@@ -1,101 +1,292 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HAVKAR</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HAVKAR</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-<style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
 
-body{
-  margin:0;
-  font-family: Arial, sans-serif;
-  background: linear-gradient(to bottom, #e8f5e9, #ffffff);
-  text-align:center;
-}
+        .container {
+            background: linear-gradient(135deg, rgba(232, 245, 233, 0.95) 0%, rgba(200, 230, 201, 0.95) 100%);
+            border-radius: 40px;
+            padding: 50px 30px;
+            max-width: 450px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            position: relative;
+            overflow: hidden;
+        }
 
-h1{
-  margin-top:30px;
-  color:#1b5e20;
-  font-size:28px;
-}
+        .container::before {
+            content: '';
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+            border-radius: 50%;
+            top: -100px;
+            right: -100px;
+            pointer-events: none;
+        }
 
-.grid{
-  display:grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap:20px;
-  padding:20px;
-}
+        .logo-section {
+            text-align: center;
+            margin-bottom: 40px;
+        }
 
-.card{
-  background:white;
-  padding:25px;
-  border-radius:20px;
-  box-shadow:0 8px 20px rgba(0,0,0,0.15);
-  font-size:16px;
-}
+        .globe-icon {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 20px;
+            position: relative;
+        }
 
-.icon{
-  font-size:30px;
-  margin-bottom:10px;
-}
+        .globe {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #2e7d32 0%, #66bb6a 100%);
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(46, 125, 50, 0.3);
+        }
 
-.btn{
-  margin:30px 20px;
-  padding:20px;
-  background: linear-gradient(90deg, #1b8f3a, #2ecc71);
-  color:white;
-  border-radius:50px;
-  font-size:20px;
-  font-weight:bold;
-  box-shadow:0 8px 20px rgba(0,0,0,0.2);
-  }
+        .globe::before {
+            content: '';
+            position: absolute;
+            width: 110%;
+            height: 15px;
+            background: linear-gradient(90deg, transparent, #1b5e20, transparent);
+            top: 50%;
+            left: -5%;
+            transform: translateY(-50%) rotate(-20deg);
+            border-radius: 50%;
+        }
 
-</style>
+        .globe::after {
+            content: '';
+            position: absolute;
+            width: 120%;
+            height: 20px;
+            border: 4px solid #1b5e20;
+            border-radius: 50%;
+            top: 50%;
+            left: -10%;
+            transform: translateY(-50%) rotate(25deg);
+            border-left-color: transparent;
+            border-right-color: transparent;
+        }
 
+        .continents {
+            position: absolute;
+            top: 20%;
+            left: 20%;
+            width: 60%;
+            height: 60%;
+        }
+
+        .continent {
+            position: absolute;
+            background: #1b5e20;
+            border-radius: 40% 60% 50% 50%;
+        }
+
+        .continent:nth-child(1) {
+            width: 30px;
+            height: 25px;
+            top: 10%;
+            left: 20%;
+        }
+
+        .continent:nth-child(2) {
+            width: 25px;
+            height: 30px;
+            top: 40%;
+            left: 50%;
+        }
+
+        .continent:nth-child(3) {
+            width: 20px;
+            height: 20px;
+            top: 60%;
+            left: 15%;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            color: #1b5e20;
+            font-weight: 800;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+        }
+
+        .tagline {
+            color: #4a4a4a;
+            font-size: 1rem;
+            font-weight: 500;
+            letter-spacing: 2px;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+
+        .menu-item {
+            background: white;
+            border-radius: 20px;
+            padding: 25px 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .menu-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .menu-icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .menu-item span {
+            display: block;
+            color: #2e2e2e;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .enter-button {
+            width: 100%;
+            background: linear-gradient(135deg, #2e7d32 0%, #388e3c 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 20px;
+            font-size: 1.3rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(46, 125, 50, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .enter-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(46, 125, 50, 0.4);
+        }
+
+        .enter-button::after {
+            content: '→';
+            font-size: 1.5rem;
+        }
+
+        .create-account {
+            text-align: center;
+            color: #4a4a4a;
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+
+        .create-account:hover {
+            color: #2e7d32;
+        }
+
+        .security-badge {
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .security-badge::before {
+            content: '✓';
+            color: #2e7d32;
+            font-weight: bold;
+        }
+
+        .security-badge::after {
+            content: '🔒';
+        }
+    </style>
 </head>
+<body>
+    <div class="container">
+        <div class="logo-section">
+            <div class="globe-icon">
+                <div class="globe">
+                    <div class="continents">
+                        <div class="continent"></div>
+                        <div class="continent"></div>
+                        <div class="continent"></div>
+                    </div>
+                </div>
+            </div>
+            <h1>HAVKAR</h1>
+            <div class="tagline">Connect • Trade • Work • Help</div>
+        </div>
 
+        <div class="menu-grid">
+            <div class="menu-item">
+                <div class="menu-icon">💬</div>
+                <span>Chat</span>
+            </div>
+            <div class="menu-item">
+                <div class="menu-icon">💼</div>
+                <span>Jobs</span>
+            </div>
+            <div class="menu-item">
+                <div class="menu-icon">🛒</div>
+                <span>Buy & Sell</span>
+            </div>
+            <div class="menu-item">
+                <div class="menu-icon">🔧</div>
+                <span>Services</span>
+            </div>
+            <div class="menu-item">
+                <div class="menu-icon">💰</div>
+                <span>Wallet</span>
+            </div>
+            <div class="menu-item">
+                <div class="menu-icon">🎧</div>
+                <span>Support</span>
+            </div>
+        </div>
 
-<div class="top">
-<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Equirectangular_projection_SW.jpg/512px-Equirectangular_projection_SW.jpg" width="110">
-  <h1>HAVKAR</h1>
-  <p>Connect • Trade • Work • Help</p>
-</div>
-<div class="grid">
+        <button class="enter-button">Enter HAVKAR</button>
 
-  <div class="card">
-    <div class="icon">💬</div>
-    Chat
-  </div>
+        <div class="create-account">Create New Account</div>
 
-  <div class="card">
-    <div class="icon">💼</div>
-    Jobs
-  </div>
-
-  <div class="card">
-    <div class="icon">🛒</div>
-    Buy & Sell
-  </div>
-
-  <div class="card">
-    <div class="icon">🛠</div>
-    Services
-  </div>
-
-  <div class="card">
-    <div class="icon">💳</div>
-    Wallet
-  </div>
-
-  <div class="card">
-    <div class="icon">🎧</div>
-    Support
-  </div>
-
-</div>
-
-<div class="btn">Enter HAVKAR →</div>
-
+        <div class="security-badge">Safe • Secure</div>
+    </div>
 </body>
 </html>
