@@ -19,26 +19,55 @@
             justify-content: center;
             align-items: center;
             padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle, #b8d4b8 1px, transparent 1px),
+                radial-gradient(circle, #b8d4b8 1px, transparent 1px);
+            background-size: 40px 40px, 60px 60px;
+            background-position: 0 0, 30px 30px;
+            opacity: 0.3;
+            pointer-events: none;
         }
 
         .container {
-            background: linear-gradient(135deg, rgba(232, 245, 233, 0.95) 0%, rgba(200, 230, 201, 0.95) 100%);
+            background: linear-gradient(135deg, rgba(240, 248, 240, 0.95) 0%, rgba(220, 237, 220, 0.95) 100%);
             border-radius: 40px;
             padding: 50px 30px;
             max-width: 450px;
             width: 100%;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
             border: 2px solid rgba(255, 255, 255, 0.8);
+            position: relative;
+            z-index: 1;
+        }
+
+        .decorative-leaf {
+            position: absolute;
+            bottom: 80px;
+            right: -10px;
+            width: 120px;
+            height: 150px;
+            opacity: 0.7;
+            pointer-events: none;
         }
 
         .logo-section {
             text-align: center;
             margin-bottom: 40px;
+            position: relative;
         }
 
         .globe-container {
-            width: 120px;
-            height: 120px;
+            width: 140px;
+            height: 140px;
             margin: 0 auto 25px;
             position: relative;
         }
@@ -159,32 +188,81 @@
     <div class="container">
         <div class="logo-section">
             <div class="globe-container">
-                <svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                <svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
                     <defs>
-                        <radialGradient id="earthGradient" cx="40%" cy="40%">
-                            <stop offset="0%" stop-color="#66bb6a"/>
-                            <stop offset="60%" stop-color="#43a047"/>
+                        <radialGradient id="earthGrad" cx="35%" cy="35%">
+                            <stop offset="0%" stop-color="#81c784"/>
+                            <stop offset="40%" stop-color="#4caf50"/>
+                            <stop offset="70%" stop-color="#388e3c"/>
                             <stop offset="100%" stop-color="#2e7d32"/>
                         </radialGradient>
-                        <filter id="shadow">
-                            <feDropShadow dx="0" dy="4" stdDeviation="8" flood-opacity="0.3"/>
+                        <linearGradient id="ringTopGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#2e7d32" stop-opacity="0.2"/>
+                            <stop offset="20%" stop-color="#357a38" stop-opacity="0.6"/>
+                            <stop offset="50%" stop-color="#43a047" stop-opacity="0.8"/>
+                            <stop offset="80%" stop-color="#357a38" stop-opacity="0.6"/>
+                            <stop offset="100%" stop-color="#2e7d32" stop-opacity="0.2"/>
+                        </linearGradient>
+                        <linearGradient id="ringBottomGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#1b5e20" stop-opacity="0.3"/>
+                            <stop offset="20%" stop-color="#2e7d32" stop-opacity="0.7"/>
+                            <stop offset="50%" stop-color="#388e3c" stop-opacity="0.9"/>
+                            <stop offset="80%" stop-color="#2e7d32" stop-opacity="0.7"/>
+                            <stop offset="100%" stop-color="#1b5e20" stop-opacity="0.3"/>
+                        </linearGradient>
+                        <filter id="drop3d">
+                            <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+                            <feOffset dx="0" dy="8" result="offsetblur"/>
+                            <feComponentTransfer>
+                                <feFuncA type="linear" slope="0.5"/>
+                            </feComponentTransfer>
+                            <feMerge>
+                                <feMergeNode/>
+                                <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
                         </filter>
                     </defs>
                     
-                    <ellipse cx="60" cy="60" rx="75" ry="22" fill="none" stroke="#2e7d32" stroke-width="5" opacity="0.5" filter="url(#shadow)"/>
+                    <!-- Ring Back Part -->
+                    <g opacity="0.7">
+                        <ellipse cx="70" cy="70" rx="90" ry="28" fill="url(#ringTopGrad)" filter="url(#drop3d)"/>
+                        <ellipse cx="70" cy="70" rx="86" ry="24" fill="none" stroke="#2e7d32" stroke-width="1.5"/>
+                        <ellipse cx="70" cy="70" rx="82" ry="20" fill="rgba(255,255,255,0.1)"/>
+                    </g>
                     
-                    <circle cx="60" cy="60" r="45" fill="url(#earthGradient)" filter="url(#shadow)"/>
+                    <!-- Earth Sphere -->
+                    <g filter="url(#drop3d)">
+                        <circle cx="70" cy="70" r="50" fill="url(#earthGrad)"/>
+                        
+                        <!-- Ocean areas (darker blue-green) -->
+                        <path d="M 45,35 Q 42,30 47,28 C 51,27 55,28 58,31 C 60,34 60,38 57,41 C 54,44 49,44 46,42 Q 43,40 45,35 Z" 
+                              fill="#1b5e20" opacity="0.7"/>
+                        <path d="M 80,40 Q 78,35 83,33 C 88,32 92,34 94,38 C 96,42 95,47 91,50 C 87,53 82,52 79,48 Q 77,45 80,40 Z" 
+                              fill="#1b5e20" opacity="0.7"/>
+                        <ellipse cx="48" cy="75" rx="14" ry="12" fill="#1b5e20" opacity="0.7" transform="rotate(-20 48 75)"/>
+                        <ellipse cx="82" cy="78" rx="16" ry="13" fill="#1b5e20" opacity="0.7" transform="rotate(-28 82 78)"/>
+                        <circle cx="64" cy="58" r="10" fill="#1b5e20" opacity="0.7"/>
+                        <ellipse cx="53" cy="50" rx="7" ry="6" fill="#1b5e20" opacity="0.7"/>
+                        <path d="M 70,65 Q 75,63 79,66 Q 82,69 81,73 Q 79,77 74,78 Q 70,78 68,74 Q 67,70 70,65 Z" 
+                              fill="#1b5e20" opacity="0.6"/>
+                        
+                        <!-- Highlight/shine -->
+                        <ellipse cx="55" cy="50" rx="25" ry="20" fill="white" opacity="0.25"/>
+                        <ellipse cx="52" cy="47" rx="18" ry="14" fill="white" opacity="0.15"/>
+                    </g>
                     
-                    <path d="M 35,30 Q 40,25 48,28 Q 52,30 50,35 Q 48,38 42,37 Q 36,36 35,30 Z" fill="#1b5e20" opacity="0.8"/>
-                    <path d="M 70,35 Q 75,32 80,36 Q 83,40 81,46 Q 78,50 72,48 Q 68,45 70,35 Z" fill="#1b5e20" opacity="0.8"/>
-                    <path d="M 38,68 Q 42,65 48,67 Q 52,70 50,75 Q 46,78 40,76 Q 36,73 38,68 Z" fill="#1b5e20" opacity="0.8"/>
-                    <path d="M 72,70 Q 78,68 84,72 Q 86,77 82,82 Q 77,85 72,82 Q 69,78 72,70 Z" fill="#1b5e20" opacity="0.8"/>
-                    <circle cx="56" cy="52" r="8" fill="#1b5e20" opacity="0.8"/>
-                    
-                    <ellipse cx="48" cy="42" rx="18" ry="15" fill="white" opacity="0.25"/>
-                    
-                    <path d="M 10,55 Q 20,48 35,45 Q 50,43 60,43" fill="none" stroke="#2e7d32" stroke-width="5" opacity="0.7"/>
-                    <path d="M 60,77 Q 70,77 85,75 Q 100,72 110,65" fill="none" stroke="#2e7d32" stroke-width="5" opacity="0.7"/>
+                    <!-- Ring Front Part -->
+                    <g opacity="0.8">
+                        <path d="M 10,65 Q 20,55 35,50 C 48,46 58,44 70,44" 
+                              fill="none" stroke="url(#ringBottomGrad)" stroke-width="10" stroke-linecap="round"/>
+                        <path d="M 10,65 Q 20,55 35,50 C 48,46 58,44 70,44" 
+                              fill="none" stroke="#66bb6a" stroke-width="4" opacity="0.5" stroke-linecap="round"/>
+                        
+                        <path d="M 70,96 C 78,96 88,94 102,90 Q 117,85 130,75" 
+                              fill="none" stroke="url(#ringBottomGrad)" stroke-width="10" stroke-linecap="round"/>
+                        <path d="M 70,96 C 78,96 88,94 102,90 Q 117,85 130,75" 
+                              fill="none" stroke="#66bb6a" stroke-width="4" opacity="0.5" stroke-linecap="round"/>
+                    </g>
                 </svg>
             </div>
             <h1>HAVKAR</h1>
@@ -223,7 +301,21 @@
         <div class="create-account">Create New Account</div>
 
         <div class="security-badge">Safe • Secure</div>
+        
+        <!-- Decorative Leaf SVG -->
+        <svg class="decorative-leaf" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#43a047"/>
+                    <stop offset="50%" stop-color="#2e7d32"/>
+                    <stop offset="100%" stop-color="#1b5e20"/>
+                </linearGradient>
+            </defs>
+            <path d="M 50,10 Q 30,30 25,60 Q 23,80 30,100 Q 35,110 45,115 Q 50,118 55,115 Q 65,110 70,100 Q 77,80 75,60 Q 70,30 50,10 Z" 
+                  fill="url(#leafGrad)" opacity="0.8"/>
+            <path d="M 50,15 Q 50,40 48,70 Q 47,90 50,110" 
+                  fill="none" stroke="#1b5e20" stroke-width="2" opacity="0.5"/>
+        </svg>
     </div>
 </body>
-</html>
-    
+                                </html>
