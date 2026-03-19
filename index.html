@@ -1,272 +1,124 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HAVKAR</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<title>HAVKAR</title>
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #d4e9d4 0%, #c0dfc0 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
+<style>
+body {
+  margin:0;
+  font-family:Arial;
+  background: linear-gradient(#eaf5ef, #dfeee7);
+  text-align:center;
+}
 
-        .container {
-            background: linear-gradient(to bottom, rgba(250, 254, 250, 0.95), rgba(242, 250, 242, 0.95));
-            border-radius: 45px;
-            padding: 60px 35px 40px;
-            max-width: 420px;
-            width: 100%;
-            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.12);
-            border: 3px solid rgba(180, 210, 180, 0.5);
-            position: relative;
-            overflow: hidden;
-        }
+.top {
+  padding:30px 20px 10px;
+}
 
-        .world-map-bg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: 
-                radial-gradient(circle, rgba(140, 180, 140, 0.4) 2.5px, transparent 2.5px);
-            background-size: 40px 40px;
-            background-position: 0 0;
-            opacity: 0.8;
-            pointer-events: none;
-            z-index: 0;
-        }
+.top img {
+  width:120px;
+}
 
-        .container > * {
-            position: relative;
-            z-index: 1;
-        }
+h1 {
+  color:#1b5e20;
+  font-size:32px;
+  margin:10px 0;
+}
 
-        .logo-section {
-            text-align: center;
-            margin-bottom: 45px;
-        }
+.top p {
+  color:#555;
+  margin-bottom:20px;
+}
 
-        .globe-image {
-            width: 110px;
-            height: 110px;
-            margin: 0 auto 30px;
-            display: block;
-            filter: drop-shadow(0 10px 25px rgba(46, 125, 50, 0.35));
-        }
+.grid {
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:20px;
+  padding:20px;
+}
 
-        h1 {
-            font-size: 3.8rem;
-            color: #0d4d21;
-            font-weight: 900;
-            letter-spacing: 4px;
-            margin-bottom: 12px;
-        }
+.card {
+  background:#fff;
+  padding:25px;
+  border-radius:25px;
+  box-shadow:0 10px 25px rgba(0,0,0,0.1);
+}
 
-        .tagline {
-            color: #5a5a5a;
-            font-size: 1.05rem;
-            font-weight: 500;
-            letter-spacing: 1.5px;
-        }
+.icon {
+  font-size:40px;
+  margin-bottom:10px;
+}
 
-        .menu-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 18px;
-            margin-bottom: 45px;
-        }
+.btn {
+  margin:30px 20px;
+  padding:18px;
+  background:linear-gradient(90deg,#1b8f3a,#2ecc71);
+  color:white;
+  border-radius:50px;
+  font-size:20px;
+  font-weight:bold;
+}
 
-        .menu-item {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 22px;
-            padding: 28px 18px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.06);
-        }
+.sub {
+  color:#777;
+  margin-top:10px;
+}
 
-        .menu-item:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
-        }
+.sec {
+  margin-top:10px;
+  color:#2e7d32;
+}
+</style>
 
-        .menu-icon {
-            font-size: 2.5rem;
-            margin-bottom: 12px;
-            display: block;
-        }
-
-        .icon-chat { color: #2e7d32; }
-        .icon-jobs { color: #1976d2; }
-        .icon-buy { color: #388e3c; }
-        .icon-services { color: #f57c00; }
-        .icon-wallet { color: #388e3c; }
-        .icon-support { color: #1976d2; }
-
-        .menu-item span {
-            display: block;
-            color: #2a2a2a;
-            font-weight: 600;
-            font-size: 1rem;
-        }
-
-        .enter-button {
-            width: 100%;
-            background: linear-gradient(135deg, #2e7d32 0%, #43a047 100%);
-            color: white;
-            border: none;
-            border-radius: 55px;
-            padding: 22px;
-            font-size: 1.35rem;
-            font-weight: 800;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 10px 25px rgba(46, 125, 50, 0.35);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 18px;
-            margin-bottom: 28px;
-            letter-spacing: 1px;
-        }
-
-        .enter-button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 35px rgba(46, 125, 50, 0.45);
-        }
-
-        .enter-button::after {
-            content: '→';
-            font-size: 1.6rem;
-        }
-
-        .create-account {
-            text-align: center;
-            color: #5a5a5a;
-            font-size: 1.05rem;
-            font-weight: 500;
-            margin-bottom: 22px;
-            cursor: pointer;
-        }
-
-        .create-account:hover {
-            color: #2e7d32;
-        }
-
-        .security-badge {
-            text-align: center;
-            color: #6a6a6a;
-            font-size: 0.95rem;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .security-badge::before {
-            content: '✓';
-            color: #2e7d32;
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
-
-        .security-badge::after {
-            content: '🔒';
-            font-size: 1rem;
-        }
-
-        .decorative-plant {
-            position: absolute;
-            bottom: 90px;
-            right: 15px;
-            width: 75px;
-            height: 115px;
-            opacity: 0.75;
-            pointer-events: none;
-            z-index: 2;
-        }
-    </style>
 </head>
+
 <body>
-    <div class="container">
-        <div class="world-map-bg"></div>
-        
-        <div class="logo-section">
-            <img src="icon.png" alt="HAVKAR Globe" class="globe-image">
-            <h1>HAVKAR</h1>
-            <div class="tagline">Connect • Trade • Work • Help</div>
-        </div>
 
-        <div class="menu-grid">
-            <div class="menu-item">
-                <i class="fas fa-comment-dots menu-icon icon-chat"></i>
-                <span>Chat</span>
-            </div>
-            <div class="menu-item">
-                <i class="fas fa-briefcase menu-icon icon-jobs"></i>
-                <span>Jobs</span>
-            </div>
-            <div class="menu-item">
-                <i class="fas fa-shopping-bag menu-icon icon-buy"></i>
-                <span>Buy & Sell</span>
-            </div>
-            <div class="menu-item">
-                <i class="fas fa-tools menu-icon icon-services"></i>
-                <span>Services</span>
-            </div>
-            <div class="menu-item">
-                <i class="fas fa-wallet menu-icon icon-wallet"></i>
-                <span>Wallet</span>
-            </div>
-            <div class="menu-item">
-                <i class="fas fa-headphones-alt menu-icon icon-support"></i>
-                <span>Support</span>
-            </div>
-        </div>
+<div class="top">
+  <img src="https://cdn-icons-png.flaticon.com/512/921/921347.png">
+  <h1>HAVKAR</h1>
+  <p>Connect • Trade • Work • Help</p>
+</div>
 
-        <button class="enter-button">Enter HAVKAR</button>
+<div class="grid">
 
-        <div class="create-account">Create New Account</div>
+  <div class="card">
+    <div class="icon">💬</div>
+    Chat
+  </div>
 
-        <div class="security-badge">Safe • Secure</div>
-        
-        <svg class="decorative-plant" viewBox="0 0 75 115" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-                <linearGradient id="leaf1" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#2d7a33"/>
-                    <stop offset="100%" stop-color="#1b5520"/>
-                </linearGradient>
-                <linearGradient id="leaf2" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#43a047"/>
-                    <stop offset="100%" stop-color="#2e7d32"/>
-                </linearGradient>
-                <linearGradient id="leaf3" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#388e3c"/>
-                    <stop offset="100%" stop-color="#2d7a33"/>
-                </linearGradient>
-            </defs>
-            
-            <ellipse cx="37" cy="27" rx="21" ry="27" fill="url(#leaf1)" opacity="0.9" transform="rotate(-15 37 27)"/>
-            <ellipse cx="40" cy="58" rx="23" ry="30" fill="url(#leaf2)" opacity="0.85" transform="rotate(10 40 58)"/>
-            <ellipse cx="42" cy="92" rx="21" ry="27" fill="url(#leaf3)" opacity="0.9" transform="rotate(-10 42 92)"/>
-            
-            <path d="M 37,17 Q 37,42 39,74 Q 40,95 42,110" 
-                  fill="none" stroke="#1b5520" stroke-width="2" opacity="0.4"/>
-        </svg>
-    </div>
+  <div class="card">
+    <div class="icon">💼</div>
+    Jobs
+  </div>
+
+  <div class="card">
+    <div class="icon">🛒</div>
+    Buy & Sell
+  </div>
+
+  <div class="card">
+    <div class="icon">🛠️</div>
+    Services
+  </div>
+
+  <div class="card">
+    <div class="icon">💳</div>
+    Wallet
+  </div>
+
+  <div class="card">
+    <div class="icon">🎧</div>
+    Support
+  </div>
+
+</div>
+
+<div class="btn">Enter HAVKAR →</div>
+
+<div class="sub">Create New Account</div>
+<div class="sec">🔒 امن • آسان</div>
+
 </body>
-                </html>
+</html>
