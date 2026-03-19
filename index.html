@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HAVKAR - Connect the World</title>
+    <title>HAVKAR - Global Connection Platform</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap');
-
         * {
             margin: 0;
             padding: 0;
@@ -17,41 +15,109 @@
         html, body {
             width: 100%;
             height: 100%;
-            overflow-x: hidden;
+            overflow: hidden;
         }
 
         body {
-            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #d4f1d4 0%, #b8e6b8 50%, #9cdb9c 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a1f0a;
+            position: relative;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+        }
+
+        /* نقشه پس‌زمینه متحرک */
+        .world-map {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(135deg, #0f2f0f 0%, #1a4d1a 50%, #0f2f0f 100%);
+            overflow: hidden;
+        }
+
+        .world-map::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(46, 125, 50, 0.3) 2px, transparent 2px),
+                radial-gradient(circle at 80% 50%, rgba(67, 160, 71, 0.2) 1px, transparent 1px);
+            background-size: 60px 60px, 40px 40px;
+            animation: mapMove 30s linear infinite;
+        }
+
+        @keyframes mapMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(-50%, -50%); }
+        }
+
+        /* ذرات شناور */
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(67, 160, 71, 0.6);
+            border-radius: 50%;
+            animation: float 15s infinite;
+            box-shadow: 0 0 10px rgba(67, 160, 71, 0.8);
+        }
+
+        .particle:nth-child(1) { left: 10%; top: 20%; animation-delay: 0s; }
+        .particle:nth-child(2) { left: 20%; top: 80%; animation-delay: 2s; }
+        .particle:nth-child(3) { left: 60%; top: 30%; animation-delay: 4s; }
+        .particle:nth-child(4) { left: 80%; top: 70%; animation-delay: 6s; }
+        .particle:nth-child(5) { left: 40%; top: 50%; animation-delay: 8s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) translateX(0); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-100vh) translateX(50px); opacity: 0; }
+        }
+
+        /* کانتینر شیشه‌ای */
+        .glass-container {
+            position: relative;
+            width: 90%;
+            max-width: 450px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            border-radius: 40px;
+            padding: 45px 30px 35px;
+            border: 2px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            z-index: 10;
+        }
+
+        /* هدر با لوگو */
+        .header {
+            text-align: center;
+            margin-bottom: 35px;
             position: relative;
         }
 
-        body::before {
-            content: '';
-            position: absolute;
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, rgba(46, 125, 50, 0.1), transparent);
-            border-radius: 50%;
-            top: -200px;
-            right: -200px;
-            animation: pulse 8s ease-in-out infinite;
+        .logo-glow {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 20px;
         }
 
-        body::after {
+        .logo-glow::before {
             content: '';
             position: absolute;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, rgba(67, 160, 71, 0.08), transparent);
+            width: 120px;
+            height: 120px;
+            top: -10px;
+            left: -10px;
+            background: radial-gradient(circle, rgba(67, 160, 71, 0.4), transparent);
             border-radius: 50%;
-            bottom: -150px;
-            left: -150px;
-            animation: pulse 10s ease-in-out infinite reverse;
+            animation: pulse 3s ease-in-out infinite;
         }
 
         @keyframes pulse {
@@ -59,403 +125,265 @@
             50% { transform: scale(1.1); opacity: 0.8; }
         }
 
-        .container {
-            background: linear-gradient(145deg, rgba(255,255,255,0.95), rgba(250,255,250,0.9));
-            border-radius: 50px;
-            padding: 55px 35px 40px;
-            max-width: 440px;
+        .logo-glow img {
             width: 100%;
-            box-shadow: 
-                0 35px 100px rgba(0,0,0,0.15),
-                0 0 0 1px rgba(255,255,255,0.5) inset,
-                0 10px 40px rgba(46, 125, 50, 0.1);
+            height: 100%;
             position: relative;
             z-index: 1;
-            backdrop-filter: blur(20px);
-            overflow: hidden;
+            filter: drop-shadow(0 0 20px rgba(67, 160, 71, 0.6));
         }
 
-        .container::before {
+        h1 {
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #66bb6a, #43a047, #2e7d32);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 8px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 30px rgba(67, 160, 71, 0.5);
+        }
+
+        .tagline {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.95rem;
+            font-weight: 500;
+            letter-spacing: 3px;
+        }
+
+        /* منوی سه‌بعدی */
+        .menu-3d {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 35px;
+            perspective: 1000px;
+        }
+
+        .menu-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 25px 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+            position: relative;
+        }
+
+        .menu-card::before {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-image: radial-gradient(circle, rgba(120, 160, 120, 0.15) 2px, transparent 2px);
-            background-size: 45px 45px;
-            opacity: 0.5;
-            pointer-events: none;
+            background: linear-gradient(135deg, rgba(67, 160, 71, 0.2), transparent);
+            border-radius: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
-        .container > * {
-            position: relative;
-            z-index: 1;
-        }
-
-        .logo-section {
-            text-align: center;
-            margin-bottom: 45px;
-            animation: fadeInDown 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        }
-
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .globe-wrapper {
-            position: relative;
-            width: 120px;
-            height: 120px;
-            margin: 0 auto 30px;
-        }
-
-        .globe-image {
-            width: 100%;
-            height: 100%;
-            display: block;
-            filter: drop-shadow(0 20px 40px rgba(46, 125, 50, 0.3));
-            animation: floatGlobe 6s ease-in-out infinite;
-        }
-
-        @keyframes floatGlobe {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-15px) rotate(5deg); }
-        }
-
-        h1 {
-            font-size: 4rem;
-            background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 50%, #43a047 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-weight: 900;
-            letter-spacing: 6px;
-            margin-bottom: 15px;
-            position: relative;
-        }
-
-        h1::after {
-            content: '';
-            position: absolute;
-            bottom: -8px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80px;
-            height: 4px;
-            background: linear-gradient(90deg, transparent, #43a047, transparent);
-            border-radius: 2px;
-        }
-
-        .tagline {
-            color: #5a6a5a;
-            font-size: 1.05rem;
-            font-weight: 500;
-            letter-spacing: 2px;
-            margin-top: 18px;
-        }
-
-        .menu-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 18px;
-            margin-bottom: 45px;
-            animation: fadeInUp 0.8s ease-out 0.3s both;
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(40px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .menu-item {
-            background: linear-gradient(145deg, #ffffff, #fafafa);
-            border-radius: 24px;
-            padding: 30px 18px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        .menu-card:hover {
+            transform: translateY(-10px) rotateX(10deg);
             box-shadow: 
-                0 10px 30px rgba(0,0,0,0.08),
-                0 0 0 1px rgba(46, 125, 50, 0.03) inset;
+                0 20px 40px rgba(0, 0, 0, 0.5),
+                0 0 20px rgba(67, 160, 71, 0.4);
+        }
+
+        .menu-card:hover::before {
+            opacity: 1;
+        }
+
+        .menu-card i {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            display: block;
+            filter: drop-shadow(0 0 10px currentColor);
+        }
+
+        .icon-buy { color: #66bb6a; }
+        .icon-jobs { color: #42a5f5; }
+        .icon-services { color: #ffa726; }
+        .icon-wallet { color: #66bb6a; }
+        .icon-chat { color: #26a69a; }
+        .icon-support { color: #ab47bc; }
+
+        .menu-card span {
+            display: block;
+            color: rgba(255, 255, 255, 0.95);
+            font-weight: 700;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+        }
+
+        /* دکمه ورود نئونی */
+        .neon-button {
+            width: 100%;
+            background: transparent;
+            border: 2px solid #43a047;
+            color: #66bb6a;
+            border-radius: 50px;
+            padding: 18px;
+            font-size: 1.2rem;
+            font-weight: 800;
+            letter-spacing: 3px;
+            cursor: pointer;
             position: relative;
             overflow: hidden;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            box-shadow: 
+                0 0 20px rgba(67, 160, 71, 0.3),
+                inset 0 0 20px rgba(67, 160, 71, 0.1);
         }
 
-        .menu-item::before {
+        .neon-button::before {
             content: '';
             position: absolute;
             top: 0;
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+            background: linear-gradient(90deg, transparent, rgba(67, 160, 71, 0.4), transparent);
             transition: left 0.5s ease;
         }
 
-        .menu-item:hover::before {
-            left: 100%;
-        }
-
-        .menu-item:hover {
-            transform: translateY(-10px) scale(1.03);
+        .neon-button:hover {
+            background: rgba(67, 160, 71, 0.2);
             box-shadow: 
-                0 20px 50px rgba(0,0,0,0.15),
-                0 0 0 1px rgba(46, 125, 50, 0.1) inset;
-        }
-
-        .menu-icon {
-            font-size: 2.8rem;
-            margin-bottom: 12px;
-            display: block;
-            transition: all 0.3s ease;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
-        }
-
-        .menu-item:hover .menu-icon {
-            transform: scale(1.15) rotate(-5deg);
-        }
-
-        .icon-buy { color: #388e3c; }
-        .icon-jobs { color: #1976d2; }
-        .icon-services { color: #f57c00; }
-        .icon-wallet { color: #43a047; }
-        .icon-chat { color: #00897b; }
-        .icon-support { color: #5e35b1; }
-
-        .menu-item span {
-            display: block;
-            color: #2a2a2a;
-            font-weight: 700;
-            font-size: 1rem;
-            letter-spacing: 0.5px;
-        }
-
-        .button-section {
-            animation: fadeInUp 0.8s ease-out 0.5s both;
-        }
-
-        .enter-button {
-            width: 100%;
-            background: linear-gradient(135deg, #2e7d32 0%, #388e3c 50%, #43a047 100%);
-            color: white;
-            border: none;
-            border-radius: 60px;
-            padding: 22px 30px;
-            font-size: 1.4rem;
-            font-weight: 900;
-            cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            box-shadow: 
-                0 15px 40px rgba(46, 125, 50, 0.4),
-                0 0 0 1px rgba(255,255,255,0.2) inset;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 18px;
-            margin-bottom: 28px;
-            letter-spacing: 2px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .enter-button::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            background: rgba(255,255,255,0.3);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            transition: width 0.6s ease, height 0.6s ease;
-        }
-
-        .enter-button:hover::before {
-            width: 300px;
-            height: 300px;
-        }
-
-        .enter-button:hover {
-            transform: translateY(-5px);
-            box-shadow: 
-                0 25px 60px rgba(46, 125, 50, 0.5),
-                0 0 0 1px rgba(255,255,255,0.3) inset;
-        }
-
-        .enter-button::after {
-            content: '→';
-            font-size: 1.8rem;
-            transition: transform 0.3s ease;
-            position: relative;
-            z-index: 1;
-        }
-
-        .enter-button:hover::after {
-            transform: translateX(8px);
-        }
-
-        .enter-button span {
-            position: relative;
-            z-index: 1;
-        }
-
-        .create-account {
-            text-align: center;
-            color: #5a6a5a;
-            font-size: 1.05rem;
-            font-weight: 600;
-            margin-bottom: 25px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .create-account::after {
-            content: '';
-            position: absolute;
-            bottom: -3px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 2px;
-            background: #2e7d32;
-            transition: width 0.3s ease;
-        }
-
-        .create-account:hover {
-            color: #2e7d32;
+                0 0 40px rgba(67, 160, 71, 0.6),
+                inset 0 0 20px rgba(67, 160, 71, 0.2);
             transform: translateY(-2px);
         }
 
-        .create-account:hover::after {
-            width: 100%;
+        .neon-button:hover::before {
+            left: 100%;
         }
 
-        .security-badge {
+        .neon-button::after {
+            content: '→';
+            margin-left: 10px;
+            font-size: 1.4rem;
+        }
+
+        /* فوتر */
+        .footer {
             text-align: center;
-            color: #6a7a6a;
-            font-size: 1rem;
+        }
+
+        .create-link {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.95rem;
             font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        .create-link:hover {
+            color: #66bb6a;
+            text-shadow: 0 0 10px rgba(102, 187, 106, 0.5);
+        }
+
+        .security {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.85rem;
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
         }
 
-        .security-badge::before {
+        .security::before {
             content: '✓';
-            color: #2e7d32;
+            color: #66bb6a;
             font-weight: bold;
-            font-size: 1.3rem;
-            animation: checkPulse 2s ease infinite;
+            text-shadow: 0 0 10px rgba(102, 187, 106, 0.8);
         }
 
-        @keyframes checkPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-
-        .security-badge::after {
+        .security::after {
             content: '🔒';
-            font-size: 1.1rem;
         }
 
-        .decorative-plant {
+        /* برگ تزئینی */
+        .glass-leaf {
             position: absolute;
-            bottom: 85px;
-            right: 18px;
-            width: 75px;
-            height: 110px;
-            opacity: 0.8;
-            pointer-events: none;
-            z-index: 2;
-            filter: drop-shadow(0 8px 20px rgba(46, 125, 50, 0.2));
-            animation: swayPlant 4s ease-in-out infinite;
+            bottom: 70px;
+            right: 20px;
+            width: 60px;
+            height: 90px;
+            opacity: 0.3;
+            filter: drop-shadow(0 0 15px rgba(67, 160, 71, 0.6));
+            animation: leafSway 5s ease-in-out infinite;
         }
 
-        @keyframes swayPlant {
+        @keyframes leafSway {
             0%, 100% { transform: rotate(0deg); }
-            50% { transform: rotate(3deg); }
+            50% { transform: rotate(5deg); }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="logo-section">
-            <div class="globe-wrapper">
-                <img src="icon.png" alt="HAVKAR Globe" class="globe-image">
+    <div class="world-map">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <div class="glass-container">
+        <div class="header">
+            <div class="logo-glow">
+                <img src="icon.png" alt="HAVKAR">
             </div>
             <h1>HAVKAR</h1>
             <div class="tagline">Connect • Trade • Work • Help</div>
         </div>
 
-        <div class="menu-grid">
-            <div class="menu-item">
-                <i class="fas fa-shopping-bag menu-icon icon-buy"></i>
+        <div class="menu-3d">
+            <div class="menu-card">
+                <i class="fas fa-shopping-bag icon-buy"></i>
                 <span>Buy & Sell</span>
             </div>
-            <div class="menu-item">
-                <i class="fas fa-briefcase menu-icon icon-jobs"></i>
+            <div class="menu-card">
+                <i class="fas fa-briefcase icon-jobs"></i>
                 <span>Jobs</span>
             </div>
-            <div class="menu-item">
-                <i class="fas fa-tools menu-icon icon-services"></i>
+            <div class="menu-card">
+                <i class="fas fa-tools icon-services"></i>
                 <span>Services</span>
             </div>
-            <div class="menu-item">
-                <i class="fas fa-wallet menu-icon icon-wallet"></i>
+            <div class="menu-card">
+                <i class="fas fa-wallet icon-wallet"></i>
                 <span>Wallet</span>
             </div>
-            <div class="menu-item">
-                <i class="fas fa-comments menu-icon icon-chat"></i>
+            <div class="menu-card">
+                <i class="fas fa-comments icon-chat"></i>
                 <span>Chat</span>
             </div>
-            <div class="menu-item">
-                <i class="fas fa-headset menu-icon icon-support"></i>
+            <div class="menu-card">
+                <i class="fas fa-headset icon-support"></i>
                 <span>Support</span>
             </div>
         </div>
 
-        <div class="button-section">
-            <button class="enter-button"><span>Enter HAVKAR</span></button>
-            <div class="create-account">Create New Account</div>
-            <div class="security-badge">Safe • Secure</div>
+        <button class="neon-button">ENTER HAVKAR</button>
+
+        <div class="footer">
+            <div class="create-link">Create New Account</div>
+            <div class="security">Safe • Secure</div>
         </div>
-        
-        <svg class="decorative-plant" viewBox="0 0 75 110" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-                <linearGradient id="leaf1" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#2e7d32"/>
-                    <stop offset="100%" stop-color="#1b5520"/>
-                </linearGradient>
-                <linearGradient id="leaf2" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#43a047"/>
-                    <stop offset="100%" stop-color="#2e7d32"/>
-                </linearGradient>
-                <linearGradient id="leaf3" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#4caf50"/>
-                    <stop offset="100%" stop-color="#388e3c"/>
-                </linearGradient>
-            </defs>
-            <ellipse cx="37" cy="26" rx="21" ry="26" fill="url(#leaf1)" opacity="0.9" transform="rotate(-15 37 26)"/>
-            <ellipse cx="40" cy="57" rx="23" ry="29" fill="url(#leaf2)" opacity="0.88" transform="rotate(12 40 57)"/>
-            <ellipse cx="42" cy="90" rx="21" ry="26" fill="url(#leaf3)" opacity="0.9" transform="rotate(-12 42 90)"/>
-            <path d="M 37,16 Q 37,42 40,72 Q 41,92 42,105" fill="none" stroke="#1b5520" stroke-width="2.5" opacity="0.5"/>
+
+        <svg class="glass-leaf" viewBox="0 0 60 90" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="30" cy="25" rx="18" ry="23" fill="#43a047" opacity="0.6" transform="rotate(-15 30 25)"/>
+            <ellipse cx="32" cy="50" rx="20" ry="25" fill="#66bb6a" opacity="0.5" transform="rotate(10 32 50)"/>
+            <ellipse cx="34" cy="75" rx="18" ry="23" fill="#43a047" opacity="0.6" transform="rotate(-10 34 75)"/>
         </svg>
     </div>
 </body>
