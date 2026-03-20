@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HAVKAR - Events</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #689f38, #7cb342);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .header h1 {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 15px;
+        }
+
+        .icon-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+
+        .search-bar {
+            padding: 15px 20px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 1rem;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #7cb342;
+        }
+
+        .tabs {
+            background: white;
+            display: flex;
+            padding: 15px 20px;
+            gap: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 8px 16px;
+            border: none;
+            background: #f5f5f5;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .tab.active {
+            background: #7cb342;
+            color: white;
+        }
+
+        .content {
+            padding: 15px 20px 100px;
+        }
+
+        .event-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .event-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        .event-image {
+            width: 100%;
+            height: 160px;
+            background: linear-gradient(135deg, #e8f5e9, #c5e1a5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+        }
+
+        .event-content {
+            padding: 15px;
+        }
+
+        .event-date-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            background: #7cb342;
+            color: white;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .event-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .event-organizer {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 12px;
+        }
+
+        .event-details {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .detail-item i {
+            color: #7cb342;
+        }
+
+        .event-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 12px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .attendees {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .event-price {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #558b2f;
+        }
+
+        .fab-button {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #689f38, #7cb342);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 1.8rem;
+            box-shadow: 0 5px 20px rgba(104, 159, 56, 0.4);
+            cursor: pointer;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            color: #999;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        .nav-item.active {
+            color: #7cb342;
+        }
+
+        .nav-item i {
+            font-size: 1.3rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <button class="back-btn" onclick="window.location.href='index.html'">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h1>Events</h1>
+        </div>
+        <div class="header-right">
+            <button class="icon-btn"><i class="fas fa-calendar"></i></button>
+            <button class="icon-btn"><i class="fas fa-filter"></i></button>
+        </div>
+    </div>
+
+    <div class="search-bar">
+        <input type="text" class="search-input" placeholder="Search events...">
+    </div>
+
+    <div class="tabs">
+        <button class="tab active">All Events</button>
+        <button class="tab">Music</button>
+        <button class="tab">Cultural</button>
+        <button class="tab">Sports</button>
+        <button class="tab">Food</button>
+        <button class="tab">Community</button>
+    </div>
+
+    <div class="content">
+        <div class="event-card">
+            <div class="event-image">🎵</div>
+            <div class="event-content">
+                <div class="event-date-badge">SAT, MAR 29 • 8:00 PM</div>
+                <div class="event-title">Italian Music Festival</div>
+                <div class="event-organizer">Organized by Milano Events</div>
+                <div class="event-details">
+                    <div class="detail-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        Piazza Duomo, Milan
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-users"></i>
+                        500+ Attending
+                    </div>
+                </div>
+                <div class="event-footer">
+                    <div class="attendees">245 people interested</div>
+                    <div class="event-price">€25</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="event-card">
+            <div class="event-image">🍕</div>
+            <div class="event-content">
+                <div class="event-date-badge">SUN, MAR 30 • 12:00 PM</div>
+                <div class="event-title">Italian Food Fair</div>
+                <div class="event-organizer">Organized by Taste of Italy</div>
+                <div class="event-details">
+                    <div class="detail-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        Parco Sempione, Milan
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-users"></i>
+                        1000+ Attending
+                    </div>
+                </div>
+                <div class="event-footer">
+                    <div class="attendees">680 people interested</div>
+                    <div class="event-price">Free</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="event-card">
+            <div class="event-image">🎨</div>
+            <div class="event-content">
+                <div class="event-date-badge">FRI, APR 4 • 6:00 PM</div>
+                <div class="event-title">Art Exhibition Opening</div>
+                <div class="event-organizer">Organized by Galleria d'Arte</div>
+                <div class="event-details">
+                    <div class="detail-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        Brera District, Milan
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-users"></i>
+                        150+ Attending
+                    </div>
+                </div>
+                <div class="event-footer">
+                    <div class="attendees">89 people interested</div>
+                    <div class="event-price">€15</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="event-card">
+            <div class="event-image">⚽</div>
+            <div class="event-content">
+                <div class="event-date-badge">SAT, APR 5 • 3:00 PM</div>
+                <div class="event-title">Community Football Match</div>
+                <div class="event-organizer">Organized by Milano Sports Club</div>
+                <div class="event-details">
+                    <div class="detail-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        San Siro Stadium, Milan
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-users"></i>
+                        300+ Attending
+                    </div>
+                </div>
+                <div class="event-footer">
+                    <div class="attendees">210 people interested</div>
+                    <div class="event-price">€10</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="event-card">
+            <div class="event-image">🎭</div>
+            <div class="event-content">
+                <div class="event-date-badge">SUN, APR 6 • 7:00 PM</div>
+                <div class="event-title">Theater Performance</div>
+                <div class="event-organizer">Organized by Teatro alla Scala</div>
+                <div class="event-details">
+                    <div class="detail-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        Teatro alla Scala, Milan
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-users"></i>
+                        200+ Attending
+                    </div>
+                </div>
+                <div class="event-footer">
+                    <div class="attendees">156 people interested</div>
+                    <div class="event-price">€40</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="event-card">
+            <div class="event-image">🎉</div>
+            <div class="event-content">
+                <div class="event-date-badge">FRI, APR 11 • 9:00 PM</div>
+                <div class="event-title">Iranian Community Gathering</div>
+                <div class="event-organizer">Organized by Persian Cultural Center</div>
+                <div class="event-details">
+                    <div class="detail-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        Community Center, Milan
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-users"></i>
+                        120+ Attending
+                    </div>
+                </div>
+                <div class="event-footer">
+                    <div class="attendees">95 people interested</div>
+                    <div class="event-price">Free</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="fab-button" onclick="alert('Create Event - Coming Soon!')">
+        <i class="fas fa-plus"></i>
+    </button>
+
+    <div class="bottom-nav">
+        <div class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </div>
+        <div class="nav-item active">
+            <i class="fas fa-calendar-alt"></i>
+            <span>Events</span>
+        </div>
+        <div class="nav-item">
+            <i class="fas fa-ticket-alt"></i>
+            <span>My Tickets</span>
+        </div>
+        <div class="nav-item">
+            <i class="fas fa-user"></i>
+            <span>Profile</span>
+        </div>
+    </div>
+</body>
+          </html>
