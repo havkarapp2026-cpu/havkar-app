@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HAVKAR - Reviews</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #689f38, #7cb342);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .header h1 {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 15px;
+        }
+
+        .icon-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+
+        .rating-summary {
+            background: white;
+            margin: 20px;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+
+        .average-rating {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #558b2f;
+            margin-bottom: 10px;
+        }
+
+        .stars {
+            font-size: 1.5rem;
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+
+        .total-reviews {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .rating-bars {
+            margin-top: 20px;
+        }
+
+        .rating-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .bar-label {
+            font-size: 0.85rem;
+            color: #666;
+            width: 60px;
+        }
+
+        .bar-container {
+            flex: 1;
+            height: 8px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #689f38, #7cb342);
+            border-radius: 10px;
+        }
+
+        .bar-count {
+            font-size: 0.85rem;
+            color: #666;
+            width: 40px;
+            text-align: right;
+        }
+
+        .tabs {
+            background: white;
+            display: flex;
+            padding: 15px 20px;
+            gap: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: #f5f5f5;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .tab.active {
+            background: #7cb342;
+            color: white;
+        }
+
+        .content {
+            padding: 15px 20px 100px;
+        }
+
+        .review-card {
+            background: white;
+            border-radius: 15px;
+            padding: 18px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 12px;
+        }
+
+        .reviewer-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .reviewer-avatar {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, #e8f5e9, #c5e1a5);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .reviewer-name {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 3px;
+        }
+
+        .review-date {
+            font-size: 0.75rem;
+            color: #999;
+        }
+
+        .review-rating {
+            color: #ffd700;
+            font-size: 0.9rem;
+        }
+
+        .review-text {
+            font-size: 0.9rem;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .review-meta {
+            display: flex;
+            gap: 15px;
+            padding-top: 12px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .meta-btn {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.85rem;
+            color: #666;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        .meta-btn i {
+            color: #7cb342;
+        }
+
+        .fab-button {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #689f38, #7cb342);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 1.8rem;
+            box-shadow: 0 5px 20px rgba(104, 159, 56, 0.4);
+            cursor: pointer;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            color: #999;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        .nav-item.active {
+            color: #7cb342;
+        }
+
+        .nav-item i {
+            font-size: 1.3rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <button class="back-btn" onclick="window.location.href='index.html'">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h1>Reviews</h1>
+        </div>
+        <div class="header-right">
+            <button class="icon-btn"><i class="fas fa-filter"></i></button>
+        </div>
+    </div>
+
+    <div class="rating-summary">
+        <div class="average-rating">4.8</div>
+        <div class="stars">★★★★★</div>
+        <div class="total-reviews">Based on 1,247 reviews</div>
+        
+        <div class="rating-bars">
+            <div class="rating-bar">
+                <div class="bar-label">5 stars</div>
+                <div class="bar-container">
+                    <div class="bar-fill" style="width: 85%;"></div>
+                </div>
+                <div class="bar-count">1,060</div>
+            </div>
+            <div class="rating-bar">
+                <div class="bar-label">4 stars</div>
+                <div class="bar-container">
+                    <div class="bar-fill" style="width: 10%;"></div>
+                </div>
+                <div class="bar-count">125</div>
+            </div>
+            <div class="rating-bar">
+                <div class="bar-label">3 stars</div>
+                <div class="bar-container">
+                    <div class="bar-fill" style="width: 3%;"></div>
+                </div>
+                <div class="bar-count">37</div>
+            </div>
+            <div class="rating-bar">
+                <div class="bar-label">2 stars</div>
+                <div class="bar-container">
+                    <div class="bar-fill" style="width: 1%;"></div>
+                </div>
+                <div class="bar-count">12</div>
+            </div>
+            <div class="rating-bar">
+                <div class="bar-label">1 star</div>
+                <div class="bar-container">
+                    <div class="bar-fill" style="width: 1%;"></div>
+                </div>
+                <div class="bar-count">13</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab active">All</button>
+        <button class="tab">5 Stars</button>
+        <button class="tab">Recent</button>
+    </div>
+
+    <div class="content">
+        <div class="review-card">
+            <div class="review-header">
+                <div class="reviewer-info">
+                    <div class="reviewer-avatar">👤</div>
+                    <div>
+                        <div class="reviewer-name">Marco Rossi</div>
+                        <div class="review-date">2 days ago</div>
+                    </div>
+                </div>
+                <div class="review-rating">★★★★★</div>
+            </div>
+            <div class="review-text">
+                Excellent service! Very professional and reliable. The delivery was fast and the communication was perfect. Highly recommend!
+            </div>
+            <div class="review-meta">
+                <button class="meta-btn">
+                    <i class="fas fa-thumbs-up"></i>
+                    Helpful (45)
+                </button>
+                <button class="meta-btn">
+                    <i class="fas fa-reply"></i>
+                    Reply
+                </button>
+            </div>
+        </div>
+
+        <div class="review-card">
+            <div class="review-header">
+                <div class="reviewer-info">
+                    <div class="reviewer-avatar">👩</div>
+                    <div>
+                        <div class="reviewer-name">Sara Ferrari</div>
+                        <div class="review-date">5 days ago</div>
+                    </div>
+                </div>
+                <div class="review-rating">★★★★★</div>
+            </div>
+            <div class="review-text">
+                Great platform! Found exactly what I was looking for. The seller was responsive and honest. Will definitely use again.
+            </div>
+            <div class="review-meta">
+                <button class="meta-btn">
+                    <i class="fas fa-thumbs-up"></i>
+                    Helpful (32)
+                </button>
+                <button class="meta-btn">
+                    <i class="fas fa-reply"></i>
+                    Reply
+                </button>
+            </div>
+        </div>
+
+        <div class="review-card">
+            <div class="review-header">
+                <div class="reviewer-info">
+                    <div class="reviewer-avatar">👨</div>
+                    <div>
+                        <div class="reviewer-name">Giuseppe Bianchi</div>
+                        <div class="review-date">1 week ago</div>
+                    </div>
+                </div>
+                <div class="review-rating">★★★★☆</div>
+            </div>
+            <div class="review-text">
+                Good experience overall. The service was as expected. Minor delay but nothing major. Would recommend to others.
+            </div>
+            <div class="review-meta">
+                <button class="meta-btn">
+                    <i class="fas fa-thumbs-up"></i>
+                    Helpful (28)
+                </button>
+                <button class="meta-btn">
+                    <i class="fas fa-reply"></i>
+                    Reply
+                </button>
+            </div>
+        </div>
+
+        <div class="review-card">
+            <div class="review-header">
+                <div class="reviewer-info">
+                    <div class="reviewer-avatar">👩</div>
+                    <div>
+                        <div class="reviewer-name">Maria Romano</div>
+                        <div class="review-date">2 weeks ago</div>
+                    </div>
+                </div>
+                <div class="review-rating">★★★★★</div>
+            </div>
+            <div class="review-text">
+                Amazing! Best service I've used in Italy. Everything was smooth from start to finish. The app is easy to use and very helpful.
+            </div>
+            <div class="review-meta">
+                <button class="meta-btn">
+                    <i class="fas fa-thumbs-up"></i>
+                    Helpful (67)
+                </button>
+                <button class="meta-btn">
+                    <i class="fas fa-reply"></i>
+                    Reply
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <button class="fab-button" onclick="alert('Write Review - Coming Soon!')">
+        <i class="fas fa-pen"></i>
+    </button>
+
+    <div class="bottom-nav">
+        <div class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </div>
+        <div class="nav-item active">
+            <i class="fas fa-star"></i>
+            <span>Reviews</span>
+        </div>
+        <div class="nav-item">
+            <i class="fas fa-bookmark"></i>
+            <span>Saved</span>
+        </div>
+        <div class="nav-item">
+            <i class="fas fa-user"></i>
+            <span>Profile</span>
+        </div>
+    </div>
+</body>
+                  </html>
