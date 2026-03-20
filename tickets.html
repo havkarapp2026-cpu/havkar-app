@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HAVKAR - Tickets</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #5c6bc0, #7986cb);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .header h1 {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 15px;
+        }
+
+        .icon-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+
+        .tabs {
+            background: white;
+            display: flex;
+            padding: 15px 20px;
+            gap: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: #f5f5f5;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            background: #5c6bc0;
+            color: white;
+        }
+
+        .search-section {
+            padding: 20px;
+            background: white;
+            margin-bottom: 10px;
+        }
+
+        .search-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .search-input {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 0.95rem;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #5c6bc0;
+        }
+
+        .search-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #5c6bc0, #7986cb);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .content {
+            padding: 0 20px 100px;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #333;
+            margin: 20px 0 15px;
+        }
+
+        .ticket-card {
+            background: white;
+            border-radius: 15px;
+            padding: 18px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .airline {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .airline-logo {
+            width: 45px;
+            height: 45px;
+            background: #f5f5f5;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .airline-name {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .price {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: #5c6bc0;
+        }
+
+        .route {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 12px;
+        }
+
+        .location {
+            flex: 1;
+        }
+
+        .city {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .time {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .route-icon {
+            color: #999;
+            font-size: 1.2rem;
+        }
+
+        .flight-info {
+            display: flex;
+            gap: 20px;
+            padding-top: 12px;
+            border-top: 1px solid #f0f0f0;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .info-item i {
+            color: #5c6bc0;
+        }
+
+        .book-btn {
+            width: 100%;
+            padding: 12px;
+            background: #5c6bc0;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 12px;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            color: #999;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        .nav-item.active {
+            color: #5c6bc0;
+        }
+
+        .nav-item i {
+            font-size: 1.3rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <button class="back-btn" onclick="window.location.href='index.html'">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h1>Tickets</h1>
+        </div>
+        <div class="header-right">
+            <button class="icon-btn"><i class="fas fa-bell"></i></button>
+            <button class="icon-btn"><i class="fas fa-user"></i></button>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab active">Flights</button>
+        <button class="tab">Trains</button>
+        <button class="tab">Buses</button>
+    </div>
+
+    <div class="search-section">
+        <div class="search-row">
+            <input type="text" class="search-input" placeholder="From: Rome" value="Rome">
+            <input type="text" class="search-input" placeholder="To: Milan" value="Milan">
+        </div>
+        <div class="search-row">
+            <input type="date" class="search-input" value="2026-03-25">
+            <input type="number" class="search-input" placeholder="Passengers" value="1">
+        </div>
+        <button class="search-btn">Search Flights</button>
+    </div>
+
+    <div class="content">
+        <div class="section-title">Available Flights</div>
+
+        <div class="ticket-card">
+            <div class="ticket-header">
+                <div class="airline">
+                    <div class="airline-logo">✈️</div>
+                    <div class="airline-name">Alitalia</div>
+                </div>
+                <div class="price">€89</div>
+            </div>
+            <div class="route">
+                <div class="location">
+                    <div class="city">Rome</div>
+                    <div class="time">08:30 AM</div>
+                </div>
+                <div class="route-icon">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+                <div class="location" style="text-align: right;">
+                    <div class="city">Milan</div>
+                    <div class="time">09:45 AM</div>
+                </div>
+            </div>
+            <div class="flight-info">
+                <div class="info-item">
+                    <i class="fas fa-clock"></i>
+                    1h 15m
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-plane"></i>
+                    Direct
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-suitcase"></i>
+                    1 Bag
+                </div>
+            </div>
+            <button class="book-btn">Book Now</button>
+        </div>
+
+        <div class="ticket-card">
+            <div class="ticket-header">
+                <div class="airline">
+                    <div class="airline-logo">✈️</div>
+                    <div class="airline-name">ITA Airways</div>
+                </div>
+                <div class="price">€75</div>
+            </div>
+            <div class="route">
+                <div class="location">
+                    <div class="city">Rome</div>
+                    <div class="time">11:00 AM</div>
+                </div>
+                <div class="route-icon">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+                <div class="location" style="text-align: right;">
+                    <div class="city">Milan</div>
+                    <div class="time">12:20 PM</div>
+                </div>
+            </div>
+            <div class="flight-info">
+                <div class="info-item">
+                    <i class="fas fa-clock"></i>
+                    1h 20m
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-plane"></i>
+                    Direct
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-suitcase"></i>
+                    1 Bag
+                </div>
+            </div>
+            <button class="book-btn">Book Now</button>
+        </div>
+
+        <div class="ticket-card">
+            <div class="ticket-header">
+                <div class="airline">
+                    <div class="airline-logo">✈️</div>
+                    <div class="airline-name">Ryanair</div>
+                </div>
+                <div class="price">€45</div>
+            </div>
+            <div class="route">
+                <div class="location">
+                    <div class="city">Rome</div>
+                    <div class="time">02:15 PM</div>
+                </div>
+                <div class="route-icon">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+                <div class="location" style="text-align: right;">
+                    <div class="city">Milan</div>
+                    <div class="time">03:30 PM</div>
+                </div>
+            </div>
+            <div class="flight-info">
+                <div class="info-item">
+                    <i class="fas fa-clock"></i>
+                    1h 15m
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-plane"></i>
+                    Direct
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-suitcase"></i>
+                    No Bag
+                </div>
+            </div>
+            <button class="book-btn">Book Now</button>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item active">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </div>
+        <div class="nav-item">
+            <i class="fas fa-search"></i>
+            <span>Search</span>
+        </div>
+        <div class="nav-item">
+            <i class="fas fa-ticket-alt"></i>
+            <span>My Tickets</span>
+        </div>
+        <div class="nav-item">
+            <i class="fas fa-bell"></i>
+            <span>Alerts</span>
+        </div>
+        <div class="nav-item">
+            <i class="fas fa-user"></i>
+            <span>Profile</span>
+        </div>
+    </div>
+</body>
+  </html>
