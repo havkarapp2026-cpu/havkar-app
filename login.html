@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <title>Login - HAVKAR</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <style>
 body {
   margin:0;
@@ -62,12 +60,22 @@ button {
 
 </div>
 
-<script id="login_script">
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword } 
+from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
 
-const supabaseClient = supabase.createClient(
-  "https://iompzwaxuirvatiibtrb.supabase.co",
-  "sb_publishable_oEKE1vl6EkWXdETgy9MjHw_DUTJLN4O"
-);
+const firebaseConfig = {
+  apiKey: "AIzaSyBZ8Ma5QiFPUvkIGCEevHMgNBtREY8z--I",
+  authDomain: "havkar-app.firebaseapp.com",
+  projectId: "havkar-app",
+  storageBucket: "havkar-app.firebasestorage.app",
+  messagingSenderId: "832126762661",
+  appId: "1:832126762661:web:3251321255fda6e28b174c"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 
 const form = document.getElementById("loginForm");
 
@@ -77,21 +85,18 @@ form.addEventListener("submit", async function(e) {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
-  const { data, error } = await supabaseClient.auth.signInWithPassword({
-    email: email,
-    password: password
-  });
-
-  if (error) {
-    alert("❌ " + error.message);
-  } else {
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
     alert("✅ Login success");
+
     setTimeout(() => {
-  window.location.href = "index.html";
-}, 1000);
+      window.location.href = "index.html";
+    }, 1000);
+
+  } catch (error) {
+    alert("❌ " + error.message);
   }
 });
-
 </script>
 
 </body>
