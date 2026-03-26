@@ -74,8 +74,7 @@ const firebaseConfig = {
   appId: "1:832126762661:web:3251321255fda6e28b174c"
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+
 
 const form = document.getElementById("loginForm");
 
@@ -86,8 +85,14 @@ form.addEventListener("submit", async function(e) {
   const password = document.getElementById("password").value;
 
   try {
-    await signInWithEmailAndPassword(auth, email, password);
-    alert("✅ Login success");
+const { data, error } = await supabase.auth.signInWithPassword({
+  email: email,
+  password: password,
+});
+
+if (error) {
+  throw error;
+  }
 
     setTimeout(() => {
       window.location.href = "index.html";
