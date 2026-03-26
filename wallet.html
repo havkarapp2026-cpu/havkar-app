@@ -419,9 +419,19 @@ const supabase = window.supabase.createClient(
 );
 
 async function loadWallets() {
+  const { data: { user } } = await supabase.auth.getUser();
+
   const { data, error } = await supabase
     .from('wallets')
-    .select('*');
+    .select('*')
+    .eq('user_id', user.id);
+
+  if (error) {
+    alert("ERROR: " + error.message);
+  } else {
+    document.body.innerHTML += "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+  }
+}
 
   if (error) {
     alert("ERROR: " + error.message);
