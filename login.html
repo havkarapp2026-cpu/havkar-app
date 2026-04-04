@@ -1,86 +1,44 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HAVKAR Login</title>
+  <title>Login</title>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <style>
-    body {
-      margin: 0;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: linear-gradient(135deg, #0f9d58, #34a853);
-      font-family: Arial;
-    }
-
-    .box {
-      background: white;
-      padding: 30px;
-      border-radius: 15px;
-      width: 300px;
-      text-align: center;
-    }
-
-    input {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-    }
-
-    button {
-      width: 100%;
-      padding: 12px;
-      background: #0f9d58;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-    }
-  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 </head>
 
 <body>
 
-<div class="box">
-  <h2>HAVKAR</h2>
+  <h2>Login</h2>
 
-  <input id="email" type="email" placeholder="Email">
-  <input id="password" type="password" placeholder="Password">
+  <input id="email" type="email" placeholder="Email"><br><br>
+  <input id="password" type="password" placeholder="Password"><br><br>
 
   <button onclick="login()">Login</button>
-</div>
 
-<script>
-const supabase = window.supabase.createClient(
-  "https://iompzwaxuirvatiibrtb.supabase.co",
-  "sb_publishable_oEKE1vl6EkWXdETgy9MjHw_DUTJLN40"
-);
+  <script>
+    const supabase = window.supabase.createClient(
+      "https://iompzwaxuirvatiibrtb.supabase.co",
+      "sb_publishable_oEKE1vl6EkWXdETgy9MjHw_DUTJLN40"
+    );
 
-async function login() {
-  alert("clicked");
+    async function login() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
 
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: email,
-    password: password
-  });
-
-  if (error) {
-    alert(error.message);
-  } else {
-    window.location.href = "index.html";
-  }
-}
-</script>
+      if (error) {
+        alert(error.message);
+      } else {
+        alert("success");
+        window.location.href = "index.html";
+      }
+    }
+  </script>
 
 </body>
 </html>
