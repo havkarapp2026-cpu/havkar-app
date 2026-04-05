@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HAVKAR</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2.39.7/dist/umd/supabase.js"></script>
 
 <style>
 body {
@@ -20,32 +20,32 @@ body {
 
 .box {
   background: #f3f4f6;
-  padding: 40px;
+  padding: 45px;
   border-radius: 25px;
-  width: 90%;
+  width: 92%;
   max-width: 420px;
   text-align: center;
 }
 
 h1 {
   color: #16a34a;
-  font-size: 32px;
+  font-size: 34px;
 }
 
 input {
   width: 100%;
-  padding: 16px;
-  margin: 12px 0;
-  border-radius: 12px;
+  padding: 18px;
+  margin: 14px 0;
+  border-radius: 14px;
   border: 1px solid #ccc;
   font-size: 18px;
 }
 
 button {
   width: 100%;
-  padding: 16px;
-  margin-top: 12px;
-  border-radius: 12px;
+  padding: 18px;
+  margin-top: 14px;
+  border-radius: 14px;
   border: none;
   font-size: 18px;
 }
@@ -75,7 +75,7 @@ button {
 </div>
 
 <script>
-const supabase = window.supabase.createClient(
+const supabaseClient = supabase.createClient(
   "https://gispovncijfgikvgpzck.supabase.co",
   "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq"
 );
@@ -84,15 +84,19 @@ async function signup() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
-  const { data, error } = await supabase.auth.signUp({
-    email: email,
-    password: password
-  });
+  try {
+    const { error } = await supabaseClient.auth.signUp({
+      email: email,
+      password: password
+    });
 
-  if (error) {
-    alert(error.message);
-  } else {
-    alert("Account created");
+    if (error) {
+      alert(error.message);
+    } else {
+      alert("Account created");
+    }
+  } catch (e) {
+    alert("Error");
   }
 }
 
@@ -100,15 +104,19 @@ async function login() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: email,
-    password: password
-  });
+  try {
+    const { error } = await supabaseClient.auth.signInWithPassword({
+      email: email,
+      password: password
+    });
 
-  if (error) {
-    alert(error.message);
-  } else {
-    alert("Login success");
+    if (error) {
+      alert(error.message);
+    } else {
+      alert("Login success");
+    }
+  } catch (e) {
+    alert("Error");
   }
 }
 </script>
