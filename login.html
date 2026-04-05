@@ -1,154 +1,39 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HAVKAR Login</title>
-
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: Arial, sans-serif;
-    }
-
-    body {
-      height: 100vh;
-      background: linear-gradient(135deg, #16a34a, #22c55e);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 400px;
-      padding: 20px;
-    }
-
-    .card {
-      background: #fff;
-      border-radius: 15px;
-      padding: 30px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-      text-align: center;
-    }
-
-    h1 {
-      margin-bottom: 20px;
-      color: #16a34a;
-    }
-
-    input {
-      width: 100%;
-      padding: 12px;
-      margin: 10px 0;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 14px;
-    }
-
-    button {
-      width: 100%;
-      padding: 12px;
-      margin-top: 10px;
-      border: none;
-      border-radius: 8px;
-      background: #16a34a;
-      color: white;
-      font-size: 16px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: #15803d;
-    }
-
-    .link {
-      margin-top: 15px;
-      font-size: 14px;
-    }
-
-    .link span {
-      color: #16a34a;
-      cursor: pointer;
-    }
-
-  </style>
-</head>
-
-<body>
-
-<div class="container">
-  <div class="card">
-    <h1>HAVKAR</h1>
-
-    <input id="email" type="email" placeholder="Email">
-    <input id="password" type="password" placeholder="Password">
-
-    <button onclick="login()">Login</button>
-    <button onclick="signup()">Create Account</button>
-
-    <div class="link">
-      <span onclick="forgot()">Forgot password?</span>
-    </div>
-  </div>
-</div>
-
 <script>
-  const supabase = window.supabase.createClient(
-    "https://gispovnciifgikvgpzck.supabase.co",
-    "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq"
-  );
+const supabase = window.supabase.createClient(
+  "https://gispovncijfgikvgpzck.supabase.co",
+  "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq"
+);
 
-  async function login() {
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
+async function login() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
 
-    if (error) {
-      alert(error.message);
-    } else {
-      alert("Login success");
-      window.location.href = "index.html";
-    }
+  if (error) {
+    alert(error.message);
+  } else {
+    alert("success");
+    window.location.href = "index.html";
   }
+}
 
-  async function signup() {
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
+async function signup() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password
-    });
+  const { error } = await supabase.auth.signUp({
+    email,
+    password
+  });
 
-    if (error) {
-      alert(error.message);
-    } else {
-      alert("Account created");
-    }
+  if (error) {
+    alert(error.message);
+  } else {
+    alert("Account created");
   }
-
-  async function forgot() {
-    const email = document.getElementById("email").value;
-
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
-
-    if (error) {
-      alert(error.message);
-    } else {
-      alert("Check your email");
-    }
-  }
+}
 </script>
-
-</body>
-</html>
