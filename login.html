@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HAVKAR</title>
 
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 body {
@@ -25,13 +25,11 @@ body {
   width: 90%;
   max-width: 420px;
   text-align: center;
-  box-shadow: 0 15px 30px rgba(0,0,0,0.2);
 }
 
 h1 {
   color: #16a34a;
   font-size: 32px;
-  margin-bottom: 25px;
 }
 
 input {
@@ -50,7 +48,6 @@ button {
   border-radius: 12px;
   border: none;
   font-size: 18px;
-  cursor: pointer;
 }
 
 .login {
@@ -61,12 +58,6 @@ button {
 .signup {
   background: #16a34a;
   color: white;
-}
-
-.forgot {
-  margin-top: 15px;
-  font-size: 14px;
-  color: #15803d;
 }
 </style>
 </head>
@@ -81,8 +72,6 @@ button {
 
   <button class="login" onclick="login()">Login</button>
   <button class="signup" onclick="signup()">Create Account</button>
-
-  <div class="forgot">Forgot password?</div>
 </div>
 
 <script>
@@ -95,9 +84,9 @@ async function signup() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
-  const { error } = await supabase.auth.signUp({
-    email,
-    password
+  const { data, error } = await supabase.auth.signUp({
+    email: email,
+    password: password
   });
 
   if (error) {
@@ -111,15 +100,15 @@ async function login() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email,
+    password: password
   });
 
   if (error) {
     alert(error.message);
   } else {
-    alert("Login successful");
+    alert("Login success");
   }
 }
 </script>
