@@ -4,7 +4,40 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HAVKAR</title>
 
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const supabase = createClient(
+  "https://gispovncijfgiikvgpzck.supabase.co",
+  "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq"
+);
+
+window.signup = async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  const { error } = await supabase.auth.signUp({
+    email,
+    password
+  });
+
+  if (error) alert(error.message);
+  else alert("Account created");
+};
+
+window.login = async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) alert(error.message);
+  else alert("Login success");
+};
+</script>
 
 <style>
 body {
@@ -64,39 +97,6 @@ button {
   <button onclick="signup()">Create Account</button>
   <button onclick="login()">Login</button>
 </div>
-
-<script>
-const supabase = window.supabase.createClient(
-  "https://gispovncijfgiikvgpzck.supabase.co",
-  "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq"
-);
-
-async function signup() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-
-  const { error } = await supabase.auth.signUp({
-    email,
-    password
-  });
-
-  if (error) alert(error.message);
-  else alert("Account created");
-}
-
-async function login() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password
-  });
-
-  if (error) alert(error.message);
-  else alert("Login success");
-}
-</script>
 
 </body>
 </html>
