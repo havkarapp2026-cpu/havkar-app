@@ -1,16 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HAVKAR</title>
 
-<script src="https://unpkg.com/@supabase/supabase-js@2.39.7/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <style>
 body {
   margin: 0;
-  background: #16a34a;
+  background: #1fa64b;
   font-family: Arial;
   display: flex;
   justify-content: center;
@@ -19,24 +18,24 @@ body {
 }
 
 .box {
-  background: #f3f4f6;
-  padding: 45px;
-  border-radius: 25px;
-  width: 92%;
-  max-width: 420px;
+  background: white;
+  padding: 40px;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 400px;
   text-align: center;
 }
 
 h1 {
-  color: #16a34a;
-  font-size: 34px;
+  color: #1fa64b;
+  font-size: 40px;
 }
 
 input {
   width: 100%;
   padding: 18px;
-  margin: 14px 0;
-  border-radius: 14px;
+  margin: 10px 0;
+  border-radius: 10px;
   border: 1px solid #ccc;
   font-size: 18px;
 }
@@ -44,21 +43,14 @@ input {
 button {
   width: 100%;
   padding: 18px;
-  margin-top: 14px;
-  border-radius: 14px;
+  margin-top: 10px;
   border: none;
+  border-radius: 10px;
   font-size: 18px;
-}
-
-.login {
-  background: #15803d;
+  background: #1fa64b;
   color: white;
 }
 
-.signup {
-  background: #16a34a;
-  color: white;
-}
 </style>
 </head>
 
@@ -70,13 +62,13 @@ button {
   <input id="email" type="email" placeholder="Email">
   <input id="password" type="password" placeholder="Password">
 
-  <button class="login" onclick="login()">Login</button>
-  <button class="signup" onclick="signup()">Create Account</button>
+  <button onclick="login()">Login</button>
+  <button onclick="signup()">Create Account</button>
 </div>
 
 <script>
-const supabaseClient = supabase.createClient(
-  "https://gispovncijfgikvgpzck.supabase.co",
+const supabase = window.supabase.createClient(
+  "https://gispovncijfgiikvgpzck.supabase.co",
   "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq"
 );
 
@@ -84,19 +76,15 @@ async function signup() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
-  try {
-    const { error } = await supabaseClient.auth.signUp({
-      email: email,
-      password: password
-    });
+  const { error } = await supabase.auth.signUp({
+    email: email,
+    password: password
+  });
 
-    if (error) {
-      alert(error.message);
-    } else {
-      alert("Account created");
-    }
-  } catch (e) {
-    alert("Error");
+  if (error) {
+    alert(error.message);
+  } else {
+    alert("Account created");
   }
 }
 
@@ -104,19 +92,15 @@ async function login() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
-  try {
-    const { error } = await supabaseClient.auth.signInWithPassword({
-      email: email,
-      password: password
-    });
+  const { error } = await supabase.auth.signInWithPassword({
+    email: email,
+    password: password
+  });
 
-    if (error) {
-      alert(error.message);
-    } else {
-      alert("Login success");
-    }
-  } catch (e) {
-    alert("Error");
+  if (error) {
+    alert(error.message);
+  } else {
+    alert("Login success");
   }
 }
 </script>
