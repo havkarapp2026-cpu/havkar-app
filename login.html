@@ -4,16 +4,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HAVKAR</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-<script>
-const supabase = window.supabase.createClient(
+const supabase = createClient(
   "https://gispovnciifgikvgpzck.supabase.co",
-  "sb_publishable_KD8yd063Xik2oMyjevWWYg_tJK2jEKq"
+  "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq"
 );
 
 window.signup = async () => {
-  const email = document.getElementById("email").value;
+  const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
 
   if (!email || !password) {
@@ -41,7 +41,7 @@ window.signup = async () => {
 };
 
 window.login = async () => {
-  const email = document.getElementById("email").value;
+  const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
 
   if (!email || !password) {
@@ -50,11 +50,10 @@ window.login = async () => {
   }
 
   try {
-    const { data, error } =
-      await supabase.auth.signInWithPassword({
-        email: email,
-        password: password
-      });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: password
+    });
 
     if (error) {
       alert(error.message);
@@ -88,6 +87,7 @@ body {
   width: 95%;
   max-width: 420px;
   text-align: center;
+  box-sizing: border-box;
 }
 
 h1 {
