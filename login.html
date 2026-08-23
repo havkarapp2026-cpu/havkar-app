@@ -4,38 +4,69 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HAVKAR</title>
 
-<script type="module">
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-const supabase = createClient(
-  "https://gispovncijfgiikvgpzck.supabase.co",
-  "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq"
+<script>
+const supabase = window.supabase.createClient(
+  "https://gispovnciifgikvgpzck.supabase.co",
+  "sb_publishable_KD8yd063Xik2oMyjevWWYg_tJK2jEKq"
 );
 
 window.signup = async () => {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
-  const { error } = await supabase.auth.signUp({
-    email,
-    password
-  });
+  if (!email || !password) {
+    alert("Please enter your email and password.");
+    return;
+  }
 
-  if (error) alert(error.message);
-  else alert("Account created");
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email: email,
+      password: password
+    });
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    if (data.user) {
+      alert("Account created successfully.");
+    }
+  } catch (error) {
+    alert("Connection error: " + error.message);
+  }
 };
 
 window.login = async () => {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password
-  });
+  if (!email || !password) {
+    alert("Please enter your email and password.");
+    return;
+  }
 
-  if (error) alert(error.message);
-  else window.location.href = "index.html";
+  try {
+    const { data, error } =
+      await supabase.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    if (data.user) {
+      window.location.href = "index.html";
+    }
+  } catch (error) {
+    alert("Connection error: " + error.message);
+  }
 };
 </script>
 
@@ -71,6 +102,7 @@ input {
   border-radius: 10px;
   border: 1px solid #ccc;
   font-size: 18px;
+  box-sizing: border-box;
 }
 
 button {
@@ -91,8 +123,17 @@ button {
 <div class="box">
   <h1>HAVKAR</h1>
 
-  <input id="email" type="email" placeholder="Email">
-  <input id="password" type="password" placeholder="Password">
+  <input
+    id="email"
+    type="email"
+    placeholder="Email"
+  >
+
+  <input
+    id="password"
+    type="password"
+    placeholder="Password"
+  >
 
   <button onclick="signup()">Create Account</button>
   <button onclick="login()">Login</button>
