@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>HAVKAR - Post New Ad</title>
 
   <style>
@@ -76,6 +77,7 @@
       border-radius: 10px;
       font-size: 16px;
       outline: none;
+      background: white;
     }
 
     input:focus,
@@ -87,6 +89,27 @@
     textarea {
       min-height: 130px;
       resize: vertical;
+    }
+
+    .photo-info {
+      font-size: 13px;
+      color: #777;
+      margin-top: 7px;
+    }
+
+    .photo-preview {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .photo-preview img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 2px solid #e0e0e0;
     }
 
     .publish-btn {
@@ -105,17 +128,30 @@
     .publish-btn:active {
       transform: scale(0.98);
     }
+
+    @media (max-width: 500px) {
+      .photo-preview {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
   </style>
 </head>
 
 <body>
 
   <div class="header">
-    <button class="back-btn" onclick="window.location.href='buy-sell.html'">←</button>
+    <button
+      class="back-btn"
+      onclick="window.location.href='buy-sell.html'"
+    >
+      ←
+    </button>
+
     <h1>Post New Ad</h1>
   </div>
 
   <div class="container">
+
     <div class="card">
 
       <h2>Create Your Ad</h2>
@@ -123,6 +159,7 @@
       <form onsubmit="publishAd(event)">
 
         <label>Title</label>
+
         <input
           type="text"
           id="title"
@@ -131,6 +168,7 @@
         >
 
         <label>Category</label>
+
         <select id="category" required>
           <option value="">Select category</option>
           <option>Electronics</option>
@@ -144,6 +182,7 @@
         </select>
 
         <label>Price</label>
+
         <input
           type="number"
           id="price"
@@ -154,6 +193,7 @@
         >
 
         <label>Location</label>
+
         <input
           type="text"
           id="location"
@@ -162,39 +202,164 @@
         >
 
         <label>Description</label>
+
         <textarea
           id="description"
           placeholder="Describe your item or service..."
           required
         ></textarea>
 
-        <button class="publish-btn" type="submit">
+        <label>Photos (up to 20)</label>
+
+        <input
+          type="file"
+          id="photos"
+          accept="image/*"
+          multiple
+        >
+
+        <div class="photo-info">
+          You can select up to 20 photos.
+        </div>
+
+        <div
+          id="photoPreview"
+          class="photo-preview"
+        ></div>
+
+        <button
+          class="publish-btn"
+          type="submit"
+        >
           Publish Ad
         </button>
 
       </form>
 
     </div>
+
   </div>
 
   <script>
-    function publishAd(event) {
+
+    const photoInput = document.getElementById("photos");
+    const photoPreview = document.getElementById("photoPreview");
+
+    photoInput.addEventListener("change", function () {
+
+      photoPreview.innerHTML = "";
+
+      const files = Array.from(this.files);
+
+      if (files.length > 20) {
+        alert("You can upload a maximum of 20 photos.");
+        this.value = "";
+        return;
+      }
+
+      files.forEach(function(file) {
+
+        if (!file.type.startsWith("image/")) {
+          return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+
+          const img = document.createElement("img");
+
+          img.src = e.target.result;
+
+          photoPreview.appendChild(img);
+        };
+
+        reader.readAsDataURL(file);
+      });
+
+    });
+
+
+    async function publishAd(event) {
+
       event.preventDefault();
 
+      const files = Array.from(photoInput.files);
+
+      if (files.length > 20) {
+        alert("You can upload a maximum of 20 photos.");
+        return;
+      }
+
+      const photos = [];
+
+      for (const file of files) {
+
+        const photoData = await readFile(file);
+
+        photos.push(photoData);
+      }
+
       const ad = {
+
         title: document.getElementById("title").value,
+
         category: document.getElementById("category").value,
+
         price: document.getElementById("price").value,
+
         location: document.getElementById("location").value,
-        description: document.getElementById("description").value
+
+        description: document.getElementById("description").value,
+
+        photos: photos,
+
+        createdAt: new Date().toISOString()
+
       };
 
-      localStorage.setItem("havkar_new_ad", JSON.stringify(ad));
+      try {
 
-      alert("Your ad has been created successfully!");
+        localStorage.setItem(
+          "havkar_new_ad",
+          JSON.stringify(ad)
+        );
 
-      window.location.href = "buy-sell.html";
+        alert("Your ad has been published successfully!");
+
+        window.location.href = "buy-sell.html";
+
+      } catch (error) {
+
+        alert(
+          "The photos are too large to save in the browser. Please choose smaller photos."
+        );
+
+      }
+
     }
+
+
+    function readFile(file) {
+
+      return new Promise(function(resolve, reject) {
+
+        const reader = new FileReader();
+
+        reader.onload = function() {
+          resolve(reader.result);
+        };
+
+        reader.onerror = function() {
+          reject(reader.error);
+        };
+
+        reader.readAsDataURL(file);
+
+      });
+
+    }
+
   </script>
 
 </body>
