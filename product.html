@@ -1,143 +1,560 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HAVKAR - Product Details</title>
 
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #f5f5f5;
-            min-height: 100vh;
-        }
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
 
-        .header {
-            background: linear-gradient(135deg, #2e7d32, #43a047);
-            color: white;
-            padding: 15px 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
+<title>HAVKAR - Product Details</title>
 
-        .back-btn {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            font-size: 22px;
-            cursor: pointer;
-        }
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-        .header h1 {
-            font-size: 1.3rem;
-        }
+<style>
 
-        .product {
-            margin: 20px;
-            background: white;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-        }
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-        .product-image {
-            height: 230px;
-            background: linear-gradient(135deg, #e0e0e0, #f5f5f5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 6rem;
-        }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                 Roboto, sans-serif;
+    background: #f5f5f5;
+    min-height: 100vh;
+}
 
-        .product-info {
-            padding: 20px;
-        }
+/* HEADER */
 
-        .product-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 10px;
-        }
+.header {
+    background: linear-gradient(135deg, #2e7d32, #43a047);
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
 
-        .product-price {
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: #2e7d32;
-            margin-bottom: 15px;
-        }
+.back-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    font-size: 22px;
+    cursor: pointer;
+}
 
-        .product-location {
-            color: #666;
-            margin-bottom: 20px;
-        }
+.header h1 {
+    font-size: 1.3rem;
+}
 
-        .description {
-            color: #555;
-            line-height: 1.6;
-            margin-bottom: 25px;
-        }
+/* STATUS */
 
-        .contact-btn {
-            width: 100%;
-            padding: 15px;
-            border: none;
-            border-radius: 10px;
-            background: linear-gradient(135deg, #2e7d32, #43a047);
-            color: white;
-            font-size: 1rem;
-            font-weight: 700;
-            cursor: pointer;
-        }
-    </style>
+.status {
+    margin: 30px 20px;
+    padding: 20px;
+    text-align: center;
+    color: #666;
+}
+
+.status.error {
+    color: #c62828;
+}
+
+/* PRODUCT */
+
+.product {
+    margin: 20px;
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.product-image {
+    width: 100%;
+    min-height: 260px;
+    background: linear-gradient(135deg, #e0e0e0, #f5f5f5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 6rem;
+    color: #999;
+}
+
+.product-image img {
+    width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+    display: block;
+}
+
+.product-info {
+    padding: 20px;
+}
+
+.product-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.product-price {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #2e7d32;
+    margin-bottom: 15px;
+}
+
+.product-location {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.product-category {
+    color: #888;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+}
+
+.description {
+    color: #555;
+    line-height: 1.6;
+    margin-bottom: 25px;
+    white-space: pre-wrap;
+}
+
+.contact-btn {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #2e7d32, #43a047);
+    color: white;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.contact-btn:active {
+    transform: scale(0.99);
+}
+
+</style>
+
 </head>
+
 
 <body>
 
-    <div class="header">
-        <button class="back-btn" onclick="history.back()">←</button>
-        <h1>Product Details</h1>
+
+<div class="header">
+
+    <button
+        class="back-btn"
+        type="button"
+        onclick="history.back()">
+
+        ←
+
+    </button>
+
+    <h1>Product Details</h1>
+
+</div>
+
+
+<div id="status"
+     class="status">
+
+    Loading product...
+
+</div>
+
+
+<div id="product"
+     class="product"
+     style="display:none;">
+
+    <div class="product-image"
+         id="productImage">
+
+        📦
+
     </div>
 
-    <div class="product">
 
-        <div class="product-image" id="productImage">📱</div>
+    <div class="product-info">
 
-        <div class="product-info">
-
-            <div class="product-title" id="productTitle">
-                iPhone 13 Pro Max
-            </div>
-
-            <div class="product-price" id="productPrice">
-                €850
-            </div>
-
-            <div class="product-location" id="productLocation">
-                📍 Milan, Italy
-            </div>
-
-            <div class="description" id="productDescription">
-                This product is available for sale on HAVKAR.
-            </div>
-
-            <button class="contact-btn"
-                onclick="alert('Contact seller - Coming Soon!')">
-                Contact Seller
-            </button>
+        <div class="product-title"
+             id="productTitle">
 
         </div>
+
+
+        <div class="product-price"
+             id="productPrice">
+
+        </div>
+
+
+        <div class="product-location"
+             id="productLocation">
+
+        </div>
+
+
+        <div class="product-category"
+             id="productCategory">
+
+        </div>
+
+
+        <div class="description"
+             id="productDescription">
+
+        </div>
+
+
+        <button
+            class="contact-btn"
+            type="button"
+            onclick="contactSeller()">
+
+            Contact Seller
+
+        </button>
+
     </div>
 
+</div>
+
+
+<script>
+
+/* =========================================================
+   SUPABASE CONFIGURATION
+   ========================================================= */
+
+const SUPABASE_URL =
+    "https://gispovnciifgikvgpzck.supabase.co";
+
+
+const SUPABASE_PUBLISHABLE_KEY =
+    "sb_publishable_h6RUZrukEovZn_N3XLDuk_wUi67UsWG";
+
+
+/* =========================================================
+   SUPABASE CLIENT
+   ========================================================= */
+
+const supabaseClient =
+    window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_PUBLISHABLE_KEY
+    );
+
+
+/* =========================================================
+   ELEMENTS
+   ========================================================= */
+
+const statusBox =
+    document.getElementById("status");
+
+const productBox =
+    document.getElementById("product");
+
+const productImage =
+    document.getElementById("productImage");
+
+const productTitle =
+    document.getElementById("productTitle");
+
+const productPrice =
+    document.getElementById("productPrice");
+
+const productLocation =
+    document.getElementById("productLocation");
+
+const productCategory =
+    document.getElementById("productCategory");
+
+const productDescription =
+    document.getElementById("productDescription");
+
+
+/* =========================================================
+   GET AD ID FROM URL
+   ========================================================= */
+
+const urlParams =
+    new URLSearchParams(window.location.search);
+
+const adId =
+    urlParams.get("id");
+
+
+/* =========================================================
+   FORMAT PRICE
+   ========================================================= */
+
+function formatPrice(price) {
+
+    if (
+        price === null ||
+        price === undefined ||
+        price === ""
+    ) {
+
+        return "Price not specified";
+
+    }
+
+    const number =
+        Number(price);
+
+    if (Number.isNaN(number)) {
+
+        return String(price);
+
+    }
+
+    return "€" +
+        number.toLocaleString(
+            "en-US",
+            {
+                maximumFractionDigits: 2
+            }
+        );
+
+}
+
+
+/* =========================================================
+   LOAD PRODUCT
+   ========================================================= */
+
+async function loadProduct() {
+
+    if (!adId) {
+
+        statusBox.textContent =
+            "Product ID is missing.";
+
+        statusBox.classList.add("error");
+
+        return;
+
+    }
+
+
+    statusBox.textContent =
+        "Loading product...";
+
+
+    try {
+
+        const result =
+            await supabaseClient
+                .from("ads")
+                .select("*")
+                .eq("id", adId)
+                .single();
+
+
+        if (result.error) {
+
+            throw result.error;
+
+        }
+
+
+        const ad =
+            result.data;
+
+
+        if (!ad) {
+
+            throw new Error(
+                "Product not found."
+            );
+
+        }
+
+
+        /* TITLE */
+
+        productTitle.textContent =
+            ad.title || "Untitled";
+
+
+        /* PRICE */
+
+        productPrice.textContent =
+            formatPrice(ad.price);
+
+
+        /* LOCATION */
+
+        productLocation.textContent =
+            "📍 " +
+            (ad.location || "Location not specified");
+
+
+        /* CATEGORY */
+
+        productCategory.textContent =
+            ad.category || "";
+
+
+        /* DESCRIPTION */
+
+        productDescription.textContent =
+            ad.description ||
+            "No description available.";
+
+
+        /* PHOTO */
+
+        let photo = null;
+
+
+        if (
+            Array.isArray(ad.photos) &&
+            ad.photos.length > 0
+        ) {
+
+            photo = ad.photos[0];
+
+        }
+
+
+        if (
+            typeof ad.photos === "string" &&
+            ad.photos.trim() !== ""
+        ) {
+
+            try {
+
+                const parsed =
+                    JSON.parse(ad.photos);
+
+                if (
+                    Array.isArray(parsed) &&
+                    parsed.length > 0
+                ) {
+
+                    photo = parsed[0];
+
+                }
+
+            } catch (e) {
+
+                photo = ad.photos;
+
+            }
+
+        }
+
+
+        if (photo) {
+
+            productImage.innerHTML = "";
+
+
+            const img =
+                document.createElement("img");
+
+
+            img.src = photo;
+
+
+            img.alt =
+                ad.title || "Product";
+
+
+            img.onerror =
+                function() {
+
+                    productImage.innerHTML =
+                        "📦";
+
+                };
+
+
+            productImage.appendChild(img);
+
+        }
+
+
+        /* SHOW PRODUCT */
+
+        statusBox.style.display =
+            "none";
+
+        productBox.style.display =
+            "block";
+
+
+        /* PAGE TITLE */
+
+        document.title =
+            "HAVKAR - " +
+            (ad.title || "Product Details");
+
+
+    } catch (error) {
+
+        console.error(
+            "Loading product error:",
+            error
+        );
+
+
+        statusBox.textContent =
+            "Could not load product: " +
+            error.message;
+
+
+        statusBox.classList.add(
+            "error"
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   CONTACT SELLER
+   ========================================================= */
+
+function contactSeller() {
+
+    alert(
+        "Contact seller - Coming Soon!"
+    );
+
+}
+
+
+/* =========================================================
+   START
+   ========================================================= */
+
+loadProduct();
+
+</script>
+
+
 </body>
+
 </html>
