@@ -1,142 +1,562 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HAVKAR</title>
+
+<title>HAVKAR - Login</title>
 
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+/* ================================
+   SUPABASE
+================================ */
+
+const SUPABASE_URL =
+  "https://gispovnciifgikvgpzck.supabase.co";
+
+const SUPABASE_KEY =
+  "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq";
+
 const supabase = createClient(
-  "https://gispovnciifgikvgpzck.supabase.co",
-  "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq"
+  SUPABASE_URL,
+  SUPABASE_KEY
 );
 
-window.signup = async () => {
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
+
+/* ================================
+   LOGIN
+================================ */
+
+window.login = async function () {
+
+  const email =
+    document.getElementById("email").value.trim();
+
+  const password =
+    document.getElementById("password").value;
+
 
   if (!email || !password) {
-    alert("Please enter your email and password.");
+    showMessage(
+      "Please enter your email and password.",
+      "error"
+    );
     return;
   }
 
+
+  const button =
+    document.getElementById("loginBtn");
+
+  button.disabled = true;
+
+  showMessage(
+    "Logging in...",
+    "success"
+  );
+
+
   try {
-    const { data, error } = await supabase.auth.signUp({
+
+    const {
+      data,
+      error
+    } = await supabase.auth.signInWithPassword({
       email: email,
       password: password
     });
 
+
     if (error) {
-      alert(error.message);
-      return;
+      throw error;
     }
 
-    if (data.user) {
-      alert("Account created successfully.");
+
+    if (data && data.user) {
+
+      showMessage(
+        "Login successful. Opening HAVKAR...",
+        "success"
+      );
+
+
+      setTimeout(function () {
+
+        window.location.href =
+          "index.html";
+
+      }, 500);
+
+    } else {
+
+      throw new Error(
+        "Login failed. Please try again."
+      );
+
     }
+
+
   } catch (error) {
-    alert("Connection error: " + error.message);
+
+    showMessage(
+      error.message,
+      "error"
+    );
+
+  } finally {
+
+    button.disabled = false;
+
   }
+
 };
 
-window.login = async () => {
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
+
+/* ================================
+   SIGN UP
+================================ */
+
+window.signup = async function () {
+
+  const email =
+    document.getElementById("email").value.trim();
+
+  const password =
+    document.getElementById("password").value;
+
 
   if (!email || !password) {
-    alert("Please enter your email and password.");
+
+    showMessage(
+      "Please enter your email and password.",
+      "error"
+    );
+
     return;
   }
 
+
+  if (password.length < 6) {
+
+    showMessage(
+      "Password must be at least 6 characters.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  const button =
+    document.getElementById("signupBtn");
+
+  button.disabled = true;
+
+
+  showMessage(
+    "Creating your account...",
+    "success"
+  );
+
+
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
+
+    const {
+      data,
+      error
+    } = await supabase.auth.signUp({
       email: email,
       password: password
     });
 
+
     if (error) {
-      alert(error.message);
-      return;
+      throw error;
     }
 
+
     if (data.user) {
-      window.location.href = "index.html";
+
+      if (
+        data.session
+      ) {
+
+        showMessage(
+          "Account created successfully.",
+          "success"
+        );
+
+
+        setTimeout(function () {
+
+          window.location.href =
+            "index.html";
+
+        }, 500);
+
+      } else {
+
+        showMessage(
+          "Account created. Please check your email to confirm your account.",
+          "success"
+        );
+
+      }
+
     }
+
+
   } catch (error) {
-    alert("Connection error: " + error.message);
+
+    showMessage(
+      error.message,
+      "error"
+    );
+
+  } finally {
+
+    button.disabled = false;
+
   }
+
 };
+
+
+/* ================================
+   MESSAGE
+================================ */
+
+function showMessage(message, type) {
+
+  const box =
+    document.getElementById("message");
+
+  box.textContent = message;
+
+  box.className =
+    "message " + type;
+
+}
+
+
+/* ================================
+   ENTER KEY
+================================ */
+
+window.handleKeyPress =
+  function (event) {
+
+    if (event.key === "Enter") {
+
+      window.login();
+
+    }
+
+  };
+
 </script>
 
+
 <style>
-body {
+
+* {
+  box-sizing: border-box;
   margin: 0;
-  background: #1fa64b;
-  font-family: Arial;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
+  padding: 0;
 }
+
+
+body {
+
+  font-family:
+    Arial,
+    sans-serif;
+
+  background:
+    linear-gradient(
+      135deg,
+      #1fa64b,
+      #7bcf91
+    );
+
+  min-height: 100vh;
+
+  display: flex;
+
+  justify-content: center;
+
+  align-items: center;
+
+  padding: 20px;
+
+}
+
 
 .box {
+
+  width: 100%;
+
+  max-width: 430px;
+
   background: white;
-  padding: 40px;
-  border-radius: 20px;
-  width: 95%;
-  max-width: 420px;
+
+  border-radius: 24px;
+
+  padding: 35px 25px;
+
   text-align: center;
-  box-sizing: border-box;
+
+  box-shadow:
+    0 10px 35px
+    rgba(0,0,0,0.18);
+
 }
+
+
+.logo {
+
+  width: 80px;
+
+  height: 80px;
+
+  margin: 0 auto 15px;
+
+  border-radius: 20px;
+
+  background:
+    #e8f5e9;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  font-size: 38px;
+
+}
+
 
 h1 {
-  color: #1fa64b;
-  font-size: 42px;
+
+  color: #1b7f38;
+
+  font-size: 38px;
+
+  margin-bottom: 8px;
+
+  letter-spacing: 2px;
+
 }
+
+
+.subtitle {
+
+  color: #777;
+
+  font-size: 15px;
+
+  margin-bottom: 28px;
+
+}
+
 
 input {
+
   width: 100%;
-  padding: 18px;
-  margin: 12px 0;
-  border-radius: 10px;
-  border: 1px solid #ccc;
-  font-size: 18px;
-  box-sizing: border-box;
+
+  padding: 16px;
+
+  margin-bottom: 14px;
+
+  border: 2px solid #e0e0e0;
+
+  border-radius: 12px;
+
+  font-size: 16px;
+
+  outline: none;
+
 }
 
-button {
-  width: 100%;
-  padding: 18px;
-  margin-top: 12px;
-  border: none;
-  border-radius: 10px;
-  font-size: 18px;
-  background: #1fa64b;
-  color: white;
+
+input:focus {
+
+  border-color: #1fa64b;
+
 }
+
+
+button {
+
+  width: 100%;
+
+  padding: 16px;
+
+  border: none;
+
+  border-radius: 12px;
+
+  font-size: 17px;
+
+  font-weight: bold;
+
+  cursor: pointer;
+
+  margin-top: 10px;
+
+}
+
+
+.login-btn {
+
+  background:
+    linear-gradient(
+      135deg,
+      #1fa64b,
+      #43a047
+    );
+
+  color: white;
+
+}
+
+
+.signup-btn {
+
+  background: #eeeeee;
+
+  color: #333;
+
+}
+
+
+button:disabled {
+
+  opacity: 0.6;
+
+  cursor: not-allowed;
+
+}
+
+
+.message {
+
+  display: none;
+
+  margin-top: 18px;
+
+  padding: 12px;
+
+  border-radius: 10px;
+
+  font-size: 14px;
+
+}
+
+
+.message.success {
+
+  display: block;
+
+  background: #e8f5e9;
+
+  color: #2e7d32;
+
+}
+
+
+.message.error {
+
+  display: block;
+
+  background: #ffebee;
+
+  color: #c62828;
+
+}
+
+
+.footer {
+
+  margin-top: 22px;
+
+  font-size: 13px;
+
+  color: #999;
+
+}
+
 </style>
+
 </head>
+
 
 <body>
 
 <div class="box">
+
+  <div class="logo">
+    🌿
+  </div>
+
   <h1>HAVKAR</h1>
+
+  <div class="subtitle">
+    Connect • Trade • Work • Help
+  </div>
+
 
   <input
     id="email"
     type="email"
     placeholder="Email"
+    autocomplete="email"
+    onkeypress="handleKeyPress(event)"
   >
+
 
   <input
     id="password"
     type="password"
     placeholder="Password"
+    autocomplete="current-password"
+    onkeypress="handleKeyPress(event)"
   >
 
-  <button onclick="signup()">Create Account</button>
-  <button onclick="login()">Login</button>
+
+  <button
+    id="loginBtn"
+    class="login-btn"
+    type="button"
+    onclick="login()"
+  >
+    Login
+  </button>
+
+
+  <button
+    id="signupBtn"
+    class="signup-btn"
+    type="button"
+    onclick="signup()"
+  >
+    Create New Account
+  </button>
+
+
+  <div
+    id="message"
+    class="message"
+  ></div>
+
+
+  <div class="footer">
+    HAVKAR • Safe • Secure 🔒
+  </div>
+
 </div>
 
 </body>
