@@ -93,6 +93,21 @@ textarea {
   resize: vertical;
 }
 
+.category-help {
+  margin-top: 7px;
+  font-size: 13px;
+  color: #777;
+}
+
+.custom-category {
+  display: none;
+  margin-top: 10px;
+}
+
+.custom-category.show {
+  display: block;
+}
+
 .photo-info {
   font-size: 13px;
   color: #777;
@@ -202,6 +217,7 @@ textarea {
 
 </div>
 
+
 <div class="container">
 
   <div class="card">
@@ -209,6 +225,8 @@ textarea {
     <h2>Create Your Ad</h2>
 
     <form id="adForm">
+
+      <!-- TITLE -->
 
       <label for="title">Title</label>
 
@@ -219,6 +237,9 @@ textarea {
         required
       >
 
+
+      <!-- CATEGORY -->
+
       <label for="category">Category</label>
 
       <select id="category" required>
@@ -226,18 +247,113 @@ textarea {
         <option value="">Select category</option>
 
         <option value="Electronics">Electronics</option>
+
         <option value="Furniture">Furniture</option>
+
         <option value="Vehicles">Vehicles</option>
+
         <option value="Real Estate">Real Estate</option>
+
         <option value="Clothing">Clothing</option>
+
         <option value="Books">Books</option>
+
         <option value="Services">Services</option>
+
         <option value="Jobs">Jobs</option>
+
         <option value="Housing">Housing</option>
+
         <option value="Food">Food</option>
-        <option value="Other">Other</option>
+
+        <option value="Restaurant Equipment">
+          Restaurant Equipment
+        </option>
+
+        <option value="Used Items">
+          Used Items
+        </option>
+
+        <option value="Home Appliances">
+          Home Appliances
+        </option>
+
+        <option value="Tools & Machinery">
+          Tools & Machinery
+        </option>
+
+        <option value="Computers">
+          Computers
+        </option>
+
+        <option value="Mobile Phones">
+          Mobile Phones
+        </option>
+
+        <option value="Motorcycles">
+          Motorcycles
+        </option>
+
+        <option value="Cars">
+          Cars
+        </option>
+
+        <option value="Trucks">
+          Trucks
+        </option>
+
+        <option value="Baby & Kids">
+          Baby & Kids
+        </option>
+
+        <option value="Sports">
+          Sports
+        </option>
+
+        <option value="Beauty & Personal Care">
+          Beauty & Personal Care
+        </option>
+
+        <option value="Construction & Industrial">
+          Construction & Industrial
+        </option>
+
+        <option value="Agricultural Equipment">
+          Agricultural Equipment
+        </option>
+
+        <option value="Other">
+          Other / Custom
+        </option>
 
       </select>
+
+
+      <div class="category-help">
+        Choose a category or enter your own category.
+      </div>
+
+
+      <!-- CUSTOM CATEGORY -->
+
+      <div
+        id="customCategoryBox"
+        class="custom-category">
+
+        <label for="customCategory">
+          Your Category
+        </label>
+
+        <input
+          type="text"
+          id="customCategory"
+          placeholder="Enter your own category"
+        >
+
+      </div>
+
+
+      <!-- PRICE -->
 
       <label for="price">Price</label>
 
@@ -250,6 +366,9 @@ textarea {
         required
       >
 
+
+      <!-- LOCATION -->
+
       <label for="location">Location</label>
 
       <input
@@ -259,6 +378,9 @@ textarea {
         required
       >
 
+
+      <!-- DESCRIPTION -->
+
       <label for="description">Description</label>
 
       <textarea
@@ -267,7 +389,12 @@ textarea {
         required
       ></textarea>
 
-      <label for="photos">Photos (up to 20)</label>
+
+      <!-- PHOTOS -->
+
+      <label for="photos">
+        Photos (up to 20)
+      </label>
 
       <input
         type="file"
@@ -280,17 +407,24 @@ textarea {
         You can select up to 20 photos.
       </div>
 
+
       <div
         id="photoPreview"
         class="photo-preview">
       </div>
 
+
+      <!-- PUBLISH -->
+
       <button
         class="publish-btn"
         id="publishBtn"
         type="submit">
+
         Publish Ad
+
       </button>
+
 
       <div
         id="status"
@@ -303,6 +437,7 @@ textarea {
 
 </div>
 
+
 <script>
 
 /* =========================================================
@@ -311,13 +446,6 @@ textarea {
 
 const SUPABASE_URL =
   "https://gispovnciifgikvgpzck.supabase.co";
-
-/*
-  IMPORTANT:
-  Put your Supabase PUBLISHABLE KEY here.
-
-  Do NOT put a Secret key here.
-*/
 
 const SUPABASE_PUBLISHABLE_KEY =
   "sb_publishable_h6RUZrukEovZn_N3XLDukw_Ui67UsWG";
@@ -341,6 +469,15 @@ const supabaseClient =
 const adForm =
   document.getElementById("adForm");
 
+const categoryInput =
+  document.getElementById("category");
+
+const customCategoryBox =
+  document.getElementById("customCategoryBox");
+
+const customCategoryInput =
+  document.getElementById("customCategory");
+
 const photoInput =
   document.getElementById("photos");
 
@@ -362,7 +499,35 @@ let selectedFiles = [];
 
 
 /* =========================================================
-   STATUS MESSAGE
+   CATEGORY
+   ========================================================= */
+
+categoryInput.addEventListener(
+  "change",
+  function () {
+
+    if (this.value === "Other") {
+
+      customCategoryBox.classList.add("show");
+
+      customCategoryInput.required = true;
+
+    } else {
+
+      customCategoryBox.classList.remove("show");
+
+      customCategoryInput.required = false;
+
+      customCategoryInput.value = "";
+
+    }
+
+  }
+);
+
+
+/* =========================================================
+   STATUS
    ========================================================= */
 
 function showStatus(message, type) {
@@ -379,120 +544,168 @@ function showStatus(message, type) {
    PHOTO INPUT
    ========================================================= */
 
-photoInput.addEventListener("change", function () {
+photoInput.addEventListener(
+  "change",
+  function () {
 
-  const newFiles =
-    Array.from(this.files);
+    const newFiles =
+      Array.from(this.files);
 
-  if (selectedFiles.length + newFiles.length > 20) {
+    if (
+      selectedFiles.length +
+      newFiles.length > 20
+    ) {
 
-    showStatus(
-      "You can upload a maximum of 20 photos.",
-      "error"
-    );
+      showStatus(
+        "You can upload a maximum of 20 photos.",
+        "error"
+      );
 
-    return;
-  }
+      this.value = "";
 
-  for (const file of newFiles) {
-
-    if (!file.type.startsWith("image/")) {
-      continue;
+      return;
     }
 
-    selectedFiles.push(file);
+
+    for (const file of newFiles) {
+
+      if (
+        file.type &&
+        file.type.startsWith("image/")
+      ) {
+
+        selectedFiles.push(file);
+
+      }
+
+    }
+
+
+    renderPhotos();
+
+    this.value = "";
+
   }
-
-  renderPhotos();
-
-  this.value = "";
-
-});
+);
 
 
 /* =========================================================
-   RENDER PHOTO PREVIEW
+   RENDER PHOTOS
    ========================================================= */
 
 function renderPhotos() {
 
   photoPreview.innerHTML = "";
 
-  selectedFiles.forEach(function (file, index) {
 
-    const box =
-      document.createElement("div");
+  selectedFiles.forEach(
+    function (file, index) {
 
-    box.className = "photo-box";
+      const box =
+        document.createElement("div");
 
-    const img =
-      document.createElement("img");
+      box.className =
+        "photo-box";
 
-    const removeBtn =
-      document.createElement("button");
 
-    removeBtn.type = "button";
+      const img =
+        document.createElement("img");
 
-    removeBtn.className =
-      "remove-photo";
 
-    removeBtn.textContent = "×";
+      const removeBtn =
+        document.createElement("button");
 
-    removeBtn.onclick = function () {
 
-      selectedFiles.splice(index, 1);
+      removeBtn.type =
+        "button";
 
-      renderPhotos();
 
-    };
+      removeBtn.className =
+        "remove-photo";
 
-    const reader =
-      new FileReader();
 
-    reader.onload = function (event) {
+      removeBtn.textContent =
+        "×";
 
-      img.src =
-        event.target.result;
 
-    };
+      removeBtn.onclick =
+        function () {
 
-    reader.readAsDataURL(file);
+          selectedFiles.splice(
+            index,
+            1
+          );
 
-    box.appendChild(img);
+          renderPhotos();
 
-    box.appendChild(removeBtn);
+        };
 
-    photoPreview.appendChild(box);
 
-  });
+      const reader =
+        new FileReader();
+
+
+      reader.onload =
+        function (event) {
+
+          img.src =
+            event.target.result;
+
+        };
+
+
+      reader.readAsDataURL(file);
+
+
+      box.appendChild(img);
+
+      box.appendChild(removeBtn);
+
+      photoPreview.appendChild(box);
+
+    }
+  );
 
 }
 
 
 /* =========================================================
-   CONVERT FILE TO BASE64
+   READ FILE
    ========================================================= */
 
 function readFile(file) {
 
-  return new Promise(function(resolve, reject) {
+  return new Promise(
+    function(resolve, reject) {
 
-    const reader =
-      new FileReader();
+      const reader =
+        new FileReader();
 
-    reader.onload =
-      function() {
-        resolve(reader.result);
-      };
 
-    reader.onerror =
-      function() {
-        reject(reader.error);
-      };
+      reader.onload =
+        function() {
 
-    reader.readAsDataURL(file);
+          resolve(
+            reader.result
+          );
 
-  });
+        };
+
+
+      reader.onerror =
+        function() {
+
+          reject(
+            reader.error
+          );
+
+        };
+
+
+      reader.readAsDataURL(file);
+
+    }
+  );
 
 }
 
@@ -501,152 +714,212 @@ function readFile(file) {
    PUBLISH AD
    ========================================================= */
 
-adForm.addEventListener("submit", async function(event) {
+adForm.addEventListener(
+  "submit",
+  async function(event) {
 
-  event.preventDefault();
-
-  showStatus(
-    "Publishing your ad...",
-    "success"
-  );
-
-  publishBtn.disabled = true;
-
-  try {
-
-    /* ---------------------------------------------
-       CHECK SUPABASE KEY
-       --------------------------------------------- */
-
-    if (
-      !SUPABASE_PUBLISHABLE_KEY ||
-      SUPABASE_PUBLISHABLE_KEY ===
-      "YOUR_PUBLISHABLE_KEY"
-    ) {
-
-      throw new Error(
-        "Supabase Publishable Key has not been added."
-      );
-
-    }
+    event.preventDefault();
 
 
-    /* ---------------------------------------------
-       READ PHOTOS
-       --------------------------------------------- */
+    publishBtn.disabled = true;
 
-    const photos = [];
-
-    for (const file of selectedFiles) {
-
-      const photoData =
-        await readFile(file);
-
-      photos.push(photoData);
-
-    }
-
-
-    /* ---------------------------------------------
-       CREATE AD DATA
-       --------------------------------------------- */
-
-    const ad = {
-
-      title:
-        document.getElementById("title").value.trim(),
-
-      category:
-        document.getElementById("category").value,
-
-      price:
-        Number(
-          document.getElementById("price").value
-        ),
-
-      location:
-        document.getElementById("location").value.trim(),
-
-      description:
-        document.getElementById("description").value.trim(),
-
-      photos:
-        photos
-
-    };
-
-
-    /* ---------------------------------------------
-       SAVE TO SUPABASE
-       --------------------------------------------- */
-
-    const { data, error } =
-      await supabaseClient
-        .from("ads")
-        .insert([ad])
-        .select();
-
-
-    if (error) {
-
-      console.error(error);
-
-      throw new Error(
-        error.message
-      );
-
-    }
-
-
-    /* ---------------------------------------------
-       SUCCESS
-       --------------------------------------------- */
 
     showStatus(
-      "Your ad has been published successfully!",
+      "Publishing your ad...",
       "success"
     );
 
 
-    adForm.reset();
+    try {
 
-    selectedFiles = [];
+      /* ---------------------------------------------
+         CHECK KEY
+         --------------------------------------------- */
 
-    renderPhotos();
+      if (
+        !SUPABASE_PUBLISHABLE_KEY ||
+        SUPABASE_PUBLISHABLE_KEY ===
+        "YOUR_PUBLISHABLE_KEY"
+      ) {
+
+        throw new Error(
+          "Supabase Publishable Key has not been added."
+        );
+
+      }
 
 
-    /* ---------------------------------------------
-       GO BACK AFTER SUCCESS
-       --------------------------------------------- */
+      /* ---------------------------------------------
+         GET CATEGORY
+         --------------------------------------------- */
 
-    setTimeout(function() {
-
-      window.location.href =
-        "buy-sell.html";
-
-    }, 1500);
+      let category =
+        categoryInput.value;
 
 
-  } catch (error) {
+      if (category === "Other") {
 
-    console.error(
-      "Publish error:",
-      error
-    );
+        category =
+          customCategoryInput.value.trim();
 
-    showStatus(
-      "Could not publish the ad: " +
-      error.message,
-      "error"
-    );
+        if (!category) {
 
-  } finally {
+          throw new Error(
+            "Please enter your category."
+          );
 
-    publishBtn.disabled = false;
+        }
+
+      }
+
+
+      /* ---------------------------------------------
+         READ PHOTOS
+         --------------------------------------------- */
+
+      const photos = [];
+
+
+      for (
+        const file of selectedFiles
+      ) {
+
+        const photoData =
+          await readFile(file);
+
+        photos.push(photoData);
+
+      }
+
+
+      /* ---------------------------------------------
+         CREATE AD
+         --------------------------------------------- */
+
+      const ad = {
+
+        title:
+          document
+            .getElementById("title")
+            .value
+            .trim(),
+
+        category:
+          category,
+
+        price:
+          Number(
+            document
+              .getElementById("price")
+              .value
+          ),
+
+        location:
+          document
+            .getElementById("location")
+            .value
+            .trim(),
+
+        description:
+          document
+            .getElementById("description")
+            .value
+            .trim(),
+
+        photos:
+          photos
+
+      };
+
+
+      /* ---------------------------------------------
+         SAVE TO SUPABASE
+         --------------------------------------------- */
+
+      const {
+        data,
+        error
+      } =
+        await supabaseClient
+          .from("ads")
+          .insert([ad])
+          .select();
+
+
+      if (error) {
+
+        console.error(error);
+
+        throw new Error(
+          error.message
+        );
+
+      }
+
+
+      /* ---------------------------------------------
+         SUCCESS
+         --------------------------------------------- */
+
+      showStatus(
+        "Your ad has been published successfully!",
+        "success"
+      );
+
+
+      adForm.reset();
+
+
+      selectedFiles = [];
+
+
+      renderPhotos();
+
+
+      customCategoryBox
+        .classList
+        .remove("show");
+
+
+      customCategoryInput.required =
+        false;
+
+
+      setTimeout(
+        function() {
+
+          window.location.href =
+            "buy-sell.html";
+
+        },
+        1500
+      );
+
+
+    } catch (error) {
+
+      console.error(
+        "Publish error:",
+        error
+      );
+
+
+      showStatus(
+        "Could not publish the ad: " +
+        error.message,
+        "error"
+      );
+
+
+    } finally {
+
+      publishBtn.disabled =
+        false;
+
+    }
 
   }
-
-});
+);
 
 </script>
 
