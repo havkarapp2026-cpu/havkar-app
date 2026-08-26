@@ -2,15 +2,18 @@
 <html lang="en">
 
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
 
 <title>HAVKAR - Buy & Sell</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
 
@@ -21,7 +24,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
                  Roboto, sans-serif;
     background: #f5f5f5;
     padding-bottom: 75px;
@@ -143,6 +146,11 @@ body {
     overflow: hidden;
     box-shadow: 0 2px 10px rgba(0,0,0,0.08);
     cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+.ad-card:active {
+    transform: scale(0.98);
 }
 
 .ad-image {
@@ -281,12 +289,16 @@ body {
     .ad-image {
         height: 135px;
     }
+
 }
 
 </style>
+
 </head>
 
+
 <body>
+
 
 <!-- HEADER -->
 
@@ -298,23 +310,34 @@ body {
             class="back-btn"
             type="button"
             onclick="window.location.href='index.html'">
+
             <i class="fas fa-arrow-left"></i>
+
         </button>
 
         <h1>Buy & Sell</h1>
 
     </div>
 
-    <div class="header-right">
 
-        <button class="icon-btn">
-            <i class="fas fa-bell"></i>
-        </button>
+    <div class="header-right">
 
         <button
             class="icon-btn"
+            type="button">
+
+            <i class="fas fa-bell"></i>
+
+        </button>
+
+
+        <button
+            class="icon-btn"
+            type="button"
             onclick="window.location.href='profile.html'">
+
             <i class="fas fa-user"></i>
+
         </button>
 
     </div>
@@ -339,32 +362,66 @@ body {
 
 <div class="filters">
 
-    <button class="filter-btn active" data-category="All">
+    <button
+        class="filter-btn active"
+        data-category="All">
+
         All
+
     </button>
 
-    <button class="filter-btn" data-category="Electronics">
+
+    <button
+        class="filter-btn"
+        data-category="Electronics">
+
         Electronics
+
     </button>
 
-    <button class="filter-btn" data-category="Furniture">
+
+    <button
+        class="filter-btn"
+        data-category="Furniture">
+
         Furniture
+
     </button>
 
-    <button class="filter-btn" data-category="Vehicles">
+
+    <button
+        class="filter-btn"
+        data-category="Vehicles">
+
         Vehicles
+
     </button>
 
-    <button class="filter-btn" data-category="Real Estate">
+
+    <button
+        class="filter-btn"
+        data-category="Real Estate">
+
         Real Estate
+
     </button>
 
-    <button class="filter-btn" data-category="Clothing">
+
+    <button
+        class="filter-btn"
+        data-category="Clothing">
+
         Clothing
+
     </button>
 
-    <button class="filter-btn" data-category="Books">
+
+    <button
+        class="filter-btn"
+        data-category="Books">
+
         Books
+
     </button>
 
 </div>
@@ -374,11 +431,20 @@ body {
 
 <div class="content">
 
-    <div id="status" class="status show">
+    <div
+        id="status"
+        class="status show">
+
         Loading ads...
+
     </div>
 
-    <div id="adsGrid" class="ads-grid"></div>
+
+    <div
+        id="adsGrid"
+        class="ads-grid">
+
+    </div>
 
 </div>
 
@@ -387,6 +453,7 @@ body {
 
 <button
     class="fab-button"
+    type="button"
     onclick="window.location.href='post-ad.html'">
 
     <i class="fas fa-plus"></i>
@@ -403,36 +470,49 @@ body {
         onclick="window.location.href='index.html'">
 
         <i class="fas fa-home"></i>
+
         <span>Home</span>
 
     </div>
 
-    <div class="nav-item">
+
+    <div
+        class="nav-item"
+        onclick="document.getElementById('searchInput').focus()">
 
         <i class="fas fa-search"></i>
+
         <span>Search</span>
 
     </div>
 
-    <div class="nav-item">
+
+    <div
+        class="nav-item">
 
         <i class="fas fa-heart"></i>
+
         <span>Saved</span>
 
     </div>
 
-    <div class="nav-item">
+
+    <div
+        class="nav-item">
 
         <i class="fas fa-comment"></i>
+
         <span>Messages</span>
 
     </div>
+
 
     <div
         class="nav-item"
         onclick="window.location.href='profile.html'">
 
         <i class="fas fa-user"></i>
+
         <span>Profile</span>
 
     </div>
@@ -442,12 +522,14 @@ body {
 
 <script>
 
+
 /* =========================================================
    SUPABASE CONFIGURATION
    ========================================================= */
 
 const SUPABASE_URL =
     "https://gispovnciifgikvgpzck.supabase.co";
+
 
 const SUPABASE_PUBLISHABLE_KEY =
     "sb_publishable_h6RUZrukEovZn_N3XLDukw_Ui67UsWG";
@@ -471,11 +553,14 @@ const supabaseClient =
 const adsGrid =
     document.getElementById("adsGrid");
 
+
 const statusBox =
     document.getElementById("status");
 
+
 const searchInput =
     document.getElementById("searchInput");
+
 
 const filterButtons =
     document.querySelectorAll(".filter-btn");
@@ -496,8 +581,13 @@ let currentCategory = "All";
 
 function escapeHtml(value) {
 
-    if (value === null || value === undefined) {
+    if (
+        value === null ||
+        value === undefined
+    ) {
+
         return "";
+
     }
 
     return String(value)
@@ -506,6 +596,7 @@ function escapeHtml(value) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+
 }
 
 
@@ -515,20 +606,34 @@ function escapeHtml(value) {
 
 function formatPrice(price) {
 
-    if (price === null || price === undefined || price === "") {
+    if (
+        price === null ||
+        price === undefined ||
+        price === ""
+    ) {
+
         return "Price not specified";
+
     }
 
-    const number =
-        Number(price);
+
+    const number = Number(price);
+
 
     if (Number.isNaN(number)) {
+
         return escapeHtml(price);
+
     }
 
-    return "€" + number.toLocaleString("en-US", {
-        maximumFractionDigits: 2
-    });
+
+    return "€" + number.toLocaleString(
+        "en-US",
+        {
+            maximumFractionDigits: 2
+        }
+    );
+
 }
 
 
@@ -545,9 +650,37 @@ function getPhoto(ad) {
     ) {
 
         return ad.photos[0];
+
     }
 
     return null;
+
+}
+
+
+/* =========================================================
+   OPEN PRODUCT
+   ========================================================= */
+
+function openProduct(adId) {
+
+    if (
+        adId === null ||
+        adId === undefined ||
+        adId === ""
+    ) {
+
+        console.error("Ad ID is missing.");
+
+        return;
+
+    }
+
+
+    window.location.href =
+        "product.html?id=" +
+        encodeURIComponent(adId);
+
 }
 
 
@@ -559,7 +692,11 @@ function renderAds(ads) {
 
     adsGrid.innerHTML = "";
 
-    if (!ads || ads.length === 0) {
+
+    if (
+        !ads ||
+        ads.length === 0
+    ) {
 
         statusBox.textContent =
             "No ads found.";
@@ -568,7 +705,9 @@ function renderAds(ads) {
             "status show";
 
         return;
+
     }
+
 
     statusBox.className =
         "status";
@@ -576,11 +715,27 @@ function renderAds(ads) {
 
     ads.forEach(function(ad) {
 
+
         const card =
             document.createElement("div");
 
+
         card.className =
             "ad-card";
+
+
+        /*
+         * CLICKING THE CARD OPENS THE AD
+         */
+
+        card.addEventListener(
+            "click",
+            function() {
+
+                openProduct(ad.id);
+
+            }
+        );
 
 
         const image =
@@ -596,16 +751,20 @@ function renderAds(ads) {
             imageHtml =
                 `
                 <div class="ad-image">
+
                     <img
-                        src="${image}"
-                        alt="${escapeHtml(ad.title)}">
+                        alt="${escapeHtml(ad.title)}"
+                        loading="lazy">
+
                 </div>
                 `;
+
         }
 
 
         card.innerHTML =
             `
+
             ${imageHtml}
 
             <div class="ad-info">
@@ -633,7 +792,28 @@ function renderAds(ads) {
                 </div>
 
             </div>
+
             `;
+
+
+        /*
+         * SET IMAGE URL DIRECTLY
+         * SO SPECIAL CHARACTERS IN URL
+         * DO NOT BREAK THE IMAGE
+         */
+
+        if (image) {
+
+            const img =
+                card.querySelector("img");
+
+            if (img) {
+
+                img.src = image;
+
+            }
+
+        }
 
 
         adsGrid.appendChild(card);
@@ -658,18 +838,23 @@ async function loadAds() {
 
     try {
 
+
         const result =
             await supabaseClient
                 .from("ads")
                 .select("*")
-                .order("created_at", {
-                    ascending: false
-                });
+                .order(
+                    "created_at",
+                    {
+                        ascending: false
+                    }
+                );
 
 
         if (result.error) {
 
             throw result.error;
+
         }
 
 
@@ -678,6 +863,7 @@ async function loadAds() {
 
 
         applyFilters();
+
 
     }
 
@@ -692,6 +878,7 @@ async function loadAds() {
         statusBox.textContent =
             "Could not load ads: " +
             error.message;
+
 
         statusBox.className =
             "status show error";
@@ -714,36 +901,39 @@ function applyFilters() {
 
 
     const filtered =
-        allAds.filter(function(ad) {
-
-            const categoryMatch =
-                currentCategory === "All" ||
-                ad.category === currentCategory;
+        allAds.filter(
+            function(ad) {
 
 
-            const searchableText =
-                (
-                    (ad.title || "") +
-                    " " +
-                    (ad.description || "") +
-                    " " +
-                    (ad.location || "") +
-                    " " +
-                    (ad.category || "")
-                ).toLowerCase();
+                const categoryMatch =
+                    currentCategory === "All" ||
+                    ad.category === currentCategory;
 
 
-            const searchMatch =
-                !search ||
-                searchableText.includes(search);
+                const searchableText =
+                    (
+                        (ad.title || "") +
+                        " " +
+                        (ad.description || "") +
+                        " " +
+                        (ad.location || "") +
+                        " " +
+                        (ad.category || "")
+                    ).toLowerCase();
 
 
-            return (
-                categoryMatch &&
-                searchMatch
-            );
+                const searchMatch =
+                    !search ||
+                    searchableText.includes(search);
 
-        });
+
+                return (
+                    categoryMatch &&
+                    searchMatch
+                );
+
+            }
+        );
 
 
     renderAds(filtered);
@@ -775,6 +965,7 @@ filterButtons.forEach(
         button.addEventListener(
             "click",
             function() {
+
 
                 filterButtons.forEach(
                     function(btn) {
@@ -811,7 +1002,9 @@ filterButtons.forEach(
 
 loadAds();
 
+
 </script>
 
 </body>
+
 </html>
