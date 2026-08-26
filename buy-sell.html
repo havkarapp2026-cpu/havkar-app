@@ -24,8 +24,8 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-                 Roboto, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont,
+                 "Segoe UI", Roboto, sans-serif;
     background: #f5f5f5;
     padding-bottom: 75px;
 }
@@ -87,7 +87,7 @@ body {
 
 .search-input {
     width: 100%;
-    padding: 12px 15px;
+    padding: 13px 16px;
     border: 2px solid #e0e0e0;
     border-radius: 25px;
     font-size: 1rem;
@@ -107,13 +107,18 @@ body {
     gap: 10px;
     overflow-x: auto;
     border-bottom: 1px solid #e0e0e0;
+    scrollbar-width: none;
+}
+
+.filters::-webkit-scrollbar {
+    display: none;
 }
 
 .filter-btn {
-    padding: 8px 16px;
+    padding: 9px 17px;
     border: 2px solid #e0e0e0;
     background: white;
-    border-radius: 20px;
+    border-radius: 22px;
     font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
@@ -296,9 +301,7 @@ body {
 
 </head>
 
-
 <body>
-
 
 <!-- HEADER -->
 
@@ -319,7 +322,6 @@ body {
 
     </div>
 
-
     <div class="header-right">
 
         <button
@@ -329,7 +331,6 @@ body {
             <i class="fas fa-bell"></i>
 
         </button>
-
 
         <button
             class="icon-btn"
@@ -358,71 +359,11 @@ body {
 </div>
 
 
-<!-- FILTERS -->
+<!-- CATEGORY FILTERS -->
 
-<div class="filters">
-
-    <button
-        class="filter-btn active"
-        data-category="All">
-
-        All
-
-    </button>
-
-
-    <button
-        class="filter-btn"
-        data-category="Electronics">
-
-        Electronics
-
-    </button>
-
-
-    <button
-        class="filter-btn"
-        data-category="Furniture">
-
-        Furniture
-
-    </button>
-
-
-    <button
-        class="filter-btn"
-        data-category="Vehicles">
-
-        Vehicles
-
-    </button>
-
-
-    <button
-        class="filter-btn"
-        data-category="Real Estate">
-
-        Real Estate
-
-    </button>
-
-
-    <button
-        class="filter-btn"
-        data-category="Clothing">
-
-        Clothing
-
-    </button>
-
-
-    <button
-        class="filter-btn"
-        data-category="Books">
-
-        Books
-
-    </button>
+<div
+    class="filters"
+    id="filters">
 
 </div>
 
@@ -438,7 +379,6 @@ body {
         Loading ads...
 
     </div>
-
 
     <div
         id="adsGrid"
@@ -470,49 +410,38 @@ body {
         onclick="window.location.href='index.html'">
 
         <i class="fas fa-home"></i>
-
         <span>Home</span>
 
     </div>
-
 
     <div
         class="nav-item"
         onclick="document.getElementById('searchInput').focus()">
 
         <i class="fas fa-search"></i>
-
         <span>Search</span>
 
     </div>
 
-
-    <div
-        class="nav-item">
+    <div class="nav-item">
 
         <i class="fas fa-heart"></i>
-
         <span>Saved</span>
 
     </div>
 
-
-    <div
-        class="nav-item">
+    <div class="nav-item">
 
         <i class="fas fa-comment"></i>
-
         <span>Messages</span>
 
     </div>
-
 
     <div
         class="nav-item"
         onclick="window.location.href='profile.html'">
 
         <i class="fas fa-user"></i>
-
         <span>Profile</span>
 
     </div>
@@ -522,22 +451,15 @@ body {
 
 <script>
 
-
 /* =========================================================
-   SUPABASE CONFIGURATION
+   SUPABASE
    ========================================================= */
 
 const SUPABASE_URL =
     "https://gispovnciifgikvgpzck.supabase.co";
 
-
 const SUPABASE_PUBLISHABLE_KEY =
     "sb_publishable_h6RUZrukEovZn_N3XLDukw_Ui67UsWG";
-
-
-/* =========================================================
-   SUPABASE CLIENT
-   ========================================================= */
 
 const supabaseClient =
     window.supabase.createClient(
@@ -547,23 +469,73 @@ const supabaseClient =
 
 
 /* =========================================================
+   CATEGORIES
+   ========================================================= */
+
+const CATEGORIES = [
+
+    "All",
+
+    "Electronics",
+    "Phones & Tablets",
+    "Computers",
+    "TV & Audio",
+    "Appliances",
+
+    "Furniture",
+    "Home & Garden",
+    "Kitchen",
+
+    "Restaurant Equipment",
+    "Food & Catering",
+    "Tools & Machinery",
+
+    "Vehicles",
+    "Cars",
+    "Motorcycles",
+    "Trucks & Commercial Vehicles",
+    "Bicycles",
+
+    "Real Estate",
+    "Jobs & Services",
+
+    "Clothing",
+    "Shoes & Accessories",
+
+    "Books",
+    "Baby & Kids",
+
+    "Sports & Fitness",
+    "Beauty & Health",
+
+    "Pets & Animals",
+    "Agriculture",
+
+    "Business & Commercial",
+
+    "Second Hand",
+    "Free Items",
+
+    "Other"
+
+];
+
+
+/* =========================================================
    ELEMENTS
    ========================================================= */
 
 const adsGrid =
     document.getElementById("adsGrid");
 
-
 const statusBox =
     document.getElementById("status");
-
 
 const searchInput =
     document.getElementById("searchInput");
 
-
-const filterButtons =
-    document.querySelectorAll(".filter-btn");
+const filtersContainer =
+    document.getElementById("filters");
 
 
 /* =========================================================
@@ -573,6 +545,71 @@ const filterButtons =
 let allAds = [];
 
 let currentCategory = "All";
+
+
+/* =========================================================
+   CREATE CATEGORY BUTTONS
+   ========================================================= */
+
+function createCategoryButtons() {
+
+    filtersContainer.innerHTML = "";
+
+    CATEGORIES.forEach(function(category) {
+
+        const button =
+            document.createElement("button");
+
+        button.type = "button";
+
+        button.className =
+            "filter-btn";
+
+        if (category === "All") {
+
+            button.classList.add("active");
+
+        }
+
+        button.dataset.category =
+            category;
+
+        button.textContent =
+            category;
+
+        button.addEventListener(
+            "click",
+            function() {
+
+                document
+                    .querySelectorAll(".filter-btn")
+                    .forEach(function(btn) {
+
+                        btn.classList.remove(
+                            "active"
+                        );
+
+                    });
+
+                button.classList.add(
+                    "active"
+                );
+
+                currentCategory =
+                    category;
+
+                applyFilters();
+
+            }
+        );
+
+        filtersContainer.appendChild(
+            button
+        );
+
+    });
+
+}
 
 
 /* =========================================================
@@ -591,6 +628,7 @@ function escapeHtml(value) {
     }
 
     return String(value)
+
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
@@ -616,9 +654,8 @@ function formatPrice(price) {
 
     }
 
-
-    const number = Number(price);
-
+    const number =
+        Number(price);
 
     if (Number.isNaN(number)) {
 
@@ -626,13 +663,13 @@ function formatPrice(price) {
 
     }
 
-
-    return "€" + number.toLocaleString(
-        "en-US",
-        {
-            maximumFractionDigits: 2
-        }
-    );
+    return "€" +
+        number.toLocaleString(
+            "en-US",
+            {
+                maximumFractionDigits: 2
+            }
+        );
 
 }
 
@@ -670,12 +707,13 @@ function openProduct(adId) {
         adId === ""
     ) {
 
-        console.error("Ad ID is missing.");
+        console.error(
+            "Ad ID is missing."
+        );
 
         return;
 
     }
-
 
     window.location.href =
         "product.html?id=" +
@@ -692,7 +730,6 @@ function renderAds(ads) {
 
     adsGrid.innerHTML = "";
 
-
     if (
         !ads ||
         ads.length === 0
@@ -708,25 +745,18 @@ function renderAds(ads) {
 
     }
 
-
     statusBox.className =
         "status";
 
 
     ads.forEach(function(ad) {
 
-
         const card =
             document.createElement("div");
-
 
         card.className =
             "ad-card";
 
-
-        /*
-         * CLICKING THE CARD OPENS THE AD
-         */
 
         card.addEventListener(
             "click",
@@ -748,8 +778,8 @@ function renderAds(ads) {
 
         if (image) {
 
-            imageHtml =
-                `
+            imageHtml = `
+
                 <div class="ad-image">
 
                     <img
@@ -757,24 +787,28 @@ function renderAds(ads) {
                         loading="lazy">
 
                 </div>
-                `;
+
+            `;
 
         }
 
 
-        card.innerHTML =
-            `
+        card.innerHTML = `
 
             ${imageHtml}
 
             <div class="ad-info">
 
                 <div class="ad-title">
+
                     ${escapeHtml(ad.title)}
+
                 </div>
 
                 <div class="ad-price">
+
                     ${formatPrice(ad.price)}
+
                 </div>
 
                 <div class="ad-location">
@@ -793,14 +827,8 @@ function renderAds(ads) {
 
             </div>
 
-            `;
+        `;
 
-
-        /*
-         * SET IMAGE URL DIRECTLY
-         * SO SPECIAL CHARACTERS IN URL
-         * DO NOT BREAK THE IMAGE
-         */
 
         if (image) {
 
@@ -824,7 +852,7 @@ function renderAds(ads) {
 
 
 /* =========================================================
-   LOAD ADS FROM SUPABASE
+   LOAD ADS
    ========================================================= */
 
 async function loadAds() {
@@ -838,11 +866,13 @@ async function loadAds() {
 
     try {
 
-
         const result =
             await supabaseClient
+
                 .from("ads")
+
                 .select("*")
+
                 .order(
                     "created_at",
                     {
@@ -864,7 +894,6 @@ async function loadAds() {
 
         applyFilters();
 
-
     }
 
     catch (error) {
@@ -874,11 +903,9 @@ async function loadAds() {
             error
         );
 
-
         statusBox.textContent =
             "Could not load ads: " +
             error.message;
-
 
         statusBox.className =
             "status show error";
@@ -889,7 +916,7 @@ async function loadAds() {
 
 
 /* =========================================================
-   FILTER ADS
+   FILTER
    ========================================================= */
 
 function applyFilters() {
@@ -904,13 +931,16 @@ function applyFilters() {
         allAds.filter(
             function(ad) {
 
-
                 const categoryMatch =
+
                     currentCategory === "All" ||
-                    ad.category === currentCategory;
+
+                    ad.category ===
+                        currentCategory;
 
 
                 const searchableText =
+
                     (
                         (ad.title || "") +
                         " " +
@@ -919,12 +949,17 @@ function applyFilters() {
                         (ad.location || "") +
                         " " +
                         (ad.category || "")
-                    ).toLowerCase();
+                    )
+                    .toLowerCase();
 
 
                 const searchMatch =
+
                     !search ||
-                    searchableText.includes(search);
+
+                    searchableText.includes(
+                        search
+                    );
 
 
                 return (
@@ -956,52 +991,12 @@ searchInput.addEventListener(
 
 
 /* =========================================================
-   CATEGORY FILTER
-   ========================================================= */
-
-filterButtons.forEach(
-    function(button) {
-
-        button.addEventListener(
-            "click",
-            function() {
-
-
-                filterButtons.forEach(
-                    function(btn) {
-
-                        btn.classList.remove(
-                            "active"
-                        );
-
-                    }
-                );
-
-
-                button.classList.add(
-                    "active"
-                );
-
-
-                currentCategory =
-                    button.dataset.category;
-
-
-                applyFilters();
-
-            }
-        );
-
-    }
-);
-
-
-/* =========================================================
    START
    ========================================================= */
 
-loadAds();
+createCategoryButtons();
 
+loadAds();
 
 </script>
 
