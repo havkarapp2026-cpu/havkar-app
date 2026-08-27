@@ -61,6 +61,10 @@ body {
     justify-content: center;
 }
 
+.back-btn:active {
+    transform: scale(0.95);
+}
+
 .header h1 {
     font-size: 1.3rem;
     font-weight: 700;
@@ -92,7 +96,11 @@ body {
     width: 100%;
     min-height: 280px;
 
-    background: linear-gradient(135deg, #e0e0e0, #f5f5f5);
+    background: linear-gradient(
+        135deg,
+        #e0e0e0,
+        #f5f5f5
+    );
 
     display: flex;
     align-items: center;
@@ -150,9 +158,7 @@ body {
     color: #555;
     line-height: 1.65;
     font-size: 0.95rem;
-
     white-space: pre-wrap;
-
     margin-bottom: 25px;
 }
 
@@ -164,7 +170,11 @@ body {
     border: none;
     border-radius: 10px;
 
-    background: linear-gradient(135deg, #2e7d32, #43a047);
+    background: linear-gradient(
+        135deg,
+        #2e7d32,
+        #43a047
+    );
 
     color: white;
 
@@ -172,6 +182,10 @@ body {
     font-weight: 700;
 
     cursor: pointer;
+}
+
+.contact-btn:active {
+    transform: scale(0.99);
 }
 
 .contact-btn:disabled {
@@ -279,7 +293,9 @@ body {
 
 
         <div class="description-title">
+
             Description
+
         </div>
 
 
@@ -315,14 +331,14 @@ const SUPABASE_URL =
     "https://gispovnciifgikvgpzck.supabase.co";
 
 
-const SUPABASE_KEY =
-    "sb_publishable_KD8yd063Xik2oMyjevWVYg_tJK2jEKq";
+const SUPABASE_PUBLISHABLE_KEY =
+    "sb_publishable_h6RUZrukEovZn_N3XLDukw_Ui67UsWG";
 
 
 const supabaseClient =
     window.supabase.createClient(
         SUPABASE_URL,
-        SUPABASE_KEY
+        SUPABASE_PUBLISHABLE_KEY
     );
 
 
@@ -352,10 +368,14 @@ const productCategory =
     document.getElementById("productCategory");
 
 const productDescription =
-    document.getElementById("productDescription");
+    document.getElementById(
+        "productDescription"
+    );
 
 const contactButton =
-    document.getElementById("contactButton");
+    document.getElementById(
+        "contactButton"
+    );
 
 
 /* =========================================================
@@ -380,7 +400,21 @@ let currentAd = null;
 
 function goBack() {
 
-    window.history.back();
+    if (
+        document.referrer &&
+        document.referrer.includes(
+            window.location.hostname
+        )
+    ) {
+
+        window.history.back();
+
+    } else {
+
+        window.location.href =
+            "buy-sell.html";
+
+    }
 
 }
 
@@ -625,6 +659,7 @@ async function loadProduct() {
                 "Product Details"
             );
 
+
     }
     catch (error) {
 
@@ -673,7 +708,9 @@ async function contactSeller() {
     try {
 
 
-        /* GET USER */
+        /* -------------------------------------------------
+           CURRENT USER
+        ------------------------------------------------- */
 
         const {
             data: userData,
@@ -706,7 +743,9 @@ async function contactSeller() {
         }
 
 
-        /* SELLER */
+        /* -------------------------------------------------
+           SELLER ID
+        ------------------------------------------------- */
 
         const sellerId =
             currentAd.user_id;
@@ -715,13 +754,15 @@ async function contactSeller() {
         if (!sellerId) {
 
             throw new Error(
-                "Seller information is missing."
+                "Seller information is missing from this advertisement."
             );
 
         }
 
 
-        /* OWN AD */
+        /* -------------------------------------------------
+           OWN AD
+        ------------------------------------------------- */
 
         if (
             user.id === sellerId
@@ -740,7 +781,9 @@ async function contactSeller() {
             "Opening conversation...";
 
 
-        /* FIND EXISTING CONVERSATION */
+        /* -------------------------------------------------
+           FIND CONVERSATION
+        ------------------------------------------------- */
 
         const existing =
             await supabaseClient
@@ -771,7 +814,9 @@ async function contactSeller() {
         let conversationId;
 
 
-        /* EXISTING */
+        /* -------------------------------------------------
+           EXISTING CONVERSATION
+        ------------------------------------------------- */
 
         if (existing.data) {
 
@@ -781,7 +826,9 @@ async function contactSeller() {
         }
 
 
-        /* CREATE */
+        /* -------------------------------------------------
+           CREATE CONVERSATION
+        ------------------------------------------------- */
 
         else {
 
@@ -817,7 +864,9 @@ async function contactSeller() {
         }
 
 
-        /* MESSAGE */
+        /* -------------------------------------------------
+           MESSAGE
+        ------------------------------------------------- */
 
         const message =
             prompt(
@@ -880,7 +929,7 @@ async function contactSeller() {
         );
 
         alert(
-            "Could not contact seller:\n" +
+            "Could not contact seller:\n\n" +
             (
                 error.message ||
                 "Unknown error"
