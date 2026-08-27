@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>HAVKAR - Create Account</title>
+
+<script type="module">
+
+import { createClient }
+from "https://esm.sh/@supabase/supabase-js@2";
+
+
+const SUPABASE_URL =
+"https://gispovnciifgikvgpzck.supabase.co";
+
+const SUPABASE_KEY =
+"sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq";
+
+
+const supabase =
+createClient(
+SUPABASE_URL,
+SUPABASE_KEY
+);
+
+
+window.createAccount = async function () {
+
+const email =
+document.getElementById("email").value.trim();
+
+const password =
+document.getElementById("password").value;
+
+const confirmPassword =
+document.getElementById("confirmPassword").value;
+
+const message =
+document.getElementById("message");
+
+const button =
+document.getElementById("createBtn");
+
+
+if (!email || !password || !confirmPassword) {
+
+message.textContent =
+"Please fill in all fields.";
+
+message.className =
+"message error";
+
+return;
+}
+
+
+if (password.length < 6) {
+
+message.textContent =
+"Password must be at least 6 characters.";
+
+message.className =
+"message error";
+
+return;
+}
+
+
+if (password !== confirmPassword) {
+
+message.textContent =
+"Passwords do not match.";
+
+message.className =
+"message error";
+
+return;
+}
+
+
+button.disabled = true;
+
+button.textContent =
+"Creating account...";
+
+message.textContent = "";
+
+
+try {
+
+const { data, error } =
+await supabase.auth.signUp({
+
+email: email,
+
+password: password
+
+});
+
+
+if (error) {
+
+message.textContent =
+error.message;
+
+message.className =
+"message error";
+
+button.disabled = false;
+
+button.textContent =
+"Create Account";
+
+return;
+
+}
+
+
+if (data && data.user) {
+
+message.textContent =
+"Account created successfully!";
+
+message.className =
+"message success";
+
+
+setTimeout(function () {
+
+window.location.replace(
+"index.html"
+);
+
+}, 1000);
+
+}
+
+}
+
+catch (error) {
+
+message.textContent =
+"Connection error: " +
+error.message;
+
+message.className =
+"message error";
+
+button.disabled = false;
+
+button.textContent =
+"Create Account";
+
+}
+
+};
+
+
+window.goLogin = function () {
+
+window.location.href =
+"login.html";
+
+};
+
+
+window.handleKeyPress = function (event) {
+
+if (event.key === "Enter") {
+
+window.createAccount();
+
+}
+
+};
+
+</script>
+
+
+<style>
+
+* {
+box-sizing: border-box;
+margin: 0;
+padding: 0;
+}
+
+
+body {
+
+min-height: 100vh;
+
+font-family:
+Arial,
+Helvetica,
+sans-serif;
+
+background:
+linear-gradient(
+135deg,
+#b8e6bd,
+#37b85d
+);
+
+display: flex;
+
+justify-content: center;
+
+align-items: center;
+
+padding: 20px;
+}
+
+
+.signup-box {
+
+width: 100%;
+
+max-width: 600px;
+
+background:
+rgba(255,255,255,0.97);
+
+border-radius: 30px;
+
+padding: 45px 40px;
+
+text-align: center;
+
+box-shadow:
+0 15px 45px
+rgba(0,0,0,0.18);
+}
+
+
+.logo-container {
+
+width: 110px;
+
+height: 110px;
+
+margin: 0 auto 20px;
+
+border-radius: 25px;
+
+background: #e8f5e9;
+
+display: flex;
+
+align-items: center;
+
+justify-content: center;
+
+overflow: hidden;
+}
+
+
+.logo {
+
+width: 90px;
+
+height: 90px;
+
+object-fit: contain;
+}
+
+
+h1 {
+
+color: #187a35;
+
+font-size: 46px;
+
+font-weight: 800;
+
+margin-bottom: 8px;
+}
+
+
+.subtitle {
+
+color: #777;
+
+font-size: 18px;
+
+margin-bottom: 35px;
+}
+
+
+.input-group {
+
+margin-bottom: 18px;
+
+text-align: left;
+}
+
+
+.input-group label {
+
+display: block;
+
+margin-bottom: 7px;
+
+color: #444;
+
+font-size: 15px;
+
+font-weight: 600;
+}
+
+
+.input {
+
+width: 100%;
+
+padding: 17px;
+
+border: 2px solid #ddd;
+
+border-radius: 13px;
+
+font-size: 17px;
+
+outline: none;
+}
+
+
+.input:focus {
+
+border-color: #35aa55;
+
+box-shadow:
+0 0 0 3px
+rgba(53,170,85,0.12);
+}
+
+
+.create-btn {
+
+width: 100%;
+
+padding: 17px;
+
+margin-top: 8px;
+
+border: none;
+
+border-radius: 13px;
+
+background:
+linear-gradient(
+135deg,
+#22a447,
+#35b858
+);
+
+color: white;
+
+font-size: 19px;
+
+font-weight: bold;
+
+cursor: pointer;
+}
+
+
+.create-btn:disabled {
+
+opacity: 0.65;
+
+cursor: not-allowed;
+}
+
+
+.login-btn {
+
+width: 100%;
+
+padding: 17px;
+
+margin-top: 14px;
+
+border: 2px solid #39824b;
+
+border-radius: 13px;
+
+background: white;
+
+color: #39824b;
+
+font-size: 18px;
+
+font-weight: bold;
+
+cursor: pointer;
+}
+
+
+.message {
+
+min-height: 24px;
+
+margin-top: 18px;
+
+font-size: 14px;
+
+font-weight: 600;
+}
+
+
+.message.error {
+
+color: #c62828;
+}
+
+
+.message.success {
+
+color: #2e7d32;
+}
+
+
+.footer {
+
+margin-top: 30px;
+
+color: #999;
+
+font-size: 14px;
+}
+
+
+@media (max-width: 600px) {
+
+body {
+
+padding: 12px;
+}
+
+.signup-box {
+
+padding: 35px 22px;
+
+border-radius: 25px;
+}
+
+h1 {
+
+font-size: 40px;
+}
+
+.subtitle {
+
+font-size: 16px;
+}
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<div class="signup-box">
+
+
+<div class="logo-container">
+
+<img
+src="icon.png"
+alt="HAVKAR"
+class="logo"
+>
+
+</div>
+
+
+<h1>HAVKAR</h1>
+
+
+<div class="subtitle">
+Create your account
+</div>
+
+
+<div class="input-group">
+
+<label for="email">
+Email
+</label>
+
+<input
+id="email"
+class="input"
+type="email"
+placeholder="Enter your email"
+autocomplete="email"
+onkeypress="handleKeyPress(event)"
+>
+
+</div>
+
+
+<div class="input-group">
+
+<label for="password">
+Password
+</label>
+
+<input
+id="password"
+class="input"
+type="password"
+placeholder="Create a password"
+autocomplete="new-password"
+onkeypress="handleKeyPress(event)"
+>
+
+</div>
+
+
+<div class="input-group">
+
+<label for="confirmPassword">
+Confirm Password
+</label>
+
+<input
+id="confirmPassword"
+class="input"
+type="password"
+placeholder="Confirm your password"
+autocomplete="new-password"
+onkeypress="handleKeyPress(event)"
+>
+
+</div>
+
+
+<button
+id="createBtn"
+class="create-btn"
+type="button"
+onclick="createAccount()"
+>
+Create Account
+</button>
+
+
+<button
+class="login-btn"
+type="button"
+onclick="goLogin()"
+>
+Back to Login
+</button>
+
+
+<div
+id="message"
+class="message"
+></div>
+
+
+<div class="footer">
+
+HAVKAR • Safe • Secure 🔒
+
+</div>
+
+
+</div>
+
+
+</body>
+</html>
