@@ -1,459 +1,1561 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HAVKAR - Jobs</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HAVKAR - Jobs</title>
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
-        }
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-        .header {
-            background: linear-gradient(135deg, #689f38, #7cb342);
-            color: white;
-            padding: 15px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
 
-        .back-btn {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.5rem;
-            cursor: pointer;
-        }
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:#f5f7f6;
+  color:#222;
+  padding-bottom:75px;
+}
 
-        .header h1 {
-            font-size: 1.3rem;
-            font-weight: 700;
-        }
+.header{
+  background:linear-gradient(135deg,#2e7d32,#66bb6a);
+  color:white;
+  padding:14px 18px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  position:sticky;
+  top:0;
+  z-index:20;
+  box-shadow:0 3px 12px rgba(0,0,0,.15);
+}
 
-        .header-right {
-            display: flex;
-            gap: 15px;
-        }
+.header-left{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
 
-        .icon-btn {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
+.back-btn,
+.icon-btn{
+  border:0;
+  background:rgba(255,255,255,.18);
+  color:white;
+  cursor:pointer;
+}
 
-        .icon-btn:hover {
-            background: rgba(255,255,255,0.3);
-        }
+.back-btn{
+  background:none;
+  font-size:24px;
+}
 
-        .search-bar {
-            padding: 15px 20px;
-            background: white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
+.header h1{
+  font-size:22px;
+}
 
-        .search-input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 25px;
-            font-size: 1rem;
-            transition: all 0.3s;
-        }
+.header-right{
+  display:flex;
+  gap:10px;
+}
 
-        .search-input:focus {
-            outline: none;
-            border-color: #7cb342;
-        }
+.icon-btn{
+  width:40px;
+  height:40px;
+  border-radius:50%;
+}
 
-        .filters {
-            padding: 15px 20px;
-            background: white;
-            display: flex;
-            gap: 10px;
-            overflow-x: auto;
-            border-bottom: 1px solid #e0e0e0;
-        }
+.hero{
+  background:white;
+  padding:20px;
+}
 
-        .filter-btn {
-            padding: 8px 16px;
-            border: 2px solid #e0e0e0;
-            background: white;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: all 0.3s;
-        }
+.hero h2{
+  font-size:24px;
+  margin-bottom:6px;
+}
 
-        .filter-btn.active {
-            background: #7cb342;
-            color: white;
-            border-color: #7cb342;
-        }
+.hero p{
+  color:#666;
+  line-height:1.5;
+}
 
-        .content {
-            padding: 15px 20px 80px;
-        }
+.search{
+  margin-top:16px;
+  position:relative;
+}
 
-        .job-card {
-            background: white;
-            border-radius: 15px;
-            padding: 18px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-            cursor: pointer;
-            transition: all 0.3s;
-        }
+.search i{
+  position:absolute;
+  left:15px;
+  top:14px;
+  color:#888;
+}
 
-        .job-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
-        }
+.search input{
+  width:100%;
+  padding:13px 15px 13px 42px;
+  border:1px solid #ddd;
+  border-radius:14px;
+  font-size:16px;
+  outline:none;
+}
 
-        .job-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: start;
-            margin-bottom: 12px;
-        }
+.search input:focus{
+  border-color:#66bb6a;
+}
 
-        .company-logo {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, #e8f5e9, #c5e1a5);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-        }
+.filters{
+  display:flex;
+  gap:9px;
+  overflow-x:auto;
+  padding:15px 20px;
+  background:white;
+}
 
-        .job-info {
-            flex: 1;
-            margin-left: 15px;
-        }
+.filter{
+  flex:none;
+  border:1px solid #ddd;
+  background:white;
+  border-radius:22px;
+  padding:9px 16px;
+  font-weight:600;
+  cursor:pointer;
+}
 
-        .job-title {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 5px;
-        }
+.filter.active{
+  background:#43a047;
+  color:white;
+  border-color:#43a047;
+}
 
-        .company-name {
-            font-size: 0.9rem;
-            color: #666;
-            margin-bottom: 8px;
-        }
+.content{
+  padding:16px;
+}
 
-        .job-meta {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin-bottom: 10px;
-        }
+.section-title{
+  font-size:19px;
+  font-weight:700;
+  margin-bottom:13px;
+}
 
-        .meta-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 0.85rem;
-            color: #666;
-        }
+.job-card{
+  background:white;
+  border-radius:18px;
+  padding:17px;
+  margin-bottom:14px;
+  box-shadow:0 3px 14px rgba(0,0,0,.07);
+  cursor:pointer;
+  transition:.2s;
+}
 
-        .meta-item i {
-            color: #7cb342;
-        }
+.job-card:active{
+  transform:scale(.985);
+}
 
-        .job-tags {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
+.job-top{
+  display:flex;
+  gap:13px;
+}
 
-        .tag {
-            padding: 5px 12px;
-            background: #e8f5e9;
-            color: #558b2f;
-            border-radius: 15px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
+.logo{
+  width:52px;
+  height:52px;
+  border-radius:14px;
+  background:linear-gradient(135deg,#e8f5e9,#c8e6c9);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:25px;
+  flex:none;
+}
 
-        .salary {
-            font-size: 1.1rem;
-            font-weight: 800;
-            color: #558b2f;
-            white-space: nowrap;
-        }
+.job-main{
+  flex:1;
+}
 
-        .fab-button {
-            position: fixed;
-            bottom: 80px;
-            right: 20px;
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, #689f38, #7cb342);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            font-size: 1.8rem;
-            box-shadow: 0 5px 20px rgba(104, 159, 56, 0.4);
-            cursor: pointer;
-            transition: all 0.3s;
-        }
+.job-title{
+  font-size:17px;
+  font-weight:750;
+  margin-bottom:4px;
+}
 
-        .fab-button:hover {
-            transform: scale(1.1);
-            box-shadow: 0 8px 30px rgba(104, 159, 56, 0.5);
-        }
+.company{
+  color:#666;
+  font-size:14px;
+}
 
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-        }
+.salary{
+  color:#2e7d32;
+  font-weight:800;
+  white-space:nowrap;
+}
 
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 5px;
-            color: #999;
-            font-size: 0.75rem;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
+.meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-top:12px;
+  color:#666;
+  font-size:13px;
+}
 
-        .nav-item.active {
-            color: #7cb342;
-        }
+.meta i{
+  color:#43a047;
+  margin-right:4px;
+}
 
-        .nav-item i {
-            font-size: 1.3rem;
-        }
-    </style>
+.tags{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  margin-top:12px;
+}
+
+.tag{
+  background:#e8f5e9;
+  color:#388e3c;
+  padding:5px 10px;
+  border-radius:12px;
+  font-size:12px;
+  font-weight:600;
+}
+
+.empty{
+  text-align:center;
+  padding:40px 20px;
+  color:#777;
+}
+
+.fab{
+  position:fixed;
+  right:20px;
+  bottom:88px;
+  width:62px;
+  height:62px;
+  border:0;
+  border-radius:50%;
+  background:linear-gradient(135deg,#2e7d32,#66bb6a);
+  color:white;
+  font-size:25px;
+  box-shadow:0 6px 22px rgba(46,125,50,.4);
+  cursor:pointer;
+  z-index:15;
+}
+
+.bottom-nav{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  height:72px;
+  background:white;
+  display:flex;
+  justify-content:space-around;
+  align-items:center;
+  box-shadow:0 -2px 12px rgba(0,0,0,.1);
+  z-index:20;
+}
+
+.nav-item{
+  text-align:center;
+  color:#999;
+  font-size:12px;
+  cursor:pointer;
+}
+
+.nav-item i{
+  display:block;
+  font-size:20px;
+  margin-bottom:4px;
+}
+
+.nav-item.active{
+  color:#43a047;
+}
+
+/* MODAL */
+
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.55);
+  display:none;
+  align-items:flex-end;
+  justify-content:center;
+  z-index:50;
+}
+
+.modal.show{
+  display:flex;
+}
+
+.modal-box{
+  width:100%;
+  max-width:600px;
+  max-height:92vh;
+  overflow:auto;
+  background:white;
+  border-radius:25px 25px 0 0;
+  padding:22px;
+}
+
+.modal-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:18px;
+}
+
+.modal-head h2{
+  font-size:21px;
+}
+
+.close{
+  border:0;
+  background:#f1f1f1;
+  width:38px;
+  height:38px;
+  border-radius:50%;
+  font-size:20px;
+}
+
+.form-group{
+  margin-bottom:14px;
+}
+
+.form-group label{
+  display:block;
+  font-weight:650;
+  margin-bottom:6px;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select{
+  width:100%;
+  padding:12px;
+  border:1px solid #ddd;
+  border-radius:12px;
+  font-size:15px;
+  outline:none;
+}
+
+.form-group textarea{
+  min-height:110px;
+  resize:vertical;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus{
+  border-color:#66bb6a;
+}
+
+.plan-title{
+  font-weight:750;
+  margin:20px 0 10px;
+}
+
+.plans{
+  display:grid;
+  gap:10px;
+}
+
+.plan{
+  border:2px solid #ddd;
+  border-radius:15px;
+  padding:15px;
+  cursor:pointer;
+}
+
+.plan.selected{
+  border-color:#43a047;
+  background:#f1f8f2;
+}
+
+.plan strong{
+  display:block;
+  font-size:17px;
+  color:#2e7d32;
+}
+
+.plan span{
+  color:#666;
+  font-size:13px;
+}
+
+.summary{
+  background:#f6f8f6;
+  padding:15px;
+  border-radius:14px;
+  margin-top:15px;
+  line-height:1.8;
+}
+
+.primary{
+  width:100%;
+  border:0;
+  background:linear-gradient(135deg,#2e7d32,#66bb6a);
+  color:white;
+  padding:14px;
+  border-radius:13px;
+  font-size:16px;
+  font-weight:750;
+  margin-top:16px;
+  cursor:pointer;
+}
+
+.secondary{
+  width:100%;
+  border:1px solid #43a047;
+  background:white;
+  color:#2e7d32;
+  padding:13px;
+  border-radius:13px;
+  font-weight:700;
+  margin-top:10px;
+}
+
+.notice{
+  background:#fff8e1;
+  color:#795548;
+  padding:12px;
+  border-radius:12px;
+  font-size:13px;
+  margin-top:12px;
+  line-height:1.5;
+}
+
+.detail-row{
+  display:flex;
+  justify-content:space-between;
+  padding:10px 0;
+  border-bottom:1px solid #eee;
+}
+
+.detail-label{
+  color:#777;
+}
+
+.detail-value{
+  font-weight:650;
+  text-align:right;
+  max-width:60%;
+}
+
+.success{
+  text-align:center;
+  padding:25px 10px;
+}
+
+.success i{
+  font-size:55px;
+  color:#43a047;
+  margin-bottom:15px;
+}
+
+@media(min-width:700px){
+  .modal{
+    align-items:center;
+  }
+
+  .modal-box{
+    border-radius:22px;
+  }
+
+  .content{
+    max-width:900px;
+    margin:auto;
+  }
+}
+</style>
 </head>
+
 <body>
-    <div class="header">
-        <div class="header-left">
-            <button class="back-btn" onclick="window.location.href='index.html'">
-                <i class="fas fa-arrow-left"></i>
-            </button>
-            <h1>Jobs</h1>
-        </div>
-        <div class="header-right">
-            <button class="icon-btn"><i class="fas fa-bell"></i></button>
-            <button class="icon-btn"><i class="fas fa-user"></i></button>
-        </div>
+
+<header class="header">
+  <div class="header-left">
+    <button class="back-btn" onclick="goHome()">
+      <i class="fas fa-arrow-left"></i>
+    </button>
+    <h1>Jobs</h1>
+  </div>
+
+  <div class="header-right">
+    <button class="icon-btn">
+      <i class="fas fa-bell"></i>
+    </button>
+    <button class="icon-btn" onclick="openMyJobs()">
+      <i class="fas fa-user"></i>
+    </button>
+  </div>
+</header>
+
+<section class="hero">
+  <h2>Find the right opportunity</h2>
+  <p>Discover jobs, hire professionals and grow your career with HAVKAR.</p>
+
+  <div class="search">
+    <i class="fas fa-search"></i>
+    <input
+      id="searchInput"
+      type="text"
+      placeholder="Search jobs, companies..."
+      oninput="renderJobs()">
+  </div>
+</section>
+
+<div class="filters">
+  <button class="filter active" data-filter="All">All</button>
+  <button class="filter" data-filter="Full-time">Full-time</button>
+  <button class="filter" data-filter="Part-time">Part-time</button>
+  <button class="filter" data-filter="Remote">Remote</button>
+  <button class="filter" data-filter="Freelance">Freelance</button>
+  <button class="filter" data-filter="Contract">Contract</button>
+</div>
+
+<main class="content">
+
+  <div class="section-title">Available jobs</div>
+
+  <div id="jobsList"></div>
+
+</main>
+
+<button class="fab" onclick="openPostJob()" aria-label="Post a job">
+  <i class="fas fa-plus"></i>
+</button>
+
+<nav class="bottom-nav">
+
+  <div class="nav-item active" onclick="goHome()">
+    <i class="fas fa-home"></i>
+    Home
+  </div>
+
+  <div class="nav-item">
+    <i class="fas fa-search"></i>
+    Search
+  </div>
+
+  <div class="nav-item">
+    <i class="fas fa-bookmark"></i>
+    Saved
+  </div>
+
+  <div class="nav-item" onclick="window.location.href='chat.html'">
+    <i class="fas fa-comment"></i>
+    Messages
+  </div>
+
+  <div class="nav-item" onclick="openMyJobs()">
+    <i class="fas fa-user"></i>
+    Profile
+  </div>
+
+</nav>
+
+
+<!-- JOB DETAIL MODAL -->
+
+<div class="modal" id="detailModal">
+
+  <div class="modal-box">
+
+    <div class="modal-head">
+      <h2 id="detailTitle">Job details</h2>
+      <button class="close" onclick="closeModal('detailModal')">
+        ×
+      </button>
     </div>
 
-    <div class="search-bar">
-        <input type="text" class="search-input" placeholder="Search jobs, companies...">
+    <div id="detailContent"></div>
+
+  </div>
+
+</div>
+
+
+<!-- POST JOB MODAL -->
+
+<div class="modal" id="postModal">
+
+  <div class="modal-box">
+
+    <div class="modal-head">
+      <h2>Post a Job</h2>
+      <button class="close" onclick="closeModal('postModal')">
+        ×
+      </button>
     </div>
 
-    <div class="filters">
-        <button class="filter-btn active">All</button>
-        <button class="filter-btn">Full-time</button>
-        <button class="filter-btn">Part-time</button>
-        <button class="filter-btn">Remote</button>
-        <button class="filter-btn">Freelance</button>
-        <button class="filter-btn">Contract</button>
+    <div class="form-group">
+      <label>Job title</label>
+      <input id="jobTitle" placeholder="Example: Pizza Chef">
     </div>
 
-    <div class="content">
-        <div class="job-card">
-            <div class="job-header">
-                <div style="display: flex; flex: 1;">
-                    <div class="company-logo">💼</div>
-                    <div class="job-info">
-                        <div class="job-title">Senior Frontend Developer</div>
-                        <div class="company-name">Tech Solutions Italy</div>
-                        <div class="job-meta">
-                            <div class="meta-item">
-                                <i class="fas fa-map-marker-alt"></i>
-                                Milan, Italy
-                            </div>
-                            <div class="meta-item">
-                                <i class="fas fa-clock"></i>
-                                Full-time
-                            </div>
-                        </div>
-                        <div class="job-tags">
-                            <span class="tag">React</span>
-                            <span class="tag">JavaScript</span>
-                            <span class="tag">CSS</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="salary">€45k-65k</div>
-            </div>
-        </div>
-
-        <div class="job-card">
-            <div class="job-header">
-                <div style="display: flex; flex: 1;">
-                    <div class="company-logo">🏢</div>
-                    <div class="job-info">
-                        <div class="job-title">Marketing Manager</div>
-                        <div class="company-name">Digital Agency Rome</div>
-                        <div class="job-meta">
-                            <div class="meta-item">
-                                <i class="fas fa-map-marker-alt"></i>
-                                Rome, Italy
-                            </div>
-                            <div class="meta-item">
-                                <i class="fas fa-clock"></i>
-                                Full-time
-                            </div>
-                        </div>
-                        <div class="job-tags">
-                            <span class="tag">Marketing</span>
-                            <span class="tag">SEO</span>
-                            <span class="tag">Social Media</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="salary">€35k-50k</div>
-            </div>
-        </div>
-
-        <div class="job-card">
-            <div class="job-header">
-                <div style="display: flex; flex: 1;">
-                    <div class="company-logo">🌐</div>
-                    <div class="job-info">
-                        <div class="job-title">Remote Customer Support</div>
-                        <div class="company-name">Global Services</div>
-                        <div class="job-meta">
-                            <div class="meta-item">
-                                <i class="fas fa-map-marker-alt"></i>
-                                Remote
-                            </div>
-                            <div class="meta-item">
-                                <i class="fas fa-clock"></i>
-                                Part-time
-                            </div>
-                        </div>
-                        <div class="job-tags">
-                            <span class="tag">Customer Service</span>
-                            <span class="tag">English</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="salary">€20k-30k</div>
-            </div>
-        </div>
-
-        <div class="job-card">
-            <div class="job-header">
-                <div style="display: flex; flex: 1;">
-                    <div class="company-logo">🎨</div>
-                    <div class="job-info">
-                        <div class="job-title">Graphic Designer</div>
-                        <div class="company-name">Creative Studio</div>
-                        <div class="job-meta">
-                            <div class="meta-item">
-                                <i class="fas fa-map-marker-alt"></i>
-                                Florence, Italy
-                            </div>
-                            <div class="meta-item">
-                                <i class="fas fa-clock"></i>
-                                Freelance
-                            </div>
-                        </div>
-                        <div class="job-tags">
-                            <span class="tag">Photoshop</span>
-                            <span class="tag">Illustrator</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="salary">€30k-40k</div>
-            </div>
-        </div>
-
-        <div class="job-card">
-            <div class="job-header">
-                <div style="display: flex; flex: 1;">
-                    <div class="company-logo">🍕</div>
-                    <div class="job-info">
-                        <div class="job-title">Restaurant Server</div>
-                        <div class="company-name">Italian Restaurant</div>
-                        <div class="job-meta">
-                            <div class="meta-item">
-                                <i class="fas fa-map-marker-alt"></i>
-                                Venice, Italy
-                            </div>
-                            <div class="meta-item">
-                                <i class="fas fa-clock"></i>
-                                Part-time
-                            </div>
-                        </div>
-                        <div class="job-tags">
-                            <span class="tag">Hospitality</span>
-                            <span class="tag">Italian</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="salary">€18k-25k</div>
-            </div>
-        </div>
+    <div class="form-group">
+      <label>Company / Business</label>
+      <input id="jobCompany" placeholder="Company name">
     </div>
 
-    <button class="fab-button" onclick="alert('Post Job - Coming Soon!')">
-        <i class="fas fa-plus"></i>
+    <div class="form-group">
+      <label>Location</label>
+      <input id="jobLocation" placeholder="Crotone, Italy">
+    </div>
+
+    <div class="form-group">
+      <label>Job type</label>
+      <select id="jobType">
+        <option>Full-time</option>
+        <option>Part-time</option>
+        <option>Remote</option>
+        <option>Freelance</option>
+        <option>Contract</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Salary / Payment</label>
+      <input id="jobSalary" placeholder="Example: €1,800/month">
+    </div>
+
+    <div class="form-group">
+      <label>Skills</label>
+      <input id="jobSkills" placeholder="Pizza, Cooking, Italian">
+    </div>
+
+    <div class="form-group">
+      <label>Job description</label>
+      <textarea id="jobDescription"
+        placeholder="Describe the job, requirements and conditions..."></textarea>
+    </div>
+
+    <div class="plan-title">
+      Choose a monthly publishing plan
+    </div>
+
+    <div class="plans">
+
+      <div class="plan selected"
+           data-price="9.99"
+           data-plan="Basic"
+           onclick="selectPlan(this)">
+        <strong>Basic — €9.99 / month</strong>
+        <span>For small businesses and one active job.</span>
+      </div>
+
+      <div class="plan"
+           data-price="19.99"
+           data-plan="Professional"
+           onclick="selectPlan(this)">
+        <strong>Professional — €19.99 / month</strong>
+        <span>More visibility and multiple active jobs.</span>
+      </div>
+
+      <div class="plan"
+           data-price="39.99"
+           data-plan="Business"
+           onclick="selectPlan(this)">
+        <strong>Business — €39.99 / month</strong>
+        <span>For businesses with regular recruitment.</span>
+      </div>
+
+    </div>
+
+    <div class="summary">
+      <strong>Monthly publishing fee</strong><br>
+      Plan: <span id="selectedPlanName">Basic</span><br>
+      Amount: €<span id="selectedPlanPrice">9.99</span>
+    </div>
+
+    <div class="notice">
+      Your job will only become publicly active after the monthly
+      subscription payment is successfully confirmed.
+    </div>
+
+    <button class="primary" onclick="submitJob()">
+      Continue to payment
     </button>
 
-    <div class="bottom-nav">
-        <div class="nav-item active">
-            <i class="fas fa-home"></i>
-            <span>Home</span>
-        </div>
-        <div class="nav-item">
-            <i class="fas fa-search"></i>
-            <span>Search</span>
-        </div>
-        <div class="nav-item">
-            <i class="fas fa-bookmark"></i>
-            <span>Saved</span>
-        </div>
-        <div class="nav-item">
-            <i class="fas fa-comment"></i>
-            <span>Messages</span>
-        </div>
-        <div class="nav-item">
-            <i class="fas fa-user"></i>
-            <span>Profile</span>
-        </div>
+  </div>
+
+</div>
+
+
+<!-- PAYMENT MODAL -->
+
+<div class="modal" id="paymentModal">
+
+  <div class="modal-box">
+
+    <div class="modal-head">
+      <h2>Monthly subscription</h2>
+      <button class="close" onclick="closeModal('paymentModal')">
+        ×
+      </button>
     </div>
+
+    <div id="paymentContent"></div>
+
+  </div>
+
+</div>
+
+
+<!-- MY JOBS -->
+
+<div class="modal" id="myJobsModal">
+
+  <div class="modal-box">
+
+    <div class="modal-head">
+      <h2>My Jobs</h2>
+      <button class="close" onclick="closeModal('myJobsModal')">
+        ×
+      </button>
+    </div>
+
+    <div id="myJobsContent"></div>
+
+  </div>
+
+</div>
+
+
+<script>
+
+/*
+  HAVKAR JOBS
+  -----------------------------------------
+  This page provides:
+  - Professional job listing
+  - Search
+  - Filters
+  - Job details
+  - User job posting
+  - Monthly subscription selection
+  - User's own jobs
+  - Supabase-ready structure
+
+  IMPORTANT:
+  Real card/bank payment must be connected
+  through a secure payment provider + server/
+  Supabase Edge Function.
+*/
+
+
+const SUPABASE_URL = "";
+const SUPABASE_PUBLISHABLE_KEY =
+"sb_publishable_h6RUZrukEovZn_N3XLDukw_Ui67UsWG";
+
+let supabaseClient = null;
+
+if(
+  SUPABASE_URL &&
+  SUPABASE_PUBLISHABLE_KEY &&
+  window.supabase
+){
+  supabaseClient =
+    window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY
+    );
+}
+
+
+/* DEMO / INITIAL JOBS */
+
+let jobs = [
+
+  {
+    id:"demo-1",
+    title:"Senior Frontend Developer",
+    company:"Tech Solutions Italy",
+    location:"Milan, Italy",
+    type:"Full-time",
+    salary:"€45k-65k",
+    skills:["React","JavaScript","CSS"],
+    description:
+    "We are looking for an experienced frontend developer to join our growing technology team.",
+    icon:"💼",
+    owner:false,
+    status:"active"
+  },
+
+  {
+    id:"demo-2",
+    title:"Marketing Manager",
+    company:"Digital Agency Rome",
+    location:"Rome, Italy",
+    type:"Full-time",
+    salary:"€35k-50k",
+    skills:["Marketing","SEO","Social Media"],
+    description:
+    "Manage digital campaigns, social media strategy and marketing projects.",
+    icon:"🏢",
+    owner:false,
+    status:"active"
+  },
+
+  {
+    id:"demo-3",
+    title:"Remote Customer Support",
+    company:"Global Services",
+    location:"Remote",
+    type:"Part-time",
+    salary:"€20k-30k",
+    skills:["Customer Service","English"],
+    description:
+    "Remote customer support position for an international service company.",
+    icon:"🌐",
+    owner:false,
+    status:"active"
+  },
+
+  {
+    id:"demo-4",
+    title:"Graphic Designer",
+    company:"Creative Studio",
+    location:"Florence, Italy",
+    type:"Freelance",
+    salary:"€30k-40k",
+    skills:["Photoshop","Illustrator"],
+    description:
+    "Freelance graphic designer for branding and digital projects.",
+    icon:"🎨",
+    owner:false,
+    status:"active"
+  },
+
+  {
+    id:"demo-5",
+    title:"Restaurant Server",
+    company:"Italian Restaurant",
+    location:"Venice, Italy",
+    type:"Part-time",
+    salary:"€18k-25k",
+    skills:["Hospitality","Italian"],
+    description:
+    "Restaurant server position in a busy Italian restaurant.",
+    icon:"🍕",
+    owner:false,
+    status:"active"
+  }
+
+];
+
+
+let selectedFilter = "All";
+let selectedPlan = {
+  name:"Basic",
+  price:9.99
+};
+
+
+/* LOAD LOCAL JOBS */
+
+function loadLocalJobs(){
+
+  const saved =
+    localStorage.getItem("havkar_jobs");
+
+  if(saved){
+
+    try{
+
+      const localJobs =
+        JSON.parse(saved);
+
+      jobs = [
+        ...localJobs,
+        ...jobs.filter(j => !localJobs.some(
+          x => x.id === j.id
+        ))
+      ];
+
+    }catch(error){
+
+      console.error(error);
+
+    }
+
+  }
+
+}
+
+
+/* SAVE LOCAL JOBS */
+
+function saveLocalJobs(){
+
+  const ownJobs =
+    jobs.filter(j => j.owner === true);
+
+  localStorage.setItem(
+    "havkar_jobs",
+    JSON.stringify(ownJobs)
+  );
+
+}
+
+
+/* RENDER JOBS */
+
+function renderJobs(){
+
+  const list =
+    document.getElementById("jobsList");
+
+  const search =
+    document
+      .getElementById("searchInput")
+      .value
+      .toLowerCase()
+      .trim();
+
+  let filtered =
+    jobs.filter(job => {
+
+      const filterOK =
+        selectedFilter === "All" ||
+        job.type === selectedFilter;
+
+      const searchText =
+        (
+          job.title + " " +
+          job.company + " " +
+          job.location + " " +
+          job.skills.join(" ")
+        ).toLowerCase();
+
+      return filterOK &&
+             (!search || searchText.includes(search));
+
+    });
+
+
+  if(!filtered.length){
+
+    list.innerHTML = `
+      <div class="empty">
+        <i class="fas fa-search"
+           style="font-size:40px;margin-bottom:15px;"></i>
+        <p>No jobs found.</p>
+      </div>
+    `;
+
+    return;
+
+  }
+
+
+  list.innerHTML =
+    filtered.map(job => `
+
+      <article class="job-card"
+               onclick="openJob('${escapeJS(job.id)}')">
+
+        <div class="job-top">
+
+          <div class="logo">
+            ${job.icon || "💼"}
+          </div>
+
+          <div class="job-main">
+
+            <div class="job-title">
+              ${escapeHTML(job.title)}
+            </div>
+
+            <div class="company">
+              ${escapeHTML(job.company)}
+            </div>
+
+          </div>
+
+          <div class="salary">
+            ${escapeHTML(job.salary || "Negotiable")}
+          </div>
+
+        </div>
+
+        <div class="meta">
+
+          <span>
+            <i class="fas fa-location-dot"></i>
+            ${escapeHTML(job.location)}
+          </span>
+
+          <span>
+            <i class="fas fa-clock"></i>
+            ${escapeHTML(job.type)}
+          </span>
+
+        </div>
+
+        <div class="tags">
+
+          ${
+            job.skills.map(skill =>
+              `<span class="tag">
+                ${escapeHTML(skill)}
+              </span>`
+            ).join("")
+          }
+
+        </div>
+
+      </article>
+
+    `).join("");
+
+}
+
+
+/* OPEN JOB */
+
+function openJob(id){
+
+  const job =
+    jobs.find(j => String(j.id) === String(id));
+
+  if(!job) return;
+
+  document.getElementById("detailTitle")
+    .textContent = job.title;
+
+  document.getElementById("detailContent")
+    .innerHTML = `
+
+      <div class="job-top">
+
+        <div class="logo">
+          ${job.icon || "💼"}
+        </div>
+
+        <div class="job-main">
+
+          <div class="job-title">
+            ${escapeHTML(job.title)}
+          </div>
+
+          <div class="company">
+            ${escapeHTML(job.company)}
+          </div>
+
+        </div>
+
+      </div>
+
+      <div style="margin-top:20px">
+
+        <div class="detail-row">
+          <span class="detail-label">Location</span>
+          <span class="detail-value">
+            ${escapeHTML(job.location)}
+          </span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">Type</span>
+          <span class="detail-value">
+            ${escapeHTML(job.type)}
+          </span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">Salary</span>
+          <span class="detail-value">
+            ${escapeHTML(job.salary || "Negotiable")}
+          </span>
+        </div>
+
+      </div>
+
+      <div style="margin-top:20px">
+        <h3>Description</h3>
+        <p style="color:#666;line-height:1.7;margin-top:8px">
+          ${escapeHTML(job.description || "")}
+        </p>
+      </div>
+
+      <div style="margin-top:20px">
+        <h3>Skills</h3>
+
+        <div class="tags">
+
+          ${
+            job.skills.map(skill =>
+              `<span class="tag">
+                ${escapeHTML(skill)}
+              </span>`
+            ).join("")
+          }
+
+        </div>
+
+      </div>
+
+      ${
+        job.owner
+        ? `
+          <button class="secondary"
+                  onclick="alert('This is your job advertisement.')">
+            <i class="fas fa-user"></i>
+            Your advertisement
+          </button>
+        `
+        :
+        `
+          <button class="primary"
+                  onclick="applyJob('${escapeJS(job.id)}')">
+            <i class="fas fa-paper-plane"></i>
+            Apply for this job
+          </button>
+        `
+      }
+
+    `;
+
+  openModal("detailModal");
+
+}
+
+
+/* APPLY */
+
+function applyJob(id){
+
+  const job =
+    jobs.find(j => String(j.id) === String(id));
+
+  if(!job) return;
+
+  closeModal("detailModal");
+
+  alert(
+    "Application started for: " +
+    job.title
+  );
+
+}
+
+
+/* OPEN POST JOB */
+
+function openPostJob(){
+
+  openModal("postModal");
+
+}
+
+
+/* SELECT MONTHLY PLAN */
+
+function selectPlan(element){
+
+  document
+    .querySelectorAll(".plan")
+    .forEach(p => p.classList.remove("selected"));
+
+  element.classList.add("selected");
+
+  selectedPlan = {
+
+    name:
+      element.dataset.plan,
+
+    price:
+      Number(element.dataset.price)
+
+  };
+
+  document.getElementById("selectedPlanName")
+    .textContent = selectedPlan.name;
+
+  document.getElementById("selectedPlanPrice")
+    .textContent =
+      selectedPlan.price.toFixed(2);
+
+}
+
+
+/* SUBMIT JOB */
+
+async function submitJob(){
+
+  const title =
+    document.getElementById("jobTitle").value.trim();
+
+  const company =
+    document.getElementById("jobCompany").value.trim();
+
+  const location =
+    document.getElementById("jobLocation").value.trim();
+
+  const type =
+    document.getElementById("jobType").value;
+
+  const salary =
+    document.getElementById("jobSalary").value.trim();
+
+  const skills =
+    document.getElementById("jobSkills").value
+      .split(",")
+      .map(x => x.trim())
+      .filter(Boolean);
+
+  const description =
+    document.getElementById("jobDescription").value.trim();
+
+
+  if(
+    !title ||
+    !company ||
+    !location ||
+    !description
+  ){
+
+    alert(
+      "Please complete the required fields."
+    );
+
+    return;
+
+  }
+
+
+  const newJob = {
+
+    id:
+      "job-" +
+      Date.now(),
+
+    title,
+    company,
+    location,
+    type,
+    salary:
+      salary || "Negotiable",
+
+    skills:
+      skills.length
+      ? skills
+      : ["General"],
+
+    description,
+
+    icon:"💼",
+
+    owner:true,
+
+    status:"pending_payment",
+
+    plan:selectedPlan.name,
+
+    monthly_fee:selectedPlan.price,
+
+    created_at:
+      new Date().toISOString()
+
+  };
+
+
+  /*
+    Save the advertisement locally for now.
+    Later this same object will be inserted
+    into Supabase after the payment is confirmed.
+  */
+
+  jobs.unshift(newJob);
+
+  saveLocalJobs();
+
+  closeModal("postModal");
+
+  showPaymentScreen(newJob);
+
+}
+
+
+/* PAYMENT SCREEN */
+
+function showPaymentScreen(job){
+
+  document.getElementById("paymentContent")
+    .innerHTML = `
+
+      <div class="summary">
+
+        <div class="detail-row">
+          <span class="detail-label">
+            Job
+          </span>
+
+          <span class="detail-value">
+            ${escapeHTML(job.title)}
+          </span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">
+            Company
+          </span>
+
+          <span class="detail-value">
+            ${escapeHTML(job.company)}
+          </span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">
+            Monthly plan
+          </span>
+
+          <span class="detail-value">
+            ${escapeHTML(job.plan)}
+          </span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">
+            Monthly fee
+          </span>
+
+          <span class="detail-value">
+            €${Number(job.monthly_fee).toFixed(2)}
+          </span>
+        </div>
+
+      </div>
+
+      <div class="notice">
+
+        Your advertisement is currently
+        <strong>pending payment</strong>.
+
+        The advertisement must not become
+        publicly active until the payment
+        provider confirms the subscription.
+
+      </div>
+
+      <button class="primary"
+              onclick="startRealPayment('${escapeJS(job.id)}')">
+
+        <i class="fas fa-credit-card"></i>
+        Pay €${Number(job.monthly_fee).toFixed(2)} / month
+
+      </button>
+
+      <button class="secondary"
+              onclick="closeModal('paymentModal')">
+
+        Pay later
+
+      </button>
+
+    `;
+
+  openModal("paymentModal");
+
+}
+
+
+/*
+  REAL PAYMENT CONNECTION
+
+  This intentionally does NOT pretend that
+  payment has happened.
+
+  A secure payment provider must be connected
+  here through a backend / Supabase Edge Function.
+
+  Until that is connected, the advertisement
+  remains pending_payment.
+*/
+
+function startRealPayment(jobId){
+
+  alert(
+    "Payment gateway is not connected yet. " +
+    "The advertisement has NOT been activated."
+  );
+
+}
+
+
+/* MY JOBS */
+
+function openMyJobs(){
+
+  const own =
+    jobs.filter(j => j.owner === true);
+
+  const container =
+    document.getElementById("myJobsContent");
+
+
+  if(!own.length){
+
+    container.innerHTML = `
+
+      <div class="empty">
+
+        <i class="fas fa-briefcase"
+           style="font-size:45px;margin-bottom:15px;"></i>
+
+        <p>You have not posted any jobs yet.</p>
+
+        <button class="primary"
+                onclick="closeModal('myJobsModal');openPostJob()">
+
+          Post your first job
+
+        </button>
+
+      </div>
+
+    `;
+
+  }else{
+
+    container.innerHTML =
+      own.map(job => `
+
+        <div class="job-card"
+             onclick="openJob('${escapeJS(job.id)}')">
+
+          <div class="job-title">
+            ${escapeHTML(job.title)}
+          </div>
+
+          <div class="company">
+            ${escapeHTML(job.company)}
+          </div>
+
+          <div class="meta">
+
+            <span>
+              Plan: ${escapeHTML(job.plan)}
+            </span>
+
+            <span>
+              €${Number(job.monthly_fee).toFixed(2)}/month
+            </span>
+
+            <span>
+              Status:
+              ${escapeHTML(job.status)}
+            </span>
+
+          </div>
+
+        </div>
+
+      `).join("");
+
+  }
+
+  openModal("myJobsModal");
+
+}
+
+
+/* FILTERS */
+
+document
+  .querySelectorAll(".filter")
+  .forEach(button => {
+
+    button.addEventListener(
+      "click",
+      () => {
+
+        document
+          .querySelectorAll(".filter")
+          .forEach(b =>
+            b.classList.remove("active")
+          );
+
+        button.classList.add("active");
+
+        selectedFilter =
+          button.dataset.filter;
+
+        renderJobs();
+
+      }
+    );
+
+  });
+
+
+/* MODALS */
+
+function openModal(id){
+
+  document
+    .getElementById(id)
+    .classList.add("show");
+
+}
+
+function closeModal(id){
+
+  document
+    .getElementById(id)
+    .classList.remove("show");
+
+}
+
+
+/* HOME */
+
+function goHome(){
+
+  window.location.href =
+    "index.html";
+
+}
+
+
+/* HTML SAFETY */
+
+function escapeHTML(value){
+
+  return String(value ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+
+}
+
+function escapeJS(value){
+
+  return String(value ?? "")
+    .replace(/\\/g,"\\\\")
+    .replace(/'/g,"\\'");
+
+}
+
+
+/* START */
+
+loadLocalJobs();
+renderJobs();
+
+</script>
+
 </body>
-    </html>
+</html>
