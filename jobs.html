@@ -25,7 +25,7 @@ body{
 }
 
 .header{
-  background:linear-gradient(135deg,#2e7d32,#66bb6a);
+  background:linear-gradient(135deg,#1b5e20,#66bb6a);
   color:white;
   padding:14px 18px;
   display:flex;
@@ -162,11 +162,12 @@ body{
 .job-top{
   display:flex;
   gap:13px;
+  align-items:flex-start;
 }
 
 .logo{
-  width:52px;
-  height:52px;
+  width:58px;
+  height:58px;
   border-radius:14px;
   background:linear-gradient(135deg,#e8f5e9,#c8e6c9);
   display:flex;
@@ -174,10 +175,18 @@ body{
   justify-content:center;
   font-size:25px;
   flex:none;
+  overflow:hidden;
+}
+
+.logo img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
 }
 
 .job-main{
   flex:1;
+  min-width:0;
 }
 
 .job-title{
@@ -195,6 +204,7 @@ body{
   color:#2e7d32;
   font-weight:800;
   white-space:nowrap;
+  margin-left:auto;
 }
 
 .meta{
@@ -324,6 +334,7 @@ body{
   height:38px;
   border-radius:50%;
   font-size:20px;
+  cursor:pointer;
 }
 
 .form-group{
@@ -356,6 +367,94 @@ body{
 .form-group textarea:focus,
 .form-group select:focus{
   border-color:#66bb6a;
+}
+
+/* IMAGE UPLOAD */
+
+.image-upload{
+  border:2px dashed #b7d9ba;
+  background:#f7fbf7;
+  border-radius:16px;
+  padding:16px;
+  text-align:center;
+  cursor:pointer;
+  transition:.2s;
+}
+
+.image-upload:hover{
+  border-color:#43a047;
+  background:#f1f8f2;
+}
+
+.image-upload i{
+  font-size:30px;
+  color:#43a047;
+  margin-bottom:8px;
+}
+
+.image-upload strong{
+  display:block;
+  color:#2e7d32;
+  margin-bottom:4px;
+}
+
+.image-upload span{
+  color:#777;
+  font-size:12px;
+}
+
+#jobImage{
+  display:none;
+}
+
+.image-preview{
+  display:none;
+  position:relative;
+  margin-top:12px;
+  border-radius:16px;
+  overflow:hidden;
+  background:#f1f1f1;
+}
+
+.image-preview.show{
+  display:block;
+}
+
+.image-preview img{
+  width:100%;
+  max-height:230px;
+  object-fit:cover;
+  display:block;
+}
+
+.remove-image{
+  position:absolute;
+  top:10px;
+  right:10px;
+  width:36px;
+  height:36px;
+  border:0;
+  border-radius:50%;
+  background:rgba(0,0,0,.65);
+  color:white;
+  font-size:18px;
+  cursor:pointer;
+}
+
+.upload-note{
+  color:#777;
+  font-size:12px;
+  line-height:1.5;
+  margin-top:7px;
+}
+
+.detail-image{
+  width:100%;
+  max-height:260px;
+  object-fit:cover;
+  border-radius:17px;
+  margin-bottom:18px;
+  display:block;
 }
 
 .plan-title{
@@ -421,6 +520,7 @@ body{
   border-radius:13px;
   font-weight:700;
   margin-top:10px;
+  cursor:pointer;
 }
 
 .notice{
@@ -436,6 +536,7 @@ body{
 .detail-row{
   display:flex;
   justify-content:space-between;
+  gap:15px;
   padding:10px 0;
   border-bottom:1px solid #eee;
 }
@@ -448,6 +549,26 @@ body{
   font-weight:650;
   text-align:right;
   max-width:60%;
+}
+
+.status-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:12px;
+  font-size:12px;
+  font-weight:700;
+}
+
+.status-pending{
+  background:#fff8e1;
+  color:#8d6e63;
+}
+
+.status-active{
+  background:#e8f5e9;
+  color:#2e7d32;
 }
 
 .success{
@@ -481,57 +602,104 @@ body{
 <body>
 
 <header class="header">
+
   <div class="header-left">
+
     <button class="back-btn" onclick="goHome()">
       <i class="fas fa-arrow-left"></i>
     </button>
+
     <h1>Jobs</h1>
+
   </div>
 
   <div class="header-right">
+
     <button class="icon-btn">
       <i class="fas fa-bell"></i>
     </button>
+
     <button class="icon-btn" onclick="openMyJobs()">
       <i class="fas fa-user"></i>
     </button>
+
   </div>
+
 </header>
 
+
 <section class="hero">
+
   <h2>Find the right opportunity</h2>
-  <p>Discover jobs, hire professionals and grow your career with HAVKAR.</p>
+
+  <p>
+    Discover jobs, hire professionals and grow your career with HAVKAR.
+  </p>
 
   <div class="search">
+
     <i class="fas fa-search"></i>
+
     <input
       id="searchInput"
       type="text"
       placeholder="Search jobs, companies..."
       oninput="renderJobs()">
+
   </div>
+
 </section>
 
+
 <div class="filters">
-  <button class="filter active" data-filter="All">All</button>
-  <button class="filter" data-filter="Full-time">Full-time</button>
-  <button class="filter" data-filter="Part-time">Part-time</button>
-  <button class="filter" data-filter="Remote">Remote</button>
-  <button class="filter" data-filter="Freelance">Freelance</button>
-  <button class="filter" data-filter="Contract">Contract</button>
+
+  <button class="filter active" data-filter="All">
+    All
+  </button>
+
+  <button class="filter" data-filter="Full-time">
+    Full-time
+  </button>
+
+  <button class="filter" data-filter="Part-time">
+    Part-time
+  </button>
+
+  <button class="filter" data-filter="Remote">
+    Remote
+  </button>
+
+  <button class="filter" data-filter="Freelance">
+    Freelance
+  </button>
+
+  <button class="filter" data-filter="Contract">
+    Contract
+  </button>
+
 </div>
+
 
 <main class="content">
 
-  <div class="section-title">Available jobs</div>
+  <div class="section-title">
+    Available jobs
+  </div>
 
   <div id="jobsList"></div>
 
 </main>
 
-<button class="fab" onclick="openPostJob()" aria-label="Post a job">
+
+<button
+  class="fab"
+  onclick="openPostJob()"
+  aria-label="Post a job">
+
   <i class="fas fa-plus"></i>
+
 </button>
+
 
 <nav class="bottom-nav">
 
@@ -550,14 +718,22 @@ body{
     Saved
   </div>
 
-  <div class="nav-item" onclick="window.location.href='chat.html'">
+  <div
+    class="nav-item"
+    onclick="window.location.href='chat.html'">
+
     <i class="fas fa-comment"></i>
     Messages
+
   </div>
 
-  <div class="nav-item" onclick="openMyJobs()">
+  <div
+    class="nav-item"
+    onclick="openMyJobs()">
+
     <i class="fas fa-user"></i>
     Profile
+
   </div>
 
 </nav>
@@ -570,10 +746,19 @@ body{
   <div class="modal-box">
 
     <div class="modal-head">
-      <h2 id="detailTitle">Job details</h2>
-      <button class="close" onclick="closeModal('detailModal')">
+
+      <h2 id="detailTitle">
+        Job details
+      </h2>
+
+      <button
+        class="close"
+        onclick="closeModal('detailModal')">
+
         ×
+
       </button>
+
     </div>
 
     <div id="detailContent"></div>
@@ -590,99 +775,289 @@ body{
   <div class="modal-box">
 
     <div class="modal-head">
-      <h2>Post a Job</h2>
-      <button class="close" onclick="closeModal('postModal')">
+
+      <h2>
+        Post a Job
+      </h2>
+
+      <button
+        class="close"
+        onclick="closeModal('postModal')">
+
         ×
+
       </button>
+
     </div>
 
-    <div class="form-group">
-      <label>Job title</label>
-      <input id="jobTitle" placeholder="Example: Pizza Chef">
-    </div>
+
+    <!-- IMAGE -->
 
     <div class="form-group">
-      <label>Company / Business</label>
-      <input id="jobCompany" placeholder="Company name">
+
+      <label>
+        Advertisement image / Company logo
+      </label>
+
+      <div
+        class="image-upload"
+        onclick="document.getElementById('jobImage').click()">
+
+        <i class="fas fa-cloud-arrow-up"></i>
+
+        <strong>
+          Add an image
+        </strong>
+
+        <span>
+          Upload a professional image for your advertisement
+        </span>
+
+      </div>
+
+      <input
+        id="jobImage"
+        type="file"
+        accept="image/*"
+        onchange="handleImageUpload(event)">
+
+      <div
+        id="imagePreview"
+        class="image-preview">
+
+        <img
+          id="imagePreviewImg"
+          src=""
+          alt="Advertisement preview">
+
+        <button
+          type="button"
+          class="remove-image"
+          onclick="removeJobImage(event)">
+
+          ×
+
+        </button>
+
+      </div>
+
+      <div class="upload-note">
+        Recommended: clear company logo, workplace photo,
+        or a professional advertisement image.
+      </div>
+
     </div>
 
-    <div class="form-group">
-      <label>Location</label>
-      <input id="jobLocation" placeholder="Crotone, Italy">
-    </div>
 
     <div class="form-group">
-      <label>Job type</label>
+
+      <label>
+        Job title
+      </label>
+
+      <input
+        id="jobTitle"
+        placeholder="Example: Pizza Chef">
+
+    </div>
+
+
+    <div class="form-group">
+
+      <label>
+        Company / Business
+      </label>
+
+      <input
+        id="jobCompany"
+        placeholder="Company name">
+
+    </div>
+
+
+    <div class="form-group">
+
+      <label>
+        Location
+      </label>
+
+      <input
+        id="jobLocation"
+        placeholder="Crotone, Italy">
+
+    </div>
+
+
+    <div class="form-group">
+
+      <label>
+        Job type
+      </label>
+
       <select id="jobType">
-        <option>Full-time</option>
-        <option>Part-time</option>
-        <option>Remote</option>
-        <option>Freelance</option>
-        <option>Contract</option>
+
+        <option>
+          Full-time
+        </option>
+
+        <option>
+          Part-time
+        </option>
+
+        <option>
+          Remote
+        </option>
+
+        <option>
+          Freelance
+        </option>
+
+        <option>
+          Contract
+        </option>
+
       </select>
+
     </div>
 
-    <div class="form-group">
-      <label>Salary / Payment</label>
-      <input id="jobSalary" placeholder="Example: €1,800/month">
-    </div>
 
     <div class="form-group">
-      <label>Skills</label>
-      <input id="jobSkills" placeholder="Pizza, Cooking, Italian">
+
+      <label>
+        Salary / Payment
+      </label>
+
+      <input
+        id="jobSalary"
+        placeholder="Example: €1,800/month">
+
     </div>
 
+
     <div class="form-group">
-      <label>Job description</label>
-      <textarea id="jobDescription"
+
+      <label>
+        Skills
+      </label>
+
+      <input
+        id="jobSkills"
+        placeholder="Pizza, Cooking, Italian">
+
+    </div>
+
+
+    <div class="form-group">
+
+      <label>
+        Job description
+      </label>
+
+      <textarea
+        id="jobDescription"
         placeholder="Describe the job, requirements and conditions..."></textarea>
+
     </div>
+
 
     <div class="plan-title">
       Choose a monthly publishing plan
     </div>
 
+
     <div class="plans">
 
-      <div class="plan selected"
-           data-price="9.99"
-           data-plan="Basic"
-           onclick="selectPlan(this)">
-        <strong>Basic — €9.99 / month</strong>
-        <span>For small businesses and one active job.</span>
+      <div
+        class="plan selected"
+        data-price="9.99"
+        data-plan="Basic"
+        onclick="selectPlan(this)">
+
+        <strong>
+          Basic — €9.99 / month
+        </strong>
+
+        <span>
+          For small businesses and one active job.
+        </span>
+
       </div>
 
-      <div class="plan"
-           data-price="19.99"
-           data-plan="Professional"
-           onclick="selectPlan(this)">
-        <strong>Professional — €19.99 / month</strong>
-        <span>More visibility and multiple active jobs.</span>
+
+      <div
+        class="plan"
+        data-price="19.99"
+        data-plan="Professional"
+        onclick="selectPlan(this)">
+
+        <strong>
+          Professional — €19.99 / month
+        </strong>
+
+        <span>
+          More visibility and multiple active jobs.
+        </span>
+
       </div>
 
-      <div class="plan"
-           data-price="39.99"
-           data-plan="Business"
-           onclick="selectPlan(this)">
-        <strong>Business — €39.99 / month</strong>
-        <span>For businesses with regular recruitment.</span>
+
+      <div
+        class="plan"
+        data-price="39.99"
+        data-plan="Business"
+        onclick="selectPlan(this)">
+
+        <strong>
+          Business — €39.99 / month
+        </strong>
+
+        <span>
+          For businesses with regular recruitment.
+        </span>
+
       </div>
 
     </div>
+
 
     <div class="summary">
-      <strong>Monthly publishing fee</strong><br>
-      Plan: <span id="selectedPlanName">Basic</span><br>
-      Amount: €<span id="selectedPlanPrice">9.99</span>
+
+      <strong>
+        Monthly publishing fee
+      </strong>
+
+      <br>
+
+      Plan:
+      <span id="selectedPlanName">
+        Basic
+      </span>
+
+      <br>
+
+      Amount:
+      €<span id="selectedPlanPrice">
+        9.99
+      </span>
+
     </div>
+
 
     <div class="notice">
-      Your job will only become publicly active after the monthly
-      subscription payment is successfully confirmed.
+
+      Your job will only become publicly active
+      after the monthly subscription payment
+      is successfully confirmed.
+
     </div>
 
-    <button class="primary" onclick="submitJob()">
+
+    <button
+      class="primary"
+      onclick="submitJob()">
+
       Continue to payment
+
     </button>
 
   </div>
@@ -697,10 +1072,19 @@ body{
   <div class="modal-box">
 
     <div class="modal-head">
-      <h2>Monthly subscription</h2>
-      <button class="close" onclick="closeModal('paymentModal')">
+
+      <h2>
+        Monthly subscription
+      </h2>
+
+      <button
+        class="close"
+        onclick="closeModal('paymentModal')">
+
         ×
+
       </button>
+
     </div>
 
     <div id="paymentContent"></div>
@@ -717,10 +1101,19 @@ body{
   <div class="modal-box">
 
     <div class="modal-head">
-      <h2>My Jobs</h2>
-      <button class="close" onclick="closeModal('myJobsModal')">
+
+      <h2>
+        My Jobs
+      </h2>
+
+      <button
+        class="close"
+        onclick="closeModal('myJobsModal')">
+
         ×
+
       </button>
+
     </div>
 
     <div id="myJobsContent"></div>
@@ -732,27 +1125,26 @@ body{
 
 <script>
 
-/*
-  HAVKAR JOBS
-  -----------------------------------------
-  This page provides:
-  - Professional job listing
-  - Search
-  - Filters
-  - Job details
-  - User job posting
-  - Monthly subscription selection
-  - User's own jobs
-  - Supabase-ready structure
+/* =========================================================
+   HAVKAR JOBS
+   =========================================================
+   Professional job listing
+   Search
+   Filters
+   Job details
+   Advertisement image upload
+   Image preview
+   Monthly subscription plans
+   My Jobs
+   Payment-ready structure
+   Supabase-ready structure
+   ========================================================= */
 
-  IMPORTANT:
-  Real card/bank payment must be connected
-  through a secure payment provider + server/
-  Supabase Edge Function.
-*/
 
+/* SUPABASE */
 
 const SUPABASE_URL = "";
+
 const SUPABASE_PUBLISHABLE_KEY =
 "sb_publishable_h6RUZrukEovZn_N3XLDukw_Ui67UsWG";
 
@@ -763,15 +1155,17 @@ if(
   SUPABASE_PUBLISHABLE_KEY &&
   window.supabase
 ){
+
   supabaseClient =
     window.supabase.createClient(
       SUPABASE_URL,
       SUPABASE_PUBLISHABLE_KEY
     );
+
 }
 
 
-/* DEMO / INITIAL JOBS */
+/* DEMO JOBS */
 
 let jobs = [
 
@@ -782,13 +1176,19 @@ let jobs = [
     location:"Milan, Italy",
     type:"Full-time",
     salary:"€45k-65k",
-    skills:["React","JavaScript","CSS"],
+    skills:[
+      "React",
+      "JavaScript",
+      "CSS"
+    ],
     description:
-    "We are looking for an experienced frontend developer to join our growing technology team.",
+      "We are looking for an experienced frontend developer to join our growing technology team.",
     icon:"💼",
+    image:"",
     owner:false,
     status:"active"
   },
+
 
   {
     id:"demo-2",
@@ -797,13 +1197,19 @@ let jobs = [
     location:"Rome, Italy",
     type:"Full-time",
     salary:"€35k-50k",
-    skills:["Marketing","SEO","Social Media"],
+    skills:[
+      "Marketing",
+      "SEO",
+      "Social Media"
+    ],
     description:
-    "Manage digital campaigns, social media strategy and marketing projects.",
+      "Manage digital campaigns, social media strategy and marketing projects.",
     icon:"🏢",
+    image:"",
     owner:false,
     status:"active"
   },
+
 
   {
     id:"demo-3",
@@ -812,13 +1218,18 @@ let jobs = [
     location:"Remote",
     type:"Part-time",
     salary:"€20k-30k",
-    skills:["Customer Service","English"],
+    skills:[
+      "Customer Service",
+      "English"
+    ],
     description:
-    "Remote customer support position for an international service company.",
+      "Remote customer support position for an international service company.",
     icon:"🌐",
+    image:"",
     owner:false,
     status:"active"
   },
+
 
   {
     id:"demo-4",
@@ -827,13 +1238,18 @@ let jobs = [
     location:"Florence, Italy",
     type:"Freelance",
     salary:"€30k-40k",
-    skills:["Photoshop","Illustrator"],
+    skills:[
+      "Photoshop",
+      "Illustrator"
+    ],
     description:
-    "Freelance graphic designer for branding and digital projects.",
+      "Freelance graphic designer for branding and digital projects.",
     icon:"🎨",
+    image:"",
     owner:false,
     status:"active"
   },
+
 
   {
     id:"demo-5",
@@ -842,10 +1258,14 @@ let jobs = [
     location:"Venice, Italy",
     type:"Part-time",
     salary:"€18k-25k",
-    skills:["Hospitality","Italian"],
+    skills:[
+      "Hospitality",
+      "Italian"
+    ],
     description:
-    "Restaurant server position in a busy Italian restaurant.",
+      "Restaurant server position in a busy Italian restaurant.",
     icon:"🍕",
+    image:"",
     owner:false,
     status:"active"
   }
@@ -854,10 +1274,17 @@ let jobs = [
 
 
 let selectedFilter = "All";
+
+
 let selectedPlan = {
   name:"Basic",
   price:9.99
 };
+
+
+/* TEMPORARY IMAGE */
+
+let selectedJobImage = "";
 
 
 /* LOAD LOCAL JOBS */
@@ -876,14 +1303,20 @@ function loadLocalJobs(){
 
       jobs = [
         ...localJobs,
-        ...jobs.filter(j => !localJobs.some(
-          x => x.id === j.id
-        ))
+        ...jobs.filter(
+          j =>
+            !localJobs.some(
+              x => x.id === j.id
+            )
+        )
       ];
 
     }catch(error){
 
-      console.error(error);
+      console.error(
+        "Could not load local jobs:",
+        error
+      );
 
     }
 
@@ -897,12 +1330,212 @@ function loadLocalJobs(){
 function saveLocalJobs(){
 
   const ownJobs =
-    jobs.filter(j => j.owner === true);
+    jobs.filter(
+      j => j.owner === true
+    );
 
-  localStorage.setItem(
-    "havkar_jobs",
-    JSON.stringify(ownJobs)
-  );
+  try{
+
+    localStorage.setItem(
+      "havkar_jobs",
+      JSON.stringify(ownJobs)
+    );
+
+  }catch(error){
+
+    console.error(
+      "Could not save jobs:",
+      error
+    );
+
+    alert(
+      "The advertisement could not be saved on this device."
+    );
+
+  }
+
+}
+
+
+/* IMAGE UPLOAD */
+
+function handleImageUpload(event){
+
+  const file =
+    event.target.files &&
+    event.target.files[0];
+
+  if(!file) return;
+
+
+  if(!file.type.startsWith("image/")){
+
+    alert(
+      "Please select an image file."
+    );
+
+    event.target.value = "";
+
+    return;
+
+  }
+
+
+  /*
+    Resize and compress the image before
+    saving it locally.
+
+    This keeps the prototype lightweight
+    and makes it ready for later migration
+    to Supabase Storage.
+  */
+
+  const reader =
+    new FileReader();
+
+
+  reader.onload = function(e){
+
+    const img =
+      new Image();
+
+
+    img.onload = function(){
+
+      const maxSize = 1200;
+
+      let width = img.width;
+      let height = img.height;
+
+
+      if(width > maxSize){
+
+        height =
+          height * maxSize / width;
+
+        width =
+          maxSize;
+
+      }
+
+
+      if(height > maxSize){
+
+        width =
+          width * maxSize / height;
+
+        height =
+          maxSize;
+
+      }
+
+
+      const canvas =
+        document.createElement("canvas");
+
+      canvas.width =
+        Math.round(width);
+
+      canvas.height =
+        Math.round(height);
+
+
+      const ctx =
+        canvas.getContext("2d");
+
+      ctx.drawImage(
+        img,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
+
+      selectedJobImage =
+        canvas.toDataURL(
+          "image/jpeg",
+          0.82
+        );
+
+
+      document.getElementById(
+        "imagePreviewImg"
+      ).src =
+        selectedJobImage;
+
+
+      document.getElementById(
+        "imagePreview"
+      ).classList.add("show");
+
+    };
+
+
+    img.src =
+      e.target.result;
+
+  };
+
+
+  reader.readAsDataURL(file);
+
+}
+
+
+/* REMOVE IMAGE */
+
+function removeJobImage(event){
+
+  if(event){
+
+    event.stopPropagation();
+
+  }
+
+
+  selectedJobImage = "";
+
+
+  document.getElementById(
+    "jobImage"
+  ).value = "";
+
+
+  document.getElementById(
+    "imagePreviewImg"
+  ).src = "";
+
+
+  document.getElementById(
+    "imagePreview"
+  ).classList.remove("show");
+
+}
+
+
+/* RENDER JOB IMAGE */
+
+function renderJobImage(job){
+
+  if(job.image){
+
+    return `
+      <div class="logo">
+        <img
+          src="${escapeHTML(job.image)}"
+          alt="Company image">
+      </div>
+    `;
+
+  }
+
+
+  return `
+    <div class="logo">
+      ${job.icon || "💼"}
+    </div>
+  `;
 
 }
 
@@ -912,14 +1545,20 @@ function saveLocalJobs(){
 function renderJobs(){
 
   const list =
-    document.getElementById("jobsList");
+    document.getElementById(
+      "jobsList"
+    );
+
 
   const search =
     document
-      .getElementById("searchInput")
+      .getElementById(
+        "searchInput"
+      )
       .value
       .toLowerCase()
       .trim();
+
 
   let filtered =
     jobs.filter(job => {
@@ -927,6 +1566,7 @@ function renderJobs(){
       const filterOK =
         selectedFilter === "All" ||
         job.type === selectedFilter;
+
 
       const searchText =
         (
@@ -936,8 +1576,10 @@ function renderJobs(){
           job.skills.join(" ")
         ).toLowerCase();
 
+
       return filterOK &&
-             (!search || searchText.includes(search));
+        (!search ||
+          searchText.includes(search));
 
     });
 
@@ -945,11 +1587,20 @@ function renderJobs(){
   if(!filtered.length){
 
     list.innerHTML = `
+
       <div class="empty">
-        <i class="fas fa-search"
-           style="font-size:40px;margin-bottom:15px;"></i>
-        <p>No jobs found.</p>
+
+        <i
+          class="fas fa-search"
+          style="font-size:40px;margin-bottom:15px;">
+        </i>
+
+        <p>
+          No jobs found.
+        </p>
+
       </div>
+
     `;
 
     return;
@@ -958,16 +1609,16 @@ function renderJobs(){
 
 
   list.innerHTML =
+
     filtered.map(job => `
 
-      <article class="job-card"
-               onclick="openJob('${escapeJS(job.id)}')">
+      <article
+        class="job-card"
+        onclick="openJob('${escapeJS(job.id)}')">
 
         <div class="job-top">
 
-          <div class="logo">
-            ${job.icon || "💼"}
-          </div>
+          ${renderJobImage(job)}
 
           <div class="job-main">
 
@@ -982,32 +1633,50 @@ function renderJobs(){
           </div>
 
           <div class="salary">
-            ${escapeHTML(job.salary || "Negotiable")}
+
+            ${escapeHTML(
+              job.salary || "Negotiable"
+            )}
+
           </div>
 
         </div>
 
+
         <div class="meta">
 
           <span>
+
             <i class="fas fa-location-dot"></i>
-            ${escapeHTML(job.location)}
+
+            ${escapeHTML(
+              job.location
+            )}
+
           </span>
 
+
           <span>
+
             <i class="fas fa-clock"></i>
-            ${escapeHTML(job.type)}
+
+            ${escapeHTML(
+              job.type
+            )}
+
           </span>
 
         </div>
 
+
         <div class="tags">
 
           ${
-            job.skills.map(skill =>
-              `<span class="tag">
-                ${escapeHTML(skill)}
-              </span>`
+            job.skills.map(
+              skill =>
+                `<span class="tag">
+                  ${escapeHTML(skill)}
+                </span>`
             ).join("")
           }
 
@@ -1025,107 +1694,225 @@ function renderJobs(){
 function openJob(id){
 
   const job =
-    jobs.find(j => String(j.id) === String(id));
+    jobs.find(
+      j =>
+        String(j.id) ===
+        String(id)
+    );
+
 
   if(!job) return;
 
-  document.getElementById("detailTitle")
-    .textContent = job.title;
 
-  document.getElementById("detailContent")
-    .innerHTML = `
+  document.getElementById(
+    "detailTitle"
+  ).textContent =
+    job.title;
 
-      <div class="job-top">
 
-        <div class="logo">
-          ${job.icon || "💼"}
+  const imageHTML =
+    job.image
+    ? `
+      <img
+        class="detail-image"
+        src="${escapeHTML(job.image)}"
+        alt="Advertisement image">
+    `
+    : "";
+
+
+  const statusHTML =
+    job.status === "active"
+    ? `
+      <span class="status-badge status-active">
+        <i class="fas fa-check-circle"></i>
+        Active
+      </span>
+    `
+    : `
+      <span class="status-badge status-pending">
+        <i class="fas fa-clock"></i>
+        Pending payment
+      </span>
+    `;
+
+
+  document.getElementById(
+    "detailContent"
+  ).innerHTML = `
+
+    ${imageHTML}
+
+
+    <div class="job-top">
+
+      ${renderJobImage(job)}
+
+      <div class="job-main">
+
+        <div class="job-title">
+          ${escapeHTML(job.title)}
         </div>
 
-        <div class="job-main">
-
-          <div class="job-title">
-            ${escapeHTML(job.title)}
-          </div>
-
-          <div class="company">
-            ${escapeHTML(job.company)}
-          </div>
-
+        <div class="company">
+          ${escapeHTML(job.company)}
         </div>
 
       </div>
 
-      <div style="margin-top:20px">
+    </div>
 
-        <div class="detail-row">
-          <span class="detail-label">Location</span>
-          <span class="detail-value">
-            ${escapeHTML(job.location)}
-          </span>
-        </div>
 
-        <div class="detail-row">
-          <span class="detail-label">Type</span>
-          <span class="detail-value">
-            ${escapeHTML(job.type)}
-          </span>
-        </div>
+    <div style="margin-top:20px">
 
-        <div class="detail-row">
-          <span class="detail-label">Salary</span>
-          <span class="detail-value">
-            ${escapeHTML(job.salary || "Negotiable")}
-          </span>
-        </div>
+      <div class="detail-row">
+
+        <span class="detail-label">
+          Location
+        </span>
+
+        <span class="detail-value">
+          ${escapeHTML(job.location)}
+        </span>
 
       </div>
 
-      <div style="margin-top:20px">
-        <h3>Description</h3>
-        <p style="color:#666;line-height:1.7;margin-top:8px">
-          ${escapeHTML(job.description || "")}
-        </p>
+
+      <div class="detail-row">
+
+        <span class="detail-label">
+          Type
+        </span>
+
+        <span class="detail-value">
+          ${escapeHTML(job.type)}
+        </span>
+
       </div>
 
-      <div style="margin-top:20px">
-        <h3>Skills</h3>
 
-        <div class="tags">
+      <div class="detail-row">
 
-          ${
-            job.skills.map(skill =>
+        <span class="detail-label">
+          Salary
+        </span>
+
+        <span class="detail-value">
+          ${escapeHTML(
+            job.salary ||
+            "Negotiable"
+          )}
+        </span>
+
+      </div>
+
+
+      <div class="detail-row">
+
+        <span class="detail-label">
+          Status
+        </span>
+
+        <span class="detail-value">
+          ${statusHTML}
+        </span>
+
+      </div>
+
+    </div>
+
+
+    <div style="margin-top:20px">
+
+      <h3>
+        Description
+      </h3>
+
+      <p
+        style="
+          color:#666;
+          line-height:1.7;
+          margin-top:8px;
+        ">
+
+        ${escapeHTML(
+          job.description || ""
+        )}
+
+      </p>
+
+    </div>
+
+
+    <div style="margin-top:20px">
+
+      <h3>
+        Skills
+      </h3>
+
+      <div class="tags">
+
+        ${
+          job.skills.map(
+            skill =>
               `<span class="tag">
                 ${escapeHTML(skill)}
               </span>`
-            ).join("")
-          }
-
-        </div>
+          ).join("")
+        }
 
       </div>
 
-      ${
-        job.owner
-        ? `
-          <button class="secondary"
-                  onclick="alert('This is your job advertisement.')">
-            <i class="fas fa-user"></i>
-            Your advertisement
-          </button>
-        `
-        :
-        `
-          <button class="primary"
-                  onclick="applyJob('${escapeJS(job.id)}')">
-            <i class="fas fa-paper-plane"></i>
-            Apply for this job
-          </button>
-        `
-      }
+    </div>
 
-    `;
 
-  openModal("detailModal");
+    ${
+      job.owner
+
+      ? `
+
+        <button
+          class="secondary"
+          onclick="
+            alert(
+              'This is your job advertisement.'
+            )
+          ">
+
+          <i class="fas fa-user"></i>
+
+          Your advertisement
+
+        </button>
+
+      `
+
+      :
+
+      `
+
+        <button
+          class="primary"
+          onclick="
+            applyJob('${escapeJS(job.id)}')
+          ">
+
+          <i class="fas fa-paper-plane"></i>
+
+          Apply for this job
+
+        </button>
+
+      `
+
+    }
+
+  `;
+
+
+  openModal(
+    "detailModal"
+  );
 
 }
 
@@ -1135,11 +1922,20 @@ function openJob(id){
 function applyJob(id){
 
   const job =
-    jobs.find(j => String(j.id) === String(id));
+    jobs.find(
+      j =>
+        String(j.id) ===
+        String(id)
+    );
+
 
   if(!job) return;
 
-  closeModal("detailModal");
+
+  closeModal(
+    "detailModal"
+  );
+
 
   alert(
     "Application started for: " +
@@ -1153,7 +1949,98 @@ function applyJob(id){
 
 function openPostJob(){
 
-  openModal("postModal");
+  resetPostForm();
+
+  openModal(
+    "postModal"
+  );
+
+}
+
+
+/* RESET POST FORM */
+
+function resetPostForm(){
+
+  document.getElementById(
+    "jobTitle"
+  ).value = "";
+
+
+  document.getElementById(
+    "jobCompany"
+  ).value = "";
+
+
+  document.getElementById(
+    "jobLocation"
+  ).value = "";
+
+
+  document.getElementById(
+    "jobType"
+  ).value = "Full-time";
+
+
+  document.getElementById(
+    "jobSalary"
+  ).value = "";
+
+
+  document.getElementById(
+    "jobSkills"
+  ).value = "";
+
+
+  document.getElementById(
+    "jobDescription"
+  ).value = "";
+
+
+  removeJobImage();
+
+
+  selectedPlan = {
+    name:"Basic",
+    price:9.99
+  };
+
+
+  document
+    .querySelectorAll(".plan")
+    .forEach(
+      p =>
+        p.classList.remove(
+          "selected"
+        )
+    );
+
+
+  const basic =
+    document.querySelector(
+      '.plan[data-plan="Basic"]'
+    );
+
+
+  if(basic){
+
+    basic.classList.add(
+      "selected"
+    );
+
+  }
+
+
+  document.getElementById(
+    "selectedPlanName"
+  ).textContent =
+    "Basic";
+
+
+  document.getElementById(
+    "selectedPlanPrice"
+  ).textContent =
+    "9.99";
 
 }
 
@@ -1164,9 +2051,18 @@ function selectPlan(element){
 
   document
     .querySelectorAll(".plan")
-    .forEach(p => p.classList.remove("selected"));
+    .forEach(
+      p =>
+        p.classList.remove(
+          "selected"
+        )
+    );
 
-  element.classList.add("selected");
+
+  element.classList.add(
+    "selected"
+  );
+
 
   selectedPlan = {
 
@@ -1174,16 +2070,23 @@ function selectPlan(element){
       element.dataset.plan,
 
     price:
-      Number(element.dataset.price)
+      Number(
+        element.dataset.price
+      )
 
   };
 
-  document.getElementById("selectedPlanName")
-    .textContent = selectedPlan.name;
 
-  document.getElementById("selectedPlanPrice")
-    .textContent =
-      selectedPlan.price.toFixed(2);
+  document.getElementById(
+    "selectedPlanName"
+  ).textContent =
+    selectedPlan.name;
+
+
+  document.getElementById(
+    "selectedPlanPrice"
+  ).textContent =
+    selectedPlan.price.toFixed(2);
 
 }
 
@@ -1193,28 +2096,50 @@ function selectPlan(element){
 async function submitJob(){
 
   const title =
-    document.getElementById("jobTitle").value.trim();
+    document.getElementById(
+      "jobTitle"
+    ).value.trim();
+
 
   const company =
-    document.getElementById("jobCompany").value.trim();
+    document.getElementById(
+      "jobCompany"
+    ).value.trim();
+
 
   const location =
-    document.getElementById("jobLocation").value.trim();
+    document.getElementById(
+      "jobLocation"
+    ).value.trim();
+
 
   const type =
-    document.getElementById("jobType").value;
+    document.getElementById(
+      "jobType"
+    ).value;
+
 
   const salary =
-    document.getElementById("jobSalary").value.trim();
+    document.getElementById(
+      "jobSalary"
+    ).value.trim();
+
 
   const skills =
-    document.getElementById("jobSkills").value
-      .split(",")
-      .map(x => x.trim())
-      .filter(Boolean);
+    document.getElementById(
+      "jobSkills"
+    ).value
+    .split(",")
+    .map(
+      x => x.trim()
+    )
+    .filter(Boolean);
+
 
   const description =
-    document.getElementById("jobDescription").value.trim();
+    document.getElementById(
+      "jobDescription"
+    ).value.trim();
 
 
   if(
@@ -1240,11 +2165,16 @@ async function submitJob(){
       Date.now(),
 
     title,
+
     company,
+
     location,
+
     type,
+
     salary:
-      salary || "Negotiable",
+      salary ||
+      "Negotiable",
 
     skills:
       skills.length
@@ -1253,15 +2183,23 @@ async function submitJob(){
 
     description,
 
-    icon:"💼",
+    icon:
+      "💼",
 
-    owner:true,
+    image:
+      selectedJobImage,
 
-    status:"pending_payment",
+    owner:
+      true,
 
-    plan:selectedPlan.name,
+    status:
+      "pending_payment",
 
-    monthly_fee:selectedPlan.price,
+    plan:
+      selectedPlan.name,
+
+    monthly_fee:
+      selectedPlan.price,
 
     created_at:
       new Date().toISOString()
@@ -1270,18 +2208,36 @@ async function submitJob(){
 
 
   /*
-    Save the advertisement locally for now.
-    Later this same object will be inserted
-    into Supabase after the payment is confirmed.
+    Advertisement is stored locally
+    for the prototype.
+
+    In the production version,
+    the image will be uploaded to
+    Supabase Storage and the job
+    record will be stored in Supabase.
+
+    The job remains pending_payment
+    until the payment provider confirms
+    the subscription.
   */
 
-  jobs.unshift(newJob);
+
+  jobs.unshift(
+    newJob
+  );
+
 
   saveLocalJobs();
 
-  closeModal("postModal");
 
-  showPaymentScreen(newJob);
+  closeModal(
+    "postModal"
+  );
+
+
+  showPaymentScreen(
+    newJob
+  );
 
 }
 
@@ -1290,100 +2246,154 @@ async function submitJob(){
 
 function showPaymentScreen(job){
 
-  document.getElementById("paymentContent")
-    .innerHTML = `
+  const imageHTML =
+    job.image
+    ? `
+      <img
+        class="detail-image"
+        src="${escapeHTML(job.image)}"
+        alt="Advertisement image">
+    `
+    : "";
 
-      <div class="summary">
 
-        <div class="detail-row">
-          <span class="detail-label">
-            Job
-          </span>
+  document.getElementById(
+    "paymentContent"
+  ).innerHTML = `
 
-          <span class="detail-value">
-            ${escapeHTML(job.title)}
-          </span>
-        </div>
+    ${imageHTML}
 
-        <div class="detail-row">
-          <span class="detail-label">
-            Company
-          </span>
 
-          <span class="detail-value">
-            ${escapeHTML(job.company)}
-          </span>
-        </div>
+    <div class="summary">
 
-        <div class="detail-row">
-          <span class="detail-label">
-            Monthly plan
-          </span>
+      <div class="detail-row">
 
-          <span class="detail-value">
-            ${escapeHTML(job.plan)}
-          </span>
-        </div>
+        <span class="detail-label">
+          Job
+        </span>
 
-        <div class="detail-row">
-          <span class="detail-label">
-            Monthly fee
-          </span>
-
-          <span class="detail-value">
-            €${Number(job.monthly_fee).toFixed(2)}
-          </span>
-        </div>
+        <span class="detail-value">
+          ${escapeHTML(job.title)}
+        </span>
 
       </div>
 
-      <div class="notice">
 
-        Your advertisement is currently
-        <strong>pending payment</strong>.
+      <div class="detail-row">
 
-        The advertisement must not become
-        publicly active until the payment
-        provider confirms the subscription.
+        <span class="detail-label">
+          Company
+        </span>
+
+        <span class="detail-value">
+          ${escapeHTML(job.company)}
+        </span>
 
       </div>
 
-      <button class="primary"
-              onclick="startRealPayment('${escapeJS(job.id)}')">
 
-        <i class="fas fa-credit-card"></i>
-        Pay €${Number(job.monthly_fee).toFixed(2)} / month
+      <div class="detail-row">
 
-      </button>
+        <span class="detail-label">
+          Monthly plan
+        </span>
 
-      <button class="secondary"
-              onclick="closeModal('paymentModal')">
+        <span class="detail-value">
+          ${escapeHTML(job.plan)}
+        </span>
 
-        Pay later
+      </div>
 
-      </button>
 
-    `;
+      <div class="detail-row">
 
-  openModal("paymentModal");
+        <span class="detail-label">
+          Monthly fee
+        </span>
+
+        <span class="detail-value">
+
+          €${Number(
+            job.monthly_fee
+          ).toFixed(2)}
+
+        </span>
+
+      </div>
+
+    </div>
+
+
+    <div class="notice">
+
+      Your advertisement is currently
+      <strong>pending payment</strong>.
+
+      The advertisement must not become
+      publicly active until the payment
+      provider confirms the subscription.
+
+    </div>
+
+
+    <button
+      class="primary"
+      onclick="
+        startRealPayment(
+          '${escapeJS(job.id)}'
+        )
+      ">
+
+      <i class="fas fa-credit-card"></i>
+
+      Pay €${Number(
+        job.monthly_fee
+      ).toFixed(2)} / month
+
+    </button>
+
+
+    <button
+      class="secondary"
+      onclick="
+        closeModal('paymentModal')
+      ">
+
+      Pay later
+
+    </button>
+
+  `;
+
+
+  openModal(
+    "paymentModal"
+  );
 
 }
 
 
-/*
-  REAL PAYMENT CONNECTION
-
-  This intentionally does NOT pretend that
-  payment has happened.
-
-  A secure payment provider must be connected
-  here through a backend / Supabase Edge Function.
-
-  Until that is connected, the advertisement
-  remains pending_payment.
-*/
+/* REAL PAYMENT */
 
 function startRealPayment(jobId){
+
+  /*
+    IMPORTANT:
+
+    This function does NOT pretend
+    that payment has happened.
+
+    A real payment provider must be
+    connected through a secure backend
+    or Supabase Edge Function.
+
+    Until the provider confirms payment,
+    the advertisement remains:
+
+    pending_payment
+
+  */
+
 
   alert(
     "Payment gateway is not connected yet. " +
@@ -1398,10 +2408,16 @@ function startRealPayment(jobId){
 function openMyJobs(){
 
   const own =
-    jobs.filter(j => j.owner === true);
+    jobs.filter(
+      j =>
+        j.owner === true
+    );
+
 
   const container =
-    document.getElementById("myJobsContent");
+    document.getElementById(
+      "myJobsContent"
+    );
 
 
   if(!own.length){
@@ -1410,13 +2426,25 @@ function openMyJobs(){
 
       <div class="empty">
 
-        <i class="fas fa-briefcase"
-           style="font-size:45px;margin-bottom:15px;"></i>
+        <i
+          class="fas fa-briefcase"
+          style="
+            font-size:45px;
+            margin-bottom:15px;
+          ">
+        </i>
 
-        <p>You have not posted any jobs yet.</p>
+        <p>
+          You have not posted any jobs yet.
+        </p>
 
-        <button class="primary"
-                onclick="closeModal('myJobsModal');openPostJob()">
+
+        <button
+          class="primary"
+          onclick="
+            closeModal('myJobsModal');
+            openPostJob()
+          ">
 
           Post your first job
 
@@ -1426,46 +2454,87 @@ function openMyJobs(){
 
     `;
 
-  }else{
+  }
+
+  else{
 
     container.innerHTML =
-      own.map(job => `
 
-        <div class="job-card"
-             onclick="openJob('${escapeJS(job.id)}')">
+      own.map(
+        job => `
 
-          <div class="job-title">
-            ${escapeHTML(job.title)}
+          <div
+            class="job-card"
+            onclick="
+              openJob(
+                '${escapeJS(job.id)}'
+              )
+            ">
+
+            <div class="job-top">
+
+              ${renderJobImage(job)}
+
+              <div class="job-main">
+
+                <div class="job-title">
+
+                  ${escapeHTML(
+                    job.title
+                  )}
+
+                </div>
+
+                <div class="company">
+
+                  ${escapeHTML(
+                    job.company
+                  )}
+
+                </div>
+
+              </div>
+
+            </div>
+
+
+            <div class="meta">
+
+              <span>
+                Plan:
+                ${escapeHTML(
+                  job.plan
+                )}
+              </span>
+
+
+              <span>
+                €${Number(
+                  job.monthly_fee
+                ).toFixed(2)}/month
+              </span>
+
+
+              <span>
+                Status:
+                ${escapeHTML(
+                  job.status
+                )}
+              </span>
+
+            </div>
+
           </div>
 
-          <div class="company">
-            ${escapeHTML(job.company)}
-          </div>
-
-          <div class="meta">
-
-            <span>
-              Plan: ${escapeHTML(job.plan)}
-            </span>
-
-            <span>
-              €${Number(job.monthly_fee).toFixed(2)}/month
-            </span>
-
-            <span>
-              Status:
-              ${escapeHTML(job.status)}
-            </span>
-
-          </div>
-
-        </div>
-
-      `).join("");
+        `
+      ).join("");
 
   }
 
-  openModal("myJobsModal");
+
+  openModal(
+    "myJobsModal"
+  );
 
 }
 
@@ -1474,29 +2543,39 @@ function openMyJobs(){
 
 document
   .querySelectorAll(".filter")
-  .forEach(button => {
+  .forEach(
+    button => {
 
-    button.addEventListener(
-      "click",
-      () => {
+      button.addEventListener(
+        "click",
+        () => {
 
-        document
-          .querySelectorAll(".filter")
-          .forEach(b =>
-            b.classList.remove("active")
+          document
+            .querySelectorAll(".filter")
+            .forEach(
+              b =>
+                b.classList.remove(
+                  "active"
+                )
+            );
+
+
+          button.classList.add(
+            "active"
           );
 
-        button.classList.add("active");
 
-        selectedFilter =
-          button.dataset.filter;
+          selectedFilter =
+            button.dataset.filter;
 
-        renderJobs();
 
-      }
-    );
+          renderJobs();
 
-  });
+        }
+      );
+
+    }
+  );
 
 
 /* MODALS */
@@ -1505,15 +2584,20 @@ function openModal(id){
 
   document
     .getElementById(id)
-    .classList.add("show");
+    .classList.add(
+      "show"
+    );
 
 }
+
 
 function closeModal(id){
 
   document
     .getElementById(id)
-    .classList.remove("show");
+    .classList.remove(
+      "show"
+    );
 
 }
 
@@ -1532,20 +2616,46 @@ function goHome(){
 
 function escapeHTML(value){
 
-  return String(value ?? "")
-    .replace(/&/g,"&amp;")
-    .replace(/</g,"&lt;")
-    .replace(/>/g,"&gt;")
-    .replace(/"/g,"&quot;")
-    .replace(/'/g,"&#039;");
+  return String(
+    value ?? ""
+  )
+  .replace(
+    /&/g,
+    "&amp;"
+  )
+  .replace(
+    /</g,
+    "&lt;"
+  )
+  .replace(
+    />/g,
+    "&gt;"
+  )
+  .replace(
+    /"/g,
+    "&quot;"
+  )
+  .replace(
+    /'/g,
+    "&#039;"
+  );
 
 }
 
+
 function escapeJS(value){
 
-  return String(value ?? "")
-    .replace(/\\/g,"\\\\")
-    .replace(/'/g,"\\'");
+  return String(
+    value ?? ""
+  )
+  .replace(
+    /\\/g,
+    "\\\\"
+  )
+  .replace(
+    /'/g,
+    "\\'"
+  );
 
 }
 
@@ -1553,9 +2663,10 @@ function escapeJS(value){
 /* START */
 
 loadLocalJobs();
+
 renderJobs();
 
 </script>
 
 </body>
-</html>
+  </html>
