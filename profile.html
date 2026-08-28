@@ -175,13 +175,26 @@ body{
         0 3px 15px rgba(0,0,0,.08);
 }
 
-.avatar{
-    width:90px;
-    height:90px;
+/* =========================
+   PROFILE AVATAR
+========================= */
+
+.avatar-wrapper{
+    position:relative;
+
+    width:110px;
+    height:110px;
 
     margin:0 auto 15px;
+}
+
+.avatar{
+    width:110px;
+    height:110px;
 
     border-radius:50%;
+
+    overflow:hidden;
 
     background:
         linear-gradient(
@@ -196,9 +209,68 @@ body{
     align-items:center;
     justify-content:center;
 
-    font-size:38px;
+    font-size:42px;
     font-weight:800;
+
+    border:4px solid white;
+
+    box-shadow:
+        0 3px 12px rgba(0,0,0,.15);
 }
+
+.avatar img{
+    width:100%;
+    height:100%;
+
+    object-fit:cover;
+
+    display:block;
+}
+
+/* =========================
+   AVATAR EDIT BUTTON
+========================= */
+
+.avatar-edit{
+    position:absolute;
+
+    right:-2px;
+    bottom:-2px;
+
+    width:38px;
+    height:38px;
+
+    border:3px solid white;
+
+    border-radius:50%;
+
+    background:#689f38;
+
+    color:white;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    cursor:pointer;
+
+    box-shadow:
+        0 2px 8px rgba(0,0,0,.18);
+
+    font-size:15px;
+}
+
+.avatar-edit:active{
+    transform:scale(.96);
+}
+
+#avatarInput{
+    display:none;
+}
+
+/* =========================
+   PROFILE NAME
+========================= */
 
 .profile-name{
     font-size:23px;
@@ -214,6 +286,62 @@ body{
     font-size:14px;
 
     word-break:break-word;
+}
+
+/* =========================
+   PROFILE PHOTO ACTIONS
+========================= */
+
+.photo-actions{
+    display:flex;
+
+    justify-content:center;
+
+    gap:10px;
+
+    margin-top:18px;
+
+    flex-wrap:wrap;
+}
+
+.photo-btn{
+    border:0;
+
+    padding:10px 14px;
+
+    border-radius:10px;
+
+    cursor:pointer;
+
+    font-weight:700;
+
+    font-size:13px;
+
+    display:flex;
+
+    align-items:center;
+
+    gap:7px;
+}
+
+.photo-btn.primary{
+    background:#689f38;
+    color:white;
+}
+
+.photo-btn.secondary{
+    background:#eeeeee;
+    color:#444;
+}
+
+.photo-btn.danger{
+    background:#ffebee;
+    color:#c62828;
+}
+
+.photo-btn:disabled{
+    opacity:.55;
+    cursor:not-allowed;
 }
 
 /* =========================
@@ -492,6 +620,27 @@ body{
 
 .nav-item.active{
     color:#7cb342;
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media(max-width:480px){
+
+    .profile-card{
+        margin:16px;
+        padding:25px 15px;
+    }
+
+    .photo-actions{
+        gap:8px;
+    }
+
+    .photo-btn{
+        padding:9px 11px;
+    }
+
 }
 
 </style>
@@ -1007,6 +1156,75 @@ function escapeHtml(
 
 
 /* =========================================
+   AVATAR URL
+========================================= */
+
+function getAvatarUrl(user){
+
+    if(!user){
+
+        return "";
+
+    }
+
+
+    const metadata =
+        user.user_metadata || {};
+
+
+    return (
+        metadata.avatar_url ||
+        ""
+    );
+
+}
+
+
+/* =========================================
+   RENDER AVATAR
+========================================= */
+
+function renderAvatar(
+    name,
+    avatarUrl
+){
+
+    const firstLetter =
+        String(name)
+            .trim()
+            .charAt(0)
+            .toUpperCase() ||
+        "H";
+
+
+    if(avatarUrl){
+
+        return `
+
+            <img
+                src="${escapeHtml(avatarUrl)}"
+                alt="Profile photo"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+
+            <span style="display:none;">
+                ${escapeHtml(firstLetter)}
+            </span>
+
+        `;
+
+    }
+
+
+    return `
+        <span>
+            ${escapeHtml(firstLetter)}
+        </span>
+    `;
+
+}
+
+
+/* =========================================
    LOAD PROFILE
 ========================================= */
 
@@ -1070,12 +1288,6 @@ async function(
 
     try{
 
-
-        /*
-         * Use the SAME Supabase project
-         * as login.html and signup.html.
-         */
-
         const {
             data,
             error
@@ -1095,10 +1307,6 @@ async function(
             ? data.session
             : null;
 
-
-        /*
-         * No session.
-         */
 
         if(
             !session ||
@@ -1121,10 +1329,6 @@ async function(
 
         }
 
-
-        /*
-         * User is logged in.
-         */
 
         currentUser =
             session.user;
@@ -1151,12 +1355,8 @@ async function(
             "No email";
 
 
-        const firstLetter =
-            String(name)
-                .trim()
-                .charAt(0)
-                .toUpperCase() ||
-            "H";
+        const avatarUrl =
+            getAvatarUrl(user);
 
 
         /*
@@ -1167,11 +1367,38 @@ async function(
 
             <div class="profile-card">
 
-                <div class="avatar">
+                <div class="avatar-wrapper">
 
-                    ${escapeHtml(firstLetter)}
+                    <div
+                        class="avatar"
+                        id="avatarDisplay">
+
+                        ${renderAvatar(
+                            name,
+                            avatarUrl
+                        )}
+
+                    </div>
+
+
+                    <button
+                        class="avatar-edit"
+                        type="button"
+                        title="Change profile photo"
+                        onclick="openAvatarPicker()">
+
+                        <i class="fas fa-camera"></i>
+
+                    </button>
 
                 </div>
+
+
+                <input
+                    type="file"
+                    id="avatarInput"
+                    accept="image/jpeg,image/png,image/webp"
+                    onchange="handleAvatarSelected(event)">
 
 
                 <div class="profile-name">
@@ -1184,6 +1411,44 @@ async function(
                 <div class="profile-email">
 
                     ${escapeHtml(email)}
+
+                </div>
+
+
+                <div class="photo-actions">
+
+                    <button
+                        class="photo-btn primary"
+                        id="changePhotoBtn"
+                        type="button"
+                        onclick="openAvatarPicker()">
+
+                        <i class="fas fa-camera"></i>
+
+                        Change Photo
+
+                    </button>
+
+
+                    ${
+                        avatarUrl
+                        ?
+                        `
+                        <button
+                            class="photo-btn danger"
+                            id="removePhotoBtn"
+                            type="button"
+                            onclick="removeAvatar()">
+
+                            <i class="fas fa-trash"></i>
+
+                            Remove Photo
+
+                        </button>
+                        `
+                        :
+                        ""
+                    }
 
                 </div>
 
@@ -1220,7 +1485,6 @@ async function(
 
         accountArea.style.display =
             "block";
-
 
     }
     catch(error){
@@ -1268,6 +1532,484 @@ async function(
 
 
 /* =========================================
+   OPEN AVATAR PICKER
+========================================= */
+
+window.openAvatarPicker =
+function(){
+
+    if(!currentUser){
+
+        showMessage(
+            "Please log in first.",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    const input =
+        document.getElementById(
+            "avatarInput"
+        );
+
+
+    if(input){
+
+        input.click();
+
+    }
+
+};
+
+
+/* =========================================
+   HANDLE AVATAR SELECTED
+========================================= */
+
+window.handleAvatarSelected =
+async function(event){
+
+    const input =
+        event.target;
+
+
+    if(
+        !input ||
+        !input.files ||
+        !input.files.length
+    ){
+
+        return;
+
+    }
+
+
+    const file =
+        input.files[0];
+
+
+    /*
+     * Allowed image types.
+     */
+
+    const allowedTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/webp"
+    ];
+
+
+    if(
+        !allowedTypes.includes(
+            file.type
+        )
+    ){
+
+        showMessage(
+            "Please select a JPG, PNG or WEBP image.",
+            "error"
+        );
+
+        input.value =
+            "";
+
+        return;
+
+    }
+
+
+    /*
+     * Maximum size: 5 MB
+     */
+
+    const maxSize =
+        5 * 1024 * 1024;
+
+
+    if(file.size > maxSize){
+
+        showMessage(
+            "Profile photo must be smaller than 5 MB.",
+            "error"
+        );
+
+        input.value =
+            "";
+
+        return;
+
+    }
+
+
+    if(!currentUser){
+
+        showMessage(
+            "Please log in first.",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    const changeButton =
+        document.getElementById(
+            "changePhotoBtn"
+        );
+
+
+    if(changeButton){
+
+        changeButton.disabled =
+            true;
+
+        changeButton.innerHTML =
+            `
+            <i class="fas fa-spinner fa-spin"></i>
+            Uploading...
+            `;
+
+    }
+
+
+    clearMessage();
+
+
+    try{
+
+        /*
+         * Unique storage path.
+         */
+
+        const extension =
+            file.name
+                .split(".")
+                .pop()
+                .toLowerCase();
+
+
+        const filePath =
+            currentUser.id +
+            "/" +
+            Date.now() +
+            "-" +
+            crypto.randomUUID() +
+            "." +
+            extension;
+
+
+        /*
+         * Upload image to Supabase Storage.
+         */
+
+        const {
+            error: uploadError
+        } =
+        await supabase.storage
+            .from("avatars")
+            .upload(
+                filePath,
+                file,
+                {
+                    cacheControl:"3600",
+                    upsert:false,
+                    contentType:file.type
+                }
+            );
+
+
+        if(uploadError){
+
+            throw uploadError;
+
+        }
+
+
+        /*
+         * Get public URL.
+         */
+
+        const {
+            data:publicData
+        } =
+        supabase.storage
+            .from("avatars")
+            .getPublicUrl(
+                filePath
+            );
+
+
+        const publicUrl =
+            publicData &&
+            publicData.publicUrl
+            ? publicData.publicUrl
+            : "";
+
+
+        if(!publicUrl){
+
+            throw new Error(
+                "Could not create image URL."
+            );
+
+        }
+
+
+        /*
+         * Save URL inside Supabase Auth metadata.
+         */
+
+        const {
+            data:updateData,
+            error:updateError
+        } =
+        await supabase.auth.updateUser({
+
+            data:{
+                avatar_url:
+                    publicUrl
+            }
+
+        });
+
+
+        if(updateError){
+
+            throw updateError;
+
+        }
+
+
+        /*
+         * Update local user immediately.
+         */
+
+        if(
+            updateData &&
+            updateData.user
+        ){
+
+            currentUser =
+                updateData.user;
+
+        }
+
+
+        showMessage(
+            "Profile photo updated successfully.",
+            "success"
+        );
+
+
+        /*
+         * Reload profile.
+         */
+
+        await loadProfile(true);
+
+    }
+    catch(error){
+
+        console.error(
+            "Avatar upload error:",
+            error
+        );
+
+
+        showMessage(
+            "Could not upload profile photo: " +
+            (
+                error.message ||
+                "Unknown error"
+            ),
+            "error"
+        );
+
+    }
+    finally{
+
+        input.value =
+            "";
+
+
+        if(changeButton){
+
+            changeButton.disabled =
+                false;
+
+            changeButton.innerHTML =
+                `
+                <i class="fas fa-camera"></i>
+                Change Photo
+                `;
+
+        }
+
+    }
+
+};
+
+
+/* =========================================
+   REMOVE AVATAR
+========================================= */
+
+window.removeAvatar =
+async function(){
+
+    if(!currentUser){
+
+        showMessage(
+            "Please log in first.",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    const metadata =
+        currentUser.user_metadata || {};
+
+
+    const avatarUrl =
+        metadata.avatar_url || "";
+
+
+    if(!avatarUrl){
+
+        showMessage(
+            "No profile photo to remove.",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    const confirmed =
+        confirm(
+            "Remove your profile photo?"
+        );
+
+
+    if(!confirmed){
+
+        return;
+
+    }
+
+
+    const removeButton =
+        document.getElementById(
+            "removePhotoBtn"
+        );
+
+
+    if(removeButton){
+
+        removeButton.disabled =
+            true;
+
+        removeButton.innerHTML =
+            `
+            <i class="fas fa-spinner fa-spin"></i>
+            Removing...
+            `;
+
+    }
+
+
+    try{
+
+        /*
+         * Remove the URL from user metadata.
+         */
+
+        const {
+            data:updateData,
+            error:updateError
+        } =
+        await supabase.auth.updateUser({
+
+            data:{
+                avatar_url:null
+            }
+
+        });
+
+
+        if(updateError){
+
+            throw updateError;
+
+        }
+
+
+        if(
+            updateData &&
+            updateData.user
+        ){
+
+            currentUser =
+                updateData.user;
+
+        }
+
+
+        /*
+         * The profile will immediately
+         * return to the user's first letter.
+         */
+
+        showMessage(
+            "Profile photo removed.",
+            "success"
+        );
+
+
+        await loadProfile(true);
+
+    }
+    catch(error){
+
+        console.error(
+            "Remove avatar error:",
+            error
+        );
+
+
+        showMessage(
+            "Could not remove profile photo: " +
+            (
+                error.message ||
+                "Unknown error"
+            ),
+            "error"
+        );
+
+    }
+    finally{
+
+        if(removeButton){
+
+            removeButton.disabled =
+                false;
+
+        }
+
+    }
+
+};
+
+
+/* =========================================
    COPY USER ID
 ========================================= */
 
@@ -1304,10 +2046,6 @@ async function(){
 
     }
     catch(error){
-
-        /*
-         * Older browser fallback.
-         */
 
         try{
 
@@ -1468,4 +2206,4 @@ loadProfile();
 
 </body>
 
-</html>
+      </html>
