@@ -1,444 +1,1237 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HAVKAR - Wallet</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HAVKAR - Wallet</title>
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
-        }
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-        .header {
-            background: linear-gradient(135deg, #689f38, #7cb342);
-            color: white;
-            padding: 15px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
 
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
+body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:#f5f5f5;
+    color:#333;
+    padding-bottom:90px;
+}
 
-        .back-btn {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.5rem;
-            cursor: pointer;
-        }
+button{
+    font-family:inherit;
+}
 
-        .header h1 {
-            font-size: 1.3rem;
-            font-weight: 700;
-        }
+.header{
+    background:linear-gradient(135deg,#689f38,#7cb342);
+    color:white;
+    padding:15px 20px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    box-shadow:0 2px 10px rgba(0,0,0,.12);
+}
 
-        .header-right {
-            display: flex;
-            gap: 15px;
-        }
+.header-left{
+    display:flex;
+    align-items:center;
+    gap:15px;
+}
 
-        .icon-btn {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            font-size: 1.1rem;
-            cursor: pointer;
-        }
+.back-btn{
+    background:none;
+    border:0;
+    color:white;
+    font-size:1.5rem;
+    cursor:pointer;
+}
 
-        .balance-card {
-            margin: 20px;
-            background: linear-gradient(135deg, #689f38, #7cb342);
-            border-radius: 20px;
-            padding: 25px;
-            color: white;
-            box-shadow: 0 5px 20px rgba(104,159,56,0.3);
-        }
+.header h1{
+    font-size:1.3rem;
+    font-weight:700;
+}
 
-        .balance-label {
-            font-size: 0.9rem;
-            opacity: 0.9;
-            margin-bottom: 8px;
-        }
+.header-right{
+    display:flex;
+    gap:12px;
+}
 
-        .balance-amount {
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin-bottom: 20px;
-        }
+.icon-btn{
+    background:rgba(255,255,255,.2);
+    border:0;
+    color:white;
+    width:40px;
+    height:40px;
+    border-radius:50%;
+    font-size:1.1rem;
+    cursor:pointer;
+}
 
-        .card-actions {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-        }
+.balance-card{
+    margin:20px;
+    background:linear-gradient(135deg,#689f38,#7cb342);
+    border-radius:20px;
+    padding:25px;
+    color:white;
+    box-shadow:0 5px 20px rgba(104,159,56,.3);
+}
 
-        .action-btn {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            padding: 12px;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-        }
+.balance-label{
+    font-size:.9rem;
+    opacity:.9;
+    margin-bottom:8px;
+}
 
-        .action-btn i {
-            font-size: 1.5rem;
-        }
+.balance-amount{
+    font-size:2.5rem;
+    font-weight:800;
+    margin-bottom:20px;
+}
 
-        .section-title {
-            padding: 20px 20px 10px;
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #333;
-        }
+.card-actions{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
+}
 
-        .crypto-list {
-            padding: 0 20px;
-        }
+.action-btn{
+    background:rgba(255,255,255,.2);
+    border:0;
+    color:white;
+    padding:13px 8px;
+    border-radius:12px;
+    font-size:.85rem;
+    font-weight:600;
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+}
 
-        .crypto-item {
-            background: white;
-            border-radius: 15px;
-            padding: 15px;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        }
+.action-btn i{
+    font-size:1.4rem;
+}
 
-        .crypto-icon {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            background: #f5f5f5;
-        }
+.section-title{
+    padding:20px 20px 10px;
+    font-size:1.1rem;
+    font-weight:700;
+}
 
-        .crypto-info {
-            flex: 1;
-        }
+.crypto-list,
+.transactions{
+    padding:0 20px;
+}
 
-        .crypto-name {
-            font-size: 1rem;
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 3px;
-        }
+.crypto-item,
+.transaction-item{
+    background:white;
+    border-radius:15px;
+    padding:15px;
+    margin-bottom:12px;
+    display:flex;
+    align-items:center;
+    gap:15px;
+    box-shadow:0 2px 8px rgba(0,0,0,.06);
+}
 
-        .crypto-symbol {
-            font-size: 0.85rem;
-            color: #999;
-        }
+.crypto-icon,
+.transaction-icon{
+    width:45px;
+    height:45px;
+    min-width:45px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:1.4rem;
+}
 
-        .crypto-values {
-            text-align: right;
-        }
+.crypto-info,
+.transaction-info{
+    flex:1;
+}
 
-        .crypto-amount {
-            font-size: 1rem;
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 3px;
-        }
+.crypto-name,
+.transaction-title{
+    font-size:1rem;
+    font-weight:700;
+    margin-bottom:3px;
+}
 
-        .crypto-change {
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
+.crypto-symbol,
+.transaction-date{
+    font-size:.85rem;
+    color:#999;
+}
 
-        .positive {
-            color: #558b2f;
-        }
+.crypto-values,
+.transaction-amount{
+    text-align:right;
+}
 
-        .negative {
-            color: #d32f2f;
-        }
+.crypto-amount{
+    font-size:1rem;
+    font-weight:700;
+    margin-bottom:3px;
+}
 
-        .transactions {
-            padding: 0 20px 100px;
-        }
+.crypto-change{
+    font-size:.85rem;
+    font-weight:600;
+}
 
-        .transaction-item {
-            background: white;
-            border-radius: 15px;
-            padding: 15px;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        }
+.positive{
+    color:#558b2f;
+}
 
-        .transaction-icon {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.3rem;
-        }
+.negative{
+    color:#d32f2f;
+}
 
-        .sent {
-            background: #ffebee;
-            color: #d32f2f;
-        }
+.sent{
+    background:#ffebee;
+    color:#d32f2f;
+}
 
-        .received {
-            background: #e8f5e9;
-            color: #558b2f;
-        }
+.received{
+    background:#e8f5e9;
+    color:#558b2f;
+}
 
-        .transaction-info {
-            flex: 1;
-        }
+.transaction-amount{
+    font-size:1rem;
+    font-weight:800;
+}
 
-        .transaction-title {
-            font-size: 1rem;
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 3px;
-        }
+.empty{
+    background:white;
+    padding:20px;
+    border-radius:15px;
+    color:#999;
+    text-align:center;
+}
 
-        .transaction-date {
-            font-size: 0.85rem;
-            color: #999;
-        }
+.bottom-nav{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    background:white;
+    display:flex;
+    justify-content:space-around;
+    padding:10px 0;
+    box-shadow:0 -2px 10px rgba(0,0,0,.1);
+    z-index:20;
+}
 
-        .transaction-amount {
-            font-size: 1.1rem;
-            font-weight: 800;
-            text-align: right;
-        }
+.nav-item{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:5px;
+    color:#999;
+    font-size:.75rem;
+    cursor:pointer;
+}
 
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-        }
+.nav-item.active{
+    color:#7cb342;
+}
 
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 5px;
-            color: #999;
-            font-size: 0.75rem;
-            cursor: pointer;
-        }
+.nav-item i{
+    font-size:1.3rem;
+}
 
-        .nav-item.active {
-            color: #7cb342;
-        }
+/* MODAL */
 
-        .nav-item i {
-            font-size: 1.3rem;
-        }
-    </style>
+.modal{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.55);
+    z-index:100;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+}
+
+.modal-box{
+    background:white;
+    width:100%;
+    max-width:430px;
+    border-radius:20px;
+    padding:22px;
+    box-shadow:0 10px 40px rgba(0,0,0,.25);
+}
+
+.modal-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+}
+
+.modal-header h2{
+    font-size:1.25rem;
+}
+
+.close-btn{
+    border:0;
+    background:#f1f1f1;
+    width:35px;
+    height:35px;
+    border-radius:50%;
+    cursor:pointer;
+    font-size:1.1rem;
+}
+
+.form-group{
+    margin-bottom:15px;
+}
+
+.form-group label{
+    display:block;
+    margin-bottom:7px;
+    font-size:.9rem;
+    font-weight:600;
+}
+
+.form-group input,
+.form-group textarea{
+    width:100%;
+    padding:13px;
+    border:1px solid #ddd;
+    border-radius:10px;
+    font-size:1rem;
+    outline:none;
+}
+
+.form-group input:focus,
+.form-group textarea:focus{
+    border-color:#7cb342;
+}
+
+.primary-btn{
+    width:100%;
+    border:0;
+    background:#7cb342;
+    color:white;
+    padding:14px;
+    border-radius:11px;
+    font-size:1rem;
+    font-weight:700;
+    cursor:pointer;
+}
+
+.primary-btn:disabled{
+    opacity:.6;
+}
+
+.info-box{
+    background:#f4f8ef;
+    border-radius:12px;
+    padding:15px;
+    margin-bottom:15px;
+    word-break:break-all;
+}
+
+.info-label{
+    font-size:.8rem;
+    color:#777;
+    margin-bottom:5px;
+}
+
+.user-id{
+    font-size:.85rem;
+    font-weight:600;
+}
+
+.copy-btn{
+    margin-top:10px;
+    border:0;
+    background:#689f38;
+    color:white;
+    padding:8px 12px;
+    border-radius:8px;
+    cursor:pointer;
+}
+
+.status{
+    margin-top:12px;
+    padding:10px;
+    border-radius:9px;
+    display:none;
+    font-size:.9rem;
+}
+
+.status.success{
+    display:block;
+    background:#e8f5e9;
+    color:#2e7d32;
+}
+
+.status.error{
+    display:block;
+    background:#ffebee;
+    color:#c62828;
+}
+
+.loading{
+    text-align:center;
+    padding:20px;
+    color:#999;
+}
+</style>
 </head>
+
 <body>
-    <div class="header">
-        <div class="header-left">
-            <button class="back-btn" onclick="window.location.href='index.html'">
-                <i class="fas fa-arrow-left"></i>
-            </button>
-            <h1>Wallet</h1>
-        </div>
-        <div class="header-right">
-            <button class="icon-btn"><i class="fas fa-bell"></i></button>
-            <button class="icon-btn"><i class="fas fa-cog"></i></button>
-        </div>
+
+<!-- HEADER -->
+
+<div class="header">
+    <div class="header-left">
+        <button class="back-btn" onclick="window.location.href='index.html'">
+            <i class="fas fa-arrow-left"></i>
+        </button>
+
+        <h1>Wallet</h1>
     </div>
 
-    <div class="balance-card">
-        <div class="balance-label">Total Balance</div>
-        <div class="balance-amount">€2,845.50</div>
-        <div class="card-actions">
-            <button class="action-btn" onclick="alert('Send Money - Coming Soon!')">
-                <i class="fas fa-paper-plane"></i>
-                Send
-            </button>
-            <button class="action-btn" onclick="alert('Receive Money - Coming Soon!')">
-                <i class="fas fa-download"></i>
-                Receive
-            </button>
-            <button class="action-btn" onclick="alert('Exchange - Coming Soon!')">
-                <i class="fas fa-exchange-alt"></i>
-                Exchange
-            </button>
-        </div>
+    <div class="header-right">
+        <button class="icon-btn">
+            <i class="fas fa-bell"></i>
+        </button>
+
+        <button class="icon-btn">
+            <i class="fas fa-cog"></i>
+        </button>
+    </div>
+</div>
+
+
+<!-- BALANCE -->
+
+<div class="balance-card">
+
+    <div class="balance-label">
+        Total Balance
     </div>
 
-    <div class="section-title">Cryptocurrencies</div>
-    <div class="crypto-list">
-        <div class="crypto-item">
-            <div class="crypto-icon" style="background: #f7931a;">₿</div>
-            <div class="crypto-info">
-                <div class="crypto-name">Bitcoin</div>
-                <div class="crypto-symbol">BTC</div>
-            </div>
-            <div class="crypto-values">
-                <div class="crypto-amount">€1,245.00</div>
-                <div class="crypto-change positive">+3.5%</div>
-            </div>
-        </div>
-
-        <div class="crypto-item">
-            <div class="crypto-icon" style="background: #627eea;">Ξ</div>
-            <div class="crypto-info">
-                <div class="crypto-name">Ethereum</div>
-                <div class="crypto-symbol">ETH</div>
-            </div>
-            <div class="crypto-values">
-                <div class="crypto-amount">€850.00</div>
-                <div class="crypto-change positive">+2.1%</div>
-            </div>
-        </div>
-
-        <div class="crypto-item">
-            <div class="crypto-icon" style="background: #26a17b;">₮</div>
-            <div class="crypto-info">
-                <div class="crypto-name">Tether</div>
-                <div class="crypto-symbol">USDT</div>
-            </div>
-            <div class="crypto-values">
-                <div class="crypto-amount">€750.50</div>
-                <div class="crypto-change">0.0%</div>
-            </div>
-        </div>
+    <div class="balance-amount" id="totalBalance">
+        €0.00
     </div>
 
-    <div class="section-title">Recent Transactions</div>
-    <div class="transactions">
-        <div class="transaction-item">
-            <div class="transaction-icon sent">
-                <i class="fas fa-arrow-up"></i>
-            </div>
-            <div class="transaction-info">
-                <div class="transaction-title">Sent to Marco</div>
-                <div class="transaction-date">Today, 10:30 AM</div>
-            </div>
-            <div class="transaction-amount negative">-€50.00</div>
-        </div>
+    <div class="card-actions">
 
-        <div class="transaction-item">
-            <div class="transaction-icon received">
-                <i class="fas fa-arrow-down"></i>
-            </div>
-            <div class="transaction-info">
-                <div class="transaction-title">Received from Sara</div>
-                <div class="transaction-date">Yesterday, 3:15 PM</div>
-            </div>
-            <div class="transaction-amount positive">+€120.00</div>
-        </div>
+        <button class="action-btn" onclick="openSendModal()">
+            <i class="fas fa-paper-plane"></i>
+            Send
+        </button>
 
-        <div class="transaction-item">
-            <div class="transaction-icon sent">
-                <i class="fas fa-arrow-up"></i>
-            </div>
-            <div class="transaction-info">
-                <div class="transaction-title">Payment to Shop</div>
-                <div class="transaction-date">2 days ago</div>
-            </div>
-            <div class="transaction-amount negative">-€35.50</div>
-        </div>
+        <button class="action-btn" onclick="openReceiveModal()">
+            <i class="fas fa-download"></i>
+            Receive
+        </button>
 
-        <div class="transaction-item">
-            <div class="transaction-icon received">
-                <i class="fas fa-arrow-down"></i>
-            </div>
-            <div class="transaction-info">
-                <div class="transaction-title">Salary Deposit</div>
-                <div class="transaction-date">5 days ago</div>
-            </div>
-            <div class="transaction-amount positive">+€2,500.00</div>
-        </div>
-    </div>
-
-    <div class="bottom-nav">
-        <div class="nav-item active">
-            <i class="fas fa-wallet"></i>
-            <span>Wallet</span>
-        </div>
-        <div class="nav-item">
-            <i class="fas fa-chart-line"></i>
-            <span>Market</span>
-        </div>
-        <div class="nav-item">
+        <button class="action-btn" onclick="openExchangeModal()">
             <i class="fas fa-exchange-alt"></i>
-            <span>Trade</span>
-        </div>
-        <div class="nav-item">
-            <i class="fas fa-history"></i>
-            <span>History</span>
-        </div>
-        <div class="nav-item">
-            <i class="fas fa-user"></i>
-            <span>Profile</span>
-        </div>
+            Exchange
+        </button>
+
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</div>
+
+
+<!-- CRYPTOCURRENCIES -->
+
+<div class="section-title">
+    Cryptocurrencies
+</div>
+
+<div class="crypto-list" id="cryptoList">
+
+    <div class="loading">
+        Loading wallet...
+    </div>
+
+</div>
+
+
+<!-- TRANSACTIONS -->
+
+<div class="section-title">
+    Recent Transactions
+</div>
+
+<div class="transactions" id="transactionList">
+
+    <div class="loading">
+        Loading transactions...
+    </div>
+
+</div>
+
+
+<!-- SEND MODAL -->
+
+<div class="modal" id="sendModal">
+
+    <div class="modal-box">
+
+        <div class="modal-header">
+
+            <h2>
+                Send Money
+            </h2>
+
+            <button class="close-btn" onclick="closeModal('sendModal')">
+                ×
+            </button>
+
+        </div>
+
+        <div class="form-group">
+
+            <label>
+                Receiver User ID
+            </label>
+
+            <input
+                id="receiverId"
+                type="text"
+                placeholder="Enter receiver User ID"
+            >
+
+        </div>
+
+        <div class="form-group">
+
+            <label>
+                Amount (€)
+            </label>
+
+            <input
+                id="sendAmount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                placeholder="0.00"
+            >
+
+        </div>
+
+        <div class="form-group">
+
+            <label>
+                Note
+            </label>
+
+            <textarea
+                id="sendNote"
+                rows="3"
+                placeholder="Optional note"
+            ></textarea>
+
+        </div>
+
+        <button
+            class="primary-btn"
+            id="sendButton"
+            onclick="sendMoney()"
+        >
+            Send Money
+        </button>
+
+        <div id="sendStatus" class="status"></div>
+
+    </div>
+</div>
+
+
+<!-- RECEIVE MODAL -->
+
+<div class="modal" id="receiveModal">
+
+    <div class="modal-box">
+
+        <div class="modal-header">
+
+            <h2>
+                Receive Money
+            </h2>
+
+            <button class="close-btn" onclick="closeModal('receiveModal')">
+                ×
+            </button>
+
+        </div>
+
+        <div class="info-box">
+
+            <div class="info-label">
+                Your HAVKAR User ID
+            </div>
+
+            <div class="user-id" id="myUserId">
+                Loading...
+            </div>
+
+            <button class="copy-btn" onclick="copyUserId()">
+                <i class="fas fa-copy"></i>
+                Copy ID
+            </button>
+
+        </div>
+
+        <p style="font-size:.9rem;color:#777;line-height:1.5;">
+            Give this User ID to another HAVKAR user.
+            They can use it to send money directly to your HAVKAR wallet.
+        </p>
+
+    </div>
+</div>
+
+
+<!-- EXCHANGE MODAL -->
+
+<div class="modal" id="exchangeModal">
+
+    <div class="modal-box">
+
+        <div class="modal-header">
+
+            <h2>
+                Exchange
+            </h2>
+
+            <button class="close-btn" onclick="closeModal('exchangeModal')">
+                ×
+            </button>
+
+        </div>
+
+        <div class="info-box">
+            <strong>Exchange is not activated yet.</strong>
+            <br><br>
+            The wallet and internal transfer system are active.
+            Currency exchange will be connected in a later stage.
+        </div>
+
+    </div>
+</div>
+
+
+<!-- BOTTOM NAV -->
+
+<div class="bottom-nav">
+
+    <div class="nav-item active">
+        <i class="fas fa-wallet"></i>
+        <span>Wallet</span>
+    </div>
+
+    <div class="nav-item"
+         onclick="window.location.href='market.html'">
+        <i class="fas fa-chart-line"></i>
+        <span>Market</span>
+    </div>
+
+    <div class="nav-item"
+         onclick="window.location.href='trade.html'">
+        <i class="fas fa-exchange-alt"></i>
+        <span>Trade</span>
+    </div>
+
+    <div class="nav-item"
+         onclick="window.location.href='history.html'">
+        <i class="fas fa-history"></i>
+        <span>History</span>
+    </div>
+
+    <div class="nav-item"
+         onclick="window.location.href='profile.html'">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+    </div>
+
+</div>
+
+
+<!-- SUPABASE -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
+
 const supabase = window.supabase.createClient(
-  "https://iompzwaxuirvatiibrtb.supabase.com",
-  "sb_publishable_oEKE1vl6EkWXdETgy9MjHw_DUTJLN4O"
+    "https://iompzwaxuirvatiibrtb.supabase.com",
+    "sb_publishable_oEKE1vl6EkWXdETgy9MjHw_DUTJLN4O"
 );
 
-async function loadWallets() {
-  const { data: { user } } = await supabase.auth.getUser();
+let currentUser = null;
 
-  const { data, error } = await supabase
-    .from('wallets')
-    .select('*')
-    .eq('user_id', user.id);
 
-  if (error) {
-    alert("ERROR: " + error.message);
-  } else {
-    let total = 0;
+/* =========================
+   AUTHENTICATION
+========================= */
 
-data.forEach(wallet => {
-  total += wallet.balance;
-});
-  }
+async function getCurrentUser(){
+
+    const {
+        data,
+        error
+    } = await supabase.auth.getUser();
+
+    if(error){
+        console.error(error);
+        return null;
+    }
+
+    currentUser = data.user;
+
+    return currentUser;
 }
 
 
-loadWallets();
+/* =========================
+   LOAD WALLET
+========================= */
+
+async function loadWallet(){
+
+    const user = await getCurrentUser();
+
+    if(!user){
+
+        document.getElementById("totalBalance").textContent = "€0.00";
+
+        document.getElementById("cryptoList").innerHTML =
+            '<div class="empty">Please log in to see your wallet.</div>';
+
+        document.getElementById("transactionList").innerHTML =
+            '<div class="empty">Please log in to see transactions.</div>';
+
+        return;
+    }
+
+    document.getElementById("myUserId").textContent = user.id;
+
+    const {
+        data,
+        error
+    } = await supabase
+        .from("wallets")
+        .select("*")
+        .eq("user_id", user.id);
+
+    if(error){
+
+        console.error(error);
+
+        document.getElementById("cryptoList").innerHTML =
+            '<div class="empty">Could not load wallet.</div>';
+
+        return;
+    }
+
+    let total = 0;
+
+    if(data){
+
+        data.forEach(wallet => {
+
+            const balance = Number(wallet.balance || 0);
+
+            total += balance;
+
+        });
+
+    }
+
+    document.getElementById("totalBalance").textContent =
+        "€" + total.toLocaleString("en-US",{
+            minimumFractionDigits:2,
+            maximumFractionDigits:2
+        });
+
+    renderWallets(data || []);
+}
+
+
+/* =========================
+   RENDER WALLETS
+========================= */
+
+function renderWallets(wallets){
+
+    const list =
+        document.getElementById("cryptoList");
+
+    if(!wallets.length){
+
+        list.innerHTML =
+            '<div class="empty">No wallets found.</div>';
+
+        return;
+    }
+
+    list.innerHTML = "";
+
+    wallets.forEach(wallet => {
+
+        const currency =
+            wallet.currency ||
+            wallet.symbol ||
+            "EUR";
+
+        const balance =
+            Number(wallet.balance || 0);
+
+        let icon = "€";
+
+        if(currency.toUpperCase() === "BTC"){
+            icon = "₿";
+        }
+        else if(currency.toUpperCase() === "ETH"){
+            icon = "Ξ";
+        }
+        else if(currency.toUpperCase() === "USDT"){
+            icon = "₮";
+        }
+
+        const item =
+        document.createElement("div");
+
+        item.className = "crypto-item";
+
+        item.innerHTML = `
+
+            <div class="crypto-icon"
+                 style="background:#e8f5e9;color:#558b2f;">
+                ${icon}
+            </div>
+
+            <div class="crypto-info">
+
+                <div class="crypto-name">
+                    ${currency}
+                </div>
+
+                <div class="crypto-symbol">
+                    HAVKAR Wallet
+                </div>
+
+            </div>
+
+            <div class="crypto-values">
+
+                <div class="crypto-amount">
+                    €${balance.toLocaleString("en-US",{
+                        minimumFractionDigits:2,
+                        maximumFractionDigits:2
+                    })}
+                </div>
+
+                <div class="crypto-change">
+                    Wallet
+                </div>
+
+            </div>
+        `;
+
+        list.appendChild(item);
+
+    });
+}
+
+
+/* =========================
+   LOAD TRANSACTIONS
+========================= */
+
+async function loadTransactions(){
+
+    if(!currentUser){
+        return;
+    }
+
+    const {
+        data,
+        error
+    } = await supabase
+        .from("wallet_transfers")
+        .select("*")
+        .or(
+            `sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`
+        )
+        .order("created_at",{
+            ascending:false
+        })
+        .limit(20);
+
+    const list =
+        document.getElementById("transactionList");
+
+    if(error){
+
+        console.error(error);
+
+        list.innerHTML =
+            '<div class="empty">No transactions available yet.</div>';
+
+        return;
+    }
+
+    if(!data || !data.length){
+
+        list.innerHTML =
+            '<div class="empty">No transactions yet.</div>';
+
+        return;
+    }
+
+    list.innerHTML = "";
+
+    data.forEach(transaction => {
+
+        const isSent =
+            transaction.sender_id === currentUser.id;
+
+        const amount =
+            Number(transaction.amount || 0);
+
+        const item =
+        document.createElement("div");
+
+        item.className =
+            "transaction-item";
+
+        item.innerHTML = `
+
+            <div class="transaction-icon ${
+                isSent ? "sent" : "received"
+            }">
+
+                <i class="fas ${
+                    isSent
+                    ? "fa-arrow-up"
+                    : "fa-arrow-down"
+                }"></i>
+
+            </div>
+
+            <div class="transaction-info">
+
+                <div class="transaction-title">
+
+                    ${
+                        isSent
+                        ? "Sent Money"
+                        : "Received Money"
+                    }
+
+                </div>
+
+                <div class="transaction-date">
+
+                    ${
+                        transaction.created_at
+                        ? new Date(
+                            transaction.created_at
+                          ).toLocaleString()
+                        : ""
+                    }
+
+                    ${
+                        transaction.note
+                        ? " • " + transaction.note
+                        : ""
+                    }
+
+                </div>
+
+            </div>
+
+            <div class="transaction-amount ${
+                isSent
+                ? "negative"
+                : "positive"
+            }">
+
+                ${
+                    isSent ? "-" : "+"
+                }€${amount.toFixed(2)}
+
+            </div>
+
+        `;
+
+        list.appendChild(item);
+
+    });
+}
+
+
+/* =========================
+   SEND
+========================= */
+
+function openSendModal(){
+
+    document.getElementById("sendModal").style.display =
+        "flex";
+
+    document.getElementById("sendStatus").className =
+        "status";
+}
+
+
+async function sendMoney(){
+
+    if(!currentUser){
+
+        showStatus(
+            "sendStatus",
+            "You must be logged in.",
+            "error"
+        );
+
+        return;
+    }
+
+    const receiverId =
+        document.getElementById("receiverId")
+        .value.trim();
+
+    const amount =
+        Number(
+            document.getElementById("sendAmount")
+            .value
+        );
+
+    const note =
+        document.getElementById("sendNote")
+        .value.trim();
+
+    if(!receiverId){
+
+        showStatus(
+            "sendStatus",
+            "Please enter the receiver User ID.",
+            "error"
+        );
+
+        return;
+    }
+
+    if(!amount || amount <= 0){
+
+        showStatus(
+            "sendStatus",
+            "Please enter a valid amount.",
+            "error"
+        );
+
+        return;
+    }
+
+    if(receiverId === currentUser.id){
+
+        showStatus(
+            "sendStatus",
+            "You cannot send money to yourself.",
+            "error"
+        );
+
+        return;
+    }
+
+    const button =
+        document.getElementById("sendButton");
+
+    button.disabled = true;
+    button.textContent = "Sending...";
+
+    try{
+
+        const {
+            data,
+            error
+        } = await supabase.rpc(
+            "transfer_money",
+            {
+                p_receiver_id: receiverId,
+                p_amount: amount,
+                p_note: note
+            }
+        );
+
+        if(error){
+
+            console.error(error);
+
+            showStatus(
+                "sendStatus",
+                error.message,
+                "error"
+            );
+
+            return;
+        }
+
+        showStatus(
+            "sendStatus",
+            "Money sent successfully.",
+            "success"
+        );
+
+        document.getElementById("receiverId").value = "";
+        document.getElementById("sendAmount").value = "";
+        document.getElementById("sendNote").value = "";
+
+        await loadWallet();
+        await loadTransactions();
+
+    }
+    catch(error){
+
+        console.error(error);
+
+        showStatus(
+            "sendStatus",
+            "Transfer failed.",
+            "error"
+        );
+
+    }
+    finally{
+
+        button.disabled = false;
+        button.textContent = "Send Money";
+
+    }
+}
+
+
+/* =========================
+   RECEIVE
+========================= */
+
+function openReceiveModal(){
+
+    document.getElementById("receiveModal").style.display =
+        "flex";
+
+}
+
+
+/* =========================
+   EXCHANGE
+========================= */
+
+function openExchangeModal(){
+
+    document.getElementById("exchangeModal").style.display =
+        "flex";
+
+}
+
+
+/* =========================
+   MODAL
+========================= */
+
+function closeModal(id){
+
+    document.getElementById(id).style.display =
+        "none";
+
+}
+
+
+/* =========================
+   COPY USER ID
+========================= */
+
+async function copyUserId(){
+
+    const id =
+        document.getElementById("myUserId")
+        .textContent;
+
+    try{
+
+        await navigator.clipboard.writeText(id);
+
+        alert("User ID copied.");
+
+    }
+    catch(error){
+
+        alert("Could not copy User ID.");
+
+    }
+}
+
+
+/* =========================
+   STATUS
+========================= */
+
+function showStatus(id,message,type){
+
+    const element =
+        document.getElementById(id);
+
+    element.textContent = message;
+
+    element.className =
+        "status " + type;
+
+}
+
+
+/* =========================
+   CLOSE MODAL BY BACKGROUND
+========================= */
+
+document.querySelectorAll(".modal")
+.forEach(modal => {
+
+    modal.addEventListener("click",function(event){
+
+        if(event.target === modal){
+
+            modal.style.display = "none";
+
+        }
+
+    });
+
+});
+
+
+/* =========================
+   START
+========================= */
+
+async function startWallet(){
+
+    await loadWallet();
+
+    await loadTransactions();
+
+}
+
+startWallet();
+
 </script>
+
 </body>
-                    </html>
+</html>
