@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>HAVKAR - Market</title>
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+}
+
+body{
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Arial,
+        sans-serif;
+    background:#f5f5f5;
+    color:#333;
+    padding-bottom:90px;
+}
+
+/* =========================
+   HEADER
+========================= */
+
+.header{
+    background:linear-gradient(
+        135deg,
+        #689f38,
+        #7cb342
+    );
+    color:white;
+    padding:15px 20px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    box-shadow:0 2px 10px rgba(0,0,0,.12);
+    position:sticky;
+    top:0;
+    z-index:20;
+}
+
+.header-left{
+    display:flex;
+    align-items:center;
+    gap:15px;
+}
+
+.back-btn{
+    border:0;
+    background:none;
+    color:white;
+    font-size:24px;
+    cursor:pointer;
+    width:40px;
+    height:40px;
+}
+
+.header h1{
+    font-size:21px;
+}
+
+.refresh-btn{
+    border:0;
+    width:40px;
+    height:40px;
+    border-radius:50%;
+    background:rgba(255,255,255,.20);
+    color:white;
+    font-size:17px;
+    cursor:pointer;
+}
+
+.refresh-btn:active{
+    transform:scale(.94);
+}
+
+/* =========================
+   PAGE
+========================= */
+
+.page{
+    padding:20px;
+}
+
+/* =========================
+   MARKET SUMMARY
+========================= */
+
+.summary-card{
+    background:white;
+    border-radius:20px;
+    padding:20px;
+    margin-bottom:18px;
+    box-shadow:0 3px 12px rgba(0,0,0,.07);
+}
+
+.summary-top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+}
+
+.summary-title{
+    font-size:15px;
+    color:#777;
+}
+
+.status{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:12px;
+    color:#689f38;
+}
+
+.status-dot{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#7cb342;
+}
+
+.summary-value{
+    font-size:28px;
+    font-weight:800;
+    margin-top:7px;
+}
+
+.summary-sub{
+    color:#999;
+    font-size:12px;
+    margin-top:5px;
+}
+
+/* =========================
+   SEARCH
+========================= */
+
+.search-box{
+    position:relative;
+    margin-bottom:18px;
+}
+
+.search-box i{
+    position:absolute;
+    left:15px;
+    top:50%;
+    transform:translateY(-50%);
+    color:#999;
+}
+
+.search-box input{
+    width:100%;
+    border:1px solid #e0e0e0;
+    background:white;
+    border-radius:14px;
+    padding:14px 15px 14px 45px;
+    font-size:15px;
+    outline:none;
+    box-shadow:0 2px 8px rgba(0,0,0,.04);
+}
+
+.search-box input:focus{
+    border-color:#7cb342;
+}
+
+/* =========================
+   MARKET LIST
+========================= */
+
+.market-title{
+    font-size:20px;
+    font-weight:750;
+    margin-bottom:12px;
+}
+
+.market-list{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+
+.coin-card{
+    background:white;
+    border-radius:17px;
+    padding:15px;
+    display:flex;
+    align-items:center;
+    gap:13px;
+    box-shadow:0 2px 9px rgba(0,0,0,.06);
+    transition:transform .15s ease;
+}
+
+.coin-card:active{
+    transform:scale(.99);
+}
+
+.coin-icon{
+    width:48px;
+    height:48px;
+    min-width:48px;
+    border-radius:50%;
+    background:#f1f7eb;
+    color:#689f38;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:21px;
+    font-weight:800;
+}
+
+.coin-info{
+    flex:1;
+    min-width:0;
+}
+
+.coin-name{
+    font-size:16px;
+    font-weight:750;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.coin-symbol{
+    color:#999;
+    font-size:12px;
+    margin-top:4px;
+}
+
+.coin-right{
+    text-align:right;
+    min-width:115px;
+}
+
+.coin-price{
+    font-size:15px;
+    font-weight:750;
+    white-space:nowrap;
+}
+
+.coin-change{
+    margin-top:5px;
+    font-size:12px;
+    font-weight:700;
+}
+
+.up{
+    color:#2e7d32;
+}
+
+.down{
+    color:#c62828;
+}
+
+/* =========================
+   LOADING
+========================= */
+
+.loading{
+    background:white;
+    border-radius:17px;
+    padding:25px;
+    text-align:center;
+    color:#999;
+}
+
+.spinner{
+    width:30px;
+    height:30px;
+    border:3px solid #e5e5e5;
+    border-top-color:#7cb342;
+    border-radius:50%;
+    animation:spin .8s linear infinite;
+    margin:0 auto 12px;
+}
+
+@keyframes spin{
+    to{
+        transform:rotate(360deg);
+    }
+}
+
+/* =========================
+   ERROR
+========================= */
+
+.error-box{
+    background:#ffebee;
+    color:#c62828;
+    border-radius:14px;
+    padding:15px;
+    margin-bottom:15px;
+    line-height:1.5;
+    display:none;
+}
+
+.error-box button{
+    margin-top:10px;
+    border:0;
+    border-radius:9px;
+    padding:9px 13px;
+    background:#c62828;
+    color:white;
+    cursor:pointer;
+}
+
+/* =========================
+   EMPTY
+========================= */
+
+.empty{
+    background:white;
+    border-radius:17px;
+    padding:25px;
+    text-align:center;
+    color:#999;
+}
+
+/* =========================
+   BOTTOM NAV
+========================= */
+
+.bottom-nav{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    height:75px;
+    background:white;
+    display:flex;
+    justify-content:space-around;
+    align-items:center;
+    box-shadow:0 -2px 10px rgba(0,0,0,.10);
+    z-index:50;
+}
+
+.nav-item{
+    color:#999;
+    text-align:center;
+    font-size:12px;
+    cursor:pointer;
+    min-width:55px;
+}
+
+.nav-item i{
+    display:block;
+    font-size:21px;
+    margin-bottom:5px;
+}
+
+.nav-item.active{
+    color:#7cb342;
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media(max-width:380px){
+
+    .page{
+        padding:15px;
+    }
+
+    .coin-right{
+        min-width:100px;
+    }
+
+    .coin-price{
+        font-size:14px;
+    }
+
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- =========================
+     HEADER
+========================= -->
+
+<div class="header">
+
+    <div class="header-left">
+
+        <button
+            class="back-btn"
+            type="button"
+            onclick="goBack()"
+            aria-label="Back">
+
+            <i class="fas fa-arrow-left"></i>
+
+        </button>
+
+        <h1>Market</h1>
+
+    </div>
+
+    <button
+        class="refresh-btn"
+        type="button"
+        onclick="loadMarket()"
+        aria-label="Refresh market">
+
+        <i class="fas fa-rotate"></i>
+
+    </button>
+
+</div>
+
+
+<!-- =========================
+     MAIN
+========================= -->
+
+<main class="page">
+
+    <div
+        id="errorBox"
+        class="error-box">
+    </div>
+
+
+    <!-- SUMMARY -->
+
+    <div class="summary-card">
+
+        <div class="summary-top">
+
+            <div class="summary-title">
+                Cryptocurrency Market
+            </div>
+
+            <div class="status">
+
+                <span class="status-dot"></span>
+
+                <span id="connectionStatus">
+                    Updating
+                </span>
+
+            </div>
+
+        </div>
+
+        <div
+            class="summary-value"
+            id="marketCount">
+
+            --
+
+        </div>
+
+        <div
+            class="summary-sub"
+            id="lastUpdated">
+
+            Loading market data...
+
+        </div>
+
+    </div>
+
+
+    <!-- SEARCH -->
+
+    <div class="search-box">
+
+        <i class="fas fa-search"></i>
+
+        <input
+            id="searchInput"
+            type="search"
+            placeholder="Search cryptocurrency..."
+            autocomplete="off">
+
+    </div>
+
+
+    <!-- MARKET -->
+
+    <div class="market-title">
+        Top Cryptocurrencies
+    </div>
+
+    <div
+        id="marketList"
+        class="market-list">
+
+        <div class="loading">
+
+            <div class="spinner"></div>
+
+            Loading cryptocurrency prices...
+
+        </div>
+
+    </div>
+
+</main>
+
+
+<!-- =========================
+     BOTTOM NAV
+========================= -->
+
+<div class="bottom-nav">
+
+    <div
+        class="nav-item"
+        onclick="window.location.href='wallet.html'">
+
+        <i class="fas fa-wallet"></i>
+
+        Wallet
+
+    </div>
+
+
+    <div
+        class="nav-item active">
+
+        <i class="fas fa-chart-line"></i>
+
+        Market
+
+    </div>
+
+
+    <div
+        class="nav-item"
+        onclick="window.location.href='trade.html'">
+
+        <i class="fas fa-exchange-alt"></i>
+
+        Trade
+
+    </div>
+
+
+    <div
+        class="nav-item"
+        onclick="window.location.href='history.html'">
+
+        <i class="fas fa-history"></i>
+
+        History
+
+    </div>
+
+
+    <div
+        class="nav-item"
+        onclick="window.location.href='profile.html'">
+
+        <i class="fas fa-user"></i>
+
+        Profile
+
+    </div>
+
+</div>
+
+
+<script>
+
+/* ==========================================
+   MARKET CONFIGURATION
+========================================== */
+
+const COINS = [
+
+    {
+        id:"bitcoin",
+        name:"Bitcoin",
+        symbol:"BTC",
+        icon:"₿"
+    },
+
+    {
+        id:"ethereum",
+        name:"Ethereum",
+        symbol:"ETH",
+        icon:"Ξ"
+    },
+
+    {
+        id:"tether",
+        name:"Tether",
+        symbol:"USDT",
+        icon:"₮"
+    },
+
+    {
+        id:"binancecoin",
+        name:"BNB",
+        symbol:"BNB",
+        icon:"BNB"
+    },
+
+    {
+        id:"solana",
+        name:"Solana",
+        symbol:"SOL",
+        icon:"S"
+    },
+
+    {
+        id:"ripple",
+        name:"XRP",
+        symbol:"XRP",
+        icon:"X"
+    },
+
+    {
+        id:"cardano",
+        name:"Cardano",
+        symbol:"ADA",
+        icon:"A"
+    },
+
+    {
+        id:"dogecoin",
+        name:"Dogecoin",
+        symbol:"DOGE",
+        icon:"Ð"
+    },
+
+    {
+        id:"tron",
+        name:"TRON",
+        symbol:"TRX",
+        icon:"T"
+    },
+
+    {
+        id:"polkadot",
+        name:"Polkadot",
+        symbol:"DOT",
+        icon:"●"
+    }
+
+];
+
+
+/* ==========================================
+   STATE
+========================================== */
+
+let marketData = {};
+
+
+/* ==========================================
+   DOM
+========================================== */
+
+const marketList =
+    document.getElementById("marketList");
+
+const searchInput =
+    document.getElementById("searchInput");
+
+const marketCount =
+    document.getElementById("marketCount");
+
+const lastUpdated =
+    document.getElementById("lastUpdated");
+
+const connectionStatus =
+    document.getElementById("connectionStatus");
+
+const errorBox =
+    document.getElementById("errorBox");
+
+
+/* ==========================================
+   BACK
+========================================== */
+
+function goBack(){
+
+    if(
+        document.referrer &&
+        document.referrer.indexOf(
+            window.location.origin
+        ) === 0
+    ){
+
+        window.history.back();
+
+    }
+    else{
+
+        window.location.href =
+            "index.html";
+
+    }
+
+}
+
+
+/* ==========================================
+   LOAD MARKET
+========================================== */
+
+async function loadMarket(){
+
+    hideError();
+
+    connectionStatus.textContent =
+        "Updating";
+
+
+    marketList.innerHTML = `
+
+        <div class="loading">
+
+            <div class="spinner"></div>
+
+            Loading cryptocurrency prices...
+
+        </div>
+
+    `;
+
+
+    const ids =
+        COINS
+            .map(coin => coin.id)
+            .join(",");
+
+
+    const url =
+        "https://api.coingecko.com/api/v3/coins/markets" +
+        "?vs_currency=eur" +
+        "&ids=" +
+        encodeURIComponent(ids) +
+        "&order=market_cap_desc" +
+        "&per_page=10" +
+        "&page=1" +
+        "&sparkline=false" +
+        "&price_change_percentage=24h";
+
+
+    try{
+
+        const response =
+            await fetch(
+                url,
+                {
+                    method:"GET",
+                    headers:{
+                        "Accept":"application/json"
+                    },
+                    cache:"no-store"
+                }
+            );
+
+
+        if(!response.ok){
+
+            throw new Error(
+                "Market service returned HTTP " +
+                response.status
+            );
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        if(
+            !Array.isArray(data) ||
+            !data.length
+        ){
+
+            throw new Error(
+                "No market data was returned."
+            );
+
+        }
+
+
+        marketData = {};
+
+
+        data.forEach(coin => {
+
+            marketData[coin.id] =
+                coin;
+
+        });
+
+
+        renderMarket();
+
+
+        marketCount.textContent =
+            data.length +
+            " cryptocurrencies";
+
+
+        lastUpdated.textContent =
+            "Updated: " +
+            new Date().toLocaleTimeString(
+                [],
+                {
+                    hour:"2-digit",
+                    minute:"2-digit",
+                    second:"2-digit"
+                }
+            );
+
+
+        connectionStatus.textContent =
+            "Live";
+
+
+    }
+    catch(error){
+
+        console.error(
+            "Market error:",
+            error
+        );
+
+
+        connectionStatus.textContent =
+            "Offline";
+
+
+        marketList.innerHTML = `
+
+            <div class="empty">
+
+                Unable to load cryptocurrency prices.
+
+                <br><br>
+
+                Please check your internet connection
+                and try again.
+
+                <br>
+
+                <button
+                    type="button"
+                    onclick="loadMarket()"
+                    style="
+                        margin-top:15px;
+                        border:0;
+                        padding:11px 16px;
+                        border-radius:10px;
+                        background:#7cb342;
+                        color:white;
+                        font-weight:700;
+                        cursor:pointer;
+                    ">
+
+                    Try Again
+
+                </button>
+
+            </div>
+
+        `;
+
+
+        showError(
+            "Market data could not be loaded."
+        );
+
+    }
+
+}
+
+
+/* ==========================================
+   RENDER MARKET
+========================================== */
+
+function renderMarket(){
+
+    const query =
+        searchInput.value
+            .trim()
+            .toLowerCase();
+
+
+    const filtered =
+        COINS.filter(coin => {
+
+            const market =
+                marketData[coin.id];
+
+            if(!market){
+
+                return false;
+
+            }
+
+
+            if(!query){
+
+                return true;
+
+            }
+
+
+            return (
+
+                coin.name
+                    .toLowerCase()
+                    .includes(query)
+
+                ||
+
+                coin.symbol
+                    .toLowerCase()
+                    .includes(query)
+
+            );
+
+        });
+
+
+    if(!filtered.length){
+
+        marketList.innerHTML = `
+
+            <div class="empty">
+
+                No cryptocurrency found.
+
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+
+    marketList.innerHTML = "";
+
+
+    filtered.forEach(coin => {
+
+        const market =
+            marketData[coin.id];
+
+
+        const price =
+            Number(
+                market.current_price || 0
+            );
+
+
+        const change =
+            Number(
+                market.price_change_percentage_24h ||
+                0
+            );
+
+
+        const changeClass =
+            change >= 0
+                ? "up"
+                : "down";
+
+
+        const sign =
+            change >= 0
+                ? "+"
+                : "";
+
+
+        const card =
+            document.createElement("div");
+
+
+        card.className =
+            "coin-card";
+
+
+        card.innerHTML = `
+
+            <div class="coin-icon">
+
+                ${escapeHtml(coin.icon)}
+
+            </div>
+
+
+            <div class="coin-info">
+
+                <div class="coin-name">
+
+                    ${escapeHtml(coin.name)}
+
+                </div>
+
+                <div class="coin-symbol">
+
+                    ${escapeHtml(coin.symbol)}
+
+                </div>
+
+            </div>
+
+
+            <div class="coin-right">
+
+                <div class="coin-price">
+
+                    €${formatPrice(price)}
+
+                </div>
+
+                <div
+                    class="coin-change ${changeClass}">
+
+                    ${sign}${change.toFixed(2)}%
+
+                </div>
+
+            </div>
+
+        `;
+
+
+        marketList.appendChild(card);
+
+    });
+
+}
+
+
+/* ==========================================
+   SEARCH
+========================================== */
+
+searchInput.addEventListener(
+    "input",
+    function(){
+
+        renderMarket();
+
+    }
+);
+
+
+/* ==========================================
+   FORMAT PRICE
+========================================== */
+
+function formatPrice(value){
+
+    const number =
+        Number(value || 0);
+
+
+    if(number >= 1000){
+
+        return number.toLocaleString(
+            "en-US",
+            {
+                minimumFractionDigits:2,
+                maximumFractionDigits:2
+            }
+        );
+
+    }
+
+
+    if(number >= 1){
+
+        return number.toLocaleString(
+            "en-US",
+            {
+                minimumFractionDigits:2,
+                maximumFractionDigits:4
+            }
+        );
+
+    }
+
+
+    return number.toLocaleString(
+        "en-US",
+        {
+            minimumFractionDigits:2,
+            maximumFractionDigits:8
+        }
+    );
+
+}
+
+
+/* ==========================================
+   ESCAPE HTML
+========================================== */
+
+function escapeHtml(value){
+
+    return String(value)
+
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+
+        .replace(
+            /</g,
+            "&lt;"
+        )
+
+        .replace(
+            />/g,
+            "&gt;"
+        )
+
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
+
+
+/* ==========================================
+   ERROR
+========================================== */
+
+function showError(message){
+
+    errorBox.innerHTML =
+        escapeHtml(message) +
+        "<br>" +
+        "<button type='button' onclick='hideError()'>Close</button>";
+
+    errorBox.style.display =
+        "block";
+
+}
+
+
+function hideError(){
+
+    errorBox.style.display =
+        "none";
+
+}
+
+
+/* ==========================================
+   AUTO REFRESH
+========================================== */
+
+setInterval(
+    function(){
+
+        loadMarket();
+
+    },
+    120000
+);
+
+
+/* ==========================================
+   START
+========================================== */
+
+loadMarket();
+
+</script>
+
+</body>
+</html>
