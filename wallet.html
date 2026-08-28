@@ -1,12 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
 <title>HAVKAR - Wallet</title>
 
 <link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
 
@@ -114,7 +119,8 @@ body{
     padding:0 20px;
 }
 
-.item{
+.item,
+.market-item{
     background:white;
     border-radius:15px;
     padding:15px;
@@ -125,7 +131,8 @@ body{
     box-shadow:0 2px 8px rgba(0,0,0,.06);
 }
 
-.circle{
+.circle,
+.market-icon{
     width:46px;
     height:46px;
     min-width:46px;
@@ -133,38 +140,55 @@ body{
     display:flex;
     align-items:center;
     justify-content:center;
+}
+
+.circle{
     background:#e8f5e9;
     color:#558b2f;
     font-size:22px;
     font-weight:700;
 }
 
-.info{
+.info,
+.market-info{
     flex:1;
     min-width:0;
 }
 
-.name{
+.name,
+.market-name{
     font-weight:700;
-    margin-bottom:4px;
 }
 
-.small{
+.small,
+.market-symbol{
     color:#999;
     font-size:13px;
 }
 
-.amount{
+.small{
+    margin-top:4px;
+}
+
+.market-symbol{
+    font-size:12px;
+    margin-top:3px;
+}
+
+.amount,
+.market-price{
     text-align:right;
     font-weight:700;
     white-space:nowrap;
 }
 
-.positive{
+.positive,
+.market-up{
     color:#558b2f;
 }
 
-.negative{
+.negative,
+.market-down{
     color:#d32f2f;
 }
 
@@ -187,69 +211,15 @@ body{
     word-break:break-word;
 }
 
-.market-item{
-    background:white;
-    border-radius:15px;
-    padding:15px;
-    margin-bottom:12px;
-    display:flex;
-    align-items:center;
-    gap:14px;
-    box-shadow:0 2px 8px rgba(0,0,0,.06);
-}
-
-.market-icon{
-    width:46px;
-    height:46px;
-    min-width:46px;
-    border-radius:50%;
-    background:#f4f8ef;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-weight:800;
-    font-size:19px;
-    color:#689f38;
-}
-
-.market-info{
-    flex:1;
-    min-width:0;
-}
-
-.market-name{
-    font-weight:700;
-}
-
-.market-symbol{
-    color:#999;
-    font-size:12px;
-    margin-top:3px;
-}
-
-.market-price{
-    text-align:right;
-    font-weight:700;
-}
-
-.market-change{
-    font-size:12px;
-    margin-top:4px;
-}
-
-.market-up{
-    color:#2e7d32;
-}
-
-.market-down{
-    color:#c62828;
-}
-
 .market-header{
     display:flex;
     justify-content:space-between;
     align-items:center;
     padding:0 20px 10px;
+}
+
+.market-header .section-title{
+    padding:20px 0 0;
 }
 
 .market-refresh{
@@ -261,6 +231,24 @@ body{
     color:#689f38;
     cursor:pointer;
     box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+
+.price-time{
+    padding:0 20px 5px;
+    color:#999;
+    font-size:12px;
+}
+
+.market-icon{
+    background:#f4f8ef;
+    color:#689f38;
+    font-weight:800;
+    font-size:19px;
+}
+
+.market-change{
+    font-size:12px;
+    margin-top:4px;
 }
 
 .bottom-nav{
@@ -308,6 +296,8 @@ body{
 .modal-box{
     width:100%;
     max-width:430px;
+    max-height:90vh;
+    overflow-y:auto;
     background:white;
     border-radius:20px;
     padding:22px;
@@ -400,16 +390,13 @@ textarea{
     cursor:pointer;
 }
 
-.price-time{
-    padding:0 20px 5px;
-    color:#999;
-    font-size:12px;
-}
-
 </style>
+
 </head>
 
+
 <body>
+
 
 <!-- HEADER -->
 
@@ -428,7 +415,9 @@ textarea{
 
     </div>
 
+
     <button class="icon-btn"
+            id="refreshButton"
             onclick="refreshWallet()">
 
         <i class="fas fa-rotate"></i>
@@ -456,28 +445,34 @@ textarea{
 
     </div>
 
+
     <div class="card-actions">
 
         <button class="action-btn"
                 onclick="openSend()">
 
             <i class="fas fa-paper-plane"></i>
+
             Send
 
         </button>
+
 
         <button class="action-btn"
                 onclick="openReceive()">
 
             <i class="fas fa-download"></i>
+
             Receive
 
         </button>
+
 
         <button class="action-btn"
                 onclick="openExchange()">
 
             <i class="fas fa-exchange-alt"></i>
+
             Exchange
 
         </button>
@@ -493,6 +488,7 @@ textarea{
     My Wallets
 </div>
 
+
 <div class="list"
      id="walletList">
 
@@ -503,13 +499,14 @@ textarea{
 </div>
 
 
-<!-- CRYPTOCURRENCY MARKET -->
+<!-- CRYPTO MARKET -->
 
 <div class="market-header">
 
     <div class="section-title">
         Cryptocurrency Prices
     </div>
+
 
     <button class="market-refresh"
             onclick="loadCryptoPrices()">
@@ -520,12 +517,14 @@ textarea{
 
 </div>
 
+
 <div class="price-time"
      id="priceUpdated">
 
     Loading prices...
 
 </div>
+
 
 <div class="list"
      id="cryptoList">
@@ -543,6 +542,7 @@ textarea{
     Recent Transactions
 </div>
 
+
 <div class="list"
      id="transactionList">
 
@@ -553,7 +553,7 @@ textarea{
 </div>
 
 
-<!-- SEND -->
+<!-- SEND MODAL -->
 
 <div class="modal"
      id="sendModal">
@@ -573,16 +573,20 @@ textarea{
 
         </div>
 
+
         <label>
             Receiver User ID
         </label>
 
+
         <input id="receiverId"
                placeholder="Enter User ID">
+
 
         <label>
             Amount (€)
         </label>
+
 
         <input id="sendAmount"
                type="number"
@@ -590,13 +594,16 @@ textarea{
                step="0.01"
                placeholder="0.00">
 
+
         <label>
             Note
         </label>
 
+
         <textarea id="sendNote"
                   rows="3"
                   placeholder="Optional note"></textarea>
+
 
         <button class="primary"
                 id="sendButton"
@@ -606,8 +613,10 @@ textarea{
 
         </button>
 
+
         <div id="sendStatus"
              class="status">
+
         </div>
 
     </div>
@@ -615,7 +624,7 @@ textarea{
 </div>
 
 
-<!-- RECEIVE -->
+<!-- RECEIVE MODAL -->
 
 <div class="modal"
      id="receiveModal">
@@ -635,9 +644,11 @@ textarea{
 
         </div>
 
+
         <p style="margin-bottom:10px;">
             Your HAVKAR User ID
         </p>
+
 
         <div class="user-id"
              id="myUserId">
@@ -646,10 +657,12 @@ textarea{
 
         </div>
 
+
         <button class="copy"
                 onclick="copyId()">
 
             <i class="fas fa-copy"></i>
+
             Copy ID
 
         </button>
@@ -659,7 +672,7 @@ textarea{
 </div>
 
 
-<!-- EXCHANGE -->
+<!-- EXCHANGE MODAL -->
 
 <div class="modal"
      id="exchangeModal">
@@ -679,6 +692,7 @@ textarea{
 
         </div>
 
+
         <p style="line-height:1.6;color:#777;">
 
             Currency exchange is not activated yet.
@@ -697,38 +711,47 @@ textarea{
     <div class="nav-item active">
 
         <i class="fas fa-wallet"></i>
+
         Wallet
 
     </div>
+
 
     <div class="nav-item"
          onclick="window.location.href='market.html'">
 
         <i class="fas fa-chart-line"></i>
+
         Market
 
     </div>
+
 
     <div class="nav-item"
          onclick="window.location.href='trade.html'">
 
         <i class="fas fa-exchange-alt"></i>
+
         Trade
 
     </div>
+
 
     <div class="nav-item"
          onclick="window.location.href='history.html'">
 
         <i class="fas fa-history"></i>
+
         History
 
     </div>
+
 
     <div class="nav-item"
          onclick="window.location.href='profile.html'">
 
         <i class="fas fa-user"></i>
+
         Profile
 
     </div>
@@ -740,23 +763,28 @@ textarea{
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+
 <script>
 
 /* ==========================================
    SUPABASE
 ========================================== */
 
-const supabase = window.supabase.createClient(
+const supabase =
+    window.supabase.createClient(
 
-    "https://iompzwaxuirvatiibrtb.supabase.com",
+        "https://iompzwaxuirvatiibrtb.supabase.com",
 
-    "sb_publishable_oEKE1vl6EkWXdETgy9MjHw_DUTJLN4O"
+        "sb_publishable_oEKE1vl6EkWXdETgy9MjHw_DUTJLN4O"
 
-);
+    );
+
 
 let currentUser = null;
 
 let cryptoPrices = {};
+
+let walletData = [];
 
 
 /* ==========================================
@@ -832,22 +860,23 @@ async function getUser(){
 
     try{
 
-        const {
-            data,
-            error
-        } = await supabase.auth.getUser();
+        const result =
+            await supabase.auth.getUser();
 
-        if(error){
+
+        if(result.error){
 
             console.error(
                 "Auth error:",
-                error
+                result.error
             );
 
             return null;
+
         }
 
-        return data.user || null;
+
+        return result.data.user || null;
 
     }
     catch(error){
@@ -858,6 +887,7 @@ async function getUser(){
         );
 
         return null;
+
     }
 
 }
@@ -872,6 +902,7 @@ async function loadWallet(){
     const walletList =
         document.getElementById("walletList");
 
+
     walletList.innerHTML =
         '<div class="loading">Loading wallet...</div>';
 
@@ -884,20 +915,28 @@ async function loadWallet(){
 
         currentUser = null;
 
+        walletData = [];
+
+
         document.getElementById("totalBalance")
             .textContent = "€0.00";
+
 
         document.getElementById("myUserId")
             .textContent = "Not logged in";
 
+
         walletList.innerHTML =
             '<div class="empty">Please log in first.</div>';
+
 
         document.getElementById("transactionList")
             .innerHTML =
             '<div class="empty">Please log in first.</div>';
 
+
         return;
+
     }
 
 
@@ -908,42 +947,47 @@ async function loadWallet(){
         .textContent = user.id;
 
 
-    const {
-        data,
-        error
-    } = await supabase
-        .from("wallets")
-        .select("*")
-        .eq("user_id",user.id);
+    const result =
+        await supabase
+            .from("wallets")
+            .select("*")
+            .eq("user_id",user.id);
 
 
-    if(error){
+    if(result.error){
 
         console.error(
             "Wallet error:",
-            error
+            result.error
         );
+
+
+        walletData = [];
+
 
         walletList.innerHTML =
             `<div class="empty">
                 Wallet error:<br><br>
-                ${escapeHtml(error.message)}
+                ${escapeHtml(result.error.message)}
              </div>`;
+
 
         showError(
             "Wallet database error: " +
-            error.message
+            result.error.message
         );
 
+
         return;
+
     }
 
 
-    const wallets =
-        data || [];
+    walletData =
+        result.data || [];
 
 
-    renderWallets(wallets);
+    renderWallets(walletData);
 
 }
 
@@ -963,10 +1007,13 @@ function renderWallets(wallets){
         document.getElementById("totalBalance")
             .textContent = "€0.00";
 
+
         list.innerHTML =
             '<div class="empty">No wallets found.</div>';
 
+
         return;
+
     }
 
 
@@ -990,12 +1037,25 @@ function renderWallets(wallets){
             Number(wallet.balance || 0);
 
 
-        let valueEUR =
-            balance;
+        let valueEUR = 0;
 
 
-        if(
-            currency !== "EUR" &&
+        /*
+         * EUR wallet
+         */
+
+        if(currency === "EUR"){
+
+            valueEUR = balance;
+
+        }
+
+
+        /*
+         * Cryptocurrency wallet
+         */
+
+        else if(
             cryptoPrices[currency] &&
             cryptoPrices[currency].eur
         ){
@@ -1012,11 +1072,12 @@ function renderWallets(wallets){
         totalEUR += valueEUR;
 
 
-        let icon =
-            currency === "EUR"
-            ? "€"
-            : currency;
+        let icon = currency;
 
+
+        if(currency === "EUR"){
+            icon = "€";
+        }
 
         if(currency === "BTC"){
             icon = "₿";
@@ -1034,15 +1095,16 @@ function renderWallets(wallets){
         const item =
             document.createElement("div");
 
+
         item.className = "item";
 
 
-        let valueText =
+        const valueText =
             "€" +
             formatMoney(valueEUR);
 
 
-        let quantityText =
+        const quantityText =
             formatCrypto(balance);
 
 
@@ -1052,11 +1114,13 @@ function renderWallets(wallets){
                 ${escapeHtml(icon)}
             </div>
 
+
             <div class="info">
 
                 <div class="name">
                     ${escapeHtml(currency)}
                 </div>
+
 
                 <div class="small">
 
@@ -1072,6 +1136,7 @@ function renderWallets(wallets){
                 </div>
 
             </div>
+
 
             <div class="amount">
 
@@ -1104,12 +1169,14 @@ async function loadCryptoPrices(){
     const list =
         document.getElementById("cryptoList");
 
+
     const updated =
         document.getElementById("priceUpdated");
 
 
     list.innerHTML =
         '<div class="loading">Loading cryptocurrency prices...</div>';
+
 
     updated.textContent =
         "Updating prices...";
@@ -1129,18 +1196,45 @@ async function loadCryptoPrices(){
         "&include_24hr_change=true";
 
 
+    /*
+     * IMPORTANT:
+     * Price request has a timeout.
+     * It cannot freeze the Wallet forever.
+     */
+
+    const controller =
+        new AbortController();
+
+
+    const timeout =
+        setTimeout(
+            function(){
+
+                controller.abort();
+
+            },
+            10000
+        );
+
+
     try{
 
         const response =
-            await fetch(url,{
+            await fetch(
+                url,
+                {
+                    method:"GET",
 
-                method:"GET",
+                    headers:{
+                        "Accept":"application/json"
+                    },
 
-                headers:{
-                    "Accept":"application/json"
+                    signal:controller.signal
                 }
+            );
 
-            });
+
+        clearTimeout(timeout);
 
 
         if(!response.ok){
@@ -1181,18 +1275,21 @@ async function loadCryptoPrices(){
 
 
         /*
-         * Refresh wallet values after prices arrive.
+         * Recalculate wallet values
+         * after receiving crypto prices.
          */
 
-        if(currentUser){
+        if(walletData.length){
 
-            await loadWallet();
+            renderWallets(walletData);
 
         }
 
-
     }
     catch(error){
+
+        clearTimeout(timeout);
+
 
         console.error(
             "Crypto price error:",
@@ -1200,10 +1297,16 @@ async function loadCryptoPrices(){
         );
 
 
+        let message =
+            error.name === "AbortError"
+            ? "Price service timed out."
+            : error.message;
+
+
         list.innerHTML =
             `<div class="empty">
-                Unable to load cryptocurrency prices.<br><br>
-                ${escapeHtml(error.message)}
+                Cryptocurrency prices unavailable.<br><br>
+                ${escapeHtml(message)}
              </div>`;
 
 
@@ -1254,6 +1357,7 @@ function renderCryptoPrices(){
         const item =
             document.createElement("div");
 
+
         item.className =
             "market-item";
 
@@ -1287,6 +1391,7 @@ function renderCryptoPrices(){
 
                 </div>
 
+
                 <div class="market-symbol">
 
                     ${escapeHtml(coin.symbol)}
@@ -1299,6 +1404,7 @@ function renderCryptoPrices(){
             <div class="market-price">
 
                 €${formatMoney(eur)}
+
 
                 <div class="market-change ${changeClass}">
 
@@ -1342,6 +1448,7 @@ async function loadTransactions(){
             '<div class="empty">Please log in first.</div>';
 
         return;
+
     }
 
 
@@ -1349,47 +1456,53 @@ async function loadTransactions(){
         '<div class="loading">Loading transactions...</div>';
 
 
-    const {
-        data,
-        error
-    } = await supabase
-        .from("wallet_transfers")
-        .select("*")
-        .or(
-            `sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`
-        )
-        .order(
-            "created_at",
-            {
-                ascending:false
-            }
-        )
-        .limit(20);
+    const result =
+        await supabase
+            .from("wallet_transfers")
+            .select("*")
+            .or(
+                `sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`
+            )
+            .order(
+                "created_at",
+                {
+                    ascending:false
+                }
+            )
+            .limit(20);
 
 
-    if(error){
+    if(result.error){
 
         console.error(
             "Transaction error:",
-            error
+            result.error
         );
+
 
         list.innerHTML =
             `<div class="empty">
                 Transaction error:<br><br>
-                ${escapeHtml(error.message)}
+                ${escapeHtml(result.error.message)}
              </div>`;
 
+
         return;
+
     }
 
 
-    if(!data || !data.length){
+    const data =
+        result.data || [];
+
+
+    if(!data.length){
 
         list.innerHTML =
             '<div class="empty">No transactions yet.</div>';
 
         return;
+
     }
 
 
@@ -1514,6 +1627,7 @@ async function sendMoney(){
         );
 
         return;
+
     }
 
 
@@ -1545,6 +1659,7 @@ async function sendMoney(){
         );
 
         return;
+
     }
 
 
@@ -1560,12 +1675,11 @@ async function sendMoney(){
         );
 
         return;
+
     }
 
 
-    if(
-        receiverId === currentUser.id
-    ){
+    if(receiverId === currentUser.id){
 
         showStatus(
             "sendStatus",
@@ -1574,6 +1688,7 @@ async function sendMoney(){
         );
 
         return;
+
     }
 
 
@@ -1587,20 +1702,56 @@ async function sendMoney(){
         "Sending...";
 
 
-    const {
-        data,
-        error
-    } = await supabase.rpc(
-        "transfer_money",
-        {
-            p_receiver_id:receiverId,
-            p_amount:amount,
-            p_note:note
+    try{
+
+        const result =
+            await supabase.rpc(
+                "transfer_money",
+                {
+                    p_receiver_id:receiverId,
+                    p_amount:amount,
+                    p_note:note
+                }
+            );
+
+
+        if(result.error){
+
+            throw result.error;
+
         }
-    );
 
 
-    if(error){
+        showStatus(
+            "sendStatus",
+            "Money sent successfully.",
+            "success"
+        );
+
+
+        document.getElementById("receiverId")
+            .value = "";
+
+
+        document.getElementById("sendAmount")
+            .value = "";
+
+
+        document.getElementById("sendNote")
+            .value = "";
+
+
+        await loadWallet();
+
+
+        if(currentUser){
+
+            await loadTransactions();
+
+        }
+
+    }
+    catch(error){
 
         console.error(
             "Transfer error:",
@@ -1610,46 +1761,12 @@ async function sendMoney(){
 
         showStatus(
             "sendStatus",
-            error.message,
+            error.message ||
+            "Transfer failed.",
             "error"
         );
 
-
-        button.disabled = false;
-
-        button.textContent =
-            "Send Money";
-
-        return;
     }
-
-
-    console.log(
-        "Transfer result:",
-        data
-    );
-
-
-    showStatus(
-        "sendStatus",
-        "Money sent successfully.",
-        "success"
-    );
-
-
-    document.getElementById("receiverId")
-        .value = "";
-
-    document.getElementById("sendAmount")
-        .value = "";
-
-    document.getElementById("sendNote")
-        .value = "";
-
-
-    await loadWallet();
-
-    await loadTransactions();
 
 
     button.disabled = false;
@@ -1717,6 +1834,7 @@ async function copyId(){
         );
 
         return;
+
     }
 
 
@@ -1757,6 +1875,13 @@ function showStatus(
         document.getElementById(id);
 
 
+    if(!element){
+
+        return;
+
+    }
+
+
     element.textContent =
         message;
 
@@ -1768,13 +1893,23 @@ function showStatus(
 
 
 /* ==========================================
-   ERROR
+   PAGE ERROR
 ========================================== */
 
 function showError(message){
 
-    document.getElementById("pageError")
-        .innerHTML =
+    const element =
+        document.getElementById("pageError");
+
+
+    if(!element){
+
+        return;
+
+    }
+
+
+    element.innerHTML =
         `<div class="error">
             ${escapeHtml(message)}
          </div>`;
@@ -1878,21 +2013,65 @@ function escapeHtml(value){
 
 async function refreshWallet(){
 
+    const button =
+        document.getElementById("refreshButton");
+
+
+    button.disabled = true;
+
+
     document.getElementById("pageError")
         .innerHTML = "";
 
 
-    await loadCryptoPrices();
+    try{
+
+        /*
+         * FIRST:
+         * Load the wallet.
+         * It does NOT wait for CoinGecko.
+         */
+
+        await loadWallet();
 
 
-    await loadWallet();
+        /*
+         * SECOND:
+         * Load transactions.
+         */
+
+        if(currentUser){
+
+            await loadTransactions();
+
+        }
 
 
-    if(currentUser){
+        /*
+         * THIRD:
+         * Update cryptocurrency prices.
+         */
 
-        await loadTransactions();
+        await loadCryptoPrices();
 
     }
+    catch(error){
+
+        console.error(
+            "Refresh error:",
+            error
+        );
+
+
+        showError(
+            "Refresh error: " +
+            error.message
+        );
+
+    }
+
+
+    button.disabled = false;
 
 }
 
@@ -1938,22 +2117,12 @@ supabase.auth.onAuthStateChange(
             currentUser =
                 session.user;
 
-
-            setTimeout(
-                async function(){
-
-                    await loadWallet();
-
-                    await loadTransactions();
-
-                },
-                0
-            );
-
         }
         else{
 
             currentUser = null;
+
+            walletData = [];
 
         }
 
@@ -1962,26 +2131,24 @@ supabase.auth.onAuthStateChange(
 
 
 /* ==========================================
-   START
+   START WALLET
 ========================================== */
 
 async function startWallet(){
 
     /*
-     * Load prices independently.
-     * Even if the user is not logged in,
-     * cryptocurrency prices can still be shown.
-     */
-
-    await loadCryptoPrices();
-
-
-    /*
-     * Then load the user's wallet.
+     * CRITICAL:
+     *
+     * Wallet loads FIRST.
+     * Cryptocurrency API cannot block it.
      */
 
     await loadWallet();
 
+
+    /*
+     * Transactions load after wallet.
+     */
 
     if(currentUser){
 
@@ -1989,12 +2156,30 @@ async function startWallet(){
 
     }
 
+
+    /*
+     * Cryptocurrency prices are loaded
+     * independently.
+     *
+     * We intentionally do NOT await this.
+     *
+     * Therefore, if CoinGecko is slow/down,
+     * the Wallet remains usable.
+     */
+
+    loadCryptoPrices();
+
 }
 
+
+/* ==========================================
+   START
+========================================== */
 
 startWallet();
 
 </script>
 
 </body>
-    </html>
+
+</html>
