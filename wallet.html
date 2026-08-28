@@ -9,6 +9,7 @@
 href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
+
 *{
     box-sizing:border-box;
     margin:0;
@@ -135,10 +136,12 @@ body{
     background:#e8f5e9;
     color:#558b2f;
     font-size:22px;
+    font-weight:700;
 }
 
 .info{
     flex:1;
+    min-width:0;
 }
 
 .name{
@@ -154,6 +157,7 @@ body{
 .amount{
     text-align:right;
     font-weight:700;
+    white-space:nowrap;
 }
 
 .positive{
@@ -171,6 +175,7 @@ body{
     padding:20px;
     text-align:center;
     color:#999;
+    margin-bottom:12px;
 }
 
 .error{
@@ -180,6 +185,82 @@ body{
     color:#c62828;
     border-radius:12px;
     word-break:break-word;
+}
+
+.market-item{
+    background:white;
+    border-radius:15px;
+    padding:15px;
+    margin-bottom:12px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    box-shadow:0 2px 8px rgba(0,0,0,.06);
+}
+
+.market-icon{
+    width:46px;
+    height:46px;
+    min-width:46px;
+    border-radius:50%;
+    background:#f4f8ef;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:800;
+    font-size:19px;
+    color:#689f38;
+}
+
+.market-info{
+    flex:1;
+    min-width:0;
+}
+
+.market-name{
+    font-weight:700;
+}
+
+.market-symbol{
+    color:#999;
+    font-size:12px;
+    margin-top:3px;
+}
+
+.market-price{
+    text-align:right;
+    font-weight:700;
+}
+
+.market-change{
+    font-size:12px;
+    margin-top:4px;
+}
+
+.market-up{
+    color:#2e7d32;
+}
+
+.market-down{
+    color:#c62828;
+}
+
+.market-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:0 20px 10px;
+}
+
+.market-refresh{
+    border:0;
+    background:white;
+    width:36px;
+    height:36px;
+    border-radius:50%;
+    color:#689f38;
+    cursor:pointer;
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
 }
 
 .bottom-nav{
@@ -212,8 +293,6 @@ body{
 .nav-item.active{
     color:#7cb342;
 }
-
-/* MODALS */
 
 .modal{
     display:none;
@@ -248,6 +327,7 @@ body{
     border-radius:50%;
     background:#eee;
     font-size:20px;
+    cursor:pointer;
 }
 
 label{
@@ -275,6 +355,12 @@ textarea{
     color:white;
     font-weight:700;
     font-size:16px;
+    cursor:pointer;
+}
+
+.primary:disabled{
+    opacity:.6;
+    cursor:not-allowed;
 }
 
 .status{
@@ -311,11 +397,21 @@ textarea{
     color:white;
     padding:9px 13px;
     border-radius:8px;
+    cursor:pointer;
 }
+
+.price-time{
+    padding:0 20px 5px;
+    color:#999;
+    font-size:12px;
+}
+
 </style>
 </head>
 
 <body>
+
+<!-- HEADER -->
 
 <div class="header">
 
@@ -323,7 +419,9 @@ textarea{
 
         <button class="back-btn"
                 onclick="window.location.href='index.html'">
+
             <i class="fas fa-arrow-left"></i>
+
         </button>
 
         <h1>Wallet</h1>
@@ -332,7 +430,9 @@ textarea{
 
     <button class="icon-btn"
             onclick="refreshWallet()">
+
         <i class="fas fa-rotate"></i>
+
     </button>
 
 </div>
@@ -340,6 +440,8 @@ textarea{
 
 <div id="pageError"></div>
 
+
+<!-- BALANCE -->
 
 <div class="balance-card">
 
@@ -349,27 +451,35 @@ textarea{
 
     <div class="balance-amount"
          id="totalBalance">
+
         €0.00
+
     </div>
 
     <div class="card-actions">
 
         <button class="action-btn"
                 onclick="openSend()">
+
             <i class="fas fa-paper-plane"></i>
             Send
+
         </button>
 
         <button class="action-btn"
                 onclick="openReceive()">
+
             <i class="fas fa-download"></i>
             Receive
+
         </button>
 
         <button class="action-btn"
                 onclick="openExchange()">
+
             <i class="fas fa-exchange-alt"></i>
             Exchange
+
         </button>
 
     </div>
@@ -377,8 +487,10 @@ textarea{
 </div>
 
 
+<!-- USER WALLETS -->
+
 <div class="section-title">
-    Cryptocurrencies
+    My Wallets
 </div>
 
 <div class="list"
@@ -390,6 +502,42 @@ textarea{
 
 </div>
 
+
+<!-- CRYPTOCURRENCY MARKET -->
+
+<div class="market-header">
+
+    <div class="section-title">
+        Cryptocurrency Prices
+    </div>
+
+    <button class="market-refresh"
+            onclick="loadCryptoPrices()">
+
+        <i class="fas fa-rotate"></i>
+
+    </button>
+
+</div>
+
+<div class="price-time"
+     id="priceUpdated">
+
+    Loading prices...
+
+</div>
+
+<div class="list"
+     id="cryptoList">
+
+    <div class="loading">
+        Loading cryptocurrency prices...
+    </div>
+
+</div>
+
+
+<!-- TRANSACTIONS -->
 
 <div class="section-title">
     Recent Transactions
@@ -418,7 +566,9 @@ textarea{
 
             <button class="close"
                     onclick="closeModal('sendModal')">
+
                 ×
+
             </button>
 
         </div>
@@ -451,7 +601,9 @@ textarea{
         <button class="primary"
                 id="sendButton"
                 onclick="sendMoney()">
+
             Send Money
+
         </button>
 
         <div id="sendStatus"
@@ -476,7 +628,9 @@ textarea{
 
             <button class="close"
                     onclick="closeModal('receiveModal')">
+
                 ×
+
             </button>
 
         </div>
@@ -487,13 +641,17 @@ textarea{
 
         <div class="user-id"
              id="myUserId">
+
             Loading...
+
         </div>
 
         <button class="copy"
                 onclick="copyId()">
+
             <i class="fas fa-copy"></i>
             Copy ID
+
         </button>
 
     </div>
@@ -514,13 +672,17 @@ textarea{
 
             <button class="close"
                     onclick="closeModal('exchangeModal')">
+
                 ×
+
             </button>
 
         </div>
 
         <p style="line-height:1.6;color:#777;">
+
             Currency exchange is not activated yet.
+
         </p>
 
     </div>
@@ -528,81 +690,182 @@ textarea{
 </div>
 
 
-<!-- NAV -->
+<!-- BOTTOM NAV -->
 
 <div class="bottom-nav">
 
     <div class="nav-item active">
+
         <i class="fas fa-wallet"></i>
         Wallet
+
     </div>
 
     <div class="nav-item"
          onclick="window.location.href='market.html'">
+
         <i class="fas fa-chart-line"></i>
         Market
+
     </div>
 
     <div class="nav-item"
          onclick="window.location.href='trade.html'">
+
         <i class="fas fa-exchange-alt"></i>
         Trade
+
     </div>
 
     <div class="nav-item"
          onclick="window.location.href='history.html'">
+
         <i class="fas fa-history"></i>
         History
+
     </div>
 
     <div class="nav-item"
          onclick="window.location.href='profile.html'">
+
         <i class="fas fa-user"></i>
         Profile
+
     </div>
 
 </div>
 
 
+<!-- SUPABASE -->
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
 
-/* ================================
+/* ==========================================
    SUPABASE
-================================ */
+========================================== */
 
 const supabase = window.supabase.createClient(
+
     "https://iompzwaxuirvatiibrtb.supabase.com",
+
     "sb_publishable_oEKE1vl6EkWXdETgy9MjHw_DUTJLN4O"
+
 );
 
 let currentUser = null;
 
+let cryptoPrices = {};
 
-/* ================================
-   USER
-================================ */
+
+/* ==========================================
+   CRYPTO CONFIGURATION
+========================================== */
+
+const CRYPTO_LIST = [
+
+    {
+        id:"bitcoin",
+        symbol:"BTC",
+        name:"Bitcoin",
+        icon:"₿"
+    },
+
+    {
+        id:"ethereum",
+        symbol:"ETH",
+        name:"Ethereum",
+        icon:"Ξ"
+    },
+
+    {
+        id:"tether",
+        symbol:"USDT",
+        name:"Tether",
+        icon:"₮"
+    },
+
+    {
+        id:"binancecoin",
+        symbol:"BNB",
+        name:"BNB",
+        icon:"BNB"
+    },
+
+    {
+        id:"solana",
+        symbol:"SOL",
+        name:"Solana",
+        icon:"S"
+    },
+
+    {
+        id:"ripple",
+        symbol:"XRP",
+        name:"XRP",
+        icon:"X"
+    },
+
+    {
+        id:"cardano",
+        symbol:"ADA",
+        name:"Cardano",
+        icon:"A"
+    },
+
+    {
+        id:"dogecoin",
+        symbol:"DOGE",
+        name:"Dogecoin",
+        icon:"Ð"
+    }
+
+];
+
+
+/* ==========================================
+   GET CURRENT USER
+========================================== */
 
 async function getUser(){
 
-    const result =
-        await supabase.auth.getUser();
+    try{
 
-    if(result.error){
+        const {
+            data,
+            error
+        } = await supabase.auth.getUser();
 
-        console.error(result.error);
+        if(error){
+
+            console.error(
+                "Auth error:",
+                error
+            );
+
+            return null;
+        }
+
+        return data.user || null;
+
+    }
+    catch(error){
+
+        console.error(
+            "Get user error:",
+            error
+        );
 
         return null;
     }
 
-    return result.data.user || null;
 }
 
 
-/* ================================
+/* ==========================================
    LOAD WALLET
-================================ */
+========================================== */
 
 async function loadWallet(){
 
@@ -612,8 +875,10 @@ async function loadWallet(){
     walletList.innerHTML =
         '<div class="loading">Loading wallet...</div>';
 
+
     const user =
         await getUser();
+
 
     if(!user){
 
@@ -635,7 +900,9 @@ async function loadWallet(){
         return;
     }
 
+
     currentUser = user;
+
 
     document.getElementById("myUserId")
         .textContent = user.id;
@@ -675,45 +942,26 @@ async function loadWallet(){
     const wallets =
         data || [];
 
-    let total = 0;
-
-    wallets.forEach(wallet => {
-
-        const balance =
-            Number(wallet.balance || 0);
-
-        total += balance;
-
-    });
-
-
-    document.getElementById("totalBalance")
-        .textContent =
-        "€" +
-        total.toLocaleString(
-            "en-US",
-            {
-                minimumFractionDigits:2,
-                maximumFractionDigits:2
-            }
-        );
-
 
     renderWallets(wallets);
 
 }
 
 
-/* ================================
-   RENDER
-================================ */
+/* ==========================================
+   RENDER WALLETS
+========================================== */
 
 function renderWallets(wallets){
 
     const list =
         document.getElementById("walletList");
 
+
     if(!wallets.length){
+
+        document.getElementById("totalBalance")
+            .textContent = "€0.00";
 
         list.innerHTML =
             '<div class="empty">No wallets found.</div>';
@@ -721,7 +969,12 @@ function renderWallets(wallets){
         return;
     }
 
+
     list.innerHTML = "";
+
+
+    let totalEUR = 0;
+
 
     wallets.forEach(wallet => {
 
@@ -732,10 +985,38 @@ function renderWallets(wallets){
                 "EUR"
             ).toUpperCase();
 
+
         const balance =
             Number(wallet.balance || 0);
 
-        let icon = "€";
+
+        let valueEUR =
+            balance;
+
+
+        if(
+            currency !== "EUR" &&
+            cryptoPrices[currency] &&
+            cryptoPrices[currency].eur
+        ){
+
+            valueEUR =
+                balance *
+                Number(
+                    cryptoPrices[currency].eur
+                );
+
+        }
+
+
+        totalEUR += valueEUR;
+
+
+        let icon =
+            currency === "EUR"
+            ? "€"
+            : currency;
+
 
         if(currency === "BTC"){
             icon = "₿";
@@ -755,6 +1036,16 @@ function renderWallets(wallets){
 
         item.className = "item";
 
+
+        let valueText =
+            "€" +
+            formatMoney(valueEUR);
+
+
+        let quantityText =
+            formatCrypto(balance);
+
+
         item.innerHTML = `
 
             <div class="circle">
@@ -768,39 +1059,282 @@ function renderWallets(wallets){
                 </div>
 
                 <div class="small">
-                    HAVKAR Wallet
+
+                    ${escapeHtml(quantityText)}
+                    ${escapeHtml(currency)}
+
+                    ${
+                        currency !== "EUR"
+                        ? " • " + valueText
+                        : ""
+                    }
+
                 </div>
 
             </div>
 
             <div class="amount">
 
-                €${balance.toLocaleString(
-                    "en-US",
-                    {
-                        minimumFractionDigits:2,
-                        maximumFractionDigits:2
-                    }
-                )}
+                ${valueText}
 
             </div>
+
         `;
+
 
         list.appendChild(item);
 
     });
 
+
+    document.getElementById("totalBalance")
+        .textContent =
+        "€" +
+        formatMoney(totalEUR);
+
 }
 
 
-/* ================================
+/* ==========================================
+   LOAD CRYPTO PRICES
+========================================== */
+
+async function loadCryptoPrices(){
+
+    const list =
+        document.getElementById("cryptoList");
+
+    const updated =
+        document.getElementById("priceUpdated");
+
+
+    list.innerHTML =
+        '<div class="loading">Loading cryptocurrency prices...</div>';
+
+    updated.textContent =
+        "Updating prices...";
+
+
+    const ids =
+        CRYPTO_LIST
+            .map(coin => coin.id)
+            .join(",");
+
+
+    const url =
+        "https://api.coingecko.com/api/v3/simple/price" +
+        "?ids=" +
+        encodeURIComponent(ids) +
+        "&vs_currencies=eur" +
+        "&include_24hr_change=true";
+
+
+    try{
+
+        const response =
+            await fetch(url,{
+
+                method:"GET",
+
+                headers:{
+                    "Accept":"application/json"
+                }
+
+            });
+
+
+        if(!response.ok){
+
+            throw new Error(
+                "Price service returned HTTP " +
+                response.status
+            );
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        cryptoPrices = {};
+
+
+        CRYPTO_LIST.forEach(coin => {
+
+            if(data[coin.id]){
+
+                cryptoPrices[coin.symbol] =
+                    data[coin.id];
+
+            }
+
+        });
+
+
+        renderCryptoPrices();
+
+
+        updated.textContent =
+            "Updated: " +
+            new Date().toLocaleTimeString();
+
+
+        /*
+         * Refresh wallet values after prices arrive.
+         */
+
+        if(currentUser){
+
+            await loadWallet();
+
+        }
+
+
+    }
+    catch(error){
+
+        console.error(
+            "Crypto price error:",
+            error
+        );
+
+
+        list.innerHTML =
+            `<div class="empty">
+                Unable to load cryptocurrency prices.<br><br>
+                ${escapeHtml(error.message)}
+             </div>`;
+
+
+        updated.textContent =
+            "Price update unavailable";
+
+    }
+
+}
+
+
+/* ==========================================
+   RENDER CRYPTO PRICES
+========================================== */
+
+function renderCryptoPrices(){
+
+    const list =
+        document.getElementById("cryptoList");
+
+
+    list.innerHTML = "";
+
+
+    CRYPTO_LIST.forEach(coin => {
+
+        const price =
+            cryptoPrices[coin.symbol];
+
+
+        if(!price){
+
+            return;
+
+        }
+
+
+        const eur =
+            Number(price.eur || 0);
+
+
+        const change =
+            Number(
+                price.eur_24h_change || 0
+            );
+
+
+        const item =
+            document.createElement("div");
+
+        item.className =
+            "market-item";
+
+
+        const changeClass =
+            change >= 0
+            ? "market-up"
+            : "market-down";
+
+
+        const changeSign =
+            change >= 0
+            ? "+"
+            : "";
+
+
+        item.innerHTML = `
+
+            <div class="market-icon">
+
+                ${escapeHtml(coin.icon)}
+
+            </div>
+
+
+            <div class="market-info">
+
+                <div class="market-name">
+
+                    ${escapeHtml(coin.name)}
+
+                </div>
+
+                <div class="market-symbol">
+
+                    ${escapeHtml(coin.symbol)}
+
+                </div>
+
+            </div>
+
+
+            <div class="market-price">
+
+                €${formatMoney(eur)}
+
+                <div class="market-change ${changeClass}">
+
+                    ${changeSign}${change.toFixed(2)}%
+
+                </div>
+
+            </div>
+
+        `;
+
+
+        list.appendChild(item);
+
+    });
+
+
+    if(!list.children.length){
+
+        list.innerHTML =
+            '<div class="empty">No cryptocurrency prices available.</div>';
+
+    }
+
+}
+
+
+/* ==========================================
    TRANSACTIONS
-================================ */
+========================================== */
 
 async function loadTransactions(){
 
     const list =
         document.getElementById("transactionList");
+
 
     if(!currentUser){
 
@@ -809,6 +1343,7 @@ async function loadTransactions(){
 
         return;
     }
+
 
     list.innerHTML =
         '<div class="loading">Loading transactions...</div>';
@@ -866,13 +1401,11 @@ async function loadTransactions(){
         const sent =
             transaction.sender_id === currentUser.id;
 
+
         const amount =
-            Number(transaction.amount || 0);
-
-        const item =
-            document.createElement("div");
-
-        item.className = "item";
+            Number(
+                transaction.amount || 0
+            );
 
 
         const date =
@@ -881,6 +1414,14 @@ async function loadTransactions(){
                 transaction.created_at
               ).toLocaleString()
             : "";
+
+
+        const item =
+            document.createElement("div");
+
+
+        item.className =
+            "item";
 
 
         item.innerHTML = `
@@ -912,15 +1453,16 @@ async function loadTransactions(){
 
                 </div>
 
+
                 <div class="small">
 
                     ${escapeHtml(date)}
 
                     ${
                         transaction.note
-                        ? ' • ' +
+                        ? " • " +
                           escapeHtml(transaction.note)
-                        : ''
+                        : ""
                     }
 
                 </div>
@@ -935,11 +1477,12 @@ async function loadTransactions(){
             }">
 
                 ${sent ? '-' : '+'}
-                €${amount.toFixed(2)}
+                €${formatMoney(amount)}
 
             </div>
 
         `;
+
 
         list.appendChild(item);
 
@@ -948,9 +1491,9 @@ async function loadTransactions(){
 }
 
 
-/* ================================
+/* ==========================================
    SEND
-================================ */
+========================================== */
 
 function openSend(){
 
@@ -976,7 +1519,9 @@ async function sendMoney(){
 
     const receiverId =
         document.getElementById("receiverId")
-            .value.trim();
+            .value
+            .trim();
+
 
     const amount =
         Number(
@@ -984,9 +1529,11 @@ async function sendMoney(){
                 .value
         );
 
+
     const note =
         document.getElementById("sendNote")
-            .value.trim();
+            .value
+            .trim();
 
 
     if(!receiverId){
@@ -1001,7 +1548,10 @@ async function sendMoney(){
     }
 
 
-    if(!Number.isFinite(amount) || amount <= 0){
+    if(
+        !Number.isFinite(amount) ||
+        amount <= 0
+    ){
 
         showStatus(
             "sendStatus",
@@ -1013,7 +1563,9 @@ async function sendMoney(){
     }
 
 
-    if(receiverId === currentUser.id){
+    if(
+        receiverId === currentUser.id
+    ){
 
         showStatus(
             "sendStatus",
@@ -1028,8 +1580,11 @@ async function sendMoney(){
     const button =
         document.getElementById("sendButton");
 
+
     button.disabled = true;
-    button.textContent = "Sending...";
+
+    button.textContent =
+        "Sending...";
 
 
     const {
@@ -1052,14 +1607,18 @@ async function sendMoney(){
             error
         );
 
+
         showStatus(
             "sendStatus",
             error.message,
             "error"
         );
 
+
         button.disabled = false;
-        button.textContent = "Send Money";
+
+        button.textContent =
+            "Send Money";
 
         return;
     }
@@ -1078,24 +1637,32 @@ async function sendMoney(){
     );
 
 
-    document.getElementById("receiverId").value = "";
-    document.getElementById("sendAmount").value = "";
-    document.getElementById("sendNote").value = "";
+    document.getElementById("receiverId")
+        .value = "";
+
+    document.getElementById("sendAmount")
+        .value = "";
+
+    document.getElementById("sendNote")
+        .value = "";
 
 
     await loadWallet();
+
     await loadTransactions();
 
 
     button.disabled = false;
-    button.textContent = "Send Money";
+
+    button.textContent =
+        "Send Money";
 
 }
 
 
-/* ================================
+/* ==========================================
    RECEIVE
-================================ */
+========================================== */
 
 function openReceive(){
 
@@ -1105,9 +1672,9 @@ function openReceive(){
 }
 
 
-/* ================================
+/* ==========================================
    EXCHANGE
-================================ */
+========================================== */
 
 function openExchange(){
 
@@ -1117,30 +1684,41 @@ function openExchange(){
 }
 
 
-/* ================================
-   CLOSE
-================================ */
+/* ==========================================
+   CLOSE MODAL
+========================================== */
 
 function closeModal(id){
 
-    document.getElementById(id)
-        .style.display = "none";
+    const modal =
+        document.getElementById(id);
+
+
+    if(modal){
+
+        modal.style.display =
+            "none";
+
+    }
 
 }
 
 
-/* ================================
-   COPY
-================================ */
+/* ==========================================
+   COPY USER ID
+========================================== */
 
 async function copyId(){
 
     if(!currentUser){
 
-        alert("User ID is not available.");
+        alert(
+            "User ID is not available."
+        );
 
         return;
     }
+
 
     try{
 
@@ -1148,29 +1726,40 @@ async function copyId(){
             currentUser.id
         );
 
-        alert("User ID copied.");
+
+        alert(
+            "User ID copied."
+        );
 
     }
     catch(error){
 
-        alert("Could not copy User ID.");
+        alert(
+            "Could not copy User ID."
+        );
 
     }
 
 }
 
 
-/* ================================
+/* ==========================================
    STATUS
-================================ */
+========================================== */
 
-function showStatus(id,message,type){
+function showStatus(
+    id,
+    message,
+    type
+){
 
     const element =
         document.getElementById(id);
 
+
     element.textContent =
         message;
+
 
     element.className =
         "status " + type;
@@ -1178,9 +1767,9 @@ function showStatus(id,message,type){
 }
 
 
-/* ================================
+/* ==========================================
    ERROR
-================================ */
+========================================== */
 
 function showError(message){
 
@@ -1193,32 +1782,111 @@ function showError(message){
 }
 
 
-/* ================================
-   ESCAPE
-================================ */
+/* ==========================================
+   FORMAT MONEY
+========================================== */
 
-function escapeHtml(value){
+function formatMoney(value){
 
-    return String(value)
-        .replace(/&/g,"&amp;")
-        .replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;")
-        .replace(/"/g,"&quot;")
-        .replace(/'/g,"&#039;");
+    return Number(value || 0)
+        .toLocaleString(
+            "en-US",
+            {
+                minimumFractionDigits:2,
+                maximumFractionDigits:2
+            }
+        );
 
 }
 
 
-/* ================================
+/* ==========================================
+   FORMAT CRYPTO
+========================================== */
+
+function formatCrypto(value){
+
+    const number =
+        Number(value || 0);
+
+
+    if(number === 0){
+
+        return "0";
+
+    }
+
+
+    if(
+        Math.abs(number) < 0.000001
+    ){
+
+        return number.toFixed(8);
+
+    }
+
+
+    return number.toLocaleString(
+        "en-US",
+        {
+            maximumFractionDigits:8
+        }
+    );
+
+}
+
+
+/* ==========================================
+   ESCAPE HTML
+========================================== */
+
+function escapeHtml(value){
+
+    return String(value)
+
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+
+        .replace(
+            /</g,
+            "&lt;"
+        )
+
+        .replace(
+            />/g,
+            "&gt;"
+        )
+
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
+
+
+/* ==========================================
    REFRESH
-================================ */
+========================================== */
 
 async function refreshWallet(){
 
     document.getElementById("pageError")
         .innerHTML = "";
 
+
+    await loadCryptoPrices();
+
+
     await loadWallet();
+
 
     if(currentUser){
 
@@ -1229,9 +1897,9 @@ async function refreshWallet(){
 }
 
 
-/* ================================
+/* ==========================================
    MODAL BACKGROUND
-================================ */
+========================================== */
 
 document.querySelectorAll(".modal")
     .forEach(modal => {
@@ -1240,9 +1908,12 @@ document.querySelectorAll(".modal")
             "click",
             function(event){
 
-                if(event.target === modal){
+                if(
+                    event.target === modal
+                ){
 
-                    modal.style.display = "none";
+                    modal.style.display =
+                        "none";
 
                 }
 
@@ -1252,17 +1923,32 @@ document.querySelectorAll(".modal")
     });
 
 
-/* ================================
-   AUTH CHANGE
-================================ */
+/* ==========================================
+   AUTH STATE
+========================================== */
 
 supabase.auth.onAuthStateChange(
     function(event,session){
 
-        if(session && session.user){
+        if(
+            session &&
+            session.user
+        ){
 
             currentUser =
                 session.user;
+
+
+            setTimeout(
+                async function(){
+
+                    await loadWallet();
+
+                    await loadTransactions();
+
+                },
+                0
+            );
 
         }
         else{
@@ -1275,13 +1961,27 @@ supabase.auth.onAuthStateChange(
 );
 
 
-/* ================================
+/* ==========================================
    START
-================================ */
+========================================== */
 
 async function startWallet(){
 
+    /*
+     * Load prices independently.
+     * Even if the user is not logged in,
+     * cryptocurrency prices can still be shown.
+     */
+
+    await loadCryptoPrices();
+
+
+    /*
+     * Then load the user's wallet.
+     */
+
     await loadWallet();
+
 
     if(currentUser){
 
@@ -1291,9 +1991,10 @@ async function startWallet(){
 
 }
 
+
 startWallet();
 
 </script>
 
 </body>
-</html>
+    </html>
