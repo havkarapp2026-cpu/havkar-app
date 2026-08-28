@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
 
 <meta charset="UTF-8">
@@ -14,6 +13,10 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
+
+/* =====================================================
+   GLOBAL
+   ===================================================== */
 
 *{
     box-sizing:border-box;
@@ -36,19 +39,19 @@ body{
     padding-bottom:90px;
 }
 
-button,
-input,
-textarea{
+button{
     font-family:inherit;
 }
 
-button{
-    cursor:pointer;
+button:disabled{
+    opacity:.6;
+    cursor:not-allowed;
 }
+
 
 /* =====================================================
    HEADER
-===================================================== */
+   ===================================================== */
 
 .header{
     background:
@@ -68,6 +71,10 @@ button{
 
     box-shadow:
         0 2px 10px rgba(0,0,0,.12);
+
+    position:sticky;
+    top:0;
+    z-index:40;
 }
 
 .header-left{
@@ -76,10 +83,15 @@ button{
     gap:15px;
 }
 
-.back-btn{
+.back-btn,
+.icon-btn{
     border:0;
-    background:none;
     color:#fff;
+    cursor:pointer;
+}
+
+.back-btn{
+    background:none;
     font-size:24px;
 }
 
@@ -88,60 +100,56 @@ button{
 }
 
 .icon-btn{
+    background:rgba(255,255,255,.2);
     width:40px;
     height:40px;
-
-    border:0;
     border-radius:50%;
-
-    background:
-        rgba(255,255,255,.20);
-
-    color:#fff;
-
-    font-size:17px;
 }
 
-.icon-btn:disabled{
-    opacity:.55;
-}
 
 /* =====================================================
-   ERROR
-===================================================== */
+   ERROR / DEBUG
+   ===================================================== */
 
-.error-box{
-    display:none;
-
+.error{
     margin:15px 20px;
-
     padding:14px;
 
-    border-radius:12px;
-
     background:#ffebee;
-
     color:#c62828;
 
-    font-size:14px;
+    border-radius:12px;
 
     word-break:break-word;
 }
 
-.error-box.show{
-    display:block;
+.debug-box{
+    margin:15px 20px;
+    padding:12px;
+
+    border-radius:10px;
+
+    background:#fff8e1;
+    color:#795548;
+
+    font-size:12px;
+
+    display:none;
+
+    word-break:break-word;
 }
 
+
 /* =====================================================
-   BALANCE
-===================================================== */
+   BALANCE CARD
+   ===================================================== */
 
 .balance-card{
     margin:20px;
 
     padding:25px;
 
-    border-radius:22px;
+    border-radius:20px;
 
     color:#fff;
 
@@ -153,7 +161,7 @@ button{
         );
 
     box-shadow:
-        0 5px 20px rgba(104,159,56,.30);
+        0 5px 20px rgba(104,159,56,.3);
 }
 
 .balance-label{
@@ -166,18 +174,16 @@ button{
     font-weight:800;
 
     margin:8px 0 4px;
-
-    word-break:break-word;
 }
 
-.balance-currency{
-    font-size:13px;
+.balance-subtitle{
+    font-size:14px;
     opacity:.85;
 
     margin-bottom:20px;
 }
 
-.balance-actions{
+.card-actions{
     display:grid;
 
     grid-template-columns:
@@ -191,72 +197,90 @@ button{
 
     border-radius:12px;
 
-    padding:13px 5px;
+    padding:14px 5px;
 
     color:#fff;
 
     background:
-        rgba(255,255,255,.20);
+        rgba(255,255,255,.2);
+
+    cursor:pointer;
 
     font-weight:600;
+
+    transition:
+        transform .15s ease,
+        background .15s ease;
+}
+
+.action-btn:hover{
+    background:
+        rgba(255,255,255,.28);
 }
 
 .action-btn:active{
-    transform:scale(.98);
+    transform:scale(.97);
 }
 
 .action-btn i{
     display:block;
 
-    font-size:21px;
+    font-size:22px;
 
-    margin-bottom:6px;
+    margin-bottom:7px;
 }
 
+
 /* =====================================================
-   VALUE CURRENCY
-===================================================== */
+   PORTFOLIO CURRENCY
+   ===================================================== */
 
-.value-selector{
-    margin:0 20px 5px;
-
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
+.portfolio-bar{
+    margin:0 20px 20px;
 
     background:#fff;
 
-    padding:13px 15px;
+    border-radius:15px;
 
-    border-radius:14px;
+    padding:15px 18px;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:space-between;
 
     box-shadow:
         0 2px 8px rgba(0,0,0,.06);
 }
 
-.value-selector span{
+.portfolio-label{
     color:#777;
-    font-size:13px;
+    font-size:14px;
 }
 
-.value-selector select{
+.currency-select{
     border:0;
-    outline:0;
 
     background:#f4f8ef;
 
     color:#558b2f;
 
+    padding:10px 12px;
+
+    border-radius:10px;
+
     font-weight:700;
 
-    padding:8px 10px;
+    outline:none;
 
-    border-radius:9px;
+    cursor:pointer;
 }
 
+
 /* =====================================================
-   SECTION
-===================================================== */
+   SECTIONS
+   ===================================================== */
 
 .section-title{
     padding:20px 20px 10px;
@@ -265,135 +289,6 @@ button{
 
     font-weight:700;
 }
-
-/* =====================================================
-   LIST
-===================================================== */
-
-.list{
-    padding:0 20px;
-}
-
-.loading,
-.empty{
-    background:#fff;
-
-    border-radius:15px;
-
-    padding:22px;
-
-    margin-bottom:12px;
-
-    text-align:center;
-
-    color:#999;
-}
-
-/* =====================================================
-   WALLET ITEM
-===================================================== */
-
-.wallet-item{
-    background:#fff;
-
-    border-radius:16px;
-
-    padding:15px;
-
-    margin-bottom:12px;
-
-    display:flex;
-
-    align-items:center;
-
-    gap:13px;
-
-    box-shadow:
-        0 2px 8px rgba(0,0,0,.06);
-}
-
-.wallet-icon{
-    width:48px;
-    height:48px;
-
-    min-width:48px;
-
-    border-radius:50%;
-
-    display:flex;
-
-    align-items:center;
-    justify-content:center;
-
-    background:#e8f5e9;
-
-    color:#558b2f;
-
-    font-size:21px;
-
-    font-weight:800;
-}
-
-.wallet-info{
-    flex:1;
-
-    min-width:0;
-}
-
-.wallet-name{
-    font-weight:700;
-
-    margin-bottom:4px;
-}
-
-.wallet-balance{
-    color:#777;
-
-    font-size:13px;
-
-    word-break:break-word;
-}
-
-.wallet-value{
-    text-align:right;
-
-    font-weight:700;
-
-    white-space:nowrap;
-}
-
-.wallet-value-small{
-    color:#999;
-
-    font-size:11px;
-
-    margin-top:4px;
-}
-
-/* =====================================================
-   FAVORITE
-===================================================== */
-
-.favorite-btn{
-    width:34px;
-    height:34px;
-
-    border:0;
-
-    background:none;
-
-    color:#bbb;
-
-    font-size:17px;
-}
-
-.favorite-btn.active{
-    color:#f5b400;
-}
-
-/* =====================================================
-   CRYPTO
-===================================================== */
 
 .market-header{
     display:flex;
@@ -406,123 +301,42 @@ button{
 }
 
 .market-header .section-title{
-    padding-right:8px;
+    padding-right:10px;
 }
 
 .market-refresh{
-    width:38px;
-    height:38px;
-
     border:0;
-
-    border-radius:50%;
 
     background:#fff;
 
+    width:38px;
+    height:38px;
+
+    border-radius:50%;
+
     color:#689f38;
+
+    cursor:pointer;
 
     box-shadow:
         0 2px 8px rgba(0,0,0,.08);
 }
 
-.market-refresh:disabled{
-    opacity:.5;
-}
-
-.price-time{
-    padding:0 20px 8px;
-
-    color:#999;
-
-    font-size:12px;
-}
-
-.crypto-item{
-    background:#fff;
-
-    border-radius:16px;
-
-    padding:14px;
-
-    margin-bottom:12px;
-
-    display:flex;
-
-    align-items:center;
-
-    gap:12px;
-
-    box-shadow:
-        0 2px 8px rgba(0,0,0,.06);
-}
-
-.crypto-icon{
-    width:47px;
-    height:47px;
-
-    min-width:47px;
-
-    border-radius:50%;
-
-    background:#f4f8ef;
-
-    display:flex;
-
-    align-items:center;
-    justify-content:center;
-
-    font-size:18px;
-
-    font-weight:800;
-
-    color:#689f38;
-}
-
-.crypto-info{
-    flex:1;
-
-    min-width:0;
-}
-
-.crypto-name{
-    font-weight:700;
-}
-
-.crypto-symbol{
-    color:#999;
-
-    font-size:12px;
-
-    margin-top:3px;
-}
-
-.crypto-price{
-    text-align:right;
-
-    font-weight:700;
-
-    white-space:nowrap;
-}
-
-.crypto-change{
-    font-size:12px;
-
-    margin-top:4px;
-}
-
-.up{
-    color:#2e7d32;
-}
-
-.down{
-    color:#c62828;
-}
 
 /* =====================================================
-   TRANSACTIONS
-===================================================== */
+   LISTS
+   ===================================================== */
 
-.transaction-item{
+.list{
+    padding:0 20px;
+}
+
+
+/* =====================================================
+   WALLET ITEM
+   ===================================================== */
+
+.item{
     background:#fff;
 
     border-radius:15px;
@@ -535,80 +349,218 @@ button{
 
     align-items:center;
 
-    gap:13px;
+    gap:14px;
 
     box-shadow:
         0 2px 8px rgba(0,0,0,.06);
 }
 
-.transaction-icon{
-    width:45px;
-    height:45px;
+.circle{
+    width:46px;
+    height:46px;
 
-    min-width:45px;
+    min-width:46px;
 
     border-radius:50%;
 
     display:flex;
 
     align-items:center;
+
     justify-content:center;
-}
 
-.transaction-icon.sent{
-    background:#ffebee;
-    color:#d32f2f;
-}
-
-.transaction-icon.received{
     background:#e8f5e9;
+
     color:#558b2f;
+
+    font-size:22px;
+
+    font-weight:700;
 }
 
-.transaction-info{
+.info{
     flex:1;
-
     min-width:0;
 }
 
-.transaction-title{
+.name{
     font-weight:700;
-
     margin-bottom:4px;
 }
 
-.transaction-date{
+.small{
     color:#999;
-
-    font-size:12px;
-
+    font-size:13px;
     word-break:break-word;
 }
 
-.transaction-amount{
+.amount{
+    text-align:right;
+
     font-weight:700;
 
     white-space:nowrap;
 }
 
-.transaction-amount.sent{
-    color:#d32f2f;
-}
-
-.transaction-amount.received{
+.positive{
     color:#558b2f;
 }
 
+.negative{
+    color:#d32f2f;
+}
+
+
+/* =====================================================
+   LOADING / EMPTY
+   ===================================================== */
+
+.loading,
+.empty{
+    background:#fff;
+
+    border-radius:15px;
+
+    padding:20px;
+
+    margin-bottom:12px;
+
+    text-align:center;
+
+    color:#999;
+}
+
+
+/* =====================================================
+   MARKET
+   ===================================================== */
+
+.price-time{
+    padding:0 20px 8px;
+
+    color:#999;
+
+    font-size:12px;
+}
+
+.market-item{
+    background:#fff;
+
+    border-radius:15px;
+
+    padding:15px;
+
+    margin-bottom:12px;
+
+    display:flex;
+
+    align-items:center;
+
+    gap:14px;
+
+    box-shadow:
+        0 2px 8px rgba(0,0,0,.06);
+
+    cursor:pointer;
+
+    transition:
+        transform .15s ease,
+        box-shadow .15s ease;
+}
+
+.market-item:hover{
+    box-shadow:
+        0 4px 14px rgba(0,0,0,.09);
+}
+
+.market-item:active{
+    transform:scale(.985);
+}
+
+.market-icon{
+    width:46px;
+    height:46px;
+
+    min-width:46px;
+
+    border-radius:50%;
+
+    background:#f4f8ef;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    font-weight:800;
+
+    font-size:18px;
+
+    color:#689f38;
+
+    overflow:hidden;
+}
+
+.market-icon img{
+    width:46px;
+    height:46px;
+
+    object-fit:cover;
+
+    border-radius:50%;
+}
+
+.market-info{
+    flex:1;
+    min-width:0;
+}
+
+.market-name{
+    font-weight:700;
+}
+
+.market-symbol{
+    color:#999;
+
+    font-size:12px;
+
+    margin-top:3px;
+}
+
+.market-price{
+    text-align:right;
+
+    font-weight:700;
+
+    white-space:nowrap;
+}
+
+.market-change{
+    font-size:12px;
+
+    margin-top:4px;
+}
+
+.market-up{
+    color:#2e7d32;
+}
+
+.market-down{
+    color:#c62828;
+}
+
+
 /* =====================================================
    BOTTOM NAV
-===================================================== */
+   ===================================================== */
 
 .bottom-nav{
     position:fixed;
 
+    bottom:0;
     left:0;
     right:0;
-    bottom:0;
 
     height:75px;
 
@@ -621,7 +573,7 @@ button{
     align-items:center;
 
     box-shadow:
-        0 -2px 10px rgba(0,0,0,.10);
+        0 -2px 10px rgba(0,0,0,.1);
 
     z-index:50;
 }
@@ -634,6 +586,8 @@ button{
     font-size:12px;
 
     cursor:pointer;
+
+    min-width:60px;
 }
 
 .nav-item i{
@@ -648,9 +602,10 @@ button{
     color:#7cb342;
 }
 
+
 /* =====================================================
-   MODAL
-===================================================== */
+   MODALS
+   ===================================================== */
 
 .modal{
     display:none;
@@ -659,18 +614,16 @@ button{
 
     inset:0;
 
-    background:rgba(0,0,0,.55);
+    background:
+        rgba(0,0,0,.55);
 
     z-index:100;
 
     align-items:center;
+
     justify-content:center;
 
     padding:20px;
-}
-
-.modal.show{
-    display:flex;
 }
 
 .modal-box{
@@ -692,14 +645,15 @@ button{
 .modal-header{
     display:flex;
 
-    align-items:center;
     justify-content:space-between;
+
+    align-items:center;
 
     margin-bottom:20px;
 }
 
 .modal-header h2{
-    font-size:21px;
+    font-size:24px;
 }
 
 .close{
@@ -713,7 +667,14 @@ button{
     background:#eee;
 
     font-size:20px;
+
+    cursor:pointer;
 }
+
+
+/* =====================================================
+   FORM
+   ===================================================== */
 
 label{
     display:block;
@@ -738,6 +699,8 @@ textarea{
     margin-bottom:15px;
 
     outline:none;
+
+    font-family:inherit;
 }
 
 input:focus,
@@ -761,37 +724,53 @@ textarea:focus{
     font-weight:700;
 
     font-size:16px;
+
+    cursor:pointer;
 }
 
 .primary:disabled{
     opacity:.6;
+
+    cursor:not-allowed;
 }
 
-.status{
-    display:none;
 
+/* =====================================================
+   STATUS
+   ===================================================== */
+
+.status{
     margin-top:12px;
 
-    padding:11px;
+    padding:10px;
 
     border-radius:9px;
+
+    display:none;
 
     word-break:break-word;
 }
 
-.status.show{
-    display:block;
-}
-
 .status.success{
+    display:block;
+
     background:#e8f5e9;
+
     color:#2e7d32;
 }
 
 .status.error{
+    display:block;
+
     background:#ffebee;
+
     color:#c62828;
 }
+
+
+/* =====================================================
+   USER ID
+   ===================================================== */
 
 .user-id{
     background:#f4f8ef;
@@ -814,27 +793,206 @@ textarea:focus{
 
     color:#fff;
 
-    padding:10px 14px;
+    padding:9px 13px;
 
     border-radius:8px;
+
+    cursor:pointer;
 }
 
+
 /* =====================================================
-   MOBILE
-===================================================== */
+   CRYPTO DETAILS
+   ===================================================== */
 
-@media(max-width:380px){
+.crypto-details-box{
+    max-width:460px;
+}
 
-    .balance-amount{
-        font-size:34px;
+.crypto-details-header{
+    display:flex;
+
+    align-items:center;
+
+    gap:12px;
+
+    margin-bottom:20px;
+}
+
+.crypto-details-icon{
+    width:54px;
+    height:54px;
+
+    min-width:54px;
+
+    border-radius:50%;
+
+    background:#f4f8ef;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    color:#689f38;
+
+    font-size:25px;
+
+    font-weight:800;
+
+    overflow:hidden;
+}
+
+.crypto-details-icon img{
+    width:54px;
+    height:54px;
+
+    border-radius:50%;
+
+    object-fit:cover;
+}
+
+.crypto-details-name{
+    font-size:22px;
+
+    font-weight:800;
+}
+
+.crypto-details-symbol{
+    color:#999;
+
+    font-size:13px;
+
+    margin-top:3px;
+}
+
+.crypto-details-price{
+    font-size:34px;
+
+    font-weight:800;
+
+    margin:15px 0 5px;
+}
+
+.crypto-details-change{
+    font-size:14px;
+
+    font-weight:700;
+
+    margin-bottom:20px;
+}
+
+.crypto-stats{
+    display:grid;
+
+    grid-template-columns:
+        1fr 1fr;
+
+    gap:10px;
+}
+
+.crypto-stat{
+    background:#f7f9f4;
+
+    border-radius:12px;
+
+    padding:14px;
+}
+
+.crypto-stat-label{
+    color:#999;
+
+    font-size:12px;
+
+    margin-bottom:6px;
+}
+
+.crypto-stat-value{
+    font-weight:700;
+
+    font-size:14px;
+
+    word-break:break-word;
+}
+
+.crypto-description{
+    margin-top:15px;
+
+    padding:15px;
+
+    background:#f7f9f4;
+
+    border-radius:12px;
+
+    color:#666;
+
+    line-height:1.6;
+
+    font-size:13px;
+
+    max-height:160px;
+
+    overflow:auto;
+}
+
+
+/* =====================================================
+   RESPONSIVE
+   ===================================================== */
+
+@media(max-width:420px){
+
+    .balance-card{
+        margin:15px;
+        padding:20px;
+    }
+
+    .list{
+        padding:0 15px;
+    }
+
+    .section-title{
+        padding-left:15px;
+    }
+
+    .market-header{
+        padding-right:15px;
+    }
+
+    .price-time{
+        padding-left:15px;
+    }
+
+    .portfolio-bar{
+        margin-left:15px;
+        margin-right:15px;
+    }
+
+    .card-actions{
+        gap:7px;
     }
 
     .action-btn{
-        font-size:12px;
+        padding:12px 3px;
     }
 
-    .wallet-value{
-        font-size:13px;
+    .crypto-details-price{
+        font-size:30px;
+    }
+
+}
+
+
+/* =====================================================
+   REDUCED MOTION
+   ===================================================== */
+
+@media(prefers-reduced-motion:reduce){
+
+    *{
+        scroll-behavior:auto !important;
+        transition:none !important;
     }
 
 }
@@ -843,12 +1001,13 @@ textarea:focus{
 
 </head>
 
+
 <body>
 
 
 <!-- =====================================================
      HEADER
-===================================================== -->
+     ===================================================== -->
 
 <div class="header">
 
@@ -857,22 +1016,23 @@ textarea:focus{
         <button
             class="back-btn"
             type="button"
+            aria-label="Back"
             onclick="goHome()">
 
             <i class="fas fa-arrow-left"></i>
 
         </button>
 
-        <h1>
-            Wallet
-        </h1>
+        <h1>Wallet</h1>
 
     </div>
 
+
     <button
         class="icon-btn"
-        id="refreshButton"
+        id="walletRefreshButton"
         type="button"
+        aria-label="Refresh wallet"
         onclick="refreshWallet()">
 
         <i class="fas fa-rotate"></i>
@@ -882,17 +1042,22 @@ textarea:focus{
 </div>
 
 
-<!-- ERROR -->
+<!-- =====================================================
+     ERROR
+     ===================================================== -->
+
+<div id="pageError"></div>
+
 
 <div
-    id="errorBox"
-    class="error-box">
+    id="debugBox"
+    class="debug-box">
 </div>
 
 
 <!-- =====================================================
-     TOTAL BALANCE
-===================================================== -->
+     BALANCE
+     ===================================================== -->
 
 <div class="balance-card">
 
@@ -900,19 +1065,26 @@ textarea:focus{
         Total Balance
     </div>
 
+
     <div
-        id="totalBalance"
-        class="balance-amount">
+        class="balance-amount"
+        id="totalBalance">
 
         €0.00
 
     </div>
 
-    <div class="balance-currency">
+
+    <div
+        class="balance-subtitle">
+
         Portfolio value
+
     </div>
 
-    <div class="balance-actions">
+
+    <div class="card-actions">
+
 
         <button
             class="action-btn"
@@ -925,6 +1097,7 @@ textarea:focus{
 
         </button>
 
+
         <button
             class="action-btn"
             type="button"
@@ -936,16 +1109,18 @@ textarea:focus{
 
         </button>
 
+
         <button
             class="action-btn"
             type="button"
             onclick="openExchange()">
 
-            <i class="fas fa-arrow-right-arrow-left"></i>
+            <i class="fas fa-exchange-alt"></i>
 
             Exchange
 
         </button>
+
 
     </div>
 
@@ -953,17 +1128,19 @@ textarea:focus{
 
 
 <!-- =====================================================
-     DISPLAY CURRENCY
-===================================================== -->
+     PORTFOLIO CURRENCY
+     ===================================================== -->
 
-<div class="value-selector">
+<div class="portfolio-bar">
 
-    <span>
+    <div class="portfolio-label">
         Show portfolio in
-    </span>
+    </div>
+
 
     <select
         id="displayCurrency"
+        class="currency-select"
         onchange="changeDisplayCurrency()">
 
         <option value="EUR">
@@ -988,16 +1165,17 @@ textarea:focus{
 
 
 <!-- =====================================================
-     MY WALLETS
-===================================================== -->
+     WALLETS
+     ===================================================== -->
 
 <div class="section-title">
     My Wallets
 </div>
 
+
 <div
-    id="walletList"
-    class="list">
+    class="list"
+    id="walletList">
 
     <div class="loading">
         Loading wallet...
@@ -1007,8 +1185,8 @@ textarea:focus{
 
 
 <!-- =====================================================
-     CRYPTO MARKET
-===================================================== -->
+     CRYPTOCURRENCY
+     ===================================================== -->
 
 <div class="market-header">
 
@@ -1016,10 +1194,12 @@ textarea:focus{
         Cryptocurrency Prices
     </div>
 
+
     <button
-        id="cryptoRefresh"
         class="market-refresh"
+        id="cryptoRefreshButton"
         type="button"
+        aria-label="Refresh cryptocurrency prices"
         onclick="loadCryptoPrices()">
 
         <i class="fas fa-rotate"></i>
@@ -1028,17 +1208,19 @@ textarea:focus{
 
 </div>
 
+
 <div
-    id="priceTime"
-    class="price-time">
+    class="price-time"
+    id="priceUpdated">
 
     Loading prices...
 
 </div>
 
+
 <div
-    id="cryptoList"
-    class="list">
+    class="list"
+    id="cryptoList">
 
     <div class="loading">
         Loading cryptocurrency prices...
@@ -1049,15 +1231,16 @@ textarea:focus{
 
 <!-- =====================================================
      TRANSACTIONS
-===================================================== -->
+     ===================================================== -->
 
 <div class="section-title">
     Recent Transactions
 </div>
 
+
 <div
-    id="transactionList"
-    class="list">
+    class="list"
+    id="transactionList">
 
     <div class="loading">
         Loading transactions...
@@ -1068,11 +1251,11 @@ textarea:focus{
 
 <!-- =====================================================
      SEND MODAL
-===================================================== -->
+     ===================================================== -->
 
 <div
-    id="sendModal"
-    class="modal">
+    class="modal"
+    id="sendModal">
 
     <div class="modal-box">
 
@@ -1082,9 +1265,11 @@ textarea:focus{
                 Send Money
             </h2>
 
+
             <button
                 class="close"
                 type="button"
+                aria-label="Close"
                 onclick="closeModal('sendModal')">
 
                 ×
@@ -1093,9 +1278,11 @@ textarea:focus{
 
         </div>
 
+
         <label>
             Receiver User ID
         </label>
+
 
         <input
             id="receiverId"
@@ -1103,9 +1290,11 @@ textarea:focus{
             autocomplete="off"
             placeholder="Enter User ID">
 
+
         <label>
             Amount (€)
         </label>
+
 
         <input
             id="sendAmount"
@@ -1115,24 +1304,28 @@ textarea:focus{
             inputmode="decimal"
             placeholder="0.00">
 
+
         <label>
             Note
         </label>
+
 
         <textarea
             id="sendNote"
             rows="3"
             placeholder="Optional note"></textarea>
 
+
         <button
-            id="sendButton"
             class="primary"
+            id="sendButton"
             type="button"
             onclick="sendMoney()">
 
             Send Money
 
         </button>
+
 
         <div
             id="sendStatus"
@@ -1146,11 +1339,11 @@ textarea:focus{
 
 <!-- =====================================================
      RECEIVE MODAL
-===================================================== -->
+     ===================================================== -->
 
 <div
-    id="receiveModal"
-    class="modal">
+    class="modal"
+    id="receiveModal">
 
     <div class="modal-box">
 
@@ -1160,9 +1353,11 @@ textarea:focus{
                 Receive Money
             </h2>
 
+
             <button
                 class="close"
                 type="button"
+                aria-label="Close"
                 onclick="closeModal('receiveModal')">
 
                 ×
@@ -1171,22 +1366,25 @@ textarea:focus{
 
         </div>
 
+
         <p style="margin-bottom:10px;">
             Your HAVKAR User ID
         </p>
 
+
         <div
-            id="myUserId"
-            class="user-id">
+            class="user-id"
+            id="myUserId">
 
             Loading...
 
         </div>
 
+
         <button
             class="copy"
             type="button"
-            onclick="copyUserId()">
+            onclick="copyId()">
 
             <i class="fas fa-copy"></i>
 
@@ -1201,11 +1399,11 @@ textarea:focus{
 
 <!-- =====================================================
      EXCHANGE MODAL
-===================================================== -->
+     ===================================================== -->
 
 <div
-    id="exchangeModal"
-    class="modal">
+    class="modal"
+    id="exchangeModal">
 
     <div class="modal-box">
 
@@ -1215,9 +1413,11 @@ textarea:focus{
                 Exchange
             </h2>
 
+
             <button
                 class="close"
                 type="button"
+                aria-label="Close"
                 onclick="closeModal('exchangeModal')">
 
                 ×
@@ -1226,30 +1426,32 @@ textarea:focus{
 
         </div>
 
-        <p style="line-height:1.7;color:#777;">
 
-            Exchange between currencies will be activated
-            after the Wallet currency system is connected
-            to the transaction backend.
+        <p
+            style="
+                line-height:1.6;
+                color:#777;
+                margin-bottom:15px;
+            ">
+
+            Currency exchange is not activated yet.
 
         </p>
 
-        <br>
 
         <div
             style="
                 background:#f4f8ef;
-                padding:14px;
+                padding:15px;
                 border-radius:12px;
-                color:#558b2f;
-                font-size:14px;
+                color:#689f38;
+                font-weight:600;
+                line-height:1.8;
             ">
 
-            <strong>
-                Supported display currencies:
-            </strong>
+            Supported display currencies:
 
-            <br><br>
+            <br>
 
             EUR € &nbsp; • &nbsp;
             USD $ &nbsp; • &nbsp;
@@ -1264,10 +1466,54 @@ textarea:focus{
 
 
 <!-- =====================================================
+     CRYPTO DETAILS MODAL
+     ===================================================== -->
+
+<div
+    class="modal"
+    id="cryptoDetailsModal">
+
+    <div class="modal-box crypto-details-box">
+
+        <div class="modal-header">
+
+            <h2 id="cryptoDetailsTitle">
+                Cryptocurrency
+            </h2>
+
+
+            <button
+                class="close"
+                type="button"
+                aria-label="Close"
+                onclick="closeModal('cryptoDetailsModal')">
+
+                ×
+
+            </button>
+
+        </div>
+
+
+        <div id="cryptoDetailsContent">
+
+            <div class="loading">
+                Loading cryptocurrency details...
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
      BOTTOM NAV
-===================================================== -->
+     ===================================================== -->
 
 <div class="bottom-nav">
+
 
     <div
         class="nav-item active"
@@ -1279,6 +1525,7 @@ textarea:focus{
 
     </div>
 
+
     <div
         class="nav-item"
         onclick="goPage('market.html')">
@@ -1288,6 +1535,7 @@ textarea:focus{
         Market
 
     </div>
+
 
     <div
         class="nav-item"
@@ -1299,6 +1547,7 @@ textarea:focus{
 
     </div>
 
+
     <div
         class="nav-item"
         onclick="goPage('history.html')">
@@ -1308,6 +1557,7 @@ textarea:focus{
         History
 
     </div>
+
 
     <div
         class="nav-item"
@@ -1324,31 +1574,23 @@ textarea:focus{
 
 <!-- =====================================================
      SUPABASE
-===================================================== -->
+     ===================================================== -->
 
-<script
-    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
-</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 
 <script>
 
 /* =====================================================
-   HAVKAR WALLET
-   PROFESSIONAL VERSION
-===================================================== */
-
-
-/* =====================================================
-   SUPABASE
-   SAME PROJECT AS PROFILE / LOGIN
-===================================================== */
+   SUPABASE CONFIG
+   ===================================================== */
 
 const SUPABASE_URL =
-    "https://gispovnciifgikvgpzck.supabase.co";
+    "https://iompzwaxuirvatiibrtb.supabase.com";
+
 
 const SUPABASE_KEY =
-    "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq";
+    "sb_publishable_oEKE1vl6EkWXdETgy9MjHw_DUTJLN4O";
 
 
 const supabaseClient =
@@ -1359,63 +1601,19 @@ const supabaseClient =
 
 
 /* =====================================================
-   STATE
-===================================================== */
+   GLOBAL STATE
+   ===================================================== */
 
 let currentUser = null;
 
-let walletData = [];
-
 let cryptoPrices = {};
 
-let displayCurrency = "EUR";
-
-let isRefreshing = false;
-
-
-/* =====================================================
-   DISPLAY CURRENCIES
-===================================================== */
-
-const DISPLAY_CURRENCIES = {
-
-    EUR:{
-        symbol:"€",
-        rate:1
-    },
-
-    USD:{
-        symbol:"$",
-        rate:1
-    },
-
-    CHF:{
-        symbol:"CHF ",
-        rate:1
-    },
-
-    GBP:{
-        symbol:"£",
-        rate:1
-    }
-
-};
-
-
-/*
- * Important:
- * EUR is the base value.
- *
- * Until a trusted FX backend is connected,
- * EUR remains the authoritative wallet value.
- *
- * The interface is ready for live FX rates later.
- */
+let walletsCache = [];
 
 
 /* =====================================================
    CRYPTO CONFIG
-===================================================== */
+   ===================================================== */
 
 const CRYPTO_LIST = [
 
@@ -1479,96 +1677,8 @@ const CRYPTO_LIST = [
 
 
 /* =====================================================
-   FAVORITES
-===================================================== */
-
-function getFavorites(){
-
-    try{
-
-        const saved =
-            localStorage.getItem(
-                "havkar_wallet_favorites"
-            );
-
-        if(!saved){
-
-            return [];
-
-        }
-
-        const data =
-            JSON.parse(saved);
-
-        return Array.isArray(data)
-            ? data
-            : [];
-
-    }
-    catch(error){
-
-        return [];
-
-    }
-
-}
-
-
-function saveFavorites(favorites){
-
-    try{
-
-        localStorage.setItem(
-            "havkar_wallet_favorites",
-            JSON.stringify(favorites)
-        );
-
-    }
-    catch(error){
-
-        console.error(
-            "Favorite save error:",
-            error
-        );
-
-    }
-
-}
-
-
-function toggleFavorite(symbol){
-
-    let favorites =
-        getFavorites();
-
-    if(
-        favorites.includes(symbol)
-    ){
-
-        favorites =
-            favorites.filter(
-                function(item){
-                    return item !== symbol;
-                }
-            );
-
-    }
-    else{
-
-        favorites.push(symbol);
-
-    }
-
-    saveFavorites(favorites);
-
-    renderCryptoPrices();
-
-}
-
-
-/* =====================================================
    TIMEOUT
-===================================================== */
+   ===================================================== */
 
 function withTimeout(
     promise,
@@ -1604,7 +1714,7 @@ function withTimeout(
 
 /* =====================================================
    NAVIGATION
-===================================================== */
+   ===================================================== */
 
 function goPage(page){
 
@@ -1623,178 +1733,8 @@ function goHome(){
 
 
 /* =====================================================
-   ESCAPE HTML
-===================================================== */
-
-function escapeHtml(value){
-
-    return String(
-        value ?? ""
-    )
-
-    .replace(
-        /&/g,
-        "&amp;"
-    )
-
-    .replace(
-        /</g,
-        "&lt;"
-    )
-
-    .replace(
-        />/g,
-        "&gt;"
-    )
-
-    .replace(
-        /"/g,
-        "&quot;"
-    )
-
-    .replace(
-        /'/g,
-        "&#039;"
-    );
-
-}
-
-
-/* =====================================================
-   FORMAT MONEY
-===================================================== */
-
-function formatMoney(value){
-
-    const number =
-        Number(value || 0);
-
-    return number.toLocaleString(
-        "en-US",
-        {
-            minimumFractionDigits:2,
-            maximumFractionDigits:2
-        }
-    );
-
-}
-
-
-/* =====================================================
-   FORMAT CRYPTO
-===================================================== */
-
-function formatCrypto(value){
-
-    const number =
-        Number(value || 0);
-
-    if(number === 0){
-
-        return "0";
-
-    }
-
-    if(
-        Math.abs(number) < 0.000001
-    ){
-
-        return number.toFixed(8);
-
-    }
-
-    return number.toLocaleString(
-        "en-US",
-        {
-            maximumFractionDigits:8
-        }
-    );
-
-}
-
-
-/* =====================================================
-   CURRENCY DISPLAY
-===================================================== */
-
-function currencySymbol(currency){
-
-    if(currency === "EUR"){
-        return "€";
-    }
-
-    if(currency === "USD"){
-        return "$";
-    }
-
-    if(currency === "CHF"){
-        return "CHF ";
-    }
-
-    if(currency === "GBP"){
-        return "£";
-    }
-
-    return currency + " ";
-
-}
-
-
-function changeDisplayCurrency(){
-
-    displayCurrency =
-        document.getElementById(
-            "displayCurrency"
-        ).value;
-
-    renderWallets(
-        walletData
-    );
-
-}
-
-
-/* =====================================================
-   ERROR
-===================================================== */
-
-function showError(message){
-
-    const box =
-        document.getElementById(
-            "errorBox"
-        );
-
-    box.textContent =
-        message;
-
-    box.classList.add(
-        "show"
-    );
-
-}
-
-
-function clearError(){
-
-    const box =
-        document.getElementById(
-            "errorBox"
-        );
-
-    box.textContent =
-        "";
-
-    box.classList.remove(
-        "show"
-    );
-
-}
-
-
-/* =====================================================
-   SESSION
-===================================================== */
+   AUTH
+   ===================================================== */
 
 async function getCurrentUser(){
 
@@ -1807,15 +1747,22 @@ async function getCurrentUser(){
 
                 8000,
 
-                "Authentication request timed out."
+                "Supabase authentication timed out."
 
             );
 
+
         if(result.error){
 
-            throw result.error;
+            console.error(
+                "getSession error:",
+                result.error
+            );
+
+            return null;
 
         }
+
 
         if(
             result.data &&
@@ -1827,13 +1774,14 @@ async function getCurrentUser(){
 
         }
 
+
         return null;
 
     }
     catch(error){
 
         console.error(
-            "Session error:",
+            "Authentication error:",
             error
         );
 
@@ -1851,16 +1799,17 @@ async function getCurrentUser(){
 
 /* =====================================================
    LOAD WALLET
-===================================================== */
+   ===================================================== */
 
 async function loadWallet(){
 
-    const list =
+    const walletList =
         document.getElementById(
             "walletList"
         );
 
-    list.innerHTML =
+
+    walletList.innerHTML =
         '<div class="loading">Loading wallet...</div>';
 
 
@@ -1870,28 +1819,36 @@ async function loadWallet(){
 
     if(!user){
 
-        currentUser =
-            null;
+        currentUser = null;
 
-        walletData = [];
+        walletsCache = [];
+
 
         document.getElementById(
             "totalBalance"
         ).textContent =
             "€0.00";
 
+
         document.getElementById(
             "myUserId"
         ).textContent =
             "Not logged in";
 
-        list.innerHTML =
-            '<div class="empty">Please log in first.</div>';
+
+        walletList.innerHTML =
+            '<div class="empty">' +
+            'Please log in first.' +
+            '</div>';
+
 
         document.getElementById(
             "transactionList"
         ).innerHTML =
-            '<div class="empty">Please log in first.</div>';
+            '<div class="empty">' +
+            'Please log in first.' +
+            '</div>';
+
 
         return;
 
@@ -1916,10 +1873,7 @@ async function loadWallet(){
                 supabaseClient
                     .from("wallets")
                     .select("*")
-                    .eq(
-                        "user_id",
-                        user.id
-                    ),
+                    .eq("user_id",user.id),
 
                 10000,
 
@@ -1935,12 +1889,12 @@ async function loadWallet(){
         }
 
 
-        walletData =
+        walletsCache =
             result.data || [];
 
 
         renderWallets(
-            walletData
+            walletsCache
         );
 
     }
@@ -1951,13 +1905,17 @@ async function loadWallet(){
             error
         );
 
-        walletData = [];
 
-        list.innerHTML =
+        walletsCache = [];
+
+
+        walletList.innerHTML =
             '<div class="empty">' +
-            'Unable to load wallet.<br><br>' +
+            'Unable to load wallet.' +
+            '<br><br>' +
             escapeHtml(error.message) +
             '</div>';
+
 
         showError(
             "Wallet error: " +
@@ -1971,7 +1929,7 @@ async function loadWallet(){
 
 /* =====================================================
    RENDER WALLETS
-===================================================== */
+   ===================================================== */
 
 function renderWallets(wallets){
 
@@ -1986,16 +1944,14 @@ function renderWallets(wallets){
         document.getElementById(
             "totalBalance"
         ).textContent =
-            currencySymbol(
-                displayCurrency
-            ) +
-            "0.00";
+            "€0.00";
 
 
         list.innerHTML =
             '<div class="empty">' +
             'No wallet found for this account.' +
             '</div>';
+
 
         return;
 
@@ -2026,16 +1982,11 @@ function renderWallets(wallets){
 
 
             let valueEUR =
-                0;
+                balance;
 
 
-            if(currency === "EUR"){
-
-                valueEUR =
-                    balance;
-
-            }
-            else if(
+            if(
+                currency !== "EUR" &&
                 cryptoPrices[currency] &&
                 cryptoPrices[currency].eur
             ){
@@ -2045,20 +1996,6 @@ function renderWallets(wallets){
                     Number(
                         cryptoPrices[currency].eur
                     );
-
-            }
-            else{
-
-                /*
-                 * Non-EUR fiat wallets are not
-                 * converted without a trusted FX rate.
-                 *
-                 * If the wallet contains another fiat
-                 * currency, it is not silently treated
-                 * as EUR.
-                 */
-
-                valueEUR = 0;
 
             }
 
@@ -2075,18 +2012,6 @@ function renderWallets(wallets){
                 icon = "€";
             }
 
-            if(currency === "USD"){
-                icon = "$";
-            }
-
-            if(currency === "CHF"){
-                icon = "₣";
-            }
-
-            if(currency === "GBP"){
-                icon = "£";
-            }
-
             if(currency === "BTC"){
                 icon = "₿";
             }
@@ -2099,19 +2024,6 @@ function renderWallets(wallets){
                 icon = "₮";
             }
 
-            if(currency === "DOGE"){
-                icon = "Ð";
-            }
-
-
-            let convertedValue =
-                totalEUR === 0
-                ? 0
-                : convertEUR(
-                    valueEUR,
-                    displayCurrency
-                );
-
 
             const item =
                 document.createElement(
@@ -2120,116 +2032,73 @@ function renderWallets(wallets){
 
 
             item.className =
-                "wallet-item";
+                "item";
+
+
+            const cryptoValue =
+                currency === "EUR"
+                ? ""
+                : " • €" +
+                  formatMoney(valueEUR);
 
 
             item.innerHTML = `
 
-                <div class="wallet-icon">
+                <div class="circle">
 
                     ${escapeHtml(icon)}
 
                 </div>
 
-                <div class="wallet-info">
 
-                    <div class="wallet-name">
+                <div class="info">
+
+                    <div class="name">
 
                         ${escapeHtml(currency)}
 
                     </div>
 
-                    <div class="wallet-balance">
+
+                    <div class="small">
 
                         ${formatCrypto(balance)}
                         ${escapeHtml(currency)}
+
+                        ${cryptoValue}
 
                     </div>
 
                 </div>
 
-                <div class="wallet-value">
 
-                    ${
-                        valueEUR > 0
-                        ? currencySymbol(displayCurrency) +
-                          formatMoney(convertedValue)
-                        : "—"
-                    }
+                <div class="amount">
 
-                    <div class="wallet-value-small">
-
-                        ${
-                            valueEUR > 0
-                            ? "Portfolio value"
-                            : "Rate unavailable"
-                        }
-
-                    </div>
+                    €${formatMoney(valueEUR)}
 
                 </div>
 
             `;
 
 
-            list.appendChild(
-                item
-            );
+            list.appendChild(item);
 
         }
     );
 
 
-    const totalDisplay =
-        convertEUR(
-            totalEUR,
-            displayCurrency
-        );
-
-
     document.getElementById(
         "totalBalance"
     ).textContent =
-        currencySymbol(
-            displayCurrency
-        ) +
-        formatMoney(
-            totalDisplay
-        );
-
-}
-
-
-/* =====================================================
-   EUR CONVERSION
-===================================================== */
-
-function convertEUR(
-    eurValue,
-    currency
-){
-
-    /*
-     * EUR is the authoritative base.
-     *
-     * Until live FX rates are connected,
-     * only EUR is mathematically converted.
-     */
-
-    if(currency === "EUR"){
-
-        return Number(eurValue || 0);
-
-    }
-
-    return 0;
+        "€" +
+        formatMoney(totalEUR);
 
 }
 
 
 /* =====================================================
    LOAD CRYPTO PRICES
-===================================================== */
+   ===================================================== */
 
 async function loadCryptoPrices(){
 
@@ -2238,23 +2107,29 @@ async function loadCryptoPrices(){
             "cryptoList"
         );
 
+
     const updated =
         document.getElementById(
-            "priceTime"
+            "priceUpdated"
         );
+
 
     const button =
         document.getElementById(
-            "cryptoRefresh"
+            "cryptoRefreshButton"
         );
 
 
-    button.disabled =
-        true;
+    if(button){
+        button.disabled = true;
+    }
 
 
     list.innerHTML =
-        '<div class="loading">Loading cryptocurrency prices...</div>';
+        '<div class="loading">' +
+        'Loading cryptocurrency prices...' +
+        '</div>';
+
 
     updated.textContent =
         "Updating prices...";
@@ -2344,10 +2219,10 @@ async function loadCryptoPrices(){
                 .toLocaleTimeString();
 
 
-        if(walletData.length){
+        if(currentUser){
 
             renderWallets(
-                walletData
+                walletsCache
             );
 
         }
@@ -2368,14 +2243,18 @@ async function loadCryptoPrices(){
             escapeHtml(error.message) +
             '</div>';
 
+
         updated.textContent =
             "Price update unavailable";
 
     }
     finally{
 
-        button.disabled =
-            false;
+        if(button){
+
+            button.disabled = false;
+
+        }
 
     }
 
@@ -2383,8 +2262,8 @@ async function loadCryptoPrices(){
 
 
 /* =====================================================
-   RENDER CRYPTO
-===================================================== */
+   RENDER CRYPTO PRICES
+   ===================================================== */
 
 function renderCryptoPrices(){
 
@@ -2397,35 +2276,10 @@ function renderCryptoPrices(){
     list.innerHTML = "";
 
 
-    const favorites =
-        getFavorites();
-
-
-    const ordered =
-        [...CRYPTO_LIST].sort(
-            function(a,b){
-
-                const aFav =
-                    favorites.includes(
-                        a.symbol
-                    );
-
-                const bFav =
-                    favorites.includes(
-                        b.symbol
-                    );
-
-                return Number(bFav) -
-                       Number(aFav);
-
-            }
-        );
-
-
     let count = 0;
 
 
-    ordered.forEach(
+    CRYPTO_LIST.forEach(
         function(coin){
 
             const price =
@@ -2458,20 +2312,14 @@ function renderCryptoPrices(){
 
             const changeClass =
                 change >= 0
-                ? "up"
-                : "down";
+                ? "market-up"
+                : "market-down";
 
 
             const sign =
                 change >= 0
                 ? "+"
                 : "";
-
-
-            const favorite =
-                favorites.includes(
-                    coin.symbol
-                );
 
 
             const item =
@@ -2481,26 +2329,86 @@ function renderCryptoPrices(){
 
 
             item.className =
-                "crypto-item";
+                "market-item";
+
+
+            /*
+             * IMPORTANT:
+             * Every cryptocurrency card is clickable.
+             */
+
+            item.setAttribute(
+                "role",
+                "button"
+            );
+
+
+            item.setAttribute(
+                "tabindex",
+                "0"
+            );
+
+
+            item.setAttribute(
+                "aria-label",
+                "Open " +
+                coin.name +
+                " details"
+            );
+
+
+            item.addEventListener(
+                "click",
+                function(){
+
+                    openCryptoDetails(
+                        coin.id
+                    );
+
+                }
+            );
+
+
+            item.addEventListener(
+                "keydown",
+                function(event){
+
+                    if(
+                        event.key === "Enter" ||
+                        event.key === " "
+                    ){
+
+                        event.preventDefault();
+
+                        openCryptoDetails(
+                            coin.id
+                        );
+
+                    }
+
+                }
+            );
 
 
             item.innerHTML = `
 
-                <div class="crypto-icon">
+                <div class="market-icon">
 
                     ${escapeHtml(coin.icon)}
 
                 </div>
 
-                <div class="crypto-info">
 
-                    <div class="crypto-name">
+                <div class="market-info">
+
+                    <div class="market-name">
 
                         ${escapeHtml(coin.name)}
 
                     </div>
 
-                    <div class="crypto-symbol">
+
+                    <div class="market-symbol">
 
                         ${escapeHtml(coin.symbol)}
 
@@ -2508,11 +2416,13 @@ function renderCryptoPrices(){
 
                 </div>
 
-                <div class="crypto-price">
 
-                    €${formatMoney(eur)}
+                <div class="market-price">
 
-                    <div class="crypto-change ${changeClass}">
+                    €${formatMarketPrice(eur)}
+
+                    <div
+                        class="market-change ${changeClass}">
 
                         ${sign}${change.toFixed(2)}%
 
@@ -2520,29 +2430,10 @@ function renderCryptoPrices(){
 
                 </div>
 
-                <button
-                    class="favorite-btn ${
-                        favorite
-                        ? "active"
-                        : ""
-                    }"
-                    type="button"
-                    onclick="toggleFavorite('${escapeHtml(coin.symbol)}')">
-
-                    <i class="${
-                        favorite
-                        ? "fas"
-                        : "far"
-                    } fa-star"></i>
-
-                </button>
-
             `;
 
 
-            list.appendChild(
-                item
-            );
+            list.appendChild(item);
 
         }
     );
@@ -2561,8 +2452,402 @@ function renderCryptoPrices(){
 
 
 /* =====================================================
-   TRANSACTIONS
-===================================================== */
+   CRYPTO DETAILS
+   ===================================================== */
+
+async function openCryptoDetails(
+    coinId
+){
+
+    const modal =
+        document.getElementById(
+            "cryptoDetailsModal"
+        );
+
+
+    const title =
+        document.getElementById(
+            "cryptoDetailsTitle"
+        );
+
+
+    const content =
+        document.getElementById(
+            "cryptoDetailsContent"
+        );
+
+
+    if(!modal || !content){
+
+        return;
+
+    }
+
+
+    modal.style.display =
+        "flex";
+
+
+    title.textContent =
+        "Loading...";
+
+
+    content.innerHTML =
+        '<div class="loading">' +
+        'Loading cryptocurrency details...' +
+        '</div>';
+
+
+    try{
+
+        const response =
+            await withTimeout(
+
+                fetch(
+                    "https://api.coingecko.com/api/v3/coins/" +
+                    encodeURIComponent(coinId) +
+                    "?localization=false" +
+                    "&tickers=false" +
+                    "&market_data=true" +
+                    "&community_data=false" +
+                    "&developer_data=false" +
+                    "&sparkline=false"
+                ),
+
+                12000,
+
+                "Cryptocurrency details request timed out."
+
+            );
+
+
+        if(!response.ok){
+
+            throw new Error(
+                "CoinGecko HTTP " +
+                response.status
+            );
+
+        }
+
+
+        const coin =
+            await response.json();
+
+
+        renderCryptoDetails(
+            coin
+        );
+
+    }
+    catch(error){
+
+        console.error(
+            "Crypto details error:",
+            error
+        );
+
+
+        title.textContent =
+            "Cryptocurrency";
+
+
+        content.innerHTML =
+            '<div class="empty">' +
+            'Unable to load cryptocurrency details.' +
+            '<br><br>' +
+            escapeHtml(error.message) +
+            '</div>';
+
+    }
+
+}
+
+
+/* =====================================================
+   RENDER CRYPTO DETAILS
+   ===================================================== */
+
+function renderCryptoDetails(
+    coin
+){
+
+    const title =
+        document.getElementById(
+            "cryptoDetailsTitle"
+        );
+
+
+    const content =
+        document.getElementById(
+            "cryptoDetailsContent"
+        );
+
+
+    const market =
+        coin.market_data || {};
+
+
+    const currentPrice =
+        Number(
+            market.current_price?.eur || 0
+        );
+
+
+    const change24 =
+        Number(
+            market.price_change_percentage_24h || 0
+        );
+
+
+    const marketCap =
+        Number(
+            market.market_cap?.eur || 0
+        );
+
+
+    const volume =
+        Number(
+            market.total_volume?.eur || 0
+        );
+
+
+    const high24 =
+        Number(
+            market.high_24h?.eur || 0
+        );
+
+
+    const low24 =
+        Number(
+            market.low_24h?.eur || 0
+        );
+
+
+    const rank =
+        coin.market_cap_rank || "-";
+
+
+    const symbol =
+        String(
+            coin.symbol || ""
+        ).toUpperCase();
+
+
+    const name =
+        coin.name ||
+        "Cryptocurrency";
+
+
+    const image =
+        coin.image?.small ||
+        "";
+
+
+    const description =
+        coin.description?.en
+        ? stripHtml(
+            coin.description.en
+          )
+        : "";
+
+
+    title.textContent =
+        name;
+
+
+    const changeClass =
+        change24 >= 0
+        ? "market-up"
+        : "market-down";
+
+
+    const changeSign =
+        change24 >= 0
+        ? "+"
+        : "";
+
+
+    const iconHtml =
+        image
+        ? `
+            <img
+                src="${escapeHtml(image)}"
+                alt="${escapeHtml(name)}">
+          `
+        : escapeHtml(symbol);
+
+
+    content.innerHTML = `
+
+        <div class="crypto-details-header">
+
+
+            <div class="crypto-details-icon">
+
+                ${iconHtml}
+
+            </div>
+
+
+            <div>
+
+                <div class="crypto-details-name">
+
+                    ${escapeHtml(name)}
+
+                </div>
+
+
+                <div class="crypto-details-symbol">
+
+                    ${escapeHtml(symbol)}
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+        <div class="crypto-details-price">
+
+            €${formatMarketPrice(currentPrice)}
+
+        </div>
+
+
+        <div
+            class="crypto-details-change ${changeClass}">
+
+            ${changeSign}${change24.toFixed(2)}%
+            &nbsp; 24h
+
+        </div>
+
+
+        <div class="crypto-stats">
+
+
+            <div class="crypto-stat">
+
+                <div class="crypto-stat-label">
+                    24h High
+                </div>
+
+                <div class="crypto-stat-value">
+
+                    €${formatMarketPrice(high24)}
+
+                </div>
+
+            </div>
+
+
+            <div class="crypto-stat">
+
+                <div class="crypto-stat-label">
+                    24h Low
+                </div>
+
+                <div class="crypto-stat-value">
+
+                    €${formatMarketPrice(low24)}
+
+                </div>
+
+            </div>
+
+
+            <div class="crypto-stat">
+
+                <div class="crypto-stat-label">
+                    Market Cap
+                </div>
+
+                <div class="crypto-stat-value">
+
+                    €${formatLargeNumber(marketCap)}
+
+                </div>
+
+            </div>
+
+
+            <div class="crypto-stat">
+
+                <div class="crypto-stat-label">
+                    24h Volume
+                </div>
+
+                <div class="crypto-stat-value">
+
+                    €${formatLargeNumber(volume)}
+
+                </div>
+
+            </div>
+
+
+            <div class="crypto-stat">
+
+                <div class="crypto-stat-label">
+                    Market Rank
+                </div>
+
+                <div class="crypto-stat-value">
+
+                    #${escapeHtml(rank)}
+
+                </div>
+
+            </div>
+
+
+            <div class="crypto-stat">
+
+                <div class="crypto-stat-label">
+                    Symbol
+                </div>
+
+                <div class="crypto-stat-value">
+
+                    ${escapeHtml(symbol)}
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+        ${
+            description
+            ? `
+                <div class="crypto-description">
+
+                    ${escapeHtml(
+                        description.substring(
+                            0,
+                            1200
+                        )
+                    )}
+
+                </div>
+              `
+            : ""
+        }
+
+    `;
+
+}
+
+
+/* =====================================================
+   LOAD TRANSACTIONS
+   ===================================================== */
 
 async function loadTransactions(){
 
@@ -2575,7 +2860,9 @@ async function loadTransactions(){
     if(!currentUser){
 
         list.innerHTML =
-            '<div class="empty">Please log in first.</div>';
+            '<div class="empty">' +
+            'Please log in first.' +
+            '</div>';
 
         return;
 
@@ -2583,7 +2870,9 @@ async function loadTransactions(){
 
 
     list.innerHTML =
-        '<div class="loading">Loading transactions...</div>';
+        '<div class="loading">' +
+        'Loading transactions...' +
+        '</div>';
 
 
     try{
@@ -2665,7 +2954,7 @@ async function loadTransactions(){
 
 /* =====================================================
    RENDER TRANSACTIONS
-===================================================== */
+   ===================================================== */
 
 function renderTransactions(
     transactions
@@ -2702,12 +2991,6 @@ function renderTransactions(
                 : "";
 
 
-            const note =
-                transaction.note
-                ? transaction.note
-                : "";
-
-
             const item =
                 document.createElement(
                     "div"
@@ -2715,15 +2998,17 @@ function renderTransactions(
 
 
             item.className =
-                "transaction-item";
+                "item";
 
 
             item.innerHTML = `
 
-                <div class="
-                    transaction-icon
-                    ${sent ? "sent" : "received"}
-                ">
+                <div
+                    class="circle"
+                    style="
+                        background:${sent ? "#ffebee" : "#e8f5e9"};
+                        color:${sent ? "#d32f2f" : "#558b2f"};
+                    ">
 
                     <i class="fas ${
                         sent
@@ -2733,9 +3018,10 @@ function renderTransactions(
 
                 </div>
 
-                <div class="transaction-info">
 
-                    <div class="transaction-title">
+                <div class="info">
+
+                    <div class="name">
 
                         ${
                             sent
@@ -2745,14 +3031,17 @@ function renderTransactions(
 
                     </div>
 
-                    <div class="transaction-date">
+
+                    <div class="small">
 
                         ${escapeHtml(date)}
 
                         ${
-                            note
+                            transaction.note
                             ? " • " +
-                              escapeHtml(note)
+                              escapeHtml(
+                                  transaction.note
+                              )
                             : ""
                         }
 
@@ -2760,10 +3049,13 @@ function renderTransactions(
 
                 </div>
 
-                <div class="
-                    transaction-amount
-                    ${sent ? "sent" : "received"}
-                ">
+
+                <div
+                    class="amount ${
+                        sent
+                        ? "negative"
+                        : "positive"
+                    }">
 
                     ${sent ? "-" : "+"}
                     €${formatMoney(amount)}
@@ -2785,7 +3077,7 @@ function renderTransactions(
 
 /* =====================================================
    SEND
-===================================================== */
+   ===================================================== */
 
 function openSend(){
 
@@ -2793,11 +3085,11 @@ function openSend(){
         "sendStatus"
     );
 
+
     document.getElementById(
         "sendModal"
-    ).classList.add(
-        "show"
-    );
+    ).style.display =
+        "flex";
 
 }
 
@@ -2891,13 +3183,9 @@ async function sendMoney(){
     button.disabled =
         true;
 
+
     button.textContent =
         "Sending...";
-
-
-    clearStatus(
-        "sendStatus"
-    );
 
 
     try{
@@ -2981,6 +3269,7 @@ async function sendMoney(){
         button.disabled =
             false;
 
+
         button.textContent =
             "Send Money";
 
@@ -2991,47 +3280,75 @@ async function sendMoney(){
 
 /* =====================================================
    RECEIVE
-===================================================== */
+   ===================================================== */
 
 function openReceive(){
 
-    if(currentUser){
-
-        document.getElementById(
-            "myUserId"
-        ).textContent =
-            currentUser.id;
-
-    }
-    else{
-
-        document.getElementById(
-            "myUserId"
-        ).textContent =
-            "Not logged in";
-
-    }
+    document.getElementById(
+        "myUserId"
+    ).textContent =
+        currentUser
+        ? currentUser.id
+        : "Not logged in";
 
 
     document.getElementById(
         "receiveModal"
-    ).classList.add(
-        "show"
-    );
+    ).style.display =
+        "flex";
 
 }
 
 
 /* =====================================================
    EXCHANGE
-===================================================== */
+   ===================================================== */
 
 function openExchange(){
 
     document.getElementById(
         "exchangeModal"
-    ).classList.add(
-        "show"
+    ).style.display =
+        "flex";
+
+}
+
+
+/* =====================================================
+   DISPLAY CURRENCY
+   ===================================================== */
+
+function changeDisplayCurrency(){
+
+    const currency =
+        document.getElementById(
+            "displayCurrency"
+        ).value;
+
+
+    /*
+     * The backend wallet remains EUR-based.
+     * This selector is currently a display preference.
+     */
+
+    if(currency === "EUR"){
+
+        renderWallets(
+            walletsCache
+        );
+
+        return;
+
+    }
+
+
+    /*
+     * Until FX rates are connected,
+     * keep the actual wallet value in EUR.
+     */
+
+    renderWallets(
+        walletsCache
     );
 
 }
@@ -3039,20 +3356,18 @@ function openExchange(){
 
 /* =====================================================
    CLOSE MODAL
-===================================================== */
+   ===================================================== */
 
 function closeModal(id){
 
     const modal =
-        document.getElementById(
-            id
-        );
+        document.getElementById(id);
+
 
     if(modal){
 
-        modal.classList.remove(
-            "show"
-        );
+        modal.style.display =
+            "none";
 
     }
 
@@ -3061,11 +3376,15 @@ function closeModal(id){
 
 /* =====================================================
    COPY USER ID
-===================================================== */
+   ===================================================== */
 
-async function copyUserId(){
+async function copyId(){
 
     if(!currentUser){
+
+        alert(
+            "User ID is not available."
+        );
 
         return;
 
@@ -3077,6 +3396,7 @@ async function copyUserId(){
         await navigator.clipboard.writeText(
             currentUser.id
         );
+
 
         alert(
             "User ID copied."
@@ -3096,7 +3416,7 @@ async function copyUserId(){
 
 /* =====================================================
    STATUS
-===================================================== */
+   ===================================================== */
 
 function showStatus(
     id,
@@ -3105,9 +3425,14 @@ function showStatus(
 ){
 
     const element =
-        document.getElementById(
-            id
-        );
+        document.getElementById(id);
+
+
+    if(!element){
+
+        return;
+
+    }
 
 
     element.textContent =
@@ -3115,7 +3440,7 @@ function showStatus(
 
 
     element.className =
-        "status show " +
+        "status " +
         type;
 
 }
@@ -3124,9 +3449,7 @@ function showStatus(
 function clearStatus(id){
 
     const element =
-        document.getElementById(
-            id
-        );
+        document.getElementById(id);
 
 
     if(element){
@@ -3143,33 +3466,305 @@ function clearStatus(id){
 
 
 /* =====================================================
-   REFRESH
-===================================================== */
+   PAGE ERROR
+   ===================================================== */
 
-async function refreshWallet(){
+function showError(
+    message
+){
 
-    if(isRefreshing){
+    const box =
+        document.getElementById(
+            "pageError"
+        );
 
-        return;
+
+    box.innerHTML =
+        '<div class="error">' +
+        escapeHtml(message) +
+        '</div>';
+
+}
+
+
+function clearError(){
+
+    document.getElementById(
+        "pageError"
+    ).innerHTML =
+        "";
+
+}
+
+
+/* =====================================================
+   DEBUG
+   ===================================================== */
+
+function showDebug(
+    message
+){
+
+    const box =
+        document.getElementById(
+            "debugBox"
+        );
+
+
+    box.textContent =
+        message;
+
+
+    box.style.display =
+        "block";
+
+}
+
+
+/* =====================================================
+   MONEY FORMAT
+   ===================================================== */
+
+function formatMoney(
+    value
+){
+
+    return Number(
+        value || 0
+    ).toLocaleString(
+        "en-US",
+        {
+            minimumFractionDigits:2,
+            maximumFractionDigits:2
+        }
+    );
+
+}
+
+
+/* =====================================================
+   MARKET PRICE FORMAT
+   ===================================================== */
+
+function formatMarketPrice(
+    value
+){
+
+    const number =
+        Number(value || 0);
+
+
+    if(number === 0){
+
+        return "0.00";
 
     }
 
 
-    isRefreshing =
-        true;
+    if(
+        Math.abs(number) < 0.01
+    ){
 
+        return number.toLocaleString(
+            "en-US",
+            {
+                minimumFractionDigits:2,
+                maximumFractionDigits:6
+            }
+        );
+
+    }
+
+
+    return number.toLocaleString(
+        "en-US",
+        {
+            minimumFractionDigits:2,
+            maximumFractionDigits:6
+        }
+    );
+
+}
+
+
+/* =====================================================
+   LARGE NUMBER FORMAT
+   ===================================================== */
+
+function formatLargeNumber(
+    value
+){
+
+    const number =
+        Number(value || 0);
+
+
+    if(number >= 1e12){
+
+        return (
+            number / 1e12
+        ).toFixed(2) +
+        "T";
+
+    }
+
+
+    if(number >= 1e9){
+
+        return (
+            number / 1e9
+        ).toFixed(2) +
+        "B";
+
+    }
+
+
+    if(number >= 1e6){
+
+        return (
+            number / 1e6
+        ).toFixed(2) +
+        "M";
+
+    }
+
+
+    if(number >= 1e3){
+
+        return (
+            number / 1e3
+        ).toFixed(2) +
+        "K";
+
+    }
+
+
+    return formatMoney(
+        number
+    );
+
+}
+
+
+/* =====================================================
+   CRYPTO FORMAT
+   ===================================================== */
+
+function formatCrypto(
+    value
+){
+
+    const number =
+        Number(value || 0);
+
+
+    if(number === 0){
+
+        return "0";
+
+    }
+
+
+    if(
+        Math.abs(number) < 0.000001
+    ){
+
+        return number.toFixed(8);
+
+    }
+
+
+    return number.toLocaleString(
+        "en-US",
+        {
+            maximumFractionDigits:8
+        }
+    );
+
+}
+
+
+/* =====================================================
+   STRIP HTML
+   ===================================================== */
+
+function stripHtml(
+    value
+){
+
+    return String(value || "")
+        .replace(
+            /<[^>]*>/g,
+            ""
+        )
+        .replace(
+            /\s+/g,
+            " "
+        )
+        .trim();
+
+}
+
+
+/* =====================================================
+   ESCAPE HTML
+   ===================================================== */
+
+function escapeHtml(
+    value
+){
+
+    return String(value)
+
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+
+        .replace(
+            /</g,
+            "&lt;"
+        )
+
+        .replace(
+            />/g,
+            "&gt;"
+        )
+
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
+
+
+/* =====================================================
+   REFRESH WALLET
+   ===================================================== */
+
+async function refreshWallet(){
 
     clearError();
 
 
     const button =
         document.getElementById(
-            "refreshButton"
+            "walletRefreshButton"
         );
 
 
-    button.disabled =
-        true;
+    if(button){
+
+        button.disabled =
+            true;
+
+    }
 
 
     try{
@@ -3188,6 +3783,7 @@ async function refreshWallet(){
             error
         );
 
+
         showError(
             "Refresh error: " +
             error.message
@@ -3196,11 +3792,12 @@ async function refreshWallet(){
     }
     finally{
 
-        isRefreshing =
-            false;
+        if(button){
 
-        button.disabled =
-            false;
+            button.disabled =
+                false;
+
+        }
 
     }
 
@@ -3209,7 +3806,7 @@ async function refreshWallet(){
 
 /* =====================================================
    MODAL BACKGROUND
-===================================================== */
+   ===================================================== */
 
 document
     .querySelectorAll(".modal")
@@ -3225,9 +3822,8 @@ document
                         modal
                     ){
 
-                        modal.classList.remove(
-                            "show"
-                        );
+                        modal.style.display =
+                            "none";
 
                     }
 
@@ -3239,8 +3835,8 @@ document
 
 
 /* =====================================================
-   ESC
-===================================================== */
+   ESC KEY
+   ===================================================== */
 
 document.addEventListener(
     "keydown",
@@ -3258,9 +3854,8 @@ document.addEventListener(
                 .forEach(
                     function(modal){
 
-                        modal.classList.remove(
-                            "show"
-                        );
+                        modal.style.display =
+                            "none";
 
                     }
                 );
@@ -3273,7 +3868,7 @@ document.addEventListener(
 
 /* =====================================================
    AUTH STATE
-===================================================== */
+   ===================================================== */
 
 supabaseClient.auth.onAuthStateChange(
     function(
@@ -3281,39 +3876,79 @@ supabaseClient.auth.onAuthStateChange(
         session
     ){
 
-        currentUser =
+        if(
             session &&
             session.user
-            ? session.user
-            : null;
+        ){
+
+            currentUser =
+                session.user;
+
+        }
+        else{
+
+            currentUser =
+                null;
+
+        }
 
     }
 );
 
 
 /* =====================================================
-   START
-===================================================== */
+   GLOBAL JAVASCRIPT ERROR
+   ===================================================== */
+
+window.addEventListener(
+    "error",
+    function(event){
+
+        console.error(
+            "Global JavaScript error:",
+            event.error ||
+            event.message
+        );
+
+    }
+);
+
+
+/* =====================================================
+   UNHANDLED PROMISE
+   ===================================================== */
+
+window.addEventListener(
+    "unhandledrejection",
+    function(event){
+
+        console.error(
+            "Unhandled promise rejection:",
+            event.reason
+        );
+
+    }
+);
+
+
+/* =====================================================
+   START WALLET
+   ===================================================== */
 
 async function startWallet(){
 
     clearError();
 
+
     /*
-     * Start prices independently.
+     * Start both independently.
      */
 
     loadCryptoPrices();
 
-    /*
-     * Load authenticated wallet.
-     */
 
     await loadWallet();
 
-    /*
-     * Load history after user is known.
-     */
 
     if(currentUser){
 
@@ -3324,10 +3959,14 @@ async function startWallet(){
 }
 
 
+/* =====================================================
+   START
+   ===================================================== */
+
 startWallet();
 
 </script>
 
-</body>
 
-    </html>
+</body>
+      </html>
