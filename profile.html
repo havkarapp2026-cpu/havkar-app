@@ -27,7 +27,9 @@ body{
     padding-bottom:90px;
 }
 
-/* HEADER */
+/* =========================
+   HEADER
+========================= */
 
 .header{
     background:linear-gradient(135deg,#689f38,#7cb342);
@@ -68,7 +70,37 @@ body{
     cursor:pointer;
 }
 
-/* PROFILE */
+.refresh-btn:disabled{
+    opacity:.6;
+}
+
+/* =========================
+   MESSAGE
+========================= */
+
+.message{
+    margin:15px 20px;
+    padding:14px;
+    border-radius:12px;
+    display:none;
+    word-break:break-word;
+}
+
+.message.error{
+    display:block;
+    background:#ffebee;
+    color:#c62828;
+}
+
+.message.success{
+    display:block;
+    background:#e8f5e9;
+    color:#2e7d32;
+}
+
+/* =========================
+   PROFILE
+========================= */
 
 .profile-card{
     margin:20px;
@@ -105,7 +137,9 @@ body{
     word-break:break-word;
 }
 
-/* SECTIONS */
+/* =========================
+   SECTIONS
+========================= */
 
 .section-title{
     padding:20px 20px 10px;
@@ -172,7 +206,9 @@ body{
     cursor:pointer;
 }
 
-/* ACTIONS */
+/* =========================
+   ACTIONS
+========================= */
 
 .action-card{
     margin:0 20px;
@@ -214,7 +250,9 @@ body{
     color:#d32f2f;
 }
 
-/* STATUS */
+/* =========================
+   LOADING
+========================= */
 
 .loading{
     margin:20px;
@@ -225,24 +263,54 @@ body{
     color:#999;
 }
 
-.error{
-    margin:15px 20px;
-    padding:14px;
-    border-radius:12px;
-    background:#ffebee;
-    color:#c62828;
-    word-break:break-word;
+/* =========================
+   LOGIN
+========================= */
+
+.login-card{
+    margin:20px;
+    padding:25px;
+    background:white;
+    border-radius:15px;
+    text-align:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.06);
 }
 
-.success{
-    margin:15px 20px;
-    padding:14px;
-    border-radius:12px;
+.login-icon{
+    width:60px;
+    height:60px;
+    margin:0 auto 15px;
+    border-radius:50%;
     background:#e8f5e9;
-    color:#2e7d32;
+    color:#689f38;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:25px;
 }
 
-/* BOTTOM NAV */
+.login-card h3{
+    margin-bottom:8px;
+}
+
+.login-card p{
+    color:#999;
+    margin-bottom:18px;
+}
+
+.login-btn{
+    border:0;
+    background:#689f38;
+    color:white;
+    padding:12px 20px;
+    border-radius:9px;
+    font-weight:600;
+    cursor:pointer;
+}
+
+/* =========================
+   BOTTOM NAV
+========================= */
 
 .bottom-nav{
     position:fixed;
@@ -281,14 +349,17 @@ body{
 
 <body>
 
-<!-- HEADER -->
+<!-- =========================
+     HEADER
+========================= -->
 
 <div class="header">
 
     <div class="header-left">
 
         <button class="back-btn"
-                onclick="window.location.href='index.html'">
+                type="button"
+                onclick="goHome()">
 
             <i class="fas fa-arrow-left"></i>
 
@@ -299,7 +370,9 @@ body{
     </div>
 
     <button class="refresh-btn"
-            onclick="loadProfile()">
+            id="refreshButton"
+            type="button"
+            onclick="loadProfile(true)">
 
         <i class="fas fa-rotate"></i>
 
@@ -308,10 +381,18 @@ body{
 </div>
 
 
-<div id="pageMessage"></div>
+<!-- =========================
+     MESSAGE
+========================= -->
+
+<div id="pageMessage"
+     class="message">
+</div>
 
 
-<!-- PROFILE -->
+<!-- =========================
+     PROFILE CONTENT
+========================= -->
 
 <div id="profileContent">
 
@@ -322,7 +403,9 @@ body{
 </div>
 
 
-<!-- ACCOUNT INFORMATION -->
+<!-- =========================
+     ACCOUNT INFORMATION
+========================= -->
 
 <div id="accountSection"
      style="display:none;">
@@ -331,13 +414,19 @@ body{
         Account Information
     </div>
 
+
     <div class="info-card">
+
+        <!-- USER ID -->
 
         <div class="info-row">
 
             <div class="info-icon">
+
                 <i class="fas fa-user"></i>
+
             </div>
+
 
             <div class="info-content">
 
@@ -352,7 +441,9 @@ body{
 
             </div>
 
+
             <button class="copy-btn"
+                    type="button"
                     onclick="copyUserId()">
 
                 <i class="fas fa-copy"></i>
@@ -362,11 +453,16 @@ body{
         </div>
 
 
+        <!-- EMAIL -->
+
         <div class="info-row">
 
             <div class="info-icon">
+
                 <i class="fas fa-envelope"></i>
+
             </div>
+
 
             <div class="info-content">
 
@@ -384,11 +480,16 @@ body{
         </div>
 
 
+        <!-- CREATED -->
+
         <div class="info-row">
 
             <div class="info-icon">
+
                 <i class="fas fa-calendar"></i>
+
             </div>
+
 
             <div class="info-content">
 
@@ -408,16 +509,21 @@ body{
     </div>
 
 
-    <!-- ACTIONS -->
+    <!-- =========================
+         ACCOUNT ACTIONS
+    ========================= -->
 
     <div class="section-title">
         Account
     </div>
 
+
     <div class="action-card">
 
+
         <button class="action"
-                onclick="window.location.href='wallet.html'">
+                type="button"
+                onclick="openPage('wallet.html')">
 
             <i class="fas fa-wallet"></i>
 
@@ -429,7 +535,8 @@ body{
 
 
         <button class="action"
-                onclick="window.location.href='history.html'">
+                type="button"
+                onclick="openPage('history.html')">
 
             <i class="fas fa-history"></i>
 
@@ -441,7 +548,8 @@ body{
 
 
         <button class="action"
-                onclick="window.location.href='market.html'">
+                type="button"
+                onclick="openPage('market.html')">
 
             <i class="fas fa-chart-line"></i>
 
@@ -453,7 +561,8 @@ body{
 
 
         <button class="action"
-                onclick="window.location.href='support.html'">
+                type="button"
+                onclick="openPage('support.html')">
 
             <i class="fas fa-headset"></i>
 
@@ -465,6 +574,7 @@ body{
 
 
         <button class="action logout"
+                type="button"
                 onclick="logout()">
 
             <i class="fas fa-right-from-bracket"></i>
@@ -480,32 +590,35 @@ body{
 </div>
 
 
-<!-- NOT LOGGED IN -->
+<!-- =========================
+     LOGIN SECTION
+========================= -->
 
 <div id="loginSection"
      style="display:none;">
 
-    <div class="info-card"
-         style="text-align:center;">
+    <div class="login-card">
 
-        <div class="info-icon"
-             style="margin:0 auto 15px;">
+        <div class="login-icon">
 
             <i class="fas fa-user-lock"></i>
 
         </div>
 
-        <h3 style="margin-bottom:8px;">
+
+        <h3>
             Not Logged In
         </h3>
 
-        <p style="color:#999;margin-bottom:18px;">
+
+        <p>
             Please log in to view your profile.
         </p>
 
-        <button class="copy-btn"
-                style="padding:12px 20px;"
-                onclick="window.location.href='login.html'">
+
+        <button class="login-btn"
+                type="button"
+                onclick="openPage('login.html')">
 
             Go to Login
 
@@ -516,41 +629,48 @@ body{
 </div>
 
 
-<!-- BOTTOM NAV -->
+<!-- =========================
+     BOTTOM NAV
+========================= -->
 
 <div class="bottom-nav">
 
+
     <div class="nav-item"
-         onclick="window.location.href='wallet.html'">
+         onclick="openPage('wallet.html')">
 
         <i class="fas fa-wallet"></i>
+
         Wallet
 
     </div>
 
 
     <div class="nav-item"
-         onclick="window.location.href='market.html'">
+         onclick="openPage('market.html')">
 
         <i class="fas fa-chart-line"></i>
+
         Market
 
     </div>
 
 
     <div class="nav-item"
-         onclick="window.location.href='trade.html'">
+         onclick="openPage('trade.html')">
 
         <i class="fas fa-exchange-alt"></i>
+
         Trade
 
     </div>
 
 
     <div class="nav-item"
-         onclick="window.location.href='history.html'">
+         onclick="openPage('history.html')">
 
         <i class="fas fa-history"></i>
+
         History
 
     </div>
@@ -559,6 +679,7 @@ body{
     <div class="nav-item active">
 
         <i class="fas fa-user"></i>
+
         Profile
 
     </div>
@@ -566,296 +687,80 @@ body{
 </div>
 
 
-<!-- SUPABASE -->
+<!-- =========================
+     SUPABASE
+========================= -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+
 <script>
 
-/* ==========================================
-   SUPABASE
-========================================== */
+/* =====================================================
+   SUPABASE CONFIGURATION
+===================================================== */
+
+const SUPABASE_URL =
+    "https://iompzwaxuirvatiibrtb.supabase.com";
+
+const SUPABASE_KEY =
+    "sb_publishable_oEKE1vl6EkWXdETgy9MjHw_DUTJLN4O";
+
 
 const supabase =
     window.supabase.createClient(
-
-        "https://iompzwaxuirvatiibrtb.supabase.com",
-
-        "sb_publishable_oEKE1vl6EkWXdETgy9MjHw_DUTJLN4O"
-
+        SUPABASE_URL,
+        SUPABASE_KEY
     );
 
 
+/* =====================================================
+   GLOBAL USER
+===================================================== */
+
 let currentUser = null;
 
+let loadingProfile = false;
 
-/* ==========================================
-   GET USER
-========================================== */
 
-async function getCurrentUser(){
+/* =====================================================
+   NAVIGATION
+===================================================== */
 
-    try{
+function openPage(page){
 
-        const result =
-            await supabase.auth.getUser();
-
-        if(result.error){
-
-            console.error(
-                "Auth error:",
-                result.error
-            );
-
-            return null;
-
-        }
-
-        return result.data.user || null;
-
-    }
-    catch(error){
-
-        console.error(
-            "Get user error:",
-            error
-        );
-
-        return null;
-
-    }
+    window.location.href = page;
 
 }
 
 
-/* ==========================================
-   LOAD PROFILE
-========================================== */
+function goHome(){
 
-async function loadProfile(){
+    window.location.href =
+        "index.html";
 
-    const content =
-        document.getElementById(
-            "profileContent"
-        );
+}
 
-    const accountSection =
-        document.getElementById(
-            "accountSection"
-        );
 
-    const loginSection =
-        document.getElementById(
-            "loginSection"
-        );
+/* =====================================================
+   MESSAGE
+===================================================== */
 
-    const message =
+function clearMessage(){
+
+    const element =
         document.getElementById(
             "pageMessage"
         );
 
+    element.className =
+        "message";
 
-    message.innerHTML = "";
-
-    content.innerHTML =
-        '<div class="loading">Loading profile...</div>';
-
-    accountSection.style.display =
-        "none";
-
-    loginSection.style.display =
-        "none";
-
-
-    const user =
-        await getCurrentUser();
-
-
-    if(!user){
-
-        currentUser = null;
-
-        content.innerHTML = "";
-
-        loginSection.style.display =
-            "block";
-
-        return;
-
-    }
-
-
-    currentUser = user;
-
-
-    const metadata =
-        user.user_metadata || {};
-
-
-    const name =
-        metadata.full_name ||
-        metadata.name ||
-        metadata.username ||
-        "HAVKAR User";
-
-
-    const email =
-        user.email ||
-        "No email";
-
-
-    const avatarLetter =
-        String(name)
-            .trim()
-            .charAt(0)
-            .toUpperCase() || "H";
-
-
-    content.innerHTML = `
-
-        <div class="profile-card">
-
-            <div class="avatar">
-
-                ${escapeHtml(avatarLetter)}
-
-            </div>
-
-            <div class="profile-name">
-
-                ${escapeHtml(name)}
-
-            </div>
-
-            <div class="profile-email">
-
-                ${escapeHtml(email)}
-
-            </div>
-
-        </div>
-
-    `;
-
-
-    document.getElementById("userId")
-        .textContent =
-        user.id;
-
-
-    document.getElementById("userEmail")
-        .textContent =
-        email;
-
-
-    document.getElementById("createdAt")
-        .textContent =
-        user.created_at
-        ? new Date(
-            user.created_at
-          ).toLocaleString()
-        : "-";
-
-
-    accountSection.style.display =
-        "block";
+    element.textContent =
+        "";
 
 }
 
-
-/* ==========================================
-   COPY USER ID
-========================================== */
-
-async function copyUserId(){
-
-    if(!currentUser){
-
-        return;
-
-    }
-
-
-    try{
-
-        await navigator.clipboard.writeText(
-            currentUser.id
-        );
-
-
-        showMessage(
-            "User ID copied successfully.",
-            "success"
-        );
-
-    }
-    catch(error){
-
-        showMessage(
-            "Could not copy User ID.",
-            "error"
-        );
-
-    }
-
-}
-
-
-/* ==========================================
-   LOGOUT
-========================================== */
-
-async function logout(){
-
-    try{
-
-        const {
-            error
-        } =
-        await supabase.auth.signOut();
-
-
-        if(error){
-
-            console.error(
-                "Logout error:",
-                error
-            );
-
-            showMessage(
-                error.message,
-                "error"
-            );
-
-            return;
-
-        }
-
-
-        window.location.href =
-            "login.html";
-
-    }
-    catch(error){
-
-        console.error(
-            "Logout exception:",
-            error
-        );
-
-        showMessage(
-            "Could not log out.",
-            "error"
-        );
-
-    }
-
-}
-
-
-/* ==========================================
-   MESSAGE
-========================================== */
 
 function showMessage(
     text,
@@ -867,27 +772,22 @@ function showMessage(
             "pageMessage"
         );
 
+    element.className =
+        "message " + type;
 
-    element.innerHTML = `
-
-        <div class="${type}">
-
-            ${escapeHtml(text)}
-
-        </div>
-
-    `;
+    element.textContent =
+        text;
 
 }
 
 
-/* ==========================================
-   ESCAPE HTML
-========================================== */
+/* =====================================================
+   SAFE HTML
+===================================================== */
 
 function escapeHtml(value){
 
-    return String(value)
+    return String(value || "")
 
         .replace(
             /&/g,
@@ -917,9 +817,438 @@ function escapeHtml(value){
 }
 
 
-/* ==========================================
+/* =====================================================
+   GET SESSION
+===================================================== */
+
+async function getSessionSafe(){
+
+    try{
+
+        /*
+         * getSession() reads the existing Supabase
+         * session from the browser.
+         */
+
+        const result =
+            await supabase.auth.getSession();
+
+
+        if(result.error){
+
+            console.error(
+                "Session error:",
+                result.error
+            );
+
+            return null;
+
+        }
+
+
+        if(
+            result.data &&
+            result.data.session &&
+            result.data.session.user
+        ){
+
+            return result.data.session;
+
+        }
+
+
+        return null;
+
+    }
+    catch(error){
+
+        console.error(
+            "Session exception:",
+            error
+        );
+
+        return null;
+
+    }
+
+}
+
+
+/* =====================================================
+   LOAD PROFILE
+===================================================== */
+
+async function loadProfile(
+    manualRefresh = false
+){
+
+    if(loadingProfile){
+
+        return;
+
+    }
+
+
+    loadingProfile = true;
+
+
+    const content =
+        document.getElementById(
+            "profileContent"
+        );
+
+    const accountSection =
+        document.getElementById(
+            "accountSection"
+        );
+
+    const loginSection =
+        document.getElementById(
+            "loginSection"
+        );
+
+    const refreshButton =
+        document.getElementById(
+            "refreshButton"
+        );
+
+
+    clearMessage();
+
+
+    accountSection.style.display =
+        "none";
+
+    loginSection.style.display =
+        "none";
+
+
+    content.innerHTML =
+        '<div class="loading">Loading profile...</div>';
+
+
+    refreshButton.disabled =
+        true;
+
+
+    try{
+
+        /*
+         * First use the local/browser session.
+         */
+
+        const session =
+            await getSessionSafe();
+
+
+        /*
+         * No active session.
+         */
+
+        if(
+            !session ||
+            !session.user
+        ){
+
+            currentUser = null;
+
+
+            content.innerHTML = "";
+
+
+            loginSection.style.display =
+                "block";
+
+
+            return;
+
+        }
+
+
+        /*
+         * User found.
+         */
+
+        currentUser =
+            session.user;
+
+
+        const user =
+            currentUser;
+
+
+        const metadata =
+            user.user_metadata || {};
+
+
+        const name =
+            metadata.full_name ||
+            metadata.name ||
+            metadata.username ||
+            user.email ||
+            "HAVKAR User";
+
+
+        const email =
+            user.email ||
+            "No email";
+
+
+        const avatarLetter =
+            String(name)
+                .trim()
+                .charAt(0)
+                .toUpperCase() ||
+            "H";
+
+
+        /*
+         * Render profile card.
+         */
+
+        content.innerHTML = `
+
+            <div class="profile-card">
+
+                <div class="avatar">
+
+                    ${escapeHtml(avatarLetter)}
+
+                </div>
+
+
+                <div class="profile-name">
+
+                    ${escapeHtml(name)}
+
+                </div>
+
+
+                <div class="profile-email">
+
+                    ${escapeHtml(email)}
+
+                </div>
+
+            </div>
+
+        `;
+
+
+        /*
+         * Account information.
+         */
+
+        document.getElementById(
+            "userId"
+        ).textContent =
+            user.id || "-";
+
+
+        document.getElementById(
+            "userEmail"
+        ).textContent =
+            email;
+
+
+        document.getElementById(
+            "createdAt"
+        ).textContent =
+            user.created_at
+            ? new Date(
+                user.created_at
+              ).toLocaleString()
+            : "-";
+
+
+        accountSection.style.display =
+            "block";
+
+
+    }
+    catch(error){
+
+        console.error(
+            "Profile loading error:",
+            error
+        );
+
+
+        currentUser = null;
+
+
+        content.innerHTML = `
+
+            <div class="loading">
+
+                Unable to load profile.
+
+            </div>
+
+        `;
+
+
+        showMessage(
+            "Profile error: " +
+            (error.message || "Unknown error"),
+            "error"
+        );
+
+    }
+    finally{
+
+        loadingProfile = false;
+
+        refreshButton.disabled =
+            false;
+
+    }
+
+}
+
+
+/* =====================================================
+   COPY USER ID
+===================================================== */
+
+async function copyUserId(){
+
+    if(!currentUser){
+
+        showMessage(
+            "User ID is not available.",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    const userId =
+        currentUser.id;
+
+
+    try{
+
+        if(
+            navigator.clipboard &&
+            navigator.clipboard.writeText
+        ){
+
+            await navigator.clipboard.writeText(
+                userId
+            );
+
+        }
+        else{
+
+            const textarea =
+                document.createElement(
+                    "textarea"
+                );
+
+            textarea.value =
+                userId;
+
+            document.body.appendChild(
+                textarea
+            );
+
+            textarea.select();
+
+            document.execCommand(
+                "copy"
+            );
+
+            textarea.remove();
+
+        }
+
+
+        showMessage(
+            "User ID copied successfully.",
+            "success"
+        );
+
+    }
+    catch(error){
+
+        console.error(
+            "Copy error:",
+            error
+        );
+
+
+        showMessage(
+            "Could not copy User ID.",
+            "error"
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   LOGOUT
+===================================================== */
+
+async function logout(){
+
+    try{
+
+        const result =
+            await supabase.auth.signOut();
+
+
+        if(result.error){
+
+            console.error(
+                "Logout error:",
+                result.error
+            );
+
+
+            showMessage(
+                result.error.message,
+                "error"
+            );
+
+
+            return;
+
+        }
+
+
+        currentUser = null;
+
+
+        window.location.href =
+            "login.html";
+
+    }
+    catch(error){
+
+        console.error(
+            "Logout exception:",
+            error
+        );
+
+
+        showMessage(
+            "Could not log out.",
+            "error"
+        );
+
+    }
+
+}
+
+
+/* =====================================================
    AUTH STATE
-========================================== */
+===================================================== */
 
 supabase.auth.onAuthStateChange(
     function(event,session){
@@ -935,7 +1264,8 @@ supabase.auth.onAuthStateChange(
         }
         else{
 
-            currentUser = null;
+            currentUser =
+                null;
 
         }
 
@@ -943,11 +1273,18 @@ supabase.auth.onAuthStateChange(
 );
 
 
-/* ==========================================
+/* =====================================================
    START
-========================================== */
+===================================================== */
 
-loadProfile();
+document.addEventListener(
+    "DOMContentLoaded",
+    function(){
+
+        loadProfile();
+
+    }
+);
 
 </script>
 
