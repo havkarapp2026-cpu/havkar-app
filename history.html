@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HAVKAR - Transaction History</title>
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+}
+
+html,body{
+    width:100%;
+    min-height:100%;
+}
+
+body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:#f5f5f5;
+    color:#222;
+    padding-bottom:90px;
+}
+
+.header{
+    height:72px;
+    background:#69b52f;
+    color:white;
+    display:flex;
+    align-items:center;
+    padding:0 22px;
+    box-shadow:0 2px 8px rgba(0,0,0,.12);
+    position:sticky;
+    top:0;
+    z-index:20;
+}
+
+.back{
+    width:45px;
+    height:45px;
+    border:0;
+    border-radius:50%;
+    background:rgba(255,255,255,.15);
+    color:white;
+    font-size:22px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.header h1{
+    font-size:25px;
+    margin-left:14px;
+    font-weight:700;
+}
+
+.refresh{
+    margin-left:auto;
+    width:45px;
+    height:45px;
+    border:0;
+    border-radius:50%;
+    background:rgba(255,255,255,.15);
+    color:white;
+    font-size:20px;
+    cursor:pointer;
+}
+
+.container{
+    max-width:950px;
+    margin:0 auto;
+    padding:22px 16px;
+}
+
+.hero{
+    background:white;
+    border-radius:22px;
+    padding:25px 22px;
+    box-shadow:0 4px 18px rgba(0,0,0,.07);
+    margin-bottom:18px;
+}
+
+.hero-title{
+    font-size:16px;
+    color:#777;
+    margin-bottom:7px;
+}
+
+.hero h2{
+    font-size:30px;
+    margin-bottom:5px;
+}
+
+.hero p{
+    color:#888;
+    font-size:14px;
+}
+
+.filters{
+    display:flex;
+    gap:12px;
+    margin-bottom:18px;
+    flex-wrap:wrap;
+}
+
+.filter{
+    background:white;
+    border:1px solid #ddd;
+    border-radius:14px;
+    padding:13px 16px;
+    font-size:15px;
+    flex:1;
+    min-width:150px;
+    outline:none;
+}
+
+.transaction{
+    background:white;
+    border-radius:18px;
+    margin-bottom:12px;
+    padding:17px;
+    display:flex;
+    align-items:center;
+    gap:15px;
+    box-shadow:0 3px 12px rgba(0,0,0,.06);
+}
+
+.icon{
+    width:50px;
+    height:50px;
+    border-radius:50%;
+    background:#eef8e8;
+    color:#69b52f;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:20px;
+    flex-shrink:0;
+}
+
+.info{
+    flex:1;
+    min-width:0;
+}
+
+.info strong{
+    display:block;
+    font-size:16px;
+    margin-bottom:5px;
+}
+
+.info span{
+    display:block;
+    color:#888;
+    font-size:13px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.amount{
+    text-align:right;
+    font-weight:700;
+    font-size:16px;
+}
+
+.amount small{
+    display:block;
+    font-size:12px;
+    color:#888;
+    margin-top:5px;
+    font-weight:400;
+}
+
+.sent{
+    color:#c04444;
+}
+
+.received{
+    color:#4d9b2c;
+}
+
+.empty{
+    background:white;
+    border-radius:20px;
+    padding:55px 20px;
+    text-align:center;
+    box-shadow:0 4px 15px rgba(0,0,0,.06);
+}
+
+.empty i{
+    font-size:48px;
+    color:#b8d9a5;
+    margin-bottom:15px;
+}
+
+.empty h3{
+    font-size:20px;
+    margin-bottom:8px;
+}
+
+.empty p{
+    color:#888;
+    font-size:14px;
+    line-height:1.6;
+}
+
+.bottom-nav{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    height:82px;
+    background:white;
+    border-top:1px solid #e5e5e5;
+    display:flex;
+    justify-content:space-around;
+    align-items:center;
+    z-index:30;
+    box-shadow:0 -3px 12px rgba(0,0,0,.06);
+}
+
+.nav-item{
+    text-decoration:none;
+    color:#999;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+    font-size:12px;
+    min-width:60px;
+}
+
+.nav-item i{
+    font-size:23px;
+}
+
+.nav-item.active{
+    color:#69b52f;
+}
+
+@media(max-width:600px){
+    .header{
+        height:68px;
+    }
+
+    .header h1{
+        font-size:23px;
+    }
+
+    .container{
+        padding:18px 12px;
+    }
+
+    .transaction{
+        padding:14px;
+    }
+
+    .icon{
+        width:45px;
+        height:45px;
+    }
+
+    .amount{
+        font-size:14px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header class="header">
+    <button class="back" onclick="goBack()">
+        <i class="fa-solid fa-arrow-left"></i>
+    </button>
+
+    <h1>Transaction History</h1>
+
+    <button class="refresh" onclick="loadHistory()">
+        <i class="fa-solid fa-rotate"></i>
+    </button>
+</header>
+
+<main class="container">
+
+    <section class="hero">
+        <div class="hero-title">HAVKAR Wallet</div>
+        <h2>Transaction History</h2>
+        <p id="transactionCount">All your transactions in one place</p>
+    </section>
+
+    <div class="filters">
+        <select class="filter" id="typeFilter" onchange="loadHistory()">
+            <option value="all">All transactions</option>
+            <option value="sent">Sent</option>
+            <option value="received">Received</option>
+            <option value="exchange">Exchange</option>
+        </select>
+
+        <select class="filter" id="currencyFilter" onchange="loadHistory()">
+            <option value="all">All currencies</option>
+            <option value="EUR">EUR €</option>
+            <option value="USDT">USDT</option>
+            <option value="TRX">TRX</option>
+            <option value="BTC">BTC</option>
+            <option value="ETH">ETH</option>
+        </select>
+    </div>
+
+    <section id="historyList"></section>
+
+</main>
+
+<nav class="bottom-nav">
+
+    <a class="nav-item" href="index.html">
+        <i class="fa-solid fa-wallet"></i>
+        <span>Wallet</span>
+    </a>
+
+    <a class="nav-item" href="market.html">
+        <i class="fa-solid fa-chart-line"></i>
+        <span>Market</span>
+    </a>
+
+    <a class="nav-item" href="trade.html">
+        <i class="fa-solid fa-right-left"></i>
+        <span>Trade</span>
+    </a>
+
+    <a class="nav-item active" href="history.html">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        <span>History</span>
+    </a>
+
+    <a class="nav-item" href="profile.html">
+        <i class="fa-solid fa-user"></i>
+        <span>Profile</span>
+    </a>
+
+</nav>
+
+<script>
+
+function goBack(){
+    if(document.referrer){
+        history.back();
+    }else{
+        window.location.href="index.html";
+    }
+}
+
+function getTransactions(){
+
+    const possibleKeys=[
+        "havkar_transactions",
+        "transactions",
+        "transactionHistory",
+        "havkar_history"
+    ];
+
+    for(const key of possibleKeys){
+
+        try{
+
+            const data=localStorage.getItem(key);
+
+            if(data){
+
+                const parsed=JSON.parse(data);
+
+                if(Array.isArray(parsed)){
+                    return parsed;
+                }
+
+            }
+
+        }catch(error){
+            console.warn("History read error:",error);
+        }
+
+    }
+
+    return [];
+}
+
+function getType(transaction){
+
+    const type=String(
+        transaction.type ||
+        transaction.transactionType ||
+        transaction.action ||
+        ""
+    ).toLowerCase();
+
+    if(type.includes("receive") || type.includes("received")){
+        return "received";
+    }
+
+    if(type.includes("exchange") || type.includes("swap")){
+        return "exchange";
+    }
+
+    return "sent";
+}
+
+function getCurrency(transaction){
+
+    return String(
+        transaction.currency ||
+        transaction.symbol ||
+        transaction.asset ||
+        transaction.coin ||
+        "EUR"
+    ).toUpperCase();
+
+}
+
+function getAmount(transaction){
+
+    const value=
+        transaction.amount ??
+        transaction.value ??
+        transaction.quantity ??
+        0;
+
+    const number=Number(value);
+
+    if(Number.isNaN(number)){
+        return "0.00";
+    }
+
+    return number.toLocaleString(undefined,{
+        minimumFractionDigits:2,
+        maximumFractionDigits:8
+    });
+}
+
+function getDate(transaction){
+
+    const raw=
+        transaction.date ||
+        transaction.createdAt ||
+        transaction.timestamp ||
+        transaction.time;
+
+    if(!raw){
+        return "Date unavailable";
+    }
+
+    try{
+
+        const date=new Date(raw);
+
+        if(Number.isNaN(date.getTime())){
+            return String(raw);
+        }
+
+        return date.toLocaleString();
+
+    }catch(error){
+
+        return String(raw);
+
+    }
+
+}
+
+function getDescription(transaction){
+
+    return (
+        transaction.note ||
+        transaction.description ||
+        transaction.memo ||
+        transaction.recipient ||
+        transaction.receiver ||
+        "HAVKAR transaction"
+    );
+
+}
+
+function createTransaction(transaction){
+
+    const type=getType(transaction);
+    const currency=getCurrency(transaction);
+    const amount=getAmount(transaction);
+    const date=getDate(transaction);
+    const description=getDescription(transaction);
+
+    let icon="fa-right-left";
+
+    if(type==="sent"){
+        icon="fa-arrow-up";
+    }
+
+    if(type==="received"){
+        icon="fa-arrow-down";
+    }
+
+    if(type==="exchange"){
+        icon="fa-repeat";
+    }
+
+    const item=document.createElement("div");
+
+    item.className="transaction";
+
+    item.innerHTML=`
+
+        <div class="icon">
+            <i class="fa-solid ${icon}"></i>
+        </div>
+
+        <div class="info">
+            <strong>
+                ${type.charAt(0).toUpperCase()+type.slice(1)}
+                ${currency}
+            </strong>
+
+            <span>${escapeHtml(description)}</span>
+
+            <span>${escapeHtml(date)}</span>
+        </div>
+
+        <div class="amount ${type}">
+            ${type==="received" ? "+" : "-"}${amount} ${currency}
+            <small>${type.toUpperCase()}</small>
+        </div>
+
+    `;
+
+    return item;
+}
+
+function escapeHtml(value){
+
+    const div=document.createElement("div");
+    div.textContent=String(value);
+    return div.innerHTML;
+
+}
+
+function loadHistory(){
+
+    const list=document.getElementById("historyList");
+
+    list.innerHTML="";
+
+    const typeFilter=document.getElementById("typeFilter").value;
+    const currencyFilter=document.getElementById("currencyFilter").value;
+
+    let transactions=getTransactions();
+
+    transactions=transactions.filter(transaction=>{
+
+        const type=getType(transaction);
+        const currency=getCurrency(transaction);
+
+        const typeOK=
+            typeFilter==="all" ||
+            type===typeFilter;
+
+        const currencyOK=
+            currencyFilter==="all" ||
+            currency===currencyFilter;
+
+        return typeOK && currencyOK;
+
+    });
+
+    document.getElementById("transactionCount").textContent=
+        transactions.length+
+        (transactions.length===1
+        ? " transaction"
+        : " transactions");
+
+    if(transactions.length===0){
+
+        list.innerHTML=`
+
+            <div class="empty">
+
+                <i class="fa-solid fa-clock-rotate-left"></i>
+
+                <h3>No transactions yet</h3>
+
+                <p>
+                    Your completed payments, transfers,
+                    exchanges and other wallet activity
+                    will appear here.
+                </p>
+
+            </div>
+
+        `;
+
+        return;
+    }
+
+    transactions.sort((a,b)=>{
+
+        const da=new Date(
+            a.date ||
+            a.createdAt ||
+            a.timestamp ||
+            a.time ||
+            0
+        );
+
+        const db=new Date(
+            b.date ||
+            b.createdAt ||
+            b.timestamp ||
+            b.time ||
+            0
+        );
+
+        return db-da;
+
+    });
+
+    transactions.forEach(transaction=>{
+        list.appendChild(
+            createTransaction(transaction)
+        );
+    });
+
+}
+
+loadHistory();
+
+</script>
+
+</body>
+</html>
