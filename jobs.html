@@ -3,185 +3,480 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>HAVKAR - Jobs</title>
 
-<link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+>
 
 <style>
+
+/* =========================================================
+   HAVKAR JOBS
+   Professional responsive job platform
+   ========================================================= */
+
 *{
   margin:0;
   padding:0;
   box-sizing:border-box;
 }
 
-body{
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-  background:#f5f7f6;
-  color:#222;
-  padding-bottom:75px;
+:root{
+  --green-dark:#145a1a;
+  --green:#2e7d32;
+  --green-main:#43a047;
+  --green-light:#e8f5e9;
+  --green-soft:#f4faf5;
+
+  --text:#1f2421;
+  --muted:#6f7672;
+  --border:#e2e7e3;
+
+  --white:#ffffff;
+  --background:#f4f7f5;
+
+  --shadow:0 6px 22px rgba(0,0,0,.07);
+  --shadow-hover:0 10px 30px rgba(0,0,0,.11);
+
+  --radius:18px;
 }
 
+html{
+  scroll-behavior:smooth;
+}
+
+body{
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Arial,
+    sans-serif;
+
+  background:var(--background);
+  color:var(--text);
+
+  min-height:100vh;
+
+  padding-bottom:82px;
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
 .header{
-  background:linear-gradient(135deg,#1b5e20,#66bb6a);
-  color:white;
-  padding:14px 18px;
+  position:sticky;
+  top:0;
+  z-index:100;
+
+  height:68px;
+
   display:flex;
   align-items:center;
   justify-content:space-between;
-  position:sticky;
-  top:0;
-  z-index:20;
-  box-shadow:0 3px 12px rgba(0,0,0,.15);
+
+  padding:10px 16px;
+
+  color:white;
+
+  background:
+    linear-gradient(
+      135deg,
+      var(--green-dark),
+      var(--green-main)
+    );
+
+  box-shadow:
+    0 4px 18px rgba(0,0,0,.15);
 }
 
 .header-left{
   display:flex;
   align-items:center;
-  gap:14px;
-}
+  gap:13px;
 
-.back-btn,
-.icon-btn{
-  border:0;
-  background:rgba(255,255,255,.18);
-  color:white;
-  cursor:pointer;
+  min-width:0;
 }
 
 .back-btn{
-  background:none;
-  font-size:24px;
+  width:42px;
+  height:42px;
+
+  border:0;
+  background:transparent;
+
+  color:white;
+
+  font-size:23px;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  cursor:pointer;
+
+  border-radius:50%;
+}
+
+.back-btn:active{
+  background:rgba(255,255,255,.14);
 }
 
 .header h1{
-  font-size:22px;
+  font-size:21px;
+  font-weight:750;
+  letter-spacing:.2px;
 }
 
 .header-right{
   display:flex;
-  gap:10px;
+  align-items:center;
+  gap:8px;
 }
 
 .icon-btn{
   width:40px;
   height:40px;
+
+  border:0;
   border-radius:50%;
+
+  color:white;
+  background:rgba(255,255,255,.15);
+
+  cursor:pointer;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  transition:.2s;
 }
+
+.icon-btn:hover{
+  background:rgba(255,255,255,.24);
+}
+
+.icon-btn:active{
+  transform:scale(.94);
+}
+
+
+/* =========================================================
+   HERO
+   ========================================================= */
 
 .hero{
   background:white;
-  padding:20px;
+
+  padding:
+    22px
+    max(18px, calc((100vw - 900px) / 2));
+  
+  border-bottom:1px solid #edf0ee;
+}
+
+.hero-inner{
+  max-width:900px;
+  margin:auto;
 }
 
 .hero h2{
-  font-size:24px;
-  margin-bottom:6px;
+  font-size:25px;
+  line-height:1.2;
+  margin-bottom:7px;
+  font-weight:800;
 }
 
 .hero p{
-  color:#666;
-  line-height:1.5;
+  color:var(--muted);
+  line-height:1.55;
+  font-size:14px;
 }
+
+
+/* =========================================================
+   SEARCH
+   ========================================================= */
 
 .search{
-  margin-top:16px;
   position:relative;
+  margin-top:17px;
 }
 
-.search i{
+.search-icon{
   position:absolute;
+
   left:15px;
-  top:14px;
-  color:#888;
+  top:50%;
+
+  transform:translateY(-50%);
+
+  color:#89918c;
+
+  pointer-events:none;
+
+  font-size:16px;
 }
 
 .search input{
   width:100%;
-  padding:13px 15px 13px 42px;
-  border:1px solid #ddd;
-  border-radius:14px;
-  font-size:16px;
+
+  height:50px;
+
+  padding:
+    0
+    45px
+    0
+    43px;
+
+  border:
+    1px solid
+    var(--border);
+
+  border-radius:15px;
+
+  background:#fafcfb;
+
+  color:var(--text);
+
+  font-size:15px;
+
   outline:none;
+
+  transition:.2s;
 }
 
 .search input:focus{
-  border-color:#66bb6a;
+  background:white;
+
+  border-color:var(--green-main);
+
+  box-shadow:
+    0 0 0 4px
+    rgba(67,160,71,.10);
+}
+
+.clear-search{
+  position:absolute;
+
+  right:9px;
+  top:50%;
+
+  transform:translateY(-50%);
+
+  width:34px;
+  height:34px;
+
+  border:0;
+  border-radius:50%;
+
+  background:#eef2ef;
+
+  color:#69716c;
+
+  display:none;
+
+  align-items:center;
+  justify-content:center;
+
+  cursor:pointer;
+}
+
+.clear-search.show{
+  display:flex;
+}
+
+
+/* =========================================================
+   FILTERS
+   ========================================================= */
+
+.filters-wrap{
+  background:white;
+
+  border-bottom:1px solid #edf0ee;
 }
 
 .filters{
+  max-width:900px;
+  margin:auto;
+
   display:flex;
   gap:9px;
+
   overflow-x:auto;
-  padding:15px 20px;
-  background:white;
+
+  padding:
+    13px 18px
+    15px;
+
+  scrollbar-width:none;
+}
+
+.filters::-webkit-scrollbar{
+  display:none;
 }
 
 .filter{
   flex:none;
-  border:1px solid #ddd;
+
+  border:
+    1px solid
+    var(--border);
+
   background:white;
-  border-radius:22px;
-  padding:9px 16px;
-  font-weight:600;
-  cursor:pointer;
-}
 
-.filter.active{
-  background:#43a047;
-  color:white;
-  border-color:#43a047;
-}
+  color:#3f4742;
 
-.content{
-  padding:16px;
-}
+  border-radius:24px;
 
-.section-title{
-  font-size:19px;
+  padding:
+    9px 16px;
+
+  font-size:13px;
   font-weight:700;
-  margin-bottom:13px;
-}
 
-.job-card{
-  background:white;
-  border-radius:18px;
-  padding:17px;
-  margin-bottom:14px;
-  box-shadow:0 3px 14px rgba(0,0,0,.07);
   cursor:pointer;
+
   transition:.2s;
 }
 
+.filter:hover{
+  border-color:#aeb8b1;
+}
+
+.filter.active{
+  color:white;
+
+  background:var(--green-main);
+
+  border-color:var(--green-main);
+
+  box-shadow:
+    0 4px 12px
+    rgba(67,160,71,.22);
+}
+
+
+/* =========================================================
+   CONTENT
+   ========================================================= */
+
+.content{
+  max-width:900px;
+
+  margin:auto;
+
+  padding:
+    20px
+    16px
+    35px;
+}
+
+.section-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+
+  margin-bottom:14px;
+}
+
+.section-title{
+  font-size:20px;
+  font-weight:800;
+}
+
+.result-count{
+  color:#7a827d;
+  font-size:13px;
+}
+
+
+/* =========================================================
+   JOB CARD
+   ========================================================= */
+
+.job-card{
+  position:relative;
+
+  background:white;
+
+  border:
+    1px solid
+    #edf0ee;
+
+  border-radius:var(--radius);
+
+  padding:17px;
+
+  margin-bottom:14px;
+
+  box-shadow:var(--shadow);
+
+  cursor:pointer;
+
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease,
+    border-color .18s ease;
+}
+
+.job-card:hover{
+  transform:translateY(-2px);
+
+  box-shadow:var(--shadow-hover);
+
+  border-color:#d9e3db;
+}
+
 .job-card:active{
-  transform:scale(.985);
+  transform:scale(.988);
 }
 
 .job-top{
   display:flex;
-  gap:13px;
   align-items:flex-start;
+  gap:12px;
 }
 
 .logo{
   width:58px;
   height:58px;
-  border-radius:14px;
-  background:linear-gradient(135deg,#e8f5e9,#c8e6c9);
+
+  flex:none;
+
+  border-radius:15px;
+
+  overflow:hidden;
+
+  background:
+    linear-gradient(
+      135deg,
+      #e8f5e9,
+      #c8e6c9
+    );
+
   display:flex;
   align-items:center;
   justify-content:center;
+
   font-size:25px;
-  flex:none;
-  overflow:hidden;
 }
 
 .logo img{
   width:100%;
   height:100%;
+
   object-fit:cover;
+
+  display:block;
 }
 
 .job-main{
@@ -191,115 +486,325 @@ body{
 
 .job-title{
   font-size:17px;
-  font-weight:750;
+  line-height:1.3;
+
+  font-weight:800;
+
   margin-bottom:4px;
+
+  word-break:break-word;
 }
 
 .company{
-  color:#666;
-  font-size:14px;
+  color:var(--muted);
+
+  font-size:13px;
+
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 
 .salary{
-  color:#2e7d32;
-  font-weight:800;
-  white-space:nowrap;
-  margin-left:auto;
+  color:var(--green);
+
+  font-size:14px;
+
+  font-weight:850;
+
+  text-align:right;
+
+  max-width:120px;
+
+  word-break:break-word;
+}
+
+.job-actions{
+  display:flex;
+
+  align-items:center;
+
+  gap:7px;
+
+  margin-left:4px;
+}
+
+.save-btn{
+  width:40px;
+  height:40px;
+
+  flex:none;
+
+  border:0;
+
+  border-radius:50%;
+
+  background:#f3f6f4;
+
+  color:#737c76;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  cursor:pointer;
+
+  transition:.18s;
+
+  font-size:17px;
+}
+
+.save-btn:hover{
+  background:#e8f5e9;
+  color:var(--green);
+}
+
+.save-btn.saved{
+  color:var(--green);
+
+  background:
+    var(--green-light);
+}
+
+.save-btn:active{
+  transform:scale(.9);
 }
 
 .meta{
   display:flex;
+
   flex-wrap:wrap;
-  gap:12px;
-  margin-top:12px;
-  color:#666;
-  font-size:13px;
+
+  gap:9px 14px;
+
+  margin-top:13px;
+
+  color:#69716c;
+
+  font-size:12.5px;
+}
+
+.meta span{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
 }
 
 .meta i{
-  color:#43a047;
-  margin-right:4px;
+  color:var(--green-main);
 }
 
 .tags{
   display:flex;
+
   flex-wrap:wrap;
-  gap:7px;
+
+  gap:6px;
+
   margin-top:12px;
 }
 
 .tag{
-  background:#e8f5e9;
+  background:var(--green-light);
+
   color:#388e3c;
-  padding:5px 10px;
-  border-radius:12px;
-  font-size:12px;
-  font-weight:600;
+
+  padding:
+    5px 9px;
+
+  border-radius:10px;
+
+  font-size:11.5px;
+
+  font-weight:700;
 }
+
+
+/* =========================================================
+   EMPTY
+   ========================================================= */
 
 .empty{
   text-align:center;
-  padding:40px 20px;
-  color:#777;
+
+  background:white;
+
+  border-radius:18px;
+
+  padding:45px 20px;
+
+  color:#78807b;
+
+  box-shadow:var(--shadow);
 }
+
+.empty-icon{
+  font-size:43px;
+
+  color:#a1aaa4;
+
+  margin-bottom:14px;
+}
+
+.empty strong{
+  display:block;
+
+  color:#424943;
+
+  font-size:16px;
+
+  margin-bottom:6px;
+}
+
+.empty p{
+  font-size:13px;
+
+  line-height:1.5;
+}
+
+
+/* =========================================================
+   FAB
+   ========================================================= */
 
 .fab{
   position:fixed;
+
   right:20px;
-  bottom:88px;
-  width:62px;
-  height:62px;
+  bottom:91px;
+
+  width:60px;
+  height:60px;
+
   border:0;
+
   border-radius:50%;
-  background:linear-gradient(135deg,#2e7d32,#66bb6a);
+
+  background:
+    linear-gradient(
+      135deg,
+      var(--green),
+      #66bb6a
+    );
+
   color:white;
-  font-size:25px;
-  box-shadow:0 6px 22px rgba(46,125,50,.4);
+
+  font-size:23px;
+
+  box-shadow:
+    0 7px 25px
+    rgba(46,125,50,.35);
+
   cursor:pointer;
-  z-index:15;
+
+  z-index:80;
+
+  transition:.2s;
 }
+
+.fab:hover{
+  transform:translateY(-2px);
+
+  box-shadow:
+    0 10px 30px
+    rgba(46,125,50,.42);
+}
+
+.fab:active{
+  transform:scale(.93);
+}
+
+
+/* =========================================================
+   BOTTOM NAV
+   ========================================================= */
 
 .bottom-nav{
   position:fixed;
+
   bottom:0;
   left:0;
   right:0;
-  height:72px;
+
+  height:76px;
+
   background:white;
+
   display:flex;
-  justify-content:space-around;
+
   align-items:center;
-  box-shadow:0 -2px 12px rgba(0,0,0,.1);
-  z-index:20;
+  justify-content:space-around;
+
+  border-top:
+    1px solid
+    #e8ece9;
+
+  box-shadow:
+    0 -4px 18px
+    rgba(0,0,0,.08);
+
+  z-index:100;
 }
 
 .nav-item{
-  text-align:center;
-  color:#999;
-  font-size:12px;
+  flex:1;
+
+  height:100%;
+
+  display:flex;
+  flex-direction:column;
+
+  align-items:center;
+  justify-content:center;
+
+  gap:4px;
+
+  color:#929994;
+
+  font-size:11px;
+
+  font-weight:650;
+
   cursor:pointer;
+
+  transition:.2s;
+
+  user-select:none;
 }
 
 .nav-item i{
-  display:block;
   font-size:20px;
-  margin-bottom:4px;
+}
+
+.nav-item:hover{
+  color:var(--green-main);
 }
 
 .nav-item.active{
-  color:#43a047;
+  color:var(--green-main);
 }
 
-/* MODAL */
+
+/* =========================================================
+   MODAL
+   ========================================================= */
 
 .modal{
   position:fixed;
+
   inset:0;
-  background:rgba(0,0,0,.55);
+
   display:none;
+
   align-items:flex-end;
   justify-content:center;
-  z-index:50;
+
+  background:
+    rgba(0,0,0,.56);
+
+  z-index:200;
+
+  padding:0;
 }
 
 .modal.show{
@@ -308,98 +813,212 @@ body{
 
 .modal-box{
   width:100%;
-  max-width:600px;
-  max-height:92vh;
-  overflow:auto;
+
+  max-width:650px;
+
+  max-height:94vh;
+
+  overflow-y:auto;
+
   background:white;
-  border-radius:25px 25px 0 0;
+
+  border-radius:
+    25px
+    25px
+    0
+    0;
+
   padding:22px;
+
+  box-shadow:
+    0 -10px 40px
+    rgba(0,0,0,.18);
+
+  animation:
+    modalUp .2s ease;
+}
+
+@keyframes modalUp{
+  from{
+    transform:translateY(30px);
+    opacity:0;
+  }
+
+  to{
+    transform:translateY(0);
+    opacity:1;
+  }
 }
 
 .modal-head{
   display:flex;
-  justify-content:space-between;
+
   align-items:center;
+  justify-content:space-between;
+
+  gap:15px;
+
   margin-bottom:18px;
 }
 
 .modal-head h2{
   font-size:21px;
+
+  font-weight:800;
 }
 
 .close{
+  width:39px;
+  height:39px;
+
+  flex:none;
+
   border:0;
-  background:#f1f1f1;
-  width:38px;
-  height:38px;
+
   border-radius:50%;
+
+  background:#f0f2f1;
+
+  color:#414742;
+
   font-size:20px;
+
   cursor:pointer;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
+.close:hover{
+  background:#e5e9e6;
+}
+
+
+/* =========================================================
+   FORM
+   ========================================================= */
+
 .form-group{
-  margin-bottom:14px;
+  margin-bottom:15px;
 }
 
 .form-group label{
   display:block;
-  font-weight:650;
-  margin-bottom:6px;
+
+  font-size:13px;
+
+  font-weight:750;
+
+  margin-bottom:7px;
+
+  color:#333a35;
 }
 
 .form-group input,
 .form-group textarea,
 .form-group select{
   width:100%;
-  padding:12px;
-  border:1px solid #ddd;
+
+  border:
+    1px solid
+    var(--border);
+
   border-radius:12px;
-  font-size:15px;
+
+  background:#fbfcfb;
+
+  color:#222;
+
+  padding:
+    12px;
+
+  font-family:inherit;
+
+  font-size:14px;
+
   outline:none;
+
+  transition:.2s;
+}
+
+.form-group input,
+.form-group select{
+  height:46px;
 }
 
 .form-group textarea{
-  min-height:110px;
+  min-height:120px;
+
   resize:vertical;
+
+  line-height:1.55;
 }
 
 .form-group input:focus,
 .form-group textarea:focus,
 .form-group select:focus{
-  border-color:#66bb6a;
+  background:white;
+
+  border-color:var(--green-main);
+
+  box-shadow:
+    0 0 0 4px
+    rgba(67,160,71,.09);
 }
 
-/* IMAGE UPLOAD */
+
+/* =========================================================
+   IMAGE UPLOAD
+   ========================================================= */
 
 .image-upload{
-  border:2px dashed #b7d9ba;
+  border:
+    2px dashed
+    #b8d8bc;
+
   background:#f7fbf7;
+
   border-radius:16px;
-  padding:16px;
+
+  padding:20px 15px;
+
   text-align:center;
+
   cursor:pointer;
+
   transition:.2s;
 }
 
 .image-upload:hover{
-  border-color:#43a047;
+  border-color:var(--green-main);
+
   background:#f1f8f2;
 }
 
 .image-upload i{
+  display:block;
+
+  color:var(--green-main);
+
   font-size:30px;
-  color:#43a047;
-  margin-bottom:8px;
+
+  margin-bottom:9px;
 }
 
 .image-upload strong{
   display:block;
-  color:#2e7d32;
+
+  color:var(--green);
+
+  font-size:14px;
+
   margin-bottom:4px;
 }
 
 .image-upload span{
   color:#777;
+
   font-size:12px;
 }
 
@@ -409,11 +1028,16 @@ body{
 
 .image-preview{
   display:none;
+
   position:relative;
+
   margin-top:12px;
-  border-radius:16px;
+
   overflow:hidden;
-  background:#f1f1f1;
+
+  border-radius:16px;
+
+  background:#f0f2f1;
 }
 
 .image-preview.show{
@@ -422,205 +1046,536 @@ body{
 
 .image-preview img{
   width:100%;
-  max-height:230px;
+
+  max-height:240px;
+
   object-fit:cover;
+
   display:block;
 }
 
 .remove-image{
   position:absolute;
+
   top:10px;
   right:10px;
+
   width:36px;
   height:36px;
+
   border:0;
+
   border-radius:50%;
-  background:rgba(0,0,0,.65);
+
+  background:
+    rgba(0,0,0,.68);
+
   color:white;
+
   font-size:18px;
+
   cursor:pointer;
 }
 
 .upload-note{
   color:#777;
-  font-size:12px;
+
+  font-size:11.5px;
+
   line-height:1.5;
+
   margin-top:7px;
 }
 
-.detail-image{
-  width:100%;
-  max-height:260px;
-  object-fit:cover;
-  border-radius:17px;
-  margin-bottom:18px;
-  display:block;
-}
+
+/* =========================================================
+   PLANS
+   ========================================================= */
 
 .plan-title{
-  font-weight:750;
-  margin:20px 0 10px;
+  margin:
+    22px 0
+    10px;
+
+  font-size:14px;
+
+  font-weight:800;
 }
 
 .plans{
   display:grid;
+
   gap:10px;
 }
 
 .plan{
-  border:2px solid #ddd;
+  border:
+    2px solid
+    #e0e5e1;
+
   border-radius:15px;
-  padding:15px;
+
+  padding:14px;
+
   cursor:pointer;
+
+  transition:.2s;
+}
+
+.plan:hover{
+  border-color:#b8c6ba;
 }
 
 .plan.selected{
-  border-color:#43a047;
+  border-color:var(--green-main);
+
   background:#f1f8f2;
+
+  box-shadow:
+    0 4px 12px
+    rgba(67,160,71,.08);
 }
 
 .plan strong{
   display:block;
-  font-size:17px;
-  color:#2e7d32;
+
+  color:var(--green);
+
+  font-size:16px;
+
+  margin-bottom:4px;
 }
 
 .plan span{
-  color:#666;
+  color:#6c746f;
+
+  font-size:12px;
+
+  line-height:1.4;
+}
+
+
+/* =========================================================
+   SUMMARY
+   ========================================================= */
+
+.summary{
+  background:#f5f8f6;
+
+  border-radius:14px;
+
+  padding:14px;
+
+  margin-top:15px;
+
+  line-height:1.7;
+}
+
+.detail-row{
+  display:flex;
+
+  justify-content:space-between;
+
+  gap:15px;
+
+  padding:10px 0;
+
+  border-bottom:
+    1px solid
+    #e7ebe8;
+}
+
+.detail-row:last-child{
+  border-bottom:0;
+}
+
+.detail-label{
+  color:#777;
+
   font-size:13px;
 }
 
-.summary{
-  background:#f6f8f6;
-  padding:15px;
-  border-radius:14px;
-  margin-top:15px;
-  line-height:1.8;
+.detail-value{
+  font-weight:700;
+
+  font-size:13px;
+
+  text-align:right;
+
+  max-width:62%;
+
+  word-break:break-word;
 }
+
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
 
 .primary{
   width:100%;
+
   border:0;
-  background:linear-gradient(135deg,#2e7d32,#66bb6a);
-  color:white;
-  padding:14px;
+
   border-radius:13px;
-  font-size:16px;
-  font-weight:750;
-  margin-top:16px;
+
+  padding:14px;
+
+  margin-top:15px;
+
+  color:white;
+
+  background:
+    linear-gradient(
+      135deg,
+      var(--green),
+      #66bb6a
+    );
+
+  font-family:inherit;
+
+  font-size:15px;
+
+  font-weight:800;
+
   cursor:pointer;
+
+  box-shadow:
+    0 5px 15px
+    rgba(46,125,50,.22);
+
+  transition:.2s;
+}
+
+.primary:hover{
+  transform:translateY(-1px);
+}
+
+.primary:active{
+  transform:scale(.985);
 }
 
 .secondary{
   width:100%;
-  border:1px solid #43a047;
-  background:white;
-  color:#2e7d32;
-  padding:13px;
+
+  border:
+    1px solid
+    var(--green-main);
+
   border-radius:13px;
-  font-weight:700;
+
+  padding:13px;
+
   margin-top:10px;
+
+  color:var(--green);
+
+  background:white;
+
+  font-family:inherit;
+
+  font-size:14px;
+
+  font-weight:750;
+
   cursor:pointer;
 }
 
 .notice{
   background:#fff8e1;
-  color:#795548;
-  padding:12px;
+
+  color:#725b35;
+
   border-radius:12px;
-  font-size:13px;
-  margin-top:12px;
-  line-height:1.5;
+
+  padding:12px;
+
+  margin-top:13px;
+
+  font-size:12.5px;
+
+  line-height:1.55;
 }
 
-.detail-row{
-  display:flex;
-  justify-content:space-between;
-  gap:15px;
-  padding:10px 0;
-  border-bottom:1px solid #eee;
-}
 
-.detail-label{
-  color:#777;
-}
-
-.detail-value{
-  font-weight:650;
-  text-align:right;
-  max-width:60%;
-}
+/* =========================================================
+   STATUS
+   ========================================================= */
 
 .status-badge{
   display:inline-flex;
-  align-items:center;
-  gap:6px;
-  padding:6px 10px;
-  border-radius:12px;
-  font-size:12px;
-  font-weight:700;
-}
 
-.status-pending{
-  background:#fff8e1;
-  color:#8d6e63;
+  align-items:center;
+
+  gap:6px;
+
+  padding:
+    6px 10px;
+
+  border-radius:12px;
+
+  font-size:11px;
+
+  font-weight:800;
 }
 
 .status-active{
   background:#e8f5e9;
+
   color:#2e7d32;
 }
 
+.status-pending{
+  background:#fff8e1;
+
+  color:#8d6e63;
+}
+
+
+/* =========================================================
+   DETAIL IMAGE
+   ========================================================= */
+
+.detail-image{
+  width:100%;
+
+  max-height:280px;
+
+  object-fit:cover;
+
+  border-radius:17px;
+
+  display:block;
+
+  margin-bottom:17px;
+}
+
+
+/* =========================================================
+   MY JOBS / SAVED
+   ========================================================= */
+
+.saved-job-card{
+  background:white;
+
+  border:
+    1px solid
+    #edf0ee;
+
+  border-radius:17px;
+
+  padding:15px;
+
+  margin-bottom:11px;
+
+  box-shadow:
+    0 3px 12px
+    rgba(0,0,0,.05);
+
+  cursor:pointer;
+}
+
+.saved-job-card:active{
+  transform:scale(.99);
+}
+
+.job-status-line{
+  margin-top:11px;
+
+  display:flex;
+
+  align-items:center;
+
+  flex-wrap:wrap;
+
+  gap:7px;
+
+  color:#737b76;
+
+  font-size:11.5px;
+}
+
+
+/* =========================================================
+   SUCCESS
+   ========================================================= */
+
 .success{
   text-align:center;
-  padding:25px 10px;
+
+  padding:
+    28px
+    10px;
 }
 
 .success i{
+  display:block;
+
   font-size:55px;
-  color:#43a047;
+
+  color:var(--green-main);
+
   margin-bottom:15px;
 }
 
+.success h3{
+  font-size:20px;
+
+  margin-bottom:7px;
+}
+
+.success p{
+  color:#707872;
+
+  line-height:1.55;
+
+  font-size:13px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
 @media(min-width:700px){
+
+  body{
+    padding-bottom:0;
+  }
+
   .modal{
     align-items:center;
+
+    padding:20px;
   }
 
   .modal-box{
     border-radius:22px;
+
+    max-height:90vh;
+  }
+
+  .bottom-nav{
+    left:50%;
+
+    right:auto;
+
+    bottom:18px;
+
+    transform:translateX(-50%);
+
+    width:
+      min(600px, calc(100% - 30px));
+
+    height:64px;
+
+    border-radius:20px;
+
+    border:1px solid #e5eae6;
+  }
+
+  .fab{
+    bottom:98px;
+  }
+
+}
+
+@media(max-width:420px){
+
+  .header{
+    padding-left:10px;
+    padding-right:10px;
+  }
+
+  .header h1{
+    font-size:20px;
+  }
+
+  .hero{
+    padding:20px 15px;
   }
 
   .content{
-    max-width:900px;
-    margin:auto;
+    padding-left:13px;
+    padding-right:13px;
   }
+
+  .job-card{
+    padding:14px;
+  }
+
+  .salary{
+    max-width:95px;
+    font-size:13px;
+  }
+
+  .job-title{
+    font-size:16px;
+  }
+
+  .logo{
+    width:54px;
+    height:54px;
+  }
+
+  .save-btn{
+    width:37px;
+    height:37px;
+  }
+
 }
+
 </style>
 </head>
 
+
 <body>
+
+
+<!-- =======================================================
+     HEADER
+     ======================================================= -->
 
 <header class="header">
 
   <div class="header-left">
 
-    <button class="back-btn" onclick="goHome()">
+    <button
+      class="back-btn"
+      type="button"
+      onclick="goHome()"
+      aria-label="Back">
+
       <i class="fas fa-arrow-left"></i>
+
     </button>
 
     <h1>Jobs</h1>
 
   </div>
 
+
   <div class="header-right">
 
-    <button class="icon-btn">
+    <button
+      class="icon-btn"
+      type="button"
+      onclick="openAlerts()"
+      aria-label="Notifications">
+
       <i class="fas fa-bell"></i>
+
     </button>
 
-    <button class="icon-btn" onclick="openMyJobs()">
+
+    <button
+      class="icon-btn"
+      type="button"
+      onclick="openMyJobs()"
+      aria-label="My Jobs">
+
       <i class="fas fa-user"></i>
+
     </button>
 
   </div>
@@ -628,71 +1583,157 @@ body{
 </header>
 
 
+<!-- =======================================================
+     HERO / SEARCH
+     ======================================================= -->
+
 <section class="hero">
 
-  <h2>Find the right opportunity</h2>
+  <div class="hero-inner">
 
-  <p>
-    Discover jobs, hire professionals and grow your career with HAVKAR.
-  </p>
+    <h2>
+      Find the right opportunity
+    </h2>
 
-  <div class="search">
+    <p>
+      Discover jobs, hire professionals and grow your career with HAVKAR.
+    </p>
 
-    <i class="fas fa-search"></i>
 
-    <input
-      id="searchInput"
-      type="text"
-      placeholder="Search jobs, companies..."
-      oninput="renderJobs()">
+    <div class="search">
+
+      <i class="fas fa-search search-icon"></i>
+
+      <input
+        id="searchInput"
+        type="search"
+        autocomplete="off"
+        placeholder="Search jobs, companies, skills..."
+        aria-label="Search jobs"
+      >
+
+      <button
+        id="clearSearch"
+        class="clear-search"
+        type="button"
+        onclick="clearJobSearch()"
+        aria-label="Clear search">
+
+        <i class="fas fa-times"></i>
+
+      </button>
+
+    </div>
 
   </div>
 
 </section>
 
 
-<div class="filters">
+<!-- =======================================================
+     FILTERS
+     ======================================================= -->
 
-  <button class="filter active" data-filter="All">
-    All
-  </button>
+<div class="filters-wrap">
 
-  <button class="filter" data-filter="Full-time">
-    Full-time
-  </button>
+  <div class="filters">
 
-  <button class="filter" data-filter="Part-time">
-    Part-time
-  </button>
+    <button
+      class="filter active"
+      type="button"
+      data-filter="All">
 
-  <button class="filter" data-filter="Remote">
-    Remote
-  </button>
+      All
 
-  <button class="filter" data-filter="Freelance">
-    Freelance
-  </button>
+    </button>
 
-  <button class="filter" data-filter="Contract">
-    Contract
-  </button>
+
+    <button
+      class="filter"
+      type="button"
+      data-filter="Full-time">
+
+      Full-time
+
+    </button>
+
+
+    <button
+      class="filter"
+      type="button"
+      data-filter="Part-time">
+
+      Part-time
+
+    </button>
+
+
+    <button
+      class="filter"
+      type="button"
+      data-filter="Remote">
+
+      Remote
+
+    </button>
+
+
+    <button
+      class="filter"
+      type="button"
+      data-filter="Freelance">
+
+      Freelance
+
+    </button>
+
+
+    <button
+      class="filter"
+      type="button"
+      data-filter="Contract">
+
+      Contract
+
+    </button>
+
+  </div>
 
 </div>
 
 
+<!-- =======================================================
+     JOB LIST
+     ======================================================= -->
+
 <main class="content">
 
-  <div class="section-title">
-    Available jobs
+  <div class="section-header">
+
+    <div class="section-title">
+      Available jobs
+    </div>
+
+    <div
+      id="resultCount"
+      class="result-count">
+    </div>
+
   </div>
+
 
   <div id="jobsList"></div>
 
 </main>
 
 
+<!-- =======================================================
+     POST JOB FAB
+     ======================================================= -->
+
 <button
   class="fab"
+  type="button"
   onclick="openPostJob()"
   aria-label="Post a job">
 
@@ -701,47 +1742,81 @@ body{
 </button>
 
 
+<!-- =======================================================
+     BOTTOM NAVIGATION
+     ======================================================= -->
+
 <nav class="bottom-nav">
 
-  <div class="nav-item active" onclick="goHome()">
+  <div
+    class="nav-item active"
+    id="navHome"
+    onclick="goHome()">
+
     <i class="fas fa-home"></i>
-    Home
+
+    <span>Home</span>
+
   </div>
 
-  <div class="nav-item">
-    <i class="fas fa-search"></i>
-    Search
-  </div>
-
-  <div class="nav-item">
-    <i class="fas fa-bookmark"></i>
-    Saved
-  </div>
 
   <div
     class="nav-item"
-    onclick="window.location.href='chat.html'">
+    id="navSearch"
+    onclick="focusJobSearch()">
+
+    <i class="fas fa-search"></i>
+
+    <span>Search</span>
+
+  </div>
+
+
+  <div
+    class="nav-item"
+    id="navSaved"
+    onclick="openSavedJobs()">
+
+    <i class="fas fa-bookmark"></i>
+
+    <span>Saved</span>
+
+  </div>
+
+
+  <div
+    class="nav-item"
+    id="navMessages"
+    onclick="openMessages()">
 
     <i class="fas fa-comment"></i>
-    Messages
+
+    <span>Messages</span>
 
   </div>
 
+
   <div
     class="nav-item"
-    onclick="openMyJobs()">
+    id="navProfile"
+    onclick="openProfile()">
 
     <i class="fas fa-user"></i>
-    Profile
+
+    <span>Profile</span>
 
   </div>
 
 </nav>
 
 
-<!-- JOB DETAIL MODAL -->
+<!-- =======================================================
+     JOB DETAIL MODAL
+     ======================================================= -->
 
-<div class="modal" id="detailModal">
+<div
+  class="modal"
+  id="detailModal">
 
   <div class="modal-box">
 
@@ -753,6 +1828,7 @@ body{
 
       <button
         class="close"
+        type="button"
         onclick="closeModal('detailModal')">
 
         ×
@@ -761,6 +1837,7 @@ body{
 
     </div>
 
+
     <div id="detailContent"></div>
 
   </div>
@@ -768,9 +1845,13 @@ body{
 </div>
 
 
-<!-- POST JOB MODAL -->
+<!-- =======================================================
+     POST JOB MODAL
+     ======================================================= -->
 
-<div class="modal" id="postModal">
+<div
+  class="modal"
+  id="postModal">
 
   <div class="modal-box">
 
@@ -782,6 +1863,7 @@ body{
 
       <button
         class="close"
+        type="button"
         onclick="closeModal('postModal')">
 
         ×
@@ -799,6 +1881,7 @@ body{
         Advertisement image / Company logo
       </label>
 
+
       <div
         class="image-upload"
         onclick="document.getElementById('jobImage').click()">
@@ -815,11 +1898,13 @@ body{
 
       </div>
 
+
       <input
         id="jobImage"
         type="file"
         accept="image/*"
-        onchange="handleImageUpload(event)">
+      >
+
 
       <div
         id="imagePreview"
@@ -828,7 +1913,9 @@ body{
         <img
           id="imagePreviewImg"
           src=""
-          alt="Advertisement preview">
+          alt="Advertisement preview"
+        >
+
 
         <button
           type="button"
@@ -841,52 +1928,72 @@ body{
 
       </div>
 
+
       <div class="upload-note">
-        Recommended: clear company logo, workplace photo,
-        or a professional advertisement image.
+
+        Recommended: company logo, workplace photo
+        or professional advertisement image.
+
       </div>
 
     </div>
 
 
+    <!-- TITLE -->
+
     <div class="form-group">
 
       <label>
-        Job title
+        Job title *
       </label>
 
       <input
         id="jobTitle"
-        placeholder="Example: Pizza Chef">
+        type="text"
+        maxlength="120"
+        placeholder="Example: Pizza Chef"
+      >
 
     </div>
 
 
+    <!-- COMPANY -->
+
     <div class="form-group">
 
       <label>
-        Company / Business
+        Company / Business *
       </label>
 
       <input
         id="jobCompany"
-        placeholder="Company name">
+        type="text"
+        maxlength="120"
+        placeholder="Company name"
+      >
 
     </div>
 
+
+    <!-- LOCATION -->
 
     <div class="form-group">
 
       <label>
-        Location
+        Location *
       </label>
 
       <input
         id="jobLocation"
-        placeholder="Crotone, Italy">
+        type="text"
+        maxlength="120"
+        placeholder="Crotone, Italy"
+      >
 
     </div>
 
+
+    <!-- TYPE -->
 
     <div class="form-group">
 
@@ -896,23 +2003,23 @@ body{
 
       <select id="jobType">
 
-        <option>
+        <option value="Full-time">
           Full-time
         </option>
 
-        <option>
+        <option value="Part-time">
           Part-time
         </option>
 
-        <option>
+        <option value="Remote">
           Remote
         </option>
 
-        <option>
+        <option value="Freelance">
           Freelance
         </option>
 
-        <option>
+        <option value="Contract">
           Contract
         </option>
 
@@ -920,6 +2027,8 @@ body{
 
     </div>
 
+
+    <!-- SALARY -->
 
     <div class="form-group">
 
@@ -929,10 +2038,15 @@ body{
 
       <input
         id="jobSalary"
-        placeholder="Example: €1,800/month">
+        type="text"
+        maxlength="100"
+        placeholder="Example: €1,800/month"
+      >
 
     </div>
 
+
+    <!-- SKILLS -->
 
     <div class="form-group">
 
@@ -942,23 +2056,32 @@ body{
 
       <input
         id="jobSkills"
-        placeholder="Pizza, Cooking, Italian">
+        type="text"
+        maxlength="250"
+        placeholder="Pizza, Cooking, Italian"
+      >
 
     </div>
 
+
+    <!-- DESCRIPTION -->
 
     <div class="form-group">
 
       <label>
-        Job description
+        Job description *
       </label>
 
       <textarea
         id="jobDescription"
-        placeholder="Describe the job, requirements and conditions..."></textarea>
+        maxlength="3000"
+        placeholder="Describe the job, requirements and conditions..."
+      ></textarea>
 
     </div>
 
+
+    <!-- PLANS -->
 
     <div class="plan-title">
       Choose a monthly publishing plan
@@ -1020,6 +2143,8 @@ body{
     </div>
 
 
+    <!-- SUMMARY -->
+
     <div class="summary">
 
       <strong>
@@ -1045,16 +2170,19 @@ body{
 
     <div class="notice">
 
-      Your job will only become publicly active
-      after the monthly subscription payment
-      is successfully confirmed.
+      Your job will remain
+      <strong>Pending payment</strong>
+      until a real payment provider confirms the subscription.
 
     </div>
 
 
     <button
       class="primary"
+      type="button"
       onclick="submitJob()">
+
+      <i class="fas fa-arrow-right"></i>
 
       Continue to payment
 
@@ -1065,9 +2193,13 @@ body{
 </div>
 
 
-<!-- PAYMENT MODAL -->
+<!-- =======================================================
+     PAYMENT MODAL
+     ======================================================= -->
 
-<div class="modal" id="paymentModal">
+<div
+  class="modal"
+  id="paymentModal">
 
   <div class="modal-box">
 
@@ -1079,6 +2211,7 @@ body{
 
       <button
         class="close"
+        type="button"
         onclick="closeModal('paymentModal')">
 
         ×
@@ -1087,6 +2220,7 @@ body{
 
     </div>
 
+
     <div id="paymentContent"></div>
 
   </div>
@@ -1094,9 +2228,48 @@ body{
 </div>
 
 
-<!-- MY JOBS -->
+<!-- =======================================================
+     SAVED JOBS MODAL
+     ======================================================= -->
 
-<div class="modal" id="myJobsModal">
+<div
+  class="modal"
+  id="savedJobsModal">
+
+  <div class="modal-box">
+
+    <div class="modal-head">
+
+      <h2>
+        Saved Jobs
+      </h2>
+
+      <button
+        class="close"
+        type="button"
+        onclick="closeModal('savedJobsModal')">
+
+        ×
+
+      </button>
+
+    </div>
+
+
+    <div id="savedJobsContent"></div>
+
+  </div>
+
+</div>
+
+
+<!-- =======================================================
+     MY JOBS MODAL
+     ======================================================= -->
+
+<div
+  class="modal"
+  id="myJobsModal">
 
   <div class="modal-box">
 
@@ -1108,6 +2281,7 @@ body{
 
       <button
         class="close"
+        type="button"
         onclick="closeModal('myJobsModal')">
 
         ×
@@ -1115,6 +2289,7 @@ body{
       </button>
 
     </div>
+
 
     <div id="myJobsContent"></div>
 
@@ -1126,227 +2301,292 @@ body{
 <script>
 
 /* =========================================================
-   HAVKAR JOBS
-   =========================================================
-   Professional job listing
-   Search
-   Filters
-   Job details
-   Advertisement image upload
-   Image preview
-   Monthly subscription plans
-   My Jobs
-   Payment-ready structure
-   Supabase-ready structure
+   HAVKAR JOBS ENGINE
    ========================================================= */
 
 
-/* SUPABASE */
+/* =========================================================
+   DEMO JOB DATA
+   ========================================================= */
 
-const SUPABASE_URL = "";
-
-const SUPABASE_PUBLISHABLE_KEY =
-"sb_publishable_h6RUZrukEovZn_N3XLDukw_Ui67UsWG";
-
-let supabaseClient = null;
-
-if(
-  SUPABASE_URL &&
-  SUPABASE_PUBLISHABLE_KEY &&
-  window.supabase
-){
-
-  supabaseClient =
-    window.supabase.createClient(
-      SUPABASE_URL,
-      SUPABASE_PUBLISHABLE_KEY
-    );
-
-}
-
-
-/* DEMO JOBS */
-
-let jobs = [
+const demoJobs = [
 
   {
     id:"demo-1",
+
     title:"Senior Frontend Developer",
+
     company:"Tech Solutions Italy",
+
     location:"Milan, Italy",
+
     type:"Full-time",
+
     salary:"€45k-65k",
+
     skills:[
       "React",
       "JavaScript",
       "CSS"
     ],
+
     description:
       "We are looking for an experienced frontend developer to join our growing technology team.",
+
     icon:"💼",
+
     image:"",
+
     owner:false,
+
     status:"active"
   },
 
 
   {
     id:"demo-2",
+
     title:"Marketing Manager",
+
     company:"Digital Agency Rome",
+
     location:"Rome, Italy",
+
     type:"Full-time",
+
     salary:"€35k-50k",
+
     skills:[
       "Marketing",
       "SEO",
       "Social Media"
     ],
+
     description:
       "Manage digital campaigns, social media strategy and marketing projects.",
+
     icon:"🏢",
+
     image:"",
+
     owner:false,
+
     status:"active"
   },
 
 
   {
     id:"demo-3",
+
     title:"Remote Customer Support",
+
     company:"Global Services",
+
     location:"Remote",
+
     type:"Part-time",
+
     salary:"€20k-30k",
+
     skills:[
       "Customer Service",
       "English"
     ],
+
     description:
       "Remote customer support position for an international service company.",
+
     icon:"🌐",
+
     image:"",
+
     owner:false,
+
     status:"active"
   },
 
 
   {
     id:"demo-4",
+
     title:"Graphic Designer",
+
     company:"Creative Studio",
+
     location:"Florence, Italy",
+
     type:"Freelance",
+
     salary:"€30k-40k",
+
     skills:[
       "Photoshop",
       "Illustrator"
     ],
+
     description:
       "Freelance graphic designer for branding and digital projects.",
+
     icon:"🎨",
+
     image:"",
+
     owner:false,
+
     status:"active"
   },
 
 
   {
     id:"demo-5",
+
     title:"Restaurant Server",
+
     company:"Italian Restaurant",
+
     location:"Venice, Italy",
+
     type:"Part-time",
+
     salary:"€18k-25k",
+
     skills:[
       "Hospitality",
       "Italian"
     ],
+
     description:
       "Restaurant server position in a busy Italian restaurant.",
+
     icon:"🍕",
+
     image:"",
+
     owner:false,
+
     status:"active"
   }
 
 ];
 
 
-let selectedFilter = "All";
+let jobs = [];
 
+let selectedFilter = "All";
 
 let selectedPlan = {
   name:"Basic",
   price:9.99
 };
 
-
-/* TEMPORARY IMAGE */
-
 let selectedJobImage = "";
 
 
-/* LOAD LOCAL JOBS */
+/* =========================================================
+   STORAGE KEYS
+   ========================================================= */
+
+const JOBS_STORAGE_KEY =
+  "havkar_jobs";
+
+const SAVED_STORAGE_KEY =
+  "havkar_saved_jobs";
+
+
+/* =========================================================
+   LOAD JOBS
+   ========================================================= */
 
 function loadLocalJobs(){
 
-  const saved =
-    localStorage.getItem("havkar_jobs");
+  jobs = [...demoJobs];
 
-  if(saved){
 
-    try{
+  try{
 
-      const localJobs =
-        JSON.parse(saved);
-
-      jobs = [
-        ...localJobs,
-        ...jobs.filter(
-          j =>
-            !localJobs.some(
-              x => x.id === j.id
-            )
-        )
-      ];
-
-    }catch(error){
-
-      console.error(
-        "Could not load local jobs:",
-        error
+    const stored =
+      localStorage.getItem(
+        JOBS_STORAGE_KEY
       );
 
-    }
+
+    if(!stored) return;
+
+
+    const localJobs =
+      JSON.parse(stored);
+
+
+    if(!Array.isArray(localJobs)) return;
+
+
+    localJobs.forEach(localJob => {
+
+      if(!localJob || !localJob.id) return;
+
+
+      const existingIndex =
+        jobs.findIndex(
+          job =>
+            String(job.id) ===
+            String(localJob.id)
+        );
+
+
+      if(existingIndex >= 0){
+
+        jobs[existingIndex] =
+          localJob;
+
+      }else{
+
+        jobs.unshift(localJob);
+
+      }
+
+    });
+
+
+  }catch(error){
+
+    console.error(
+      "HAVKAR: Could not load jobs.",
+      error
+    );
 
   }
 
 }
 
 
-/* SAVE LOCAL JOBS */
+/* =========================================================
+   SAVE OWNER JOBS
+   ========================================================= */
 
 function saveLocalJobs(){
 
-  const ownJobs =
-    jobs.filter(
-      j => j.owner === true
-    );
-
   try{
 
+    const ownJobs =
+      jobs.filter(
+        job =>
+          job.owner === true
+      );
+
+
     localStorage.setItem(
-      "havkar_jobs",
+      JOBS_STORAGE_KEY,
       JSON.stringify(ownJobs)
     );
+
 
   }catch(error){
 
     console.error(
-      "Could not save jobs:",
+      "HAVKAR: Could not save jobs.",
       error
     );
+
 
     alert(
       "The advertisement could not be saved on this device."
@@ -1357,190 +2597,180 @@ function saveLocalJobs(){
 }
 
 
-/* IMAGE UPLOAD */
+/* =========================================================
+   SAVED JOBS STORAGE
+   ========================================================= */
 
-function handleImageUpload(event){
+function getSavedJobIds(){
 
-  const file =
-    event.target.files &&
-    event.target.files[0];
+  try{
 
-  if(!file) return;
-
-
-  if(!file.type.startsWith("image/")){
-
-    alert(
-      "Please select an image file."
-    );
-
-    event.target.value = "";
-
-    return;
-
-  }
-
-
-  /*
-    Resize and compress the image before
-    saving it locally.
-
-    This keeps the prototype lightweight
-    and makes it ready for later migration
-    to Supabase Storage.
-  */
-
-  const reader =
-    new FileReader();
-
-
-  reader.onload = function(e){
-
-    const img =
-      new Image();
-
-
-    img.onload = function(){
-
-      const maxSize = 1200;
-
-      let width = img.width;
-      let height = img.height;
-
-
-      if(width > maxSize){
-
-        height =
-          height * maxSize / width;
-
-        width =
-          maxSize;
-
-      }
-
-
-      if(height > maxSize){
-
-        width =
-          width * maxSize / height;
-
-        height =
-          maxSize;
-
-      }
-
-
-      const canvas =
-        document.createElement("canvas");
-
-      canvas.width =
-        Math.round(width);
-
-      canvas.height =
-        Math.round(height);
-
-
-      const ctx =
-        canvas.getContext("2d");
-
-      ctx.drawImage(
-        img,
-        0,
-        0,
-        canvas.width,
-        canvas.height
+    const stored =
+      localStorage.getItem(
+        SAVED_STORAGE_KEY
       );
 
 
-      selectedJobImage =
-        canvas.toDataURL(
-          "image/jpeg",
-          0.82
-        );
+    if(!stored) return [];
 
 
-      document.getElementById(
-        "imagePreviewImg"
-      ).src =
-        selectedJobImage;
+    const parsed =
+      JSON.parse(stored);
 
 
-      document.getElementById(
-        "imagePreview"
-      ).classList.add("show");
+    if(!Array.isArray(parsed)){
 
-    };
+      return [];
 
-
-    img.src =
-      e.target.result;
-
-  };
+    }
 
 
-  reader.readAsDataURL(file);
+    return parsed.map(
+      id => String(id)
+    );
+
+
+  }catch(error){
+
+    console.error(
+      "HAVKAR: Could not load saved jobs.",
+      error
+    );
+
+    return [];
+
+  }
 
 }
 
 
-/* REMOVE IMAGE */
+function saveSavedJobIds(ids){
 
-function removeJobImage(event){
+  try{
+
+    localStorage.setItem(
+      SAVED_STORAGE_KEY,
+      JSON.stringify(ids)
+    );
+
+
+  }catch(error){
+
+    console.error(
+      "HAVKAR: Could not save saved jobs.",
+      error
+    );
+
+  }
+
+}
+
+
+function isJobSaved(jobId){
+
+  return getSavedJobIds()
+    .includes(
+      String(jobId)
+    );
+
+}
+
+
+/* =========================================================
+   TOGGLE SAVE
+   ========================================================= */
+
+function toggleSaveJob(
+  event,
+  jobId
+){
 
   if(event){
+
+    event.preventDefault();
 
     event.stopPropagation();
 
   }
 
 
-  selectedJobImage = "";
+  const id =
+    String(jobId);
 
 
-  document.getElementById(
-    "jobImage"
-  ).value = "";
+  let saved =
+    getSavedJobIds();
 
 
-  document.getElementById(
-    "imagePreviewImg"
-  ).src = "";
+  if(saved.includes(id)){
+
+    saved =
+      saved.filter(
+        savedId =>
+          savedId !== id
+      );
+
+  }else{
+
+    saved.push(id);
+
+  }
 
 
-  document.getElementById(
-    "imagePreview"
-  ).classList.remove("show");
+  saveSavedJobIds(saved);
+
+
+  renderJobs();
 
 }
 
 
-/* RENDER JOB IMAGE */
+/* =========================================================
+   RENDER JOB IMAGE
+   ========================================================= */
 
 function renderJobImage(job){
 
-  if(job.image){
+  if(
+    job.image &&
+    typeof job.image === "string"
+  ){
 
     return `
+
       <div class="logo">
+
         <img
           src="${escapeHTML(job.image)}"
-          alt="Company image">
+          alt="Company image"
+          loading="lazy"
+        >
+
       </div>
+
     `;
 
   }
 
 
   return `
+
     <div class="logo">
-      ${job.icon || "💼"}
+
+      ${escapeHTML(
+        job.icon || "💼"
+      )}
+
     </div>
+
   `;
 
 }
 
 
-/* RENDER JOBS */
+/* =========================================================
+   RENDER JOBS
+   ========================================================= */
 
 function renderJobs(){
 
@@ -1550,38 +2780,79 @@ function renderJobs(){
     );
 
 
+  const searchInput =
+    document.getElementById(
+      "searchInput"
+    );
+
+
   const search =
-    document
-      .getElementById(
-        "searchInput"
-      )
-      .value
-      .toLowerCase()
-      .trim();
+    searchInput
+      ? searchInput.value
+          .toLowerCase()
+          .trim()
+      : "";
 
 
-  let filtered =
+  const filtered =
     jobs.filter(job => {
+
 
       const filterOK =
         selectedFilter === "All" ||
         job.type === selectedFilter;
 
 
+      const skills =
+        Array.isArray(job.skills)
+          ? job.skills.join(" ")
+          : "";
+
+
       const searchText =
         (
-          job.title + " " +
-          job.company + " " +
-          job.location + " " +
-          job.skills.join(" ")
-        ).toLowerCase();
+          String(job.title || "") +
+          " " +
+          String(job.company || "") +
+          " " +
+          String(job.location || "") +
+          " " +
+          String(job.type || "") +
+          " " +
+          skills +
+          " " +
+          String(job.description || "")
+        )
+        .toLowerCase();
 
 
-      return filterOK &&
-        (!search ||
-          searchText.includes(search));
+      return (
+        filterOK &&
+        (
+          !search ||
+          searchText.includes(search)
+        )
+      );
 
     });
+
+
+  const resultCount =
+    document.getElementById(
+      "resultCount"
+    );
+
+
+  if(resultCount){
+
+    resultCount.textContent =
+      `${filtered.length} ${
+        filtered.length === 1
+          ? "job"
+          : "jobs"
+      }`;
+
+  }
 
 
   if(!filtered.length){
@@ -1590,13 +2861,18 @@ function renderJobs(){
 
       <div class="empty">
 
-        <i
-          class="fas fa-search"
-          style="font-size:40px;margin-bottom:15px;">
-        </i>
+        <div class="empty-icon">
+
+          <i class="fas fa-search"></i>
+
+        </div>
+
+        <strong>
+          No jobs found
+        </strong>
 
         <p>
-          No jobs found.
+          Try another keyword or change the job filter.
         </p>
 
       </div>
@@ -1610,93 +2886,161 @@ function renderJobs(){
 
   list.innerHTML =
 
-    filtered.map(job => `
+    filtered.map(job => {
 
-      <article
-        class="job-card"
-        onclick="openJob('${escapeJS(job.id)}')">
+      const saved =
+        isJobSaved(job.id);
 
-        <div class="job-top">
 
-          ${renderJobImage(job)}
+      const skills =
+        Array.isArray(job.skills)
+          ? job.skills
+          : [];
 
-          <div class="job-main">
 
-            <div class="job-title">
-              ${escapeHTML(job.title)}
+      return `
+
+        <article
+          class="job-card"
+          onclick="
+            openJob('${escapeJS(job.id)}')
+          ">
+
+
+          <div class="job-top">
+
+            ${renderJobImage(job)}
+
+
+            <div class="job-main">
+
+              <div class="job-title">
+
+                ${escapeHTML(
+                  job.title
+                )}
+
+              </div>
+
+
+              <div class="company">
+
+                ${escapeHTML(
+                  job.company
+                )}
+
+              </div>
+
             </div>
 
-            <div class="company">
-              ${escapeHTML(job.company)}
+
+            <div class="salary">
+
+              ${escapeHTML(
+                job.salary ||
+                "Negotiable"
+              )}
+
+            </div>
+
+
+            <div class="job-actions">
+
+              <button
+                class="save-btn ${
+                  saved ? "saved" : ""
+                }"
+                type="button"
+                onclick="
+                  toggleSaveJob(
+                    event,
+                    '${escapeJS(job.id)}'
+                  )
+                "
+                aria-label="${
+                  saved
+                    ? "Remove saved job"
+                    : "Save job"
+                }">
+
+                <i class="${
+                  saved
+                    ? "fas"
+                    : "far"
+                } fa-bookmark"></i>
+
+              </button>
+
             </div>
 
           </div>
 
-          <div class="salary">
 
-            ${escapeHTML(
-              job.salary || "Negotiable"
-            )}
+          <div class="meta">
+
+            <span>
+
+              <i class="fas fa-location-dot"></i>
+
+              ${escapeHTML(
+                job.location ||
+                "Not specified"
+              )}
+
+            </span>
+
+
+            <span>
+
+              <i class="fas fa-clock"></i>
+
+              ${escapeHTML(
+                job.type ||
+                "Not specified"
+              )}
+
+            </span>
 
           </div>
 
-        </div>
+
+          <div class="tags">
+
+            ${
+              skills
+                .slice(0,5)
+                .map(
+                  skill => `
+                    <span class="tag">
+                      ${escapeHTML(skill)}
+                    </span>
+                  `
+                )
+                .join("")
+            }
+
+          </div>
 
 
-        <div class="meta">
+        </article>
 
-          <span>
+      `;
 
-            <i class="fas fa-location-dot"></i>
-
-            ${escapeHTML(
-              job.location
-            )}
-
-          </span>
-
-
-          <span>
-
-            <i class="fas fa-clock"></i>
-
-            ${escapeHTML(
-              job.type
-            )}
-
-          </span>
-
-        </div>
-
-
-        <div class="tags">
-
-          ${
-            job.skills.map(
-              skill =>
-                `<span class="tag">
-                  ${escapeHTML(skill)}
-                </span>`
-            ).join("")
-          }
-
-        </div>
-
-      </article>
-
-    `).join("");
+    }).join("");
 
 }
 
 
-/* OPEN JOB */
+/* =========================================================
+   OPEN JOB DETAIL
+   ========================================================= */
 
 function openJob(id){
 
   const job =
     jobs.find(
-      j =>
-        String(j.id) ===
+      item =>
+        String(item.id) ===
         String(id)
     );
 
@@ -1704,37 +3048,60 @@ function openJob(id){
   if(!job) return;
 
 
+  const skills =
+    Array.isArray(job.skills)
+      ? job.skills
+      : [];
+
+
   document.getElementById(
     "detailTitle"
   ).textContent =
-    job.title;
+    job.title || "Job details";
 
 
   const imageHTML =
     job.image
-    ? `
-      <img
-        class="detail-image"
-        src="${escapeHTML(job.image)}"
-        alt="Advertisement image">
-    `
-    : "";
+      ? `
+
+        <img
+          class="detail-image"
+          src="${escapeHTML(job.image)}"
+          alt="Advertisement image"
+        >
+
+      `
+      : "";
+
+
+  const saved =
+    isJobSaved(job.id);
 
 
   const statusHTML =
     job.status === "active"
-    ? `
-      <span class="status-badge status-active">
-        <i class="fas fa-check-circle"></i>
-        Active
-      </span>
-    `
-    : `
-      <span class="status-badge status-pending">
-        <i class="fas fa-clock"></i>
-        Pending payment
-      </span>
-    `;
+      ? `
+
+        <span class="status-badge status-active">
+
+          <i class="fas fa-check-circle"></i>
+
+          Active
+
+        </span>
+
+      `
+      : `
+
+        <span class="status-badge status-pending">
+
+          <i class="fas fa-clock"></i>
+
+          Pending payment
+
+        </span>
+
+      `;
 
 
   document.getElementById(
@@ -1748,22 +3115,53 @@ function openJob(id){
 
       ${renderJobImage(job)}
 
+
       <div class="job-main">
 
         <div class="job-title">
-          ${escapeHTML(job.title)}
+
+          ${escapeHTML(
+            job.title
+          )}
+
         </div>
 
+
         <div class="company">
-          ${escapeHTML(job.company)}
+
+          ${escapeHTML(
+            job.company
+          )}
+
         </div>
 
       </div>
+
+
+      <button
+        class="save-btn ${
+          saved ? "saved" : ""
+        }"
+        type="button"
+        onclick="
+          toggleSaveFromDetail(
+            '${escapeJS(job.id)}'
+          )
+        ">
+
+        <i class="${
+          saved
+            ? "fas"
+            : "far"
+        } fa-bookmark"></i>
+
+      </button>
 
     </div>
 
 
     <div style="margin-top:20px">
+
 
       <div class="detail-row">
 
@@ -1772,7 +3170,12 @@ function openJob(id){
         </span>
 
         <span class="detail-value">
-          ${escapeHTML(job.location)}
+
+          ${escapeHTML(
+            job.location ||
+            "Not specified"
+          )}
+
         </span>
 
       </div>
@@ -1781,11 +3184,16 @@ function openJob(id){
       <div class="detail-row">
 
         <span class="detail-label">
-          Type
+          Job type
         </span>
 
         <span class="detail-value">
-          ${escapeHTML(job.type)}
+
+          ${escapeHTML(
+            job.type ||
+            "Not specified"
+          )}
+
         </span>
 
       </div>
@@ -1798,10 +3206,12 @@ function openJob(id){
         </span>
 
         <span class="detail-value">
+
           ${escapeHTML(
             job.salary ||
             "Negotiable"
           )}
+
         </span>
 
       </div>
@@ -1814,10 +3224,13 @@ function openJob(id){
         </span>
 
         <span class="detail-value">
+
           ${statusHTML}
+
         </span>
 
       </div>
+
 
     </div>
 
@@ -1828,15 +3241,18 @@ function openJob(id){
         Description
       </h3>
 
+
       <p
         style="
-          color:#666;
+          color:#68706b;
           line-height:1.7;
           margin-top:8px;
+          font-size:14px;
         ">
 
         ${escapeHTML(
-          job.description || ""
+          job.description ||
+          "No description provided."
         )}
 
       </p>
@@ -1850,15 +3266,25 @@ function openJob(id){
         Skills
       </h3>
 
+
       <div class="tags">
 
         ${
-          job.skills.map(
-            skill =>
-              `<span class="tag">
-                ${escapeHTML(skill)}
-              </span>`
-          ).join("")
+          skills.length
+            ? skills
+                .map(
+                  skill => `
+                    <span class="tag">
+                      ${escapeHTML(skill)}
+                    </span>
+                  `
+                )
+                .join("")
+            : `
+              <span class="tag">
+                General
+              </span>
+            `
         }
 
       </div>
@@ -1869,42 +3295,42 @@ function openJob(id){
     ${
       job.owner
 
-      ? `
+        ? `
 
-        <button
-          class="secondary"
-          onclick="
-            alert(
-              'This is your job advertisement.'
-            )
-          ">
+          <button
+            class="secondary"
+            type="button"
+            onclick="
+              closeModal('detailModal');
+              openMyJobs();
+            ">
 
-          <i class="fas fa-user"></i>
+            <i class="fas fa-user"></i>
 
-          Your advertisement
+            Manage your advertisement
 
-        </button>
+          </button>
 
-      `
+        `
 
-      :
+        : `
 
-      `
+          <button
+            class="primary"
+            type="button"
+            onclick="
+              applyJob(
+                '${escapeJS(job.id)}'
+              )
+            ">
 
-        <button
-          class="primary"
-          onclick="
-            applyJob('${escapeJS(job.id)}')
-          ">
+            <i class="fas fa-paper-plane"></i>
 
-          <i class="fas fa-paper-plane"></i>
+            Apply for this job
 
-          Apply for this job
+          </button>
 
-        </button>
-
-      `
-
+        `
     }
 
   `;
@@ -1917,14 +3343,33 @@ function openJob(id){
 }
 
 
-/* APPLY */
+/* =========================================================
+   SAVE FROM DETAIL
+   ========================================================= */
+
+function toggleSaveFromDetail(jobId){
+
+  toggleSaveJob(
+    null,
+    jobId
+  );
+
+
+  openJob(jobId);
+
+}
+
+
+/* =========================================================
+   APPLY
+   ========================================================= */
 
 function applyJob(id){
 
   const job =
     jobs.find(
-      j =>
-        String(j.id) ===
+      item =>
+        String(item.id) ===
         String(id)
     );
 
@@ -1945,7 +3390,9 @@ function applyJob(id){
 }
 
 
-/* OPEN POST JOB */
+/* =========================================================
+   OPEN POST JOB
+   ========================================================= */
 
 function openPostJob(){
 
@@ -1958,43 +3405,43 @@ function openPostJob(){
 }
 
 
-/* RESET POST FORM */
+/* =========================================================
+   RESET POST FORM
+   ========================================================= */
 
 function resetPostForm(){
 
-  document.getElementById(
-    "jobTitle"
-  ).value = "";
+  const fields = [
+
+    "jobTitle",
+    "jobCompany",
+    "jobLocation",
+    "jobSalary",
+    "jobSkills",
+    "jobDescription"
+
+  ];
 
 
-  document.getElementById(
-    "jobCompany"
-  ).value = "";
+  fields.forEach(id => {
+
+    const element =
+      document.getElementById(id);
 
 
-  document.getElementById(
-    "jobLocation"
-  ).value = "";
+    if(element){
+
+      element.value = "";
+
+    }
+
+  });
 
 
   document.getElementById(
     "jobType"
-  ).value = "Full-time";
-
-
-  document.getElementById(
-    "jobSalary"
-  ).value = "";
-
-
-  document.getElementById(
-    "jobSkills"
-  ).value = "";
-
-
-  document.getElementById(
-    "jobDescription"
-  ).value = "";
+  ).value =
+    "Full-time";
 
 
   removeJobImage();
@@ -2009,8 +3456,8 @@ function resetPostForm(){
   document
     .querySelectorAll(".plan")
     .forEach(
-      p =>
-        p.classList.remove(
+      plan =>
+        plan.classList.remove(
           "selected"
         )
     );
@@ -2045,15 +3492,20 @@ function resetPostForm(){
 }
 
 
-/* SELECT MONTHLY PLAN */
+/* =========================================================
+   SELECT PLAN
+   ========================================================= */
 
 function selectPlan(element){
+
+  if(!element) return;
+
 
   document
     .querySelectorAll(".plan")
     .forEach(
-      p =>
-        p.classList.remove(
+      plan =>
+        plan.classList.remove(
           "selected"
         )
     );
@@ -2091,9 +3543,268 @@ function selectPlan(element){
 }
 
 
-/* SUBMIT JOB */
+/* =========================================================
+   IMAGE UPLOAD
+   ========================================================= */
 
-async function submitJob(){
+document.getElementById(
+  "jobImage"
+).addEventListener(
+  "change",
+  handleImageUpload
+);
+
+
+function handleImageUpload(event){
+
+  const file =
+    event.target.files &&
+    event.target.files[0];
+
+
+  if(!file) return;
+
+
+  if(
+    !file.type ||
+    !file.type.startsWith("image/")
+  ){
+
+    alert(
+      "Please select a valid image file."
+    );
+
+
+    event.target.value = "";
+
+    return;
+
+  }
+
+
+  const maxFileSize =
+    8 * 1024 * 1024;
+
+
+  if(file.size > maxFileSize){
+
+    alert(
+      "The image is too large. Please choose an image smaller than 8 MB."
+    );
+
+
+    event.target.value = "";
+
+    return;
+
+  }
+
+
+  const reader =
+    new FileReader();
+
+
+  reader.onload = function(e){
+
+    const img =
+      new Image();
+
+
+    img.onload = function(){
+
+      const maxSize =
+        1200;
+
+
+      let width =
+        img.width;
+
+
+      let height =
+        img.height;
+
+
+      if(
+        width > maxSize ||
+        height > maxSize
+      ){
+
+        const ratio =
+          Math.min(
+            maxSize / width,
+            maxSize / height
+          );
+
+
+        width =
+          width * ratio;
+
+
+        height =
+          height * ratio;
+
+      }
+
+
+      const canvas =
+        document.createElement(
+          "canvas"
+        );
+
+
+      canvas.width =
+        Math.round(width);
+
+
+      canvas.height =
+        Math.round(height);
+
+
+      const context =
+        canvas.getContext(
+          "2d"
+        );
+
+
+      if(!context){
+
+        alert(
+          "The image could not be processed."
+        );
+
+        return;
+
+      }
+
+
+      context.drawImage(
+        img,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
+
+      selectedJobImage =
+        canvas.toDataURL(
+          "image/jpeg",
+          .82
+        );
+
+
+      document.getElementById(
+        "imagePreviewImg"
+      ).src =
+        selectedJobImage;
+
+
+      document.getElementById(
+        "imagePreview"
+      ).classList.add(
+        "show"
+      );
+
+    };
+
+
+    img.onerror =
+      function(){
+
+        alert(
+          "The selected image could not be opened."
+        );
+
+      };
+
+
+    img.src =
+      e.target.result;
+
+  };
+
+
+  reader.onerror =
+    function(){
+
+      alert(
+        "The image could not be read."
+      );
+
+  };
+
+
+  reader.readAsDataURL(file);
+
+}
+
+
+/* =========================================================
+   REMOVE IMAGE
+   ========================================================= */
+
+function removeJobImage(event){
+
+  if(event){
+
+    event.preventDefault();
+
+    event.stopPropagation();
+
+  }
+
+
+  selectedJobImage = "";
+
+
+  const input =
+    document.getElementById(
+      "jobImage"
+    );
+
+
+  if(input){
+
+    input.value = "";
+
+  }
+
+
+  const previewImage =
+    document.getElementById(
+      "imagePreviewImg"
+    );
+
+
+  if(previewImage){
+
+    previewImage.src = "";
+
+  }
+
+
+  const preview =
+    document.getElementById(
+      "imagePreview"
+    );
+
+
+  if(preview){
+
+    preview.classList.remove(
+      "show"
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   SUBMIT JOB
+   ========================================================= */
+
+function submitJob(){
 
   const title =
     document.getElementById(
@@ -2131,7 +3842,8 @@ async function submitJob(){
     ).value
     .split(",")
     .map(
-      x => x.trim()
+      item =>
+        item.trim()
     )
     .filter(Boolean);
 
@@ -2150,7 +3862,40 @@ async function submitJob(){
   ){
 
     alert(
-      "Please complete the required fields."
+      "Please complete all required fields."
+    );
+
+    return;
+
+  }
+
+
+  if(title.length < 2){
+
+    alert(
+      "Please enter a valid job title."
+    );
+
+    return;
+
+  }
+
+
+  if(company.length < 2){
+
+    alert(
+      "Please enter a valid company name."
+    );
+
+    return;
+
+  }
+
+
+  if(description.length < 10){
+
+    alert(
+      "Please provide a more detailed job description."
     );
 
     return;
@@ -2162,7 +3907,11 @@ async function submitJob(){
 
     id:
       "job-" +
-      Date.now(),
+      Date.now() +
+      "-" +
+      Math.random()
+        .toString(36)
+        .slice(2,8),
 
     title,
 
@@ -2178,19 +3927,17 @@ async function submitJob(){
 
     skills:
       skills.length
-      ? skills
-      : ["General"],
+        ? skills
+        : ["General"],
 
     description,
 
-    icon:
-      "💼",
+    icon:"💼",
 
     image:
       selectedJobImage,
 
-    owner:
-      true,
+    owner:true,
 
     status:
       "pending_payment",
@@ -2207,21 +3954,6 @@ async function submitJob(){
   };
 
 
-  /*
-    Advertisement is stored locally
-    for the prototype.
-
-    In the production version,
-    the image will be uploaded to
-    Supabase Storage and the job
-    record will be stored in Supabase.
-
-    The job remains pending_payment
-    until the payment provider confirms
-    the subscription.
-  */
-
-
   jobs.unshift(
     newJob
   );
@@ -2235,6 +3967,9 @@ async function submitJob(){
   );
 
 
+  renderJobs();
+
+
   showPaymentScreen(
     newJob
   );
@@ -2242,19 +3977,24 @@ async function submitJob(){
 }
 
 
-/* PAYMENT SCREEN */
+/* =========================================================
+   PAYMENT SCREEN
+   ========================================================= */
 
 function showPaymentScreen(job){
 
   const imageHTML =
     job.image
-    ? `
-      <img
-        class="detail-image"
-        src="${escapeHTML(job.image)}"
-        alt="Advertisement image">
-    `
-    : "";
+      ? `
+
+        <img
+          class="detail-image"
+          src="${escapeHTML(job.image)}"
+          alt="Advertisement image"
+        >
+
+      `
+      : "";
 
 
   document.getElementById(
@@ -2265,6 +4005,7 @@ function showPaymentScreen(job){
 
 
     <div class="summary">
+
 
       <div class="detail-row">
 
@@ -2321,6 +4062,7 @@ function showPaymentScreen(job){
 
       </div>
 
+
     </div>
 
 
@@ -2329,15 +4071,15 @@ function showPaymentScreen(job){
       Your advertisement is currently
       <strong>pending payment</strong>.
 
-      The advertisement must not become
-      publicly active until the payment
-      provider confirms the subscription.
+      It will not be treated as an active paid advertisement
+      until the real payment provider confirms the transaction.
 
     </div>
 
 
     <button
       class="primary"
+      type="button"
       onclick="
         startRealPayment(
           '${escapeJS(job.id)}'
@@ -2355,6 +4097,7 @@ function showPaymentScreen(job){
 
     <button
       class="secondary"
+      type="button"
       onclick="
         closeModal('paymentModal')
       ">
@@ -2373,44 +4116,50 @@ function showPaymentScreen(job){
 }
 
 
-/* REAL PAYMENT */
+/* =========================================================
+   PAYMENT
+   ========================================================= */
 
 function startRealPayment(jobId){
 
   /*
     IMPORTANT:
+    No fake payment confirmation.
 
-    This function does NOT pretend
-    that payment has happened.
-
-    A real payment provider must be
-    connected through a secure backend
-    or Supabase Edge Function.
-
-    Until the provider confirms payment,
-    the advertisement remains:
-
-    pending_payment
-
+    A real payment provider/backend
+    must be connected before activation.
   */
 
 
+  const job =
+    jobs.find(
+      item =>
+        String(item.id) ===
+        String(jobId)
+    );
+
+
+  if(!job) return;
+
+
   alert(
-    "Payment gateway is not connected yet. " +
-    "The advertisement has NOT been activated."
+    "The payment gateway is not connected yet. " +
+    "Your advertisement has NOT been activated."
   );
 
 }
 
 
-/* MY JOBS */
+/* =========================================================
+   MY JOBS
+   ========================================================= */
 
 function openMyJobs(){
 
-  const own =
+  const ownJobs =
     jobs.filter(
-      j =>
-        j.owner === true
+      job =>
+        job.owner === true
     );
 
 
@@ -2420,31 +4169,38 @@ function openMyJobs(){
     );
 
 
-  if(!own.length){
+  if(!ownJobs.length){
 
     container.innerHTML = `
 
       <div class="empty">
 
-        <i
-          class="fas fa-briefcase"
-          style="
-            font-size:45px;
-            margin-bottom:15px;
-          ">
-        </i>
+        <div class="empty-icon">
+
+          <i class="fas fa-briefcase"></i>
+
+        </div>
+
+
+        <strong>
+          You have not posted any jobs yet.
+        </strong>
+
 
         <p>
-          You have not posted any jobs yet.
+          Create your first advertisement and publish your job opportunity.
         </p>
 
 
         <button
           class="primary"
+          type="button"
           onclick="
             closeModal('myJobsModal');
-            openPostJob()
+            openPostJob();
           ">
+
+          <i class="fas fa-plus"></i>
 
           Post your first job
 
@@ -2454,80 +4210,107 @@ function openMyJobs(){
 
     `;
 
-  }
-
-  else{
+  }else{
 
     container.innerHTML =
 
-      own.map(
-        job => `
+      ownJobs
+        .map(job => {
 
-          <div
-            class="job-card"
-            onclick="
-              openJob(
-                '${escapeJS(job.id)}'
-              )
-            ">
+          const status =
+            job.status === "active"
+              ? `
+                <span class="status-badge status-active">
+                  <i class="fas fa-check-circle"></i>
+                  Active
+                </span>
+              `
+              : `
+                <span class="status-badge status-pending">
+                  <i class="fas fa-clock"></i>
+                  Pending payment
+                </span>
+              `;
 
-            <div class="job-top">
 
-              ${renderJobImage(job)}
+          return `
 
-              <div class="job-main">
+            <div
+              class="saved-job-card"
+              onclick="
+                openJob(
+                  '${escapeJS(job.id)}'
+                )
+              ">
 
-                <div class="job-title">
 
-                  ${escapeHTML(
-                    job.title
-                  )}
+              <div class="job-top">
+
+                ${renderJobImage(job)}
+
+
+                <div class="job-main">
+
+                  <div class="job-title">
+
+                    ${escapeHTML(
+                      job.title
+                    )}
+
+                  </div>
+
+
+                  <div class="company">
+
+                    ${escapeHTML(
+                      job.company
+                    )}
+
+                  </div>
 
                 </div>
 
-                <div class="company">
+
+                <div class="salary">
 
                   ${escapeHTML(
-                    job.company
+                    job.salary ||
+                    "Negotiable"
                   )}
 
                 </div>
 
               </div>
 
-            </div>
+
+              <div class="job-status-line">
+
+                ${status}
 
 
-            <div class="meta">
-
-              <span>
-                Plan:
-                ${escapeHTML(
-                  job.plan
-                )}
-              </span>
+                <span>
+                  ${escapeHTML(
+                    job.plan ||
+                    "Basic"
+                  )}
+                </span>
 
 
-              <span>
-                €${Number(
-                  job.monthly_fee
-                ).toFixed(2)}/month
-              </span>
+                <span>
+                  €${Number(
+                    job.monthly_fee || 0
+                  ).toFixed(2)}/month
+                </span>
 
+              </div>
 
-              <span>
-                Status:
-                ${escapeHTML(
-                  job.status
-                )}
-              </span>
 
             </div>
 
-          </div>
+          `;
 
-        `
-      ).join("");
+        })
+        .join("");
 
   }
 
@@ -2539,7 +4322,325 @@ function openMyJobs(){
 }
 
 
-/* FILTERS */
+/* =========================================================
+   SAVED JOBS
+   ========================================================= */
+
+function openSavedJobs(){
+
+  const savedIds =
+    getSavedJobIds();
+
+
+  const savedJobs =
+    jobs.filter(
+      job =>
+        savedIds.includes(
+          String(job.id)
+        )
+    );
+
+
+  const container =
+    document.getElementById(
+      "savedJobsContent"
+    );
+
+
+  if(!savedJobs.length){
+
+    container.innerHTML = `
+
+      <div class="empty">
+
+        <div class="empty-icon">
+
+          <i class="far fa-bookmark"></i>
+
+        </div>
+
+
+        <strong>
+          No saved jobs
+        </strong>
+
+
+        <p>
+          Tap the bookmark icon on any job to save it here.
+        </p>
+
+      </div>
+
+    `;
+
+  }else{
+
+    container.innerHTML =
+
+      savedJobs
+        .map(job => {
+
+          return `
+
+            <div
+              class="saved-job-card"
+              onclick="
+                openJob(
+                  '${escapeJS(job.id)}'
+                )
+              ">
+
+
+              <div class="job-top">
+
+                ${renderJobImage(job)}
+
+
+                <div class="job-main">
+
+                  <div class="job-title">
+
+                    ${escapeHTML(
+                      job.title
+                    )}
+
+                  </div>
+
+
+                  <div class="company">
+
+                    ${escapeHTML(
+                      job.company
+                    )}
+
+                  </div>
+
+                </div>
+
+
+                <button
+                  class="save-btn saved"
+                  type="button"
+                  onclick="
+                    toggleSaveFromSaved(
+                      event,
+                      '${escapeJS(job.id)}'
+                    )
+                  "
+                  aria-label="Remove saved job">
+
+                  <i class="fas fa-bookmark"></i>
+
+                </button>
+
+              </div>
+
+
+              <div class="meta">
+
+                <span>
+
+                  <i class="fas fa-location-dot"></i>
+
+                  ${escapeHTML(
+                    job.location
+                  )}
+
+                </span>
+
+
+                <span>
+
+                  <i class="fas fa-clock"></i>
+
+                  ${escapeHTML(
+                    job.type
+                  )}
+
+                </span>
+
+              </div>
+
+
+            </div>
+
+          `;
+
+        })
+        .join("");
+
+  }
+
+
+  openModal(
+    "savedJobsModal"
+  );
+
+}
+
+
+/* =========================================================
+   REMOVE FROM SAVED LIST
+   ========================================================= */
+
+function toggleSaveFromSaved(
+  event,
+  jobId
+){
+
+  if(event){
+
+    event.preventDefault();
+
+    event.stopPropagation();
+
+  }
+
+
+  toggleSaveJob(
+    null,
+    jobId
+  );
+
+
+  openSavedJobs();
+
+}
+
+
+/* =========================================================
+   SEARCH
+   ========================================================= */
+
+const searchInput =
+  document.getElementById(
+    "searchInput"
+  );
+
+
+if(searchInput){
+
+  searchInput.addEventListener(
+    "input",
+    function(){
+
+      const clearButton =
+        document.getElementById(
+          "clearSearch"
+        );
+
+
+      if(
+        clearButton
+      ){
+
+        clearButton.classList.toggle(
+          "show",
+          Boolean(
+            searchInput.value.trim()
+          )
+        );
+
+      }
+
+
+      renderJobs();
+
+    }
+  );
+
+
+  searchInput.addEventListener(
+    "keydown",
+    function(event){
+
+      if(
+        event.key ===
+        "Escape"
+      ){
+
+        clearJobSearch();
+
+      }
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   CLEAR SEARCH
+   ========================================================= */
+
+function clearJobSearch(){
+
+  const input =
+    document.getElementById(
+      "searchInput"
+    );
+
+
+  if(!input) return;
+
+
+  input.value = "";
+
+
+  const clearButton =
+    document.getElementById(
+      "clearSearch"
+    );
+
+
+  if(clearButton){
+
+    clearButton.classList.remove(
+      "show"
+    );
+
+  }
+
+
+  renderJobs();
+
+  input.focus();
+
+}
+
+
+/* =========================================================
+   FOCUS SEARCH
+   ========================================================= */
+
+function focusJobSearch(){
+
+  const input =
+    document.getElementById(
+      "searchInput"
+    );
+
+
+  if(!input) return;
+
+
+  input.scrollIntoView({
+    behavior:"smooth",
+    block:"center"
+  });
+
+
+  setTimeout(
+    () => input.focus(),
+    300
+  );
+
+}
+
+
+/* =========================================================
+   FILTERS
+   ========================================================= */
 
 document
   .querySelectorAll(".filter")
@@ -2548,25 +4649,25 @@ document
 
       button.addEventListener(
         "click",
-        () => {
+        function(){
 
           document
             .querySelectorAll(".filter")
             .forEach(
-              b =>
-                b.classList.remove(
+              item =>
+                item.classList.remove(
                   "active"
                 )
             );
 
 
-          button.classList.add(
+          this.classList.add(
             "active"
           );
 
 
           selectedFilter =
-            button.dataset.filter;
+            this.dataset.filter;
 
 
           renderJobs();
@@ -2578,31 +4679,124 @@ document
   );
 
 
-/* MODALS */
+/* =========================================================
+   MODALS
+   ========================================================= */
 
 function openModal(id){
 
-  document
-    .getElementById(id)
-    .classList.add(
-      "show"
-    );
+  const modal =
+    document.getElementById(id);
+
+
+  if(!modal) return;
+
+
+  modal.classList.add(
+    "show"
+  );
+
+
+  document.body.style.overflow =
+    "hidden";
 
 }
 
 
 function closeModal(id){
 
-  document
-    .getElementById(id)
-    .classList.remove(
-      "show"
+  const modal =
+    document.getElementById(id);
+
+
+  if(!modal) return;
+
+
+  modal.classList.remove(
+    "show"
+  );
+
+
+  const anyOpen =
+    document.querySelector(
+      ".modal.show"
     );
+
+
+  if(!anyOpen){
+
+    document.body.style.overflow =
+      "";
+
+  }
 
 }
 
 
-/* HOME */
+/* =========================================================
+   CLOSE MODAL WHEN CLICKING BACKGROUND
+   ========================================================= */
+
+document
+  .querySelectorAll(".modal")
+  .forEach(
+    modal => {
+
+      modal.addEventListener(
+        "click",
+        function(event){
+
+          if(
+            event.target ===
+            modal
+          ){
+
+            closeModal(
+              modal.id
+            );
+
+          }
+
+        }
+      );
+
+    }
+  );
+
+
+/* =========================================================
+   ESCAPE KEY
+   ========================================================= */
+
+document.addEventListener(
+  "keydown",
+  function(event){
+
+    if(
+      event.key ===
+      "Escape"
+    ){
+
+      document
+        .querySelectorAll(
+          ".modal.show"
+        )
+        .forEach(
+          modal =>
+            closeModal(
+              modal.id
+            )
+        );
+
+    }
+
+  }
+);
+
+
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
 
 function goHome(){
 
@@ -2612,7 +4806,33 @@ function goHome(){
 }
 
 
-/* HTML SAFETY */
+function openMessages(){
+
+  window.location.href =
+    "chat.html";
+
+}
+
+
+function openProfile(){
+
+  window.location.href =
+    "profile.html";
+
+}
+
+
+function openAlerts(){
+
+  window.location.href =
+    "alerts.html";
+
+}
+
+
+/* =========================================================
+   HTML ESCAPE
+   ========================================================= */
 
 function escapeHTML(value){
 
@@ -2643,6 +4863,10 @@ function escapeHTML(value){
 }
 
 
+/* =========================================================
+   JAVASCRIPT STRING ESCAPE
+   ========================================================= */
+
 function escapeJS(value){
 
   return String(
@@ -2655,12 +4879,22 @@ function escapeJS(value){
   .replace(
     /'/g,
     "\\'"
+  )
+  .replace(
+    /\r/g,
+    "\\r"
+  )
+  .replace(
+    /\n/g,
+    "\\n"
   );
 
 }
 
 
-/* START */
+/* =========================================================
+   INITIALIZE
+   ========================================================= */
 
 loadLocalJobs();
 
@@ -2669,4 +4903,4 @@ renderJobs();
 </script>
 
 </body>
-  </html>
+    </html>
