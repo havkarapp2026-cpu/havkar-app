@@ -1,444 +1,1760 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HAVKAR - Tickets</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HAVKAR - Tickets</title>
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
-        }
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-        .header {
-            background: linear-gradient(135deg, #689f38, #7cb342);
-            color: white;
-            padding: 15px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
 
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
+body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:#f5f5f5;
+    color:#333;
+    padding-bottom:78px;
+}
 
-        .back-btn {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.5rem;
-            cursor: pointer;
-        }
+button,
+input,
+select{
+    font-family:inherit;
+}
 
-        .header h1 {
-            font-size: 1.3rem;
-            font-weight: 700;
-        }
+button{
+    cursor:pointer;
+}
 
-        .header-right {
-            display: flex;
-            gap: 15px;
-        }
+/* HEADER */
 
-        .icon-btn {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            font-size: 1.1rem;
-            cursor: pointer;
-        }
+.header{
+    background:linear-gradient(135deg,#689f38,#7cb342);
+    color:white;
+    padding:15px 20px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    box-shadow:0 2px 10px rgba(0,0,0,.12);
+    position:sticky;
+    top:0;
+    z-index:50;
+}
 
-        .tabs {
-            background: white;
-            display: flex;
-            padding: 15px 20px;
-            gap: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
+.header-left{
+    display:flex;
+    align-items:center;
+    gap:15px;
+}
 
-        .tab {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            background: #f5f5f5;
-            border-radius: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
+.back-btn{
+    background:none;
+    border:none;
+    color:white;
+    font-size:24px;
+}
 
-        .tab.active {
-            background: #7cb342;
-            color: white;
-        }
+.header h1{
+    font-size:21px;
+    font-weight:700;
+}
 
-        .search-section {
-            padding: 20px;
-            background: white;
-            margin-bottom: 10px;
-        }
+.header-right{
+    display:flex;
+    gap:10px;
+}
 
-        .search-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
+.icon-btn{
+    width:40px;
+    height:40px;
+    border:none;
+    border-radius:50%;
+    background:rgba(255,255,255,.20);
+    color:white;
+    font-size:17px;
+}
 
-        .search-input {
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            font-size: 0.95rem;
-        }
+/* TABS */
 
-        .search-input:focus {
-            outline: none;
-            border-color: #7cb342;
-        }
+.tabs{
+    background:white;
+    display:flex;
+    gap:10px;
+    padding:15px 20px;
+    box-shadow:0 2px 6px rgba(0,0,0,.05);
+}
 
-        .search-btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #689f38, #7cb342);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 700;
-            cursor: pointer;
-            margin-top: 10px;
-        }
+.tab{
+    flex:1;
+    border:none;
+    background:#f3f3f3;
+    padding:12px 8px;
+    border-radius:13px;
+    font-size:15px;
+    font-weight:700;
+    transition:.2s;
+}
 
-        .content {
-            padding: 0 20px 100px;
-        }
+.tab.active{
+    background:#7cb342;
+    color:white;
+}
 
-        .section-title {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #333;
-            margin: 20px 0 15px;
-        }
+/* SEARCH */
 
-        .ticket-card {
-            background: white;
-            border-radius: 15px;
-            padding: 18px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-        }
+.search-section{
+    background:white;
+    padding:18px 20px 20px;
+    margin-bottom:10px;
+}
 
-        .ticket-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
+.search-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-bottom:10px;
+}
 
-        .airline {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+.field{
+    position:relative;
+}
 
-        .airline-logo {
-            width: 45px;
-            height: 45px;
-            background: #f5f5f5;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-        }
+.field i{
+    position:absolute;
+    left:13px;
+    top:50%;
+    transform:translateY(-50%);
+    color:#7cb342;
+    z-index:2;
+}
 
-        .airline-name {
-            font-size: 1rem;
-            font-weight: 700;
-            color: #333;
-        }
+.search-input{
+    width:100%;
+    min-height:50px;
+    border:2px solid #e1e1e1;
+    border-radius:13px;
+    padding:12px 12px 12px 40px;
+    font-size:15px;
+    background:white;
+}
 
-        .price {
-            font-size: 1.3rem;
-            font-weight: 800;
-            color: #558b2f;
-        }
+.search-input:focus{
+    outline:none;
+    border-color:#7cb342;
+}
 
-        .route {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 12px;
-        }
+.search-btn{
+    width:100%;
+    border:none;
+    color:white;
+    background:linear-gradient(135deg,#689f38,#7cb342);
+    padding:15px;
+    border-radius:13px;
+    font-size:16px;
+    font-weight:800;
+    margin-top:3px;
+    box-shadow:0 4px 10px rgba(124,179,66,.25);
+}
 
-        .location {
-            flex: 1;
-        }
+.search-btn:active{
+    transform:scale(.99);
+}
 
-        .city {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: #333;
-        }
+/* EXTRA OPTIONS */
 
-        .time {
-            font-size: 0.9rem;
-            color: #666;
-        }
+.extra-options{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-top:13px;
+    font-size:13px;
+}
 
-        .route-icon {
-            color: #999;
-            font-size: 1.2rem;
-        }
+.swap-btn{
+    width:38px;
+    height:38px;
+    border-radius:50%;
+    border:1px solid #ddd;
+    background:white;
+    color:#689f38;
+}
 
-        .flight-info {
-            display: flex;
-            gap: 20px;
-            padding-top: 12px;
-            border-top: 1px solid #f0f0f0;
-            font-size: 0.85rem;
-            color: #666;
-        }
+.filter-toggle{
+    border:none;
+    background:none;
+    color:#689f38;
+    font-weight:700;
+}
 
-        .info-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
+.filters{
+    display:none;
+    margin-top:14px;
+    padding-top:14px;
+    border-top:1px solid #eee;
+}
 
-        .info-item i {
-            color: #7cb342;
-        }
+.filters.show{
+    display:block;
+}
 
-        .book-btn {
-            width: 100%;
-            padding: 12px;
-            background: #7cb342;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-weight: 700;
-            cursor: pointer;
-            margin-top: 12px;
-        }
+.filter-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
 
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-        }
+.filter-box{
+    border:1px solid #ddd;
+    border-radius:12px;
+    padding:10px;
+    background:#fafafa;
+}
 
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 5px;
-            color: #999;
-            font-size: 0.75rem;
-            cursor: pointer;
-        }
+.filter-box label{
+    display:block;
+    font-size:12px;
+    color:#777;
+    margin-bottom:5px;
+}
 
-        .nav-item.active {
-            color: #7cb342;
-        }
+.filter-box select{
+    width:100%;
+    border:none;
+    background:transparent;
+    font-weight:600;
+}
 
-        .nav-item i {
-            font-size: 1.3rem;
-        }
-    </style>
+/* CONTENT */
+
+.content{
+    padding:0 20px 30px;
+}
+
+.results-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin:18px 0 14px;
+}
+
+.section-title{
+    font-size:18px;
+    font-weight:800;
+}
+
+.result-count{
+    color:#777;
+    font-size:13px;
+}
+
+/* TICKET CARD */
+
+.ticket-card{
+    background:white;
+    border-radius:17px;
+    padding:17px;
+    margin-bottom:15px;
+    box-shadow:0 2px 12px rgba(0,0,0,.07);
+}
+
+.ticket-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:15px;
+}
+
+.airline{
+    display:flex;
+    align-items:center;
+    gap:11px;
+}
+
+.airline-logo{
+    width:45px;
+    height:45px;
+    border-radius:13px;
+    background:#f4f4f4;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:22px;
+}
+
+.airline-name{
+    font-size:16px;
+    font-weight:800;
+}
+
+.flight-number{
+    font-size:12px;
+    color:#999;
+    margin-top:2px;
+}
+
+.price{
+    font-size:20px;
+    font-weight:900;
+    color:#558b2f;
+}
+
+.price small{
+    display:block;
+    text-align:right;
+    color:#999;
+    font-size:10px;
+    font-weight:500;
+}
+
+/* ROUTE */
+
+.route{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:13px;
+}
+
+.location{
+    flex:1;
+}
+
+.location:last-child{
+    text-align:right;
+}
+
+.city{
+    font-size:18px;
+    font-weight:800;
+}
+
+.time{
+    color:#666;
+    font-size:13px;
+    margin-top:2px;
+}
+
+.airport{
+    color:#999;
+    font-size:11px;
+    margin-top:2px;
+}
+
+.route-middle{
+    min-width:75px;
+    text-align:center;
+}
+
+.route-line{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    color:#7cb342;
+    font-size:13px;
+}
+
+.route-line::before,
+.route-line::after{
+    content:"";
+    height:1px;
+    background:#ddd;
+    flex:1;
+}
+
+.duration{
+    font-size:10px;
+    color:#888;
+    margin-top:5px;
+}
+
+/* INFO */
+
+.flight-info{
+    display:flex;
+    gap:15px;
+    flex-wrap:wrap;
+    border-top:1px solid #eee;
+    padding-top:12px;
+}
+
+.info-item{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    color:#666;
+    font-size:12px;
+}
+
+.info-item i{
+    color:#7cb342;
+}
+
+.book-btn{
+    width:100%;
+    border:none;
+    padding:13px;
+    margin-top:14px;
+    border-radius:12px;
+    background:#7cb342;
+    color:white;
+    font-size:15px;
+    font-weight:800;
+}
+
+.book-btn:hover{
+    background:#689f38;
+}
+
+/* SORT */
+
+.sort-box{
+    margin-bottom:12px;
+}
+
+.sort-box select{
+    border:1px solid #ddd;
+    background:white;
+    border-radius:10px;
+    padding:8px 10px;
+    font-size:12px;
+}
+
+/* EMPTY */
+
+.empty{
+    background:white;
+    border-radius:15px;
+    padding:40px 20px;
+    text-align:center;
+    color:#888;
+    display:none;
+}
+
+.empty i{
+    font-size:40px;
+    color:#bbb;
+    margin-bottom:12px;
+}
+
+/* MODAL */
+
+.modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.58);
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    z-index:100;
+}
+
+.modal-overlay.show{
+    display:flex;
+}
+
+.modal{
+    background:white;
+    width:100%;
+    max-width:600px;
+    max-height:90vh;
+    overflow-y:auto;
+    border-radius:24px 24px 0 0;
+    padding:22px;
+    animation:slideUp .25s ease;
+}
+
+@keyframes slideUp{
+    from{
+        transform:translateY(100%);
+    }
+    to{
+        transform:translateY(0);
+    }
+}
+
+.modal-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+}
+
+.modal-title{
+    font-size:21px;
+    font-weight:800;
+}
+
+.close-btn{
+    width:40px;
+    height:40px;
+    border:none;
+    border-radius:50%;
+    background:#f1f1f1;
+    font-size:18px;
+}
+
+.booking-summary{
+    background:#f7f9f5;
+    border-radius:15px;
+    padding:16px;
+    margin-bottom:18px;
+}
+
+.summary-airline{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:15px;
+}
+
+.summary-route{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.summary-city{
+    font-size:18px;
+    font-weight:800;
+}
+
+.summary-time{
+    color:#666;
+    font-size:13px;
+}
+
+.summary-arrow{
+    color:#7cb342;
+    font-size:20px;
+}
+
+.form-title{
+    font-size:16px;
+    font-weight:800;
+    margin-bottom:12px;
+}
+
+.booking-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
+
+.booking-field{
+    margin-bottom:10px;
+}
+
+.booking-field.full{
+    grid-column:1 / -1;
+}
+
+.booking-field label{
+    display:block;
+    font-size:12px;
+    color:#666;
+    margin-bottom:5px;
+}
+
+.booking-field input{
+    width:100%;
+    padding:12px;
+    border:1px solid #ddd;
+    border-radius:11px;
+}
+
+.total-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    border-top:1px solid #eee;
+    margin-top:10px;
+    padding-top:15px;
+}
+
+.total-price{
+    font-size:22px;
+    font-weight:900;
+    color:#558b2f;
+}
+
+.confirm-btn{
+    width:100%;
+    border:none;
+    padding:15px;
+    border-radius:13px;
+    background:linear-gradient(135deg,#689f38,#7cb342);
+    color:white;
+    font-size:16px;
+    font-weight:800;
+    margin-top:15px;
+}
+
+/* TOAST */
+
+.toast{
+    position:fixed;
+    left:50%;
+    bottom:90px;
+    transform:translateX(-50%) translateY(20px);
+    background:#333;
+    color:white;
+    padding:12px 18px;
+    border-radius:30px;
+    font-size:13px;
+    opacity:0;
+    pointer-events:none;
+    transition:.3s;
+    z-index:200;
+    white-space:nowrap;
+}
+
+.toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+}
+
+/* BOTTOM NAV */
+
+.bottom-nav{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    height:78px;
+    background:white;
+    display:flex;
+    justify-content:space-around;
+    align-items:center;
+    box-shadow:0 -2px 12px rgba(0,0,0,.10);
+    z-index:60;
+}
+
+.nav-item{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:5px;
+    color:#999;
+    font-size:11px;
+    cursor:pointer;
+}
+
+.nav-item i{
+    font-size:20px;
+}
+
+.nav-item.active{
+    color:#7cb342;
+}
+
+/* MOBILE */
+
+@media(max-width:600px){
+
+    .search-row{
+        grid-template-columns:1fr;
+    }
+
+    .filter-row{
+        grid-template-columns:1fr;
+    }
+
+    .route-middle{
+        min-width:55px;
+    }
+
+    .city{
+        font-size:16px;
+    }
+
+    .booking-grid{
+        grid-template-columns:1fr;
+    }
+
+    .booking-field.full{
+        grid-column:auto;
+    }
+}
+</style>
 </head>
+
 <body>
-    <div class="header">
-        <div class="header-left">
-            <button class="back-btn" onclick="window.location.href='index.html'">
-                <i class="fas fa-arrow-left"></i>
-            </button>
-            <h1>Tickets</h1>
-        </div>
-        <div class="header-right">
-            <button class="icon-btn"><i class="fas fa-bell"></i></button>
-            <button class="icon-btn"><i class="fas fa-user"></i></button>
-        </div>
+
+<!-- HEADER -->
+
+<header class="header">
+
+    <div class="header-left">
+        <button class="back-btn" onclick="goHome()">
+            <i class="fas fa-arrow-left"></i>
+        </button>
+
+        <h1 id="pageTitle">Tickets</h1>
     </div>
 
-    <div class="tabs">
-        <button class="tab active">Flights</button>
-        <button class="tab">Trains</button>
-        <button class="tab">Buses</button>
-    </div>
-
-    <div class="search-section">
-        <div class="search-row">
-            <input type="text" class="search-input" placeholder="From: Rome" value="Rome">
-            <input type="text" class="search-input" placeholder="To: Milan" value="Milan">
-        </div>
-        <div class="search-row">
-            <input type="date" class="search-input" value="2026-03-25">
-            <input type="number" class="search-input" placeholder="Passengers" value="1">
-        </div>
-        <button class="search-btn">Search Flights</button>
-    </div>
-
-    <div class="content">
-        <div class="section-title">Available Flights</div>
-
-        <div class="ticket-card">
-            <div class="ticket-header">
-                <div class="airline">
-                    <div class="airline-logo">✈️</div>
-                    <div class="airline-name">Alitalia</div>
-                </div>
-                <div class="price">€89</div>
-            </div>
-            <div class="route">
-                <div class="location">
-                    <div class="city">Rome</div>
-                    <div class="time">08:30 AM</div>
-                </div>
-                <div class="route-icon">
-                    <i class="fas fa-arrow-right"></i>
-                </div>
-                <div class="location" style="text-align: right;">
-                    <div class="city">Milan</div>
-                    <div class="time">09:45 AM</div>
-                </div>
-            </div>
-            <div class="flight-info">
-                <div class="info-item">
-                    <i class="fas fa-clock"></i>
-                    1h 15m
-                </div>
-                <div class="info-item">
-                    <i class="fas fa-plane"></i>
-                    Direct
-                </div>
-                <div class="info-item">
-                    <i class="fas fa-suitcase"></i>
-                    1 Bag
-                </div>
-            </div>
-            <button class="book-btn">Book Now</button>
-        </div>
-
-        <div class="ticket-card">
-            <div class="ticket-header">
-                <div class="airline">
-                    <div class="airline-logo">✈️</div>
-                    <div class="airline-name">ITA Airways</div>
-                </div>
-                <div class="price">€75</div>
-            </div>
-            <div class="route">
-                <div class="location">
-                    <div class="city">Rome</div>
-                    <div class="time">11:00 AM</div>
-                </div>
-                <div class="route-icon">
-                    <i class="fas fa-arrow-right"></i>
-                </div>
-                <div class="location" style="text-align: right;">
-                    <div class="city">Milan</div>
-                    <div class="time">12:20 PM</div>
-                </div>
-            </div>
-            <div class="flight-info">
-                <div class="info-item">
-                    <i class="fas fa-clock"></i>
-                    1h 20m
-                </div>
-                <div class="info-item">
-                    <i class="fas fa-plane"></i>
-                    Direct
-                </div>
-                <div class="info-item">
-                    <i class="fas fa-suitcase"></i>
-                    1 Bag
-                </div>
-            </div>
-            <button class="book-btn">Book Now</button>
-        </div>
-
-        <div class="ticket-card">
-            <div class="ticket-header">
-                <div class="airline">
-                    <div class="airline-logo">✈️</div>
-                    <div class="airline-name">Ryanair</div>
-                </div>
-                <div class="price">€45</div>
-            </div>
-            <div class="route">
-                <div class="location">
-                    <div class="city">Rome</div>
-                    <div class="time">02:15 PM</div>
-                </div>
-                <div class="route-icon">
-                    <i class="fas fa-arrow-right"></i>
-                </div>
-                <div class="location" style="text-align: right;">
-                    <div class="city">Milan</div>
-                    <div class="time">03:30 PM</div>
-                </div>
-            </div>
-            <div class="flight-info">
-                <div class="info-item">
-                    <i class="fas fa-clock"></i>
-                    1h 15m
-                </div>
-                <div class="info-item">
-                    <i class="fas fa-plane"></i>
-                    Direct
-                </div>
-                <div class="info-item">
-                    <i class="fas fa-suitcase"></i>
-                    No Bag
-                </div>
-            </div>
-            <button class="book-btn">Book Now</button>
-        </div>
-    </div>
-
-    <div class="bottom-nav">
-        <div class="nav-item active">
-            <i class="fas fa-home"></i>
-            <span>Home</span>
-        </div>
-        <div class="nav-item">
-            <i class="fas fa-search"></i>
-            <span>Search</span>
-        </div>
-        <div class="nav-item">
-            <i class="fas fa-ticket-alt"></i>
-            <span>My Tickets</span>
-        </div>
-        <div class="nav-item">
+    <div class="header-right">
+        <button class="icon-btn" onclick="showToast('Notifications coming soon')">
             <i class="fas fa-bell"></i>
-            <span>Alerts</span>
-        </div>
-        <div class="nav-item">
+        </button>
+
+        <button class="icon-btn" onclick="goProfile()">
             <i class="fas fa-user"></i>
-            <span>Profile</span>
-        </div>
+        </button>
     </div>
+
+</header>
+
+
+<!-- TABS -->
+
+<div class="tabs">
+
+    <button class="tab active" data-type="flights" onclick="changeTransport('flights')">
+        <i class="fas fa-plane"></i>
+        Flights
+    </button>
+
+    <button class="tab" data-type="trains" onclick="changeTransport('trains')">
+        <i class="fas fa-train"></i>
+        Trains
+    </button>
+
+    <button class="tab" data-type="buses" onclick="changeTransport('buses')">
+        <i class="fas fa-bus"></i>
+        Buses
+    </button>
+
+</div>
+
+
+<!-- SEARCH SECTION -->
+
+<section class="search-section">
+
+    <div class="search-row">
+
+        <div class="field">
+            <i class="fas fa-location-dot"></i>
+            <input
+                id="fromInput"
+                class="search-input"
+                type="text"
+                value="Rome"
+                placeholder="From">
+        </div>
+
+        <div class="field">
+            <i class="fas fa-location-dot"></i>
+            <input
+                id="toInput"
+                class="search-input"
+                type="text"
+                value="Milan"
+                placeholder="To">
+        </div>
+
+    </div>
+
+
+    <div class="extra-options">
+
+        <button class="swap-btn" onclick="swapLocations()">
+            <i class="fas fa-right-left"></i>
+        </button>
+
+        <button class="filter-toggle" onclick="toggleFilters()">
+            <i class="fas fa-sliders"></i>
+            Filters
+        </button>
+
+    </div>
+
+
+    <div class="search-row" style="margin-top:10px;">
+
+        <div class="field">
+            <i class="fas fa-calendar"></i>
+            <input
+                id="dateInput"
+                class="search-input"
+                type="date"
+                value="2026-03-25">
+        </div>
+
+        <div class="field">
+            <i class="fas fa-user"></i>
+            <input
+                id="passengerInput"
+                class="search-input"
+                type="number"
+                min="1"
+                max="9"
+                value="1"
+                placeholder="Passengers">
+        </div>
+
+    </div>
+
+
+    <!-- FILTERS -->
+
+    <div id="filters" class="filters">
+
+        <div class="filter-row">
+
+            <div class="filter-box">
+                <label>Stops</label>
+
+                <select id="stopsFilter">
+                    <option value="all">Any</option>
+                    <option value="direct">Direct only</option>
+                    <option value="one">1 stop max</option>
+                </select>
+            </div>
+
+            <div class="filter-box">
+                <label>Sort by</label>
+
+                <select id="sortSelect" onchange="sortFlights()">
+                    <option value="recommended">Recommended</option>
+                    <option value="price">Lowest price</option>
+                    <option value="duration">Shortest duration</option>
+                    <option value="time">Earliest departure</option>
+                </select>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <button class="search-btn" onclick="searchTickets()">
+        <i class="fas fa-search"></i>
+        Search <span id="searchType">Flights</span>
+    </button>
+
+</section>
+
+
+<!-- CONTENT -->
+
+<main class="content">
+
+    <div class="results-header">
+
+        <div class="section-title" id="resultsTitle">
+            Available Flights
+        </div>
+
+        <div class="result-count" id="resultCount">
+            3 results
+        </div>
+
+    </div>
+
+
+    <div id="ticketsContainer"></div>
+
+
+    <div id="emptyState" class="empty">
+
+        <i class="fas fa-ticket"></i>
+
+        <h3>No results found</h3>
+
+        <p style="margin-top:7px;">
+            Try another route or date.
+        </p>
+
+    </div>
+
+</main>
+
+
+<!-- BOOKING MODAL -->
+
+<div id="bookingModal" class="modal-overlay" onclick="closeModalOutside(event)">
+
+    <div class="modal">
+
+        <div class="modal-header">
+
+            <div class="modal-title">
+                Book Ticket
+            </div>
+
+            <button class="close-btn" onclick="closeBooking()">
+                <i class="fas fa-times"></i>
+            </button>
+
+        </div>
+
+
+        <div class="booking-summary">
+
+            <div class="summary-airline">
+
+                <strong id="modalAirline">
+                    ITA Airways
+                </strong>
+
+                <strong id="modalFlight">
+                    AZ 123
+                </strong>
+
+            </div>
+
+
+            <div class="summary-route">
+
+                <div>
+                    <div class="summary-city" id="modalFrom">
+                        Rome
+                    </div>
+
+                    <div class="summary-time" id="modalDeparture">
+                        11:00 AM
+                    </div>
+                </div>
+
+
+                <div class="summary-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+
+
+                <div style="text-align:right;">
+
+                    <div class="summary-city" id="modalTo">
+                        Milan
+                    </div>
+
+                    <div class="summary-time" id="modalArrival">
+                        12:20 PM
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="form-title">
+            Passenger Information
+        </div>
+
+
+        <div class="booking-grid">
+
+            <div class="booking-field">
+                <label>First Name</label>
+                <input id="firstName" type="text" placeholder="First name">
+            </div>
+
+            <div class="booking-field">
+                <label>Last Name</label>
+                <input id="lastName" type="text" placeholder="Last name">
+            </div>
+
+            <div class="booking-field">
+                <label>Email</label>
+                <input id="email" type="email" placeholder="Email">
+            </div>
+
+            <div class="booking-field">
+                <label>Phone</label>
+                <input id="phone" type="tel" placeholder="Phone number">
+            </div>
+
+            <div class="booking-field full">
+                <label>Passport / ID Number</label>
+                <input id="passport" type="text" placeholder="Passport or ID">
+            </div>
+
+        </div>
+
+
+        <div class="total-row">
+
+            <span>Total</span>
+
+            <span class="total-price" id="modalPrice">
+                €75
+            </span>
+
+        </div>
+
+
+        <button class="confirm-btn" onclick="confirmBooking()">
+            <i class="fas fa-check"></i>
+            Confirm Booking
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- TOAST -->
+
+<div id="toast" class="toast"></div>
+
+
+<!-- BOTTOM NAV -->
+
+<nav class="bottom-nav">
+
+    <div class="nav-item" onclick="goHome()">
+        <i class="fas fa-home"></i>
+        <span>Home</span>
+    </div>
+
+    <div class="nav-item">
+        <i class="fas fa-search"></i>
+        <span>Search</span>
+    </div>
+
+    <div class="nav-item active">
+        <i class="fas fa-ticket"></i>
+        <span>My Tickets</span>
+    </div>
+
+    <div class="nav-item" onclick="showToast('Notifications coming soon')">
+        <i class="fas fa-bell"></i>
+        <span>Alerts</span>
+    </div>
+
+    <div class="nav-item" onclick="goProfile()">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+    </div>
+
+</nav>
+
+
+<script>
+
+/* =========================
+   DATA
+========================= */
+
+const flightData = [
+
+    {
+        airline:"Alitalia",
+        flight:"AZ 201",
+        logo:"✈️",
+        from:"Rome",
+        to:"Milan",
+        departure:"08:30 AM",
+        arrival:"09:45 AM",
+        duration:"1h 15m",
+        durationMinutes:75,
+        stops:"Direct",
+        bags:"1 Bag",
+        price:89
+    },
+
+    {
+        airline:"ITA Airways",
+        flight:"AZ 123",
+        logo:"✈️",
+        from:"Rome",
+        to:"Milan",
+        departure:"11:00 AM",
+        arrival:"12:20 PM",
+        duration:"1h 20m",
+        durationMinutes:80,
+        stops:"Direct",
+        bags:"1 Bag",
+        price:75
+    },
+
+    {
+        airline:"Ryanair",
+        flight:"FR 1542",
+        logo:"✈️",
+        from:"Rome",
+        to:"Milan",
+        departure:"02:15 PM",
+        arrival:"03:30 PM",
+        duration:"1h 15m",
+        durationMinutes:75,
+        stops:"Direct",
+        bags:"No Bag",
+        price:45
+    }
+
+];
+
+
+/* =========================
+   STATE
+========================= */
+
+let currentType = "flights";
+let currentTickets = [...flightData];
+let selectedTicket = null;
+
+
+/* =========================
+   INIT
+========================= */
+
+document.addEventListener("DOMContentLoaded",function(){
+    renderTickets();
+});
+
+
+/* =========================
+   CHANGE TRANSPORT
+========================= */
+
+function changeTransport(type){
+
+    currentType = type;
+
+    document.querySelectorAll(".tab").forEach(tab=>{
+        tab.classList.remove("active");
+    });
+
+    const activeTab = document.querySelector(
+        '.tab[data-type="' + type + '"]'
+    );
+
+    if(activeTab){
+        activeTab.classList.add("active");
+    }
+
+
+    if(type === "flights"){
+
+        document.getElementById("pageTitle").textContent = "Tickets";
+        document.getElementById("searchType").textContent = "Flights";
+        document.getElementById("resultsTitle").textContent =
+            "Available Flights";
+
+        currentTickets = [...flightData];
+
+    }
+
+    else if(type === "trains"){
+
+        document.getElementById("pageTitle").textContent = "Train Tickets";
+        document.getElementById("searchType").textContent = "Trains";
+        document.getElementById("resultsTitle").textContent =
+            "Available Trains";
+
+        currentTickets = [];
+
+    }
+
+    else if(type === "buses"){
+
+        document.getElementById("pageTitle").textContent = "Bus Tickets";
+        document.getElementById("searchType").textContent = "Buses";
+        document.getElementById("resultsTitle").textContent =
+            "Available Buses";
+
+        currentTickets = [];
+
+    }
+
+
+    renderTickets();
+
+}
+
+
+/* =========================
+   RENDER
+========================= */
+
+function renderTickets(){
+
+    const container =
+        document.getElementById("ticketsContainer");
+
+    const empty =
+        document.getElementById("emptyState");
+
+    const count =
+        document.getElementById("resultCount");
+
+
+    container.innerHTML = "";
+
+
+    if(currentTickets.length === 0){
+
+        empty.style.display = "block";
+        count.textContent = "0 results";
+
+        return;
+    }
+
+
+    empty.style.display = "none";
+
+    count.textContent =
+        currentTickets.length + " results";
+
+
+    currentTickets.forEach((ticket,index)=>{
+
+        const card = document.createElement("div");
+
+        card.className = "ticket-card";
+
+        card.innerHTML = `
+
+            <div class="ticket-header">
+
+                <div class="airline">
+
+                    <div class="airline-logo">
+                        ${ticket.logo}
+                    </div>
+
+                    <div>
+
+                        <div class="airline-name">
+                            ${ticket.airline}
+                        </div>
+
+                        <div class="flight-number">
+                            ${ticket.flight}
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="price">
+
+                    €${ticket.price}
+
+                    <small>per passenger</small>
+
+                </div>
+
+            </div>
+
+
+            <div class="route">
+
+                <div class="location">
+
+                    <div class="city">
+                        ${ticket.from}
+                    </div>
+
+                    <div class="time">
+                        ${ticket.departure}
+                    </div>
+
+                    <div class="airport">
+                        Airport
+                    </div>
+
+                </div>
+
+
+                <div class="route-middle">
+
+                    <div class="route-line">
+                        <i class="fas fa-plane"></i>
+                    </div>
+
+                    <div class="duration">
+                        ${ticket.duration}
+                    </div>
+
+                </div>
+
+
+                <div class="location">
+
+                    <div class="city">
+                        ${ticket.to}
+                    </div>
+
+                    <div class="time">
+                        ${ticket.arrival}
+                    </div>
+
+                    <div class="airport">
+                        Airport
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="flight-info">
+
+                <div class="info-item">
+                    <i class="fas fa-clock"></i>
+                    ${ticket.duration}
+                </div>
+
+                <div class="info-item">
+                    <i class="fas fa-plane"></i>
+                    ${ticket.stops}
+                </div>
+
+                <div class="info-item">
+                    <i class="fas fa-suitcase"></i>
+                    ${ticket.bags}
+                </div>
+
+            </div>
+
+
+            <button
+                class="book-btn"
+                onclick="openBooking(${index})">
+
+                <i class="fas fa-ticket"></i>
+                Book Now
+
+            </button>
+
+        `;
+
+
+        container.appendChild(card);
+
+    });
+
+}
+
+
+/* =========================
+   SEARCH
+========================= */
+
+function searchTickets(){
+
+    if(currentType !== "flights"){
+
+        showToast(
+            currentType === "trains"
+            ? "Train search is being prepared"
+            : "Bus search is being prepared"
+        );
+
+        return;
+    }
+
+
+    const from =
+        document.getElementById("fromInput")
+        .value.trim()
+        .toLowerCase();
+
+    const to =
+        document.getElementById("toInput")
+        .value.trim()
+        .toLowerCase();
+
+    const stops =
+        document.getElementById("stopsFilter").value;
+
+
+    currentTickets = flightData.filter(ticket=>{
+
+        const fromMatch =
+            !from ||
+            ticket.from.toLowerCase().includes(from);
+
+        const toMatch =
+            !to ||
+            ticket.to.toLowerCase().includes(to);
+
+        const stopMatch =
+            stops === "all" ||
+            (stops === "direct" &&
+             ticket.stops === "Direct");
+
+        return fromMatch && toMatch && stopMatch;
+
+    });
+
+
+    sortFlights();
+
+    showToast(
+        currentTickets.length +
+        " flight" +
+        (currentTickets.length === 1 ? "" : "s") +
+        " found"
+    );
+
+}
+
+
+/* =========================
+   SORT
+========================= */
+
+function sortFlights(){
+
+    const sort =
+        document.getElementById("sortSelect").value;
+
+
+    if(sort === "price"){
+
+        currentTickets.sort(
+            (a,b)=>a.price-b.price
+        );
+
+    }
+
+    else if(sort === "duration"){
+
+        currentTickets.sort(
+            (a,b)=>a.durationMinutes-b.durationMinutes
+        );
+
+    }
+
+    else if(sort === "time"){
+
+        currentTickets.sort(
+            (a,b)=>
+                convertTime(a.departure) -
+                convertTime(b.departure)
+        );
+
+    }
+
+
+    renderTickets();
+
+}
+
+
+function convertTime(time){
+
+    const parts = time.split(" ");
+
+    let [hour,minute] =
+        parts[0].split(":").map(Number);
+
+    const period = parts[1];
+
+    if(period === "PM" && hour !== 12){
+        hour += 12;
+    }
+
+    if(period === "AM" && hour === 12){
+        hour = 0;
+    }
+
+    return hour * 60 + minute;
+
+}
+
+
+/* =========================
+   SWAP
+========================= */
+
+function swapLocations(){
+
+    const from =
+        document.getElementById("fromInput");
+
+    const to =
+        document.getElementById("toInput");
+
+    const temp = from.value;
+
+    from.value = to.value;
+    to.value = temp;
+
+}
+
+
+/* =========================
+   FILTERS
+========================= */
+
+function toggleFilters(){
+
+    document
+        .getElementById("filters")
+        .classList.toggle("show");
+
+}
+
+
+/* =========================
+   BOOKING
+========================= */
+
+function openBooking(index){
+
+    selectedTicket =
+        currentTickets[index];
+
+    if(!selectedTicket){
+        return;
+    }
+
+
+    document.getElementById("modalAirline")
+        .textContent =
+        selectedTicket.airline;
+
+    document.getElementById("modalFlight")
+        .textContent =
+        selectedTicket.flight;
+
+    document.getElementById("modalFrom")
+        .textContent =
+        selectedTicket.from;
+
+    document.getElementById("modalTo")
+        .textContent =
+        selectedTicket.to;
+
+    document.getElementById("modalDeparture")
+        .textContent =
+        selectedTicket.departure;
+
+    document.getElementById("modalArrival")
+        .textContent =
+        selectedTicket.arrival;
+
+
+    const passengers =
+        Number(
+            document.getElementById(
+                "passengerInput"
+            ).value
+        ) || 1;
+
+
+    document.getElementById("modalPrice")
+        .textContent =
+        "€" +
+        (selectedTicket.price * passengers);
+
+
+    document
+        .getElementById("bookingModal")
+        .classList.add("show");
+
+
+    document.body.style.overflow = "hidden";
+
+}
+
+
+function closeBooking(){
+
+    document
+        .getElementById("bookingModal")
+        .classList.remove("show");
+
+    document.body.style.overflow = "";
+
+}
+
+
+function closeModalOutside(event){
+
+    if(event.target.id === "bookingModal"){
+        closeBooking();
+    }
+
+}
+
+
+/* =========================
+   CONFIRM
+========================= */
+
+function confirmBooking(){
+
+    const firstName =
+        document.getElementById("firstName")
+        .value.trim();
+
+    const lastName =
+        document.getElementById("lastName")
+        .value.trim();
+
+    const email =
+        document.getElementById("email")
+        .value.trim();
+
+    const phone =
+        document.getElementById("phone")
+        .value.trim();
+
+    const passport =
+        document.getElementById("passport")
+        .value.trim();
+
+
+    if(
+        !firstName ||
+        !lastName ||
+        !email ||
+        !phone ||
+        !passport
+    ){
+
+        showToast(
+            "Please complete all passenger information"
+        );
+
+        return;
+    }
+
+
+    const booking = {
+
+        id:
+            "HAV-" +
+            Date.now(),
+
+        type:"flight",
+
+        airline:selectedTicket.airline,
+
+        flight:selectedTicket.flight,
+
+        from:selectedTicket.from,
+
+        to:selectedTicket.to,
+
+        departure:selectedTicket.departure,
+
+        arrival:selectedTicket.arrival,
+
+        price:selectedTicket.price,
+
+        passengers:
+            Number(
+                document.getElementById(
+                    "passengerInput"
+                ).value
+            ) || 1,
+
+        passenger:{
+            firstName,
+            lastName,
+            email,
+            phone,
+            passport
+        },
+
+        date:
+            document.getElementById(
+                "dateInput"
+            ).value,
+
+        createdAt:
+            new Date().toISOString()
+
+    };
+
+
+    const existing =
+        JSON.parse(
+            localStorage.getItem(
+                "havkarBookings"
+            ) || "[]"
+        );
+
+
+    existing.push(booking);
+
+
+    localStorage.setItem(
+        "havkarBookings",
+        JSON.stringify(existing)
+    );
+
+
+    closeBooking();
+
+
+    showToast(
+        "Booking saved successfully"
+    );
+
+}
+
+
+/* =========================
+   NAVIGATION
+========================= */
+
+function goHome(){
+
+    window.location.href = "index.html";
+
+}
+
+
+function goProfile(){
+
+    window.location.href = "profile.html";
+
+}
+
+
+/* =========================
+   TOAST
+========================= */
+
+function showToast(message){
+
+    const toast =
+        document.getElementById("toast");
+
+    toast.textContent = message;
+
+    toast.classList.add("show");
+
+
+    setTimeout(()=>{
+        toast.classList.remove("show");
+    },2500);
+
+}
+
+
+/* =========================
+   ESC KEY
+========================= */
+
+document.addEventListener("keydown",function(event){
+
+    if(event.key === "Escape"){
+
+        closeBooking();
+
+    }
+
+});
+
+</script>
+
 </body>
-                    </html>
+</html>
