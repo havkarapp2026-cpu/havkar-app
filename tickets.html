@@ -14,6 +14,7 @@ let searchTimer = null;
 
 const STORAGE_KEY = "havkar_my_tickets";
 
+
 /* =========================================================
    DEMO TICKET DATABASE
 ========================================================= */
@@ -92,6 +93,7 @@ const ticketData = {
 
     ],
 
+
     train: [
 
         {
@@ -163,6 +165,7 @@ const ticketData = {
         }
 
     ],
+
 
     bus: [
 
@@ -240,7 +243,7 @@ const ticketData = {
 
 
 /* =========================================================
-   DOM HELPER
+   SAFE DOM HELPER
 ========================================================= */
 
 function $(id) {
@@ -249,13 +252,19 @@ function $(id) {
 
 
 /* =========================================================
-   HELPERS
+   GENERAL HELPERS
 ========================================================= */
 
 function getTypeName(type) {
 
-    if (type === "flight") return "Flights";
-    if (type === "train") return "Trains";
+    if (type === "flight") {
+        return "Flights";
+    }
+
+    if (type === "train") {
+        return "Trains";
+    }
+
     return "Buses";
 }
 
@@ -287,7 +296,9 @@ function timeToMinutes(time) {
         /(\d+):(\d+)\s*(AM|PM)/i
     );
 
-    if (!match) return 0;
+    if (!match) {
+        return 0;
+    }
 
     let hour = Number(match[1]);
     const minute = Number(match[2]);
@@ -301,8 +312,7 @@ function timeToMinutes(time) {
         hour = 0;
     }
 
-    return hour * 60 + minute;
-
+    return (hour * 60) + minute;
 }
 
 
@@ -314,7 +324,9 @@ function setToday() {
 
     const dateInput = $("dateInput");
 
-    if (!dateInput) return;
+    if (!dateInput) {
+        return;
+    }
 
     const today = new Date();
 
@@ -330,22 +342,26 @@ function setToday() {
 
     dateInput.value =
         `${year}-${month}-${day}`;
-
 }
 
 
 /* =========================================================
-   TYPE CHANGE
+   CHANGE TRANSPORT TYPE
 ========================================================= */
 
 function changeType(type) {
 
-    if (!ticketData[type]) return;
+    if (
+        type !== "flight" &&
+        type !== "train" &&
+        type !== "bus"
+    ) {
+        return;
+    }
 
     currentType = type;
 
-    document
-        .querySelectorAll(".tab")
+    document.querySelectorAll(".tab")
         .forEach(tab => {
 
             tab.classList.toggle(
@@ -357,46 +373,57 @@ function changeType(type) {
 
     const name = getTypeName(type);
 
-    if ($("pageTitle")) {
-        $("pageTitle").textContent =
+    const pageTitle = $("pageTitle");
+
+    if (pageTitle) {
+        pageTitle.textContent =
             name + " Tickets";
     }
 
-    if ($("resultsTitle")) {
-        $("resultsTitle").textContent =
+    const resultsTitle = $("resultsTitle");
+
+    if (resultsTitle) {
+        resultsTitle.textContent =
             "Available " + name;
     }
 
-    if ($("searchButtonText")) {
-        $("searchButtonText").textContent =
+    const searchButtonText =
+        $("searchButtonText");
+
+    if (searchButtonText) {
+        searchButtonText.textContent =
             "Search " + name;
     }
 
     searchTickets(false);
-
 }
 
 
 /* =========================================================
-   SEARCH
+   SEARCH TICKETS
 ========================================================= */
 
 function searchTickets(showMessage = true) {
+
+    clearTimeout(searchTimer);
 
     const fromInput = $("fromInput");
     const toInput = $("toInput");
     const dateInput = $("dateInput");
     const passengersInput = $("passengersInput");
 
+    const container = $("resultsContainer");
+    const resultCount = $("resultCount");
+
     if (
         !fromInput ||
         !toInput ||
-        !dateInput ||
-        !passengersInput
+        !container
     ) {
         console.error(
             "HAVKAR: Search elements not found."
         );
+
         return;
     }
 
@@ -408,10 +435,15 @@ function searchTickets(showMessage = true) {
         toInput.value
     );
 
-    const date = dateInput.value;
+    const date =
+        dateInput
+            ? dateInput.value
+            : "";
 
     let passengers =
-        Number(passengersInput.value);
+        passengersInput
+            ? Number(passengersInput.value)
+            : 1;
 
     if (!passengers || passengers < 1) {
         passengers = 1;
@@ -421,87 +453,79 @@ function searchTickets(showMessage = true) {
         passengers = 9;
     }
 
-    passengersInput.value = passengers;
+    if (passengersInput) {
+        passengersInput.value =
+            passengers;
+    }
 
 
     /* -----------------------------------------
-       VALIDATION
+       ROUTE VALIDATION
     ----------------------------------------- */
 
     if (!from || !to) {
 
         currentResults = [];
 
-        if ($("resultCount")) {
-            $("resultCount").textContent =
+        if (resultCount) {
+            resultCount.textContent =
                 "0 results";
         }
 
-        if ($("resultsContainer")) {
-            $("resultsContainer").innerHTML = `
+        container.innerHTML = `
 
-                <div class="empty-state">
+            <div class="empty-state">
 
-                    <div class="empty-icon">
-                        <i class="fas fa-location-dot"></i>
-                    </div>
-
-                    <h3>Enter your route</h3>
-
-                    <p>
-                        Please enter both origin
-                        and destination.
-                    </p>
-
+                <div class="empty-icon">
+                    <i class="fas fa-location-dot"></i>
                 </div>
 
-            `;
-        }
+                <h3>Enter your route</h3>
+
+                <p>
+                    Please enter both origin and destination.
+                </p>
+
+            </div>
+
+        `;
 
         return;
     }
 
 
     /* -----------------------------------------
-       CANCEL PREVIOUS SEARCH
-    ----------------------------------------- */
-
-    clearTimeout(searchTimer);
-
-
-    /* -----------------------------------------
        LOADING
     ----------------------------------------- */
 
-    if ($("resultsContainer")) {
+    container.innerHTML = `
 
-        $("resultsContainer").innerHTML = `
+        <div
+            class="loading"
+            style="
+                display:flex;
+                justify-content:center;
+                align-items:center;
+                padding:40px;
+                gap:10px;
+            "
+        >
 
-            <div class="loading"
-                 style="
-                    display:flex;
-                    justify-content:center;
-                    align-items:center;
-                    padding:40px;
-                    gap:10px;
-                 ">
+            <i
+                class="fas fa-spinner fa-spin"
+                style="
+                    color:#7cb342;
+                    font-size:22px;
+                "
+            ></i>
 
-                <i
-                    class="fas fa-spinner fa-spin"
-                    style="
-                        color:#7cb342;
-                        font-size:22px;
-                    ">
-                </i>
+            <span>
+                Searching...
+            </span>
 
-                <span>
-                    Searching...
-                </span>
+        </div>
 
-            </div>
-
-        `;
-    }
+    `;
 
 
     /* -----------------------------------------
@@ -510,27 +534,34 @@ function searchTickets(showMessage = true) {
 
     searchTimer = setTimeout(() => {
 
+        const source =
+            Array.isArray(
+                ticketData[currentType]
+            )
+                ? ticketData[currentType]
+                : [];
+
+
         let results =
-            (ticketData[currentType] || [])
-                .filter(ticket => {
+            source.filter(ticket => {
 
-                    const ticketFrom =
-                        normalize(ticket.from);
+                const ticketFrom =
+                    normalize(ticket.from);
 
-                    const ticketTo =
-                        normalize(ticket.to);
+                const ticketTo =
+                    normalize(ticket.to);
 
-                    return (
-                        ticketFrom === from &&
-                        ticketTo === to
-                    );
+                return (
+                    ticketFrom === from &&
+                    ticketTo === to
+                );
 
-                });
+            });
 
 
-        /* -----------------------------------------
+        /* -------------------------------------
            STOPS FILTER
-        ----------------------------------------- */
+        ------------------------------------- */
 
         const stopsSelect =
             $("stopsSelect");
@@ -563,9 +594,9 @@ function searchTickets(showMessage = true) {
         }
 
 
-        /* -----------------------------------------
+        /* -------------------------------------
            SORT
-        ----------------------------------------- */
+        ------------------------------------- */
 
         const sortSelect =
             $("sortSelect");
@@ -599,8 +630,12 @@ function searchTickets(showMessage = true) {
 
             results.sort(
                 (a, b) =>
-                    timeToMinutes(a.fromTime) -
-                    timeToMinutes(b.fromTime)
+                    timeToMinutes(
+                        a.fromTime
+                    ) -
+                    timeToMinutes(
+                        b.fromTime
+                    )
             );
 
         }
@@ -628,9 +663,9 @@ function searchTickets(showMessage = true) {
         }
 
 
-        /* -----------------------------------------
-           STORE RESULTS
-        ----------------------------------------- */
+        /* -------------------------------------
+           SAVE RESULTS
+        ------------------------------------- */
 
         currentResults =
             results.map(ticket => ({
@@ -639,16 +674,16 @@ function searchTickets(showMessage = true) {
             }));
 
 
-        /* -----------------------------------------
+        /* -------------------------------------
            RENDER
-        ----------------------------------------- */
+        ------------------------------------- */
 
         renderResults();
 
 
-        /* -----------------------------------------
+        /* -------------------------------------
            MESSAGE
-        ----------------------------------------- */
+        ------------------------------------- */
 
         if (showMessage) {
 
@@ -691,7 +726,9 @@ function renderResults() {
     const resultCount =
         $("resultCount");
 
-    if (!container) return;
+    if (!container) {
+        return;
+    }
 
     if (resultCount) {
 
@@ -715,8 +752,7 @@ function renderResults() {
                 <h3>No results found</h3>
 
                 <p>
-                    Try another route,
-                    date or filter.
+                    Try another route, date or filter.
                 </p>
 
             </div>
@@ -742,7 +778,7 @@ function renderResults() {
 
 
 /* =========================================================
-   TICKET CARD
+   CREATE TICKET CARD
 ========================================================= */
 
 function createTicketCard(ticket, index) {
@@ -798,7 +834,9 @@ function createTicketCard(ticket, index) {
 
                     <div class="price">
 
-                        €${Number(ticket.price).toFixed(2)}
+                        €${Number(
+                            ticket.price
+                        ).toFixed(0)}
 
                     </div>
 
@@ -849,8 +887,8 @@ function createTicketCard(ticket, index) {
                         <i
                             class="fas ${escapeHtml(
                                 ticket.icon
-                            )}">
-                        </i>
+                            )}"
+                        ></i>
 
                     </div>
 
@@ -934,7 +972,8 @@ function createTicketCard(ticket, index) {
             <button
                 class="book-btn"
                 type="button"
-                onclick="openBooking(${index})">
+                onclick="openBooking(${index})"
+            >
 
                 <i class="fas fa-ticket"></i>
 
@@ -950,7 +989,7 @@ function createTicketCard(ticket, index) {
 
 
 /* =========================================================
-   BOOKING
+   OPEN BOOKING
 ========================================================= */
 
 function openBooking(index) {
@@ -969,106 +1008,131 @@ function openBooking(index) {
     }
 
 
-    const fields = {
+    const summaryProvider =
+        $("summaryProvider");
 
-        summaryProvider:
-            selectedTicket.provider,
+    if (summaryProvider) {
+        summaryProvider.textContent =
+            selectedTicket.provider;
+    }
 
-        summaryCode:
-            selectedTicket.code,
 
-        summaryPrice:
+    const summaryCode =
+        $("summaryCode");
+
+    if (summaryCode) {
+        summaryCode.textContent =
+            selectedTicket.code;
+    }
+
+
+    const summaryPrice =
+        $("summaryPrice");
+
+    if (summaryPrice) {
+        summaryPrice.textContent =
             "€" +
-            Number(
-                selectedTicket.price
-            ).toFixed(2),
-
-        summaryFrom:
-            selectedTicket.from,
-
-        summaryTo:
-            selectedTicket.to,
-
-        summaryFromTime:
-            selectedTicket.fromTime,
-
-        summaryToTime:
-            selectedTicket.toTime
-
-    };
+            selectedTicket.price;
+    }
 
 
-    Object.keys(fields)
-        .forEach(id => {
+    const summaryFrom =
+        $("summaryFrom");
 
-            if ($(id)) {
+    if (summaryFrom) {
+        summaryFrom.textContent =
+            selectedTicket.from;
+    }
 
-                $(id).textContent =
-                    fields[id];
 
-            }
+    const summaryTo =
+        $("summaryTo");
 
-        });
+    if (summaryTo) {
+        summaryTo.textContent =
+            selectedTicket.to;
+    }
+
+
+    const summaryFromTime =
+        $("summaryFromTime");
+
+    if (summaryFromTime) {
+        summaryFromTime.textContent =
+            selectedTicket.fromTime;
+    }
+
+
+    const summaryToTime =
+        $("summaryToTime");
+
+    if (summaryToTime) {
+        summaryToTime.textContent =
+            selectedTicket.toTime;
+    }
 
 
     updateTotal();
 
 
-    if ($("bookingModal")) {
+    const modal =
+        $("bookingModal");
 
-        $("bookingModal")
-            .classList
-            .add("show");
-
+    if (modal) {
+        modal.classList.add("show");
     }
 
 }
 
 
 /* =========================================================
-   TOTAL
+   UPDATE TOTAL
 ========================================================= */
 
 function updateTotal() {
 
-    if (!selectedTicket) return;
+    if (!selectedTicket) {
+        return;
+    }
 
     const passengersInput =
         $("passengersInput");
 
-    const totalPrice =
-        $("totalPrice");
-
-    if (!passengersInput || !totalPrice) {
-        return;
-    }
-
-
     let passengers =
-        Number(
-            passengersInput.value
-        );
+        passengersInput
+            ? Number(passengersInput.value)
+            : 1;
 
 
     if (!passengers || passengers < 1) {
         passengers = 1;
     }
 
+
     if (passengers > 9) {
         passengers = 9;
     }
 
 
-    passengersInput.value =
-        passengers;
+    if (passengersInput) {
+        passengersInput.value =
+            passengers;
+    }
 
 
-    totalPrice.textContent =
-        "€" +
-        (
-            selectedTicket.price *
-            passengers
-        ).toFixed(2);
+    const totalPrice =
+        $("totalPrice");
+
+    if (totalPrice) {
+
+        totalPrice.textContent =
+            "€" +
+            (
+                selectedTicket.price *
+                passengers
+            );
+
+    }
 
 }
 
@@ -1079,19 +1143,18 @@ function updateTotal() {
 
 function closeBooking() {
 
-    if ($("bookingModal")) {
+    const modal =
+        $("bookingModal");
 
-        $("bookingModal")
-            .classList
-            .remove("show");
-
+    if (modal) {
+        modal.classList.remove("show");
     }
 
 }
 
 
 /* =========================================================
-   LOCAL STORAGE
+   GET SAVED TICKETS
 ========================================================= */
 
 function getSavedTickets() {
@@ -1168,7 +1231,7 @@ function confirmBooking(event) {
             "No ticket selected."
         );
 
-        return;
+        return false;
     }
 
 
@@ -1194,7 +1257,7 @@ function confirmBooking(event) {
         generateBookingCode();
 
 
-    const valueOf = id => {
+    const getValue = id => {
 
         const element = $(id);
 
@@ -1205,95 +1268,78 @@ function confirmBooking(event) {
     };
 
 
+    const dateInput =
+        $("dateInput");
+
+
     const booking = {
 
         id: Date.now(),
 
         bookingCode:
-
             bookingCode,
 
         bookedAt:
-
-            new Date()
-                .toISOString(),
+            new Date().toISOString(),
 
         type:
-
             selectedTicket.type,
 
         typeName:
-
             getTypeName(
                 selectedTicket.type
             ),
 
         provider:
-
             selectedTicket.provider,
 
         code:
-
             selectedTicket.code,
 
         from:
-
             selectedTicket.from,
 
         to:
-
             selectedTicket.to,
 
         fromTime:
-
             selectedTicket.fromTime,
 
         toTime:
-
             selectedTicket.toTime,
 
         duration:
-
             selectedTicket.duration,
 
         price:
-
             selectedTicket.price,
 
         passengers:
-
             passengers,
 
         total:
-
             selectedTicket.price *
             passengers,
 
         firstName:
-
-            valueOf("firstName"),
+            getValue("firstName"),
 
         lastName:
-
-            valueOf("lastName"),
+            getValue("lastName"),
 
         email:
-
-            valueOf("email"),
+            getValue("email"),
 
         phone:
-
-            valueOf("phone"),
+            getValue("phone"),
 
         document:
-
-            valueOf("document"),
+            getValue("document"),
 
         travelDate:
-
-            $("dateInput")
-                ? $("dateInput").value
-                : ""
+            dateInput
+                ? dateInput.value
+                : selectedTicket.selectedDate || ""
 
     };
 
@@ -1327,7 +1373,7 @@ function confirmBooking(event) {
             "Unable to save ticket."
         );
 
-        return;
+        return false;
 
     }
 
@@ -1335,40 +1381,42 @@ function confirmBooking(event) {
     closeBooking();
 
 
-    if ($("successBookingCode")) {
+    const successBookingCode =
+        $("successBookingCode");
 
-        $("successBookingCode")
-            .textContent =
+    if (successBookingCode) {
+
+        successBookingCode.textContent =
             bookingCode;
 
     }
 
 
-    if ($("successModal")) {
+    const successModal =
+        $("successModal");
 
-        $("successModal")
-            .classList
-            .add("show");
-
+    if (successModal) {
+        successModal.classList.add("show");
     }
 
 
-    if ($("bookingForm")) {
+    const bookingForm =
+        $("bookingForm");
 
-        $("bookingForm").reset();
-
+    if (bookingForm) {
+        bookingForm.reset();
     }
 
 
     if (passengersInput) {
-
         passengersInput.value =
             passengers;
-
     }
 
 
     selectedTicket = null;
+
+    return false;
 
 }
 
@@ -1383,87 +1431,88 @@ function showMyTickets() {
         getSavedTickets();
 
 
-    if ($("pageTitle")) {
+    const pageTitle =
+        $("pageTitle");
 
-        $("pageTitle")
-            .textContent =
+    if (pageTitle) {
+        pageTitle.textContent =
             "My Tickets";
-
     }
 
 
-    if ($("resultsTitle")) {
+    const resultsTitle =
+        $("resultsTitle");
 
-        $("resultsTitle")
-            .textContent =
+    if (resultsTitle) {
+        resultsTitle.textContent =
             "My Tickets";
-
     }
 
 
-    if ($("resultCount")) {
+    const resultCount =
+        $("resultCount");
 
-        $("resultCount")
-            .textContent =
+    if (resultCount) {
+
+        resultCount.textContent =
             tickets.length +
             " saved";
 
     }
 
 
-    document
-        .querySelectorAll(".tab")
-        .forEach(tab =>
+    document.querySelectorAll(".tab")
+        .forEach(tab => {
+
             tab.classList.remove(
                 "active"
-            )
-        );
+            );
+
+        });
+
+
+    const container =
+        $("resultsContainer");
+
+
+    if (!container) {
+        return;
+    }
 
 
     if (tickets.length === 0) {
 
-        if ($("resultsContainer")) {
+        container.innerHTML = `
 
-            $("resultsContainer")
-                .innerHTML = `
+            <div class="empty-state">
 
-                    <div class="empty-state">
+                <div class="empty-icon">
 
-                        <div class="empty-icon">
+                    <i class="fas fa-ticket"></i>
 
-                            <i class="fas fa-ticket"></i>
+                </div>
 
-                        </div>
+                <h3>No tickets yet</h3>
 
-                        <h3>No tickets yet</h3>
+                <p>
+                    Your confirmed bookings
+                    will appear here.
+                </p>
 
-                        <p>
-                            Your confirmed bookings
-                            will appear here.
-                        </p>
+            </div>
 
-                    </div>
-
-                `;
-
-        }
+        `;
 
         return;
     }
 
 
-    if ($("resultsContainer")) {
-
-        $("resultsContainer")
-            .innerHTML =
-
-            tickets
-                .map(ticket =>
-                    createMyTicket(ticket)
-                )
-                .join("");
-
-    }
+    container.innerHTML =
+        tickets
+            .map(ticket =>
+                createMyTicket(ticket)
+            )
+            .join("");
 
 }
 
@@ -1504,7 +1553,8 @@ function createMyTicket(ticket) {
                     type="button"
                     onclick="deleteTicket(${Number(
                         ticket.id
-                    )})">
+                    )})"
+                >
 
                     <i class="fas fa-trash"></i>
 
@@ -1518,7 +1568,8 @@ function createMyTicket(ticket) {
                     display:flex;
                     justify-content:space-between;
                     align-items:center;
-                ">
+                "
+            >
 
                 <div>
 
@@ -1535,7 +1586,8 @@ function createMyTicket(ticket) {
                             font-size:12px;
                             color:#888;
                             margin-top:3px;
-                        ">
+                        "
+                    >
 
                         ${escapeHtml(
                             ticket.code
@@ -1549,8 +1601,8 @@ function createMyTicket(ticket) {
                 <div class="price">
 
                     €${Number(
-                        ticket.total || 0
-                    ).toFixed(2)}
+                        ticket.total
+                    ).toFixed(0)}
 
                 </div>
 
@@ -1590,7 +1642,8 @@ function createMyTicket(ticket) {
                 <div
                     style="
                         text-align:right;
-                    ">
+                    "
+                >
 
                     <div class="my-city">
 
@@ -1693,9 +1746,13 @@ function createMyTicket(ticket) {
 
 function deleteTicket(id) {
 
-    if (!confirm(
-        "Delete this ticket?"
-    )) {
+    const shouldDelete =
+        window.confirm(
+            "Delete this ticket?"
+        );
+
+
+    if (!shouldDelete) {
         return;
     }
 
@@ -1750,12 +1807,11 @@ function deleteTicket(id) {
 
 function closeSuccess() {
 
-    if ($("successModal")) {
+    const modal =
+        $("successModal");
 
-        $("successModal")
-            .classList
-            .remove("show");
-
+    if (modal) {
+        modal.classList.remove("show");
     }
 
 }
@@ -1767,8 +1823,12 @@ function closeSuccess() {
 
 function swapLocations() {
 
-    const from = $("fromInput");
-    const to = $("toInput");
+    const from =
+        $("fromInput");
+
+    const to =
+        $("toInput");
+
 
     if (!from || !to) {
         return;
@@ -1801,6 +1861,7 @@ function toggleFilters() {
     const filters =
         $("extraFilters");
 
+
     if (!filters) {
         return;
     }
@@ -1814,13 +1875,14 @@ function toggleFilters() {
 
 
 /* =========================================================
-   BOTTOM SEARCH
+   FOCUS SEARCH
 ========================================================= */
 
 function focusSearch() {
 
     const section =
         $("searchSection");
+
 
     if (section) {
 
@@ -1867,13 +1929,19 @@ function showToast(message) {
     const toast =
         $("toast");
 
+
     if (!toast) {
+        console.log(
+            "HAVKAR:",
+            message
+        );
+
         return;
     }
 
 
     toast.textContent =
-        message;
+        String(message);
 
 
     toast.classList.add(
@@ -1899,24 +1967,99 @@ function showToast(message) {
 
 
 /* =========================================================
-   SAFE EVENT LISTENER
+   CLOSE MODAL WHEN CLICKING OUTSIDE
 ========================================================= */
 
-function on(id, event, handler) {
+function setupModalOutsideClick(
+    modalId,
+    closeFunction
+) {
 
-    const element = $(id);
+    const modal =
+        $(modalId);
+
+
+    if (!modal) {
+        return;
+    }
+
+
+    modal.addEventListener(
+        "click",
+        event => {
+
+            if (
+                event.target ===
+                event.currentTarget
+            ) {
+
+                closeFunction();
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   ENTER KEY SEARCH
+========================================================= */
+
+function setupEnterSearch(id) {
+
+    const element =
+        $(id);
+
 
     if (!element) {
-        console.warn(
-            "HAVKAR: Element not found ->",
-            id
-        );
         return;
     }
 
 
     element.addEventListener(
-        event,
+        "keydown",
+        event => {
+
+            if (event.key === "Enter") {
+
+                event.preventDefault();
+
+                searchTickets(true);
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   SAFE EVENT LISTENER
+========================================================= */
+
+function on(id, eventName, handler) {
+
+    const element =
+        $(id);
+
+
+    if (!element) {
+
+        console.warn(
+            "HAVKAR: Element not found:",
+            id
+        );
+
+        return;
+
+    }
+
+
+    element.addEventListener(
+        eventName,
         handler
     );
 
@@ -1924,90 +2067,13 @@ function on(id, event, handler) {
 
 
 /* =========================================================
-   INITIALIZATION
-   IMPORTANT:
-   EVERYTHING STARTS AFTER DOM IS READY
+   INITIALIZE EVERYTHING
 ========================================================= */
 
-function initializeHAVKARTickets() {
+function initializeHAVKAR() {
 
-    /* -----------------------------------------
-       TODAY
-    ----------------------------------------- */
-
-    setToday();
-
-
-    /* -----------------------------------------
-       PASSENGERS
-    ----------------------------------------- */
-
-    on(
-        "passengersInput",
-        "input",
-        updateTotal
-    );
-
-    on(
-        "passengersInput",
-        "change",
-        updateTotal
-    );
-
-
-    /* -----------------------------------------
-       FILTERS
-    ----------------------------------------- */
-
-    on(
-        "stopsSelect",
-        "change",
-        () => searchTickets(false)
-    );
-
-
-    on(
-        "sortSelect",
-        "change",
-        () => searchTickets(false)
-    );
-
-
-    /* -----------------------------------------
-       ENTER SEARCH
-    ----------------------------------------- */
-
-    on(
-        "fromInput",
-        "keydown",
-        event => {
-
-            if (event.key === "Enter") {
-
-                event.preventDefault();
-
-                searchTickets(true);
-
-            }
-
-        }
-    );
-
-
-    on(
-        "toInput",
-        "keydown",
-        event => {
-
-            if (event.key === "Enter") {
-
-                event.preventDefault();
-
-                searchTickets(true);
-
-            }
-
-        }
+    console.log(
+        "HAVKAR Tickets initializing..."
     );
 
 
@@ -2015,15 +2081,11 @@ function initializeHAVKARTickets() {
        DATE
     ----------------------------------------- */
 
-    on(
-        "dateInput",
-        "change",
-        () => searchTickets(false)
-    );
+    setToday();
 
 
     /* -----------------------------------------
-       MAIN SEARCH BUTTON
+       SEARCH BUTTON
     ----------------------------------------- */
 
     on(
@@ -2034,7 +2096,7 @@ function initializeHAVKARTickets() {
 
 
     /* -----------------------------------------
-       TABS
+       TRANSPORT TABS
     ----------------------------------------- */
 
     document
@@ -2045,9 +2107,10 @@ function initializeHAVKARTickets() {
                 "click",
                 () => {
 
-                    changeType(
-                        tab.dataset.type
-                    );
+                    const type =
+                        tab.dataset.type;
+
+                    changeType(type);
 
                 }
             );
@@ -2056,7 +2119,7 @@ function initializeHAVKARTickets() {
 
 
     /* -----------------------------------------
-       HEADER
+       HEADER BUTTONS
     ----------------------------------------- */
 
     on(
@@ -2098,7 +2161,7 @@ function initializeHAVKARTickets() {
 
 
     /* -----------------------------------------
-       FILTER TOGGLE
+       FILTER
     ----------------------------------------- */
 
     on(
@@ -2154,6 +2217,59 @@ function initializeHAVKARTickets() {
 
 
     /* -----------------------------------------
+       PASSENGERS
+    ----------------------------------------- */
+
+    on(
+        "passengersInput",
+        "input",
+        updateTotal
+    );
+
+
+    /* -----------------------------------------
+       FILTER EVENTS
+    ----------------------------------------- */
+
+    on(
+        "stopsSelect",
+        "change",
+        () => searchTickets(false)
+    );
+
+
+    on(
+        "sortSelect",
+        "change",
+        () => searchTickets(false)
+    );
+
+
+    /* -----------------------------------------
+       DATE CHANGE
+    ----------------------------------------- */
+
+    on(
+        "dateInput",
+        "change",
+        () => searchTickets(false)
+    );
+
+
+    /* -----------------------------------------
+       ENTER SEARCH
+    ----------------------------------------- */
+
+    setupEnterSearch(
+        "fromInput"
+    );
+
+    setupEnterSearch(
+        "toInput"
+    );
+
+
+    /* -----------------------------------------
        BOOKING FORM
     ----------------------------------------- */
 
@@ -2164,6 +2280,10 @@ function initializeHAVKARTickets() {
     );
 
 
+    /* -----------------------------------------
+       CLOSE BOOKING
+    ----------------------------------------- */
+
     on(
         "closeBooking",
         "click",
@@ -2171,12 +2291,20 @@ function initializeHAVKARTickets() {
     );
 
 
+    /* -----------------------------------------
+       CLOSE SUCCESS
+    ----------------------------------------- */
+
     on(
         "closeSuccess",
         "click",
         closeSuccess
     );
 
+
+    /* -----------------------------------------
+       VIEW TICKETS
+    ----------------------------------------- */
 
     on(
         "viewTicketsBtn",
@@ -2192,42 +2320,18 @@ function initializeHAVKARTickets() {
 
 
     /* -----------------------------------------
-       MODAL BACKDROP
+       MODAL OUTSIDE CLICK
     ----------------------------------------- */
 
-    on(
+    setupModalOutsideClick(
         "bookingModal",
-        "click",
-        event => {
-
-            if (
-                event.target ===
-                event.currentTarget
-            ) {
-
-                closeBooking();
-
-            }
-
-        }
+        closeBooking
     );
 
 
-    on(
+    setupModalOutsideClick(
         "successModal",
-        "click",
-        event => {
-
-            if (
-                event.target ===
-                event.currentTarget
-            ) {
-
-                closeSuccess();
-
-            }
-
-        }
+        closeSuccess
     );
 
 
@@ -2240,7 +2344,8 @@ function initializeHAVKARTickets() {
         event => {
 
             if (
-                event.key === "Escape"
+                event.key ===
+                "Escape"
             ) {
 
                 closeBooking();
@@ -2259,11 +2364,18 @@ function initializeHAVKARTickets() {
 
     searchTickets(false);
 
+
+    console.log(
+        "HAVKAR Tickets initialized successfully."
+    );
+
 }
 
 
 /* =========================================================
-   START ONLY WHEN DOM IS READY
+   DOM READY
+   IMPORTANT:
+   ALL DOM EVENTS START HERE
 ========================================================= */
 
 if (
@@ -2273,7 +2385,7 @@ if (
 
     document.addEventListener(
         "DOMContentLoaded",
-        initializeHAVKARTickets,
+        initializeHAVKAR,
         {
             once: true
         }
@@ -2283,7 +2395,7 @@ if (
 
 else {
 
-    initializeHAVKARTickets();
+    initializeHAVKAR();
 
 }
 
