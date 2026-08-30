@@ -2608,7 +2608,6 @@ function renderCryptoDetails(
 
             </div>
 
-
             <label
                 class="trade-input-label"
                 for="tradeAmount">
@@ -2950,11 +2949,6 @@ function updateTradePreview(){
 
 async function executeCryptoTrade(){
 
-    const status =
-        document.getElementById(
-            "tradeStatus"
-        );
-
     const button =
         document.getElementById(
             "tradeExecuteButton"
@@ -3095,24 +3089,26 @@ async function executeCryptoTrade(){
     try{
 
         /*
-         * Real Supabase RPC.
+         * IMPORTANT:
          *
-         * Function:
-         * execute_trade
+         * Supabase function currently exists as:
          *
-         * Parameters:
-         * p_side
-         * p_symbol
-         * p_amount
-         * p_price_eur
-         * p_total_eur
+         * public.trade_crypto(
+         *     text,
+         *     text,
+         *     numeric,
+         *     numeric
+         * )
+         *
+         * Therefore only FOUR parameters
+         * are sent here.
          */
 
         const result =
             await withTimeout(
 
                 supabaseClient.rpc(
-                    "execute_trade",
+                    "trade_crypto",
                     {
                         p_side:
                             tradeSide,
@@ -3124,10 +3120,7 @@ async function executeCryptoTrade(){
                             amount,
 
                         p_price_eur:
-                            price,
-
-                        p_total_eur:
-                            totalEUR
+                            price
                     }
                 ),
 
@@ -3167,8 +3160,7 @@ async function executeCryptoTrade(){
 
 
         /*
-         * Update current crypto balance
-         * shown inside the modal.
+         * Update current crypto balance.
          */
 
         const balance =
@@ -4188,10 +4180,6 @@ async function startWallet(){
 
     clearError();
 
-    /*
-     * Load prices and wallet independently.
-     */
-
     await Promise.allSettled([
 
         loadCryptoPrices(),
@@ -4213,4 +4201,4 @@ startWallet();
 </script>
 
 </body>
-</html>
+      </html>
