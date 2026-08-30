@@ -7,7 +7,7 @@
 <title>HAVKAR - Services</title>
 
 <link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 
 <style>
 
@@ -35,7 +35,7 @@ body {
         sans-serif;
 
     background: #f5f6f4;
-    color: #303030;
+    color: #292929;
     min-height: 100vh;
 }
 
@@ -48,12 +48,14 @@ textarea {
 
 button {
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
 }
 
-button:active {
-    transform: scale(.97);
+input,
+select,
+textarea {
+    outline: none;
 }
-
 
 /* =========================================================
    HEADER
@@ -64,55 +66,69 @@ button:active {
     top: 0;
     z-index: 100;
 
-    height: 70px;
+    width: 100%;
 
     background:
         linear-gradient(
             135deg,
-            #689f38,
-            #7cb342
+            #689f38 0%,
+            #7cb342 55%,
+            #8bc34a 100%
         );
 
     color: white;
+
+    padding:
+        calc(13px + env(safe-area-inset-top))
+        18px
+        13px;
 
     display: flex;
     align-items: center;
     justify-content: space-between;
 
-    padding: 0 18px;
-
     box-shadow:
-        0 3px 14px rgba(0,0,0,.15);
+        0 3px 14px rgba(0,0,0,.14);
 }
 
 .header-left {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 13px;
+    min-width: 0;
 }
 
 .back-btn {
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    height: 44px;
 
     border: none;
-    background: rgba(255,255,255,.15);
-
-    color: white;
-
     border-radius: 50%;
 
-    font-size: 18px;
+    background: rgba(255,255,255,.18);
+
+    color: white;
 
     display: flex;
     align-items: center;
     justify-content: center;
+
+    font-size: 20px;
+
+    transition: .2s;
+}
+
+.back-btn:active {
+    transform: scale(.92);
 }
 
 .header-title {
     font-size: 21px;
     font-weight: 800;
-    letter-spacing: -.3px;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .header-right {
@@ -132,13 +148,19 @@ button:active {
 
     color: white;
 
-    font-size: 17px;
-
     display: flex;
     align-items: center;
     justify-content: center;
 
+    font-size: 17px;
+
     position: relative;
+
+    transition: .2s;
+}
+
+.header-icon:active {
+    transform: scale(.92);
 }
 
 .notification-badge {
@@ -147,15 +169,15 @@ button:active {
     top: -2px;
     right: -2px;
 
-    min-width: 18px;
-    height: 18px;
+    min-width: 19px;
+    height: 19px;
 
-    padding: 0 4px;
+    padding: 0 5px;
+
+    background: #e53935;
+    color: white;
 
     border-radius: 20px;
-
-    background: #d32f2f;
-    color: white;
 
     font-size: 10px;
     font-weight: 800;
@@ -164,20 +186,19 @@ button:active {
     align-items: center;
     justify-content: center;
 
-    border: 2px solid #689f38;
+    border: 2px solid #7cb342;
 }
 
-
 /* =========================================================
-   SEARCH
+   SEARCH AREA
 ========================================================= */
 
-.search-section {
+.search-area {
     background: white;
 
-    padding: 15px 18px 12px;
+    padding: 16px 18px 14px;
 
-    border-bottom: 1px solid #e8e8e8;
+    border-bottom: 1px solid #e7e7e7;
 }
 
 .search-wrapper {
@@ -187,33 +208,36 @@ button:active {
 .search-icon {
     position: absolute;
 
-    left: 16px;
+    left: 17px;
     top: 50%;
 
     transform: translateY(-50%);
 
     color: #999;
 
-    font-size: 16px;
+    font-size: 17px;
+
+    pointer-events: none;
 }
 
 .search-input {
     width: 100%;
 
-    height: 48px;
+    height: 52px;
+
+    padding:
+        0 48px
+        0 46px;
 
     border: 2px solid #e1e1e1;
-    border-radius: 25px;
+
+    border-radius: 28px;
 
     background: #fafafa;
 
-    padding:
-        0 45px
-        0 45px;
+    color: #333;
 
-    font-size: 15px;
-
-    outline: none;
+    font-size: 16px;
 
     transition: .2s;
 }
@@ -221,6 +245,9 @@ button:active {
 .search-input:focus {
     border-color: #7cb342;
     background: white;
+
+    box-shadow:
+        0 0 0 4px rgba(124,179,66,.10);
 }
 
 .clear-search {
@@ -231,35 +258,46 @@ button:active {
 
     transform: translateY(-50%);
 
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
 
     border: none;
     border-radius: 50%;
 
-    background: #eeeeee;
+    background: #e8e8e8;
 
     color: #777;
 
     display: none;
+    align-items: center;
+    justify-content: center;
 }
 
+.clear-search.show {
+    display: flex;
+}
 
 /* =========================================================
    CATEGORIES
 ========================================================= */
 
-.categories {
+.categories-wrapper {
     background: white;
 
+    border-bottom: 1px solid #e5e5e5;
+
+    overflow: hidden;
+}
+
+.categories {
     display: flex;
+
     gap: 9px;
 
     overflow-x: auto;
 
     padding:
-        4px 18px
-        15px;
+        12px 18px 14px;
 
     scrollbar-width: none;
 }
@@ -271,117 +309,148 @@ button:active {
 .category-btn {
     flex-shrink: 0;
 
-    border: 1.5px solid #dedede;
+    min-height: 40px;
+
+    padding:
+        8px 17px;
+
+    border:
+        1.5px solid #dedede;
+
+    border-radius: 23px;
 
     background: white;
 
-    color: #555;
+    color: #666;
 
-    padding:
-        9px 16px;
-
-    border-radius: 22px;
-
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
 
     transition: .2s;
 }
 
 .category-btn:hover {
-    border-color: #7cb342;
+    border-color: #9ccc65;
 }
 
 .category-btn.active {
-    background: #7cb342;
+    background:
+        linear-gradient(
+            135deg,
+            #689f38,
+            #7cb342
+        );
+
     border-color: #7cb342;
+
     color: white;
 
     box-shadow:
-        0 3px 8px rgba(124,179,66,.25);
+        0 4px 10px rgba(104,159,56,.22);
 }
 
+.category-btn:active {
+    transform: scale(.96);
+}
 
 /* =========================================================
-   MAIN CONTENT
+   CONTENT HEADER
 ========================================================= */
 
 .content {
     width: 100%;
-    max-width: 900px;
+
+    max-width: 1100px;
 
     margin: 0 auto;
 
     padding:
-        17px
-        17px
+        20px
+        18px
         110px;
 }
 
-.results-header {
+.content-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
 
-    margin-bottom: 13px;
+    margin-bottom: 14px;
 }
 
-.results-title {
+.content-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: #444;
+}
+
+.service-count {
     font-size: 14px;
     font-weight: 700;
-    color: #555;
+    color: #689f38;
 }
 
-.results-count {
-    color: #7cb342;
-    font-weight: 800;
-}
+/* =========================================================
+   SERVICE GRID
+========================================================= */
 
+.services-grid {
+    display: grid;
+
+    grid-template-columns: 1fr;
+
+    gap: 15px;
+}
 
 /* =========================================================
    SERVICE CARD
 ========================================================= */
 
 .service-card {
+    position: relative;
+
     background: white;
 
-    border-radius: 18px;
+    border-radius: 20px;
 
-    padding: 18px;
+    padding: 19px;
 
-    margin-bottom: 14px;
-
-    border: 1px solid #eeeeee;
+    border: 1px solid #ededed;
 
     box-shadow:
-        0 3px 14px rgba(0,0,0,.06);
+        0 4px 18px rgba(0,0,0,.07);
 
     transition:
-        transform .2s,
-        box-shadow .2s;
+        transform .2s ease,
+        box-shadow .2s ease;
+
+    overflow: hidden;
 }
 
 .service-card:hover {
     transform: translateY(-2px);
 
     box-shadow:
-        0 7px 22px rgba(0,0,0,.09);
+        0 8px 25px rgba(0,0,0,.10);
 }
 
 .service-top {
     display: flex;
+
     align-items: flex-start;
 
-    gap: 13px;
+    gap: 14px;
+
+    margin-bottom: 14px;
 }
 
 .provider-avatar {
-    width: 58px;
-    height: 58px;
+    width: 62px;
+    height: 62px;
 
-    min-width: 58px;
+    min-width: 62px;
 
-    border-radius: 16px;
+    border-radius: 17px;
 
     background:
         linear-gradient(
@@ -394,10 +463,12 @@ button:active {
     align-items: center;
     justify-content: center;
 
-    font-size: 26px;
+    font-size: 29px;
+
+    border: 1px solid #d7ebc5;
 }
 
-.service-info {
+.service-main {
     flex: 1;
     min-width: 0;
 }
@@ -408,37 +479,51 @@ button:active {
 
     color: #292929;
 
-    line-height: 1.25;
+    line-height: 1.3;
+
+    padding-right: 34px;
 
     margin-bottom: 4px;
 }
 
 .provider-name {
-    font-size: 13px;
-    color: #666;
+    font-size: 14px;
+
+    color: #707070;
 
     margin-bottom: 6px;
 }
 
 .rating {
-    display: inline-flex;
+    display: flex;
     align-items: center;
 
-    gap: 4px;
+    gap: 5px;
 
-    font-size: 12px;
-    font-weight: 700;
+    font-size: 13px;
 
     color: #689f38;
+
+    font-weight: 700;
 }
 
-.favorite-btn {
-    width: 38px;
-    height: 38px;
+.rating i {
+    font-size: 12px;
+}
+
+.save-btn {
+    position: absolute;
+
+    top: 18px;
+    right: 18px;
+
+    width: 40px;
+    height: 40px;
+
+    border:
+        1px solid #e3e3e3;
 
     border-radius: 50%;
-
-    border: 1px solid #e4e4e4;
 
     background: white;
 
@@ -448,49 +533,51 @@ button:active {
     align-items: center;
     justify-content: center;
 
-    flex-shrink: 0;
+    font-size: 16px;
 
     transition: .2s;
 }
 
-.favorite-btn.saved {
-    color: #7cb342;
-    background: #f1f8ed;
-    border-color: #c5e1a5;
+.save-btn:hover {
+    color: #689f38;
+    border-color: #b7d997;
 }
 
-
-/* =========================================================
-   SERVICE DETAILS
-========================================================= */
+.save-btn.saved {
+    color: #689f38;
+    background: #f1f8eb;
+    border-color: #b7d997;
+}
 
 .service-details {
     display: flex;
+
     flex-wrap: wrap;
 
     gap: 8px;
 
-    margin:
-        15px 0
-        12px;
+    margin-bottom: 12px;
 }
 
 .detail-item {
     display: inline-flex;
+
     align-items: center;
 
     gap: 6px;
 
-    background: #f7f7f7;
-
-    border-radius: 9px;
-
     padding:
-        7px 9px;
+        7px 10px;
+
+    border-radius: 10px;
+
+    background: #f7f8f6;
+
+    color: #666;
 
     font-size: 12px;
 
-    color: #666;
+    font-weight: 600;
 }
 
 .detail-item i {
@@ -498,28 +585,25 @@ button:active {
 }
 
 .service-description {
-    font-size: 13.5px;
+    color: #666;
+
+    font-size: 14px;
 
     line-height: 1.55;
 
-    color: #666;
-
-    margin-bottom: 15px;
+    margin-bottom: 17px;
 }
 
-
-/* =========================================================
-   SERVICE FOOTER
-========================================================= */
-
-.service-footer {
+.service-bottom {
     display: flex;
+
     align-items: center;
+
     justify-content: space-between;
 
-    gap: 12px;
+    gap: 15px;
 
-    padding-top: 13px;
+    padding-top: 15px;
 
     border-top: 1px solid #eeeeee;
 }
@@ -527,19 +611,32 @@ button:active {
 .price {
     color: #558b2f;
 
-    font-size: 18px;
+    font-size: 21px;
 
     font-weight: 900;
+
+    white-space: nowrap;
 }
 
 .price small {
-    font-size: 11px;
-    font-weight: 600;
     color: #888;
+
+    font-size: 12px;
+
+    font-weight: 600;
 }
 
 .book-btn {
+    min-width: 116px;
+
+    min-height: 44px;
+
+    padding:
+        10px 18px;
+
     border: none;
+
+    border-radius: 23px;
 
     background:
         linear-gradient(
@@ -550,69 +647,93 @@ button:active {
 
     color: white;
 
-    padding:
-        11px 18px;
-
-    border-radius: 12px;
-
-    font-size: 13px;
+    font-size: 14px;
 
     font-weight: 800;
 
     box-shadow:
-        0 4px 10px rgba(104,159,56,.22);
+        0 4px 12px rgba(104,159,56,.22);
+
+    transition: .2s;
 }
 
+.book-btn:hover {
+    filter: brightness(1.04);
+
+    box-shadow:
+        0 6px 15px rgba(104,159,56,.28);
+}
+
+.book-btn:active {
+    transform: scale(.96);
+}
 
 /* =========================================================
    EMPTY
 ========================================================= */
 
 .empty-message {
+    display: none;
+
     background: white;
 
-    border-radius: 18px;
+    border-radius: 20px;
 
-    padding: 65px 20px;
+    padding: 55px 25px;
 
     text-align: center;
 
-    color: #777;
+    border: 1px solid #eee;
+}
 
-    box-shadow:
-        0 3px 14px rgba(0,0,0,.05);
+.empty-message.show {
+    display: block;
 }
 
 .empty-message i {
-    font-size: 42px;
+    width: 70px;
+    height: 70px;
 
-    color: #bdbdbd;
+    border-radius: 50%;
 
-    margin-bottom: 17px;
+    background: #f0f5ec;
+
+    color: #8ab85d;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    margin: 0 auto 18px;
+
+    font-size: 28px;
 }
 
 .empty-message h3 {
-    color: #444;
-
-    font-size: 18px;
+    font-size: 19px;
 
     margin-bottom: 7px;
 }
 
 .empty-message p {
-    font-size: 13px;
-}
+    color: #888;
 
+    font-size: 14px;
+
+    line-height: 1.5;
+}
 
 /* =========================================================
    FAB
 ========================================================= */
 
-.fab-button {
+.fab {
     position: fixed;
 
-    right: 18px;
-    bottom: 88px;
+    right: 20px;
+
+    bottom:
+        calc(88px + env(safe-area-inset-bottom));
 
     width: 58px;
     height: 58px;
@@ -630,49 +751,30 @@ button:active {
 
     color: white;
 
-    font-size: 21px;
+    font-size: 22px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     box-shadow:
-        0 6px 20px rgba(104,159,56,.35);
+        0 7px 22px rgba(104,159,56,.38);
 
     z-index: 80;
-}
-
-.fab-label {
-    position: absolute;
-
-    right: 68px;
-    top: 50%;
-
-    transform: translateY(-50%);
-
-    background: #333;
-
-    color: white;
-
-    padding:
-        7px 10px;
-
-    border-radius: 8px;
-
-    font-size: 11px;
-
-    white-space: nowrap;
-
-    opacity: 0;
-
-    pointer-events: none;
 
     transition: .2s;
 }
 
-.fab-button:hover .fab-label {
-    opacity: 1;
+.fab:hover {
+    transform: translateY(-2px);
 }
 
+.fab:active {
+    transform: scale(.93);
+}
 
 /* =========================================================
-   BOTTOM NAVIGATION
+   BOTTOM NAV
 ========================================================= */
 
 .bottom-nav {
@@ -682,66 +784,69 @@ button:active {
     right: 0;
     bottom: 0;
 
-    height: 72px;
+    height:
+        calc(72px + env(safe-area-inset-bottom));
 
-    background: white;
+    padding-bottom:
+        env(safe-area-inset-bottom);
 
-    display: flex;
-    align-items: center;
-    justify-content: space-around;
+    background: rgba(255,255,255,.97);
+
+    border-top: 1px solid #e6e6e6;
 
     box-shadow:
-        0 -3px 15px rgba(0,0,0,.10);
+        0 -4px 18px rgba(0,0,0,.08);
 
-    z-index: 100;
+    display: flex;
+
+    align-items: stretch;
+
+    justify-content: space-around;
+
+    z-index: 70;
+
+    backdrop-filter: blur(12px);
 }
 
 .nav-item {
     flex: 1;
 
-    height: 100%;
+    max-width: 130px;
+
+    border: none;
+
+    background: transparent;
+
+    color: #999;
 
     display: flex;
+
     flex-direction: column;
 
     align-items: center;
+
     justify-content: center;
 
-    gap: 4px;
-
-    color: #999;
+    gap: 5px;
 
     font-size: 11px;
 
     font-weight: 600;
 
-    position: relative;
+    transition: .2s;
 }
 
 .nav-item i {
-    font-size: 20px;
+    font-size: 19px;
 }
 
 .nav-item.active {
     color: #7cb342;
 }
 
-.nav-item.active::before {
-    content: "";
-
-    position: absolute;
-
-    top: 0;
-
-    width: 35px;
-    height: 3px;
-
-    background: #7cb342;
-
-    border-radius:
-        0 0 5px 5px;
+.nav-item:active {
+    transform: scale(.94);
 }
-
 
 /* =========================================================
    MODAL
@@ -753,16 +858,18 @@ button:active {
     inset: 0;
 
     background:
-        rgba(0,0,0,.62);
+        rgba(0,0,0,.58);
 
     display: none;
 
-    align-items: flex-end;
+    align-items: center;
     justify-content: center;
 
-    padding: 0;
+    padding: 18px;
 
-    z-index: 500;
+    z-index: 300;
+
+    backdrop-filter: blur(3px);
 }
 
 .modal.show {
@@ -771,46 +878,62 @@ button:active {
 
 .modal-box {
     width: 100%;
-    max-width: 650px;
 
-    max-height: 92vh;
+    max-width: 570px;
+
+    max-height: 91vh;
 
     overflow-y: auto;
 
     background: white;
 
-    border-radius:
-        24px 24px 0 0;
+    border-radius: 24px;
 
-    padding:
-        25px 20px
-        30px;
+    padding: 25px 21px 22px;
 
     position: relative;
 
+    box-shadow:
+        0 20px 60px rgba(0,0,0,.25);
+
     animation:
-        modalUp .25s ease;
+        modalIn .2s ease;
 }
 
-@keyframes modalUp {
-
+@keyframes modalIn {
     from {
-        transform: translateY(100%);
+        opacity: 0;
+        transform: translateY(15px) scale(.98);
     }
 
     to {
-        transform: translateY(0);
+        opacity: 1;
+        transform: translateY(0) scale(1);
     }
 }
 
+.modal-header {
+    padding-right: 48px;
+
+    margin-bottom: 21px;
+}
+
 .modal-title {
-    font-size: 20px;
+    font-size: 21px;
 
     font-weight: 900;
 
-    margin-bottom: 20px;
+    color: #292929;
+}
 
-    padding-right: 45px;
+.modal-subtitle {
+    margin-top: 5px;
+
+    font-size: 13px;
+
+    color: #888;
+
+    line-height: 1.4;
 }
 
 .close-btn {
@@ -819,8 +942,8 @@ button:active {
     top: 15px;
     right: 15px;
 
-    width: 40px;
-    height: 40px;
+    width: 42px;
+    height: 42px;
 
     border: none;
 
@@ -830,21 +953,33 @@ button:active {
 
     color: #555;
 
-    font-size: 16px;
+    font-size: 17px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
+
+.close-btn:hover {
+    background: #e8e8e8;
+}
+
+/* =========================================================
+   FORM
+========================================================= */
 
 .form-group {
-    margin-bottom: 15px;
+    margin-bottom: 16px;
 }
 
-.form-group label {
+.form-label {
     display: block;
 
-    font-size: 13px;
+    margin-bottom: 7px;
+
+    font-size: 14px;
 
     font-weight: 800;
-
-    margin-bottom: 7px;
 
     color: #444;
 }
@@ -854,19 +989,19 @@ button:active {
 
     min-height: 48px;
 
+    padding:
+        12px 14px;
+
     border:
-        1.5px solid #ddd;
+        1.5px solid #dedede;
 
     border-radius: 12px;
 
     background: white;
 
-    padding:
-        11px 13px;
+    color: #333;
 
-    font-size: 14px;
-
-    outline: none;
+    font-size: 15px;
 
     transition: .2s;
 }
@@ -875,12 +1010,19 @@ button:active {
     border-color: #7cb342;
 
     box-shadow:
-        0 0 0 3px rgba(124,179,66,.10);
+        0 0 0 4px rgba(124,179,66,.10);
 }
 
 textarea.form-control {
     min-height: 105px;
+
     resize: vertical;
+}
+
+.readonly {
+    background: #f7f7f7;
+
+    color: #666;
 }
 
 .submit-btn {
@@ -903,11 +1045,17 @@ textarea.form-control {
 
     font-size: 15px;
 
-    font-weight: 900;
+    font-weight: 800;
 
-    margin-top: 5px;
+    margin-top: 4px;
+
+    box-shadow:
+        0 5px 15px rgba(104,159,56,.24);
 }
 
+.submit-btn:active {
+    transform: scale(.98);
+}
 
 /* =========================================================
    TOAST
@@ -917,34 +1065,38 @@ textarea.form-control {
     position: fixed;
 
     left: 50%;
-    bottom: 88px;
+
+    bottom:
+        calc(88px + env(safe-area-inset-bottom));
 
     transform:
         translateX(-50%)
         translateY(20px);
 
+    max-width: calc(100% - 35px);
+
+    padding:
+        12px 19px;
+
     background: #303030;
 
     color: white;
-
-    padding:
-        12px 18px;
 
     border-radius: 25px;
 
     font-size: 13px;
 
+    font-weight: 600;
+
+    text-align: center;
+
     opacity: 0;
 
     pointer-events: none;
 
-    transition: .3s;
+    transition: .25s;
 
-    z-index: 1000;
-
-    max-width: 90%;
-
-    text-align: center;
+    z-index: 500;
 }
 
 .toast.show {
@@ -955,64 +1107,129 @@ textarea.form-control {
         translateY(0);
 }
 
-
 /* =========================================================
-   RESPONSIVE DESKTOP
+   DESKTOP
 ========================================================= */
 
 @media (min-width: 700px) {
 
+    body {
+        background: #eeeeee;
+    }
+
     .header {
-        padding: 0 25px;
+        padding-left: max(22px, calc((100vw - 1100px) / 2 + 18px));
+        padding-right: max(22px, calc((100vw - 1100px) / 2 + 18px));
+    }
+
+    .search-area,
+    .categories-wrapper {
+        padding-left: max(0px, calc((100vw - 1100px) / 2));
+        padding-right: max(0px, calc((100vw - 1100px) / 2));
+    }
+
+    .search-area {
+        padding-top: 18px;
+        padding-bottom: 16px;
+    }
+
+    .services-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
     }
 
     .content {
-        padding:
-            22px
-            22px
-            110px;
-    }
-
-    .modal {
-        align-items: center;
-        padding: 20px;
-    }
-
-    .modal-box {
-        border-radius: 22px;
+        padding-top: 24px;
     }
 
     .bottom-nav {
+        height: 70px;
+
         left: 50%;
         right: auto;
 
         transform: translateX(-50%);
 
-        width: 100%;
-        max-width: 900px;
+        width: min(100%, 1100px);
 
         border-radius:
             18px 18px 0 0;
     }
 
-    .fab-button {
+    .fab {
         right:
-            calc(
-                50% - 430px
-            );
+            max(25px, calc((100vw - 1100px) / 2 + 20px));
+    }
+}
+
+@media (min-width: 1000px) {
+
+    .services-grid {
+        grid-template-columns:
+            repeat(3, minmax(0, 1fr));
+    }
+}
+
+/* =========================================================
+   SMALL PHONES
+========================================================= */
+
+@media (max-width: 380px) {
+
+    .header {
+        padding-left: 13px;
+        padding-right: 13px;
+    }
+
+    .header-title {
+        font-size: 19px;
+    }
+
+    .header-right {
+        gap: 5px;
+    }
+
+    .header-icon {
+        width: 38px;
+        height: 38px;
+    }
+
+    .back-btn {
+        width: 40px;
+        height: 40px;
+    }
+
+    .content {
+        padding-left: 13px;
+        padding-right: 13px;
+    }
+
+    .service-card {
+        padding: 15px;
+    }
+
+    .service-bottom {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .book-btn {
+        width: 100%;
+    }
+
+    .price {
+        font-size: 20px;
     }
 }
 
 </style>
 </head>
 
-
 <body>
 
-
-<!-- =======================================================
+<!-- =========================================================
      HEADER
-======================================================= -->
+========================================================= -->
 
 <header class="header">
 
@@ -1020,6 +1237,7 @@ textarea.form-control {
 
         <button
             class="back-btn"
+            type="button"
             onclick="goBack()"
             aria-label="Back">
 
@@ -1033,11 +1251,11 @@ textarea.form-control {
 
     </div>
 
-
     <div class="header-right">
 
         <button
             class="header-icon"
+            type="button"
             onclick="goNotifications()"
             aria-label="Notifications">
 
@@ -1051,9 +1269,9 @@ textarea.form-control {
 
         </button>
 
-
         <button
             class="header-icon"
+            type="button"
             onclick="goProfile()"
             aria-label="Profile">
 
@@ -1066,11 +1284,11 @@ textarea.form-control {
 </header>
 
 
-<!-- =======================================================
+<!-- =========================================================
      SEARCH
-======================================================= -->
+========================================================= -->
 
-<section class="search-section">
+<section class="search-area">
 
     <div class="search-wrapper">
 
@@ -1082,11 +1300,12 @@ textarea.form-control {
             type="search"
             autocomplete="off"
             placeholder="Search services..."
-        >
+            aria-label="Search services">
 
         <button
             id="clearSearch"
             class="clear-search"
+            type="button"
             onclick="clearSearch()"
             aria-label="Clear search">
 
@@ -1099,100 +1318,126 @@ textarea.form-control {
 </section>
 
 
-<!-- =======================================================
+<!-- =========================================================
      CATEGORIES
-======================================================= -->
+========================================================= -->
 
-<section class="categories">
+<section class="categories-wrapper">
 
-    <button
-        class="category-btn active"
-        data-category="All"
-        onclick="selectCategory('All', this)">
-        All
-    </button>
+    <div class="categories" id="categories">
 
-    <button
-        class="category-btn"
-        data-category="Plumbing"
-        onclick="selectCategory('Plumbing', this)">
-        Plumbing
-    </button>
+        <button
+            class="category-btn active"
+            type="button"
+            data-category="All">
 
-    <button
-        class="category-btn"
-        data-category="Electrical"
-        onclick="selectCategory('Electrical', this)">
-        Electrical
-    </button>
+            All
 
-    <button
-        class="category-btn"
-        data-category="Cleaning"
-        onclick="selectCategory('Cleaning', this)">
-        Cleaning
-    </button>
+        </button>
 
-    <button
-        class="category-btn"
-        data-category="Carpentry"
-        onclick="selectCategory('Carpentry', this)">
-        Carpentry
-    </button>
+        <button
+            class="category-btn"
+            type="button"
+            data-category="Plumbing">
 
-    <button
-        class="category-btn"
-        data-category="Painting"
-        onclick="selectCategory('Painting', this)">
-        Painting
-    </button>
+            Plumbing
 
-    <button
-        class="category-btn"
-        data-category="Moving"
-        onclick="selectCategory('Moving', this)">
-        Moving
-    </button>
+        </button>
+
+        <button
+            class="category-btn"
+            type="button"
+            data-category="Electrical">
+
+            Electrical
+
+        </button>
+
+        <button
+            class="category-btn"
+            type="button"
+            data-category="Cleaning">
+
+            Cleaning
+
+        </button>
+
+        <button
+            class="category-btn"
+            type="button"
+            data-category="Carpentry">
+
+            Carpentry
+
+        </button>
+
+        <button
+            class="category-btn"
+            type="button"
+            data-category="Painting">
+
+            Painting
+
+        </button>
+
+        <button
+            class="category-btn"
+            type="button"
+            data-category="Moving">
+
+            Moving
+
+        </button>
+
+    </div>
 
 </section>
 
 
-<!-- =======================================================
+<!-- =========================================================
      CONTENT
-======================================================= -->
+========================================================= -->
 
 <main class="content">
 
-    <div class="results-header">
+    <div class="content-header">
 
-        <div class="results-title">
+        <div class="content-title">
             Available Services
         </div>
 
-        <div class="results-title">
-            <span
-                id="resultsCount"
-                class="results-count">
-                4
-            </span>
-            services
+        <div
+            class="service-count"
+            id="serviceCount">
+            0 services
         </div>
 
     </div>
 
 
-    <div id="servicesContainer">
+    <div
+        class="services-grid"
+        id="servicesContainer">
 
 
         <!-- =================================================
              SERVICE 1
-        ================================================== -->
+        ================================================= -->
 
         <article
             class="service-card"
-            data-id="1"
             data-category="Plumbing"
-            data-search="professional plumbing marco rossi plumber milan emergency repair installation">
+            data-search="professional plumbing marco rossi plumbing plumber milan italy repair installation emergency">
+
+            <button
+                class="save-btn"
+                type="button"
+                onclick="toggleSave(this)"
+                aria-label="Save service">
+
+                <i class="far fa-bookmark"></i>
+
+            </button>
 
             <div class="service-top">
 
@@ -1200,7 +1445,7 @@ textarea.form-control {
                     🔧
                 </div>
 
-                <div class="service-info">
+                <div class="service-main">
 
                     <div class="service-title">
                         Professional Plumbing
@@ -1211,51 +1456,2354 @@ textarea.form-control {
                     </div>
 
                     <div class="rating">
-                        ⭐ 4.8
-                        <span style="color:#999;">
+
+                        <i class="fas fa-star"></i>
+
+                        4.8
+
+                        <span>
                             (127 reviews)
                         </span>
+
                     </div>
 
                 </div>
 
-                <button
-                    class="favorite-btn"
-                    onclick="toggleFavorite(this, event)"
-                    aria-label="Save service">
+            </div>
 
-                    <i class="far fa-bookmark"></i>
+            <div class="service-details">
+
+                <div class="detail-item">
+
+                    <i class="fas fa-location-dot"></i>
+
+                    Milan, Italy
+
+                </div>
+
+                <div class="detail-item">
+
+                    <i class="fas fa-clock"></i>
+
+                    Available Now
+
+                </div>
+
+            </div>
+
+            <div class="service-description">
+
+                Expert plumber with 15+ years of experience.
+                Repairs, installations and emergency services
+                available 24/7.
+
+            </div>
+
+            <div class="service-bottom">
+
+                <div class="price">
+
+                    €50
+                    <small>/ hour</small>
+
+                </div>
+
+                <button
+                    class="book-btn"
+                    type="button"
+                    onclick="openBooking(
+                        'Professional Plumbing',
+                        'Marco Rossi',
+                        '€50 / hour'
+                    )">
+
+                    Book Now
 
                 </button>
 
             </div>
 
+        </article>
+
+
+        <!-- =================================================
+             SERVICE 2
+        ================================================= -->
+
+        <article
+            class="service-card"
+            data-category="Electrical"
+            data-search="electrical services giuseppe bianchi electrician electricity wiring repair installation rome italy">
+
+            <button
+                class="save-btn"
+                type="button"
+                onclick="toggleSave(this)"
+                aria-label="Save service">
+
+                <i class="far fa-bookmark"></i>
+
+            </button>
+
+            <div class="service-top">
+
+                <div class="provider-avatar">
+                    ⚡
+                </div>
+
+                <div class="service-main">
+
+                    <div class="service-title">
+                        Electrical Services
+                    </div>
+
+                    <div class="provider-name">
+                        Giuseppe Bianchi
+                    </div>
+
+                    <div class="rating">
+
+                        <i class="fas fa-star"></i>
+
+                        4.9
+
+                        <span>
+                            (203 reviews)
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
 
             <div class="service-details">
 
                 <div class="detail-item">
-                    <i class="fas fa-map-marker-alt"></i>
-                    Milan, Italy
+
+                    <i class="fas fa-location-dot"></i>
+
+                    Rome, Italy
+
                 </div>
 
                 <div class="detail-item">
+
                     <i class="fas fa-clock"></i>
-                    Available Now
+
+                    Mon-Sat 8AM-8PM
+
                 </div>
 
             </div>
 
+            <div class="service-description">
+
+                Licensed electrician for home and commercial
+                wiring, repairs and installations.
+                Fast and reliable service.
+
+            </div>
+
+            <div class="service-bottom">
+
+                <div class="price">
+
+                    €60
+                    <small>/ hour</small>
+
+                </div>
+
+                <button
+                    class="book-btn"
+                    type="button"
+                    onclick="openBooking(
+                        'Electrical Services',
+                        'Giuseppe Bianchi',
+                        '€60 / hour'
+                    )">
+
+                    Book Now
+
+                </button>
+
+            </div>
+
+        </article>
+
+
+        <!-- =================================================
+             SERVICE 3
+        ================================================= -->
+
+        <article
+            class="service-card"
+            data-category="Cleaning"
+            data-search="home cleaning maria ferrari cleaning cleaner house apartment deep cleaning florence italy">
+
+            <button
+                class="save-btn"
+                type="button"
+                onclick="toggleSave(this)"
+                aria-label="Save service">
+
+                <i class="far fa-bookmark"></i>
+
+            </button>
+
+            <div class="service-top">
+
+                <div class="provider-avatar">
+                    🧹
+                </div>
+
+                <div class="service-main">
+
+                    <div class="service-title">
+                        Home Cleaning
+                    </div>
+
+                    <div class="provider-name">
+                        Maria Ferrari
+                    </div>
+
+                    <div class="rating">
+
+                        <i class="fas fa-star"></i>
+
+                        5.0
+
+                        <span>
+                            (89 reviews)
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="service-details">
+
+                <div class="detail-item">
+
+                    <i class="fas fa-location-dot"></i>
+
+                    Florence, Italy
+
+                </div>
+
+                <div class="detail-item">
+
+                    <i class="fas fa-clock"></i>
+
+                    Flexible Hours
+
+                </div>
+
+            </div>
 
             <div class="service-description">
 
-                Expert plumber with 15+ years of experience.
-                Repairs, installations and emergency services available 24/7.
+                Professional house cleaning service.
+                Deep cleaning, regular maintenance and
+                eco-friendly products.
+
+            </div>
+
+            <div class="service-bottom">
+
+                <div class="price">
+
+                    €25
+                    <small>/ hour</small>
+
+                </div>
+
+                <button
+                    class="book-btn"
+                    type="button"
+                    onclick="openBooking(
+                        'Home Cleaning',
+                        'Maria Ferrari',
+                        '€25 / hour'
+                    )">
+
+                    Book Now
+
+                </button>
+
+            </div>
+
+        </article>
+
+
+        <!-- =================================================
+             SERVICE 4
+        ================================================= -->
+
+        <article
+            class="service-card"
+            data-category="Carpentry"
+            data-search="carpentry furniture antonio russo carpenter custom furniture wood repair installation turin italy">
+
+            <button
+                class="save-btn"
+                type="button"
+                onclick="toggleSave(this)"
+                aria-label="Save service">
+
+                <i class="far fa-bookmark"></i>
+
+            </button>
+
+            <div class="service-top">
+
+                <div class="provider-avatar">
+                    🪚
+                </div>
+
+                <div class="service-main">
+
+                    <div class="service-title">
+                        Carpentry & Furniture
+                    </div>
+
+                    <div class="provider-name">
+                        Antonio Russo
+                    </div>
+
+                    <div class="rating">
+
+                        <i class="fas fa-star"></i>
+
+                        4.7
+
+                        <span>
+                            (156 reviews)
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="service-details">
+
+                <div class="detail-item">
+
+                    <i class="fas fa-location-dot"></i>
+
+                    Turin, Italy
+
+                </div>
+
+                <div class="detail-item">
+
+                    <i class="fas fa-clock"></i>
+
+                    By Appointment
+
+                </div>
+
+            </div>
+
+            <div class="service-description">
+
+                Custom furniture making, repairs and
+                installations. Quality craftsmanship
+                guaranteed.
+
+            </div>
+
+            <div class="service-bottom">
+
+                <div class="price">
+
+                    €40
+                    <small>/ hour</small>
+
+                </div>
+
+                <button
+                    class="book-btn"
+                    type="button"
+                    onclick="openBooking(
+                        'Carpentry & Furniture',
+                        'Antonio Russo',
+                        '€40 / hour'
+                    )">
+
+                    Book Now
+
+                </button>
+
+            </div>
+
+        </article>
+
+
+        <!-- =================================================
+             SERVICE 5
+        ================================================= -->
+
+        <article
+            class="service-card"
+            data-category="Painting"
+            data-search="painting house painter sofia conti painting walls interior exterior naples italy">
+
+            <button
+                class="save-btn"
+                type="button"
+                onclick="toggleSave(this)"
+                aria-label="Save service">
+
+                <i class="far fa-bookmark"></i>
+
+            </button>
+
+            <div class="service-top">
+
+                <div class="provider-avatar">
+                    🎨
+                </div>
+
+                <div class="service-main">
+
+                    <div class="service-title">
+                        Professional Painting
+                    </div>
+
+                    <div class="provider-name">
+                        Sofia Conti
+                    </div>
+
+                    <div class="rating">
+
+                        <i class="fas fa-star"></i>
+
+                        4.9
+
+                        <span>
+                            (74 reviews)
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="service-details">
+
+                <div class="detail-item">
+
+                    <i class="fas fa-location-dot"></i>
+
+                    Naples, Italy
+
+                </div>
+
+                <div class="detail-item">
+
+                    <i class="fas fa-clock"></i>
+
+                    Mon-Sat
+
+                </div>
+
+            </div>
+
+            <div class="service-description">
+
+                Interior and exterior painting for homes,
+                apartments and commercial spaces.
+                Clean professional finish.
+
+            </div>
+
+            <div class="service-bottom">
+
+                <div class="price">
+
+                    €35
+                    <small>/ hour</small>
+
+                </div>
+
+                <button
+                    class="book-btn"
+                    type="button"
+                    onclick="openBooking(
+                        'Professional Painting',
+                        'Sofia Conti',
+                        '€35 / hour'
+                    )">
+
+                    Book Now
+
+                </button>
+
+            </div>
+
+        </article>
+
+
+        <!-- =================================================
+             SERVICE 6
+        ================================================= -->
+
+        <article
+            class="service-card"
+            data-category="Moving"
+            data-search="moving transport movers relocation luca romano moving service truck boxes bologna italy">
+
+            <button
+                class="save-btn"
+                type="button"
+                onclick="toggleSave(this)"
+                aria-label="Save service">
+
+                <i class="far fa-bookmark"></i>
+
+            </button>
+
+            <div class="service-top">
+
+                <div class="provider-avatar">
+                    🚚
+                </div>
+
+                <div class="service-main">
+
+                    <div class="service-title">
+                        Moving & Transport
+                    </div>
+
+                    <div class="provider-name">
+                        Luca Romano
+                    </div>
+
+                    <div class="rating">
+
+                        <i class="fas fa-star"></i>
+
+                        4.8
+
+                        <span>
+                            (112 reviews)
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="service-details">
+
+                <div class="detail-item">
+
+                    <i class="fas fa-location-dot"></i>
+
+                    Bologna, Italy
+
+                </div>
+
+                <div class="detail-item">
+
+                    <i class="fas fa-clock"></i>
+
+                    Available Daily
+
+                </div>
+
+            </div>
+
+            <div class="service-description">
+
+                Reliable moving and transport service for
+                homes, apartments and businesses.
+                Small and large moves available.
+
+            </div>
+
+            <div class="service-bottom">
+
+                <div class="price">
+
+                    €45
+                    <small>/ hour</small>
+
+                </div>
+
+                <button
+                    class="book-btn"
+                    type="button"
+                    onclick="openBooking(
+                        'Moving & Transport',
+                        'Luca Romano',
+                        '€45 / hour'
+                    )">
+
+                    Book Now
+
+                </button>
+
+            </div>
+
+        </article>
+
+    </div>
+
+
+    <!-- EMPTY SEARCH RESULT -->
+
+    <div
+        class="empty-message"
+        id="emptyMessage">
+
+        <i class="fas fa-magnifying-glass"></i>
+
+        <h3>
+            No services found
+        </h3>
+
+        <p>
+            Try another search or choose a different category.
+        </p>
+
+    </div>
+
+</main>
+
+
+<!-- =========================================================
+     OFFER SERVICE FAB
+========================================================= -->
+
+<button
+    class="fab"
+    type="button"
+    onclick="openOfferService()"
+    aria-label="Offer a service">
+
+    <i class="fas fa-plus"></i>
+
+</button>
+
+
+<!-- =========================================================
+     BOTTOM NAVIGATION
+========================================================= -->
+
+<nav class="bottom-nav">
+
+    <button
+        class="nav-item"
+        type="button"
+        onclick="goHome()">
+
+        <i class="fas fa-home"></i>
+
+        <span>
+            Home
+        </span>
+
+    </button>
+
+    <button
+        class="nav-item active"
+        type="button"
+        onclick="focusSearch()">
+
+        <i class="fas fa-search"></i>
+
+        <span>
+            Search
+        </span>
+
+    </button>
+
+    <button
+        class="nav-item"
+        type="button"
+        onclick="showSavedServices()">
+
+        <i class="fas fa-bookmark"></i>
+
+        <span>
+            Saved
+        </span>
+
+    </button>
+
+    <button
+        class="nav-item"
+        type="button"
+        onclick="goMessages()">
+
+        <i class="fas fa-comment"></i>
+
+        <span>
+            Messages
+        </span>
+
+    </button>
+
+    <button
+        class="nav-item"
+        type="button"
+        onclick="goProfile()">
+
+        <i class="fas fa-user"></i>
+
+        <span>
+            Profile
+        </span>
+
+    </button>
+
+</nav>
+
+
+<!-- =========================================================
+     BOOKING MODAL
+========================================================= -->
+
+<div
+    class="modal"
+    id="bookingModal"
+    role="dialog"
+    aria-modal="true">
+
+    <div class="modal-box">
+
+        <button
+            class="close-btn"
+            type="button"
+            onclick="closeModal('bookingModal')"
+            aria-label="Close">
+
+            <i class="fas fa-times"></i>
+
+        </button>
+
+        <div class="modal-header">
+
+            <div class="modal-title">
+                Book Service
+            </div>
+
+            <div class="modal-subtitle">
+                Choose your preferred date and time.
+            </div>
+
+        </div>
+
+
+        <form id="bookingForm">
+
+            <div class="form-group">
+
+                <label
+                    class="form-label"
+                    for="bookingService">
+
+                    Service
+
+                </label>
+
+                <input
+                    id="bookingService"
+                    class="form-control readonly"
+                    type="text"
+                    readonly>
 
             </div>
 
 
-            <div class="service-footer">
+            <div class="form-group">
 
-                <div class="price">
-                    €50
-                    <small>/
+                <label
+                    class="form-label"
+                    for="bookingProvider">
+
+                    Provider
+
+                </label>
+
+                <input
+                    id="bookingProvider"
+                    class="form-control readonly"
+                    type="text"
+                    readonly>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label
+                    class="form-label"
+                    for="bookingPrice">
+
+                    Price
+
+                </label>
+
+                <input
+                    id="bookingPrice"
+                    class="form-control readonly"
+                    type="text"
+                    readonly>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label
+                    class="form-label"
+                    for="bookingDate">
+
+                    Date
+
+                </label>
+
+                <select
+                    id="bookingDate"
+                    class="form-control"
+                    required>
+
+                    <option value="">
+                        Select date
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label
+                    class="form-label"
+                    for="bookingTime">
+
+                    Time
+
+                </label>
+
+                <select
+                    id="bookingTime"
+                    class="form-control"
+                    required>
+
+                    <option value="">
+                        Select time
+                    </option>
+
+                    <option value="08:00">
+                        08:00
+                    </option>
+
+                    <option value="09:00">
+                        09:00
+                    </option>
+
+                    <option value="10:00">
+                        10:00
+                    </option>
+
+                    <option value="11:00">
+                        11:00
+                    </option>
+
+                    <option value="12:00">
+                        12:00
+                    </option>
+
+                    <option value="13:00">
+                        13:00
+                    </option>
+
+                    <option value="14:00">
+                        14:00
+                    </option>
+
+                    <option value="15:00">
+                        15:00
+                    </option>
+
+                    <option value="16:00">
+                        16:00
+                    </option>
+
+                    <option value="17:00">
+                        17:00
+                    </option>
+
+                    <option value="18:00">
+                        18:00
+                    </option>
+
+                    <option value="19:00">
+                        19:00
+                    </option>
+
+                    <option value="20:00">
+                        20:00
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label
+                    class="form-label"
+                    for="bookingMessage">
+
+                    Message
+
+                </label>
+
+                <textarea
+                    id="bookingMessage"
+                    class="form-control"
+                    placeholder="Describe what you need..."></textarea>
+
+            </div>
+
+
+            <button
+                class="submit-btn"
+                type="submit">
+
+                <i class="fas fa-calendar-check"></i>
+
+                &nbsp;
+
+                Confirm Booking
+
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     OFFER SERVICE MODAL
+========================================================= -->
+
+<div
+    class="modal"
+    id="offerModal"
+    role="dialog"
+    aria-modal="true">
+
+    <div class="modal-box">
+
+        <button
+            class="close-btn"
+            type="button"
+            onclick="closeModal('offerModal')"
+            aria-label="Close">
+
+            <i class="fas fa-times"></i>
+
+        </button>
+
+        <div class="modal-header">
+
+            <div class="modal-title">
+                Offer a Service
+            </div>
+
+            <div class="modal-subtitle">
+                Publish your service on HAVKAR.
+            </div>
+
+        </div>
+
+
+        <form id="offerForm">
+
+            <div class="form-group">
+
+                <label
+                    class="form-label"
+                    for="newServiceName">
+
+                    Service Name
+
+                </label>
+
+                <input
+                    id="newServiceName"
+                    class="form-control"
+                    type="text"
+                    placeholder="Example: Plumbing"
+                    maxlength="80"
+                    required>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label
+                    class="form-label"
+                    for="newServiceCategory">
+
+                    Category
+
+                </label>
+
+                <select
+                    id="newServiceCategory"
+                    class="form-control"
+                    required>
+
+                    <option value="Plumbing">
+                        Plumbing
+                    </option>
+
+                    <option value="Electrical">
+                        Electrical
+                    </option>
+
+                    <option value="Cleaning">
+                        Cleaning
+                    </option>
+
+                    <option value="Carpentry">
+                        Carpentry
+                    </option>
+
+                    <option value="Painting">
+                        Painting
+                    </option>
+
+                    <option value="Moving">
+                        Moving
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label
+                    class="form-label"
+                    for="newServicePrice">
+
+                    Price
+
+                </label>
+
+                <input
+                    id="newServicePrice"
+                    class="form-control"
+                    type="text"
+                    placeholder="Example: €30 / hour"
+                    maxlength="40"
+                    required>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label
+                    class="form-label"
+                    for="newServiceDescription">
+
+                    Description
+
+                </label>
+
+                <textarea
+                    id="newServiceDescription"
+                    class="form-control"
+                    placeholder="Describe your service..."
+                    maxlength="500"
+                    required></textarea>
+
+            </div>
+
+
+            <button
+                class="submit-btn"
+                type="submit">
+
+                <i class="fas fa-plus-circle"></i>
+
+                &nbsp;
+
+                Publish Service
+
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     TOAST
+========================================================= -->
+
+<div
+    class="toast"
+    id="toast">
+</div>
+
+
+<script>
+
+/* =========================================================
+   GLOBAL STATE
+========================================================= */
+
+let selectedCategory = "All";
+
+
+/* =========================================================
+   DOM READY
+========================================================= */
+
+document.addEventListener("DOMContentLoaded", function() {
+
+    loadSavedServices();
+
+    loadSavedBookmarks();
+
+    filterServices();
+
+    createBookingDates();
+
+    updateNotificationBadge();
+
+});
+
+
+/* =========================================================
+   SEARCH
+========================================================= */
+
+const searchInput =
+    document.getElementById("searchInput");
+
+const clearSearchButton =
+    document.getElementById("clearSearch");
+
+
+searchInput.addEventListener(
+    "input",
+    function() {
+
+        updateClearSearchButton();
+
+        filterServices();
+
+    }
+);
+
+
+function updateClearSearchButton() {
+
+    if (searchInput.value.trim()) {
+
+        clearSearchButton.classList.add("show");
+
+    } else {
+
+        clearSearchButton.classList.remove("show");
+
+    }
+
+}
+
+
+function clearSearch() {
+
+    searchInput.value = "";
+
+    updateClearSearchButton();
+
+    filterServices();
+
+    searchInput.focus();
+
+}
+
+
+/* =========================================================
+   CATEGORY
+========================================================= */
+
+document
+    .querySelectorAll(".category-btn")
+    .forEach(function(button) {
+
+        button.addEventListener(
+            "click",
+            function() {
+
+                selectedCategory =
+                    button.dataset.category;
+
+                document
+                    .querySelectorAll(".category-btn")
+                    .forEach(function(btn) {
+
+                        btn.classList.remove("active");
+
+                    });
+
+                button.classList.add("active");
+
+                filterServices();
+
+            }
+        );
+
+    });
+
+
+/* =========================================================
+   FILTER SERVICES
+========================================================= */
+
+function filterServices() {
+
+    const search =
+        searchInput.value
+            .toLowerCase()
+            .trim();
+
+    const cards =
+        document.querySelectorAll(".service-card");
+
+    let visible = 0;
+
+    cards.forEach(function(card) {
+
+        const category =
+            card.dataset.category || "";
+
+        const searchableText =
+            (
+                card.dataset.search ||
+                card.textContent ||
+                ""
+            ).toLowerCase();
+
+        const categoryMatch =
+            selectedCategory === "All" ||
+            category === selectedCategory;
+
+        const searchMatch =
+            searchableText.includes(search);
+
+        if (categoryMatch && searchMatch) {
+
+            card.style.display = "";
+
+            visible++;
+
+        } else {
+
+            card.style.display = "none";
+
+        }
+
+    });
+
+    updateServiceCount(visible);
+
+    const empty =
+        document.getElementById("emptyMessage");
+
+    if (visible === 0) {
+
+        empty.classList.add("show");
+
+    } else {
+
+        empty.classList.remove("show");
+
+    }
+
+}
+
+
+/* =========================================================
+   SERVICE COUNT
+========================================================= */
+
+function updateServiceCount(count) {
+
+    const element =
+        document.getElementById("serviceCount");
+
+    element.textContent =
+        count === 1
+            ? "1 service"
+            : count + " services";
+
+}
+
+
+/* =========================================================
+   BOOKING
+========================================================= */
+
+function openBooking(
+    service,
+    provider,
+    price
+) {
+
+    document.getElementById(
+        "bookingService"
+    ).value = service;
+
+    document.getElementById(
+        "bookingProvider"
+    ).value = provider;
+
+    document.getElementById(
+        "bookingPrice"
+    ).value = price;
+
+    document.getElementById(
+        "bookingDate"
+    ).value = "";
+
+    document.getElementById(
+        "bookingTime"
+    ).value = "";
+
+    document.getElementById(
+        "bookingMessage"
+    ).value = "";
+
+    document
+        .getElementById("bookingModal")
+        .classList.add("show");
+
+    document.body.style.overflow = "hidden";
+
+}
+
+
+function createBookingDates() {
+
+    const select =
+        document.getElementById("bookingDate");
+
+    select.innerHTML = `
+        <option value="">
+            Select date
+        </option>
+    `;
+
+    const today = new Date();
+
+    for (let i = 0; i < 21; i++) {
+
+        const date =
+            new Date(today);
+
+        date.setDate(
+            today.getDate() + i
+        );
+
+        const year =
+            date.getFullYear();
+
+        const month =
+            String(
+                date.getMonth() + 1
+            ).padStart(2, "0");
+
+        const day =
+            String(
+                date.getDate()
+            ).padStart(2, "0");
+
+        const value =
+            `${year}-${month}-${day}`;
+
+        const label =
+            date.toLocaleDateString(
+                "en-GB",
+                {
+                    weekday: "short",
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric"
+                }
+            );
+
+        const option =
+            document.createElement("option");
+
+        option.value = value;
+
+        option.textContent = label;
+
+        select.appendChild(option);
+
+    }
+
+}
+
+
+/* =========================================================
+   BOOKING SUBMIT
+========================================================= */
+
+document
+    .getElementById("bookingForm")
+    .addEventListener(
+        "submit",
+        function(event) {
+
+            event.preventDefault();
+
+            const service =
+                document.getElementById(
+                    "bookingService"
+                ).value;
+
+            const provider =
+                document.getElementById(
+                    "bookingProvider"
+                ).value;
+
+            const price =
+                document.getElementById(
+                    "bookingPrice"
+                ).value;
+
+            const date =
+                document.getElementById(
+                    "bookingDate"
+                ).value;
+
+            const time =
+                document.getElementById(
+                    "bookingTime"
+                ).value;
+
+            const message =
+                document.getElementById(
+                    "bookingMessage"
+                ).value.trim();
+
+            if (!date || !time) {
+
+                showToast(
+                    "Please select date and time."
+                );
+
+                return;
+
+            }
+
+            const booking = {
+
+                id:
+                    Date.now(),
+
+                service:
+                    service,
+
+                provider:
+                    provider,
+
+                price:
+                    price,
+
+                date:
+                    date,
+
+                time:
+                    time,
+
+                message:
+                    message,
+
+                createdAt:
+                    new Date().toISOString()
+
+            };
+
+
+            const bookings =
+                JSON.parse(
+                    localStorage.getItem(
+                        "havkarBookings"
+                    ) || "[]"
+                );
+
+            bookings.push(booking);
+
+            localStorage.setItem(
+                "havkarBookings",
+                JSON.stringify(bookings)
+            );
+
+
+            closeModal("bookingModal");
+
+            showToast(
+                "Booking confirmed successfully."
+            );
+
+            document
+                .getElementById("bookingForm")
+                .reset();
+
+        }
+    );
+
+
+/* =========================================================
+   OFFER SERVICE
+========================================================= */
+
+function openOfferService() {
+
+    document
+        .getElementById("offerModal")
+        .classList.add("show");
+
+    document.body.style.overflow = "hidden";
+
+}
+
+
+/* =========================================================
+   OFFER SERVICE SUBMIT
+========================================================= */
+
+document
+    .getElementById("offerForm")
+    .addEventListener(
+        "submit",
+        function(event) {
+
+            event.preventDefault();
+
+            const name =
+                document.getElementById(
+                    "newServiceName"
+                ).value.trim();
+
+            const category =
+                document.getElementById(
+                    "newServiceCategory"
+                ).value;
+
+            const price =
+                document.getElementById(
+                    "newServicePrice"
+                ).value.trim();
+
+            const description =
+                document.getElementById(
+                    "newServiceDescription"
+                ).value.trim();
+
+
+            if (
+                !name ||
+                !category ||
+                !price ||
+                !description
+            ) {
+
+                showToast(
+                    "Please fill in all fields."
+                );
+
+                return;
+
+            }
+
+
+            const service = {
+
+                id:
+                    Date.now(),
+
+                name:
+                    name,
+
+                category:
+                    category,
+
+                price:
+                    price,
+
+                description:
+                    description,
+
+                provider:
+                    "You",
+
+                location:
+                    "Your Location",
+
+                availability:
+                    "Available",
+
+                createdAt:
+                    new Date().toISOString()
+
+            };
+
+
+            const services =
+                JSON.parse(
+                    localStorage.getItem(
+                        "havkarServices"
+                    ) || "[]"
+                );
+
+            services.push(service);
+
+            localStorage.setItem(
+                "havkarServices",
+                JSON.stringify(services)
+            );
+
+
+            addServiceCard(
+                service,
+                true
+            );
+
+
+            closeModal("offerModal");
+
+            document
+                .getElementById("offerForm")
+                .reset();
+
+            showToast(
+                "Your service has been published."
+            );
+
+            filterServices();
+
+        }
+    );
+
+
+/* =========================================================
+   ADD SERVICE CARD
+========================================================= */
+
+function addServiceCard(
+    service,
+    prepend = false
+) {
+
+    const card =
+        document.createElement("article");
+
+    card.className =
+        "service-card";
+
+    card.dataset.category =
+        service.category;
+
+    card.dataset.search =
+        (
+            service.name +
+            " " +
+            service.category +
+            " " +
+            service.description +
+            " " +
+            service.provider +
+            " " +
+            service.location
+        ).toLowerCase();
+
+
+    card.innerHTML = `
+
+        <button
+            class="save-btn"
+            type="button"
+            onclick="toggleSave(this)"
+            aria-label="Save service">
+
+            <i class="far fa-bookmark"></i>
+
+        </button>
+
+
+        <div class="service-top">
+
+            <div class="provider-avatar">
+                🛠️
+            </div>
+
+            <div class="service-main">
+
+                <div class="service-title">
+                    ${escapeHtml(service.name)}
+                </div>
+
+                <div class="provider-name">
+                    ${escapeHtml(service.provider)}
+                </div>
+
+                <div class="rating">
+
+                    <i class="fas fa-star"></i>
+
+                    New Service
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="service-details">
+
+            <div class="detail-item">
+
+                <i class="fas fa-location-dot"></i>
+
+                ${escapeHtml(service.location)}
+
+            </div>
+
+            <div class="detail-item">
+
+                <i class="fas fa-clock"></i>
+
+                ${escapeHtml(service.availability)}
+
+            </div>
+
+        </div>
+
+
+        <div class="service-description">
+
+            ${escapeHtml(service.description)}
+
+        </div>
+
+
+        <div class="service-bottom">
+
+            <div class="price">
+
+                ${escapeHtml(service.price)}
+
+            </div>
+
+            <button
+                class="book-btn"
+                type="button">
+
+                Book Now
+
+            </button>
+
+        </div>
+
+    `;
+
+
+    const bookButton =
+        card.querySelector(".book-btn");
+
+    bookButton.addEventListener(
+        "click",
+        function() {
+
+            openBooking(
+                service.name,
+                service.provider,
+                service.price
+            );
+
+        }
+    );
+
+
+    const container =
+        document.getElementById(
+            "servicesContainer"
+        );
+
+    if (prepend) {
+
+        container.prepend(card);
+
+    } else {
+
+        container.appendChild(card);
+
+    }
+
+}
+
+
+/* =========================================================
+   LOAD SAVED SERVICES
+========================================================= */
+
+function loadSavedServices() {
+
+    let services = [];
+
+    try {
+
+        services =
+            JSON.parse(
+                localStorage.getItem(
+                    "havkarServices"
+                ) || "[]"
+            );
+
+    } catch (error) {
+
+        services = [];
+
+    }
+
+
+    services.forEach(
+        function(service) {
+
+            addServiceCard(
+                service,
+                false
+            );
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   SAVE / UNSAVE SERVICE
+========================================================= */
+
+function toggleSave(button) {
+
+    const card =
+        button.closest(".service-card");
+
+    if (!card) {
+        return;
+    }
+
+    const titleElement =
+        card.querySelector(".service-title");
+
+    const title =
+        titleElement
+            ? titleElement.textContent.trim()
+            : "";
+
+    let saved =
+        JSON.parse(
+            localStorage.getItem(
+                "havkarSavedServices"
+            ) || "[]"
+        );
+
+
+    const alreadySaved =
+        saved.includes(title);
+
+
+    if (alreadySaved) {
+
+        saved =
+            saved.filter(
+                function(item) {
+                    return item !== title;
+                }
+            );
+
+        button.classList.remove("saved");
+
+        button.innerHTML =
+            '<i class="far fa-bookmark"></i>';
+
+        showToast(
+            "Service removed from saved."
+        );
+
+    } else {
+
+        saved.push(title);
+
+        button.classList.add("saved");
+
+        button.innerHTML =
+            '<i class="fas fa-bookmark"></i>';
+
+        showToast(
+            "Service saved."
+        );
+
+    }
+
+
+    localStorage.setItem(
+        "havkarSavedServices",
+        JSON.stringify(saved)
+    );
+
+}
+
+
+/* =========================================================
+   LOAD BOOKMARKS
+========================================================= */
+
+function loadSavedBookmarks() {
+
+    let saved = [];
+
+    try {
+
+        saved =
+            JSON.parse(
+                localStorage.getItem(
+                    "havkarSavedServices"
+                ) || "[]"
+            );
+
+    } catch (error) {
+
+        saved = [];
+
+    }
+
+
+    document
+        .querySelectorAll(".service-card")
+        .forEach(
+            function(card) {
+
+                const titleElement =
+                    card.querySelector(
+                        ".service-title"
+                    );
+
+                const saveButton =
+                    card.querySelector(
+                        ".save-btn"
+                    );
+
+                if (
+                    !titleElement ||
+                    !saveButton
+                ) {
+                    return;
+                }
+
+                const title =
+                    titleElement
+                        .textContent
+                        .trim();
+
+                if (
+                    saved.includes(title)
+                ) {
+
+                    saveButton
+                        .classList
+                        .add("saved");
+
+                    saveButton.innerHTML =
+                        '<i class="fas fa-bookmark"></i>';
+
+                }
+
+            }
+        );
+
+}
+
+
+/* =========================================================
+   SAVED SERVICES
+========================================================= */
+
+function showSavedServices() {
+
+    const saved =
+        JSON.parse(
+            localStorage.getItem(
+                "havkarSavedServices"
+            ) || "[]"
+        );
+
+    if (saved.length === 0) {
+
+        showToast(
+            "You have no saved services."
+        );
+
+        return;
+
+    }
+
+
+    const cards =
+        document.querySelectorAll(
+            ".service-card"
+        );
+
+    let found = false;
+
+    cards.forEach(
+        function(card) {
+
+            const titleElement =
+                card.querySelector(
+                    ".service-title"
+                );
+
+            if (!titleElement) {
+                return;
+            }
+
+            const title =
+                titleElement
+                    .textContent
+                    .trim();
+
+            if (saved.includes(title)) {
+
+                card.style.display = "";
+
+                found = true;
+
+            } else {
+
+                card.style.display = "none";
+
+            }
+
+        }
+    );
+
+
+    if (found) {
+
+        document.getElementById(
+            "serviceCount"
+        ).textContent =
+            saved.length +
+            (saved.length === 1
+                ? " saved"
+                : " saved");
+
+        document
+            .getElementById(
+                "emptyMessage"
+            )
+            .classList.remove("show");
+
+        showToast(
+            "Showing your saved services."
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   MODAL
+========================================================= */
+
+function closeModal(id) {
+
+    const modal =
+        document.getElementById(id);
+
+    if (modal) {
+
+        modal.classList.remove("show");
+
+    }
+
+    document.body.style.overflow = "";
+
+}
+
+
+/* Close by clicking outside */
+
+document
+    .querySelectorAll(".modal")
+    .forEach(
+        function(modal) {
+
+            modal.addEventListener(
+                "click",
+                function(event) {
+
+                    if (
+                        event.target === modal
+                    ) {
+
+                        closeModal(
+                            modal.id
+                        );
+
+                    }
+
+                }
+            );
+
+        }
+    );
+
+
+/* Close with ESC */
+
+document.addEventListener(
+    "keydown",
+    function(event) {
+
+        if (
+            event.key === "Escape"
+        ) {
+
+            document
+                .querySelectorAll(
+                    ".modal.show"
+                )
+                .forEach(
+                    function(modal) {
+
+                        closeModal(
+                            modal.id
+                        );
+
+                    }
+                );
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   TOAST
+========================================================= */
+
+let toastTimer = null;
+
+
+function showToast(message) {
+
+    const toast =
+        document.getElementById("toast");
+
+    toast.textContent =
+        message;
+
+    toast.classList.add("show");
+
+    clearTimeout(toastTimer);
+
+    toastTimer =
+        setTimeout(
+            function() {
+
+                toast.classList.remove(
+                    "show"
+                );
+
+            },
+            2500
+        );
+
+}
+
+
+/* =========================================================
+   NAVIGATION
+========================================================= */
+
+function goBack() {
+
+    if (
+        window.history.length > 1
+    ) {
+
+        window.history.back();
+
+    } else {
+
+        goHome();
+
+    }
+
+}
+
+
+function goHome() {
+
+    window.location.href =
+        "index.html";
+
+}
+
+
+function goProfile() {
+
+    window.location.href =
+        "profile.html";
+
+}
+
+
+function goNotifications() {
+
+    window.location.href =
+        "notifications.html";
+
+}
+
+
+function goMessages() {
+
+    window.location.href =
+        "messages.html";
+
+}
+
+
+function focusSearch() {
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+
+    setTimeout(
+        function() {
+
+            searchInput.focus();
+
+        },
+        250
+    );
+
+}
+
+
+/* =========================================================
+   NOTIFICATION BADGE
+========================================================= */
+
+function updateNotificationBadge() {
+
+    const badge =
+        document.getElementById(
+            "notificationBadge"
+        );
+
+    if (!badge) {
+        return;
+    }
+
+    const unread =
+        parseInt(
+            localStorage.getItem(
+                "havkarUnreadNotifications"
+            ) || "4",
+            10
+        );
+
+    if (unread > 0) {
+
+        badge.textContent =
+            unread > 99
+                ? "99+"
+                : unread;
+
+        badge.style.display =
+            "flex";
+
+    } else {
+
+        badge.style.display =
+            "none";
+
+    }
+
+}
+
+
+/* =========================================================
+   SECURITY HELPERS
+========================================================= */
+
+function escapeHtml(text) {
+
+    return String(text)
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
+
+</script>
+
+</body>
+   </html>
