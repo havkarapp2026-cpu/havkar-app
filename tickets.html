@@ -1,275 +1,1441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#7cb342">
+
+<title>HAVKAR - Flight Tickets</title>
+
+<link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+:root{
+    --green:#7cb342;
+    --green-dark:#558b2f;
+    --green-light:#eef7e8;
+    --bg:#f5f6f5;
+    --white:#ffffff;
+    --text:#2d2d2d;
+    --muted:#777777;
+    --border:#e1e1e1;
+    --danger:#e53935;
+    --shadow:0 4px 16px rgba(0,0,0,.07);
+}
+
+html{
+    scroll-behavior:smooth;
+}
+
+body{
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Arial,
+        sans-serif;
+
+    background:var(--bg);
+    color:var(--text);
+    padding-bottom:85px;
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.header{
+    min-height:76px;
+
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+
+    padding:14px 18px;
+
+    color:#fff;
+
+    background:
+        linear-gradient(
+            135deg,
+            #689f38,
+            #7cb342
+        );
+
+    box-shadow:
+        0 3px 12px rgba(0,0,0,.12);
+}
+
+.header-left{
+    display:flex;
+    align-items:center;
+    gap:13px;
+}
+
+.header-title{
+    font-size:22px;
+    font-weight:800;
+}
+
+.back-button,
+.header-button{
+    width:43px;
+    height:43px;
+
+    border:0;
+    border-radius:50%;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    color:#fff;
+    background:rgba(255,255,255,.18);
+
+    cursor:pointer;
+
+    font-size:18px;
+}
+
+.header-right{
+    display:flex;
+    gap:9px;
+}
+
+/* =========================================================
+   DEMO NOTICE
+========================================================= */
+
+.demo-notice{
+    margin:14px 16px 0;
+
+    padding:13px 15px;
+
+    border-radius:14px;
+
+    background:#fff8e1;
+
+    border:1px solid #f0d98a;
+
+    color:#765c00;
+
+    display:flex;
+    align-items:center;
+
+    gap:10px;
+
+    font-size:13px;
+    line-height:1.4;
+}
+
+.demo-notice i{
+    font-size:18px;
+    color:#d49b00;
+}
+
+/* =========================================================
+   FLIGHT TAB
+========================================================= */
+
+.tabs{
+    margin:14px 16px 0;
+
+    display:flex;
+
+    background:#fff;
+
+    border-radius:15px;
+
+    padding:5px;
+
+    box-shadow:var(--shadow);
+}
+
+.tab{
+    width:100%;
+
+    border:0;
+
+    padding:13px;
+
+    border-radius:11px;
+
+    background:transparent;
+
+    color:#555;
+
+    font-size:15px;
+    font-weight:750;
+}
+
+.tab.active{
+    background:
+        linear-gradient(
+            135deg,
+            #689f38,
+            #7cb342
+        );
+
+    color:#fff;
+}
+
+/* =========================================================
+   SEARCH
+========================================================= */
+
+.search-section{
+    margin:14px 16px 0;
+
+    padding:17px;
+
+    background:#fff;
+
+    border-radius:18px;
+
+    box-shadow:var(--shadow);
+}
+
+.search-row{
+    display:grid;
+
+    grid-template-columns:1fr 1fr;
+
+    gap:10px;
+
+    margin-bottom:10px;
+}
+
+.input-wrap{
+    position:relative;
+}
+
+.input-wrap i{
+    position:absolute;
+
+    left:14px;
+    top:50%;
+
+    transform:translateY(-50%);
+
+    color:var(--green);
+
+    pointer-events:none;
+}
+
+.search-input{
+    width:100%;
+    height:54px;
+
+    border:2px solid var(--border);
+
+    border-radius:13px;
+
+    background:#fff;
+
+    padding:
+        0
+        12px
+        0
+        40px;
+
+    outline:none;
+
+    font-size:15px;
+
+    color:#333;
+}
+
+.search-input:focus{
+    border-color:var(--green);
+
+    box-shadow:
+        0 0 0 3px
+        rgba(124,179,66,.12);
+}
+
+.swap-row{
+    display:flex;
+
+    justify-content:space-between;
+    align-items:center;
+
+    margin:1px 0 9px;
+}
+
+.swap-button{
+    width:42px;
+    height:42px;
+
+    border:1px solid #ddd;
+
+    border-radius:50%;
+
+    background:#fff;
+
+    color:var(--green-dark);
+
+    cursor:pointer;
+
+    font-size:17px;
+}
+
+.filter-button{
+    border:0;
+
+    background:none;
+
+    color:var(--green-dark);
+
+    font-weight:750;
+
+    cursor:pointer;
+
+    font-size:14px;
+}
+
+.extra-filters{
+    display:none;
+
+    grid-template-columns:1fr 1fr;
+
+    gap:10px;
+
+    margin-bottom:11px;
+}
+
+.extra-filters.show{
+    display:grid;
+}
+
+.select-wrap label{
+    display:block;
+
+    margin:
+        0
+        0
+        5px
+        3px;
+
+    font-size:12px;
+
+    color:var(--muted);
+}
+
+.select-input{
+    width:100%;
+    height:46px;
+
+    border:2px solid var(--border);
+
+    border-radius:11px;
+
+    background:#fff;
+
+    padding:0 9px;
+
+    outline:none;
+
+    font-size:13px;
+}
+
+.search-button{
+    width:100%;
+    height:54px;
+
+    margin-top:3px;
+
+    border:0;
+
+    border-radius:13px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #689f38,
+            #7cb342
+        );
+
+    color:#fff;
+
+    font-size:16px;
+    font-weight:800;
+
+    cursor:pointer;
+
+    box-shadow:
+        0 4px 12px
+        rgba(124,179,66,.22);
+}
+
+/* =========================================================
+   CONTENT
+========================================================= */
+
+.content{
+    padding:
+        3px
+        16px
+        95px;
+}
+
+.results-header{
+    display:flex;
+
+    align-items:center;
+    justify-content:space-between;
+
+    margin:
+        20px
+        2px
+        13px;
+}
+
+.results-title{
+    font-size:20px;
+    font-weight:800;
+}
+
+.result-count{
+    color:var(--muted);
+
+    font-size:13px;
+}
+
+/* =========================================================
+   TICKET CARD
+========================================================= */
+
+.ticket-card{
+    background:#fff;
+
+    border-radius:18px;
+
+    padding:17px;
+
+    margin-bottom:14px;
+
+    box-shadow:var(--shadow);
+
+    border:
+        1px solid
+        rgba(0,0,0,.025);
+}
+
+.ticket-top{
+    display:flex;
+
+    align-items:flex-start;
+    justify-content:space-between;
+
+    gap:10px;
+
+    margin-bottom:17px;
+}
+
+.provider{
+    display:flex;
+
+    align-items:center;
+
+    gap:11px;
+
+    min-width:0;
+}
+
+.provider-logo{
+    width:47px;
+    height:47px;
+
+    flex:none;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    border-radius:13px;
+
+    background:var(--green-light);
+
+    color:var(--green-dark);
+
+    font-size:20px;
+}
+
+.provider-name{
+    font-size:15px;
+    font-weight:800;
+}
+
+.provider-code{
+    margin-top:3px;
+
+    color:#888;
+
+    font-size:12px;
+}
+
+.price-box{
+    text-align:right;
+}
+
+.price{
+    color:var(--green-dark);
+
+    font-size:22px;
+
+    font-weight:850;
+}
+
+.price-label{
+    color:#888;
+
+    font-size:11px;
+
+    margin-top:2px;
+}
+
+/* =========================================================
+   ROUTE
+========================================================= */
+
+.route{
+    display:grid;
+
+    grid-template-columns:
+        1fr
+        65px
+        1fr;
+
+    align-items:center;
+
+    gap:5px;
+
+    margin-bottom:13px;
+}
+
+.location{
+    min-width:0;
+}
+
+.location.right{
+    text-align:right;
+}
+
+.city{
+    font-size:20px;
+    font-weight:850;
+
+    overflow:hidden;
+
+    text-overflow:ellipsis;
+
+    white-space:nowrap;
+}
+
+.time{
+    margin-top:3px;
+
+    color:#666;
+
+    font-size:13px;
+}
+
+.station{
+    margin-top:3px;
+
+    color:#999;
+
+    font-size:11px;
+}
+
+.route-center{
+    text-align:center;
+
+    color:var(--green);
+}
+
+.route-line{
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    gap:4px;
+}
+
+.route-line::before,
+.route-line::after{
+    content:"";
+
+    width:18px;
+    height:1px;
+
+    background:#ddd;
+}
+
+.route-duration{
+    margin-top:5px;
+
+    color:#777;
+
+    font-size:11px;
+}
+
+/* =========================================================
+   TICKET INFO
+========================================================= */
+
+.ticket-info{
+    display:flex;
+
+    flex-wrap:wrap;
+
+    gap:12px;
+
+    padding:
+        11px
+        0;
+
+    border-top:
+        1px solid
+        #eeeeee;
+
+    border-bottom:
+        1px solid
+        #eeeeee;
+}
+
+.info-item{
+    display:flex;
+
+    align-items:center;
+
+    gap:5px;
+
+    color:#666;
+
+    font-size:12px;
+}
+
+.info-item i{
+    color:var(--green);
+}
+
+/* =========================================================
+   DEMO DISABLED BUTTON
+========================================================= */
+
+.demo-disabled{
+    width:100%;
+
+    min-height:48px;
+
+    margin-top:12px;
+
+    border:0;
+
+    border-radius:12px;
+
+    background:#eeeeee;
+
+    color:#888;
+
+    font-size:14px;
+
+    font-weight:750;
+
+    cursor:not-allowed;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    gap:7px;
+}
+
+.demo-disabled i{
+    color:#999;
+}
+
+/* =========================================================
+   EMPTY / LOADING
+========================================================= */
+
+.empty-state{
+    background:#fff;
+
+    border-radius:18px;
+
+    padding:48px 18px;
+
+    text-align:center;
+
+    box-shadow:var(--shadow);
+}
+
+.empty-icon{
+    width:68px;
+    height:68px;
+
+    margin:
+        0
+        auto
+        14px;
+
+    border-radius:50%;
+
+    background:#f0f0f0;
+
+    color:#aaa;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    font-size:28px;
+}
+
+.empty-state h3{
+    margin-bottom:7px;
+
+    color:#666;
+
+    font-size:18px;
+}
+
+.empty-state p{
+    color:#999;
+
+    font-size:13px;
+
+    line-height:1.5;
+}
+
+.loading{
+    background:#fff;
+
+    border-radius:18px;
+
+    padding:45px 20px;
+
+    text-align:center;
+
+    box-shadow:var(--shadow);
+
+    color:#777;
+}
+
+.loading i{
+    color:var(--green);
+
+    font-size:25px;
+
+    margin-bottom:10px;
+}
+
+/* =========================================================
+   TOAST
+========================================================= */
+
+.toast{
+    position:fixed;
+
+    left:50%;
+    bottom:95px;
+
+    transform:
+        translateX(-50%)
+        translateY(20px);
+
+    opacity:0;
+
+    pointer-events:none;
+
+    z-index:3000;
+
+    background:#333;
+
+    color:#fff;
+
+    padding:
+        11px
+        17px;
+
+    border-radius:11px;
+
+    font-size:13px;
+
+    white-space:nowrap;
+
+    transition:.25s;
+}
+
+.toast.show{
+    opacity:1;
+
+    transform:
+        translateX(-50%)
+        translateY(0);
+}
+
+/* =========================================================
+   BOTTOM NAVIGATION
+========================================================= */
+
+.bottom-nav{
+    position:fixed;
+
+    left:0;
+    right:0;
+    bottom:0;
+
+    height:78px;
+
+    display:flex;
+
+    align-items:center;
+    justify-content:space-around;
+
+    background:#fff;
+
+    box-shadow:
+        0 -3px 13px
+        rgba(0,0,0,.09);
+
+    z-index:2000;
+}
+
+.nav-item{
+    flex:1;
+
+    height:100%;
+
+    display:flex;
+
+    flex-direction:column;
+
+    align-items:center;
+    justify-content:center;
+
+    gap:5px;
+
+    color:#999;
+
+    font-size:11px;
+
+    cursor:pointer;
+}
+
+.nav-item i{
+    font-size:20px;
+}
+
+.nav-item.active{
+    color:var(--green);
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media(max-width:600px){
+
+    .header{
+        padding:
+            13px
+            15px;
+    }
+
+    .header-title{
+        font-size:20px;
+    }
+
+    .search-section{
+        padding:15px;
+    }
+
+    .search-row{
+        gap:8px;
+    }
+
+    .search-input{
+        height:52px;
+
+        font-size:14px;
+    }
+
+    .city{
+        font-size:18px;
+    }
+
+    .route{
+        grid-template-columns:
+            1fr
+            54px
+            1fr;
+    }
+
+}
+
+@media(max-width:380px){
+
+    .provider-name{
+        font-size:14px;
+    }
+
+    .price{
+        font-size:19px;
+    }
+
+    .ticket-card{
+        padding:14px;
+    }
+
+    .ticket-info{
+        gap:8px;
+    }
+
+    .info-item{
+        font-size:11px;
+    }
+
+}
+
+</style>
+</head>
+
+
+<body>
+
+<!-- =========================================================
+     HEADER
+========================================================= -->
+
+<header class="header">
+
+    <div class="header-left">
+
+        <button
+            id="backButton"
+            class="back-button"
+            type="button"
+            aria-label="Back"
+        >
+            <i class="fas fa-arrow-left"></i>
+        </button>
+
+        <h1
+            id="pageTitle"
+            class="header-title"
+        >
+            Flight Tickets
+        </h1>
+
+    </div>
+
+
+    <div class="header-right">
+
+        <button
+            id="notificationButton"
+            class="header-button"
+            type="button"
+            aria-label="Notifications"
+        >
+            <i class="fas fa-bell"></i>
+        </button>
+
+
+        <button
+            id="profileButton"
+            class="header-button"
+            type="button"
+            aria-label="Profile"
+        >
+            <i class="fas fa-user"></i>
+        </button>
+
+    </div>
+
+</header>
+
+
+<!-- =========================================================
+     DEMO NOTICE
+========================================================= -->
+
+<div class="demo-notice">
+
+    <i class="fas fa-flask"></i>
+
+    <div>
+        <strong>Demo Flight Tickets</strong><br>
+        These flights are for testing the HAVKAR interface only.
+        Purchase and payment are currently unavailable.
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     TRANSPORT TAB
+========================================================= -->
+
+<div class="tabs">
+
+    <button
+        class="tab active"
+        type="button"
+    >
+        <i class="fas fa-plane"></i>
+        Flights
+    </button>
+
+</div>
+
+
+<!-- =========================================================
+     SEARCH
+========================================================= -->
+
+<section
+    id="searchSection"
+    class="search-section"
+>
+
+    <div class="search-row">
+
+        <div class="input-wrap">
+
+            <i class="fas fa-location-dot"></i>
+
+            <input
+                id="fromInput"
+                class="search-input"
+                type="text"
+                value="Rome"
+                placeholder="From"
+                autocomplete="off"
+            >
+
+        </div>
+
+
+        <div class="input-wrap">
+
+            <i class="fas fa-location-dot"></i>
+
+            <input
+                id="toInput"
+                class="search-input"
+                type="text"
+                value="Milan"
+                placeholder="To"
+                autocomplete="off"
+            >
+
+        </div>
+
+    </div>
+
+
+    <div class="swap-row">
+
+        <button
+            id="swapButton"
+            class="swap-button"
+            type="button"
+            aria-label="Swap locations"
+        >
+            <i class="fas fa-right-left"></i>
+        </button>
+
+
+        <button
+            id="filterButton"
+            class="filter-button"
+            type="button"
+        >
+            <i class="fas fa-sliders"></i>
+            Filters
+        </button>
+
+    </div>
+
+
+    <div class="search-row">
+
+        <div class="input-wrap">
+
+            <i class="fas fa-calendar"></i>
+
+            <input
+                id="dateInput"
+                class="search-input"
+                type="date"
+            >
+
+        </div>
+
+
+        <div class="input-wrap">
+
+            <i class="fas fa-user"></i>
+
+            <input
+                id="passengersInput"
+                class="search-input"
+                type="number"
+                min="1"
+                max="9"
+                value="1"
+                inputmode="numeric"
+                aria-label="Passengers"
+            >
+
+        </div>
+
+    </div>
+
+
+    <!-- FILTERS -->
+
+    <div
+        id="extraFilters"
+        class="extra-filters"
+    >
+
+        <div class="select-wrap">
+
+            <label for="stopsSelect">
+                Stops
+            </label>
+
+            <select
+                id="stopsSelect"
+                class="select-input"
+            >
+
+                <option value="any">
+                    Any
+                </option>
+
+                <option value="direct">
+                    Direct only
+                </option>
+
+                <option value="one">
+                    Up to 1 stop
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <div class="select-wrap">
+
+            <label for="sortSelect">
+                Sort by
+            </label>
+
+            <select
+                id="sortSelect"
+                class="select-input"
+            >
+
+                <option value="recommended">
+                    Recommended
+                </option>
+
+                <option value="price">
+                    Lowest price
+                </option>
+
+                <option value="duration">
+                    Shortest trip
+                </option>
+
+                <option value="departure">
+                    Earliest departure
+                </option>
+
+            </select>
+
+        </div>
+
+    </div>
+
+
+    <button
+        id="searchButton"
+        class="search-button"
+        type="button"
+    >
+
+        <i class="fas fa-search"></i>
+
+        Search Flights
+
+    </button>
+
+</section>
+
+
+<!-- =========================================================
+     RESULTS
+========================================================= -->
+
+<main class="content">
+
+    <div class="results-header">
+
+        <div
+            id="resultsTitle"
+            class="results-title"
+        >
+            Available Demo Flights
+        </div>
+
+
+        <div
+            id="resultCount"
+            class="result-count"
+        >
+            0 results
+        </div>
+
+    </div>
+
+
+    <div id="resultsContainer"></div>
+
+</main>
+
+
+<!-- =========================================================
+     BOTTOM NAVIGATION
+========================================================= -->
+
+<nav class="bottom-nav">
+
+    <div
+        id="homeNav"
+        class="nav-item"
+        role="button"
+        tabindex="0"
+    >
+
+        <i class="fas fa-home"></i>
+
+        <span>Home</span>
+
+    </div>
+
+
+    <div
+        id="searchNav"
+        class="nav-item active"
+        role="button"
+        tabindex="0"
+    >
+
+        <i class="fas fa-search"></i>
+
+        <span>Search</span>
+
+    </div>
+
+
+    <div
+        id="ticketsNav"
+        class="nav-item"
+        role="button"
+        tabindex="0"
+    >
+
+        <i class="fas fa-ticket"></i>
+
+        <span>Tickets</span>
+
+    </div>
+
+
+    <div
+        id="alertsNav"
+        class="nav-item"
+        role="button"
+        tabindex="0"
+    >
+
+        <i class="fas fa-bell"></i>
+
+        <span>Alerts</span>
+
+    </div>
+
+
+    <div
+        id="profileNav"
+        class="nav-item"
+        role="button"
+        tabindex="0"
+    >
+
+        <i class="fas fa-user"></i>
+
+        <span>Profile</span>
+
+    </div>
+
+</nav>
+
+
+<!-- =========================================================
+     TOAST
+========================================================= -->
+
+<div
+    id="toast"
+    class="toast"
+    role="status"
+    aria-live="polite"
+></div>
+
+
 <script>
+
 "use strict";
 
 /* =========================================================
    HAVKAR TICKETS
-   PROFESSIONAL / STABLE VERSION
+   DEMO FLIGHTS ONLY
+   NO REAL PURCHASE
+   NO REAL PAYMENT
 ========================================================= */
 
-let currentType = "flight";
+
+/* =========================================================
+   STATE
+========================================================= */
+
 let currentResults = [];
-let selectedTicket = null;
+
 let toastTimer = null;
+
 let searchTimer = null;
 
-const STORAGE_KEY = "havkar_my_tickets";
+
+/* =========================================================
+   DEMO FLIGHT DATABASE
+========================================================= */
+
+const flightData = [
+
+    {
+        type:"flight",
+        provider:"ITA Airways",
+        code:"AZ 123",
+        from:"Rome",
+        to:"Milan",
+        fromTime:"08:30 AM",
+        toTime:"09:45 AM",
+        duration:"1h 15m",
+        durationMinutes:75,
+        stops:0,
+        stopsText:"Direct",
+        baggage:"1 Bag",
+        price:75,
+        icon:"fa-plane"
+    },
+
+
+    {
+        type:"flight",
+        provider:"Ryanair",
+        code:"FR 1542",
+        from:"Rome",
+        to:"Milan",
+        fromTime:"02:15 PM",
+        toTime:"03:30 PM",
+        duration:"1h 15m",
+        durationMinutes:75,
+        stops:0,
+        stopsText:"Direct",
+        baggage:"No Bag",
+        price:45,
+        icon:"fa-plane"
+    },
+
+
+    {
+        type:"flight",
+        provider:"Wizz Air",
+        code:"W4 6012",
+        from:"Rome",
+        to:"Milan",
+        fromTime:"06:20 PM",
+        toTime:"07:40 PM",
+        duration:"1h 20m",
+        durationMinutes:80,
+        stops:0,
+        stopsText:"Direct",
+        baggage:"1 Bag",
+        price:59,
+        icon:"fa-plane"
+    },
+
+
+    {
+        type:"flight",
+        provider:"Lufthansa",
+        code:"LH 1871",
+        from:"Rome",
+        to:"Milan",
+        fromTime:"10:10 AM",
+        toTime:"12:05 PM",
+        duration:"1h 55m",
+        durationMinutes:115,
+        stops:1,
+        stopsText:"1 Stop",
+        baggage:"1 Bag",
+        price:69,
+        icon:"fa-plane"
+    }
+
+];
 
 
 /* =========================================================
-   DEMO TICKET DATABASE
+   DOM HELPER
 ========================================================= */
 
-const ticketData = {
+function $(id){
 
-    flight: [
-
-        {
-            type: "flight",
-            provider: "ITA Airways",
-            code: "AZ 123",
-            from: "Rome",
-            to: "Milan",
-            fromTime: "08:30 AM",
-            toTime: "09:45 AM",
-            duration: "1h 15m",
-            durationMinutes: 75,
-            stops: 0,
-            stopsText: "Direct",
-            baggage: "1 Bag",
-            price: 75,
-            icon: "fa-plane"
-        },
-
-        {
-            type: "flight",
-            provider: "Ryanair",
-            code: "FR 1542",
-            from: "Rome",
-            to: "Milan",
-            fromTime: "02:15 PM",
-            toTime: "03:30 PM",
-            duration: "1h 15m",
-            durationMinutes: 75,
-            stops: 0,
-            stopsText: "Direct",
-            baggage: "No Bag",
-            price: 45,
-            icon: "fa-plane"
-        },
-
-        {
-            type: "flight",
-            provider: "Wizz Air",
-            code: "W4 6012",
-            from: "Rome",
-            to: "Milan",
-            fromTime: "06:20 PM",
-            toTime: "07:40 PM",
-            duration: "1h 20m",
-            durationMinutes: 80,
-            stops: 0,
-            stopsText: "Direct",
-            baggage: "1 Bag",
-            price: 59,
-            icon: "fa-plane"
-        },
-
-        {
-            type: "flight",
-            provider: "Lufthansa",
-            code: "LH 1871",
-            from: "Rome",
-            to: "Milan",
-            fromTime: "10:10 AM",
-            toTime: "12:05 PM",
-            duration: "1h 55m",
-            durationMinutes: 115,
-            stops: 1,
-            stopsText: "1 Stop",
-            baggage: "1 Bag",
-            price: 69,
-            icon: "fa-plane"
-        }
-
-    ],
-
-
-    train: [
-
-        {
-            type: "train",
-            provider: "Trenitalia",
-            code: "FR 9608",
-            from: "Rome",
-            to: "Milan",
-            fromTime: "06:40 AM",
-            toTime: "09:40 AM",
-            duration: "3h 00m",
-            durationMinutes: 180,
-            stops: 0,
-            stopsText: "Direct",
-            baggage: "2 Bags",
-            price: 49,
-            icon: "fa-train"
-        },
-
-        {
-            type: "train",
-            provider: "Italo",
-            code: "IT 9924",
-            from: "Rome",
-            to: "Milan",
-            fromTime: "08:25 AM",
-            toTime: "11:35 AM",
-            duration: "3h 10m",
-            durationMinutes: 190,
-            stops: 0,
-            stopsText: "Direct",
-            baggage: "2 Bags",
-            price: 39,
-            icon: "fa-train"
-        },
-
-        {
-            type: "train",
-            provider: "Trenitalia",
-            code: "FR 9654",
-            from: "Rome",
-            to: "Milan",
-            fromTime: "12:20 PM",
-            toTime: "03:25 PM",
-            duration: "3h 05m",
-            durationMinutes: 185,
-            stops: 0,
-            stopsText: "Direct",
-            baggage: "2 Bags",
-            price: 54,
-            icon: "fa-train"
-        },
-
-        {
-            type: "train",
-            provider: "Intercity",
-            code: "IC 588",
-            from: "Rome",
-            to: "Milan",
-            fromTime: "02:15 PM",
-            toTime: "07:55 PM",
-            duration: "5h 40m",
-            durationMinutes: 340,
-            stops: 1,
-            stopsText: "1 Stop",
-            baggage: "2 Bags",
-            price: 31,
-            icon: "fa-train"
-        }
-
-    ],
-
-
-    bus: [
-
-        {
-            type: "bus",
-            provider: "FlixBus",
-            code: "FLX 102",
-            from: "Rome",
-            to: "Milan",
-            fromTime: "07:00 AM",
-            toTime: "01:15 PM",
-            duration: "6h 15m",
-            durationMinutes: 375,
-            stops: 0,
-            stopsText: "Direct",
-            baggage: "1 Bag",
-            price: 29,
-            icon: "fa-bus"
-        },
-
-        {
-            type: "bus",
-            provider: "MarinoBus",
-            code: "MB 421",
-            from: "Rome",
-            to: "Milan",
-            fromTime: "09:30 AM",
-            toTime: "04:20 PM",
-            duration: "6h 50m",
-            durationMinutes: 410,
-            stops: 1,
-            stopsText: "1 Stop",
-            baggage: "2 Bags",
-            price: 25,
-            icon: "fa-bus"
-        },
-
-        {
-            type: "bus",
-            provider: "Itabus",
-            code: "ITB 770",
-            from: "Rome",
-            to: "Milan",
-            fromTime: "12:00 PM",
-            toTime: "06:25 PM",
-            duration: "6h 25m",
-            durationMinutes: 385,
-            stops: 0,
-            stopsText: "Direct",
-            baggage: "1 Bag",
-            price: 22,
-            icon: "fa-bus"
-        },
-
-        {
-            type: "bus",
-            provider: "FlixBus",
-            code: "FLX 244",
-            from: "Rome",
-            to: "Milan",
-            fromTime: "10:45 PM",
-            toTime: "05:50 AM",
-            duration: "7h 05m",
-            durationMinutes: 425,
-            stops: 0,
-            stopsText: "Direct",
-            baggage: "1 Bag",
-            price: 27,
-            icon: "fa-bus"
-        }
-
-    ]
-
-};
-
-
-/* =========================================================
-   SAFE DOM HELPER
-========================================================= */
-
-function $(id) {
     return document.getElementById(id);
+
 }
 
 
 /* =========================================================
-   GENERAL HELPERS
+   NORMALIZE
 ========================================================= */
 
-function getTypeName(type) {
-
-    if (type === "flight") {
-        return "Flights";
-    }
-
-    if (type === "train") {
-        return "Trains";
-    }
-
-    return "Buses";
-}
-
-
-function normalize(value) {
+function normalize(value){
 
     return String(value || "")
         .trim()
@@ -278,41 +1444,65 @@ function normalize(value) {
 }
 
 
-function escapeHtml(value) {
+/* =========================================================
+   ESCAPE HTML
+========================================================= */
+
+function escapeHtml(value){
 
     return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
 
 }
 
 
-function timeToMinutes(time) {
+/* =========================================================
+   TIME TO MINUTES
+========================================================= */
 
-    const match = String(time || "").match(
-        /(\d+):(\d+)\s*(AM|PM)/i
-    );
+function timeToMinutes(time){
 
-    if (!match) {
+    const match =
+        String(time || "").match(
+            /(\d+):(\d+)\s*(AM|PM)/i
+        );
+
+    if(!match){
         return 0;
     }
 
-    let hour = Number(match[1]);
-    const minute = Number(match[2]);
-    const period = match[3].toUpperCase();
+    let hour =
+        Number(match[1]);
 
-    if (period === "PM" && hour !== 12) {
+    const minute =
+        Number(match[2]);
+
+    const period =
+        match[3].toUpperCase();
+
+    if(
+        period === "PM" &&
+        hour !== 12
+    ){
         hour += 12;
     }
 
-    if (period === "AM" && hour === 12) {
+    if(
+        period === "AM" &&
+        hour === 12
+    ){
         hour = 0;
     }
 
-    return (hour * 60) + minute;
+    return (
+        hour * 60 +
+        minute
+    );
+
 }
 
 
@@ -320,396 +1510,256 @@ function timeToMinutes(time) {
    TODAY
 ========================================================= */
 
-function setToday() {
+function setToday(){
 
-    const dateInput = $("dateInput");
+    const input =
+        $("dateInput");
 
-    if (!dateInput) {
+    if(!input){
         return;
     }
 
-    const today = new Date();
+    const today =
+        new Date();
 
-    const year = today.getFullYear();
+    const year =
+        today.getFullYear();
 
-    const month = String(
-        today.getMonth() + 1
-    ).padStart(2, "0");
+    const month =
+        String(
+            today.getMonth() + 1
+        ).padStart(2,"0");
 
-    const day = String(
-        today.getDate()
-    ).padStart(2, "0");
+    const day =
+        String(
+            today.getDate()
+        ).padStart(2,"0");
 
-    dateInput.value =
+    input.value =
         `${year}-${month}-${day}`;
+
 }
 
 
 /* =========================================================
-   CHANGE TRANSPORT TYPE
+   GET FILTERED RESULTS
 ========================================================= */
 
-function changeType(type) {
+function getFilteredResults(){
 
-    if (
-        type !== "flight" &&
-        type !== "train" &&
-        type !== "bus"
-    ) {
-        return;
+    const from =
+        normalize(
+            $("fromInput")?.value
+        );
+
+    const to =
+        normalize(
+            $("toInput")?.value
+        );
+
+
+    if(!from || !to){
+
+        return [];
+
     }
 
-    currentType = type;
 
-    document.querySelectorAll(".tab")
-        .forEach(tab => {
+    /*
+       IMPORTANT:
 
-            tab.classList.toggle(
-                "active",
-                tab.dataset.type === type
+       This is DEMO DATA.
+
+       It only displays the demo flights
+       when the route is Rome -> Milan.
+
+       It does NOT pretend to search
+       a real airline database.
+    */
+
+    if(
+        from !== "rome" ||
+        to !== "milan"
+    ){
+
+        return [];
+
+    }
+
+
+    let results =
+        flightData.map(
+            flight => ({
+                ...flight
+            })
+        );
+
+
+    /* =====================================================
+       STOPS FILTER
+    ===================================================== */
+
+    const stopFilter =
+        $("stopsSelect")?.value ||
+        "any";
+
+
+    if(
+        stopFilter === "direct"
+    ){
+
+        results =
+            results.filter(
+                flight =>
+                    flight.stops === 0
             );
 
-        });
-
-    const name = getTypeName(type);
-
-    const pageTitle = $("pageTitle");
-
-    if (pageTitle) {
-        pageTitle.textContent =
-            name + " Tickets";
     }
 
-    const resultsTitle = $("resultsTitle");
 
-    if (resultsTitle) {
-        resultsTitle.textContent =
-            "Available " + name;
+    if(
+        stopFilter === "one"
+    ){
+
+        results =
+            results.filter(
+                flight =>
+                    flight.stops <= 1
+            );
+
     }
 
-    const searchButtonText =
-        $("searchButtonText");
 
-    if (searchButtonText) {
-        searchButtonText.textContent =
-            "Search " + name;
+    /* =====================================================
+       SORT
+    ===================================================== */
+
+    const sort =
+        $("sortSelect")?.value ||
+        "recommended";
+
+
+    if(sort === "price"){
+
+        results.sort(
+            (a,b) =>
+                a.price - b.price
+        );
+
     }
 
-    searchTickets(false);
+    else if(
+        sort === "duration"
+    ){
+
+        results.sort(
+            (a,b) =>
+                a.durationMinutes -
+                b.durationMinutes
+        );
+
+    }
+
+    else if(
+        sort === "departure"
+    ){
+
+        results.sort(
+            (a,b) =>
+                timeToMinutes(
+                    a.fromTime
+                ) -
+                timeToMinutes(
+                    b.fromTime
+                )
+        );
+
+    }
+
+    else{
+
+        results.sort(
+            (a,b) => {
+
+                const scoreA =
+                    a.price +
+                    (
+                        a.durationMinutes *
+                        0.08
+                    ) +
+                    (
+                        a.stops *
+                        15
+                    );
+
+
+                const scoreB =
+                    b.price +
+                    (
+                        b.durationMinutes *
+                        0.08
+                    ) +
+                    (
+                        b.stops *
+                        15
+                    );
+
+
+                return scoreA - scoreB;
+
+            }
+        );
+
+    }
+
+
+    return results;
+
 }
 
 
 /* =========================================================
-   SEARCH TICKETS
+   SEARCH
 ========================================================= */
 
-function searchTickets(showMessage = true) {
+function searchFlights(){
 
     clearTimeout(searchTimer);
 
-    const fromInput = $("fromInput");
-    const toInput = $("toInput");
-    const dateInput = $("dateInput");
-    const passengersInput = $("passengersInput");
 
-    const container = $("resultsContainer");
-    const resultCount = $("resultCount");
+    const container =
+        $("resultsContainer");
 
-    if (
-        !fromInput ||
-        !toInput ||
-        !container
-    ) {
-        console.error(
-            "HAVKAR: Search elements not found."
-        );
 
+    if(!container){
         return;
     }
 
-    const from = normalize(
-        fromInput.value
-    );
-
-    const to = normalize(
-        toInput.value
-    );
-
-    const date =
-        dateInput
-            ? dateInput.value
-            : "";
-
-    let passengers =
-        passengersInput
-            ? Number(passengersInput.value)
-            : 1;
-
-    if (!passengers || passengers < 1) {
-        passengers = 1;
-    }
-
-    if (passengers > 9) {
-        passengers = 9;
-    }
-
-    if (passengersInput) {
-        passengersInput.value =
-            passengers;
-    }
-
-
-    /* -----------------------------------------
-       ROUTE VALIDATION
-    ----------------------------------------- */
-
-    if (!from || !to) {
-
-        currentResults = [];
-
-        if (resultCount) {
-            resultCount.textContent =
-                "0 results";
-        }
-
-        container.innerHTML = `
-
-            <div class="empty-state">
-
-                <div class="empty-icon">
-                    <i class="fas fa-location-dot"></i>
-                </div>
-
-                <h3>Enter your route</h3>
-
-                <p>
-                    Please enter both origin and destination.
-                </p>
-
-            </div>
-
-        `;
-
-        return;
-    }
-
-
-    /* -----------------------------------------
-       LOADING
-    ----------------------------------------- */
 
     container.innerHTML = `
 
-        <div
-            class="loading"
-            style="
-                display:flex;
-                justify-content:center;
-                align-items:center;
-                padding:40px;
-                gap:10px;
-            "
-        >
+        <div class="loading">
 
-            <i
-                class="fas fa-spinner fa-spin"
-                style="
-                    color:#7cb342;
-                    font-size:22px;
-                "
-            ></i>
+            <i class="fas fa-spinner fa-spin"></i>
 
-            <span>
-                Searching...
-            </span>
+            <div>
+                Loading demo flights...
+            </div>
 
         </div>
 
     `;
 
 
-    /* -----------------------------------------
-       SEARCH
-    ----------------------------------------- */
+    searchTimer =
+        setTimeout(() => {
 
-    searchTimer = setTimeout(() => {
+            currentResults =
+                getFilteredResults();
 
-        const source =
-            Array.isArray(
-                ticketData[currentType]
-            )
-                ? ticketData[currentType]
-                : [];
+            renderResults();
 
-
-        let results =
-            source.filter(ticket => {
-
-                const ticketFrom =
-                    normalize(ticket.from);
-
-                const ticketTo =
-                    normalize(ticket.to);
-
-                return (
-                    ticketFrom === from &&
-                    ticketTo === to
-                );
-
-            });
-
-
-        /* -------------------------------------
-           STOPS FILTER
-        ------------------------------------- */
-
-        const stopsSelect =
-            $("stopsSelect");
-
-        const stopFilter =
-            stopsSelect
-                ? stopsSelect.value
-                : "all";
-
-
-        if (stopFilter === "direct") {
-
-            results =
-                results.filter(
-                    ticket =>
-                        ticket.stops === 0
-                );
-
-        }
-
-
-        if (stopFilter === "one") {
-
-            results =
-                results.filter(
-                    ticket =>
-                        ticket.stops <= 1
-                );
-
-        }
-
-
-        /* -------------------------------------
-           SORT
-        ------------------------------------- */
-
-        const sortSelect =
-            $("sortSelect");
-
-        const sort =
-            sortSelect
-                ? sortSelect.value
-                : "recommended";
-
-
-        if (sort === "price") {
-
-            results.sort(
-                (a, b) =>
-                    a.price - b.price
-            );
-
-        }
-
-        else if (sort === "duration") {
-
-            results.sort(
-                (a, b) =>
-                    a.durationMinutes -
-                    b.durationMinutes
-            );
-
-        }
-
-        else if (sort === "departure") {
-
-            results.sort(
-                (a, b) =>
-                    timeToMinutes(
-                        a.fromTime
-                    ) -
-                    timeToMinutes(
-                        b.fromTime
-                    )
-            );
-
-        }
-
-        else {
-
-            /* Recommended */
-
-            results.sort((a, b) => {
-
-                const scoreA =
-                    a.price +
-                    (a.durationMinutes * 0.08) +
-                    (a.stops * 15);
-
-                const scoreB =
-                    b.price +
-                    (b.durationMinutes * 0.08) +
-                    (b.stops * 15);
-
-                return scoreA - scoreB;
-
-            });
-
-        }
-
-
-        /* -------------------------------------
-           SAVE RESULTS
-        ------------------------------------- */
-
-        currentResults =
-            results.map(ticket => ({
-                ...ticket,
-                selectedDate: date
-            }));
-
-
-        /* -------------------------------------
-           RENDER
-        ------------------------------------- */
-
-        renderResults();
-
-
-        /* -------------------------------------
-           MESSAGE
-        ------------------------------------- */
-
-        if (showMessage) {
-
-            if (currentResults.length > 0) {
-
-                showToast(
-                    currentResults.length +
-                    " " +
-                    getTypeName(currentType)
-                        .toLowerCase() +
-                    " found"
-                );
-
-            }
-
-            else {
-
-                showToast(
-                    "No tickets found"
-                );
-
-            }
-
-        }
-
-    }, 300);
+        },180);
 
 }
 
@@ -718,41 +1768,88 @@ function searchTickets(showMessage = true) {
    RENDER RESULTS
 ========================================================= */
 
-function renderResults() {
+function renderResults(){
 
     const container =
         $("resultsContainer");
 
-    const resultCount =
+    const count =
         $("resultCount");
 
-    if (!container) {
+
+    if(!container){
         return;
     }
 
-    if (resultCount) {
 
-        resultCount.textContent =
+    if(count){
+
+        count.textContent =
             currentResults.length +
-            " results";
+            " demo results";
 
     }
 
 
-    if (currentResults.length === 0) {
+    if(
+        currentResults.length === 0
+    ){
+
+        const from =
+            $("fromInput")?.value ||
+            "";
+
+        const to =
+            $("toInput")?.value ||
+            "";
+
+
+        if(
+            !from ||
+            !to
+        ){
+
+            container.innerHTML = `
+
+                <div class="empty-state">
+
+                    <div class="empty-icon">
+                        <i class="fas fa-location-dot"></i>
+                    </div>
+
+                    <h3>
+                        Enter your route
+                    </h3>
+
+                    <p>
+                        Enter origin and destination
+                        to search the demo flight database.
+                    </p>
+
+                </div>
+
+            `;
+
+            return;
+
+        }
+
 
         container.innerHTML = `
 
             <div class="empty-state">
 
                 <div class="empty-icon">
-                    <i class="fas fa-ticket"></i>
+                    <i class="fas fa-plane-slash"></i>
                 </div>
 
-                <h3>No results found</h3>
+                <h3>
+                    No demo flights found
+                </h3>
 
                 <p>
-                    Try another route, date or filter.
+                    The current demo database contains
+                    only Rome → Milan flights.
                 </p>
 
             </div>
@@ -760,17 +1857,15 @@ function renderResults() {
         `;
 
         return;
+
     }
 
 
     container.innerHTML =
         currentResults
             .map(
-                (ticket, index) =>
-                    createTicketCard(
-                        ticket,
-                        index
-                    )
+                flight =>
+                    createFlightCard(flight)
             )
             .join("");
 
@@ -778,22 +1873,14 @@ function renderResults() {
 
 
 /* =========================================================
-   CREATE TICKET CARD
+   CREATE FLIGHT CARD
 ========================================================= */
 
-function createTicketCard(ticket, index) {
-
-    const station =
-        ticket.type === "flight"
-            ? "Airport"
-            : ticket.type === "train"
-                ? "Train Station"
-                : "Bus Station";
-
+function createFlightCard(flight){
 
     return `
 
-        <div class="ticket-card">
+        <article class="ticket-card">
 
             <div class="ticket-top">
 
@@ -801,28 +1888,24 @@ function createTicketCard(ticket, index) {
 
                     <div class="provider-logo">
 
-                        <i class="fas ${escapeHtml(
-                            ticket.icon
-                        )}"></i>
+                        <i class="fas fa-plane"></i>
 
                     </div>
+
 
                     <div>
 
                         <div class="provider-name">
-
                             ${escapeHtml(
-                                ticket.provider
+                                flight.provider
                             )}
-
                         </div>
 
+
                         <div class="provider-code">
-
                             ${escapeHtml(
-                                ticket.code
+                                flight.code
                             )}
-
                         </div>
 
                     </div>
@@ -833,17 +1916,13 @@ function createTicketCard(ticket, index) {
                 <div class="price-box">
 
                     <div class="price">
-
                         €${Number(
-                            ticket.price
+                            flight.price
                         ).toFixed(0)}
-
                     </div>
 
                     <div class="price-label">
-
-                        per passenger
-
+                        demo price / passenger
                     </div>
 
                 </div>
@@ -856,25 +1935,19 @@ function createTicketCard(ticket, index) {
                 <div class="location">
 
                     <div class="city">
-
                         ${escapeHtml(
-                            ticket.from
+                            flight.from
                         )}
-
                     </div>
 
                     <div class="time">
-
                         ${escapeHtml(
-                            ticket.fromTime
+                            flight.fromTime
                         )}
-
                     </div>
 
                     <div class="station">
-
-                        ${station}
-
+                        Airport
                     </div>
 
                 </div>
@@ -884,20 +1957,14 @@ function createTicketCard(ticket, index) {
 
                     <div class="route-line">
 
-                        <i
-                            class="fas ${escapeHtml(
-                                ticket.icon
-                            )}"
-                        ></i>
+                        <i class="fas fa-plane"></i>
 
                     </div>
 
                     <div class="route-duration">
-
                         ${escapeHtml(
-                            ticket.duration
+                            flight.duration
                         )}
-
                     </div>
 
                 </div>
@@ -906,25 +1973,19 @@ function createTicketCard(ticket, index) {
                 <div class="location right">
 
                     <div class="city">
-
                         ${escapeHtml(
-                            ticket.to
+                            flight.to
                         )}
-
                     </div>
 
                     <div class="time">
-
                         ${escapeHtml(
-                            ticket.toTime
+                            flight.toTime
                         )}
-
                     </div>
 
                     <div class="station">
-
-                        ${station}
-
+                        Airport
                     </div>
 
                 </div>
@@ -939,7 +2000,7 @@ function createTicketCard(ticket, index) {
                     <i class="fas fa-clock"></i>
 
                     ${escapeHtml(
-                        ticket.duration
+                        flight.duration
                     )}
 
                 </div>
@@ -950,7 +2011,7 @@ function createTicketCard(ticket, index) {
                     <i class="fas fa-route"></i>
 
                     ${escapeHtml(
-                        ticket.stopsText
+                        flight.stopsText
                     )}
 
                 </div>
@@ -961,7 +2022,7 @@ function createTicketCard(ticket, index) {
                     <i class="fas fa-suitcase"></i>
 
                     ${escapeHtml(
-                        ticket.baggage
+                        flight.baggage
                     )}
 
                 </div>
@@ -969,850 +2030,28 @@ function createTicketCard(ticket, index) {
             </div>
 
 
+            <!--
+                IMPORTANT:
+
+                This is intentionally NOT a
+                purchase / booking button.
+            -->
+
             <button
-                class="book-btn"
+                class="demo-disabled"
                 type="button"
-                onclick="openBooking(${index})"
+                disabled
             >
 
-                <i class="fas fa-ticket"></i>
+                <i class="fas fa-lock"></i>
 
-                Book Now
+                Demo Only — Purchase Unavailable
 
             </button>
 
-        </div>
+        </article>
 
     `;
-
-}
-
-
-/* =========================================================
-   OPEN BOOKING
-========================================================= */
-
-function openBooking(index) {
-
-    selectedTicket =
-        currentResults[index];
-
-
-    if (!selectedTicket) {
-
-        showToast(
-            "Ticket not found."
-        );
-
-        return;
-    }
-
-
-    const summaryProvider =
-        $("summaryProvider");
-
-    if (summaryProvider) {
-        summaryProvider.textContent =
-            selectedTicket.provider;
-    }
-
-
-    const summaryCode =
-        $("summaryCode");
-
-    if (summaryCode) {
-        summaryCode.textContent =
-            selectedTicket.code;
-    }
-
-
-    const summaryPrice =
-        $("summaryPrice");
-
-    if (summaryPrice) {
-        summaryPrice.textContent =
-            "€" +
-            selectedTicket.price;
-    }
-
-
-    const summaryFrom =
-        $("summaryFrom");
-
-    if (summaryFrom) {
-        summaryFrom.textContent =
-            selectedTicket.from;
-    }
-
-
-    const summaryTo =
-        $("summaryTo");
-
-    if (summaryTo) {
-        summaryTo.textContent =
-            selectedTicket.to;
-    }
-
-
-    const summaryFromTime =
-        $("summaryFromTime");
-
-    if (summaryFromTime) {
-        summaryFromTime.textContent =
-            selectedTicket.fromTime;
-    }
-
-
-    const summaryToTime =
-        $("summaryToTime");
-
-    if (summaryToTime) {
-        summaryToTime.textContent =
-            selectedTicket.toTime;
-    }
-
-
-    updateTotal();
-
-
-    const modal =
-        $("bookingModal");
-
-    if (modal) {
-        modal.classList.add("show");
-    }
-
-}
-
-
-/* =========================================================
-   UPDATE TOTAL
-========================================================= */
-
-function updateTotal() {
-
-    if (!selectedTicket) {
-        return;
-    }
-
-    const passengersInput =
-        $("passengersInput");
-
-    let passengers =
-        passengersInput
-            ? Number(passengersInput.value)
-            : 1;
-
-
-    if (!passengers || passengers < 1) {
-        passengers = 1;
-    }
-
-
-    if (passengers > 9) {
-        passengers = 9;
-    }
-
-
-    if (passengersInput) {
-        passengersInput.value =
-            passengers;
-    }
-
-
-    const totalPrice =
-        $("totalPrice");
-
-    if (totalPrice) {
-
-        totalPrice.textContent =
-            "€" +
-            (
-                selectedTicket.price *
-                passengers
-            );
-
-    }
-
-}
-
-
-/* =========================================================
-   CLOSE BOOKING
-========================================================= */
-
-function closeBooking() {
-
-    const modal =
-        $("bookingModal");
-
-    if (modal) {
-        modal.classList.remove("show");
-    }
-
-}
-
-
-/* =========================================================
-   GET SAVED TICKETS
-========================================================= */
-
-function getSavedTickets() {
-
-    try {
-
-        const saved =
-            localStorage.getItem(
-                STORAGE_KEY
-            );
-
-
-        if (!saved) {
-            return [];
-        }
-
-
-        const tickets =
-            JSON.parse(saved);
-
-
-        return Array.isArray(tickets)
-            ? tickets
-            : [];
-
-    }
-
-    catch (error) {
-
-        console.error(
-            "HAVKAR storage error:",
-            error
-        );
-
-        return [];
-
-    }
-
-}
-
-
-/* =========================================================
-   BOOKING CODE
-========================================================= */
-
-function generateBookingCode() {
-
-    const random =
-        Math.random()
-            .toString(36)
-            .substring(2, 8)
-            .toUpperCase();
-
-
-    return "HAV-" + random;
-
-}
-
-
-/* =========================================================
-   CONFIRM BOOKING
-========================================================= */
-
-function confirmBooking(event) {
-
-    if (event) {
-        event.preventDefault();
-    }
-
-
-    if (!selectedTicket) {
-
-        showToast(
-            "No ticket selected."
-        );
-
-        return false;
-    }
-
-
-    const passengersInput =
-        $("passengersInput");
-
-
-    const passengers =
-        Math.max(
-            1,
-            Math.min(
-                9,
-                Number(
-                    passengersInput
-                        ? passengersInput.value
-                        : 1
-                ) || 1
-            )
-        );
-
-
-    const bookingCode =
-        generateBookingCode();
-
-
-    const getValue = id => {
-
-        const element = $(id);
-
-        return element
-            ? element.value.trim()
-            : "";
-
-    };
-
-
-    const dateInput =
-        $("dateInput");
-
-
-    const booking = {
-
-        id: Date.now(),
-
-        bookingCode:
-            bookingCode,
-
-        bookedAt:
-            new Date().toISOString(),
-
-        type:
-            selectedTicket.type,
-
-        typeName:
-            getTypeName(
-                selectedTicket.type
-            ),
-
-        provider:
-            selectedTicket.provider,
-
-        code:
-            selectedTicket.code,
-
-        from:
-            selectedTicket.from,
-
-        to:
-            selectedTicket.to,
-
-        fromTime:
-            selectedTicket.fromTime,
-
-        toTime:
-            selectedTicket.toTime,
-
-        duration:
-            selectedTicket.duration,
-
-        price:
-            selectedTicket.price,
-
-        passengers:
-            passengers,
-
-        total:
-            selectedTicket.price *
-            passengers,
-
-        firstName:
-            getValue("firstName"),
-
-        lastName:
-            getValue("lastName"),
-
-        email:
-            getValue("email"),
-
-        phone:
-            getValue("phone"),
-
-        document:
-            getValue("document"),
-
-        travelDate:
-            dateInput
-                ? dateInput.value
-                : selectedTicket.selectedDate || ""
-
-    };
-
-
-    const tickets =
-        getSavedTickets();
-
-
-    tickets.unshift(
-        booking
-    );
-
-
-    try {
-
-        localStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify(tickets)
-        );
-
-    }
-
-    catch (error) {
-
-        console.error(
-            "HAVKAR save error:",
-            error
-        );
-
-        showToast(
-            "Unable to save ticket."
-        );
-
-        return false;
-
-    }
-
-
-    closeBooking();
-
-
-    const successBookingCode =
-        $("successBookingCode");
-
-    if (successBookingCode) {
-
-        successBookingCode.textContent =
-            bookingCode;
-
-    }
-
-
-    const successModal =
-        $("successModal");
-
-    if (successModal) {
-        successModal.classList.add("show");
-    }
-
-
-    const bookingForm =
-        $("bookingForm");
-
-    if (bookingForm) {
-        bookingForm.reset();
-    }
-
-
-    if (passengersInput) {
-        passengersInput.value =
-            passengers;
-    }
-
-
-    selectedTicket = null;
-
-    return false;
-
-}
-
-
-/* =========================================================
-   MY TICKETS
-========================================================= */
-
-function showMyTickets() {
-
-    const tickets =
-        getSavedTickets();
-
-
-    const pageTitle =
-        $("pageTitle");
-
-    if (pageTitle) {
-        pageTitle.textContent =
-            "My Tickets";
-    }
-
-
-    const resultsTitle =
-        $("resultsTitle");
-
-    if (resultsTitle) {
-        resultsTitle.textContent =
-            "My Tickets";
-    }
-
-
-    const resultCount =
-        $("resultCount");
-
-    if (resultCount) {
-
-        resultCount.textContent =
-            tickets.length +
-            " saved";
-
-    }
-
-
-    document.querySelectorAll(".tab")
-        .forEach(tab => {
-
-            tab.classList.remove(
-                "active"
-            );
-
-        });
-
-
-    const container =
-        $("resultsContainer");
-
-
-    if (!container) {
-        return;
-    }
-
-
-    if (tickets.length === 0) {
-
-        container.innerHTML = `
-
-            <div class="empty-state">
-
-                <div class="empty-icon">
-
-                    <i class="fas fa-ticket"></i>
-
-                </div>
-
-                <h3>No tickets yet</h3>
-
-                <p>
-                    Your confirmed bookings
-                    will appear here.
-                </p>
-
-            </div>
-
-        `;
-
-        return;
-    }
-
-
-    container.innerHTML =
-        tickets
-            .map(ticket =>
-                createMyTicket(ticket)
-            )
-            .join("");
-
-}
-
-
-/* =========================================================
-   MY TICKET CARD
-========================================================= */
-
-function createMyTicket(ticket) {
-
-    const icon =
-        ticket.type === "flight"
-            ? "fa-plane"
-            : ticket.type === "train"
-                ? "fa-train"
-                : "fa-bus";
-
-
-    return `
-
-        <div class="my-ticket">
-
-            <div class="my-ticket-header">
-
-                <div class="ticket-type">
-
-                    <i class="fas ${icon}"></i>
-
-                    ${escapeHtml(
-                        ticket.typeName
-                    )}
-
-                </div>
-
-
-                <button
-                    class="delete-ticket"
-                    type="button"
-                    onclick="deleteTicket(${Number(
-                        ticket.id
-                    )})"
-                >
-
-                    <i class="fas fa-trash"></i>
-
-                </button>
-
-            </div>
-
-
-            <div
-                style="
-                    display:flex;
-                    justify-content:space-between;
-                    align-items:center;
-                "
-            >
-
-                <div>
-
-                    <strong>
-
-                        ${escapeHtml(
-                            ticket.provider
-                        )}
-
-                    </strong>
-
-                    <div
-                        style="
-                            font-size:12px;
-                            color:#888;
-                            margin-top:3px;
-                        "
-                    >
-
-                        ${escapeHtml(
-                            ticket.code
-                        )}
-
-                    </div>
-
-                </div>
-
-
-                <div class="price">
-
-                    €${Number(
-                        ticket.total
-                    ).toFixed(0)}
-
-                </div>
-
-            </div>
-
-
-            <div class="my-route">
-
-                <div>
-
-                    <div class="my-city">
-
-                        ${escapeHtml(
-                            ticket.from
-                        )}
-
-                    </div>
-
-                    <div class="my-time">
-
-                        ${escapeHtml(
-                            ticket.fromTime
-                        )}
-
-                    </div>
-
-                </div>
-
-
-                <div class="my-arrow">
-
-                    <i class="fas fa-arrow-right"></i>
-
-                </div>
-
-
-                <div
-                    style="
-                        text-align:right;
-                    "
-                >
-
-                    <div class="my-city">
-
-                        ${escapeHtml(
-                            ticket.to
-                        )}
-
-                    </div>
-
-                    <div class="my-time">
-
-                        ${escapeHtml(
-                            ticket.toTime
-                        )}
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <div class="ticket-details">
-
-                <div class="detail">
-
-                    Booking code
-
-                    <strong>
-
-                        ${escapeHtml(
-                            ticket.bookingCode
-                        )}
-
-                    </strong>
-
-                </div>
-
-
-                <div class="detail">
-
-                    Passengers
-
-                    <strong>
-
-                        ${Number(
-                            ticket.passengers || 1
-                        )}
-
-                    </strong>
-
-                </div>
-
-
-                <div class="detail">
-
-                    Passenger
-
-                    <strong>
-
-                        ${escapeHtml(
-                            ticket.firstName
-                        )}
-
-                        ${escapeHtml(
-                            ticket.lastName
-                        )}
-
-                    </strong>
-
-                </div>
-
-
-                <div class="detail">
-
-                    Duration
-
-                    <strong>
-
-                        ${escapeHtml(
-                            ticket.duration
-                        )}
-
-                    </strong>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    `;
-
-}
-
-
-/* =========================================================
-   DELETE TICKET
-========================================================= */
-
-function deleteTicket(id) {
-
-    const shouldDelete =
-        window.confirm(
-            "Delete this ticket?"
-        );
-
-
-    if (!shouldDelete) {
-        return;
-    }
-
-
-    const tickets =
-        getSavedTickets()
-            .filter(
-                ticket =>
-                    String(ticket.id) !==
-                    String(id)
-            );
-
-
-    try {
-
-        localStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify(tickets)
-        );
-
-    }
-
-    catch (error) {
-
-        console.error(
-            "HAVKAR delete error:",
-            error
-        );
-
-        showToast(
-            "Unable to delete ticket."
-        );
-
-        return;
-
-    }
-
-
-    showToast(
-        "Ticket deleted."
-    );
-
-
-    showMyTickets();
-
-}
-
-
-/* =========================================================
-   SUCCESS MODAL
-========================================================= */
-
-function closeSuccess() {
-
-    const modal =
-        $("successModal");
-
-    if (modal) {
-        modal.classList.remove("show");
-    }
 
 }
 
@@ -1821,7 +2060,7 @@ function closeSuccess() {
    SWAP LOCATIONS
 ========================================================= */
 
-function swapLocations() {
+function swapLocations(){
 
     const from =
         $("fromInput");
@@ -1830,7 +2069,7 @@ function swapLocations() {
         $("toInput");
 
 
-    if (!from || !to) {
+    if(!from || !to){
         return;
     }
 
@@ -1838,31 +2077,29 @@ function swapLocations() {
     const temporary =
         from.value;
 
-
     from.value =
         to.value;
-
 
     to.value =
         temporary;
 
 
-    searchTickets(false);
+    searchFlights();
 
 }
 
 
 /* =========================================================
-   FILTERS
+   TOGGLE FILTERS
 ========================================================= */
 
-function toggleFilters() {
+function toggleFilters(){
 
     const filters =
         $("extraFilters");
 
 
-    if (!filters) {
+    if(!filters){
         return;
     }
 
@@ -1878,17 +2115,17 @@ function toggleFilters() {
    FOCUS SEARCH
 ========================================================= */
 
-function focusSearch() {
+function focusSearch(){
 
     const section =
         $("searchSection");
 
 
-    if (section) {
+    if(section){
 
         section.scrollIntoView({
-            behavior: "smooth",
-            block: "start"
+            behavior:"smooth",
+            block:"start"
         });
 
     }
@@ -1896,23 +2133,23 @@ function focusSearch() {
 
     setTimeout(() => {
 
-        const from =
+        const input =
             $("fromInput");
 
-        if (from) {
-            from.focus();
+        if(input){
+            input.focus();
         }
 
-    }, 350);
+    },300);
 
 }
 
 
 /* =========================================================
-   HOME
+   GO HOME
 ========================================================= */
 
-function goHome() {
+function goHome(){
 
     window.location.href =
         "index.html";
@@ -1924,18 +2161,13 @@ function goHome() {
    TOAST
 ========================================================= */
 
-function showToast(message) {
+function showToast(message){
 
     const toast =
         $("toast");
 
 
-    if (!toast) {
-        console.log(
-            "HAVKAR:",
-            message
-        );
-
+    if(!toast){
         return;
     }
 
@@ -1961,77 +2193,7 @@ function showToast(message) {
                 "show"
             );
 
-        }, 2500);
-
-}
-
-
-/* =========================================================
-   CLOSE MODAL WHEN CLICKING OUTSIDE
-========================================================= */
-
-function setupModalOutsideClick(
-    modalId,
-    closeFunction
-) {
-
-    const modal =
-        $(modalId);
-
-
-    if (!modal) {
-        return;
-    }
-
-
-    modal.addEventListener(
-        "click",
-        event => {
-
-            if (
-                event.target ===
-                event.currentTarget
-            ) {
-
-                closeFunction();
-
-            }
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   ENTER KEY SEARCH
-========================================================= */
-
-function setupEnterSearch(id) {
-
-    const element =
-        $(id);
-
-
-    if (!element) {
-        return;
-    }
-
-
-    element.addEventListener(
-        "keydown",
-        event => {
-
-            if (event.key === "Enter") {
-
-                event.preventDefault();
-
-                searchTickets(true);
-
-            }
-
-        }
-    );
+        },2300);
 
 }
 
@@ -2040,21 +2202,18 @@ function setupEnterSearch(id) {
    SAFE EVENT LISTENER
 ========================================================= */
 
-function on(id, eventName, handler) {
+function on(
+    elementId,
+    eventName,
+    handler
+){
 
     const element =
-        $(id);
+        $(elementId);
 
 
-    if (!element) {
-
-        console.warn(
-            "HAVKAR: Element not found:",
-            id
-        );
-
+    if(!element){
         return;
-
     }
 
 
@@ -2067,70 +2226,172 @@ function on(id, eventName, handler) {
 
 
 /* =========================================================
-   INITIALIZE EVERYTHING
+   ENTER KEY
 ========================================================= */
 
-function initializeHAVKAR() {
+function setupEnterSearch(
+    elementId
+){
+
+    const element =
+        $(elementId);
+
+
+    if(!element){
+        return;
+    }
+
+
+    element.addEventListener(
+        "keydown",
+        event => {
+
+            if(
+                event.key ===
+                "Enter"
+            ){
+
+                event.preventDefault();
+
+                searchFlights();
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   INITIALIZE
+========================================================= */
+
+function initializeHAVKAR(){
 
     console.log(
-        "HAVKAR Tickets initializing..."
+        "HAVKAR Tickets Demo initializing..."
     );
 
 
-    /* -----------------------------------------
-       DATE
-    ----------------------------------------- */
+    /* DATE */
 
     setToday();
 
 
-    /* -----------------------------------------
-       SEARCH BUTTON
-    ----------------------------------------- */
+    /* SEARCH */
 
     on(
-        "searchBtn",
+        "searchButton",
         "click",
-        () => searchTickets(true)
+        searchFlights
     );
 
 
-    /* -----------------------------------------
-       TRANSPORT TABS
-    ----------------------------------------- */
-
-    document
-        .querySelectorAll(".tab")
-        .forEach(tab => {
-
-            tab.addEventListener(
-                "click",
-                () => {
-
-                    const type =
-                        tab.dataset.type;
-
-                    changeType(type);
-
-                }
-            );
-
-        });
-
-
-    /* -----------------------------------------
-       HEADER BUTTONS
-    ----------------------------------------- */
+    /* SWAP */
 
     on(
-        "backBtn",
+        "swapButton",
+        "click",
+        swapLocations
+    );
+
+
+    /* FILTER */
+
+    on(
+        "filterButton",
+        "click",
+        toggleFilters
+    );
+
+
+    /* FILTER CHANGES */
+
+    on(
+        "stopsSelect",
+        "change",
+        searchFlights
+    );
+
+
+    on(
+        "sortSelect",
+        "change",
+        searchFlights
+    );
+
+
+    /* DATE */
+
+    on(
+        "dateInput",
+        "change",
+        searchFlights
+    );
+
+
+    /* PASSENGERS */
+
+    on(
+        "passengersInput",
+        "change",
+        () => {
+
+            const input =
+                $("passengersInput");
+
+            if(!input){
+                return;
+            }
+
+
+            let value =
+                Number(input.value);
+
+
+            if(
+                !Number.isFinite(value) ||
+                value < 1
+            ){
+                value = 1;
+            }
+
+
+            if(value > 9){
+                value = 9;
+            }
+
+
+            input.value =
+                value;
+
+        }
+    );
+
+
+    /* ENTER SEARCH */
+
+    setupEnterSearch(
+        "fromInput"
+    );
+
+    setupEnterSearch(
+        "toInput"
+    );
+
+
+    /* HEADER */
+
+    on(
+        "backButton",
         "click",
         goHome
     );
 
 
     on(
-        "notificationBtn",
+        "notificationButton",
         "click",
         () =>
             showToast(
@@ -2140,7 +2401,7 @@ function initializeHAVKAR() {
 
 
     on(
-        "profileBtn",
+        "profileButton",
         "click",
         () =>
             showToast(
@@ -2149,31 +2410,7 @@ function initializeHAVKAR() {
     );
 
 
-    /* -----------------------------------------
-       SWAP
-    ----------------------------------------- */
-
-    on(
-        "swapBtn",
-        "click",
-        swapLocations
-    );
-
-
-    /* -----------------------------------------
-       FILTER
-    ----------------------------------------- */
-
-    on(
-        "filterToggle",
-        "click",
-        toggleFilters
-    );
-
-
-    /* -----------------------------------------
-       BOTTOM NAVIGATION
-    ----------------------------------------- */
+    /* BOTTOM NAV */
 
     on(
         "homeNav",
@@ -2192,7 +2429,10 @@ function initializeHAVKAR() {
     on(
         "ticketsNav",
         "click",
-        showMyTickets
+        () =>
+            showToast(
+                "Ticket history will be connected later."
+            )
     );
 
 
@@ -2216,157 +2456,13 @@ function initializeHAVKAR() {
     );
 
 
-    /* -----------------------------------------
-       PASSENGERS
-    ----------------------------------------- */
+    /* FIRST RENDER */
 
-    on(
-        "passengersInput",
-        "input",
-        updateTotal
-    );
-
-
-    /* -----------------------------------------
-       FILTER EVENTS
-    ----------------------------------------- */
-
-    on(
-        "stopsSelect",
-        "change",
-        () => searchTickets(false)
-    );
-
-
-    on(
-        "sortSelect",
-        "change",
-        () => searchTickets(false)
-    );
-
-
-    /* -----------------------------------------
-       DATE CHANGE
-    ----------------------------------------- */
-
-    on(
-        "dateInput",
-        "change",
-        () => searchTickets(false)
-    );
-
-
-    /* -----------------------------------------
-       ENTER SEARCH
-    ----------------------------------------- */
-
-    setupEnterSearch(
-        "fromInput"
-    );
-
-    setupEnterSearch(
-        "toInput"
-    );
-
-
-    /* -----------------------------------------
-       BOOKING FORM
-    ----------------------------------------- */
-
-    on(
-        "bookingForm",
-        "submit",
-        confirmBooking
-    );
-
-
-    /* -----------------------------------------
-       CLOSE BOOKING
-    ----------------------------------------- */
-
-    on(
-        "closeBooking",
-        "click",
-        closeBooking
-    );
-
-
-    /* -----------------------------------------
-       CLOSE SUCCESS
-    ----------------------------------------- */
-
-    on(
-        "closeSuccess",
-        "click",
-        closeSuccess
-    );
-
-
-    /* -----------------------------------------
-       VIEW TICKETS
-    ----------------------------------------- */
-
-    on(
-        "viewTicketsBtn",
-        "click",
-        () => {
-
-            closeSuccess();
-
-            showMyTickets();
-
-        }
-    );
-
-
-    /* -----------------------------------------
-       MODAL OUTSIDE CLICK
-    ----------------------------------------- */
-
-    setupModalOutsideClick(
-        "bookingModal",
-        closeBooking
-    );
-
-
-    setupModalOutsideClick(
-        "successModal",
-        closeSuccess
-    );
-
-
-    /* -----------------------------------------
-       ESC KEY
-    ----------------------------------------- */
-
-    document.addEventListener(
-        "keydown",
-        event => {
-
-            if (
-                event.key ===
-                "Escape"
-            ) {
-
-                closeBooking();
-
-                closeSuccess();
-
-            }
-
-        }
-    );
-
-
-    /* -----------------------------------------
-       FIRST SEARCH
-    ----------------------------------------- */
-
-    searchTickets(false);
+    searchFlights();
 
 
     console.log(
-        "HAVKAR Tickets initialized successfully."
+        "HAVKAR Tickets Demo initialized successfully."
     );
 
 }
@@ -2374,29 +2470,29 @@ function initializeHAVKAR() {
 
 /* =========================================================
    DOM READY
-   IMPORTANT:
-   ALL DOM EVENTS START HERE
 ========================================================= */
 
-if (
+if(
     document.readyState ===
     "loading"
-) {
+){
 
     document.addEventListener(
         "DOMContentLoaded",
         initializeHAVKAR,
         {
-            once: true
+            once:true
         }
     );
 
 }
-
-else {
+else{
 
     initializeHAVKAR();
 
 }
 
 </script>
+
+</body>
+</html>
