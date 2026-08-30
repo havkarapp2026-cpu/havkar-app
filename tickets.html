@@ -1,1409 +1,19 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#7cb342">
-<title>HAVKAR - Tickets</title>
-
-<link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-<style>
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
-
-:root{
-    --green:#7cb342;
-    --green-dark:#558b2f;
-    --green-light:#eef7e8;
-    --bg:#f5f6f5;
-    --text:#2f2f2f;
-    --muted:#777;
-    --border:#e1e1e1;
-    --white:#fff;
-    --danger:#e53935;
-}
-
-html{
-    scroll-behavior:smooth;
-}
-
-body{
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
-    background:var(--bg);
-    color:var(--text);
-    padding-bottom:82px;
-}
-
-/* =========================
-   HEADER
-========================= */
-
-.header{
-    background:linear-gradient(135deg,#689f38,#7cb342);
-    color:white;
-    padding:15px 20px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    min-height:76px;
-    box-shadow:0 3px 12px rgba(0,0,0,.12);
-}
-
-.header-left{
-    display:flex;
-    align-items:center;
-    gap:14px;
-}
-
-.back-btn{
-    width:42px;
-    height:42px;
-    border:none;
-    border-radius:50%;
-    background:rgba(255,255,255,.18);
-    color:white;
-    font-size:20px;
-    cursor:pointer;
-}
-
-.header h1{
-    font-size:23px;
-    font-weight:750;
-}
-
-.header-right{
-    display:flex;
-    gap:10px;
-}
-
-.icon-btn{
-    width:42px;
-    height:42px;
-    border:none;
-    border-radius:50%;
-    background:rgba(255,255,255,.18);
-    color:white;
-    font-size:17px;
-    cursor:pointer;
-}
-
-/* =========================
-   MAIN TABS
-========================= */
-
-.tabs{
-    background:white;
-    display:flex;
-    gap:12px;
-    padding:15px 20px;
-    box-shadow:0 2px 7px rgba(0,0,0,.05);
-}
-
-.tab{
-    flex:1;
-    border:none;
-    padding:13px 8px;
-    border-radius:13px;
-    background:#f2f2f2;
-    color:#222;
-    font-size:16px;
-    font-weight:700;
-    cursor:pointer;
-    transition:.2s;
-}
-
-.tab i{
-    margin-right:6px;
-}
-
-.tab.active{
-    background:linear-gradient(135deg,#689f38,#7cb342);
-    color:white;
-}
-
-/* =========================
-   SEARCH
-========================= */
-
-.search-section{
-    background:white;
-    padding:20px;
-    border-bottom:1px solid #eee;
-}
-
-.search-row{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:12px;
-    margin-bottom:12px;
-}
-
-.input-wrap{
-    position:relative;
-}
-
-.input-wrap i{
-    position:absolute;
-    left:15px;
-    top:50%;
-    transform:translateY(-50%);
-    color:var(--green);
-    pointer-events:none;
-}
-
-.search-input{
-    width:100%;
-    height:56px;
-    border:2px solid var(--border);
-    border-radius:14px;
-    background:#fff;
-    padding:0 14px 0 42px;
-    font-size:16px;
-    color:#333;
-    outline:none;
-    transition:.2s;
-}
-
-.search-input:focus{
-    border-color:var(--green);
-    box-shadow:0 0 0 3px rgba(124,179,66,.12);
-}
-
-.swap-row{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin:-3px 0 8px;
-}
-
-.swap-btn{
-    width:44px;
-    height:44px;
-    border-radius:50%;
-    border:1px solid #ddd;
-    background:white;
-    color:var(--green-dark);
-    font-size:18px;
-    cursor:pointer;
-    box-shadow:0 2px 5px rgba(0,0,0,.05);
-}
-
-.filter-toggle{
-    border:none;
-    background:none;
-    color:var(--green-dark);
-    font-size:15px;
-    font-weight:700;
-    cursor:pointer;
-}
-
-.filter-toggle i{
-    margin-right:5px;
-}
-
-.extra-filters{
-    display:none;
-    grid-template-columns:1fr 1fr;
-    gap:12px;
-    margin:5px 0 12px;
-}
-
-.extra-filters.show{
-    display:grid;
-}
-
-.select-wrap{
-    position:relative;
-}
-
-.select-wrap label{
-    display:block;
-    font-size:12px;
-    color:#777;
-    margin:0 0 5px 4px;
-}
-
-.select-input{
-    width:100%;
-    height:48px;
-    border:2px solid var(--border);
-    border-radius:12px;
-    background:white;
-    padding:0 10px;
-    font-size:14px;
-    outline:none;
-}
-
-.search-btn{
-    width:100%;
-    height:58px;
-    border:none;
-    border-radius:14px;
-    margin-top:4px;
-    background:linear-gradient(135deg,#689f38,#7cb342);
-    color:white;
-    font-size:17px;
-    font-weight:750;
-    cursor:pointer;
-    box-shadow:0 4px 12px rgba(124,179,66,.25);
-}
-
-.search-btn:active{
-    transform:scale(.99);
-}
-
-/* =========================
-   CONTENT
-========================= */
-
-.content{
-    padding:4px 20px 100px;
-}
-
-.results-header{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    margin:22px 0 15px;
-}
-
-.section-title{
-    font-size:21px;
-    font-weight:750;
-}
-
-.result-count{
-    color:#777;
-    font-size:14px;
-}
-
-/* =========================
-   TICKET CARD
-========================= */
-
-.ticket-card{
-    background:white;
-    border-radius:18px;
-    padding:18px;
-    margin-bottom:15px;
-    box-shadow:0 3px 13px rgba(0,0,0,.07);
-    border:1px solid rgba(0,0,0,.025);
-}
-
-.ticket-top{
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    margin-bottom:17px;
-}
-
-.provider{
-    display:flex;
-    align-items:center;
-    gap:12px;
-}
-
-.provider-logo{
-    width:48px;
-    height:48px;
-    border-radius:14px;
-    background:#f2f5ef;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    color:var(--green-dark);
-    font-size:21px;
-}
-
-.provider-name{
-    font-weight:750;
-    font-size:16px;
-}
-
-.provider-code{
-    color:#888;
-    font-size:13px;
-    margin-top:2px;
-}
-
-.price-box{
-    text-align:right;
-}
-
-.price{
-    color:var(--green-dark);
-    font-size:23px;
-    font-weight:800;
-}
-
-.price-label{
-    color:#888;
-    font-size:12px;
-}
-
-/* route */
-
-.route{
-    display:grid;
-    grid-template-columns:1fr 70px 1fr;
-    align-items:center;
-    gap:5px;
-    margin-bottom:14px;
-}
-
-.location{
-    min-width:0;
-}
-
-.location.right{
-    text-align:right;
-}
-
-.city{
-    font-size:21px;
-    font-weight:800;
-}
-
-.time{
-    color:#666;
-    font-size:14px;
-    margin-top:2px;
-}
-
-.station{
-    color:#999;
-    font-size:12px;
-    margin-top:3px;
-}
-
-.route-center{
-    text-align:center;
-    color:var(--green);
-}
-
-.route-line{
-    display:flex;
-    align-items:center;
-    gap:5px;
-    justify-content:center;
-}
-
-.route-line::before,
-.route-line::after{
-    content:"";
-    height:1px;
-    background:#ddd;
-    width:20px;
-}
-
-.route-duration{
-    font-size:12px;
-    color:#777;
-    margin-top:5px;
-}
-
-/* info */
-
-.ticket-info{
-    display:flex;
-    gap:15px;
-    flex-wrap:wrap;
-    padding:12px 0;
-    border-top:1px solid #eee;
-    border-bottom:1px solid #eee;
-}
-
-.info-item{
-    display:flex;
-    align-items:center;
-    gap:6px;
-    color:#666;
-    font-size:13px;
-}
-
-.info-item i{
-    color:var(--green);
-}
-
-.book-btn{
-    width:100%;
-    height:48px;
-    margin-top:13px;
-    border:none;
-    border-radius:12px;
-    background:var(--green);
-    color:white;
-    font-size:15px;
-    font-weight:750;
-    cursor:pointer;
-}
-
-.book-btn:hover{
-    background:var(--green-dark);
-}
-
-/* =========================
-   EMPTY
-========================= */
-
-.empty-state{
-    background:white;
-    border-radius:18px;
-    padding:55px 20px;
-    text-align:center;
-    box-shadow:0 2px 9px rgba(0,0,0,.05);
-}
-
-.empty-icon{
-    width:70px;
-    height:70px;
-    margin:0 auto 15px;
-    border-radius:50%;
-    background:#f0f0f0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:#aaa;
-    font-size:30px;
-}
-
-.empty-state h3{
-    color:#666;
-    margin-bottom:7px;
-}
-
-.empty-state p{
-    color:#999;
-    font-size:14px;
-}
-
-/* =========================
-   MODAL
-========================= */
-
-.modal-overlay{
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,.58);
-    z-index:1000;
-    display:none;
-    align-items:flex-end;
-    justify-content:center;
-}
-
-.modal-overlay.show{
-    display:flex;
-}
-
-.modal{
-    width:100%;
-    max-width:650px;
-    max-height:94vh;
-    overflow-y:auto;
-    background:white;
-    border-radius:24px 24px 0 0;
-    padding:22px;
-    animation:slideUp .25s ease;
-}
-
-@keyframes slideUp{
-    from{
-        transform:translateY(100%);
-    }
-    to{
-        transform:translateY(0);
-    }
-}
-
-.modal-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:20px;
-}
-
-.modal-header h2{
-    font-size:22px;
-}
-
-.close-btn{
-    width:40px;
-    height:40px;
-    border:none;
-    border-radius:50%;
-    background:#f1f1f1;
-    font-size:18px;
-    cursor:pointer;
-}
-
-.booking-summary{
-    background:#f5f8f2;
-    border-radius:16px;
-    padding:16px;
-    margin-bottom:20px;
-}
-
-.summary-top{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:13px;
-}
-
-.summary-provider{
-    font-weight:800;
-}
-
-.summary-code{
-    color:#777;
-    font-size:13px;
-}
-
-.summary-route{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-}
-
-.summary-city{
-    font-size:18px;
-    font-weight:800;
-}
-
-.summary-time{
-    color:#777;
-    font-size:13px;
-}
-
-.summary-arrow{
-    color:var(--green);
-    font-size:22px;
-}
-
-.form-title{
-    font-size:18px;
-    font-weight:750;
-    margin-bottom:13px;
-}
-
-.form-grid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:12px;
-}
-
-.form-group{
-    margin-bottom:13px;
-}
-
-.form-group.full{
-    grid-column:1/-1;
-}
-
-.form-group label{
-    display:block;
-    color:#666;
-    font-size:13px;
-    margin:0 0 6px 2px;
-}
-
-.form-group input{
-    width:100%;
-    height:50px;
-    border:2px solid #e2e2e2;
-    border-radius:12px;
-    padding:0 13px;
-    font-size:15px;
-    outline:none;
-}
-
-.form-group input:focus{
-    border-color:var(--green);
-}
-
-.total-row{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    border-top:1px solid #eee;
-    padding-top:17px;
-    margin-top:3px;
-}
-
-.total-row span:first-child{
-    font-size:18px;
-    font-weight:600;
-}
-
-.total-price{
-    color:var(--green-dark);
-    font-size:25px;
-    font-weight:850;
-}
-
-.confirm-btn{
-    width:100%;
-    height:54px;
-    border:none;
-    border-radius:13px;
-    margin-top:15px;
-    background:var(--green);
-    color:white;
-    font-size:16px;
-    font-weight:800;
-    cursor:pointer;
-}
-
-.confirm-btn i{
-    margin-right:7px;
-}
-
-/* =========================
-   SUCCESS
-========================= */
-
-.success-box{
-    text-align:center;
-    padding:20px 5px 10px;
-}
-
-.success-icon{
-    width:75px;
-    height:75px;
-    border-radius:50%;
-    background:#e8f5df;
-    color:var(--green-dark);
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    font-size:35px;
-    margin:0 auto 17px;
-}
-
-.success-box h2{
-    margin-bottom:8px;
-}
-
-.success-box p{
-    color:#777;
-    margin-bottom:15px;
-}
-
-.booking-code{
-    display:inline-block;
-    background:#f2f6ee;
-    padding:11px 20px;
-    border-radius:10px;
-    color:var(--green-dark);
-    font-weight:800;
-    letter-spacing:1px;
-}
-
-/* =========================
-   MY TICKETS
-========================= */
-
-.my-ticket{
-    background:white;
-    border-radius:18px;
-    padding:18px;
-    margin-bottom:15px;
-    box-shadow:0 3px 12px rgba(0,0,0,.07);
-}
-
-.my-ticket-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:14px;
-}
-
-.ticket-type{
-    display:flex;
-    align-items:center;
-    gap:9px;
-    color:var(--green-dark);
-    font-weight:750;
-}
-
-.delete-ticket{
-    border:none;
-    background:#fff0f0;
-    color:var(--danger);
-    width:35px;
-    height:35px;
-    border-radius:50%;
-    cursor:pointer;
-}
-
-.my-route{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin:15px 0;
-}
-
-.my-city{
-    font-size:18px;
-    font-weight:800;
-}
-
-.my-time{
-    font-size:13px;
-    color:#777;
-}
-
-.my-arrow{
-    color:var(--green);
-}
-
-.ticket-details{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:8px;
-    border-top:1px solid #eee;
-    padding-top:13px;
-}
-
-.detail{
-    font-size:13px;
-    color:#777;
-}
-
-.detail strong{
-    display:block;
-    color:#333;
-    margin-top:2px;
-}
-
-/* =========================
-   BOTTOM NAV
-========================= */
-
-.bottom-nav{
-    position:fixed;
-    left:0;
-    right:0;
-    bottom:0;
-    height:78px;
-    background:white;
-    display:flex;
-    justify-content:space-around;
-    align-items:center;
-    z-index:900;
-    box-shadow:0 -3px 13px rgba(0,0,0,.09);
-}
-
-.nav-item{
-    flex:1;
-    height:100%;
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-    align-items:center;
-    gap:5px;
-    color:#999;
-    font-size:12px;
-    cursor:pointer;
-}
-
-.nav-item i{
-    font-size:21px;
-}
-
-.nav-item.active{
-    color:var(--green);
-}
-
-/* =========================
-   TOAST
-========================= */
-
-.toast{
-    position:fixed;
-    left:50%;
-    bottom:92px;
-    transform:translateX(-50%) translateY(20px);
-    background:#333;
-    color:white;
-    padding:12px 18px;
-    border-radius:12px;
-    font-size:14px;
-    opacity:0;
-    pointer-events:none;
-    transition:.25s;
-    z-index:2000;
-    white-space:nowrap;
-}
-
-.toast.show{
-    opacity:1;
-    transform:translateX(-50%) translateY(0);
-}
-
-/* =========================
-   RESPONSIVE
-========================= */
-
-@media(max-width:600px){
-
-    .header{
-        padding:14px 16px;
-    }
-
-    .header h1{
-        font-size:21px;
-    }
-
-    .tabs{
-        padding:12px 14px;
-        gap:8px;
-    }
-
-    .tab{
-        font-size:14px;
-        padding:12px 5px;
-    }
-
-    .tab i{
-        margin-right:3px;
-    }
-
-    .search-section{
-        padding:16px;
-    }
-
-    .search-row{
-        gap:9px;
-    }
-
-    .search-input{
-        height:54px;
-        font-size:15px;
-    }
-
-    .content{
-        padding-left:16px;
-        padding-right:16px;
-    }
-
-    .ticket-card{
-        padding:16px;
-    }
-
-    .city{
-        font-size:19px;
-    }
-
-    .route{
-        grid-template-columns:1fr 55px 1fr;
-    }
-
-    .modal{
-        padding:18px;
-    }
-
-    .form-grid{
-        grid-template-columns:1fr;
-    }
-
-    .form-group.full{
-        grid-column:auto;
-    }
-}
-
-@media(max-width:380px){
-
-    .ticket-info{
-        gap:9px;
-    }
-
-    .info-item{
-        font-size:12px;
-    }
-
-    .provider-name{
-        font-size:14px;
-    }
-
-    .price{
-        font-size:20px;
-    }
-}
-</style>
-</head>
-
-<body>
-
-<!-- =========================
-     HEADER
-========================= -->
-
-<header class="header">
-
-    <div class="header-left">
-
-        <button class="back-btn" onclick="goHome()">
-            <i class="fas fa-arrow-left"></i>
-        </button>
-
-        <h1 id="pageTitle">Tickets</h1>
-
-    </div>
-
-    <div class="header-right">
-
-        <button class="icon-btn" onclick="showToast('Notifications')">
-            <i class="fas fa-bell"></i>
-        </button>
-
-        <button class="icon-btn" onclick="showMyTickets()">
-            <i class="fas fa-user"></i>
-        </button>
-
-    </div>
-
-</header>
-
-
-<!-- =========================
-     TYPE TABS
-========================= -->
-
-<div class="tabs">
-
-    <button class="tab active" data-type="flight" onclick="changeType('flight')">
-        <i class="fas fa-plane"></i>
-        Flights
-    </button>
-
-    <button class="tab" data-type="train" onclick="changeType('train')">
-        <i class="fas fa-train"></i>
-        Trains
-    </button>
-
-    <button class="tab" data-type="bus" onclick="changeType('bus')">
-        <i class="fas fa-bus"></i>
-        Buses
-    </button>
-
-</div>
-
-
-<!-- =========================
-     SEARCH SECTION
-========================= -->
-
-<section class="search-section">
-
-    <div class="search-row">
-
-        <div class="input-wrap">
-            <i class="fas fa-location-dot"></i>
-            <input
-                id="fromInput"
-                class="search-input"
-                type="text"
-                value="Rome"
-                placeholder="From"
-                autocomplete="off">
-        </div>
-
-        <div class="input-wrap">
-            <i class="fas fa-location-dot"></i>
-            <input
-                id="toInput"
-                class="search-input"
-                type="text"
-                value="Milan"
-                placeholder="To"
-                autocomplete="off">
-        </div>
-
-    </div>
-
-
-    <div class="swap-row">
-
-        <button class="swap-btn" onclick="swapLocations()" title="Swap">
-            <i class="fas fa-right-left"></i>
-        </button>
-
-        <button class="filter-toggle" onclick="toggleFilters()">
-            <i class="fas fa-sliders"></i>
-            Filters
-        </button>
-
-    </div>
-
-
-    <div class="search-row">
-
-        <div class="input-wrap">
-            <i class="fas fa-calendar"></i>
-            <input
-                id="dateInput"
-                class="search-input"
-                type="date">
-        </div>
-
-        <div class="input-wrap">
-            <i class="fas fa-user"></i>
-            <input
-                id="passengersInput"
-                class="search-input"
-                type="number"
-                min="1"
-                max="9"
-                value="1"
-                placeholder="Passengers">
-        </div>
-
-    </div>
-
-
-    <!-- FILTERS -->
-
-    <div class="extra-filters" id="extraFilters">
-
-        <div class="select-wrap">
-
-            <label for="stopsSelect">Stops</label>
-
-            <select id="stopsSelect" class="select-input">
-                <option value="any">Any</option>
-                <option value="direct">Direct only</option>
-                <option value="one">Up to 1 stop</option>
-            </select>
-
-        </div>
-
-
-        <div class="select-wrap">
-
-            <label for="sortSelect">Sort by</label>
-
-            <select id="sortSelect" class="select-input">
-                <option value="recommended">Recommended</option>
-                <option value="price">Lowest price</option>
-                <option value="duration">Shortest trip</option>
-                <option value="departure">Earliest departure</option>
-            </select>
-
-        </div>
-
-    </div>
-
-
-    <button class="search-btn" onclick="searchTickets()">
-        <i class="fas fa-search"></i>
-        <span id="searchButtonText">Search Flights</span>
-    </button>
-
-</section>
-
-
-<!-- =========================
-     RESULTS
-========================= -->
-
-<main class="content">
-
-    <div class="results-header">
-
-        <div class="section-title" id="resultsTitle">
-            Available Flights
-        </div>
-
-        <div class="result-count" id="resultCount">
-            0 results
-        </div>
-
-    </div>
-
-
-    <div id="resultsContainer"></div>
-
-</main>
-
-
-<!-- =========================
-     BOTTOM NAV
-========================= -->
-
-<nav class="bottom-nav">
-
-    <div class="nav-item" onclick="goHome()">
-        <i class="fas fa-home"></i>
-        <span>Home</span>
-    </div>
-
-    <div class="nav-item" onclick="focusSearch()">
-        <i class="fas fa-search"></i>
-        <span>Search</span>
-    </div>
-
-    <div class="nav-item active" onclick="showMyTickets()">
-        <i class="fas fa-ticket"></i>
-        <span>My Tickets</span>
-    </div>
-
-    <div class="nav-item" onclick="showToast('Alerts')">
-        <i class="fas fa-bell"></i>
-        <span>Alerts</span>
-    </div>
-
-    <div class="nav-item" onclick="showToast('Profile')">
-        <i class="fas fa-user"></i>
-        <span>Profile</span>
-    </div>
-
-</nav>
-
-
-<!-- =========================
-     BOOKING MODAL
-========================= -->
-
-<div class="modal-overlay" id="bookingModal">
-
-    <div class="modal">
-
-        <div class="modal-header">
-
-            <h2>Book Ticket</h2>
-
-            <button class="close-btn" onclick="closeBooking()">
-                <i class="fas fa-xmark"></i>
-            </button>
-
-        </div>
-
-
-        <div class="booking-summary">
-
-            <div class="summary-top">
-
-                <div>
-                    <div class="summary-provider" id="summaryProvider">
-                        ITA Airways
-                    </div>
-
-                    <div class="summary-code" id="summaryCode">
-                        AZ 123
-                    </div>
-                </div>
-
-                <div class="price" id="summaryPrice">
-                    €75
-                </div>
-
-            </div>
-
-
-            <div class="summary-route">
-
-                <div>
-                    <div class="summary-city" id="summaryFrom">
-                        Rome
-                    </div>
-                    <div class="summary-time" id="summaryFromTime">
-                        11:00 AM
-                    </div>
-                </div>
-
-                <div class="summary-arrow">
-                    <i class="fas fa-arrow-right"></i>
-                </div>
-
-                <div style="text-align:right">
-                    <div class="summary-city" id="summaryTo">
-                        Milan
-                    </div>
-                    <div class="summary-time" id="summaryToTime">
-                        12:20 PM
-                    </div>
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <div class="form-title">
-            Passenger Information
-        </div>
-
-
-        <form id="bookingForm" onsubmit="confirmBooking(event)">
-
-            <div class="form-grid">
-
-                <div class="form-group">
-
-                    <label>First Name</label>
-
-                    <input
-                        id="firstName"
-                        type="text"
-                        placeholder="First name"
-                        required>
-
-                </div>
-
-
-                <div class="form-group">
-
-                    <label>Last Name</label>
-
-                    <input
-                        id="lastName"
-                        type="text"
-                        placeholder="Last name"
-                        required>
-
-                </div>
-
-
-                <div class="form-group">
-
-                    <label>Email</label>
-
-                    <input
-                        id="email"
-                        type="email"
-                        placeholder="Email"
-                        required>
-
-                </div>
-
-
-                <div class="form-group">
-
-                    <label>Phone</label>
-
-                    <input
-                        id="phone"
-                        type="tel"
-                        placeholder="Phone number"
-                        required>
-
-                </div>
-
-
-                <div class="form-group full">
-
-                    <label>Passport / ID Number</label>
-
-                    <input
-                        id="document"
-                        type="text"
-                        placeholder="Passport or ID"
-                        required>
-
-                </div>
-
-            </div>
-
-
-            <div class="total-row">
-
-                <span>Total</span>
-
-                <span class="total-price" id="totalPrice">
-                    €75
-                </span>
-
-            </div>
-
-
-            <button class="confirm-btn" type="submit">
-                <i class="fas fa-check"></i>
-                Confirm Booking
-            </button>
-
-        </form>
-
-    </div>
-
-</div>
-
-
-<!-- =========================
-     SUCCESS MODAL
-========================= -->
-
-<div class="modal-overlay" id="successModal">
-
-    <div class="modal">
-
-        <div class="modal-header">
-
-            <h2>Booking Confirmed</h2>
-
-            <button class="close-btn" onclick="closeSuccess()">
-                <i class="fas fa-xmark"></i>
-            </button>
-
-        </div>
-
-
-        <div class="success-box">
-
-            <div class="success-icon">
-                <i class="fas fa-check"></i>
-            </div>
-
-            <h2>Your ticket is confirmed</h2>
-
-            <p>
-                Your booking has been saved successfully.
-            </p>
-
-            <div class="booking-code" id="successBookingCode">
-                HAV-000000
-            </div>
-
-            <button
-                class="confirm-btn"
-                onclick="closeSuccess();showMyTickets();">
-                <i class="fas fa-ticket"></i>
-                View My Tickets
-            </button>
-
-        </div>
-
-    </div>
-
-</div>
-
-
-<!-- =========================
-     TOAST
-========================= -->
-
-<div class="toast" id="toast"></div>
-
-
 <script>
+"use strict";
 
 /* =========================================================
-   HAVKAR TICKETS
+   HAVKAR TICKETS - PROFESSIONAL SEARCH ENGINE
 ========================================================= */
 
 let currentType = "flight";
 let currentResults = [];
 let selectedTicket = null;
+let toastTimer = null;
 
+const STORAGE_KEY = "havkar_my_tickets";
 
 /* =========================================================
-   SAMPLE DATA
-   These are demonstration results for the interface.
+   DEMO TICKET DATABASE
 ========================================================= */
 
 const ticketData = {
@@ -1480,7 +90,6 @@ const ticketData = {
 
     ],
 
-
     train: [
 
         {
@@ -1552,7 +161,6 @@ const ticketData = {
         }
 
     ],
-
 
     bus: [
 
@@ -1630,92 +238,7 @@ const ticketData = {
 
 
 /* =========================================================
-   INITIAL DATE
-========================================================= */
-
-function setToday(){
-
-    const dateInput = document.getElementById("dateInput");
-
-    const today = new Date();
-
-    const year = today.getFullYear();
-
-    const month = String(today.getMonth()+1).padStart(2,"0");
-
-    const day = String(today.getDate()).padStart(2,"0");
-
-    dateInput.value = `${year}-${month}-${day}`;
-}
-
-
-/* =========================================================
-   TYPE CHANGE
-========================================================= */
-
-function changeType(type){
-
-    currentType = type;
-
-    document.querySelectorAll(".tab").forEach(tab=>{
-
-        tab.classList.toggle(
-            "active",
-            tab.dataset.type === type
-        );
-
-    });
-
-    const names = {
-        flight:"Flights",
-        train:"Trains",
-        bus:"Buses"
-    };
-
-    document.getElementById("pageTitle").textContent =
-        names[type] + " Tickets";
-
-    document.getElementById("resultsTitle").textContent =
-        "Available " + names[type];
-
-    document.getElementById("searchButtonText").textContent =
-        "Search " + names[type];
-
-    renderResults();
-
-}
-
-
-/* =========================================================
-   SEARCH
-========================================================= */
-
-function searchTickets(){
-
-    const from =
-        document.getElementById("fromInput").value.trim();
-
-    const to =
-        document.getElementById("toInput").value.trim();
-
-    if(!from || !to){
-
-        showToast("Please enter origin and destination.");
-
-        return;
-    }
-
-    renderResults();
-
-    showToast(
-        `${currentResults.length} ${getTypeName(currentType).toLowerCase()} found`
-    );
-
-}
-
-
-/* =========================================================
-   GET TYPE NAME
+   HELPERS
 ========================================================= */
 
 function getTypeName(type){
@@ -1728,6 +251,417 @@ function getTypeName(type){
 }
 
 
+function normalize(value){
+
+    return String(value || "")
+        .trim()
+        .toLowerCase();
+
+}
+
+
+function escapeHtml(value){
+
+    return String(value ?? "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
+
+}
+
+
+function timeToMinutes(time){
+
+    const match =
+        String(time).match(
+            /(\d+):(\d+)\s*(AM|PM)/i
+        );
+
+    if(!match) return 0;
+
+    let hour = Number(match[1]);
+
+    const minute = Number(match[2]);
+
+    const period = match[3].toUpperCase();
+
+    if(period === "PM" && hour !== 12){
+
+        hour += 12;
+
+    }
+
+    if(period === "AM" && hour === 12){
+
+        hour = 0;
+
+    }
+
+    return hour * 60 + minute;
+
+}
+
+
+/* =========================================================
+   TODAY
+========================================================= */
+
+function setToday(){
+
+    const dateInput =
+        document.getElementById("dateInput");
+
+    const today = new Date();
+
+    const year =
+        today.getFullYear();
+
+    const month =
+        String(today.getMonth()+1).padStart(2,"0");
+
+    const day =
+        String(today.getDate()).padStart(2,"0");
+
+    dateInput.value =
+        `${year}-${month}-${day}`;
+
+}
+
+
+/* =========================================================
+   TYPE CHANGE
+========================================================= */
+
+function changeType(type){
+
+    currentType = type;
+
+    document.querySelectorAll(".tab")
+        .forEach(tab => {
+
+            tab.classList.toggle(
+                "active",
+                tab.dataset.type === type
+            );
+
+        });
+
+
+    const name =
+        getTypeName(type);
+
+
+    document.getElementById("pageTitle")
+        .textContent =
+        name + " Tickets";
+
+
+    document.getElementById("resultsTitle")
+        .textContent =
+        "Available " + name;
+
+
+    document.getElementById("searchButtonText")
+        .textContent =
+        "Search " + name;
+
+
+    searchTickets(false);
+
+}
+
+
+/* =========================================================
+   REAL SEARCH
+========================================================= */
+
+function searchTickets(showMessage = true){
+
+    const fromInput =
+        document.getElementById("fromInput");
+
+    const toInput =
+        document.getElementById("toInput");
+
+    const dateInput =
+        document.getElementById("dateInput");
+
+    const passengersInput =
+        document.getElementById("passengersInput");
+
+
+    const from =
+        normalize(fromInput.value);
+
+    const to =
+        normalize(toInput.value);
+
+    const date =
+        dateInput.value;
+
+
+    let passengers =
+        Number(passengersInput.value);
+
+
+    if(!passengers || passengers < 1){
+
+        passengers = 1;
+
+    }
+
+
+    if(passengers > 9){
+
+        passengers = 9;
+
+    }
+
+
+    passengersInput.value = passengers;
+
+
+    /* -----------------------------------------
+       VALIDATION
+    ----------------------------------------- */
+
+    if(!from || !to){
+
+        currentResults = [];
+
+        document.getElementById("resultCount")
+            .textContent = "0 results";
+
+
+        document.getElementById("resultsContainer")
+            .innerHTML = `
+
+                <div class="empty-state">
+
+                    <div class="empty-icon">
+                        <i class="fas fa-location-dot"></i>
+                    </div>
+
+                    <h3>Enter your route</h3>
+
+                    <p>
+                        Please enter both origin and destination.
+                    </p>
+
+                </div>
+
+            `;
+
+        return;
+
+    }
+
+
+    /* -----------------------------------------
+       SHOW LOADING
+    ----------------------------------------- */
+
+    document.getElementById("resultsContainer")
+        .innerHTML = `
+
+            <div class="loading"
+                 style="
+                    display:flex;
+                    justify-content:center;
+                    align-items:center;
+                    padding:40px;
+                    gap:10px;
+                 ">
+
+                <i
+                    class="fas fa-spinner fa-spin"
+                    style="
+                        color:#7cb342;
+                        font-size:22px;
+                    ">
+                </i>
+
+                <span>
+                    Searching...
+                </span>
+
+            </div>
+
+        `;
+
+
+    /* -----------------------------------------
+       SEARCH DELAY
+       Makes UI feel realistic
+    ----------------------------------------- */
+
+    setTimeout(() => {
+
+        let results =
+            ticketData[currentType].filter(ticket => {
+
+                const ticketFrom =
+                    normalize(ticket.from);
+
+                const ticketTo =
+                    normalize(ticket.to);
+
+
+                return (
+                    ticketFrom === from &&
+                    ticketTo === to
+                );
+
+            });
+
+
+        /* -----------------------------------------
+           STOPS FILTER
+        ----------------------------------------- */
+
+        const stopFilter =
+            document.getElementById("stopsSelect")
+                .value;
+
+
+        if(stopFilter === "direct"){
+
+            results =
+                results.filter(
+                    ticket => ticket.stops === 0
+                );
+
+        }
+
+
+        if(stopFilter === "one"){
+
+            results =
+                results.filter(
+                    ticket => ticket.stops <= 1
+                );
+
+        }
+
+
+        /* -----------------------------------------
+           SORT
+        ----------------------------------------- */
+
+        const sort =
+            document.getElementById("sortSelect")
+                .value;
+
+
+        if(sort === "price"){
+
+            results.sort(
+                (a,b) => a.price - b.price
+            );
+
+        }
+
+
+        else if(sort === "duration"){
+
+            results.sort(
+                (a,b) =>
+                    a.durationMinutes -
+                    b.durationMinutes
+            );
+
+        }
+
+
+        else if(sort === "departure"){
+
+            results.sort(
+                (a,b) =>
+                    timeToMinutes(a.fromTime) -
+                    timeToMinutes(b.fromTime)
+            );
+
+        }
+
+
+        else{
+
+            /* Recommended */
+
+            results.sort((a,b) => {
+
+                const scoreA =
+                    a.price +
+                    (a.durationMinutes * 0.08) +
+                    (a.stops * 15);
+
+
+                const scoreB =
+                    b.price +
+                    (b.durationMinutes * 0.08) +
+                    (b.stops * 15);
+
+
+                return scoreA - scoreB;
+
+            });
+
+        }
+
+
+        /* -----------------------------------------
+           STORE RESULTS
+        ----------------------------------------- */
+
+        currentResults =
+            results.map(ticket => ({
+                ...ticket,
+                selectedDate: date
+            }));
+
+
+        /* -----------------------------------------
+           RENDER
+        ----------------------------------------- */
+
+        renderResults();
+
+
+        /* -----------------------------------------
+           MESSAGE
+        ----------------------------------------- */
+
+        if(showMessage){
+
+            if(currentResults.length > 0){
+
+                showToast(
+                    currentResults.length +
+                    " " +
+                    getTypeName(currentType)
+                        .toLowerCase() +
+                    " found"
+                );
+
+            }
+
+            else{
+
+                showToast(
+                    "No tickets found"
+                );
+
+            }
+
+        }
+
+    },300);
+
+}
+
+
 /* =========================================================
    RENDER RESULTS
 ========================================================= */
@@ -1735,94 +669,18 @@ function getTypeName(type){
 function renderResults(){
 
     const container =
-        document.getElementById("resultsContainer");
-
-    const from =
-        document.getElementById("fromInput").value.trim() || "Rome";
-
-    const to =
-        document.getElementById("toInput").value.trim() || "Milan";
-
-    let results =
-        ticketData[currentType].map(item=>({
-            ...item,
-            from:from,
-            to:to
-        }));
-
-
-    /* Stops filter */
-
-    const stopFilter =
-        document.getElementById("stopsSelect").value;
-
-    if(stopFilter === "direct"){
-
-        results =
-            results.filter(item=>item.stops === 0);
-
-    }
-
-    if(stopFilter === "one"){
-
-        results =
-            results.filter(item=>item.stops <= 1);
-
-    }
-
-
-    /* Sort */
-
-    const sort =
-        document.getElementById("sortSelect").value;
-
-    if(sort === "price"){
-
-        results.sort((a,b)=>a.price-b.price);
-
-    }
-
-    else if(sort === "duration"){
-
-        results.sort(
-            (a,b)=>a.durationMinutes-b.durationMinutes
+        document.getElementById(
+            "resultsContainer"
         );
 
-    }
 
-    else if(sort === "departure"){
-
-        results.sort(
-            (a,b)=>timeToMinutes(a.fromTime)-timeToMinutes(b.fromTime)
-        );
-
-    }
-
-    else{
-
-        results.sort((a,b)=>{
-
-            const scoreA =
-                a.price + (a.durationMinutes * .08) + (a.stops * 15);
-
-            const scoreB =
-                b.price + (b.durationMinutes * .08) + (b.stops * 15);
-
-            return scoreA-scoreB;
-
-        });
-
-    }
+    document.getElementById("resultCount")
+        .textContent =
+        currentResults.length +
+        " results";
 
 
-    currentResults = results;
-
-
-    document.getElementById("resultCount").textContent =
-        results.length + " results";
-
-
-    if(results.length === 0){
+    if(currentResults.length === 0){
 
         container.innerHTML = `
 
@@ -1843,13 +701,20 @@ function renderResults(){
         `;
 
         return;
+
     }
 
 
     container.innerHTML =
-        results.map((ticket,index)=>
-            createTicketCard(ticket,index)
-        ).join("");
+        currentResults
+            .map(
+                (ticket,index) =>
+                    createTicketCard(
+                        ticket,
+                        index
+                    )
+            )
+            .join("");
 
 }
 
@@ -1860,6 +725,14 @@ function renderResults(){
 
 function createTicketCard(ticket,index){
 
+    const station =
+        ticket.type === "flight"
+            ? "Airport"
+            : ticket.type === "train"
+                ? "Train Station"
+                : "Bus Station";
+
+
     return `
 
         <div class="ticket-card">
@@ -1869,17 +742,27 @@ function createTicketCard(ticket,index){
                 <div class="provider">
 
                     <div class="provider-logo">
+
                         <i class="fas ${ticket.icon}"></i>
+
                     </div>
 
                     <div>
 
                         <div class="provider-name">
-                            ${escapeHtml(ticket.provider)}
+
+                            ${escapeHtml(
+                                ticket.provider
+                            )}
+
                         </div>
 
                         <div class="provider-code">
-                            ${escapeHtml(ticket.code)}
+
+                            ${escapeHtml(
+                                ticket.code
+                            )}
+
                         </div>
 
                     </div>
@@ -1890,11 +773,15 @@ function createTicketCard(ticket,index){
                 <div class="price-box">
 
                     <div class="price">
+
                         €${ticket.price}
+
                     </div>
 
                     <div class="price-label">
+
                         per passenger
+
                     </div>
 
                 </div>
@@ -1907,19 +794,25 @@ function createTicketCard(ticket,index){
                 <div class="location">
 
                     <div class="city">
-                        ${escapeHtml(ticket.from)}
+
+                        ${escapeHtml(
+                            ticket.from
+                        )}
+
                     </div>
 
                     <div class="time">
-                        ${escapeHtml(ticket.fromTime)}
+
+                        ${escapeHtml(
+                            ticket.fromTime
+                        )}
+
                     </div>
 
                     <div class="station">
-                        ${ticket.type === "flight"
-                            ? "Airport"
-                            : ticket.type === "train"
-                                ? "Train Station"
-                                : "Bus Station"}
+
+                        ${station}
+
                     </div>
 
                 </div>
@@ -1929,12 +822,18 @@ function createTicketCard(ticket,index){
 
                     <div class="route-line">
 
-                        <i class="fas ${ticket.icon}"></i>
+                        <i
+                            class="fas ${ticket.icon}">
+                        </i>
 
                     </div>
 
                     <div class="route-duration">
-                        ${ticket.duration}
+
+                        ${escapeHtml(
+                            ticket.duration
+                        )}
+
                     </div>
 
                 </div>
@@ -1943,19 +842,25 @@ function createTicketCard(ticket,index){
                 <div class="location right">
 
                     <div class="city">
-                        ${escapeHtml(ticket.to)}
+
+                        ${escapeHtml(
+                            ticket.to
+                        )}
+
                     </div>
 
                     <div class="time">
-                        ${escapeHtml(ticket.toTime)}
+
+                        ${escapeHtml(
+                            ticket.toTime
+                        )}
+
                     </div>
 
                     <div class="station">
-                        ${ticket.type === "flight"
-                            ? "Airport"
-                            : ticket.type === "train"
-                                ? "Train Station"
-                                : "Bus Station"}
+
+                        ${station}
+
                     </div>
 
                 </div>
@@ -1966,18 +871,35 @@ function createTicketCard(ticket,index){
             <div class="ticket-info">
 
                 <div class="info-item">
+
                     <i class="fas fa-clock"></i>
-                    ${ticket.duration}
+
+                    ${escapeHtml(
+                        ticket.duration
+                    )}
+
                 </div>
 
+
                 <div class="info-item">
+
                     <i class="fas fa-route"></i>
-                    ${ticket.stopsText}
+
+                    ${escapeHtml(
+                        ticket.stopsText
+                    )}
+
                 </div>
 
+
                 <div class="info-item">
+
                     <i class="fas fa-suitcase"></i>
-                    ${ticket.baggage}
+
+                    ${escapeHtml(
+                        ticket.baggage
+                    )}
+
                 </div>
 
             </div>
@@ -1985,9 +907,11 @@ function createTicketCard(ticket,index){
 
             <button
                 class="book-btn"
+                type="button"
                 onclick="openBooking(${index})">
 
                 <i class="fas fa-ticket"></i>
+
                 Book Now
 
             </button>
@@ -2000,44 +924,118 @@ function createTicketCard(ticket,index){
 
 
 /* =========================================================
-   OPEN BOOKING
+   BOOKING
 ========================================================= */
 
 function openBooking(index){
 
-    selectedTicket = currentResults[index];
+    selectedTicket =
+        currentResults[index];
 
-    document.getElementById("summaryProvider").textContent =
-        selectedTicket.provider;
 
-    document.getElementById("summaryCode").textContent =
-        selectedTicket.code;
+    if(!selectedTicket){
 
-    document.getElementById("summaryPrice").textContent =
-        "€" + selectedTicket.price;
-
-    document.getElementById("summaryFrom").textContent =
-        selectedTicket.from;
-
-    document.getElementById("summaryTo").textContent =
-        selectedTicket.to;
-
-    document.getElementById("summaryFromTime").textContent =
-        selectedTicket.fromTime;
-
-    document.getElementById("summaryToTime").textContent =
-        selectedTicket.toTime;
-
-    document.getElementById("totalPrice").textContent =
-        "€" + (
-            selectedTicket.price *
-            Number(
-                document.getElementById("passengersInput").value || 1
-            )
+        showToast(
+            "Ticket not found."
         );
 
-    document.getElementById("bookingModal")
-        .classList.add("show");
+        return;
+
+    }
+
+
+    document.getElementById(
+        "summaryProvider"
+    ).textContent =
+        selectedTicket.provider;
+
+
+    document.getElementById(
+        "summaryCode"
+    ).textContent =
+        selectedTicket.code;
+
+
+    document.getElementById(
+        "summaryPrice"
+    ).textContent =
+        "€" +
+        selectedTicket.price;
+
+
+    document.getElementById(
+        "summaryFrom"
+    ).textContent =
+        selectedTicket.from;
+
+
+    document.getElementById(
+        "summaryTo"
+    ).textContent =
+        selectedTicket.to;
+
+
+    document.getElementById(
+        "summaryFromTime"
+    ).textContent =
+        selectedTicket.fromTime;
+
+
+    document.getElementById(
+        "summaryToTime"
+    ).textContent =
+        selectedTicket.toTime;
+
+
+    updateTotal();
+
+
+    document.getElementById(
+        "bookingModal"
+    ).classList.add("show");
+
+}
+
+
+/* =========================================================
+   TOTAL
+========================================================= */
+
+function updateTotal(){
+
+    if(!selectedTicket) return;
+
+
+    let passengers =
+        Number(
+            document.getElementById(
+                "passengersInput"
+            ).value
+        );
+
+
+    if(!passengers || passengers < 1){
+
+        passengers = 1;
+
+    }
+
+
+    if(passengers > 9){
+
+        passengers = 9;
+
+    }
+
+
+    document.getElementById(
+        "totalPrice"
+    ).textContent =
+        "€" +
+        (
+            selectedTicket.price *
+            passengers
+        );
 
 }
 
@@ -2048,141 +1046,9 @@ function openBooking(index){
 
 function closeBooking(){
 
-    document.getElementById("bookingModal")
-        .classList.remove("show");
-
-}
-
-
-/* =========================================================
-   CONFIRM BOOKING
-========================================================= */
-
-function confirmBooking(event){
-
-    event.preventDefault();
-
-    if(!selectedTicket){
-
-        showToast("No ticket selected.");
-
-        return;
-    }
-
-
-    const passengers =
-        Math.max(
-            1,
-            Number(
-                document.getElementById("passengersInput").value || 1
-            )
-        );
-
-
-    const firstName =
-        document.getElementById("firstName").value.trim();
-
-    const lastName =
-        document.getElementById("lastName").value.trim();
-
-    const email =
-        document.getElementById("email").value.trim();
-
-    const phone =
-        document.getElementById("phone").value.trim();
-
-    const documentNumber =
-        document.getElementById("document").value.trim();
-
-
-    const bookingCode =
-        generateBookingCode();
-
-
-    const booking = {
-
-        id:Date.now(),
-
-        bookingCode:bookingCode,
-
-        bookedAt:new Date().toISOString(),
-
-        type:selectedTicket.type,
-
-        typeName:getTypeName(selectedTicket.type),
-
-        provider:selectedTicket.provider,
-
-        code:selectedTicket.code,
-
-        from:selectedTicket.from,
-
-        to:selectedTicket.to,
-
-        fromTime:selectedTicket.fromTime,
-
-        toTime:selectedTicket.toTime,
-
-        duration:selectedTicket.duration,
-
-        price:selectedTicket.price,
-
-        passengers:passengers,
-
-        total:selectedTicket.price * passengers,
-
-        firstName:firstName,
-
-        lastName:lastName,
-
-        email:email,
-
-        phone:phone,
-
-        document:documentNumber
-
-    };
-
-
-    const tickets =
-        getSavedTickets();
-
-    tickets.unshift(booking);
-
-    localStorage.setItem(
-        "havkar_my_tickets",
-        JSON.stringify(tickets)
-    );
-
-
-    closeBooking();
-
-
-    document.getElementById("successBookingCode")
-        .textContent = bookingCode;
-
-    document.getElementById("successModal")
-        .classList.add("show");
-
-
-    document.getElementById("bookingForm").reset();
-
-}
-
-
-/* =========================================================
-   GENERATE BOOKING CODE
-========================================================= */
-
-function generateBookingCode(){
-
-    const random =
-        Math.random()
-            .toString(36)
-            .substring(2,8)
-            .toUpperCase();
-
-    return "HAV-" + random;
+    document.getElementById(
+        "bookingModal"
+    ).classList.remove("show");
 
 }
 
@@ -2195,15 +1061,242 @@ function getSavedTickets(){
 
     try{
 
-        return JSON.parse(
-            localStorage.getItem("havkar_my_tickets")
-        ) || [];
+        const saved =
+            localStorage.getItem(
+                STORAGE_KEY
+            );
 
-    }catch(error){
+
+        if(!saved){
+
+            return [];
+
+        }
+
+
+        const tickets =
+            JSON.parse(saved);
+
+
+        return Array.isArray(tickets)
+            ? tickets
+            : [];
+
+    }
+
+    catch(error){
+
+        console.error(
+            "HAVKAR storage error:",
+            error
+        );
 
         return [];
 
     }
+
+}
+
+
+/* =========================================================
+   BOOKING CODE
+========================================================= */
+
+function generateBookingCode(){
+
+    const random =
+        Math.random()
+            .toString(36)
+            .substring(2,8)
+            .toUpperCase();
+
+
+    return "HAV-" + random;
+
+}
+
+
+/* =========================================================
+   CONFIRM BOOKING
+========================================================= */
+
+function confirmBooking(event){
+
+    event.preventDefault();
+
+
+    if(!selectedTicket){
+
+        showToast(
+            "No ticket selected."
+        );
+
+        return;
+
+    }
+
+
+    const passengers =
+        Math.max(
+            1,
+            Math.min(
+                9,
+                Number(
+                    document.getElementById(
+                        "passengersInput"
+                    ).value
+                ) || 1
+            )
+        );
+
+
+    const bookingCode =
+        generateBookingCode();
+
+
+    const booking = {
+
+        id:Date.now(),
+
+        bookingCode:
+
+            bookingCode,
+
+        bookedAt:
+
+            new Date()
+                .toISOString(),
+
+        type:
+
+            selectedTicket.type,
+
+        typeName:
+
+            getTypeName(
+                selectedTicket.type
+            ),
+
+        provider:
+
+            selectedTicket.provider,
+
+        code:
+
+            selectedTicket.code,
+
+        from:
+
+            selectedTicket.from,
+
+        to:
+
+            selectedTicket.to,
+
+        fromTime:
+
+            selectedTicket.fromTime,
+
+        toTime:
+
+            selectedTicket.toTime,
+
+        duration:
+
+            selectedTicket.duration,
+
+        price:
+
+            selectedTicket.price,
+
+        passengers:
+
+            passengers,
+
+        total:
+
+            selectedTicket.price *
+            passengers,
+
+        firstName:
+
+            document.getElementById(
+                "firstName"
+            ).value.trim(),
+
+        lastName:
+
+            document.getElementById(
+                "lastName"
+            ).value.trim(),
+
+        email:
+
+            document.getElementById(
+                "email"
+            ).value.trim(),
+
+        phone:
+
+            document.getElementById(
+                "phone"
+            ).value.trim(),
+
+        document:
+
+            document.getElementById(
+                "document"
+            ).value.trim(),
+
+        travelDate:
+
+            document.getElementById(
+                "dateInput"
+            ).value
+
+    };
+
+
+    const tickets =
+        getSavedTickets();
+
+
+    tickets.unshift(
+        booking
+    );
+
+
+    localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(tickets)
+    );
+
+
+    closeBooking();
+
+
+    document.getElementById(
+        "successBookingCode"
+    ).textContent =
+        bookingCode;
+
+
+    document.getElementById(
+        "successModal"
+    ).classList.add("show");
+
+
+    document.getElementById(
+        "bookingForm"
+    ).reset();
+
+
+    document.getElementById(
+        "passengersInput"
+    ).value = passengers;
+
+
+    selectedTicket = null;
 
 }
 
@@ -2217,39 +1310,53 @@ function showMyTickets(){
     const tickets =
         getSavedTickets();
 
-    document.getElementById("pageTitle").textContent =
+
+    document.getElementById(
+        "pageTitle"
+    ).textContent =
         "My Tickets";
+
+
+    document.getElementById(
+        "resultsTitle"
+    ).textContent =
+        "My Tickets";
+
+
+    document.getElementById(
+        "resultCount"
+    ).textContent =
+        tickets.length +
+        " saved";
+
 
     document.querySelectorAll(".tab")
-        .forEach(tab=>tab.classList.remove("active"));
-
-
-    document.getElementById("resultsTitle").textContent =
-        "My Tickets";
-
-
-    document.getElementById("resultCount").textContent =
-        tickets.length + " saved";
-
-
-    const container =
-        document.getElementById("resultsContainer");
+        .forEach(tab =>
+            tab.classList.remove(
+                "active"
+            )
+        );
 
 
     if(tickets.length === 0){
 
-        container.innerHTML = `
+        document.getElementById(
+            "resultsContainer"
+        ).innerHTML = `
 
             <div class="empty-state">
 
                 <div class="empty-icon">
+
                     <i class="fas fa-ticket"></i>
+
                 </div>
 
                 <h3>No tickets yet</h3>
 
                 <p>
-                    Your confirmed bookings will appear here.
+                    Your confirmed bookings
+                    will appear here.
                 </p>
 
             </div>
@@ -2257,11 +1364,20 @@ function showMyTickets(){
         `;
 
         return;
+
     }
 
 
-    container.innerHTML =
-        tickets.map(ticket=>createMyTicket(ticket)).join("");
+    document.getElementById(
+        "resultsContainer"
+    ).innerHTML =
+
+        tickets
+            .map(
+                ticket =>
+                    createMyTicket(ticket)
+            )
+            .join("");
 
 }
 
@@ -2290,15 +1406,17 @@ function createMyTicket(ticket){
 
                     <i class="fas ${icon}"></i>
 
-                    ${escapeHtml(ticket.typeName)}
+                    ${escapeHtml(
+                        ticket.typeName
+                    )}
 
                 </div>
 
 
                 <button
                     class="delete-ticket"
-                    onclick="deleteTicket(${ticket.id})"
-                    title="Delete ticket">
+                    type="button"
+                    onclick="deleteTicket(${ticket.id})">
 
                     <i class="fas fa-trash"></i>
 
@@ -2307,23 +1425,43 @@ function createMyTicket(ticket){
             </div>
 
 
-            <div style="display:flex;justify-content:space-between;align-items:center">
+            <div
+                style="
+                    display:flex;
+                    justify-content:space-between;
+                    align-items:center;
+                ">
 
                 <div>
 
                     <strong>
-                        ${escapeHtml(ticket.provider)}
+
+                        ${escapeHtml(
+                            ticket.provider
+                        )}
+
                     </strong>
 
-                    <div style="font-size:12px;color:#888;margin-top:3px">
-                        ${escapeHtml(ticket.code)}
+                    <div
+                        style="
+                            font-size:12px;
+                            color:#888;
+                            margin-top:3px;
+                        ">
+
+                        ${escapeHtml(
+                            ticket.code
+                        )}
+
                     </div>
 
                 </div>
 
 
                 <div class="price">
+
                     €${ticket.total}
+
                 </div>
 
             </div>
@@ -2334,29 +1472,50 @@ function createMyTicket(ticket){
                 <div>
 
                     <div class="my-city">
-                        ${escapeHtml(ticket.from)}
+
+                        ${escapeHtml(
+                            ticket.from
+                        )}
+
                     </div>
 
                     <div class="my-time">
-                        ${escapeHtml(ticket.fromTime)}
+
+                        ${escapeHtml(
+                            ticket.fromTime
+                        )}
+
                     </div>
 
                 </div>
 
 
                 <div class="my-arrow">
+
                     <i class="fas fa-arrow-right"></i>
+
                 </div>
 
 
-                <div style="text-align:right">
+                <div
+                    style="
+                        text-align:right;
+                    ">
 
                     <div class="my-city">
-                        ${escapeHtml(ticket.to)}
+
+                        ${escapeHtml(
+                            ticket.to
+                        )}
+
                     </div>
 
                     <div class="my-time">
-                        ${escapeHtml(ticket.toTime)}
+
+                        ${escapeHtml(
+                            ticket.toTime
+                        )}
+
                     </div>
 
                 </div>
@@ -2367,32 +1526,64 @@ function createMyTicket(ticket){
             <div class="ticket-details">
 
                 <div class="detail">
+
                     Booking code
+
                     <strong>
-                        ${escapeHtml(ticket.bookingCode)}
+
+                        ${escapeHtml(
+                            ticket.bookingCode
+                        )}
+
                     </strong>
+
                 </div>
 
+
                 <div class="detail">
+
                     Passengers
+
                     <strong>
+
                         ${ticket.passengers}
+
                     </strong>
+
                 </div>
 
+
                 <div class="detail">
+
                     Passenger
+
                     <strong>
-                        ${escapeHtml(ticket.firstName)}
-                        ${escapeHtml(ticket.lastName)}
+
+                        ${escapeHtml(
+                            ticket.firstName
+                        )}
+
+                        ${escapeHtml(
+                            ticket.lastName
+                        )}
+
                     </strong>
+
                 </div>
 
+
                 <div class="detail">
+
                     Duration
+
                     <strong>
-                        ${escapeHtml(ticket.duration)}
+
+                        ${escapeHtml(
+                            ticket.duration
+                        )}
+
                     </strong>
+
                 </div>
 
             </div>
@@ -2410,24 +1601,34 @@ function createMyTicket(ticket){
 
 function deleteTicket(id){
 
-    const confirmed =
-        confirm("Delete this ticket?");
+    if(!confirm(
+        "Delete this ticket?"
+    )){
 
-    if(!confirmed) return;
+        return;
+
+    }
 
 
     const tickets =
         getSavedTickets()
-            .filter(ticket=>ticket.id !== id);
+            .filter(
+                ticket =>
+                    String(ticket.id) !==
+                    String(id)
+            );
 
 
     localStorage.setItem(
-        "havkar_my_tickets",
+        STORAGE_KEY,
         JSON.stringify(tickets)
     );
 
 
-    showToast("Ticket deleted.");
+    showToast(
+        "Ticket deleted."
+    );
+
 
     showMyTickets();
 
@@ -2435,37 +1636,48 @@ function deleteTicket(id){
 
 
 /* =========================================================
-   CLOSE SUCCESS
+   SUCCESS MODAL
 ========================================================= */
 
 function closeSuccess(){
 
-    document.getElementById("successModal")
-        .classList.remove("show");
+    document.getElementById(
+        "successModal"
+    ).classList.remove("show");
 
 }
 
 
 /* =========================================================
-   SWAP LOCATIONS
+   SWAP
 ========================================================= */
 
 function swapLocations(){
 
     const from =
-        document.getElementById("fromInput");
+        document.getElementById(
+            "fromInput"
+        );
 
     const to =
-        document.getElementById("toInput");
-
-    const temp = from.value;
-
-    from.value = to.value;
-
-    to.value = temp;
+        document.getElementById(
+            "toInput"
+        );
 
 
-    renderResults();
+    const temporary =
+        from.value;
+
+
+    from.value =
+        to.value;
+
+
+    to.value =
+        temporary;
+
+
+    searchTickets(false);
 
 }
 
@@ -2476,24 +1688,36 @@ function swapLocations(){
 
 function toggleFilters(){
 
-    document.getElementById("extraFilters")
-        .classList.toggle("show");
+    document.getElementById(
+        "extraFilters"
+    ).classList.toggle(
+        "show"
+    );
 
 }
 
 
 /* =========================================================
-   FOCUS SEARCH
+   BOTTOM SEARCH
 ========================================================= */
 
 function focusSearch(){
 
-    document.getElementById("fromInput").focus();
-
-    window.scrollTo({
-        top:0,
-        behavior:"smooth"
+    document.getElementById(
+        "searchSection"
+    ).scrollIntoView({
+        behavior:"smooth",
+        block:"start"
     });
+
+
+    setTimeout(() => {
+
+        document.getElementById(
+            "fromInput"
+        ).focus();
+
+    },350);
 
 }
 
@@ -2504,41 +1728,8 @@ function focusSearch(){
 
 function goHome(){
 
-    window.location.href = "index.html";
-
-}
-
-
-/* =========================================================
-   TIME CONVERTER
-========================================================= */
-
-function timeToMinutes(time){
-
-    const parts =
-        time.match(/(\d+):(\d+)\s*(AM|PM)/i);
-
-    if(!parts) return 0;
-
-    let hour =
-        Number(parts[1]);
-
-    const minute =
-        Number(parts[2]);
-
-    const period =
-        parts[3].toUpperCase();
-
-
-    if(period === "PM" && hour !== 12){
-        hour += 12;
-    }
-
-    if(period === "AM" && hour === 12){
-        hour = 0;
-    }
-
-    return hour * 60 + minute;
+    window.location.href =
+        "index.html";
 
 }
 
@@ -2547,24 +1738,34 @@ function timeToMinutes(time){
    TOAST
 ========================================================= */
 
-let toastTimer = null;
-
 function showToast(message){
 
     const toast =
-        document.getElementById("toast");
-
-    toast.textContent = message;
-
-    toast.classList.add("show");
+        document.getElementById(
+            "toast"
+        );
 
 
-    clearTimeout(toastTimer);
+    toast.textContent =
+        message;
+
+
+    toast.classList.add(
+        "show"
+    );
+
+
+    clearTimeout(
+        toastTimer
+    );
+
 
     toastTimer =
-        setTimeout(()=>{
+        setTimeout(() => {
 
-            toast.classList.remove("show");
+            toast.classList.remove(
+                "show"
+            );
 
         },2500);
 
@@ -2572,46 +1773,17 @@ function showToast(message){
 
 
 /* =========================================================
-   ESCAPE HTML
-========================================================= */
-
-function escapeHtml(value){
-
-    return String(value)
-        .replace(/&/g,"&amp;")
-        .replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;")
-        .replace(/"/g,"&quot;")
-        .replace(/'/g,"&#039;");
-
-}
-
-
-/* =========================================================
-   UPDATE TOTAL WHEN PASSENGERS CHANGE
+   PASSENGER TOTAL
 ========================================================= */
 
 document
-    .getElementById("passengersInput")
-    .addEventListener("input",function(){
-
-        if(!selectedTicket) return;
-
-        const count =
-            Math.max(
-                1,
-                Number(this.value || 1)
-            );
-
-        document.getElementById("totalPrice")
-            .textContent =
-                "€" +
-                (
-                    selectedTicket.price *
-                    count
-                );
-
-    });
+    .getElementById(
+        "passengersInput"
+    )
+    .addEventListener(
+        "input",
+        updateTotal
+    );
 
 
 /* =========================================================
@@ -2619,66 +1791,367 @@ document
 ========================================================= */
 
 document
-    .getElementById("stopsSelect")
-    .addEventListener("change",renderResults);
+    .getElementById(
+        "stopsSelect"
+    )
+    .addEventListener(
+        "change",
+        () => searchTickets(false)
+    );
+
 
 document
-    .getElementById("sortSelect")
-    .addEventListener("change",renderResults);
+    .getElementById(
+        "sortSelect"
+    )
+    .addEventListener(
+        "change",
+        () => searchTickets(false)
+    );
 
 
 /* =========================================================
-   CLOSE MODALS WHEN CLICKING OUTSIDE
+   ENTER = SEARCH
 ========================================================= */
 
 document
-    .getElementById("bookingModal")
-    .addEventListener("click",function(event){
+    .getElementById(
+        "fromInput"
+    )
+    .addEventListener(
+        "keydown",
+        event => {
 
-        if(event.target === this){
-            closeBooking();
+            if(event.key === "Enter"){
+
+                event.preventDefault();
+
+                searchTickets(true);
+
+            }
+
         }
-
-    });
+    );
 
 
 document
-    .getElementById("successModal")
-    .addEventListener("click",function(event){
+    .getElementById(
+        "toInput"
+    )
+    .addEventListener(
+        "keydown",
+        event => {
 
-        if(event.target === this){
-            closeSuccess();
+            if(event.key === "Enter"){
+
+                event.preventDefault();
+
+                searchTickets(true);
+
+            }
+
         }
+    );
 
-    });
+
+/* =========================================================
+   DATE CHANGE
+========================================================= */
+
+document
+    .getElementById(
+        "dateInput"
+    )
+    .addEventListener(
+        "change",
+        () => searchTickets(false)
+    );
+
+
+/* =========================================================
+   CLOSE MODALS OUTSIDE
+========================================================= */
+
+document
+    .getElementById(
+        "bookingModal"
+    )
+    .addEventListener(
+        "click",
+        event => {
+
+            if(
+                event.target ===
+                event.currentTarget
+            ){
+
+                closeBooking();
+
+            }
+
+        }
+    );
+
+
+document
+    .getElementById(
+        "successModal"
+    )
+    .addEventListener(
+        "click",
+        event => {
+
+            if(
+                event.target ===
+                event.currentTarget
+            ){
+
+                closeSuccess();
+
+            }
+
+        }
+    );
 
 
 /* =========================================================
    ESC KEY
 ========================================================= */
 
-document.addEventListener("keydown",function(event){
+document.addEventListener(
+    "keydown",
+    event => {
 
-    if(event.key === "Escape"){
+        if(event.key === "Escape"){
 
-        closeBooking();
+            closeBooking();
 
-        closeSuccess();
+            closeSuccess();
+
+        }
 
     }
-
-});
+);
 
 
 /* =========================================================
    INITIALIZE
 ========================================================= */
 
-setToday();
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
 
-renderResults();
+        setToday();
+
+        /*
+         * IMPORTANT:
+         * Bind the main search button explicitly.
+         * This prevents problems caused by inline onclick.
+         */
+
+        document
+            .getElementById(
+                "searchBtn"
+            )
+            .addEventListener(
+                "click",
+                () => searchTickets(true)
+            );
+
+
+        /* Tabs */
+
+        document
+            .querySelectorAll(".tab")
+            .forEach(tab => {
+
+                tab.addEventListener(
+                    "click",
+                    () =>
+                        changeType(
+                            tab.dataset.type
+                        )
+                );
+
+            });
+
+
+        /* Header buttons */
+
+        document
+            .getElementById(
+                "backBtn"
+            )
+            .addEventListener(
+                "click",
+                goHome
+            );
+
+
+        document
+            .getElementById(
+                "notificationBtn"
+            )
+            .addEventListener(
+                "click",
+                () =>
+                    showToast(
+                        "Notifications"
+                    )
+            );
+
+
+        document
+            .getElementById(
+                "profileBtn"
+            )
+            .addEventListener(
+                "click",
+                () =>
+                    showToast(
+                        "Profile"
+                    )
+            );
+
+
+        /* Swap */
+
+        document
+            .getElementById(
+                "swapBtn"
+            )
+            .addEventListener(
+                "click",
+                swapLocations
+            );
+
+
+        /* Filters */
+
+        document
+            .getElementById(
+                "filterToggle"
+            )
+            .addEventListener(
+                "click",
+                toggleFilters
+            );
+
+
+        /* Bottom navigation */
+
+        document
+            .getElementById(
+                "homeNav"
+            )
+            .addEventListener(
+                "click",
+                goHome
+            );
+
+
+        document
+            .getElementById(
+                "searchNav"
+            )
+            .addEventListener(
+                "click",
+                focusSearch
+            );
+
+
+        document
+            .getElementById(
+                "ticketsNav"
+            )
+            .addEventListener(
+                "click",
+                showMyTickets
+            );
+
+
+        document
+            .getElementById(
+                "alertsNav"
+            )
+            .addEventListener(
+                "click",
+                () =>
+                    showToast(
+                        "Alerts"
+                    )
+            );
+
+
+        document
+            .getElementById(
+                "profileNav"
+            )
+            .addEventListener(
+                "click",
+                () =>
+                    showToast(
+                        "Profile"
+                    )
+            );
+
+
+        /* Booking */
+
+        document
+            .getElementById(
+                "bookingForm"
+            )
+            .addEventListener(
+                "submit",
+                confirmBooking
+            );
+
+
+        document
+            .getElementById(
+                "closeBooking"
+            )
+            .addEventListener(
+                "click",
+                closeBooking
+            );
+
+
+        document
+            .getElementById(
+                "closeSuccess"
+            )
+            .addEventListener(
+                "click",
+                closeSuccess
+            );
+
+
+        document
+            .getElementById(
+                "viewTicketsBtn"
+            )
+            .addEventListener(
+                "click",
+                () => {
+
+                    closeSuccess();
+
+                    showMyTickets();
+
+                }
+            );
+
+
+        /*
+         * FIRST SEARCH
+         */
+
+        searchTickets(false);
+
+    }
+);
 
 </script>
-
-</body>
-</html>
