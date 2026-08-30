@@ -1,1669 +1,1261 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HAVKAR - Services</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<title>HAVKAR - Services</title>
 
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-                         Roboto, Arial, sans-serif;
-            background: #f5f5f5;
-            color: #333;
-        }
+<style>
 
-        button,
-        input,
-        select,
-        textarea {
-            font-family: inherit;
-        }
+/* =========================================================
+   RESET
+========================================================= */
 
-        button {
-            cursor: pointer;
-        }
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-        /* HEADER */
+html {
+    scroll-behavior: smooth;
+}
 
-        .header {
-            background: linear-gradient(135deg, #689f38, #7cb342);
-            color: white;
-            padding: 15px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 2px 10px rgba(0,0,0,.1);
-        }
+body {
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Arial,
+        sans-serif;
 
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
+    background: #f5f6f4;
+    color: #303030;
+    min-height: 100vh;
+}
 
-        .back-btn {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.5rem;
-        }
+button,
+input,
+select,
+textarea {
+    font-family: inherit;
+}
 
-        .header h1 {
-            font-size: 1.3rem;
-            font-weight: 700;
-        }
+button {
+    cursor: pointer;
+}
 
-        .header-right {
-            display: flex;
-            gap: 12px;
-        }
+button:active {
+    transform: scale(.97);
+}
 
-        .icon-btn {
-            background: rgba(255,255,255,.2);
-            border: none;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            font-size: 1.1rem;
-        }
 
-        /* SEARCH */
+/* =========================================================
+   HEADER
+========================================================= */
 
-        .search-bar {
-            padding: 15px 20px;
-            background: white;
-        }
+.header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
 
-        .search-input {
-            width: 100%;
-            padding: 13px 16px;
-            border: 2px solid #e0e0e0;
-            border-radius: 25px;
-            font-size: 1rem;
-        }
+    height: 70px;
 
-        .search-input:focus {
-            outline: none;
-            border-color: #7cb342;
-        }
+    background:
+        linear-gradient(
+            135deg,
+            #689f38,
+            #7cb342
+        );
 
-        /* CATEGORIES */
+    color: white;
 
-        .categories {
-            padding: 12px 15px;
-            background: white;
-            display: flex;
-            gap: 10px;
-            overflow-x: auto;
-            border-bottom: 1px solid #ddd;
-        }
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 
-        .category-btn {
-            padding: 9px 17px;
-            border: 2px solid #e0e0e0;
-            background: white;
-            border-radius: 22px;
-            font-size: .9rem;
-            font-weight: 600;
-            white-space: nowrap;
-        }
+    padding: 0 18px;
 
-        .category-btn.active {
-            background: #7cb342;
-            color: white;
-            border-color: #7cb342;
-        }
+    box-shadow:
+        0 3px 14px rgba(0,0,0,.15);
+}
 
-        /* CONTENT */
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
 
-        .content {
-            padding: 15px 20px 100px;
-        }
+.back-btn {
+    width: 42px;
+    height: 42px;
 
-        .service-card {
-            background: white;
-            border-radius: 15px;
-            padding: 18px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,.08);
-        }
+    border: none;
+    background: rgba(255,255,255,.15);
 
-        .service-header {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 12px;
-        }
+    color: white;
 
-        .provider-avatar {
-            width: 60px;
-            height: 60px;
-            min-width: 60px;
-            background: linear-gradient(135deg,#e8f5e9,#c5e1a5);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.8rem;
-        }
+    border-radius: 50%;
 
-        .service-info {
-            flex: 1;
-        }
+    font-size: 18px;
 
-        .service-title {
-            font-size: 1.1rem;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
-        .provider-name {
-            font-size: .9rem;
-            color: #666;
-            margin-bottom: 7px;
-        }
+.header-title {
+    font-size: 21px;
+    font-weight: 800;
+    letter-spacing: -.3px;
+}
 
-        .rating {
-            font-size: .85rem;
-            color: #7cb342;
-            font-weight: 600;
-        }
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
 
-        .service-details {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
-        }
+.header-icon {
+    width: 42px;
+    height: 42px;
 
-        .detail-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: .85rem;
-            color: #666;
-        }
+    border: none;
+    border-radius: 50%;
 
-        .detail-item i {
-            color: #7cb342;
-        }
+    background: rgba(255,255,255,.18);
 
-        .service-description {
-            font-size: .9rem;
-            color: #666;
-            line-height: 1.5;
-            margin-bottom: 12px;
-        }
+    color: white;
 
-        .price-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+    font-size: 17px;
 
-        .price {
-            font-size: 1.2rem;
-            font-weight: 800;
-            color: #558b2f;
-        }
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-        .book-btn {
-            padding: 10px 20px;
-            background: linear-gradient(135deg,#689f38,#7cb342);
-            color: white;
-            border: none;
-            border-radius: 20px;
-            font-weight: 700;
-        }
+    position: relative;
+}
 
-        /* FAB */
+.notification-badge {
+    position: absolute;
 
-        .fab-button {
-            position: fixed;
-            bottom: 80px;
-            right: 20px;
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg,#689f38,#7cb342);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            font-size: 1.8rem;
-            box-shadow: 0 5px 20px rgba(104,159,56,.4);
-            z-index: 20;
-        }
+    top: -2px;
+    right: -2px;
 
-        /* BOTTOM NAV */
+    min-width: 18px;
+    height: 18px;
 
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
-            box-shadow: 0 -2px 10px rgba(0,0,0,.1);
-            z-index: 20;
-        }
+    padding: 0 4px;
 
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 5px;
-            color: #999;
-            font-size: .75rem;
-            cursor: pointer;
-        }
+    border-radius: 20px;
 
-        .nav-item.active {
-            color: #7cb342;
-        }
+    background: #d32f2f;
+    color: white;
 
-        .nav-item i {
-            font-size: 1.3rem;
-        }
+    font-size: 10px;
+    font-weight: 800;
 
-        /* MODAL */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-        .modal {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,.6);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            z-index: 100;
-        }
+    border: 2px solid #689f38;
+}
 
-        .modal.show {
-            display: flex;
-        }
 
-        .modal-box {
-            background: white;
-            width: 100%;
-            max-width: 600px;
-            max-height: 90vh;
-            overflow-y: auto;
-            border-radius: 22px;
-            padding: 25px;
-            position: relative;
-        }
+/* =========================================================
+   SEARCH
+========================================================= */
 
-        .modal-title {
-            font-size: 1.4rem;
-            font-weight: 800;
-            margin-bottom: 20px;
-        }
+.search-section {
+    background: white;
 
-        .close-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            width: 42px;
-            height: 42px;
-            border: none;
-            border-radius: 50%;
-            background: #f1f1f1;
-            font-size: 1.2rem;
-        }
+    padding: 15px 18px 12px;
 
-        .form-group {
-            margin-bottom: 15px;
-        }
+    border-bottom: 1px solid #e8e8e8;
+}
 
-        .form-group label {
-            display: block;
-            font-weight: 700;
-            margin-bottom: 7px;
-        }
+.search-wrapper {
+    position: relative;
+}
 
-        .form-control {
-            width: 100%;
-            padding: 13px 15px;
-            border: 2px solid #ddd;
-            border-radius: 12px;
-            font-size: 1rem;
-            background: white;
-        }
+.search-icon {
+    position: absolute;
 
-        .form-control:focus {
-            outline: none;
-            border-color: #7cb342;
-        }
+    left: 16px;
+    top: 50%;
 
-        textarea.form-control {
-            min-height: 110px;
-            resize: vertical;
-        }
+    transform: translateY(-50%);
 
-        .submit-btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg,#689f38,#7cb342);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 800;
-            margin-top: 5px;
-        }
+    color: #999;
 
-        .empty-message {
-            text-align: center;
-            padding: 50px 20px;
-            color: #777;
-        }
+    font-size: 16px;
+}
 
-        .empty-message i {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            color: #aaa;
-        }
+.search-input {
+    width: 100%;
 
-        /* TOAST */
+    height: 48px;
 
-        .toast {
-            position: fixed;
-            left: 50%;
-            bottom: 90px;
-            transform: translateX(-50%) translateY(20px);
-            background: #333;
-            color: white;
-            padding: 13px 20px;
-            border-radius: 25px;
-            opacity: 0;
-            pointer-events: none;
-            transition: .3s;
-            z-index: 200;
-            text-align: center;
-            max-width: 90%;
-        }
+    border: 2px solid #e1e1e1;
+    border-radius: 25px;
 
-        .toast.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-    </style>
+    background: #fafafa;
+
+    padding:
+        0 45px
+        0 45px;
+
+    font-size: 15px;
+
+    outline: none;
+
+    transition: .2s;
+}
+
+.search-input:focus {
+    border-color: #7cb342;
+    background: white;
+}
+
+.clear-search {
+    position: absolute;
+
+    right: 13px;
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    width: 30px;
+    height: 30px;
+
+    border: none;
+    border-radius: 50%;
+
+    background: #eeeeee;
+
+    color: #777;
+
+    display: none;
+}
+
+
+/* =========================================================
+   CATEGORIES
+========================================================= */
+
+.categories {
+    background: white;
+
+    display: flex;
+    gap: 9px;
+
+    overflow-x: auto;
+
+    padding:
+        4px 18px
+        15px;
+
+    scrollbar-width: none;
+}
+
+.categories::-webkit-scrollbar {
+    display: none;
+}
+
+.category-btn {
+    flex-shrink: 0;
+
+    border: 1.5px solid #dedede;
+
+    background: white;
+
+    color: #555;
+
+    padding:
+        9px 16px;
+
+    border-radius: 22px;
+
+    font-size: 13px;
+    font-weight: 700;
+
+    transition: .2s;
+}
+
+.category-btn:hover {
+    border-color: #7cb342;
+}
+
+.category-btn.active {
+    background: #7cb342;
+    border-color: #7cb342;
+    color: white;
+
+    box-shadow:
+        0 3px 8px rgba(124,179,66,.25);
+}
+
+
+/* =========================================================
+   MAIN CONTENT
+========================================================= */
+
+.content {
+    width: 100%;
+    max-width: 900px;
+
+    margin: 0 auto;
+
+    padding:
+        17px
+        17px
+        110px;
+}
+
+.results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-bottom: 13px;
+}
+
+.results-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #555;
+}
+
+.results-count {
+    color: #7cb342;
+    font-weight: 800;
+}
+
+
+/* =========================================================
+   SERVICE CARD
+========================================================= */
+
+.service-card {
+    background: white;
+
+    border-radius: 18px;
+
+    padding: 18px;
+
+    margin-bottom: 14px;
+
+    border: 1px solid #eeeeee;
+
+    box-shadow:
+        0 3px 14px rgba(0,0,0,.06);
+
+    transition:
+        transform .2s,
+        box-shadow .2s;
+}
+
+.service-card:hover {
+    transform: translateY(-2px);
+
+    box-shadow:
+        0 7px 22px rgba(0,0,0,.09);
+}
+
+.service-top {
+    display: flex;
+    align-items: flex-start;
+
+    gap: 13px;
+}
+
+.provider-avatar {
+    width: 58px;
+    height: 58px;
+
+    min-width: 58px;
+
+    border-radius: 16px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #e8f5e9,
+            #c5e1a5
+        );
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 26px;
+}
+
+.service-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.service-title {
+    font-size: 17px;
+    font-weight: 800;
+
+    color: #292929;
+
+    line-height: 1.25;
+
+    margin-bottom: 4px;
+}
+
+.provider-name {
+    font-size: 13px;
+    color: #666;
+
+    margin-bottom: 6px;
+}
+
+.rating {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 4px;
+
+    font-size: 12px;
+    font-weight: 700;
+
+    color: #689f38;
+}
+
+.favorite-btn {
+    width: 38px;
+    height: 38px;
+
+    border-radius: 50%;
+
+    border: 1px solid #e4e4e4;
+
+    background: white;
+
+    color: #999;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    transition: .2s;
+}
+
+.favorite-btn.saved {
+    color: #7cb342;
+    background: #f1f8ed;
+    border-color: #c5e1a5;
+}
+
+
+/* =========================================================
+   SERVICE DETAILS
+========================================================= */
+
+.service-details {
+    display: flex;
+    flex-wrap: wrap;
+
+    gap: 8px;
+
+    margin:
+        15px 0
+        12px;
+}
+
+.detail-item {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 6px;
+
+    background: #f7f7f7;
+
+    border-radius: 9px;
+
+    padding:
+        7px 9px;
+
+    font-size: 12px;
+
+    color: #666;
+}
+
+.detail-item i {
+    color: #7cb342;
+}
+
+.service-description {
+    font-size: 13.5px;
+
+    line-height: 1.55;
+
+    color: #666;
+
+    margin-bottom: 15px;
+}
+
+
+/* =========================================================
+   SERVICE FOOTER
+========================================================= */
+
+.service-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 12px;
+
+    padding-top: 13px;
+
+    border-top: 1px solid #eeeeee;
+}
+
+.price {
+    color: #558b2f;
+
+    font-size: 18px;
+
+    font-weight: 900;
+}
+
+.price small {
+    font-size: 11px;
+    font-weight: 600;
+    color: #888;
+}
+
+.book-btn {
+    border: none;
+
+    background:
+        linear-gradient(
+            135deg,
+            #689f38,
+            #7cb342
+        );
+
+    color: white;
+
+    padding:
+        11px 18px;
+
+    border-radius: 12px;
+
+    font-size: 13px;
+
+    font-weight: 800;
+
+    box-shadow:
+        0 4px 10px rgba(104,159,56,.22);
+}
+
+
+/* =========================================================
+   EMPTY
+========================================================= */
+
+.empty-message {
+    background: white;
+
+    border-radius: 18px;
+
+    padding: 65px 20px;
+
+    text-align: center;
+
+    color: #777;
+
+    box-shadow:
+        0 3px 14px rgba(0,0,0,.05);
+}
+
+.empty-message i {
+    font-size: 42px;
+
+    color: #bdbdbd;
+
+    margin-bottom: 17px;
+}
+
+.empty-message h3 {
+    color: #444;
+
+    font-size: 18px;
+
+    margin-bottom: 7px;
+}
+
+.empty-message p {
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   FAB
+========================================================= */
+
+.fab-button {
+    position: fixed;
+
+    right: 18px;
+    bottom: 88px;
+
+    width: 58px;
+    height: 58px;
+
+    border: none;
+
+    border-radius: 50%;
+
+    background:
+        linear-gradient(
+            135deg,
+            #689f38,
+            #7cb342
+        );
+
+    color: white;
+
+    font-size: 21px;
+
+    box-shadow:
+        0 6px 20px rgba(104,159,56,.35);
+
+    z-index: 80;
+}
+
+.fab-label {
+    position: absolute;
+
+    right: 68px;
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    background: #333;
+
+    color: white;
+
+    padding:
+        7px 10px;
+
+    border-radius: 8px;
+
+    font-size: 11px;
+
+    white-space: nowrap;
+
+    opacity: 0;
+
+    pointer-events: none;
+
+    transition: .2s;
+}
+
+.fab-button:hover .fab-label {
+    opacity: 1;
+}
+
+
+/* =========================================================
+   BOTTOM NAVIGATION
+========================================================= */
+
+.bottom-nav {
+    position: fixed;
+
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    height: 72px;
+
+    background: white;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+
+    box-shadow:
+        0 -3px 15px rgba(0,0,0,.10);
+
+    z-index: 100;
+}
+
+.nav-item {
+    flex: 1;
+
+    height: 100%;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 4px;
+
+    color: #999;
+
+    font-size: 11px;
+
+    font-weight: 600;
+
+    position: relative;
+}
+
+.nav-item i {
+    font-size: 20px;
+}
+
+.nav-item.active {
+    color: #7cb342;
+}
+
+.nav-item.active::before {
+    content: "";
+
+    position: absolute;
+
+    top: 0;
+
+    width: 35px;
+    height: 3px;
+
+    background: #7cb342;
+
+    border-radius:
+        0 0 5px 5px;
+}
+
+
+/* =========================================================
+   MODAL
+========================================================= */
+
+.modal {
+    position: fixed;
+
+    inset: 0;
+
+    background:
+        rgba(0,0,0,.62);
+
+    display: none;
+
+    align-items: flex-end;
+    justify-content: center;
+
+    padding: 0;
+
+    z-index: 500;
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-box {
+    width: 100%;
+    max-width: 650px;
+
+    max-height: 92vh;
+
+    overflow-y: auto;
+
+    background: white;
+
+    border-radius:
+        24px 24px 0 0;
+
+    padding:
+        25px 20px
+        30px;
+
+    position: relative;
+
+    animation:
+        modalUp .25s ease;
+}
+
+@keyframes modalUp {
+
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+.modal-title {
+    font-size: 20px;
+
+    font-weight: 900;
+
+    margin-bottom: 20px;
+
+    padding-right: 45px;
+}
+
+.close-btn {
+    position: absolute;
+
+    top: 15px;
+    right: 15px;
+
+    width: 40px;
+    height: 40px;
+
+    border: none;
+
+    border-radius: 50%;
+
+    background: #f1f1f1;
+
+    color: #555;
+
+    font-size: 16px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+
+    font-size: 13px;
+
+    font-weight: 800;
+
+    margin-bottom: 7px;
+
+    color: #444;
+}
+
+.form-control {
+    width: 100%;
+
+    min-height: 48px;
+
+    border:
+        1.5px solid #ddd;
+
+    border-radius: 12px;
+
+    background: white;
+
+    padding:
+        11px 13px;
+
+    font-size: 14px;
+
+    outline: none;
+
+    transition: .2s;
+}
+
+.form-control:focus {
+    border-color: #7cb342;
+
+    box-shadow:
+        0 0 0 3px rgba(124,179,66,.10);
+}
+
+textarea.form-control {
+    min-height: 105px;
+    resize: vertical;
+}
+
+.submit-btn {
+    width: 100%;
+
+    min-height: 50px;
+
+    border: none;
+
+    border-radius: 13px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #689f38,
+            #7cb342
+        );
+
+    color: white;
+
+    font-size: 15px;
+
+    font-weight: 900;
+
+    margin-top: 5px;
+}
+
+
+/* =========================================================
+   TOAST
+========================================================= */
+
+.toast {
+    position: fixed;
+
+    left: 50%;
+    bottom: 88px;
+
+    transform:
+        translateX(-50%)
+        translateY(20px);
+
+    background: #303030;
+
+    color: white;
+
+    padding:
+        12px 18px;
+
+    border-radius: 25px;
+
+    font-size: 13px;
+
+    opacity: 0;
+
+    pointer-events: none;
+
+    transition: .3s;
+
+    z-index: 1000;
+
+    max-width: 90%;
+
+    text-align: center;
+}
+
+.toast.show {
+    opacity: 1;
+
+    transform:
+        translateX(-50%)
+        translateY(0);
+}
+
+
+/* =========================================================
+   RESPONSIVE DESKTOP
+========================================================= */
+
+@media (min-width: 700px) {
+
+    .header {
+        padding: 0 25px;
+    }
+
+    .content {
+        padding:
+            22px
+            22px
+            110px;
+    }
+
+    .modal {
+        align-items: center;
+        padding: 20px;
+    }
+
+    .modal-box {
+        border-radius: 22px;
+    }
+
+    .bottom-nav {
+        left: 50%;
+        right: auto;
+
+        transform: translateX(-50%);
+
+        width: 100%;
+        max-width: 900px;
+
+        border-radius:
+            18px 18px 0 0;
+    }
+
+    .fab-button {
+        right:
+            calc(
+                50% - 430px
+            );
+    }
+}
+
+</style>
 </head>
+
 
 <body>
 
-<!-- HEADER -->
 
-<div class="header">
+<!-- =======================================================
+     HEADER
+======================================================= -->
+
+<header class="header">
 
     <div class="header-left">
-        <button class="back-btn" onclick="goBack()">
+
+        <button
+            class="back-btn"
+            onclick="goBack()"
+            aria-label="Back">
+
             <i class="fas fa-arrow-left"></i>
+
         </button>
 
-        <h1>Services</h1>
+        <div class="header-title">
+            Services
+        </div>
+
     </div>
+
 
     <div class="header-right">
 
-        <button class="icon-btn" onclick="showToast('Notifications coming soon')">
+        <button
+            class="header-icon"
+            onclick="goNotifications()"
+            aria-label="Notifications">
+
             <i class="fas fa-bell"></i>
+
+            <span
+                class="notification-badge"
+                id="notificationBadge">
+                4
+            </span>
+
         </button>
 
-        <button class="icon-btn" onclick="goProfile()">
+
+        <button
+            class="header-icon"
+            onclick="goProfile()"
+            aria-label="Profile">
+
             <i class="fas fa-user"></i>
+
         </button>
 
     </div>
 
-</div>
+</header>
 
 
-<!-- SEARCH -->
+<!-- =======================================================
+     SEARCH
+======================================================= -->
 
-<div class="search-bar">
+<section class="search-section">
 
-    <input
-        id="searchInput"
-        class="search-input"
-        type="text"
-        placeholder="Search services..."
-        oninput="filterServices()"
-    >
+    <div class="search-wrapper">
 
-</div>
+        <i class="fas fa-search search-icon"></i>
+
+        <input
+            id="searchInput"
+            class="search-input"
+            type="search"
+            autocomplete="off"
+            placeholder="Search services..."
+        >
+
+        <button
+            id="clearSearch"
+            class="clear-search"
+            onclick="clearSearch()"
+            aria-label="Clear search">
+
+            <i class="fas fa-times"></i>
+
+        </button>
+
+    </div>
+
+</section>
 
 
-<!-- CATEGORIES -->
+<!-- =======================================================
+     CATEGORIES
+======================================================= -->
 
-<div class="categories">
+<section class="categories">
 
-    <button class="category-btn active"
-            onclick="selectCategory('All', this)">
+    <button
+        class="category-btn active"
+        data-category="All"
+        onclick="selectCategory('All', this)">
         All
     </button>
 
-    <button class="category-btn"
-            onclick="selectCategory('Plumbing', this)">
+    <button
+        class="category-btn"
+        data-category="Plumbing"
+        onclick="selectCategory('Plumbing', this)">
         Plumbing
     </button>
 
-    <button class="category-btn"
-            onclick="selectCategory('Electrical', this)">
+    <button
+        class="category-btn"
+        data-category="Electrical"
+        onclick="selectCategory('Electrical', this)">
         Electrical
     </button>
 
-    <button class="category-btn"
-            onclick="selectCategory('Cleaning', this)">
+    <button
+        class="category-btn"
+        data-category="Cleaning"
+        onclick="selectCategory('Cleaning', this)">
         Cleaning
     </button>
 
-    <button class="category-btn"
-            onclick="selectCategory('Carpentry', this)">
+    <button
+        class="category-btn"
+        data-category="Carpentry"
+        onclick="selectCategory('Carpentry', this)">
         Carpentry
     </button>
 
-    <button class="category-btn"
-            onclick="selectCategory('Painting', this)">
+    <button
+        class="category-btn"
+        data-category="Painting"
+        onclick="selectCategory('Painting', this)">
         Painting
     </button>
 
-    <button class="category-btn"
-            onclick="selectCategory('Moving', this)">
+    <button
+        class="category-btn"
+        data-category="Moving"
+        onclick="selectCategory('Moving', this)">
         Moving
     </button>
 
-</div>
+</section>
 
 
-<!-- SERVICES -->
+<!-- =======================================================
+     CONTENT
+======================================================= -->
 
-<div class="content" id="servicesContainer">
+<main class="content">
 
-    <!-- SERVICE 1 -->
+    <div class="results-header">
 
-    <div class="service-card"
-         data-category="Plumbing"
-         data-search="professional plumbing marco rossi plumbing milan">
-
-        <div class="service-header">
-
-            <div class="provider-avatar">🔧</div>
-
-            <div class="service-info">
-
-                <div class="service-title">
-                    Professional Plumbing
-                </div>
-
-                <div class="provider-name">
-                    Marco Rossi
-                </div>
-
-                <div class="rating">
-                    ⭐ 4.8 (127 reviews)
-                </div>
-
-            </div>
-
+        <div class="results-title">
+            Available Services
         </div>
 
-        <div class="service-details">
-
-            <div class="detail-item">
-                <i class="fas fa-map-marker-alt"></i>
-                Milan, Italy
-            </div>
-
-            <div class="detail-item">
-                <i class="fas fa-clock"></i>
-                Available Now
-            </div>
-
-        </div>
-
-        <div class="service-description">
-            Expert plumber with 15+ years experience.
-            Repairs, installations and emergency services available 24/7.
-        </div>
-
-        <div class="price-section">
-
-            <div class="price">
-                €50/hour
-            </div>
-
-            <button class="book-btn"
-                    onclick="openBooking(
-                        'Professional Plumbing',
-                        'Marco Rossi',
-                        '€50/hour'
-                    )">
-                Book Now
-            </button>
-
+        <div class="results-title">
+            <span
+                id="resultsCount"
+                class="results-count">
+                4
+            </span>
+            services
         </div>
 
     </div>
 
 
-    <!-- SERVICE 2 -->
+    <div id="servicesContainer">
 
-    <div class="service-card"
-         data-category="Electrical"
-         data-search="electrical services giuseppe bianchi electrician electrical rome">
 
-        <div class="service-header">
+        <!-- =================================================
+             SERVICE 1
+        ================================================== -->
 
-            <div class="provider-avatar">⚡</div>
+        <article
+            class="service-card"
+            data-id="1"
+            data-category="Plumbing"
+            data-search="professional plumbing marco rossi plumber milan emergency repair installation">
 
-            <div class="service-info">
+            <div class="service-top">
 
-                <div class="service-title">
-                    Electrical Services
+                <div class="provider-avatar">
+                    🔧
                 </div>
 
-                <div class="provider-name">
-                    Giuseppe Bianchi
-                </div>
+                <div class="service-info">
 
-                <div class="rating">
-                    ⭐ 4.9 (203 reviews)
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="service-details">
-
-            <div class="detail-item">
-                <i class="fas fa-map-marker-alt"></i>
-                Rome, Italy
-            </div>
-
-            <div class="detail-item">
-                <i class="fas fa-clock"></i>
-                Mon-Sat 8AM-8PM
-            </div>
-
-        </div>
-
-        <div class="service-description">
-            Licensed electrician for home and commercial wiring,
-            repairs and installations. Fast and reliable.
-        </div>
-
-        <div class="price-section">
-
-            <div class="price">
-                €60/hour
-            </div>
-
-            <button class="book-btn"
-                    onclick="openBooking(
-                        'Electrical Services',
-                        'Giuseppe Bianchi',
-                        '€60/hour'
-                    )">
-                Book Now
-            </button>
-
-        </div>
-
-    </div>
-
-
-    <!-- SERVICE 3 -->
-
-    <div class="service-card"
-         data-category="Cleaning"
-         data-search="home cleaning maria ferrari cleaning florence">
-
-        <div class="service-header">
-
-            <div class="provider-avatar">🧹</div>
-
-            <div class="service-info">
-
-                <div class="service-title">
-                    Home Cleaning
-                </div>
-
-                <div class="provider-name">
-                    Maria Ferrari
-                </div>
-
-                <div class="rating">
-                    ⭐ 5.0 (89 reviews)
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="service-details">
-
-            <div class="detail-item">
-                <i class="fas fa-map-marker-alt"></i>
-                Florence, Italy
-            </div>
-
-            <div class="detail-item">
-                <i class="fas fa-clock"></i>
-                Flexible Hours
-            </div>
-
-        </div>
-
-        <div class="service-description">
-            Professional house cleaning service.
-            Deep cleaning, regular maintenance and eco-friendly products.
-        </div>
-
-        <div class="price-section">
-
-            <div class="price">
-                €25/hour
-            </div>
-
-            <button class="book-btn"
-                    onclick="openBooking(
-                        'Home Cleaning',
-                        'Maria Ferrari',
-                        '€25/hour'
-                    )">
-                Book Now
-            </button>
-
-        </div>
-
-    </div>
-
-
-    <!-- SERVICE 4 -->
-
-    <div class="service-card"
-         data-category="Carpentry"
-         data-search="carpentry furniture antonio russo carpenter turin">
-
-        <div class="service-header">
-
-            <div class="provider-avatar">🪚</div>
-
-            <div class="service-info">
-
-                <div class="service-title">
-                    Carpentry & Furniture
-                </div>
-
-                <div class="provider-name">
-                    Antonio Russo
-                </div>
-
-                <div class="rating">
-                    ⭐ 4.7 (156 reviews)
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="service-details">
-
-            <div class="detail-item">
-                <i class="fas fa-map-marker-alt"></i>
-                Turin, Italy
-            </div>
-
-            <div class="detail-item">
-                <i class="fas fa-clock"></i>
-                By Appointment
-            </div>
-
-        </div>
-
-        <div class="service-description">
-            Custom furniture making, repairs and installations.
-            Quality craftsmanship guaranteed.
-        </div>
-
-        <div class="price-section">
-
-            <div class="price">
-                €40/hour
-            </div>
-
-            <button class="book-btn"
-                    onclick="openBooking(
-                        'Carpentry & Furniture',
-                        'Antonio Russo',
-                        '€40/hour'
-                    )">
-                Book Now
-            </button>
-
-        </div>
-
-    </div>
-
-</div>
-
-
-<!-- OFFER SERVICE BUTTON -->
-
-<button class="fab-button"
-        onclick="openOfferService()">
-
-    <i class="fas fa-plus"></i>
-
-</button>
-
-
-<!-- BOTTOM NAV -->
-
-<div class="bottom-nav">
-
-    <div class="nav-item active"
-         onclick="goHome()">
-
-        <i class="fas fa-home"></i>
-        <span>Home</span>
-
-    </div>
-
-    <div class="nav-item"
-         onclick="focusSearch()">
-
-        <i class="fas fa-search"></i>
-        <span>Search</span>
-
-    </div>
-
-    <div class="nav-item"
-         onclick="showToast('Saved services coming soon')">
-
-        <i class="fas fa-bookmark"></i>
-        <span>Saved</span>
-
-    </div>
-
-    <div class="nav-item"
-         onclick="showToast('Messages coming soon')">
-
-        <i class="fas fa-comment"></i>
-        <span>Messages</span>
-
-    </div>
-
-    <div class="nav-item"
-         onclick="goProfile()">
-
-        <i class="fas fa-user"></i>
-        <span>Profile</span>
-
-    </div>
-
-</div>
-
-
-<!-- BOOKING MODAL -->
-
-<div class="modal" id="bookingModal">
-
-    <div class="modal-box">
-
-        <button class="close-btn"
-                onclick="closeModal('bookingModal')">
-            <i class="fas fa-times"></i>
-        </button>
-
-        <div class="modal-title">
-            Book Service
-        </div>
-
-        <form id="bookingForm">
-
-            <div class="form-group">
-
-                <label>Service</label>
-
-                <input
-                    id="bookingService"
-                    class="form-control"
-                    type="text"
-                    readonly
-                >
-
-            </div>
-
-            <div class="form-group">
-
-                <label>Provider</label>
-
-                <input
-                    id="bookingProvider"
-                    class="form-control"
-                    type="text"
-                    readonly
-                >
-
-            </div>
-
-            <div class="form-group">
-
-                <label>Price</label>
-
-                <input
-                    id="bookingPrice"
-                    class="form-control"
-                    type="text"
-                    readonly
-                >
-
-            </div>
-
-            <div class="form-group">
-
-                <label>Date</label>
-
-                <select
-                    id="bookingDate"
-                    class="form-control"
-                    required>
-                </select>
-
-            </div>
-
-            <div class="form-group">
-
-                <label>Time</label>
-
-                <select
-                    id="bookingTime"
-                    class="form-control"
-                    required>
-
-                    <option value="">Select time</option>
-                    <option>08:00</option>
-                    <option>09:00</option>
-                    <option>10:00</option>
-                    <option>11:00</option>
-                    <option>12:00</option>
-                    <option>13:00</option>
-                    <option>14:00</option>
-                    <option>15:00</option>
-                    <option>16:00</option>
-                    <option>17:00</option>
-                    <option>18:00</option>
-                    <option>19:00</option>
-                    <option>20:00</option>
-
-                </select>
-
-            </div>
-
-            <div class="form-group">
-
-                <label>Message</label>
-
-                <textarea
-                    id="bookingMessage"
-                    class="form-control"
-                    placeholder="Describe what you need..."></textarea>
-
-            </div>
-
-            <button
-                type="submit"
-                class="submit-btn">
-
-                Confirm Booking
-
-            </button>
-
-        </form>
-
-    </div>
-
-</div>
-
-
-<!-- OFFER SERVICE MODAL -->
-
-<div class="modal" id="offerModal">
-
-    <div class="modal-box">
-
-        <button class="close-btn"
-                onclick="closeModal('offerModal')">
-
-            <i class="fas fa-times"></i>
-
-        </button>
-
-        <div class="modal-title">
-            Offer a Service
-        </div>
-
-        <form id="offerForm">
-
-            <div class="form-group">
-
-                <label>Service Name</label>
-
-                <input
-                    id="newServiceName"
-                    class="form-control"
-                    type="text"
-                    placeholder="Example: Plumbing"
-                    required>
-
-            </div>
-
-            <div class="form-group">
-
-                <label>Category</label>
-
-                <select
-                    id="newServiceCategory"
-                    class="form-control"
-                    required>
-
-                    <option value="Plumbing">Plumbing</option>
-                    <option value="Electrical">Electrical</option>
-                    <option value="Cleaning">Cleaning</option>
-                    <option value="Carpentry">Carpentry</option>
-                    <option value="Painting">Painting</option>
-                    <option value="Moving">Moving</option>
-
-                </select>
-
-            </div>
-
-            <div class="form-group">
-
-                <label>Price</label>
-
-                <input
-                    id="newServicePrice"
-                    class="form-control"
-                    type="text"
-                    placeholder="Example: €30/hour"
-                    required>
-
-            </div>
-
-            <div class="form-group">
-
-                <label>Description</label>
-
-                <textarea
-                    id="newServiceDescription"
-                    class="form-control"
-                    placeholder="Describe your service..."
-                    required></textarea>
-
-            </div>
-
-            <button
-                type="submit"
-                class="submit-btn">
-
-                Publish Service
-
-            </button>
-
-        </form>
-
-    </div>
-
-</div>
-
-
-<!-- TOAST -->
-
-<div class="toast" id="toast"></div>
-
-
-<script>
-
-    /* =========================
-       GLOBAL VARIABLES
-    ========================= */
-
-    let selectedCategory = "All";
-
-
-    /* =========================
-       CATEGORY FILTER
-    ========================= */
-
-    function selectCategory(category, button) {
-
-        selectedCategory = category;
-
-        document.querySelectorAll(".category-btn")
-            .forEach(btn => btn.classList.remove("active"));
-
-        button.classList.add("active");
-
-        filterServices();
-    }
-
-
-    /* =========================
-       SEARCH + FILTER
-    ========================= */
-
-    function filterServices() {
-
-        const search =
-            document.getElementById("searchInput")
-                .value
-                .toLowerCase()
-                .trim();
-
-        const cards =
-            document.querySelectorAll(".service-card");
-
-        let visible = 0;
-
-        cards.forEach(card => {
-
-            const category =
-                card.dataset.category;
-
-            const text =
-                card.dataset.search.toLowerCase();
-
-            const categoryMatch =
-                selectedCategory === "All" ||
-                category === selectedCategory;
-
-            const searchMatch =
-                text.includes(search);
-
-            if (categoryMatch && searchMatch) {
-
-                card.style.display = "block";
-                visible++;
-
-            } else {
-
-                card.style.display = "none";
-
-            }
-
-        });
-
-        let empty =
-            document.getElementById("emptyMessage");
-
-        if (!empty) {
-
-            empty = document.createElement("div");
-
-            empty.id = "emptyMessage";
-
-            empty.className = "empty-message";
-
-            empty.innerHTML = `
-                <i class="fas fa-search"></i>
-                <h3>No services found</h3>
-                <p>Try another search or category.</p>
-            `;
-
-            document
-                .getElementById("servicesContainer")
-                .appendChild(empty);
-        }
-
-        empty.style.display =
-            visible === 0 ? "block" : "none";
-    }
-
-
-    /* =========================
-       BOOKING
-    ========================= */
-
-    function openBooking(service, provider, price) {
-
-        document.getElementById("bookingService").value = service;
-
-        document.getElementById("bookingProvider").value = provider;
-
-        document.getElementById("bookingPrice").value = price;
-
-        createDates();
-
-        document.getElementById("bookingTime").value = "";
-
-        document.getElementById("bookingMessage").value = "";
-
-        document
-            .getElementById("bookingModal")
-            .classList.add("show");
-    }
-
-
-    function createDates() {
-
-        const select =
-            document.getElementById("bookingDate");
-
-        select.innerHTML =
-            '<option value="">Select date</option>';
-
-        const today = new Date();
-
-        for (let i = 0; i < 14; i++) {
-
-            const date = new Date(today);
-
-            date.setDate(today.getDate() + i);
-
-            const value =
-                date.toISOString().split("T")[0];
-
-            const label =
-                date.toLocaleDateString(
-                    "en-GB",
-                    {
-                        weekday: "short",
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric"
-                    }
-                );
-
-            const option =
-                document.createElement("option");
-
-            option.value = value;
-
-            option.textContent = label;
-
-            select.appendChild(option);
-        }
-    }
-
-
-    /* =========================
-       CONFIRM BOOKING
-    ========================= */
-
-    document
-        .getElementById("bookingForm")
-        .addEventListener("submit", function(event) {
-
-            event.preventDefault();
-
-            const service =
-                document.getElementById("bookingService").value;
-
-            const date =
-                document.getElementById("bookingDate").value;
-
-            const time =
-                document.getElementById("bookingTime").value;
-
-            if (!date || !time) {
-
-                showToast("Please select date and time.");
-
-                return;
-            }
-
-            const booking = {
-
-                service:
-                    service,
-
-                provider:
-                    document.getElementById("bookingProvider").value,
-
-                price:
-                    document.getElementById("bookingPrice").value,
-
-                date:
-                    date,
-
-                time:
-                    time,
-
-                message:
-                    document.getElementById("bookingMessage").value,
-
-                createdAt:
-                    new Date().toISOString()
-            };
-
-
-            /* Save booking locally */
-
-            const bookings =
-                JSON.parse(
-                    localStorage.getItem("havkarBookings") || "[]"
-                );
-
-            bookings.push(booking);
-
-            localStorage.setItem(
-                "havkarBookings",
-                JSON.stringify(bookings)
-            );
-
-
-            closeModal("bookingModal");
-
-            showToast(
-                "Booking confirmed successfully."
-            );
-
-            document
-                .getElementById("bookingForm")
-                .reset();
-
-        });
-
-
-    /* =========================
-       OFFER SERVICE
-    ========================= */
-
-    function openOfferService() {
-
-        document
-            .getElementById("offerModal")
-            .classList.add("show");
-    }
-
-
-    document
-        .getElementById("offerForm")
-        .addEventListener("submit", function(event) {
-
-            event.preventDefault();
-
-            const name =
-                document.getElementById("newServiceName").value.trim();
-
-            const category =
-                document.getElementById("newServiceCategory").value;
-
-            const price =
-                document.getElementById("newServicePrice").value.trim();
-
-            const description =
-                document.getElementById("newServiceDescription").value.trim();
-
-
-            if (!name || !price || !description) {
-
-                showToast("Please fill in all fields.");
-
-                return;
-            }
-
-
-            /* Create new service card */
-
-            const card =
-                document.createElement("div");
-
-            card.className = "service-card";
-
-            card.dataset.category = category;
-
-            card.dataset.search =
-                `${name} ${category} ${description}`.toLowerCase();
-
-
-            card.innerHTML = `
-
-                <div class="service-header">
-
-                    <div class="provider-avatar">
-                        🛠️
+                    <div class="service-title">
+                        Professional Plumbing
                     </div>
 
-                    <div class="service-info">
+                    <div class="provider-name">
+                        Marco Rossi
+                    </div>
 
-                        <div class="service-title">
-                            ${escapeHtml(name)}
-                        </div>
-
-                        <div class="provider-name">
-                            You
-                        </div>
-
-                        <div class="rating">
-                            ⭐ New Service
-                        </div>
-
+                    <div class="rating">
+                        ⭐ 4.8
+                        <span style="color:#999;">
+                            (127 reviews)
+                        </span>
                     </div>
 
                 </div>
 
-                <div class="service-details">
+                <button
+                    class="favorite-btn"
+                    onclick="toggleFavorite(this, event)"
+                    aria-label="Save service">
 
-                    <div class="detail-item">
-                        <i class="fas fa-map-marker-alt"></i>
-                        Your Location
-                    </div>
+                    <i class="far fa-bookmark"></i>
 
-                    <div class="detail-item">
-                        <i class="fas fa-clock"></i>
-                        Available
-                    </div>
+                </button>
 
+            </div>
+
+
+            <div class="service-details">
+
+                <div class="detail-item">
+                    <i class="fas fa-map-marker-alt"></i>
+                    Milan, Italy
                 </div>
 
-                <div class="service-description">
-                    ${escapeHtml(description)}
+                <div class="detail-item">
+                    <i class="fas fa-clock"></i>
+                    Available Now
                 </div>
 
-                <div class="price-section">
+            </div>
 
-                    <div class="price">
-                        ${escapeHtml(price)}
-                    </div>
 
-                    <button
-                        class="book-btn"
-                        onclick="openBooking(
-                            '${escapeJs(name)}',
-                            'You',
-                            '${escapeJs(price)}'
-                        )">
+            <div class="service-description">
 
-                        Book Now
+                Expert plumber with 15+ years of experience.
+                Repairs, installations and emergency services available 24/7.
 
-                    </button>
+            </div>
 
-                </div>
-            `;
 
+            <div class="service-footer">
 
-            document
-                .getElementById("servicesContainer")
-                .prepend(card);
-
-
-            /* Save service */
-
-            const services =
-                JSON.parse(
-                    localStorage.getItem("havkarServices") || "[]"
-                );
-
-            services.push({
-
-                name: name,
-
-                category: category,
-
-                price: price,
-
-                description: description,
-
-                provider: "You"
-
-            });
-
-            localStorage.setItem(
-                "havkarServices",
-                JSON.stringify(services)
-            );
-
-
-            closeModal("offerModal");
-
-            document
-                .getElementById("offerForm")
-                .reset();
-
-            showToast(
-                "Your service has been published."
-            );
-
-            filterServices();
-
-        });
-
-
-    /* =========================
-       MODAL CLOSE
-    ========================= */
-
-    function closeModal(id) {
-
-        document
-            .getElementById(id)
-            .classList.remove("show");
-    }
-
-
-    /* Close when clicking outside */
-
-    document
-        .querySelectorAll(".modal")
-        .forEach(modal => {
-
-            modal.addEventListener("click", function(event) {
-
-                if (event.target === modal) {
-
-                    modal.classList.remove("show");
-
-                }
-
-            });
-
-        });
-
-
-    /* =========================
-       TOAST
-    ========================= */
-
-    function showToast(message) {
-
-        const toast =
-            document.getElementById("toast");
-
-        toast.textContent = message;
-
-        toast.classList.add("show");
-
-        setTimeout(() => {
-
-            toast.classList.remove("show");
-
-        }, 2500);
-    }
-
-
-    /* =========================
-       NAVIGATION
-    ========================= */
-
-    function goBack() {
-
-        window.location.href = "index.html";
-    }
-
-
-    function goHome() {
-
-        window.location.href = "index.html";
-    }
-
-
-    function goProfile() {
-
-        window.location.href = "profile.html";
-    }
-
-
-    function focusSearch() {
-
-        const input =
-            document.getElementById("searchInput");
-
-        input.focus();
-
-        window.scrollTo({
-            top: 0,
-            behavior: "smooth"
-        });
-    }
-
-
-    /* =========================
-       SECURITY HELPERS
-    ========================= */
-
-    function escapeHtml(text) {
-
-        return text
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-    }
-
-
-    function escapeJs(text) {
-
-        return text
-            .replace(/\\/g, "\\\\")
-            .replace(/'/g, "\\'");
-    }
-
-
-    /* =========================
-       LOAD SAVED SERVICES
-    ========================= */
-
-    function loadSavedServices() {
-
-        const services =
-            JSON.parse(
-                localStorage.getItem("havkarServices") || "[]"
-            );
-
-        services.forEach(service => {
-
-            const card =
-                document.createElement("div");
-
-            card.className = "service-card";
-
-            card.dataset.category =
-                service.category;
-
-            card.dataset.search =
-                `${service.name} ${service.category} ${service.description}`.toLowerCase();
-
-
-            card.innerHTML = `
-
-                <div class="service-header">
-
-                    <div class="provider-avatar">
-                        🛠️
-                    </div>
-
-                    <div class="service-info">
-
-                        <div class="service-title">
-                            ${escapeHtml(service.name)}
-                        </div>
-
-                        <div class="provider-name">
-                            ${escapeHtml(service.provider)}
-                        </div>
-
-                        <div class="rating">
-                            ⭐ New Service
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <div class="service-details">
-
-                    <div class="detail-item">
-                        <i class="fas fa-map-marker-alt"></i>
-                        Your Location
-                    </div>
-
-                    <div class="detail-item">
-                        <i class="fas fa-clock"></i>
-                        Available
-                    </div>
-
-                </div>
-
-                <div class="service-description">
-                    ${escapeHtml(service.description)}
-                </div>
-
-                <div class="price-section">
-
-                    <div class="price">
-                        ${escapeHtml(service.price)}
-                    </div>
-
-                    <button
-                        class="book-btn"
-                        onclick="openBooking(
-                            '${escapeJs(service.name)}',
-                            '${escapeJs(service.provider)}',
-                            '${escapeJs(service.price)}'
-                        )">
-
-                        Book Now
-
-                    </button>
-
-                </div>
-            `;
-
-            document
-                .getElementById("servicesContainer")
-                .appendChild(card);
-
-        });
-
-    }
-
-
-    /* =========================
-       START
-    ========================= */
-
-    loadSavedServices();
-
-    filterServices();
-
-</script>
-
-</body>
-                    </html>
+                <div class="price">
+                    €50
+                    <small>/
