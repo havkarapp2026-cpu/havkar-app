@@ -1,21 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
 <meta charset="UTF-8">
 
 <meta name="viewport"
-      content="width=device-width, initial-scale=1.0">
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+<meta name="theme-color" content="#2e7d32">
+
+<meta name="description"
+      content="HAVKAR Buy & Sell - Find products, services and local listings.">
 
 <title>HAVKAR - Buy & Sell</title>
 
+<!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- Font Awesome -->
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
 
 <link rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
+
+/* =========================================================
+   ROOT
+   ========================================================= */
+
+:root {
+    --primary: #2e7d32;
+    --primary-light: #43a047;
+    --primary-dark: #1b5e20;
+    --primary-soft: #e8f5e9;
+
+    --background: #f5f7f5;
+    --surface: #ffffff;
+
+    --text: #202124;
+    --muted: #70757a;
+    --border: #e0e0e0;
+
+    --danger: #c62828;
+    --danger-bg: #ffebee;
+
+    --shadow-sm: 0 2px 8px rgba(0,0,0,.06);
+    --shadow-md: 0 5px 18px rgba(0,0,0,.10);
+
+    --radius: 16px;
+
+    --nav-height: 74px;
+}
+
+
+/* =========================================================
+   RESET
+   ========================================================= */
 
 * {
     margin: 0;
@@ -23,91 +63,284 @@
     box-sizing: border-box;
 }
 
-body {
-    font-family: -apple-system, BlinkMacSystemFont,
-                 "Segoe UI", Roboto, sans-serif;
-    background: #f5f5f5;
-    padding-bottom: 75px;
+html {
+    scroll-behavior: smooth;
 }
 
-/* HEADER */
+body {
+    min-height: 100vh;
+
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Helvetica,
+        Arial,
+        sans-serif;
+
+    background: var(--background);
+    color: var(--text);
+
+    padding-bottom:
+        calc(var(--nav-height) + env(safe-area-inset-bottom));
+
+    -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+    font: inherit;
+}
+
+button {
+    -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+input:focus-visible {
+    outline: 3px solid rgba(67,160,71,.25);
+    outline-offset: 2px;
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
 
 .header {
-    background: linear-gradient(135deg, #2e7d32, #43a047);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+
+    min-height: 68px;
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--primary-dark),
+            var(--primary-light)
+        );
+
     color: white;
-    padding: 15px 20px;
+
     display: flex;
     align-items: center;
     justify-content: space-between;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+
+    padding:
+        12px 20px;
+
+    box-shadow:
+        0 2px 12px rgba(0,0,0,.14);
 }
 
 .header-left {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 14px;
+
+    min-width: 0;
 }
 
 .back-btn {
-    background: none;
-    border: none;
+    width: 42px;
+    height: 42px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 0;
+    border-radius: 50%;
+
+    background: rgba(255,255,255,.14);
     color: white;
-    font-size: 1.5rem;
+
     cursor: pointer;
+
+    transition:
+        background .2s ease,
+        transform .15s ease;
+}
+
+.back-btn:hover {
+    background: rgba(255,255,255,.22);
+}
+
+.back-btn:active {
+    transform: scale(.94);
+}
+
+.back-btn i {
+    font-size: 1.25rem;
 }
 
 .header h1 {
-    font-size: 1.3rem;
-    font-weight: 700;
+    font-size: 1.25rem;
+    font-weight: 750;
+
+    white-space: nowrap;
 }
 
 .header-right {
     display: flex;
-    gap: 15px;
+    align-items: center;
+    gap: 10px;
 }
 
 .icon-btn {
-    background: rgba(255,255,255,0.2);
-    border: none;
-    color: white;
-    width: 40px;
-    height: 40px;
+    width: 42px;
+    height: 42px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 0;
     border-radius: 50%;
-    font-size: 1.1rem;
+
+    background: rgba(255,255,255,.16);
+    color: white;
+
     cursor: pointer;
+
+    transition:
+        background .2s ease,
+        transform .15s ease;
 }
 
-/* SEARCH */
+.icon-btn:hover {
+    background: rgba(255,255,255,.24);
+}
 
-.search-bar {
-    padding: 15px 20px;
-    background: white;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+.icon-btn:active {
+    transform: scale(.94);
+}
+
+
+/* =========================================================
+   SEARCH
+   ========================================================= */
+
+.search-section {
+    position: sticky;
+    top: 68px;
+    z-index: 90;
+
+    background: var(--surface);
+
+    padding:
+        14px 20px 12px;
+
+    border-bottom:
+        1px solid rgba(0,0,0,.05);
+}
+
+.search-wrapper {
+    position: relative;
+}
+
+.search-icon {
+    position: absolute;
+
+    left: 17px;
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    color: #888;
+
+    pointer-events: none;
 }
 
 .search-input {
     width: 100%;
-    padding: 13px 16px;
-    border: 2px solid #e0e0e0;
-    border-radius: 25px;
+
+    height: 50px;
+
+    padding:
+        0 48px 0 46px;
+
+    border:
+        2px solid var(--border);
+
+    border-radius: 26px;
+
+    background: #fff;
+
+    color: var(--text);
+
     font-size: 1rem;
+
     outline: none;
+
+    transition:
+        border-color .2s ease,
+        box-shadow .2s ease;
+}
+
+.search-input::placeholder {
+    color: #8a8a8a;
 }
 
 .search-input:focus {
-    border-color: #43a047;
+    border-color: var(--primary-light);
+
+    box-shadow:
+        0 0 0 4px rgba(67,160,71,.10);
 }
 
-/* FILTERS */
+.clear-search {
+    position: absolute;
+
+    right: 10px;
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    width: 34px;
+    height: 34px;
+
+    border: 0;
+    border-radius: 50%;
+
+    background: #f1f3f1;
+
+    color: #666;
+
+    cursor: pointer;
+
+    display: none;
+}
+
+.clear-search.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+/* =========================================================
+   FILTERS
+   ========================================================= */
 
 .filters {
-    padding: 15px 20px;
-    background: white;
+    background: var(--surface);
+
     display: flex;
-    gap: 10px;
+    align-items: center;
+
+    gap: 9px;
+
+    padding:
+        2px 20px 14px;
+
     overflow-x: auto;
-    border-bottom: 1px solid #e0e0e0;
+
     scrollbar-width: none;
+
+    -webkit-overflow-scrolling: touch;
 }
 
 .filters::-webkit-scrollbar {
@@ -115,227 +348,695 @@ body {
 }
 
 .filter-btn {
-    padding: 9px 17px;
-    border: 2px solid #e0e0e0;
-    background: white;
+    flex: 0 0 auto;
+
+    min-height: 40px;
+
+    padding:
+        8px 17px;
+
+    border:
+        2px solid var(--border);
+
     border-radius: 22px;
-    font-size: 0.9rem;
-    font-weight: 600;
+
+    background: white;
+
+    color: var(--text);
+
+    font-size: .9rem;
+    font-weight: 650;
+
     cursor: pointer;
+
     white-space: nowrap;
+
+    transition:
+        background .2s ease,
+        color .2s ease,
+        border-color .2s ease,
+        transform .15s ease;
+}
+
+.filter-btn:hover {
+    border-color: var(--primary-light);
+}
+
+.filter-btn:active {
+    transform: scale(.97);
 }
 
 .filter-btn.active {
-    background: #43a047;
+    background: var(--primary-light);
+    border-color: var(--primary-light);
     color: white;
-    border-color: #43a047;
 }
 
-/* CONTENT */
+
+/* =========================================================
+   CONTENT
+   ========================================================= */
 
 .content {
-    padding: 15px 20px;
+    width: 100%;
+    max-width: 1400px;
+
+    margin: 0 auto;
+
+    padding:
+        18px 20px 40px;
 }
+
+.results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-bottom: 15px;
+}
+
+.results-title {
+    font-size: 1rem;
+    font-weight: 750;
+}
+
+.results-count {
+    font-size: .82rem;
+    color: var(--muted);
+}
+
+
+/* =========================================================
+   ADS GRID
+   ========================================================= */
 
 .ads-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap: 14px;
 }
 
-/* AD CARD */
+
+/* =========================================================
+   AD CARD
+   ========================================================= */
 
 .ad-card {
-    background: white;
-    border-radius: 15px;
+    position: relative;
+
+    min-width: 0;
+
+    background: var(--surface);
+
+    border-radius: var(--radius);
+
     overflow: hidden;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+
+    box-shadow: var(--shadow-sm);
+
     cursor: pointer;
-    transition: transform 0.15s ease;
+
+    transition:
+        transform .18s ease,
+        box-shadow .18s ease;
+}
+
+.ad-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
 }
 
 .ad-card:active {
-    transform: scale(0.98);
+    transform: scale(.985);
 }
 
+
+/* =========================================================
+   AD IMAGE
+   ========================================================= */
+
 .ad-image {
+    position: relative;
+
     width: 100%;
-    height: 150px;
-    background: linear-gradient(135deg, #e0e0e0, #f5f5f5);
+
+    aspect-ratio: 1 / .86;
+
+    background:
+        linear-gradient(
+            135deg,
+            #e8ece8,
+            #f7f8f7
+        );
+
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 3rem;
-    color: #999;
+
+    overflow: hidden;
+}
+
+.ad-image-placeholder {
+    color: #9aa09a;
+    font-size: 2.6rem;
 }
 
 .ad-image img {
     width: 100%;
     height: 100%;
+
+    display: block;
+
     object-fit: cover;
+
+    opacity: 0;
+
+    transition: opacity .2s ease;
 }
+
+.ad-image img.loaded {
+    opacity: 1;
+}
+
+.ad-image.no-image img {
+    display: none;
+}
+
+.ad-condition {
+    position: absolute;
+
+    top: 9px;
+    left: 9px;
+
+    padding:
+        5px 8px;
+
+    border-radius: 8px;
+
+    background:
+        rgba(0,0,0,.62);
+
+    color: white;
+
+    font-size: .68rem;
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   AD INFO
+   ========================================================= */
 
 .ad-info {
     padding: 12px;
 }
 
 .ad-title {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #333;
-    margin-bottom: 5px;
+    color: var(--text);
+
+    font-size: .94rem;
+    font-weight: 720;
+
+    line-height: 1.3;
+
+    margin-bottom: 6px;
+
+    display:
+        -webkit-box;
+
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+
+    min-height: 2.45em;
 }
 
 .ad-price {
-    font-size: 1.1rem;
+    color: var(--primary-dark);
+
+    font-size: 1.08rem;
     font-weight: 800;
-    color: #2e7d32;
-    margin-bottom: 5px;
+
+    margin-bottom: 6px;
 }
 
 .ad-location {
-    font-size: 0.8rem;
-    color: #666;
     display: flex;
     align-items: center;
+
     gap: 5px;
+
+    color: var(--muted);
+
+    font-size: .77rem;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ad-location i {
+    color: var(--primary-light);
+    flex: 0 0 auto;
 }
 
 .ad-category {
-    font-size: 0.75rem;
-    color: #888;
-    margin-top: 6px;
+    margin-top: 7px;
+
+    color: #8a8f8a;
+
+    font-size: .72rem;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/* STATUS */
+
+/* =========================================================
+   STATUS
+   ========================================================= */
 
 .status {
-    text-align: center;
-    padding: 30px 15px;
-    color: #777;
+    width: 100%;
+
     display: none;
+
+    text-align: center;
+
+    padding:
+        42px 20px;
+
+    color: var(--muted);
 }
 
 .status.show {
     display: block;
 }
 
-.status.error {
-    color: #c62828;
+.status-icon {
+    width: 62px;
+    height: 62px;
+
+    margin:
+        0 auto 15px;
+
+    border-radius: 50%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: var(--primary-soft);
+
+    color: var(--primary);
+
+    font-size: 1.5rem;
 }
 
-/* ADD BUTTON */
+.status-title {
+    font-size: 1.05rem;
+    font-weight: 750;
+
+    margin-bottom: 7px;
+
+    color: var(--text);
+}
+
+.status-text {
+    max-width: 430px;
+
+    margin: 0 auto;
+
+    font-size: .88rem;
+    line-height: 1.55;
+}
+
+.status.error .status-icon {
+    background: var(--danger-bg);
+    color: var(--danger);
+}
+
+.status.error .status-title {
+    color: var(--danger);
+}
+
+.retry-btn {
+    margin-top: 18px;
+
+    border: 0;
+
+    border-radius: 12px;
+
+    padding:
+        11px 20px;
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--primary),
+            var(--primary-light)
+        );
+
+    color: white;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 4px 12px rgba(46,125,50,.22);
+}
+
+.retry-btn:active {
+    transform: scale(.97);
+}
+
+
+/* =========================================================
+   LOADING SKELETON
+   ========================================================= */
+
+.skeleton-card {
+    background: white;
+
+    border-radius: var(--radius);
+
+    overflow: hidden;
+
+    box-shadow: var(--shadow-sm);
+}
+
+.skeleton {
+    background:
+        linear-gradient(
+            90deg,
+            #eeeeee 25%,
+            #f7f7f7 37%,
+            #eeeeee 63%
+        );
+
+    background-size: 400% 100%;
+
+    animation:
+        skeleton-loading 1.4s ease infinite;
+}
+
+.skeleton-image {
+    width: 100%;
+    aspect-ratio: 1 / .86;
+}
+
+.skeleton-line {
+    height: 12px;
+
+    border-radius: 6px;
+
+    margin:
+        12px;
+}
+
+.skeleton-line.short {
+    width: 45%;
+}
+
+.skeleton-line.medium {
+    width: 70%;
+}
+
+@keyframes skeleton-loading {
+
+    0% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0 50%;
+    }
+
+}
+
+
+/* =========================================================
+   FAB
+   ========================================================= */
 
 .fab-button {
     position: fixed;
-    bottom: 80px;
+
     right: 20px;
+
+    bottom:
+        calc(
+            var(--nav-height)
+            + 18px
+            + env(safe-area-inset-bottom)
+        );
+
+    z-index: 80;
+
     width: 60px;
     height: 60px;
-    background: linear-gradient(135deg, #2e7d32, #43a047);
-    color: white;
-    border: none;
+
+    border: 0;
     border-radius: 50%;
-    font-size: 1.8rem;
-    box-shadow: 0 5px 20px rgba(46,125,50,0.4);
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--primary-dark),
+            var(--primary-light)
+        );
+
+    color: white;
+
+    font-size: 1.55rem;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
     cursor: pointer;
-    z-index: 10;
+
+    box-shadow:
+        0 7px 22px rgba(46,125,50,.38);
+
+    transition:
+        transform .18s ease,
+        box-shadow .18s ease;
 }
 
-/* BOTTOM NAV */
+.fab-button:hover {
+    transform: translateY(-2px);
+
+    box-shadow:
+        0 9px 26px rgba(46,125,50,.45);
+}
+
+.fab-button:active {
+    transform: scale(.94);
+}
+
+
+/* =========================================================
+   BOTTOM NAV
+   ========================================================= */
 
 .bottom-nav {
     position: fixed;
-    bottom: 0;
+
     left: 0;
     right: 0;
-    background: white;
+    bottom: 0;
+
+    z-index: 100;
+
+    height:
+        calc(
+            var(--nav-height)
+            + env(safe-area-inset-bottom)
+        );
+
+    padding-bottom:
+        env(safe-area-inset-bottom);
+
+    background: rgba(255,255,255,.97);
+
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+
     display: flex;
+    align-items: flex-start;
     justify-content: space-around;
-    padding: 10px 0;
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-    z-index: 20;
+
+    box-shadow:
+        0 -2px 12px rgba(0,0,0,.10);
 }
 
 .nav-item {
+    flex: 1;
+
+    height: var(--nav-height);
+
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    color: #999;
-    font-size: 0.75rem;
-    cursor: pointer;
-}
 
-.nav-item.active {
-    color: #43a047;
+    align-items: center;
+    justify-content: center;
+
+    gap: 5px;
+
+    color: #929792;
+
+    font-size: .72rem;
+    font-weight: 550;
+
+    cursor: pointer;
+
+    transition:
+        color .2s ease;
 }
 
 .nav-item i {
-    font-size: 1.3rem;
+    font-size: 1.28rem;
 }
 
-/* MOBILE */
+.nav-item.active {
+    color: var(--primary-light);
+}
+
+.nav-item:active {
+    opacity: .72;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (min-width: 650px) {
+
+    .ads-grid {
+        grid-template-columns:
+            repeat(3, minmax(0, 1fr));
+
+        gap: 18px;
+    }
+
+}
+
+@media (min-width: 950px) {
+
+    .ads-grid {
+        grid-template-columns:
+            repeat(4, minmax(0, 1fr));
+
+        gap: 20px;
+    }
+
+}
 
 @media (max-width: 500px) {
 
-    .ads-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
+    .header {
+        padding:
+            11px 14px;
+    }
+
+    .header h1 {
+        font-size: 1.16rem;
+    }
+
+    .search-section {
+        top: 64px;
+        padding:
+            12px 12px 10px;
+    }
+
+    .filters {
+        padding:
+            2px 12px 12px;
     }
 
     .content {
-        padding: 12px;
+        padding:
+            14px 12px 30px;
     }
 
-    .ad-image {
-        height: 135px;
+    .ads-grid {
+        gap: 11px;
+    }
+
+    .ad-info {
+        padding: 10px;
+    }
+
+    .ad-title {
+        font-size: .89rem;
+    }
+
+    .ad-price {
+        font-size: 1rem;
+    }
+
+    .fab-button {
+        right: 16px;
     }
 
 }
 
 </style>
-
 </head>
+
 
 <body>
 
-<!-- HEADER -->
 
-<div class="header">
+<!-- =========================================================
+     HEADER
+     ========================================================= -->
+
+<header class="header">
 
     <div class="header-left">
 
         <button
             class="back-btn"
             type="button"
-            onclick="window.location.href='index.html'">
+            aria-label="Back"
+            onclick="goHome()">
 
             <i class="fas fa-arrow-left"></i>
 
         </button>
 
-        <h1>Buy & Sell</h1>
+        <h1>Buy &amp; Sell</h1>
 
     </div>
+
 
     <div class="header-right">
 
         <button
             class="icon-btn"
-            type="button">
+            type="button"
+            aria-label="Notifications"
+            onclick="showInfo('Notifications are not connected yet.')">
 
             <i class="fas fa-bell"></i>
 
         </button>
 
+
         <button
             class="icon-btn"
             type="button"
-            onclick="window.location.href='profile.html'">
+            aria-label="Profile"
+            onclick="goProfile()">
 
             <i class="fas fa-user"></i>
 
@@ -343,116 +1044,266 @@ body {
 
     </div>
 
-</div>
+</header>
 
 
-<!-- SEARCH -->
+<!-- =========================================================
+     SEARCH
+     ========================================================= -->
 
-<div class="search-bar">
+<section class="search-section">
 
-    <input
-        type="text"
-        id="searchInput"
-        class="search-input"
-        placeholder="Search products, services...">
+    <div class="search-wrapper">
 
-</div>
+        <i class="fas fa-search search-icon"></i>
 
+        <input
+            id="searchInput"
+            class="search-input"
+            type="search"
+            autocomplete="off"
+            enterkeyhint="search"
+            placeholder="Search products, services..."
+            aria-label="Search products and services">
 
-<!-- CATEGORY FILTERS -->
+        <button
+            id="clearSearch"
+            class="clear-search"
+            type="button"
+            aria-label="Clear search">
 
-<div
-    class="filters"
-    id="filters">
+            <i class="fas fa-times"></i>
 
-</div>
-
-
-<!-- ADS -->
-
-<div class="content">
-
-    <div
-        id="status"
-        class="status show">
-
-        Loading ads...
+        </button>
 
     </div>
+
+</section>
+
+
+<!-- =========================================================
+     FILTERS
+     ========================================================= -->
+
+<nav
+    id="filters"
+    class="filters"
+    aria-label="Categories">
+</nav>
+
+
+<!-- =========================================================
+     MAIN CONTENT
+     ========================================================= -->
+
+<main class="content">
+
+    <div class="results-header">
+
+        <div
+            id="resultsTitle"
+            class="results-title">
+            Latest listings
+        </div>
+
+        <div
+            id="resultsCount"
+            class="results-count">
+            —
+        </div>
+
+    </div>
+
+
+    <!-- Loading -->
+
+    <div
+        id="loadingStatus"
+        class="status show">
+
+        <div class="status-icon">
+
+            <i class="fas fa-spinner fa-spin"></i>
+
+        </div>
+
+        <div class="status-title">
+            Loading listings
+        </div>
+
+        <div class="status-text">
+            Please wait while HAVKAR loads the latest listings.
+        </div>
+
+    </div>
+
+
+    <!-- Error -->
+
+    <div
+        id="errorStatus"
+        class="status error">
+
+        <div class="status-icon">
+
+            <i class="fas fa-cloud-exclamation"></i>
+
+        </div>
+
+        <div class="status-title">
+            Could not load listings
+        </div>
+
+        <div
+            id="errorText"
+            class="status-text">
+            Unable to connect to the listings service.
+        </div>
+
+        <button
+            id="retryButton"
+            class="retry-btn"
+            type="button">
+
+            <i class="fas fa-rotate-right"></i>
+            Try again
+
+        </button>
+
+    </div>
+
+
+    <!-- Empty -->
+
+    <div
+        id="emptyStatus"
+        class="status">
+
+        <div class="status-icon">
+
+            <i class="fas fa-box-open"></i>
+
+        </div>
+
+        <div class="status-title">
+            No listings found
+        </div>
+
+        <div class="status-text">
+            There are no listings matching your search or category.
+        </div>
+
+    </div>
+
+
+    <!-- Ads -->
 
     <div
         id="adsGrid"
         class="ads-grid">
-
     </div>
 
-</div>
+</main>
 
 
-<!-- ADD AD -->
+<!-- =========================================================
+     ADD LISTING
+     ========================================================= -->
 
 <button
     class="fab-button"
     type="button"
-    onclick="window.location.href='post-ad.html'">
+    aria-label="Post an ad"
+    onclick="goPostAd()">
 
     <i class="fas fa-plus"></i>
 
 </button>
 
 
-<!-- BOTTOM NAV -->
+<!-- =========================================================
+     BOTTOM NAV
+     ========================================================= -->
 
-<div class="bottom-nav">
+<nav class="bottom-nav">
 
     <div
         class="nav-item active"
-        onclick="window.location.href='index.html'">
+        role="button"
+        tabindex="0"
+        onclick="goHome()">
 
         <i class="fas fa-home"></i>
+
         <span>Home</span>
 
     </div>
 
+
     <div
         class="nav-item"
-        onclick="document.getElementById('searchInput').focus()">
+        role="button"
+        tabindex="0"
+        onclick="focusSearch()">
 
         <i class="fas fa-search"></i>
+
         <span>Search</span>
 
     </div>
 
-    <div class="nav-item">
+
+    <div
+        class="nav-item"
+        role="button"
+        tabindex="0"
+        onclick="showInfo('Saved listings will be connected to your account.')">
 
         <i class="fas fa-heart"></i>
+
         <span>Saved</span>
 
     </div>
 
-    <div class="nav-item">
+
+    <div
+        class="nav-item"
+        role="button"
+        tabindex="0"
+        onclick="showInfo('Messaging will be connected to your account.')">
 
         <i class="fas fa-comment"></i>
+
         <span>Messages</span>
 
     </div>
 
+
     <div
         class="nav-item"
-        onclick="window.location.href='profile.html'">
+        role="button"
+        tabindex="0"
+        onclick="goProfile()">
 
         <i class="fas fa-user"></i>
+
         <span>Profile</span>
 
     </div>
 
-</div>
+</nav>
 
 
 <script>
 
 /* =========================================================
-   SUPABASE
+   HAVKAR BUY & SELL
+   Production-oriented client
+   ========================================================= */
+
+
+/* =========================================================
+   SUPABASE CONFIGURATION
    ========================================================= */
 
 const SUPABASE_URL =
@@ -461,11 +1312,60 @@ const SUPABASE_URL =
 const SUPABASE_PUBLISHABLE_KEY =
     "sb_publishable_h6RUZrukEovZn_N3XLDukw_Ui67UsWG";
 
-const supabaseClient =
-    window.supabase.createClient(
-        SUPABASE_URL,
-        SUPABASE_PUBLISHABLE_KEY
-    );
+
+/* =========================================================
+   SUPABASE CLIENT
+   ========================================================= */
+
+let supabaseClient = null;
+
+
+function initializeSupabase() {
+
+    try {
+
+        if (
+            !window.supabase ||
+            typeof window.supabase.createClient !== "function"
+        ) {
+
+            throw new Error(
+                "Supabase library could not be loaded."
+            );
+
+        }
+
+
+        supabaseClient =
+            window.supabase.createClient(
+                SUPABASE_URL,
+                SUPABASE_PUBLISHABLE_KEY,
+                {
+                    auth: {
+                        persistSession: true,
+                        autoRefreshToken: true,
+                        detectSessionInUrl: true
+                    }
+                }
+            );
+
+
+        return true;
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "[HAVKAR] Supabase initialization failed:",
+            error
+        );
+
+        return false;
+
+    }
+
+}
 
 
 /* =========================================================
@@ -522,98 +1422,106 @@ const CATEGORIES = [
 
 
 /* =========================================================
-   ELEMENTS
+   APPLICATION STATE
+   ========================================================= */
+
+const state = {
+
+    ads: [],
+
+    filteredAds: [],
+
+    currentCategory: "All",
+
+    search: "",
+
+    loading: false,
+
+    requestId: 0
+
+};
+
+
+/* =========================================================
+   DOM
    ========================================================= */
 
 const adsGrid =
     document.getElementById("adsGrid");
 
-const statusBox =
-    document.getElementById("status");
+const filtersContainer =
+    document.getElementById("filters");
 
 const searchInput =
     document.getElementById("searchInput");
 
-const filtersContainer =
-    document.getElementById("filters");
+const clearSearch =
+    document.getElementById("clearSearch");
+
+const loadingStatus =
+    document.getElementById("loadingStatus");
+
+const errorStatus =
+    document.getElementById("errorStatus");
+
+const emptyStatus =
+    document.getElementById("emptyStatus");
+
+const errorText =
+    document.getElementById("errorText");
+
+const retryButton =
+    document.getElementById("retryButton");
+
+const resultsTitle =
+    document.getElementById("resultsTitle");
+
+const resultsCount =
+    document.getElementById("resultsCount");
 
 
 /* =========================================================
-   DATA
+   NAVIGATION
    ========================================================= */
 
-let allAds = [];
+function goHome() {
 
-let currentCategory = "All";
+    window.location.href =
+        "index.html";
+
+}
 
 
-/* =========================================================
-   CREATE CATEGORY BUTTONS
-   ========================================================= */
+function goProfile() {
 
-function createCategoryButtons() {
+    window.location.href =
+        "profile.html";
 
-    filtersContainer.innerHTML = "";
+}
 
-    CATEGORIES.forEach(function(category) {
 
-        const button =
-            document.createElement("button");
+function goPostAd() {
 
-        button.type = "button";
+    window.location.href =
+        "post-ad.html";
 
-        button.className =
-            "filter-btn";
+}
 
-        if (category === "All") {
 
-            button.classList.add("active");
+function focusSearch() {
 
-        }
+    searchInput.focus();
 
-        button.dataset.category =
-            category;
-
-        button.textContent =
-            category;
-
-        button.addEventListener(
-            "click",
-            function() {
-
-                document
-                    .querySelectorAll(".filter-btn")
-                    .forEach(function(btn) {
-
-                        btn.classList.remove(
-                            "active"
-                        );
-
-                    });
-
-                button.classList.add(
-                    "active"
-                );
-
-                currentCategory =
-                    category;
-
-                applyFilters();
-
-            }
-        );
-
-        filtersContainer.appendChild(
-            button
-        );
-
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
     });
 
 }
 
 
 /* =========================================================
-   ESCAPE HTML
+   SAFE HTML
    ========================================================= */
 
 function escapeHtml(value) {
@@ -627,6 +1535,7 @@ function escapeHtml(value) {
 
     }
 
+
     return String(value)
 
         .replace(/&/g, "&amp;")
@@ -639,56 +1548,168 @@ function escapeHtml(value) {
 
 
 /* =========================================================
-   FORMAT PRICE
+   SAFE STRING
    ========================================================= */
 
-function formatPrice(price) {
+function safeString(value) {
 
     if (
-        price === null ||
-        price === undefined ||
-        price === ""
+        value === null ||
+        value === undefined
+    ) {
+
+        return "";
+
+    }
+
+    return String(value).trim();
+
+}
+
+
+/* =========================================================
+   PRICE FORMAT
+   ========================================================= */
+
+function formatPrice(value) {
+
+    if (
+        value === null ||
+        value === undefined ||
+        value === ""
     ) {
 
         return "Price not specified";
 
     }
 
+
     const number =
-        Number(price);
+        Number(value);
 
-    if (Number.isNaN(number)) {
 
-        return escapeHtml(price);
+    if (!Number.isFinite(number)) {
+
+        return escapeHtml(value);
 
     }
 
-    return "€" +
-        number.toLocaleString(
-            "en-US",
-            {
-                maximumFractionDigits: 2
-            }
-        );
+
+    return new Intl.NumberFormat(
+        "en-US",
+        {
+            style: "currency",
+            currency: "EUR",
+            maximumFractionDigits: 2
+        }
+    ).format(number);
 
 }
 
 
 /* =========================================================
-   GET PHOTO
+   IMAGE EXTRACTION
    ========================================================= */
 
-function getPhoto(ad) {
+function getFirstImage(ad) {
 
-    if (
-        Array.isArray(ad.photos) &&
-        ad.photos.length > 0 &&
-        ad.photos[0]
-    ) {
+    if (!ad) {
+        return null;
+    }
 
-        return ad.photos[0];
+
+    const photos =
+        ad.photos;
+
+
+    if (Array.isArray(photos)) {
+
+        for (const photo of photos) {
+
+            if (
+                typeof photo === "string" &&
+                photo.trim()
+            ) {
+
+                return photo.trim();
+
+            }
+
+        }
 
     }
+
+
+    if (
+        typeof photos === "string" &&
+        photos.trim()
+    ) {
+
+        try {
+
+            const parsed =
+                JSON.parse(photos);
+
+            if (Array.isArray(parsed)) {
+
+                for (const photo of parsed) {
+
+                    if (
+                        typeof photo === "string" &&
+                        photo.trim()
+                    ) {
+
+                        return photo.trim();
+
+                    }
+
+                }
+
+            }
+
+        }
+
+        catch (_) {
+
+            /*
+             * Some databases may contain
+             * a single URL string instead
+             * of JSON.
+             */
+
+            if (
+                photos.startsWith("http://") ||
+                photos.startsWith("https://")
+            ) {
+
+                return photos.trim();
+
+            }
+
+        }
+
+    }
+
+
+    if (
+        typeof ad.image_url === "string" &&
+        ad.image_url.trim()
+    ) {
+
+        return ad.image_url.trim();
+
+    }
+
+
+    if (
+        typeof ad.image === "string" &&
+        ad.image.trim()
+    ) {
+
+        return ad.image.trim();
+
+    }
+
 
     return null;
 
@@ -696,28 +1717,643 @@ function getPhoto(ad) {
 
 
 /* =========================================================
-   OPEN PRODUCT
+   DATE FORMAT
    ========================================================= */
 
-function openProduct(adId) {
+function formatDate(value) {
 
-    if (
-        adId === null ||
-        adId === undefined ||
-        adId === ""
-    ) {
+    if (!value) {
+        return "";
+    }
 
-        console.error(
-            "Ad ID is missing."
+
+    const date =
+        new Date(value);
+
+
+    if (Number.isNaN(date.getTime())) {
+        return "";
+    }
+
+
+    return new Intl.DateTimeFormat(
+        "en-GB",
+        {
+            day: "numeric",
+            month: "short",
+            year: "numeric"
+        }
+    ).format(date);
+
+}
+
+
+/* =========================================================
+   STATUS CONTROL
+   ========================================================= */
+
+function hideAllStatuses() {
+
+    loadingStatus.classList.remove("show");
+    errorStatus.classList.remove("show");
+    emptyStatus.classList.remove("show");
+
+}
+
+
+function showLoading() {
+
+    hideAllStatuses();
+
+    loadingStatus.classList.add("show");
+
+}
+
+
+function showError(message) {
+
+    hideAllStatuses();
+
+    errorText.textContent =
+        message ||
+        "Unable to connect to the listings service.";
+
+    errorStatus.classList.add("show");
+
+}
+
+
+function showEmpty() {
+
+    hideAllStatuses();
+
+    emptyStatus.classList.add("show");
+
+}
+
+
+function showSuccessContent() {
+
+    hideAllStatuses();
+
+}
+
+
+/* =========================================================
+   CATEGORY BUTTONS
+   ========================================================= */
+
+function createCategoryButtons() {
+
+    filtersContainer.innerHTML = "";
+
+
+    const fragment =
+        document.createDocumentFragment();
+
+
+    CATEGORIES.forEach(function(category) {
+
+        const button =
+            document.createElement("button");
+
+
+        button.type =
+            "button";
+
+
+        button.className =
+            "filter-btn";
+
+
+        if (
+            category ===
+            state.currentCategory
+        ) {
+
+            button.classList.add("active");
+
+        }
+
+
+        button.dataset.category =
+            category;
+
+
+        button.textContent =
+            category;
+
+
+        button.addEventListener(
+            "click",
+            function() {
+
+                setCategory(category);
+
+            }
         );
 
-        return;
+
+        fragment.appendChild(button);
+
+    });
+
+
+    filtersContainer.appendChild(fragment);
+
+}
+
+
+/* =========================================================
+   SET CATEGORY
+   ========================================================= */
+
+function setCategory(category) {
+
+    state.currentCategory =
+        category;
+
+
+    document
+        .querySelectorAll(".filter-btn")
+        .forEach(function(button) {
+
+            button.classList.toggle(
+                "active",
+                button.dataset.category ===
+                    category
+            );
+
+        });
+
+
+    applyFilters();
+
+}
+
+
+/* =========================================================
+   SEARCH
+   ========================================================= */
+
+function setupSearch() {
+
+    searchInput.addEventListener(
+        "input",
+        function() {
+
+            state.search =
+                safeString(
+                    searchInput.value
+                ).toLowerCase();
+
+
+            clearSearch.classList.toggle(
+                "show",
+                Boolean(state.search)
+            );
+
+
+            applyFilters();
+
+        }
+    );
+
+
+    clearSearch.addEventListener(
+        "click",
+        function() {
+
+            searchInput.value =
+                "";
+
+            state.search =
+                "";
+
+            clearSearch.classList.remove(
+                "show"
+            );
+
+            applyFilters();
+
+            searchInput.focus();
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   SEARCHABLE TEXT
+   ========================================================= */
+
+function getSearchableText(ad) {
+
+    return [
+
+        ad.title,
+        ad.description,
+        ad.location,
+        ad.category,
+        ad.city,
+        ad.region,
+        ad.country
+
+    ]
+
+        .map(safeString)
+        .join(" ")
+        .toLowerCase();
+
+}
+
+
+/* =========================================================
+   CATEGORY MATCH
+   ========================================================= */
+
+function categoryMatches(ad) {
+
+    if (
+        state.currentCategory ===
+        "All"
+    ) {
+
+        return true;
 
     }
 
-    window.location.href =
-        "product.html?id=" +
-        encodeURIComponent(adId);
+
+    const category =
+        safeString(ad.category);
+
+
+    return (
+        category.toLowerCase() ===
+        state.currentCategory.toLowerCase()
+    );
+
+}
+
+
+/* =========================================================
+   APPLY FILTERS
+   ========================================================= */
+
+function applyFilters() {
+
+    const search =
+        state.search;
+
+
+    state.filteredAds =
+        state.ads.filter(
+            function(ad) {
+
+                if (
+                    !categoryMatches(ad)
+                ) {
+
+                    return false;
+
+                }
+
+
+                if (!search) {
+
+                    return true;
+
+                }
+
+
+                return getSearchableText(
+                    ad
+                ).includes(search);
+
+            }
+        );
+
+
+    updateResultsHeader();
+
+    renderAds(
+        state.filteredAds
+    );
+
+}
+
+
+/* =========================================================
+   RESULTS HEADER
+   ========================================================= */
+
+function updateResultsHeader() {
+
+    const count =
+        state.filteredAds.length;
+
+
+    if (state.search) {
+
+        resultsTitle.textContent =
+            "Search results";
+
+    }
+
+    else if (
+        state.currentCategory !==
+        "All"
+    ) {
+
+        resultsTitle.textContent =
+            state.currentCategory;
+
+    }
+
+    else {
+
+        resultsTitle.textContent =
+            "Latest listings";
+
+    }
+
+
+    resultsCount.textContent =
+        count +
+        (
+            count === 1
+                ? " listing"
+                : " listings"
+        );
+
+}
+
+
+/* =========================================================
+   IMAGE HTML
+   ========================================================= */
+
+function createImageHtml(ad) {
+
+    const image =
+        getFirstImage(ad);
+
+
+    const title =
+        escapeHtml(
+            safeString(ad.title) ||
+            "Listing"
+        );
+
+
+    if (!image) {
+
+        return `
+
+            <div class="ad-image no-image">
+
+                <div class="ad-image-placeholder">
+
+                    <i class="fas fa-box-open"></i>
+
+                </div>
+
+            </div>
+
+        `;
+
+    }
+
+
+    return `
+
+        <div class="ad-image">
+
+            <img
+                src="${escapeHtml(image)}"
+                alt="${title}"
+                loading="lazy"
+                referrerpolicy="no-referrer">
+
+            <div class="ad-image-placeholder">
+
+                <i class="fas fa-image"></i>
+
+            </div>
+
+        </div>
+
+    `;
+
+}
+
+
+/* =========================================================
+   CREATE AD CARD
+   ========================================================= */
+
+function createAdCard(ad) {
+
+    const card =
+        document.createElement("article");
+
+
+    card.className =
+        "ad-card";
+
+
+    card.setAttribute(
+        "role",
+        "button"
+    );
+
+
+    card.setAttribute(
+        "tabindex",
+        "0"
+    );
+
+
+    const id =
+        safeString(ad.id);
+
+
+    card.dataset.id =
+        id;
+
+
+    const title =
+        safeString(ad.title) ||
+        "Untitled listing";
+
+
+    const location =
+        safeString(ad.location) ||
+        safeString(ad.city) ||
+        "Location not specified";
+
+
+    const category =
+        safeString(ad.category) ||
+        "Other";
+
+
+    const image =
+        getFirstImage(ad);
+
+
+    const imageMarkup =
+        createImageHtml(ad);
+
+
+    const condition =
+        safeString(ad.condition);
+
+
+    const date =
+        formatDate(ad.created_at);
+
+
+    card.innerHTML = `
+
+        ${imageMarkup}
+
+        <div class="ad-info">
+
+            <div class="ad-title">
+                ${escapeHtml(title)}
+            </div>
+
+            <div class="ad-price">
+                ${formatPrice(ad.price)}
+            </div>
+
+            <div class="ad-location">
+
+                <i class="fas fa-location-dot"></i>
+
+                <span>
+                    ${escapeHtml(location)}
+                </span>
+
+            </div>
+
+            <div class="ad-category">
+
+                ${escapeHtml(category)}
+
+                ${
+                    date
+                        ? " • " +
+                          escapeHtml(date)
+                        : ""
+                }
+
+            </div>
+
+        </div>
+
+    `;
+
+
+    const img =
+        card.querySelector(
+            ".ad-image img"
+        );
+
+
+    if (img) {
+
+        img.addEventListener(
+            "load",
+            function() {
+
+                img.classList.add(
+                    "loaded"
+                );
+
+            }
+        );
+
+
+        img.addEventListener(
+            "error",
+            function() {
+
+                const imageBox =
+                    card.querySelector(
+                        ".ad-image"
+                    );
+
+
+                if (!imageBox) {
+                    return;
+                }
+
+
+                imageBox.classList.add(
+                    "no-image"
+                );
+
+
+                img.remove();
+
+
+                const placeholder =
+                    document.createElement(
+                        "div"
+                    );
+
+
+                placeholder.className =
+                    "ad-image-placeholder";
+
+
+                placeholder.innerHTML =
+                    '<i class="fas fa-image"></i>';
+
+
+                imageBox.appendChild(
+                    placeholder
+                );
+
+            }
+        );
+
+    }
+
+
+    card.addEventListener(
+        "click",
+        function() {
+
+            openProduct(id);
+
+        }
+    );
+
+
+    card.addEventListener(
+        "keydown",
+        function(event) {
+
+            if (
+                event.key === "Enter" ||
+                event.key === " "
+            ) {
+
+                event.preventDefault();
+
+                openProduct(id);
+
+            }
+
+        }
+    );
+
+
+    return card;
 
 }
 
@@ -730,185 +2366,450 @@ function renderAds(ads) {
 
     adsGrid.innerHTML = "";
 
+
     if (
         !ads ||
         ads.length === 0
     ) {
 
-        statusBox.textContent =
-            "No ads found.";
-
-        statusBox.className =
-            "status show";
+        showEmpty();
 
         return;
 
     }
 
-    statusBox.className =
-        "status";
+
+    showSuccessContent();
 
 
-    ads.forEach(function(ad) {
+    const fragment =
+        document.createDocumentFragment();
+
+
+    ads.forEach(
+        function(ad) {
+
+            fragment.appendChild(
+                createAdCard(ad)
+            );
+
+        }
+    );
+
+
+    adsGrid.appendChild(
+        fragment
+    );
+
+}
+
+
+/* =========================================================
+   OPEN PRODUCT
+   ========================================================= */
+
+function openProduct(id) {
+
+    if (!id) {
+
+        showInfo(
+            "This listing does not have a valid ID."
+        );
+
+        return;
+
+    }
+
+
+    window.location.href =
+        "product.html?id=" +
+        encodeURIComponent(id);
+
+}
+
+
+/* =========================================================
+   SKELETON
+   ========================================================= */
+
+function renderSkeletons(count = 6) {
+
+    adsGrid.innerHTML = "";
+
+
+    hideAllStatuses();
+
+
+    for (
+        let i = 0;
+        i < count;
+        i++
+    ) {
 
         const card =
             document.createElement("div");
 
+
         card.className =
-            "ad-card";
-
-
-        card.addEventListener(
-            "click",
-            function() {
-
-                openProduct(ad.id);
-
-            }
-        );
-
-
-        const image =
-            getPhoto(ad);
-
-
-        let imageHtml =
-            '<div class="ad-image">📦</div>';
-
-
-        if (image) {
-
-            imageHtml = `
-
-                <div class="ad-image">
-
-                    <img
-                        alt="${escapeHtml(ad.title)}"
-                        loading="lazy">
-
-                </div>
-
-            `;
-
-        }
+            "skeleton-card";
 
 
         card.innerHTML = `
 
-            ${imageHtml}
+            <div
+                class="skeleton skeleton-image">
+            </div>
 
-            <div class="ad-info">
+            <div
+                class="skeleton skeleton-line medium">
+            </div>
 
-                <div class="ad-title">
+            <div
+                class="skeleton skeleton-line short">
+            </div>
 
-                    ${escapeHtml(ad.title)}
-
-                </div>
-
-                <div class="ad-price">
-
-                    ${formatPrice(ad.price)}
-
-                </div>
-
-                <div class="ad-location">
-
-                    <i class="fas fa-map-marker-alt"></i>
-
-                    ${escapeHtml(ad.location)}
-
-                </div>
-
-                <div class="ad-category">
-
-                    ${escapeHtml(ad.category)}
-
-                </div>
-
+            <div
+                class="skeleton skeleton-line short">
             </div>
 
         `;
 
 
-        if (image) {
-
-            const img =
-                card.querySelector("img");
-
-            if (img) {
-
-                img.src = image;
-
-            }
-
-        }
-
-
         adsGrid.appendChild(card);
 
-    });
+    }
 
 }
 
 
 /* =========================================================
-   LOAD ADS
+   NETWORK ERROR DETECTION
    ========================================================= */
 
-async function loadAds() {
+function getReadableError(error) {
 
-    statusBox.textContent =
-        "Loading ads...";
+    if (!navigator.onLine) {
 
-    statusBox.className =
-        "status show";
+        return (
+            "Your device appears to be offline. " +
+            "Check your internet connection and try again."
+        );
+
+    }
 
 
-    try {
+    const message =
+        safeString(
+            error?.message
+        );
 
-        const result =
-            await supabaseClient
 
+    if (
+        message.toLowerCase()
+            .includes("failed to fetch")
+    ) {
+
+        return (
+            "HAVKAR could not establish a connection " +
+            "with the listings server. " +
+            "Please try again."
+        );
+
+    }
+
+
+    if (
+        message.toLowerCase()
+            .includes("network")
+    ) {
+
+        return (
+            "A network connection problem occurred " +
+            "while loading the listings."
+        );
+
+    }
+
+
+    if (
+        message.toLowerCase()
+            .includes("jwt")
+    ) {
+
+        return (
+            "The application authentication response " +
+            "was rejected by the server."
+        );
+
+    }
+
+
+    if (
+        message.toLowerCase()
+            .includes("permission")
+    ) {
+
+        return (
+            "The listings service denied access " +
+            "to the ads data."
+        );
+
+    }
+
+
+    if (message) {
+
+        return message;
+
+    }
+
+
+    return (
+        "An unexpected error occurred " +
+        "while loading listings."
+    );
+
+}
+
+
+/* =========================================================
+   TIMEOUT HELPER
+   ========================================================= */
+
+function withTimeout(
+    promise,
+    timeoutMs
+) {
+
+    return Promise.race([
+
+        promise,
+
+        new Promise(
+            function(_, reject) {
+
+                setTimeout(
+                    function() {
+
+                        reject(
+                            new Error(
+                                "Request timed out."
+                            )
+                        );
+
+                    },
+                    timeoutMs
+                );
+
+            }
+        )
+
+    ]);
+
+}
+
+
+/* =========================================================
+   LOAD ADS - ONE REQUEST
+   ========================================================= */
+
+async function fetchAdsOnce() {
+
+    if (!supabaseClient) {
+
+        throw new Error(
+            "Supabase is not initialized."
+        );
+
+    }
+
+
+    const result =
+        await withTimeout(
+
+            supabaseClient
                 .from("ads")
-
                 .select("*")
-
                 .order(
                     "created_at",
                     {
                         ascending: false
                     }
-                );
+                ),
+
+            15000
+
+        );
 
 
-        if (result.error) {
+    if (result.error) {
 
-            throw result.error;
+        throw result.error;
+
+    }
+
+
+    return result.data || [];
+
+}
+
+
+/* =========================================================
+   LOAD ADS - RETRY
+   ========================================================= */
+
+async function loadAds() {
+
+    const requestId =
+        ++state.requestId;
+
+
+    state.loading =
+        true;
+
+
+    renderSkeletons();
+
+
+    showLoading();
+
+
+    try {
+
+        if (!navigator.onLine) {
+
+            throw new Error(
+                "Your device is offline."
+            );
 
         }
 
 
-        allAds =
-            result.data || [];
+        if (!supabaseClient) {
+
+            const initialized =
+                initializeSupabase();
 
 
-        applyFilters();
+            if (!initialized) {
+
+                throw new Error(
+                    "The listings service could not be initialized."
+                );
+
+            }
+
+        }
+
+
+        let lastError =
+            null;
+
+
+        const attempts =
+            2;
+
+
+        for (
+            let attempt = 1;
+            attempt <= attempts;
+            attempt++
+        ) {
+
+            try {
+
+                const data =
+                    await fetchAdsOnce();
+
+
+                if (
+                    requestId !==
+                    state.requestId
+                ) {
+
+                    return;
+
+                }
+
+
+                state.ads =
+                    Array.isArray(data)
+                        ? data
+                        : [];
+
+
+                state.loading =
+                    false;
+
+
+                applyFilters();
+
+
+                return;
+
+            }
+
+            catch (error) {
+
+                lastError =
+                    error;
+
+
+                console.warn(
+                    `[HAVKAR] Ads request failed. Attempt ${attempt}/${attempts}`,
+                    error
+                );
+
+
+                if (
+                    attempt <
+                    attempts
+                ) {
+
+                    await new Promise(
+                        function(resolve) {
+
+                            setTimeout(
+                                resolve,
+                                900
+                            );
+
+                        }
+                    );
+
+                }
+
+            }
+
+        }
+
+
+        throw lastError ||
+            new Error(
+                "Unable to load ads."
+            );
 
     }
 
     catch (error) {
 
+        state.loading =
+            false;
+
+
         console.error(
-            "Loading ads error:",
+            "[HAVKAR] Final ads loading error:",
             error
         );
 
-        statusBox.textContent =
-            "Could not load ads: " +
-            error.message;
 
-        statusBox.className =
-            "status show error";
+        adsGrid.innerHTML =
+            "";
+
+
+        showError(
+            getReadableError(error)
+        );
 
     }
 
@@ -916,90 +2817,178 @@ async function loadAds() {
 
 
 /* =========================================================
-   FILTER
+   RETRY
    ========================================================= */
 
-function applyFilters() {
-
-    const search =
-        searchInput.value
-            .trim()
-            .toLowerCase();
-
-
-    const filtered =
-        allAds.filter(
-            function(ad) {
-
-                const categoryMatch =
-
-                    currentCategory === "All" ||
-
-                    ad.category ===
-                        currentCategory;
-
-
-                const searchableText =
-
-                    (
-                        (ad.title || "") +
-                        " " +
-                        (ad.description || "") +
-                        " " +
-                        (ad.location || "") +
-                        " " +
-                        (ad.category || "")
-                    )
-                    .toLowerCase();
-
-
-                const searchMatch =
-
-                    !search ||
-
-                    searchableText.includes(
-                        search
-                    );
-
-
-                return (
-                    categoryMatch &&
-                    searchMatch
-                );
-
-            }
-        );
-
-
-    renderAds(filtered);
-
-}
-
-
-/* =========================================================
-   SEARCH
-   ========================================================= */
-
-searchInput.addEventListener(
-    "input",
+retryButton.addEventListener(
+    "click",
     function() {
 
-        applyFilters();
+        loadAds();
 
     }
 );
 
 
 /* =========================================================
+   ONLINE / OFFLINE
+   ========================================================= */
+
+window.addEventListener(
+    "online",
+    function() {
+
+        if (
+            state.ads.length === 0
+        ) {
+
+            loadAds();
+
+        }
+
+    }
+);
+
+
+window.addEventListener(
+    "offline",
+    function() {
+
+        if (
+            state.loading
+        ) {
+
+            showError(
+                "Your internet connection was lost. " +
+                "Reconnect and try again."
+            );
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   INFO MESSAGE
+   ========================================================= */
+
+function showInfo(message) {
+
+    const existing =
+        document.getElementById(
+            "havkarInfoToast"
+        );
+
+
+    if (existing) {
+
+        existing.remove();
+
+    }
+
+
+    const toast =
+        document.createElement(
+            "div"
+        );
+
+
+    toast.id =
+        "havkarInfoToast";
+
+
+    toast.textContent =
+        message;
+
+
+    Object.assign(
+        toast.style,
+        {
+
+            position: "fixed",
+
+            left: "50%",
+
+            bottom:
+                "calc(90px + env(safe-area-inset-bottom))",
+
+            transform:
+                "translateX(-50%)",
+
+            zIndex: "1000",
+
+            maxWidth: "calc(100vw - 32px)",
+
+            padding:
+                "13px 18px",
+
+            borderRadius:
+                "12px",
+
+            background:
+                "#242624",
+
+            color:
+                "#fff",
+
+            fontSize:
+                "14px",
+
+            fontWeight:
+                "600",
+
+            textAlign:
+                "center",
+
+            boxShadow:
+                "0 8px 28px rgba(0,0,0,.22)"
+
+        }
+    );
+
+
+    document.body.appendChild(
+        toast
+    );
+
+
+    setTimeout(
+        function() {
+
+            toast.remove();
+
+        },
+        2800
+    );
+
+}
+
+
+/* =========================================================
+   INITIALIZATION
+   ========================================================= */
+
+function initializePage() {
+
+    createCategoryButtons();
+
+    setupSearch();
+
+    initializeSupabase();
+
+    loadAds();
+
+}
+
+
+/* =========================================================
    START
    ========================================================= */
 
-createCategoryButtons();
-
-loadAds();
+initializePage();
 
 </script>
 
 </body>
-
-</html>
+      </html>
