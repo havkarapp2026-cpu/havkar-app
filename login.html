@@ -89,6 +89,7 @@ h1 {
     border-radius: 13px;
     font-size: 17px;
     outline: none;
+    transition: border-color 0.2s ease;
 }
 
 .input:focus {
@@ -102,6 +103,11 @@ button {
     font-size: 18px;
     font-weight: bold;
     cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+button:active {
+    transform: scale(0.99);
 }
 
 .login-btn {
@@ -128,6 +134,7 @@ button:disabled {
     margin-top: 18px;
     font-size: 14px;
     font-weight: 600;
+    line-height: 1.5;
 }
 
 .message.error {
@@ -257,15 +264,20 @@ import {
 
 
 /* =========================================================
-   HAVKAR SUPABASE
+   HAVKAR SUPABASE CONFIGURATION
+   CORRECT PROJECT
 ========================================================= */
 
 const SUPABASE_URL =
-    "https://iompzwaxuirvatiibrtb.supabase.co";
+    "https://gispovnciifgikvgpzck.supabase.co";
 
 const SUPABASE_KEY =
-    "sb_publishable_oEKE1vl6EkWXdETgy9MjHw_DUTJLN4O";
+    "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq";
 
+
+/* =========================================================
+   SUPABASE CLIENT
+========================================================= */
 
 const supabase =
     createClient(
@@ -302,16 +314,12 @@ const message =
 
 
 /* =========================================================
-   MESSAGE
+   MESSAGE HELPER
 ========================================================= */
 
-function showMessage(
-    text,
-    type = ""
-) {
+function showMessage(text, type = "") {
 
-    message.textContent =
-        text;
+    message.textContent = text;
 
     message.className =
         type
@@ -346,10 +354,10 @@ async function login() {
 
     loginBtn.disabled = true;
 
-    signupBtn.disabled = true;
-
     loginBtn.textContent =
         "Logging in...";
+
+    signupBtn.disabled = true;
 
     showMessage("");
 
@@ -383,10 +391,10 @@ async function login() {
 
             loginBtn.disabled = false;
 
-            signupBtn.disabled = false;
-
             loginBtn.textContent =
                 "Login";
+
+            signupBtn.disabled = false;
 
             return;
         }
@@ -405,16 +413,16 @@ async function login() {
 
             loginBtn.disabled = false;
 
-            signupBtn.disabled = false;
-
             loginBtn.textContent =
                 "Login";
+
+            signupBtn.disabled = false;
 
             return;
         }
 
 
-        /* Verify session */
+        /* Verify the session */
 
         const {
             data: sessionData,
@@ -431,7 +439,7 @@ async function login() {
         ) {
 
             console.error(
-                "HAVKAR Session Error:",
+                "HAVKAR Session Verification Error:",
                 sessionError
             );
 
@@ -442,10 +450,10 @@ async function login() {
 
             loginBtn.disabled = false;
 
-            signupBtn.disabled = false;
-
             loginBtn.textContent =
                 "Login";
+
+            signupBtn.disabled = false;
 
             return;
         }
@@ -457,13 +465,8 @@ async function login() {
         );
 
 
-        /*
-         * Allow Supabase to persist the session
-         * before navigating to the application.
-         */
-
         setTimeout(
-            function() {
+            function () {
 
                 window.location.replace(
                     "index.html"
@@ -492,10 +495,10 @@ async function login() {
 
         loginBtn.disabled = false;
 
-        signupBtn.disabled = false;
-
         loginBtn.textContent =
             "Login";
+
+        signupBtn.disabled = false;
     }
 }
 
@@ -511,12 +514,12 @@ loginBtn.addEventListener(
 
 
 /* =========================================================
-   ENTER KEY
+   ENTER KEY SUPPORT
 ========================================================= */
 
 emailInput.addEventListener(
     "keydown",
-    function(event) {
+    function (event) {
 
         if (event.key === "Enter") {
 
@@ -530,7 +533,7 @@ emailInput.addEventListener(
 
 passwordInput.addEventListener(
     "keydown",
-    function(event) {
+    function (event) {
 
         if (event.key === "Enter") {
 
@@ -548,13 +551,75 @@ passwordInput.addEventListener(
 
 signupBtn.addEventListener(
     "click",
-    function() {
+    function () {
 
         window.location.href =
             "signup.html";
 
     }
 );
+
+
+/* =========================================================
+   INITIAL SESSION CHECK
+========================================================= */
+
+(async function checkExistingSession() {
+
+    try {
+
+        const {
+            data,
+            error
+        } =
+        await supabase.auth.getSession();
+
+
+        if (error) {
+
+            console.warn(
+                "HAVKAR Existing Session Check:",
+                error
+            );
+
+            return;
+        }
+
+
+        if (
+            data &&
+            data.session &&
+            data.session.user
+        ) {
+
+            showMessage(
+                "You are already logged in.",
+                "success"
+            );
+
+            setTimeout(
+                function () {
+
+                    window.location.replace(
+                        "index.html"
+                    );
+
+                },
+                400
+            );
+
+        }
+
+    } catch (error) {
+
+        console.warn(
+            "HAVKAR Session Check Exception:",
+            error
+        );
+
+    }
+
+})();
 
 </script>
 
