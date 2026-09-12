@@ -2,144 +2,96 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b5e20">
-
-<meta name="description"
-      content="HAVKAR Buy & Sell — a fast local marketplace for products, services and listings.">
-
+<meta name="description" content="HAVKAR Buy & Sell marketplace">
 <title>HAVKAR — Buy & Sell</title>
 
-<!-- =========================================================
-     EXTERNAL LIBRARIES
-     ========================================================= -->
-
-<script
-    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
-</script>
-
-<link
-    rel="preconnect"
-    href="https://cdnjs.cloudflare.com">
-
-<link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
 <style>
+:root{
+    --green-950:#0b3d16;
+    --green-900:#12551b;
+    --green-800:#1b5e20;
+    --green-700:#2e7d32;
+    --green-600:#43a047;
+    --green-500:#4caf50;
+    --green-100:#e8f5e9;
 
-/* =========================================================
-   HAVKAR BUY & SELL
-   Professional single-file marketplace page
-   ========================================================= */
+    --bg:#f4f7f4;
+    --surface:#fff;
 
-:root {
-    --green-950: #0b3d16;
-    --green-900: #12551b;
-    --green-800: #1b5e20;
-    --green-700: #2e7d32;
-    --green-600: #43a047;
-    --green-500: #4caf50;
-    --green-100: #e8f5e9;
-    --green-50: #f3faf3;
+    --text:#202522;
+    --text-2:#4d554f;
+    --muted:#7b827d;
 
-    --red-700: #b71c1c;
-    --red-100: #ffebee;
+    --border:#e0e5e1;
 
-    --orange-600: #ef6c00;
+    --red:#b71c1c;
+    --red-bg:#ffebee;
 
-    --bg: #f4f7f4;
-    --surface: #ffffff;
-    --surface-2: #fafcfa;
+    --shadow:0 4px 18px rgba(0,0,0,.07);
+    --shadow-lg:0 10px 30px rgba(0,0,0,.11);
 
-    --text: #202522;
-    --text-2: #4d554f;
-    --muted: #7b827d;
-
-    --border: #e0e5e1;
-    --border-strong: #d1d8d2;
-
-    --shadow-1:
-        0 2px 10px rgba(0,0,0,.06);
-
-    --shadow-2:
-        0 8px 30px rgba(0,0,0,.10);
-
-    --shadow-green:
-        0 8px 24px rgba(46,125,50,.28);
-
-    --radius: 18px;
-
-    --header-height: 68px;
-    --bottom-height: 76px;
+    --header:68px;
+    --bottom:76px;
 }
 
-
-/* =========================================================
-   RESET
-   ========================================================= */
-
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
 }
 
-html {
-    scroll-behavior: smooth;
+html{
+    scroll-behavior:smooth;
 }
 
-body {
-    min-height: 100vh;
-
-    background:
-        linear-gradient(
-            180deg,
-            #f7faf7 0%,
-            var(--bg) 100%
-        );
-
-    color: var(--text);
+body{
+    min-height:100vh;
+    background:linear-gradient(
+        180deg,
+        #f7faf7 0%,
+        var(--bg) 100%
+    );
+    color:var(--text);
 
     font-family:
         -apple-system,
         BlinkMacSystemFont,
         "Segoe UI",
         Roboto,
-        Helvetica,
         Arial,
         sans-serif;
 
     padding-bottom:
         calc(
-            var(--bottom-height)
+            var(--bottom)
             + env(safe-area-inset-bottom)
             + 20px
         );
 
-    -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing:antialiased;
 }
 
 button,
-input {
-    font: inherit;
+input{
+    font:inherit;
 }
 
-button {
-    -webkit-tap-highlight-color: transparent;
+button{
+    border:0;
+    -webkit-tap-highlight-color:transparent;
 }
 
 button:focus-visible,
-input:focus-visible {
-    outline:
-        3px solid rgba(76,175,80,.28);
-
-    outline-offset: 2px;
+input:focus-visible{
+    outline:3px solid rgba(76,175,80,.25);
+    outline-offset:2px;
 }
 
 
@@ -147,21 +99,20 @@ input:focus-visible {
    HEADER
    ========================================================= */
 
-.header {
-    position: sticky;
-    top: 0;
-    z-index: 200;
+.header{
+    position:sticky;
+    top:0;
+    z-index:200;
 
-    min-height: var(--header-height);
+    min-height:var(--header);
 
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
 
-    padding:
-        10px 18px;
+    padding:10px 18px;
 
-    color: #fff;
+    color:#fff;
 
     background:
         linear-gradient(
@@ -174,273 +125,199 @@ input:focus-visible {
         0 3px 16px rgba(0,0,0,.16);
 }
 
-.header-left {
-    min-width: 0;
-
-    display: flex;
-    align-items: center;
-
-    gap: 13px;
+.header-left,
+.header-right{
+    display:flex;
+    align-items:center;
+    gap:10px;
 }
 
-.header-title {
-    overflow: hidden;
-
-    white-space: nowrap;
-    text-overflow: ellipsis;
-
-    font-size: 1.22rem;
-    font-weight: 800;
+.header-left{
+    min-width:0;
+    gap:13px;
 }
 
-.header-right {
-    display: flex;
-    align-items: center;
+.header-title{
+    overflow:hidden;
 
-    gap: 9px;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+
+    font-size:1.2rem;
+    font-weight:800;
 }
 
-.circle-button {
-    width: 43px;
-    height: 43px;
+.circle-button{
+    width:43px;
+    height:43px;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display:flex;
+    align-items:center;
+    justify-content:center;
 
-    border: 0;
-    border-radius: 50%;
+    border-radius:50%;
 
-    color: #fff;
+    color:#fff;
+    background:rgba(255,255,255,.15);
 
-    background:
-        rgba(255,255,255,.15);
+    cursor:pointer;
 
-    cursor: pointer;
-
-    transition:
-        transform .15s ease,
-        background .2s ease;
+    transition:.18s ease;
 }
 
-.circle-button:hover {
-    background:
-        rgba(255,255,255,.24);
+.circle-button:hover{
+    background:rgba(255,255,255,.24);
 }
 
-.circle-button:active {
-    transform: scale(.93);
-}
-
-.circle-button i {
-    font-size: 1.08rem;
+.circle-button:active{
+    transform:scale(.93);
 }
 
 
 /* =========================================================
-   SEARCH AREA
+   SEARCH
    ========================================================= */
 
-.search-panel {
-    position: sticky;
+.search-panel{
+    position:sticky;
+    top:var(--header);
+    z-index:150;
 
-    top: var(--header-height);
+    background:rgba(255,255,255,.97);
 
-    z-index: 150;
-
-    background:
-        rgba(255,255,255,.97);
-
-    backdrop-filter:
-        blur(16px);
-
-    -webkit-backdrop-filter:
-        blur(16px);
+    backdrop-filter:blur(16px);
 
     border-bottom:
         1px solid rgba(0,0,0,.05);
 }
 
-.search-container {
-    padding:
-        14px 20px 10px;
+.search-container{
+    padding:14px 20px 10px;
 }
 
-.search-box {
-    position: relative;
+.search-box{
+    position:relative;
 }
 
-.search-icon {
-    position: absolute;
+.search-icon{
+    position:absolute;
 
-    left: 17px;
-    top: 50%;
+    left:17px;
+    top:50%;
 
-    transform:
-        translateY(-50%);
+    transform:translateY(-50%);
 
-    color:
-        #8b918d;
+    color:#8b918d;
 
-    pointer-events: none;
+    pointer-events:none;
 }
 
-.search-input {
-    width: 100%;
-    height: 51px;
+.search-input{
+    width:100%;
+    height:51px;
 
-    border:
-        2px solid var(--border);
-
-    border-radius: 28px;
+    border:2px solid var(--border);
+    border-radius:28px;
 
     padding:
         0 48px;
 
-    background:
-        var(--surface);
+    background:#fff;
+    color:var(--text);
 
-    color:
-        var(--text);
+    outline:none;
 
-    font-size:
-        1rem;
-
-    outline: none;
-
-    transition:
-        border-color .2s ease,
-        box-shadow .2s ease;
+    transition:.2s ease;
 }
 
-.search-input::placeholder {
-    color:
-        #8a908b;
-}
-
-.search-input:focus {
-    border-color:
-        var(--green-600);
+.search-input:focus{
+    border-color:var(--green-600);
 
     box-shadow:
-        0 0 0 4px
-        rgba(67,160,71,.10);
+        0 0 0 4px rgba(67,160,71,.1);
 }
 
-.clear-search {
-    position: absolute;
+.clear-search{
+    position:absolute;
 
-    right: 9px;
-    top: 50%;
+    right:9px;
+    top:50%;
 
-    width: 35px;
-    height: 35px;
+    width:35px;
+    height:35px;
 
-    transform:
-        translateY(-50%);
+    transform:translateY(-50%);
 
-    display: none;
-    align-items: center;
-    justify-content: center;
+    display:none;
+    align-items:center;
+    justify-content:center;
 
-    border: 0;
-    border-radius: 50%;
+    border-radius:50%;
 
-    background:
-        #eef1ee;
+    background:#eef1ee;
+    color:#687069;
 
-    color:
-        #687069;
-
-    cursor: pointer;
+    cursor:pointer;
 }
 
-.clear-search.visible {
-    display: flex;
+.clear-search.visible{
+    display:flex;
 }
 
 
 /* =========================================================
-   CATEGORY FILTERS
+   FILTERS
    ========================================================= */
 
-.filters-wrapper {
-    overflow: hidden;
+.filters-wrapper{
+    overflow:hidden;
 
-    background:
-        rgba(255,255,255,.97);
+    background:rgba(255,255,255,.97);
 }
 
-.filters {
-    display: flex;
+.filters{
+    display:flex;
 
-    gap: 9px;
+    gap:9px;
 
-    overflow-x: auto;
+    overflow-x:auto;
 
     padding:
         2px 20px 13px;
 
-    scrollbar-width: none;
+    scrollbar-width:none;
 
-    -webkit-overflow-scrolling: touch;
+    -webkit-overflow-scrolling:touch;
 }
 
-.filters::-webkit-scrollbar {
-    display: none;
+.filters::-webkit-scrollbar{
+    display:none;
 }
 
-.filter-button {
-    flex:
-        0 0 auto;
+.filter-button{
+    flex:0 0 auto;
 
-    min-height:
-        40px;
+    min-height:40px;
 
     padding:
         8px 17px;
 
-    border:
-        2px solid var(--border);
+    border:2px solid var(--border);
+    border-radius:23px;
 
-    border-radius:
-        23px;
+    background:#fff;
+    color:var(--text);
 
-    background:
-        #fff;
+    font-size:.88rem;
+    font-weight:700;
 
-    color:
-        var(--text);
+    white-space:nowrap;
 
-    font-size:
-        .88rem;
-
-    font-weight:
-        700;
-
-    white-space:
-        nowrap;
-
-    cursor:
-        pointer;
-
-    transition:
-        all .18s ease;
+    cursor:pointer;
 }
 
-.filter-button:hover {
-    border-color:
-        var(--green-500);
-}
-
-.filter-button:active {
-    transform:
-        scale(.97);
-}
-
-.filter-button.active {
-    border-color:
-        var(--green-600);
+.filter-button.active{
+    border-color:var(--green-600);
 
     background:
         linear-gradient(
@@ -449,12 +326,10 @@ input:focus-visible {
             var(--green-500)
         );
 
-    color:
-        #fff;
+    color:#fff;
 
     box-shadow:
-        0 4px 12px
-        rgba(67,160,71,.20);
+        0 4px 12px rgba(67,160,71,.2);
 }
 
 
@@ -462,124 +337,92 @@ input:focus-visible {
    MAIN
    ========================================================= */
 
-.main {
-    width: 100%;
+.main{
+    width:100%;
+    max-width:1440px;
 
-    max-width:
-        1440px;
-
-    margin:
-        0 auto;
+    margin:auto;
 
     padding:
         18px 20px 40px;
 }
 
-.results-bar {
-    display: flex;
+.results-bar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
 
-    align-items: center;
-    justify-content: space-between;
+    gap:15px;
 
-    gap: 15px;
-
-    margin-bottom:
-        16px;
+    margin-bottom:16px;
 }
 
-.results-title {
-    font-size:
-        1.05rem;
-
-    font-weight:
-        800;
+.results-title{
+    font-size:1.05rem;
+    font-weight:800;
 }
 
-.results-count {
-    color:
-        var(--muted);
+.results-count{
+    color:var(--muted);
 
-    font-size:
-        .83rem;
+    font-size:.83rem;
 
-    white-space:
-        nowrap;
+    white-space:nowrap;
 }
 
-
-/* =========================================================
-   GRID
-   ========================================================= */
-
-.ads-grid {
-    display: grid;
+.ads-grid{
+    display:grid;
 
     grid-template-columns:
-        repeat(2, minmax(0, 1fr));
+        repeat(2,minmax(0,1fr));
 
-    gap:
-        13px;
+    gap:13px;
 }
 
 
 /* =========================================================
-   CARD
+   AD CARD
    ========================================================= */
 
-.ad-card {
-    position: relative;
+.ad-card{
+    position:relative;
 
-    min-width: 0;
+    min-width:0;
 
-    overflow: hidden;
+    overflow:hidden;
 
-    background:
-        var(--surface);
+    background:#fff;
 
     border:
         1px solid rgba(0,0,0,.035);
 
-    border-radius:
-        var(--radius);
+    border-radius:18px;
 
-    box-shadow:
-        var(--shadow-1);
+    box-shadow:var(--shadow);
 
-    cursor:
-        pointer;
+    cursor:pointer;
 
-    transition:
-        transform .18s ease,
-        box-shadow .18s ease;
+    transition:.18s ease;
 }
 
-.ad-card:hover {
-    transform:
-        translateY(-3px);
+.ad-card:hover{
+    transform:translateY(-3px);
 
-    box-shadow:
-        var(--shadow-2);
+    box-shadow:var(--shadow-lg);
 }
 
-.ad-card:active {
-    transform:
-        scale(.985);
+.ad-card:active{
+    transform:scale(.985);
 }
 
+.ad-image{
+    position:relative;
 
-/* =========================================================
-   IMAGE
-   ========================================================= */
+    width:100%;
 
-.ad-image {
-    position: relative;
+    aspect-ratio:1/.88;
 
-    width: 100%;
-
-    aspect-ratio:
-        1 / .88;
-
-    overflow: hidden;
+    overflow:hidden;
 
     background:
         linear-gradient(
@@ -589,197 +432,157 @@ input:focus-visible {
         );
 }
 
-.ad-image img {
-    width: 100%;
-    height: 100%;
+.ad-image img{
+    width:100%;
+    height:100%;
 
-    display: block;
+    display:block;
 
-    object-fit: cover;
+    object-fit:cover;
 
-    opacity: 0;
+    opacity:0;
 
     transition:
-        opacity .25s ease,
-        transform .35s ease;
+        opacity .25s,
+        transform .35s;
 }
 
-.ad-card:hover
-.ad-image img {
-    transform:
-        scale(1.025);
+.ad-image img.loaded{
+    opacity:1;
 }
 
-.ad-image img.loaded {
-    opacity: 1;
+.ad-card:hover .ad-image img{
+    transform:scale(1.025);
 }
 
-.image-placeholder {
-    position: absolute;
+.image-placeholder{
+    position:absolute;
 
-    inset: 0;
+    inset:0;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display:flex;
+    align-items:center;
+    justify-content:center;
 
-    color:
-        #a1aaa3;
+    color:#a1aaa3;
 
-    font-size:
-        2.35rem;
+    font-size:2.3rem;
 }
 
-.ad-image.has-image
-.image-placeholder {
-    opacity: 0;
+.image-loading{
+    position:absolute;
+
+    inset:0;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    color:#8d968f;
+
+    font-size:1.2rem;
 }
 
-.condition-badge {
-    position: absolute;
+.ad-image.has-image .image-placeholder{
+    opacity:0;
+}
 
-    top: 9px;
-    left: 9px;
+.condition-badge{
+    position:absolute;
 
-    max-width:
-        calc(100% - 18px);
+    top:9px;
+    left:9px;
+
+    max-width:calc(100% - 18px);
 
     padding:
         5px 9px;
 
-    border-radius:
-        9px;
+    border-radius:9px;
 
     background:
         rgba(0,0,0,.66);
 
-    color:
-        #fff;
+    color:#fff;
 
-    font-size:
-        .66rem;
+    font-size:.66rem;
+    font-weight:750;
 
-    font-weight:
-        750;
+    white-space:nowrap;
 
-    white-space:
-        nowrap;
+    overflow:hidden;
 
-    overflow:
-        hidden;
-
-    text-overflow:
-        ellipsis;
+    text-overflow:ellipsis;
 }
 
-
-/* =========================================================
-   CARD INFORMATION
-   ========================================================= */
-
-.ad-info {
+.ad-info{
     padding:
         11px 12px 13px;
 }
 
-.ad-title {
-    min-height:
-        2.55em;
+.ad-title{
+    min-height:2.55em;
 
-    margin-bottom:
-        6px;
+    margin-bottom:6px;
 
-    display:
-        -webkit-box;
+    display:-webkit-box;
 
-    overflow:
-        hidden;
+    overflow:hidden;
 
-    color:
-        var(--text);
+    font-size:.92rem;
+    font-weight:750;
 
-    font-size:
-        .92rem;
+    line-height:1.28;
 
-    font-weight:
-        750;
-
-    line-height:
-        1.28;
-
-    -webkit-line-clamp:
-        2;
-
-    -webkit-box-orient:
-        vertical;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
 }
 
-.ad-price {
-    margin-bottom:
-        7px;
+.ad-price{
+    margin-bottom:7px;
 
-    color:
-        var(--green-800);
+    color:var(--green-800);
 
-    font-size:
-        1.06rem;
+    font-size:1.06rem;
 
-    font-weight:
-        850;
+    font-weight:850;
 }
 
-.ad-location {
-    display:
-        flex;
+.ad-location{
+    display:flex;
+    align-items:center;
 
-    align-items:
-        center;
+    gap:5px;
 
-    gap:
-        5px;
+    overflow:hidden;
 
-    overflow:
-        hidden;
+    color:var(--text-2);
 
-    color:
-        var(--text-2);
+    font-size:.75rem;
 
-    font-size:
-        .75rem;
+    white-space:nowrap;
 
-    white-space:
-        nowrap;
-
-    text-overflow:
-        ellipsis;
+    text-overflow:ellipsis;
 }
 
-.ad-location i {
-    flex:
-        0 0 auto;
+.ad-location i{
+    flex:0 0 auto;
 
-    color:
-        var(--green-600);
+    color:var(--green-600);
 }
 
-.ad-meta {
-    margin-top:
-        6px;
+.ad-meta{
+    margin-top:6px;
 
-    overflow:
-        hidden;
+    overflow:hidden;
 
-    color:
-        #8b938d;
+    color:#8b938d;
 
-    font-size:
-        .70rem;
+    font-size:.70rem;
 
-    white-space:
-        nowrap;
+    white-space:nowrap;
 
-    text-overflow:
-        ellipsis;
+    text-overflow:ellipsis;
 }
 
 
@@ -787,121 +590,79 @@ input:focus-visible {
    STATUS
    ========================================================= */
 
-.status {
-    display:
-        none;
+.status{
+    display:none;
 
-    width:
-        100%;
+    width:100%;
 
-    padding:
-        65px 20px;
+    padding:65px 20px;
 
-    text-align:
-        center;
+    text-align:center;
 }
 
-.status.visible {
-    display:
-        block;
+.status.visible{
+    display:block;
 }
 
-.status-icon {
-    width:
-        66px;
-
-    height:
-        66px;
+.status-icon{
+    width:66px;
+    height:66px;
 
     margin:
         0 auto 16px;
 
-    display:
-        flex;
+    display:flex;
+    align-items:center;
+    justify-content:center;
 
-    align-items:
-        center;
+    border-radius:50%;
 
-    justify-content:
-        center;
+    background:var(--green-100);
 
-    border-radius:
-        50%;
+    color:var(--green-700);
 
-    background:
-        var(--green-100);
-
-    color:
-        var(--green-700);
-
-    font-size:
-        1.55rem;
+    font-size:1.55rem;
 }
 
-.status.error .status-icon {
-    background:
-        var(--red-100);
+.status.error .status-icon{
+    background:var(--red-bg);
 
-    color:
-        var(--red-700);
+    color:var(--red);
 }
 
-.status-title {
-    margin-bottom:
-        8px;
+.status-title{
+    margin-bottom:8px;
 
-    color:
-        var(--text);
+    font-size:1.12rem;
 
-    font-size:
-        1.12rem;
-
-    font-weight:
-        800;
+    font-weight:800;
 }
 
-.status.error .status-title {
-    color:
-        var(--red-700);
+.status.error .status-title{
+    color:var(--red);
 }
 
-.status-message {
-    max-width:
-        520px;
+.status-message{
+    max-width:560px;
 
-    margin:
-        0 auto;
+    margin:0 auto;
 
-    color:
-        var(--muted);
+    color:var(--muted);
 
-    font-size:
-        .9rem;
+    font-size:.9rem;
 
-    line-height:
-        1.6;
+    line-height:1.6;
 
-    word-break:
-        break-word;
+    word-break:break-word;
 }
 
-
-/* =========================================================
-   RETRY
-   ========================================================= */
-
-.retry-button {
-    margin-top:
-        19px;
+.retry-button{
+    margin-top:19px;
 
     padding:
         12px 22px;
 
-    border:
-        0;
-
-    border-radius:
-        13px;
+    border-radius:13px;
 
     background:
         linear-gradient(
@@ -910,25 +671,18 @@ input:focus-visible {
             var(--green-500)
         );
 
-    color:
-        #fff;
+    color:#fff;
 
-    font-weight:
-        750;
+    font-weight:750;
 
-    cursor:
-        pointer;
+    cursor:pointer;
 
     box-shadow:
-        var(--shadow-green);
-
-    transition:
-        transform .15s ease;
+        0 8px 24px rgba(46,125,50,.28);
 }
 
-.retry-button:active {
-    transform:
-        scale(.96);
+.retry-button:active{
+    transform:scale(.96);
 }
 
 
@@ -936,61 +690,48 @@ input:focus-visible {
    SKELETON
    ========================================================= */
 
-.skeleton-grid {
-    display:
-        grid;
+.skeleton-grid{
+    display:grid;
 
     grid-template-columns:
-        repeat(2, minmax(0, 1fr));
+        repeat(2,minmax(0,1fr));
 
-    gap:
-        13px;
+    gap:13px;
 }
 
-.skeleton-card {
-    overflow:
-        hidden;
+.skeleton-card{
+    overflow:hidden;
 
-    border-radius:
-        var(--radius);
+    border-radius:18px;
 
-    background:
-        #fff;
+    background:#fff;
 
-    box-shadow:
-        var(--shadow-1);
+    box-shadow:var(--shadow);
 }
 
-.skeleton-image {
-    width:
-        100%;
+.skeleton-image{
+    width:100%;
 
-    aspect-ratio:
-        1 / .88;
+    aspect-ratio:1/.88;
 }
 
-.skeleton-line {
-    height:
-        12px;
+.skeleton-line{
+    height:12px;
 
-    margin:
-        12px;
+    margin:12px;
 
-    border-radius:
-        8px;
+    border-radius:8px;
 }
 
-.skeleton-line.small {
-    width:
-        42%;
+.skeleton-line.small{
+    width:42%;
 }
 
-.skeleton-line.medium {
-    width:
-        72%;
+.skeleton-line.medium{
+    width:72%;
 }
 
-.skeleton {
+.skeleton{
     background:
         linear-gradient(
             90deg,
@@ -999,25 +740,20 @@ input:focus-visible {
             #ecefec 63%
         );
 
-    background-size:
-        400% 100%;
+    background-size:400% 100%;
 
     animation:
         skeletonMove 1.35s ease infinite;
 }
 
-@keyframes skeletonMove {
-
-    0% {
-        background-position:
-            100% 50%;
+@keyframes skeletonMove{
+    0%{
+        background-position:100% 50%;
     }
 
-    100% {
-        background-position:
-            0 50%;
+    100%{
+        background-position:0 50%;
     }
-
 }
 
 
@@ -1025,43 +761,28 @@ input:focus-visible {
    FAB
    ========================================================= */
 
-.fab {
-    position:
-        fixed;
+.fab{
+    position:fixed;
 
-    right:
-        20px;
+    right:20px;
 
     bottom:
         calc(
-            var(--bottom-height)
+            var(--bottom)
             + 18px
             + env(safe-area-inset-bottom)
         );
 
-    z-index:
-        180;
+    z-index:180;
 
-    width:
-        62px;
+    width:62px;
+    height:62px;
 
-    height:
-        62px;
+    border-radius:50%;
 
-    border:
-        0;
-
-    border-radius:
-        50%;
-
-    display:
-        flex;
-
-    align-items:
-        center;
-
-    justify-content:
-        center;
+    display:flex;
+    align-items:center;
+    justify-content:center;
 
     background:
         linear-gradient(
@@ -1070,145 +791,89 @@ input:focus-visible {
             var(--green-500)
         );
 
-    color:
-        #fff;
+    color:#fff;
 
-    font-size:
-        1.55rem;
+    font-size:1.55rem;
 
-    cursor:
-        pointer;
+    cursor:pointer;
 
     box-shadow:
-        0 9px 28px
-        rgba(27,94,32,.36);
-
-    transition:
-        transform .18s ease,
-        box-shadow .18s ease;
+        0 9px 28px rgba(27,94,32,.36);
 }
 
-.fab:hover {
-    transform:
-        translateY(-3px);
-
-    box-shadow:
-        0 12px 32px
-        rgba(27,94,32,.43);
-}
-
-.fab:active {
-    transform:
-        scale(.93);
+.fab:active{
+    transform:scale(.93);
 }
 
 
 /* =========================================================
-   BOTTOM NAVIGATION
+   BOTTOM NAV
    ========================================================= */
 
-.bottom-nav {
-    position:
-        fixed;
+.bottom-nav{
+    position:fixed;
 
-    left:
-        0;
+    left:0;
+    right:0;
+    bottom:0;
 
-    right:
-        0;
-
-    bottom:
-        0;
-
-    z-index:
-        200;
+    z-index:200;
 
     height:
         calc(
-            var(--bottom-height)
+            var(--bottom)
             + env(safe-area-inset-bottom)
         );
 
     padding-bottom:
         env(safe-area-inset-bottom);
 
-    display:
-        flex;
+    display:flex;
 
-    align-items:
-        flex-start;
-
-    justify-content:
-        space-around;
+    align-items:flex-start;
+    justify-content:space-around;
 
     background:
         rgba(255,255,255,.98);
 
-    backdrop-filter:
-        blur(16px);
-
-    -webkit-backdrop-filter:
-        blur(16px);
+    backdrop-filter:blur(16px);
 
     box-shadow:
-        0 -3px 16px
-        rgba(0,0,0,.10);
+        0 -3px 16px rgba(0,0,0,.1);
 }
 
-.nav-item {
-    flex:
-        1;
+.nav-item{
+    flex:1;
 
-    height:
-        var(--bottom-height);
+    height:var(--bottom);
 
-    display:
-        flex;
+    display:flex;
 
-    flex-direction:
-        column;
+    flex-direction:column;
 
-    align-items:
-        center;
+    align-items:center;
 
-    justify-content:
-        center;
+    justify-content:center;
 
-    gap:
-        5px;
+    gap:5px;
 
-    color:
-        #929893;
+    color:#929893;
 
-    font-size:
-        .70rem;
+    font-size:.70rem;
 
-    font-weight:
-        650;
+    font-weight:650;
 
-    cursor:
-        pointer;
+    cursor:pointer;
 
-    user-select:
-        none;
-
-    transition:
-        color .18s ease;
+    user-select:none;
 }
 
-.nav-item i {
-    font-size:
-        1.27rem;
+.nav-item i{
+    font-size:1.27rem;
 }
 
-.nav-item.active {
-    color:
-        var(--green-600);
-}
-
-.nav-item:active {
-    opacity:
-        .70;
+.nav-item.active{
+    color:var(--green-600);
 }
 
 
@@ -1216,25 +881,19 @@ input:focus-visible {
    TOAST
    ========================================================= */
 
-.toast {
-    position:
-        fixed;
+.toast{
+    position:fixed;
 
-    left:
-        50%;
+    left:50%;
 
     bottom:
         calc(
-            var(--bottom-height)
+            var(--bottom)
             + 18px
             + env(safe-area-inset-bottom)
         );
 
-    z-index:
-        1000;
-
-    width:
-        max-content;
+    z-index:1000;
 
     max-width:
         calc(100vw - 32px);
@@ -1242,48 +901,36 @@ input:focus-visible {
     padding:
         13px 18px;
 
-    border-radius:
-        13px;
+    border-radius:13px;
 
     transform:
-        translate(-50%, 20px);
+        translate(-50%,20px);
 
-    opacity:
-        0;
+    opacity:0;
 
-    pointer-events:
-        none;
+    pointer-events:none;
 
-    color:
-        #fff;
+    color:#fff;
 
-    background:
-        #242824;
+    background:#242824;
 
-    font-size:
-        .86rem;
+    font-size:.86rem;
 
-    font-weight:
-        650;
+    font-weight:650;
 
-    text-align:
-        center;
+    text-align:center;
 
     box-shadow:
-        0 8px 30px
-        rgba(0,0,0,.22);
+        0 8px 30px rgba(0,0,0,.22);
 
-    transition:
-        opacity .2s ease,
-        transform .2s ease;
+    transition:.2s ease;
 }
 
-.toast.show {
-    opacity:
-        1;
+.toast.show{
+    opacity:1;
 
     transform:
-        translate(-50%, 0);
+        translate(-50%,0);
 }
 
 
@@ -1291,149 +938,112 @@ input:focus-visible {
    RESPONSIVE
    ========================================================= */
 
-@media (min-width: 650px) {
+@media(min-width:650px){
 
     .ads-grid,
-    .skeleton-grid {
+    .skeleton-grid{
         grid-template-columns:
-            repeat(3, minmax(0, 1fr));
+            repeat(3,minmax(0,1fr));
 
-        gap:
-            18px;
+        gap:18px;
     }
-
 }
 
-@media (min-width: 950px) {
+@media(min-width:950px){
 
     .ads-grid,
-    .skeleton-grid {
+    .skeleton-grid{
         grid-template-columns:
-            repeat(4, minmax(0, 1fr));
+            repeat(4,minmax(0,1fr));
 
-        gap:
-            20px;
+        gap:20px;
     }
 
-    .main {
-        padding-left:
-            28px;
-
-        padding-right:
-            28px;
+    .main{
+        padding-left:28px;
+        padding-right:28px;
     }
-
 }
 
-@media (max-width: 500px) {
+@media(max-width:500px){
 
-    .header {
-        padding:
-            10px 13px;
+    .header{
+        padding:10px 13px;
     }
 
-    .header-title {
-        font-size:
-            1.13rem;
+    .header-title{
+        font-size:1.13rem;
     }
 
-    .circle-button {
-        width:
-            41px;
-
-        height:
-            41px;
+    .circle-button{
+        width:41px;
+        height:41px;
     }
 
-    .search-container {
-        padding:
-            12px 12px 9px;
+    .search-container{
+        padding:12px 12px 9px;
     }
 
-    .filters {
-        padding-left:
-            12px;
-
-        padding-right:
-            12px;
-
-        padding-bottom:
-            11px;
+    .filters{
+        padding-left:12px;
+        padding-right:12px;
+        padding-bottom:11px;
     }
 
-    .main {
+    .main{
         padding:
             15px 12px 32px;
     }
 
     .ads-grid,
-    .skeleton-grid {
-        gap:
-            10px;
+    .skeleton-grid{
+        gap:10px;
     }
 
-    .ad-info {
-        padding:
-            10px;
+    .ad-info{
+        padding:10px;
     }
 
-    .ad-title {
-        font-size:
-            .87rem;
+    .ad-title{
+        font-size:.87rem;
     }
 
-    .ad-price {
-        font-size:
-            .98rem;
+    .ad-price{
+        font-size:.98rem;
     }
 
-    .ad-location {
-        font-size:
-            .71rem;
+    .ad-location{
+        font-size:.71rem;
     }
 
-    .fab {
-        right:
-            16px;
+    .fab{
+        right:16px;
     }
-
 }
 
-
-/* =========================================================
-   REDUCED MOTION
-   ========================================================= */
-
-@media (prefers-reduced-motion: reduce) {
+@media(prefers-reduced-motion:reduce){
 
     *,
     *::before,
-    *::after {
-        scroll-behavior:
-            auto !important;
+    *::after{
+        scroll-behavior:auto!important;
 
-        animation-duration:
-            .01ms !important;
+        animation-duration:.01ms!important;
 
-        animation-iteration-count:
-            1 !important;
+        animation-iteration-count:1!important;
 
-        transition-duration:
-            .01ms !important;
+        transition-duration:.01ms!important;
     }
-
 }
-
 </style>
 </head>
-
 
 <body>
 
 
-<!-- =========================================================
+<!-- =======================================================
      HEADER
-     ========================================================= -->
+     ======================================================= -->
 
 <header class="header">
 
@@ -1484,9 +1094,9 @@ input:focus-visible {
 </header>
 
 
-<!-- =========================================================
-     SEARCH + FILTERS
-     ========================================================= -->
+<!-- =======================================================
+     SEARCH
+     ======================================================= -->
 
 <section class="search-panel">
 
@@ -1504,6 +1114,7 @@ input:focus-visible {
                 enterkeyhint="search"
                 placeholder="Search products, services..."
                 aria-label="Search products and services">
+
 
             <button
                 id="clearSearch"
@@ -1533,9 +1144,9 @@ input:focus-visible {
 </section>
 
 
-<!-- =========================================================
+<!-- =======================================================
      MAIN
-     ========================================================= -->
+     ======================================================= -->
 
 <main class="main">
 
@@ -1561,20 +1172,15 @@ input:focus-visible {
     </div>
 
 
-    <!-- =====================================================
-         SKELETON
-         ===================================================== -->
+    <!-- Skeleton -->
 
     <div
         id="skeletonGrid"
         class="skeleton-grid">
-
     </div>
 
 
-    <!-- =====================================================
-         ERROR
-         ===================================================== -->
+    <!-- Error -->
 
     <section
         id="errorStatus"
@@ -1586,9 +1192,13 @@ input:focus-visible {
 
         </div>
 
+
         <div class="status-title">
+
             Could not load listings
+
         </div>
+
 
         <div
             id="errorMessage"
@@ -1598,22 +1208,22 @@ input:focus-visible {
 
         </div>
 
+
         <button
             id="retryButton"
             class="retry-button"
             type="button">
 
             <i class="fas fa-rotate-right"></i>
-            &nbsp; Try again
+            &nbsp;
+            Try again
 
         </button>
 
     </section>
 
 
-    <!-- =====================================================
-         EMPTY
-         ===================================================== -->
+    <!-- Empty -->
 
     <section
         id="emptyStatus"
@@ -1625,34 +1235,38 @@ input:focus-visible {
 
         </div>
 
+
         <div class="status-title">
+
             No listings found
+
         </div>
 
+
         <div class="status-message">
-            There are no listings matching your search or category.
+
+            There are no listings matching your
+            search or category.
+
         </div>
 
     </section>
 
 
-    <!-- =====================================================
-         ADS
-         ===================================================== -->
+    <!-- Ads -->
 
     <section
         id="adsGrid"
         class="ads-grid"
         aria-live="polite">
-
     </section>
 
 </main>
 
 
-<!-- =========================================================
-     FLOATING ADD BUTTON
-     ========================================================= -->
+<!-- =======================================================
+     ADD BUTTON
+     ======================================================= -->
 
 <button
     id="addButton"
@@ -1665,9 +1279,9 @@ input:focus-visible {
 </button>
 
 
-<!-- =========================================================
+<!-- =======================================================
      BOTTOM NAVIGATION
-     ========================================================= -->
+     ======================================================= -->
 
 <nav class="bottom-nav">
 
@@ -1679,7 +1293,9 @@ input:focus-visible {
 
         <i class="fas fa-house"></i>
 
-        <span>Home</span>
+        <span>
+            Home
+        </span>
 
     </div>
 
@@ -1692,7 +1308,9 @@ input:focus-visible {
 
         <i class="fas fa-magnifying-glass"></i>
 
-        <span>Search</span>
+        <span>
+            Search
+        </span>
 
     </div>
 
@@ -1705,7 +1323,9 @@ input:focus-visible {
 
         <i class="fas fa-heart"></i>
 
-        <span>Saved</span>
+        <span>
+            Saved
+        </span>
 
     </div>
 
@@ -1718,7 +1338,9 @@ input:focus-visible {
 
         <i class="fas fa-comment"></i>
 
-        <span>Messages</span>
+        <span>
+            Messages
+        </span>
 
     </div>
 
@@ -1731,16 +1353,16 @@ input:focus-visible {
 
         <i class="fas fa-user"></i>
 
-        <span>Profile</span>
+        <span>
+            Profile
+        </span>
 
     </div>
 
 </nav>
 
 
-<!-- =========================================================
-     TOAST
-     ========================================================= -->
+<!-- Toast -->
 
 <div
     id="toast"
@@ -1751,30 +1373,25 @@ input:focus-visible {
 
 
 <script>
+"use strict";
+
 
 /* =========================================================
-   HAVKAR APPLICATION
+   HAVKAR BUY & SELL
+   PRODUCTION VERSION
    ========================================================= */
 
 
 /* =========================================================
-   SUPABASE CONFIG
+   SUPABASE CONFIGURATION
    ========================================================= */
 
 const SUPABASE_URL =
     "https://gispovnciifgikvgpzck.supabase.co";
 
-/*
- * Use the SAME publishable key in the other HAVKAR pages
- * when they connect to this same Supabase project.
- */
 const SUPABASE_PUBLISHABLE_KEY =
     "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq";
 
-
-/* =========================================================
-   SUPABASE CLIENT
-   ========================================================= */
 
 let supabaseClient = null;
 
@@ -1795,9 +1412,11 @@ const state = {
 
     loading: false,
 
-    requestNumber: 0,
+    requestId: 0,
 
-    destroyed: false
+    imageObservers: [],
+
+    imageCache: new Map()
 
 };
 
@@ -1811,46 +1430,40 @@ const CATEGORIES = [
     "All",
 
     "Electronics",
+
     "Phones & Tablets",
+
     "Computers",
+
     "TV & Audio",
+
     "Appliances",
 
     "Furniture",
+
     "Home & Garden",
+
     "Kitchen",
 
     "Restaurant Equipment",
+
     "Food & Catering",
 
     "Tools & Machinery",
 
     "Vehicles",
+
     "Cars",
+
     "Motorcycles",
+
     "Trucks & Commercial Vehicles",
+
     "Bicycles",
 
-    "Real Estate",
-
-    "Jobs & Services",
-
     "Clothing",
-    "Shoes & Accessories",
 
-    "Books",
-    "Baby & Kids",
-
-    "Sports & Fitness",
-    "Beauty & Health",
-
-    "Pets & Animals",
-    "Agriculture",
-
-    "Business & Commercial",
-
-    "Second Hand",
-    "Free Items",
+    "Services",
 
     "Other"
 
@@ -1858,195 +1471,53 @@ const CATEGORIES = [
 
 
 /* =========================================================
-   DOM REFERENCES
+   DOM HELPER
    ========================================================= */
 
 const $ = id =>
     document.getElementById(id);
 
 
-const adsGrid =
-    $("adsGrid");
-
-const skeletonGrid =
-    $("skeletonGrid");
-
-const filters =
-    $("filters");
-
-const searchInput =
-    $("searchInput");
-
-const clearSearch =
-    $("clearSearch");
-
-const resultsTitle =
-    $("resultsTitle");
-
-const resultsCount =
-    $("resultsCount");
-
-const errorStatus =
-    $("errorStatus");
-
-const errorMessage =
-    $("errorMessage");
-
-const emptyStatus =
-    $("emptyStatus");
-
-const retryButton =
-    $("retryButton");
-
-const toast =
-    $("toast");
-
-
 /* =========================================================
-   SUPABASE INITIALIZATION
+   INITIALIZE SUPABASE
    ========================================================= */
 
-function initializeSupabase() {
+function initializeSupabase(){
 
-    if (
-        supabaseClient
-    ) {
+    if(supabaseClient){
 
-        return true;
+        return supabaseClient;
 
     }
 
 
-    if (
+    if(
         !window.supabase ||
         typeof window.supabase.createClient !== "function"
-    ) {
+    ){
 
-        console.error(
-            "[HAVKAR] Supabase library unavailable."
+        throw new Error(
+            "Supabase library could not be loaded."
         );
-
-        return false;
 
     }
 
 
-    try {
-
-        supabaseClient =
-            window.supabase.createClient(
-                SUPABASE_URL,
-                SUPABASE_PUBLISHABLE_KEY,
-                {
-                    auth: {
-                        persistSession: true,
-                        autoRefreshToken: true,
-                        detectSessionInUrl: true
-                    }
+    supabaseClient =
+        window.supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_PUBLISHABLE_KEY,
+            {
+                auth:{
+                    persistSession:true,
+                    autoRefreshToken:true,
+                    detectSessionInUrl:true
                 }
-            );
-
-
-        return true;
-
-    }
-
-    catch (error) {
-
-        console.error(
-            "[HAVKAR] Supabase initialization error:",
-            error
-        );
-
-        supabaseClient = null;
-
-        return false;
-
-    }
-
-}
-
-
-/* =========================================================
-   NATIVE PROMISE CONVERSION
-   IMPORTANT:
-   Prevents "promise.finally is not a function"
-   ========================================================= */
-
-function toNativePromise(value) {
-
-    return Promise.resolve(value);
-
-}
-
-
-/* =========================================================
-   TIMEOUT
-   IMPORTANT:
-   Never calls .finally() on Supabase Query Builder.
-   ========================================================= */
-
-function withTimeout(
-    operation,
-    milliseconds = 15000
-) {
-
-    const nativePromise =
-        toNativePromise(operation);
-
-
-    let timer = null;
-
-
-    const timeoutPromise =
-        new Promise(
-            function(_, reject) {
-
-                timer =
-                    window.setTimeout(
-                        function() {
-
-                            reject(
-                                new Error(
-                                    "The listings request timed out."
-                                )
-                            );
-
-                        },
-                        milliseconds
-                    );
-
             }
         );
 
 
-    return Promise.race([
-        nativePromise,
-        timeoutPromise
-    ]).then(
-        function(result) {
-
-            if (timer !== null) {
-
-                window.clearTimeout(timer);
-
-            }
-
-            return result;
-
-        },
-        function(error) {
-
-            if (timer !== null) {
-
-                window.clearTimeout(timer);
-
-            }
-
-            throw error;
-
-        }
-    );
+    return supabaseClient;
 
 }
 
@@ -2055,58 +1526,221 @@ function withTimeout(
    ESCAPE HTML
    ========================================================= */
 
-function escapeHtml(value) {
+function escapeHtml(value){
 
-    if (
-        value === null ||
-        value === undefined
-    ) {
+    return String(value ?? "")
 
-        return "";
+        .replaceAll("&","&amp;")
 
-    }
+        .replaceAll("<","&lt;")
 
+        .replaceAll(">","&gt;")
 
-    return String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+        .replaceAll('"',"&quot;")
+
+        .replaceAll("'","&#039;");
 
 }
 
 
 /* =========================================================
-   SAFE STRING
+   TOAST
    ========================================================= */
 
-function safeString(value) {
+function showToast(message){
 
-    if (
-        value === null ||
-        value === undefined
-    ) {
+    const toast =
+        $("toast");
 
-        return "";
+    toast.textContent =
+        message;
 
-    }
+    toast.classList.add("show");
 
 
-    return String(value).trim();
+    window.clearTimeout(
+        showToast.timer
+    );
+
+
+    showToast.timer =
+        window.setTimeout(
+            () => {
+
+                toast.classList.remove(
+                    "show"
+                );
+
+            },
+            2600
+        );
 
 }
 
 
 /* =========================================================
-   NORMALIZE CATEGORY
+   STATUS
    ========================================================= */
 
-function normalizeCategory(value) {
+function showStatus(
+    type,
+    message = ""
+){
 
-    return safeString(value)
-        .toLowerCase()
-        .replace(/\s+/g, " ");
+    $("errorStatus")
+        .classList
+        .remove("visible");
+
+    $("emptyStatus")
+        .classList
+        .remove("visible");
+
+
+    if(type === "error"){
+
+        $("errorMessage")
+            .textContent =
+            message;
+
+        $("errorStatus")
+            .classList
+            .add("visible");
+
+    }
+
+
+    if(type === "empty"){
+
+        $("emptyStatus")
+            .classList
+            .add("visible");
+
+    }
+
+}
+
+
+function hideStatuses(){
+
+    $("errorStatus")
+        .classList
+        .remove("visible");
+
+    $("emptyStatus")
+        .classList
+        .remove("visible");
+
+}
+
+
+/* =========================================================
+   LOADING
+   ========================================================= */
+
+function setLoading(loading){
+
+    state.loading =
+        loading;
+
+    $("skeletonGrid")
+        .style
+        .display =
+        loading
+            ? "grid"
+            : "none";
+
+}
+
+
+/* =========================================================
+   SKELETON
+   ========================================================= */
+
+function renderSkeletons(){
+
+    $("skeletonGrid")
+        .innerHTML =
+        Array.from(
+            {length:6},
+            () => `
+
+                <div class="skeleton-card">
+
+                    <div
+                        class="skeleton-image skeleton">
+                    </div>
+
+                    <div
+                        class="skeleton-line medium skeleton">
+                    </div>
+
+                    <div
+                        class="skeleton-line small skeleton">
+                    </div>
+
+                </div>
+
+            `
+        )
+        .join("");
+
+}
+
+
+/* =========================================================
+   CATEGORIES RENDER
+   ========================================================= */
+
+function renderCategories(){
+
+    $("filters")
+        .innerHTML =
+        CATEGORIES
+            .map(
+                category => `
+
+                    <button
+                        type="button"
+                        class="filter-button ${
+                            category === state.category
+                                ? "active"
+                                : ""
+                        }"
+                        data-category="${escapeHtml(category)}">
+
+                        ${escapeHtml(category)}
+
+                    </button>
+
+                `
+            )
+            .join("");
+
+
+    $("filters")
+        .querySelectorAll(
+            ".filter-button"
+        )
+        .forEach(
+            button => {
+
+                button.addEventListener(
+                    "click",
+                    () => {
+
+                        state.category =
+                            button.dataset.category ||
+                            "All";
+
+                        renderCategories();
+
+                        applyFilters();
+
+                    }
+                );
+
+            }
+        );
 
 }
 
@@ -2115,40 +1749,41 @@ function normalizeCategory(value) {
    PRICE
    ========================================================= */
 
-function formatPrice(value) {
+function formatPrice(value){
 
-    if (
+    if(
         value === null ||
         value === undefined ||
         value === ""
-    ) {
+    ){
 
-        return "Price not specified";
+        return "Price on request";
 
     }
 
 
-    const number =
+    const numeric =
         Number(value);
 
 
-    if (
-        !Number.isFinite(number)
-    ) {
+    if(
+        Number.isFinite(numeric)
+    ){
 
-        return escapeHtml(value);
+        return new Intl.NumberFormat(
+            "en-US",
+            {
+                minimumFractionDigits:0,
+                maximumFractionDigits:2
+            }
+        ).format(numeric) + " €";
 
     }
 
 
-    return new Intl.NumberFormat(
-        "en-US",
-        {
-            style: "currency",
-            currency: "EUR",
-            maximumFractionDigits: 2
-        }
-    ).format(number);
+    return escapeHtml(
+        String(value)
+    );
 
 }
 
@@ -2157,9 +1792,9 @@ function formatPrice(value) {
    DATE
    ========================================================= */
 
-function formatDate(value) {
+function formatDate(value){
 
-    if (!value) {
+    if(!value){
 
         return "";
 
@@ -2170,11 +1805,11 @@ function formatDate(value) {
         new Date(value);
 
 
-    if (
+    if(
         Number.isNaN(
             date.getTime()
         )
-    ) {
+    ){
 
         return "";
 
@@ -2182,11 +1817,11 @@ function formatDate(value) {
 
 
     return new Intl.DateTimeFormat(
-        "en-GB",
+        undefined,
         {
-            day: "numeric",
-            month: "short",
-            year: "numeric"
+            day:"2-digit",
+            month:"short",
+            year:"numeric"
         }
     ).format(date);
 
@@ -2194,966 +1829,279 @@ function formatDate(value) {
 
 
 /* =========================================================
-   IMAGE EXTRACTION
+   CATEGORY ICON
    ========================================================= */
 
-function getFirstImage(ad) {
+function getCategoryIcon(category){
 
-    if (!ad) {
-
-        return null;
-
-    }
-
-
-    const photos =
-        ad.photos;
+    const text =
+        String(
+            category || ""
+        ).toLowerCase();
 
 
-    /* Array */
+    if(
+        text.includes("phone") ||
+        text.includes("tablet")
+    ){
 
-    if (
-        Array.isArray(photos)
-    ) {
-
-        for (
-            const photo of photos
-        ) {
-
-            if (
-                typeof photo === "string" &&
-                /^https?:\/\//i.test(
-                    photo.trim()
-                )
-            ) {
-
-                return photo.trim();
-
-            }
-
-        }
+        return "fa-mobile-screen";
 
     }
 
 
-    /* JSON string */
+    if(
+        text.includes("computer")
+    ){
 
-    if (
-        typeof photos === "string" &&
-        photos.trim()
-    ) {
+        return "fa-laptop";
 
-        try {
+    }
+
+
+    if(
+        text.includes("vehicle") ||
+        text.includes("car") ||
+        text.includes("motor")
+    ){
+
+        return "fa-car";
+
+    }
+
+
+    if(
+        text.includes("furniture")
+    ){
+
+        return "fa-couch";
+
+    }
+
+
+    if(
+        text.includes("kitchen")
+    ){
+
+        return "fa-kitchen-set";
+
+    }
+
+
+    if(
+        text.includes("restaurant")
+    ){
+
+        return "fa-utensils";
+
+    }
+
+
+    if(
+        text.includes("clothing")
+    ){
+
+        return "fa-shirt";
+
+    }
+
+
+    if(
+        text.includes("service")
+    ){
+
+        return "fa-handshake";
+
+    }
+
+
+    if(
+        text.includes("tool")
+    ){
+
+        return "fa-screwdriver-wrench";
+
+    }
+
+
+    if(
+        text.includes("food")
+    ){
+
+        return "fa-basket-shopping";
+
+    }
+
+
+    return "fa-box";
+
+}
+
+
+/* =========================================================
+   NORMALIZE PHOTOS
+   ========================================================= */
+
+function normalizePhotos(value){
+
+    if(!value){
+
+        return [];
+
+    }
+
+
+    if(Array.isArray(value)){
+
+        return value.filter(
+            item =>
+                typeof item === "string" &&
+                item.trim()
+        );
+
+    }
+
+
+    if(typeof value === "string"){
+
+        try{
 
             const parsed =
-                JSON.parse(
-                    photos
-                );
+                JSON.parse(value);
 
 
-            if (
+            if(
                 Array.isArray(parsed)
-            ) {
-
-                for (
-                    const photo of parsed
-                ) {
-
-                    if (
-                        typeof photo === "string" &&
-                        photo.trim()
-                    ) {
-
-                        /*
-                         * Supports both URLs and
-                         * existing stored image data.
-                         */
-                        return photo.trim();
-
-                    }
-
-                }
-
-            }
-
-        }
-
-        catch (_) {
-
-            /*
-             * Some older records may contain
-             * one direct URL.
-             */
-
-            if (
-                /^https?:\/\//i.test(
-                    photos.trim()
-                )
-            ) {
-
-                return photos.trim();
-
-            }
-
-        }
-
-    }
-
-
-    /* image_url */
-
-    if (
-        typeof ad.image_url === "string" &&
-        ad.image_url.trim()
-    ) {
-
-        return ad.image_url.trim();
-
-    }
-
-
-    /* image */
-
-    if (
-        typeof ad.image === "string" &&
-        ad.image.trim()
-    ) {
-
-        return ad.image.trim();
-
-    }
-
-
-    return null;
-
-}
-
-
-/* =========================================================
-   LOCATION
-   ========================================================= */
-
-function getLocation(ad) {
-
-    return (
-        safeString(ad.location) ||
-        safeString(ad.city) ||
-        safeString(ad.region) ||
-        safeString(ad.country) ||
-        "Location not specified"
-    );
-
-}
-
-
-/* =========================================================
-   SEARCHABLE TEXT
-   ========================================================= */
-
-function getSearchableText(ad) {
-
-    return [
-
-        ad.title,
-        ad.description,
-        ad.category,
-        ad.location,
-        ad.city,
-        ad.region,
-        ad.country
-
-    ]
-        .map(safeString)
-        .join(" ")
-        .toLowerCase();
-
-}
-
-
-/* =========================================================
-   CATEGORY MATCH
-   ========================================================= */
-
-function categoryMatches(ad) {
-
-    if (
-        state.category === "All"
-    ) {
-
-        return true;
-
-    }
-
-
-    return (
-        normalizeCategory(ad.category) ===
-        normalizeCategory(state.category)
-    );
-
-}
-
-
-/* =========================================================
-   STATUS CONTROL
-   ========================================================= */
-
-function hideStatuses() {
-
-    errorStatus.classList.remove(
-        "visible"
-    );
-
-    emptyStatus.classList.remove(
-        "visible"
-    );
-
-}
-
-
-function showError(message) {
-
-    hideStatuses();
-
-    errorMessage.textContent =
-        message ||
-        "HAVKAR could not load the listings.";
-
-    errorStatus.classList.add(
-        "visible"
-    );
-
-}
-
-
-function showEmpty() {
-
-    hideStatuses();
-
-    emptyStatus.classList.add(
-        "visible"
-    );
-
-}
-
-
-/* =========================================================
-   SKELETON
-   ========================================================= */
-
-function showSkeleton() {
-
-    skeletonGrid.innerHTML =
-        "";
-
-
-    skeletonGrid.style.display =
-        "grid";
-
-
-    for (
-        let i = 0;
-        i < 6;
-        i++
-    ) {
-
-        const card =
-            document.createElement(
-                "div"
-            );
-
-
-        card.className =
-            "skeleton-card";
-
-
-        card.innerHTML = `
-
-            <div
-                class="skeleton skeleton-image">
-            </div>
-
-            <div
-                class="skeleton skeleton-line medium">
-            </div>
-
-            <div
-                class="skeleton skeleton-line small">
-            </div>
-
-            <div
-                class="skeleton skeleton-line small">
-            </div>
-
-        `;
-
-
-        skeletonGrid.appendChild(
-            card
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   HIDE SKELETON
-   ========================================================= */
-
-function hideSkeleton() {
-
-    skeletonGrid.innerHTML =
-        "";
-
-    skeletonGrid.style.display =
-        "none";
-
-}
-
-
-/* =========================================================
-   CATEGORY BUTTONS
-   ========================================================= */
-
-function renderCategories() {
-
-    filters.innerHTML =
-        "";
-
-
-    const fragment =
-        document.createDocumentFragment();
-
-
-    CATEGORIES.forEach(
-        function(category) {
-
-            const button =
-                document.createElement(
-                    "button"
-                );
-
-
-            button.type =
-                "button";
-
-
-            button.className =
-                "filter-button";
-
-
-            button.dataset.category =
-                category;
-
-
-            button.textContent =
-                category;
-
-
-            button.classList.toggle(
-                "active",
-                category ===
-                    state.category
-            );
-
-
-            button.addEventListener(
-                "click",
-                function() {
-
-                    setCategory(
-                        category
-                    );
-
-                }
-            );
-
-
-            fragment.appendChild(
-                button
-            );
-
-        }
-    );
-
-
-    filters.appendChild(
-        fragment
-    );
-
-}
-
-
-/* =========================================================
-   CATEGORY
-   ========================================================= */
-
-function setCategory(category) {
-
-    state.category =
-        category;
-
-
-    document
-        .querySelectorAll(
-            ".filter-button"
-        )
-        .forEach(
-            function(button) {
-
-                button.classList.toggle(
-                    "active",
-                    button.dataset.category ===
-                        category
-                );
-
-            }
-        );
-
-
-    applyFilters();
-
-}
-
-
-/* =========================================================
-   SEARCH SETUP
-   ========================================================= */
-
-function setupSearch() {
-
-    searchInput.addEventListener(
-        "input",
-        function() {
-
-            state.search =
-                safeString(
-                    searchInput.value
-                ).toLowerCase();
-
-
-            clearSearch.classList.toggle(
-                "visible",
-                Boolean(state.search)
-            );
-
-
-            applyFilters();
-
-        }
-    );
-
-
-    clearSearch.addEventListener(
-        "click",
-        function() {
-
-            searchInput.value =
-                "";
-
-            state.search =
-                "";
-
-            clearSearch.classList.remove(
-                "visible"
-            );
-
-            applyFilters();
-
-            searchInput.focus();
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   FILTER
-   ========================================================= */
-
-function applyFilters() {
-
-    const query =
-        state.search;
-
-
-    state.filteredAds =
-        state.ads.filter(
-            function(ad) {
-
-                if (
-                    !categoryMatches(ad)
-                ) {
-
-                    return false;
-
-                }
-
-
-                if (!query) {
-
-                    return true;
-
-                }
-
-
-                return getSearchableText(
-                    ad
-                ).includes(query);
-
-            }
-        );
-
-
-    updateResultsHeader();
-
-    renderAds(
-        state.filteredAds
-    );
-
-}
-
-
-/* =========================================================
-   RESULTS HEADER
-   ========================================================= */
-
-function updateResultsHeader() {
-
-    const count =
-        state.filteredAds.length;
-
-
-    if (state.search) {
-
-        resultsTitle.textContent =
-            "Search results";
-
-    }
-
-    else if (
-        state.category !== "All"
-    ) {
-
-        resultsTitle.textContent =
-            state.category;
-
-    }
-
-    else {
-
-        resultsTitle.textContent =
-            "Latest listings";
-
-    }
-
-
-    resultsCount.textContent =
-        `${count} ${
-            count === 1
-                ? "listing"
-                : "listings"
-        }`;
-
-}
-
-
-/* =========================================================
-   IMAGE MARKUP
-   ========================================================= */
-
-function createImageMarkup(ad) {
-
-    const image =
-        getFirstImage(ad);
-
-
-    const title =
-        escapeHtml(
-            safeString(ad.title) ||
-            "Listing"
-        );
-
-
-    if (!image) {
-
-        return `
-
-            <div class="ad-image">
-
-                <div class="image-placeholder">
-
-                    <i class="fas fa-image"></i>
-
-                </div>
-
-            </div>
-
-        `;
-
-    }
-
-
-    return `
-
-        <div class="ad-image has-image">
-
-            <img
-                src="${escapeHtml(image)}"
-                alt="${title}"
-                loading="lazy"
-                decoding="async"
-                referrerpolicy="no-referrer">
-
-            <div class="image-placeholder">
-
-                <i class="fas fa-image"></i>
-
-            </div>
-
-        </div>
-
-    `;
-
-}
-
-
-/* =========================================================
-   CREATE CARD
-   ========================================================= */
-
-function createAdCard(ad) {
-
-    const card =
-        document.createElement(
-            "article"
-        );
-
-
-    card.className =
-        "ad-card";
-
-
-    card.setAttribute(
-        "role",
-        "button"
-    );
-
-
-    card.setAttribute(
-        "tabindex",
-        "0"
-    );
-
-
-    const id =
-        safeString(ad.id);
-
-
-    const title =
-        safeString(ad.title) ||
-        "Untitled listing";
-
-
-    const category =
-        safeString(ad.category) ||
-        "Other";
-
-
-    const location =
-        getLocation(ad);
-
-
-    const condition =
-        safeString(ad.condition);
-
-
-    const date =
-        formatDate(
-            ad.created_at
-        );
-
-
-    const image =
-        getFirstImage(ad);
-
-
-    card.dataset.id =
-        id;
-
-
-    card.innerHTML = `
-
-        ${createImageMarkup(ad)}
-
-        ${
-            condition
-                ? `
-                    <div class="condition-badge">
-                        ${escapeHtml(condition)}
-                    </div>
-                  `
-                : ""
-        }
-
-        <div class="ad-info">
-
-            <div class="ad-title">
-                ${escapeHtml(title)}
-            </div>
-
-            <div class="ad-price">
-                ${formatPrice(ad.price)}
-            </div>
-
-            <div class="ad-location">
-
-                <i class="fas fa-location-dot"></i>
-
-                <span>
-                    ${escapeHtml(location)}
-                </span>
-
-            </div>
-
-            <div class="ad-meta">
-
-                ${escapeHtml(category)}
-
-                ${
-                    date
-                        ? " • " +
-                          escapeHtml(date)
-                        : ""
-                }
-
-            </div>
-
-        </div>
-
-    `;
-
-
-    const img =
-        card.querySelector(
-            "img"
-        );
-
-
-    if (img) {
-
-        img.addEventListener(
-            "load",
-            function() {
-
-                img.classList.add(
-                    "loaded"
-                );
-
-            },
-            {
-                once: true
-            }
-        );
-
-
-        img.addEventListener(
-            "error",
-            function() {
-
-                const imageBox =
-                    card.querySelector(
-                        ".ad-image"
-                    );
-
-
-                if (!imageBox) {
-
-                    return;
-
-                }
-
-
-                imageBox.classList.remove(
-                    "has-image"
-                );
-
-
-                img.remove();
-
-            },
-            {
-                once: true
-            }
-        );
-
-
-        /*
-         * Handles cached images where
-         * load can already be complete.
-         */
-        if (
-            img.complete &&
-            img.naturalWidth > 0
-        ) {
-
-            img.classList.add(
-                "loaded"
-            );
-
-        }
-
-    }
-
-
-    card.addEventListener(
-        "click",
-        function() {
-
-            openProduct(
-                id
-            );
-
-        }
-    );
-
-
-    card.addEventListener(
-        "keydown",
-        function(event) {
-
-            if (
-                event.key === "Enter" ||
-                event.key === " "
-            ) {
-
-                event.preventDefault();
-
-                openProduct(
-                    id
+            ){
+
+                return parsed.filter(
+                    item =>
+                        typeof item === "string" &&
+                        item.trim()
                 );
 
             }
 
         }
-    );
+        catch(_){
 
-
-    return card;
-
-}
-
-
-/* =========================================================
-   RENDER ADS
-   ========================================================= */
-
-function renderAds(ads) {
-
-    adsGrid.innerHTML =
-        "";
-
-
-    if (
-        !Array.isArray(ads) ||
-        ads.length === 0
-    ) {
-
-        showEmpty();
-
-        return;
-
-    }
-
-
-    hideStatuses();
-
-
-    const fragment =
-        document.createDocumentFragment();
-
-
-    ads.forEach(
-        function(ad) {
-
-            fragment.appendChild(
-                createAdCard(ad)
-            );
+            /* Not JSON */
 
         }
-    );
 
 
-    adsGrid.appendChild(
-        fragment
-    );
+        if(
+            value.startsWith("data:image/") ||
+            value.startsWith("http://") ||
+            value.startsWith("https://")
+        ){
+
+            return [value];
+
+        }
+
+    }
+
+
+    return [];
 
 }
 
 
 /* =========================================================
-   FETCH ADS
+   FETCH LISTINGS
    ========================================================= */
 
-async function fetchAds() {
+async function fetchListings(){
 
-    if (
-        !initializeSupabase()
-    ) {
-
-        throw new Error(
-            "Supabase could not be initialized."
-        );
-
-    }
+    initializeSupabase();
 
 
     /*
-     * CRITICAL:
-     * Convert the Supabase thenable into a
-     * native Promise before Promise.race.
+     * IMPORTANT:
      *
-     * This avoids:
-     * "promise.finally is not a function"
+     * Do not use select("*") here.
+     *
+     * post-ad.html stores photos as Base64 inside
+     * the ads.photos field.
+     *
+     * Loading all Base64 photos for every listing
+     * makes the initial request unnecessarily huge.
+     *
+     * We therefore load listing metadata first.
      */
 
-    const query =
+    const request =
         supabaseClient
             .from("ads")
-            .select("*")
+            .select(
+                [
+                    "id",
+                    "title",
+                    "category",
+                    "price",
+                    "location",
+                    "description",
+                    "user_id",
+                    "created_at"
+                ].join(",")
+            )
             .order(
                 "created_at",
                 {
-                    ascending: false
+                    ascending:false
                 }
-            );
+            )
+            .limit(50);
 
 
-    const result =
-        await withTimeout(
-            query,
-            15000
+    const timeout =
+        new Promise(
+            (_,reject) => {
+
+                window.setTimeout(
+                    () => {
+
+                        reject(
+                            new Error(
+                                "The listings request timed out after 15 seconds."
+                            )
+                        );
+
+                    },
+                    15000
+                );
+
+            }
         );
 
 
-    if (
+    const result =
+        await Promise.race(
+            [
+                request,
+                timeout
+            ]
+        );
+
+
+    if(
         !result
-    ) {
+    ){
 
         throw new Error(
-            "The listings server returned no response."
+            "Supabase returned no response."
         );
 
     }
 
 
-    if (
+    if(
         result.error
-    ) {
+    ){
 
         console.error(
-            "[HAVKAR] Supabase error:",
+            "[HAVKAR] Supabase listings error:",
             result.error
         );
 
@@ -3162,11 +2110,11 @@ async function fetchAds() {
     }
 
 
-    if (
+    if(
         !Array.isArray(
             result.data
         )
-    ) {
+    ){
 
         return [];
 
@@ -3179,263 +2127,362 @@ async function fetchAds() {
 
 
 /* =========================================================
-   READABLE ERROR
+   FETCH PHOTOS FOR ONE AD
    ========================================================= */
 
-function readableError(error) {
+async function fetchPhotosForAd(
+    adId
+){
 
-    if (
-        !navigator.onLine
-    ) {
+    if(!adId){
 
-        return (
-            "Your device is offline. " +
-            "Please reconnect to the internet."
+        return [];
+
+    }
+
+
+    const cacheKey =
+        String(adId);
+
+
+    if(
+        state.imageCache.has(
+            cacheKey
+        )
+    ){
+
+        return state.imageCache.get(
+            cacheKey
         );
 
     }
 
+
+    initializeSupabase();
+
+
+    const result =
+        await supabaseClient
+            .from("ads")
+            .select("photos")
+            .eq("id",adId)
+            .maybeSingle();
+
+
+    if(
+        result.error
+    ){
+
+        console.warn(
+            "[HAVKAR] Photo query failed:",
+            result.error
+        );
+
+        return [];
+
+    }
+
+
+    const photos =
+        normalizePhotos(
+            result.data?.photos
+        );
+
+
+    state.imageCache.set(
+        cacheKey,
+        photos
+    );
+
+
+    return photos;
+
+}
+
+
+/* =========================================================
+   ERROR MESSAGE
+   ========================================================= */
+
+function getErrorMessage(error){
 
     const message =
-        safeString(
-            error?.message
+        String(
+            error?.message ||
+            error?.details ||
+            error?.hint ||
+            error ||
+            ""
+        ).trim();
+
+
+    const status =
+        Number(
+            error?.status ||
+            error?.statusCode ||
+            0
         );
 
 
-    const lower =
-        message.toLowerCase();
-
-
-    if (
-        lower.includes(
-            "finally is not a function"
-        )
-    ) {
+    if(
+        status === 401 ||
+        status === 403
+    ){
 
         return (
-            "HAVKAR detected an incompatible Promise " +
-            "response from the database client. " +
-            "The request handler has been protected."
+            "Supabase denied access to the listings. " +
+            "Check the public SELECT policy for the ads table."
         );
 
     }
 
 
-    if (
-        lower.includes(
-            "timed out"
-        )
-    ) {
+    if(
+        status === 404
+    ){
 
         return (
-            "Supabase did not respond within 15 seconds. " +
-            "Please try again."
+            "The ads table could not be found in Supabase."
         );
 
     }
 
 
-    if (
-        lower.includes(
-            "failed to fetch"
-        ) ||
-        lower.includes(
-            "network"
+    if(
+        /failed to fetch|network|fetch/i.test(
+            message
         )
-    ) {
+    ){
 
         return (
-            "HAVKAR could not establish a network " +
-            "connection with Supabase."
+            "HAVKAR could not establish a network connection " +
+            "with Supabase. Check the Supabase project and browser connection."
         );
 
     }
 
 
-    if (
-        lower.includes(
-            "jwt"
-        ) ||
-        lower.includes(
-            "token"
+    if(
+        /column .* does not exist/i.test(
+            message
         )
-    ) {
+    ){
 
         return (
-            "The Supabase authentication response was rejected."
+            "The ads table structure does not match " +
+            "the HAVKAR Buy & Sell page."
         );
 
     }
 
 
-    if (
-        lower.includes(
-            "permission"
-        ) ||
-        lower.includes(
-            "row-level security"
-        ) ||
-        lower.includes(
-            "rls"
+    if(
+        /relation .* does not exist|table .* does not exist/i.test(
+            message
         )
-    ) {
+    ){
 
         return (
-            "Supabase denied access to the ads table. " +
-            "Please check the ads table permissions."
+            "The Supabase `ads` table could not be found."
         );
 
     }
 
 
-    if (
-        lower.includes(
-            "relation"
-        ) &&
-        lower.includes(
-            "does not exist"
-        )
-    ) {
+    if(message){
 
         return (
-            "The Supabase 'ads' table could not be found."
+            "Supabase error: " +
+            message
         );
-
-    }
-
-
-    if (message) {
-
-        return message;
 
     }
 
 
     return (
-        "An unexpected error occurred while loading listings."
+        "HAVKAR could not load the listings."
     );
 
 }
 
 
 /* =========================================================
-   LOAD ADS
+   AD CARD HTML
    ========================================================= */
 
-async function loadAds() {
+function cardHtml(ad){
 
-    const requestId =
-        ++state.requestNumber;
-
-
-    state.loading =
-        true;
-
-
-    adsGrid.innerHTML =
-        "";
-
-
-    hideStatuses();
-
-
-    showSkeleton();
-
-
-    resultsCount.textContent =
-        "Loading...";
-
-
-    try {
-
-        const data =
-            await fetchAds();
-
-
-        /*
-         * Ignore old requests.
-         */
-
-        if (
-            requestId !==
-            state.requestNumber
-        ) {
-
-            return;
-
-        }
-
-
-        state.ads =
-            Array.isArray(data)
-                ? data
-                : [];
-
-
-        state.loading =
-            false;
-
-
-        hideSkeleton();
-
-
-        applyFilters();
-
-
-    }
-
-    catch (error) {
-
-        if (
-            requestId !==
-            state.requestNumber
-        ) {
-
-            return;
-
-        }
-
-
-        state.loading =
-            false;
-
-
-        hideSkeleton();
-
-
-        adsGrid.innerHTML =
-            "";
-
-
-        resultsCount.textContent =
-            "Unavailable";
-
-
-        console.error(
-            "[HAVKAR] Load listings failed:",
-            error
+    const title =
+        escapeHtml(
+            ad.title ||
+            "Untitled listing"
         );
 
 
-        showError(
-            readableError(error)
+    const category =
+        escapeHtml(
+            ad.category ||
+            "Other"
         );
 
-    }
+
+    const location =
+        escapeHtml(
+            ad.location ||
+            "Location not specified"
+        );
+
+
+    const description =
+        escapeHtml(
+            ad.description ||
+            ""
+        );
+
+
+    const date =
+        formatDate(
+            ad.created_at
+        );
+
+
+    const icon =
+        getCategoryIcon(
+            ad.category
+        );
+
+
+    return `
+
+        <article
+            class="ad-card"
+            data-ad-id="${escapeHtml(ad.id)}"
+            tabindex="0"
+            role="button"
+            aria-label="${title}">
+
+
+            <div
+                class="ad-image"
+                data-image-id="${escapeHtml(ad.id)}">
+
+
+                <div class="image-placeholder">
+
+                    <i class="fas ${icon}"></i>
+
+                </div>
+
+
+                <div class="image-loading">
+
+                    <i class="fas fa-spinner fa-spin"></i>
+
+                </div>
+
+
+                <span class="condition-badge">
+
+                    ${category}
+
+                </span>
+
+
+                <img
+                    alt="${title}"
+                    loading="lazy">
+
+            </div>
+
+
+            <div class="ad-info">
+
+                <div class="ad-title">
+
+                    ${title}
+
+                </div>
+
+
+                <div class="ad-price">
+
+                    ${formatPrice(ad.price)}
+
+                </div>
+
+
+                <div class="ad-location">
+
+                    <i class="fas fa-location-dot"></i>
+
+                    <span>
+
+                        ${location}
+
+                    </span>
+
+                </div>
+
+
+                ${
+                    date
+                        ? `
+                            <div class="ad-meta">
+                                ${escapeHtml(date)}
+                            </div>
+                          `
+                        : ""
+                }
+
+
+                ${
+                    description
+                        ? `
+                            <div class="ad-meta">
+                                ${description}
+                            </div>
+                          `
+                        : ""
+                }
+
+            </div>
+
+        </article>
+
+    `;
 
 }
 
 
 /* =========================================================
-   PRODUCT NAVIGATION
+   IMAGE OBSERVER
    ========================================================= */
 
-function openProduct(id) {
+function setupImageObserver(){
 
-    if (!id) {
+    state.imageObservers
+        .forEach(
+            observer =>
+                observer.disconnect()
+        );
 
-        showToast(
-            "This listing has no valid ID."
+
+    state.imageObservers = [];
+
+
+    const images =
+        $("adsGrid")
+            .querySelectorAll(
+                ".ad-image[data-image-id]"
+            );
+
+
+    if(
+        !("IntersectionObserver" in window)
+    ){
+
+        images.forEach(
+            loadCardImage
         );
 
         return;
@@ -3443,18 +2490,523 @@ function openProduct(id) {
     }
 
 
+    const observer =
+        new IntersectionObserver(
+            entries => {
+
+                entries.forEach(
+                    entry => {
+
+                        if(
+                            !entry.isIntersecting
+                        ){
+
+                            return;
+
+                        }
+
+
+                        observer.unobserve(
+                            entry.target
+                        );
+
+
+                        loadCardImage(
+                            entry.target
+                        );
+
+                    }
+                );
+
+            },
+            {
+                rootMargin:
+                    "250px 0px"
+            }
+        );
+
+
+    images.forEach(
+        element =>
+            observer.observe(
+                element
+            )
+    );
+
+
+    state.imageObservers.push(
+        observer
+    );
+
+}
+
+
+/* =========================================================
+   LOAD CARD IMAGE
+   ========================================================= */
+
+async function loadCardImage(
+    container
+){
+
+    if(
+        !container ||
+        container.dataset.loaded === "1"
+    ){
+
+        return;
+
+    }
+
+
+    container.dataset.loaded =
+        "1";
+
+
+    const adId =
+        container.dataset.imageId;
+
+
+    const image =
+        container.querySelector(
+            "img"
+        );
+
+
+    const loading =
+        container.querySelector(
+            ".image-loading"
+        );
+
+
+    try{
+
+        const photos =
+            await fetchPhotosForAd(
+                adId
+            );
+
+
+        const firstPhoto =
+            photos[0];
+
+
+        if(firstPhoto){
+
+            image.src =
+                firstPhoto;
+
+
+            image.addEventListener(
+                "load",
+                () => {
+
+                    image.classList.add(
+                        "loaded"
+                    );
+
+                    container.classList.add(
+                        "has-image"
+                    );
+
+
+                    if(loading){
+
+                        loading.style.display =
+                            "none";
+
+                    }
+
+                },
+                {
+                    once:true
+                }
+            );
+
+
+            image.addEventListener(
+                "error",
+                () => {
+
+                    if(loading){
+
+                        loading.style.display =
+                            "none";
+
+                    }
+
+                },
+                {
+                    once:true
+                }
+            );
+
+        }
+        else{
+
+            if(loading){
+
+                loading.style.display =
+                    "none";
+
+            }
+
+        }
+
+    }
+    catch(error){
+
+        console.warn(
+            "[HAVKAR] Could not load ad image:",
+            error
+        );
+
+
+        if(loading){
+
+            loading.style.display =
+                "none";
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   RENDER ADS
+   ========================================================= */
+
+function renderAds(
+    list
+){
+
+    const grid =
+        $("adsGrid");
+
+
+    state.imageObservers
+        .forEach(
+            observer =>
+                observer.disconnect()
+        );
+
+
+    state.imageObservers = [];
+
+
+    grid.innerHTML =
+        list
+            .map(cardHtml)
+            .join("");
+
+
+    $("resultsCount")
+        .textContent =
+        list.length === 1
+            ? "1 listing"
+            : `${list.length} listings`;
+
+
+    if(
+        !list.length
+    ){
+
+        showStatus(
+            "empty"
+        );
+
+    }
+    else{
+
+        hideStatuses();
+
+    }
+
+
+    grid
+        .querySelectorAll(
+            ".ad-card"
+        )
+        .forEach(
+            card => {
+
+                const open =
+                    () =>
+                        openAd(
+                            card.dataset.adId
+                        );
+
+
+                card.addEventListener(
+                    "click",
+                    open
+                );
+
+
+                card.addEventListener(
+                    "keydown",
+                    event => {
+
+                        if(
+                            event.key === "Enter" ||
+                            event.key === " "
+                        ){
+
+                            event.preventDefault();
+
+                            open();
+
+                        }
+
+                    }
+                );
+
+            }
+        );
+
+
+    setupImageObserver();
+
+}
+
+
+/* =========================================================
+   APPLY FILTERS
+   ========================================================= */
+
+function applyFilters(){
+
+    const search =
+        state.search
+            .trim()
+            .toLowerCase();
+
+
+    const category =
+        state.category;
+
+
+    state.filteredAds =
+        state.ads.filter(
+            ad => {
+
+                const categoryMatch =
+                    category === "All" ||
+                    String(
+                        ad.category || ""
+                    ).toLowerCase() ===
+                    category.toLowerCase();
+
+
+                if(
+                    !categoryMatch
+                ){
+
+                    return false;
+
+                }
+
+
+                if(!search){
+
+                    return true;
+
+                }
+
+
+                const haystack =
+                    [
+                        ad.title,
+                        ad.category,
+                        ad.location,
+                        ad.description,
+                        ad.price
+                    ]
+                    .join(" ")
+                    .toLowerCase();
+
+
+                return haystack.includes(
+                    search
+                );
+
+            }
+        );
+
+
+    $("resultsTitle")
+        .textContent =
+        search ||
+        category !== "All"
+            ? "Search results"
+            : "Latest listings";
+
+
+    renderAds(
+        state.filteredAds
+    );
+
+}
+
+
+/* =========================================================
+   LOAD LISTINGS
+   ========================================================= */
+
+async function loadListings(){
+
+    const requestId =
+        ++state.requestId;
+
+
+    hideStatuses();
+
+
+    $("adsGrid")
+        .innerHTML =
+        "";
+
+
+    renderSkeletons();
+
+
+    setLoading(
+        true
+    );
+
+
+    $("resultsCount")
+        .textContent =
+        "Loading...";
+
+
+    try{
+
+        const ads =
+            await fetchListings();
+
+
+        if(
+            requestId !==
+            state.requestId
+        ){
+
+            return;
+
+        }
+
+
+        state.ads =
+            ads;
+
+
+        state.imageCache.clear();
+
+
+        applyFilters();
+
+    }
+    catch(error){
+
+        if(
+            requestId !==
+            state.requestId
+        ){
+
+            return;
+
+        }
+
+
+        console.error(
+            "[HAVKAR] Listings load failed:",
+            error
+        );
+
+
+        state.ads = [];
+
+        state.filteredAds = [];
+
+
+        $("adsGrid")
+            .innerHTML =
+            "";
+
+
+        $("resultsCount")
+            .textContent =
+            "Unavailable";
+
+
+        showStatus(
+            "error",
+            getErrorMessage(
+                error
+            )
+        );
+
+    }
+    finally{
+
+        if(
+            requestId ===
+            state.requestId
+        ){
+
+            setLoading(
+                false
+            );
+
+
+            $("skeletonGrid")
+                .innerHTML =
+                "";
+
+
+            $("skeletonGrid")
+                .style
+                .display =
+                "none";
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   OPEN AD
+   ========================================================= */
+
+function openAd(id){
+
+    if(!id){
+
+        return;
+
+    }
+
+
+    /*
+     * Current HAVKAR detail destination.
+     */
+
     window.location.href =
-        "product.html?id=" +
+        "ad-details.html?id=" +
         encodeURIComponent(id);
 
 }
 
 
 /* =========================================================
-   NAVIGATION HELPERS
+   NAVIGATION
    ========================================================= */
 
-function goHome() {
+function goHome(){
 
     window.location.href =
         "index.html";
@@ -3462,7 +3014,7 @@ function goHome() {
 }
 
 
-function goProfile() {
+function goProfile(){
 
     window.location.href =
         "profile.html";
@@ -3470,315 +3022,302 @@ function goProfile() {
 }
 
 
-function goPostAd() {
+function goMessages(){
 
     window.location.href =
-        "post-ad.html";
+        "chat.html";
 
 }
 
 
 /* =========================================================
-   TOAST
+   NAVIGATION SETUP
    ========================================================= */
 
-let toastTimer =
-    null;
+function setupNavigation(){
 
+    $("backButton")
+        .addEventListener(
+            "click",
+            () => {
 
-function showToast(message) {
+                if(
+                    window.history.length > 1
+                ){
 
-    toast.textContent =
-        message;
-
-
-    toast.classList.add(
-        "show"
-    );
-
-
-    if (
-        toastTimer
-    ) {
-
-        clearTimeout(
-            toastTimer
-        );
-
-    }
-
-
-    toastTimer =
-        setTimeout(
-            function() {
-
-                toast.classList.remove(
-                    "show"
-                );
-
-            },
-            2800
-        );
-
-}
-
-
-/* =========================================================
-   ONLINE / OFFLINE
-   ========================================================= */
-
-window.addEventListener(
-    "online",
-    function() {
-
-        showToast(
-            "Connection restored. Loading listings..."
-        );
-
-
-        loadAds();
-
-    }
-);
-
-
-window.addEventListener(
-    "offline",
-    function() {
-
-        if (
-            state.loading
-        ) {
-
-            state.loading =
-                false;
-
-
-            hideSkeleton();
-
-
-            showError(
-                "Your internet connection was lost. " +
-                "Reconnect and try again."
-            );
-
-        }
-
-        else {
-
-            showToast(
-                "You are currently offline."
-            );
-
-        }
-
-    }
-);
-
-
-/* =========================================================
-   NAVIGATION EVENTS
-   ========================================================= */
-
-$("backButton")
-    .addEventListener(
-        "click",
-        function() {
-
-            /*
-             * If there is usable browser history,
-             * use it. Otherwise return to home.
-             */
-
-            if (
-                window.history.length > 1
-            ) {
-
-                window.history.back();
-
-            }
-
-            else {
-
-                goHome();
-
-            }
-
-        }
-    );
-
-
-$("profileButton")
-    .addEventListener(
-        "click",
-        goProfile
-    );
-
-
-$("notificationButton")
-    .addEventListener(
-        "click",
-        function() {
-
-            showToast(
-                "Notifications will be connected to your account."
-            );
-
-        }
-    );
-
-
-$("addButton")
-    .addEventListener(
-        "click",
-        goPostAd
-    );
-
-
-$("navHome")
-    .addEventListener(
-        "click",
-        goHome
-    );
-
-
-$("navSearch")
-    .addEventListener(
-        "click",
-        function() {
-
-            searchInput.focus();
-
-
-            window.scrollTo({
-                top: 0,
-                behavior: "smooth"
-            });
-
-        }
-    );
-
-
-$("navSaved")
-    .addEventListener(
-        "click",
-        function() {
-
-            showToast(
-                "Saved listings will be connected to your account."
-            );
-
-        }
-    );
-
-
-$("navMessages")
-    .addEventListener(
-        "click",
-        function() {
-
-            showToast(
-                "Messaging will be connected to your account."
-            );
-
-        }
-    );
-
-
-$("navProfile")
-    .addEventListener(
-        "click",
-        goProfile
-    );
-
-
-retryButton
-    .addEventListener(
-        "click",
-        loadAds
-    );
-
-
-/* =========================================================
-   KEYBOARD NAVIGATION
-   ========================================================= */
-
-document
-    .querySelectorAll(
-        ".nav-item"
-    )
-    .forEach(
-        function(item) {
-
-            item.addEventListener(
-                "keydown",
-                function(event) {
-
-                    if (
-                        event.key === "Enter" ||
-                        event.key === " "
-                    ) {
-
-                        event.preventDefault();
-
-                        item.click();
-
-                    }
+                    window.history.back();
 
                 }
+                else{
+
+                    goHome();
+
+                }
+
+            }
+        );
+
+
+    $("addButton")
+        .addEventListener(
+            "click",
+            () => {
+
+                window.location.href =
+                    "post-ad.html";
+
+            }
+        );
+
+
+    $("profileButton")
+        .addEventListener(
+            "click",
+            goProfile
+        );
+
+
+    $("notificationButton")
+        .addEventListener(
+            "click",
+            () => {
+
+                showToast(
+                    "Notifications will appear here."
+                );
+
+            }
+        );
+
+
+    $("navHome")
+        .addEventListener(
+            "click",
+            goHome
+        );
+
+
+    $("navSearch")
+        .addEventListener(
+            "click",
+            () => {
+
+                $("searchInput")
+                    .focus();
+
+
+                window.scrollTo(
+                    {
+                        top:0,
+                        behavior:"smooth"
+                    }
+                );
+
+            }
+        );
+
+
+    $("navSaved")
+        .addEventListener(
+            "click",
+            () => {
+
+                showToast(
+                    "Saved listings will appear here."
+                );
+
+            }
+        );
+
+
+    $("navMessages")
+        .addEventListener(
+            "click",
+            goMessages
+        );
+
+
+    $("navProfile")
+        .addEventListener(
+            "click",
+            goProfile
+        );
+
+
+    document
+        .querySelectorAll(
+            ".nav-item"
+        )
+        .forEach(
+            item => {
+
+                item.addEventListener(
+                    "keydown",
+                    event => {
+
+                        if(
+                            event.key === "Enter" ||
+                            event.key === " "
+                        ){
+
+                            event.preventDefault();
+
+                            item.click();
+
+                        }
+
+                    }
+                );
+
+            }
+        );
+
+}
+
+
+/* =========================================================
+   SEARCH SETUP
+   ========================================================= */
+
+function setupSearch(){
+
+    const input =
+        $("searchInput");
+
+
+    const clear =
+        $("clearSearch");
+
+
+    input.addEventListener(
+        "input",
+        () => {
+
+            state.search =
+                input.value;
+
+
+            clear.classList.toggle(
+                "visible",
+                Boolean(
+                    input.value
+                )
             );
+
+
+            applyFilters();
 
         }
     );
 
 
+    clear.addEventListener(
+        "click",
+        () => {
+
+            input.value =
+                "";
+
+
+            state.search =
+                "";
+
+
+            clear.classList.remove(
+                "visible"
+            );
+
+
+            applyFilters();
+
+
+            input.focus();
+
+        }
+    );
+
+}
+
+
 /* =========================================================
-   VISIBILITY REFRESH
+   RETRY
+   ========================================================= */
+
+function setupRetry(){
+
+    $("retryButton")
+        .addEventListener(
+            "click",
+            loadListings
+        );
+
+}
+
+
+/* =========================================================
+   BOOT
+   ========================================================= */
+
+async function boot(){
+
+    try{
+
+        initializeSupabase();
+
+        renderCategories();
+
+        setupNavigation();
+
+        setupSearch();
+
+        setupRetry();
+
+        renderSkeletons();
+
+        await loadListings();
+
+    }
+    catch(error){
+
+        console.error(
+            "[HAVKAR] Application startup failed:",
+            error
+        );
+
+
+        $("skeletonGrid")
+            .style
+            .display =
+            "none";
+
+
+        $("resultsCount")
+            .textContent =
+            "Unavailable";
+
+
+        showStatus(
+            "error",
+            getErrorMessage(
+                error
+            )
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   START APPLICATION
    ========================================================= */
 
 document.addEventListener(
-    "visibilitychange",
-    function() {
-
-        if (
-            document.visibilityState ===
-            "visible" &&
-            !state.loading &&
-            state.ads.length === 0
-        ) {
-
-            loadAds();
-
-        }
-
-    }
+    "DOMContentLoaded",
+    boot
 );
-
-
-/* =========================================================
-   INITIALIZE
-   ========================================================= */
-
-function initializePage() {
-
-    renderCategories();
-
-    setupSearch();
-
-    initializeSupabase();
-
-    loadAds();
-
-}
-
-
-/* =========================================================
-   START
-   ========================================================= */
-
-initializePage();
 
 </script>
 
 </body>
-    </html>
+      </html>
