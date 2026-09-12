@@ -1540,15 +1540,22 @@ select:focus{
    ========================================================= */
 
 const SUPABASE_URL =
-    "https://iompzwaxuirvatiibrtb.supabase.com";
+    "https://gispovnciifgikvgpzck.supabase.co";
 
 const SUPABASE_KEY =
-    "sb_publishable_oEKE1vl6EkWXdETgy9MjHw_DUTJLN4O";
+    "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq";
 
 const supabaseClient =
     window.supabase.createClient(
         SUPABASE_URL,
-        SUPABASE_KEY
+        SUPABASE_KEY,
+        {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true,
+                detectSessionInUrl: false
+            }
+        }
     );
 
 
@@ -3089,19 +3096,14 @@ async function executeCryptoTrade(){
     try{
 
         /*
-         * IMPORTANT:
-         *
-         * Supabase function currently exists as:
+         * Supabase function:
          *
          * public.trade_crypto(
-         *     text,
-         *     text,
-         *     numeric,
-         *     numeric
+         *     p_side text,
+         *     p_symbol text,
+         *     p_amount numeric,
+         *     p_price_eur numeric
          * )
-         *
-         * Therefore only FOUR parameters
-         * are sent here.
          */
 
         const result =
