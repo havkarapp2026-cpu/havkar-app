@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 
 <meta charset="UTF-8">
@@ -16,10 +17,24 @@
 
 <meta
     name="description"
-    content="HAVKAR Buy & Sell - Fast local marketplace for products, services and listings."
+    content="HAVKAR Buy & Sell - Fast local marketplace for products and services."
 >
 
 <title>HAVKAR - Buy & Sell</title>
+
+
+<!-- =========================================================
+     SUPABASE
+     ========================================================= -->
+
+<script
+    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+></script>
+
+
+<!-- =========================================================
+     FONT AWESOME
+     ========================================================= -->
 
 <link
     rel="preconnect"
@@ -29,17 +44,10 @@
 <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer"
 >
 
+
 <style>
-
-/* =========================================================
-   HAVKAR BUY & SELL
-   Professional single-page marketplace client
-   ========================================================= */
-
 
 /* =========================================================
    ROOT
@@ -50,6 +58,7 @@
     --primary: #2e7d32;
     --primary-light: #43a047;
     --primary-dark: #1b5e20;
+
     --primary-soft: #e8f5e9;
 
     --background: #f5f7f5;
@@ -57,23 +66,23 @@
 
     --text: #202124;
     --muted: #70757a;
-    --border: #e0e4e0;
+
+    --border: #e0e0e0;
 
     --danger: #c62828;
-    --danger-soft: #ffebee;
+    --danger-bg: #ffebee;
 
     --warning: #ef6c00;
-    --warning-soft: #fff3e0;
+    --warning-bg: #fff3e0;
 
     --shadow-sm:
-        0 2px 8px rgba(0,0,0,.055);
+        0 2px 8px rgba(0,0,0,.06);
 
     --shadow-md:
-        0 7px 22px rgba(0,0,0,.10);
+        0 6px 20px rgba(0,0,0,.10);
 
     --radius: 16px;
 
-    --header-height: 68px;
     --nav-height: 74px;
 
 }
@@ -84,14 +93,21 @@
    ========================================================= */
 
 * {
+
     margin: 0;
     padding: 0;
+
     box-sizing: border-box;
+
 }
 
+
 html {
+
     scroll-behavior: smooth;
+
 }
+
 
 body {
 
@@ -118,24 +134,34 @@ body {
             + env(safe-area-inset-bottom)
         );
 
-    -webkit-font-smoothing: antialiased;
+    -webkit-font-smoothing:
+        antialiased;
 
 }
+
 
 button,
 input {
+
     font: inherit;
+
 }
 
+
 button {
-    -webkit-tap-highlight-color: transparent;
+
+    -webkit-tap-highlight-color:
+        transparent;
+
 }
+
 
 button:focus-visible,
 input:focus-visible {
 
     outline:
-        3px solid rgba(67,160,71,.24);
+        3px solid
+        rgba(67,160,71,.25);
 
     outline-offset:
         2px;
@@ -149,32 +175,25 @@ input:focus-visible {
 
 .header {
 
-    position:
-        sticky;
+    position: sticky;
 
-    top:
-        0;
+    top: 0;
 
-    z-index:
-        1000;
+    z-index: 100;
 
-    min-height:
-        var(--header-height);
+    min-height: 68px;
 
-    display:
-        flex;
+    display: flex;
 
-    align-items:
-        center;
+    align-items: center;
 
-    justify-content:
-        space-between;
+    justify-content: space-between;
 
     padding:
-        11px 18px;
+        12px 20px;
 
     color:
-        #fff;
+        white;
 
     background:
         linear-gradient(
@@ -188,67 +207,41 @@ input:focus-visible {
 
 }
 
+
 .header-left {
 
-    min-width:
-        0;
+    display: flex;
 
-    display:
-        flex;
+    align-items: center;
 
-    align-items:
-        center;
+    gap: 14px;
 
-    gap:
-        13px;
+    min-width: 0;
 
 }
 
-.header-right {
 
-    display:
-        flex;
+.back-btn {
 
-    align-items:
-        center;
+    width: 42px;
+    height: 42px;
 
-    gap:
-        9px;
+    flex: 0 0 42px;
 
-}
+    display: flex;
 
-.back-btn,
-.header-icon-btn {
+    align-items: center;
+    justify-content: center;
 
-    width:
-        42px;
+    border: 0;
 
-    height:
-        42px;
-
-    flex:
-        0 0 42px;
-
-    border:
-        0;
-
-    border-radius:
-        50%;
-
-    display:
-        flex;
-
-    align-items:
-        center;
-
-    justify-content:
-        center;
-
-    color:
-        #fff;
+    border-radius: 50%;
 
     background:
         rgba(255,255,255,.15);
+
+    color:
+        white;
 
     cursor:
         pointer;
@@ -259,55 +252,112 @@ input:focus-visible {
 
 }
 
-.back-btn:hover,
-.header-icon-btn:hover {
+
+.back-btn:hover {
 
     background:
         rgba(255,255,255,.23);
 
 }
 
-.back-btn:active,
-.header-icon-btn:active {
+
+.back-btn:active {
 
     transform:
-        scale(.93);
+        scale(.94);
 
 }
+
 
 .back-btn i {
-    font-size: 1.28rem;
+
+    font-size:
+        1.25rem;
+
 }
 
-.header-icon-btn i {
-    font-size: 1.05rem;
-}
 
 .header h1 {
 
-    min-width:
-        0;
+    font-size:
+        1.25rem;
 
-    overflow:
-        hidden;
-
-    text-overflow:
-        ellipsis;
+    font-weight:
+        750;
 
     white-space:
         nowrap;
 
-    font-size:
-        1.24rem;
+}
 
-    font-weight:
-        750;
+
+.header-right {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        10px;
+
+}
+
+
+.icon-btn {
+
+    width: 42px;
+    height: 42px;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+    justify-content:
+        center;
+
+    border:
+        0;
+
+    border-radius:
+        50%;
+
+    background:
+        rgba(255,255,255,.15);
+
+    color:
+        white;
+
+    cursor:
+        pointer;
+
+    transition:
+        transform .15s ease,
+        background .2s ease;
+
+}
+
+
+.icon-btn:hover {
+
+    background:
+        rgba(255,255,255,.23);
+
+}
+
+
+.icon-btn:active {
+
+    transform:
+        scale(.94);
 
 }
 
 
 /* =========================================================
-   SEARCH AREA
+   SEARCH
    ========================================================= */
 
 .search-section {
@@ -316,31 +366,30 @@ input:focus-visible {
         sticky;
 
     top:
-        var(--header-height);
+        68px;
 
     z-index:
-        900;
+        90;
 
     background:
         var(--surface);
 
     padding:
-        13px 18px 11px;
+        14px 20px 12px;
 
     border-bottom:
-        1px solid rgba(0,0,0,.045);
+        1px solid rgba(0,0,0,.05);
 
 }
+
 
 .search-wrapper {
 
     position:
         relative;
 
-    width:
-        100%;
-
 }
+
 
 .search-icon {
 
@@ -357,15 +406,13 @@ input:focus-visible {
         translateY(-50%);
 
     color:
-        #858a85;
+        #888;
 
     pointer-events:
         none;
 
-    font-size:
-        1.05rem;
-
 }
+
 
 .search-input {
 
@@ -376,16 +423,16 @@ input:focus-visible {
         50px;
 
     padding:
-        0 48px;
+        0 48px 0 46px;
 
     border:
         2px solid var(--border);
 
     border-radius:
-        27px;
+        26px;
 
     background:
-        #fff;
+        white;
 
     color:
         var(--text);
@@ -402,9 +449,6 @@ input:focus-visible {
 
 }
 
-.search-input::placeholder {
-    color: #8a8f8a;
-}
 
 .search-input:focus {
 
@@ -412,9 +456,19 @@ input:focus-visible {
         var(--primary-light);
 
     box-shadow:
-        0 0 0 4px rgba(67,160,71,.10);
+        0 0 0 4px
+        rgba(67,160,71,.10);
 
 }
+
+
+.search-input::placeholder {
+
+    color:
+        #8a8a8a;
+
+}
+
 
 .clear-search {
 
@@ -422,7 +476,7 @@ input:focus-visible {
         absolute;
 
     right:
-        9px;
+        10px;
 
     top:
         50%;
@@ -436,18 +490,6 @@ input:focus-visible {
     height:
         34px;
 
-    border:
-        0;
-
-    border-radius:
-        50%;
-
-    background:
-        #f0f2f0;
-
-    color:
-        #666;
-
     display:
         none;
 
@@ -457,18 +499,34 @@ input:focus-visible {
     justify-content:
         center;
 
+    border:
+        0;
+
+    border-radius:
+        50%;
+
+    background:
+        #f1f3f1;
+
+    color:
+        #666;
+
     cursor:
         pointer;
 
 }
 
+
 .clear-search.show {
-    display: flex;
+
+    display:
+        flex;
+
 }
 
 
 /* =========================================================
-   CATEGORY BAR
+   FILTERS
    ========================================================= */
 
 .filters {
@@ -482,17 +540,14 @@ input:focus-visible {
     gap:
         9px;
 
-    padding:
-        2px 18px 13px;
-
     overflow-x:
         auto;
 
-    background:
-        var(--surface);
+    padding:
+        2px 20px 14px;
 
-    border-bottom:
-        1px solid rgba(0,0,0,.045);
+    background:
+        white;
 
     scrollbar-width:
         none;
@@ -502,9 +557,14 @@ input:focus-visible {
 
 }
 
+
 .filters::-webkit-scrollbar {
-    display: none;
+
+    display:
+        none;
+
 }
+
 
 .filter-btn {
 
@@ -524,13 +584,13 @@ input:focus-visible {
         22px;
 
     background:
-        #fff;
+        white;
 
     color:
         var(--text);
 
     font-size:
-        .89rem;
+        .9rem;
 
     font-weight:
         650;
@@ -546,30 +606,39 @@ input:focus-visible {
 
 }
 
+
 .filter-btn:hover {
-    border-color: var(--primary-light);
-}
-
-.filter-btn:active {
-    transform: scale(.97);
-}
-
-.filter-btn.active {
-
-    color:
-        #fff;
 
     border-color:
         var(--primary-light);
 
+}
+
+
+.filter-btn:active {
+
+    transform:
+        scale(.97);
+
+}
+
+
+.filter-btn.active {
+
+    color:
+        white;
+
     background:
+        var(--primary-light);
+
+    border-color:
         var(--primary-light);
 
 }
 
 
 /* =========================================================
-   MAIN CONTENT
+   CONTENT
    ========================================================= */
 
 .content {
@@ -578,20 +647,18 @@ input:focus-visible {
         100%;
 
     max-width:
-        1440px;
+        1400px;
 
     margin:
         0 auto;
 
     padding:
-        17px 18px 42px;
+        18px 20px 40px;
 
 }
 
-.results-header {
 
-    min-height:
-        25px;
+.results-header {
 
     display:
         flex;
@@ -603,9 +670,10 @@ input:focus-visible {
         space-between;
 
     margin-bottom:
-        14px;
+        15px;
 
 }
+
 
 .results-title {
 
@@ -617,19 +685,20 @@ input:focus-visible {
 
 }
 
+
 .results-count {
+
+    font-size:
+        .82rem;
 
     color:
         var(--muted);
-
-    font-size:
-        .80rem;
 
 }
 
 
 /* =========================================================
-   GRID
+   ADS GRID
    ========================================================= */
 
 .ads-grid {
@@ -638,13 +707,10 @@ input:focus-visible {
         grid;
 
     grid-template-columns:
-        repeat(
-            2,
-            minmax(0,1fr)
-        );
+        repeat(2,minmax(0,1fr));
 
     gap:
-        13px;
+        14px;
 
 }
 
@@ -662,7 +728,7 @@ input:focus-visible {
         hidden;
 
     background:
-        var(--surface);
+        white;
 
     border-radius:
         var(--radius);
@@ -674,23 +740,28 @@ input:focus-visible {
         pointer;
 
     transition:
-        transform .16s ease,
-        box-shadow .16s ease;
+        transform .18s ease,
+        box-shadow .18s ease;
 
 }
+
 
 .ad-card:hover {
 
     transform:
-        translateY(-2px);
+        translateY(-3px);
 
     box-shadow:
         var(--shadow-md);
 
 }
 
+
 .ad-card:active {
-    transform: scale(.985);
+
+    transform:
+        scale(.985);
+
 }
 
 
@@ -724,19 +795,14 @@ input:focus-visible {
     background:
         linear-gradient(
             135deg,
-            #e7ebe7,
+            #e8ece8,
             #f7f8f7
         );
 
 }
 
+
 .ad-image img {
-
-    position:
-        absolute;
-
-    inset:
-        0;
 
     width:
         100%;
@@ -744,93 +810,78 @@ input:focus-visible {
     height:
         100%;
 
-    object-fit:
-        cover;
-
     display:
         block;
+
+    object-fit:
+        cover;
 
     opacity:
         0;
 
     transition:
-        opacity .22s ease;
+        opacity .2s ease;
 
 }
+
 
 .ad-image img.loaded {
-    opacity: 1;
-}
 
-.ad-image-placeholder {
-
-    position:
-        relative;
-
-    z-index:
+    opacity:
         1;
 
+}
+
+
+.image-placeholder {
+
+    position:
+        absolute;
+
+    inset:
+        0;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
     color:
-        #9aa19a;
+        #9aa09a;
 
     font-size:
         2.5rem;
 
+    pointer-events:
+        none;
+
 }
 
+
 .ad-image.has-image
-.ad-image-placeholder {
+.image-placeholder {
 
     display:
         none;
 
 }
 
-.ad-condition {
-
-    position:
-        absolute;
-
-    z-index:
-        3;
-
-    top:
-        9px;
-
-    left:
-        9px;
-
-    padding:
-        5px 8px;
-
-    border-radius:
-        8px;
-
-    color:
-        #fff;
-
-    background:
-        rgba(0,0,0,.62);
-
-    font-size:
-        .66rem;
-
-    font-weight:
-        700;
-
-}
-
 
 /* =========================================================
-   CARD INFO
+   INFO
    ========================================================= */
 
 .ad-info {
 
     padding:
-        10px;
+        12px;
 
 }
+
 
 .ad-title {
 
@@ -838,7 +889,7 @@ input:focus-visible {
         2.45em;
 
     margin-bottom:
-        5px;
+        6px;
 
     display:
         -webkit-box;
@@ -856,7 +907,7 @@ input:focus-visible {
         var(--text);
 
     font-size:
-        .91rem;
+        .94rem;
 
     font-weight:
         720;
@@ -866,21 +917,23 @@ input:focus-visible {
 
 }
 
+
 .ad-price {
 
     margin-bottom:
-        5px;
+        6px;
 
     color:
         var(--primary-dark);
 
     font-size:
-        1.04rem;
+        1.08rem;
 
     font-weight:
         800;
 
 }
+
 
 .ad-location {
 
@@ -893,16 +946,23 @@ input:focus-visible {
     gap:
         5px;
 
-    min-width:
-        0;
+    overflow:
+        hidden;
 
     color:
         var(--muted);
 
     font-size:
-        .75rem;
+        .77rem;
+
+    white-space:
+        nowrap;
+
+    text-overflow:
+        ellipsis;
 
 }
+
 
 .ad-location i {
 
@@ -914,82 +974,69 @@ input:focus-visible {
 
 }
 
-.ad-location span {
-
-    min-width:
-        0;
-
-    overflow:
-        hidden;
-
-    text-overflow:
-        ellipsis;
-
-    white-space:
-        nowrap;
-
-}
 
 .ad-category {
 
     margin-top:
-        6px;
+        7px;
 
     overflow:
         hidden;
 
-    text-overflow:
-        ellipsis;
+    color:
+        #8a8f8a;
+
+    font-size:
+        .72rem;
 
     white-space:
         nowrap;
 
-    color:
-        #8b908b;
-
-    font-size:
-        .69rem;
+    text-overflow:
+        ellipsis;
 
 }
 
 
 /* =========================================================
-   STATUS
+   LOADING
    ========================================================= */
 
 .status {
 
-    display:
-        none;
-
     width:
         100%;
 
+    display:
+        none;
+
     padding:
-        45px 18px;
+        42px 20px;
 
     text-align:
         center;
 
 }
 
+
 .status.show {
-    display: block;
+
+    display:
+        block;
+
 }
+
 
 .status-icon {
 
     width:
-        64px;
+        62px;
 
     height:
-        64px;
+        62px;
 
     margin:
         0 auto 15px;
-
-    border-radius:
-        50%;
 
     display:
         flex;
@@ -1000,6 +1047,9 @@ input:focus-visible {
     justify-content:
         center;
 
+    border-radius:
+        50%;
+
     background:
         var(--primary-soft);
 
@@ -1007,9 +1057,10 @@ input:focus-visible {
         var(--primary);
 
     font-size:
-        1.45rem;
+        1.5rem;
 
 }
+
 
 .status-title {
 
@@ -1020,17 +1071,18 @@ input:focus-visible {
         var(--text);
 
     font-size:
-        1.04rem;
+        1.05rem;
 
     font-weight:
         750;
 
 }
 
+
 .status-text {
 
     max-width:
-        480px;
+        500px;
 
     margin:
         0 auto;
@@ -1039,23 +1091,25 @@ input:focus-visible {
         var(--muted);
 
     font-size:
-        .87rem;
+        .88rem;
 
     line-height:
         1.55;
 
 }
 
+
 .status.error
 .status-icon {
 
     background:
-        var(--danger-soft);
+        var(--danger-bg);
 
     color:
         var(--danger);
 
 }
+
 
 .status.error
 .status-title {
@@ -1064,6 +1118,11 @@ input:focus-visible {
         var(--danger);
 
 }
+
+
+/* =========================================================
+   RETRY
+   ========================================================= */
 
 .retry-btn {
 
@@ -1079,15 +1138,15 @@ input:focus-visible {
     border-radius:
         12px;
 
-    color:
-        #fff;
-
     background:
         linear-gradient(
             135deg,
             var(--primary),
             var(--primary-light)
         );
+
+    color:
+        white;
 
     font-weight:
         700;
@@ -1096,12 +1155,17 @@ input:focus-visible {
         pointer;
 
     box-shadow:
-        0 5px 14px rgba(46,125,50,.23);
+        0 4px 12px
+        rgba(46,125,50,.22);
 
 }
 
+
 .retry-btn:active {
-    transform: scale(.97);
+
+    transform:
+        scale(.97);
+
 }
 
 
@@ -1114,16 +1178,17 @@ input:focus-visible {
     overflow:
         hidden;
 
+    background:
+        white;
+
     border-radius:
         var(--radius);
-
-    background:
-        #fff;
 
     box-shadow:
         var(--shadow-sm);
 
 }
+
 
 .skeleton {
 
@@ -1131,7 +1196,7 @@ input:focus-visible {
         linear-gradient(
             90deg,
             #eeeeee 25%,
-            #f8f8f8 38%,
+            #f7f7f7 37%,
             #eeeeee 63%
         );
 
@@ -1139,9 +1204,10 @@ input:focus-visible {
         400% 100%;
 
     animation:
-        skeletonMove 1.35s ease infinite;
+        skeletonLoading 1.35s ease infinite;
 
 }
+
 
 .skeleton-image {
 
@@ -1153,37 +1219,51 @@ input:focus-visible {
 
 }
 
+
 .skeleton-line {
 
     height:
-        11px;
+        12px;
 
     margin:
-        11px;
+        12px;
 
     border-radius:
         6px;
 
 }
 
+
 .skeleton-line.medium {
-    width: 68%;
+
+    width:
+        70%;
+
 }
+
 
 .skeleton-line.short {
-    width: 43%;
+
+    width:
+        45%;
+
 }
 
-@keyframes skeletonMove {
+
+@keyframes skeletonLoading {
 
     0% {
+
         background-position:
             100% 50%;
+
     }
 
     100% {
+
         background-position:
             0 50%;
+
     }
 
 }
@@ -1199,29 +1279,23 @@ input:focus-visible {
         fixed;
 
     right:
-        18px;
+        20px;
 
     bottom:
         calc(
             var(--nav-height)
-            + 17px
+            + 18px
             + env(safe-area-inset-bottom)
         );
 
     z-index:
-        1100;
+        80;
 
     width:
         60px;
 
     height:
         60px;
-
-    border:
-        0;
-
-    border-radius:
-        50%;
 
     display:
         flex;
@@ -1232,8 +1306,11 @@ input:focus-visible {
     justify-content:
         center;
 
-    color:
-        #fff;
+    border:
+        0;
+
+    border-radius:
+        50%;
 
     background:
         linear-gradient(
@@ -1242,6 +1319,9 @@ input:focus-visible {
             var(--primary-light)
         );
 
+    color:
+        white;
+
     font-size:
         1.55rem;
 
@@ -1249,19 +1329,17 @@ input:focus-visible {
         pointer;
 
     box-shadow:
-        0 7px 23px rgba(46,125,50,.38);
-
-    transition:
-        transform .18s ease;
+        0 7px 22px
+        rgba(46,125,50,.38);
 
 }
 
-.fab-button:hover {
-    transform: translateY(-2px);
-}
 
 .fab-button:active {
-    transform: scale(.93);
+
+    transform:
+        scale(.94);
+
 }
 
 
@@ -1284,7 +1362,7 @@ input:focus-visible {
         0;
 
     z-index:
-        1000;
+        100;
 
     height:
         calc(
@@ -1314,9 +1392,11 @@ input:focus-visible {
         blur(14px);
 
     box-shadow:
-        0 -2px 12px rgba(0,0,0,.10);
+        0 -2px 12px
+        rgba(0,0,0,.10);
 
 }
+
 
 .nav-item {
 
@@ -1345,7 +1425,7 @@ input:focus-visible {
         #929792;
 
     font-size:
-        .71rem;
+        .72rem;
 
     font-weight:
         550;
@@ -1353,140 +1433,21 @@ input:focus-visible {
     cursor:
         pointer;
 
-    transition:
-        color .18s ease;
-
 }
+
 
 .nav-item i {
-    font-size: 1.27rem;
-}
-
-.nav-item.active {
-    color: var(--primary-light);
-}
-
-.nav-item:active {
-    opacity: .70;
-}
-
-
-/* =========================================================
-   TOAST
-   ========================================================= */
-
-.toast {
-
-    position:
-        fixed;
-
-    left:
-        50%;
-
-    bottom:
-        calc(
-            var(--nav-height)
-            + 20px
-            + env(safe-area-inset-bottom)
-        );
-
-    z-index:
-        3000;
-
-    max-width:
-        calc(100vw - 32px);
-
-    padding:
-        12px 17px;
-
-    transform:
-        translateX(-50%);
-
-    border-radius:
-        12px;
-
-    color:
-        #fff;
-
-    background:
-        #242624;
 
     font-size:
-        14px;
-
-    font-weight:
-        600;
-
-    text-align:
-        center;
-
-    box-shadow:
-        0 8px 28px rgba(0,0,0,.23);
-
-    animation:
-        toastIn .18s ease;
-
-}
-
-@keyframes toastIn {
-
-    from {
-        opacity: 0;
-        transform:
-            translateX(-50%)
-            translateY(8px);
-    }
-
-    to {
-        opacity: 1;
-        transform:
-            translateX(-50%)
-            translateY(0);
-    }
+        1.28rem;
 
 }
 
 
-/* =========================================================
-   DESKTOP
-   ========================================================= */
+.nav-item.active {
 
-@media (min-width: 650px) {
-
-    .ads-grid {
-
-        grid-template-columns:
-            repeat(
-                3,
-                minmax(0,1fr)
-            );
-
-        gap:
-            17px;
-
-    }
-
-}
-
-
-/* =========================================================
-   LARGE DESKTOP
-   ========================================================= */
-
-@media (min-width: 950px) {
-
-    .ads-grid {
-
-        grid-template-columns:
-            repeat(
-                4,
-                minmax(0,1fr)
-            );
-
-        gap:
-            20px;
-
-    }
+    color:
+        var(--primary-light);
 
 }
 
@@ -1497,92 +1458,115 @@ input:focus-visible {
 
 @media (max-width: 500px) {
 
-    :root {
-        --header-height: 64px;
+    .header {
+
+        padding:
+            11px 14px;
+
     }
 
-    .header {
-        padding:
-            10px 13px;
-    }
 
     .header h1 {
+
         font-size:
             1.16rem;
+
     }
+
 
     .search-section {
 
         top:
-            var(--header-height);
+            64px;
 
         padding:
-            11px 12px 10px;
+            12px 12px 10px;
 
     }
+
 
     .filters {
 
         padding:
-            2px 12px 11px;
+            2px 12px 12px;
 
     }
+
 
     .content {
 
         padding:
-            14px 12px 32px;
+            14px 12px 30px;
 
     }
+
 
     .ads-grid {
-        gap: 11px;
+
+        gap:
+            11px;
+
     }
+
 
     .ad-info {
-        padding: 9px;
+
+        padding:
+            10px;
+
     }
+
 
     .ad-title {
-        font-size: .88rem;
+
+        font-size:
+            .89rem;
+
     }
+
 
     .ad-price {
-        font-size: .99rem;
+
+        font-size:
+            1rem;
+
     }
 
-    .ad-location {
-        font-size: .73rem;
-    }
 
     .fab-button {
-        right: 15px;
+
+        right:
+            16px;
+
     }
 
 }
 
 
-/* =========================================================
-   REDUCED MOTION
-   ========================================================= */
+@media (min-width: 650px) {
 
-@media (prefers-reduced-motion: reduce) {
+    .ads-grid {
 
-    *,
-    *::before,
-    *::after {
+        grid-template-columns:
+            repeat(3,minmax(0,1fr));
 
-        scroll-behavior:
-            auto !important;
+        gap:
+            18px;
 
-        animation-duration:
-            .01ms !important;
+    }
 
-        animation-iteration-count:
-            1 !important;
+}
 
-        transition-duration:
-            .01ms !important;
+
+@media (min-width: 950px) {
+
+    .ads-grid {
+
+        grid-template-columns:
+            repeat(4,minmax(0,1fr));
+
+        gap:
+            20px;
 
     }
 
@@ -1605,16 +1589,20 @@ input:focus-visible {
     <div class="header-left">
 
         <button
-            id="backButton"
             class="back-btn"
             type="button"
-            aria-label="Back">
+            aria-label="Back"
+            onclick="goHome()"
+        >
 
             <i class="fas fa-arrow-left"></i>
 
         </button>
 
-        <h1>Buy &amp; Sell</h1>
+
+        <h1>
+            Buy &amp; Sell
+        </h1>
 
     </div>
 
@@ -1622,10 +1610,11 @@ input:focus-visible {
     <div class="header-right">
 
         <button
-            id="notificationButton"
-            class="header-icon-btn"
+            class="icon-btn"
             type="button"
-            aria-label="Notifications">
+            aria-label="Notifications"
+            onclick="showInfo('Notifications are not connected yet.')"
+        >
 
             <i class="fas fa-bell"></i>
 
@@ -1633,10 +1622,11 @@ input:focus-visible {
 
 
         <button
-            id="profileButton"
-            class="header-icon-btn"
+            class="icon-btn"
             type="button"
-            aria-label="Profile">
+            aria-label="Profile"
+            onclick="goProfile()"
+        >
 
             <i class="fas fa-user"></i>
 
@@ -1657,8 +1647,7 @@ input:focus-visible {
 
         <i
             class="fas fa-search search-icon"
-            aria-hidden="true">
-        </i>
+        ></i>
 
 
         <input
@@ -1676,7 +1665,8 @@ input:focus-visible {
             id="clearSearch"
             class="clear-search"
             type="button"
-            aria-label="Clear search">
+            aria-label="Clear search"
+        >
 
             <i class="fas fa-times"></i>
 
@@ -1688,13 +1678,14 @@ input:focus-visible {
 
 
 <!-- =========================================================
-     CATEGORIES
+     FILTERS
      ========================================================= -->
 
 <nav
     id="filters"
     class="filters"
-    aria-label="Listing categories">
+    aria-label="Categories"
+>
 </nav>
 
 
@@ -1709,31 +1700,28 @@ input:focus-visible {
 
         <div
             id="resultsTitle"
-            class="results-title">
-
+            class="results-title"
+        >
             Latest listings
-
         </div>
 
 
         <div
             id="resultsCount"
-            class="results-count">
-
+            class="results-count"
+        >
             —
-
         </div>
 
     </div>
 
 
-    <!-- =====================================================
-         LOADING
-         ===================================================== -->
+    <!-- LOADING -->
 
     <div
         id="loadingStatus"
-        class="status">
+        class="status show"
+    >
 
         <div class="status-icon">
 
@@ -1741,24 +1729,25 @@ input:focus-visible {
 
         </div>
 
+
         <div class="status-title">
             Loading listings
         </div>
 
+
         <div class="status-text">
-            HAVKAR is loading the latest listings.
+            Please wait while HAVKAR loads the latest listings.
         </div>
 
     </div>
 
 
-    <!-- =====================================================
-         ERROR
-         ===================================================== -->
+    <!-- ERROR -->
 
     <div
         id="errorStatus"
-        class="status error">
+        class="status error"
+    >
 
         <div class="status-icon">
 
@@ -1766,23 +1755,25 @@ input:focus-visible {
 
         </div>
 
+
         <div class="status-title">
             Could not load listings
         </div>
 
+
         <div
             id="errorText"
-            class="status-text">
-
+            class="status-text"
+        >
             Unable to connect to the listings service.
-
         </div>
 
 
         <button
             id="retryButton"
             class="retry-btn"
-            type="button">
+            type="button"
+        >
 
             <i class="fas fa-rotate-right"></i>
 
@@ -1793,13 +1784,12 @@ input:focus-visible {
     </div>
 
 
-    <!-- =====================================================
-         EMPTY
-         ===================================================== -->
+    <!-- EMPTY -->
 
     <div
         id="emptyStatus"
-        class="status">
+        class="status"
+    >
 
         <div class="status-icon">
 
@@ -1807,9 +1797,11 @@ input:focus-visible {
 
         </div>
 
+
         <div class="status-title">
             No listings found
         </div>
+
 
         <div class="status-text">
             There are no listings matching your search or category.
@@ -1818,40 +1810,27 @@ input:focus-visible {
     </div>
 
 
-    <!-- =====================================================
-         SKELETON
-         ===================================================== -->
-
-    <div
-        id="skeletonGrid"
-        class="ads-grid"
-        style="display:none;">
-
-    </div>
-
-
-    <!-- =====================================================
-         ADS
-         ===================================================== -->
+    <!-- ADS -->
 
     <div
         id="adsGrid"
-        class="ads-grid">
-
+        class="ads-grid"
+    >
     </div>
 
 </main>
 
 
 <!-- =========================================================
-     ADD LISTING
+     ADD
      ========================================================= -->
 
 <button
-    id="postAdButton"
     class="fab-button"
     type="button"
-    aria-label="Post an ad">
+    aria-label="Post a new ad"
+    onclick="goPostAd()"
+>
 
     <i class="fas fa-plus"></i>
 
@@ -1864,68 +1843,82 @@ input:focus-visible {
 
 <nav class="bottom-nav">
 
-
     <div
-        id="homeNav"
         class="nav-item active"
         role="button"
-        tabindex="0">
+        tabindex="0"
+        onclick="goHome()"
+    >
 
         <i class="fas fa-home"></i>
 
-        <span>Home</span>
+        <span>
+            Home
+        </span>
 
     </div>
 
 
     <div
-        id="searchNav"
         class="nav-item"
         role="button"
-        tabindex="0">
+        tabindex="0"
+        onclick="focusSearch()"
+    >
 
         <i class="fas fa-search"></i>
 
-        <span>Search</span>
+        <span>
+            Search
+        </span>
 
     </div>
 
 
     <div
-        id="savedNav"
         class="nav-item"
         role="button"
-        tabindex="0">
+        tabindex="0"
+        onclick="showInfo('Saved listings will be connected to your account.')"
+    >
 
         <i class="fas fa-heart"></i>
 
-        <span>Saved</span>
+        <span>
+            Saved
+        </span>
 
     </div>
 
 
     <div
-        id="messagesNav"
         class="nav-item"
         role="button"
-        tabindex="0">
+        tabindex="0"
+        onclick="showInfo('Messaging will be connected to your account.')"
+    >
 
         <i class="fas fa-comment"></i>
 
-        <span>Messages</span>
+        <span>
+            Messages
+        </span>
 
     </div>
 
 
     <div
-        id="profileNav"
         class="nav-item"
         role="button"
-        tabindex="0">
+        tabindex="0"
+        onclick="goProfile()"
+    >
 
         <i class="fas fa-user"></i>
 
-        <span>Profile</span>
+        <span>
+            Profile
+        </span>
 
     </div>
 
@@ -1936,12 +1929,14 @@ input:focus-visible {
 
 /* =========================================================
    HAVKAR BUY & SELL
-   APPLICATION ENGINE
+   Optimized Listings Engine
    ========================================================= */
 
 
 /* =========================================================
-   SUPABASE
+   SUPABASE CONFIG
+   IMPORTANT:
+   Same publishable key used by post-ad.html
    ========================================================= */
 
 const SUPABASE_URL =
@@ -1949,29 +1944,20 @@ const SUPABASE_URL =
 
 
 const SUPABASE_PUBLISHABLE_KEY =
-    "sb_publishable_h6RUZrukEovZn_N3XLDukw_Ui67UsWG";
-
-
-const ADS_ENDPOINT =
-    SUPABASE_URL +
-    "/rest/v1/ads";
+    "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq";
 
 
 /* =========================================================
-   APPLICATION CONSTANTS
+   CONSTANTS
    ========================================================= */
 
-const CONFIG = {
+const ADS_PAGE_SIZE = 60;
 
-    pageSize: 60,
+const REQUEST_TIMEOUT_MS = 12000;
 
-    requestTimeout: 12000,
+const IMAGE_REQUEST_TIMEOUT_MS = 10000;
 
-    maxAttempts: 2,
-
-    retryDelay: 700
-
-};
+const MAX_VISIBLE_IMAGE_LOADS = 8;
 
 
 /* =========================================================
@@ -2028,6 +2014,79 @@ const CATEGORIES = [
 
 
 /* =========================================================
+   SUPABASE CLIENT
+   ========================================================= */
+
+let supabaseClient = null;
+
+
+function initializeSupabase() {
+
+    if (
+        supabaseClient
+    ) {
+
+        return true;
+
+    }
+
+
+    try {
+
+        if (
+            !window.supabase ||
+            typeof window.supabase.createClient !== "function"
+        ) {
+
+            throw new Error(
+                "Supabase library did not load."
+            );
+
+        }
+
+
+        supabaseClient =
+            window.supabase.createClient(
+                SUPABASE_URL,
+                SUPABASE_PUBLISHABLE_KEY,
+                {
+
+                    auth: {
+
+                        persistSession:
+                            true,
+
+                        autoRefreshToken:
+                            true,
+
+                        detectSessionInUrl:
+                            true
+
+                    }
+
+                }
+            );
+
+
+        return true;
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "[HAVKAR] Supabase initialization:",
+            error
+        );
+
+        return false;
+
+    }
+
+}
+
+
+/* =========================================================
    STATE
    ========================================================= */
 
@@ -2037,17 +2096,17 @@ const state = {
 
     filteredAds: [],
 
-    category: "All",
+    currentCategory: "All",
 
     search: "",
 
     loading: false,
 
-    requestNumber: 0,
+    requestId: 0,
 
-    controller: null,
+    imageQueue: [],
 
-    lastSuccessfulLoad: 0
+    activeImageLoads: 0
 
 };
 
@@ -2056,217 +2115,111 @@ const state = {
    DOM
    ========================================================= */
 
-const $ = function(id) {
-    return document.getElementById(id);
-};
-
-
 const adsGrid =
-    $("adsGrid");
+    document.getElementById(
+        "adsGrid"
+    );
 
-const skeletonGrid =
-    $("skeletonGrid");
 
-const filters =
-    $("filters");
+const filtersContainer =
+    document.getElementById(
+        "filters"
+    );
+
 
 const searchInput =
-    $("searchInput");
+    document.getElementById(
+        "searchInput"
+    );
+
 
 const clearSearch =
-    $("clearSearch");
+    document.getElementById(
+        "clearSearch"
+    );
+
 
 const loadingStatus =
-    $("loadingStatus");
+    document.getElementById(
+        "loadingStatus"
+    );
+
 
 const errorStatus =
-    $("errorStatus");
+    document.getElementById(
+        "errorStatus"
+    );
+
 
 const emptyStatus =
-    $("emptyStatus");
+    document.getElementById(
+        "emptyStatus"
+    );
+
 
 const errorText =
-    $("errorText");
+    document.getElementById(
+        "errorText"
+    );
+
 
 const retryButton =
-    $("retryButton");
+    document.getElementById(
+        "retryButton"
+    );
+
 
 const resultsTitle =
-    $("resultsTitle");
+    document.getElementById(
+        "resultsTitle"
+    );
+
 
 const resultsCount =
-    $("resultsCount");
+    document.getElementById(
+        "resultsCount"
+    );
 
 
 /* =========================================================
    NAVIGATION
    ========================================================= */
 
-function navigate(path) {
+function goHome() {
 
     window.location.href =
-        path;
+        "index.html";
 
 }
 
 
-$("backButton").addEventListener(
-    "click",
-    function() {
+function goProfile() {
 
-        navigate("index.html");
+    window.location.href =
+        "profile.html";
 
-    }
-);
+}
 
 
-$("profileButton").addEventListener(
-    "click",
-    function() {
+function goPostAd() {
 
-        navigate("profile.html");
+    window.location.href =
+        "post-ad.html";
 
-    }
-);
+}
 
 
-$("postAdButton").addEventListener(
-    "click",
-    function() {
+function focusSearch() {
 
-        navigate("post-ad.html");
+    searchInput.focus();
 
-    }
-);
+    window.scrollTo({
 
+        top: 0,
 
-$("homeNav").addEventListener(
-    "click",
-    function() {
-
-        navigate("index.html");
-
-    }
-);
-
-
-$("profileNav").addEventListener(
-    "click",
-    function() {
-
-        navigate("profile.html");
-
-    }
-);
-
-
-$("searchNav").addEventListener(
-    "click",
-    function() {
-
-        searchInput.focus();
-
-        window.scrollTo({
-            top: 0,
-            behavior: "smooth"
-        });
-
-    }
-);
-
-
-$("savedNav").addEventListener(
-    "click",
-    function() {
-
-        showToast(
-            "Saved listings will be connected to your account."
-        );
-
-    }
-);
-
-
-$("messagesNav").addEventListener(
-    "click",
-    function() {
-
-        showToast(
-            "Messaging will be connected to your account."
-        );
-
-    }
-);
-
-
-$("notificationButton").addEventListener(
-    "click",
-    function() {
-
-        showToast(
-            "Notifications will be connected to your account."
-        );
-
-    }
-);
-
-
-/* =========================================================
-   KEYBOARD NAVIGATION
-   ========================================================= */
-
-document
-    .querySelectorAll(".nav-item")
-    .forEach(function(item) {
-
-        item.addEventListener(
-            "keydown",
-            function(event) {
-
-                if (
-                    event.key === "Enter" ||
-                    event.key === " "
-                ) {
-
-                    event.preventDefault();
-
-                    item.click();
-
-                }
-
-            }
-        );
+        behavior: "smooth"
 
     });
-
-
-/* =========================================================
-   ESCAPE HTML
-   ========================================================= */
-
-function escapeHtml(value) {
-
-    if (
-        value === null ||
-        value === undefined
-    ) {
-
-        return "";
-
-    }
-
-
-    return String(value)
-
-        .replace(/&/g, "&amp;")
-
-        .replace(/</g, "&lt;")
-
-        .replace(/>/g, "&gt;")
-
-        .replace(/"/g, "&quot;")
-
-        .replace(/'/g, "&#039;");
 
 }
 
@@ -2293,6 +2246,42 @@ function safeString(value) {
 
 
 /* =========================================================
+   ESCAPE HTML
+   ========================================================= */
+
+function escapeHtml(value) {
+
+    return safeString(value)
+
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+
+        .replace(
+            /</g,
+            "&lt;"
+        )
+
+        .replace(
+            />/g,
+            "&gt;"
+        )
+
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
+
+
+/* =========================================================
    PRICE
    ========================================================= */
 
@@ -2313,10 +2302,12 @@ function formatPrice(value) {
         Number(value);
 
 
-    if (!Number.isFinite(number)) {
+    if (
+        !Number.isFinite(number)
+    ) {
 
         return escapeHtml(
-            safeString(value)
+            value
         );
 
     }
@@ -2325,9 +2316,16 @@ function formatPrice(value) {
     return new Intl.NumberFormat(
         "en-US",
         {
-            style: "currency",
-            currency: "EUR",
-            maximumFractionDigits: 2
+
+            style:
+                "currency",
+
+            currency:
+                "EUR",
+
+            maximumFractionDigits:
+                2
+
         }
     ).format(number);
 
@@ -2341,7 +2339,9 @@ function formatPrice(value) {
 function formatDate(value) {
 
     if (!value) {
+
         return "";
+
     }
 
 
@@ -2363,9 +2363,16 @@ function formatDate(value) {
     return new Intl.DateTimeFormat(
         "en-GB",
         {
-            day: "numeric",
-            month: "short",
-            year: "numeric"
+
+            day:
+                "numeric",
+
+            month:
+                "short",
+
+            year:
+                "numeric"
+
         }
     ).format(date);
 
@@ -2373,119 +2380,125 @@ function formatDate(value) {
 
 
 /* =========================================================
-   IMAGE EXTRACTION
+   TIMEOUT
    ========================================================= */
 
-function getFirstImage(ad) {
+function withTimeout(
+    promise,
+    milliseconds
+) {
 
-    if (!ad) {
-        return null;
-    }
-
-
-    const photos =
-        ad.photos;
+    let timer = null;
 
 
-    if (Array.isArray(photos)) {
+    const timeout =
+        new Promise(
+            function(_, reject) {
 
-        for (
-            const photo of photos
-        ) {
+                timer =
+                    setTimeout(
+                        function() {
 
-            if (
-                typeof photo === "string" &&
-                photo.trim()
-            ) {
+                            reject(
+                                new Error(
+                                    "Request timed out."
+                                )
+                            );
 
-                return photo.trim();
+                        },
+                        milliseconds
+                    );
 
             }
-
-        }
-
-    }
+        );
 
 
-    if (
-        typeof photos === "string" &&
-        photos.trim()
-    ) {
+    return Promise.race([
 
-        const value =
-            photos.trim();
+        promise
 
+            .finally(
+                function() {
 
-        try {
+                    if (timer) {
 
-            const parsed =
-                JSON.parse(value);
-
-
-            if (Array.isArray(parsed)) {
-
-                for (
-                    const photo of parsed
-                ) {
-
-                    if (
-                        typeof photo === "string" &&
-                        photo.trim()
-                    ) {
-
-                        return photo.trim();
+                        clearTimeout(
+                            timer
+                        );
 
                     }
 
                 }
+            ),
 
-            }
+        timeout
 
-        }
+    ]);
 
-        catch (_) {
-
-            if (
-                value.startsWith("https://") ||
-                value.startsWith("http://")
-            ) {
-
-                return value;
-
-            }
-
-        }
-
-    }
+}
 
 
-    const fallbackFields = [
+/* =========================================================
+   STATUS
+   ========================================================= */
 
-        "image_url",
-        "image",
-        "thumbnail_url",
-        "thumbnail"
+function hideStatuses() {
 
-    ];
+    loadingStatus
+        .classList
+        .remove("show");
 
+    errorStatus
+        .classList
+        .remove("show");
 
-    for (
-        const field of fallbackFields
-    ) {
+    emptyStatus
+        .classList
+        .remove("show");
 
-        if (
-            typeof ad[field] === "string" &&
-            ad[field].trim()
-        ) {
-
-            return ad[field].trim();
-
-        }
-
-    }
+}
 
 
-    return null;
+function showLoading() {
+
+    hideStatuses();
+
+    loadingStatus
+        .classList
+        .add("show");
+
+}
+
+
+function showError(message) {
+
+    hideStatuses();
+
+    errorText.textContent =
+        message ||
+        "Unable to load listings.";
+
+    errorStatus
+        .classList
+        .add("show");
+
+}
+
+
+function showEmpty() {
+
+    hideStatuses();
+
+    emptyStatus
+        .classList
+        .add("show");
+
+}
+
+
+function showContent() {
+
+    hideStatuses();
 
 }
 
@@ -2520,72 +2533,62 @@ function readableError(error) {
 
 
     if (
-        lower.includes("abort") ||
-        lower.includes("timed out")
+        lower.includes(
+            "failed to fetch"
+        )
     ) {
 
         return (
-            "The listings server took too long to respond. " +
-            "Please try again."
+            "HAVKAR could not reach Supabase. " +
+            "The browser-to-database connection failed."
         );
 
     }
 
 
     if (
-        lower.includes("401")
+        lower.includes(
+            "timed out"
+        )
     ) {
 
         return (
-            "The listings server rejected the application key."
+            "The listings server took too long to respond."
         );
 
     }
 
 
     if (
-        lower.includes("403")
+        lower.includes(
+            "permission"
+        ) ||
+        lower.includes(
+            "row-level security"
+        ) ||
+        lower.includes(
+            "rls"
+        )
     ) {
 
         return (
-            "The listings table denied public access. " +
-            "The Supabase Row Level Security policy needs to allow reading listings."
+            "Supabase denied access to the listings."
         );
 
     }
 
 
     if (
-        lower.includes("404")
+        lower.includes(
+            "relation"
+        ) &&
+        lower.includes(
+            "does not exist"
+        )
     ) {
 
         return (
-            "The listings endpoint or ads table could not be found."
-        );
-
-    }
-
-
-    if (
-        lower.includes("42501")
-    ) {
-
-        return (
-            "Supabase denied access to the ads table. " +
-            "Check the SELECT policy for the ads table."
-        );
-
-    }
-
-
-    if (
-        lower.includes("failed to fetch") ||
-        lower.includes("networkerror")
-    ) {
-
-        return (
-            "HAVKAR could not reach the listings server. " +
-            "The problem is between the browser and Supabase."
+            "The ads table could not be found in Supabase."
         );
 
     }
@@ -2606,147 +2609,12 @@ function readableError(error) {
 
 
 /* =========================================================
-   STATUS
-   ========================================================= */
-
-function hideStatuses() {
-
-    loadingStatus.classList.remove("show");
-
-    errorStatus.classList.remove("show");
-
-    emptyStatus.classList.remove("show");
-
-}
-
-
-function showLoading() {
-
-    hideStatuses();
-
-    loadingStatus.classList.add("show");
-
-}
-
-
-function showError(message) {
-
-    hideStatuses();
-
-    errorText.textContent =
-        message ||
-        "Unable to load listings.";
-
-    errorStatus.classList.add("show");
-
-}
-
-
-function showEmpty() {
-
-    hideStatuses();
-
-    emptyStatus.classList.add("show");
-
-}
-
-
-function showContent() {
-
-    hideStatuses();
-
-}
-
-
-/* =========================================================
-   SKELETON
-   ========================================================= */
-
-function renderSkeletons(count) {
-
-    const total =
-        Number.isFinite(count)
-            ? count
-            : 6;
-
-
-    skeletonGrid.innerHTML = "";
-
-    skeletonGrid.style.display =
-        "grid";
-
-
-    const fragment =
-        document.createDocumentFragment();
-
-
-    for (
-        let i = 0;
-        i < total;
-        i++
-    ) {
-
-        const card =
-            document.createElement("div");
-
-
-        card.className =
-            "skeleton-card";
-
-
-        card.innerHTML = `
-
-            <div
-                class="skeleton skeleton-image">
-            </div>
-
-            <div
-                class="skeleton skeleton-line medium">
-            </div>
-
-            <div
-                class="skeleton skeleton-line short">
-            </div>
-
-            <div
-                class="skeleton skeleton-line short">
-            </div>
-
-        `;
-
-
-        fragment.appendChild(
-            card
-        );
-
-    }
-
-
-    skeletonGrid.appendChild(
-        fragment
-    );
-
-}
-
-
-function hideSkeletons() {
-
-    skeletonGrid.innerHTML =
-        "";
-
-    skeletonGrid.style.display =
-        "none";
-
-}
-
-
-/* =========================================================
    CATEGORIES
    ========================================================= */
 
-function createCategories() {
+function createCategoryButtons() {
 
-    filters.innerHTML =
+    filtersContainer.innerHTML =
         "";
 
 
@@ -2779,20 +2647,44 @@ function createCategories() {
                 category;
 
 
-            button.classList.toggle(
-                "active",
+            if (
                 category ===
-                    state.category
-            );
+                state.currentCategory
+            ) {
+
+                button.classList.add(
+                    "active"
+                );
+
+            }
 
 
             button.addEventListener(
                 "click",
                 function() {
 
-                    setCategory(
-                        category
-                    );
+                    state.currentCategory =
+                        category;
+
+
+                    document
+                        .querySelectorAll(
+                            ".filter-btn"
+                        )
+                        .forEach(
+                            function(btn) {
+
+                                btn.classList.toggle(
+                                    "active",
+                                    btn.dataset.category ===
+                                        category
+                                );
+
+                            }
+                        );
+
+
+                    applyFilters();
 
                 }
             );
@@ -2806,41 +2698,9 @@ function createCategories() {
     );
 
 
-    filters.appendChild(
+    filtersContainer.appendChild(
         fragment
     );
-
-}
-
-
-/* =========================================================
-   CATEGORY
-   ========================================================= */
-
-function setCategory(category) {
-
-    state.category =
-        category;
-
-
-    document
-        .querySelectorAll(
-            ".filter-btn"
-        )
-        .forEach(
-            function(button) {
-
-                button.classList.toggle(
-                    "active",
-                    button.dataset.category ===
-                        category
-                );
-
-            }
-        );
-
-
-    applyFilters();
 
 }
 
@@ -2849,50 +2709,57 @@ function setCategory(category) {
    SEARCH
    ========================================================= */
 
-searchInput.addEventListener(
-    "input",
-    function() {
+function setupSearch() {
 
-        state.search =
-            safeString(
-                searchInput.value
-            ).toLowerCase();
+    searchInput.addEventListener(
+        "input",
+        function() {
 
-
-        clearSearch.classList.toggle(
-            "show",
-            Boolean(
-                state.search
-            )
-        );
+            state.search =
+                safeString(
+                    searchInput.value
+                ).toLowerCase();
 
 
-        applyFilters();
+            clearSearch
+                .classList
+                .toggle(
+                    "show",
+                    Boolean(state.search)
+                );
 
-    }
-);
+
+            applyFilters();
+
+        }
+    );
 
 
-clearSearch.addEventListener(
-    "click",
-    function() {
+    clearSearch.addEventListener(
+        "click",
+        function() {
 
-        searchInput.value =
-            "";
+            searchInput.value =
+                "";
 
-        state.search =
-            "";
+            state.search =
+                "";
 
-        clearSearch.classList.remove(
-            "show"
-        );
+            clearSearch
+                .classList
+                .remove(
+                    "show"
+                );
 
-        applyFilters();
 
-        searchInput.focus();
+            applyFilters();
 
-    }
-);
+            searchInput.focus();
+
+        }
+    );
+
+}
 
 
 /* =========================================================
@@ -2913,7 +2780,9 @@ function searchableText(ad) {
 
     ]
 
-        .map(safeString)
+        .map(
+            safeString
+        )
 
         .join(" ")
 
@@ -2929,7 +2798,7 @@ function searchableText(ad) {
 function categoryMatches(ad) {
 
     if (
-        state.category ===
+        state.currentCategory ===
         "All"
     ) {
 
@@ -2939,16 +2808,18 @@ function categoryMatches(ad) {
 
 
     return (
-        safeString(ad.category)
-            .toLowerCase() ===
-        state.category.toLowerCase()
+        safeString(
+            ad.category
+        ).toLowerCase()
+        ===
+        state.currentCategory.toLowerCase()
     );
 
 }
 
 
 /* =========================================================
-   FILTER ENGINE
+   APPLY FILTERS
    ========================================================= */
 
 function applyFilters() {
@@ -2962,7 +2833,9 @@ function applyFilters() {
             function(ad) {
 
                 if (
-                    !categoryMatches(ad)
+                    !categoryMatches(
+                        ad
+                    )
                 ) {
 
                     return false;
@@ -2997,7 +2870,7 @@ function applyFilters() {
 
 
 /* =========================================================
-   RESULTS HEADER
+   HEADER
    ========================================================= */
 
 function updateResultsHeader() {
@@ -3014,12 +2887,12 @@ function updateResultsHeader() {
     }
 
     else if (
-        state.category !==
+        state.currentCategory !==
         "All"
     ) {
 
         resultsTitle.textContent =
-            state.category;
+            state.currentCategory;
 
     }
 
@@ -3043,76 +2916,176 @@ function updateResultsHeader() {
 
 
 /* =========================================================
-   IMAGE MARKUP
+   PHOTO PARSER
    ========================================================= */
 
-function createImageMarkup(ad) {
+function parsePhotos(value) {
 
-    const image =
-        getFirstImage(ad);
+    if (
+        Array.isArray(value)
+    ) {
 
+        return value
+            .filter(
+                function(item) {
 
-    const title =
-        escapeHtml(
-            safeString(ad.title) ||
-            "Listing"
-        );
+                    return (
+                        typeof item ===
+                        "string" &&
+                        item.trim()
+                    );
 
+                }
+            )
+            .map(
+                function(item) {
 
-    if (!image) {
+                    return item.trim();
 
-        return `
-
-            <div
-                class="ad-image">
-
-                <div
-                    class="ad-image-placeholder">
-
-                    <i
-                        class="fas fa-box-open">
-                    </i>
-
-                </div>
-
-            </div>
-
-        `;
+                }
+            );
 
     }
 
 
-    return `
+    if (
+        typeof value !==
+        "string"
+    ) {
 
-        <div
-            class="ad-image">
+        return [];
 
-            <img
-                src="${escapeHtml(image)}"
-                alt="${title}"
-                loading="lazy"
-                decoding="async"
-                referrerpolicy="no-referrer"
-            >
+    }
 
-            <div
-                class="ad-image-placeholder">
 
-                <i
-                    class="fas fa-image">
-                </i>
+    const text =
+        value.trim();
 
-            </div>
 
-        </div>
+    if (!text) {
 
-    `;
+        return [];
+
+    }
+
+
+    if (
+        text.startsWith(
+            "http://"
+        ) ||
+        text.startsWith(
+            "https://"
+        ) ||
+        text.startsWith(
+            "data:image/"
+        )
+    ) {
+
+        return [
+            text
+        ];
+
+    }
+
+
+    try {
+
+        const parsed =
+            JSON.parse(
+                text
+            );
+
+
+        if (
+            Array.isArray(parsed)
+        ) {
+
+            return parsed
+                .filter(
+                    function(item) {
+
+                        return (
+                            typeof item ===
+                            "string" &&
+                            item.trim()
+                        );
+
+                    }
+                )
+                .map(
+                    function(item) {
+
+                        return item.trim();
+
+                    }
+                );
+
+        }
+
+    }
+
+    catch (_) {
+
+        return [];
+
+    }
+
+
+    return [];
 
 }
 
 
 /* =========================================================
-   AD CARD
+   CARD IMAGE
+   ========================================================= */
+
+function createImageArea(ad) {
+
+    const imageBox =
+        document.createElement(
+            "div"
+        );
+
+
+    imageBox.className =
+        "ad-image";
+
+
+    const placeholder =
+        document.createElement(
+            "div"
+        );
+
+
+    placeholder.className =
+        "image-placeholder";
+
+
+    placeholder.innerHTML =
+        '<i class="fas fa-image"></i>';
+
+
+    imageBox.appendChild(
+        placeholder
+    );
+
+
+    /*
+     * IMPORTANT:
+     * We intentionally do NOT include
+     * photos in the first ads query.
+     *
+     * Images are fetched later.
+     */
+
+    return imageBox;
+
+}
+
+
+/* =========================================================
+   CARD
    ========================================================= */
 
 function createAdCard(ad) {
@@ -3140,31 +3113,125 @@ function createAdCard(ad) {
 
 
     const id =
-        safeString(ad.id);
+        safeString(
+            ad.id
+        );
 
 
     card.dataset.id =
         id;
 
 
+    const imageBox =
+        createImageArea(
+            ad
+        );
+
+
+    const info =
+        document.createElement(
+            "div"
+        );
+
+
+    info.className =
+        "ad-info";
+
+
     const title =
-        safeString(ad.title) ||
+        document.createElement(
+            "div"
+        );
+
+
+    title.className =
+        "ad-title";
+
+
+    title.textContent =
+        safeString(
+            ad.title
+        ) ||
         "Untitled listing";
 
 
+    const price =
+        document.createElement(
+            "div"
+        );
+
+
+    price.className =
+        "ad-price";
+
+
+    price.innerHTML =
+        formatPrice(
+            ad.price
+        );
+
+
     const location =
-        safeString(ad.location) ||
-        safeString(ad.city) ||
+        document.createElement(
+            "div"
+        );
+
+
+    location.className =
+        "ad-location";
+
+
+    const locationIcon =
+        document.createElement(
+            "i"
+        );
+
+
+    locationIcon.className =
+        "fas fa-location-dot";
+
+
+    const locationText =
+        document.createElement(
+            "span"
+        );
+
+
+    locationText.textContent =
+        safeString(
+            ad.location
+        ) ||
+        safeString(
+            ad.city
+        ) ||
         "Location not specified";
 
 
+    location.appendChild(
+        locationIcon
+    );
+
+
+    location.appendChild(
+        locationText
+    );
+
+
     const category =
-        safeString(ad.category) ||
+        document.createElement(
+            "div"
+        );
+
+
+    category.className =
+        "ad-category";
+
+
+    const categoryText =
+        safeString(
+            ad.category
+        ) ||
         "Other";
-
-
-    const condition =
-        safeString(ad.condition);
 
 
     const date =
@@ -3173,179 +3240,53 @@ function createAdCard(ad) {
         );
 
 
-    card.innerHTML = `
+    category.textContent =
+        date
+            ? categoryText +
+              " • " +
+              date
+            : categoryText;
 
-        ${createImageMarkup(ad)}
 
-        <div class="ad-info">
+    info.appendChild(
+        title
+    );
 
-            <div class="ad-title">
 
-                ${escapeHtml(title)}
+    info.appendChild(
+        price
+    );
 
-            </div>
 
-            <div class="ad-price">
+    info.appendChild(
+        location
+    );
 
-                ${formatPrice(ad.price)}
 
-            </div>
+    info.appendChild(
+        category
+    );
 
-            <div class="ad-location">
 
-                <i
-                    class="fas fa-location-dot">
-                </i>
+    card.appendChild(
+        imageBox
+    );
 
-                <span>
-                    ${escapeHtml(location)}
-                </span>
 
-            </div>
-
-            <div class="ad-category">
-
-                ${escapeHtml(category)}
-
-                ${
-                    date
-                        ? " • " +
-                          escapeHtml(date)
-                        : ""
-                }
-
-            </div>
-
-        </div>
-
-    `;
-
-
-    if (condition) {
-
-        const imageBox =
-            card.querySelector(
-                ".ad-image"
-            );
-
-
-        if (imageBox) {
-
-            const badge =
-                document.createElement(
-                    "div"
-                );
-
-
-            badge.className =
-                "ad-condition";
-
-
-            badge.textContent =
-                condition;
-
-
-            imageBox.appendChild(
-                badge
-            );
-
-        }
-
-    }
-
-
-    const img =
-        card.querySelector(
-            ".ad-image img"
-        );
-
-
-    if (img) {
-
-        img.addEventListener(
-            "load",
-            function() {
-
-                img.classList.add(
-                    "loaded"
-                );
-
-
-                const placeholder =
-                    card.querySelector(
-                        ".ad-image-placeholder"
-                    );
-
-
-                if (placeholder) {
-
-                    placeholder.style.display =
-                        "none";
-
-                }
-
-            },
-            {
-                once: true
-            }
-        );
-
-
-        img.addEventListener(
-            "error",
-            function() {
-
-                img.remove();
-
-
-                const box =
-                    card.querySelector(
-                        ".ad-image"
-                    );
-
-
-                if (!box) {
-                    return;
-                }
-
-
-                box.classList.remove(
-                    "has-image"
-                );
-
-
-                const placeholder =
-                    box.querySelector(
-                        ".ad-image-placeholder"
-                    );
-
-
-                if (placeholder) {
-
-                    placeholder.style.display =
-                        "flex";
-
-                }
-
-            },
-            {
-                once: true
-            }
-        );
-
-    }
-
-
-    function open() {
-
-        openProduct(id);
-
-    }
+    card.appendChild(
+        info
+    );
 
 
     card.addEventListener(
         "click",
-        open
+        function() {
+
+            openProduct(
+                id
+            );
+
+        }
     );
 
 
@@ -3354,17 +3295,31 @@ function createAdCard(ad) {
         function(event) {
 
             if (
-                event.key === "Enter" ||
-                event.key === " "
+                event.key ===
+                    "Enter" ||
+                event.key ===
+                    " "
             ) {
 
                 event.preventDefault();
 
-                open();
+                openProduct(
+                    id
+                );
 
             }
 
         }
+    );
+
+
+    /*
+     * Queue image loading.
+     */
+
+    queueImageLoad(
+        card,
+        id
     );
 
 
@@ -3374,13 +3329,277 @@ function createAdCard(ad) {
 
 
 /* =========================================================
-   RENDER ADS
+   IMAGE QUEUE
+   ========================================================= */
+
+function queueImageLoad(
+    card,
+    id
+) {
+
+    if (
+        !id
+    ) {
+
+        return;
+
+    }
+
+
+    state.imageQueue.push({
+
+        card:
+            card,
+
+        id:
+            id
+
+    });
+
+
+    processImageQueue();
+
+}
+
+
+/* =========================================================
+   PROCESS IMAGE QUEUE
+   ========================================================= */
+
+function processImageQueue() {
+
+    while (
+
+        state.activeImageLoads
+            <
+        MAX_VISIBLE_IMAGE_LOADS
+
+        &&
+
+        state.imageQueue.length
+            >
+        0
+
+    ) {
+
+        const item =
+            state.imageQueue.shift();
+
+
+        if (
+            !document.body.contains(
+                item.card
+            )
+        ) {
+
+            continue;
+
+        }
+
+
+        state.activeImageLoads++;
+
+
+        loadAdImage(
+            item.card,
+            item.id
+        )
+        .finally(
+            function() {
+
+                state.activeImageLoads--;
+
+                processImageQueue();
+
+            }
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   LOAD ONE AD IMAGE
+   ========================================================= */
+
+async function loadAdImage(
+    card,
+    id
+) {
+
+    if (
+        !supabaseClient ||
+        !id
+    ) {
+
+        return;
+
+    }
+
+
+    try {
+
+        const result =
+            await withTimeout(
+
+                supabaseClient
+
+                    .from("ads")
+
+                    .select(
+                        "photos"
+                    )
+
+                    .eq(
+                        "id",
+                        id
+                    )
+
+                    .maybeSingle(),
+
+                IMAGE_REQUEST_TIMEOUT_MS
+
+            );
+
+
+        if (
+            result.error
+        ) {
+
+            console.warn(
+                "[HAVKAR] Image request failed:",
+                result.error
+            );
+
+            return;
+
+        }
+
+
+        const photos =
+            parsePhotos(
+                result.data &&
+                result.data.photos
+            );
+
+
+        if (
+            photos.length === 0
+        ) {
+
+            return;
+
+        }
+
+
+        const image =
+            photos[0];
+
+
+        const imageBox =
+            card.querySelector(
+                ".ad-image"
+            );
+
+
+        if (
+            !imageBox
+        ) {
+
+            return;
+
+        }
+
+
+        const img =
+            document.createElement(
+                "img"
+            );
+
+
+        img.alt =
+            safeString(
+                card.querySelector(
+                    ".ad-title"
+                )?.textContent
+            ) ||
+            "Listing";
+
+
+        img.loading =
+            "lazy";
+
+
+        img.decoding =
+            "async";
+
+
+        img.referrerPolicy =
+            "no-referrer";
+
+
+        img.onload =
+            function() {
+
+                img.classList.add(
+                    "loaded"
+                );
+
+
+                imageBox.classList.add(
+                    "has-image"
+                );
+
+            };
+
+
+        img.onerror =
+            function() {
+
+                img.remove();
+
+            };
+
+
+        imageBox.appendChild(
+            img
+        );
+
+
+        img.src =
+            image;
+
+    }
+
+    catch (error) {
+
+        console.warn(
+            "[HAVKAR] Image loading error:",
+            error
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   RENDER
    ========================================================= */
 
 function renderAds(ads) {
 
     adsGrid.innerHTML =
         "";
+
+
+    state.imageQueue =
+        [];
+
+
+    state.activeImageLoads =
+        0;
 
 
     if (
@@ -3406,7 +3625,9 @@ function renderAds(ads) {
         function(ad) {
 
             fragment.appendChild(
-                createAdCard(ad)
+                createAdCard(
+                    ad
+                )
             );
 
         }
@@ -3417,6 +3638,13 @@ function renderAds(ads) {
         fragment
     );
 
+
+    /*
+     * Start a limited number of image requests.
+     */
+
+    processImageQueue();
+
 }
 
 
@@ -3426,10 +3654,12 @@ function renderAds(ads) {
 
 function openProduct(id) {
 
-    if (!id) {
+    if (
+        !id
+    ) {
 
-        showToast(
-            "This listing has no valid ID."
+        showInfo(
+            "This listing does not have a valid ID."
         );
 
         return;
@@ -3439,180 +3669,158 @@ function openProduct(id) {
 
     window.location.href =
         "product.html?id=" +
-        encodeURIComponent(id);
+        encodeURIComponent(
+            id
+        );
+
+}
+
+
+/* =========================================================
+   SKELETONS
+   ========================================================= */
+
+function renderSkeletons(
+    count = 6
+) {
+
+    adsGrid.innerHTML =
+        "";
+
+
+    hideStatuses();
+
+
+    for (
+        let i = 0;
+        i < count;
+        i++
+    ) {
+
+        const card =
+            document.createElement(
+                "div"
+            );
+
+
+        card.className =
+            "skeleton-card";
+
+
+        card.innerHTML = `
+
+            <div
+                class="skeleton skeleton-image">
+            </div>
+
+            <div
+                class="skeleton skeleton-line medium">
+            </div>
+
+            <div
+                class="skeleton skeleton-line short">
+            </div>
+
+            <div
+                class="skeleton skeleton-line short">
+            </div>
+
+        `;
+
+
+        adsGrid.appendChild(
+            card
+        );
+
+    }
 
 }
 
 
 /* =========================================================
    FETCH ADS
+   =========================================================
+   
+   CRITICAL OPTIMIZATION:
+   
+   We deliberately DO NOT select photos here.
+   
+   Old version:
+       select("*")
+   
+   New version:
+       only lightweight listing fields
+   
+   Photos are loaded separately.
    ========================================================= */
 
-async function fetchAdsOnce(signal) {
+async function fetchAds() {
 
-    const query =
-        new URLSearchParams({
+    if (
+        !supabaseClient
+    ) {
 
-            select: "*",
+        throw new Error(
+            "Supabase is not initialized."
+        );
 
-            order: "created_at.desc",
+    }
 
-            limit:
-                String(
-                    CONFIG.pageSize
+
+    const result =
+        await withTimeout(
+
+            supabaseClient
+
+                .from("ads")
+
+                .select(
+                    [
+                        "id",
+                        "title",
+                        "category",
+                        "price",
+                        "location",
+                        "description",
+                        "city",
+                        "region",
+                        "country",
+                        "created_at"
+                    ].join(",")
                 )
 
-        });
+                .order(
+                    "created_at",
+                    {
+                        ascending:
+                            false
+                    }
+                )
 
+                .limit(
+                    ADS_PAGE_SIZE
+                ),
 
-    const url =
-        ADS_ENDPOINT +
-        "?" +
-        query.toString();
-
-
-    const response =
-        await fetch(
-            url,
-            {
-                method: "GET",
-
-                headers: {
-
-                    "apikey":
-                        SUPABASE_PUBLISHABLE_KEY,
-
-                    "Authorization":
-                        "Bearer " +
-                        SUPABASE_PUBLISHABLE_KEY,
-
-                    "Accept":
-                        "application/json"
-
-                },
-
-                cache:
-                    "no-store",
-
-                signal:
-                    signal
-
-            }
-        );
-
-
-    if (!response.ok) {
-
-        let serverMessage =
-            "";
-
-
-        try {
-
-            serverMessage =
-                await response.text();
-
-        }
-
-        catch (_) {
-
-            serverMessage =
-                "";
-
-        }
-
-
-        throw new Error(
-
-            "Supabase HTTP " +
-            response.status +
-            (
-                serverMessage
-                    ? " — " +
-                      serverMessage
-                    : ""
-            )
+            REQUEST_TIMEOUT_MS
 
         );
+
+
+    if (
+        result.error
+    ) {
+
+        throw result.error;
 
     }
 
 
-    const data =
-        await response.json();
-
-
-    if (!Array.isArray(data)) {
-
-        throw new Error(
-            "The listings server returned invalid data."
-        );
-
-    }
-
-
-    return data;
-
-}
-
-
-/* =========================================================
-   TIMEOUT
-   ========================================================= */
-
-function createTimeoutController(
-    milliseconds
-) {
-
-    const controller =
-        new AbortController();
-
-
-    const timer =
-        setTimeout(
-            function() {
-
-                controller.abort();
-
-            },
-            milliseconds
-        );
-
-
-    return {
-
-        controller:
-            controller,
-
-        clear:
-            function() {
-
-                clearTimeout(
-                    timer
-                );
-
-            }
-
-    };
-
-}
-
-
-/* =========================================================
-   DELAY
-   ========================================================= */
-
-function delay(milliseconds) {
-
-    return new Promise(
-        function(resolve) {
-
-            setTimeout(
-                resolve,
-                milliseconds
-            );
-
-        }
+    return (
+        Array.isArray(
+            result.data
+        )
+            ? result.data
+            : []
     );
 
 }
@@ -3624,28 +3832,18 @@ function delay(milliseconds) {
 
 async function loadAds() {
 
-    const requestNumber =
-        ++state.requestNumber;
-
-
-    if (state.controller) {
-
-        state.controller.abort();
-
-    }
+    const requestId =
+        ++state.requestId;
 
 
     state.loading =
         true;
 
 
+    renderSkeletons();
+
+
     showLoading();
-
-    renderSkeletons(6);
-
-
-    let lastError =
-        null;
 
 
     try {
@@ -3661,132 +3859,48 @@ async function loadAds() {
         }
 
 
-        for (
-            let attempt = 1;
-            attempt <= CONFIG.maxAttempts;
-            attempt++
+        if (
+            !initializeSupabase()
         ) {
 
-            let timeout =
-                null;
-
-
-            try {
-
-                timeout =
-                    createTimeoutController(
-                        CONFIG.requestTimeout
-                    );
-
-
-                state.controller =
-                    timeout.controller;
-
-
-                const data =
-                    await fetchAdsOnce(
-                        timeout.controller.signal
-                    );
-
-
-                if (
-                    requestNumber !==
-                    state.requestNumber
-                ) {
-
-                    return;
-
-                }
-
-
-                state.ads =
-                    data;
-
-
-                state.loading =
-                    false;
-
-
-                state.lastSuccessfulLoad =
-                    Date.now();
-
-
-                hideSkeletons();
-
-
-                applyFilters();
-
-
-                return;
-
-            }
-
-            catch (error) {
-
-                lastError =
-                    error;
-
-
-                console.warn(
-                    "[HAVKAR] Listings request failed:",
-                    error
-                );
-
-
-                if (
-                    error &&
-                    error.name ===
-                        "AbortError"
-                ) {
-
-                    lastError =
-                        new Error(
-                            "Listings request timed out."
-                        );
-
-                }
-
-
-                if (
-                    attempt <
-                    CONFIG.maxAttempts
-                ) {
-
-                    await delay(
-                        CONFIG.retryDelay
-                    );
-
-                }
-
-            }
-
-            finally {
-
-                if (timeout) {
-
-                    timeout.clear();
-
-                }
-
-            }
+            throw new Error(
+                "Supabase could not be initialized."
+            );
 
         }
 
 
-        throw (
-            lastError ||
-            new Error(
-                "Unable to load listings."
-            )
-        );
+        const data =
+            await fetchAds();
+
+
+        if (
+            requestId !==
+            state.requestId
+        ) {
+
+            return;
+
+        }
+
+
+        state.ads =
+            data;
+
+
+        state.loading =
+            false;
+
+
+        applyFilters();
 
     }
 
     catch (error) {
 
         if (
-            requestNumber !==
-            state.requestNumber
+            requestId !==
+            state.requestId
         ) {
 
             return;
@@ -3798,11 +3912,10 @@ async function loadAds() {
             false;
 
 
-        state.controller =
-            null;
-
-
-        hideSkeletons();
+        console.error(
+            "[HAVKAR] Listings error:",
+            error
+        );
 
 
         adsGrid.innerHTML =
@@ -3814,26 +3927,6 @@ async function loadAds() {
                 error
             )
         );
-
-
-        console.error(
-            "[HAVKAR] Final listings error:",
-            error
-        );
-
-    }
-
-    finally {
-
-        if (
-            requestNumber ===
-            state.requestNumber
-        ) {
-
-            state.loading =
-                false;
-
-        }
 
     }
 
@@ -3855,7 +3948,7 @@ retryButton.addEventListener(
 
 
 /* =========================================================
-   ONLINE EVENT
+   ONLINE
    ========================================================= */
 
 window.addEventListener(
@@ -3875,7 +3968,7 @@ window.addEventListener(
 
 
 /* =========================================================
-   OFFLINE EVENT
+   OFFLINE
    ========================================================= */
 
 window.addEventListener(
@@ -3886,16 +3979,8 @@ window.addEventListener(
             state.loading
         ) {
 
-            if (state.controller) {
-
-                state.controller.abort();
-
-            }
-
-
             showError(
-                "Internet connection was lost. " +
-                "Reconnect and press Try again."
+                "Your internet connection was lost. Please reconnect and try again."
             );
 
         }
@@ -3905,23 +3990,23 @@ window.addEventListener(
 
 
 /* =========================================================
-   TOAST
+   INFO TOAST
    ========================================================= */
 
-let toastTimer =
-    null;
-
-
-function showToast(message) {
+function showInfo(message) {
 
     const old =
-        document.querySelector(
-            ".toast"
+        document.getElementById(
+            "havkarInfoToast"
         );
 
 
-    if (old) {
+    if (
+        old
+    ) {
+
         old.remove();
+
     }
 
 
@@ -3931,12 +4016,62 @@ function showToast(message) {
         );
 
 
-    toast.className =
-        "toast";
+    toast.id =
+        "havkarInfoToast";
 
 
     toast.textContent =
-        safeString(message);
+        message;
+
+
+    Object.assign(
+        toast.style,
+        {
+
+            position:
+                "fixed",
+
+            left:
+                "50%",
+
+            bottom:
+                "calc(90px + env(safe-area-inset-bottom))",
+
+            transform:
+                "translateX(-50%)",
+
+            zIndex:
+                "1000",
+
+            maxWidth:
+                "calc(100vw - 32px)",
+
+            padding:
+                "13px 18px",
+
+            borderRadius:
+                "12px",
+
+            background:
+                "#242624",
+
+            color:
+                "#fff",
+
+            fontSize:
+                "14px",
+
+            fontWeight:
+                "600",
+
+            textAlign:
+                "center",
+
+            boxShadow:
+                "0 8px 28px rgba(0,0,0,.22)"
+
+        }
+    );
 
 
     document.body.appendChild(
@@ -3944,24 +4079,20 @@ function showToast(message) {
     );
 
 
-    if (toastTimer) {
+    setTimeout(
+        function() {
 
-        clearTimeout(
-            toastTimer
-        );
-
-    }
-
-
-    toastTimer =
-        setTimeout(
-            function() {
+            if (
+                toast.parentNode
+            ) {
 
                 toast.remove();
 
-            },
-            2800
-        );
+            }
+
+        },
+        2800
+    );
 
 }
 
@@ -3972,9 +4103,11 @@ function showToast(message) {
 
 function initializePage() {
 
-    createCategories();
+    createCategoryButtons();
 
-    updateResultsHeader();
+    setupSearch();
+
+    initializeSupabase();
 
     loadAds();
 
@@ -3989,5 +4122,7 @@ initializePage();
 
 </script>
 
+
 </body>
-      </html>
+
+    </html>
