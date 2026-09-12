@@ -89,7 +89,6 @@ h1 {
     border-radius: 13px;
     font-size: 17px;
     outline: none;
-    transition: border-color 0.2s ease;
 }
 
 .input:focus {
@@ -103,11 +102,6 @@ button {
     font-size: 18px;
     font-weight: bold;
     cursor: pointer;
-    transition: opacity 0.2s ease, transform 0.1s ease;
-}
-
-button:active {
-    transform: scale(0.99);
 }
 
 .login-btn {
@@ -134,7 +128,6 @@ button:disabled {
     margin-top: 18px;
     font-size: 14px;
     font-weight: 600;
-    line-height: 1.5;
 }
 
 .message.error {
@@ -264,25 +257,15 @@ import {
 
 
 /* =========================================================
-   HAVKAR SUPABASE CONFIGURATION
-   IMPORTANT:
-   This must be the SAME Supabase project used by
-   wallet.html and trade.html.
+   HAVKAR SUPABASE
 ========================================================= */
 
 const SUPABASE_URL =
-    "https://iompzwaxuirvatiibrtb.supabase.com";
+    "https://iompzwaxuirvatiibrtb.supabase.co";
 
 const SUPABASE_KEY =
     "sb_publishable_oEKE1vl6EkWXdETgy9MjHw_DUTJLN4O";
 
-
-/* =========================================================
-   SUPABASE CLIENT
-   Explicit authentication persistence is enabled so the
-   session survives navigation between login.html,
-   index.html, wallet.html and trade.html.
-========================================================= */
 
 const supabase =
     createClient(
@@ -319,12 +302,16 @@ const message =
 
 
 /* =========================================================
-   MESSAGE HELPER
+   MESSAGE
 ========================================================= */
 
-function showMessage(text, type = "") {
+function showMessage(
+    text,
+    type = ""
+) {
 
-    message.textContent = text;
+    message.textContent =
+        text;
 
     message.className =
         type
@@ -359,10 +346,10 @@ async function login() {
 
     loginBtn.disabled = true;
 
+    signupBtn.disabled = true;
+
     loginBtn.textContent =
         "Logging in...";
-
-    signupBtn.disabled = true;
 
     showMessage("");
 
@@ -396,10 +383,10 @@ async function login() {
 
             loginBtn.disabled = false;
 
+            signupBtn.disabled = false;
+
             loginBtn.textContent =
                 "Login";
-
-            signupBtn.disabled = false;
 
             return;
         }
@@ -411,11 +398,6 @@ async function login() {
             !data.session
         ) {
 
-            console.error(
-                "HAVKAR Login Error: Session was not returned.",
-                data
-            );
-
             showMessage(
                 "Login failed. No active session was created.",
                 "error"
@@ -423,20 +405,16 @@ async function login() {
 
             loginBtn.disabled = false;
 
+            signupBtn.disabled = false;
+
             loginBtn.textContent =
                 "Login";
-
-            signupBtn.disabled = false;
 
             return;
         }
 
 
-        /*
-         * Verify that the authenticated session is actually
-         * available from the same Supabase client before
-         * navigating away from the login page.
-         */
+        /* Verify session */
 
         const {
             data: sessionData,
@@ -453,21 +431,21 @@ async function login() {
         ) {
 
             console.error(
-                "HAVKAR Session Verification Error:",
+                "HAVKAR Session Error:",
                 sessionError
             );
 
             showMessage(
-                "Login succeeded, but the session could not be saved. Please try again.",
+                "Login succeeded, but the session could not be saved.",
                 "error"
             );
 
             loginBtn.disabled = false;
 
+            signupBtn.disabled = false;
+
             loginBtn.textContent =
                 "Login";
-
-            signupBtn.disabled = false;
 
             return;
         }
@@ -480,19 +458,19 @@ async function login() {
 
 
         /*
-         * Give Supabase a moment to finish persisting the
-         * authentication session before changing pages.
+         * Allow Supabase to persist the session
+         * before navigating to the application.
          */
 
         setTimeout(
-            function () {
+            function() {
 
                 window.location.replace(
                     "index.html"
                 );
 
             },
-            500
+            700
         );
 
 
@@ -505,16 +483,19 @@ async function login() {
 
         showMessage(
             "Connection error: " +
-            (error?.message || "Please try again."),
+            (
+                error?.message ||
+                "Please try again."
+            ),
             "error"
         );
 
         loginBtn.disabled = false;
 
+        signupBtn.disabled = false;
+
         loginBtn.textContent =
             "Login";
-
-        signupBtn.disabled = false;
     }
 }
 
@@ -530,12 +511,12 @@ loginBtn.addEventListener(
 
 
 /* =========================================================
-   ENTER KEY SUPPORT
+   ENTER KEY
 ========================================================= */
 
 emailInput.addEventListener(
     "keydown",
-    function (event) {
+    function(event) {
 
         if (event.key === "Enter") {
 
@@ -549,7 +530,7 @@ emailInput.addEventListener(
 
 passwordInput.addEventListener(
     "keydown",
-    function (event) {
+    function(event) {
 
         if (event.key === "Enter") {
 
@@ -567,80 +548,13 @@ passwordInput.addEventListener(
 
 signupBtn.addEventListener(
     "click",
-    function () {
+    function() {
 
         window.location.href =
             "signup.html";
 
     }
 );
-
-
-/* =========================================================
-   INITIAL SESSION CHECK
-========================================================= */
-
-(async function checkExistingSession() {
-
-    try {
-
-        const {
-            data,
-            error
-        } =
-        await supabase.auth.getSession();
-
-
-        if (error) {
-
-            console.warn(
-                "HAVKAR Existing Session Check:",
-                error
-            );
-
-            return;
-        }
-
-
-        /*
-         * If the user already has an active session,
-         * there is no reason to remain on login.html.
-         */
-
-        if (
-            data &&
-            data.session &&
-            data.session.user
-        ) {
-
-            showMessage(
-                "You are already logged in.",
-                "success"
-            );
-
-            setTimeout(
-                function () {
-
-                    window.location.replace(
-                        "index.html"
-                    );
-
-                },
-                400
-            );
-
-        }
-
-    } catch (error) {
-
-        console.warn(
-            "HAVKAR Session Check Exception:",
-            error
-        );
-
-    }
-
-})();
 
 </script>
 
