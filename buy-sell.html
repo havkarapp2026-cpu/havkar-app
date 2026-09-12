@@ -1,90 +1,81 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
 <meta charset="UTF-8">
 
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
->
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-<meta
-    name="theme-color"
-    content="#2e7d32"
->
+<meta name="theme-color" content="#1b5e20">
 
-<meta
-    name="description"
-    content="HAVKAR Buy & Sell - Fast local marketplace for products and services."
->
+<meta name="description"
+      content="HAVKAR Buy & Sell — a fast local marketplace for products, services and listings.">
 
-<title>HAVKAR - Buy & Sell</title>
-
+<title>HAVKAR — Buy & Sell</title>
 
 <!-- =========================================================
-     SUPABASE
+     EXTERNAL LIBRARIES
      ========================================================= -->
 
 <script
-    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
-></script>
-
-
-<!-- =========================================================
-     FONT AWESOME
-     ========================================================= -->
+    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+</script>
 
 <link
     rel="preconnect"
-    href="https://cdnjs.cloudflare.com"
->
+    href="https://cdnjs.cloudflare.com">
 
 <link
     rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
->
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
 
 <style>
 
 /* =========================================================
-   ROOT
+   HAVKAR BUY & SELL
+   Professional single-file marketplace page
    ========================================================= */
 
 :root {
+    --green-950: #0b3d16;
+    --green-900: #12551b;
+    --green-800: #1b5e20;
+    --green-700: #2e7d32;
+    --green-600: #43a047;
+    --green-500: #4caf50;
+    --green-100: #e8f5e9;
+    --green-50: #f3faf3;
 
-    --primary: #2e7d32;
-    --primary-light: #43a047;
-    --primary-dark: #1b5e20;
+    --red-700: #b71c1c;
+    --red-100: #ffebee;
 
-    --primary-soft: #e8f5e9;
+    --orange-600: #ef6c00;
 
-    --background: #f5f7f5;
+    --bg: #f4f7f4;
     --surface: #ffffff;
+    --surface-2: #fafcfa;
 
-    --text: #202124;
-    --muted: #70757a;
+    --text: #202522;
+    --text-2: #4d554f;
+    --muted: #7b827d;
 
-    --border: #e0e0e0;
+    --border: #e0e5e1;
+    --border-strong: #d1d8d2;
 
-    --danger: #c62828;
-    --danger-bg: #ffebee;
+    --shadow-1:
+        0 2px 10px rgba(0,0,0,.06);
 
-    --warning: #ef6c00;
-    --warning-bg: #fff3e0;
+    --shadow-2:
+        0 8px 30px rgba(0,0,0,.10);
 
-    --shadow-sm:
-        0 2px 8px rgba(0,0,0,.06);
+    --shadow-green:
+        0 8px 24px rgba(46,125,50,.28);
 
-    --shadow-md:
-        0 6px 20px rgba(0,0,0,.10);
+    --radius: 18px;
 
-    --radius: 16px;
-
-    --nav-height: 74px;
-
+    --header-height: 68px;
+    --bottom-height: 76px;
 }
 
 
@@ -93,25 +84,26 @@
    ========================================================= */
 
 * {
-
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
-
-    box-sizing: border-box;
-
 }
-
 
 html {
-
     scroll-behavior: smooth;
-
 }
 
-
 body {
-
     min-height: 100vh;
+
+    background:
+        linear-gradient(
+            180deg,
+            #f7faf7 0%,
+            var(--bg) 100%
+        );
+
+    color: var(--text);
 
     font-family:
         -apple-system,
@@ -122,50 +114,32 @@ body {
         Arial,
         sans-serif;
 
-    background:
-        var(--background);
-
-    color:
-        var(--text);
-
     padding-bottom:
         calc(
-            var(--nav-height)
+            var(--bottom-height)
             + env(safe-area-inset-bottom)
+            + 20px
         );
 
-    -webkit-font-smoothing:
-        antialiased;
-
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
-
 
 button,
 input {
-
     font: inherit;
-
 }
-
 
 button {
-
-    -webkit-tap-highlight-color:
-        transparent;
-
+    -webkit-tap-highlight-color: transparent;
 }
-
 
 button:focus-visible,
 input:focus-visible {
-
     outline:
-        3px solid
-        rgba(67,160,71,.25);
+        3px solid rgba(76,175,80,.28);
 
-    outline-offset:
-        2px;
-
+    outline-offset: 2px;
 }
 
 
@@ -174,265 +148,157 @@ input:focus-visible {
    ========================================================= */
 
 .header {
-
     position: sticky;
-
     top: 0;
+    z-index: 200;
 
-    z-index: 100;
-
-    min-height: 68px;
+    min-height: var(--header-height);
 
     display: flex;
-
     align-items: center;
-
     justify-content: space-between;
 
     padding:
-        12px 20px;
+        10px 18px;
 
-    color:
-        white;
+    color: #fff;
 
     background:
         linear-gradient(
             135deg,
-            var(--primary-dark),
-            var(--primary-light)
+            var(--green-900),
+            var(--green-600)
         );
 
     box-shadow:
-        0 2px 12px rgba(0,0,0,.14);
-
+        0 3px 16px rgba(0,0,0,.16);
 }
-
 
 .header-left {
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 14px;
-
     min-width: 0;
 
+    display: flex;
+    align-items: center;
+
+    gap: 13px;
 }
 
+.header-title {
+    overflow: hidden;
 
-.back-btn {
+    white-space: nowrap;
+    text-overflow: ellipsis;
 
-    width: 42px;
-    height: 42px;
+    font-size: 1.22rem;
+    font-weight: 800;
+}
 
-    flex: 0 0 42px;
+.header-right {
+    display: flex;
+    align-items: center;
+
+    gap: 9px;
+}
+
+.circle-button {
+    width: 43px;
+    height: 43px;
 
     display: flex;
-
     align-items: center;
     justify-content: center;
 
     border: 0;
-
     border-radius: 50%;
 
-    background:
-        rgba(255,255,255,.15);
-
-    color:
-        white;
-
-    cursor:
-        pointer;
-
-    transition:
-        transform .15s ease,
-        background .2s ease;
-
-}
-
-
-.back-btn:hover {
-
-    background:
-        rgba(255,255,255,.23);
-
-}
-
-
-.back-btn:active {
-
-    transform:
-        scale(.94);
-
-}
-
-
-.back-btn i {
-
-    font-size:
-        1.25rem;
-
-}
-
-
-.header h1 {
-
-    font-size:
-        1.25rem;
-
-    font-weight:
-        750;
-
-    white-space:
-        nowrap;
-
-}
-
-
-.header-right {
-
-    display:
-        flex;
-
-    align-items:
-        center;
-
-    gap:
-        10px;
-
-}
-
-
-.icon-btn {
-
-    width: 42px;
-    height: 42px;
-
-    display:
-        flex;
-
-    align-items:
-        center;
-    justify-content:
-        center;
-
-    border:
-        0;
-
-    border-radius:
-        50%;
+    color: #fff;
 
     background:
         rgba(255,255,255,.15);
 
-    color:
-        white;
-
-    cursor:
-        pointer;
+    cursor: pointer;
 
     transition:
         transform .15s ease,
         background .2s ease;
-
 }
 
-
-.icon-btn:hover {
-
+.circle-button:hover {
     background:
-        rgba(255,255,255,.23);
-
+        rgba(255,255,255,.24);
 }
 
+.circle-button:active {
+    transform: scale(.93);
+}
 
-.icon-btn:active {
-
-    transform:
-        scale(.94);
-
+.circle-button i {
+    font-size: 1.08rem;
 }
 
 
 /* =========================================================
-   SEARCH
+   SEARCH AREA
    ========================================================= */
 
-.search-section {
+.search-panel {
+    position: sticky;
 
-    position:
-        sticky;
+    top: var(--header-height);
 
-    top:
-        68px;
-
-    z-index:
-        90;
+    z-index: 150;
 
     background:
-        var(--surface);
+        rgba(255,255,255,.97);
 
-    padding:
-        14px 20px 12px;
+    backdrop-filter:
+        blur(16px);
+
+    -webkit-backdrop-filter:
+        blur(16px);
 
     border-bottom:
         1px solid rgba(0,0,0,.05);
-
 }
 
-
-.search-wrapper {
-
-    position:
-        relative;
-
+.search-container {
+    padding:
+        14px 20px 10px;
 }
 
+.search-box {
+    position: relative;
+}
 
 .search-icon {
+    position: absolute;
 
-    position:
-        absolute;
-
-    left:
-        17px;
-
-    top:
-        50%;
+    left: 17px;
+    top: 50%;
 
     transform:
         translateY(-50%);
 
     color:
-        #888;
+        #8b918d;
 
-    pointer-events:
-        none;
-
+    pointer-events: none;
 }
 
-
 .search-input {
-
-    width:
-        100%;
-
-    height:
-        50px;
-
-    padding:
-        0 48px 0 46px;
+    width: 100%;
+    height: 51px;
 
     border:
         2px solid var(--border);
 
-    border-radius:
-        26px;
+    border-radius: 28px;
+
+    padding:
+        0 48px;
 
     background:
-        white;
+        var(--surface);
 
     color:
         var(--text);
@@ -440,134 +306,91 @@ input:focus-visible {
     font-size:
         1rem;
 
-    outline:
-        none;
+    outline: none;
 
     transition:
         border-color .2s ease,
         box-shadow .2s ease;
-
 }
 
+.search-input::placeholder {
+    color:
+        #8a908b;
+}
 
 .search-input:focus {
-
     border-color:
-        var(--primary-light);
+        var(--green-600);
 
     box-shadow:
         0 0 0 4px
         rgba(67,160,71,.10);
-
 }
-
-
-.search-input::placeholder {
-
-    color:
-        #8a8a8a;
-
-}
-
 
 .clear-search {
+    position: absolute;
 
-    position:
-        absolute;
+    right: 9px;
+    top: 50%;
 
-    right:
-        10px;
-
-    top:
-        50%;
+    width: 35px;
+    height: 35px;
 
     transform:
         translateY(-50%);
 
-    width:
-        34px;
+    display: none;
+    align-items: center;
+    justify-content: center;
 
-    height:
-        34px;
-
-    display:
-        none;
-
-    align-items:
-        center;
-
-    justify-content:
-        center;
-
-    border:
-        0;
-
-    border-radius:
-        50%;
+    border: 0;
+    border-radius: 50%;
 
     background:
-        #f1f3f1;
+        #eef1ee;
 
     color:
-        #666;
+        #687069;
 
-    cursor:
-        pointer;
-
+    cursor: pointer;
 }
 
-
-.clear-search.show {
-
-    display:
-        flex;
-
+.clear-search.visible {
+    display: flex;
 }
 
 
 /* =========================================================
-   FILTERS
+   CATEGORY FILTERS
    ========================================================= */
 
-.filters {
-
-    display:
-        flex;
-
-    align-items:
-        center;
-
-    gap:
-        9px;
-
-    overflow-x:
-        auto;
-
-    padding:
-        2px 20px 14px;
+.filters-wrapper {
+    overflow: hidden;
 
     background:
-        white;
-
-    scrollbar-width:
-        none;
-
-    -webkit-overflow-scrolling:
-        touch;
-
+        rgba(255,255,255,.97);
 }
 
+.filters {
+    display: flex;
+
+    gap: 9px;
+
+    overflow-x: auto;
+
+    padding:
+        2px 20px 13px;
+
+    scrollbar-width: none;
+
+    -webkit-overflow-scrolling: touch;
+}
 
 .filters::-webkit-scrollbar {
-
-    display:
-        none;
-
+    display: none;
 }
 
-
-.filter-btn {
-
+.filter-button {
     flex:
         0 0 auto;
 
@@ -581,19 +404,19 @@ input:focus-visible {
         2px solid var(--border);
 
     border-radius:
-        22px;
+        23px;
 
     background:
-        white;
+        #fff;
 
     color:
         var(--text);
 
     font-size:
-        .9rem;
+        .88rem;
 
     font-weight:
-        650;
+        700;
 
     white-space:
         nowrap;
@@ -603,115 +426,99 @@ input:focus-visible {
 
     transition:
         all .18s ease;
-
 }
 
-
-.filter-btn:hover {
-
+.filter-button:hover {
     border-color:
-        var(--primary-light);
-
+        var(--green-500);
 }
 
-
-.filter-btn:active {
-
+.filter-button:active {
     transform:
         scale(.97);
-
 }
 
-
-.filter-btn.active {
-
-    color:
-        white;
+.filter-button.active {
+    border-color:
+        var(--green-600);
 
     background:
-        var(--primary-light);
+        linear-gradient(
+            135deg,
+            var(--green-600),
+            var(--green-500)
+        );
 
-    border-color:
-        var(--primary-light);
+    color:
+        #fff;
 
+    box-shadow:
+        0 4px 12px
+        rgba(67,160,71,.20);
 }
 
 
 /* =========================================================
-   CONTENT
+   MAIN
    ========================================================= */
 
-.content {
-
-    width:
-        100%;
+.main {
+    width: 100%;
 
     max-width:
-        1400px;
+        1440px;
 
     margin:
         0 auto;
 
     padding:
         18px 20px 40px;
-
 }
 
+.results-bar {
+    display: flex;
 
-.results-header {
+    align-items: center;
+    justify-content: space-between;
 
-    display:
-        flex;
-
-    align-items:
-        center;
-
-    justify-content:
-        space-between;
+    gap: 15px;
 
     margin-bottom:
-        15px;
-
+        16px;
 }
-
 
 .results-title {
-
     font-size:
-        1rem;
+        1.05rem;
 
     font-weight:
-        750;
-
+        800;
 }
 
-
 .results-count {
-
-    font-size:
-        .82rem;
-
     color:
         var(--muted);
 
+    font-size:
+        .83rem;
+
+    white-space:
+        nowrap;
 }
 
 
 /* =========================================================
-   ADS GRID
+   GRID
    ========================================================= */
 
 .ads-grid {
-
-    display:
-        grid;
+    display: grid;
 
     grid-template-columns:
-        repeat(2,minmax(0,1fr));
+        repeat(2, minmax(0, 1fr));
 
     gap:
-        14px;
-
+        13px;
 }
 
 
@@ -720,21 +527,23 @@ input:focus-visible {
    ========================================================= */
 
 .ad-card {
+    position: relative;
 
-    min-width:
-        0;
+    min-width: 0;
 
-    overflow:
-        hidden;
+    overflow: hidden;
 
     background:
-        white;
+        var(--surface);
+
+    border:
+        1px solid rgba(0,0,0,.035);
 
     border-radius:
         var(--radius);
 
     box-shadow:
-        var(--shadow-sm);
+        var(--shadow-1);
 
     cursor:
         pointer;
@@ -742,26 +551,19 @@ input:focus-visible {
     transition:
         transform .18s ease,
         box-shadow .18s ease;
-
 }
 
-
 .ad-card:hover {
-
     transform:
         translateY(-3px);
 
     box-shadow:
-        var(--shadow-md);
-
+        var(--shadow-2);
 }
 
-
 .ad-card:active {
-
     transform:
         scale(.985);
-
 }
 
 
@@ -770,135 +572,125 @@ input:focus-visible {
    ========================================================= */
 
 .ad-image {
+    position: relative;
 
-    position:
-        relative;
-
-    width:
-        100%;
+    width: 100%;
 
     aspect-ratio:
-        1 / .86;
+        1 / .88;
 
-    overflow:
-        hidden;
-
-    display:
-        flex;
-
-    align-items:
-        center;
-
-    justify-content:
-        center;
+    overflow: hidden;
 
     background:
         linear-gradient(
             135deg,
-            #e8ece8,
-            #f7f8f7
+            #e7ece8,
+            #f8faf8
         );
-
 }
-
 
 .ad-image img {
+    width: 100%;
+    height: 100%;
 
-    width:
-        100%;
+    display: block;
 
-    height:
-        100%;
+    object-fit: cover;
 
-    display:
-        block;
-
-    object-fit:
-        cover;
-
-    opacity:
-        0;
+    opacity: 0;
 
     transition:
-        opacity .2s ease;
-
+        opacity .25s ease,
+        transform .35s ease;
 }
 
+.ad-card:hover
+.ad-image img {
+    transform:
+        scale(1.025);
+}
 
 .ad-image img.loaded {
-
-    opacity:
-        1;
-
+    opacity: 1;
 }
-
 
 .image-placeholder {
+    position: absolute;
 
-    position:
-        absolute;
+    inset: 0;
 
-    inset:
-        0;
-
-    display:
-        flex;
-
-    align-items:
-        center;
-
-    justify-content:
-        center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     color:
-        #9aa09a;
+        #a1aaa3;
 
     font-size:
-        2.5rem;
-
-    pointer-events:
-        none;
-
+        2.35rem;
 }
-
 
 .ad-image.has-image
 .image-placeholder {
+    opacity: 0;
+}
 
-    display:
-        none;
+.condition-badge {
+    position: absolute;
 
+    top: 9px;
+    left: 9px;
+
+    max-width:
+        calc(100% - 18px);
+
+    padding:
+        5px 9px;
+
+    border-radius:
+        9px;
+
+    background:
+        rgba(0,0,0,.66);
+
+    color:
+        #fff;
+
+    font-size:
+        .66rem;
+
+    font-weight:
+        750;
+
+    white-space:
+        nowrap;
+
+    overflow:
+        hidden;
+
+    text-overflow:
+        ellipsis;
 }
 
 
 /* =========================================================
-   INFO
+   CARD INFORMATION
    ========================================================= */
 
 .ad-info {
-
     padding:
-        12px;
-
+        11px 12px 13px;
 }
 
-
 .ad-title {
-
     min-height:
-        2.45em;
+        2.55em;
 
     margin-bottom:
         6px;
 
     display:
         -webkit-box;
-
-    -webkit-box-orient:
-        vertical;
-
-    -webkit-line-clamp:
-        2;
 
     overflow:
         hidden;
@@ -907,36 +699,36 @@ input:focus-visible {
         var(--text);
 
     font-size:
-        .94rem;
+        .92rem;
 
     font-weight:
-        720;
+        750;
 
     line-height:
-        1.3;
+        1.28;
 
+    -webkit-line-clamp:
+        2;
+
+    -webkit-box-orient:
+        vertical;
 }
-
 
 .ad-price {
-
     margin-bottom:
-        6px;
+        7px;
 
     color:
-        var(--primary-dark);
+        var(--green-800);
 
     font-size:
-        1.08rem;
+        1.06rem;
 
     font-weight:
-        800;
-
+        850;
 }
 
-
 .ad-location {
-
     display:
         flex;
 
@@ -950,93 +742,79 @@ input:focus-visible {
         hidden;
 
     color:
-        var(--muted);
+        var(--text-2);
 
     font-size:
-        .77rem;
+        .75rem;
 
     white-space:
         nowrap;
 
     text-overflow:
         ellipsis;
-
 }
 
-
 .ad-location i {
-
     flex:
         0 0 auto;
 
     color:
-        var(--primary-light);
-
+        var(--green-600);
 }
 
-
-.ad-category {
-
+.ad-meta {
     margin-top:
-        7px;
+        6px;
 
     overflow:
         hidden;
 
     color:
-        #8a8f8a;
+        #8b938d;
 
     font-size:
-        .72rem;
+        .70rem;
 
     white-space:
         nowrap;
 
     text-overflow:
         ellipsis;
-
 }
 
 
 /* =========================================================
-   LOADING
+   STATUS
    ========================================================= */
 
 .status {
+    display:
+        none;
 
     width:
         100%;
 
-    display:
-        none;
-
     padding:
-        42px 20px;
+        65px 20px;
 
     text-align:
         center;
-
 }
 
-
-.status.show {
-
+.status.visible {
     display:
         block;
-
 }
 
-
 .status-icon {
-
     width:
-        62px;
+        66px;
 
     height:
-        62px;
+        66px;
 
     margin:
-        0 auto 15px;
+        0 auto 16px;
 
     display:
         flex;
@@ -1051,38 +829,45 @@ input:focus-visible {
         50%;
 
     background:
-        var(--primary-soft);
+        var(--green-100);
 
     color:
-        var(--primary);
+        var(--green-700);
 
     font-size:
-        1.5rem;
-
+        1.55rem;
 }
 
+.status.error .status-icon {
+    background:
+        var(--red-100);
+
+    color:
+        var(--red-700);
+}
 
 .status-title {
-
     margin-bottom:
-        7px;
+        8px;
 
     color:
         var(--text);
 
     font-size:
-        1.05rem;
+        1.12rem;
 
     font-weight:
-        750;
-
+        800;
 }
 
+.status.error .status-title {
+    color:
+        var(--red-700);
+}
 
-.status-text {
-
+.status-message {
     max-width:
-        500px;
+        520px;
 
     margin:
         0 auto;
@@ -1091,32 +876,13 @@ input:focus-visible {
         var(--muted);
 
     font-size:
-        .88rem;
+        .9rem;
 
     line-height:
-        1.55;
+        1.6;
 
-}
-
-
-.status.error
-.status-icon {
-
-    background:
-        var(--danger-bg);
-
-    color:
-        var(--danger);
-
-}
-
-
-.status.error
-.status-title {
-
-    color:
-        var(--danger);
-
+    word-break:
+        break-word;
 }
 
 
@@ -1124,48 +890,45 @@ input:focus-visible {
    RETRY
    ========================================================= */
 
-.retry-btn {
-
+.retry-button {
     margin-top:
-        18px;
+        19px;
 
     padding:
-        11px 20px;
+        12px 22px;
 
     border:
         0;
 
     border-radius:
-        12px;
+        13px;
 
     background:
         linear-gradient(
             135deg,
-            var(--primary),
-            var(--primary-light)
+            var(--green-700),
+            var(--green-500)
         );
 
     color:
-        white;
+        #fff;
 
     font-weight:
-        700;
+        750;
 
     cursor:
         pointer;
 
     box-shadow:
-        0 4px 12px
-        rgba(46,125,50,.22);
+        var(--shadow-green);
 
+    transition:
+        transform .15s ease;
 }
 
-
-.retry-btn:active {
-
+.retry-button:active {
     transform:
-        scale(.97);
-
+        scale(.96);
 }
 
 
@@ -1173,55 +936,40 @@ input:focus-visible {
    SKELETON
    ========================================================= */
 
-.skeleton-card {
+.skeleton-grid {
+    display:
+        grid;
 
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap:
+        13px;
+}
+
+.skeleton-card {
     overflow:
         hidden;
-
-    background:
-        white;
 
     border-radius:
         var(--radius);
 
-    box-shadow:
-        var(--shadow-sm);
-
-}
-
-
-.skeleton {
-
     background:
-        linear-gradient(
-            90deg,
-            #eeeeee 25%,
-            #f7f7f7 37%,
-            #eeeeee 63%
-        );
+        #fff;
 
-    background-size:
-        400% 100%;
-
-    animation:
-        skeletonLoading 1.35s ease infinite;
-
+    box-shadow:
+        var(--shadow-1);
 }
-
 
 .skeleton-image {
-
     width:
         100%;
 
     aspect-ratio:
-        1 / .86;
-
+        1 / .88;
 }
 
-
 .skeleton-line {
-
     height:
         12px;
 
@@ -1229,41 +977,45 @@ input:focus-visible {
         12px;
 
     border-radius:
-        6px;
-
+        8px;
 }
 
+.skeleton-line.small {
+    width:
+        42%;
+}
 
 .skeleton-line.medium {
-
     width:
-        70%;
-
+        72%;
 }
 
+.skeleton {
+    background:
+        linear-gradient(
+            90deg,
+            #ecefec 25%,
+            #f7f9f7 38%,
+            #ecefec 63%
+        );
 
-.skeleton-line.short {
+    background-size:
+        400% 100%;
 
-    width:
-        45%;
-
+    animation:
+        skeletonMove 1.35s ease infinite;
 }
 
-
-@keyframes skeletonLoading {
+@keyframes skeletonMove {
 
     0% {
-
         background-position:
             100% 50%;
-
     }
 
     100% {
-
         background-position:
             0 50%;
-
     }
 
 }
@@ -1273,8 +1025,7 @@ input:focus-visible {
    FAB
    ========================================================= */
 
-.fab-button {
-
+.fab {
     position:
         fixed;
 
@@ -1283,19 +1034,25 @@ input:focus-visible {
 
     bottom:
         calc(
-            var(--nav-height)
+            var(--bottom-height)
             + 18px
             + env(safe-area-inset-bottom)
         );
 
     z-index:
-        80;
+        180;
 
     width:
-        60px;
+        62px;
 
     height:
-        60px;
+        62px;
+
+    border:
+        0;
+
+    border-radius:
+        50%;
 
     display:
         flex;
@@ -1306,21 +1063,15 @@ input:focus-visible {
     justify-content:
         center;
 
-    border:
-        0;
-
-    border-radius:
-        50%;
-
     background:
         linear-gradient(
             135deg,
-            var(--primary-dark),
-            var(--primary-light)
+            var(--green-900),
+            var(--green-500)
         );
 
     color:
-        white;
+        #fff;
 
     font-size:
         1.55rem;
@@ -1329,26 +1080,34 @@ input:focus-visible {
         pointer;
 
     box-shadow:
-        0 7px 22px
-        rgba(46,125,50,.38);
+        0 9px 28px
+        rgba(27,94,32,.36);
 
+    transition:
+        transform .18s ease,
+        box-shadow .18s ease;
 }
 
-
-.fab-button:active {
-
+.fab:hover {
     transform:
-        scale(.94);
+        translateY(-3px);
 
+    box-shadow:
+        0 12px 32px
+        rgba(27,94,32,.43);
+}
+
+.fab:active {
+    transform:
+        scale(.93);
 }
 
 
 /* =========================================================
-   BOTTOM NAV
+   BOTTOM NAVIGATION
    ========================================================= */
 
 .bottom-nav {
-
     position:
         fixed;
 
@@ -1362,11 +1121,11 @@ input:focus-visible {
         0;
 
     z-index:
-        100;
+        200;
 
     height:
         calc(
-            var(--nav-height)
+            var(--bottom-height)
             + env(safe-area-inset-bottom)
         );
 
@@ -1383,28 +1142,25 @@ input:focus-visible {
         space-around;
 
     background:
-        rgba(255,255,255,.97);
+        rgba(255,255,255,.98);
 
     backdrop-filter:
-        blur(14px);
+        blur(16px);
 
     -webkit-backdrop-filter:
-        blur(14px);
+        blur(16px);
 
     box-shadow:
-        0 -2px 12px
+        0 -3px 16px
         rgba(0,0,0,.10);
-
 }
 
-
 .nav-item {
-
     flex:
         1;
 
     height:
-        var(--nav-height);
+        var(--bottom-height);
 
     display:
         flex;
@@ -1422,158 +1178,253 @@ input:focus-visible {
         5px;
 
     color:
-        #929792;
+        #929893;
 
     font-size:
-        .72rem;
+        .70rem;
 
     font-weight:
-        550;
+        650;
 
     cursor:
         pointer;
 
-}
+    user-select:
+        none;
 
+    transition:
+        color .18s ease;
+}
 
 .nav-item i {
-
     font-size:
-        1.28rem;
+        1.27rem;
+}
 
+.nav-item.active {
+    color:
+        var(--green-600);
+}
+
+.nav-item:active {
+    opacity:
+        .70;
 }
 
 
-.nav-item.active {
+/* =========================================================
+   TOAST
+   ========================================================= */
+
+.toast {
+    position:
+        fixed;
+
+    left:
+        50%;
+
+    bottom:
+        calc(
+            var(--bottom-height)
+            + 18px
+            + env(safe-area-inset-bottom)
+        );
+
+    z-index:
+        1000;
+
+    width:
+        max-content;
+
+    max-width:
+        calc(100vw - 32px);
+
+    padding:
+        13px 18px;
+
+    border-radius:
+        13px;
+
+    transform:
+        translate(-50%, 20px);
+
+    opacity:
+        0;
+
+    pointer-events:
+        none;
 
     color:
-        var(--primary-light);
+        #fff;
+
+    background:
+        #242824;
+
+    font-size:
+        .86rem;
+
+    font-weight:
+        650;
+
+    text-align:
+        center;
+
+    box-shadow:
+        0 8px 30px
+        rgba(0,0,0,.22);
+
+    transition:
+        opacity .2s ease,
+        transform .2s ease;
+}
+
+.toast.show {
+    opacity:
+        1;
+
+    transform:
+        translate(-50%, 0);
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (min-width: 650px) {
+
+    .ads-grid,
+    .skeleton-grid {
+        grid-template-columns:
+            repeat(3, minmax(0, 1fr));
+
+        gap:
+            18px;
+    }
+
+}
+
+@media (min-width: 950px) {
+
+    .ads-grid,
+    .skeleton-grid {
+        grid-template-columns:
+            repeat(4, minmax(0, 1fr));
+
+        gap:
+            20px;
+    }
+
+    .main {
+        padding-left:
+            28px;
+
+        padding-right:
+            28px;
+    }
+
+}
+
+@media (max-width: 500px) {
+
+    .header {
+        padding:
+            10px 13px;
+    }
+
+    .header-title {
+        font-size:
+            1.13rem;
+    }
+
+    .circle-button {
+        width:
+            41px;
+
+        height:
+            41px;
+    }
+
+    .search-container {
+        padding:
+            12px 12px 9px;
+    }
+
+    .filters {
+        padding-left:
+            12px;
+
+        padding-right:
+            12px;
+
+        padding-bottom:
+            11px;
+    }
+
+    .main {
+        padding:
+            15px 12px 32px;
+    }
+
+    .ads-grid,
+    .skeleton-grid {
+        gap:
+            10px;
+    }
+
+    .ad-info {
+        padding:
+            10px;
+    }
+
+    .ad-title {
+        font-size:
+            .87rem;
+    }
+
+    .ad-price {
+        font-size:
+            .98rem;
+    }
+
+    .ad-location {
+        font-size:
+            .71rem;
+    }
+
+    .fab {
+        right:
+            16px;
+    }
 
 }
 
 
 /* =========================================================
-   MOBILE
+   REDUCED MOTION
    ========================================================= */
 
-@media (max-width: 500px) {
+@media (prefers-reduced-motion: reduce) {
 
-    .header {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior:
+            auto !important;
 
-        padding:
-            11px 14px;
+        animation-duration:
+            .01ms !important;
 
-    }
+        animation-iteration-count:
+            1 !important;
 
-
-    .header h1 {
-
-        font-size:
-            1.16rem;
-
-    }
-
-
-    .search-section {
-
-        top:
-            64px;
-
-        padding:
-            12px 12px 10px;
-
-    }
-
-
-    .filters {
-
-        padding:
-            2px 12px 12px;
-
-    }
-
-
-    .content {
-
-        padding:
-            14px 12px 30px;
-
-    }
-
-
-    .ads-grid {
-
-        gap:
-            11px;
-
-    }
-
-
-    .ad-info {
-
-        padding:
-            10px;
-
-    }
-
-
-    .ad-title {
-
-        font-size:
-            .89rem;
-
-    }
-
-
-    .ad-price {
-
-        font-size:
-            1rem;
-
-    }
-
-
-    .fab-button {
-
-        right:
-            16px;
-
-    }
-
-}
-
-
-@media (min-width: 650px) {
-
-    .ads-grid {
-
-        grid-template-columns:
-            repeat(3,minmax(0,1fr));
-
-        gap:
-            18px;
-
-    }
-
-}
-
-
-@media (min-width: 950px) {
-
-    .ads-grid {
-
-        grid-template-columns:
-            repeat(4,minmax(0,1fr));
-
-        gap:
-            20px;
-
+        transition-duration:
+            .01ms !important;
     }
 
 }
 
 </style>
-
 </head>
 
 
@@ -1589,18 +1440,16 @@ input:focus-visible {
     <div class="header-left">
 
         <button
-            class="back-btn"
+            id="backButton"
+            class="circle-button"
             type="button"
-            aria-label="Back"
-            onclick="goHome()"
-        >
+            aria-label="Go back">
 
             <i class="fas fa-arrow-left"></i>
 
         </button>
 
-
-        <h1>
+        <h1 class="header-title">
             Buy &amp; Sell
         </h1>
 
@@ -1610,11 +1459,10 @@ input:focus-visible {
     <div class="header-right">
 
         <button
-            class="icon-btn"
+            id="notificationButton"
+            class="circle-button"
             type="button"
-            aria-label="Notifications"
-            onclick="showInfo('Notifications are not connected yet.')"
-        >
+            aria-label="Notifications">
 
             <i class="fas fa-bell"></i>
 
@@ -1622,11 +1470,10 @@ input:focus-visible {
 
 
         <button
-            class="icon-btn"
+            id="profileButton"
+            class="circle-button"
             type="button"
-            aria-label="Profile"
-            onclick="goProfile()"
-        >
+            aria-label="Profile">
 
             <i class="fas fa-user"></i>
 
@@ -1638,39 +1485,48 @@ input:focus-visible {
 
 
 <!-- =========================================================
-     SEARCH
+     SEARCH + FILTERS
      ========================================================= -->
 
-<section class="search-section">
+<section class="search-panel">
 
-    <div class="search-wrapper">
+    <div class="search-container">
 
-        <i
-            class="fas fa-search search-icon"
-        ></i>
+        <div class="search-box">
+
+            <i class="fas fa-search search-icon"></i>
+
+            <input
+                id="searchInput"
+                class="search-input"
+                type="search"
+                autocomplete="off"
+                enterkeyhint="search"
+                placeholder="Search products, services..."
+                aria-label="Search products and services">
+
+            <button
+                id="clearSearch"
+                class="clear-search"
+                type="button"
+                aria-label="Clear search">
+
+                <i class="fas fa-xmark"></i>
+
+            </button>
+
+        </div>
+
+    </div>
 
 
-        <input
-            id="searchInput"
-            class="search-input"
-            type="search"
-            autocomplete="off"
-            enterkeyhint="search"
-            placeholder="Search products, services..."
-            aria-label="Search products and services"
-        >
+    <div class="filters-wrapper">
 
-
-        <button
-            id="clearSearch"
-            class="clear-search"
-            type="button"
-            aria-label="Clear search"
-        >
-
-            <i class="fas fa-times"></i>
-
-        </button>
+        <nav
+            id="filters"
+            class="filters"
+            aria-label="Listing categories">
+        </nav>
 
     </div>
 
@@ -1678,76 +1534,51 @@ input:focus-visible {
 
 
 <!-- =========================================================
-     FILTERS
-     ========================================================= -->
-
-<nav
-    id="filters"
-    class="filters"
-    aria-label="Categories"
->
-</nav>
-
-
-<!-- =========================================================
      MAIN
      ========================================================= -->
 
-<main class="content">
+<main class="main">
 
-
-    <div class="results-header">
+    <div class="results-bar">
 
         <div
             id="resultsTitle"
-            class="results-title"
-        >
+            class="results-title">
+
             Latest listings
+
         </div>
 
 
         <div
             id="resultsCount"
-            class="results-count"
-        >
-            —
+            class="results-count">
+
+            Loading...
+
         </div>
 
     </div>
 
 
-    <!-- LOADING -->
+    <!-- =====================================================
+         SKELETON
+         ===================================================== -->
 
     <div
-        id="loadingStatus"
-        class="status show"
-    >
-
-        <div class="status-icon">
-
-            <i class="fas fa-spinner fa-spin"></i>
-
-        </div>
-
-
-        <div class="status-title">
-            Loading listings
-        </div>
-
-
-        <div class="status-text">
-            Please wait while HAVKAR loads the latest listings.
-        </div>
+        id="skeletonGrid"
+        class="skeleton-grid">
 
     </div>
 
 
-    <!-- ERROR -->
+    <!-- =====================================================
+         ERROR
+         ===================================================== -->
 
-    <div
+    <section
         id="errorStatus"
-        class="status error"
-    >
+        class="status error">
 
         <div class="status-icon">
 
@@ -1755,41 +1586,38 @@ input:focus-visible {
 
         </div>
 
-
         <div class="status-title">
             Could not load listings
         </div>
 
-
         <div
-            id="errorText"
-            class="status-text"
-        >
-            Unable to connect to the listings service.
-        </div>
+            id="errorMessage"
+            class="status-message">
 
+            HAVKAR could not load the listings.
+
+        </div>
 
         <button
             id="retryButton"
-            class="retry-btn"
-            type="button"
-        >
+            class="retry-button"
+            type="button">
 
             <i class="fas fa-rotate-right"></i>
-
-            Try again
+            &nbsp; Try again
 
         </button>
 
-    </div>
+    </section>
 
 
-    <!-- EMPTY -->
+    <!-- =====================================================
+         EMPTY
+         ===================================================== -->
 
-    <div
+    <section
         id="emptyStatus"
-        class="status"
-    >
+        class="status">
 
         <div class="status-icon">
 
@@ -1797,40 +1625,40 @@ input:focus-visible {
 
         </div>
 
-
         <div class="status-title">
             No listings found
         </div>
 
-
-        <div class="status-text">
+        <div class="status-message">
             There are no listings matching your search or category.
         </div>
 
-    </div>
+    </section>
 
 
-    <!-- ADS -->
+    <!-- =====================================================
+         ADS
+         ===================================================== -->
 
-    <div
+    <section
         id="adsGrid"
         class="ads-grid"
-    >
-    </div>
+        aria-live="polite">
+
+    </section>
 
 </main>
 
 
 <!-- =========================================================
-     ADD
+     FLOATING ADD BUTTON
      ========================================================= -->
 
 <button
-    class="fab-button"
+    id="addButton"
+    class="fab"
     type="button"
-    aria-label="Post a new ad"
-    onclick="goPostAd()"
->
+    aria-label="Post a new ad">
 
     <i class="fas fa-plus"></i>
 
@@ -1838,126 +1666,140 @@ input:focus-visible {
 
 
 <!-- =========================================================
-     BOTTOM NAV
+     BOTTOM NAVIGATION
      ========================================================= -->
 
 <nav class="bottom-nav">
 
     <div
         class="nav-item active"
+        id="navHome"
         role="button"
-        tabindex="0"
-        onclick="goHome()"
-    >
+        tabindex="0">
 
-        <i class="fas fa-home"></i>
+        <i class="fas fa-house"></i>
 
-        <span>
-            Home
-        </span>
+        <span>Home</span>
 
     </div>
 
 
     <div
         class="nav-item"
+        id="navSearch"
         role="button"
-        tabindex="0"
-        onclick="focusSearch()"
-    >
+        tabindex="0">
 
-        <i class="fas fa-search"></i>
+        <i class="fas fa-magnifying-glass"></i>
 
-        <span>
-            Search
-        </span>
+        <span>Search</span>
 
     </div>
 
 
     <div
         class="nav-item"
+        id="navSaved"
         role="button"
-        tabindex="0"
-        onclick="showInfo('Saved listings will be connected to your account.')"
-    >
+        tabindex="0">
 
         <i class="fas fa-heart"></i>
 
-        <span>
-            Saved
-        </span>
+        <span>Saved</span>
 
     </div>
 
 
     <div
         class="nav-item"
+        id="navMessages"
         role="button"
-        tabindex="0"
-        onclick="showInfo('Messaging will be connected to your account.')"
-    >
+        tabindex="0">
 
         <i class="fas fa-comment"></i>
 
-        <span>
-            Messages
-        </span>
+        <span>Messages</span>
 
     </div>
 
 
     <div
         class="nav-item"
+        id="navProfile"
         role="button"
-        tabindex="0"
-        onclick="goProfile()"
-    >
+        tabindex="0">
 
         <i class="fas fa-user"></i>
 
-        <span>
-            Profile
-        </span>
+        <span>Profile</span>
 
     </div>
 
 </nav>
 
 
+<!-- =========================================================
+     TOAST
+     ========================================================= -->
+
+<div
+    id="toast"
+    class="toast"
+    role="status"
+    aria-live="polite">
+</div>
+
+
 <script>
 
 /* =========================================================
-   HAVKAR BUY & SELL
-   Optimized Listings Engine
+   HAVKAR APPLICATION
    ========================================================= */
 
 
 /* =========================================================
    SUPABASE CONFIG
-   IMPORTANT:
-   Same publishable key used by post-ad.html
    ========================================================= */
 
 const SUPABASE_URL =
     "https://gispovnciifgikvgpzck.supabase.co";
 
-
+/*
+ * Use the SAME publishable key in the other HAVKAR pages
+ * when they connect to this same Supabase project.
+ */
 const SUPABASE_PUBLISHABLE_KEY =
     "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq";
 
 
 /* =========================================================
-   CONSTANTS
+   SUPABASE CLIENT
    ========================================================= */
 
-const ADS_PAGE_SIZE = 60;
+let supabaseClient = null;
 
-const REQUEST_TIMEOUT_MS = 12000;
 
-const IMAGE_REQUEST_TIMEOUT_MS = 10000;
+/* =========================================================
+   APPLICATION STATE
+   ========================================================= */
 
-const MAX_VISIBLE_IMAGE_LOADS = 8;
+const state = {
+
+    ads: [],
+
+    filteredAds: [],
+
+    category: "All",
+
+    search: "",
+
+    loading: false,
+
+    requestNumber: 0,
+
+    destroyed: false
+
+};
 
 
 /* =========================================================
@@ -1980,6 +1822,7 @@ const CATEGORIES = [
 
     "Restaurant Equipment",
     "Food & Catering",
+
     "Tools & Machinery",
 
     "Vehicles",
@@ -1989,6 +1832,7 @@ const CATEGORIES = [
     "Bicycles",
 
     "Real Estate",
+
     "Jobs & Services",
 
     "Clothing",
@@ -2014,11 +1858,53 @@ const CATEGORIES = [
 
 
 /* =========================================================
-   SUPABASE CLIENT
+   DOM REFERENCES
    ========================================================= */
 
-let supabaseClient = null;
+const $ = id =>
+    document.getElementById(id);
 
+
+const adsGrid =
+    $("adsGrid");
+
+const skeletonGrid =
+    $("skeletonGrid");
+
+const filters =
+    $("filters");
+
+const searchInput =
+    $("searchInput");
+
+const clearSearch =
+    $("clearSearch");
+
+const resultsTitle =
+    $("resultsTitle");
+
+const resultsCount =
+    $("resultsCount");
+
+const errorStatus =
+    $("errorStatus");
+
+const errorMessage =
+    $("errorMessage");
+
+const emptyStatus =
+    $("emptyStatus");
+
+const retryButton =
+    $("retryButton");
+
+const toast =
+    $("toast");
+
+
+/* =========================================================
+   SUPABASE INITIALIZATION
+   ========================================================= */
 
 function initializeSupabase() {
 
@@ -2031,39 +1917,32 @@ function initializeSupabase() {
     }
 
 
+    if (
+        !window.supabase ||
+        typeof window.supabase.createClient !== "function"
+    ) {
+
+        console.error(
+            "[HAVKAR] Supabase library unavailable."
+        );
+
+        return false;
+
+    }
+
+
     try {
-
-        if (
-            !window.supabase ||
-            typeof window.supabase.createClient !== "function"
-        ) {
-
-            throw new Error(
-                "Supabase library did not load."
-            );
-
-        }
-
 
         supabaseClient =
             window.supabase.createClient(
                 SUPABASE_URL,
                 SUPABASE_PUBLISHABLE_KEY,
                 {
-
                     auth: {
-
-                        persistSession:
-                            true,
-
-                        autoRefreshToken:
-                            true,
-
-                        detectSessionInUrl:
-                            true
-
+                        persistSession: true,
+                        autoRefreshToken: true,
+                        detectSessionInUrl: true
                     }
-
                 }
             );
 
@@ -2075,9 +1954,11 @@ function initializeSupabase() {
     catch (error) {
 
         console.error(
-            "[HAVKAR] Supabase initialization:",
+            "[HAVKAR] Supabase initialization error:",
             error
         );
+
+        supabaseClient = null;
 
         return false;
 
@@ -2087,139 +1968,111 @@ function initializeSupabase() {
 
 
 /* =========================================================
-   STATE
+   NATIVE PROMISE CONVERSION
+   IMPORTANT:
+   Prevents "promise.finally is not a function"
    ========================================================= */
 
-const state = {
+function toNativePromise(value) {
 
-    ads: [],
+    return Promise.resolve(value);
 
-    filteredAds: [],
-
-    currentCategory: "All",
-
-    search: "",
-
-    loading: false,
-
-    requestId: 0,
-
-    imageQueue: [],
-
-    activeImageLoads: 0
-
-};
+}
 
 
 /* =========================================================
-   DOM
+   TIMEOUT
+   IMPORTANT:
+   Never calls .finally() on Supabase Query Builder.
    ========================================================= */
 
-const adsGrid =
-    document.getElementById(
-        "adsGrid"
+function withTimeout(
+    operation,
+    milliseconds = 15000
+) {
+
+    const nativePromise =
+        toNativePromise(operation);
+
+
+    let timer = null;
+
+
+    const timeoutPromise =
+        new Promise(
+            function(_, reject) {
+
+                timer =
+                    window.setTimeout(
+                        function() {
+
+                            reject(
+                                new Error(
+                                    "The listings request timed out."
+                                )
+                            );
+
+                        },
+                        milliseconds
+                    );
+
+            }
+        );
+
+
+    return Promise.race([
+        nativePromise,
+        timeoutPromise
+    ]).then(
+        function(result) {
+
+            if (timer !== null) {
+
+                window.clearTimeout(timer);
+
+            }
+
+            return result;
+
+        },
+        function(error) {
+
+            if (timer !== null) {
+
+                window.clearTimeout(timer);
+
+            }
+
+            throw error;
+
+        }
     );
 
-
-const filtersContainer =
-    document.getElementById(
-        "filters"
-    );
-
-
-const searchInput =
-    document.getElementById(
-        "searchInput"
-    );
-
-
-const clearSearch =
-    document.getElementById(
-        "clearSearch"
-    );
-
-
-const loadingStatus =
-    document.getElementById(
-        "loadingStatus"
-    );
-
-
-const errorStatus =
-    document.getElementById(
-        "errorStatus"
-    );
-
-
-const emptyStatus =
-    document.getElementById(
-        "emptyStatus"
-    );
-
-
-const errorText =
-    document.getElementById(
-        "errorText"
-    );
-
-
-const retryButton =
-    document.getElementById(
-        "retryButton"
-    );
-
-
-const resultsTitle =
-    document.getElementById(
-        "resultsTitle"
-    );
-
-
-const resultsCount =
-    document.getElementById(
-        "resultsCount"
-    );
+}
 
 
 /* =========================================================
-   NAVIGATION
+   ESCAPE HTML
    ========================================================= */
 
-function goHome() {
+function escapeHtml(value) {
 
-    window.location.href =
-        "index.html";
+    if (
+        value === null ||
+        value === undefined
+    ) {
 
-}
+        return "";
 
-
-function goProfile() {
-
-    window.location.href =
-        "profile.html";
-
-}
+    }
 
 
-function goPostAd() {
-
-    window.location.href =
-        "post-ad.html";
-
-}
-
-
-function focusSearch() {
-
-    searchInput.focus();
-
-    window.scrollTo({
-
-        top: 0,
-
-        behavior: "smooth"
-
-    });
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 
 }
 
@@ -2246,37 +2099,14 @@ function safeString(value) {
 
 
 /* =========================================================
-   ESCAPE HTML
+   NORMALIZE CATEGORY
    ========================================================= */
 
-function escapeHtml(value) {
+function normalizeCategory(value) {
 
     return safeString(value)
-
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-
-        .replace(
-            /</g,
-            "&lt;"
-        )
-
-        .replace(
-            />/g,
-            "&gt;"
-        )
-
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-
-        .replace(
-            /'/g,
-            "&#039;"
-        );
+        .toLowerCase()
+        .replace(/\s+/g, " ");
 
 }
 
@@ -2306,9 +2136,7 @@ function formatPrice(value) {
         !Number.isFinite(number)
     ) {
 
-        return escapeHtml(
-            value
-        );
+        return escapeHtml(value);
 
     }
 
@@ -2316,16 +2144,9 @@ function formatPrice(value) {
     return new Intl.NumberFormat(
         "en-US",
         {
-
-            style:
-                "currency",
-
-            currency:
-                "EUR",
-
-            maximumFractionDigits:
-                2
-
+            style: "currency",
+            currency: "EUR",
+            maximumFractionDigits: 2
         }
     ).format(number);
 
@@ -2363,16 +2184,9 @@ function formatDate(value) {
     return new Intl.DateTimeFormat(
         "en-GB",
         {
-
-            day:
-                "numeric",
-
-            month:
-                "short",
-
-            year:
-                "numeric"
-
+            day: "numeric",
+            month: "short",
+            year: "numeric"
         }
     ).format(date);
 
@@ -2380,92 +2194,218 @@ function formatDate(value) {
 
 
 /* =========================================================
-   TIMEOUT
+   IMAGE EXTRACTION
    ========================================================= */
 
-function withTimeout(
-    promise,
-    milliseconds
-) {
+function getFirstImage(ad) {
 
-    let timer = null;
+    if (!ad) {
+
+        return null;
+
+    }
 
 
-    const timeout =
-        new Promise(
-            function(_, reject) {
+    const photos =
+        ad.photos;
 
-                timer =
-                    setTimeout(
-                        function() {
 
-                            reject(
-                                new Error(
-                                    "Request timed out."
-                                )
-                            );
+    /* Array */
 
-                        },
-                        milliseconds
-                    );
+    if (
+        Array.isArray(photos)
+    ) {
+
+        for (
+            const photo of photos
+        ) {
+
+            if (
+                typeof photo === "string" &&
+                /^https?:\/\//i.test(
+                    photo.trim()
+                )
+            ) {
+
+                return photo.trim();
 
             }
-        );
+
+        }
+
+    }
 
 
-    return Promise.race([
+    /* JSON string */
 
-        promise
+    if (
+        typeof photos === "string" &&
+        photos.trim()
+    ) {
 
-            .finally(
-                function() {
+        try {
 
-                    if (timer) {
+            const parsed =
+                JSON.parse(
+                    photos
+                );
 
-                        clearTimeout(
-                            timer
-                        );
+
+            if (
+                Array.isArray(parsed)
+            ) {
+
+                for (
+                    const photo of parsed
+                ) {
+
+                    if (
+                        typeof photo === "string" &&
+                        photo.trim()
+                    ) {
+
+                        /*
+                         * Supports both URLs and
+                         * existing stored image data.
+                         */
+                        return photo.trim();
 
                     }
 
                 }
-            ),
 
-        timeout
+            }
 
-    ]);
+        }
+
+        catch (_) {
+
+            /*
+             * Some older records may contain
+             * one direct URL.
+             */
+
+            if (
+                /^https?:\/\//i.test(
+                    photos.trim()
+                )
+            ) {
+
+                return photos.trim();
+
+            }
+
+        }
+
+    }
+
+
+    /* image_url */
+
+    if (
+        typeof ad.image_url === "string" &&
+        ad.image_url.trim()
+    ) {
+
+        return ad.image_url.trim();
+
+    }
+
+
+    /* image */
+
+    if (
+        typeof ad.image === "string" &&
+        ad.image.trim()
+    ) {
+
+        return ad.image.trim();
+
+    }
+
+
+    return null;
 
 }
 
 
 /* =========================================================
-   STATUS
+   LOCATION
    ========================================================= */
 
-function hideStatuses() {
+function getLocation(ad) {
 
-    loadingStatus
-        .classList
-        .remove("show");
-
-    errorStatus
-        .classList
-        .remove("show");
-
-    emptyStatus
-        .classList
-        .remove("show");
+    return (
+        safeString(ad.location) ||
+        safeString(ad.city) ||
+        safeString(ad.region) ||
+        safeString(ad.country) ||
+        "Location not specified"
+    );
 
 }
 
 
-function showLoading() {
+/* =========================================================
+   SEARCHABLE TEXT
+   ========================================================= */
 
-    hideStatuses();
+function getSearchableText(ad) {
 
-    loadingStatus
-        .classList
-        .add("show");
+    return [
+
+        ad.title,
+        ad.description,
+        ad.category,
+        ad.location,
+        ad.city,
+        ad.region,
+        ad.country
+
+    ]
+        .map(safeString)
+        .join(" ")
+        .toLowerCase();
+
+}
+
+
+/* =========================================================
+   CATEGORY MATCH
+   ========================================================= */
+
+function categoryMatches(ad) {
+
+    if (
+        state.category === "All"
+    ) {
+
+        return true;
+
+    }
+
+
+    return (
+        normalizeCategory(ad.category) ===
+        normalizeCategory(state.category)
+    );
+
+}
+
+
+/* =========================================================
+   STATUS CONTROL
+   ========================================================= */
+
+function hideStatuses() {
+
+    errorStatus.classList.remove(
+        "visible"
+    );
+
+    emptyStatus.classList.remove(
+        "visible"
+    );
 
 }
 
@@ -2474,13 +2414,13 @@ function showError(message) {
 
     hideStatuses();
 
-    errorText.textContent =
+    errorMessage.textContent =
         message ||
-        "Unable to load listings.";
+        "HAVKAR could not load the listings.";
 
-    errorStatus
-        .classList
-        .add("show");
+    errorStatus.classList.add(
+        "visible"
+    );
 
 }
 
@@ -2489,132 +2429,95 @@ function showEmpty() {
 
     hideStatuses();
 
-    emptyStatus
-        .classList
-        .add("show");
-
-}
-
-
-function showContent() {
-
-    hideStatuses();
-
-}
-
-
-/* =========================================================
-   ERROR MESSAGE
-   ========================================================= */
-
-function readableError(error) {
-
-    if (
-        !navigator.onLine
-    ) {
-
-        return (
-            "Your device is offline. " +
-            "Please check your internet connection."
-        );
-
-    }
-
-
-    const message =
-        safeString(
-            error &&
-            error.message
-        );
-
-
-    const lower =
-        message.toLowerCase();
-
-
-    if (
-        lower.includes(
-            "failed to fetch"
-        )
-    ) {
-
-        return (
-            "HAVKAR could not reach Supabase. " +
-            "The browser-to-database connection failed."
-        );
-
-    }
-
-
-    if (
-        lower.includes(
-            "timed out"
-        )
-    ) {
-
-        return (
-            "The listings server took too long to respond."
-        );
-
-    }
-
-
-    if (
-        lower.includes(
-            "permission"
-        ) ||
-        lower.includes(
-            "row-level security"
-        ) ||
-        lower.includes(
-            "rls"
-        )
-    ) {
-
-        return (
-            "Supabase denied access to the listings."
-        );
-
-    }
-
-
-    if (
-        lower.includes(
-            "relation"
-        ) &&
-        lower.includes(
-            "does not exist"
-        )
-    ) {
-
-        return (
-            "The ads table could not be found in Supabase."
-        );
-
-    }
-
-
-    if (message) {
-
-        return message;
-
-    }
-
-
-    return (
-        "An unexpected error occurred while loading listings."
+    emptyStatus.classList.add(
+        "visible"
     );
 
 }
 
 
 /* =========================================================
-   CATEGORIES
+   SKELETON
    ========================================================= */
 
-function createCategoryButtons() {
+function showSkeleton() {
 
-    filtersContainer.innerHTML =
+    skeletonGrid.innerHTML =
+        "";
+
+
+    skeletonGrid.style.display =
+        "grid";
+
+
+    for (
+        let i = 0;
+        i < 6;
+        i++
+    ) {
+
+        const card =
+            document.createElement(
+                "div"
+            );
+
+
+        card.className =
+            "skeleton-card";
+
+
+        card.innerHTML = `
+
+            <div
+                class="skeleton skeleton-image">
+            </div>
+
+            <div
+                class="skeleton skeleton-line medium">
+            </div>
+
+            <div
+                class="skeleton skeleton-line small">
+            </div>
+
+            <div
+                class="skeleton skeleton-line small">
+            </div>
+
+        `;
+
+
+        skeletonGrid.appendChild(
+            card
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   HIDE SKELETON
+   ========================================================= */
+
+function hideSkeleton() {
+
+    skeletonGrid.innerHTML =
+        "";
+
+    skeletonGrid.style.display =
+        "none";
+
+}
+
+
+/* =========================================================
+   CATEGORY BUTTONS
+   ========================================================= */
+
+function renderCategories() {
+
+    filters.innerHTML =
         "";
 
 
@@ -2636,55 +2539,31 @@ function createCategoryButtons() {
 
 
             button.className =
-                "filter-btn";
-
-
-            button.textContent =
-                category;
+                "filter-button";
 
 
             button.dataset.category =
                 category;
 
 
-            if (
+            button.textContent =
+                category;
+
+
+            button.classList.toggle(
+                "active",
                 category ===
-                state.currentCategory
-            ) {
-
-                button.classList.add(
-                    "active"
-                );
-
-            }
+                    state.category
+            );
 
 
             button.addEventListener(
                 "click",
                 function() {
 
-                    state.currentCategory =
-                        category;
-
-
-                    document
-                        .querySelectorAll(
-                            ".filter-btn"
-                        )
-                        .forEach(
-                            function(btn) {
-
-                                btn.classList.toggle(
-                                    "active",
-                                    btn.dataset.category ===
-                                        category
-                                );
-
-                            }
-                        );
-
-
-                    applyFilters();
+                    setCategory(
+                        category
+                    );
 
                 }
             );
@@ -2698,7 +2577,7 @@ function createCategoryButtons() {
     );
 
 
-    filtersContainer.appendChild(
+    filters.appendChild(
         fragment
     );
 
@@ -2706,7 +2585,39 @@ function createCategoryButtons() {
 
 
 /* =========================================================
-   SEARCH
+   CATEGORY
+   ========================================================= */
+
+function setCategory(category) {
+
+    state.category =
+        category;
+
+
+    document
+        .querySelectorAll(
+            ".filter-button"
+        )
+        .forEach(
+            function(button) {
+
+                button.classList.toggle(
+                    "active",
+                    button.dataset.category ===
+                        category
+                );
+
+            }
+        );
+
+
+    applyFilters();
+
+}
+
+
+/* =========================================================
+   SEARCH SETUP
    ========================================================= */
 
 function setupSearch() {
@@ -2721,12 +2632,10 @@ function setupSearch() {
                 ).toLowerCase();
 
 
-            clearSearch
-                .classList
-                .toggle(
-                    "show",
-                    Boolean(state.search)
-                );
+            clearSearch.classList.toggle(
+                "visible",
+                Boolean(state.search)
+            );
 
 
             applyFilters();
@@ -2745,12 +2654,9 @@ function setupSearch() {
             state.search =
                 "";
 
-            clearSearch
-                .classList
-                .remove(
-                    "show"
-                );
-
+            clearSearch.classList.remove(
+                "visible"
+            );
 
             applyFilters();
 
@@ -2763,68 +2669,12 @@ function setupSearch() {
 
 
 /* =========================================================
-   SEARCH TEXT
-   ========================================================= */
-
-function searchableText(ad) {
-
-    return [
-
-        ad.title,
-        ad.description,
-        ad.location,
-        ad.category,
-        ad.city,
-        ad.region,
-        ad.country
-
-    ]
-
-        .map(
-            safeString
-        )
-
-        .join(" ")
-
-        .toLowerCase();
-
-}
-
-
-/* =========================================================
-   CATEGORY MATCH
-   ========================================================= */
-
-function categoryMatches(ad) {
-
-    if (
-        state.currentCategory ===
-        "All"
-    ) {
-
-        return true;
-
-    }
-
-
-    return (
-        safeString(
-            ad.category
-        ).toLowerCase()
-        ===
-        state.currentCategory.toLowerCase()
-    );
-
-}
-
-
-/* =========================================================
-   APPLY FILTERS
+   FILTER
    ========================================================= */
 
 function applyFilters() {
 
-    const search =
+    const query =
         state.search;
 
 
@@ -2833,9 +2683,7 @@ function applyFilters() {
             function(ad) {
 
                 if (
-                    !categoryMatches(
-                        ad
-                    )
+                    !categoryMatches(ad)
                 ) {
 
                     return false;
@@ -2843,18 +2691,16 @@ function applyFilters() {
                 }
 
 
-                if (!search) {
+                if (!query) {
 
                     return true;
 
                 }
 
 
-                return searchableText(
+                return getSearchableText(
                     ad
-                ).includes(
-                    search
-                );
+                ).includes(query);
 
             }
         );
@@ -2870,7 +2716,7 @@ function applyFilters() {
 
 
 /* =========================================================
-   HEADER
+   RESULTS HEADER
    ========================================================= */
 
 function updateResultsHeader() {
@@ -2887,12 +2733,11 @@ function updateResultsHeader() {
     }
 
     else if (
-        state.currentCategory !==
-        "All"
+        state.category !== "All"
     ) {
 
         resultsTitle.textContent =
-            state.currentCategory;
+            state.category;
 
     }
 
@@ -2905,187 +2750,77 @@ function updateResultsHeader() {
 
 
     resultsCount.textContent =
-        count +
-        (
+        `${count} ${
             count === 1
-                ? " listing"
-                : " listings"
-        );
+                ? "listing"
+                : "listings"
+        }`;
 
 }
 
 
 /* =========================================================
-   PHOTO PARSER
+   IMAGE MARKUP
    ========================================================= */
 
-function parsePhotos(value) {
+function createImageMarkup(ad) {
 
-    if (
-        Array.isArray(value)
-    ) {
-
-        return value
-            .filter(
-                function(item) {
-
-                    return (
-                        typeof item ===
-                        "string" &&
-                        item.trim()
-                    );
-
-                }
-            )
-            .map(
-                function(item) {
-
-                    return item.trim();
-
-                }
-            );
-
-    }
+    const image =
+        getFirstImage(ad);
 
 
-    if (
-        typeof value !==
-        "string"
-    ) {
+    const title =
+        escapeHtml(
+            safeString(ad.title) ||
+            "Listing"
+        );
 
-        return [];
+
+    if (!image) {
+
+        return `
+
+            <div class="ad-image">
+
+                <div class="image-placeholder">
+
+                    <i class="fas fa-image"></i>
+
+                </div>
+
+            </div>
+
+        `;
 
     }
 
 
-    const text =
-        value.trim();
+    return `
 
+        <div class="ad-image has-image">
 
-    if (!text) {
+            <img
+                src="${escapeHtml(image)}"
+                alt="${title}"
+                loading="lazy"
+                decoding="async"
+                referrerpolicy="no-referrer">
 
-        return [];
+            <div class="image-placeholder">
 
-    }
+                <i class="fas fa-image"></i>
 
+            </div>
 
-    if (
-        text.startsWith(
-            "http://"
-        ) ||
-        text.startsWith(
-            "https://"
-        ) ||
-        text.startsWith(
-            "data:image/"
-        )
-    ) {
+        </div>
 
-        return [
-            text
-        ];
-
-    }
-
-
-    try {
-
-        const parsed =
-            JSON.parse(
-                text
-            );
-
-
-        if (
-            Array.isArray(parsed)
-        ) {
-
-            return parsed
-                .filter(
-                    function(item) {
-
-                        return (
-                            typeof item ===
-                            "string" &&
-                            item.trim()
-                        );
-
-                    }
-                )
-                .map(
-                    function(item) {
-
-                        return item.trim();
-
-                    }
-                );
-
-        }
-
-    }
-
-    catch (_) {
-
-        return [];
-
-    }
-
-
-    return [];
+    `;
 
 }
 
 
 /* =========================================================
-   CARD IMAGE
-   ========================================================= */
-
-function createImageArea(ad) {
-
-    const imageBox =
-        document.createElement(
-            "div"
-        );
-
-
-    imageBox.className =
-        "ad-image";
-
-
-    const placeholder =
-        document.createElement(
-            "div"
-        );
-
-
-    placeholder.className =
-        "image-placeholder";
-
-
-    placeholder.innerHTML =
-        '<i class="fas fa-image"></i>';
-
-
-    imageBox.appendChild(
-        placeholder
-    );
-
-
-    /*
-     * IMPORTANT:
-     * We intentionally do NOT include
-     * photos in the first ads query.
-     *
-     * Images are fetched later.
-     */
-
-    return imageBox;
-
-}
-
-
-/* =========================================================
-   CARD
+   CREATE CARD
    ========================================================= */
 
 function createAdCard(ad) {
@@ -3113,125 +2848,25 @@ function createAdCard(ad) {
 
 
     const id =
-        safeString(
-            ad.id
-        );
-
-
-    card.dataset.id =
-        id;
-
-
-    const imageBox =
-        createImageArea(
-            ad
-        );
-
-
-    const info =
-        document.createElement(
-            "div"
-        );
-
-
-    info.className =
-        "ad-info";
+        safeString(ad.id);
 
 
     const title =
-        document.createElement(
-            "div"
-        );
-
-
-    title.className =
-        "ad-title";
-
-
-    title.textContent =
-        safeString(
-            ad.title
-        ) ||
+        safeString(ad.title) ||
         "Untitled listing";
 
 
-    const price =
-        document.createElement(
-            "div"
-        );
-
-
-    price.className =
-        "ad-price";
-
-
-    price.innerHTML =
-        formatPrice(
-            ad.price
-        );
+    const category =
+        safeString(ad.category) ||
+        "Other";
 
 
     const location =
-        document.createElement(
-            "div"
-        );
+        getLocation(ad);
 
 
-    location.className =
-        "ad-location";
-
-
-    const locationIcon =
-        document.createElement(
-            "i"
-        );
-
-
-    locationIcon.className =
-        "fas fa-location-dot";
-
-
-    const locationText =
-        document.createElement(
-            "span"
-        );
-
-
-    locationText.textContent =
-        safeString(
-            ad.location
-        ) ||
-        safeString(
-            ad.city
-        ) ||
-        "Location not specified";
-
-
-    location.appendChild(
-        locationIcon
-    );
-
-
-    location.appendChild(
-        locationText
-    );
-
-
-    const category =
-        document.createElement(
-            "div"
-        );
-
-
-    category.className =
-        "ad-category";
-
-
-    const categoryText =
-        safeString(
-            ad.category
-        ) ||
-        "Other";
+    const condition =
+        safeString(ad.condition);
 
 
     const date =
@@ -3240,42 +2875,136 @@ function createAdCard(ad) {
         );
 
 
-    category.textContent =
-        date
-            ? categoryText +
-              " • " +
-              date
-            : categoryText;
+    const image =
+        getFirstImage(ad);
 
 
-    info.appendChild(
-        title
-    );
+    card.dataset.id =
+        id;
 
 
-    info.appendChild(
-        price
-    );
+    card.innerHTML = `
+
+        ${createImageMarkup(ad)}
+
+        ${
+            condition
+                ? `
+                    <div class="condition-badge">
+                        ${escapeHtml(condition)}
+                    </div>
+                  `
+                : ""
+        }
+
+        <div class="ad-info">
+
+            <div class="ad-title">
+                ${escapeHtml(title)}
+            </div>
+
+            <div class="ad-price">
+                ${formatPrice(ad.price)}
+            </div>
+
+            <div class="ad-location">
+
+                <i class="fas fa-location-dot"></i>
+
+                <span>
+                    ${escapeHtml(location)}
+                </span>
+
+            </div>
+
+            <div class="ad-meta">
+
+                ${escapeHtml(category)}
+
+                ${
+                    date
+                        ? " • " +
+                          escapeHtml(date)
+                        : ""
+                }
+
+            </div>
+
+        </div>
+
+    `;
 
 
-    info.appendChild(
-        location
-    );
+    const img =
+        card.querySelector(
+            "img"
+        );
 
 
-    info.appendChild(
-        category
-    );
+    if (img) {
+
+        img.addEventListener(
+            "load",
+            function() {
+
+                img.classList.add(
+                    "loaded"
+                );
+
+            },
+            {
+                once: true
+            }
+        );
 
 
-    card.appendChild(
-        imageBox
-    );
+        img.addEventListener(
+            "error",
+            function() {
+
+                const imageBox =
+                    card.querySelector(
+                        ".ad-image"
+                    );
 
 
-    card.appendChild(
-        info
-    );
+                if (!imageBox) {
+
+                    return;
+
+                }
+
+
+                imageBox.classList.remove(
+                    "has-image"
+                );
+
+
+                img.remove();
+
+            },
+            {
+                once: true
+            }
+        );
+
+
+        /*
+         * Handles cached images where
+         * load can already be complete.
+         */
+        if (
+            img.complete &&
+            img.naturalWidth > 0
+        ) {
+
+            img.classList.add(
+                "loaded"
+            );
+
+        }
+
+    }
 
 
     card.addEventListener(
@@ -3295,10 +3024,8 @@ function createAdCard(ad) {
         function(event) {
 
             if (
-                event.key ===
-                    "Enter" ||
-                event.key ===
-                    " "
+                event.key === "Enter" ||
+                event.key === " "
             ) {
 
                 event.preventDefault();
@@ -3313,279 +3040,13 @@ function createAdCard(ad) {
     );
 
 
-    /*
-     * Queue image loading.
-     */
-
-    queueImageLoad(
-        card,
-        id
-    );
-
-
     return card;
 
 }
 
 
 /* =========================================================
-   IMAGE QUEUE
-   ========================================================= */
-
-function queueImageLoad(
-    card,
-    id
-) {
-
-    if (
-        !id
-    ) {
-
-        return;
-
-    }
-
-
-    state.imageQueue.push({
-
-        card:
-            card,
-
-        id:
-            id
-
-    });
-
-
-    processImageQueue();
-
-}
-
-
-/* =========================================================
-   PROCESS IMAGE QUEUE
-   ========================================================= */
-
-function processImageQueue() {
-
-    while (
-
-        state.activeImageLoads
-            <
-        MAX_VISIBLE_IMAGE_LOADS
-
-        &&
-
-        state.imageQueue.length
-            >
-        0
-
-    ) {
-
-        const item =
-            state.imageQueue.shift();
-
-
-        if (
-            !document.body.contains(
-                item.card
-            )
-        ) {
-
-            continue;
-
-        }
-
-
-        state.activeImageLoads++;
-
-
-        loadAdImage(
-            item.card,
-            item.id
-        )
-        .finally(
-            function() {
-
-                state.activeImageLoads--;
-
-                processImageQueue();
-
-            }
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   LOAD ONE AD IMAGE
-   ========================================================= */
-
-async function loadAdImage(
-    card,
-    id
-) {
-
-    if (
-        !supabaseClient ||
-        !id
-    ) {
-
-        return;
-
-    }
-
-
-    try {
-
-        const result =
-            await withTimeout(
-
-                supabaseClient
-
-                    .from("ads")
-
-                    .select(
-                        "photos"
-                    )
-
-                    .eq(
-                        "id",
-                        id
-                    )
-
-                    .maybeSingle(),
-
-                IMAGE_REQUEST_TIMEOUT_MS
-
-            );
-
-
-        if (
-            result.error
-        ) {
-
-            console.warn(
-                "[HAVKAR] Image request failed:",
-                result.error
-            );
-
-            return;
-
-        }
-
-
-        const photos =
-            parsePhotos(
-                result.data &&
-                result.data.photos
-            );
-
-
-        if (
-            photos.length === 0
-        ) {
-
-            return;
-
-        }
-
-
-        const image =
-            photos[0];
-
-
-        const imageBox =
-            card.querySelector(
-                ".ad-image"
-            );
-
-
-        if (
-            !imageBox
-        ) {
-
-            return;
-
-        }
-
-
-        const img =
-            document.createElement(
-                "img"
-            );
-
-
-        img.alt =
-            safeString(
-                card.querySelector(
-                    ".ad-title"
-                )?.textContent
-            ) ||
-            "Listing";
-
-
-        img.loading =
-            "lazy";
-
-
-        img.decoding =
-            "async";
-
-
-        img.referrerPolicy =
-            "no-referrer";
-
-
-        img.onload =
-            function() {
-
-                img.classList.add(
-                    "loaded"
-                );
-
-
-                imageBox.classList.add(
-                    "has-image"
-                );
-
-            };
-
-
-        img.onerror =
-            function() {
-
-                img.remove();
-
-            };
-
-
-        imageBox.appendChild(
-            img
-        );
-
-
-        img.src =
-            image;
-
-    }
-
-    catch (error) {
-
-        console.warn(
-            "[HAVKAR] Image loading error:",
-            error
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   RENDER
+   RENDER ADS
    ========================================================= */
 
 function renderAds(ads) {
@@ -3594,16 +3055,8 @@ function renderAds(ads) {
         "";
 
 
-    state.imageQueue =
-        [];
-
-
-    state.activeImageLoads =
-        0;
-
-
     if (
-        !ads ||
+        !Array.isArray(ads) ||
         ads.length === 0
     ) {
 
@@ -3614,7 +3067,7 @@ function renderAds(ads) {
     }
 
 
-    showContent();
+    hideStatuses();
 
 
     const fragment =
@@ -3625,9 +3078,7 @@ function renderAds(ads) {
         function(ad) {
 
             fragment.appendChild(
-                createAdCard(
-                    ad
-                )
+                createAdCard(ad)
             );
 
         }
@@ -3638,189 +3089,230 @@ function renderAds(ads) {
         fragment
     );
 
-
-    /*
-     * Start a limited number of image requests.
-     */
-
-    processImageQueue();
-
-}
-
-
-/* =========================================================
-   OPEN PRODUCT
-   ========================================================= */
-
-function openProduct(id) {
-
-    if (
-        !id
-    ) {
-
-        showInfo(
-            "This listing does not have a valid ID."
-        );
-
-        return;
-
-    }
-
-
-    window.location.href =
-        "product.html?id=" +
-        encodeURIComponent(
-            id
-        );
-
-}
-
-
-/* =========================================================
-   SKELETONS
-   ========================================================= */
-
-function renderSkeletons(
-    count = 6
-) {
-
-    adsGrid.innerHTML =
-        "";
-
-
-    hideStatuses();
-
-
-    for (
-        let i = 0;
-        i < count;
-        i++
-    ) {
-
-        const card =
-            document.createElement(
-                "div"
-            );
-
-
-        card.className =
-            "skeleton-card";
-
-
-        card.innerHTML = `
-
-            <div
-                class="skeleton skeleton-image">
-            </div>
-
-            <div
-                class="skeleton skeleton-line medium">
-            </div>
-
-            <div
-                class="skeleton skeleton-line short">
-            </div>
-
-            <div
-                class="skeleton skeleton-line short">
-            </div>
-
-        `;
-
-
-        adsGrid.appendChild(
-            card
-        );
-
-    }
-
 }
 
 
 /* =========================================================
    FETCH ADS
-   =========================================================
-   
-   CRITICAL OPTIMIZATION:
-   
-   We deliberately DO NOT select photos here.
-   
-   Old version:
-       select("*")
-   
-   New version:
-       only lightweight listing fields
-   
-   Photos are loaded separately.
    ========================================================= */
 
 async function fetchAds() {
 
     if (
-        !supabaseClient
+        !initializeSupabase()
     ) {
 
         throw new Error(
-            "Supabase is not initialized."
+            "Supabase could not be initialized."
         );
 
     }
 
 
+    /*
+     * CRITICAL:
+     * Convert the Supabase thenable into a
+     * native Promise before Promise.race.
+     *
+     * This avoids:
+     * "promise.finally is not a function"
+     */
+
+    const query =
+        supabaseClient
+            .from("ads")
+            .select("*")
+            .order(
+                "created_at",
+                {
+                    ascending: false
+                }
+            );
+
+
     const result =
         await withTimeout(
-
-            supabaseClient
-
-                .from("ads")
-
-                .select(
-                    [
-                        "id",
-                        "title",
-                        "category",
-                        "price",
-                        "location",
-                        "description",
-                        "city",
-                        "region",
-                        "country",
-                        "created_at"
-                    ].join(",")
-                )
-
-                .order(
-                    "created_at",
-                    {
-                        ascending:
-                            false
-                    }
-                )
-
-                .limit(
-                    ADS_PAGE_SIZE
-                ),
-
-            REQUEST_TIMEOUT_MS
-
+            query,
+            15000
         );
+
+
+    if (
+        !result
+    ) {
+
+        throw new Error(
+            "The listings server returned no response."
+        );
+
+    }
 
 
     if (
         result.error
     ) {
 
+        console.error(
+            "[HAVKAR] Supabase error:",
+            result.error
+        );
+
         throw result.error;
 
     }
 
 
-    return (
-        Array.isArray(
+    if (
+        !Array.isArray(
             result.data
         )
-            ? result.data
-            : []
+    ) {
+
+        return [];
+
+    }
+
+
+    return result.data;
+
+}
+
+
+/* =========================================================
+   READABLE ERROR
+   ========================================================= */
+
+function readableError(error) {
+
+    if (
+        !navigator.onLine
+    ) {
+
+        return (
+            "Your device is offline. " +
+            "Please reconnect to the internet."
+        );
+
+    }
+
+
+    const message =
+        safeString(
+            error?.message
+        );
+
+
+    const lower =
+        message.toLowerCase();
+
+
+    if (
+        lower.includes(
+            "finally is not a function"
+        )
+    ) {
+
+        return (
+            "HAVKAR detected an incompatible Promise " +
+            "response from the database client. " +
+            "The request handler has been protected."
+        );
+
+    }
+
+
+    if (
+        lower.includes(
+            "timed out"
+        )
+    ) {
+
+        return (
+            "Supabase did not respond within 15 seconds. " +
+            "Please try again."
+        );
+
+    }
+
+
+    if (
+        lower.includes(
+            "failed to fetch"
+        ) ||
+        lower.includes(
+            "network"
+        )
+    ) {
+
+        return (
+            "HAVKAR could not establish a network " +
+            "connection with Supabase."
+        );
+
+    }
+
+
+    if (
+        lower.includes(
+            "jwt"
+        ) ||
+        lower.includes(
+            "token"
+        )
+    ) {
+
+        return (
+            "The Supabase authentication response was rejected."
+        );
+
+    }
+
+
+    if (
+        lower.includes(
+            "permission"
+        ) ||
+        lower.includes(
+            "row-level security"
+        ) ||
+        lower.includes(
+            "rls"
+        )
+    ) {
+
+        return (
+            "Supabase denied access to the ads table. " +
+            "Please check the ads table permissions."
+        );
+
+    }
+
+
+    if (
+        lower.includes(
+            "relation"
+        ) &&
+        lower.includes(
+            "does not exist"
+        )
+    ) {
+
+        return (
+            "The Supabase 'ads' table could not be found."
+        );
+
+    }
+
+
+    if (message) {
+
+        return message;
+
+    }
+
+
+    return (
+        "An unexpected error occurred while loading listings."
     );
 
 }
@@ -3833,50 +3325,40 @@ async function fetchAds() {
 async function loadAds() {
 
     const requestId =
-        ++state.requestId;
+        ++state.requestNumber;
 
 
     state.loading =
         true;
 
 
-    renderSkeletons();
+    adsGrid.innerHTML =
+        "";
 
 
-    showLoading();
+    hideStatuses();
+
+
+    showSkeleton();
+
+
+    resultsCount.textContent =
+        "Loading...";
 
 
     try {
-
-        if (
-            !navigator.onLine
-        ) {
-
-            throw new Error(
-                "Your device is offline."
-            );
-
-        }
-
-
-        if (
-            !initializeSupabase()
-        ) {
-
-            throw new Error(
-                "Supabase could not be initialized."
-            );
-
-        }
-
 
         const data =
             await fetchAds();
 
 
+        /*
+         * Ignore old requests.
+         */
+
         if (
             requestId !==
-            state.requestId
+            state.requestNumber
         ) {
 
             return;
@@ -3885,14 +3367,20 @@ async function loadAds() {
 
 
         state.ads =
-            data;
+            Array.isArray(data)
+                ? data
+                : [];
 
 
         state.loading =
             false;
 
 
+        hideSkeleton();
+
+
         applyFilters();
+
 
     }
 
@@ -3900,7 +3388,7 @@ async function loadAds() {
 
         if (
             requestId !==
-            state.requestId
+            state.requestNumber
         ) {
 
             return;
@@ -3912,20 +3400,25 @@ async function loadAds() {
             false;
 
 
-        console.error(
-            "[HAVKAR] Listings error:",
-            error
-        );
+        hideSkeleton();
 
 
         adsGrid.innerHTML =
             "";
 
 
+        resultsCount.textContent =
+            "Unavailable";
+
+
+        console.error(
+            "[HAVKAR] Load listings failed:",
+            error
+        );
+
+
         showError(
-            readableError(
-                error
-            )
+            readableError(error)
         );
 
     }
@@ -3934,12 +3427,114 @@ async function loadAds() {
 
 
 /* =========================================================
-   RETRY
+   PRODUCT NAVIGATION
    ========================================================= */
 
-retryButton.addEventListener(
-    "click",
+function openProduct(id) {
+
+    if (!id) {
+
+        showToast(
+            "This listing has no valid ID."
+        );
+
+        return;
+
+    }
+
+
+    window.location.href =
+        "product.html?id=" +
+        encodeURIComponent(id);
+
+}
+
+
+/* =========================================================
+   NAVIGATION HELPERS
+   ========================================================= */
+
+function goHome() {
+
+    window.location.href =
+        "index.html";
+
+}
+
+
+function goProfile() {
+
+    window.location.href =
+        "profile.html";
+
+}
+
+
+function goPostAd() {
+
+    window.location.href =
+        "post-ad.html";
+
+}
+
+
+/* =========================================================
+   TOAST
+   ========================================================= */
+
+let toastTimer =
+    null;
+
+
+function showToast(message) {
+
+    toast.textContent =
+        message;
+
+
+    toast.classList.add(
+        "show"
+    );
+
+
+    if (
+        toastTimer
+    ) {
+
+        clearTimeout(
+            toastTimer
+        );
+
+    }
+
+
+    toastTimer =
+        setTimeout(
+            function() {
+
+                toast.classList.remove(
+                    "show"
+                );
+
+            },
+            2800
+        );
+
+}
+
+
+/* =========================================================
+   ONLINE / OFFLINE
+   ========================================================= */
+
+window.addEventListener(
+    "online",
     function() {
+
+        showToast(
+            "Connection restored. Loading listings..."
+        );
+
 
         loadAds();
 
@@ -3947,15 +3542,208 @@ retryButton.addEventListener(
 );
 
 
-/* =========================================================
-   ONLINE
-   ========================================================= */
-
 window.addEventListener(
-    "online",
+    "offline",
     function() {
 
         if (
+            state.loading
+        ) {
+
+            state.loading =
+                false;
+
+
+            hideSkeleton();
+
+
+            showError(
+                "Your internet connection was lost. " +
+                "Reconnect and try again."
+            );
+
+        }
+
+        else {
+
+            showToast(
+                "You are currently offline."
+            );
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   NAVIGATION EVENTS
+   ========================================================= */
+
+$("backButton")
+    .addEventListener(
+        "click",
+        function() {
+
+            /*
+             * If there is usable browser history,
+             * use it. Otherwise return to home.
+             */
+
+            if (
+                window.history.length > 1
+            ) {
+
+                window.history.back();
+
+            }
+
+            else {
+
+                goHome();
+
+            }
+
+        }
+    );
+
+
+$("profileButton")
+    .addEventListener(
+        "click",
+        goProfile
+    );
+
+
+$("notificationButton")
+    .addEventListener(
+        "click",
+        function() {
+
+            showToast(
+                "Notifications will be connected to your account."
+            );
+
+        }
+    );
+
+
+$("addButton")
+    .addEventListener(
+        "click",
+        goPostAd
+    );
+
+
+$("navHome")
+    .addEventListener(
+        "click",
+        goHome
+    );
+
+
+$("navSearch")
+    .addEventListener(
+        "click",
+        function() {
+
+            searchInput.focus();
+
+
+            window.scrollTo({
+                top: 0,
+                behavior: "smooth"
+            });
+
+        }
+    );
+
+
+$("navSaved")
+    .addEventListener(
+        "click",
+        function() {
+
+            showToast(
+                "Saved listings will be connected to your account."
+            );
+
+        }
+    );
+
+
+$("navMessages")
+    .addEventListener(
+        "click",
+        function() {
+
+            showToast(
+                "Messaging will be connected to your account."
+            );
+
+        }
+    );
+
+
+$("navProfile")
+    .addEventListener(
+        "click",
+        goProfile
+    );
+
+
+retryButton
+    .addEventListener(
+        "click",
+        loadAds
+    );
+
+
+/* =========================================================
+   KEYBOARD NAVIGATION
+   ========================================================= */
+
+document
+    .querySelectorAll(
+        ".nav-item"
+    )
+    .forEach(
+        function(item) {
+
+            item.addEventListener(
+                "keydown",
+                function(event) {
+
+                    if (
+                        event.key === "Enter" ||
+                        event.key === " "
+                    ) {
+
+                        event.preventDefault();
+
+                        item.click();
+
+                    }
+
+                }
+            );
+
+        }
+    );
+
+
+/* =========================================================
+   VISIBILITY REFRESH
+   ========================================================= */
+
+document.addEventListener(
+    "visibilitychange",
+    function() {
+
+        if (
+            document.visibilityState ===
+            "visible" &&
+            !state.loading &&
             state.ads.length === 0
         ) {
 
@@ -3968,142 +3756,12 @@ window.addEventListener(
 
 
 /* =========================================================
-   OFFLINE
-   ========================================================= */
-
-window.addEventListener(
-    "offline",
-    function() {
-
-        if (
-            state.loading
-        ) {
-
-            showError(
-                "Your internet connection was lost. Please reconnect and try again."
-            );
-
-        }
-
-    }
-);
-
-
-/* =========================================================
-   INFO TOAST
-   ========================================================= */
-
-function showInfo(message) {
-
-    const old =
-        document.getElementById(
-            "havkarInfoToast"
-        );
-
-
-    if (
-        old
-    ) {
-
-        old.remove();
-
-    }
-
-
-    const toast =
-        document.createElement(
-            "div"
-        );
-
-
-    toast.id =
-        "havkarInfoToast";
-
-
-    toast.textContent =
-        message;
-
-
-    Object.assign(
-        toast.style,
-        {
-
-            position:
-                "fixed",
-
-            left:
-                "50%",
-
-            bottom:
-                "calc(90px + env(safe-area-inset-bottom))",
-
-            transform:
-                "translateX(-50%)",
-
-            zIndex:
-                "1000",
-
-            maxWidth:
-                "calc(100vw - 32px)",
-
-            padding:
-                "13px 18px",
-
-            borderRadius:
-                "12px",
-
-            background:
-                "#242624",
-
-            color:
-                "#fff",
-
-            fontSize:
-                "14px",
-
-            fontWeight:
-                "600",
-
-            textAlign:
-                "center",
-
-            boxShadow:
-                "0 8px 28px rgba(0,0,0,.22)"
-
-        }
-    );
-
-
-    document.body.appendChild(
-        toast
-    );
-
-
-    setTimeout(
-        function() {
-
-            if (
-                toast.parentNode
-            ) {
-
-                toast.remove();
-
-            }
-
-        },
-        2800
-    );
-
-}
-
-
-/* =========================================================
-   INITIALIZATION
+   INITIALIZE
    ========================================================= */
 
 function initializePage() {
 
-    createCategoryButtons();
+    renderCategories();
 
     setupSearch();
 
@@ -4122,7 +3780,5 @@ initializePage();
 
 </script>
 
-
 </body>
-
     </html>
