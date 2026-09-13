@@ -1547,15 +1547,17 @@ function goSaved(){
         "buy-sell.html#saved";
 }
 
-function openSellerMessage(){
+/* =========================================================
+   OPEN REAL SELLER CONVERSATION
+   ========================================================= */
+
+async function openSellerMessage(){
 
     if(!state.ad){
         return;
     }
 
-    if(
-        !state.ad.user_id
-    ){
+    if(!state.ad.user_id){
 
         showToast(
             "Seller contact is not available for this listing."
@@ -1564,8 +1566,24 @@ function openSellerMessage(){
         return;
     }
 
+    if(!state.currentUserId){
+
+        showToast(
+            "Please sign in to message the seller."
+        );
+
+        window.setTimeout(
+            () => {
+                window.location.href =
+                    "login.html";
+            },
+            900
+        );
+
+        return;
+    }
+
     if(
-        state.currentUserId &&
         String(state.currentUserId) ===
         String(state.ad.user_id)
     ){
@@ -1577,17 +1595,181 @@ function openSellerMessage(){
         return;
     }
 
-    /*
-     * The current HAVKAR chat screen is still being
-     * connected to the real conversations/messages
-     * backend. We therefore do not create a fake
-     * conversation here.
-     *
-     * The listing itself remains fully functional.
-     */
-    showToast(
-        "Seller messaging will open when HAVKAR Chat is connected."
-    );
+    try{
+
+        initializeSupabase();
+
+        /*
+         * First look for an existing conversation.
+         * This prevents duplicate conversations when
+         * the buyer presses Message Seller more than once.
+         */
+
+        const existing =
+            await supabaseClient
+                .from("conversations")
+                .select(
+                    "id,ad_id,buyer_id,seller_id,created_at,updated_at"
+                )
+                .eq(
+                    "ad_id",
+                    state.ad.id
+                )
+                .eq(
+                    "buyer_id",
+                    state.currentUserId
+                )
+                .eq(
+                    "seller_id",
+                    state.ad.user_id
+                )
+                .maybeSingle();
+
+        if(existing.error){
+
+            console.error(
+                "[HAVKAR] Conversation lookup failed:",
+                existing.error
+            );
+
+            showToast(
+                "Could not check the seller conversation."
+            );
+
+            return;
+        }
+
+        let conversationId =
+            existing.data?.id || null;
+
+        /*
+         * No existing conversation:
+         * create one in Supabase.
+         */
+
+        if(!conversationId){
+
+            const created =
+                await supabaseClient
+                    .from("conversations")
+                    .insert({
+                        ad_id: state.ad.id,
+                        buyer_id: state.currentUserId,
+                        seller_id: state.ad.user_id
+                    })
+                    .select(
+                        "id,ad_id,buyer_id,seller_id,created_at,updated_at"
+                    )
+                    .single();
+
+            if(created.error){
+
+                /*
+                 * If another request created the same
+                 * conversation at nearly the same time,
+                 * retry the lookup instead of creating
+                 * another record.
+                 */
+
+                console.error(
+                    "[HAVKAR] Conversation creation failed:",
+                    created.error
+                );
+
+                const retry =
+                    await supabaseClient
+                        .from("conversations")
+                        .select(
+                            "id,ad_id,buyer_id,seller_id,created_at,updated_at"
+                        )
+                        .eq(
+                            "ad_id",
+                            state.ad.id
+                        )
+                        .eq(
+                            "buyer_id",
+                            state.currentUserId
+                        )
+                        .eq(
+                            "seller_id",
+                            state.ad.user_id
+                        )
+                        .maybeSingle();
+
+                if(
+                    retry.error ||
+                    !retry.data?.id
+                ){
+
+                    showToast(
+                        "Could not start the seller conversation."
+                    );
+
+                    return;
+                }
+
+                conversationId =
+                    retry.data.id;
+
+            }else{
+
+                conversationId =
+                    created.data.id;
+            }
+        }
+
+        if(!conversationId){
+
+            showToast(
+                "Could not open the seller conversation."
+            );
+
+            return;
+        }
+
+        /*
+         * Pass the real conversation ID to HAVKAR Chat.
+         * The Chat page must use this ID to load the
+         * conversation and its messages.
+         */
+
+        const chatUrl =
+            "chat.html?conversation_id=" +
+            encodeURIComponent(
+                conversationId
+            );
+
+        window.location.href =
+            chatUrl;
+
+    }catch(error){
+
+        console.error(
+            "[HAVKAR] Seller messaging failed:",
+            error
+        );
+
+        const message =
+            String(
+                error?.message || ""
+            ).toLowerCase();
+
+        if(
+            message.includes("failed to fetch") ||
+            message.includes("network")
+        ){
+
+            showToast(
+                "HAVKAR could not connect to the server."
+            );
+
+            return;
+        }
+
+        showToast(
+            "Could not open seller messaging."
+        );
+    }
 }
 
 function setupNavigation(){
@@ -1745,4 +1927,4 @@ document.addEventListener(
 </script>
 
 </body>
-                  </html>
+</html>
