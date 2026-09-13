@@ -9,6 +9,9 @@
 
 <meta name="theme-color" content="#2e7d32">
 
+<meta name="description"
+      content="HAVKAR secure login and password recovery">
+
 <title>HAVKAR - Login</title>
 
 <style>
@@ -19,14 +22,25 @@
     padding: 0;
 }
 
+html {
+    min-height: 100%;
+}
+
 body {
     min-height: 100vh;
     font-family: Arial, Helvetica, sans-serif;
-    background: linear-gradient(135deg, #b8e6bd, #37b85d);
+    background:
+        linear-gradient(
+            135deg,
+            #b8e6bd 0%,
+            #7edc98 45%,
+            #37b85d 100%
+        );
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 20px;
+    color: #222;
 }
 
 .login-box {
@@ -36,7 +50,8 @@ body {
     border-radius: 30px;
     padding: 45px 40px;
     text-align: center;
-    box-shadow: 0 15px 45px rgba(0,0,0,0.18);
+    box-shadow:
+        0 15px 45px rgba(0,0,0,0.18);
 }
 
 .logo-container {
@@ -49,6 +64,8 @@ body {
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    box-shadow:
+        0 8px 24px rgba(46,125,50,0.10);
 }
 
 .logo {
@@ -91,12 +108,21 @@ h1 {
     border-radius: 13px;
     font-size: 17px;
     outline: none;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background: #fff;
+    color: #222;
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.input::placeholder {
+    color: #999;
 }
 
 .input:focus {
     border-color: #35aa55;
-    box-shadow: 0 0 0 3px rgba(53,170,85,0.10);
+    box-shadow:
+        0 0 0 3px rgba(53,170,85,0.10);
 }
 
 .login-btn,
@@ -107,21 +133,44 @@ h1 {
     font-size: 18px;
     font-weight: bold;
     cursor: pointer;
-    transition: opacity 0.2s ease, transform 0.1s ease;
+    transition:
+        opacity 0.2s ease,
+        transform 0.1s ease,
+        box-shadow 0.2s ease;
 }
 
 .login-btn {
     margin-top: 8px;
     border: none;
-    background: linear-gradient(135deg, #22a447, #35b858);
+    background:
+        linear-gradient(
+            135deg,
+            #22a447,
+            #35b858
+        );
     color: white;
+    box-shadow:
+        0 7px 18px rgba(34,164,71,0.18);
 }
 
 .reset-btn {
     margin-top: 8px;
     border: none;
-    background: linear-gradient(135deg, #22a447, #35b858);
+    background:
+        linear-gradient(
+            135deg,
+            #22a447,
+            #35b858
+        );
     color: white;
+    box-shadow:
+        0 7px 18px rgba(34,164,71,0.18);
+}
+
+.login-btn:hover,
+.reset-btn:hover {
+    box-shadow:
+        0 9px 22px rgba(34,164,71,0.24);
 }
 
 .signup-btn {
@@ -135,7 +184,14 @@ h1 {
     font-size: 18px;
     font-weight: bold;
     cursor: pointer;
-    transition: opacity 0.2s ease, transform 0.1s ease;
+    transition:
+        opacity 0.2s ease,
+        transform 0.1s ease,
+        background 0.2s ease;
+}
+
+.signup-btn:hover {
+    background: #f1f8f2;
 }
 
 .forgot-btn {
@@ -148,6 +204,7 @@ h1 {
     font-weight: 700;
     cursor: pointer;
     text-decoration: none;
+    padding: 4px 8px;
 }
 
 .forgot-btn:hover {
@@ -164,6 +221,11 @@ h1 {
     font-weight: 700;
     cursor: pointer;
     text-decoration: none;
+    padding: 4px 8px;
+}
+
+.back-login-btn:hover {
+    text-decoration: underline;
 }
 
 button:active {
@@ -204,6 +266,17 @@ button:disabled {
     font-size: 14px;
 }
 
+.session-notice {
+    margin-top: 16px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
 .hidden {
     display: none !important;
 }
@@ -225,6 +298,26 @@ button:disabled {
 
     .subtitle {
         font-size: 16px;
+    }
+
+    .logo-container {
+        width: 100px;
+        height: 100px;
+    }
+
+    .logo {
+        width: 82px;
+        height: 82px;
+    }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        transition-duration: 0.01ms !important;
     }
 
 }
@@ -317,6 +410,12 @@ button:disabled {
             type="button">
             Create New Account
         </button>
+
+
+        <div
+            id="sessionNotice"
+            class="session-notice hidden">
+        </div>
 
     </div>
 
@@ -468,11 +567,6 @@ const supabase =
             auth: {
                 persistSession: true,
                 autoRefreshToken: true,
-
-                /*
-                 * Must be TRUE for Supabase password
-                 * recovery links to be processed correctly.
-                 */
                 detectSessionInUrl: true
             }
         }
@@ -528,6 +622,9 @@ const updatePasswordBtn =
 const message =
     document.getElementById("message");
 
+const sessionNotice =
+    document.getElementById("sessionNotice");
+
 
 /* =========================================================
    MESSAGE HELPER
@@ -545,6 +642,39 @@ function showMessage(
         type
             ? `message ${type}`
             : "message";
+}
+
+
+/* =========================================================
+   SESSION NOTICE
+========================================================= */
+
+function showExistingSessionNotice() {
+
+    if(!sessionNotice){
+        return;
+    }
+
+    sessionNotice.textContent =
+        "You are already logged in. You can stay here to use password recovery, or log in with another account.";
+
+    sessionNotice.classList.remove(
+        "hidden"
+    );
+}
+
+
+function hideExistingSessionNotice() {
+
+    if(!sessionNotice){
+        return;
+    }
+
+    sessionNotice.textContent = "";
+
+    sessionNotice.classList.add(
+        "hidden"
+    );
 }
 
 
@@ -567,6 +697,8 @@ function showLoginMode() {
     );
 
     showMessage("");
+
+    hideExistingSessionNotice();
 
     emailInput.focus();
 }
@@ -595,6 +727,7 @@ function showForgotMode() {
 
         forgotEmail.value =
             currentEmail;
+
     }
 
     forgotEmail.focus();
@@ -614,6 +747,8 @@ function showResetMode() {
     resetMode.classList.remove(
         "hidden"
     );
+
+    hideExistingSessionNotice();
 
     showMessage(
         "Choose a new password.",
@@ -750,7 +885,15 @@ async function login() {
         );
 
 
-        setTimeout(
+        /*
+         * Short success message.
+         * This delay is only after a successful
+         * login button press.
+         *
+         * It does NOT affect Forgot Password.
+         */
+
+        window.setTimeout(
             function(){
 
                 window.location.replace(
@@ -847,10 +990,10 @@ async function sendPasswordReset() {
     try {
 
         /*
-         * The user will return to THIS SAME login.html
-         * after clicking the secure Supabase email link.
+         * Return to this same login.html page.
          *
-         * This avoids needing a second reset-password file.
+         * Supabase will process the secure recovery
+         * session from the email link.
          */
 
         const redirectTo =
@@ -887,11 +1030,8 @@ async function sendPasswordReset() {
 
 
         /*
-         * We intentionally do not reveal whether
-         * the email exists in HAVKAR.
-         *
-         * This is safer and prevents account
-         * enumeration.
+         * Do not reveal whether an email exists.
+         * This prevents account enumeration.
          */
 
         showMessage(
@@ -948,10 +1088,6 @@ async function updatePassword() {
         return;
     }
 
-
-    /*
-     * Minimum length.
-     */
 
     if(password.length < 8){
 
@@ -1046,7 +1182,7 @@ async function updatePassword() {
 
 
         showMessage(
-            "Password changed successfully. You can now log in with your new password.",
+            "Password changed successfully.",
             "success"
         );
 
@@ -1059,11 +1195,12 @@ async function updatePassword() {
 
 
         /*
-         * Give the user time to see the success
-         * message, then return to normal login.
+         * End the recovery session.
+         * The user must log in again with
+         * the new password.
          */
 
-        setTimeout(
+        window.setTimeout(
             async function(){
 
                 try {
@@ -1082,7 +1219,7 @@ async function updatePassword() {
                 showLoginMode();
 
                 showMessage(
-                    "Your password has been changed. Please log in.",
+                    "Your password has been changed. Please log in with your new password.",
                     "success"
                 );
 
@@ -1165,7 +1302,7 @@ updatePasswordBtn.addEventListener(
 
 
 /* =========================================================
-   ENTER KEY SUPPORT — LOGIN
+   ENTER KEY SUPPORT — LOGIN EMAIL
 ========================================================= */
 
 emailInput.addEventListener(
@@ -1181,6 +1318,10 @@ emailInput.addEventListener(
     }
 );
 
+
+/* =========================================================
+   ENTER KEY SUPPORT — LOGIN PASSWORD
+========================================================= */
 
 passwordInput.addEventListener(
     "keydown",
@@ -1231,6 +1372,10 @@ newPassword.addEventListener(
     }
 );
 
+
+/* =========================================================
+   ENTER KEY SUPPORT — CONFIRM PASSWORD
+========================================================= */
 
 confirmPassword.addEventListener(
     "keydown",
@@ -1294,12 +1439,6 @@ supabase.auth.onAuthStateChange(
 
     try {
 
-        /*
-         * Check the current URL and session.
-         * Supabase may establish the recovery session
-         * from the email link.
-         */
-
         const {
             data,
             error
@@ -1319,9 +1458,7 @@ supabase.auth.onAuthStateChange(
 
 
         /*
-         * Detect Supabase recovery parameters.
-         * This is an additional safety check alongside
-         * PASSWORD_RECOVERY.
+         * Detect recovery parameters.
          */
 
         const hash =
@@ -1349,8 +1486,14 @@ supabase.auth.onAuthStateChange(
 
 
         /*
-         * If there is already a normal authenticated
-         * session, return the user to HAVKAR.
+         * IMPORTANT:
+         *
+         * If a normal session already exists,
+         * DO NOT redirect automatically.
+         *
+         * The user must remain on this page so
+         * Forgot Password remains immediately
+         * accessible.
          */
 
         if(
@@ -1359,30 +1502,7 @@ supabase.auth.onAuthStateChange(
             data.session.user
         ){
 
-            /*
-             * Do not immediately redirect if this is
-             * a password-recovery session.
-             */
-
-            if(!isRecoveryUrl){
-
-                showMessage(
-                    "You are already logged in.",
-                    "success"
-                );
-
-                setTimeout(
-                    function(){
-
-                        window.location.replace(
-                            "index.html"
-                        );
-
-                    },
-                    500
-                );
-
-            }
+            showExistingSessionNotice();
 
         }
 
