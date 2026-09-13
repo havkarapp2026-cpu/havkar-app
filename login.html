@@ -7,6 +7,8 @@
 <meta name="viewport"
       content="width=device-width, initial-scale=1.0">
 
+<meta name="theme-color" content="#2e7d32">
+
 <title>HAVKAR - Login</title>
 
 <style>
@@ -89,14 +91,16 @@ h1 {
     border-radius: 13px;
     font-size: 17px;
     outline: none;
-    transition: border-color 0.2s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .input:focus {
     border-color: #35aa55;
+    box-shadow: 0 0 0 3px rgba(53,170,85,0.10);
 }
 
-button {
+.login-btn,
+.reset-btn {
     width: 100%;
     padding: 17px;
     border-radius: 13px;
@@ -106,10 +110,6 @@ button {
     transition: opacity 0.2s ease, transform 0.1s ease;
 }
 
-button:active {
-    transform: scale(0.99);
-}
-
 .login-btn {
     margin-top: 8px;
     border: none;
@@ -117,11 +117,57 @@ button:active {
     color: white;
 }
 
+.reset-btn {
+    margin-top: 8px;
+    border: none;
+    background: linear-gradient(135deg, #22a447, #35b858);
+    color: white;
+}
+
 .signup-btn {
+    width: 100%;
     margin-top: 14px;
+    padding: 17px;
     border: 2px solid #2e7d32;
+    border-radius: 13px;
     background: white;
     color: #2e7d32;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+.forgot-btn {
+    display: inline-block;
+    margin-top: 16px;
+    border: none;
+    background: transparent;
+    color: #2e7d32;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.forgot-btn:hover {
+    text-decoration: underline;
+}
+
+.back-login-btn {
+    display: inline-block;
+    margin-top: 16px;
+    border: none;
+    background: transparent;
+    color: #2e7d32;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+button:active {
+    transform: scale(0.99);
 }
 
 button:disabled {
@@ -145,10 +191,21 @@ button:disabled {
     color: #2e7d32;
 }
 
+.help-text {
+    margin-top: 12px;
+    color: #777;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
 .footer {
     margin-top: 30px;
     color: #999;
     font-size: 14px;
+}
+
+.hidden {
+    display: none !important;
 }
 
 @media (max-width: 600px) {
@@ -196,58 +253,182 @@ button:disabled {
         Connect • Trade • Work • Help
     </div>
 
-    <div class="input-group">
 
-        <label for="email">
-            Email
-        </label>
+    <!-- =====================================================
+         LOGIN MODE
+    ====================================================== -->
 
-        <input
-            id="email"
-            class="input"
-            type="email"
-            placeholder="Enter your email"
-            autocomplete="email"
-            inputmode="email"
-        >
+    <div id="loginMode">
+
+        <div class="input-group">
+
+            <label for="email">
+                Email
+            </label>
+
+            <input
+                id="email"
+                class="input"
+                type="email"
+                placeholder="Enter your email"
+                autocomplete="email"
+                inputmode="email"
+            >
+
+        </div>
+
+
+        <div class="input-group">
+
+            <label for="password">
+                Password
+            </label>
+
+            <input
+                id="password"
+                class="input"
+                type="password"
+                placeholder="Enter your password"
+                autocomplete="current-password"
+            >
+
+        </div>
+
+
+        <button
+            id="loginBtn"
+            class="login-btn"
+            type="button">
+            Login
+        </button>
+
+
+        <button
+            id="forgotBtn"
+            class="forgot-btn"
+            type="button">
+            Forgot password?
+        </button>
+
+
+        <button
+            id="signupBtn"
+            class="signup-btn"
+            type="button">
+            Create New Account
+        </button>
 
     </div>
 
-    <div class="input-group">
 
-        <label for="password">
-            Password
-        </label>
+    <!-- =====================================================
+         FORGOT PASSWORD MODE
+    ====================================================== -->
 
-        <input
-            id="password"
-            class="input"
-            type="password"
-            placeholder="Enter your password"
-            autocomplete="current-password"
-        >
+    <div id="forgotMode" class="hidden">
+
+        <div class="input-group">
+
+            <label for="forgotEmail">
+                Email
+            </label>
+
+            <input
+                id="forgotEmail"
+                class="input"
+                type="email"
+                placeholder="Enter your HAVKAR email"
+                autocomplete="email"
+                inputmode="email"
+            >
+
+        </div>
+
+
+        <button
+            id="sendResetBtn"
+            class="reset-btn"
+            type="button">
+            Send Reset Link
+        </button>
+
+
+        <button
+            id="backLoginBtn"
+            class="back-login-btn"
+            type="button">
+            Back to Login
+        </button>
+
+
+        <div class="help-text">
+            We will send a secure password reset link to your email.
+        </div>
 
     </div>
 
-    <button
-        id="loginBtn"
-        class="login-btn"
-        type="button">
-        Login
-    </button>
 
-    <button
-        id="signupBtn"
-        class="signup-btn"
-        type="button">
-        Create New Account
-    </button>
+    <!-- =====================================================
+         RESET PASSWORD MODE
+    ====================================================== -->
+
+    <div id="resetMode" class="hidden">
+
+        <div class="input-group">
+
+            <label for="newPassword">
+                New Password
+            </label>
+
+            <input
+                id="newPassword"
+                class="input"
+                type="password"
+                placeholder="Enter your new password"
+                autocomplete="new-password"
+            >
+
+        </div>
+
+
+        <div class="input-group">
+
+            <label for="confirmPassword">
+                Confirm New Password
+            </label>
+
+            <input
+                id="confirmPassword"
+                class="input"
+                type="password"
+                placeholder="Confirm your new password"
+                autocomplete="new-password"
+            >
+
+        </div>
+
+
+        <button
+            id="updatePasswordBtn"
+            class="reset-btn"
+            type="button">
+            Change Password
+        </button>
+
+
+        <div class="help-text">
+            Choose a strong password that you do not use elsewhere.
+        </div>
+
+    </div>
+
 
     <div
         id="message"
         class="message"
         aria-live="polite">
     </div>
+
 
     <div class="footer">
         HAVKAR • Safe • Secure 🔒
@@ -287,7 +468,12 @@ const supabase =
             auth: {
                 persistSession: true,
                 autoRefreshToken: true,
-                detectSessionInUrl: false
+
+                /*
+                 * Must be TRUE for Supabase password
+                 * recovery links to be processed correctly.
+                 */
+                detectSessionInUrl: true
             }
         }
     );
@@ -296,6 +482,15 @@ const supabase =
 /* =========================================================
    ELEMENTS
 ========================================================= */
+
+const loginMode =
+    document.getElementById("loginMode");
+
+const forgotMode =
+    document.getElementById("forgotMode");
+
+const resetMode =
+    document.getElementById("resetMode");
 
 const emailInput =
     document.getElementById("email");
@@ -306,8 +501,29 @@ const passwordInput =
 const loginBtn =
     document.getElementById("loginBtn");
 
+const forgotBtn =
+    document.getElementById("forgotBtn");
+
 const signupBtn =
     document.getElementById("signupBtn");
+
+const forgotEmail =
+    document.getElementById("forgotEmail");
+
+const sendResetBtn =
+    document.getElementById("sendResetBtn");
+
+const backLoginBtn =
+    document.getElementById("backLoginBtn");
+
+const newPassword =
+    document.getElementById("newPassword");
+
+const confirmPassword =
+    document.getElementById("confirmPassword");
+
+const updatePasswordBtn =
+    document.getElementById("updatePasswordBtn");
 
 const message =
     document.getElementById("message");
@@ -317,14 +533,94 @@ const message =
    MESSAGE HELPER
 ========================================================= */
 
-function showMessage(text, type = "") {
+function showMessage(
+    text,
+    type = ""
+) {
 
-    message.textContent = text;
+    message.textContent =
+        text;
 
     message.className =
         type
             ? `message ${type}`
             : "message";
+}
+
+
+/* =========================================================
+   MODE CONTROL
+========================================================= */
+
+function showLoginMode() {
+
+    loginMode.classList.remove(
+        "hidden"
+    );
+
+    forgotMode.classList.add(
+        "hidden"
+    );
+
+    resetMode.classList.add(
+        "hidden"
+    );
+
+    showMessage("");
+
+    emailInput.focus();
+}
+
+
+function showForgotMode() {
+
+    loginMode.classList.add(
+        "hidden"
+    );
+
+    forgotMode.classList.remove(
+        "hidden"
+    );
+
+    resetMode.classList.add(
+        "hidden"
+    );
+
+    showMessage("");
+
+    const currentEmail =
+        emailInput.value.trim();
+
+    if(currentEmail){
+
+        forgotEmail.value =
+            currentEmail;
+    }
+
+    forgotEmail.focus();
+}
+
+
+function showResetMode() {
+
+    loginMode.classList.add(
+        "hidden"
+    );
+
+    forgotMode.classList.add(
+        "hidden"
+    );
+
+    resetMode.classList.remove(
+        "hidden"
+    );
+
+    showMessage(
+        "Choose a new password.",
+        "success"
+    );
+
+    newPassword.focus();
 }
 
 
@@ -341,7 +637,7 @@ async function login() {
         passwordInput.value;
 
 
-    if (!email || !password) {
+    if(!email || !password){
 
         showMessage(
             "Please enter your email and password.",
@@ -352,12 +648,17 @@ async function login() {
     }
 
 
-    loginBtn.disabled = true;
+    loginBtn.disabled =
+        true;
 
     loginBtn.textContent =
         "Logging in...";
 
-    signupBtn.disabled = true;
+    forgotBtn.disabled =
+        true;
+
+    signupBtn.disabled =
+        true;
 
     showMessage("");
 
@@ -370,14 +671,16 @@ async function login() {
         } =
         await supabase.auth.signInWithPassword({
 
-            email: email,
+            email:
+                email,
 
-            password: password
+            password:
+                password
 
         });
 
 
-        if (error) {
+        if(error){
 
             console.error(
                 "HAVKAR Login Error:",
@@ -389,40 +692,29 @@ async function login() {
                 "error"
             );
 
-            loginBtn.disabled = false;
-
-            loginBtn.textContent =
-                "Login";
-
-            signupBtn.disabled = false;
-
             return;
         }
 
 
-        if (
+        if(
             !data ||
             !data.user ||
             !data.session
-        ) {
+        ){
 
             showMessage(
                 "Login failed. No active session was created.",
                 "error"
             );
 
-            loginBtn.disabled = false;
-
-            loginBtn.textContent =
-                "Login";
-
-            signupBtn.disabled = false;
-
             return;
         }
 
 
-        /* Verify the session */
+        /*
+         * Verify that Supabase actually saved
+         * the authenticated session.
+         */
 
         const {
             data: sessionData,
@@ -431,12 +723,12 @@ async function login() {
         await supabase.auth.getSession();
 
 
-        if (
+        if(
             sessionError ||
             !sessionData ||
             !sessionData.session ||
             !sessionData.session.user
-        ) {
+        ){
 
             console.error(
                 "HAVKAR Session Verification Error:",
@@ -447,13 +739,6 @@ async function login() {
                 "Login succeeded, but the session could not be saved.",
                 "error"
             );
-
-            loginBtn.disabled = false;
-
-            loginBtn.textContent =
-                "Login";
-
-            signupBtn.disabled = false;
 
             return;
         }
@@ -466,7 +751,7 @@ async function login() {
 
 
         setTimeout(
-            function () {
+            function(){
 
                 window.location.replace(
                     "index.html"
@@ -477,7 +762,7 @@ async function login() {
         );
 
 
-    } catch (error) {
+    } catch(error){
 
         console.error(
             "HAVKAR Login Exception:",
@@ -493,12 +778,338 @@ async function login() {
             "error"
         );
 
-        loginBtn.disabled = false;
+    } finally {
+
+        loginBtn.disabled =
+            false;
 
         loginBtn.textContent =
             "Login";
 
-        signupBtn.disabled = false;
+        forgotBtn.disabled =
+            false;
+
+        signupBtn.disabled =
+            false;
+    }
+}
+
+
+/* =========================================================
+   SEND PASSWORD RESET EMAIL
+========================================================= */
+
+async function sendPasswordReset() {
+
+    const email =
+        forgotEmail.value.trim();
+
+
+    if(!email){
+
+        showMessage(
+            "Please enter your email address.",
+            "error"
+        );
+
+        forgotEmail.focus();
+
+        return;
+    }
+
+
+    if(
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+            email
+        )
+    ){
+
+        showMessage(
+            "Please enter a valid email address.",
+            "error"
+        );
+
+        forgotEmail.focus();
+
+        return;
+    }
+
+
+    sendResetBtn.disabled =
+        true;
+
+    sendResetBtn.textContent =
+        "Sending...";
+
+    showMessage("");
+
+
+    try {
+
+        /*
+         * The user will return to THIS SAME login.html
+         * after clicking the secure Supabase email link.
+         *
+         * This avoids needing a second reset-password file.
+         */
+
+        const redirectTo =
+            window.location.origin +
+            window.location.pathname;
+
+
+        const {
+            error
+        } =
+        await supabase.auth.resetPasswordForEmail(
+            email,
+            {
+                redirectTo:
+                    redirectTo
+            }
+        );
+
+
+        if(error){
+
+            console.error(
+                "HAVKAR Password Reset Error:",
+                error
+            );
+
+            showMessage(
+                error.message,
+                "error"
+            );
+
+            return;
+        }
+
+
+        /*
+         * We intentionally do not reveal whether
+         * the email exists in HAVKAR.
+         *
+         * This is safer and prevents account
+         * enumeration.
+         */
+
+        showMessage(
+            "If this email belongs to a HAVKAR account, a password reset link has been sent. Please check your email.",
+            "success"
+        );
+
+
+    } catch(error){
+
+        console.error(
+            "HAVKAR Password Reset Exception:",
+            error
+        );
+
+        showMessage(
+            "Connection error. Please try again.",
+            "error"
+        );
+
+    } finally {
+
+        sendResetBtn.disabled =
+            false;
+
+        sendResetBtn.textContent =
+            "Send Reset Link";
+    }
+}
+
+
+/* =========================================================
+   UPDATE PASSWORD
+========================================================= */
+
+async function updatePassword() {
+
+    const password =
+        newPassword.value;
+
+    const confirmation =
+        confirmPassword.value;
+
+
+    if(!password){
+
+        showMessage(
+            "Please enter your new password.",
+            "error"
+        );
+
+        newPassword.focus();
+
+        return;
+    }
+
+
+    /*
+     * Minimum length.
+     */
+
+    if(password.length < 8){
+
+        showMessage(
+            "Your new password must be at least 8 characters.",
+            "error"
+        );
+
+        newPassword.focus();
+
+        return;
+    }
+
+
+    if(!confirmation){
+
+        showMessage(
+            "Please confirm your new password.",
+            "error"
+        );
+
+        confirmPassword.focus();
+
+        return;
+    }
+
+
+    if(password !== confirmation){
+
+        showMessage(
+            "The passwords do not match.",
+            "error"
+        );
+
+        confirmPassword.focus();
+
+        return;
+    }
+
+
+    updatePasswordBtn.disabled =
+        true;
+
+    updatePasswordBtn.textContent =
+        "Changing Password...";
+
+    showMessage("");
+
+
+    try {
+
+        const {
+            data,
+            error
+        } =
+        await supabase.auth.updateUser({
+
+            password:
+                password
+
+        });
+
+
+        if(error){
+
+            console.error(
+                "HAVKAR Update Password Error:",
+                error
+            );
+
+            showMessage(
+                error.message,
+                "error"
+            );
+
+            return;
+        }
+
+
+        if(
+            !data ||
+            !data.user
+        ){
+
+            showMessage(
+                "Password could not be changed. Please request a new reset link.",
+                "error"
+            );
+
+            return;
+        }
+
+
+        showMessage(
+            "Password changed successfully. You can now log in with your new password.",
+            "success"
+        );
+
+
+        newPassword.value =
+            "";
+
+        confirmPassword.value =
+            "";
+
+
+        /*
+         * Give the user time to see the success
+         * message, then return to normal login.
+         */
+
+        setTimeout(
+            async function(){
+
+                try {
+
+                    await supabase.auth.signOut();
+
+                } catch(error) {
+
+                    console.warn(
+                        "HAVKAR Sign Out After Password Reset:",
+                        error
+                    );
+
+                }
+
+                showLoginMode();
+
+                showMessage(
+                    "Your password has been changed. Please log in.",
+                    "success"
+                );
+
+            },
+            1500
+        );
+
+
+    } catch(error){
+
+        console.error(
+            "HAVKAR Update Password Exception:",
+            error
+        );
+
+        showMessage(
+            "Connection error. Please try again.",
+            "error"
+        );
+
+    } finally {
+
+        updatePasswordBtn.disabled =
+            false;
+
+        updatePasswordBtn.textContent =
+            "Change Password";
     }
 }
 
@@ -514,14 +1125,54 @@ loginBtn.addEventListener(
 
 
 /* =========================================================
-   ENTER KEY SUPPORT
+   FORGOT PASSWORD BUTTON
+========================================================= */
+
+forgotBtn.addEventListener(
+    "click",
+    showForgotMode
+);
+
+
+/* =========================================================
+   BACK TO LOGIN
+========================================================= */
+
+backLoginBtn.addEventListener(
+    "click",
+    showLoginMode
+);
+
+
+/* =========================================================
+   SEND RESET LINK
+========================================================= */
+
+sendResetBtn.addEventListener(
+    "click",
+    sendPasswordReset
+);
+
+
+/* =========================================================
+   CHANGE PASSWORD
+========================================================= */
+
+updatePasswordBtn.addEventListener(
+    "click",
+    updatePassword
+);
+
+
+/* =========================================================
+   ENTER KEY SUPPORT — LOGIN
 ========================================================= */
 
 emailInput.addEventListener(
     "keydown",
-    function (event) {
+    function(event){
 
-        if (event.key === "Enter") {
+        if(event.key === "Enter"){
 
             passwordInput.focus();
 
@@ -533,11 +1184,61 @@ emailInput.addEventListener(
 
 passwordInput.addEventListener(
     "keydown",
-    function (event) {
+    function(event){
 
-        if (event.key === "Enter") {
+        if(event.key === "Enter"){
 
             login();
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   ENTER KEY SUPPORT — FORGOT PASSWORD
+========================================================= */
+
+forgotEmail.addEventListener(
+    "keydown",
+    function(event){
+
+        if(event.key === "Enter"){
+
+            sendPasswordReset();
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   ENTER KEY SUPPORT — NEW PASSWORD
+========================================================= */
+
+newPassword.addEventListener(
+    "keydown",
+    function(event){
+
+        if(event.key === "Enter"){
+
+            confirmPassword.focus();
+
+        }
+
+    }
+);
+
+
+confirmPassword.addEventListener(
+    "keydown",
+    function(event){
+
+        if(event.key === "Enter"){
+
+            updatePassword();
 
         }
 
@@ -551,7 +1252,7 @@ passwordInput.addEventListener(
 
 signupBtn.addEventListener(
     "click",
-    function () {
+    function(){
 
         window.location.href =
             "signup.html";
@@ -561,12 +1262,43 @@ signupBtn.addEventListener(
 
 
 /* =========================================================
-   INITIAL SESSION CHECK
+   AUTH STATE — PASSWORD RECOVERY
 ========================================================= */
 
-(async function checkExistingSession() {
+supabase.auth.onAuthStateChange(
+    function(event){
+
+        console.log(
+            "HAVKAR Auth Event:",
+            event
+        );
+
+
+        if(
+            event === "PASSWORD_RECOVERY"
+        ){
+
+            showResetMode();
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   INITIAL SESSION / RECOVERY CHECK
+========================================================= */
+
+(async function initializePage(){
 
     try {
+
+        /*
+         * Check the current URL and session.
+         * Supabase may establish the recovery session
+         * from the email link.
+         */
 
         const {
             data,
@@ -575,10 +1307,10 @@ signupBtn.addEventListener(
         await supabase.auth.getSession();
 
 
-        if (error) {
+        if(error){
 
             console.warn(
-                "HAVKAR Existing Session Check:",
+                "HAVKAR Initial Session Check:",
                 error
             );
 
@@ -586,34 +1318,78 @@ signupBtn.addEventListener(
         }
 
 
-        if (
+        /*
+         * Detect Supabase recovery parameters.
+         * This is an additional safety check alongside
+         * PASSWORD_RECOVERY.
+         */
+
+        const hash =
+            window.location.hash || "";
+
+        const search =
+            window.location.search || "";
+
+
+        const isRecoveryUrl =
+            hash.includes(
+                "type=recovery"
+            ) ||
+            search.includes(
+                "type=recovery"
+            );
+
+
+        if(isRecoveryUrl){
+
+            showResetMode();
+
+            return;
+        }
+
+
+        /*
+         * If there is already a normal authenticated
+         * session, return the user to HAVKAR.
+         */
+
+        if(
             data &&
             data.session &&
             data.session.user
-        ) {
+        ){
 
-            showMessage(
-                "You are already logged in.",
-                "success"
-            );
+            /*
+             * Do not immediately redirect if this is
+             * a password-recovery session.
+             */
 
-            setTimeout(
-                function () {
+            if(!isRecoveryUrl){
 
-                    window.location.replace(
-                        "index.html"
-                    );
+                showMessage(
+                    "You are already logged in.",
+                    "success"
+                );
 
-                },
-                400
-            );
+                setTimeout(
+                    function(){
+
+                        window.location.replace(
+                            "index.html"
+                        );
+
+                    },
+                    500
+                );
+
+            }
 
         }
 
-    } catch (error) {
+    } catch(error){
 
         console.warn(
-            "HAVKAR Session Check Exception:",
+            "HAVKAR Initial Session Exception:",
             error
         );
 
