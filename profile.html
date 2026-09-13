@@ -8,6 +8,9 @@
 <meta name="viewport"
       content="width=device-width, initial-scale=1.0">
 
+<meta name="theme-color"
+      content="#689f38">
+
 <title>HAVKAR - Profile</title>
 
 <link rel="stylesheet"
@@ -15,10 +18,18 @@
 
 <style>
 
+/* =========================================================
+   GLOBAL
+========================================================= */
+
 *{
     box-sizing:border-box;
     margin:0;
     padding:0;
+}
+
+html{
+    scroll-behavior:smooth;
 }
 
 body{
@@ -30,57 +41,119 @@ body{
         Arial,
         sans-serif;
 
-    background:#f5f5f5;
-    color:#333;
+    background:#f4f7f2;
+    color:#263238;
 
-    padding-bottom:90px;
+    min-height:100vh;
+
+    padding-bottom:92px;
+
+    transition:
+        background .25s ease,
+        color .25s ease;
 }
 
-/* =========================
+button,
+input,
+select{
+    font-family:inherit;
+}
+
+button{
+    -webkit-tap-highlight-color:transparent;
+}
+
+
+/* =========================================================
    HEADER
-========================= */
+========================================================= */
 
 .header{
+    position:sticky;
+    top:0;
+    z-index:200;
+
+    height:68px;
+
     background:
         linear-gradient(
             135deg,
-            #689f38,
+            #5f9634,
             #7cb342
         );
 
     color:white;
 
-    padding:15px 20px;
+    padding:0 18px;
 
     display:flex;
     align-items:center;
     justify-content:space-between;
 
     box-shadow:
-        0 2px 10px rgba(0,0,0,.12);
+        0 3px 14px rgba(0,0,0,.14);
 }
 
 .header-left{
     display:flex;
     align-items:center;
-    gap:15px;
+    gap:14px;
+
+    min-width:0;
 }
 
 .back-btn{
+    width:42px;
+    height:42px;
+
     border:0;
-    background:none;
+    border-radius:50%;
+
+    background:
+        rgba(255,255,255,.15);
+
     color:white;
 
-    font-size:25px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    font-size:19px;
 
     cursor:pointer;
 }
 
-.header h1{
-    font-size:21px;
+.back-btn:active{
+    transform:scale(.96);
 }
 
-.refresh-btn{
+.header-title{
+    min-width:0;
+}
+
+.header-title h1{
+    font-size:20px;
+    font-weight:800;
+
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.header-title p{
+    font-size:11px;
+    opacity:.82;
+
+    margin-top:2px;
+}
+
+.header-actions{
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+
+.header-btn{
     width:40px;
     height:40px;
 
@@ -88,33 +161,42 @@ body{
     border-radius:50%;
 
     background:
-        rgba(255,255,255,.20);
+        rgba(255,255,255,.15);
 
     color:white;
 
-    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
 
-    font-size:17px;
+    cursor:pointer;
 }
 
-.refresh-btn:disabled{
+.header-btn:active{
+    transform:scale(.96);
+}
+
+.header-btn:disabled{
     opacity:.55;
 }
 
-/* =========================
+
+/* =========================================================
    MESSAGE
-========================= */
+========================================================= */
 
 .message{
     display:none;
 
-    margin:15px 20px;
+    margin:14px 18px;
 
-    padding:14px;
+    padding:13px 15px;
 
-    border-radius:12px;
+    border-radius:13px;
 
-    font-size:14px;
+    font-size:13px;
+
+    line-height:1.5;
 
     word-break:break-word;
 }
@@ -123,74 +205,93 @@ body{
     display:block;
 
     background:#ffebee;
-
     color:#c62828;
+
+    border:1px solid #ffcdd2;
 }
 
 .message.success{
     display:block;
 
     background:#e8f5e9;
-
     color:#2e7d32;
+
+    border:1px solid #c8e6c9;
 }
 
-/* =========================
+
+/* =========================================================
+   MAIN
+========================================================= */
+
+.page{
+    max-width:720px;
+    margin:0 auto;
+
+    padding-bottom:20px;
+}
+
+
+/* =========================================================
    LOADING
-========================= */
+========================================================= */
 
 .loading{
-    margin:20px;
+    margin:20px 18px;
 
-    padding:25px;
+    padding:35px 20px;
 
     background:white;
 
-    border-radius:15px;
+    border-radius:18px;
 
     text-align:center;
 
-    color:#999;
+    color:#8a8a8a;
 
     box-shadow:
-        0 2px 8px rgba(0,0,0,.05);
+        0 3px 14px rgba(0,0,0,.06);
 }
 
-/* =========================
-   PROFILE CARD
-========================= */
+.loading i{
+    font-size:25px;
+    margin-bottom:10px;
+
+    color:#689f38;
+}
+
+
+/* =========================================================
+   PROFILE HERO
+========================================================= */
 
 .profile-card{
-    margin:20px;
+    margin:18px;
 
-    padding:28px 20px;
+    padding:30px 20px 25px;
 
     background:white;
 
-    border-radius:20px;
+    border-radius:23px;
 
     text-align:center;
 
     box-shadow:
-        0 3px 15px rgba(0,0,0,.08);
+        0 4px 20px rgba(0,0,0,.075);
 }
-
-/* =========================
-   PROFILE AVATAR
-========================= */
 
 .avatar-wrapper{
     position:relative;
 
-    width:110px;
-    height:110px;
+    width:118px;
+    height:118px;
 
-    margin:0 auto 15px;
+    margin:0 auto 16px;
 }
 
 .avatar{
-    width:110px;
-    height:110px;
+    width:118px;
+    height:118px;
 
     border-radius:50%;
 
@@ -200,7 +301,7 @@ body{
         linear-gradient(
             135deg,
             #689f38,
-            #7cb342
+            #9ccc65
         );
 
     color:white;
@@ -209,13 +310,13 @@ body{
     align-items:center;
     justify-content:center;
 
-    font-size:42px;
+    font-size:45px;
     font-weight:800;
 
     border:4px solid white;
 
     box-shadow:
-        0 3px 12px rgba(0,0,0,.15);
+        0 5px 18px rgba(0,0,0,.16);
 }
 
 .avatar img{
@@ -227,18 +328,14 @@ body{
     display:block;
 }
 
-/* =========================
-   AVATAR EDIT BUTTON
-========================= */
-
 .avatar-edit{
     position:absolute;
 
     right:-2px;
-    bottom:-2px;
+    bottom:0;
 
-    width:38px;
-    height:38px;
+    width:40px;
+    height:40px;
 
     border:3px solid white;
 
@@ -255,73 +352,116 @@ body{
     cursor:pointer;
 
     box-shadow:
-        0 2px 8px rgba(0,0,0,.18);
-
-    font-size:15px;
+        0 3px 9px rgba(0,0,0,.2);
 }
 
 .avatar-edit:active{
-    transform:scale(.96);
+    transform:scale(.95);
 }
 
 #avatarInput{
     display:none;
 }
 
-/* =========================
-   PROFILE NAME
-========================= */
-
 .profile-name{
-    font-size:23px;
+    font-size:25px;
 
     font-weight:800;
 
-    margin-bottom:6px;
-}
-
-.profile-email{
-    color:#888;
-
-    font-size:14px;
+    line-height:1.2;
 
     word-break:break-word;
 }
 
-/* =========================
-   PROFILE PHOTO ACTIONS
-========================= */
+.profile-username{
+    margin-top:5px;
+
+    color:#689f38;
+
+    font-size:14px;
+
+    font-weight:700;
+}
+
+.profile-email{
+    margin-top:5px;
+
+    color:#8b8b8b;
+
+    font-size:13px;
+
+    word-break:break-word;
+}
+
+
+/* =========================================================
+   VERIFICATION BADGE
+========================================================= */
+
+.verification-badge{
+    display:inline-flex;
+
+    align-items:center;
+    justify-content:center;
+
+    gap:6px;
+
+    margin-top:12px;
+
+    padding:7px 11px;
+
+    border-radius:20px;
+
+    background:#e8f5e9;
+
+    color:#2e7d32;
+
+    font-size:12px;
+
+    font-weight:800;
+}
+
+.verification-badge i{
+    font-size:13px;
+}
+
+
+/* =========================================================
+   PHOTO BUTTONS
+========================================================= */
 
 .photo-actions{
     display:flex;
 
+    align-items:center;
     justify-content:center;
 
-    gap:10px;
-
-    margin-top:18px;
+    gap:9px;
 
     flex-wrap:wrap;
+
+    margin-top:19px;
 }
 
 .photo-btn{
     border:0;
 
+    border-radius:11px;
+
     padding:10px 14px;
 
-    border-radius:10px;
+    display:inline-flex;
 
-    cursor:pointer;
+    align-items:center;
+    justify-content:center;
 
-    font-weight:700;
+    gap:7px;
 
     font-size:13px;
 
-    display:flex;
+    font-weight:700;
 
-    align-items:center;
-
-    gap:7px;
+    cursor:pointer;
 }
 
 .photo-btn.primary{
@@ -330,8 +470,8 @@ body{
 }
 
 .photo-btn.secondary{
-    background:#eeeeee;
-    color:#444;
+    background:#eef1ed;
+    color:#455a64;
 }
 
 .photo-btn.danger{
@@ -344,45 +484,49 @@ body{
     cursor:not-allowed;
 }
 
-/* =========================
+
+/* =========================================================
    SECTION
-========================= */
+========================================================= */
 
 .section-title{
-    padding:20px 20px 10px;
+    margin:20px 18px 10px;
 
-    font-size:19px;
+    font-size:18px;
 
-    font-weight:700;
+    font-weight:800;
+
+    color:#263238;
 }
 
-/* =========================
+
+/* =========================================================
    INFORMATION CARD
-========================= */
+========================================================= */
 
 .info-card{
-    margin:0 20px 12px;
+    margin:0 18px;
 
     background:white;
 
-    border-radius:15px;
+    border-radius:17px;
 
-    padding:5px 17px;
+    padding:4px 16px;
 
     box-shadow:
-        0 2px 8px rgba(0,0,0,.06);
+        0 3px 13px rgba(0,0,0,.055);
 }
 
 .info-row{
-    min-height:70px;
+    min-height:68px;
 
     display:flex;
 
     align-items:center;
 
-    gap:14px;
+    gap:13px;
 
-    border-bottom:1px solid #eee;
+    border-bottom:1px solid #edf0ed;
 }
 
 .info-row:last-child{
@@ -395,19 +539,17 @@ body{
 
     min-width:42px;
 
-    border-radius:50%;
+    border-radius:12px;
 
     background:#e8f5e9;
 
     color:#558b2f;
 
     display:flex;
-
     align-items:center;
-
     justify-content:center;
 
-    font-size:18px;
+    font-size:17px;
 }
 
 .info-content{
@@ -417,9 +559,9 @@ body{
 }
 
 .info-label{
-    color:#999;
+    color:#9a9a9a;
 
-    font-size:12px;
+    font-size:11px;
 
     margin-bottom:4px;
 }
@@ -427,50 +569,58 @@ body{
 .info-value{
     font-size:14px;
 
-    font-weight:600;
+    font-weight:700;
 
     word-break:break-word;
 }
 
 .copy-btn{
+    width:36px;
+    height:36px;
+
     border:0;
+
+    border-radius:9px;
 
     background:#689f38;
 
     color:white;
 
-    padding:9px 11px;
-
-    border-radius:8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
 
     cursor:pointer;
 }
 
-/* =========================
-   ACTIONS
-========================= */
+
+/* =========================================================
+   ACCOUNT ACTIONS
+========================================================= */
 
 .action-card{
-    margin:0 20px;
+    margin:0 18px;
 
     background:white;
 
-    border-radius:15px;
+    border-radius:17px;
 
     overflow:hidden;
 
     box-shadow:
-        0 2px 8px rgba(0,0,0,.06);
+        0 3px 13px rgba(0,0,0,.055);
 }
 
 .action{
     width:100%;
 
+    min-height:64px;
+
     border:0;
 
     background:white;
 
-    padding:17px;
+    padding:12px 17px;
 
     display:flex;
 
@@ -480,57 +630,460 @@ body{
 
     text-align:left;
 
-    font-size:15px;
+    font-size:14px;
+
+    font-weight:650;
+
+    color:#263238;
 
     cursor:pointer;
 
-    border-bottom:1px solid #eee;
+    border-bottom:1px solid #edf0ed;
 }
 
 .action:last-child{
     border-bottom:0;
 }
 
-.action i{
-    width:25px;
+.action:active{
+    background:#f7f9f6;
+}
+
+.action-icon{
+    width:40px;
+    height:40px;
+
+    min-width:40px;
+
+    border-radius:11px;
+
+    background:#e8f5e9;
 
     color:#689f38;
 
-    font-size:18px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    font-size:17px;
+}
+
+.action-content{
+    flex:1;
+}
+
+.action-title{
+    font-size:14px;
+    font-weight:750;
+}
+
+.action-subtitle{
+    margin-top:3px;
+
+    color:#999;
+
+    font-size:11px;
+
+    font-weight:400;
+}
+
+.action-arrow{
+    color:#aaa;
+    font-size:13px;
 }
 
 .action.logout{
     color:#d32f2f;
 }
 
-.action.logout i{
+.action.logout .action-icon{
+    background:#ffebee;
     color:#d32f2f;
 }
 
-/* =========================
-   LOGIN
-========================= */
 
-.login-card{
-    margin:20px;
+/* =========================================================
+   SETTINGS
+========================================================= */
 
-    padding:28px 20px;
+.settings-area{
+    display:none;
+
+    padding-bottom:20px;
+}
+
+.settings-header{
+    margin:18px;
+
+    padding:16px;
 
     background:white;
 
-    border-radius:15px;
+    border-radius:17px;
+
+    display:flex;
+    align-items:center;
+
+    gap:13px;
+
+    box-shadow:
+        0 3px 13px rgba(0,0,0,.055);
+}
+
+.settings-back{
+    width:40px;
+    height:40px;
+
+    min-width:40px;
+
+    border:0;
+
+    border-radius:11px;
+
+    background:#e8f5e9;
+
+    color:#558b2f;
+
+    cursor:pointer;
+}
+
+.settings-header h2{
+    font-size:20px;
+    font-weight:800;
+}
+
+.settings-header p{
+    color:#999;
+
+    font-size:11px;
+
+    margin-top:3px;
+}
+
+
+/* =========================================================
+   SETTINGS CARD
+========================================================= */
+
+.settings-card{
+    margin:0 18px;
+
+    background:white;
+
+    border-radius:17px;
+
+    overflow:hidden;
+
+    box-shadow:
+        0 3px 13px rgba(0,0,0,.055);
+}
+
+.setting-row{
+    width:100%;
+
+    min-height:70px;
+
+    padding:12px 15px;
+
+    border:0;
+
+    border-bottom:1px solid #edf0ed;
+
+    background:white;
+
+    color:#263238;
+
+    display:flex;
+
+    align-items:center;
+
+    gap:12px;
+
+    text-align:left;
+
+    cursor:pointer;
+}
+
+.setting-row:last-child{
+    border-bottom:0;
+}
+
+.setting-row:active{
+    background:#f8faf7;
+}
+
+.setting-icon{
+    width:42px;
+    height:42px;
+
+    min-width:42px;
+
+    border-radius:12px;
+
+    background:#e8f5e9;
+
+    color:#558b2f;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    font-size:17px;
+}
+
+.setting-content{
+    flex:1;
+
+    min-width:0;
+}
+
+.setting-title{
+    font-size:14px;
+
+    font-weight:750;
+}
+
+.setting-description{
+    margin-top:3px;
+
+    color:#999;
+
+    font-size:11px;
+
+    line-height:1.35;
+}
+
+.setting-arrow{
+    color:#aaa;
+    font-size:13px;
+}
+
+
+/* =========================================================
+   TOGGLE
+========================================================= */
+
+.switch{
+    position:relative;
+
+    width:48px;
+    height:28px;
+
+    flex:none;
+}
+
+.switch input{
+    position:absolute;
+
+    opacity:0;
+
+    width:0;
+    height:0;
+}
+
+.slider{
+    position:absolute;
+
+    inset:0;
+
+    background:#c9cfca;
+
+    border-radius:30px;
+
+    cursor:pointer;
+
+    transition:.2s;
+}
+
+.slider:before{
+    content:"";
+
+    position:absolute;
+
+    width:22px;
+    height:22px;
+
+    left:3px;
+    top:3px;
+
+    background:white;
+
+    border-radius:50%;
+
+    box-shadow:
+        0 1px 4px rgba(0,0,0,.25);
+
+    transition:.2s;
+}
+
+.switch input:checked + .slider{
+    background:#689f38;
+}
+
+.switch input:checked + .slider:before{
+    transform:translateX(20px);
+}
+
+
+/* =========================================================
+   SELECT
+========================================================= */
+
+.setting-select{
+    max-width:105px;
+
+    border:1px solid #dfe4df;
+
+    border-radius:9px;
+
+    padding:8px 8px;
+
+    background:white;
+
+    color:#37474f;
+
+    font-size:12px;
+
+    outline:none;
+}
+
+
+/* =========================================================
+   EDIT PROFILE
+========================================================= */
+
+.edit-form{
+    margin:0 18px;
+
+    padding:18px;
+
+    background:white;
+
+    border-radius:17px;
+
+    box-shadow:
+        0 3px 13px rgba(0,0,0,.055);
+}
+
+.form-group{
+    margin-bottom:15px;
+}
+
+.form-group:last-of-type{
+    margin-bottom:16px;
+}
+
+.form-label{
+    display:block;
+
+    margin-bottom:7px;
+
+    color:#777;
+
+    font-size:11px;
+
+    font-weight:750;
+}
+
+.form-input{
+    width:100%;
+
+    border:1px solid #dfe4df;
+
+    border-radius:11px;
+
+    padding:12px 13px;
+
+    background:white;
+
+    color:#263238;
+
+    font-size:14px;
+
+    outline:none;
+
+    transition:.2s;
+}
+
+.form-input:focus{
+    border-color:#689f38;
+
+    box-shadow:
+        0 0 0 3px rgba(104,159,56,.10);
+}
+
+.save-btn{
+    width:100%;
+
+    border:0;
+
+    border-radius:11px;
+
+    padding:13px;
+
+    background:#689f38;
+
+    color:white;
+
+    font-size:14px;
+
+    font-weight:750;
+
+    cursor:pointer;
+}
+
+.save-btn:disabled{
+    opacity:.55;
+}
+
+
+/* =========================================================
+   SECURITY INFO
+========================================================= */
+
+.security-info{
+    margin:14px 18px;
+
+    padding:15px;
+
+    background:#e8f5e9;
+
+    border:1px solid #c8e6c9;
+
+    border-radius:13px;
+
+    color:#2e7d32;
+
+    font-size:12px;
+
+    line-height:1.6;
+}
+
+
+/* =========================================================
+   LOGIN
+========================================================= */
+
+.login-card{
+    margin:20px 18px;
+
+    padding:32px 20px;
+
+    background:white;
+
+    border-radius:19px;
 
     text-align:center;
 
     box-shadow:
-        0 2px 8px rgba(0,0,0,.06);
+        0 3px 15px rgba(0,0,0,.06);
 }
 
 .login-icon{
-    width:65px;
-    height:65px;
+    width:70px;
+    height:70px;
 
-    margin:0 auto 15px;
+    margin:0 auto 16px;
 
     border-radius:50%;
 
@@ -539,22 +1092,23 @@ body{
     color:#689f38;
 
     display:flex;
-
     align-items:center;
-
     justify-content:center;
 
-    font-size:27px;
+    font-size:28px;
 }
 
 .login-card h3{
-    margin-bottom:8px;
+    font-size:19px;
+    margin-bottom:7px;
 }
 
 .login-card p{
     color:#999;
 
-    margin-bottom:18px;
+    font-size:13px;
+
+    margin-bottom:20px;
 }
 
 .login-btn{
@@ -564,18 +1118,19 @@ body{
 
     color:white;
 
-    padding:13px 22px;
+    padding:13px 25px;
 
-    border-radius:10px;
+    border-radius:11px;
 
-    font-weight:700;
+    font-weight:750;
 
     cursor:pointer;
 }
 
-/* =========================
+
+/* =========================================================
    BOTTOM NAV
-========================= */
+========================================================= */
 
 .bottom-nav{
     position:fixed;
@@ -584,61 +1139,186 @@ body{
     right:0;
     bottom:0;
 
-    height:75px;
+    height:76px;
 
     background:white;
 
     display:flex;
 
+    align-items:center;
     justify-content:space-around;
 
-    align-items:center;
-
     box-shadow:
-        0 -2px 10px rgba(0,0,0,.10);
+        0 -3px 14px rgba(0,0,0,.10);
 
-    z-index:100;
+    z-index:300;
 }
 
 .nav-item{
-    color:#999;
+    min-width:55px;
+
+    color:#929292;
 
     text-align:center;
 
-    font-size:12px;
+    font-size:10px;
+
+    font-weight:600;
 
     cursor:pointer;
+
+    padding:7px 4px;
 }
 
 .nav-item i{
     display:block;
 
-    font-size:21px;
+    font-size:20px;
 
     margin-bottom:5px;
 }
 
 .nav-item.active{
-    color:#7cb342;
+    color:#689f38;
 }
 
-/* =========================
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+body.dark-mode{
+    background:#101410;
+    color:#eeeeee;
+}
+
+body.dark-mode .profile-card,
+body.dark-mode .info-card,
+body.dark-mode .action-card,
+body.dark-mode .settings-header,
+body.dark-mode .settings-card,
+body.dark-mode .edit-form,
+body.dark-mode .login-card,
+body.dark-mode .loading{
+    background:#1b211c;
+
+    color:#eeeeee;
+}
+
+body.dark-mode .action,
+body.dark-mode .setting-row{
+    background:#1b211c;
+
+    color:#eeeeee;
+
+    border-color:#303730;
+}
+
+body.dark-mode .action:active,
+body.dark-mode .setting-row:active{
+    background:#222a23;
+}
+
+body.dark-mode .info-row{
+    border-color:#303730;
+}
+
+body.dark-mode .info-label,
+body.dark-mode .setting-description,
+body.dark-mode .profile-email,
+body.dark-mode .action-subtitle{
+    color:#a9afa9;
+}
+
+body.dark-mode .section-title,
+body.dark-mode .settings-header h2{
+    color:#eeeeee;
+}
+
+body.dark-mode .form-input,
+body.dark-mode .setting-select{
+    background:#222822;
+
+    color:#eeeeee;
+
+    border-color:#3b443b;
+}
+
+body.dark-mode .photo-btn.secondary{
+    background:#303830;
+    color:#eeeeee;
+}
+
+body.dark-mode .bottom-nav{
+    background:#191e19;
+
+    box-shadow:
+        0 -3px 14px rgba(0,0,0,.35);
+}
+
+body.dark-mode .security-info{
+    background:#1d3320;
+
+    border-color:#315c35;
+
+    color:#a5d6a7;
+}
+
+
+/* =========================================================
    MOBILE
-========================= */
+========================================================= */
 
 @media(max-width:480px){
 
+    .header{
+        height:64px;
+    }
+
+    .header-title h1{
+        font-size:18px;
+    }
+
+    .header-title p{
+        display:none;
+    }
+
     .profile-card{
-        margin:16px;
-        padding:25px 15px;
+        margin:15px;
+        padding:27px 15px 23px;
     }
 
-    .photo-actions{
-        gap:8px;
+    .avatar-wrapper,
+    .avatar{
+        width:105px;
+        height:105px;
     }
 
-    .photo-btn{
-        padding:9px 11px;
+    .avatar{
+        font-size:40px;
+    }
+
+    .profile-name{
+        font-size:22px;
+    }
+
+    .section-title{
+        margin-left:15px;
+        margin-right:15px;
+    }
+
+    .info-card,
+    .action-card,
+    .settings-card,
+    .edit-form,
+    .security-info,
+    .settings-header{
+        margin-left:15px;
+        margin-right:15px;
+    }
+
+    .setting-description{
+        max-width:230px;
     }
 
 }
@@ -651,47 +1331,61 @@ body{
 <body>
 
 
-<!-- =========================
+<!-- =========================================================
      HEADER
-========================= -->
+========================================================= -->
 
-<div class="header">
+<header class="header">
 
     <div class="header-left">
 
         <button
             class="back-btn"
             type="button"
-            onclick="goBack()">
+            onclick="goBack()"
+            aria-label="Back">
 
             <i class="fas fa-arrow-left"></i>
 
         </button>
 
 
-        <h1>
-            Profile
-        </h1>
+        <div class="header-title">
+
+            <h1 id="headerTitle">
+                Profile
+            </h1>
+
+            <p id="headerSubtitle">
+                Your HAVKAR account
+            </p>
+
+        </div>
 
     </div>
 
 
-    <button
-        class="refresh-btn"
-        id="refreshBtn"
-        type="button"
-        onclick="loadProfile(true)">
+    <div class="header-actions">
 
-        <i class="fas fa-rotate"></i>
+        <button
+            class="header-btn"
+            id="refreshBtn"
+            type="button"
+            onclick="loadProfile(true)"
+            aria-label="Refresh">
 
-    </button>
+            <i class="fas fa-rotate"></i>
 
-</div>
+        </button>
+
+    </div>
+
+</header>
 
 
-<!-- =========================
+<!-- =========================================================
      MESSAGE
-========================= -->
+========================================================= -->
 
 <div
     id="message"
@@ -699,26 +1393,38 @@ body{
 </div>
 
 
-<!-- =========================
-     MAIN PROFILE
-========================= -->
+<main class="page">
+
+
+<!-- =========================================================
+     PROFILE AREA
+========================================================= -->
 
 <div id="profileArea">
 
     <div class="loading">
-        Loading profile...
+
+        <i class="fas fa-spinner fa-spin"></i>
+
+        <div>
+            Loading profile...
+        </div>
+
     </div>
 
 </div>
 
 
-<!-- =========================
-     ACCOUNT INFORMATION
-========================= -->
+<!-- =========================================================
+     ACCOUNT AREA
+========================================================= -->
 
 <div
     id="accountArea"
     style="display:none;">
+
+
+    <!-- ACCOUNT INFORMATION -->
 
     <div class="section-title">
         Account Information
@@ -748,7 +1454,9 @@ body{
                 <div
                     id="userId"
                     class="info-value">
+
                     -
+
                 </div>
 
             </div>
@@ -757,7 +1465,8 @@ body{
             <button
                 class="copy-btn"
                 type="button"
-                onclick="copyUserId()">
+                onclick="copyUserId()"
+                aria-label="Copy User ID">
 
                 <i class="fas fa-copy"></i>
 
@@ -786,7 +1495,9 @@ body{
                 <div
                     id="userEmail"
                     class="info-value">
+
                     -
+
                 </div>
 
             </div>
@@ -800,7 +1511,7 @@ body{
 
             <div class="info-icon">
 
-                <i class="fas fa-calendar"></i>
+                <i class="fas fa-calendar-days"></i>
 
             </div>
 
@@ -814,19 +1525,20 @@ body{
                 <div
                     id="createdAt"
                     class="info-value">
+
                     -
+
                 </div>
 
             </div>
 
         </div>
 
+
     </div>
 
 
-    <!-- =========================
-         ACCOUNT ACTIONS
-    ========================= -->
+    <!-- ACCOUNT -->
 
     <div class="section-title">
         Account
@@ -836,83 +1548,658 @@ body{
     <div class="action-card">
 
 
+        <!-- WALLET -->
+
         <button
             class="action"
             type="button"
             onclick="goTo('wallet.html')">
 
-            <i class="fas fa-wallet"></i>
+            <div class="action-icon">
 
-            <span>
-                My Wallet
-            </span>
+                <i class="fas fa-wallet"></i>
+
+            </div>
+
+            <div class="action-content">
+
+                <div class="action-title">
+                    My Wallet
+                </div>
+
+                <div class="action-subtitle">
+                    Manage your HAVKAR wallet
+                </div>
+
+            </div>
+
+            <div class="action-arrow">
+                <i class="fas fa-chevron-right"></i>
+            </div>
 
         </button>
 
+
+        <!-- MARKET -->
 
         <button
             class="action"
             type="button"
             onclick="goTo('market.html')">
 
-            <i class="fas fa-chart-line"></i>
+            <div class="action-icon">
 
-            <span>
-                Cryptocurrency Market
-            </span>
+                <i class="fas fa-chart-line"></i>
+
+            </div>
+
+            <div class="action-content">
+
+                <div class="action-title">
+                    Cryptocurrency Market
+                </div>
+
+                <div class="action-subtitle">
+                    View market information
+                </div>
+
+            </div>
+
+            <div class="action-arrow">
+                <i class="fas fa-chevron-right"></i>
+            </div>
 
         </button>
 
+
+        <!-- HISTORY -->
 
         <button
             class="action"
             type="button"
             onclick="goTo('history.html')">
 
-            <i class="fas fa-history"></i>
+            <div class="action-icon">
 
-            <span>
-                Transaction History
-            </span>
+                <i class="fas fa-clock-rotate-left"></i>
+
+            </div>
+
+            <div class="action-content">
+
+                <div class="action-title">
+                    Transaction History
+                </div>
+
+                <div class="action-subtitle">
+                    Review your transactions
+                </div>
+
+            </div>
+
+            <div class="action-arrow">
+                <i class="fas fa-chevron-right"></i>
+            </div>
 
         </button>
 
+
+        <!-- SETTINGS -->
+
+        <button
+            class="action"
+            type="button"
+            onclick="openSettings()">
+
+            <div class="action-icon">
+
+                <i class="fas fa-sliders"></i>
+
+            </div>
+
+            <div class="action-content">
+
+                <div class="action-title">
+                    Settings
+                </div>
+
+                <div class="action-subtitle">
+                    Personalize your HAVKAR account
+                </div>
+
+            </div>
+
+            <div class="action-arrow">
+                <i class="fas fa-chevron-right"></i>
+            </div>
+
+        </button>
+
+
+        <!-- SUPPORT -->
 
         <button
             class="action"
             type="button"
             onclick="goTo('support.html')">
 
-            <i class="fas fa-headset"></i>
+            <div class="action-icon">
 
-            <span>
-                Support
-            </span>
+                <i class="fas fa-headset"></i>
+
+            </div>
+
+            <div class="action-content">
+
+                <div class="action-title">
+                    Support
+                </div>
+
+                <div class="action-subtitle">
+                    Get help from HAVKAR
+                </div>
+
+            </div>
+
+            <div class="action-arrow">
+                <i class="fas fa-chevron-right"></i>
+            </div>
 
         </button>
 
+
+        <!-- LOGOUT -->
 
         <button
             class="action logout"
             type="button"
             onclick="logout()">
 
-            <i class="fas fa-right-from-bracket"></i>
+            <div class="action-icon">
 
-            <span>
-                Log Out
-            </span>
+                <i class="fas fa-right-from-bracket"></i>
+
+            </div>
+
+            <div class="action-content">
+
+                <div class="action-title">
+                    Log Out
+                </div>
+
+                <div class="action-subtitle">
+                    Sign out of your account
+                </div>
+
+            </div>
+
+            <div class="action-arrow">
+                <i class="fas fa-chevron-right"></i>
+            </div>
 
         </button>
 
+
     </div>
+
 
 </div>
 
 
-<!-- =========================
-     NOT LOGGED IN
-========================= -->
+<!-- =========================================================
+     SETTINGS AREA
+========================================================= -->
+
+<div
+    id="settingsArea"
+    class="settings-area">
+
+
+    <!-- SETTINGS HEADER -->
+
+    <div class="settings-header">
+
+        <button
+            class="settings-back"
+            type="button"
+            onclick="closeSettings()">
+
+            <i class="fas fa-arrow-left"></i>
+
+        </button>
+
+
+        <div>
+
+            <h2>
+                Settings
+            </h2>
+
+            <p>
+                Manage your HAVKAR preferences
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         PERSONAL INFORMATION
+    ====================================================== -->
+
+    <div class="section-title">
+        Personal Information
+    </div>
+
+
+    <div class="edit-form">
+
+
+        <div class="form-group">
+
+            <label
+                class="form-label"
+                for="fullNameInput">
+
+                Full Name
+
+            </label>
+
+
+            <input
+                id="fullNameInput"
+                class="form-input"
+                type="text"
+                maxlength="100"
+                autocomplete="name"
+                placeholder="Enter your full name">
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label
+                class="form-label"
+                for="usernameInput">
+
+                Username
+
+            </label>
+
+
+            <input
+                id="usernameInput"
+                class="form-input"
+                type="text"
+                maxlength="50"
+                autocomplete="username"
+                placeholder="Enter your username">
+
+        </div>
+
+
+        <button
+            id="saveProfileBtn"
+            class="save-btn"
+            type="button"
+            onclick="savePersonalInformation()">
+
+            <i class="fas fa-save"></i>
+
+            Save Personal Information
+
+        </button>
+
+
+    </div>
+
+
+    <!-- =====================================================
+         PREFERENCES
+    ====================================================== -->
+
+    <div class="section-title">
+        Preferences
+    </div>
+
+
+    <div class="settings-card">
+
+
+        <!-- NOTIFICATIONS -->
+
+        <div class="setting-row">
+
+            <div class="setting-icon">
+
+                <i class="fas fa-bell"></i>
+
+            </div>
+
+
+            <div class="setting-content">
+
+                <div class="setting-title">
+                    Notifications
+                </div>
+
+                <div class="setting-description">
+                    Receive important HAVKAR notifications.
+                </div>
+
+            </div>
+
+
+            <label class="switch">
+
+                <input
+                    id="notificationsToggle"
+                    type="checkbox"
+                    onchange="saveToggleSetting('notifications',this.checked)">
+
+                <span class="slider"></span>
+
+            </label>
+
+        </div>
+
+
+        <!-- ONLINE STATUS -->
+
+        <div class="setting-row">
+
+            <div class="setting-icon">
+
+                <i class="fas fa-circle-user"></i>
+
+            </div>
+
+
+            <div class="setting-content">
+
+                <div class="setting-title">
+                    Online Status
+                </div>
+
+                <div class="setting-description">
+                    Allow others to see your online status.
+                </div>
+
+            </div>
+
+
+            <label class="switch">
+
+                <input
+                    id="onlineStatusToggle"
+                    type="checkbox"
+                    onchange="saveToggleSetting('onlineStatus',this.checked)">
+
+                <span class="slider"></span>
+
+            </label>
+
+        </div>
+
+
+        <!-- DARK MODE -->
+
+        <div class="setting-row">
+
+            <div class="setting-icon">
+
+                <i class="fas fa-moon"></i>
+
+            </div>
+
+
+            <div class="setting-content">
+
+                <div class="setting-title">
+                    Dark Mode
+                </div>
+
+                <div class="setting-description">
+                    Use a darker interface.
+                </div>
+
+            </div>
+
+
+            <label class="switch">
+
+                <input
+                    id="darkModeToggle"
+                    type="checkbox"
+                    onchange="toggleDarkMode(this.checked)">
+
+                <span class="slider"></span>
+
+            </label>
+
+        </div>
+
+
+        <!-- LANGUAGE -->
+
+        <div class="setting-row">
+
+            <div class="setting-icon">
+
+                <i class="fas fa-language"></i>
+
+            </div>
+
+
+            <div class="setting-content">
+
+                <div class="setting-title">
+                    Language
+                </div>
+
+                <div class="setting-description">
+                    Select your preferred language.
+                </div>
+
+            </div>
+
+
+            <select
+                id="languageSelect"
+                class="setting-select"
+                onchange="saveLanguage(this.value)">
+
+                <option value="en">
+                    English
+                </option>
+
+                <option value="ku">
+                    کوردی
+                </option>
+
+                <option value="fa">
+                    فارسی
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <!-- LOCATION -->
+
+        <button
+            class="setting-row"
+            type="button"
+            onclick="requestLocation()">
+
+            <div class="setting-icon">
+
+                <i class="fas fa-location-dot"></i>
+
+            </div>
+
+
+            <div class="setting-content">
+
+                <div class="setting-title">
+                    Location
+                </div>
+
+                <div
+                    id="locationStatus"
+                    class="setting-description">
+
+                    Location permission is not enabled.
+
+                </div>
+
+            </div>
+
+
+            <div class="setting-arrow">
+
+                <i class="fas fa-chevron-right"></i>
+
+            </div>
+
+        </button>
+
+
+        <!-- PRIVACY -->
+
+        <button
+            class="setting-row"
+            type="button"
+            onclick="openPrivacy()">
+
+            <div class="setting-icon">
+
+                <i class="fas fa-shield-halved"></i>
+
+            </div>
+
+
+            <div class="setting-content">
+
+                <div class="setting-title">
+                    Privacy & Security
+                </div>
+
+                <div class="setting-description">
+                    Manage account privacy and security.
+                </div>
+
+            </div>
+
+
+            <div class="setting-arrow">
+
+                <i class="fas fa-chevron-right"></i>
+
+            </div>
+
+        </button>
+
+
+        <!-- PAYMENT -->
+
+        <button
+            class="setting-row"
+            type="button"
+            onclick="goTo('wallet.html')">
+
+            <div class="setting-icon">
+
+                <i class="fas fa-credit-card"></i>
+
+            </div>
+
+
+            <div class="setting-content">
+
+                <div class="setting-title">
+                    Payment & Wallet
+                </div>
+
+                <div class="setting-description">
+                    Manage wallet and payment features.
+                </div>
+
+            </div>
+
+
+            <div class="setting-arrow">
+
+                <i class="fas fa-chevron-right"></i>
+
+            </div>
+
+        </button>
+
+
+        <!-- ACCOUNT SETTINGS -->
+
+        <button
+            class="setting-row"
+            type="button"
+            onclick="openAccountSettings()">
+
+            <div class="setting-icon">
+
+                <i class="fas fa-user-gear"></i>
+
+            </div>
+
+
+            <div class="setting-content">
+
+                <div class="setting-title">
+                    Account Settings
+                </div>
+
+                <div class="setting-description">
+                    View account details and sign out.
+                </div>
+
+            </div>
+
+
+            <div class="setting-arrow">
+
+                <i class="fas fa-chevron-right"></i>
+
+            </div>
+
+        </button>
+
+
+    </div>
+
+
+    <!-- SECURITY -->
+
+    <div
+        id="securityInfo"
+        class="security-info">
+
+        <i class="fas fa-lock"></i>
+
+        Your authentication is protected by
+        Supabase. HAVKAR does not display or store
+        your password on this page.
+
+    </div>
+
+
+</div>
+
+
+<!-- =========================================================
+     LOGIN AREA
+========================================================= -->
 
 <div
     id="loginArea"
@@ -933,7 +2220,7 @@ body{
 
 
         <p>
-            Please log in to view your profile.
+            Please log in to view your HAVKAR profile.
         </p>
 
 
@@ -951,11 +2238,14 @@ body{
 </div>
 
 
-<!-- =========================
-     BOTTOM NAV
-========================= -->
+</main>
 
-<div class="bottom-nav">
+
+<!-- =========================================================
+     BOTTOM NAVIGATION
+========================================================= -->
+
+<nav class="bottom-nav">
 
 
     <div
@@ -1011,12 +2301,13 @@ body{
 
     </div>
 
-</div>
+
+</nav>
 
 
-<!-- =========================
+<!-- =========================================================
      SUPABASE
-========================= -->
+========================================================= -->
 
 <script type="module">
 
@@ -1026,17 +2317,15 @@ import {
 from "https://esm.sh/@supabase/supabase-js@2";
 
 
-/* =========================================
-   SAME SUPABASE AS LOGIN + SIGNUP
-========================================= */
+/* =========================================================
+   SUPABASE CONFIG
+========================================================= */
 
 const SUPABASE_URL =
     "https://gispovnciifgikvgpzck.supabase.co";
 
-
 const SUPABASE_KEY =
     "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq";
-
 
 const supabase =
     createClient(
@@ -1045,18 +2334,190 @@ const supabase =
     );
 
 
-/* =========================================
+/* =========================================================
    GLOBAL
-========================================= */
+========================================================= */
 
 let currentUser = null;
 
 let isLoading = false;
 
+const SETTINGS_KEY =
+    "havkar_profile_settings";
 
-/* =========================================
+
+/* =========================================================
+   DEFAULT SETTINGS
+========================================================= */
+
+function defaultSettings(){
+
+    return {
+
+        notifications:true,
+
+        onlineStatus:true,
+
+        darkMode:false,
+
+        language:"en"
+
+    };
+
+}
+
+
+/* =========================================================
+   READ SETTINGS
+========================================================= */
+
+function getSettings(){
+
+    try{
+
+        const saved =
+            localStorage.getItem(
+                SETTINGS_KEY
+            );
+
+        if(saved){
+
+            const parsed =
+                JSON.parse(saved);
+
+            return {
+
+                ...defaultSettings(),
+
+                ...parsed
+
+            };
+
+        }
+
+    }
+    catch(error){
+
+        console.error(
+            "Settings read error:",
+            error
+        );
+
+    }
+
+
+    return defaultSettings();
+
+}
+
+
+/* =========================================================
+   SAVE SETTINGS
+========================================================= */
+
+function saveSettings(
+    settings
+){
+
+    try{
+
+        localStorage.setItem(
+            SETTINGS_KEY,
+            JSON.stringify(
+                settings
+            )
+        );
+
+    }
+    catch(error){
+
+        console.error(
+            "Settings save error:",
+            error
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   APPLY SETTINGS
+========================================================= */
+
+function applySettings(){
+
+    const settings =
+        getSettings();
+
+
+    const notifications =
+        document.getElementById(
+            "notificationsToggle"
+        );
+
+
+    const onlineStatus =
+        document.getElementById(
+            "onlineStatusToggle"
+        );
+
+
+    const darkMode =
+        document.getElementById(
+            "darkModeToggle"
+        );
+
+
+    const language =
+        document.getElementById(
+            "languageSelect"
+        );
+
+
+    if(notifications){
+
+        notifications.checked =
+            settings.notifications !== false;
+
+    }
+
+
+    if(onlineStatus){
+
+        onlineStatus.checked =
+            settings.onlineStatus !== false;
+
+    }
+
+
+    if(darkMode){
+
+        darkMode.checked =
+            settings.darkMode === true;
+
+    }
+
+
+    if(language){
+
+        language.value =
+            settings.language || "en";
+
+    }
+
+
+    document.body.classList.toggle(
+        "dark-mode",
+        settings.darkMode === true
+    );
+
+}
+
+
+/* =========================================================
    NAVIGATION
-========================================= */
+========================================================= */
 
 window.goTo =
 function(page){
@@ -1076,9 +2537,182 @@ function(){
 };
 
 
-/* =========================================
+/* =========================================================
+   SETTINGS OPEN
+========================================================= */
+
+window.openSettings =
+function(){
+
+    const profile =
+        document.getElementById(
+            "profileArea"
+        );
+
+
+    const account =
+        document.getElementById(
+            "accountArea"
+        );
+
+
+    const settings =
+        document.getElementById(
+            "settingsArea"
+        );
+
+
+    if(profile){
+
+        profile.style.display =
+            "none";
+
+    }
+
+
+    if(account){
+
+        account.style.display =
+            "none";
+
+    }
+
+
+    if(settings){
+
+        settings.style.display =
+            "block";
+
+    }
+
+
+    const title =
+        document.getElementById(
+            "headerTitle"
+        );
+
+
+    const subtitle =
+        document.getElementById(
+            "headerSubtitle"
+        );
+
+
+    if(title){
+
+        title.textContent =
+            "Settings";
+
+    }
+
+
+    if(subtitle){
+
+        subtitle.textContent =
+            "HAVKAR preferences";
+
+    }
+
+
+    applySettings();
+
+
+    window.scrollTo(
+        0,
+        0
+    );
+
+};
+
+
+/* =========================================================
+   SETTINGS CLOSE
+========================================================= */
+
+window.closeSettings =
+function(){
+
+    const profile =
+        document.getElementById(
+            "profileArea"
+        );
+
+
+    const account =
+        document.getElementById(
+            "accountArea"
+        );
+
+
+    const settings =
+        document.getElementById(
+            "settingsArea"
+        );
+
+
+    if(settings){
+
+        settings.style.display =
+            "none";
+
+    }
+
+
+    if(profile){
+
+        profile.style.display =
+            "block";
+
+    }
+
+
+    if(account && currentUser){
+
+        account.style.display =
+            "block";
+
+    }
+
+
+    const title =
+        document.getElementById(
+            "headerTitle"
+        );
+
+
+    const subtitle =
+        document.getElementById(
+            "headerSubtitle"
+        );
+
+
+    if(title){
+
+        title.textContent =
+            "Profile";
+
+    }
+
+
+    if(subtitle){
+
+        subtitle.textContent =
+            "Your HAVKAR account";
+
+    }
+
+
+    window.scrollTo(
+        0,
+        0
+    );
+
+};
+
+
+/* =========================================================
    MESSAGE
-========================================= */
+========================================================= */
 
 function clearMessage(){
 
@@ -1086,6 +2720,13 @@ function clearMessage(){
         document.getElementById(
             "message"
         );
+
+    if(!message){
+
+        return;
+
+    }
+
 
     message.className =
         "message";
@@ -1106,6 +2747,13 @@ function showMessage(
             "message"
         );
 
+    if(!message){
+
+        return;
+
+    }
+
+
     message.className =
         "message " + type;
 
@@ -1115,9 +2763,9 @@ function showMessage(
 }
 
 
-/* =========================================
+/* =========================================================
    ESCAPE HTML
-========================================= */
+========================================================= */
 
 function escapeHtml(
     value
@@ -1155,11 +2803,13 @@ function escapeHtml(
 }
 
 
-/* =========================================
+/* =========================================================
    AVATAR URL
-========================================= */
+========================================================= */
 
-function getAvatarUrl(user){
+function getAvatarUrl(
+    user
+){
 
     if(!user){
 
@@ -1180,9 +2830,9 @@ function getAvatarUrl(user){
 }
 
 
-/* =========================================
-   RENDER AVATAR
-========================================= */
+/* =========================================================
+   AVATAR
+========================================================= */
 
 function renderAvatar(
     name,
@@ -1190,7 +2840,7 @@ function renderAvatar(
 ){
 
     const firstLetter =
-        String(name)
+        String(name || "HAVKAR")
             .trim()
             .charAt(0)
             .toUpperCase() ||
@@ -1204,10 +2854,22 @@ function renderAvatar(
             <img
                 src="${escapeHtml(avatarUrl)}"
                 alt="Profile photo"
-                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                onerror="
+                    this.style.display='none';
+                    this.nextElementSibling.style.display='flex';
+                ">
 
-            <span style="display:none;">
+            <span
+                style="
+                    display:none;
+                    width:100%;
+                    height:100%;
+                    align-items:center;
+                    justify-content:center;
+                ">
+
                 ${escapeHtml(firstLetter)}
+
             </span>
 
         `;
@@ -1216,22 +2878,22 @@ function renderAvatar(
 
 
     return `
+
         <span>
             ${escapeHtml(firstLetter)}
         </span>
+
     `;
 
 }
 
 
-/* =========================================
+/* =========================================================
    LOAD PROFILE
-========================================= */
+========================================================= */
 
 window.loadProfile =
-async function(
-    manualRefresh = false
-){
+async function(){
 
     if(isLoading){
 
@@ -1240,7 +2902,8 @@ async function(
     }
 
 
-    isLoading = true;
+    isLoading =
+        true;
 
 
     const area =
@@ -1249,19 +2912,25 @@ async function(
         );
 
 
-    const accountArea =
+    const account =
         document.getElementById(
             "accountArea"
         );
 
 
-    const loginArea =
+    const login =
         document.getElementById(
             "loginArea"
         );
 
 
-    const refreshBtn =
+    const settings =
+        document.getElementById(
+            "settingsArea"
+        );
+
+
+    const refresh =
         document.getElementById(
             "refreshBtn"
         );
@@ -1270,20 +2939,57 @@ async function(
     clearMessage();
 
 
-    accountArea.style.display =
-        "none";
+    if(account){
+
+        account.style.display =
+            "none";
+
+    }
 
 
-    loginArea.style.display =
-        "none";
+    if(login){
+
+        login.style.display =
+            "none";
+
+    }
 
 
-    area.innerHTML =
-        '<div class="loading">Loading profile...</div>';
+    if(settings){
+
+        settings.style.display =
+            "none";
+
+    }
 
 
-    refreshBtn.disabled =
-        true;
+    if(area){
+
+        area.style.display =
+            "block";
+
+        area.innerHTML =
+            `
+            <div class="loading">
+
+                <i class="fas fa-spinner fa-spin"></i>
+
+                <div>
+                    Loading profile...
+                </div>
+
+            </div>
+            `;
+
+    }
+
+
+    if(refresh){
+
+        refresh.disabled =
+            true;
+
+    }
 
 
     try{
@@ -1317,12 +3023,20 @@ async function(
                 null;
 
 
-            area.innerHTML =
-                "";
+            if(area){
+
+                area.innerHTML =
+                    "";
+
+            }
 
 
-            loginArea.style.display =
-                "block";
+            if(login){
+
+                login.style.display =
+                    "block";
+
+            }
 
 
             return;
@@ -1350,141 +3064,249 @@ async function(
             "HAVKAR User";
 
 
+        const username =
+            metadata.username ||
+            "";
+
+
         const email =
             user.email ||
             "No email";
 
 
         const avatarUrl =
-            getAvatarUrl(user);
+            getAvatarUrl(
+                user
+            );
 
 
-        /*
-         * PROFILE CARD
-         */
+        const verification =
+            metadata.verified === true ||
+            metadata.is_verified === true;
 
-        area.innerHTML = `
 
-            <div class="profile-card">
+        if(area){
 
-                <div class="avatar-wrapper">
+            area.innerHTML = `
 
-                    <div
-                        class="avatar"
-                        id="avatarDisplay">
+                <div class="profile-card">
 
-                        ${renderAvatar(
-                            name,
-                            avatarUrl
-                        )}
+
+                    <div class="avatar-wrapper">
+
+
+                        <div class="avatar">
+
+                            ${renderAvatar(
+                                name,
+                                avatarUrl
+                            )}
+
+                        </div>
+
+
+                        <button
+                            class="avatar-edit"
+                            type="button"
+                            onclick="openAvatarPicker()"
+                            aria-label="Change profile photo">
+
+                            <i class="fas fa-camera"></i>
+
+                        </button>
+
 
                     </div>
 
 
-                    <button
-                        class="avatar-edit"
-                        type="button"
-                        title="Change profile photo"
-                        onclick="openAvatarPicker()">
-
-                        <i class="fas fa-camera"></i>
-
-                    </button>
-
-                </div>
+                    <input
+                        type="file"
+                        id="avatarInput"
+                        accept="image/jpeg,image/png,image/webp"
+                        onchange="handleAvatarSelected(event)">
 
 
-                <input
-                    type="file"
-                    id="avatarInput"
-                    accept="image/jpeg,image/png,image/webp"
-                    onchange="handleAvatarSelected(event)">
+                    <div class="profile-name">
 
+                        ${escapeHtml(name)}
 
-                <div class="profile-name">
-
-                    ${escapeHtml(name)}
-
-                </div>
-
-
-                <div class="profile-email">
-
-                    ${escapeHtml(email)}
-
-                </div>
-
-
-                <div class="photo-actions">
-
-                    <button
-                        class="photo-btn primary"
-                        id="changePhotoBtn"
-                        type="button"
-                        onclick="openAvatarPicker()">
-
-                        <i class="fas fa-camera"></i>
-
-                        Change Photo
-
-                    </button>
+                    </div>
 
 
                     ${
-                        avatarUrl
+                        username
                         ?
                         `
-                        <button
-                            class="photo-btn danger"
-                            id="removePhotoBtn"
-                            type="button"
-                            onclick="removeAvatar()">
+                        <div class="profile-username">
 
-                            <i class="fas fa-trash"></i>
+                            @${escapeHtml(username)}
 
-                            Remove Photo
-
-                        </button>
+                        </div>
                         `
                         :
                         ""
                     }
 
+
+                    <div class="profile-email">
+
+                        ${escapeHtml(email)}
+
+                    </div>
+
+
+                    ${
+                        verification
+                        ?
+                        `
+                        <div class="verification-badge">
+
+                            <i class="fas fa-circle-check"></i>
+
+                            Verified Account
+
+                        </div>
+                        `
+                        :
+                        ""
+                    }
+
+
+                    <div class="photo-actions">
+
+
+                        <button
+                            class="photo-btn primary"
+                            id="changePhotoBtn"
+                            type="button"
+                            onclick="openAvatarPicker()">
+
+                            <i class="fas fa-camera"></i>
+
+                            Change Photo
+
+                        </button>
+
+
+                        ${
+                            avatarUrl
+                            ?
+                            `
+                            <button
+                                class="photo-btn danger"
+                                id="removePhotoBtn"
+                                type="button"
+                                onclick="removeAvatar()">
+
+                                <i class="fas fa-trash"></i>
+
+                                Remove Photo
+
+                            </button>
+                            `
+                            :
+                            ""
+                        }
+
+
+                    </div>
+
+
                 </div>
 
-            </div>
+            `;
 
-        `;
-
-
-        /*
-         * ACCOUNT INFORMATION
-         */
-
-        document.getElementById(
-            "userId"
-        ).textContent =
-            user.id || "-";
+        }
 
 
-        document.getElementById(
-            "userEmail"
-        ).textContent =
-            email;
+        const userId =
+            document.getElementById(
+                "userId"
+            );
 
 
-        document.getElementById(
-            "createdAt"
-        ).textContent =
-            user.created_at
-            ? new Date(
+        const userEmail =
+            document.getElementById(
+                "userEmail"
+            );
+
+
+        const createdAt =
+            document.getElementById(
+                "createdAt"
+            );
+
+
+        if(userId){
+
+            userId.textContent =
+                user.id || "-";
+
+        }
+
+
+        if(userEmail){
+
+            userEmail.textContent =
+                email;
+
+        }
+
+
+        if(createdAt){
+
+            createdAt.textContent =
                 user.created_at
-              ).toLocaleString()
-            : "-";
+                ?
+                new Date(
+                    user.created_at
+                ).toLocaleString()
+                :
+                "-";
+
+        }
 
 
-        accountArea.style.display =
-            "block";
+        const fullNameInput =
+            document.getElementById(
+                "fullNameInput"
+            );
+
+
+        const usernameInput =
+            document.getElementById(
+                "usernameInput"
+            );
+
+
+        if(fullNameInput){
+
+            fullNameInput.value =
+                metadata.full_name ||
+                metadata.name ||
+                "";
+
+        }
+
+
+        if(usernameInput){
+
+            usernameInput.value =
+                metadata.username ||
+                "";
+
+        }
+
+
+        if(account){
+
+            account.style.display =
+                "block";
+
+        }
+
+
+        applySettings();
 
     }
     catch(error){
@@ -1499,12 +3321,23 @@ async function(
             null;
 
 
-        area.innerHTML =
-            `
-            <div class="loading">
-                Unable to load profile.
-            </div>
+        if(area){
+
+            area.innerHTML = `
+
+                <div class="loading">
+
+                    <i class="fas fa-triangle-exclamation"></i>
+
+                    <div>
+                        Unable to load profile.
+                    </div>
+
+                </div>
+
             `;
+
+        }
 
 
         showMessage(
@@ -1523,17 +3356,565 @@ async function(
             false;
 
 
-        refreshBtn.disabled =
-            false;
+        if(refresh){
+
+            refresh.disabled =
+                false;
+
+        }
 
     }
 
 };
 
 
-/* =========================================
+/* =========================================================
+   SAVE PERSONAL INFORMATION
+========================================================= */
+
+window.savePersonalInformation =
+async function(){
+
+    if(!currentUser){
+
+        showMessage(
+            "Please log in first.",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    const fullNameInput =
+        document.getElementById(
+            "fullNameInput"
+        );
+
+
+    const usernameInput =
+        document.getElementById(
+            "usernameInput"
+        );
+
+
+    const button =
+        document.getElementById(
+            "saveProfileBtn"
+        );
+
+
+    const fullName =
+        fullNameInput
+        ?
+        fullNameInput.value.trim()
+        :
+        "";
+
+
+    const username =
+        usernameInput
+        ?
+        usernameInput.value.trim()
+        :
+        "";
+
+
+    if(!fullName){
+
+        showMessage(
+            "Please enter your full name.",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    if(button){
+
+        button.disabled =
+            true;
+
+        button.innerHTML =
+            `
+            <i class="fas fa-spinner fa-spin"></i>
+            Saving...
+            `;
+
+    }
+
+
+    clearMessage();
+
+
+    try{
+
+        const {
+            data,
+            error
+        } =
+        await supabase.auth.updateUser({
+
+            data:{
+                full_name:
+                    fullName,
+
+                username:
+                    username
+
+            }
+
+        });
+
+
+        if(error){
+
+            throw error;
+
+        }
+
+
+        if(
+            data &&
+            data.user
+        ){
+
+            currentUser =
+                data.user;
+
+        }
+
+
+        await loadProfile();
+
+
+        openSettings();
+
+
+        showMessage(
+            "Personal information saved successfully.",
+            "success"
+        );
+
+    }
+    catch(error){
+
+        console.error(
+            "Personal information error:",
+            error
+        );
+
+
+        showMessage(
+            "Could not save personal information: " +
+            (
+                error.message ||
+                "Unknown error"
+            ),
+            "error"
+        );
+
+    }
+    finally{
+
+        if(button){
+
+            button.disabled =
+                false;
+
+            button.innerHTML =
+                `
+                <i class="fas fa-save"></i>
+                Save Personal Information
+                `;
+
+        }
+
+    }
+
+};
+
+
+/* =========================================================
+   TOGGLE SETTINGS
+========================================================= */
+
+window.saveToggleSetting =
+function(
+    key,
+    value
+){
+
+    const settings =
+        getSettings();
+
+
+    settings[key] =
+        Boolean(value);
+
+
+    saveSettings(
+        settings
+    );
+
+
+    if(key === "notifications"){
+
+        showMessage(
+            value
+            ?
+            "Notifications enabled."
+            :
+            "Notifications disabled.",
+            "success"
+        );
+
+    }
+
+
+    if(key === "onlineStatus"){
+
+        showMessage(
+            value
+            ?
+            "Online status enabled."
+            :
+            "Online status hidden.",
+            "success"
+        );
+
+    }
+
+};
+
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+window.toggleDarkMode =
+function(
+    enabled
+){
+
+    const settings =
+        getSettings();
+
+
+    settings.darkMode =
+        Boolean(enabled);
+
+
+    saveSettings(
+        settings
+    );
+
+
+    document.body.classList.toggle(
+        "dark-mode",
+        Boolean(enabled)
+    );
+
+};
+
+
+/* =========================================================
+   LANGUAGE
+========================================================= */
+
+window.saveLanguage =
+function(
+    language
+){
+
+    const allowed =
+        [
+            "en",
+            "ku",
+            "fa"
+        ];
+
+
+    if(
+        !allowed.includes(
+            language
+        )
+    ){
+
+        language =
+            "en";
+
+    }
+
+
+    const settings =
+        getSettings();
+
+
+    settings.language =
+        language;
+
+
+    saveSettings(
+        settings
+    );
+
+
+    const names = {
+
+        en:"English",
+
+        ku:"کوردی",
+
+        fa:"فارسی"
+
+    };
+
+
+    showMessage(
+        "Language selected: " +
+        names[language],
+        "success"
+    );
+
+};
+
+
+/* =========================================================
+   LOCATION
+========================================================= */
+
+window.requestLocation =
+function(){
+
+    const status =
+        document.getElementById(
+            "locationStatus"
+        );
+
+
+    if(!navigator.geolocation){
+
+        if(status){
+
+            status.textContent =
+                "Location is not supported by this browser.";
+
+        }
+
+
+        showMessage(
+            "Location is not supported by this browser.",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    if(status){
+
+        status.textContent =
+            "Requesting location permission...";
+
+    }
+
+
+    navigator.geolocation.getCurrentPosition(
+
+        function(){
+
+            if(status){
+
+                status.textContent =
+                    "Location permission is enabled.";
+
+            }
+
+
+            showMessage(
+                "Location permission enabled.",
+                "success"
+            );
+
+        },
+
+        function(){
+
+            if(status){
+
+                status.textContent =
+                    "Location permission is not enabled.";
+
+            }
+
+
+            showMessage(
+                "Location permission was not enabled.",
+                "error"
+            );
+
+        },
+
+        {
+            enableHighAccuracy:false,
+
+            timeout:10000,
+
+            maximumAge:300000
+
+        }
+
+    );
+
+};
+
+
+/* =========================================================
+   PRIVACY & SECURITY
+========================================================= */
+
+window.openPrivacy =
+function(){
+
+    const info =
+        document.getElementById(
+            "securityInfo"
+        );
+
+
+    if(!info){
+
+        return;
+
+    }
+
+
+    const email =
+        currentUser &&
+        currentUser.email
+        ?
+        currentUser.email
+        :
+        "Not available";
+
+
+    info.innerHTML = `
+
+        <i class="fas fa-shield-halved"></i>
+
+        <strong>
+            Privacy & Security
+        </strong>
+
+        <br><br>
+
+        Your authentication is handled by Supabase.
+
+        <br><br>
+
+        Account:
+        ${escapeHtml(email)}
+
+        <br><br>
+
+        Your local HAVKAR preferences are stored
+        in this browser on this device.
+
+    `;
+
+
+    showMessage(
+        "Privacy & Security information is shown below.",
+        "success"
+    );
+
+};
+
+
+/* =========================================================
+   ACCOUNT SETTINGS
+========================================================= */
+
+window.openAccountSettings =
+function(){
+
+    const info =
+        document.getElementById(
+            "securityInfo"
+        );
+
+
+    if(!info){
+
+        return;
+
+    }
+
+
+    info.innerHTML = `
+
+        <i class="fas fa-user-gear"></i>
+
+        <strong>
+            Account Settings
+        </strong>
+
+        <br><br>
+
+        Email:
+        ${escapeHtml(
+            currentUser?.email ||
+            "Not available"
+        )}
+
+        <br><br>
+
+        User ID:
+        ${escapeHtml(
+            currentUser?.id ||
+            "Not available"
+        )}
+
+        <br><br>
+
+        <button
+            type="button"
+            onclick="logout()"
+            style="
+                border:0;
+                background:#d32f2f;
+                color:white;
+                padding:10px 15px;
+                border-radius:9px;
+                font-weight:700;
+                cursor:pointer;
+            ">
+
+            <i class="fas fa-right-from-bracket"></i>
+
+            Log Out
+
+        </button>
+
+    `;
+
+
+    showMessage(
+        "Account settings are shown below.",
+        "success"
+    );
+
+};
+
+
+/* =========================================================
    OPEN AVATAR PICKER
-========================================= */
+========================================================= */
 
 window.openAvatarPicker =
 function(){
@@ -1565,12 +3946,14 @@ function(){
 };
 
 
-/* =========================================
-   HANDLE AVATAR SELECTED
-========================================= */
+/* =========================================================
+   HANDLE AVATAR
+========================================================= */
 
 window.handleAvatarSelected =
-async function(event){
+async function(
+    event
+){
 
     const input =
         event.target;
@@ -1591,14 +3974,14 @@ async function(event){
         input.files[0];
 
 
-    /*
-     * Allowed image types.
-     */
-
     const allowedTypes = [
+
         "image/jpeg",
+
         "image/png",
+
         "image/webp"
+
     ];
 
 
@@ -1620,10 +4003,6 @@ async function(event){
 
     }
 
-
-    /*
-     * Maximum size: 5 MB
-     */
 
     const maxSize =
         5 * 1024 * 1024;
@@ -1656,18 +4035,18 @@ async function(event){
     }
 
 
-    const changeButton =
+    const button =
         document.getElementById(
             "changePhotoBtn"
         );
 
 
-    if(changeButton){
+    if(button){
 
-        changeButton.disabled =
+        button.disabled =
             true;
 
-        changeButton.innerHTML =
+        button.innerHTML =
             `
             <i class="fas fa-spinner fa-spin"></i>
             Uploading...
@@ -1681,10 +4060,6 @@ async function(event){
 
     try{
 
-        /*
-         * Unique storage path.
-         */
-
         const extension =
             file.name
                 .split(".")
@@ -1692,22 +4067,29 @@ async function(event){
                 .toLowerCase();
 
 
+        const uniqueId =
+            typeof crypto !== "undefined" &&
+            crypto.randomUUID
+            ?
+            crypto.randomUUID()
+            :
+            String(
+                Date.now()
+            );
+
+
         const filePath =
             currentUser.id +
             "/" +
             Date.now() +
             "-" +
-            crypto.randomUUID() +
+            uniqueId +
             "." +
             extension;
 
 
-        /*
-         * Upload image to Supabase Storage.
-         */
-
         const {
-            error: uploadError
+            error:uploadError
         } =
         await supabase.storage
             .from("avatars")
@@ -1716,7 +4098,9 @@ async function(event){
                 file,
                 {
                     cacheControl:"3600",
+
                     upsert:false,
+
                     contentType:file.type
                 }
             );
@@ -1728,10 +4112,6 @@ async function(event){
 
         }
 
-
-        /*
-         * Get public URL.
-         */
 
         const {
             data:publicData
@@ -1746,8 +4126,10 @@ async function(event){
         const publicUrl =
             publicData &&
             publicData.publicUrl
-            ? publicData.publicUrl
-            : "";
+            ?
+            publicData.publicUrl
+            :
+            "";
 
 
         if(!publicUrl){
@@ -1758,10 +4140,6 @@ async function(event){
 
         }
 
-
-        /*
-         * Save URL inside Supabase Auth metadata.
-         */
 
         const {
             data:updateData,
@@ -1784,10 +4162,6 @@ async function(event){
         }
 
 
-        /*
-         * Update local user immediately.
-         */
-
         if(
             updateData &&
             updateData.user
@@ -1799,17 +4173,13 @@ async function(event){
         }
 
 
+        await loadProfile();
+
+
         showMessage(
             "Profile photo updated successfully.",
             "success"
         );
-
-
-        /*
-         * Reload profile.
-         */
-
-        await loadProfile(true);
 
     }
     catch(error){
@@ -1836,12 +4206,12 @@ async function(event){
             "";
 
 
-        if(changeButton){
+        if(button){
 
-            changeButton.disabled =
+            button.disabled =
                 false;
 
-            changeButton.innerHTML =
+            button.innerHTML =
                 `
                 <i class="fas fa-camera"></i>
                 Change Photo
@@ -1854,9 +4224,9 @@ async function(event){
 };
 
 
-/* =========================================
+/* =========================================================
    REMOVE AVATAR
-========================================= */
+========================================================= */
 
 window.removeAvatar =
 async function(){
@@ -1878,7 +4248,8 @@ async function(){
 
 
     const avatarUrl =
-        metadata.avatar_url || "";
+        metadata.avatar_url ||
+        "";
 
 
     if(!avatarUrl){
@@ -1906,18 +4277,18 @@ async function(){
     }
 
 
-    const removeButton =
+    const button =
         document.getElementById(
             "removePhotoBtn"
         );
 
 
-    if(removeButton){
+    if(button){
 
-        removeButton.disabled =
+        button.disabled =
             true;
 
-        removeButton.innerHTML =
+        button.innerHTML =
             `
             <i class="fas fa-spinner fa-spin"></i>
             Removing...
@@ -1928,13 +4299,9 @@ async function(){
 
     try{
 
-        /*
-         * Remove the URL from user metadata.
-         */
-
         const {
-            data:updateData,
-            error:updateError
+            data,
+            error
         } =
         await supabase.auth.updateUser({
 
@@ -1945,36 +4312,31 @@ async function(){
         });
 
 
-        if(updateError){
+        if(error){
 
-            throw updateError;
+            throw error;
 
         }
 
 
         if(
-            updateData &&
-            updateData.user
+            data &&
+            data.user
         ){
 
             currentUser =
-                updateData.user;
+                data.user;
 
         }
 
 
-        /*
-         * The profile will immediately
-         * return to the user's first letter.
-         */
+        await loadProfile();
+
 
         showMessage(
             "Profile photo removed.",
             "success"
         );
-
-
-        await loadProfile(true);
 
     }
     catch(error){
@@ -1995,23 +4357,13 @@ async function(){
         );
 
     }
-    finally{
-
-        if(removeButton){
-
-            removeButton.disabled =
-                false;
-
-        }
-
-    }
 
 };
 
 
-/* =========================================
+/* =========================================================
    COPY USER ID
-========================================= */
+========================================================= */
 
 window.copyUserId =
 async function(){
@@ -2034,9 +4386,23 @@ async function(){
 
     try{
 
-        await navigator.clipboard.writeText(
-            userId
-        );
+        if(
+            navigator.clipboard &&
+            navigator.clipboard.writeText
+        ){
+
+            await navigator.clipboard.writeText(
+                userId
+            );
+
+        }
+        else{
+
+            throw new Error(
+                "Clipboard unavailable"
+            );
+
+        }
 
 
         showMessage(
@@ -2063,8 +4429,8 @@ async function(){
                 "fixed";
 
 
-            textarea.style.opacity =
-                "0";
+            textarea.style.left =
+                "-9999px";
 
 
             document.body.appendChild(
@@ -2073,7 +4439,6 @@ async function(){
 
 
             textarea.focus();
-
 
             textarea.select();
 
@@ -2112,9 +4477,9 @@ async function(){
 };
 
 
-/* =========================================
+/* =========================================================
    LOGOUT
-========================================= */
+========================================================= */
 
 window.logout =
 async function(){
@@ -2165,9 +4530,9 @@ async function(){
 };
 
 
-/* =========================================
+/* =========================================================
    AUTH STATE
-========================================= */
+========================================================= */
 
 supabase.auth.onAuthStateChange(
     function(
@@ -2175,29 +4540,23 @@ supabase.auth.onAuthStateChange(
         session
     ){
 
-        if(
+        currentUser =
             session &&
             session.user
-        ){
-
-            currentUser =
-                session.user;
-
-        }
-        else{
-
-            currentUser =
-                null;
-
-        }
+            ?
+            session.user
+            :
+            null;
 
     }
 );
 
 
-/* =========================================
+/* =========================================================
    START
-========================================= */
+========================================================= */
+
+applySettings();
 
 loadProfile();
 
