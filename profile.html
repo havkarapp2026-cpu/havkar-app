@@ -395,7 +395,7 @@ button{
 
 
 /* =========================================================
-   VERIFICATION BADGE
+   VERIFICATION BADGES
 ========================================================= */
 
 .verification-badge{
@@ -404,11 +404,11 @@ button{
     align-items:center;
     justify-content:center;
 
-    gap:6px;
+    gap:7px;
 
     margin-top:12px;
 
-    padding:7px 11px;
+    padding:7px 12px;
 
     border-radius:20px;
 
@@ -421,8 +421,67 @@ button{
     font-weight:800;
 }
 
+.verification-badge.personal{
+    background:#e8f5e9;
+    color:#2e7d32;
+}
+
+.verification-badge.business{
+    background:#edf7e8;
+    color:#2e7d32;
+}
+
+.verification-badge.company{
+    background:
+        linear-gradient(
+            135deg,
+            #e8f5e9,
+            #d5efda
+        );
+
+    color:#087f23;
+
+    border:1px solid #b7ddb9;
+
+    box-shadow:
+        0 0 12px rgba(46,125,50,.18);
+}
+
 .verification-badge i{
     font-size:13px;
+}
+
+.badge-symbol{
+    font-size:15px;
+    line-height:1;
+}
+
+
+/* =========================================================
+   ACCOUNT TYPE BADGE
+========================================================= */
+
+.account-type-badge{
+    display:inline-flex;
+
+    align-items:center;
+    justify-content:center;
+
+    gap:6px;
+
+    margin-top:8px;
+
+    padding:6px 10px;
+
+    border-radius:18px;
+
+    background:#f1f5ef;
+
+    color:#607060;
+
+    font-size:11px;
+
+    font-weight:750;
 }
 
 
@@ -860,6 +919,23 @@ button{
 
 
 /* =========================================================
+   SETTING STATUS
+========================================================= */
+
+.setting-status{
+    color:#689f38;
+
+    font-size:11px;
+
+    font-weight:700;
+
+    margin-right:2px;
+
+    white-space:nowrap;
+}
+
+
+/* =========================================================
    TOGGLE
 ========================================================= */
 
@@ -1061,6 +1137,88 @@ button{
 
 
 /* =========================================================
+   SETTINGS INFORMATION PANEL
+========================================================= */
+
+.settings-panel{
+    display:none;
+
+    margin:14px 18px;
+
+    padding:18px;
+
+    background:white;
+
+    border-radius:17px;
+
+    box-shadow:
+        0 3px 13px rgba(0,0,0,.055);
+}
+
+.settings-panel.active{
+    display:block;
+}
+
+.settings-panel-title{
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+
+    margin-bottom:10px;
+
+    font-size:16px;
+
+    font-weight:800;
+
+    color:#263238;
+}
+
+.settings-panel-title i{
+    color:#689f38;
+}
+
+.settings-panel-text{
+    color:#737373;
+
+    font-size:12px;
+
+    line-height:1.65;
+}
+
+.panel-button{
+    margin-top:14px;
+
+    border:0;
+
+    border-radius:10px;
+
+    padding:10px 14px;
+
+    background:#689f38;
+
+    color:white;
+
+    font-size:12px;
+
+    font-weight:750;
+
+    cursor:pointer;
+}
+
+.panel-button.secondary{
+    background:#eef1ed;
+    color:#455a64;
+}
+
+.panel-button.danger{
+    background:#ffebee;
+    color:#c62828;
+}
+
+
+/* =========================================================
    LOGIN
 ========================================================= */
 
@@ -1199,7 +1357,8 @@ body.dark-mode .settings-header,
 body.dark-mode .settings-card,
 body.dark-mode .edit-form,
 body.dark-mode .login-card,
-body.dark-mode .loading{
+body.dark-mode .loading,
+body.dark-mode .settings-panel{
     background:#1b211c;
 
     color:#eeeeee;
@@ -1226,12 +1385,14 @@ body.dark-mode .info-row{
 body.dark-mode .info-label,
 body.dark-mode .setting-description,
 body.dark-mode .profile-email,
-body.dark-mode .action-subtitle{
+body.dark-mode .action-subtitle,
+body.dark-mode .settings-panel-text{
     color:#a9afa9;
 }
 
 body.dark-mode .section-title,
-body.dark-mode .settings-header h2{
+body.dark-mode .settings-header h2,
+body.dark-mode .settings-panel-title{
     color:#eeeeee;
 }
 
@@ -1262,6 +1423,11 @@ body.dark-mode .security-info{
     border-color:#315c35;
 
     color:#a5d6a7;
+}
+
+body.dark-mode .account-type-badge{
+    background:#293129;
+    color:#a9afa9;
 }
 
 
@@ -1312,7 +1478,8 @@ body.dark-mode .security-info{
     .settings-card,
     .edit-form,
     .security-info,
-    .settings-header{
+    .settings-header,
+    .settings-panel{
         margin-left:15px;
         margin-right:15px;
     }
@@ -1321,6 +1488,25 @@ body.dark-mode .security-info{
         max-width:230px;
     }
 
+    .setting-status{
+        display:none;
+    }
+
+}
+
+
+/* =========================================================
+   ACCESSIBILITY
+========================================================= */
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible{
+    outline:
+        3px solid
+        rgba(104,159,56,.28);
+
+    outline-offset:2px;
 }
 
 </style>
@@ -1906,7 +2092,7 @@ body.dark-mode .security-info{
         </div>
 
 
-        <!-- ONLINE STATUS -->
+        <!-- SHOW ONLINE STATUS -->
 
         <div class="setting-row">
 
@@ -1920,11 +2106,11 @@ body.dark-mode .security-info{
             <div class="setting-content">
 
                 <div class="setting-title">
-                    Online Status
+                    Show My Online Status
                 </div>
 
                 <div class="setting-description">
-                    Allow others to see your online status.
+                    Allow others to see when you are actively using HAVKAR.
                 </div>
 
             </div>
@@ -1936,6 +2122,44 @@ body.dark-mode .security-info{
                     id="onlineStatusToggle"
                     type="checkbox"
                     onchange="saveToggleSetting('onlineStatus',this.checked)">
+
+                <span class="slider"></span>
+
+            </label>
+
+        </div>
+
+
+        <!-- LAST SEEN -->
+
+        <div class="setting-row">
+
+            <div class="setting-icon">
+
+                <i class="fas fa-clock"></i>
+
+            </div>
+
+
+            <div class="setting-content">
+
+                <div class="setting-title">
+                    Last Seen
+                </div>
+
+                <div class="setting-description">
+                    Allow other users to see your last active time.
+                </div>
+
+            </div>
+
+
+            <label class="switch">
+
+                <input
+                    id="lastSeenToggle"
+                    type="checkbox"
+                    onchange="saveToggleSetting('lastSeen',this.checked)">
 
                 <span class="slider"></span>
 
@@ -2068,6 +2292,127 @@ body.dark-mode .security-info{
         </button>
 
 
+        <!-- APP LOCK -->
+
+        <button
+            class="setting-row"
+            type="button"
+            onclick="configureAppLock()">
+
+            <div class="setting-icon">
+
+                <i class="fas fa-lock"></i>
+
+            </div>
+
+
+            <div class="setting-content">
+
+                <div class="setting-title">
+                    App Lock
+                </div>
+
+                <div
+                    id="appLockDescription"
+                    class="setting-description">
+
+                    Protect HAVKAR with a PIN or supported device authentication.
+
+                </div>
+
+            </div>
+
+
+            <div
+                id="appLockStatus"
+                class="setting-status">
+
+                Off
+
+            </div>
+
+
+            <div class="setting-arrow">
+
+                <i class="fas fa-chevron-right"></i>
+
+            </div>
+
+        </button>
+
+
+        <!-- MESSAGES & CHAT -->
+
+        <button
+            class="setting-row"
+            type="button"
+            onclick="openChatSettings()">
+
+            <div class="setting-icon">
+
+                <i class="fas fa-comments"></i>
+
+            </div>
+
+
+            <div class="setting-content">
+
+                <div class="setting-title">
+                    Messages & Chat
+                </div>
+
+                <div class="setting-description">
+                    Manage messaging, privacy and conversation preferences.
+                </div>
+
+            </div>
+
+
+            <div class="setting-arrow">
+
+                <i class="fas fa-chevron-right"></i>
+
+            </div>
+
+        </button>
+
+
+        <!-- BLOCKED USERS -->
+
+        <button
+            class="setting-row"
+            type="button"
+            onclick="openBlockedUsers()">
+
+            <div class="setting-icon">
+
+                <i class="fas fa-user-slash"></i>
+
+            </div>
+
+
+            <div class="setting-content">
+
+                <div class="setting-title">
+                    Blocked Users
+                </div>
+
+                <div class="setting-description">
+                    Manage users you have blocked.
+                </div>
+
+            </div>
+
+
+            <div class="setting-arrow">
+
+                <i class="fas fa-chevron-right"></i>
+
+            </div>
+
+        </button>
+
+
         <!-- PRIVACY -->
 
         <button
@@ -2090,6 +2435,78 @@ body.dark-mode .security-info{
 
                 <div class="setting-description">
                     Manage account privacy and security.
+                </div>
+
+            </div>
+
+
+            <div class="setting-arrow">
+
+                <i class="fas fa-chevron-right"></i>
+
+            </div>
+
+        </button>
+
+
+        <!-- BUSINESS ACCOUNT -->
+
+        <button
+            class="setting-row"
+            type="button"
+            onclick="openBusinessAccount()">
+
+            <div class="setting-icon">
+
+                <i class="fas fa-store"></i>
+
+            </div>
+
+
+            <div class="setting-content">
+
+                <div class="setting-title">
+                    Business Account
+                </div>
+
+                <div class="setting-description">
+                    Create or manage your HAVKAR business profile.
+                </div>
+
+            </div>
+
+
+            <div class="setting-arrow">
+
+                <i class="fas fa-chevron-right"></i>
+
+            </div>
+
+        </button>
+
+
+        <!-- VERIFICATION -->
+
+        <button
+            class="setting-row"
+            type="button"
+            onclick="openVerification()">
+
+            <div class="setting-icon">
+
+                <i class="fas fa-circle-check"></i>
+
+            </div>
+
+
+            <div class="setting-content">
+
+                <div class="setting-title">
+                    Verification
+                </div>
+
+                <div class="setting-description">
+                    Apply for personal, business or company verification.
                 </div>
 
             </div>
@@ -2140,6 +2557,78 @@ body.dark-mode .security-info{
         </button>
 
 
+        <!-- SUBSCRIPTION -->
+
+        <button
+            class="setting-row"
+            type="button"
+            onclick="openSubscription()">
+
+            <div class="setting-icon">
+
+                <i class="fas fa-crown"></i>
+
+            </div>
+
+
+            <div class="setting-content">
+
+                <div class="setting-title">
+                    Subscription & Payments
+                </div>
+
+                <div class="setting-description">
+                    Manage HAVKAR premium plans and payments.
+                </div>
+
+            </div>
+
+
+            <div class="setting-arrow">
+
+                <i class="fas fa-chevron-right"></i>
+
+            </div>
+
+        </button>
+
+
+        <!-- ABOUT -->
+
+        <button
+            class="setting-row"
+            type="button"
+            onclick="openAbout()">
+
+            <div class="setting-icon">
+
+                <i class="fas fa-circle-info"></i>
+
+            </div>
+
+
+            <div class="setting-content">
+
+                <div class="setting-title">
+                    About HAVKAR
+                </div>
+
+                <div class="setting-description">
+                    Information about HAVKAR and its services.
+                </div>
+
+            </div>
+
+
+            <div class="setting-arrow">
+
+                <i class="fas fa-chevron-right"></i>
+
+            </div>
+
+        </button>
+
+
         <!-- ACCOUNT SETTINGS -->
 
         <button
@@ -2175,6 +2664,62 @@ body.dark-mode .security-info{
 
         </button>
 
+
+        <!-- LOGOUT -->
+
+        <button
+            class="setting-row"
+            type="button"
+            onclick="logout()">
+
+            <div
+                class="setting-icon"
+                style="
+                    background:#ffebee;
+                    color:#d32f2f;
+                ">
+
+                <i class="fas fa-right-from-bracket"></i>
+
+            </div>
+
+
+            <div class="setting-content">
+
+                <div
+                    class="setting-title"
+                    style="color:#d32f2f;">
+
+                    Log Out
+
+                </div>
+
+                <div class="setting-description">
+                    Sign out securely from HAVKAR.
+                </div>
+
+            </div>
+
+
+            <div class="setting-arrow">
+
+                <i class="fas fa-chevron-right"></i>
+
+            </div>
+
+        </button>
+
+
+    </div>
+
+
+    <!-- =====================================================
+         SETTINGS INFORMATION PANEL
+    ====================================================== -->
+
+    <div
+        id="settingsPanel"
+        class="settings-panel">
 
     </div>
 
@@ -2358,9 +2903,15 @@ function defaultSettings(){
 
         onlineStatus:true,
 
+        lastSeen:true,
+
         darkMode:false,
 
-        language:"en"
+        language:"en",
+
+        appLock:false,
+
+        accountType:"personal"
 
     };
 
@@ -2463,6 +3014,12 @@ function applySettings(){
         );
 
 
+    const lastSeen =
+        document.getElementById(
+            "lastSeenToggle"
+        );
+
+
     const darkMode =
         document.getElementById(
             "darkModeToggle"
@@ -2491,6 +3048,14 @@ function applySettings(){
     }
 
 
+    if(lastSeen){
+
+        lastSeen.checked =
+            settings.lastSeen !== false;
+
+    }
+
+
     if(darkMode){
 
         darkMode.checked =
@@ -2511,6 +3076,9 @@ function applySettings(){
         "dark-mode",
         settings.darkMode === true
     );
+
+
+    updateAppLockUI();
 
 }
 
@@ -2614,6 +3182,8 @@ function(){
     }
 
 
+    clearSettingsPanel();
+
     applySettings();
 
 
@@ -2672,6 +3242,9 @@ function(){
             "block";
 
     }
+
+
+    clearSettingsPanel();
 
 
     const title =
@@ -2764,6 +3337,103 @@ function showMessage(
 
 
 /* =========================================================
+   SETTINGS PANEL
+========================================================= */
+
+function clearSettingsPanel(){
+
+    const panel =
+        document.getElementById(
+            "settingsPanel"
+        );
+
+
+    if(!panel){
+
+        return;
+
+    }
+
+
+    panel.classList.remove(
+        "active"
+    );
+
+    panel.innerHTML =
+        "";
+
+}
+
+
+function showSettingsPanel(
+    title,
+    icon,
+    text,
+    buttons
+){
+
+    const panel =
+        document.getElementById(
+            "settingsPanel"
+        );
+
+
+    if(!panel){
+
+        return;
+
+    }
+
+
+    let buttonsHtml =
+        "";
+
+
+    if(Array.isArray(buttons)){
+
+        buttonsHtml =
+            buttons.join("");
+
+    }
+
+
+    panel.innerHTML = `
+
+        <div class="settings-panel-title">
+
+            <i class="${escapeHtml(icon)}"></i>
+
+            ${escapeHtml(title)}
+
+        </div>
+
+
+        <div class="settings-panel-text">
+
+            ${text}
+
+        </div>
+
+
+        ${buttonsHtml}
+
+    `;
+
+
+    panel.classList.add(
+        "active"
+    );
+
+
+    panel.scrollIntoView({
+        behavior:"smooth",
+        block:"nearest"
+    });
+
+}
+
+
+/* =========================================================
    ESCAPE HTML
 ========================================================= */
 
@@ -2826,6 +3496,186 @@ function getAvatarUrl(
         metadata.avatar_url ||
         ""
     );
+
+}
+
+
+/* =========================================================
+   ACCOUNT TYPE
+========================================================= */
+
+function getAccountType(
+    metadata
+){
+
+    const value =
+        String(
+            metadata.account_type ||
+            metadata.accountType ||
+            "personal"
+        ).toLowerCase();
+
+
+    if(
+        value === "business" ||
+        value === "company" ||
+        value === "factory"
+    ){
+
+        return value;
+
+    }
+
+
+    return "personal";
+
+}
+
+
+function getAccountTypeLabel(
+    type
+){
+
+    const labels = {
+
+        personal:"Personal Account",
+
+        business:"Business Account",
+
+        company:"Company / Factory",
+
+        factory:"Company / Factory"
+
+    };
+
+
+    return (
+        labels[type] ||
+        "Personal Account"
+    );
+
+}
+
+
+/* =========================================================
+   VERIFICATION
+========================================================= */
+
+function getVerificationType(
+    metadata
+){
+
+    const verified =
+        metadata.verified === true ||
+        metadata.is_verified === true;
+
+
+    if(!verified){
+
+        return "";
+
+    }
+
+
+    const type =
+        String(
+            metadata.verification_type ||
+            metadata.verificationType ||
+            metadata.account_type ||
+            "personal"
+        ).toLowerCase();
+
+
+    if(
+        type === "company" ||
+        type === "factory"
+    ){
+
+        return "company";
+
+    }
+
+
+    if(type === "business"){
+
+        return "business";
+
+    }
+
+
+    return "personal";
+
+}
+
+
+function renderVerificationBadge(
+    metadata
+){
+
+    const type =
+        getVerificationType(
+            metadata
+        );
+
+
+    if(!type){
+
+        return "";
+
+    }
+
+
+    if(type === "business"){
+
+        return `
+
+            <div class="verification-badge business">
+
+                <span class="badge-symbol">
+                    ★
+                </span>
+
+                Verified Business
+
+            </div>
+
+        `;
+
+    }
+
+
+    if(type === "company"){
+
+        return `
+
+            <div class="verification-badge company">
+
+                <span class="badge-symbol">
+                    ◆
+                </span>
+
+                Verified Company / Factory
+
+            </div>
+
+        `;
+
+    }
+
+
+    return `
+
+        <div class="verification-badge personal">
+
+            <span class="badge-symbol">
+                ✓
+            </span>
+
+            Verified Account
+
+        </div>
+
+    `;
 
 }
 
@@ -3080,9 +3930,16 @@ async function(){
             );
 
 
-        const verification =
-            metadata.verified === true ||
-            metadata.is_verified === true;
+        const accountType =
+            getAccountType(
+                metadata
+            );
+
+
+        const verificationBadge =
+            renderVerificationBadge(
+                metadata
+            );
 
 
         if(area){
@@ -3155,21 +4012,20 @@ async function(){
                     </div>
 
 
-                    ${
-                        verification
-                        ?
-                        `
-                        <div class="verification-badge">
+                    <div class="account-type-badge">
 
-                            <i class="fas fa-circle-check"></i>
+                        <i class="fas fa-user"></i>
 
-                            Verified Account
+                        ${escapeHtml(
+                            getAccountTypeLabel(
+                                accountType
+                            )
+                        )}
 
-                        </div>
-                        `
-                        :
-                        ""
-                    }
+                    </div>
+
+
+                    ${verificationBadge}
 
 
                     <div class="photo-actions">
@@ -3580,9 +4436,23 @@ function(
         showMessage(
             value
             ?
-            "Online status enabled."
+            "Online status visibility enabled."
             :
-            "Online status hidden.",
+            "Online status visibility hidden.",
+            "success"
+        );
+
+    }
+
+
+    if(key === "lastSeen"){
+
+        showMessage(
+            value
+            ?
+            "Last seen is visible to allowed users."
+            :
+            "Last seen is hidden.",
             "success"
         );
 
@@ -3775,6 +4645,377 @@ function(){
 
 
 /* =========================================================
+   APP LOCK UI
+========================================================= */
+
+function updateAppLockUI(){
+
+    const settings =
+        getSettings();
+
+
+    const status =
+        document.getElementById(
+            "appLockStatus"
+        );
+
+
+    const description =
+        document.getElementById(
+            "appLockDescription"
+        );
+
+
+    if(status){
+
+        status.textContent =
+            settings.appLock
+            ?
+            "On"
+            :
+            "Off";
+
+    }
+
+
+    if(description){
+
+        description.textContent =
+            settings.appLock
+            ?
+            "HAVKAR app lock is enabled on this device."
+            :
+            "Protect HAVKAR with a PIN or supported device authentication.";
+
+    }
+
+}
+
+
+/* =========================================================
+   APP LOCK
+========================================================= */
+
+window.configureAppLock =
+function(){
+
+    const settings =
+        getSettings();
+
+
+    if(settings.appLock){
+
+        const disable =
+            confirm(
+                "App Lock is currently enabled. Do you want to turn it off?"
+            );
+
+
+        if(disable){
+
+            settings.appLock =
+                false;
+
+
+            settings.appLockMethod =
+                "";
+
+
+            saveSettings(
+                settings
+            );
+
+
+            updateAppLockUI();
+
+
+            showMessage(
+                "App Lock disabled on this device.",
+                "success"
+            );
+
+        }
+
+
+        return;
+
+    }
+
+
+    const choice =
+        prompt(
+            "Choose App Lock method:\n\n1 = PIN\n2 = Device biometric / authentication\n\nEnter 1 or 2:"
+        );
+
+
+    if(choice === "1"){
+
+        const pin =
+            prompt(
+                "Create a 4-8 digit HAVKAR PIN:"
+            );
+
+
+        if(!pin){
+
+            return;
+
+        }
+
+
+        if(
+            !/^\d{4,8}$/.test(
+                pin
+            )
+        ){
+
+            showMessage(
+                "PIN must contain 4 to 8 digits.",
+                "error"
+            );
+
+            return;
+
+        }
+
+
+        const confirmPin =
+            prompt(
+                "Confirm your HAVKAR PIN:"
+            );
+
+
+        if(pin !== confirmPin){
+
+            showMessage(
+                "PIN confirmation does not match.",
+                "error"
+            );
+
+            return;
+
+        }
+
+
+        settings.appLock =
+            true;
+
+        settings.appLockMethod =
+            "pin";
+
+
+        /*
+         * The PIN is intentionally not stored here.
+         * Full secure app-lock enforcement requires
+         * platform/native secure storage or WebAuthn.
+         */
+
+        saveSettings(
+            settings
+        );
+
+
+        updateAppLockUI();
+
+
+        showMessage(
+            "PIN App Lock preference enabled. Secure enforcement will be connected to the platform lock system.",
+            "success"
+        );
+
+
+        return;
+
+    }
+
+
+    if(choice === "2"){
+
+        if(
+            window.PublicKeyCredential
+        ){
+
+            settings.appLock =
+                true;
+
+            settings.appLockMethod =
+                "biometric";
+
+
+            saveSettings(
+                settings
+            );
+
+
+            updateAppLockUI();
+
+
+            showMessage(
+                "Device authentication is supported by this browser. Secure biometric/WebAuthn registration will be connected in the authentication layer.",
+                "success"
+            );
+
+        }
+        else{
+
+            showMessage(
+                "Device biometric authentication is not available in this browser.",
+                "error"
+            );
+
+        }
+
+
+        return;
+
+    }
+
+
+    if(choice !== null){
+
+        showMessage(
+            "Please select 1 or 2.",
+            "error"
+        );
+
+    }
+
+};
+
+
+/* =========================================================
+   MESSAGES & CHAT SETTINGS
+========================================================= */
+
+window.openChatSettings =
+function(){
+
+    showSettingsPanel(
+
+        "Messages & Chat",
+
+        "fas fa-comments",
+
+        `
+        HAVKAR chat is designed around private conversations.
+
+        <br><br>
+
+        <strong>Online status:</strong>
+        receiving a message does not make a user online.
+        Online status should represent active HAVKAR usage.
+
+        <br><br>
+
+        <strong>Message privacy:</strong>
+        only participants of a conversation should be able
+        to access that conversation.
+
+        <br><br>
+
+        <strong>Message status:</strong>
+        one check means sent,
+        two grey checks mean delivered,
+        and two green checks mean read.
+
+        <br><br>
+
+        Chat can later include message requests,
+        reactions, media, blocking, reporting and
+        transaction/service conversation closure.
+        `,
+
+        [
+            `
+            <button
+                type="button"
+                class="panel-button"
+                onclick="goTo('chat.html')">
+
+                <i class="fas fa-comments"></i>
+
+                Open Chat
+
+            </button>
+            `
+        ]
+
+    );
+
+};
+
+
+/* =========================================================
+   BLOCKED USERS
+========================================================= */
+
+window.openBlockedUsers =
+function(){
+
+    const blockedKey =
+        currentUser
+        ?
+        "havkar_blocked_users_" + currentUser.id
+        :
+        "havkar_blocked_users";
+
+
+    let blocked = [];
+
+
+    try{
+
+        blocked =
+            JSON.parse(
+                localStorage.getItem(
+                    blockedKey
+                ) || "[]"
+            );
+
+    }
+    catch(error){
+
+        blocked = [];
+
+    }
+
+
+    showSettingsPanel(
+
+        "Blocked Users",
+
+        "fas fa-user-slash",
+
+        blocked.length
+        ?
+        `
+        You currently have
+        <strong>${blocked.length}</strong>
+        blocked user(s) on this device.
+
+        <br><br>
+
+        Cross-device blocking will require the
+        HAVKAR backend blocking system.
+        `
+        :
+        `
+        You have no locally stored blocked users.
+
+        <br><br>
+
+        HAVKAR will use account-level blocking so
+        blocked users cannot continue unwanted contact.
+        `,
+
+        []
+
+    );
+
+};
+
+
+/* =========================================================
    PRIVACY & SECURITY
 ========================================================= */
 
@@ -3803,6 +5044,10 @@ function(){
         "Not available";
 
 
+    const settings =
+        getSettings();
+
+
     info.innerHTML = `
 
         <i class="fas fa-shield-halved"></i>
@@ -3822,6 +5067,28 @@ function(){
 
         <br><br>
 
+        Online status:
+        ${
+            settings.onlineStatus
+            ?
+            "Visible according to your privacy settings."
+            :
+            "Hidden."
+        }
+
+        <br><br>
+
+        Last seen:
+        ${
+            settings.lastSeen
+            ?
+            "Visible according to your privacy settings."
+            :
+            "Hidden."
+        }
+
+        <br><br>
+
         Your local HAVKAR preferences are stored
         in this browser on this device.
 
@@ -3831,6 +5098,199 @@ function(){
     showMessage(
         "Privacy & Security information is shown below.",
         "success"
+    );
+
+};
+
+
+/* =========================================================
+   BUSINESS ACCOUNT
+========================================================= */
+
+window.openBusinessAccount =
+function(){
+
+    showSettingsPanel(
+
+        "Business Account",
+
+        "fas fa-store",
+
+        `
+        HAVKAR supports three account types:
+
+        <br><br>
+
+        <strong>Personal Account</strong><br>
+        For individual users.
+
+        <br><br>
+
+        <strong>Business Account</strong><br>
+        For shops, service providers and businesses.
+
+        <br><br>
+
+        <strong>Company / Factory</strong><br>
+        For registered companies, factories and larger organizations.
+
+        <br><br>
+
+        Business registration and account-type changes
+        will be connected to the real verification process.
+        `,
+
+        [
+            `
+            <button
+                type="button"
+                class="panel-button"
+                onclick="openVerification()">
+
+                <i class="fas fa-circle-check"></i>
+
+                Verification
+
+            </button>
+            `
+        ]
+
+    );
+
+};
+
+
+/* =========================================================
+   VERIFICATION
+========================================================= */
+
+window.openVerification =
+function(){
+
+    showSettingsPanel(
+
+        "HAVKAR Verification",
+
+        "fas fa-circle-check",
+
+        `
+        HAVKAR verification is based on real account
+        and document verification.
+
+        <br><br>
+
+        <strong>Personal:</strong>
+        green ✓
+
+        <br>
+
+        <strong>Business:</strong>
+        green ★
+
+        <br>
+
+        <strong>Company / Factory:</strong>
+        premium green ◆
+
+        <br><br>
+
+        Verification badges are not simply purchased.
+        They should only become active after the required
+        documents and account information have been reviewed.
+
+        <br><br>
+
+        The verification submission system will be
+        connected to the HAVKAR backend when the
+        verification database and review process are ready.
+        `,
+
+        []
+
+    );
+
+};
+
+
+/* =========================================================
+   SUBSCRIPTION
+========================================================= */
+
+window.openSubscription =
+function(){
+
+    showSettingsPanel(
+
+        "Subscription & Payments",
+
+        "fas fa-crown",
+
+        `
+        HAVKAR subscription features will provide
+        optional premium services.
+
+        <br><br>
+
+        Subscription payment is separate from
+        verification status.
+
+        <br><br>
+
+        A subscription must not automatically grant
+        a verification badge.
+
+        <br><br>
+
+        Payment processing will be connected to the
+        real payment provider when the HAVKAR payment
+        system is completed.
+        `,
+
+        []
+
+    );
+
+};
+
+
+/* =========================================================
+   ABOUT HAVKAR
+========================================================= */
+
+window.openAbout =
+function(){
+
+    showSettingsPanel(
+
+        "About HAVKAR",
+
+        "fas fa-circle-info",
+
+        `
+        <strong>HAVKAR</strong>
+
+        <br><br>
+
+        Connect • Trade • Work • Help
+
+        <br><br>
+
+        HAVKAR is designed as a multi-service platform
+        for jobs, services, buying and selling, wallet,
+        travel, delivery, chat, events and support.
+
+        <br><br>
+
+        Version:
+        HAVKAR Web App
+
+        <br><br>
+
+        Safe • Secure • Trusted
+        `,
+
+        []
+
     );
 
 };
@@ -3878,6 +5338,17 @@ function(){
         ${escapeHtml(
             currentUser?.id ||
             "Not available"
+        )}
+
+        <br><br>
+
+        Account type:
+        ${escapeHtml(
+            getAccountTypeLabel(
+                getAccountType(
+                    currentUser?.user_metadata || {}
+                )
+            )
         )}
 
         <br><br>
