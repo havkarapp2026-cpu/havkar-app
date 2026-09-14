@@ -1,1160 +1,308 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
 <meta charset="UTF-8">
-
-<meta name="viewport"
-      content="width=device-width,initial-scale=1.0">
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HAVKAR - Market</title>
 
 <link rel="stylesheet"
 href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
-
-*{
-    box-sizing:border-box;
-    margin:0;
-    padding:0;
-}
-
-html,
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100%}
 body{
-    width:100%;
-    min-height:100%;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:#f5f5f5;color:#333;padding-bottom:90px;
 }
-
-body{
-    font-family:
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Roboto,
-        Arial,
-        sans-serif;
-
-    background:#f5f5f5;
-    color:#333;
-
-    padding-bottom:90px;
-}
-
-button,
-input,
-select{
-    font:inherit;
-}
-
-button{
-    border:0;
-    cursor:pointer;
-}
-
-
-/* ================= HEADER ================= */
+button,input,select{font:inherit}
+button{border:0;-webkit-tap-highlight-color:transparent}
+button:focus,input:focus,select:focus{outline:none}
 
 .header{
-
-    position:sticky;
-    top:0;
-    z-index:100;
-
-    height:70px;
-
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-
-    padding:0 18px;
-
-    color:white;
-
-    background:
-        linear-gradient(
-            135deg,
-            #689f38,
-            #7cb342
-        );
-
-    box-shadow:
-        0 2px 10px rgba(0,0,0,.12);
+    position:sticky;top:0;z-index:100;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:15px 20px;color:#fff;
+    background:linear-gradient(135deg,#689f38,#7cb342);
+    box-shadow:0 2px 10px rgba(0,0,0,.12);
 }
-
-.header-left{
-
-    display:flex;
-    align-items:center;
-
-    gap:14px;
+.header-left{display:flex;align-items:center;gap:15px}
+.back-btn,.refresh-btn,.close-btn{
+    width:40px;height:40px;border-radius:50%;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
 }
+.back-btn{background:transparent;color:#fff;font-size:23px}
+.refresh-btn,.close-btn{background:rgba(255,255,255,.20);color:#fff;font-size:17px}
+.header h1{font-size:21px;font-weight:750}
 
-.header h1{
-
-    font-size:21px;
-    font-weight:800;
-}
-
-.back-btn,
-.refresh-btn{
-
-    width:40px;
-    height:40px;
-
-    border-radius:50%;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-}
-
-.back-btn{
-
-    color:white;
-    background:transparent;
-
-    font-size:23px;
-}
-
-.refresh-btn{
-
-    color:white;
-    background:rgba(255,255,255,.20);
-
-    font-size:17px;
-}
-
-
-/* ================= PAGE ================= */
-
-.page{
-
-    width:100%;
-    max-width:900px;
-
-    margin:0 auto;
-
-    padding:20px;
-}
-
-
-/* ================= ERROR ================= */
-
-.error-box{
-
-    display:none;
-
-    padding:14px;
-
-    margin-bottom:15px;
-
-    border-radius:13px;
-
-    background:#ffebee;
-    color:#c62828;
-
-    line-height:1.5;
-}
-
-.error-box.show{
-    display:block;
-}
-
-
-/* ================= SUMMARY ================= */
+.page{padding:20px;max-width:900px;margin:auto}
 
 .summary-card{
-
-    background:white;
-
-    border-radius:20px;
-
-    padding:20px;
-
-    margin-bottom:18px;
-
-    box-shadow:
-        0 3px 12px rgba(0,0,0,.07);
+    background:#fff;border-radius:20px;padding:20px;margin-bottom:18px;
+    box-shadow:0 3px 12px rgba(0,0,0,.07);
 }
-
-.summary-top{
-
-    display:flex;
-
-    justify-content:space-between;
-    align-items:center;
-
-    gap:10px;
-}
-
-.summary-title{
-
-    color:#777;
-
-    font-size:15px;
-}
-
-.connection{
-
-    display:flex;
-    align-items:center;
-
-    gap:6px;
-
-    color:#689f38;
-
-    font-size:12px;
-}
-
-.connection-dot{
-
-    width:8px;
-    height:8px;
-
-    border-radius:50%;
-
-    background:#7cb342;
-}
-
-.connection-dot.offline{
-    background:#c62828;
-}
-
-.summary-number{
-
-    margin-top:8px;
-
-    font-size:28px;
-
-    font-weight:800;
-}
-
-.summary-time{
-
-    margin-top:5px;
-
-    color:#999;
-
-    font-size:12px;
-}
-
-
-/* ================= CONTROLS ================= */
+.summary-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.summary-title{font-size:15px;color:#777}
+.status{display:flex;align-items:center;gap:6px;font-size:12px;color:#689f38}
+.status-dot{width:8px;height:8px;border-radius:50%;background:#7cb342}
+.status-dot.offline{background:#c62828}
+.summary-value{font-size:28px;font-weight:800;margin-top:7px}
+.summary-sub{color:#999;font-size:12px;margin-top:5px}
 
 .controls{
-
-    display:grid;
-
-    grid-template-columns:
-        1fr 145px;
-
-    gap:10px;
-
-    margin-bottom:20px;
+    display:grid;grid-template-columns:1fr 150px;gap:10px;margin-bottom:18px;
+}
+.search-box{position:relative}
+.search-box i{
+    position:absolute;left:15px;top:50%;
+    transform:translateY(-50%);color:#999
+}
+.search-box input{
+    width:100%;height:50px;border:1px solid #e0e0e0;background:#fff;
+    border-radius:14px;padding:0 15px 0 45px;font-size:15px;
+    box-shadow:0 2px 8px rgba(0,0,0,.04);
+}
+.currency-select{
+    width:100%;height:50px;border:1px solid #e0e0e0;background:#fff;
+    border-radius:14px;padding:0 12px;font-weight:700;color:#555;
 }
 
-.search{
-
-    position:relative;
+.section-head{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:10px;margin:4px 0 12px;
 }
-
-.search i{
-
-    position:absolute;
-
-    left:15px;
-    top:50%;
-
-    transform:
-        translateY(-50%);
-
-    color:#999;
-}
-
-.search input{
-
-    width:100%;
-    height:50px;
-
-    border:1px solid #ddd;
-
-    border-radius:14px;
-
-    background:white;
-
-    padding:
-        0 15px 0 44px;
-
-    font-size:15px;
-}
-
-.search input:focus{
-
-    border-color:#7cb342;
-
-    box-shadow:
-        0 0 0 3px
-        rgba(124,179,66,.12);
-}
-
-.currency{
-
-    width:100%;
-    height:50px;
-
-    border:1px solid #ddd;
-
-    border-radius:14px;
-
-    background:white;
-
-    padding:0 12px;
-
-    color:#444;
-
-    font-weight:700;
-}
-
-
-/* ================= SECTION ================= */
-
-.section-header{
-
-    display:flex;
-
-    justify-content:space-between;
-    align-items:center;
-
-    margin:
-        5px 0 12px;
-}
-
-.section-header h2{
-
-    font-size:20px;
-
-    font-weight:800;
-}
-
+.section-head h2{font-size:20px}
 .favorite-count{
-
-    color:#689f38;
-
-    font-size:12px;
-
-    font-weight:700;
+    color:#689f38;font-size:12px;font-weight:700;
 }
-
-
-/* ================= FAVORITES ================= */
-
-.favorite-section{
-
-    display:none;
-
-    margin-bottom:23px;
-
-    padding:17px;
-
-    border-radius:18px;
-
-    background:#edf6e7;
-
-    border:
-        1px solid #d9e9ce;
-}
-
-.favorite-section.show{
-    display:block;
-}
-
-
-/* ================= LIST ================= */
-
-.market-list{
-
-    display:flex;
-
-    flex-direction:column;
-
-    gap:12px;
-}
-
-
-/* ================= COIN CARD ================= */
+.market-list{display:flex;flex-direction:column;gap:12px}
 
 .coin-card{
-
-    width:100%;
-
-    min-height:78px;
-
-    display:flex;
-
-    align-items:center;
-
-    gap:12px;
-
-    padding:14px;
-
-    border-radius:17px;
-
-    background:white;
-
-    box-shadow:
-        0 2px 9px rgba(0,0,0,.06);
-
-    text-align:left;
-
-    transition:
-        transform .12s;
+    width:100%;background:#fff;border-radius:17px;padding:15px;
+    display:flex;align-items:center;gap:13px;
+    box-shadow:0 2px 9px rgba(0,0,0,.06);
+    cursor:pointer;text-align:left;color:#333;
+    transition:transform .15s,box-shadow .15s;
 }
-
-.coin-card:active{
-    transform:scale(.985);
+.coin-card:active{transform:scale(.985)}
+.coin-icon{
+    width:48px;height:48px;min-width:48px;border-radius:50%;
+    background:#f1f7eb;color:#689f38;display:flex;
+    align-items:center;justify-content:center;font-size:20px;font-weight:800;
 }
-
-
-/* ================= REAL COIN IMAGE ================= */
-
-.coin-image{
-
-    width:48px;
-    height:48px;
-
-    min-width:48px;
-
-    border-radius:50%;
-
-    object-fit:cover;
-
-    background:#f1f7eb;
-
-    padding:2px;
-}
-
-.coin-fallback{
-
-    width:48px;
-    height:48px;
-
-    min-width:48px;
-
-    border-radius:50%;
-
-    display:flex;
-
-    align-items:center;
-    justify-content:center;
-
-    background:#f1f7eb;
-
-    color:#689f38;
-
-    font-size:18px;
-
-    font-weight:800;
-}
-
-
-/* ================= COIN INFO ================= */
-
-.coin-info{
-
-    flex:1;
-
-    min-width:0;
-}
-
+.coin-info{flex:1;min-width:0}
 .coin-name{
-
-    font-size:16px;
-
-    font-weight:800;
-
-    white-space:nowrap;
-
-    overflow:hidden;
-
-    text-overflow:ellipsis;
+    font-size:16px;font-weight:750;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis
 }
-
-.coin-symbol{
-
-    margin-top:4px;
-
-    color:#999;
-
-    font-size:12px;
+.coin-symbol{color:#999;font-size:12px;margin-top:4px}
+.coin-right{text-align:right;min-width:115px}
+.coin-price{font-size:15px;font-weight:750;white-space:nowrap}
+.coin-change{margin-top:5px;font-size:12px;font-weight:700}
+.up{color:#2e7d32}
+.down{color:#c62828}
+.coin-star{
+    width:36px;height:36px;min-width:36px;border-radius:50%;
+    background:#f5f8f2;color:#aaa;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;font-size:16px;
 }
+.coin-star.active{color:#f2b01e;background:#fff8df}
 
-
-/* ================= PRICE ================= */
-
-.coin-price-box{
-
-    min-width:115px;
-
-    text-align:right;
+.favorite-section{
+    margin:0 0 22px;padding:17px;background:#edf6e7;
+    border-radius:18px;border:1px solid #dcebd3;
 }
+.favorite-section.hidden{display:none}
 
-.coin-price{
-
-    font-size:15px;
-
-    font-weight:800;
-
-    white-space:nowrap;
+.loading,.empty{
+    background:#fff;border-radius:17px;padding:30px;
+    text-align:center;color:#999;
 }
-
-.coin-change{
-
-    margin-top:5px;
-
-    font-size:12px;
-
-    font-weight:700;
-}
-
-.up{
-    color:#2e7d32;
-}
-
-.down{
-    color:#c62828;
-}
-
-
-/* ================= FAVORITE ================= */
-
-.star-btn{
-
-    width:37px;
-    height:37px;
-
-    min-width:37px;
-
-    display:flex;
-
-    align-items:center;
-    justify-content:center;
-
-    border-radius:50%;
-
-    background:#f5f7f3;
-
-    color:#aaa;
-
-    font-size:17px;
-}
-
-.star-btn.active{
-
-    background:#fff7d8;
-
-    color:#f0ad00;
-}
-
-
-/* ================= LOADING ================= */
-
-.loading{
-
-    background:white;
-
-    border-radius:17px;
-
-    padding:30px;
-
-    text-align:center;
-
-    color:#999;
-}
-
 .spinner{
+    width:30px;height:30px;border:3px solid #e5e5e5;
+    border-top-color:#7cb342;border-radius:50%;
+    animation:spin .8s linear infinite;margin:0 auto 12px;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-    width:30px;
-    height:30px;
-
-    margin:
-        0 auto 12px;
-
-    border:
-        3px solid #e5e5e5;
-
-    border-top-color:#7cb342;
-
-    border-radius:50%;
-
-    animation:
-        spin .8s linear infinite;
+.error-box{
+    display:none;background:#ffebee;color:#c62828;
+    border-radius:14px;padding:15px;margin-bottom:15px;line-height:1.5;
+}
+.error-box.show{display:block}
+.error-box button{
+    margin-top:10px;border-radius:9px;padding:9px 13px;
+    background:#c62828;color:#fff;cursor:pointer;font-weight:700;
 }
 
-@keyframes spin{
-
-    to{
-        transform:rotate(360deg);
-    }
+.detail-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,.42);
+    display:none;align-items:flex-end;justify-content:center;
+    z-index:500;padding:0;
 }
-
-
-/* ================= EMPTY ================= */
-
-.empty{
-
-    background:white;
-
-    border-radius:17px;
-
-    padding:30px;
-
-    text-align:center;
-
-    color:#999;
+.detail-overlay.show{display:flex}
+.detail-panel{
+    width:100%;max-width:700px;max-height:92vh;overflow-y:auto;
+    background:#f5f5f5;border-radius:24px 24px 0 0;
+    box-shadow:0 -10px 35px rgba(0,0,0,.20);
+    animation:detailUp .22s ease;
 }
-
-
-/* ================= DETAILS ================= */
-
-.overlay{
-
-    position:fixed;
-
-    inset:0;
-
-    z-index:500;
-
-    display:none;
-
-    align-items:flex-end;
-    justify-content:center;
-
-    background:
-        rgba(0,0,0,.45);
+@keyframes detailUp{
+    from{transform:translateY(100%)}
+    to{transform:translateY(0)}
 }
-
-.overlay.show{
-    display:flex;
-}
-
-.panel{
-
-    width:100%;
-
-    max-width:700px;
-
-    max-height:92vh;
-
-    overflow-y:auto;
-
-    background:#f5f5f5;
-
-    border-radius:
-        24px 24px 0 0;
-
-    animation:
-        slideUp .22s ease;
-}
-
-@keyframes slideUp{
-
-    from{
-        transform:
-            translateY(100%);
-    }
-
-    to{
-        transform:
-            translateY(0);
-    }
-}
-
-
-/* ================= DETAIL HEADER ================= */
 
 .detail-header{
-
-    position:sticky;
-
-    top:0;
-
-    z-index:10;
-
-    min-height:70px;
-
-    display:flex;
-
-    align-items:center;
-
-    justify-content:space-between;
-
-    padding:
-        12px 18px;
-
-    color:white;
-
-    background:
-        linear-gradient(
-            135deg,
-            #689f38,
-            #7cb342
-        );
+    position:sticky;top:0;z-index:10;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 20px;color:#fff;
+    background:linear-gradient(135deg,#689f38,#7cb342);
 }
-
-.detail-left{
-
-    display:flex;
-
-    align-items:center;
-
-    gap:12px;
-}
-
-.detail-image{
-
-    width:44px;
-    height:44px;
-
-    border-radius:50%;
-
-    object-fit:cover;
-
-    background:white;
-
-    padding:2px;
-}
-
-.detail-name{
-
-    font-size:18px;
-
+.detail-title{display:flex;align-items:center;gap:12px}
+.detail-title-icon{
+    width:42px;height:42px;border-radius:50%;
+    background:rgba(255,255,255,.20);
+    display:flex;align-items:center;justify-content:center;
     font-weight:800;
 }
-
-.detail-symbol{
-
-    margin-top:2px;
-
-    font-size:12px;
-
-    opacity:.85;
+.detail-title-text{
+    display:flex;flex-direction:column;gap:2px
 }
+.detail-title-name{font-size:18px;font-weight:800}
+.detail-title-symbol{font-size:12px;opacity:.85}
 
-.close-btn{
-
-    width:40px;
-    height:40px;
-
-    border-radius:50%;
-
-    background:
-        rgba(255,255,255,.20);
-
-    color:white;
-
-    font-size:18px;
+.detail-content{padding:20px}
+.detail-price-card,.stat-card{
+    background:#fff;border-radius:18px;padding:18px;
+    box-shadow:0 3px 12px rgba(0,0,0,.07);
 }
-
-
-/* ================= DETAIL CONTENT ================= */
-
-.detail-content{
-
-    padding:18px;
+.detail-price-card{margin-bottom:15px}
+.detail-label,.stat-name{
+    color:#999;font-size:12px;margin-bottom:7px
 }
-
-.price-card{
-
-    padding:20px;
-
-    margin-bottom:14px;
-
-    border-radius:18px;
-
-    background:white;
-
-    box-shadow:
-        0 3px 12px rgba(0,0,0,.07);
+.detail-price{
+    font-size:32px;font-weight:850;color:#222;word-break:break-word
 }
+.detail-change{margin-top:8px;font-size:14px;font-weight:750}
+.detail-up{color:#2e7d32}
+.detail-down{color:#c62828}
 
-.price-label{
-
-    color:#999;
-
-    font-size:12px;
-
-    margin-bottom:7px;
+.stats-grid{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px;margin-bottom:15px;
 }
-
-.big-price{
-
-    font-size:32px;
-
-    font-weight:850;
-}
-
-.big-change{
-
-    margin-top:8px;
-
-    font-size:14px;
-
-    font-weight:800;
-}
-
-
-/* ================= STATS ================= */
-
-.stats{
-
-    display:grid;
-
-    grid-template-columns:
-        repeat(2,minmax(0,1fr));
-
-    gap:11px;
-
-    margin-bottom:15px;
-}
-
-.stat{
-
-    padding:17px;
-
-    border-radius:17px;
-
-    background:white;
-
-    box-shadow:
-        0 2px 9px rgba(0,0,0,.06);
-}
-
-.stat-label{
-
-    color:#999;
-
-    font-size:12px;
-
-    margin-bottom:7px;
-}
-
 .stat-value{
-
-    font-size:14px;
-
-    font-weight:800;
-
-    line-height:1.4;
-
-    word-break:break-word;
+    color:#333;font-size:15px;font-weight:750;
+    line-height:1.35;word-break:break-word
 }
-
-
-/* ================= DETAIL ACTIONS ================= */
 
 .detail-actions{
-
-    display:grid;
-
-    grid-template-columns:
-        repeat(2,1fr);
-
-    gap:10px;
+    display:grid;grid-template-columns:repeat(3,1fr);gap:10px
 }
-
-.detail-btn{
-
-    min-height:48px;
-
-    border-radius:13px;
-
-    background:#7cb342;
-
-    color:white;
-
-    font-weight:800;
+.detail-action{
+    border-radius:14px;padding:14px;background:#7cb342;color:#fff;
+    font-weight:750;cursor:pointer;display:flex;
+    align-items:center;justify-content:center;gap:8px;
 }
-
-.detail-btn.secondary{
-
-    background:white;
-
-    color:#689f38;
-
-    border:
-        1px solid #dcebd3;
+.detail-action.secondary{
+    background:#fff;color:#689f38;border:1px solid #dfead5
 }
-
-.detail-btn.favorite-active{
-
-    background:#f0ad00;
-
-    color:white;
-}
-
-
-/* ================= NAV ================= */
+.detail-action.favorite-active{background:#f2b01e;color:#fff}
 
 .bottom-nav{
-
-    position:fixed;
-
-    left:0;
-    right:0;
-    bottom:0;
-
-    z-index:300;
-
-    height:75px;
-
-    display:flex;
-
-    align-items:center;
-
-    justify-content:space-around;
-
-    background:white;
-
-    box-shadow:
-        0 -2px 10px
-        rgba(0,0,0,.10);
+    position:fixed;left:0;right:0;bottom:0;height:75px;background:#fff;
+    display:flex;justify-content:space-around;align-items:center;
+    box-shadow:0 -2px 10px rgba(0,0,0,.10);z-index:300;
 }
-
 .nav-item{
-
-    min-width:55px;
-
-    color:#999;
-
-    text-align:center;
-
-    font-size:12px;
+    color:#999;text-align:center;font-size:12px;cursor:pointer;
+    min-width:55px;user-select:none;
 }
-
 .nav-item i{
-
-    display:block;
-
-    margin-bottom:5px;
-
-    font-size:21px;
+    display:block;font-size:21px;margin-bottom:5px
 }
-
-.nav-item.active{
-    color:#7cb342;
-}
-
-
-/* ================= TOAST ================= */
+.nav-item.active{color:#7cb342}
 
 .toast{
-
-    position:fixed;
-
-    left:50%;
-
-    bottom:95px;
-
-    z-index:900;
-
-    transform:
-        translate(-50%,20px);
-
-    opacity:0;
-
-    pointer-events:none;
-
-    padding:
-        11px 16px;
-
-    border-radius:12px;
-
-    background:#333;
-
-    color:white;
-
-    font-size:13px;
-
-    transition:.2s;
+    position:fixed;left:50%;bottom:95px;
+    transform:translateX(-50%) translateY(20px);
+    background:#333;color:#fff;padding:11px 16px;border-radius:12px;
+    font-size:13px;opacity:0;pointer-events:none;
+    transition:.2s;z-index:800;
 }
-
 .toast.show{
-
     opacity:1;
-
-    transform:
-        translate(-50%,0);
+    transform:translateX(-50%) translateY(0)
 }
-
-
-/* ================= MOBILE ================= */
 
 @media(max-width:560px){
-
-    .page{
-        padding:15px;
-    }
-
-    .controls{
-        grid-template-columns:
-            1fr 105px;
-    }
-
-    .coin-price-box{
-        min-width:95px;
-    }
-
-    .coin-price{
-        font-size:13px;
-    }
-
-    .coin-name{
-        font-size:15px;
-    }
-
-    .stats{
-        gap:8px;
-    }
-
-    .stat{
-        padding:14px;
-    }
-
+    .controls{grid-template-columns:1fr 105px}
+    .page{padding:15px}
+    .detail-content{padding:15px}
+    .stats-grid{gap:9px}
+    .detail-action{padding:12px 8px;font-size:12px}
 }
-
-
-/* ================= DESKTOP ================= */
-
 @media(min-width:700px){
-
-    .overlay{
-
-        align-items:center;
-
-        padding:20px;
-    }
-
-    .panel{
-
-        border-radius:24px;
-
-        max-height:90vh;
-    }
-
+    .detail-overlay{align-items:center;padding:20px}
+    .detail-panel{border-radius:24px;max-height:90vh}
 }
-
 </style>
 </head>
 
-
 <body>
 
-
-<!-- ================= HEADER ================= -->
-
 <header class="header">
-
     <div class="header-left">
-
         <button
             class="back-btn"
             type="button"
-            onclick="goBack()">
-
+            onclick="goBack()"
+            aria-label="Back">
             <i class="fas fa-arrow-left"></i>
-
         </button>
 
-        <h1>
-            Market
-        </h1>
-
+        <h1>Market</h1>
     </div>
-
 
     <button
         class="refresh-btn"
         type="button"
-        onclick="loadMarket()">
-
+        onclick="loadMarket()"
+        aria-label="Refresh market">
         <i class="fas fa-rotate"></i>
-
     </button>
-
 </header>
-
-
-<!-- ================= MAIN ================= -->
 
 <main class="page">
 
-
-    <div
-        id="errorBox"
-        class="error-box">
-    </div>
-
-
-    <!-- SUMMARY -->
+    <div id="errorBox" class="error-box"></div>
 
     <section class="summary-card">
 
         <div class="summary-top">
-
             <div class="summary-title">
-
                 Cryptocurrency Market
-
             </div>
 
-
-            <div class="connection">
-
-                <span
-                    id="connectionDot"
-                    class="connection-dot">
-                </span>
-
-                <span
-                    id="connectionText">
-
-                    Updating
-
-                </span>
-
+            <div class="status">
+                <span id="statusDot" class="status-dot"></span>
+                <span id="connectionStatus">Updating</span>
             </div>
-
         </div>
 
-
-        <div
-            id="marketNumber"
-            class="summary-number">
-
+        <div id="marketCount" class="summary-value">
             --
-
         </div>
 
-
-        <div
-            id="updatedText"
-            class="summary-time">
-
-            Loading prices...
-
+        <div id="lastUpdated" class="summary-sub">
+            Loading market data...
         </div>
 
     </section>
 
-
-    <!-- SEARCH -->
-
     <div class="controls">
 
-
-        <div class="search">
-
+        <div class="search-box">
             <i class="fas fa-search"></i>
 
             <input
@@ -1162,62 +310,37 @@ button{
                 type="search"
                 placeholder="Search cryptocurrency..."
                 autocomplete="off">
-
         </div>
-
-
-        <!-- IMPORTANT:
-             SEK REMOVED
-        -->
 
         <select
             id="currencySelect"
-            class="currency">
+            class="currency-select"
+            aria-label="Currency">
 
-            <option value="eur">
-                EUR €
-            </option>
-
-            <option value="usd">
-                USD $
-            </option>
-
-            <option value="chf">
-                CHF Fr
-            </option>
-
-            <option value="gbp">
-                GBP £
-            </option>
+            <option value="eur">EUR €</option>
+            <option value="usd">USD $</option>
+            <option value="sek">SEK kr</option>
+            <option value="gbp">GBP £</option>
 
         </select>
 
     </div>
 
-
-    <!-- FAVORITES -->
-
     <section
         id="favoriteSection"
-        class="favorite-section">
+        class="favorite-section hidden">
 
+        <div class="section-head">
 
-        <div class="section-header">
-
-            <h2>
-                Favorites
-            </h2>
+            <h2>Favorites</h2>
 
             <span
                 id="favoriteCount"
                 class="favorite-count">
-
                 0 saved
-
             </span>
 
         </div>
-
 
         <div
             id="favoriteList"
@@ -1226,22 +349,13 @@ button{
 
     </section>
 
-
-    <!-- MARKET -->
-
-    <div class="section-header">
-
-        <h2>
-            Top Cryptocurrencies
-        </h2>
-
+    <div class="section-head">
+        <h2>Top Cryptocurrencies</h2>
     </div>
-
 
     <div
         id="marketList"
         class="market-list">
-
 
         <div class="loading">
 
@@ -1253,406 +367,310 @@ button{
 
     </div>
 
-
 </main>
-
-
-<!-- ================= DETAILS ================= -->
 
 <div
     id="detailOverlay"
-    class="overlay">
+    class="detail-overlay"
+    aria-hidden="true">
 
-
-    <section class="panel">
-
+    <section class="detail-panel">
 
         <div class="detail-header">
 
+            <div class="detail-title">
 
-            <div class="detail-left">
+                <div
+                    id="detailIcon"
+                    class="detail-title-icon">
+                    ₿
+                </div>
 
-
-                <img
-                    id="detailImage"
-                    class="detail-image"
-                    alt="Coin">
-
-
-                <div>
+                <div class="detail-title-text">
 
                     <div
                         id="detailName"
-                        class="detail-name">
-
-                        --
-
+                        class="detail-title-name">
+                        Bitcoin
                     </div>
-
 
                     <div
                         id="detailSymbol"
-                        class="detail-symbol">
-
-                        --
-
+                        class="detail-title-symbol">
+                        BTC
                     </div>
 
                 </div>
 
-
             </div>
 
-
             <button
-                type="button"
                 class="close-btn"
-                onclick="closeDetails()">
+                type="button"
+                onclick="closeDetails()"
+                aria-label="Close">
 
                 <i class="fas fa-xmark"></i>
 
             </button>
 
-
         </div>
-
 
         <div
             id="detailContent"
             class="detail-content">
 
-
             <div class="loading">
+
+                <div class="spinner"></div>
 
                 Loading...
 
             </div>
 
-
         </div>
-
 
     </section>
 
 </div>
 
-
-<!-- ================= BOTTOM NAV ================= -->
-
 <nav class="bottom-nav">
-
 
     <div
         class="nav-item"
         onclick="navigateTo('wallet.html')">
 
         <i class="fas fa-wallet"></i>
-
         Wallet
 
     </div>
 
-
     <div class="nav-item active">
 
         <i class="fas fa-chart-line"></i>
-
         Market
 
     </div>
 
-
     <div
         class="nav-item"
-        onclick="showToast('Trade is not connected yet.')">
+        onclick="navigateTo('trade.html')">
 
         <i class="fas fa-exchange-alt"></i>
-
         Trade
 
     </div>
-
 
     <div
         class="nav-item"
         onclick="navigateTo('history.html')">
 
         <i class="fas fa-history"></i>
-
         History
 
     </div>
-
 
     <div
         class="nav-item"
         onclick="navigateTo('profile.html')">
 
         <i class="fas fa-user"></i>
-
         Profile
 
     </div>
 
 </nav>
 
-
-<div
-    id="toast"
-    class="toast">
-</div>
-
+<div id="toast" class="toast"></div>
 
 <script>
-
-"use strict";
-
-
-/* =====================================================
-   HAVKAR MARKET CONFIG
-===================================================== */
 
 const COINS = [
 
     {
         id:"bitcoin",
         name:"Bitcoin",
-        symbol:"BTC"
+        symbol:"BTC",
+        icon:"₿"
     },
 
     {
         id:"ethereum",
         name:"Ethereum",
-        symbol:"ETH"
+        symbol:"ETH",
+        icon:"Ξ"
     },
 
     {
         id:"tether",
         name:"Tether",
-        symbol:"USDT"
+        symbol:"USDT",
+        icon:"₮"
     },
 
     {
         id:"binancecoin",
         name:"BNB",
-        symbol:"BNB"
+        symbol:"BNB",
+        icon:"BNB"
     },
 
     {
         id:"solana",
         name:"Solana",
-        symbol:"SOL"
+        symbol:"SOL",
+        icon:"S"
     },
 
     {
         id:"ripple",
         name:"XRP",
-        symbol:"XRP"
+        symbol:"XRP",
+        icon:"X"
     },
 
     {
         id:"cardano",
         name:"Cardano",
-        symbol:"ADA"
+        symbol:"ADA",
+        icon:"A"
     },
 
     {
         id:"dogecoin",
         name:"Dogecoin",
-        symbol:"DOGE"
+        symbol:"DOGE",
+        icon:"Ð"
     },
 
     {
         id:"tron",
         name:"TRON",
-        symbol:"TRX"
+        symbol:"TRX",
+        icon:"T"
     },
 
     {
         id:"polkadot",
         name:"Polkadot",
-        symbol:"DOT"
+        symbol:"DOT",
+        icon:"●"
     },
 
     {
         id:"usd-coin",
         name:"USDC",
-        symbol:"USDC"
+        symbol:"USDC",
+        icon:"$"
     },
 
     {
         id:"avalanche-2",
         name:"Avalanche",
-        symbol:"AVAX"
+        symbol:"AVAX",
+        icon:"A"
     },
 
     {
         id:"chainlink",
         name:"Chainlink",
-        symbol:"LINK"
+        symbol:"LINK",
+        icon:"L"
     },
 
     {
         id:"stellar",
         name:"Stellar",
-        symbol:"XLM"
+        symbol:"XLM",
+        icon:"X"
     },
 
     {
         id:"uniswap",
         name:"Uniswap",
-        symbol:"UNI"
+        symbol:"UNI",
+        icon:"U"
     }
 
 ];
 
-
-/* =====================================================
-   STORAGE
-===================================================== */
-
 const FAVORITES_KEY =
-    "havkar_market_favorites_v2";
+    "havkar_market_favorites_v1";
 
 const CURRENCY_KEY =
-    "havkar_market_currency_v2";
-
-
-/* =====================================================
-   STATE
-===================================================== */
+    "havkar_market_currency_v1";
 
 let marketData = {};
-
 let detailCache = {};
-
+let detailRequestId = 0;
 let selectedCoinId = null;
 
-
-/* =====================================================
-   DOM
-===================================================== */
-
 const marketList =
-    document.getElementById(
-        "marketList"
-    );
+    document.getElementById("marketList");
 
 const favoriteList =
-    document.getElementById(
-        "favoriteList"
-    );
+    document.getElementById("favoriteList");
 
 const favoriteSection =
-    document.getElementById(
-        "favoriteSection"
-    );
+    document.getElementById("favoriteSection");
 
 const favoriteCount =
-    document.getElementById(
-        "favoriteCount"
-    );
+    document.getElementById("favoriteCount");
 
 const searchInput =
-    document.getElementById(
-        "searchInput"
-    );
+    document.getElementById("searchInput");
 
 const currencySelect =
-    document.getElementById(
-        "currencySelect"
-    );
+    document.getElementById("currencySelect");
 
-const marketNumber =
-    document.getElementById(
-        "marketNumber"
-    );
+const marketCount =
+    document.getElementById("marketCount");
 
-const updatedText =
-    document.getElementById(
-        "updatedText"
-    );
+const lastUpdated =
+    document.getElementById("lastUpdated");
 
-const connectionText =
-    document.getElementById(
-        "connectionText"
-    );
+const connectionStatus =
+    document.getElementById("connectionStatus");
 
-const connectionDot =
-    document.getElementById(
-        "connectionDot"
-    );
+const statusDot =
+    document.getElementById("statusDot");
 
 const errorBox =
-    document.getElementById(
-        "errorBox"
-    );
+    document.getElementById("errorBox");
 
 const detailOverlay =
-    document.getElementById(
-        "detailOverlay"
-    );
+    document.getElementById("detailOverlay");
 
 const detailContent =
-    document.getElementById(
-        "detailContent"
-    );
+    document.getElementById("detailContent");
 
-const detailImage =
-    document.getElementById(
-        "detailImage"
-    );
+const detailIcon =
+    document.getElementById("detailIcon");
 
 const detailName =
-    document.getElementById(
-        "detailName"
-    );
+    document.getElementById("detailName");
 
 const detailSymbol =
-    document.getElementById(
-        "detailSymbol"
-    );
+    document.getElementById("detailSymbol");
 
 const toast =
-    document.getElementById(
-        "toast"
-    );
+    document.getElementById("toast");
 
-
-/* =====================================================
-   FAVORITES
-===================================================== */
 
 function getFavorites(){
 
     try{
 
-        const saved =
+        const value =
             JSON.parse(
-                localStorage.getItem(
-                    FAVORITES_KEY
-                ) || "[]"
+                localStorage.getItem(FAVORITES_KEY) || "[]"
             );
 
+        return Array.isArray(value)
+            ? value
+            : [];
 
-        if(
-            !Array.isArray(saved)
-        ){
-
-            return [];
-
-        }
-
-
-        return saved;
-
-    }
-    catch(error){
-
-        console.error(
-            "Favorites error:",
-            error
-        );
+    }catch{
 
         return [];
 
@@ -1661,87 +679,46 @@ function getFavorites(){
 }
 
 
-function saveFavorites(
-    favorites
-){
+function saveFavorites(list){
 
-    try{
-
-        localStorage.setItem(
-            FAVORITES_KEY,
-
-            JSON.stringify(
-                [
-                    ...new Set(
-                        favorites
-                    )
-                ]
-            )
-        );
-
-    }
-    catch(error){
-
-        console.error(
-            "Save favorites error:",
-            error
-        );
-
-    }
+    localStorage.setItem(
+        FAVORITES_KEY,
+        JSON.stringify([...new Set(list)])
+    );
 
 }
 
 
-function isFavorite(
-    coinId
-){
+function isFavorite(id){
 
-    return getFavorites()
-        .includes(
-            coinId
-        );
+    return getFavorites().includes(id);
 
 }
 
 
-function toggleFavorite(
-    coinId,
-    event
-){
+function toggleFavorite(id,event){
 
     if(event){
-
         event.stopPropagation();
-
     }
 
-
-    let favorites =
+    const favorites =
         getFavorites();
 
+    const index =
+        favorites.indexOf(id);
 
-    if(
-        favorites.includes(
-            coinId
-        )
-    ){
+    if(index >= 0){
 
-        favorites =
-            favorites.filter(
-                id =>
-                    id !== coinId
-            );
+        favorites.splice(index,1);
 
         showToast(
             "Removed from Favorites"
         );
 
-    }
-    else{
+    }else{
 
-        favorites.push(
-            coinId
-        );
+        favorites.push(id);
 
         showToast(
             "Added to Favorites"
@@ -1749,140 +726,88 @@ function toggleFavorite(
 
     }
 
-
-    saveFavorites(
-        favorites
-    );
-
+    saveFavorites(favorites);
 
     renderMarket();
 
     renderFavorites();
 
-
     if(
-        selectedCoinId === coinId
+        selectedCoinId === id &&
+        detailOverlay.classList.contains("show")
     ){
 
-        updateDetailFavorite();
+        updateDetailFavoriteButton();
 
     }
 
 }
 
 
-/* =====================================================
-   CURRENCY
-===================================================== */
-
 function getCurrency(){
 
-    return (
-        currencySelect.value ||
-        "eur"
-    );
+    return currencySelect.value || "eur";
 
 }
 
 
 function currencySymbol(){
 
-    const symbols = {
+    return {
 
         eur:"€",
-
         usd:"$",
-
-        chf:"Fr",
-
+        sek:"kr",
         gbp:"£"
 
-    };
-
-
-    return (
-        symbols[
-            getCurrency()
-        ] || "€"
-    );
+    }[getCurrency()] || "€";
 
 }
 
 
-/* =====================================================
-   FORMAT
-===================================================== */
+function formatPrice(value){
 
-function formatPrice(
-    value
-){
+    const n = Number(value);
 
-    const number =
-        Number(value);
-
-
-    if(
-        !Number.isFinite(
-            number
-        )
-    ){
-
+    if(!Number.isFinite(n)){
         return "--";
-
     }
 
+    const digits =
+        n >= 1000
+            ? 2
+            : n >= 1
+                ? 4
+                : 8;
 
-    let digits = 8;
-
-
-    if(
-        number >= 1000
-    ){
-
-        digits = 2;
-
-    }
-    else if(
-        number >= 1
-    ){
-
-        digits = 4;
-
-    }
-
-
-    return number.toLocaleString(
+    return n.toLocaleString(
         "en-US",
         {
-            minimumFractionDigits:2,
-            maximumFractionDigits:digits
+            minimumFractionDigits:
+                n >= 1000 ? 2 : 2,
+
+            maximumFractionDigits:
+                digits
         }
     );
 
 }
 
 
-function formatNumber(
-    value
-){
+function formatLargeNumber(value){
 
-    const number =
-        Number(value);
-
+    const n = Number(value);
 
     if(
-        !Number.isFinite(
-            number
-        ) ||
-        number <= 0
+        !Number.isFinite(n) ||
+        n <= 0
     ){
 
         return "--";
 
     }
 
-
-    return number.toLocaleString(
+    return n.toLocaleString(
         "en-US",
         {
             maximumFractionDigits:2
@@ -1892,86 +817,64 @@ function formatNumber(
 }
 
 
-function formatPercent(
-    value
-){
+function formatPercent(value){
 
-    const number =
-        Number(value);
+    const n = Number(value);
 
-
-    if(
-        !Number.isFinite(
-            number
-        )
-    ){
-
+    if(!Number.isFinite(n)){
         return "--";
-
     }
 
-
     return (
-        number >= 0
-            ? "+"
-            : ""
-    ) +
-    number.toFixed(2) +
-    "%";
+        n >= 0 ? "+" : ""
+    ) + n.toFixed(2) + "%";
 
 }
 
 
-/* =====================================================
-   ESCAPE
-===================================================== */
+function escapeHtml(value){
 
-function escapeHtml(
-    value
-){
+    return String(value)
 
-    return String(
-        value
-    )
+        .replace(
+            /&/g,
+            "&amp;"
+        )
 
-    .replace(
-        /&/g,
-        "&amp;"
-    )
+        .replace(
+            /</g,
+            "&lt;"
+        )
 
-    .replace(
-        /</g,
-        "&lt;"
-    )
+        .replace(
+            />/g,
+            "&gt;"
+        )
 
-    .replace(
-        />/g,
-        "&gt;"
-    )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
 
-    .replace(
-        /"/g,
-        "&quot;"
-    )
-
-    .replace(
-        /'/g,
-        "&#039;"
-    );
+        .replace(
+            /'/g,
+            "&#039;"
+        );
 
 }
 
 
-/* =====================================================
-   NAVIGATION
-===================================================== */
+function escapeJs(value){
 
-function navigateTo(
-    file
-){
-
-    window.location.href =
-        file;
+    return String(value)
+        .replace(
+            /\\/g,
+            "\\\\"
+        )
+        .replace(
+            /'/g,
+            "\\'"
+        );
 
 }
 
@@ -1985,10 +888,9 @@ function goBack(){
         ) === 0
     ){
 
-        history.back();
+        window.history.back();
 
-    }
-    else{
+    }else{
 
         window.location.href =
             "index.html";
@@ -1998,61 +900,40 @@ function goBack(){
 }
 
 
-/* =====================================================
-   TOAST
-===================================================== */
+function navigateTo(file){
 
-let toastTimer;
+    window.location.href = file;
+
+}
 
 
-function showToast(
-    message
-){
+function showToast(message){
 
     toast.textContent =
         message;
 
-
-    toast.classList.add(
-        "show"
-    );
-
+    toast.classList.add("show");
 
     clearTimeout(
-        toastTimer
+        showToast.timer
     );
 
-
-    toastTimer =
+    showToast.timer =
         setTimeout(
-            () => {
-
-                toast.classList.remove(
-                    "show"
-                );
-
-            },
+            () =>
+                toast.classList.remove("show"),
             1800
         );
 
 }
 
 
-/* =====================================================
-   ERROR
-===================================================== */
-
-function showError(
-    message
-){
+function showError(message){
 
     errorBox.textContent =
         message;
 
-
-    errorBox.classList.add(
-        "show"
-    );
+    errorBox.classList.add("show");
 
 }
 
@@ -2062,7 +943,6 @@ function hideError(){
     errorBox.textContent =
         "";
 
-
     errorBox.classList.remove(
         "show"
     );
@@ -2070,90 +950,175 @@ function hideError(){
 }
 
 
-/* =====================================================
-   COIN IMAGE
-===================================================== */
+/*
+    Generic JSON loader.
 
-function createCoinImage(
-    coin,
-    market
+    Adds:
+    - timeout protection
+    - clean HTTP error handling
+    - JSON validation
+    - no-cache request
+*/
+async function fetchJson(
+    url,
+    options = {},
+    timeoutMs = 12000
 ){
 
-    const imageUrl =
-        market &&
-        market.image
-            ? market.image
-            : "";
+    const controller =
+        new AbortController();
 
+    const timer =
+        setTimeout(
+            () =>
+                controller.abort(),
+            timeoutMs
+        );
 
-    if(
-        imageUrl
-    ){
+    try{
 
-        return `
+        const response =
+            await fetch(
+                url,
+                {
+                    method:"GET",
 
-            <img
-                class="coin-image"
-                src="${escapeHtml(
-                    imageUrl
-                )}"
-                alt="${escapeHtml(
-                    coin.name
-                )}"
-                loading="lazy"
-                onerror="
-                    this.style.display='none';
-                    this.nextElementSibling.style.display='flex';
-                "
-            >
+                    ...options,
 
-            <div
-                class="coin-fallback"
-                style="display:none">
+                    signal:
+                        controller.signal,
 
-                ${escapeHtml(
-                    coin.symbol
-                )}
+                    cache:"no-store",
 
-            </div>
+                    headers:{
+                        Accept:
+                            "application/json",
 
-        `;
+                        ...(options.headers || {})
+                    }
+                }
+            );
+
+        if(!response.ok){
+
+            throw new Error(
+                "HTTP " +
+                response.status
+            );
+
+        }
+
+        return await response.json();
+
+    }finally{
+
+        clearTimeout(timer);
 
     }
-
-
-    return `
-
-        <div class="coin-fallback">
-
-            ${escapeHtml(
-                coin.symbol
-            )}
-
-        </div>
-
-    `;
 
 }
 
 
-/* =====================================================
-   LOAD MARKET
-===================================================== */
+/*
+    Fallback market builder.
+
+    If /coins/markets is temporarily
+    unavailable, /simple/price can still
+    provide live prices and 24h changes.
+*/
+function buildFallbackMarketData(
+    simpleData
+){
+
+    const result = {};
+
+    const currency =
+        getCurrency();
+
+    COINS.forEach(
+        coin => {
+
+            const item =
+                simpleData &&
+                simpleData[coin.id];
+
+            if(
+                !item ||
+                typeof item !== "object"
+            ){
+
+                return;
+
+            }
+
+            const price =
+                Number(
+                    item[currency]
+                );
+
+            const change =
+                Number(
+                    item[
+                        currency +
+                        "_24h_change"
+                    ]
+                );
+
+            if(!Number.isFinite(price)){
+                return;
+            }
+
+            result[coin.id] = {
+
+                id:coin.id,
+
+                name:coin.name,
+
+                symbol:
+                    coin.symbol.toLowerCase(),
+
+                current_price:
+                    price,
+
+                price_change_percentage_24h:
+                    Number.isFinite(change)
+                        ? change
+                        : 0,
+
+                market_cap:0,
+
+                total_volume:0,
+
+                market_cap_rank:"--",
+
+                circulating_supply:0,
+
+                total_supply:null,
+
+                high_24h:0,
+
+                low_24h:0
+
+            };
+
+        }
+    );
+
+    return result;
+
+}
+
 
 async function loadMarket(){
 
     hideError();
 
-
-    connectionText.textContent =
+    connectionStatus.textContent =
         "Updating";
 
-
-    connectionDot.classList.remove(
+    statusDot.classList.remove(
         "offline"
     );
-
 
     marketList.innerHTML = `
 
@@ -2167,32 +1132,27 @@ async function loadMarket(){
 
     `;
 
-
     const ids =
         COINS
-            .map(
-                coin =>
-                    coin.id
-            )
+            .map(c => c.id)
             .join(",");
-
 
     const currency =
         getCurrency();
 
 
-    const url =
+    /*
+        Primary CoinGecko market endpoint.
+    */
+    const marketsUrl =
+
         "https://api.coingecko.com/api/v3/coins/markets" +
 
         "?vs_currency=" +
-        encodeURIComponent(
-            currency
-        ) +
+        encodeURIComponent(currency) +
 
         "&ids=" +
-        encodeURIComponent(
-            ids
-        ) +
+        encodeURIComponent(ids) +
 
         "&order=market_cap_desc" +
 
@@ -2206,50 +1166,94 @@ async function loadMarket(){
         "&price_change_percentage=24h";
 
 
+    /*
+        Fallback endpoint.
+
+        This endpoint is lighter and is useful
+        when the larger market request is
+        temporarily limited.
+    */
+    const simplePriceUrl =
+
+        "https://api.coingecko.com/api/v3/simple/price" +
+
+        "?ids=" +
+        encodeURIComponent(ids) +
+
+        "&vs_currencies=" +
+        encodeURIComponent(currency) +
+
+        "&include_24hr_change=true";
+
+
     try{
 
-        const response =
-            await fetch(
-                url,
-                {
-                    method:"GET",
+        let data;
 
-                    headers:{
-                        "Accept":
-                            "application/json"
-                    },
+        let source =
+            "market";
 
-                    cache:"no-store"
-                }
+
+        /*
+            First attempt:
+            full market data.
+        */
+        try{
+
+            data =
+                await fetchJson(
+                    marketsUrl
+                );
+
+            if(
+                !Array.isArray(data) ||
+                !data.length
+            ){
+
+                throw new Error(
+                    "No market data returned."
+                );
+
+            }
+
+        }catch(primaryError){
+
+            console.warn(
+                "HAVKAR Market primary endpoint failed:",
+                primaryError
             );
 
-
-        if(
-            !response.ok
-        ){
-
-            throw new Error(
-                "HTTP " +
-                response.status
-            );
-
-        }
+            source =
+                "simple-price";
 
 
-        const data =
-            await response.json();
+            /*
+                Second attempt:
+                lighter price endpoint.
+            */
+            const simpleData =
+                await fetchJson(
+                    simplePriceUrl
+                );
 
 
-        if(
-            !Array.isArray(
-                data
-            ) ||
-            !data.length
-        ){
+            const fallback =
+                buildFallbackMarketData(
+                    simpleData
+                );
 
-            throw new Error(
-                "No market data returned."
-            );
+
+            data =
+                Object.values(
+                    fallback
+                );
+
+
+            if(!data.length){
+
+                throw primaryError;
+
+            }
 
         }
 
@@ -2258,11 +1262,11 @@ async function loadMarket(){
 
 
         data.forEach(
-            item => {
+            coin => {
 
                 marketData[
-                    item.id
-                ] = item;
+                    coin.id
+                ] = coin;
 
             }
         );
@@ -2276,13 +1280,15 @@ async function loadMarket(){
         renderFavorites();
 
 
-        marketNumber.textContent =
+        marketCount.textContent =
             data.length +
             " cryptocurrencies";
 
 
-        updatedText.textContent =
+        lastUpdated.textContent =
+
             "Updated: " +
+
             new Date()
                 .toLocaleTimeString(
                     [],
@@ -2291,26 +1297,35 @@ async function loadMarket(){
                         minute:"2-digit",
                         second:"2-digit"
                     }
-                );
+                ) +
+
+            (
+                source === "simple-price"
+                    ? " • Price feed fallback"
+                    : ""
+            );
 
 
-        connectionText.textContent =
+        connectionStatus.textContent =
             "Live";
 
-    }
-    catch(error){
+        statusDot.classList.remove(
+            "offline"
+        );
+
+
+    }catch(error){
 
         console.error(
-            "HAVKAR market error:",
+            "HAVKAR Market error:",
             error
         );
 
 
-        connectionText.textContent =
+        connectionStatus.textContent =
             "Offline";
 
-
-        connectionDot.classList.add(
+        statusDot.classList.add(
             "offline"
         );
 
@@ -2323,24 +1338,25 @@ async function loadMarket(){
 
                 <br><br>
 
-                Please check your internet connection.
+                CoinGecko did not return market data.
 
-                <br><br>
+                <br>
 
                 <button
                     type="button"
                     onclick="loadMarket()"
                     style="
+                        margin-top:15px;
+                        border:0;
+                        padding:11px 16px;
+                        border-radius:10px;
                         background:#7cb342;
                         color:white;
-                        padding:11px 18px;
-                        border-radius:10px;
                         font-weight:700;
+                        cursor:pointer
                     "
                 >
-
                     Try Again
-
                 </button>
 
             </div>
@@ -2357,26 +1373,39 @@ async function loadMarket(){
 }
 
 
-/* =====================================================
-   CREATE CARD
-===================================================== */
-
-function createCoinCard(
-    coin
+function coinMatchesQuery(
+    coin,
+    query
 ){
 
+    if(!query){
+        return true;
+    }
+
+    return (
+
+        coin.name
+            .toLowerCase()
+            .includes(query)
+
+        ||
+
+        coin.symbol
+            .toLowerCase()
+            .includes(query)
+
+    );
+
+}
+
+
+function createCoinCard(coin){
+
     const market =
-        marketData[
-            coin.id
-        ];
+        marketData[coin.id];
 
-
-    if(
-        !market
-    ){
-
+    if(!market){
         return null;
-
     }
 
 
@@ -2388,66 +1417,77 @@ function createCoinCard(
 
     const change =
         Number(
-            market.price_change_percentage_24h || 0
+            market.price_change_percentage_24h ||
+            0
         );
 
 
     const favorite =
-        isFavorite(
-            coin.id
-        );
+        isFavorite(coin.id);
 
 
     const card =
-        document.createElement(
-            "div"
-        );
+        document.createElement("div");
 
 
     card.className =
         "coin-card";
 
 
+    card.setAttribute(
+        "role",
+        "button"
+    );
+
+
+    card.setAttribute(
+        "tabindex",
+        "0"
+    );
+
+
+    card.setAttribute(
+        "aria-label",
+        "Open " +
+        coin.name +
+        " details"
+    );
+
+
     card.innerHTML = `
 
-        ${createCoinImage(
-            coin,
-            market
-        )}
+        <div class="coin-icon">
+
+            ${escapeHtml(coin.icon)}
+
+        </div>
 
 
         <div class="coin-info">
 
             <div class="coin-name">
 
-                ${escapeHtml(
-                    coin.name
-                )}
+                ${escapeHtml(coin.name)}
 
             </div>
 
-
             <div class="coin-symbol">
 
-                ${escapeHtml(
-                    coin.symbol
-                )}
+                ${escapeHtml(coin.symbol)}
 
             </div>
 
         </div>
 
 
-        <div class="coin-price-box">
+        <div class="coin-right">
 
             <div class="coin-price">
 
-                ${currencySymbol()}${formatPrice(
-                    price
-                )}
+                ${currencySymbol()}
+                ${formatPrice(price)}
 
             </div>
-
 
             <div
                 class="coin-change ${
@@ -2470,16 +1510,22 @@ function createCoinCard(
 
         <button
             type="button"
-            class="star-btn ${
+            class="coin-star ${
                 favorite
                     ? "active"
                     : ""
+            }"
+            title="${
+                favorite
+                    ? "Remove from Favorites"
+                    : "Add to Favorites"
             }"
             aria-label="${
                 favorite
                     ? "Remove from Favorites"
                     : "Add to Favorites"
-            }">
+            }"
+        >
 
             <i class="fa${
                 favorite
@@ -2494,11 +1540,29 @@ function createCoinCard(
 
     card.addEventListener(
         "click",
-        () => {
-
-            openDetails(
+        () =>
+            openCoinDetails(
                 coin.id
-            );
+            )
+    );
+
+
+    card.addEventListener(
+        "keydown",
+        event => {
+
+            if(
+                event.key === "Enter" ||
+                event.key === " "
+            ){
+
+                event.preventDefault();
+
+                openCoinDetails(
+                    coin.id
+                );
+
+            }
 
         }
     );
@@ -2506,20 +1570,17 @@ function createCoinCard(
 
     const star =
         card.querySelector(
-            ".star-btn"
+            ".coin-star"
         );
 
 
     star.addEventListener(
         "click",
-        event => {
-
+        event =>
             toggleFavorite(
                 coin.id,
                 event
-            );
-
-        }
+            )
     );
 
 
@@ -2527,10 +1588,6 @@ function createCoinCard(
 
 }
 
-
-/* =====================================================
-   RENDER MARKET
-===================================================== */
 
 function renderMarket(){
 
@@ -2542,47 +1599,12 @@ function renderMarket(){
 
     const filtered =
         COINS.filter(
-            coin => {
-
-                if(
-                    !marketData[
-                        coin.id
-                    ]
-                ){
-
-                    return false;
-
-                }
-
-
-                if(
-                    !query
-                ){
-
-                    return true;
-
-                }
-
-
-                return (
-
-                    coin.name
-                        .toLowerCase()
-                        .includes(
-                            query
-                        )
-
-                    ||
-
-                    coin.symbol
-                        .toLowerCase()
-                        .includes(
-                            query
-                        )
-
-                );
-
-            }
+            coin =>
+                marketData[coin.id] &&
+                coinMatchesQuery(
+                    coin,
+                    query
+                )
         );
 
 
@@ -2590,19 +1612,12 @@ function renderMarket(){
         "";
 
 
-    if(
-        !filtered.length
-    ){
+    if(!filtered.length){
 
-        marketList.innerHTML = `
-
-            <div class="empty">
-
+        marketList.innerHTML =
+            `<div class="empty">
                 No cryptocurrency found.
-
-            </div>
-
-        `;
+            </div>`;
 
         return;
 
@@ -2617,10 +1632,7 @@ function renderMarket(){
                     coin
                 );
 
-
-            if(
-                card
-            ){
+            if(card){
 
                 marketList.appendChild(
                     card
@@ -2634,34 +1646,28 @@ function renderMarket(){
 }
 
 
-/* =====================================================
-   RENDER FAVORITES
-===================================================== */
-
 function renderFavorites(){
 
     const favorites =
         getFavorites();
 
 
-    const coins =
+    const available =
         favorites
 
             .map(
                 id =>
                     COINS.find(
-                        coin =>
-                            coin.id === id
+                        c =>
+                            c.id === id
                     )
             )
 
             .filter(Boolean)
 
             .filter(
-                coin =>
-                    marketData[
-                        coin.id
-                    ]
+                c =>
+                    marketData[c.id]
             );
 
 
@@ -2670,16 +1676,14 @@ function renderFavorites(){
 
 
     favoriteCount.textContent =
-        coins.length +
+        available.length +
         " saved";
 
 
-    if(
-        !coins.length
-    ){
+    if(!available.length){
 
-        favoriteSection.classList.remove(
-            "show"
+        favoriteSection.classList.add(
+            "hidden"
         );
 
         return;
@@ -2687,12 +1691,12 @@ function renderFavorites(){
     }
 
 
-    favoriteSection.classList.add(
-        "show"
+    favoriteSection.classList.remove(
+        "hidden"
     );
 
 
-    coins.forEach(
+    available.forEach(
         coin => {
 
             const card =
@@ -2700,10 +1704,7 @@ function renderFavorites(){
                     coin
                 );
 
-
-            if(
-                card
-            ){
+            if(card){
 
                 favoriteList.appendChild(
                     card
@@ -2717,27 +1718,19 @@ function renderFavorites(){
 }
 
 
-/* =====================================================
-   OPEN DETAILS
-===================================================== */
-
-async function openDetails(
+async function openCoinDetails(
     coinId
 ){
 
     const coin =
         COINS.find(
-            item =>
-                item.id === coinId
+            c =>
+                c.id === coinId
         );
 
 
-    if(
-        !coin
-    ){
-
+    if(!coin){
         return;
-
     }
 
 
@@ -2745,10 +1738,15 @@ async function openDetails(
         coinId;
 
 
-    const market =
-        marketData[
-            coinId
-        ];
+    detailRequestId++;
+
+
+    const requestId =
+        detailRequestId;
+
+
+    detailIcon.textContent =
+        coin.icon;
 
 
     detailName.textContent =
@@ -2759,33 +1757,17 @@ async function openDetails(
         coin.symbol;
 
 
-    if(
-        market &&
-        market.image
-    ){
-
-        detailImage.src =
-            market.image;
-
-        detailImage.style.display =
-            "block";
-
-    }
-    else{
-
-        detailImage.style.display =
-            "none";
-
-    }
-
-
     detailContent.innerHTML = `
 
         <div class="loading">
 
             <div class="spinner"></div>
 
-            Loading details...
+            Loading ${
+                escapeHtml(
+                    coin.name
+                )
+            } details...
 
         </div>
 
@@ -2797,20 +1779,25 @@ async function openDetails(
     );
 
 
+    detailOverlay.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+
+
     document.body.style.overflow =
         "hidden";
 
 
-    if(
-        detailCache[
-            coinId
-        ]
-    ){
+    if(detailCache[coinId]){
 
-        renderDetails(
-            detailCache[
-                coinId
-            ]
+        renderCoinDetails(
+            detailCache[coinId]
+        );
+
+        refreshCoinDetails(
+            coinId,
+            requestId
         );
 
         return;
@@ -2818,23 +1805,23 @@ async function openDetails(
     }
 
 
-    await fetchDetails(
-        coinId
+    await refreshCoinDetails(
+        coinId,
+        requestId
     );
 
 }
 
 
-/* =====================================================
-   FETCH DETAILS
-===================================================== */
-
-async function fetchDetails(
-    coinId
+async function refreshCoinDetails(
+    coinId,
+    requestId
 ){
 
     const url =
+
         "https://api.coingecko.com/api/v3/coins/" +
+
         encodeURIComponent(
             coinId
         ) +
@@ -2847,86 +1834,205 @@ async function fetchDetails(
 
         "&community_data=false" +
 
-        "&developer_data=false";
+        "&developer_data=false" +
+
+        "&sparkline=false";
 
 
     try{
 
-        const response =
-            await fetch(
-                url,
-                {
-                    method:"GET",
-
-                    headers:{
-                        "Accept":
-                            "application/json"
-                    },
-
-                    cache:"no-store"
-                }
-            );
-
-
-        if(
-            !response.ok
-        ){
-
-            throw new Error(
-                "HTTP " +
-                response.status
-            );
-
-        }
-
-
         const data =
-            await response.json();
-
-
-        detailCache[
-            coinId
-        ] = data;
+            await fetchJson(
+                url
+            );
 
 
         if(
-            selectedCoinId === coinId
+            requestId !==
+            detailRequestId
         ){
 
-            renderDetails(
-                data
-            );
+            return;
 
         }
 
-    }
-    catch(error){
 
-        console.error(
-            "Details error:",
+        detailCache[coinId] =
+            data;
+
+
+        renderCoinDetails(
+            data
+        );
+
+
+    }catch(error){
+
+        console.warn(
+            "Coin details endpoint failed:",
             error
         );
+
+
+        if(
+            requestId !==
+            detailRequestId
+        ){
+
+            return;
+
+        }
+
+
+        /*
+            If the detailed endpoint fails,
+            use the market data already loaded
+            on this page.
+        */
+        const baseCoin =
+            COINS.find(
+                c =>
+                    c.id === coinId
+            );
+
+
+        const market =
+            marketData[coinId];
+
+
+        if(
+            baseCoin &&
+            market
+        ){
+
+            const currency =
+                getCurrency();
+
+
+            const price =
+                Number(
+                    market.current_price ||
+                    0
+                );
+
+
+            const change24 =
+                Number(
+                    market.price_change_percentage_24h ||
+                    0
+                );
+
+
+            const fallbackDetails = {
+
+                id:coinId,
+
+                name:baseCoin.name,
+
+                symbol:
+                    baseCoin.symbol
+                        .toLowerCase(),
+
+                market_cap_rank:
+                    market.market_cap_rank ||
+                    "--",
+
+                market_data:{
+
+                    current_price:{
+                        [currency]:
+                            price
+                    },
+
+                    price_change_percentage_24h:
+                        change24,
+
+                    price_change_percentage_7d:
+                        0,
+
+                    price_change_percentage_30d:
+                        0,
+
+                    market_cap:{
+                        [currency]:
+                            Number(
+                                market.market_cap ||
+                                0
+                            )
+                    },
+
+                    total_volume:{
+                        [currency]:
+                            Number(
+                                market.total_volume ||
+                                0
+                            )
+                    },
+
+                    high_24h:{
+                        [currency]:
+                            Number(
+                                market.high_24h ||
+                                0
+                            )
+                    },
+
+                    low_24h:{
+                        [currency]:
+                            Number(
+                                market.low_24h ||
+                                0
+                            )
+                    },
+
+                    circulating_supply:
+                        Number(
+                            market.circulating_supply ||
+                            0
+                        ),
+
+                    total_supply:
+                        market.total_supply ||
+                        null
+
+                }
+
+            };
+
+
+            detailCache[coinId] =
+                fallbackDetails;
+
+
+            renderCoinDetails(
+                fallbackDetails
+            );
+
+
+            return;
+
+        }
 
 
         detailContent.innerHTML = `
 
             <div class="empty">
 
-                Unable to load details.
+                Unable to load cryptocurrency details.
 
                 <br><br>
 
                 <button
                     type="button"
-                    onclick="fetchDetails('${coinId}')"
-                    style="
-                        background:#7cb342;
-                        color:white;
-                        padding:11px 18px;
-                        border-radius:10px;
-                        font-weight:700;
+                    class="detail-action"
+                    onclick="
+                        openCoinDetails(
+                            '${escapeJs(coinId)}'
+                        )
                     "
                 >
+
+                    <i class="fas fa-rotate"></i>
 
                     Try Again
 
@@ -2941,16 +2047,18 @@ async function fetchDetails(
 }
 
 
-/* =====================================================
-   RENDER DETAILS
-===================================================== */
-
-function renderDetails(
+function renderCoinDetails(
     coin
 ){
 
     const market =
-        coin.market_data || {};
+        coin.market_data ||
+        {};
+
+
+    const prices =
+        market.current_price ||
+        {};
 
 
     const currency =
@@ -2959,12 +2067,8 @@ function renderDetails(
 
     const currentPrice =
         Number(
-            (
-                market.current_price ||
-                {}
-            )[
-                currency
-            ] || 0
+            prices[currency] ||
+            0
         );
 
 
@@ -2991,10 +2095,7 @@ function renderDetails(
 
     const marketCap =
         Number(
-            (
-                market.market_cap ||
-                {}
-            )[
+            (market.market_cap || {})[
                 currency
             ] || 0
         );
@@ -3002,10 +2103,7 @@ function renderDetails(
 
     const volume =
         Number(
-            (
-                market.total_volume ||
-                {}
-            )[
+            (market.total_volume || {})[
                 currency
             ] || 0
         );
@@ -3013,10 +2111,7 @@ function renderDetails(
 
     const high24 =
         Number(
-            (
-                market.high_24h ||
-                {}
-            )[
+            (market.high_24h || {})[
                 currency
             ] || 0
         );
@@ -3024,18 +2119,10 @@ function renderDetails(
 
     const low24 =
         Number(
-            (
-                market.low_24h ||
-                {}
-            )[
+            (market.low_24h || {})[
                 currency
             ] || 0
         );
-
-
-    const rank =
-        coin.market_cap_rank ||
-        "--";
 
 
     const circulating =
@@ -3052,6 +2139,11 @@ function renderDetails(
         );
 
 
+    const rank =
+        coin.market_cap_rank ||
+        "--";
+
+
     const favorite =
         isFavorite(
             coin.id
@@ -3060,93 +2152,82 @@ function renderDetails(
 
     detailContent.innerHTML = `
 
-        <div class="price-card">
+        <div class="detail-price-card">
 
-            <div class="price-label">
-
+            <div class="detail-label">
                 Current Price
-
             </div>
 
+            <div class="detail-price">
 
-            <div class="big-price">
-
-                ${currencySymbol()}${formatPrice(
-                    currentPrice
-                )}
+                ${currencySymbol()}
+                ${formatPrice(currentPrice)}
 
             </div>
-
 
             <div
-                class="big-change ${
-                    change24 >= 0
-                        ? "up"
-                        : "down"
-                }"
+                class="
+                    detail-change
+                    ${
+                        change24 >= 0
+                            ? "detail-up"
+                            : "detail-down"
+                    }
+                "
             >
 
                 24h:
-                ${formatPercent(
-                    change24
-                )}
+                ${formatPercent(change24)}
 
             </div>
 
         </div>
 
 
-        <div class="stats">
+        <div class="stats-grid">
 
+            <div class="stat-card">
 
-            <div class="stat">
-
-                <div class="stat-label">
+                <div class="stat-name">
                     24h Change
                 </div>
 
                 <div class="stat-value">
-                    ${formatPercent(
-                        change24
-                    )}
+                    ${formatPercent(change24)}
                 </div>
 
             </div>
 
 
-            <div class="stat">
+            <div class="stat-card">
 
-                <div class="stat-label">
+                <div class="stat-name">
                     7d Change
                 </div>
 
                 <div class="stat-value">
-                    ${formatPercent(
-                        change7
-                    )}
+                    ${formatPercent(change7)}
                 </div>
 
             </div>
 
 
-            <div class="stat">
+            <div class="stat-card">
 
-                <div class="stat-label">
+                <div class="stat-name">
                     30d Change
                 </div>
 
                 <div class="stat-value">
-                    ${formatPercent(
-                        change30
-                    )}
+                    ${formatPercent(change30)}
                 </div>
 
             </div>
 
 
-            <div class="stat">
+            <div class="stat-card">
 
-                <div class="stat-label">
+                <div class="stat-name">
                     Market Rank
                 </div>
 
@@ -3158,88 +2239,110 @@ function renderDetails(
 
             </div>
 
+        </div>
 
-            <div class="stat">
 
-                <div class="stat-label">
+        <div class="stats-grid">
+
+            <div class="stat-card">
+
+                <div class="stat-name">
                     Market Cap
                 </div>
 
                 <div class="stat-value">
-                    ${currencySymbol()}${formatNumber(
+
+                    ${currencySymbol()}
+                    ${formatLargeNumber(
                         marketCap
                     )}
+
                 </div>
 
             </div>
 
 
-            <div class="stat">
+            <div class="stat-card">
 
-                <div class="stat-label">
+                <div class="stat-name">
                     24h Volume
                 </div>
 
                 <div class="stat-value">
-                    ${currencySymbol()}${formatNumber(
+
+                    ${currencySymbol()}
+                    ${formatLargeNumber(
                         volume
                     )}
+
                 </div>
 
             </div>
 
 
-            <div class="stat">
+            <div class="stat-card">
 
-                <div class="stat-label">
+                <div class="stat-name">
                     24h High
                 </div>
 
                 <div class="stat-value">
-                    ${currencySymbol()}${formatPrice(
+
+                    ${currencySymbol()}
+                    ${formatPrice(
                         high24
                     )}
+
                 </div>
 
             </div>
 
 
-            <div class="stat">
+            <div class="stat-card">
 
-                <div class="stat-label">
+                <div class="stat-name">
                     24h Low
                 </div>
 
                 <div class="stat-value">
-                    ${currencySymbol()}${formatPrice(
+
+                    ${currencySymbol()}
+                    ${formatPrice(
                         low24
                     )}
+
                 </div>
 
             </div>
 
 
-            <div class="stat">
+            <div class="stat-card">
 
-                <div class="stat-label">
+                <div class="stat-name">
                     Circulating Supply
                 </div>
 
                 <div class="stat-value">
-                    ${formatNumber(
+
+                    ${formatLargeNumber(
                         circulating
                     )}
-                    ${escapeHtml(
-                        coin.symbol
-                    )}
+
+                    ${
+                        escapeHtml(
+                            coin.symbol ||
+                            ""
+                        )
+                    }
+
                 </div>
 
             </div>
 
 
-            <div class="stat">
+            <div class="stat-card">
 
-                <div class="stat-label">
+                <div class="stat-name">
                     Total Supply
                 </div>
 
@@ -3247,13 +2350,16 @@ function renderDetails(
 
                     ${
                         totalSupply > 0
-                            ? formatNumber(
+
+                            ? formatLargeNumber(
                                 totalSupply
-                              ) +
-                              " " +
-                              escapeHtml(
-                                  coin.symbol
-                              )
+                            ) +
+                            " " +
+                            escapeHtml(
+                                coin.symbol ||
+                                ""
+                            )
+
                             : "--"
                     }
 
@@ -3266,23 +2372,30 @@ function renderDetails(
 
         <div class="detail-actions">
 
-
             <button
-                id="detailFavorite"
+                id="detailFavoriteButton"
                 type="button"
-                class="detail-btn ${
-                    favorite
-                        ? "favorite-active"
-                        : ""
-                }"
-                onclick="toggleFavorite('${coin.id}')">
+                class="
+                    detail-action
+                    ${
+                        favorite
+                            ? "favorite-active"
+                            : ""
+                    }
+                "
+                onclick="
+                    toggleFavorite(
+                        '${escapeJs(coin.id)}'
+                    )
+                "
+            >
 
                 <i class="fas fa-star"></i>
 
                 ${
                     favorite
-                        ? " Favorited"
-                        : " Favorite"
+                        ? "Favorited"
+                        : "Favorite"
                 }
 
             </button>
@@ -3290,8 +2403,9 @@ function renderDetails(
 
             <button
                 type="button"
-                class="detail-btn secondary"
-                onclick="refreshDetails()">
+                class="detail-action secondary"
+                onclick="refreshOpenCoin()"
+            >
 
                 <i class="fas fa-rotate"></i>
 
@@ -3300,6 +2414,22 @@ function renderDetails(
             </button>
 
 
+            <button
+                type="button"
+                class="detail-action secondary"
+                onclick="
+                    showToast(
+                        'Trade connection will be added later.'
+                    )
+                "
+            >
+
+                <i class="fas fa-arrow-right-arrow-left"></i>
+
+                Trade
+
+            </button>
+
         </div>
 
     `;
@@ -3307,15 +2437,11 @@ function renderDetails(
 }
 
 
-/* =====================================================
-   UPDATE DETAIL FAVORITE
-===================================================== */
-
-function updateDetailFavorite(){
+function updateDetailFavoriteButton(){
 
     const button =
         document.getElementById(
-            "detailFavorite"
+            "detailFavoriteButton"
         );
 
 
@@ -3336,7 +2462,7 @@ function updateDetailFavorite(){
 
 
     button.className =
-        "detail-btn" +
+        "detail-action" +
         (
             active
                 ? " favorite-active"
@@ -3355,18 +2481,10 @@ function updateDetailFavorite(){
 }
 
 
-/* =====================================================
-   REFRESH DETAILS
-===================================================== */
+function refreshOpenCoin(){
 
-async function refreshDetails(){
-
-    if(
-        !selectedCoinId
-    ){
-
+    if(!selectedCoinId){
         return;
-
     }
 
 
@@ -3375,31 +2493,16 @@ async function refreshDetails(){
     ];
 
 
-    detailContent.innerHTML = `
-
-        <div class="loading">
-
-            <div class="spinner"></div>
-
-            Updating...
-
-        </div>
-
-    `;
-
-
-    await fetchDetails(
+    openCoinDetails(
         selectedCoinId
     );
 
 }
 
 
-/* =====================================================
-   CLOSE DETAILS
-===================================================== */
-
 function closeDetails(){
+
+    detailRequestId++;
 
     selectedCoinId =
         null;
@@ -3407,6 +2510,12 @@ function closeDetails(){
 
     detailOverlay.classList.remove(
         "show"
+    );
+
+
+    detailOverlay.setAttribute(
+        "aria-hidden",
+        "true"
     );
 
 
@@ -3418,7 +2527,7 @@ function closeDetails(){
 
 detailOverlay.addEventListener(
     "click",
-    function(event){
+    event => {
 
         if(
             event.target ===
@@ -3433,45 +2542,39 @@ detailOverlay.addEventListener(
 );
 
 
-/* =====================================================
-   SEARCH
-===================================================== */
+document.addEventListener(
+    "keydown",
+    event => {
 
-searchInput.addEventListener(
-    "input",
-    function(){
+        if(
+            event.key === "Escape" &&
+            detailOverlay.classList.contains(
+                "show"
+            )
+        ){
 
-        renderMarket();
+            closeDetails();
+
+        }
 
     }
 );
 
 
-/* =====================================================
-   CURRENCY CHANGE
-===================================================== */
+searchInput.addEventListener(
+    "input",
+    renderMarket
+);
+
 
 currencySelect.addEventListener(
     "change",
-    function(){
+    () => {
 
-        try{
-
-            localStorage.setItem(
-                CURRENCY_KEY,
-                currencySelect.value
-            );
-
-        }
-        catch(error){
-
-            console.error(
-                "Currency storage error:",
-                error
-            );
-
-        }
-
+        localStorage.setItem(
+            CURRENCY_KEY,
+            currencySelect.value
+        );
 
         loadMarket();
 
@@ -3479,112 +2582,36 @@ currencySelect.addEventListener(
 );
 
 
-/* =====================================================
-   LOAD SAVED CURRENCY
-===================================================== */
-
 try{
 
-    const saved =
+    const savedCurrency =
         localStorage.getItem(
             CURRENCY_KEY
         );
 
 
-    /*
-       Only these four are allowed.
-       Old SEK value is intentionally ignored.
-    */
-
     if(
         [
             "eur",
             "usd",
-            "chf",
+            "sek",
             "gbp"
         ].includes(
-            saved
+            savedCurrency
         )
     ){
 
         currencySelect.value =
-            saved;
-
-    }
-    else{
-
-        currencySelect.value =
-            "eur";
+            savedCurrency;
 
     }
 
-}
-catch(error){
+}catch{}
 
-    currencySelect.value =
-        "eur";
-
-}
-
-
-/* =====================================================
-   ESC KEY
-===================================================== */
-
-document.addEventListener(
-    "keydown",
-    function(event){
-
-        if(
-            event.key === "Escape"
-        ){
-
-            if(
-                detailOverlay.classList.contains(
-                    "show"
-                )
-            ){
-
-                closeDetails();
-
-            }
-
-        }
-
-    }
-);
-
-
-/* =====================================================
-   AUTO REFRESH
-===================================================== */
-
-setInterval(
-    function(){
-
-        if(
-            !document.hidden &&
-            !detailOverlay.classList.contains(
-                "show"
-            )
-        ){
-
-            loadMarket();
-
-        }
-
-    },
-    120000
-);
-
-
-/* =====================================================
-   START
-===================================================== */
 
 loadMarket();
 
 </script>
 
 </body>
-</html>
+      </html>
