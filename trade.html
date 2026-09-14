@@ -3,7 +3,11 @@
 <head>
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
 
 <title>HAVKAR - Trade</title>
 
@@ -14,6 +18,10 @@
 
 <style>
 
+/* =========================================================
+   GLOBAL
+   ========================================================= */
+
 *{
     box-sizing:border-box;
     margin:0;
@@ -23,12 +31,21 @@
 :root{
     --green:#78b83f;
     --green-dark:#5f9d2d;
+    --green-soft:#eef7e8;
+
     --bg:#f4f5f3;
     --card:#ffffff;
+
     --text:#202020;
     --muted:#888;
+
     --red:#c93636;
+    --red-soft:#fff0f0;
+
     --border:#e7e7e7;
+
+    --shadow:
+        0 3px 14px rgba(0,0,0,.07);
 }
 
 html{
@@ -49,7 +66,7 @@ body{
 
     min-height:100vh;
 
-    padding-bottom:90px;
+    padding-bottom:95px;
 }
 
 button,
@@ -67,22 +84,37 @@ button:disabled{
     cursor:not-allowed;
 }
 
-/* HEADER */
+
+/* =========================================================
+   HEADER
+   ========================================================= */
 
 .header{
     height:76px;
 
-    background:var(--green);
+    background:
+        linear-gradient(
+            135deg,
+            #689f38,
+            #7cb342
+        );
+
     color:#fff;
 
     display:flex;
     align-items:center;
 
     padding:0 20px;
+
     gap:18px;
 
     box-shadow:
-        0 2px 8px rgba(0,0,0,.12);
+        0 2px 10px rgba(0,0,0,.12);
+
+    position:sticky;
+    top:0;
+
+    z-index:50;
 }
 
 .back{
@@ -91,26 +123,32 @@ button:disabled{
 
     border:0;
     background:transparent;
+
     color:#fff;
 
     font-size:27px;
-
-    cursor:pointer;
 }
 
 .header h1{
-    font-size:25px;
-    font-weight:700;
+    font-size:24px;
+    font-weight:750;
 }
 
-/* CONTAINER */
+
+/* =========================================================
+   CONTAINER
+   ========================================================= */
 
 .container{
     width:min(920px,94%);
+
     margin:22px auto;
 }
 
-/* CARD */
+
+/* =========================================================
+   CARD
+   ========================================================= */
 
 .card{
     background:var(--card);
@@ -121,20 +159,25 @@ button:disabled{
 
     margin-bottom:18px;
 
-    box-shadow:
-        0 3px 14px rgba(0,0,0,.07);
+    box-shadow:var(--shadow);
 }
 
-/* TITLES */
+
+/* =========================================================
+   TITLES
+   ========================================================= */
 
 .section-title{
     font-size:19px;
-    font-weight:700;
+    font-weight:750;
 
     margin-bottom:17px;
 }
 
-/* SELECT */
+
+/* =========================================================
+   SELECT / INPUT
+   ========================================================= */
 
 select,
 input{
@@ -143,20 +186,46 @@ input{
     padding:15px;
 
     border:1px solid #ddd;
+
     border-radius:13px;
 
     font-size:16px;
 
     outline:none;
+
     background:#fff;
+
+    color:var(--text);
 }
 
 select:focus,
 input:focus{
     border-color:var(--green);
+
+    box-shadow:
+        0 0 0 3px
+        rgba(120,184,63,.10);
 }
 
-/* ASSET */
+
+/* =========================================================
+   COIN SELECT
+   ========================================================= */
+
+.coin-select-note{
+    color:var(--muted);
+
+    font-size:13px;
+
+    line-height:1.5;
+
+    margin-top:9px;
+}
+
+
+/* =========================================================
+   ASSET
+   ========================================================= */
 
 .asset{
     display:flex;
@@ -173,15 +242,19 @@ input:focus{
     align-items:center;
 
     gap:14px;
+
+    min-width:0;
 }
 
 .coin-icon{
     width:58px;
     height:58px;
 
+    min-width:58px;
+
     border-radius:50%;
 
-    background:#f0f7ea;
+    background:var(--green-soft);
 
     display:flex;
     align-items:center;
@@ -189,7 +262,11 @@ input:focus{
 
     overflow:hidden;
 
-    flex-shrink:0;
+    color:var(--green-dark);
+
+    font-weight:800;
+
+    font-size:21px;
 }
 
 .coin-icon img{
@@ -199,8 +276,16 @@ input:focus{
     object-fit:cover;
 }
 
+.coin-name{
+    font-size:20px;
+    font-weight:750;
+
+    word-break:break-word;
+}
+
 .coin-symbol{
-    font-size:14px;
+    font-size:13px;
+
     color:#999;
 
     margin-top:3px;
@@ -208,18 +293,22 @@ input:focus{
 
 .price{
     text-align:right;
+
+    flex-shrink:0;
 }
 
 .price-value{
     font-size:25px;
-    font-weight:750;
+    font-weight:800;
+
+    white-space:nowrap;
 }
 
 .change{
     margin-top:4px;
 
     font-size:14px;
-    font-weight:650;
+    font-weight:700;
 }
 
 .up{
@@ -230,7 +319,20 @@ input:focus{
     color:var(--red);
 }
 
-/* BUY / SELL */
+.price-updated{
+    margin-top:12px;
+
+    color:#999;
+
+    font-size:12px;
+
+    text-align:right;
+}
+
+
+/* =========================================================
+   TRADE TABS
+   ========================================================= */
 
 .tabs{
     display:grid;
@@ -252,12 +354,12 @@ input:focus{
     border-radius:13px;
 
     font-size:16px;
-    font-weight:700;
+    font-weight:750;
 
-    cursor:pointer;
+    color:#555;
 }
 
-.tab.active{
+.tab.active-buy{
     background:var(--green);
 
     color:#fff;
@@ -265,7 +367,18 @@ input:focus{
     border-color:var(--green);
 }
 
-/* FORM */
+.tab.active-sell{
+    background:var(--red);
+
+    color:#fff;
+
+    border-color:var(--red);
+}
+
+
+/* =========================================================
+   FORM
+   ========================================================= */
 
 label{
     display:block;
@@ -273,18 +386,58 @@ label{
     margin:14px 0 7px;
 
     font-size:14px;
-    font-weight:650;
+    font-weight:700;
 }
 
 .amount-row{
     display:grid;
 
-    grid-template-columns:1fr 120px;
+    grid-template-columns:1fr 130px;
 
     gap:10px;
 }
 
-/* SUMMARY */
+
+/* =========================================================
+   BALANCE
+   ========================================================= */
+
+.balance-box{
+    background:#f7f9f4;
+
+    border:1px solid #e7eedf;
+
+    border-radius:13px;
+
+    padding:13px 15px;
+
+    margin-bottom:14px;
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    gap:10px;
+
+    font-size:13px;
+
+    color:#777;
+}
+
+.balance-box strong{
+    color:#222;
+
+    text-align:right;
+
+    word-break:break-word;
+}
+
+
+/* =========================================================
+   SUMMARY
+   ========================================================= */
 
 .summary{
     background:#f5f8f2;
@@ -294,12 +447,16 @@ label{
     padding:16px;
 
     margin-top:17px;
+
+    border:1px solid #e8eee2;
 }
 
 .summary-row{
     display:flex;
 
     justify-content:space-between;
+
+    gap:15px;
 
     padding:7px 0;
 
@@ -308,14 +465,22 @@ label{
 
 .summary-row strong{
     color:#222;
+
+    text-align:right;
+
+    word-break:break-word;
 }
 
-/* ACTION */
+
+/* =========================================================
+   ACTION
+   ========================================================= */
 
 .action{
     width:100%;
 
     border:0;
+
     border-radius:14px;
 
     padding:16px;
@@ -327,22 +492,65 @@ label{
     color:#fff;
 
     font-size:17px;
-    font-weight:750;
+    font-weight:800;
 
-    cursor:pointer;
-
-    transition:.15s;
+    transition:
+        transform .15s,
+        opacity .15s;
 }
 
 .action.sell{
-    background:#444;
+    background:var(--red);
 }
 
 .action:active{
     transform:scale(.99);
 }
 
-/* ACTIVITY */
+
+/* =========================================================
+   STATUS
+   ========================================================= */
+
+.status{
+    display:none;
+
+    margin-top:12px;
+
+    padding:12px 14px;
+
+    border-radius:11px;
+
+    font-size:13px;
+
+    line-height:1.5;
+
+    word-break:break-word;
+}
+
+.status.show{
+    display:block;
+}
+
+.status.success{
+    background:#e8f5e9;
+    color:#2e7d32;
+}
+
+.status.error{
+    background:var(--red-soft);
+    color:#b71c1c;
+}
+
+.status.info{
+    background:#f1f5f9;
+    color:#475569;
+}
+
+
+/* =========================================================
+   ACTIVITY
+   ========================================================= */
 
 .empty{
     text-align:center;
@@ -350,23 +558,36 @@ label{
     padding:25px;
 
     color:#999;
+
+    line-height:1.6;
 }
 
 .trade-item{
     display:flex;
 
     justify-content:space-between;
+
     align-items:center;
 
     gap:12px;
 
-    padding:13px 0;
+    padding:14px 0;
 
     border-bottom:1px solid #eee;
 }
 
 .trade-item:last-child{
     border-bottom:0;
+}
+
+.trade-left{
+    min-width:0;
+}
+
+.trade-title{
+    font-weight:750;
+
+    font-size:15px;
 }
 
 .trade-date{
@@ -380,7 +601,9 @@ label{
 .trade-value{
     text-align:right;
 
-    font-weight:700;
+    font-weight:750;
+
+    white-space:nowrap;
 }
 
 .trade-crypto{
@@ -391,7 +614,45 @@ label{
     margin-top:3px;
 }
 
-/* BOTTOM NAV */
+.trade-buy{
+    color:var(--green-dark);
+}
+
+.trade-sell{
+    color:var(--red);
+}
+
+
+/* =========================================================
+   INFO
+   ========================================================= */
+
+.info-box{
+    padding:14px 15px;
+
+    border-radius:13px;
+
+    background:#f7f9f4;
+
+    border:1px solid #e8eee2;
+
+    color:#666;
+
+    font-size:13px;
+
+    line-height:1.6;
+}
+
+.info-box i{
+    color:var(--green-dark);
+
+    margin-right:5px;
+}
+
+
+/* =========================================================
+   BOTTOM NAV
+   ========================================================= */
 
 .bottom-nav{
     position:fixed;
@@ -412,6 +673,9 @@ label{
         repeat(5,1fr);
 
     z-index:100;
+
+    box-shadow:
+        0 -2px 10px rgba(0,0,0,.08);
 }
 
 .nav-item{
@@ -431,8 +695,6 @@ label{
     gap:6px;
 
     font-size:12px;
-
-    cursor:pointer;
 }
 
 .nav-item i{
@@ -443,12 +705,16 @@ label{
     color:var(--green-dark);
 }
 
-/* TOAST */
+
+/* =========================================================
+   TOAST
+   ========================================================= */
 
 .toast{
     position:fixed;
 
     left:50%;
+
     bottom:95px;
 
     transform:
@@ -456,6 +722,7 @@ label{
         translateY(20px);
 
     background:#222;
+
     color:#fff;
 
     padding:13px 20px;
@@ -485,7 +752,23 @@ label{
         translateY(0);
 }
 
-/* MOBILE */
+
+/* =========================================================
+   LOADING
+   ========================================================= */
+
+.loading{
+    color:#999;
+
+    text-align:center;
+
+    padding:18px;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
 
 @media(max-width:600px){
 
@@ -506,10 +789,44 @@ label{
     .coin-icon{
         width:50px;
         height:50px;
+
+        min-width:50px;
+    }
+
+    .coin-name{
+        font-size:18px;
     }
 
     .amount-row{
         grid-template-columns:1fr;
+    }
+
+    .balance-box{
+        flex-direction:column;
+
+        align-items:flex-start;
+    }
+
+    .balance-box strong{
+        text-align:left;
+    }
+
+    .trade-item{
+        align-items:flex-start;
+    }
+
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media(prefers-reduced-motion:reduce){
+
+    *{
+        scroll-behavior:auto !important;
+        transition:none !important;
     }
 
 }
@@ -520,6 +837,11 @@ label{
 
 <body>
 
+
+<!-- =========================================================
+     HEADER
+     ========================================================= -->
+
 <header class="header">
 
     <button
@@ -528,7 +850,9 @@ label{
         onclick="goBack()"
         aria-label="Back"
     >
+
         <i class="fa-solid fa-arrow-left"></i>
+
     </button>
 
     <h1>Trade</h1>
@@ -539,7 +863,9 @@ label{
 <main class="container">
 
 
-<!-- SELECT CRYPTO -->
+<!-- =========================================================
+     SELECT CRYPTO
+     ========================================================= -->
 
 <section class="card">
 
@@ -584,40 +910,20 @@ label{
             Dogecoin (DOGE)
         </option>
 
-        <option value="TRX">
-            TRON (TRX)
-        </option>
-
-        <option value="TON">
-            Toncoin (TON)
-        </option>
-
-        <option value="DOT">
-            Polkadot (DOT)
-        </option>
-
-        <option value="LTC">
-            Litecoin (LTC)
-        </option>
-
-        <option value="AVAX">
-            Avalanche (AVAX)
-        </option>
-
-        <option value="LINK">
-            Chainlink (LINK)
-        </option>
-
-        <option value="MATIC">
-            Polygon (MATIC)
-        </option>
-
     </select>
+
+    <div class="coin-select-note">
+
+        Prices are updated from live market data before trading.
+
+    </div>
 
 </section>
 
 
-<!-- COIN INFO -->
+<!-- =========================================================
+     COIN INFO
+     ========================================================= -->
 
 <section class="card">
 
@@ -629,15 +935,18 @@ label{
 
                 <img
                     id="coinImage"
-                    src="https://assets.coingecko.com/coins/images/1/large/bitcoin.png"
-                    alt="Bitcoin"
+                    src=""
+                    alt="Cryptocurrency"
                 >
 
             </div>
 
             <div>
 
-                <h2 id="coinName">
+                <h2
+                    class="coin-name"
+                    id="coinName"
+                >
                     Bitcoin
                 </h2>
 
@@ -673,18 +982,27 @@ label{
 
     </div>
 
+
+    <div
+        class="price-updated"
+        id="priceUpdated"
+    >
+        Loading live price...
+    </div>
+
 </section>
 
 
-<!-- TRADE -->
+<!-- =========================================================
+     TRADE
+     ========================================================= -->
 
 <section class="card">
-
 
     <div class="tabs">
 
         <button
-            class="tab active"
+            class="tab active-buy"
             id="buyTab"
             type="button"
             onclick="setSide('buy')"
@@ -705,6 +1023,22 @@ label{
     </div>
 
 
+    <div
+        class="balance-box"
+        id="balanceBox"
+    >
+
+        <span>
+            Available balance
+        </span>
+
+        <strong id="availableBalance">
+            Loading...
+        </strong>
+
+    </div>
+
+
     <label for="amount">
         Amount
     </label>
@@ -718,6 +1052,7 @@ label{
             min="0"
             step="any"
             inputmode="decimal"
+            autocomplete="off"
             placeholder="0.00"
             oninput="calculateTotal()"
         >
@@ -772,6 +1107,19 @@ label{
         <div class="summary-row">
 
             <span>
+                Crypto amount
+            </span>
+
+            <strong id="summaryCryptoAmount">
+                0
+            </strong>
+
+        </div>
+
+
+        <div class="summary-row">
+
+            <span>
                 Estimated total
             </span>
 
@@ -789,15 +1137,42 @@ label{
         id="tradeButton"
         type="button"
         onclick="executeTrade()"
+        disabled
     >
-        Buy Bitcoin
+        Loading...
     </button>
 
+
+    <div
+        class="status"
+        id="tradeStatus"
+    ></div>
 
 </section>
 
 
-<!-- ACTIVITY -->
+<!-- =========================================================
+     INFORMATION
+     ========================================================= -->
+
+<section class="card">
+
+    <div class="info-box">
+
+        <i class="fa-solid fa-shield-halved"></i>
+
+        Trades are processed through HAVKAR's authenticated
+        wallet system. A trade is completed only after the
+        Supabase transaction succeeds.
+
+    </div>
+
+</section>
+
+
+<!-- =========================================================
+     ACTIVITY
+     ========================================================= -->
 
 <section class="card">
 
@@ -805,12 +1180,11 @@ label{
         Your Trade Activity
     </div>
 
-
     <div
         id="tradeActivity"
         class="empty"
     >
-        No trades yet.
+        Loading activity...
     </div>
 
 </section>
@@ -819,7 +1193,9 @@ label{
 </main>
 
 
-<!-- BOTTOM NAV -->
+<!-- =========================================================
+     BOTTOM NAV
+     ========================================================= -->
 
 <nav class="bottom-nav">
 
@@ -899,160 +1275,110 @@ label{
 </nav>
 
 
+<!-- =========================================================
+     TOAST
+     ========================================================= -->
+
 <div
     class="toast"
     id="toast"
 ></div>
 
 
-<!-- SUPABASE -->
+<!-- =========================================================
+     SUPABASE
+     ========================================================= -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 
 <script>
 
 /* =========================================================
-   SUPABASE
+   SUPABASE CONFIGURATION
    ========================================================= */
 
 const SUPABASE_URL =
-    "https://iompzwaxuirvatiibrtb.supabase.com";
+    "https://gispovnciifgikvgpzck.supabase.co";
 
 const SUPABASE_KEY =
-    "sb_publishable_oEKE1vl6EkWXdETgy9MjHw_DUTJLN4O";
+    "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq";
+
 
 const supabaseClient =
     window.supabase.createClient(
         SUPABASE_URL,
-        SUPABASE_KEY
+        SUPABASE_KEY,
+        {
+            auth:{
+                persistSession:true,
+                autoRefreshToken:true,
+                detectSessionInUrl:false
+            }
+        }
     );
 
 
 /* =========================================================
-   CRYPTO DATA
+   COINS
+   Only coins supported by public.trade_crypto
    ========================================================= */
 
 const coins = {
 
     BTC:{
+        id:"bitcoin",
         name:"Bitcoin",
         symbol:"BTC",
-        price:68500,
-        change:-1.20,
         image:"https://assets.coingecko.com/coins/images/1/large/bitcoin.png"
     },
 
     ETH:{
+        id:"ethereum",
         name:"Ethereum",
         symbol:"ETH",
-        price:2160,
-        change:-0.20,
         image:"https://assets.coingecko.com/coins/images/279/large/ethereum.png"
     },
 
     USDT:{
+        id:"tether",
         name:"Tether",
         symbol:"USDT",
-        price:.86,
-        change:.40,
         image:"https://assets.coingecko.com/coins/images/325/large/Tether.png"
     },
 
     BNB:{
+        id:"binancecoin",
         name:"BNB",
         symbol:"BNB",
-        price:605,
-        change:-1.00,
         image:"https://assets.coingecko.com/coins/images/825/large/bnb-icon2_2x.png"
     },
 
     SOL:{
+        id:"solana",
         name:"Solana",
         symbol:"SOL",
-        price:92,
-        change:.35,
         image:"https://assets.coingecko.com/coins/images/4128/large/solana.png"
     },
 
     XRP:{
+        id:"ripple",
         name:"XRP",
         symbol:"XRP",
-        price:1.23,
-        change:-2.00,
         image:"https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png"
     },
 
     ADA:{
+        id:"cardano",
         name:"Cardano",
         symbol:"ADA",
-        price:.18,
-        change:-1.85,
         image:"https://assets.coingecko.com/coins/images/975/large/cardano.png"
     },
 
     DOGE:{
+        id:"dogecoin",
         name:"Dogecoin",
         symbol:"DOGE",
-        price:.08,
-        change:-1.47,
         image:"https://assets.coingecko.com/coins/images/5/large/dogecoin.png"
-    },
-
-    TRX:{
-        name:"TRON",
-        symbol:"TRX",
-        price:.35,
-        change:.72,
-        image:"https://assets.coingecko.com/coins/images/1094/large/tron-logo.png"
-    },
-
-    TON:{
-        name:"Toncoin",
-        symbol:"TON",
-        price:3.20,
-        change:.50,
-        image:"https://assets.coingecko.com/coins/images/17980/large/ton_symbol.png"
-    },
-
-    DOT:{
-        name:"Polkadot",
-        symbol:"DOT",
-        price:3.50,
-        change:-.80,
-        image:"https://assets.coingecko.com/coins/images/12171/large/polkadot.png"
-    },
-
-    LTC:{
-        name:"Litecoin",
-        symbol:"LTC",
-        price:95,
-        change:-.35,
-        image:"https://assets.coingecko.com/coins/images/2/large/litecoin.png"
-    },
-
-    AVAX:{
-        name:"Avalanche",
-        symbol:"AVAX",
-        price:24,
-        change:-1.10,
-        image:"https://assets.coingecko.com/coins/images/12559/large/Avalanche_Circle_RedWhite_Trans.png"
-    },
-
-    LINK:{
-        name:"Chainlink",
-        symbol:"LINK",
-        price:13,
-        change:.30,
-        image:"https://assets.coingecko.com/coins/images/877/large/chainlink-new-logo.png"
-    },
-
-    MATIC:{
-        name:"Polygon",
-        symbol:"MATIC",
-        price:.25,
-        change:-.60,
-        image:"https://assets.coingecko.com/coins/images/4713/large/polygon.png"
     }
 
 };
@@ -1062,9 +1388,25 @@ const coins = {
    STATE
    ========================================================= */
 
-let selectedCoin = "BTC";
+let selectedCoin =
+    "BTC";
 
-let side = "buy";
+let side =
+    "buy";
+
+let prices = {};
+
+let currentUser =
+    null;
+
+let walletRows =
+    [];
+
+let loadingPrice =
+    false;
+
+let executingTrade =
+    false;
 
 
 /* =========================================================
@@ -1104,19 +1446,449 @@ function withTimeout(
 
 
 /* =========================================================
-   COIN
+   AUTHENTICATION
+   ========================================================= */
+
+async function getCurrentUser(){
+
+    try{
+
+        const result =
+            await withTimeout(
+
+                supabaseClient.auth.getUser(),
+
+                8000,
+
+                "Authentication request timed out."
+
+            );
+
+
+        if(result.error){
+
+            throw result.error;
+
+        }
+
+
+        return result.data?.user || null;
+
+    }
+    catch(error){
+
+        console.error(
+            "Authentication error:",
+            error
+        );
+
+        return null;
+
+    }
+
+}
+
+
+/* =========================================================
+   LOAD USER
+   ========================================================= */
+
+async function loadUser(){
+
+    currentUser =
+        await getCurrentUser();
+
+    if(!currentUser){
+
+        showStatus(
+            "tradeStatus",
+            "Please log in before using Trade.",
+            "error"
+        );
+
+        disableTradeButton(
+            "Please Log In"
+        );
+
+        return false;
+
+    }
+
+    return true;
+
+}
+
+
+/* =========================================================
+   LOAD WALLET
+   ========================================================= */
+
+async function loadWallet(){
+
+    if(!currentUser){
+
+        walletRows = [];
+
+        renderAvailableBalance();
+
+        return;
+
+    }
+
+
+    try{
+
+        const result =
+            await withTimeout(
+
+                supabaseClient
+                    .from("wallets")
+                    .select("*")
+                    .eq(
+                        "user_id",
+                        currentUser.id
+                    ),
+
+                10000,
+
+                "Wallet request timed out."
+
+            );
+
+
+        if(result.error){
+
+            throw result.error;
+
+        }
+
+
+        walletRows =
+            Array.isArray(result.data)
+            ? result.data
+            : [];
+
+
+        renderAvailableBalance();
+
+    }
+    catch(error){
+
+        console.error(
+            "Wallet loading error:",
+            error
+        );
+
+        walletRows = [];
+
+        document.getElementById(
+            "availableBalance"
+        ).textContent =
+            "Unavailable";
+
+    }
+
+}
+
+
+/* =========================================================
+   GET WALLET BALANCE
+   ========================================================= */
+
+function getWalletBalance(
+    symbol
+){
+
+    const wanted =
+        String(
+            symbol || ""
+        ).toUpperCase();
+
+
+    const wallet =
+        walletRows.find(
+            function(row){
+
+                const currency =
+                    String(
+                        row.currency ||
+                        row.symbol ||
+                        ""
+                    ).toUpperCase();
+
+                return currency ===
+                    wanted;
+
+            }
+        );
+
+
+    if(!wallet){
+
+        return 0;
+
+    }
+
+
+    const balance =
+        Number(
+            wallet.balance || 0
+        );
+
+
+    return Number.isFinite(balance)
+        ? balance
+        : 0;
+
+}
+
+
+/* =========================================================
+   RENDER BALANCE
+   ========================================================= */
+
+function renderAvailableBalance(){
+
+    const element =
+        document.getElementById(
+            "availableBalance"
+        );
+
+
+    if(!currentUser){
+
+        element.textContent =
+            "Please log in";
+
+        return;
+
+    }
+
+
+    if(side === "buy"){
+
+        const eur =
+            getWalletBalance("EUR");
+
+
+        element.textContent =
+            formatCrypto(eur) +
+            " EUR";
+
+        return;
+
+    }
+
+
+    const crypto =
+        getWalletBalance(
+            selectedCoin
+        );
+
+
+    element.textContent =
+        formatCrypto(crypto) +
+        " " +
+        selectedCoin;
+
+}
+
+
+/* =========================================================
+   LOAD LIVE PRICE
+   ========================================================= */
+
+async function loadPrices(){
+
+    loadingPrice =
+        true;
+
+
+    const coinIds =
+        Object.values(coins)
+            .map(
+                function(coin){
+                    return coin.id;
+                }
+            )
+            .join(",");
+
+
+    const url =
+        "https://api.coingecko.com/api/v3/simple/price" +
+        "?ids=" +
+        encodeURIComponent(
+            coinIds
+        ) +
+        "&vs_currencies=eur" +
+        "&include_24hr_change=true";
+
+
+    try{
+
+        const response =
+            await withTimeout(
+
+                fetch(
+                    url,
+                    {
+                        method:"GET",
+
+                        headers:{
+                            "Accept":
+                                "application/json"
+                        }
+                    }
+                ),
+
+                12000,
+
+                "Cryptocurrency price request timed out."
+
+            );
+
+
+        if(!response.ok){
+
+            throw new Error(
+                "CoinGecko HTTP " +
+                response.status
+            );
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        prices = {};
+
+
+        Object.keys(coins)
+            .forEach(
+                function(symbol){
+
+                    const coin =
+                        coins[symbol];
+
+
+                    if(
+                        data &&
+                        data[coin.id]
+                    ){
+
+                        prices[symbol] = {
+
+                            eur:
+                                Number(
+                                    data[
+                                        coin.id
+                                    ].eur || 0
+                                ),
+
+                            change:
+                                Number(
+                                    data[
+                                        coin.id
+                                    ].eur_24h_change || 0
+                                )
+
+                        };
+
+                    }
+
+                }
+            );
+
+
+        renderCoin();
+
+        calculateTotal();
+
+
+    }
+    catch(error){
+
+        console.error(
+            "Price loading error:",
+            error
+        );
+
+
+        const updated =
+            document.getElementById(
+                "priceUpdated"
+            );
+
+
+        updated.textContent =
+            "Live price unavailable";
+
+
+        showStatus(
+            "tradeStatus",
+            "Live cryptocurrency price is currently unavailable.",
+            "error"
+        );
+
+    }
+    finally{
+
+        loadingPrice =
+            false;
+
+    }
+
+}
+
+
+/* =========================================================
+   CHANGE COIN
    ========================================================= */
 
 function changeCoin(){
 
-    selectedCoin =
+    const select =
         document.getElementById(
             "coinSelect"
-        ).value;
+        );
 
+
+    selectedCoin =
+        String(
+            select.value
+        ).toUpperCase();
+
+
+    renderCoin();
+
+    renderAvailableBalance();
+
+    calculateTotal();
+
+    clearStatus(
+        "tradeStatus"
+    );
+
+}
+
+
+/* =========================================================
+   RENDER COIN
+   ========================================================= */
+
+function renderCoin(){
 
     const coin =
         coins[selectedCoin];
+
+
+    if(!coin){
+
+        return;
+
+    }
 
 
     document.getElementById(
@@ -1131,126 +1903,272 @@ function changeCoin(){
         coin.symbol;
 
 
-    document.getElementById(
-        "coinImage"
-    ).src =
+    const image =
+        document.getElementById(
+            "coinImage"
+        );
+
+
+    image.src =
         coin.image;
 
 
-    document.getElementById(
-        "coinImage"
-    ).alt =
+    image.alt =
         coin.name;
+
+
+    const market =
+        prices[selectedCoin];
+
+
+    const price =
+        Number(
+            market?.eur || 0
+        );
+
+
+    const change =
+        Number(
+            market?.change || 0
+        );
 
 
     document.getElementById(
         "currentPrice"
     ).textContent =
-        formatEUR(
-            coin.price
-        );
+        formatEUR(price);
 
 
-    const change =
+    const changeElement =
         document.getElementById(
             "priceChange"
         );
 
 
-    change.textContent =
-        (
-            coin.change >= 0
-            ? "+"
-            : ""
-        ) +
-        coin.change.toFixed(2) +
-        "%";
+    if(
+        Number.isFinite(change)
+    ){
+
+        changeElement.textContent =
+            (
+                change >= 0
+                ? "+"
+                : ""
+            ) +
+            change.toFixed(2) +
+            "%";
 
 
-    change.className =
-        "change " +
-        (
-            coin.change >= 0
-            ? "up"
-            : "down"
-        );
+        changeElement.className =
+            "change " +
+            (
+                change >= 0
+                ? "up"
+                : "down"
+            );
+
+    }
+    else{
+
+        changeElement.textContent =
+            "--";
+
+        changeElement.className =
+            "change";
+
+    }
 
 
     document.getElementById(
         "summaryAsset"
     ).textContent =
-        coin.symbol;
+        selectedCoin;
 
 
     document.getElementById(
         "summaryPrice"
     ).textContent =
-        formatEUR(
-            coin.price
-        );
+        formatEUR(price);
 
 
-    calculateTotal();
+    document.getElementById(
+        "priceUpdated"
+    ).textContent =
+        price > 0
+        ? "Live price • " +
+          new Date()
+              .toLocaleTimeString()
+        : "Loading live price...";
 
 }
 
 
 /* =========================================================
-   FORMAT EUR
+   SET BUY / SELL
    ========================================================= */
 
-function formatEUR(value){
-
-    const number =
-        Number(value);
-
+function setSide(
+    newSide
+){
 
     if(
-        !Number.isFinite(number)
+        newSide !== "buy" &&
+        newSide !== "sell"
     ){
 
-        return "€0.00";
+        return;
 
     }
 
-
-    return "€" +
-        number.toLocaleString(
-            "en-US",
-            {
-                minimumFractionDigits:2,
-                maximumFractionDigits:8
-            }
-        );
-
-}
-
-
-/* =========================================================
-   BUY / SELL
-   ========================================================= */
-
-function setSide(newSide){
 
     side =
         newSide;
 
 
-    document.getElementById(
-        "buyTab"
-    ).classList.toggle(
-        "active",
-        side === "buy"
+    const buyTab =
+        document.getElementById(
+            "buyTab"
+        );
+
+    const sellTab =
+        document.getElementById(
+            "sellTab"
+        );
+
+
+    buyTab.classList.remove(
+        "active-buy"
+    );
+
+    sellTab.classList.remove(
+        "active-sell"
     );
 
 
-    document.getElementById(
-        "sellTab"
-    ).classList.toggle(
-        "active",
-        side === "sell"
+    if(side === "buy"){
+
+        buyTab.classList.add(
+            "active-buy"
+        );
+
+    }
+    else{
+
+        sellTab.classList.add(
+            "active-sell"
+        );
+
+    }
+
+
+    renderAvailableBalance();
+
+    calculateTotal();
+
+    clearStatus(
+        "tradeStatus"
     );
 
+}
+
+
+/* =========================================================
+   CALCULATE TOTAL
+   ========================================================= */
+
+function calculateTotal(){
+
+    const amountInput =
+        document.getElementById(
+            "amount"
+        );
+
+
+    const unit =
+        document.getElementById(
+            "amountUnit"
+        ).value;
+
+
+    const amount =
+        Number(
+            amountInput.value
+        );
+
+
+    const price =
+        Number(
+            prices[
+                selectedCoin
+            ]?.eur || 0
+        );
+
+
+    let cryptoAmount =
+        0;
+
+
+    let eurAmount =
+        0;
+
+
+    if(
+        Number.isFinite(amount) &&
+        amount > 0 &&
+        Number.isFinite(price) &&
+        price > 0
+    ){
+
+        if(unit === "coin"){
+
+            cryptoAmount =
+                amount;
+
+            eurAmount =
+                amount *
+                price;
+
+        }
+        else{
+
+            eurAmount =
+                amount;
+
+            cryptoAmount =
+                amount /
+                price;
+
+        }
+
+    }
+
+
+    document.getElementById(
+        "summaryCryptoAmount"
+    ).textContent =
+        formatCrypto(
+            cryptoAmount
+        );
+
+
+    document.getElementById(
+        "estimatedTotal"
+    ).textContent =
+        formatEUR(
+            eurAmount
+        );
+
+
+    updateTradeButton();
+
+}
+
+
+/* =========================================================
+   UPDATE TRADE BUTTON
+   ========================================================= */
+
+function updateTradeButton(){
 
     const button =
         document.getElementById(
@@ -1258,10 +2176,68 @@ function setSide(newSide){
         );
 
 
-    button.classList.toggle(
-        "sell",
-        side === "sell"
-    );
+    if(executingTrade){
+
+        return;
+
+    }
+
+
+    if(!currentUser){
+
+        disableTradeButton(
+            "Please Log In"
+        );
+
+        return;
+
+    }
+
+
+    if(loadingPrice){
+
+        disableTradeButton(
+            "Loading Price..."
+        );
+
+        return;
+
+    }
+
+
+    const price =
+        Number(
+            prices[
+                selectedCoin
+            ]?.eur || 0
+        );
+
+
+    if(
+        !Number.isFinite(price) ||
+        price <= 0
+    ){
+
+        disableTradeButton(
+            "Price Unavailable"
+        );
+
+        return;
+
+    }
+
+
+    button.disabled =
+        false;
+
+
+    button.className =
+        "action" +
+        (
+            side === "sell"
+            ? " sell"
+            : ""
+        );
 
 
     button.textContent =
@@ -1272,72 +2248,53 @@ function setSide(newSide){
         ) +
         coins[selectedCoin].name;
 
-
-    calculateTotal();
-
 }
 
 
 /* =========================================================
-   CALCULATE
+   DISABLE TRADE BUTTON
    ========================================================= */
 
-function calculateTotal(){
-
-    const amount =
-        Number(
-            document.getElementById(
-                "amount"
-            ).value
-        ) || 0;
-
-
-    const unit =
-        document.getElementById(
-            "amountUnit"
-        ).value;
-
-
-    const price =
-        Number(
-            coins[selectedCoin].price
-        );
-
-
-    let total = 0;
-
-
-    if(unit === "coin"){
-
-        total =
-            amount * price;
-
-    }else{
-
-        total =
-            amount;
-
-    }
-
-
-    document.getElementById(
-        "estimatedTotal"
-    ).textContent =
-        formatEUR(total);
-
-}
-
-
-/* =========================================================
-   REAL CRYPTO TRADE
-   ========================================================= */
-
-async function executeTrade(){
+function disableTradeButton(
+    text
+){
 
     const button =
         document.getElementById(
             "tradeButton"
         );
+
+
+    button.disabled =
+        true;
+
+
+    button.className =
+        "action" +
+        (
+            side === "sell"
+            ? " sell"
+            : ""
+        );
+
+
+    button.textContent =
+        text;
+
+}
+
+
+/* =========================================================
+   EXECUTE TRADE
+   ========================================================= */
+
+async function executeTrade(){
+
+    if(executingTrade){
+
+        return;
+
+    }
 
 
     const amountInput =
@@ -1358,17 +2315,15 @@ async function executeTrade(){
         );
 
 
-    /*
-     * Validate amount
-     */
-
     if(
         !Number.isFinite(amount) ||
         amount <= 0
     ){
 
-        showToast(
-            "Please enter a valid amount."
+        showStatus(
+            "tradeStatus",
+            "Please enter a valid amount.",
+            "error"
         );
 
         return;
@@ -1376,13 +2331,11 @@ async function executeTrade(){
     }
 
 
-    /*
-     * Get selected price
-     */
-
     const price =
         Number(
-            coins[selectedCoin]?.price
+            prices[
+                selectedCoin
+            ]?.eur || 0
         );
 
 
@@ -1391,8 +2344,10 @@ async function executeTrade(){
         price <= 0
     ){
 
-        showToast(
-            "Cryptocurrency price is unavailable."
+        showStatus(
+            "tradeStatus",
+            "Current cryptocurrency price is unavailable.",
+            "error"
         );
 
         return;
@@ -1400,52 +2355,50 @@ async function executeTrade(){
     }
 
 
-    /*
-     * Convert entered amount
-     * to cryptocurrency amount.
-     *
-     * RPC requires:
-     *
-     * p_amount = crypto amount
-     */
+    let cryptoAmount =
+        0;
 
-    let cryptoAmount;
 
-    let eurAmount;
+    let eurAmount =
+        0;
 
 
     if(
-        amountUnit.value === "coin"
+        amountUnit.value ===
+        "coin"
     ){
 
         cryptoAmount =
             amount;
 
         eurAmount =
-            amount * price;
+            amount *
+            price;
 
-    }else{
+    }
+    else{
 
         eurAmount =
             amount;
 
         cryptoAmount =
-            amount / price;
+            amount /
+            price;
 
     }
 
 
-    /*
-     * Validate calculated values
-     */
-
     if(
-        !Number.isFinite(cryptoAmount) ||
+        !Number.isFinite(
+            cryptoAmount
+        ) ||
         cryptoAmount <= 0
     ){
 
-        showToast(
-            "Invalid cryptocurrency amount."
+        showStatus(
+            "tradeStatus",
+            "Invalid cryptocurrency amount.",
+            "error"
         );
 
         return;
@@ -1454,12 +2407,16 @@ async function executeTrade(){
 
 
     if(
-        !Number.isFinite(eurAmount) ||
+        !Number.isFinite(
+            eurAmount
+        ) ||
         eurAmount <= 0
     ){
 
-        showToast(
-            "Invalid EUR amount."
+        showStatus(
+            "tradeStatus",
+            "Invalid EUR amount.",
+            "error"
         );
 
         return;
@@ -1467,9 +2424,71 @@ async function executeTrade(){
     }
 
 
-    /*
-     * Prevent double submission
-     */
+    /* -----------------------------------------------------
+       LOCAL PRE-CHECK
+       ----------------------------------------------------- */
+
+    if(side === "buy"){
+
+        const eurBalance =
+            getWalletBalance(
+                "EUR"
+            );
+
+
+        if(
+            eurAmount >
+            eurBalance
+        ){
+
+            showStatus(
+                "tradeStatus",
+                "Insufficient EUR balance.",
+                "error"
+            );
+
+            return;
+
+        }
+
+    }
+    else{
+
+        const cryptoBalance =
+            getWalletBalance(
+                selectedCoin
+            );
+
+
+        if(
+            cryptoAmount >
+            cryptoBalance
+        ){
+
+            showStatus(
+                "tradeStatus",
+                "Insufficient " +
+                selectedCoin +
+                " balance.",
+                "error"
+            );
+
+            return;
+
+        }
+
+    }
+
+
+    executingTrade =
+        true;
+
+
+    const button =
+        document.getElementById(
+            "tradeButton"
+        );
+
 
     button.disabled =
         true;
@@ -1481,42 +2500,43 @@ async function executeTrade(){
         : "SELLING...";
 
 
+    clearStatus(
+        "tradeStatus"
+    );
+
+
     try{
 
-        /*
-         * Verify authenticated session.
-         */
+        /* -------------------------------------------------
+           AUTHENTICATED USER
+           ------------------------------------------------- */
 
-        const sessionResult =
+        const userResult =
             await withTimeout(
 
-                supabaseClient
-                    .auth
-                    .getSession(),
+                supabaseClient.auth.getUser(),
 
                 8000,
 
-                "Authentication timed out."
+                "Authentication request timed out."
 
             );
 
 
         if(
-            sessionResult.error
+            userResult.error
         ){
 
-            throw sessionResult.error;
+            throw userResult.error;
 
         }
 
 
-        const session =
-            sessionResult
-                .data
-                ?.session;
+        const user =
+            userResult.data?.user;
 
 
-        if(!session){
+        if(!user){
 
             throw new Error(
                 "Please log in first."
@@ -1525,28 +2545,35 @@ async function executeTrade(){
         }
 
 
-        /*
-         * REAL SUPABASE RPC
-         *
-         * public.trade_crypto(
-         *     p_side text,
-         *     p_symbol text,
-         *     p_amount numeric,
-         *     p_price_eur numeric
-         * )
-         */
+        currentUser =
+            user;
+
+
+        /* -------------------------------------------------
+           REAL SUPABASE RPC
+           -------------------------------------------------
+
+           public.trade_crypto(
+               p_side text,
+               p_symbol text,
+               p_amount numeric,
+               p_price_eur numeric
+           )
+
+           The RPC performs the wallet balance
+           operation inside Supabase.
+        ------------------------------------------------- */
+
 
         const result =
             await withTimeout(
 
                 supabaseClient.rpc(
-
                     "trade_crypto",
-
                     {
 
                         p_side:
-                            side,
+                            side.toUpperCase(),
 
                         p_symbol:
                             selectedCoin,
@@ -1558,7 +2585,6 @@ async function executeTrade(){
                             price
 
                     }
-
                 ),
 
                 15000,
@@ -1568,63 +2594,35 @@ async function executeTrade(){
             );
 
 
-        /*
-         * Supabase error
-         */
-
-        if(
-            result.error
-        ){
+        if(result.error){
 
             throw result.error;
 
         }
 
 
-        /*
-         * RPC should return:
-         *
-         * {
-         *   success:true,
-         *   side,
-         *   symbol,
-         *   crypto_amount,
-         *   eur_amount,
-         *   price_eur
-         * }
-         */
+        /* -------------------------------------------------
+           RPC RESULT VALIDATION
+           ------------------------------------------------- */
 
         if(
             result.data &&
+            typeof result.data ===
+            "object" &&
             result.data.success === false
         ){
 
             throw new Error(
+                result.data.message ||
                 "Trade was rejected."
             );
 
         }
 
 
-        /*
-         * SUCCESS
-         */
-
-        showToast(
-
-            side === "buy"
-
-            ? "BUY completed successfully."
-
-            : "SELL completed successfully."
-
-        );
-
-
-        /*
-         * Save only the successful
-         * transaction for local activity.
-         */
+        /* -------------------------------------------------
+           SUCCESS
+           ------------------------------------------------- */
 
         saveLocalActivity({
 
@@ -1635,7 +2633,9 @@ async function executeTrade(){
                 selectedCoin,
 
             coinName:
-                coins[selectedCoin].name,
+                coins[
+                    selectedCoin
+                ].name,
 
             cryptoAmount:
                 cryptoAmount,
@@ -1647,14 +2647,11 @@ async function executeTrade(){
                 price,
 
             time:
-                new Date().toISOString()
+                new Date()
+                    .toISOString()
 
         });
 
-
-        /*
-         * Clear input.
-         */
 
         amountInput.value =
             "";
@@ -1663,9 +2660,30 @@ async function executeTrade(){
         calculateTotal();
 
 
-        /*
-         * Refresh local activity.
-         */
+        showStatus(
+            "tradeStatus",
+            (
+                side === "buy"
+                ? "BUY completed successfully."
+                : "SELL completed successfully."
+            ),
+            "success"
+        );
+
+
+        showToast(
+            side === "buy"
+            ? "BUY completed successfully."
+            : "SELL completed successfully."
+        );
+
+
+        /* -------------------------------------------------
+           REFRESH DATABASE WALLET
+           ------------------------------------------------- */
+
+        await loadWallet();
+
 
         loadActivity();
 
@@ -1679,34 +2697,24 @@ async function executeTrade(){
         );
 
 
-        showToast(
-
+        showStatus(
+            "tradeStatus",
             "Trade failed: " +
             (
                 error?.message ||
                 "Unknown error."
-            )
-
+            ),
+            "error"
         );
 
     }
     finally{
 
-        /*
-         * Restore button.
-         */
-
-        button.disabled =
+        executingTrade =
             false;
 
 
-        button.textContent =
-            (
-                side === "buy"
-                ? "Buy "
-                : "Sell "
-            ) +
-            coins[selectedCoin].name;
+        updateTradeButton();
 
     }
 
@@ -1717,38 +2725,83 @@ async function executeTrade(){
    LOCAL ACTIVITY
    ========================================================= */
 
-function saveLocalActivity(trade){
+function getActivityKey(){
 
-    const existing =
-        JSON.parse(
-            localStorage.getItem(
-                "havkarTrades"
-            ) || "[]"
+    if(!currentUser){
+
+        return "havkarTrades_guest";
+
+    }
+
+
+    return (
+        "havkarTrades_" +
+        currentUser.id
+    );
+
+}
+
+
+/* =========================================================
+   SAVE LOCAL ACTIVITY
+   ========================================================= */
+
+function saveLocalActivity(
+    trade
+){
+
+    try{
+
+        const key =
+            getActivityKey();
+
+
+        const existing =
+            JSON.parse(
+                localStorage.getItem(
+                    key
+                ) || "[]"
+            );
+
+
+        const list =
+            Array.isArray(existing)
+            ? existing
+            : [];
+
+
+        list.unshift({
+
+            id:
+                Date.now(),
+
+            ...trade
+
+        });
+
+
+        localStorage.setItem(
+
+            key,
+
+            JSON.stringify(
+                list.slice(
+                    0,
+                    100
+                )
+            )
+
         );
 
+    }
+    catch(error){
 
-    existing.unshift({
+        console.error(
+            "Activity storage error:",
+            error
+        );
 
-        id:
-            Date.now(),
-
-        ...trade
-
-    });
-
-
-    localStorage.setItem(
-
-        "havkarTrades",
-
-        JSON.stringify(
-            existing.slice(
-                0,
-                100
-            )
-        )
-
-    );
+    }
 
 }
 
@@ -1765,23 +2818,51 @@ function loadActivity(){
         );
 
 
-    const trades =
-        JSON.parse(
-            localStorage.getItem(
-                "havkarTrades"
-            ) || "[]"
-        );
-
-
-    if(
-        !Array.isArray(trades) ||
-        !trades.length
-    ){
+    if(!currentUser){
 
         box.className =
             "empty";
 
-        box.innerHTML =
+        box.textContent =
+            "Please log in to view trade activity.";
+
+        return;
+
+    }
+
+
+    let trades = [];
+
+
+    try{
+
+        const saved =
+            JSON.parse(
+                localStorage.getItem(
+                    getActivityKey()
+                ) || "[]"
+            );
+
+
+        trades =
+            Array.isArray(saved)
+            ? saved
+            : [];
+
+    }
+    catch(error){
+
+        trades = [];
+
+    }
+
+
+    if(!trades.length){
+
+        box.className =
+            "empty";
+
+        box.textContent =
             "No trades yet.";
 
         return;
@@ -1795,73 +2876,312 @@ function loadActivity(){
 
     box.innerHTML =
         trades
-        .slice(0,5)
-        .map(
-            function(trade){
+            .slice(
+                0,
+                5
+            )
+            .map(
+                function(trade){
 
-                const date =
-                    new Date(
+                    const date =
                         trade.time
-                    );
+                        ? new Date(
+                            trade.time
+                        )
+                        : null;
 
 
-                const cryptoAmount =
-                    Number(
-                        trade.cryptoAmount
-                    );
+                    const cryptoAmount =
+                        Number(
+                            trade.cryptoAmount
+                        );
 
 
-                return `
+                    const eurAmount =
+                        Number(
+                            trade.eurAmount
+                        );
 
-                    <div class="trade-item">
 
-                        <div>
+                    const safeCoin =
+                        escapeHtml(
+                            trade.coin ||
+                            ""
+                        );
 
-                            <strong>
-                                ${
-                                    trade.type === "buy"
-                                    ? "Buy"
-                                    : "Sell"
-                                }
-                                ${trade.coin}
-                            </strong>
 
-                            <div class="trade-date">
-                                ${date.toLocaleString()}
+                    const title =
+                        trade.type ===
+                        "buy"
+                        ? "Buy "
+                        : "Sell ";
+
+
+                    const typeClass =
+                        trade.type ===
+                        "buy"
+                        ? "trade-buy"
+                        : "trade-sell";
+
+
+                    return `
+
+                        <div
+                            class="trade-item"
+                        >
+
+                            <div
+                                class="trade-left"
+                            >
+
+                                <div
+                                    class="trade-title ${typeClass}"
+                                >
+
+                                    ${title}
+                                    ${safeCoin}
+
+                                </div>
+
+
+                                <div
+                                    class="trade-date"
+                                >
+
+                                    ${
+                                        date &&
+                                        !Number.isNaN(
+                                            date.getTime()
+                                        )
+                                        ? escapeHtml(
+                                            date.toLocaleString()
+                                        )
+                                        : ""
+                                    }
+
+                                </div>
+
                             </div>
 
-                        </div>
 
-
-                        <div class="trade-value">
-
-                            ${formatEUR(
-                                trade.eurAmount
-                            )}
-
-                            <div class="trade-crypto">
+                            <div
+                                class="trade-value"
+                            >
 
                                 ${
-                                    Number.isFinite(
-                                        cryptoAmount
+                                    formatEUR(
+                                        eurAmount
                                     )
-                                    ? cryptoAmount.toFixed(8)
-                                    : "0.00000000"
                                 }
 
-                                ${trade.coin}
+
+                                <div
+                                    class="trade-crypto"
+                                >
+
+                                    ${
+                                        Number.isFinite(
+                                            cryptoAmount
+                                        )
+                                        ? formatCrypto(
+                                            cryptoAmount
+                                        )
+                                        : "0"
+                                    }
+
+                                    ${safeCoin}
+
+                                </div>
 
                             </div>
 
                         </div>
 
-                    </div>
+                    `;
 
-                `;
+                }
+            )
+            .join("");
 
-            }
+}
+
+
+/* =========================================================
+   FORMATTING
+   ========================================================= */
+
+function formatEUR(
+    value
+){
+
+    const number =
+        Number(
+            value || 0
+        );
+
+
+    if(
+        !Number.isFinite(
+            number
         )
-        .join("");
+    ){
+
+        return "€0.00";
+
+    }
+
+
+    return "€" +
+        number.toLocaleString(
+            "en-US",
+            {
+                minimumFractionDigits:2,
+                maximumFractionDigits:8
+            }
+        );
+
+}
+
+
+/* =========================================================
+   FORMAT CRYPTO
+   ========================================================= */
+
+function formatCrypto(
+    value
+){
+
+    const number =
+        Number(
+            value || 0
+        );
+
+
+    if(
+        !Number.isFinite(
+            number
+        )
+    ){
+
+        return "0";
+
+    }
+
+
+    if(number === 0){
+
+        return "0";
+
+    }
+
+
+    return number.toLocaleString(
+        "en-US",
+        {
+            minimumFractionDigits:0,
+            maximumFractionDigits:8
+        }
+    );
+
+}
+
+
+/* =========================================================
+   ESCAPE HTML
+   ========================================================= */
+
+function escapeHtml(
+    value
+){
+
+    return String(
+        value ?? ""
+    )
+
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+
+        .replace(
+            /</g,
+            "&lt;"
+        )
+
+        .replace(
+            />/g,
+            "&gt;"
+        )
+
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
+
+
+/* =========================================================
+   STATUS
+   ========================================================= */
+
+function showStatus(
+    id,
+    message,
+    type
+){
+
+    const element =
+        document.getElementById(
+            id
+        );
+
+
+    if(!element){
+
+        return;
+
+    }
+
+
+    element.textContent =
+        message;
+
+
+    element.className =
+        "status show " +
+        (
+            type ||
+            "info"
+        );
+
+}
+
+
+function clearStatus(
+    id
+){
+
+    const element =
+        document.getElementById(
+            id
+        );
+
+
+    if(element){
+
+        element.textContent =
+            "";
+
+        element.className =
+            "status";
+
+    }
 
 }
 
@@ -1870,7 +3190,13 @@ function loadActivity(){
    TOAST
    ========================================================= */
 
-function showToast(message){
+let toastTimer =
+    null;
+
+
+function showToast(
+    message
+){
 
     const toast =
         document.getElementById(
@@ -1887,16 +3213,26 @@ function showToast(message){
     );
 
 
-    setTimeout(
-        function(){
+    if(toastTimer){
 
-            toast.classList.remove(
-                "show"
-            );
+        clearTimeout(
+            toastTimer
+        );
 
-        },
-        3000
-    );
+    }
+
+
+    toastTimer =
+        setTimeout(
+            function(){
+
+                toast.classList.remove(
+                    "show"
+                );
+
+            },
+            3000
+        );
 
 }
 
@@ -1905,7 +3241,9 @@ function showToast(message){
    NAVIGATION
    ========================================================= */
 
-function openPage(page){
+function openPage(
+    page
+){
 
     window.location.href =
         page;
@@ -1921,7 +3259,8 @@ function goBack(){
 
         history.back();
 
-    }else{
+    }
+    else{
 
         window.location.href =
             "wallet.html";
@@ -1932,14 +3271,106 @@ function goBack(){
 
 
 /* =========================================================
-   INITIALIZE
+   AUTH STATE
    ========================================================= */
 
-changeCoin();
+supabaseClient.auth.onAuthStateChange(
+    function(
+        event,
+        session
+    ){
 
-loadActivity();
+        currentUser =
+            session?.user ||
+            null;
+
+
+        if(currentUser){
+
+            loadWallet();
+
+            loadActivity();
+
+            updateTradeButton();
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   GLOBAL ERROR HANDLING
+   ========================================================= */
+
+window.addEventListener(
+    "error",
+    function(event){
+
+        console.error(
+            "JavaScript error:",
+            event.error ||
+            event.message
+        );
+
+    }
+);
+
+
+window.addEventListener(
+    "unhandledrejection",
+    function(event){
+
+        console.error(
+            "Unhandled promise:",
+            event.reason
+        );
+
+    }
+);
+
+
+/* =========================================================
+   INITIALIZATION
+   ========================================================= */
+
+async function initializeTrade(){
+
+    disableTradeButton(
+        "Loading..."
+    );
+
+
+    const loggedIn =
+        await loadUser();
+
+
+    if(loggedIn){
+
+        await loadWallet();
+
+        loadActivity();
+
+    }
+
+
+    await loadPrices();
+
+
+    renderCoin();
+
+    renderAvailableBalance();
+
+    calculateTotal();
+
+    updateTradeButton();
+
+}
+
+
+initializeTrade();
 
 </script>
 
 </body>
-</html>
+    </html>
