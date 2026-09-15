@@ -196,6 +196,7 @@ textarea {
   display: none;
   text-align: center;
   font-size: 14px;
+  line-height: 1.5;
 }
 
 .status.success {
@@ -526,7 +527,14 @@ const SUPABASE_PUBLISHABLE_KEY =
 const supabaseClient =
   window.supabase.createClient(
     SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY
+    SUPABASE_PUBLISHABLE_KEY,
+    {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
+    }
   );
 
 
@@ -628,7 +636,7 @@ photoInput.addEventListener(
   function () {
 
     const newFiles =
-      Array.from(this.files);
+      Array.from(this.files || []);
 
 
     if (
@@ -653,6 +661,7 @@ photoInput.addEventListener(
     ) {
 
       if (
+        file &&
         file.type &&
         file.type.startsWith("image/")
       ) {
@@ -721,6 +730,12 @@ function renderPhotos() {
         "×";
 
 
+      removeBtn.setAttribute(
+        "aria-label",
+        "Remove photo"
+      );
+
+
       removeBtn.onclick =
         function () {
 
@@ -743,6 +758,15 @@ function renderPhotos() {
 
           img.src =
             event.target.result;
+
+        };
+
+
+      reader.onerror =
+        function () {
+
+          img.alt =
+            "Unable to preview image";
 
         };
 
@@ -800,7 +824,9 @@ function readFile(file) {
         function () {
 
           reject(
-            reader.error
+            new Error(
+              "Could not read image file."
+            )
           );
 
         };
@@ -817,6 +843,377 @@ function readFile(file) {
 
 
 /* =========================================================
+   COMPRESS IMAGE
+   =========================================================
+   Important:
+   Large camera photos can make the Supabase request too large.
+   Images are resized before being stored in ads.photos.
+   ========================================================= */
+
+function compressImage(
+  file,
+  maxSize = 1600,
+  quality = 0.82
+) {
+
+  return new Promise(
+    function (
+      resolve,
+      reject
+    ) {
+
+      const reader =
+        new FileReader();
+
+
+      reader.onload =
+        function () {
+
+          const img =
+            new Image();
+
+
+          img.onload =
+            function () {
+
+              let width =
+                img.naturalWidth;
+
+              let height =
+                img.naturalHeight;
+
+
+              if (
+                !width ||
+                !height
+              ) {
+
+                reject(
+                  new Error(
+                    "Invalid image dimensions."
+                  )
+                );
+
+                return;
+
+              }
+
+
+              const scale =
+                Math.min(
+                  1,
+                  maxSize /
+                  Math.max(
+                    width,
+                    height
+                  )
+                );
+
+
+              width =
+                Math.round(
+                  width * scale
+                );
+
+
+              height =
+                Math.round(
+                  height * scale
+                );
+
+
+              const canvas =
+                document.createElement(
+                  "canvas"
+                );
+
+
+              canvas.width =
+                width;
+
+              canvas.height =
+                height;
+
+
+              const ctx =
+                canvas.getContext(
+                  "2d"
+                );
+
+
+              if (!ctx) {
+
+                reject(
+                  new Error(
+                    "Could not prepare image."
+                  )
+                );
+
+                return;
+
+              }
+
+
+              ctx.drawImage(
+                img,
+                0,
+                0,
+                width,
+                height
+              );
+
+
+              const compressed =
+                canvas.toDataURL(
+                  "image/jpeg",
+                  quality
+                );
+
+
+              resolve(
+                compressed
+              );
+
+            };
+
+
+          img.onerror =
+            function () {
+
+              reject(
+                new Error(
+                  "Could not decode image."
+                )
+              );
+
+            };
+
+
+          img.src =
+            reader.result;
+
+        };
+
+
+      reader.onerror =
+        function () {
+
+          reject(
+            new Error(
+              "Could not read image."
+            )
+          );
+
+        };
+
+
+      reader.readAsDataURL(
+        file
+      );
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   CURRENT USER
+   ========================================================= */
+
+async function getCurrentUser() {
+
+  /*
+   * First use the persisted session.
+   * This is more reliable on mobile than relying only
+   * on getUser() during page initialization.
+   */
+
+  const sessionResult =
+    await supabaseClient
+      .auth
+      .getSession();
+
+
+  if (
+    sessionResult &&
+    sessionResult.data &&
+    sessionResult.data.session &&
+    sessionResult.data.session.user
+  ) {
+
+    return sessionResult
+      .data
+      .session
+      .user;
+
+  }
+
+
+  /*
+   * Fallback.
+   */
+
+  const userResult =
+    await supabaseClient
+      .auth
+      .getUser();
+
+
+  if (
+    userResult &&
+    userResult.data &&
+    userResult.data.user
+  ) {
+
+    return userResult
+      .data
+      .user;
+
+  }
+
+
+  return null;
+
+}
+
+
+/* =========================================================
+   VALIDATE FORM DATA
+   ========================================================= */
+
+function getFormData() {
+
+  const title =
+    document
+      .getElementById("title")
+      .value
+      .trim();
+
+
+  let category =
+    categoryInput.value;
+
+
+  const priceValue =
+    document
+      .getElementById("price")
+      .value
+      .trim();
+
+
+  const location =
+    document
+      .getElementById("location")
+      .value
+      .trim();
+
+
+  const description =
+    document
+      .getElementById("description")
+      .value
+      .trim();
+
+
+  if (!title) {
+
+    throw new Error(
+      "Please enter a title."
+    );
+
+  }
+
+
+  if (!category) {
+
+    throw new Error(
+      "Please select a category."
+    );
+
+  }
+
+
+  if (
+    category === "Other"
+  ) {
+
+    category =
+      customCategoryInput
+        .value
+        .trim();
+
+
+    if (!category) {
+
+      throw new Error(
+        "Please enter your category."
+      );
+
+    }
+
+  }
+
+
+  if (
+    priceValue === ""
+  ) {
+
+    throw new Error(
+      "Please enter a price."
+    );
+
+  }
+
+
+  const price =
+    Number(
+      priceValue
+    );
+
+
+  if (
+    !Number.isFinite(price) ||
+    price < 0
+  ) {
+
+    throw new Error(
+      "Please enter a valid price."
+    );
+
+  }
+
+
+  if (!location) {
+
+    throw new Error(
+      "Please enter a location."
+    );
+
+  }
+
+
+  if (!description) {
+
+    throw new Error(
+      "Please enter a description."
+    );
+
+  }
+
+
+  return {
+    title,
+    category,
+    price,
+    location,
+    description
+  };
+
+}
+
+
+/* =========================================================
    PUBLISH AD
    ========================================================= */
 
@@ -825,6 +1222,15 @@ adForm.addEventListener(
   async function (event) {
 
     event.preventDefault();
+
+
+    if (
+      publishBtn.disabled
+    ) {
+
+      return;
+
+    }
 
 
     publishBtn.disabled =
@@ -844,20 +1250,11 @@ adForm.addEventListener(
          CHECK CURRENT USER
          --------------------------------------------- */
 
-      const {
-        data: userData,
-        error: userError
-      } =
-        await supabaseClient
-          .auth
-          .getUser();
+      const currentUser =
+        await getCurrentUser();
 
 
-      if (
-        userError ||
-        !userData ||
-        !userData.user
-      ) {
+      if (!currentUser) {
 
         throw new Error(
           "Please login before posting an ad."
@@ -866,32 +1263,72 @@ adForm.addEventListener(
       }
 
 
-      const currentUser =
-        userData.user;
+      /* ---------------------------------------------
+         GET FORM DATA
+         --------------------------------------------- */
+
+      const formData =
+        getFormData();
 
 
       /* ---------------------------------------------
-         GET CATEGORY
+         PREPARE PHOTOS
          --------------------------------------------- */
 
-      let category =
-        categoryInput.value;
+      showStatus(
+        selectedFiles.length > 0
+          ? "Preparing your photos..."
+          : "Preparing your ad...",
+        "success"
+      );
 
 
-      if (
-        category === "Other"
+      const photos = [];
+
+
+      /*
+       * Images are compressed before being sent.
+       * This prevents large mobile camera images
+       * from producing an oversized HTTP request.
+       */
+
+      for (
+        let i = 0;
+        i < selectedFiles.length;
+        i++
       ) {
 
-        category =
-          customCategoryInput
-            .value
-            .trim();
+        const file =
+          selectedFiles[i];
 
 
-        if (!category) {
+        showStatus(
+          "Preparing photo " +
+          (i + 1) +
+          " of " +
+          selectedFiles.length +
+          "...",
+          "success"
+        );
 
-          throw new Error(
-            "Please enter your category."
+
+        const photoData =
+          await compressImage(
+            file,
+            1600,
+            0.82
+          );
+
+
+        if (
+          typeof photoData === "string" &&
+          photoData.startsWith(
+            "data:image/"
+          )
+        ) {
+
+          photos.push(
+            photoData
           );
 
         }
@@ -900,67 +1337,25 @@ adForm.addEventListener(
 
 
       /* ---------------------------------------------
-         READ PHOTOS
-         --------------------------------------------- */
-
-      showStatus(
-        "Preparing your photos...",
-        "success"
-      );
-
-
-      const photos = [];
-
-
-      for (
-        const file of selectedFiles
-      ) {
-
-        const photoData =
-          await readFile(
-            file
-          );
-
-        photos.push(
-          photoData
-        );
-
-      }
-
-
-      /* ---------------------------------------------
-         CREATE AD
+         CREATE AD OBJECT
          --------------------------------------------- */
 
       const ad = {
 
         title:
-          document
-            .getElementById("title")
-            .value
-            .trim(),
+          formData.title,
 
         category:
-          category,
+          formData.category,
 
         price:
-          Number(
-            document
-              .getElementById("price")
-              .value
-          ),
+          formData.price,
 
         location:
-          document
-            .getElementById("location")
-            .value
-            .trim(),
+          formData.location,
 
         description:
-          document
-            .getElementById("description")
-            .value
-            .trim(),
+          formData.description,
 
         photos:
           photos,
@@ -972,7 +1367,7 @@ adForm.addEventListener(
 
 
       /* ---------------------------------------------
-         SAVE AD
+         PUBLISH
          --------------------------------------------- */
 
       showStatus(
@@ -981,39 +1376,85 @@ adForm.addEventListener(
       );
 
 
-      const {
-        data,
-        error
-      } =
-        await supabaseClient
+      /*
+       * IMPORTANT:
+       * Do NOT use .select() here.
+       *
+       * We only need to create the row.
+       * Asking Supabase to return the inserted row
+       * is unnecessary and can require an additional
+       * SELECT permission/policy.
+       */
+
+      const insertPromise =
+        supabaseClient
           .from("ads")
           .insert([
             ad
-          ])
-          .select();
+          ]);
 
 
-      if (error) {
+      const timeoutPromise =
+        new Promise(
+          function (
+            _,
+            reject
+          ) {
 
-        console.error(
-          "Supabase insert error:",
-          error
+            window.setTimeout(
+              function () {
+
+                reject(
+                  new Error(
+                    "The publish request timed out. Please check your internet connection and try again."
+                  )
+                );
+
+              },
+              30000
+            );
+
+          }
         );
 
+
+      const result =
+        await Promise.race([
+          insertPromise,
+          timeoutPromise
+        ]);
+
+
+      if (
+        !result
+      ) {
+
         throw new Error(
-          error.message
+          "Supabase returned no response."
         );
 
       }
 
 
       if (
-        !data ||
-        data.length === 0
+        result.error
       ) {
 
+        console.error(
+          "Supabase insert error:",
+          result.error
+        );
+
+
+        const message =
+          result.error.message ||
+          result.error.details ||
+          result.error.hint ||
+          "Supabase could not create the ad.";
+
+
         throw new Error(
-          "The ad could not be created."
+          message
         );
 
       }
@@ -1028,6 +1469,14 @@ adForm.addEventListener(
         "success"
       );
 
+
+      publishBtn.disabled =
+        true;
+
+
+      /*
+       * Clear the form after successful insert.
+       */
 
       adForm.reset();
 
@@ -1049,39 +1498,96 @@ adForm.addEventListener(
 
 
       /*
-       * Return to Buy & Sell
+       * Return to Buy & Sell.
        */
 
-      setTimeout(
+      window.setTimeout(
         function () {
 
           window.location.href =
             "buy-sell.html";
 
         },
-        1500
+        1200
       );
 
 
     } catch (error) {
 
       console.error(
-        "Publish error:",
+        "HAVKAR Publish error:",
         error
       );
 
 
+      let message =
+        error &&
+        error.message
+          ? error.message
+          : String(error);
+
+
+      /*
+       * Browser-level fetch errors often do not
+       * contain useful Supabase details.
+       */
+
+      if (
+        message ===
+        "Failed to fetch"
+      ) {
+
+        message =
+          "Could not connect to Supabase. Please check your internet connection and try again.";
+
+      }
+
+
       showStatus(
         "Could not publish the ad: " +
-        error.message,
+        message,
         "error"
       );
 
 
-    } finally {
-
       publishBtn.disabled =
         false;
+
+    }
+
+  }
+);
+
+
+/* =========================================================
+   AUTH STATE INITIALIZATION
+   ========================================================= */
+
+supabaseClient.auth.onAuthStateChange(
+  function (
+    event,
+    session
+  ) {
+
+    if (
+      event === "SIGNED_OUT"
+    ) {
+
+      console.log(
+        "[HAVKAR] User signed out."
+      );
+
+    }
+
+    if (
+      session &&
+      session.user
+    ) {
+
+      console.log(
+        "[HAVKAR] Authenticated user:",
+        session.user.id
+      );
 
     }
 
