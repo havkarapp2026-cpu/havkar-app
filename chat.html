@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#689f38">
+<meta name="theme-color" content="#2e7d32">
 <meta name="description" content="HAVKAR Messages and Chat">
 <title>HAVKAR — Messages</title>
 
@@ -34,7 +34,7 @@ body{
     min-height:100vh;
     min-height:100dvh;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",
-    Roboto,Arial,sans-serif;
+        Roboto,Arial,sans-serif;
     background:#f5f6f5;
     color:#333;
     overflow-x:hidden;
@@ -247,7 +247,18 @@ input:focus-visible{
     font-size:14px;
 }
 
+.loading-action{
+    margin-top:18px;
+    padding:11px 18px;
+    border-radius:12px;
+    background:#7cb342;
+    color:#fff;
+    font-weight:700;
+    cursor:pointer;
+}
+
 .chat-item{
+    width:100%;
     min-height:94px;
     padding:15px 20px;
     display:flex;
@@ -256,6 +267,7 @@ input:focus-visible{
     background:#fff;
     border-bottom:1px solid #ededed;
     cursor:pointer;
+    text-align:left;
     transition:background .15s ease;
 }
 
@@ -338,7 +350,7 @@ input:focus-visible{
 }
 
 /* =========================================================
-   EMPTY
+   EMPTY / ERROR
 ========================================================= */
 
 .empty-state,
@@ -371,6 +383,39 @@ input:focus-visible{
 
 .no-results{
     display:none;
+}
+
+.error-state{
+    padding:65px 25px;
+    text-align:center;
+    color:#999;
+}
+
+.error-state i{
+    display:block;
+    margin-bottom:15px;
+    color:#d9534f;
+    font-size:44px;
+}
+
+.error-state h3{
+    color:#555;
+    margin-bottom:8px;
+}
+
+.error-state p{
+    font-size:14px;
+    line-height:1.5;
+}
+
+.retry-button{
+    margin-top:18px;
+    padding:12px 22px;
+    border-radius:13px;
+    background:#2e7d32;
+    color:#fff;
+    font-weight:750;
+    cursor:pointer;
 }
 
 /* =========================================================
@@ -520,7 +565,7 @@ input:focus-visible{
     width:100%;
     overflow-y:auto;
     overflow-x:hidden;
-    padding:18px 13px 20px;
+    padding:18px 13px 24px;
     -webkit-overflow-scrolling:touch;
     overscroll-behavior:contain;
     display:flex;
@@ -531,7 +576,7 @@ input:focus-visible{
     width:100%;
     display:flex;
     flex:0 0 auto;
-    margin-bottom:9px;
+    margin-bottom:14px;
 }
 
 .message-row.sent{
@@ -603,7 +648,7 @@ input:focus-visible{
     display:flex;
     align-items:center;
     gap:4px;
-    margin-top:3px;
+    margin-top:5px;
 }
 
 .message-row.sent .reaction-bar{
@@ -615,11 +660,11 @@ input:focus-visible{
 }
 
 .reaction-chip{
-    min-width:28px;
-    height:26px;
+    min-width:29px;
+    height:27px;
     padding:2px 7px;
     border:1px solid #e1e6e1;
-    border-radius:14px;
+    border-radius:15px;
     background:#fff;
     display:inline-flex;
     align-items:center;
@@ -643,16 +688,16 @@ input:focus-visible{
 
 .reaction-trigger{
     position:absolute;
-    right:-5px;
-    bottom:-18px;
-    width:30px;
-    height:30px;
+    right:-8px;
+    bottom:-8px;
+    width:31px;
+    height:31px;
     border-radius:50%;
     border:1px solid #e0e4e0;
     background:#fff;
     color:#777;
-    box-shadow:0 2px 7px rgba(0,0,0,.12);
-    display:none;
+    box-shadow:0 2px 7px rgba(0,0,0,.14);
+    display:flex;
     align-items:center;
     justify-content:center;
     cursor:pointer;
@@ -660,19 +705,18 @@ input:focus-visible{
 }
 
 .message-row.received .reaction-trigger{
-    left:-5px;
+    left:-8px;
     right:auto;
 }
 
-.message-wrap:hover .reaction-trigger,
-.message-wrap.reaction-open .reaction-trigger{
-    display:flex;
+.reaction-trigger:active{
+    transform:scale(.9);
 }
 
 .reaction-picker{
     position:absolute;
     right:0;
-    bottom:34px;
+    bottom:37px;
     display:none;
     align-items:center;
     gap:4px;
@@ -696,6 +740,7 @@ input:focus-visible{
 .reaction-option{
     width:39px;
     height:39px;
+    min-width:39px;
     border-radius:50%;
     background:#f7f8f7;
     display:flex;
@@ -866,9 +911,15 @@ input:focus-visible{
         max-width:85%;
     }
 
+    .reaction-picker{
+        max-width:calc(100vw - 30px);
+        overflow-x:auto;
+    }
+
     .reaction-option{
         width:37px;
         height:37px;
+        min-width:37px;
     }
 }
 
@@ -962,28 +1013,19 @@ input:focus-visible{
 
         <div id="headerMenu" class="header-menu">
 
-            <button
-                id="notificationsButton"
-                type="button">
-
+            <button id="notificationsButton" type="button">
                 <i class="fas fa-bell"></i>
                 <span>Notifications</span>
-
             </button>
 
-            <button
-                id="profileButton"
-                type="button">
-
+            <button id="profileButton" type="button">
                 <i class="fas fa-user"></i>
                 <span>Profile</span>
-
             </button>
 
         </div>
 
     </header>
-
 
     <div class="search-bar">
 
@@ -1003,7 +1045,6 @@ input:focus-visible{
 
     </div>
 
-
     <div class="section-header">
 
         <div class="section-title">
@@ -1017,7 +1058,6 @@ input:focus-visible{
         </div>
 
     </div>
-
 
     <div
         id="conversationList"
@@ -1033,10 +1073,7 @@ input:focus-visible{
 
     </div>
 
-
-    <div
-        id="noResults"
-        class="no-results">
+    <div id="noResults" class="no-results">
 
         <i class="fas fa-comments"></i>
 
@@ -1045,7 +1082,6 @@ input:focus-visible{
         <p>Try another name or keyword.</p>
 
     </div>
-
 
     <nav class="bottom-nav">
 
@@ -1113,7 +1149,6 @@ input:focus-visible{
 
         </button>
 
-
         <div
             id="chatAvatar"
             class="avatar">
@@ -1121,7 +1156,6 @@ input:focus-visible{
             <i class="fas fa-user"></i>
 
         </div>
-
 
         <div class="chat-title-area">
 
@@ -1139,7 +1173,6 @@ input:focus-visible{
 
         </div>
 
-
         <button
             id="chatInfoButton"
             class="chat-header-action"
@@ -1151,7 +1184,6 @@ input:focus-visible{
         </button>
 
     </header>
-
 
     <main
         id="chatMessages"
@@ -1166,7 +1198,6 @@ input:focus-visible{
         </div>
 
     </main>
-
 
     <div class="message-input-area">
 
@@ -1208,12 +1239,7 @@ input:focus-visible{
 "use strict";
 
 /* =========================================================
-   HAVKAR CHAT
-   Complete replacement
-========================================================= */
-
-/* =========================================================
-   SUPABASE
+   HAVKAR CHAT — FINAL
 ========================================================= */
 
 const SUPABASE_URL =
@@ -1250,6 +1276,7 @@ const REACTIONS = [
 ];
 
 const MAX_MESSAGE_LENGTH = 4000;
+const REQUEST_TIMEOUT = 10000;
 
 
 /* =========================================================
@@ -1257,14 +1284,25 @@ const MAX_MESSAGE_LENGTH = 4000;
 ========================================================= */
 
 const state = {
+
     currentUser:null,
+
     conversations:[],
+
     currentConversation:null,
+
     currentConversationId:null,
+
     realtimeChannel:null,
+
+    reactionChannel:null,
+
     searchTerm:"",
+
     reactions:{},
-    reactionChannel:null
+
+    loadingConversations:false
+
 };
 
 
@@ -1277,12 +1315,63 @@ const $ = id =>
 
 
 /* =========================================================
+   REQUEST TIMEOUT
+========================================================= */
+
+function withTimeout(
+    promise,
+    milliseconds = REQUEST_TIMEOUT
+){
+
+    let timer = null;
+
+    const timeout =
+        new Promise(
+            (_,reject) => {
+
+                timer =
+                    window.setTimeout(
+                        () => {
+
+                            reject(
+                                new Error(
+                                    "REQUEST_TIMEOUT"
+                                )
+                            );
+
+                        },
+                        milliseconds
+                    );
+
+            }
+        );
+
+    return Promise.race(
+        [
+            promise.finally(
+                () => {
+                    if(timer){
+                        clearTimeout(timer);
+                    }
+                }
+            ),
+            timeout
+        ]
+    );
+
+}
+
+
+/* =========================================================
    TOAST
 ========================================================= */
 
 let toastTimer = null;
 
-function showToast(message,type=""){
+function showToast(
+    message,
+    type = ""
+){
 
     const toast =
         $("toast");
@@ -1306,9 +1395,13 @@ function showToast(message,type=""){
     clearTimeout(toastTimer);
 
     toastTimer =
-        setTimeout(
+        window.setTimeout(
             () => {
-                toast.classList.remove("show");
+
+                toast.classList.remove(
+                    "show"
+                );
+
             },
             2800
         );
@@ -1320,19 +1413,31 @@ function showToast(message,type=""){
 ========================================================= */
 
 function goHome(){
-    window.location.href = "index.html";
+
+    window.location.href =
+        "index.html";
+
 }
 
 function goMessages(){
-    window.location.href = "chat.html";
+
+    window.location.href =
+        "chat.html";
+
 }
 
 function goNotifications(){
-    window.location.href = "notifications.html";
+
+    window.location.href =
+        "notifications.html";
+
 }
 
 function goProfile(){
-    window.location.href = "profile.html";
+
+    window.location.href =
+        "profile.html";
+
 }
 
 
@@ -1353,7 +1458,9 @@ function toggleHeaderMenu(){
     }
 
     const show =
-        !menu.classList.contains("show");
+        !menu.classList.contains(
+            "show"
+        );
 
     menu.classList.toggle(
         "show",
@@ -1361,11 +1468,14 @@ function toggleHeaderMenu(){
     );
 
     if(button){
+
         button.setAttribute(
             "aria-expanded",
             show ? "true" : "false"
         );
+
     }
+
 }
 
 function closeHeaderMenu(){
@@ -1377,15 +1487,20 @@ function closeHeaderMenu(){
         $("headerMenuButton");
 
     if(menu){
-        menu.classList.remove("show");
+        menu.classList.remove(
+            "show"
+        );
     }
 
     if(button){
+
         button.setAttribute(
             "aria-expanded",
             "false"
         );
+
     }
+
 }
 
 
@@ -1398,14 +1513,19 @@ async function loadCurrentUser(){
     try{
 
         const result =
-            await supabaseClient.auth.getSession();
+            await withTimeout(
+                supabaseClient.auth.getSession()
+            );
 
         if(result.error){
+
             console.error(
                 "[HAVKAR] Session error:",
                 result.error
             );
+
             return null;
+
         }
 
         return (
@@ -1424,15 +1544,191 @@ async function loadCurrentUser(){
         );
 
         return null;
+
     }
+
 }
 
 
 /* =========================================================
-   CONVERSATIONS
+   LOAD CONVERSATIONS
 ========================================================= */
 
 async function loadConversations(){
+
+    const list =
+        $("conversationList");
+
+    if(
+        !list ||
+        !state.currentUser
+    ){
+        return;
+    }
+
+    if(state.loadingConversations){
+        return;
+    }
+
+    state.loadingConversations =
+        true;
+
+    list.innerHTML = `
+        <div class="loading">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <p>Loading conversations...</p>
+        </div>
+    `;
+
+    try{
+
+        const userId =
+            String(
+                state.currentUser.id
+            );
+
+        const result =
+            await withTimeout(
+                supabaseClient
+                    .from("conversations")
+                    .select(
+                        "id,ad_id,buyer_id,seller_id,created_at,updated_at"
+                    )
+                    .or(
+                        "buyer_id.eq." +
+                        userId +
+                        ",seller_id.eq." +
+                        userId
+                    )
+                    .order(
+                        "updated_at",
+                        {
+                            ascending:false,
+                            nullsFirst:false
+                        }
+                    )
+            );
+
+        if(result.error){
+
+            throw result.error;
+
+        }
+
+        state.conversations =
+            Array.isArray(result.data)
+                ? result.data
+                : [];
+
+        /*
+         * IMPORTANT:
+         * Render the conversations immediately.
+         * Do NOT wait for ads/messages/unread
+         * enrichment before showing the page.
+         */
+
+        state.conversations.forEach(
+            conversation => {
+
+                conversation.ad =
+                    null;
+
+                conversation.lastMessage =
+                    null;
+
+                conversation.unreadCount =
+                    0;
+
+            }
+        );
+
+        renderConversationList();
+
+        /*
+         * Secondary enrichment happens after
+         * the main list is already visible.
+         */
+
+        enrichConversations()
+            .then(
+                () => {
+
+                    renderConversationList();
+
+                }
+            )
+            .catch(
+                error => {
+
+                    console.warn(
+                        "[HAVKAR] Conversation enrichment failed:",
+                        error
+                    );
+
+                    /*
+                     * The conversation list remains usable
+                     * even if enrichment fails.
+                     */
+
+                    renderConversationList();
+
+                }
+            );
+
+    }catch(error){
+
+        console.error(
+            "[HAVKAR] Conversation load error:",
+            error
+        );
+
+        const message =
+            String(
+                error?.message || ""
+            );
+
+        if(
+            message ===
+            "REQUEST_TIMEOUT"
+        ){
+
+            showErrorState(
+                "Messages are taking too long",
+                "HAVKAR could not reach the message server in time."
+            );
+
+        }else{
+
+            showErrorState(
+                "Unable to load conversations",
+                "Please check your connection and try again."
+            );
+
+        }
+
+        showToast(
+            "Could not load messages.",
+            "error"
+        );
+
+    }finally{
+
+        state.loadingConversations =
+            false;
+
+    }
+
+}
+
+
+/* =========================================================
+   ERROR STATE
+========================================================= */
+
+function showErrorState(
+    title,
+    text
+){
 
     const list =
         $("conversationList");
@@ -1442,58 +1738,32 @@ async function loadConversations(){
     }
 
     list.innerHTML = `
-        <div class="loading">
-            <i class="fas fa-circle-notch fa-spin"></i>
-            <p>Loading conversations...</p>
+        <div class="error-state">
+
+            <i class="fas fa-triangle-exclamation"></i>
+
+            <h3>${escapeHtml(title)}</h3>
+
+            <p>${escapeHtml(text)}</p>
+
+            <button
+                id="retryConversations"
+                class="retry-button"
+                type="button">
+
+                Try Again
+
+            </button>
+
         </div>
     `;
 
-    const result =
-        await supabaseClient
-            .from("conversations")
-            .select(
-                "id,ad_id,buyer_id,seller_id,created_at,updated_at"
-            )
-            .or(
-                "buyer_id.eq." +
-                currentUser.id +
-                ",seller_id.eq." +
-                currentUser.id
-            )
-            .order(
-                "updated_at",
-                {
-                    ascending:false,
-                    nullsFirst:false
-                }
-            );
-
-    if(result.error){
-
-        console.error(
-            "[HAVKAR] Conversation load error:",
-            result.error
+    $("retryConversations")
+        ?.addEventListener(
+            "click",
+            loadConversations
         );
 
-        showEmptyState(
-            "Unable to load conversations.",
-            "Please try again."
-        );
-
-        showToast(
-            "Could not load messages.",
-            "error"
-        );
-
-        return;
-    }
-
-    state.conversations =
-        result.data || [];
-
-    await enrichConversations();
-
-    renderConversationList();
 }
 
 
@@ -1503,13 +1773,19 @@ async function loadConversations(){
 
 async function enrichConversations(){
 
-    if(!state.conversations.length){
+    if(
+        !state.conversations.length ||
+        !state.currentUser
+    ){
         return;
     }
 
     const adIds =
         state.conversations
-            .map(item => item.ad_id)
+            .map(
+                conversation =>
+                    conversation.ad_id
+            )
             .filter(
                 id =>
                     id !== null &&
@@ -1518,123 +1794,183 @@ async function enrichConversations(){
 
     const adsMap = {};
 
+    /*
+     * Load all ads in one query.
+     */
+
     if(adIds.length){
 
-        const adResult =
-            await supabaseClient
-                .from("ads")
-                .select(
-                    "id,title,category,price,location"
+        try{
+
+            const adResult =
+                await withTimeout(
+                    supabaseClient
+                        .from("ads")
+                        .select(
+                            "id,title,category,price,location"
+                        )
+                        .in(
+                            "id",
+                            adIds
+                        )
+                );
+
+            if(
+                !adResult.error &&
+                Array.isArray(
+                    adResult.data
                 )
-                .in("id",adIds);
+            ){
 
-        if(
-            !adResult.error &&
-            Array.isArray(adResult.data)
-        ){
+                adResult.data.forEach(
+                    ad => {
 
-            adResult.data.forEach(
-                ad => {
-                    adsMap[String(ad.id)] =
-                        ad;
-                }
+                        adsMap[
+                            String(ad.id)
+                        ] = ad;
+
+                    }
+                );
+
+            }
+
+        }catch(error){
+
+            console.warn(
+                "[HAVKAR] Ads enrichment failed:",
+                error
             );
+
         }
+
     }
 
+    state.conversations.forEach(
+        conversation => {
+
+            conversation.ad =
+                conversation.ad_id !== null &&
+                conversation.ad_id !== undefined
+                    ? (
+                        adsMap[
+                            String(
+                                conversation.ad_id
+                            )
+                        ] || null
+                    )
+                    : null;
+
+        }
+    );
 
     /*
-     * Fetch latest message for each conversation.
-     * This preserves the existing project structure.
+     * Load latest message + unread count
+     * independently for each conversation.
+     *
+     * Failure of one conversation does not
+     * block the rest.
      */
 
     await Promise.all(
         state.conversations.map(
             async conversation => {
 
-                conversation.ad =
-                    conversation.ad_id !== null &&
-                    conversation.ad_id !== undefined
-                        ? adsMap[
-                            String(conversation.ad_id)
-                          ] || null
-                        : null;
+                try{
 
-                conversation.lastMessage =
-                    null;
-
-                conversation.unreadCount =
-                    0;
-
-
-                const messageResult =
-                    await supabaseClient
-                        .from("messages")
-                        .select(
-                            "id,sender_id,message_text,created_at,is_read"
-                        )
-                        .eq(
-                            "conversation_id",
-                            conversation.id
-                        )
-                        .order(
-                            "created_at",
-                            {
-                                ascending:false
-                            }
-                        )
-                        .limit(1);
-
-
-                if(
-                    !messageResult.error &&
-                    messageResult.data &&
-                    messageResult.data.length
-                ){
-
-                    conversation.lastMessage =
-                        messageResult.data[0];
-                }
-
-
-                const unreadResult =
-                    await supabaseClient
-                        .from("messages")
-                        .select(
-                            "id",
-                            {
-                                count:"exact",
-                                head:true
-                            }
-                        )
-                        .eq(
-                            "conversation_id",
-                            conversation.id
-                        )
-                        .eq(
-                            "is_read",
-                            false
-                        )
-                        .neq(
-                            "sender_id",
-                            currentUser.id
+                    const messageResult =
+                        await withTimeout(
+                            supabaseClient
+                                .from("messages")
+                                .select(
+                                    "id,sender_id,message_text,created_at,is_read"
+                                )
+                                .eq(
+                                    "conversation_id",
+                                    conversation.id
+                                )
+                                .order(
+                                    "created_at",
+                                    {
+                                        ascending:false
+                                    }
+                                )
+                                .limit(1)
                         );
 
+                    if(
+                        !messageResult.error &&
+                        Array.isArray(
+                            messageResult.data
+                        ) &&
+                        messageResult.data.length
+                    ){
 
-                if(
-                    !unreadResult.error &&
-                    Number.isFinite(
-                        unreadResult.count
-                    )
-                ){
+                        conversation.lastMessage =
+                            messageResult.data[0];
 
-                    conversation.unreadCount =
-                        unreadResult.count;
+                    }
+
+                }catch(error){
+
+                    console.warn(
+                        "[HAVKAR] Latest message failed:",
+                        error
+                    );
+
+                }
+
+                try{
+
+                    const unreadResult =
+                        await withTimeout(
+                            supabaseClient
+                                .from("messages")
+                                .select(
+                                    "id",
+                                    {
+                                        count:"exact",
+                                        head:true
+                                    }
+                                )
+                                .eq(
+                                    "conversation_id",
+                                    conversation.id
+                                )
+                                .eq(
+                                    "is_read",
+                                    false
+                                )
+                                .neq(
+                                    "sender_id",
+                                    state.currentUser.id
+                                )
+                        );
+
+                    if(
+                        !unreadResult.error &&
+                        Number.isFinite(
+                            unreadResult.count
+                        )
+                    ){
+
+                        conversation.unreadCount =
+                            unreadResult.count;
+
+                    }
+
+                }catch(error){
+
+                    console.warn(
+                        "[HAVKAR] Unread count failed:",
+                        error
+                    );
+
                 }
 
             }
         )
     );
+
 }
 
 
@@ -1658,7 +1994,9 @@ function renderConversationList(){
         state.conversations.filter(
             conversation => {
 
-                if(!state.searchTerm){
+                if(
+                    !state.searchTerm
+                ){
                     return true;
                 }
 
@@ -1669,13 +2007,19 @@ function renderConversationList(){
                     conversation.lastMessage;
 
                 const text = [
+
                     getConversationRole(
                         conversation
                     ),
+
                     ad?.title || "",
+
                     ad?.category || "",
+
                     ad?.location || "",
+
                     last?.message_text || ""
+
                 ]
                 .join(" ")
                 .toLowerCase();
@@ -1683,9 +2027,9 @@ function renderConversationList(){
                 return text.includes(
                     state.searchTerm
                 );
+
             }
         );
-
 
     if($("messageCount")){
 
@@ -1697,14 +2041,18 @@ function renderConversationList(){
                     ? " chat"
                     : " chats"
             );
+
     }
 
-
-    if(!state.conversations.length){
+    if(
+        !state.conversations.length
+    ){
 
         if(noResults){
+
             noResults.style.display =
                 "none";
+
         }
 
         showEmptyState(
@@ -1713,27 +2061,30 @@ function renderConversationList(){
         );
 
         return;
-    }
 
+    }
 
     if(!filtered.length){
 
         list.innerHTML = "";
 
         if(noResults){
+
             noResults.style.display =
                 "block";
+
         }
 
         return;
-    }
 
+    }
 
     if(noResults){
+
         noResults.style.display =
             "none";
-    }
 
+    }
 
     list.innerHTML = "";
 
@@ -1745,191 +2096,15 @@ function renderConversationList(){
                     conversation
                 )
             );
+
         }
     );
+
 }
 
 
 /* =========================================================
-   CONVERSATION ITEM
-========================================================= */
-
-function createConversationElement(
-    conversation
-){
-
-    const item =
-        document.createElement("button");
-
-    item.type = "button";
-    item.className = "chat-item";
-
-
-    const avatar =
-        document.createElement("div");
-
-    avatar.className =
-        "avatar";
-
-    avatar.innerHTML =
-        '<i class="fas fa-user"></i>';
-
-
-    const info =
-        document.createElement("div");
-
-    info.className =
-        "chat-info";
-
-
-    const header =
-        document.createElement("div");
-
-    header.className =
-        "chat-header";
-
-
-    const name =
-        document.createElement("div");
-
-    name.className =
-        "name";
-
-    name.textContent =
-        getConversationRole(
-            conversation
-        );
-
-
-    const time =
-        document.createElement("div");
-
-    time.className =
-        "time";
-
-    time.textContent =
-        conversation.lastMessage
-            ? formatTime(
-                conversation.lastMessage.created_at
-              )
-            : formatTime(
-                conversation.updated_at
-              );
-
-
-    header.appendChild(name);
-    header.appendChild(time);
-
-
-    const preview =
-        document.createElement("div");
-
-    preview.className =
-        "message-preview";
-
-
-    if(conversation.lastMessage){
-
-        const prefix =
-            conversation.lastMessage.sender_id ===
-            currentUser.id
-                ? "You: "
-                : "";
-
-        preview.textContent =
-            prefix +
-            conversation.lastMessage.message_text;
-
-    }else{
-
-        preview.textContent =
-            "No messages yet";
-    }
-
-
-    info.appendChild(header);
-    info.appendChild(preview);
-
-
-    if(conversation.ad){
-
-        const adLabel =
-            document.createElement("div");
-
-        adLabel.className =
-            "ad-label";
-
-        adLabel.textContent =
-            "Listing: " +
-            conversation.ad.title;
-
-        info.appendChild(adLabel);
-    }
-
-
-    item.appendChild(avatar);
-    item.appendChild(info);
-
-
-    if(conversation.unreadCount > 0){
-
-        const unread =
-            document.createElement("div");
-
-        unread.className =
-            "unread";
-
-        unread.textContent =
-            conversation.unreadCount > 99
-                ? "99+"
-                : String(
-                    conversation.unreadCount
-                  );
-
-        item.appendChild(unread);
-    }
-
-
-    item.addEventListener(
-        "click",
-        () => openConversation(
-            conversation
-        )
-    );
-
-
-    return item;
-}
-
-
-/* =========================================================
-   ROLE
-========================================================= */
-
-function getConversationRole(
-    conversation
-){
-
-    if(
-        String(conversation.seller_id) ===
-        String(currentUser.id)
-    ){
-        return "Buyer";
-    }
-
-    if(
-        String(conversation.buyer_id) ===
-        String(currentUser.id)
-    ){
-        return "Seller";
-    }
-
-    return "HAVKAR Member";
-}
-
-
-/* =========================================================
-   EMPTY STATE
+   EMPTY
 ========================================================= */
 
 function showEmptyState(
@@ -1946,11 +2121,241 @@ function showEmptyState(
 
     list.innerHTML = `
         <div class="empty-state">
+
             <i class="fas fa-comments"></i>
+
             <h3>${escapeHtml(title)}</h3>
+
             <p>${escapeHtml(text)}</p>
+
         </div>
     `;
+
+}
+
+
+/* =========================================================
+   CONVERSATION ITEM
+========================================================= */
+
+function createConversationElement(
+    conversation
+){
+
+    const item =
+        document.createElement(
+            "button"
+        );
+
+    item.type =
+        "button";
+
+    item.className =
+        "chat-item";
+
+    const avatar =
+        document.createElement(
+            "div"
+        );
+
+    avatar.className =
+        "avatar";
+
+    avatar.innerHTML =
+        '<i class="fas fa-user"></i>';
+
+    const info =
+        document.createElement(
+            "div"
+        );
+
+    info.className =
+        "chat-info";
+
+    const header =
+        document.createElement(
+            "div"
+        );
+
+    header.className =
+        "chat-header";
+
+    const name =
+        document.createElement(
+            "div"
+        );
+
+    name.className =
+        "name";
+
+    name.textContent =
+        getConversationRole(
+            conversation
+        );
+
+    const time =
+        document.createElement(
+            "div"
+        );
+
+    time.className =
+        "time";
+
+    time.textContent =
+        conversation.lastMessage
+            ? formatTime(
+                conversation.lastMessage.created_at
+            )
+            : formatTime(
+                conversation.updated_at
+            );
+
+    header.appendChild(name);
+    header.appendChild(time);
+
+    const preview =
+        document.createElement(
+            "div"
+        );
+
+    preview.className =
+        "message-preview";
+
+    if(
+        conversation.lastMessage
+    ){
+
+        const prefix =
+            String(
+                conversation.lastMessage.sender_id
+            ) ===
+            String(
+                state.currentUser.id
+            )
+                ? "You: "
+                : "";
+
+        preview.textContent =
+            prefix +
+            String(
+                conversation.lastMessage.message_text ||
+                ""
+            );
+
+    }else{
+
+        preview.textContent =
+            "No messages yet";
+
+    }
+
+    info.appendChild(header);
+    info.appendChild(preview);
+
+    if(conversation.ad){
+
+        const adLabel =
+            document.createElement(
+                "div"
+            );
+
+        adLabel.className =
+            "ad-label";
+
+        adLabel.textContent =
+            "Listing: " +
+            conversation.ad.title;
+
+        info.appendChild(
+            adLabel
+        );
+
+    }
+
+    item.appendChild(avatar);
+    item.appendChild(info);
+
+    if(
+        conversation.unreadCount > 0
+    ){
+
+        const unread =
+            document.createElement(
+                "div"
+            );
+
+        unread.className =
+            "unread";
+
+        unread.textContent =
+            conversation.unreadCount > 99
+                ? "99+"
+                : String(
+                    conversation.unreadCount
+                );
+
+        item.appendChild(
+            unread
+        );
+
+    }
+
+    item.addEventListener(
+        "click",
+        () => openConversation(
+            conversation
+        )
+    );
+
+    return item;
+
+}
+
+
+/* =========================================================
+   ROLE
+========================================================= */
+
+function getConversationRole(
+    conversation
+){
+
+    if(
+        !state.currentUser
+    ){
+
+        return "HAVKAR Member";
+
+    }
+
+    if(
+        String(
+            conversation.seller_id
+        ) ===
+        String(
+            state.currentUser.id
+        )
+    ){
+
+        return "Buyer";
+
+    }
+
+    if(
+        String(
+            conversation.buyer_id
+        ) ===
+        String(
+            state.currentUser.id
+        )
+    ){
+
+        return "Seller";
+
+    }
+
+    return "HAVKAR Member";
+
 }
 
 
@@ -1966,16 +2371,16 @@ async function openConversation(
         !conversation ||
         !conversation.id
     ){
-        return;
-    }
 
+        return;
+
+    }
 
     state.currentConversation =
         conversation;
 
     state.currentConversationId =
         conversation.id;
-
 
     $("messageList")
         .style.display =
@@ -1985,70 +2390,60 @@ async function openConversation(
         .style.display =
         "flex";
 
-
     $("chatPerson")
         .textContent =
         getConversationRole(
             conversation
         );
 
-
     $("chatSubtitle")
         .textContent =
         conversation.ad?.title ||
         "HAVKAR Conversation";
 
-
     $("chatMessages")
         .innerHTML = `
             <div class="chat-empty">
+
                 <i class="fas fa-circle-notch fa-spin"></i>
+
                 <p>Loading messages...</p>
+
             </div>
         `;
 
-
     closeAllReactionPickers();
-
 
     loadReactions(
         conversation.id
     );
 
-
     await loadMessages(
         conversation.id
     );
-
 
     await markMessagesRead(
         conversation.id
     );
 
-
     subscribeToConversation(
         conversation.id
     );
-
 
     subscribeToReactions(
         conversation.id
     );
 
-
-    setTimeout(
+    window.setTimeout(
         () => {
 
-            const input =
-                $("messageInput");
-
-            if(input){
-                input.focus();
-            }
+            $("messageInput")
+                ?.focus();
 
         },
-        160
+        150
     );
+
 }
 
 
@@ -2072,14 +2467,20 @@ async function openConversationFromUrl(){
         return;
     }
 
+    /*
+     * First use an already loaded conversation.
+     */
 
     const localConversation =
         state.conversations.find(
-            item =>
-                String(item.id) ===
-                String(conversationId)
+            conversation =>
+                String(
+                    conversation.id
+                ) ===
+                String(
+                    conversationId
+                )
         );
-
 
     if(localConversation){
 
@@ -2088,27 +2489,110 @@ async function openConversationFromUrl(){
         );
 
         return;
+
     }
 
+    /*
+     * Direct conversation access.
+     * This is intentionally independent of
+     * the conversation-list loading process.
+     */
 
-    const result =
-        await supabaseClient
-            .from("conversations")
-            .select(
-                "id,ad_id,buyer_id,seller_id,created_at,updated_at"
-            )
-            .eq(
-                "id",
-                conversationId
-            )
-            .maybeSingle();
+    try{
 
+        const result =
+            await withTimeout(
+                supabaseClient
+                    .from("conversations")
+                    .select(
+                        "id,ad_id,buyer_id,seller_id,created_at,updated_at"
+                    )
+                    .eq(
+                        "id",
+                        conversationId
+                    )
+                    .maybeSingle()
+            );
 
-    if(result.error){
+        if(result.error){
+
+            throw result.error;
+
+        }
+
+        if(!result.data){
+
+            showToast(
+                "Conversation not found.",
+                "error"
+            );
+
+            return;
+
+        }
+
+        const belongsToUser =
+            String(
+                result.data.buyer_id
+            ) ===
+            String(
+                state.currentUser.id
+            ) ||
+            String(
+                result.data.seller_id
+            ) ===
+            String(
+                state.currentUser.id
+            );
+
+        if(!belongsToUser){
+
+            showToast(
+                "You do not have access to this conversation.",
+                "error"
+            );
+
+            return;
+
+        }
+
+        result.data.ad =
+            null;
+
+        result.data.lastMessage =
+            null;
+
+        result.data.unreadCount =
+            0;
+
+        state.conversations.unshift(
+            result.data
+        );
+
+        /*
+         * Do not wait for enrichment.
+         */
+
+        openConversation(
+            result.data
+        );
+
+        enrichSingleConversation(
+            result.data
+        )
+        .catch(
+            error =>
+                console.warn(
+                    "[HAVKAR] Direct conversation enrichment failed:",
+                    error
+                )
+        );
+
+    }catch(error){
 
         console.error(
             "[HAVKAR] URL conversation error:",
-            result.error
+            error
         );
 
         showToast(
@@ -2116,61 +2600,74 @@ async function openConversationFromUrl(){
             "error"
         );
 
+    }
+
+}
+
+
+/* =========================================================
+   SINGLE CONVERSATION ENRICHMENT
+========================================================= */
+
+async function enrichSingleConversation(
+    conversation
+){
+
+    if(!conversation){
         return;
     }
 
+    if(conversation.ad_id){
 
-    if(!result.data){
+        try{
 
-        showToast(
-            "Conversation not found.",
-            "error"
-        );
+            const adResult =
+                await withTimeout(
+                    supabaseClient
+                        .from("ads")
+                        .select(
+                            "id,title,category,price,location"
+                        )
+                        .eq(
+                            "id",
+                            conversation.ad_id
+                        )
+                        .maybeSingle()
+                );
 
-        return;
+            if(
+                !adResult.error &&
+                adResult.data
+            ){
+
+                conversation.ad =
+                    adResult.data;
+
+                if(
+                    state.currentConversationId ===
+                    conversation.id
+                ){
+
+                    $("chatSubtitle")
+                        .textContent =
+                        adResult.data.title ||
+                        "HAVKAR Conversation";
+
+                }
+
+            }
+
+        }catch(error){
+
+            console.warn(
+                "[HAVKAR] Ad enrichment failed:",
+                error
+            );
+
+        }
+
     }
 
-
-    const belongsToUser =
-        String(result.data.buyer_id) ===
-            String(currentUser.id) ||
-        String(result.data.seller_id) ===
-            String(currentUser.id);
-
-
-    if(!belongsToUser){
-
-        showToast(
-            "You do not have access to this conversation.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    state.conversations.unshift(
-        result.data
-    );
-
-
-    await enrichConversations();
-
-
-    const conversation =
-        state.conversations.find(
-            item =>
-                String(item.id) ===
-                String(conversationId)
-        );
-
-
-    if(conversation){
-
-        await openConversation(
-            conversation
-        );
-    }
 }
 
 
@@ -2189,46 +2686,58 @@ async function loadMessages(
         return;
     }
 
+    try{
 
-    const result =
-        await supabaseClient
-            .from("messages")
-            .select(
-                "id,conversation_id,sender_id,message_text,created_at,is_read"
-            )
-            .eq(
-                "conversation_id",
-                conversationId
-            )
-            .order(
-                "created_at",
-                {
-                    ascending:true
-                }
+        const result =
+            await withTimeout(
+                supabaseClient
+                    .from("messages")
+                    .select(
+                        "id,conversation_id,sender_id,message_text,created_at,is_read"
+                    )
+                    .eq(
+                        "conversation_id",
+                        conversationId
+                    )
+                    .order(
+                        "created_at",
+                        {
+                            ascending:true
+                        }
+                    )
             );
 
+        if(result.error){
 
-    if(result.error){
+            throw result.error;
+
+        }
+
+        renderMessages(
+            result.data || []
+        );
+
+    }catch(error){
 
         console.error(
             "[HAVKAR] Message load error:",
-            result.error
+            error
         );
 
         box.innerHTML = `
             <div class="chat-empty">
+
                 <i class="fas fa-triangle-exclamation"></i>
-                <p>Unable to load messages.</p>
+
+                <p>
+                    Unable to load messages.
+                </p>
+
             </div>
         `;
 
-        return;
     }
 
-
-    renderMessages(
-        result.data || []
-    );
 }
 
 
@@ -2247,31 +2756,40 @@ function renderMessages(
         return;
     }
 
-    box.innerHTML = "";
-
+    box.innerHTML =
+        "";
 
     if(!messages.length){
 
         box.innerHTML = `
             <div class="chat-empty">
+
                 <i class="fas fa-comment-dots"></i>
-                <p>Start the conversation.</p>
+
+                <p>
+                    Start the conversation.
+                </p>
+
             </div>
         `;
 
         return;
+
     }
 
-
     messages.forEach(
-        message => appendMessage(
-            message,
-            false
-        )
+        message => {
+
+            appendMessage(
+                message,
+                false
+            );
+
+        }
     );
 
-
     scrollMessagesToBottom();
+
 }
 
 
@@ -2281,7 +2799,7 @@ function renderMessages(
 
 function appendMessage(
     message,
-    scroll=true
+    scroll = true
 ){
 
     if(
@@ -2289,22 +2807,10 @@ function appendMessage(
         !message.id ||
         !message.conversation_id
     ){
+
         return;
+
     }
-
-
-    if(
-        !state.currentConversationId ||
-        String(
-            message.conversation_id
-        ) !==
-        String(
-            state.currentConversationId
-        )
-    ){
-        return;
-    }
-
 
     const box =
         $("chatMessages");
@@ -2313,16 +2819,19 @@ function appendMessage(
         return;
     }
 
-
     const messageId =
-        String(message.id);
-
+        String(
+            message.id
+        );
 
     const existing =
         box.querySelector(
-            `[data-message-id="${cssEscape(messageId)}"]`
+            '[data-message-id="' +
+            cssEscape(
+                messageId
+            ) +
+            '"]'
         );
-
 
     if(existing){
 
@@ -2331,8 +2840,8 @@ function appendMessage(
         );
 
         return;
-    }
 
+    }
 
     const empty =
         box.querySelector(
@@ -2340,17 +2849,23 @@ function appendMessage(
         );
 
     if(empty){
+
         empty.remove();
+
     }
 
-
     const sent =
-        String(message.sender_id) ===
-        String(currentUser.id);
-
+        String(
+            message.sender_id
+        ) ===
+        String(
+            state.currentUser.id
+        );
 
     const row =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
 
     row.className =
         "message-row " +
@@ -2363,19 +2878,21 @@ function appendMessage(
     row.dataset.messageId =
         messageId;
 
-
     const wrap =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
 
     wrap.className =
         "message-wrap";
 
-    wrap.dataset.messageId =
+    wrap.dataset.messageWrap =
         messageId;
 
-
     const bubble =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
 
     bubble.className =
         "message " +
@@ -2385,28 +2902,35 @@ function appendMessage(
                 : "received"
         );
 
+    bubble.dataset.messageId =
+        messageId;
 
     const text =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
 
     text.className =
         "message-text";
 
     text.textContent =
         String(
-            message.message_text ?? ""
+            message.message_text ||
+            ""
         );
 
-
     const meta =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
 
     meta.className =
         "message-meta";
 
-
     const time =
-        document.createElement("span");
+        document.createElement(
+            "span"
+        );
 
     time.className =
         "message-time";
@@ -2416,14 +2940,16 @@ function appendMessage(
             message.created_at
         );
 
-
-    meta.appendChild(time);
-
+    meta.appendChild(
+        time
+    );
 
     if(sent){
 
         const checks =
-            document.createElement("span");
+            document.createElement(
+                "span"
+            );
 
         checks.className =
             "message-checks" +
@@ -2446,18 +2972,28 @@ function appendMessage(
                 ? "Read"
                 : "Sent";
 
-        meta.appendChild(checks);
+        meta.appendChild(
+            checks
+        );
+
     }
 
+    bubble.appendChild(
+        text
+    );
 
-    bubble.appendChild(text);
-    bubble.appendChild(meta);
-
+    bubble.appendChild(
+        meta
+    );
 
     const trigger =
-        document.createElement("button");
+        document.createElement(
+            "button"
+        );
 
-    trigger.type = "button";
+    trigger.type =
+        "button";
+
     trigger.className =
         "reaction-trigger";
 
@@ -2469,13 +3005,6 @@ function appendMessage(
     trigger.innerHTML =
         '<i class="far fa-face-smile"></i>';
 
-
-    const picker =
-        createReactionPicker(
-            messageId
-        );
-
-
     trigger.addEventListener(
         "click",
         event => {
@@ -2485,17 +3014,31 @@ function appendMessage(
             toggleReactionPicker(
                 wrap
             );
+
         }
     );
 
+    const picker =
+        createReactionPicker(
+            messageId
+        );
 
-    wrap.appendChild(bubble);
-    wrap.appendChild(trigger);
-    wrap.appendChild(picker);
+    wrap.appendChild(
+        bubble
+    );
 
+    wrap.appendChild(
+        trigger
+    );
+
+    wrap.appendChild(
+        picker
+    );
 
     const reactionBar =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
 
     reactionBar.className =
         "reaction-bar";
@@ -2503,25 +3046,28 @@ function appendMessage(
     reactionBar.dataset.reactionBar =
         messageId;
 
-
     wrap.appendChild(
         reactionBar
     );
 
+    row.appendChild(
+        wrap
+    );
 
-    row.appendChild(wrap);
-
-    box.appendChild(row);
-
+    box.appendChild(
+        row
+    );
 
     renderMessageReactions(
         messageId
     );
 
-
     if(scroll){
+
         scrollMessagesToBottom();
+
     }
+
 }
 
 
@@ -2534,7 +3080,9 @@ function createReactionPicker(
 ){
 
     const picker =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
 
     picker.className =
         "reaction-picker";
@@ -2542,14 +3090,17 @@ function createReactionPicker(
     picker.dataset.pickerFor =
         messageId;
 
-
     REACTIONS.forEach(
         emoji => {
 
             const button =
-                document.createElement("button");
+                document.createElement(
+                    "button"
+                );
 
-            button.type = "button";
+            button.type =
+                "button";
+
             button.className =
                 "reaction-option";
 
@@ -2561,7 +3112,6 @@ function createReactionPicker(
                 "React " + emoji
             );
 
-
             button.addEventListener(
                 "click",
                 event => {
@@ -2572,18 +3122,19 @@ function createReactionPicker(
                         messageId,
                         emoji
                     );
+
                 }
             );
-
 
             picker.appendChild(
                 button
             );
+
         }
     );
 
-
     return picker;
+
 }
 
 
@@ -2603,7 +3154,9 @@ function toggleReactionPicker(
         wrap.classList.add(
             "reaction-open"
         );
+
     }
+
 }
 
 
@@ -2614,11 +3167,15 @@ function closeAllReactionPickers(){
             ".message-wrap.reaction-open"
         )
         .forEach(
-            element =>
+            element => {
+
                 element.classList.remove(
                     "reaction-open"
-                )
+                );
+
+            }
         );
+
 }
 
 
@@ -2631,9 +3188,12 @@ function getReactionStorageKey(
 ){
 
     return (
-        "havkar_message_reactions_v1:" +
-        String(conversationId)
+        "havkar_message_reactions_v2:" +
+        String(
+            conversationId
+        )
     );
+
 }
 
 
@@ -2641,8 +3201,8 @@ function loadReactions(
     conversationId
 ){
 
-    state.reactions = {};
-
+    state.reactions =
+        {};
 
     try{
 
@@ -2653,23 +3213,24 @@ function loadReactions(
                 )
             );
 
-
         if(!raw){
             return;
         }
 
-
         const parsed =
-            JSON.parse(raw);
-
+            JSON.parse(
+                raw
+            );
 
         if(
             parsed &&
-            typeof parsed === "object"
+            typeof parsed ===
+            "object"
         ){
 
             state.reactions =
                 parsed;
+
         }
 
     }catch(error){
@@ -2679,17 +3240,21 @@ function loadReactions(
             error
         );
 
-        state.reactions = {};
+        state.reactions =
+            {};
+
     }
+
 }
 
 
 function saveReactions(){
 
-    if(!state.currentConversationId){
+    if(
+        !state.currentConversationId
+    ){
         return;
     }
-
 
     try{
 
@@ -2708,7 +3273,9 @@ function saveReactions(){
             "[HAVKAR] Reaction storage save failed:",
             error
         );
+
     }
+
 }
 
 
@@ -2721,19 +3288,23 @@ function getMessageReactionData(
 ){
 
     const key =
-        String(messageId);
-
+        String(
+            messageId
+        );
 
     if(
         !state.reactions[key] ||
-        typeof state.reactions[key] !== "object"
+        typeof state.reactions[key] !==
+        "object"
     ){
 
-        state.reactions[key] = {};
+        state.reactions[key] =
+            {};
+
     }
 
-
     return state.reactions[key];
+
 }
 
 
@@ -2746,40 +3317,66 @@ function addOrToggleReaction(
         !state.currentUser ||
         !state.currentConversationId
     ){
-        return;
-    }
 
+        return;
+
+    }
 
     if(
-        !REACTIONS.includes(emoji)
+        !REACTIONS.includes(
+            emoji
+        )
     ){
-        return;
-    }
 
+        return;
+
+    }
 
     const data =
         getMessageReactionData(
             messageId
         );
 
-
-    /*
-     * One reaction per user per message.
-     * Selecting the same emoji removes it.
-     * Selecting another emoji changes it.
-     */
-
     const userId =
         String(
             state.currentUser.id
         );
 
+    let currentEmoji =
+        null;
 
-    let changed =
-        false;
+    Object.keys(
+        data
+    ).forEach(
+        reactionEmoji => {
 
+            if(
+                Array.isArray(
+                    data[reactionEmoji]
+                ) &&
+                data[reactionEmoji].some(
+                    id =>
+                        String(id) ===
+                        userId
+                )
+            ){
 
-    Object.keys(data).forEach(
+                currentEmoji =
+                    reactionEmoji;
+
+            }
+
+        }
+    );
+
+    /*
+     * Same reaction = remove.
+     * Different reaction = switch.
+     */
+
+    Object.keys(
+        data
+    ).forEach(
         reactionEmoji => {
 
             if(
@@ -2787,71 +3384,43 @@ function addOrToggleReaction(
                     data[reactionEmoji]
                 )
             ){
-                data[reactionEmoji] = [];
+
+                data[reactionEmoji] =
+                    [];
+
             }
-
-
-            const before =
-                data[reactionEmoji].length;
-
 
             data[reactionEmoji] =
-                data[reactionEmoji]
-                    .filter(
-                        id =>
-                            String(id) !==
-                            userId
-                    );
+                data[reactionEmoji].filter(
+                    id =>
+                        String(id) !==
+                        userId
+                );
 
-
-            if(
-                data[reactionEmoji].length !==
-                before
-            ){
-
-                changed = true;
-            }
         }
     );
 
+    if(
+        currentEmoji !==
+        emoji
+    ){
 
-    const current =
-        Object.keys(data).find(
-            reactionEmoji =>
-                Array.isArray(
-                    data[reactionEmoji]
-                ) &&
-                data[reactionEmoji]
-                    .some(
-                        id =>
-                            String(id) ===
-                            userId
-                    )
-        );
+        if(
+            !Array.isArray(
+                data[emoji]
+            )
+        ){
 
+            data[emoji] =
+                [];
 
-    if(current === emoji){
-
-        changed = true;
-
-    }else{
-
-        if(!Array.isArray(data[emoji])){
-            data[emoji] = [];
         }
 
         data[emoji].push(
             userId
         );
 
-        changed = true;
     }
-
-
-    if(!changed){
-        return;
-    }
-
 
     cleanupReactionData(
         messageId
@@ -2863,10 +3432,12 @@ function addOrToggleReaction(
         messageId
     );
 
-
     broadcastReaction({
-        action:"sync",
-        messageId:String(messageId),
+        messageId:
+            String(
+                messageId
+            ),
+
         reactions:
             cloneReactionData(
                 getMessageReactionData(
@@ -2875,10 +3446,14 @@ function addOrToggleReaction(
             )
     });
 
-
     closeAllReactionPickers();
+
 }
 
+
+/* =========================================================
+   CLEAN REACTION DATA
+========================================================= */
 
 function cleanupReactionData(
     messageId
@@ -2889,27 +3464,38 @@ function cleanupReactionData(
             messageId
         );
 
-
-    Object.keys(data).forEach(
+    Object.keys(
+        data
+    ).forEach(
         emoji => {
 
             if(
-                !Array.isArray(data[emoji]) ||
+                !Array.isArray(
+                    data[emoji]
+                ) ||
                 !data[emoji].length
             ){
 
                 delete data[emoji];
+
             }
+
         }
     );
+
 }
 
+
+/* =========================================================
+   CLONE REACTIONS
+========================================================= */
 
 function cloneReactionData(
     data
 ){
 
-    const output = {};
+    const output =
+        {};
 
     Object.keys(
         data || {}
@@ -2922,12 +3508,14 @@ function cloneReactionData(
                 )
                     ? [
                         ...data[emoji]
-                      ]
+                    ]
                     : [];
+
         }
     );
 
     return output;
+
 }
 
 
@@ -2941,31 +3529,29 @@ function renderMessageReactions(
 
     const bar =
         document.querySelector(
-            `[data-reaction-bar="${cssEscape(String(messageId))}"]`
+            `[data-reaction-bar="${cssEscape(
+                String(messageId)
+            )}"]`
         );
-
 
     if(!bar){
         return;
     }
 
-
-    bar.innerHTML = "";
-
+    bar.innerHTML =
+        "";
 
     const data =
         getMessageReactionData(
             messageId
         );
 
-
     const userId =
         state.currentUser
             ? String(
                 state.currentUser.id
-              )
+            )
             : null;
-
 
     REACTIONS.forEach(
         emoji => {
@@ -2977,19 +3563,20 @@ function renderMessageReactions(
                     ? data[emoji]
                     : [];
 
-
             if(!users.length){
                 return;
             }
 
-
             const chip =
-                document.createElement("button");
+                document.createElement(
+                    "button"
+                );
 
-            chip.type = "button";
+            chip.type =
+                "button";
+
             chip.className =
                 "reaction-chip";
-
 
             if(
                 userId &&
@@ -3003,18 +3590,21 @@ function renderMessageReactions(
                 chip.classList.add(
                     "mine"
                 );
+
             }
 
-
             const emojiSpan =
-                document.createElement("span");
+                document.createElement(
+                    "span"
+                );
 
             emojiSpan.textContent =
                 emoji;
 
-
             const count =
-                document.createElement("span");
+                document.createElement(
+                    "span"
+                );
 
             count.className =
                 "reaction-count";
@@ -3024,7 +3614,6 @@ function renderMessageReactions(
                     users.length
                 );
 
-
             chip.appendChild(
                 emojiSpan
             );
@@ -3032,7 +3621,6 @@ function renderMessageReactions(
             chip.appendChild(
                 count
             );
-
 
             chip.addEventListener(
                 "click",
@@ -3044,15 +3632,17 @@ function renderMessageReactions(
                         messageId,
                         emoji
                     );
+
                 }
             );
-
 
             bar.appendChild(
                 chip
             );
+
         }
     );
+
 }
 
 
@@ -3066,12 +3656,13 @@ function subscribeToReactions(
 
     removeReactionSubscription();
 
-
     state.reactionChannel =
         supabaseClient
             .channel(
                 "havkar-reactions-" +
-                String(conversationId) +
+                String(
+                    conversationId
+                ) +
                 "-" +
                 Date.now()
             )
@@ -3085,42 +3676,46 @@ function subscribeToReactions(
                     const data =
                         payload?.payload;
 
-
                     if(
                         !data ||
                         String(
                             data.conversationId
                         ) !==
-                        String(conversationId)
+                        String(
+                            conversationId
+                        )
                     ){
-                        return;
-                    }
 
+                        return;
+
+                    }
 
                     if(
                         !data.messageId ||
                         !data.reactions
                     ){
+
                         return;
+
                     }
 
-
                     state.reactions[
-                        String(data.messageId)
+                        String(
+                            data.messageId
+                        )
                     ] =
                         cloneReactionData(
                             data.reactions
                         );
 
-
                     saveReactions();
-
 
                     renderMessageReactions(
                         String(
                             data.messageId
                         )
                     );
+
                 }
             )
             .subscribe(
@@ -3130,8 +3725,10 @@ function subscribeToReactions(
                         "[HAVKAR] Reaction realtime:",
                         status
                     );
+
                 }
             );
+
 }
 
 
@@ -3143,30 +3740,34 @@ function broadcastReaction(
         !state.reactionChannel ||
         !state.currentConversationId
     ){
+
         return;
+
     }
 
+    state.reactionChannel
+        .send({
+            type:"broadcast",
+            event:"reaction",
+            payload:{
+                conversationId:
+                    String(
+                        state.currentConversationId
+                    ),
+                ...payload
+            }
+        })
+        .catch(
+            error => {
 
-    state.reactionChannel.send({
-        type:"broadcast",
-        event:"reaction",
-        payload:{
-            conversationId:
-                String(
-                    state.currentConversationId
-                ),
-            ...payload
-        }
-    })
-    .catch(
-        error => {
+                console.warn(
+                    "[HAVKAR] Reaction broadcast failed:",
+                    error
+                );
 
-            console.warn(
-                "[HAVKAR] Reaction broadcast failed:",
-                error
-            );
-        }
-    );
+            }
+        );
+
 }
 
 
@@ -3182,7 +3783,9 @@ function removeReactionSubscription(){
 
         state.reactionChannel =
             null;
+
     }
+
 }
 
 
@@ -3192,7 +3795,9 @@ function removeReactionSubscription(){
 
 async function sendMessage(){
 
-    if(!state.currentUser){
+    if(
+        !state.currentUser
+    ){
 
         showToast(
             "Please sign in first.",
@@ -3200,10 +3805,12 @@ async function sendMessage(){
         );
 
         return;
+
     }
 
-
-    if(!state.currentConversationId){
+    if(
+        !state.currentConversationId
+    ){
 
         showToast(
             "Open a conversation first.",
@@ -3211,8 +3818,8 @@ async function sendMessage(){
         );
 
         return;
-    }
 
+    }
 
     const input =
         $("messageInput");
@@ -3220,20 +3827,21 @@ async function sendMessage(){
     const button =
         $("sendButton");
 
+    if(
+        !input ||
+        !button
+    ){
 
-    if(!input || !button){
         return;
-    }
 
+    }
 
     const text =
         input.value.trim();
 
-
     if(!text){
         return;
     }
-
 
     if(
         text.length >
@@ -3246,68 +3854,60 @@ async function sendMessage(){
         );
 
         return;
+
     }
 
+    input.disabled =
+        true;
 
-    input.disabled = true;
-    button.disabled = true;
-
+    button.disabled =
+        true;
 
     try{
 
         const result =
-            await supabaseClient
-                .from("messages")
-                .insert({
-                    conversation_id:
-                        state.currentConversationId,
+            await withTimeout(
+                supabaseClient
+                    .from("messages")
+                    .insert({
+                        conversation_id:
+                            state.currentConversationId,
 
-                    sender_id:
-                        state.currentUser.id,
+                        sender_id:
+                            state.currentUser.id,
 
-                    message_text:
-                        text,
+                        message_text:
+                            text,
 
-                    is_read:false
-                })
-                .select(
-                    "id,conversation_id,sender_id,message_text,created_at,is_read"
-                )
-                .single();
+                        is_read:false
 
+                    })
+                    .select(
+                        "id,conversation_id,sender_id,message_text,created_at,is_read"
+                    )
+                    .single()
+            );
 
         if(result.error){
 
-            console.error(
-                "[HAVKAR] Send message error:",
-                result.error
-            );
+            throw result.error;
 
-            showToast(
-                "Message could not be sent.",
-                "error"
-            );
-
-            return;
         }
 
-
-        input.value = "";
-
+        input.value =
+            "";
 
         appendMessage(
             result.data,
             true
         );
 
-
         await updateConversationTimestamp();
-
 
     }catch(error){
 
         console.error(
-            "[HAVKAR] Send message failed:",
+            "[HAVKAR] Send message error:",
             error
         );
 
@@ -3318,11 +3918,16 @@ async function sendMessage(){
 
     }finally{
 
-        input.disabled = false;
-        button.disabled = false;
+        input.disabled =
+            false;
+
+        button.disabled =
+            false;
 
         input.focus();
+
     }
+
 }
 
 
@@ -3332,31 +3937,49 @@ async function sendMessage(){
 
 async function updateConversationTimestamp(){
 
-    if(!state.currentConversationId){
+    if(
+        !state.currentConversationId
+    ){
+
         return;
+
     }
 
+    try{
 
-    const result =
-        await supabaseClient
-            .from("conversations")
-            .update({
-                updated_at:
-                    new Date().toISOString()
-            })
-            .eq(
-                "id",
-                state.currentConversationId
+        const result =
+            await withTimeout(
+                supabaseClient
+                    .from("conversations")
+                    .update({
+                        updated_at:
+                            new Date()
+                                .toISOString()
+                    })
+                    .eq(
+                        "id",
+                        state.currentConversationId
+                    )
             );
 
+        if(result.error){
 
-    if(result.error){
+            console.warn(
+                "[HAVKAR] Timestamp update:",
+                result.error
+            );
+
+        }
+
+    }catch(error){
 
         console.warn(
-            "[HAVKAR] Conversation timestamp update:",
-            result.error
+            "[HAVKAR] Timestamp update failed:",
+            error
         );
+
     }
+
 }
 
 
@@ -3372,38 +3995,51 @@ async function markMessagesRead(
         !state.currentUser ||
         !conversationId
     ){
+
         return;
+
     }
 
+    try{
 
-    const result =
-        await supabaseClient
-            .from("messages")
-            .update({
-                is_read:true
-            })
-            .eq(
-                "conversation_id",
-                conversationId
-            )
-            .neq(
-                "sender_id",
-                state.currentUser.id
-            )
-            .eq(
-                "is_read",
-                false
+        const result =
+            await withTimeout(
+                supabaseClient
+                    .from("messages")
+                    .update({
+                        is_read:true
+                    })
+                    .eq(
+                        "conversation_id",
+                        conversationId
+                    )
+                    .neq(
+                        "sender_id",
+                        state.currentUser.id
+                    )
+                    .eq(
+                        "is_read",
+                        false
+                    )
             );
 
+        if(result.error){
 
-    if(result.error){
+            console.warn(
+                "[HAVKAR] Mark read error:",
+                result.error
+            );
+
+        }
+
+    }catch(error){
 
         console.warn(
-            "[HAVKAR] Mark read error:",
-            result.error
+            "[HAVKAR] Mark read failed:",
+            error
         );
-    }
 
+    }
 
     const conversation =
         state.conversations.find(
@@ -3412,10 +4048,13 @@ async function markMessagesRead(
                 String(conversationId)
         );
 
-
     if(conversation){
-        conversation.unreadCount = 0;
+
+        conversation.unreadCount =
+            0;
+
     }
+
 }
 
 
@@ -3429,12 +4068,13 @@ function subscribeToConversation(
 
     removeRealtimeSubscription();
 
-
     state.realtimeChannel =
         supabaseClient
             .channel(
                 "havkar-chat-" +
-                String(conversationId) +
+                String(
+                    conversationId
+                ) +
                 "-" +
                 Date.now()
             )
@@ -3453,23 +4093,24 @@ function subscribeToConversation(
                     const message =
                         payload?.new;
 
-
                     if(
                         !message ||
                         String(
                             message.conversation_id
                         ) !==
-                        String(conversationId)
+                        String(
+                            conversationId
+                        )
                     ){
-                        return;
-                    }
 
+                        return;
+
+                    }
 
                     appendMessage(
                         message,
                         true
                     );
-
 
                     if(
                         String(
@@ -3483,7 +4124,9 @@ function subscribeToConversation(
                         await markMessagesRead(
                             conversationId
                         );
+
                     }
+
                 }
             )
             .on(
@@ -3501,6 +4144,7 @@ function subscribeToConversation(
                     updateRenderedMessage(
                         payload?.new
                     );
+
                 }
             )
             .subscribe(
@@ -3510,8 +4154,10 @@ function subscribeToConversation(
                         "[HAVKAR] Chat realtime:",
                         status
                     );
+
                 }
             );
+
 }
 
 
@@ -3527,7 +4173,9 @@ function removeRealtimeSubscription(){
 
         state.realtimeChannel =
             null;
+
     }
+
 }
 
 
@@ -3544,28 +4192,41 @@ function updateRenderedMessage(
         !message.id ||
         !state.currentConversationId
     ){
-        return;
-    }
 
+        return;
+
+    }
 
     if(
-        String(message.conversation_id) !==
-        String(state.currentConversationId)
+        String(
+            message.conversation_id
+        ) !==
+        String(
+            state.currentConversationId
+        )
     ){
-        return;
-    }
 
+        return;
+
+    }
 
     const element =
         document.querySelector(
-            `[data-message-id="${cssEscape(String(message.id))}"] .message-checks`
+            `[data-message-id="${cssEscape(
+                String(
+                    message.id
+                )
+            )}"] .message-checks`
         );
-
 
     if(
         element &&
-        String(message.sender_id) ===
-        String(state.currentUser.id)
+        String(
+            message.sender_id
+        ) ===
+        String(
+            state.currentUser.id
+        )
     ){
 
         element.textContent =
@@ -3582,7 +4243,9 @@ function updateRenderedMessage(
             message.is_read
                 ? "Read"
                 : "Sent";
+
     }
+
 }
 
 
@@ -3593,10 +4256,10 @@ function updateRenderedMessage(
 function closeChat(){
 
     removeRealtimeSubscription();
+
     removeReactionSubscription();
 
     closeAllReactionPickers();
-
 
     state.currentConversation =
         null;
@@ -3607,7 +4270,6 @@ function closeChat(){
     state.reactions =
         {};
 
-
     $("chatScreen")
         .style.display =
         "none";
@@ -3616,15 +4278,14 @@ function closeChat(){
         .style.display =
         "block";
 
-
     history.replaceState(
         {},
         "",
         "chat.html"
     );
 
-
     loadConversations();
+
 }
 
 
@@ -3637,11 +4298,9 @@ function showChatInfo(){
     const conversation =
         state.currentConversation;
 
-
     if(!conversation){
         return;
     }
-
 
     if(conversation.ad){
 
@@ -3655,7 +4314,9 @@ function showChatInfo(){
         showToast(
             "HAVKAR conversation"
         );
+
     }
+
 }
 
 
@@ -3674,13 +4335,13 @@ function searchMessages(
         .trim()
         .toLowerCase();
 
-
     renderConversationList();
+
 }
 
 
 /* =========================================================
-   ENTER SEND
+   ENTER TO SEND
 ========================================================= */
 
 function handleMessageKeydown(
@@ -3695,7 +4356,9 @@ function handleMessageKeydown(
         event.preventDefault();
 
         sendMessage();
+
     }
+
 }
 
 
@@ -3712,14 +4375,15 @@ function scrollMessagesToBottom(){
         return;
     }
 
-
     requestAnimationFrame(
         () => {
 
             box.scrollTop =
                 box.scrollHeight;
+
         }
     );
+
 }
 
 
@@ -3735,30 +4399,31 @@ function formatTime(
         return "";
     }
 
-
     const date =
-        new Date(value);
-
+        new Date(
+            value
+        );
 
     if(
         Number.isNaN(
             date.getTime()
         )
     ){
-        return "";
-    }
 
+        return "";
+
+    }
 
     const now =
         new Date();
-
 
     const difference =
         now.getTime() -
         date.getTime();
 
-
-    if(difference < 0){
+    if(
+        difference < 0
+    ){
 
         return date.toLocaleDateString(
             undefined,
@@ -3767,46 +4432,64 @@ function formatTime(
                 month:"short"
             }
         );
-    }
 
+    }
 
     const minutes =
         Math.floor(
             difference / 60000
         );
 
+    if(
+        minutes < 1
+    ){
 
-    if(minutes < 1){
         return "Now";
+
     }
 
+    if(
+        minutes < 60
+    ){
 
-    if(minutes < 60){
-        return minutes + "m";
+        return (
+            minutes +
+            "m"
+        );
+
     }
-
 
     const hours =
         Math.floor(
             minutes / 60
         );
 
+    if(
+        hours < 24
+    ){
 
-    if(hours < 24){
-        return hours + "h";
+        return (
+            hours +
+            "h"
+        );
+
     }
-
 
     const days =
         Math.floor(
             hours / 24
         );
 
+    if(
+        days < 7
+    ){
 
-    if(days < 7){
-        return days + "d";
+        return (
+            days +
+            "d"
+        );
+
     }
-
 
     return date.toLocaleDateString(
         undefined,
@@ -3815,6 +4498,7 @@ function formatTime(
             month:"short"
         }
     );
+
 }
 
 
@@ -3826,19 +4510,20 @@ function formatMessageTime(
         return "";
     }
 
-
     const date =
-        new Date(value);
-
+        new Date(
+            value
+        );
 
     if(
         Number.isNaN(
             date.getTime()
         )
     ){
-        return "";
-    }
 
+        return "";
+
+    }
 
     return date.toLocaleTimeString(
         undefined,
@@ -3847,6 +4532,7 @@ function formatMessageTime(
             minute:"2-digit"
         }
     );
+
 }
 
 
@@ -3861,11 +4547,27 @@ function escapeHtml(
     return String(
         value ?? ""
     )
-    .replace(/&/g,"&amp;")
-    .replace(/</g,"&lt;")
-    .replace(/>/g,"&gt;")
-    .replace(/"/g,"&quot;")
-    .replace(/'/g,"&#039;");
+    .replace(
+        /&/g,
+        "&amp;"
+    )
+    .replace(
+        /</g,
+        "&lt;"
+    )
+    .replace(
+        />/g,
+        "&gt;"
+    )
+    .replace(
+        /"/g,
+        "&quot;"
+    )
+    .replace(
+        /'/g,
+        "&#039;"
+    );
+
 }
 
 
@@ -3882,14 +4584,15 @@ function cssEscape(
         return window.CSS.escape(
             String(value)
         );
-    }
 
+    }
 
     return String(value)
         .replace(
             /["\\]/g,
             "\\$&"
         );
+
 }
 
 
@@ -3907,18 +4610,23 @@ document.addEventListener(
         const menuButton =
             $("headerMenuButton");
 
-
         if(
             menu &&
             menuButton &&
-            menu.classList.contains("show") &&
-            !menu.contains(event.target) &&
-            !menuButton.contains(event.target)
+            menu.classList.contains(
+                "show"
+            ) &&
+            !menu.contains(
+                event.target
+            ) &&
+            !menuButton.contains(
+                event.target
+            )
         ){
 
             closeHeaderMenu();
-        }
 
+        }
 
         if(
             !event.target.closest(
@@ -3927,7 +4635,9 @@ document.addEventListener(
         ){
 
             closeAllReactionPickers();
+
         }
+
     }
 );
 
@@ -3940,14 +4650,17 @@ document.addEventListener(
     "keydown",
     event => {
 
-        if(event.key !== "Escape"){
+        if(
+            event.key ===
+            "Escape"
+        ){
 
-            return;
+            closeHeaderMenu();
+
+            closeAllReactionPickers();
+
         }
 
-
-        closeHeaderMenu();
-        closeAllReactionPickers();
     }
 );
 
@@ -3957,29 +4670,41 @@ document.addEventListener(
 ========================================================= */
 
 supabaseClient.auth.onAuthStateChange(
-    (event,session) => {
+    (
+        event,
+        session
+    ) => {
 
-        if(event === "SIGNED_OUT"){
+        if(
+            event ===
+            "SIGNED_OUT"
+        ){
 
             state.currentUser =
                 null;
 
             removeRealtimeSubscription();
+
             removeReactionSubscription();
 
             window.location.href =
                 "login.html";
+
         }
 
-
         if(
-            event === "SIGNED_IN" &&
+            (
+                event ===
+                "SIGNED_IN"
+            ) &&
             session?.user
         ){
 
             state.currentUser =
                 session.user;
+
         }
+
     }
 );
 
@@ -3996,7 +4721,6 @@ function setupEvents(){
             goHome
         );
 
-
     $("headerMenuButton")
         ?.addEventListener(
             "click",
@@ -4005,9 +4729,9 @@ function setupEvents(){
                 event.stopPropagation();
 
                 toggleHeaderMenu();
+
             }
         );
-
 
     $("notificationsButton")
         ?.addEventListener(
@@ -4015,10 +4739,11 @@ function setupEvents(){
             () => {
 
                 closeHeaderMenu();
+
                 goNotifications();
+
             }
         );
-
 
     $("profileButton")
         ?.addEventListener(
@@ -4026,10 +4751,11 @@ function setupEvents(){
             () => {
 
                 closeHeaderMenu();
+
                 goProfile();
+
             }
         );
-
 
     $("navHome")
         ?.addEventListener(
@@ -4037,13 +4763,11 @@ function setupEvents(){
             goHome
         );
 
-
     $("navMessages")
         ?.addEventListener(
             "click",
             goMessages
         );
-
 
     $("navNotifications")
         ?.addEventListener(
@@ -4051,13 +4775,11 @@ function setupEvents(){
             goNotifications
         );
 
-
     $("navProfile")
         ?.addEventListener(
             "click",
             goProfile
         );
-
 
     $("chatBackButton")
         ?.addEventListener(
@@ -4065,13 +4787,11 @@ function setupEvents(){
             closeChat
         );
 
-
     $("chatInfoButton")
         ?.addEventListener(
             "click",
             showChatInfo
         );
-
 
     $("sendButton")
         ?.addEventListener(
@@ -4079,13 +4799,11 @@ function setupEvents(){
             sendMessage
         );
 
-
     $("messageInput")
         ?.addEventListener(
             "keydown",
             handleMessageKeydown
         );
-
 
     $("searchInput")
         ?.addEventListener(
@@ -4096,12 +4814,6 @@ function setupEvents(){
                 )
         );
 
-
-    /*
-     * If the user taps the chat background
-     * reaction menus close.
-     */
-
     $("chatMessages")
         ?.addEventListener(
             "scroll",
@@ -4110,6 +4822,7 @@ function setupEvents(){
                 passive:true
             }
         );
+
 }
 
 
@@ -4123,30 +4836,60 @@ document.addEventListener(
 
         setupEvents();
 
-
         state.currentUser =
             await loadCurrentUser();
 
-
-        if(!state.currentUser){
+        if(
+            !state.currentUser
+        ){
 
             window.location.href =
                 "login.html";
 
             return;
+
         }
 
+        /*
+         * If a conversation ID exists,
+         * open it independently first.
+         * This prevents the conversation-list
+         * request from blocking a real chat.
+         */
+
+        const params =
+            new URLSearchParams(
+                window.location.search
+            );
+
+        const conversationId =
+            params.get(
+                "conversation_id"
+            );
+
+        if(conversationId){
+
+            await openConversationFromUrl();
+
+            /*
+             * Load the conversation list in the
+             * background; it must never block chat.
+             */
+
+            loadConversations();
+
+            return;
+
+        }
 
         await loadConversations();
 
-
-        await openConversationFromUrl();
     }
 );
 
 
 /* =========================================================
-   PAGE CLEANUP
+   CLEANUP
 ========================================================= */
 
 window.addEventListener(
@@ -4154,11 +4897,13 @@ window.addEventListener(
     () => {
 
         removeRealtimeSubscription();
+
         removeReactionSubscription();
+
     }
 );
 
 </script>
 
 </body>
-    </html>
+      </html>
