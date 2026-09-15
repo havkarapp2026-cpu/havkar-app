@@ -1015,6 +1015,14 @@ input:focus-visible{
 /* =========================================================
    HAVKAR BUY & SELL
    FINAL SUPABASE VERSION
+
+   SAVED FIX:
+   - Saved listings are synchronized through one shared
+     browser storage namespace.
+   - Existing user-specific Saved keys are also imported.
+   - Guest and authenticated Saved keys are merged.
+   - Existing listings and all other marketplace features
+     remain unchanged.
    ========================================================= */
 
 const SUPABASE_URL =
@@ -1024,6 +1032,12 @@ const SUPABASE_PUBLISHABLE_KEY =
     "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq";
 
 let supabaseClient = null;
+
+const SAVED_STORAGE_PREFIX =
+    "havkar_saved_ads_v1:";
+
+const SAVED_SHARED_STORAGE_KEY =
+    "havkar_saved_ads_v1:shared";
 
 const state = {
 
@@ -1453,7 +1467,24 @@ function formatDate(value){
 
 
 /* =========================================================
-   SAVED
+   SAVED — SHARED STORAGE
+   =========================================================
+
+   This section intentionally supports BOTH:
+
+   1. The existing user-specific keys:
+      havkar_saved_ads_v1:<userId>
+      havkar_saved_ads_v1:guest
+
+   2. A shared compatibility key:
+      havkar_saved_ads_v1:shared
+
+   The page imports all existing matching keys, so a Saved
+   listing created by ad-details.html remains visible here
+   even if that page stored it under "guest" or another
+   authenticated-user key.
+
+   Nothing is deleted from localStorage.
    ========================================================= */
 
 function getSavedStorageKey(){
@@ -1463,43 +1494,200 @@ function getSavedStorageKey(){
         "guest";
 
     return (
-        "havkar_saved_ads_v1:" +
+        SAVED_STORAGE_PREFIX +
         userPart
     );
 
 }
 
 
-function loadSavedIds(){
+function readSavedIdsFromKey(key){
+
+    const ids =
+        new Set();
+
+    if(!key){
+        return ids;
+    }
 
     try{
 
         const raw =
             localStorage.getItem(
-                getSavedStorageKey()
+                key
             );
+
+        if(!raw){
+            return ids;
+        }
 
         const parsed =
-            raw
-                ? JSON.parse(raw)
-                : [];
+            JSON.parse(raw);
 
-        state.savedIds =
-            new Set(
-                Array.isArray(parsed)
-                    ? parsed.map(String)
-                    : []
+        if(
+            Array.isArray(parsed)
+        ){
+
+            parsed.forEach(
+                id => {
+
+                    if(
+                        id !== null &&
+                        id !== undefined &&
+                        String(id).trim()
+                    ){
+
+                        ids.add(
+                            String(id)
+                        );
+
+                    }
+
+                }
             );
+
+        }
 
     }catch(error){
 
         console.warn(
-            "[HAVKAR] Could not load saved listings:",
+            "[HAVKAR] Could not read Saved storage key:",
+            key,
             error
         );
 
-        state.savedIds =
-            new Set();
+    }
+
+    return ids;
+
+}
+
+
+function getAllSavedStorageKeys(){
+
+    const keys =
+        [];
+
+    try{
+
+        for(
+            let index = 0;
+            index < localStorage.length;
+            index++
+        ){
+
+            const key =
+                localStorage.key(
+                    index
+                );
+
+            if(
+                key &&
+                key.startsWith(
+                    SAVED_STORAGE_PREFIX
+                )
+            ){
+
+                keys.push(
+                    key
+                );
+
+            }
+
+        }
+
+    }catch(error){
+
+        console.warn(
+            "[HAVKAR] Could not inspect Saved storage:",
+            error
+        );
+
+    }
+
+    return keys;
+
+}
+
+
+function mergeSavedStorageIds(){
+
+    const merged =
+        new Set();
+
+    /*
+     * First read every existing HAVKAR Saved key.
+     * This is important for compatibility with the
+     * ad-details.html version that may have stored the
+     * listing under a user-specific or guest key.
+     */
+
+    getAllSavedStorageKeys()
+        .forEach(
+            key => {
+
+                readSavedIdsFromKey(
+                    key
+                ).forEach(
+                    id =>
+                        merged.add(id)
+                );
+
+            }
+        );
+
+    /*
+     * Explicitly include the current key and shared key.
+     * This also protects against browser implementations
+     * that do not enumerate storage consistently.
+     */
+
+    readSavedIdsFromKey(
+        getSavedStorageKey()
+    ).forEach(
+        id =>
+            merged.add(id)
+    );
+
+    readSavedIdsFromKey(
+        SAVED_SHARED_STORAGE_KEY
+    ).forEach(
+        id =>
+            merged.add(id)
+    );
+
+    state.savedIds =
+        merged;
+
+}
+
+
+function loadSavedIds(){
+
+    mergeSavedStorageIds();
+
+    /*
+     * Keep the shared compatibility key synchronized.
+     * Existing user-specific keys are preserved.
+     */
+
+    try{
+
+        localStorage.setItem(
+            SAVED_SHARED_STORAGE_KEY,
+            JSON.stringify(
+                Array.from(
+                    state.savedIds
+                )
+            )
+        );
+
+    }catch(error){
+
+        console.warn(
+            "[HAVKAR] Could not synchronize shared Saved storage:",
+            error
+        );
 
     }
 
@@ -1508,14 +1696,35 @@ function loadSavedIds(){
 
 function persistSavedIds(){
 
+    const ids =
+        Array.from(
+            state.savedIds
+        );
+
     try{
+
+        /*
+         * Save under the current authenticated-user key
+         * exactly as before.
+         */
 
         localStorage.setItem(
             getSavedStorageKey(),
             JSON.stringify(
-                Array.from(
-                    state.savedIds
-                )
+                ids
+            )
+        );
+
+        /*
+         * Also save to the shared compatibility key.
+         * This makes Saved independent from timing differences
+         * in Supabase authentication resolution between pages.
+         */
+
+        localStorage.setItem(
+            SAVED_SHARED_STORAGE_KEY,
+            JSON.stringify(
+                ids
             )
         );
 
@@ -1557,6 +1766,14 @@ function toggleSaved(
         return;
     }
 
+    /*
+     * Re-read storage before changing the state.
+     * This catches Saved changes made on another HAVKAR page
+     * before this page was reopened or focused.
+     */
+
+    mergeSavedStorageIds();
+
     const key =
         String(adId);
 
@@ -1590,6 +1807,12 @@ function toggleSaved(
 
 
 function showSavedListings(){
+
+    /*
+     * Always refresh Saved state when the Saved tab is opened.
+     */
+
+    mergeSavedStorageIds();
 
     state.savedOnly =
         true;
@@ -1658,6 +1881,11 @@ async function loadSavedUser(){
             null;
 
     }
+
+    /*
+     * Do not rely only on the current UID.
+     * Import all previous Saved states.
+     */
 
     loadSavedIds();
 
@@ -2787,6 +3015,14 @@ function categoryMatches(
 
 function applyFilters(){
 
+    /*
+     * Refresh Saved state before filtering.
+     * This ensures the Saved tab uses the latest available
+     * state from localStorage.
+     */
+
+    mergeSavedStorageIds();
+
     const search =
         state.search
             .trim()
@@ -3291,6 +3527,14 @@ function setupAuthListener(){
                     state.currentUserId =
                         nextUserId;
 
+                    /*
+                     * IMPORTANT:
+                     * Do not discard Saved items when the
+                     * authentication state changes.
+                     *
+                     * Merge all existing Saved keys instead.
+                     */
+
                     loadSavedIds();
 
                     applyFilters();
@@ -3299,6 +3543,53 @@ function setupAuthListener(){
 
             }
         );
+
+}
+
+
+/* =========================================================
+   CROSS-TAB / CROSS-PAGE STORAGE SYNC
+   ========================================================= */
+
+function setupSavedStorageListener(){
+
+    window.addEventListener(
+        "storage",
+        event => {
+
+            if(
+                !event.key ||
+                !event.key.startsWith(
+                    SAVED_STORAGE_PREFIX
+                )
+            ){
+
+                return;
+
+            }
+
+            mergeSavedStorageIds();
+
+            if(
+                state.savedOnly
+            ){
+
+                applyFilters();
+
+            }else{
+
+                /*
+                 * Refresh heart states on normal listing view.
+                 */
+
+                renderAds(
+                    state.filteredAds
+                );
+
+            }
+
+        }
+    );
 
 }
 
@@ -3324,6 +3615,8 @@ async function boot(){
         setupRetry();
 
         setupAuthListener();
+
+        setupSavedStorageListener();
 
         renderSkeletons();
 
@@ -3366,4 +3659,4 @@ document.addEventListener(
 </script>
 
 </body>
-</html>
+    </html>
