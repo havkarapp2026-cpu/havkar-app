@@ -2,12 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#689f38">
+<meta name="description" content="HAVKAR Messages and Chat">
+<title>HAVKAR — Messages</title>
 
-<title>HAVKAR - Messages</title>
-
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 *{
@@ -34,99 +38,108 @@ body{
     background:#f5f6f5;
     color:#333;
     overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
 }
 
 button,
 input{
-    font-family:inherit;
+    font:inherit;
 }
 
 button{
+    border:0;
     -webkit-tap-highlight-color:transparent;
     touch-action:manipulation;
 }
 
-/* =========================
-   HEADER
-========================= */
+button:focus-visible,
+input:focus-visible{
+    outline:3px solid rgba(124,179,66,.25);
+    outline-offset:2px;
+}
+
+/* =========================================================
+   MESSAGE LIST
+========================================================= */
+
+#messageList{
+    min-height:100vh;
+    min-height:100dvh;
+    padding-bottom:82px;
+}
 
 .header{
     height:70px;
     min-height:70px;
-    background:linear-gradient(135deg,#689f38,#7cb342);
+    background:linear-gradient(135deg,#2e7d32,#66bb6a);
     color:#fff;
     padding:0 20px;
     display:flex;
     align-items:center;
     justify-content:space-between;
-    box-shadow:0 2px 10px rgba(0,0,0,.12);
-    position:relative;
-    z-index:20;
+    box-shadow:0 2px 12px rgba(0,0,0,.16);
+    position:sticky;
+    top:0;
+    z-index:100;
 }
 
 .header-left{
     display:flex;
     align-items:center;
-    gap:15px;
+    gap:14px;
+    min-width:0;
 }
 
 .back-btn,
 .icon-btn{
-    border:none;
+    width:43px;
+    height:43px;
+    min-width:43px;
+    border-radius:50%;
     color:#fff;
     cursor:pointer;
-}
-
-.back-btn{
-    width:42px;
-    height:42px;
-    background:transparent;
-    border-radius:50%;
-    font-size:24px;
     display:flex;
     align-items:center;
     justify-content:center;
 }
 
-.back-btn:active{
-    background:rgba(255,255,255,.15);
+.back-btn{
+    background:rgba(255,255,255,.12);
+    font-size:23px;
+}
+
+.icon-btn{
+    background:rgba(255,255,255,.16);
+    font-size:18px;
+}
+
+.back-btn:active,
+.icon-btn:active{
+    transform:scale(.94);
+    background:rgba(255,255,255,.25);
 }
 
 .header h1{
     font-size:21px;
-    font-weight:700;
+    font-weight:800;
+    white-space:nowrap;
 }
 
-.icon-btn{
-    width:42px;
-    height:42px;
-    border-radius:50%;
-    background:rgba(255,255,255,.18);
-    font-size:18px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-}
-
-.icon-btn:active{
-    background:rgba(255,255,255,.30);
-}
-
-/* =========================
+/* =========================================================
    HEADER MENU
-========================= */
+========================================================= */
 
 .header-menu{
     position:absolute;
-    top:58px;
+    top:61px;
     right:15px;
-    width:190px;
+    width:205px;
     background:#fff;
-    border-radius:14px;
-    box-shadow:0 8px 30px rgba(0,0,0,.18);
+    border-radius:15px;
     overflow:hidden;
+    box-shadow:0 10px 35px rgba(0,0,0,.20);
     display:none;
-    z-index:100;
+    z-index:300;
 }
 
 .header-menu.show{
@@ -135,35 +148,34 @@ button{
 
 .header-menu button{
     width:100%;
-    border:none;
-    background:#fff;
-    padding:14px 16px;
-    text-align:left;
-    font-size:14px;
-    color:#333;
-    cursor:pointer;
+    min-height:52px;
+    padding:12px 16px;
     display:flex;
     align-items:center;
     gap:12px;
+    text-align:left;
+    background:#fff;
+    color:#333;
+    cursor:pointer;
 }
 
 .header-menu button:active{
-    background:#f5f5f5;
+    background:#f2f4f2;
 }
 
 .header-menu i{
-    width:20px;
+    width:21px;
     color:#689f38;
 }
 
-/* =========================
+/* =========================================================
    SEARCH
-========================= */
+========================================================= */
 
 .search-bar{
     padding:15px 20px;
     background:#fff;
-    border-bottom:1px solid #eee;
+    border-bottom:1px solid #ecefec;
 }
 
 .search-box{
@@ -176,7 +188,6 @@ button{
     top:50%;
     transform:translateY(-50%);
     color:#999;
-    font-size:16px;
     pointer-events:none;
 }
 
@@ -184,11 +195,11 @@ button{
     width:100%;
     height:50px;
     padding:0 18px 0 45px;
-    border:2px solid #e2e2e2;
-    border-radius:26px;
-    font-size:16px;
+    border:2px solid #e2e5e2;
+    border-radius:27px;
     background:#fff;
     color:#333;
+    font-size:16px;
     outline:none;
 }
 
@@ -197,16 +208,13 @@ button{
     box-shadow:0 0 0 3px rgba(124,179,66,.10);
 }
 
-/* =========================
-   CONTENT
-========================= */
-
-.content{
-    padding-bottom:90px;
-}
+/* =========================================================
+   CONVERSATIONS
+========================================================= */
 
 .section-header{
-    padding:20px 20px 12px;
+    min-height:63px;
+    padding:18px 20px 10px;
     display:flex;
     align-items:center;
     justify-content:space-between;
@@ -214,282 +222,307 @@ button{
 
 .section-title{
     font-size:20px;
-    font-weight:700;
-    color:#333;
+    font-weight:800;
 }
 
 .message-count{
+    color:#8b918d;
     font-size:13px;
-    color:#888;
 }
 
-/* =========================
-   LOADING
-========================= */
-
 .loading{
-    padding:70px 20px;
+    padding:75px 20px;
     text-align:center;
     color:#888;
 }
 
 .loading i{
-    font-size:30px;
-    margin-bottom:12px;
+    display:block;
+    margin-bottom:13px;
     color:#7cb342;
+    font-size:31px;
 }
 
 .loading p{
     font-size:14px;
 }
 
-/* =========================
-   CHAT ITEMS
-========================= */
-
 .chat-item{
-    background:#fff;
-    min-height:92px;
+    min-height:94px;
     padding:15px 20px;
     display:flex;
     align-items:center;
-    gap:15px;
-    cursor:pointer;
+    gap:14px;
+    background:#fff;
     border-bottom:1px solid #ededed;
-    transition:background .15s;
+    cursor:pointer;
+    transition:background .15s ease;
 }
 
 .chat-item:active{
-    background:#f0f0f0;
+    background:#f1f3f1;
 }
 
 .avatar{
-    width:55px;
-    height:55px;
-    min-width:55px;
+    width:56px;
+    height:56px;
+    min-width:56px;
     border-radius:50%;
-    background:linear-gradient(135deg,#e8f5e9,#c5e1a5);
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:25px;
+    background:linear-gradient(135deg,#e8f5e9,#c8e6c9);
+    color:#4d963f;
+    font-size:24px;
     flex-shrink:0;
-    color:#689f38;
 }
 
 .chat-info{
-    flex:1;
     min-width:0;
+    flex:1;
 }
 
 .chat-header{
     display:flex;
-    justify-content:space-between;
     align-items:center;
+    justify-content:space-between;
     gap:10px;
     margin-bottom:5px;
 }
 
 .name{
-    font-size:16px;
-    font-weight:700;
-    color:#333;
+    min-width:0;
     overflow:hidden;
     white-space:nowrap;
     text-overflow:ellipsis;
+    font-size:16px;
+    font-weight:750;
 }
 
 .time{
-    font-size:12px;
     color:#999;
+    font-size:12px;
     white-space:nowrap;
 }
 
 .message-preview{
-    font-size:14px;
-    color:#666;
     overflow:hidden;
-    text-overflow:ellipsis;
     white-space:nowrap;
+    text-overflow:ellipsis;
+    color:#666;
+    font-size:14px;
     line-height:1.4;
 }
 
 .ad-label{
-    font-size:11px;
-    color:#7cb342;
     margin-top:4px;
     overflow:hidden;
-    text-overflow:ellipsis;
     white-space:nowrap;
+    text-overflow:ellipsis;
+    color:#73a95e;
+    font-size:11px;
 }
 
 .unread{
-    background:#7cb342;
-    color:#fff;
+    width:23px;
+    height:23px;
+    min-width:23px;
     border-radius:50%;
-    width:22px;
-    height:22px;
-    min-width:22px;
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:12px;
-    font-weight:700;
+    background:#7cb342;
+    color:#fff;
+    font-size:11px;
+    font-weight:800;
 }
 
-/* =========================
+/* =========================================================
    EMPTY
-========================= */
+========================================================= */
 
-.empty-state{
+.empty-state,
+.no-results{
     padding:75px 25px;
     text-align:center;
     color:#999;
 }
 
-.empty-state i{
+.empty-state i,
+.no-results i{
+    display:block;
+    margin-bottom:17px;
+    color:#bfd1ba;
     font-size:48px;
-    margin-bottom:18px;
-    color:#b7cdb0;
 }
 
-.empty-state h3{
-    font-size:18px;
-    color:#555;
+.empty-state h3,
+.no-results h3{
     margin-bottom:8px;
+    color:#555;
+    font-size:18px;
 }
 
-.empty-state p{
+.empty-state p,
+.no-results p{
     font-size:14px;
     line-height:1.5;
 }
 
-/* =========================
-   NO RESULTS
-========================= */
-
 .no-results{
     display:none;
-    padding:60px 20px;
-    text-align:center;
+}
+
+/* =========================================================
+   BOTTOM NAV
+========================================================= */
+
+.bottom-nav{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    height:calc(72px + env(safe-area-inset-bottom));
+    padding:5px 0 env(safe-area-inset-bottom);
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-around;
+    background:rgba(255,255,255,.98);
+    backdrop-filter:blur(16px);
+    box-shadow:0 -3px 14px rgba(0,0,0,.10);
+    z-index:500;
+}
+
+.nav-item{
+    width:25%;
+    height:67px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:5px;
+    background:transparent;
     color:#999;
+    cursor:pointer;
 }
 
-.no-results i{
-    font-size:42px;
-    margin-bottom:15px;
-    color:#bbb;
+.nav-item i{
+    font-size:21px;
 }
 
-.no-results h3{
-    font-size:17px;
-    color:#555;
-    margin-bottom:6px;
+.nav-item span{
+    font-size:11px;
+    font-weight:650;
 }
 
-.no-results p{
-    font-size:14px;
+.nav-item.active{
+    color:#69a84d;
 }
 
-/* =========================
+.nav-item:active{
+    transform:scale(.94);
+}
+
+/* =========================================================
    CHAT SCREEN
-========================= */
+========================================================= */
 
 .chat-screen{
-    display:none;
     position:fixed;
     inset:0;
     width:100%;
     height:100vh;
     height:100dvh;
-    min-height:100vh;
-    min-height:100dvh;
-    background:#f5f6f5;
+    display:none;
     flex-direction:column;
-    z-index:200;
+    background:#f5f6f5;
+    z-index:1000;
     overflow:hidden;
 }
 
 .chat-screen-header{
-    flex:0 0 70px;
-    height:70px;
+    flex:0 0 auto;
     min-height:70px;
-    background:linear-gradient(135deg,#689f38,#7cb342);
+    padding:
+        env(safe-area-inset-top)
+        12px
+        0
+        12px;
+    background:linear-gradient(135deg,#2e7d32,#7cb342);
     color:#fff;
-    padding:0 15px;
     display:flex;
     align-items:center;
-    gap:12px;
-    box-shadow:0 2px 10px rgba(0,0,0,.12);
-    padding-top:env(safe-area-inset-top,0px);
-    box-sizing:content-box;
+    gap:11px;
+    box-shadow:0 2px 12px rgba(0,0,0,.15);
 }
 
-.chat-screen-header button{
-    width:42px;
-    height:42px;
-    min-width:42px;
-    min-height:42px;
-    border:none;
+.chat-screen-header > button{
+    width:43px;
+    height:43px;
+    min-width:43px;
     border-radius:50%;
     background:transparent;
     color:#fff;
-    font-size:23px;
-    cursor:pointer;
     display:flex;
     align-items:center;
     justify-content:center;
+    font-size:22px;
+    cursor:pointer;
 }
 
-.chat-screen-header button:active{
+.chat-screen-header > button:active{
     background:rgba(255,255,255,.15);
 }
 
 .chat-screen-header .avatar{
-    width:42px;
-    height:42px;
-    min-width:42px;
+    width:43px;
+    height:43px;
+    min-width:43px;
     font-size:19px;
+    background:rgba(255,255,255,.20);
+    color:#fff;
 }
 
 .chat-title-area{
-    flex:1;
     min-width:0;
+    flex:1;
 }
 
 .chat-person{
-    font-size:18px;
-    font-weight:700;
     overflow:hidden;
-    text-overflow:ellipsis;
     white-space:nowrap;
+    text-overflow:ellipsis;
+    font-size:18px;
+    font-weight:800;
 }
 
 .chat-subtitle{
+    margin-top:2px;
+    overflow:hidden;
+    white-space:nowrap;
+    text-overflow:ellipsis;
     font-size:11px;
     opacity:.88;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
 }
 
 .chat-header-action{
     flex-shrink:0;
 }
 
-/* =========================
+/* =========================================================
    CHAT MESSAGES
-========================= */
+========================================================= */
 
 .chat-messages{
+    position:relative;
     flex:1 1 auto;
     min-height:0;
     width:100%;
     overflow-y:auto;
     overflow-x:hidden;
+    padding:18px 13px 20px;
     -webkit-overflow-scrolling:touch;
     overscroll-behavior:contain;
-    padding:20px 15px 15px;
     display:flex;
     flex-direction:column;
 }
@@ -497,33 +530,33 @@ button{
 .message-row{
     width:100%;
     display:flex;
-    margin-bottom:10px;
     flex:0 0 auto;
-}
-
-.message-row.received{
-    justify-content:flex-start;
+    margin-bottom:9px;
 }
 
 .message-row.sent{
     justify-content:flex-end;
 }
 
+.message-row.received{
+    justify-content:flex-start;
+}
+
+.message-wrap{
+    position:relative;
+    max-width:82%;
+}
+
 .message{
-    max-width:78%;
+    position:relative;
+    max-width:100%;
     padding:10px 13px 7px;
     border-radius:18px;
+    box-shadow:0 1px 3px rgba(0,0,0,.06);
     font-size:15px;
     line-height:1.45;
     word-break:break-word;
     overflow-wrap:anywhere;
-    box-shadow:0 1px 3px rgba(0,0,0,.05);
-}
-
-.message.received{
-    background:#fff;
-    color:#333;
-    border-bottom-left-radius:5px;
 }
 
 .message.sent{
@@ -532,14 +565,20 @@ button{
     border-bottom-right-radius:5px;
 }
 
+.message.received{
+    background:#fff;
+    color:#333;
+    border-bottom-left-radius:5px;
+}
+
 .message-text{
     white-space:pre-wrap;
 }
 
 .message-meta{
     display:flex;
-    justify-content:flex-end;
     align-items:center;
+    justify-content:flex-end;
     gap:5px;
     margin-top:4px;
     font-size:10px;
@@ -555,90 +594,202 @@ button{
     color:#dff7d5;
 }
 
-/* =========================
+/* =========================================================
+   REACTIONS
+========================================================= */
+
+.reaction-bar{
+    min-height:25px;
+    display:flex;
+    align-items:center;
+    gap:4px;
+    margin-top:3px;
+}
+
+.message-row.sent .reaction-bar{
+    justify-content:flex-end;
+}
+
+.message-row.received .reaction-bar{
+    justify-content:flex-start;
+}
+
+.reaction-chip{
+    min-width:28px;
+    height:26px;
+    padding:2px 7px;
+    border:1px solid #e1e6e1;
+    border-radius:14px;
+    background:#fff;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:3px;
+    color:#444;
+    font-size:14px;
+    box-shadow:0 1px 3px rgba(0,0,0,.08);
+    cursor:pointer;
+}
+
+.reaction-chip.mine{
+    border-color:#7cb342;
+    background:#f0f8ed;
+}
+
+.reaction-count{
+    font-size:11px;
+    font-weight:700;
+}
+
+.reaction-trigger{
+    position:absolute;
+    right:-5px;
+    bottom:-18px;
+    width:30px;
+    height:30px;
+    border-radius:50%;
+    border:1px solid #e0e4e0;
+    background:#fff;
+    color:#777;
+    box-shadow:0 2px 7px rgba(0,0,0,.12);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    z-index:8;
+}
+
+.message-row.received .reaction-trigger{
+    left:-5px;
+    right:auto;
+}
+
+.message-wrap:hover .reaction-trigger,
+.message-wrap.reaction-open .reaction-trigger{
+    display:flex;
+}
+
+.reaction-picker{
+    position:absolute;
+    right:0;
+    bottom:34px;
+    display:none;
+    align-items:center;
+    gap:4px;
+    padding:7px;
+    border-radius:19px;
+    background:#fff;
+    box-shadow:0 8px 25px rgba(0,0,0,.18);
+    border:1px solid #e5e9e5;
+    z-index:20;
+}
+
+.message-row.received .reaction-picker{
+    left:0;
+    right:auto;
+}
+
+.message-wrap.reaction-open .reaction-picker{
+    display:flex;
+}
+
+.reaction-option{
+    width:39px;
+    height:39px;
+    border-radius:50%;
+    background:#f7f8f7;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:21px;
+    cursor:pointer;
+}
+
+.reaction-option:active{
+    transform:scale(.88);
+    background:#e8f5e9;
+}
+
+/* =========================================================
    CHAT EMPTY
-========================= */
+========================================================= */
 
 .chat-empty{
     margin:auto;
+    padding:35px;
+    flex:0 0 auto;
     text-align:center;
     color:#999;
-    padding:30px;
-    flex:0 0 auto;
 }
 
 .chat-empty i{
-    font-size:42px;
-    color:#c1d2bc;
+    display:block;
     margin-bottom:12px;
+    color:#bfd2ba;
+    font-size:42px;
 }
 
-/* =========================
-   MESSAGE INPUT
-========================= */
+/* =========================================================
+   INPUT
+========================================================= */
 
 .message-input-area{
     flex:0 0 auto;
-    position:relative;
-    z-index:220;
     width:100%;
     min-height:68px;
-    background:#fff;
-    padding:10px;
-    padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));
+    padding:
+        9px
+        10px
+        calc(9px + env(safe-area-inset-bottom));
     display:flex;
     align-items:center;
     gap:8px;
+    background:#fff;
     border-top:1px solid #ddd;
-    box-shadow:0 -2px 10px rgba(0,0,0,.08);
+    box-shadow:0 -3px 12px rgba(0,0,0,.08);
+    z-index:30;
 }
 
 .message-input{
     flex:1 1 auto;
     min-width:0;
     width:100%;
-    height:48px;
-    min-height:48px;
-    border:1px solid #ddd;
-    border-radius:25px;
-    padding:0 16px;
-    font-size:15px;
+    height:49px;
+    padding:0 17px;
+    border:1px solid #d7ddd7;
+    border-radius:26px;
     outline:none;
     background:#fff;
     color:#333;
-    -webkit-appearance:none;
-    appearance:none;
+    font-size:16px;
 }
 
 .message-input:focus{
     border-color:#7cb342;
-    box-shadow:0 0 0 2px rgba(124,179,66,.08);
+    box-shadow:0 0 0 3px rgba(124,179,66,.10);
 }
 
 .message-input:disabled{
-    background:#f4f4f4;
+    background:#f1f2f1;
 }
 
 .send-btn{
-    flex:0 0 48px;
-    width:48px;
-    height:48px;
-    min-width:48px;
-    min-height:48px;
-    border:none;
+    width:49px;
+    height:49px;
+    min-width:49px;
     border-radius:50%;
     background:#7cb342;
     color:#fff;
-    font-size:18px;
-    cursor:pointer;
     display:flex;
     align-items:center;
     justify-content:center;
+    font-size:18px;
+    cursor:pointer;
+    box-shadow:0 4px 12px rgba(76,175,80,.22);
 }
 
 .send-btn:active{
-    transform:scale(.95);
-    background:#689f38;
+    transform:scale(.94);
 }
 
 .send-btn:disabled{
@@ -646,31 +797,33 @@ button{
     cursor:not-allowed;
 }
 
-/* =========================
+/* =========================================================
    TOAST
-========================= */
+========================================================= */
 
 .toast{
     position:fixed;
     left:50%;
-    bottom:88px;
-    transform:translateX(-50%) translateY(15px);
-    background:#333;
-    color:#fff;
+    bottom:90px;
+    max-width:calc(100vw - 30px);
     padding:12px 18px;
-    border-radius:12px;
+    border-radius:13px;
+    background:#252825;
+    color:#fff;
     font-size:13px;
+    font-weight:650;
+    text-align:center;
+    transform:translate(-50%,18px);
     opacity:0;
     pointer-events:none;
-    transition:.25s;
-    z-index:500;
-    max-width:90%;
-    text-align:center;
+    transition:.22s ease;
+    z-index:3000;
+    box-shadow:0 8px 25px rgba(0,0,0,.22);
 }
 
 .toast.show{
     opacity:1;
-    transform:translateX(-50%) translateY(0);
+    transform:translate(-50%,0);
 }
 
 .toast.error{
@@ -681,64 +834,14 @@ button{
     background:#689f38;
 }
 
-/* =========================
-   BOTTOM NAVIGATION
-========================= */
-
-.bottom-nav{
-    position:fixed;
-    left:0;
-    right:0;
-    bottom:0;
-    height:72px;
-    background:#fff;
-    display:flex;
-    justify-content:space-around;
-    align-items:center;
-    padding:6px 0 calc(6px + env(safe-area-inset-bottom,0px));
-    box-shadow:0 -2px 12px rgba(0,0,0,.10);
-    z-index:50;
-}
-
-.nav-item{
-    width:25%;
-    height:60px;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    gap:5px;
-    color:#999;
-    font-size:12px;
-    cursor:pointer;
-    border:none;
-    background:transparent;
-}
-
-.nav-item i{
-    font-size:21px;
-}
-
-.nav-item span{
-    font-size:12px;
-}
-
-.nav-item.active{
-    color:#7cb342;
-}
-
-.nav-item:active{
-    transform:scale(.94);
-}
-
-/* =========================
-   MOBILE
-========================= */
+/* =========================================================
+   RESPONSIVE
+========================================================= */
 
 @media(max-width:480px){
 
     .header{
-        padding:0 15px;
+        padding:0 14px;
     }
 
     .search-bar{
@@ -754,53 +857,37 @@ button{
         padding:14px 15px;
     }
 
-    .chat-screen-header{
+    .chat-messages{
         padding-left:10px;
         padding-right:10px;
     }
 
-    .chat-messages{
-        padding:15px 12px 12px;
+    .message-wrap{
+        max-width:85%;
     }
 
-    .message{
-        max-width:84%;
-    }
-
-    .message-input-area{
-        padding-left:8px;
-        padding-right:8px;
-    }
-
-    .message-input{
-        font-size:16px;
+    .reaction-option{
+        width:37px;
+        height:37px;
     }
 }
-
-/* =========================
-   SMALL HEIGHT DEVICES
-========================= */
 
 @media(max-width:480px) and (max-height:700px){
 
     .chat-screen-header{
-        flex-basis:62px;
-        height:62px;
         min-height:62px;
     }
 
-    .chat-screen-header .avatar{
-        width:38px;
-        height:38px;
-        min-width:38px;
-        font-size:17px;
-    }
-
-    .chat-screen-header button{
+    .chat-screen-header > button{
         width:40px;
         height:40px;
         min-width:40px;
-        min-height:40px;
+    }
+
+    .chat-screen-header .avatar{
+        width:39px;
+        height:39px;
+        min-width:39px;
     }
 
     .chat-person{
@@ -808,21 +895,29 @@ button{
     }
 
     .message-input-area{
-        min-height:64px;
-        padding-top:8px;
-        padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));
+        min-height:63px;
+        padding-top:7px;
+        padding-bottom:calc(7px + env(safe-area-inset-bottom));
     }
 
     .message-input,
     .send-btn{
         height:46px;
-        min-height:46px;
     }
 
     .send-btn{
         width:46px;
         min-width:46px;
-        flex-basis:46px;
+    }
+}
+
+@media(prefers-reduced-motion:reduce){
+
+    *,
+    *::before,
+    *::after{
+        transition:none!important;
+        animation:none!important;
     }
 }
 </style>
@@ -831,21 +926,23 @@ button{
 <body>
 
 <!-- =========================================================
-     MESSAGE LIST
+     CONVERSATION LIST
 ========================================================= -->
 
 <div id="messageList">
 
-    <div class="header">
+    <header class="header">
 
         <div class="header-left">
 
             <button
+                id="listBackButton"
                 class="back-btn"
                 type="button"
-                onclick="goHome()"
                 aria-label="Back to home">
+
                 <i class="fas fa-arrow-left"></i>
+
             </button>
 
             <h1>Messages</h1>
@@ -853,28 +950,39 @@ button{
         </div>
 
         <button
+            id="headerMenuButton"
             class="icon-btn"
             type="button"
-            onclick="toggleHeaderMenu()"
-            aria-label="More options">
+            aria-label="More options"
+            aria-expanded="false">
+
             <i class="fas fa-ellipsis-v"></i>
+
         </button>
 
         <div id="headerMenu" class="header-menu">
 
-            <button type="button" onclick="goNotifications()">
+            <button
+                id="notificationsButton"
+                type="button">
+
                 <i class="fas fa-bell"></i>
-                Notifications
+                <span>Notifications</span>
+
             </button>
 
-            <button type="button" onclick="goProfile()">
+            <button
+                id="profileButton"
+                type="button">
+
                 <i class="fas fa-user"></i>
-                Profile
+                <span>Profile</span>
+
             </button>
 
         </div>
 
-    </div>
+    </header>
 
 
     <div class="search-bar">
@@ -884,13 +992,12 @@ button{
             <i class="fas fa-search search-icon"></i>
 
             <input
-                type="text"
                 id="searchInput"
                 class="search-input"
+                type="search"
                 placeholder="Search messages..."
                 autocomplete="off"
-                oninput="searchMessages(this.value)"
-            >
+                enterkeyhint="search">
 
         </div>
 
@@ -903,16 +1010,20 @@ button{
             Conversations
         </div>
 
-        <div class="message-count" id="messageCount">
+        <div
+            id="messageCount"
+            class="message-count">
             0 chats
         </div>
 
     </div>
 
 
-    <div class="content" id="conversationList">
+    <div
+        id="conversationList"
+        class="content">
 
-        <div class="loading" id="conversationLoading">
+        <div class="loading">
 
             <i class="fas fa-circle-notch fa-spin"></i>
 
@@ -923,7 +1034,9 @@ button{
     </div>
 
 
-    <div id="noResults" class="no-results">
+    <div
+        id="noResults"
+        class="no-results">
 
         <i class="fas fa-comments"></i>
 
@@ -937,48 +1050,41 @@ button{
     <nav class="bottom-nav">
 
         <button
+            id="navHome"
             class="nav-item"
-            type="button"
-            onclick="goHome()">
+            type="button">
 
-            <i class="fas fa-home"></i>
-
+            <i class="fas fa-house"></i>
             <span>Home</span>
 
         </button>
 
-
         <button
+            id="navMessages"
             class="nav-item active"
-            type="button"
-            onclick="goMessages()">
+            type="button">
 
             <i class="fas fa-comment"></i>
-
             <span>Messages</span>
 
         </button>
 
-
         <button
+            id="navNotifications"
             class="nav-item"
-            type="button"
-            onclick="goNotifications()">
+            type="button">
 
             <i class="fas fa-bell"></i>
-
             <span>Notifications</span>
 
         </button>
 
-
         <button
+            id="navProfile"
             class="nav-item"
-            type="button"
-            onclick="goProfile()">
+            type="button">
 
             <i class="fas fa-user"></i>
-
             <span>Profile</span>
 
         </button>
@@ -989,17 +1095,19 @@ button{
 
 
 <!-- =========================================================
-     CHAT SCREEN
+     CHAT
 ========================================================= -->
 
-<div id="chatScreen" class="chat-screen">
+<div
+    id="chatScreen"
+    class="chat-screen">
 
-    <div class="chat-screen-header">
+    <header class="chat-screen-header">
 
         <button
+            id="chatBackButton"
             type="button"
-            onclick="closeChat()"
-            aria-label="Back">
+            aria-label="Back to conversations">
 
             <i class="fas fa-arrow-left"></i>
 
@@ -1007,23 +1115,25 @@ button{
 
 
         <div
-            class="avatar"
-            id="chatAvatar">
+            id="chatAvatar"
+            class="avatar">
+
             <i class="fas fa-user"></i>
+
         </div>
 
 
         <div class="chat-title-area">
 
             <div
-                class="chat-person"
-                id="chatPerson">
+                id="chatPerson"
+                class="chat-person">
                 Conversation
             </div>
 
             <div
-                class="chat-subtitle"
-                id="chatSubtitle">
+                id="chatSubtitle"
+                class="chat-subtitle">
                 HAVKAR
             </div>
 
@@ -1031,23 +1141,23 @@ button{
 
 
         <button
+            id="chatInfoButton"
             class="chat-header-action"
             type="button"
-            onclick="showChatInfo()"
             aria-label="Conversation information">
 
             <i class="fas fa-circle-info"></i>
 
         </button>
 
-    </div>
+    </header>
 
 
-    <div
-        class="chat-messages"
-        id="chatMessages">
+    <main
+        id="chatMessages"
+        class="chat-messages">
 
-        <div class="chat-empty" id="chatLoading">
+        <div class="chat-empty">
 
             <i class="fas fa-circle-notch fa-spin"></i>
 
@@ -1055,7 +1165,7 @@ button{
 
         </div>
 
-    </div>
+    </main>
 
 
     <div class="message-input-area">
@@ -1069,15 +1179,12 @@ button{
             placeholder="Write a message..."
             autocomplete="off"
             autocapitalize="sentences"
-            maxlength="4000"
-            onkeydown="handleEnter(event)"
-        >
+            maxlength="4000">
 
         <button
             id="sendButton"
             class="send-btn"
             type="button"
-            onclick="sendMessage()"
             aria-label="Send message">
 
             <i class="fas fa-paper-plane"></i>
@@ -1089,19 +1196,24 @@ button{
 </div>
 
 
-<div id="toast" class="toast"></div>
+<div
+    id="toast"
+    class="toast"
+    role="status"
+    aria-live="polite">
+</div>
 
-
-<!-- =========================================================
-     SUPABASE
-========================================================= -->
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
+"use strict";
 
 /* =========================================================
-   SUPABASE CONFIG
+   HAVKAR CHAT
+   Complete replacement
+========================================================= */
+
+/* =========================================================
+   SUPABASE
 ========================================================= */
 
 const SUPABASE_URL =
@@ -1125,52 +1237,43 @@ const supabaseClient =
 
 
 /* =========================================================
-   STATE
+   CONSTANTS
 ========================================================= */
 
-let currentUser = null;
+const REACTIONS = [
+    "❤️",
+    "😂",
+    "😍",
+    "👍",
+    "😢",
+    "😡"
+];
 
-let conversations = [];
-
-let currentConversation = null;
-
-let currentConversationId = null;
-
-let realtimeChannel = null;
-
-let searchTerm = "";
+const MAX_MESSAGE_LENGTH = 4000;
 
 
 /* =========================================================
-   NAVIGATION
+   STATE
 ========================================================= */
 
-function goHome(){
-
-    window.location.href = "index.html";
-
-}
-
-
-function goMessages(){
-
-    window.location.href = "chat.html";
-
-}
+const state = {
+    currentUser:null,
+    conversations:[],
+    currentConversation:null,
+    currentConversationId:null,
+    realtimeChannel:null,
+    searchTerm:"",
+    reactions:{},
+    reactionChannel:null
+};
 
 
-function goNotifications(){
+/* =========================================================
+   DOM
+========================================================= */
 
-    window.location.href = "notifications.html";
-
-}
-
-
-function goProfile(){
-
-    window.location.href = "profile.html";
-
-}
+const $ = id =>
+    document.getElementById(id);
 
 
 /* =========================================================
@@ -1182,11 +1285,17 @@ let toastTimer = null;
 function showToast(message,type=""){
 
     const toast =
-        document.getElementById("toast");
+        $("toast");
 
-    toast.textContent = message;
+    if(!toast){
+        return;
+    }
 
-    toast.className = "toast";
+    toast.textContent =
+        String(message || "");
+
+    toast.className =
+        "toast";
 
     if(type){
         toast.classList.add(type);
@@ -1197,12 +1306,33 @@ function showToast(message,type=""){
     clearTimeout(toastTimer);
 
     toastTimer =
-        setTimeout(function(){
+        setTimeout(
+            () => {
+                toast.classList.remove("show");
+            },
+            2800
+        );
+}
 
-            toast.classList.remove("show");
 
-        },2800);
+/* =========================================================
+   NAVIGATION
+========================================================= */
 
+function goHome(){
+    window.location.href = "index.html";
+}
+
+function goMessages(){
+    window.location.href = "chat.html";
+}
+
+function goNotifications(){
+    window.location.href = "notifications.html";
+}
+
+function goProfile(){
+    window.location.href = "profile.html";
 }
 
 
@@ -1213,34 +1343,50 @@ function showToast(message,type=""){
 function toggleHeaderMenu(){
 
     const menu =
-        document.getElementById("headerMenu");
-
-    menu.classList.toggle("show");
-
-}
-
-
-document.addEventListener("click",function(event){
-
-    const menu =
-        document.getElementById("headerMenu");
+        $("headerMenu");
 
     const button =
-        document.querySelector(".icon-btn");
+        $("headerMenuButton");
 
-    if(
-        menu &&
-        button &&
-        menu.classList.contains("show") &&
-        !menu.contains(event.target) &&
-        !button.contains(event.target)
-    ){
-
-        menu.classList.remove("show");
-
+    if(!menu){
+        return;
     }
 
-});
+    const show =
+        !menu.classList.contains("show");
+
+    menu.classList.toggle(
+        "show",
+        show
+    );
+
+    if(button){
+        button.setAttribute(
+            "aria-expanded",
+            show ? "true" : "false"
+        );
+    }
+}
+
+function closeHeaderMenu(){
+
+    const menu =
+        $("headerMenu");
+
+    const button =
+        $("headerMenuButton");
+
+    if(menu){
+        menu.classList.remove("show");
+    }
+
+    if(button){
+        button.setAttribute(
+            "aria-expanded",
+            "false"
+        );
+    }
+}
 
 
 /* =========================================================
@@ -1249,29 +1395,36 @@ document.addEventListener("click",function(event){
 
 async function loadCurrentUser(){
 
-    const result =
-        await supabaseClient.auth.getSession();
+    try{
 
-    if(result.error){
+        const result =
+            await supabaseClient.auth.getSession();
 
-        console.error(result.error);
+        if(result.error){
+            console.error(
+                "[HAVKAR] Session error:",
+                result.error
+            );
+            return null;
+        }
+
+        return (
+            result.data &&
+            result.data.session &&
+            result.data.session.user
+        )
+            ? result.data.session.user
+            : null;
+
+    }catch(error){
+
+        console.error(
+            "[HAVKAR] Auth error:",
+            error
+        );
 
         return null;
-
     }
-
-    if(
-        result.data &&
-        result.data.session &&
-        result.data.session.user
-    ){
-
-        return result.data.session.user;
-
-    }
-
-    return null;
-
 }
 
 
@@ -1282,10 +1435,14 @@ async function loadCurrentUser(){
 async function loadConversations(){
 
     const list =
-        document.getElementById("conversationList");
+        $("conversationList");
+
+    if(!list){
+        return;
+    }
 
     list.innerHTML = `
-        <div class="loading" id="conversationLoading">
+        <div class="loading">
             <i class="fas fa-circle-notch fa-spin"></i>
             <p>Loading conversations...</p>
         </div>
@@ -1314,11 +1471,9 @@ async function loadConversations(){
     if(result.error){
 
         console.error(
-            "Conversation load error:",
+            "[HAVKAR] Conversation load error:",
             result.error
         );
-
-        list.innerHTML = "";
 
         showEmptyState(
             "Unable to load conversations.",
@@ -1331,16 +1486,14 @@ async function loadConversations(){
         );
 
         return;
-
     }
 
-    conversations =
+    state.conversations =
         result.data || [];
 
     await enrichConversations();
 
     renderConversationList();
-
 }
 
 
@@ -1350,12 +1503,12 @@ async function loadConversations(){
 
 async function enrichConversations(){
 
-    if(!conversations.length){
+    if(!state.conversations.length){
         return;
     }
 
     const adIds =
-        conversations
+        state.conversations
             .map(item => item.ad_id)
             .filter(
                 id =>
@@ -1363,7 +1516,7 @@ async function enrichConversations(){
                     id !== undefined
             );
 
-    let adsMap = {};
+    const adsMap = {};
 
     if(adIds.length){
 
@@ -1375,97 +1528,113 @@ async function enrichConversations(){
                 )
                 .in("id",adIds);
 
-        if(!adResult.error){
-
-            (adResult.data || [])
-                .forEach(function(ad){
-
-                    adsMap[String(ad.id)] =
-                        ad;
-
-                });
-
-        }
-
-    }
-
-
-    for(const conversation of conversations){
-
-        conversation.ad =
-            conversation.ad_id !== null &&
-            conversation.ad_id !== undefined
-                ? adsMap[String(conversation.ad_id)] || null
-                : null;
-
-
-        conversation.lastMessage =
-            null;
-
-
-        const messageResult =
-            await supabaseClient
-                .from("messages")
-                .select(
-                    "id,sender_id,message_text,created_at,is_read"
-                )
-                .eq(
-                    "conversation_id",
-                    conversation.id
-                )
-                .order(
-                    "created_at",
-                    {
-                        ascending:false
-                    }
-                )
-                .limit(1);
-
-
         if(
-            !messageResult.error &&
-            messageResult.data &&
-            messageResult.data.length
+            !adResult.error &&
+            Array.isArray(adResult.data)
         ){
 
-            conversation.lastMessage =
-                messageResult.data[0];
-
+            adResult.data.forEach(
+                ad => {
+                    adsMap[String(ad.id)] =
+                        ad;
+                }
+            );
         }
-
-
-        const unreadResult =
-            await supabaseClient
-                .from("messages")
-                .select(
-                    "id",
-                    {
-                        count:"exact",
-                        head:true
-                    }
-                )
-                .eq(
-                    "conversation_id",
-                    conversation.id
-                )
-                .eq(
-                    "is_read",
-                    false
-                )
-                .neq(
-                    "sender_id",
-                    currentUser.id
-                );
-
-
-        conversation.unreadCount =
-            !unreadResult.error &&
-            unreadResult.count
-                ? unreadResult.count
-                : 0;
-
     }
 
+
+    /*
+     * Fetch latest message for each conversation.
+     * This preserves the existing project structure.
+     */
+
+    await Promise.all(
+        state.conversations.map(
+            async conversation => {
+
+                conversation.ad =
+                    conversation.ad_id !== null &&
+                    conversation.ad_id !== undefined
+                        ? adsMap[
+                            String(conversation.ad_id)
+                          ] || null
+                        : null;
+
+                conversation.lastMessage =
+                    null;
+
+                conversation.unreadCount =
+                    0;
+
+
+                const messageResult =
+                    await supabaseClient
+                        .from("messages")
+                        .select(
+                            "id,sender_id,message_text,created_at,is_read"
+                        )
+                        .eq(
+                            "conversation_id",
+                            conversation.id
+                        )
+                        .order(
+                            "created_at",
+                            {
+                                ascending:false
+                            }
+                        )
+                        .limit(1);
+
+
+                if(
+                    !messageResult.error &&
+                    messageResult.data &&
+                    messageResult.data.length
+                ){
+
+                    conversation.lastMessage =
+                        messageResult.data[0];
+                }
+
+
+                const unreadResult =
+                    await supabaseClient
+                        .from("messages")
+                        .select(
+                            "id",
+                            {
+                                count:"exact",
+                                head:true
+                            }
+                        )
+                        .eq(
+                            "conversation_id",
+                            conversation.id
+                        )
+                        .eq(
+                            "is_read",
+                            false
+                        )
+                        .neq(
+                            "sender_id",
+                            currentUser.id
+                        );
+
+
+                if(
+                    !unreadResult.error &&
+                    Number.isFinite(
+                        unreadResult.count
+                    )
+                ){
+
+                    conversation.unreadCount =
+                        unreadResult.count;
+                }
+
+            }
+        )
+    );
 }
 
 
@@ -1476,54 +1645,67 @@ async function enrichConversations(){
 function renderConversationList(){
 
     const list =
-        document.getElementById("conversationList");
+        $("conversationList");
 
     const noResults =
-        document.getElementById("noResults");
+        $("noResults");
+
+    if(!list){
+        return;
+    }
 
     const filtered =
-        conversations.filter(function(conversation){
+        state.conversations.filter(
+            conversation => {
 
-            if(!searchTerm){
-                return true;
+                if(!state.searchTerm){
+                    return true;
+                }
+
+                const ad =
+                    conversation.ad;
+
+                const last =
+                    conversation.lastMessage;
+
+                const text = [
+                    getConversationRole(
+                        conversation
+                    ),
+                    ad?.title || "",
+                    ad?.category || "",
+                    ad?.location || "",
+                    last?.message_text || ""
+                ]
+                .join(" ")
+                .toLowerCase();
+
+                return text.includes(
+                    state.searchTerm
+                );
             }
-
-            const ad =
-                conversation.ad;
-
-            const text = [
-                getConversationRole(conversation),
-                ad ? ad.title : "",
-                ad ? ad.category : "",
-                ad ? ad.location : "",
-                conversation.lastMessage
-                    ? conversation.lastMessage.message_text
-                    : ""
-            ]
-            .join(" ")
-            .toLowerCase();
-
-            return text.includes(searchTerm);
-
-        });
-
-
-    document.getElementById("messageCount")
-        .textContent =
-        filtered.length +
-        (
-            filtered.length === 1
-                ? " chat"
-                : " chats"
         );
 
 
-    list.innerHTML = "";
+    if($("messageCount")){
+
+        $("messageCount")
+            .textContent =
+            filtered.length +
+            (
+                filtered.length === 1
+                    ? " chat"
+                    : " chats"
+            );
+    }
 
 
-    if(!conversations.length){
+    if(!state.conversations.length){
 
-        noResults.style.display = "none";
+        if(noResults){
+            noResults.style.display =
+                "none";
+        }
 
         showEmptyState(
             "No conversations yet",
@@ -1531,62 +1713,63 @@ function renderConversationList(){
         );
 
         return;
-
     }
 
 
     if(!filtered.length){
 
-        noResults.style.display = "block";
+        list.innerHTML = "";
+
+        if(noResults){
+            noResults.style.display =
+                "block";
+        }
 
         return;
-
     }
 
 
-    noResults.style.display = "none";
+    if(noResults){
+        noResults.style.display =
+            "none";
+    }
 
 
-    filtered.forEach(function(conversation){
+    list.innerHTML = "";
 
-        list.appendChild(
-            createConversationElement(conversation)
-        );
+    filtered.forEach(
+        conversation => {
 
-    });
-
+            list.appendChild(
+                createConversationElement(
+                    conversation
+                )
+            );
+        }
+    );
 }
 
 
 /* =========================================================
-   CONVERSATION ELEMENT
+   CONVERSATION ITEM
 ========================================================= */
 
-function createConversationElement(conversation){
+function createConversationElement(
+    conversation
+){
 
     const item =
-        document.createElement("div");
+        document.createElement("button");
 
+    item.type = "button";
     item.className = "chat-item";
-
-    item.dataset.search =
-        [
-            getConversationRole(conversation),
-            conversation.ad
-                ? conversation.ad.title
-                : "",
-            conversation.lastMessage
-                ? conversation.lastMessage.message_text
-                : ""
-        ]
-        .join(" ")
-        .toLowerCase();
 
 
     const avatar =
         document.createElement("div");
 
-    avatar.className = "avatar";
+    avatar.className =
+        "avatar";
 
     avatar.innerHTML =
         '<i class="fas fa-user"></i>';
@@ -1595,53 +1778,54 @@ function createConversationElement(conversation){
     const info =
         document.createElement("div");
 
-    info.className = "chat-info";
+    info.className =
+        "chat-info";
 
 
     const header =
         document.createElement("div");
 
-    header.className = "chat-header";
+    header.className =
+        "chat-header";
 
 
     const name =
         document.createElement("div");
 
-    name.className = "name";
+    name.className =
+        "name";
 
     name.textContent =
-        getConversationRole(conversation);
+        getConversationRole(
+            conversation
+        );
 
 
     const time =
         document.createElement("div");
 
-    time.className = "time";
+    time.className =
+        "time";
 
-    if(conversation.lastMessage){
-
-        time.textContent =
-            formatTime(
+    time.textContent =
+        conversation.lastMessage
+            ? formatTime(
                 conversation.lastMessage.created_at
-            );
-
-    }else{
-
-        time.textContent =
-            formatTime(conversation.updated_at);
-
-    }
+              )
+            : formatTime(
+                conversation.updated_at
+              );
 
 
     header.appendChild(name);
-
     header.appendChild(time);
 
 
     const preview =
         document.createElement("div");
 
-    preview.className = "message-preview";
+    preview.className =
+        "message-preview";
 
 
     if(conversation.lastMessage){
@@ -1660,12 +1844,10 @@ function createConversationElement(conversation){
 
         preview.textContent =
             "No messages yet";
-
     }
 
 
     info.appendChild(header);
-
     info.appendChild(preview);
 
 
@@ -1674,19 +1856,18 @@ function createConversationElement(conversation){
         const adLabel =
             document.createElement("div");
 
-        adLabel.className = "ad-label";
+        adLabel.className =
+            "ad-label";
 
         adLabel.textContent =
             "Listing: " +
             conversation.ad.title;
 
         info.appendChild(adLabel);
-
     }
 
 
     item.appendChild(avatar);
-
     item.appendChild(info);
 
 
@@ -1695,59 +1876,55 @@ function createConversationElement(conversation){
         const unread =
             document.createElement("div");
 
-        unread.className = "unread";
+        unread.className =
+            "unread";
 
         unread.textContent =
             conversation.unreadCount > 99
                 ? "99+"
-                : conversation.unreadCount;
+                : String(
+                    conversation.unreadCount
+                  );
 
         item.appendChild(unread);
-
     }
 
 
     item.addEventListener(
         "click",
-        function(){
-
-            openConversation(conversation);
-
-        }
+        () => openConversation(
+            conversation
+        )
     );
 
 
     return item;
-
 }
 
 
 /* =========================================================
-   CONVERSATION ROLE
+   ROLE
 ========================================================= */
 
-function getConversationRole(conversation){
+function getConversationRole(
+    conversation
+){
 
     if(
-        conversation.seller_id ===
-        currentUser.id
+        String(conversation.seller_id) ===
+        String(currentUser.id)
     ){
-
         return "Buyer";
-
     }
 
     if(
-        conversation.buyer_id ===
-        currentUser.id
+        String(conversation.buyer_id) ===
+        String(currentUser.id)
     ){
-
         return "Seller";
-
     }
 
     return "HAVKAR Member";
-
 }
 
 
@@ -1755,10 +1932,17 @@ function getConversationRole(conversation){
    EMPTY STATE
 ========================================================= */
 
-function showEmptyState(title,text){
+function showEmptyState(
+    title,
+    text
+){
 
     const list =
-        document.getElementById("conversationList");
+        $("conversationList");
+
+    if(!list){
+        return;
+    }
 
     list.innerHTML = `
         <div class="empty-state">
@@ -1767,7 +1951,6 @@ function showEmptyState(title,text){
             <p>${escapeHtml(text)}</p>
         </div>
     `;
-
 }
 
 
@@ -1775,47 +1958,62 @@ function showEmptyState(title,text){
    OPEN CONVERSATION
 ========================================================= */
 
-async function openConversation(conversation){
+async function openConversation(
+    conversation
+){
 
-    if(!conversation || !conversation.id){
+    if(
+        !conversation ||
+        !conversation.id
+    ){
         return;
     }
 
 
-    currentConversation =
+    state.currentConversation =
         conversation;
 
-    currentConversationId =
+    state.currentConversationId =
         conversation.id;
 
 
-    document.getElementById("messageList")
-        .style.display = "none";
+    $("messageList")
+        .style.display =
+        "none";
+
+    $("chatScreen")
+        .style.display =
+        "flex";
 
 
-    document.getElementById("chatScreen")
-        .style.display = "flex";
-
-
-    document.getElementById("chatPerson")
+    $("chatPerson")
         .textContent =
-        getConversationRole(conversation);
+        getConversationRole(
+            conversation
+        );
 
 
-    document.getElementById("chatSubtitle")
+    $("chatSubtitle")
         .textContent =
-        conversation.ad
-            ? conversation.ad.title
-            : "HAVKAR Conversation";
+        conversation.ad?.title ||
+        "HAVKAR Conversation";
 
 
-    document.getElementById("chatMessages")
+    $("chatMessages")
         .innerHTML = `
             <div class="chat-empty">
                 <i class="fas fa-circle-notch fa-spin"></i>
                 <p>Loading messages...</p>
             </div>
         `;
+
+
+    closeAllReactionPickers();
+
+
+    loadReactions(
+        conversation.id
+    );
 
 
     await loadMessages(
@@ -1833,19 +2031,24 @@ async function openConversation(conversation){
     );
 
 
-    setTimeout(function(){
+    subscribeToReactions(
+        conversation.id
+    );
 
-        const input =
-            document.getElementById("messageInput");
 
-        if(input){
+    setTimeout(
+        () => {
 
-            input.focus();
+            const input =
+                $("messageInput");
 
-        }
+            if(input){
+                input.focus();
+            }
 
-    },150);
-
+        },
+        160
+    );
 }
 
 
@@ -1861,31 +2064,30 @@ async function openConversationFromUrl(){
         );
 
     const conversationId =
-        params.get("conversation_id");
-
+        params.get(
+            "conversation_id"
+        );
 
     if(!conversationId){
         return;
     }
 
 
-    const conversation =
-        conversations.find(function(item){
+    const localConversation =
+        state.conversations.find(
+            item =>
+                String(item.id) ===
+                String(conversationId)
+        );
 
-            return String(item.id) ===
-                String(conversationId);
 
-        });
-
-
-    if(conversation){
+    if(localConversation){
 
         await openConversation(
-            conversation
+            localConversation
         );
 
         return;
-
     }
 
 
@@ -1904,7 +2106,10 @@ async function openConversationFromUrl(){
 
     if(result.error){
 
-        console.error(result.error);
+        console.error(
+            "[HAVKAR] URL conversation error:",
+            result.error
+        );
 
         showToast(
             "Conversation could not be opened.",
@@ -1912,7 +2117,6 @@ async function openConversationFromUrl(){
         );
 
         return;
-
     }
 
 
@@ -1924,13 +2128,14 @@ async function openConversationFromUrl(){
         );
 
         return;
-
     }
 
 
     const belongsToUser =
-        result.data.buyer_id === currentUser.id ||
-        result.data.seller_id === currentUser.id;
+        String(result.data.buyer_id) ===
+            String(currentUser.id) ||
+        String(result.data.seller_id) ===
+            String(currentUser.id);
 
 
     if(!belongsToUser){
@@ -1941,11 +2146,10 @@ async function openConversationFromUrl(){
         );
 
         return;
-
     }
 
 
-    conversations.unshift(
+    state.conversations.unshift(
         result.data
     );
 
@@ -1953,22 +2157,20 @@ async function openConversationFromUrl(){
     await enrichConversations();
 
 
-    const openedConversation =
-        conversations.find(
+    const conversation =
+        state.conversations.find(
             item =>
                 String(item.id) ===
                 String(conversationId)
         );
 
 
-    if(openedConversation){
+    if(conversation){
 
         await openConversation(
-            openedConversation
+            conversation
         );
-
     }
-
 }
 
 
@@ -1976,10 +2178,16 @@ async function openConversationFromUrl(){
    LOAD MESSAGES
 ========================================================= */
 
-async function loadMessages(conversationId){
+async function loadMessages(
+    conversationId
+){
 
     const box =
-        document.getElementById("chatMessages");
+        $("chatMessages");
+
+    if(!box){
+        return;
+    }
 
 
     const result =
@@ -2003,10 +2211,9 @@ async function loadMessages(conversationId){
     if(result.error){
 
         console.error(
-            "Message load error:",
+            "[HAVKAR] Message load error:",
             result.error
         );
-
 
         box.innerHTML = `
             <div class="chat-empty">
@@ -2016,14 +2223,12 @@ async function loadMessages(conversationId){
         `;
 
         return;
-
     }
 
 
     renderMessages(
         result.data || []
     );
-
 }
 
 
@@ -2031,10 +2236,16 @@ async function loadMessages(conversationId){
    RENDER MESSAGES
 ========================================================= */
 
-function renderMessages(messages){
+function renderMessages(
+    messages
+){
 
     const box =
-        document.getElementById("chatMessages");
+        $("chatMessages");
+
+    if(!box){
+        return;
+    }
 
     box.innerHTML = "";
 
@@ -2049,22 +2260,18 @@ function renderMessages(messages){
         `;
 
         return;
-
     }
 
 
-    messages.forEach(function(message){
-
-        appendMessage(
+    messages.forEach(
+        message => appendMessage(
             message,
             false
-        );
-
-    });
+        )
+    );
 
 
     scrollMessagesToBottom();
-
 }
 
 
@@ -2072,28 +2279,48 @@ function renderMessages(messages){
    APPEND MESSAGE
 ========================================================= */
 
-function appendMessage(message,scroll=true){
+function appendMessage(
+    message,
+    scroll=true
+){
 
     if(
         !message ||
         !message.id ||
         !message.conversation_id
     ){
-
         return;
+    }
 
+
+    if(
+        !state.currentConversationId ||
+        String(
+            message.conversation_id
+        ) !==
+        String(
+            state.currentConversationId
+        )
+    ){
+        return;
     }
 
 
     const box =
-        document.getElementById("chatMessages");
+        $("chatMessages");
+
+    if(!box){
+        return;
+    }
+
+
+    const messageId =
+        String(message.id);
 
 
     const existing =
         box.querySelector(
-            '[data-message-id="' +
-            cssEscape(String(message.id)) +
-            '"]'
+            `[data-message-id="${cssEscape(messageId)}"]`
         );
 
 
@@ -2104,12 +2331,13 @@ function appendMessage(message,scroll=true){
         );
 
         return;
-
     }
 
 
     const empty =
-        box.querySelector(".chat-empty");
+        box.querySelector(
+            ".chat-empty"
+        );
 
     if(empty){
         empty.remove();
@@ -2117,8 +2345,8 @@ function appendMessage(message,scroll=true){
 
 
     const sent =
-        message.sender_id ===
-        currentUser.id;
+        String(message.sender_id) ===
+        String(currentUser.id);
 
 
     const row =
@@ -2126,10 +2354,24 @@ function appendMessage(message,scroll=true){
 
     row.className =
         "message-row " +
-        (sent ? "sent" : "received");
+        (
+            sent
+                ? "sent"
+                : "received"
+        );
 
     row.dataset.messageId =
-        String(message.id);
+        messageId;
+
+
+    const wrap =
+        document.createElement("div");
+
+    wrap.className =
+        "message-wrap";
+
+    wrap.dataset.messageId =
+        messageId;
 
 
     const bubble =
@@ -2137,10 +2379,11 @@ function appendMessage(message,scroll=true){
 
     bubble.className =
         "message " +
-        (sent ? "sent" : "received");
-
-    bubble.dataset.messageId =
-        String(message.id);
+        (
+            sent
+                ? "sent"
+                : "received"
+        );
 
 
     const text =
@@ -2150,7 +2393,9 @@ function appendMessage(message,scroll=true){
         "message-text";
 
     text.textContent =
-        message.message_text;
+        String(
+            message.message_text ?? ""
+        );
 
 
     const meta =
@@ -2189,7 +2434,7 @@ function appendMessage(message,scroll=true){
             );
 
         checks.dataset.messageId =
-            String(message.id);
+            messageId;
 
         checks.textContent =
             message.is_read
@@ -2201,27 +2446,743 @@ function appendMessage(message,scroll=true){
                 ? "Read"
                 : "Sent";
 
-
         meta.appendChild(checks);
-
     }
 
 
     bubble.appendChild(text);
-
     bubble.appendChild(meta);
 
-    row.appendChild(bubble);
+
+    const trigger =
+        document.createElement("button");
+
+    trigger.type = "button";
+    trigger.className =
+        "reaction-trigger";
+
+    trigger.setAttribute(
+        "aria-label",
+        "React to message"
+    );
+
+    trigger.innerHTML =
+        '<i class="far fa-face-smile"></i>';
+
+
+    const picker =
+        createReactionPicker(
+            messageId
+        );
+
+
+    trigger.addEventListener(
+        "click",
+        event => {
+
+            event.stopPropagation();
+
+            toggleReactionPicker(
+                wrap
+            );
+        }
+    );
+
+
+    wrap.appendChild(bubble);
+    wrap.appendChild(trigger);
+    wrap.appendChild(picker);
+
+
+    const reactionBar =
+        document.createElement("div");
+
+    reactionBar.className =
+        "reaction-bar";
+
+    reactionBar.dataset.reactionBar =
+        messageId;
+
+
+    wrap.appendChild(
+        reactionBar
+    );
+
+
+    row.appendChild(wrap);
 
     box.appendChild(row);
 
 
+    renderMessageReactions(
+        messageId
+    );
+
+
     if(scroll){
-
         scrollMessagesToBottom();
+    }
+}
 
+
+/* =========================================================
+   REACTION PICKER
+========================================================= */
+
+function createReactionPicker(
+    messageId
+){
+
+    const picker =
+        document.createElement("div");
+
+    picker.className =
+        "reaction-picker";
+
+    picker.dataset.pickerFor =
+        messageId;
+
+
+    REACTIONS.forEach(
+        emoji => {
+
+            const button =
+                document.createElement("button");
+
+            button.type = "button";
+            button.className =
+                "reaction-option";
+
+            button.textContent =
+                emoji;
+
+            button.setAttribute(
+                "aria-label",
+                "React " + emoji
+            );
+
+
+            button.addEventListener(
+                "click",
+                event => {
+
+                    event.stopPropagation();
+
+                    addOrToggleReaction(
+                        messageId,
+                        emoji
+                    );
+                }
+            );
+
+
+            picker.appendChild(
+                button
+            );
+        }
+    );
+
+
+    return picker;
+}
+
+
+function toggleReactionPicker(
+    wrap
+){
+
+    const wasOpen =
+        wrap.classList.contains(
+            "reaction-open"
+        );
+
+    closeAllReactionPickers();
+
+    if(!wasOpen){
+
+        wrap.classList.add(
+            "reaction-open"
+        );
+    }
+}
+
+
+function closeAllReactionPickers(){
+
+    document
+        .querySelectorAll(
+            ".message-wrap.reaction-open"
+        )
+        .forEach(
+            element =>
+                element.classList.remove(
+                    "reaction-open"
+                )
+        );
+}
+
+
+/* =========================================================
+   REACTION STORAGE
+========================================================= */
+
+function getReactionStorageKey(
+    conversationId
+){
+
+    return (
+        "havkar_message_reactions_v1:" +
+        String(conversationId)
+    );
+}
+
+
+function loadReactions(
+    conversationId
+){
+
+    state.reactions = {};
+
+
+    try{
+
+        const raw =
+            localStorage.getItem(
+                getReactionStorageKey(
+                    conversationId
+                )
+            );
+
+
+        if(!raw){
+            return;
+        }
+
+
+        const parsed =
+            JSON.parse(raw);
+
+
+        if(
+            parsed &&
+            typeof parsed === "object"
+        ){
+
+            state.reactions =
+                parsed;
+        }
+
+    }catch(error){
+
+        console.warn(
+            "[HAVKAR] Reaction storage load failed:",
+            error
+        );
+
+        state.reactions = {};
+    }
+}
+
+
+function saveReactions(){
+
+    if(!state.currentConversationId){
+        return;
     }
 
+
+    try{
+
+        localStorage.setItem(
+            getReactionStorageKey(
+                state.currentConversationId
+            ),
+            JSON.stringify(
+                state.reactions
+            )
+        );
+
+    }catch(error){
+
+        console.warn(
+            "[HAVKAR] Reaction storage save failed:",
+            error
+        );
+    }
+}
+
+
+/* =========================================================
+   REACTION MODEL
+========================================================= */
+
+function getMessageReactionData(
+    messageId
+){
+
+    const key =
+        String(messageId);
+
+
+    if(
+        !state.reactions[key] ||
+        typeof state.reactions[key] !== "object"
+    ){
+
+        state.reactions[key] = {};
+    }
+
+
+    return state.reactions[key];
+}
+
+
+function addOrToggleReaction(
+    messageId,
+    emoji
+){
+
+    if(
+        !state.currentUser ||
+        !state.currentConversationId
+    ){
+        return;
+    }
+
+
+    if(
+        !REACTIONS.includes(emoji)
+    ){
+        return;
+    }
+
+
+    const data =
+        getMessageReactionData(
+            messageId
+        );
+
+
+    /*
+     * One reaction per user per message.
+     * Selecting the same emoji removes it.
+     * Selecting another emoji changes it.
+     */
+
+    const userId =
+        String(
+            state.currentUser.id
+        );
+
+
+    let changed =
+        false;
+
+
+    Object.keys(data).forEach(
+        reactionEmoji => {
+
+            if(
+                !Array.isArray(
+                    data[reactionEmoji]
+                )
+            ){
+                data[reactionEmoji] = [];
+            }
+
+
+            const before =
+                data[reactionEmoji].length;
+
+
+            data[reactionEmoji] =
+                data[reactionEmoji]
+                    .filter(
+                        id =>
+                            String(id) !==
+                            userId
+                    );
+
+
+            if(
+                data[reactionEmoji].length !==
+                before
+            ){
+
+                changed = true;
+            }
+        }
+    );
+
+
+    const current =
+        Object.keys(data).find(
+            reactionEmoji =>
+                Array.isArray(
+                    data[reactionEmoji]
+                ) &&
+                data[reactionEmoji]
+                    .some(
+                        id =>
+                            String(id) ===
+                            userId
+                    )
+        );
+
+
+    if(current === emoji){
+
+        changed = true;
+
+    }else{
+
+        if(!Array.isArray(data[emoji])){
+            data[emoji] = [];
+        }
+
+        data[emoji].push(
+            userId
+        );
+
+        changed = true;
+    }
+
+
+    if(!changed){
+        return;
+    }
+
+
+    cleanupReactionData(
+        messageId
+    );
+
+    saveReactions();
+
+    renderMessageReactions(
+        messageId
+    );
+
+
+    broadcastReaction({
+        action:"sync",
+        messageId:String(messageId),
+        reactions:
+            cloneReactionData(
+                getMessageReactionData(
+                    messageId
+                )
+            )
+    });
+
+
+    closeAllReactionPickers();
+}
+
+
+function cleanupReactionData(
+    messageId
+){
+
+    const data =
+        getMessageReactionData(
+            messageId
+        );
+
+
+    Object.keys(data).forEach(
+        emoji => {
+
+            if(
+                !Array.isArray(data[emoji]) ||
+                !data[emoji].length
+            ){
+
+                delete data[emoji];
+            }
+        }
+    );
+}
+
+
+function cloneReactionData(
+    data
+){
+
+    const output = {};
+
+    Object.keys(
+        data || {}
+    ).forEach(
+        emoji => {
+
+            output[emoji] =
+                Array.isArray(
+                    data[emoji]
+                )
+                    ? [
+                        ...data[emoji]
+                      ]
+                    : [];
+        }
+    );
+
+    return output;
+}
+
+
+/* =========================================================
+   RENDER REACTIONS
+========================================================= */
+
+function renderMessageReactions(
+    messageId
+){
+
+    const bar =
+        document.querySelector(
+            `[data-reaction-bar="${cssEscape(String(messageId))}"]`
+        );
+
+
+    if(!bar){
+        return;
+    }
+
+
+    bar.innerHTML = "";
+
+
+    const data =
+        getMessageReactionData(
+            messageId
+        );
+
+
+    const userId =
+        state.currentUser
+            ? String(
+                state.currentUser.id
+              )
+            : null;
+
+
+    REACTIONS.forEach(
+        emoji => {
+
+            const users =
+                Array.isArray(
+                    data[emoji]
+                )
+                    ? data[emoji]
+                    : [];
+
+
+            if(!users.length){
+                return;
+            }
+
+
+            const chip =
+                document.createElement("button");
+
+            chip.type = "button";
+            chip.className =
+                "reaction-chip";
+
+
+            if(
+                userId &&
+                users.some(
+                    id =>
+                        String(id) ===
+                        userId
+                )
+            ){
+
+                chip.classList.add(
+                    "mine"
+                );
+            }
+
+
+            const emojiSpan =
+                document.createElement("span");
+
+            emojiSpan.textContent =
+                emoji;
+
+
+            const count =
+                document.createElement("span");
+
+            count.className =
+                "reaction-count";
+
+            count.textContent =
+                String(
+                    users.length
+                );
+
+
+            chip.appendChild(
+                emojiSpan
+            );
+
+            chip.appendChild(
+                count
+            );
+
+
+            chip.addEventListener(
+                "click",
+                event => {
+
+                    event.stopPropagation();
+
+                    addOrToggleReaction(
+                        messageId,
+                        emoji
+                    );
+                }
+            );
+
+
+            bar.appendChild(
+                chip
+            );
+        }
+    );
+}
+
+
+/* =========================================================
+   REACTION REALTIME
+========================================================= */
+
+function subscribeToReactions(
+    conversationId
+){
+
+    removeReactionSubscription();
+
+
+    state.reactionChannel =
+        supabaseClient
+            .channel(
+                "havkar-reactions-" +
+                String(conversationId) +
+                "-" +
+                Date.now()
+            )
+            .on(
+                "broadcast",
+                {
+                    event:"reaction"
+                },
+                payload => {
+
+                    const data =
+                        payload?.payload;
+
+
+                    if(
+                        !data ||
+                        String(
+                            data.conversationId
+                        ) !==
+                        String(conversationId)
+                    ){
+                        return;
+                    }
+
+
+                    if(
+                        !data.messageId ||
+                        !data.reactions
+                    ){
+                        return;
+                    }
+
+
+                    state.reactions[
+                        String(data.messageId)
+                    ] =
+                        cloneReactionData(
+                            data.reactions
+                        );
+
+
+                    saveReactions();
+
+
+                    renderMessageReactions(
+                        String(
+                            data.messageId
+                        )
+                    );
+                }
+            )
+            .subscribe(
+                status => {
+
+                    console.log(
+                        "[HAVKAR] Reaction realtime:",
+                        status
+                    );
+                }
+            );
+}
+
+
+function broadcastReaction(
+    payload
+){
+
+    if(
+        !state.reactionChannel ||
+        !state.currentConversationId
+    ){
+        return;
+    }
+
+
+    state.reactionChannel.send({
+        type:"broadcast",
+        event:"reaction",
+        payload:{
+            conversationId:
+                String(
+                    state.currentConversationId
+                ),
+            ...payload
+        }
+    })
+    .catch(
+        error => {
+
+            console.warn(
+                "[HAVKAR] Reaction broadcast failed:",
+                error
+            );
+        }
+    );
+}
+
+
+function removeReactionSubscription(){
+
+    if(
+        state.reactionChannel
+    ){
+
+        supabaseClient.removeChannel(
+            state.reactionChannel
+        );
+
+        state.reactionChannel =
+            null;
+    }
 }
 
 
@@ -2231,7 +3192,7 @@ function appendMessage(message,scroll=true){
 
 async function sendMessage(){
 
-    if(!currentUser){
+    if(!state.currentUser){
 
         showToast(
             "Please sign in first.",
@@ -2239,11 +3200,10 @@ async function sendMessage(){
         );
 
         return;
-
     }
 
 
-    if(!currentConversationId){
+    if(!state.currentConversationId){
 
         showToast(
             "Open a conversation first.",
@@ -2251,15 +3211,14 @@ async function sendMessage(){
         );
 
         return;
-
     }
 
 
     const input =
-        document.getElementById("messageInput");
+        $("messageInput");
 
     const button =
-        document.getElementById("sendButton");
+        $("sendButton");
 
 
     if(!input || !button){
@@ -2273,11 +3232,13 @@ async function sendMessage(){
 
     if(!text){
         return;
-
     }
 
 
-    if(text.length > 4000){
+    if(
+        text.length >
+        MAX_MESSAGE_LENGTH
+    ){
 
         showToast(
             "Message is too long.",
@@ -2285,87 +3246,83 @@ async function sendMessage(){
         );
 
         return;
-
     }
 
 
     input.disabled = true;
-
     button.disabled = true;
 
 
-    const result =
-        await supabaseClient
-            .from("messages")
-            .insert({
-                conversation_id:
-                    currentConversationId,
+    try{
 
-                sender_id:
-                    currentUser.id,
+        const result =
+            await supabaseClient
+                .from("messages")
+                .insert({
+                    conversation_id:
+                        state.currentConversationId,
 
-                message_text:
-                    text,
+                    sender_id:
+                        state.currentUser.id,
 
-                is_read:false
-            })
-            .select(
-                "id,conversation_id,sender_id,message_text,created_at,is_read"
-            )
-            .single();
+                    message_text:
+                        text,
+
+                    is_read:false
+                })
+                .select(
+                    "id,conversation_id,sender_id,message_text,created_at,is_read"
+                )
+                .single();
 
 
-    if(result.error){
+        if(result.error){
 
-        console.error(
-            "Send message error:",
-            result.error
+            console.error(
+                "[HAVKAR] Send message error:",
+                result.error
+            );
+
+            showToast(
+                "Message could not be sent.",
+                "error"
+            );
+
+            return;
+        }
+
+
+        input.value = "";
+
+
+        appendMessage(
+            result.data,
+            true
         );
 
+
+        await updateConversationTimestamp();
+
+
+    }catch(error){
+
+        console.error(
+            "[HAVKAR] Send message failed:",
+            error
+        );
 
         showToast(
             "Message could not be sent.",
             "error"
         );
 
+    }finally{
 
         input.disabled = false;
-
         button.disabled = false;
 
         input.focus();
-
-        return;
-
     }
-
-
-    input.value = "";
-
-
-    /*
-       Add the message immediately.
-
-       The DOM now contains data-message-id,
-       so if Realtime also delivers the INSERT,
-       the message will NOT be duplicated.
-    */
-
-    appendMessage(
-        result.data,
-        true
-    );
-
-
-    input.disabled = false;
-
-    button.disabled = false;
-
-    input.focus();
-
-
-    await updateConversationTimestamp();
-
 }
 
 
@@ -2375,7 +3332,7 @@ async function sendMessage(){
 
 async function updateConversationTimestamp(){
 
-    if(!currentConversationId){
+    if(!state.currentConversationId){
         return;
     }
 
@@ -2389,29 +3346,32 @@ async function updateConversationTimestamp(){
             })
             .eq(
                 "id",
-                currentConversationId
+                state.currentConversationId
             );
 
 
     if(result.error){
 
         console.warn(
-            "Conversation timestamp update:",
+            "[HAVKAR] Conversation timestamp update:",
             result.error
         );
-
     }
-
 }
 
 
 /* =========================================================
-   MARK AS READ
+   MARK READ
 ========================================================= */
 
-async function markMessagesRead(conversationId){
+async function markMessagesRead(
+    conversationId
+){
 
-    if(!currentUser || !conversationId){
+    if(
+        !state.currentUser ||
+        !conversationId
+    ){
         return;
     }
 
@@ -2428,7 +3388,7 @@ async function markMessagesRead(conversationId){
             )
             .neq(
                 "sender_id",
-                currentUser.id
+                state.currentUser.id
             )
             .eq(
                 "is_read",
@@ -2439,15 +3399,14 @@ async function markMessagesRead(conversationId){
     if(result.error){
 
         console.warn(
-            "Mark read error:",
+            "[HAVKAR] Mark read error:",
             result.error
         );
-
     }
 
 
     const conversation =
-        conversations.find(
+        state.conversations.find(
             item =>
                 String(item.id) ===
                 String(conversationId)
@@ -2455,28 +3414,27 @@ async function markMessagesRead(conversationId){
 
 
     if(conversation){
-
         conversation.unreadCount = 0;
-
     }
-
 }
 
 
 /* =========================================================
-   REALTIME
+   MESSAGE REALTIME
 ========================================================= */
 
-function subscribeToConversation(conversationId){
+function subscribeToConversation(
+    conversationId
+){
 
     removeRealtimeSubscription();
 
 
-    realtimeChannel =
+    state.realtimeChannel =
         supabaseClient
             .channel(
                 "havkar-chat-" +
-                conversationId +
+                String(conversationId) +
                 "-" +
                 Date.now()
             )
@@ -2490,29 +3448,22 @@ function subscribeToConversation(conversationId){
                         "conversation_id=eq." +
                         conversationId
                 },
-                async function(payload){
+                async payload => {
 
                     const message =
-                        payload.new;
+                        payload?.new;
 
 
                     if(
                         !message ||
-                        String(message.conversation_id) !==
+                        String(
+                            message.conversation_id
+                        ) !==
                         String(conversationId)
                     ){
-
                         return;
-
                     }
 
-
-                    /*
-                       appendMessage() checks the
-                       permanent data-message-id.
-                       Therefore our own message will
-                       not be duplicated.
-                    */
 
                     appendMessage(
                         message,
@@ -2521,16 +3472,18 @@ function subscribeToConversation(conversationId){
 
 
                     if(
-                        message.sender_id !==
-                        currentUser.id
+                        String(
+                            message.sender_id
+                        ) !==
+                        String(
+                            state.currentUser.id
+                        )
                     ){
 
                         await markMessagesRead(
                             conversationId
                         );
-
                     }
-
                 }
             )
             .on(
@@ -2543,138 +3496,93 @@ function subscribeToConversation(conversationId){
                         "conversation_id=eq." +
                         conversationId
                 },
-                function(payload){
+                payload => {
 
                     updateRenderedMessage(
-                        payload.new
+                        payload?.new
                     );
-
                 }
             )
             .subscribe(
-                function(status){
+                status => {
 
                     console.log(
-                        "Chat realtime:",
+                        "[HAVKAR] Chat realtime:",
                         status
                     );
-
                 }
             );
-
 }
 
-
-/* =========================================================
-   REMOVE REALTIME
-========================================================= */
 
 function removeRealtimeSubscription(){
 
-    if(!realtimeChannel){
-        return;
+    if(
+        state.realtimeChannel
+    ){
+
+        supabaseClient.removeChannel(
+            state.realtimeChannel
+        );
+
+        state.realtimeChannel =
+            null;
     }
-
-
-    supabaseClient.removeChannel(
-        realtimeChannel
-    );
-
-
-    realtimeChannel = null;
-
 }
 
 
 /* =========================================================
-   UPDATE RENDERED MESSAGE
+   UPDATE MESSAGE
 ========================================================= */
 
-function updateRenderedMessage(message){
+function updateRenderedMessage(
+    message
+){
 
     if(
         !message ||
         !message.id ||
-        !currentConversationId ||
-        String(message.conversation_id) !==
-        String(currentConversationId)
+        !state.currentConversationId
     ){
-
         return;
-
     }
 
 
-    const messageElement =
+    if(
+        String(message.conversation_id) !==
+        String(state.currentConversationId)
+    ){
+        return;
+    }
+
+
+    const element =
         document.querySelector(
-            '[data-message-id="' +
-            cssEscape(String(message.id)) +
-            '"]'
-        );
-
-
-    if(!messageElement){
-        return;
-    }
-
-
-    const checks =
-        messageElement.querySelector(
-            ".message-checks"
+            `[data-message-id="${cssEscape(String(message.id))}"] .message-checks`
         );
 
 
     if(
-        checks &&
-        message.sender_id ===
-        currentUser.id
+        element &&
+        String(message.sender_id) ===
+        String(state.currentUser.id)
     ){
 
-        checks.textContent =
+        element.textContent =
             message.is_read
                 ? "✓✓"
                 : "✓";
 
-        checks.classList.toggle(
+        element.classList.toggle(
             "read",
             !!message.is_read
         );
 
-        checks.title =
+        element.title =
             message.is_read
                 ? "Read"
                 : "Sent";
-
     }
-
-}
-
-
-/* =========================================================
-   CSS ESCAPE
-========================================================= */
-
-function cssEscape(value){
-
-    if(
-        window.CSS &&
-        typeof window.CSS.escape ===
-        "function"
-    ){
-
-        return window.CSS.escape(
-            String(value)
-        );
-
-    }
-
-
-    return String(value)
-        .replace(
-            /["\\]/g,
-            "\\$&"
-        );
-
 }
 
 
@@ -2685,21 +3593,28 @@ function cssEscape(value){
 function closeChat(){
 
     removeRealtimeSubscription();
+    removeReactionSubscription();
+
+    closeAllReactionPickers();
 
 
-    currentConversation =
+    state.currentConversation =
         null;
 
-    currentConversationId =
+    state.currentConversationId =
         null;
 
+    state.reactions =
+        {};
 
-    document.getElementById("chatScreen")
-        .style.display = "none";
 
+    $("chatScreen")
+        .style.display =
+        "none";
 
-    document.getElementById("messageList")
-        .style.display = "block";
+    $("messageList")
+        .style.display =
+        "block";
 
 
     history.replaceState(
@@ -2710,7 +3625,6 @@ function closeChat(){
 
 
     loadConversations();
-
 }
 
 
@@ -2720,21 +3634,20 @@ function closeChat(){
 
 function showChatInfo(){
 
-    if(!currentConversation){
+    const conversation =
+        state.currentConversation;
 
+
+    if(!conversation){
         return;
-
     }
 
 
-    const ad =
-        currentConversation.ad;
-
-
-    if(ad){
+    if(conversation.ad){
 
         showToast(
-            "Listing: " + ad.title
+            "Listing: " +
+            conversation.ad.title
         );
 
     }else{
@@ -2742,9 +3655,7 @@ function showChatInfo(){
         showToast(
             "HAVKAR conversation"
         );
-
     }
-
 }
 
 
@@ -2752,21 +3663,29 @@ function showChatInfo(){
    SEARCH
 ========================================================= */
 
-function searchMessages(value){
+function searchMessages(
+    value
+){
 
-    searchTerm =
-        value.trim().toLowerCase();
+    state.searchTerm =
+        String(
+            value || ""
+        )
+        .trim()
+        .toLowerCase();
+
 
     renderConversationList();
-
 }
 
 
 /* =========================================================
-   ENTER TO SEND
+   ENTER SEND
 ========================================================= */
 
-function handleEnter(event){
+function handleMessageKeydown(
+    event
+){
 
     if(
         event.key === "Enter" &&
@@ -2776,9 +3695,7 @@ function handleEnter(event){
         event.preventDefault();
 
         sendMessage();
-
     }
-
 }
 
 
@@ -2789,20 +3706,20 @@ function handleEnter(event){
 function scrollMessagesToBottom(){
 
     const box =
-        document.getElementById("chatMessages");
+        $("chatMessages");
 
     if(!box){
         return;
     }
 
 
-    requestAnimationFrame(function(){
+    requestAnimationFrame(
+        () => {
 
-        box.scrollTop =
-            box.scrollHeight;
-
-    });
-
+            box.scrollTop =
+                box.scrollHeight;
+        }
+    );
 }
 
 
@@ -2810,7 +3727,9 @@ function scrollMessagesToBottom(){
    TIME
 ========================================================= */
 
-function formatTime(value){
+function formatTime(
+    value
+){
 
     if(!value){
         return "";
@@ -2821,7 +3740,11 @@ function formatTime(value){
         new Date(value);
 
 
-    if(Number.isNaN(date.getTime())){
+    if(
+        Number.isNaN(
+            date.getTime()
+        )
+    ){
         return "";
     }
 
@@ -2830,14 +3753,26 @@ function formatTime(value){
         new Date();
 
 
-    const diff =
+    const difference =
         now.getTime() -
         date.getTime();
 
 
+    if(difference < 0){
+
+        return date.toLocaleDateString(
+            undefined,
+            {
+                day:"numeric",
+                month:"short"
+            }
+        );
+    }
+
+
     const minutes =
         Math.floor(
-            diff / 60000
+            difference / 60000
         );
 
 
@@ -2880,11 +3815,12 @@ function formatTime(value){
             month:"short"
         }
     );
-
 }
 
 
-function formatMessageTime(value){
+function formatMessageTime(
+    value
+){
 
     if(!value){
         return "";
@@ -2895,7 +3831,11 @@ function formatMessageTime(value){
         new Date(value);
 
 
-    if(Number.isNaN(date.getTime())){
+    if(
+        Number.isNaN(
+            date.getTime()
+        )
+    ){
         return "";
     }
 
@@ -2907,24 +3847,89 @@ function formatMessageTime(value){
             minute:"2-digit"
         }
     );
-
 }
 
 
 /* =========================================================
-   ESCAPE HTML
+   ESCAPE
 ========================================================= */
 
-function escapeHtml(value){
+function escapeHtml(
+    value
+){
 
-    return String(value || "")
-        .replace(/&/g,"&amp;")
-        .replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;")
-        .replace(/"/g,"&quot;")
-        .replace(/'/g,"&#039;");
-
+    return String(
+        value ?? ""
+    )
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
 }
+
+
+function cssEscape(
+    value
+){
+
+    if(
+        window.CSS &&
+        typeof window.CSS.escape ===
+        "function"
+    ){
+
+        return window.CSS.escape(
+            String(value)
+        );
+    }
+
+
+    return String(value)
+        .replace(
+            /["\\]/g,
+            "\\$&"
+        );
+}
+
+
+/* =========================================================
+   GLOBAL CLICK
+========================================================= */
+
+document.addEventListener(
+    "click",
+    event => {
+
+        const menu =
+            $("headerMenu");
+
+        const menuButton =
+            $("headerMenuButton");
+
+
+        if(
+            menu &&
+            menuButton &&
+            menu.classList.contains("show") &&
+            !menu.contains(event.target) &&
+            !menuButton.contains(event.target)
+        ){
+
+            closeHeaderMenu();
+        }
+
+
+        if(
+            !event.target.closest(
+                ".message-wrap"
+            )
+        ){
+
+            closeAllReactionPickers();
+        }
+    }
+);
 
 
 /* =========================================================
@@ -2933,25 +3938,16 @@ function escapeHtml(value){
 
 document.addEventListener(
     "keydown",
-    function(event){
+    event => {
 
-        if(event.key === "Escape"){
+        if(event.key !== "Escape"){
 
-            const menu =
-                document.getElementById(
-                    "headerMenu"
-                );
-
-            if(menu){
-
-                menu.classList.remove(
-                    "show"
-                );
-
-            }
-
+            return;
         }
 
+
+        closeHeaderMenu();
+        closeAllReactionPickers();
     }
 );
 
@@ -2961,23 +3957,160 @@ document.addEventListener(
 ========================================================= */
 
 supabaseClient.auth.onAuthStateChange(
-    function(event,session){
+    (event,session) => {
 
-        if(
-            event === "SIGNED_OUT"
-        ){
+        if(event === "SIGNED_OUT"){
 
-            currentUser = null;
+            state.currentUser =
+                null;
 
             removeRealtimeSubscription();
+            removeReactionSubscription();
 
             window.location.href =
                 "login.html";
-
         }
 
+
+        if(
+            event === "SIGNED_IN" &&
+            session?.user
+        ){
+
+            state.currentUser =
+                session.user;
+        }
     }
 );
+
+
+/* =========================================================
+   EVENTS
+========================================================= */
+
+function setupEvents(){
+
+    $("listBackButton")
+        ?.addEventListener(
+            "click",
+            goHome
+        );
+
+
+    $("headerMenuButton")
+        ?.addEventListener(
+            "click",
+            event => {
+
+                event.stopPropagation();
+
+                toggleHeaderMenu();
+            }
+        );
+
+
+    $("notificationsButton")
+        ?.addEventListener(
+            "click",
+            () => {
+
+                closeHeaderMenu();
+                goNotifications();
+            }
+        );
+
+
+    $("profileButton")
+        ?.addEventListener(
+            "click",
+            () => {
+
+                closeHeaderMenu();
+                goProfile();
+            }
+        );
+
+
+    $("navHome")
+        ?.addEventListener(
+            "click",
+            goHome
+        );
+
+
+    $("navMessages")
+        ?.addEventListener(
+            "click",
+            goMessages
+        );
+
+
+    $("navNotifications")
+        ?.addEventListener(
+            "click",
+            goNotifications
+        );
+
+
+    $("navProfile")
+        ?.addEventListener(
+            "click",
+            goProfile
+        );
+
+
+    $("chatBackButton")
+        ?.addEventListener(
+            "click",
+            closeChat
+        );
+
+
+    $("chatInfoButton")
+        ?.addEventListener(
+            "click",
+            showChatInfo
+        );
+
+
+    $("sendButton")
+        ?.addEventListener(
+            "click",
+            sendMessage
+        );
+
+
+    $("messageInput")
+        ?.addEventListener(
+            "keydown",
+            handleMessageKeydown
+        );
+
+
+    $("searchInput")
+        ?.addEventListener(
+            "input",
+            event =>
+                searchMessages(
+                    event.target.value
+                )
+        );
+
+
+    /*
+     * If the user taps the chat background
+     * reaction menus close.
+     */
+
+    $("chatMessages")
+        ?.addEventListener(
+            "scroll",
+            closeAllReactionPickers,
+            {
+                passive:true
+            }
+        );
+}
 
 
 /* =========================================================
@@ -2986,19 +4119,21 @@ supabaseClient.auth.onAuthStateChange(
 
 document.addEventListener(
     "DOMContentLoaded",
-    async function(){
+    async () => {
 
-        currentUser =
+        setupEvents();
+
+
+        state.currentUser =
             await loadCurrentUser();
 
 
-        if(!currentUser){
+        if(!state.currentUser){
 
             window.location.href =
                 "login.html";
 
             return;
-
         }
 
 
@@ -3006,11 +4141,24 @@ document.addEventListener(
 
 
         await openConversationFromUrl();
+    }
+);
 
+
+/* =========================================================
+   PAGE CLEANUP
+========================================================= */
+
+window.addEventListener(
+    "beforeunload",
+    () => {
+
+        removeRealtimeSubscription();
+        removeReactionSubscription();
     }
 );
 
 </script>
 
 </body>
-</html>
+    </html>
