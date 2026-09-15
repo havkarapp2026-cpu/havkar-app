@@ -976,10 +976,6 @@ input:focus-visible{
 
 <body>
 
-<!-- =========================================================
-     CONVERSATION LIST
-========================================================= -->
-
 <div id="messageList">
 
     <header class="header">
@@ -1059,9 +1055,7 @@ input:focus-visible{
 
     </div>
 
-    <div
-        id="conversationList"
-        class="content">
+    <div id="conversationList" class="content">
 
         <div class="loading">
 
@@ -1085,44 +1079,24 @@ input:focus-visible{
 
     <nav class="bottom-nav">
 
-        <button
-            id="navHome"
-            class="nav-item"
-            type="button">
-
+        <button id="navHome" class="nav-item" type="button">
             <i class="fas fa-house"></i>
             <span>Home</span>
-
         </button>
 
-        <button
-            id="navMessages"
-            class="nav-item active"
-            type="button">
-
+        <button id="navMessages" class="nav-item active" type="button">
             <i class="fas fa-comment"></i>
             <span>Messages</span>
-
         </button>
 
-        <button
-            id="navNotifications"
-            class="nav-item"
-            type="button">
-
+        <button id="navNotifications" class="nav-item" type="button">
             <i class="fas fa-bell"></i>
             <span>Notifications</span>
-
         </button>
 
-        <button
-            id="navProfile"
-            class="nav-item"
-            type="button">
-
+        <button id="navProfile" class="nav-item" type="button">
             <i class="fas fa-user"></i>
             <span>Profile</span>
-
         </button>
 
     </nav>
@@ -1130,13 +1104,7 @@ input:focus-visible{
 </div>
 
 
-<!-- =========================================================
-     CHAT
-========================================================= -->
-
-<div
-    id="chatScreen"
-    class="chat-screen">
+<div id="chatScreen" class="chat-screen">
 
     <header class="chat-screen-header">
 
@@ -1149,25 +1117,17 @@ input:focus-visible{
 
         </button>
 
-        <div
-            id="chatAvatar"
-            class="avatar">
-
+        <div id="chatAvatar" class="avatar">
             <i class="fas fa-user"></i>
-
         </div>
 
         <div class="chat-title-area">
 
-            <div
-                id="chatPerson"
-                class="chat-person">
+            <div id="chatPerson" class="chat-person">
                 Conversation
             </div>
 
-            <div
-                id="chatSubtitle"
-                class="chat-subtitle">
+            <div id="chatSubtitle" class="chat-subtitle">
                 HAVKAR
             </div>
 
@@ -1185,9 +1145,7 @@ input:focus-visible{
 
     </header>
 
-    <main
-        id="chatMessages"
-        class="chat-messages">
+    <main id="chatMessages" class="chat-messages">
 
         <div class="chat-empty">
 
@@ -1227,19 +1185,14 @@ input:focus-visible{
 </div>
 
 
-<div
-    id="toast"
-    class="toast"
-    role="status"
-    aria-live="polite">
-</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 
 <script>
 "use strict";
 
 /* =========================================================
-   HAVKAR CHAT — FINAL
+   HAVKAR CHAT — PRODUCTION VERSION
 ========================================================= */
 
 const SUPABASE_URL =
@@ -1248,18 +1201,80 @@ const SUPABASE_URL =
 const SUPABASE_KEY =
     "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq";
 
-const supabaseClient =
-    window.supabase.createClient(
-        SUPABASE_URL,
-        SUPABASE_KEY,
-        {
-            auth:{
-                persistSession:true,
-                autoRefreshToken:true,
-                detectSessionInUrl:false
+
+/* =========================================================
+   SUPABASE INITIALIZATION
+========================================================= */
+
+let supabaseClient = null;
+
+function initializeSupabase(){
+
+    if(
+        !window.supabase ||
+        typeof window.supabase.createClient !== "function"
+    ){
+
+        return false;
+
+    }
+
+    try{
+
+        supabaseClient =
+            window.supabase.createClient(
+                SUPABASE_URL,
+                SUPABASE_KEY,
+                {
+                    auth:{
+                        persistSession:true,
+                        autoRefreshToken:true,
+                        detectSessionInUrl:false
+                    }
+                }
+            );
+
+        return true;
+
+    }catch(error){
+
+        console.error(
+            "[HAVKAR] Supabase initialization failed:",
+            error
+        );
+
+        return false;
+
+    }
+
+}
+
+
+if(!initializeSupabase()){
+
+    window.setTimeout(
+        () => {
+
+            if(
+                initializeSupabase()
+            ){
+
+                startPage();
+
+            }else{
+
+                showFatalError(
+                    "HAVKAR connection could not be started.",
+                    "Please refresh the page and try again."
+                );
+
             }
-        }
+
+        },
+        500
     );
+
+}
 
 
 /* =========================================================
@@ -1276,6 +1291,7 @@ const REACTIONS = [
 ];
 
 const MAX_MESSAGE_LENGTH = 4000;
+
 const REQUEST_TIMEOUT = 10000;
 
 
@@ -1301,7 +1317,9 @@ const state = {
 
     reactions:{},
 
-    loadingConversations:false
+    loadingConversations:false,
+
+    pageStarted:false
 
 };
 
@@ -1315,7 +1333,7 @@ const $ = id =>
 
 
 /* =========================================================
-   REQUEST TIMEOUT
+   SAFE REQUEST TIMEOUT
 ========================================================= */
 
 function withTimeout(
@@ -1323,41 +1341,111 @@ function withTimeout(
     milliseconds = REQUEST_TIMEOUT
 ){
 
-    let timer = null;
+    return new Promise(
+        (resolve,reject) => {
 
-    const timeout =
-        new Promise(
-            (_,reject) => {
+            let finished = false;
 
-                timer =
-                    window.setTimeout(
-                        () => {
+            const timer =
+                window.setTimeout(
+                    () => {
 
-                            reject(
-                                new Error(
-                                    "REQUEST_TIMEOUT"
-                                )
-                            );
+                        if(finished){
+                            return;
+                        }
 
-                        },
-                        milliseconds
-                    );
+                        finished = true;
 
-            }
-        );
+                        reject(
+                            new Error(
+                                "REQUEST_TIMEOUT"
+                            )
+                        );
 
-    return Promise.race(
-        [
-            promise.finally(
-                () => {
-                    if(timer){
+                    },
+                    milliseconds
+                );
+
+            Promise.resolve(promise)
+                .then(
+                    value => {
+
+                        if(finished){
+                            return;
+                        }
+
+                        finished = true;
+
                         clearTimeout(timer);
+
+                        resolve(value);
+
                     }
-                }
-            ),
-            timeout
-        ]
+                )
+                .catch(
+                    error => {
+
+                        if(finished){
+                            return;
+                        }
+
+                        finished = true;
+
+                        clearTimeout(timer);
+
+                        reject(error);
+
+                    }
+                );
+
+        }
     );
+
+}
+
+
+/* =========================================================
+   FATAL ERROR
+========================================================= */
+
+function showFatalError(
+    title,
+    text
+){
+
+    const list =
+        $("conversationList");
+
+    if(!list){
+        return;
+    }
+
+    list.innerHTML = `
+        <div class="error-state">
+
+            <i class="fas fa-triangle-exclamation"></i>
+
+            <h3>${escapeHtml(title)}</h3>
+
+            <p>${escapeHtml(text)}</p>
+
+            <button
+                id="fatalRetryButton"
+                class="retry-button"
+                type="button">
+
+                Try Again
+
+            </button>
+
+        </div>
+    `;
+
+    $("fatalRetryButton")
+        ?.addEventListener(
+            "click",
+            () => window.location.reload()
+        );
 
 }
 
@@ -1405,6 +1493,7 @@ function showToast(
             },
             2800
         );
+
 }
 
 
@@ -1419,6 +1508,7 @@ function goHome(){
 
 }
 
+
 function goMessages(){
 
     window.location.href =
@@ -1426,12 +1516,14 @@ function goMessages(){
 
 }
 
+
 function goNotifications(){
 
     window.location.href =
         "notifications.html";
 
 }
+
 
 function goProfile(){
 
@@ -1478,6 +1570,7 @@ function toggleHeaderMenu(){
 
 }
 
+
 function closeHeaderMenu(){
 
     const menu =
@@ -1487,9 +1580,11 @@ function closeHeaderMenu(){
         $("headerMenuButton");
 
     if(menu){
+
         menu.classList.remove(
             "show"
         );
+
     }
 
     if(button){
@@ -1510,6 +1605,14 @@ function closeHeaderMenu(){
 
 async function loadCurrentUser(){
 
+    if(!supabaseClient){
+
+        throw new Error(
+            "SUPABASE_NOT_INITIALIZED"
+        );
+
+    }
+
     try{
 
         const result =
@@ -1519,12 +1622,7 @@ async function loadCurrentUser(){
 
         if(result.error){
 
-            console.error(
-                "[HAVKAR] Session error:",
-                result.error
-            );
-
-            return null;
+            throw result.error;
 
         }
 
@@ -1539,11 +1637,39 @@ async function loadCurrentUser(){
     }catch(error){
 
         console.error(
-            "[HAVKAR] Auth error:",
+            "[HAVKAR] Session error:",
             error
         );
 
-        return null;
+        throw error;
+
+    }
+
+}
+
+
+/* =========================================================
+   AUTH REDIRECT
+========================================================= */
+
+function redirectToLogin(){
+
+    const currentPath =
+        window.location.pathname +
+        window.location.search;
+
+    if(
+        currentPath &&
+        currentPath !== "/login.html"
+    ){
+
+        window.location.href =
+            "login.html";
+
+    }else{
+
+        window.location.href =
+            "login.html";
 
     }
 
@@ -1559,15 +1685,28 @@ async function loadConversations(){
     const list =
         $("conversationList");
 
-    if(
-        !list ||
-        !state.currentUser
-    ){
+    if(!list){
+
         return;
+
     }
 
-    if(state.loadingConversations){
+    if(
+        !state.currentUser
+    ){
+
+        redirectToLogin();
+
         return;
+
+    }
+
+    if(
+        state.loadingConversations
+    ){
+
+        return;
+
     }
 
     state.loadingConversations =
@@ -1575,8 +1714,11 @@ async function loadConversations(){
 
     list.innerHTML = `
         <div class="loading">
+
             <i class="fas fa-circle-notch fa-spin"></i>
+
             <p>Loading conversations...</p>
+
         </div>
     `;
 
@@ -1620,40 +1762,45 @@ async function loadConversations(){
                 ? result.data
                 : [];
 
-        /*
-         * IMPORTANT:
-         * Render the conversations immediately.
-         * Do NOT wait for ads/messages/unread
-         * enrichment before showing the page.
-         */
-
         state.conversations.forEach(
             conversation => {
 
                 conversation.ad =
-                    null;
+                    conversation.ad || null;
 
                 conversation.lastMessage =
-                    null;
+                    conversation.lastMessage || null;
 
                 conversation.unreadCount =
-                    0;
+                    Number(
+                        conversation.unreadCount || 0
+                    );
 
             }
         );
 
+        /*
+         * MAIN LIST IS RENDERED IMMEDIATELY.
+         * Enrichment can never block the page.
+         */
+
         renderConversationList();
 
         /*
-         * Secondary enrichment happens after
-         * the main list is already visible.
+         * Secondary data loads in background.
          */
 
         enrichConversations()
             .then(
                 () => {
 
-                    renderConversationList();
+                    if(
+                        !state.currentConversationId
+                    ){
+
+                        renderConversationList();
+
+                    }
 
                 }
             )
@@ -1664,11 +1811,6 @@ async function loadConversations(){
                         "[HAVKAR] Conversation enrichment failed:",
                         error
                     );
-
-                    /*
-                     * The conversation list remains usable
-                     * even if enrichment fails.
-                     */
 
                     renderConversationList();
 
@@ -1694,14 +1836,14 @@ async function loadConversations(){
 
             showErrorState(
                 "Messages are taking too long",
-                "HAVKAR could not reach the message server in time."
+                "HAVKAR could not reach the conversation server in time."
             );
 
         }else{
 
             showErrorState(
                 "Unable to load conversations",
-                "Please check your connection and try again."
+                "The message service could not load your conversations."
             );
 
         }
@@ -1761,7 +1903,11 @@ function showErrorState(
     $("retryConversations")
         ?.addEventListener(
             "click",
-            loadConversations
+            () => {
+
+                loadConversations();
+
+            }
         );
 
 }
@@ -1777,7 +1923,9 @@ async function enrichConversations(){
         !state.conversations.length ||
         !state.currentUser
     ){
+
         return;
+
     }
 
     const adIds =
@@ -1793,10 +1941,6 @@ async function enrichConversations(){
             );
 
     const adsMap = {};
-
-    /*
-     * Load all ads in one query.
-     */
 
     if(adIds.length){
 
@@ -1864,11 +2008,8 @@ async function enrichConversations(){
     );
 
     /*
-     * Load latest message + unread count
-     * independently for each conversation.
-     *
-     * Failure of one conversation does not
-     * block the rest.
+     * Each conversation is enriched independently.
+     * One failed request can never stop the others.
      */
 
     await Promise.all(
@@ -1997,7 +2138,9 @@ function renderConversationList(){
                 if(
                     !state.searchTerm
                 ){
+
                     return true;
+
                 }
 
                 const ad =
@@ -2066,7 +2209,8 @@ function renderConversationList(){
 
     if(!filtered.length){
 
-        list.innerHTML = "";
+        list.innerHTML =
+            "";
 
         if(noResults){
 
@@ -2086,7 +2230,8 @@ function renderConversationList(){
 
     }
 
-    list.innerHTML = "";
+    list.innerHTML =
+        "";
 
     filtered.forEach(
         conversation => {
@@ -2264,7 +2409,9 @@ function createConversationElement(
 
         adLabel.textContent =
             "Listing: " +
-            conversation.ad.title;
+            String(
+                conversation.ad.title || ""
+            );
 
         info.appendChild(
             adLabel
@@ -2276,7 +2423,9 @@ function createConversationElement(
     item.appendChild(info);
 
     if(
-        conversation.unreadCount > 0
+        Number(
+            conversation.unreadCount
+        ) > 0
     ){
 
         const unread =
@@ -2302,9 +2451,13 @@ function createConversationElement(
 
     item.addEventListener(
         "click",
-        () => openConversation(
-            conversation
-        )
+        () => {
+
+            openConversation(
+                conversation
+            );
+
+        }
     );
 
     return item;
@@ -2418,6 +2571,12 @@ async function openConversation(
         conversation.id
     );
 
+    /*
+     * Load messages independently.
+     * Even if read-status or realtime fails,
+     * the actual chat remains available.
+     */
+
     await loadMessages(
         conversation.id
     );
@@ -2467,10 +2626,6 @@ async function openConversationFromUrl(){
         return;
     }
 
-    /*
-     * First use an already loaded conversation.
-     */
-
     const localConversation =
         state.conversations.find(
             conversation =>
@@ -2491,12 +2646,6 @@ async function openConversationFromUrl(){
         return;
 
     }
-
-    /*
-     * Direct conversation access.
-     * This is intentionally independent of
-     * the conversation-list loading process.
-     */
 
     try{
 
@@ -2565,27 +2714,45 @@ async function openConversationFromUrl(){
         result.data.unreadCount =
             0;
 
-        state.conversations.unshift(
-            result.data
-        );
+        state.conversations =
+            [
+                result.data,
+                ...state.conversations
+            ];
 
-        /*
-         * Do not wait for enrichment.
-         */
-
-        openConversation(
+        await openConversation(
             result.data
         );
 
         enrichSingleConversation(
             result.data
         )
+        .then(
+            () => {
+
+                if(
+                    state.currentConversationId ===
+                    result.data.id
+                ){
+
+                    $("chatSubtitle")
+                        .textContent =
+                        result.data.ad?.title ||
+                        "HAVKAR Conversation";
+
+                }
+
+            }
+        )
         .catch(
-            error =>
+            error => {
+
                 console.warn(
                     "[HAVKAR] Direct conversation enrichment failed:",
                     error
-                )
+                );
+
+            }
         );
 
     }catch(error){
@@ -2595,8 +2762,15 @@ async function openConversationFromUrl(){
             error
         );
 
+        const message =
+            String(
+                error?.message || ""
+            );
+
         showToast(
-            "Conversation could not be opened.",
+            message === "REQUEST_TIMEOUT"
+                ? "Conversation request timed out."
+                : "Conversation could not be opened.",
             "error"
         );
 
@@ -2730,11 +2904,37 @@ async function loadMessages(
                 <i class="fas fa-triangle-exclamation"></i>
 
                 <p>
-                    Unable to load messages.
+                    ${
+                        error?.message ===
+                        "REQUEST_TIMEOUT"
+                            ? "Message loading timed out."
+                            : "Unable to load messages."
+                    }
                 </p>
+
+                <button
+                    id="retryMessages"
+                    class="retry-button"
+                    type="button">
+
+                    Try Again
+
+                </button>
 
             </div>
         `;
+
+        $("retryMessages")
+            ?.addEventListener(
+                "click",
+                () => {
+
+                    loadMessages(
+                        conversationId
+                    );
+
+                }
+            );
 
     }
 
@@ -3253,7 +3453,9 @@ function saveReactions(){
     if(
         !state.currentConversationId
     ){
+
         return;
+
     }
 
     try{
@@ -3368,11 +3570,6 @@ function addOrToggleReaction(
 
         }
     );
-
-    /*
-     * Same reaction = remove.
-     * Different reaction = switch.
-     */
 
     Object.keys(
         data
@@ -3656,78 +3853,93 @@ function subscribeToReactions(
 
     removeReactionSubscription();
 
-    state.reactionChannel =
-        supabaseClient
-            .channel(
-                "havkar-reactions-" +
-                String(
-                    conversationId
-                ) +
-                "-" +
-                Date.now()
-            )
-            .on(
-                "broadcast",
-                {
-                    event:"reaction"
-                },
-                payload => {
+    if(!supabaseClient){
+        return;
+    }
 
-                    const data =
-                        payload?.payload;
+    try{
 
-                    if(
-                        !data ||
-                        String(
-                            data.conversationId
-                        ) !==
-                        String(
-                            conversationId
-                        )
-                    ){
+        state.reactionChannel =
+            supabaseClient
+                .channel(
+                    "havkar-reactions-" +
+                    String(
+                        conversationId
+                    ) +
+                    "-" +
+                    Date.now()
+                )
+                .on(
+                    "broadcast",
+                    {
+                        event:"reaction"
+                    },
+                    payload => {
 
-                        return;
+                        const data =
+                            payload?.payload;
 
-                    }
+                        if(
+                            !data ||
+                            String(
+                                data.conversationId
+                            ) !==
+                            String(
+                                conversationId
+                            )
+                        ){
 
-                    if(
-                        !data.messageId ||
-                        !data.reactions
-                    ){
+                            return;
 
-                        return;
+                        }
 
-                    }
+                        if(
+                            !data.messageId ||
+                            !data.reactions
+                        ){
 
-                    state.reactions[
-                        String(
-                            data.messageId
-                        )
-                    ] =
-                        cloneReactionData(
-                            data.reactions
+                            return;
+
+                        }
+
+                        state.reactions[
+                            String(
+                                data.messageId
+                            )
+                        ] =
+                            cloneReactionData(
+                                data.reactions
+                            );
+
+                        saveReactions();
+
+                        renderMessageReactions(
+                            String(
+                                data.messageId
+                            )
                         );
 
-                    saveReactions();
+                    }
+                )
+                .subscribe(
+                    status => {
 
-                    renderMessageReactions(
-                        String(
-                            data.messageId
-                        )
-                    );
+                        console.log(
+                            "[HAVKAR] Reaction realtime:",
+                            status
+                        );
 
-                }
-            )
-            .subscribe(
-                status => {
+                    }
+                );
 
-                    console.log(
-                        "[HAVKAR] Reaction realtime:",
-                        status
-                    );
+    }catch(error){
 
-                }
-            );
+        console.warn(
+            "[HAVKAR] Reaction subscription failed:",
+            error
+        );
+
+    }
 
 }
 
@@ -3777,9 +3989,20 @@ function removeReactionSubscription(){
         state.reactionChannel
     ){
 
-        supabaseClient.removeChannel(
-            state.reactionChannel
-        );
+        try{
+
+            supabaseClient.removeChannel(
+                state.reactionChannel
+            );
+
+        }catch(error){
+
+            console.warn(
+                "[HAVKAR] Reaction channel removal failed:",
+                error
+            );
+
+        }
 
         state.reactionChannel =
             null;
@@ -3912,7 +4135,9 @@ async function sendMessage(){
         );
 
         showToast(
-            "Message could not be sent.",
+            error?.message === "REQUEST_TIMEOUT"
+                ? "Sending the message timed out."
+                : "Message could not be sent.",
             "error"
         );
 
@@ -4068,95 +4293,110 @@ function subscribeToConversation(
 
     removeRealtimeSubscription();
 
-    state.realtimeChannel =
-        supabaseClient
-            .channel(
-                "havkar-chat-" +
-                String(
-                    conversationId
-                ) +
-                "-" +
-                Date.now()
-            )
-            .on(
-                "postgres_changes",
-                {
-                    event:"INSERT",
-                    schema:"public",
-                    table:"messages",
-                    filter:
-                        "conversation_id=eq." +
+    if(!supabaseClient){
+        return;
+    }
+
+    try{
+
+        state.realtimeChannel =
+            supabaseClient
+                .channel(
+                    "havkar-chat-" +
+                    String(
                         conversationId
-                },
-                async payload => {
-
-                    const message =
-                        payload?.new;
-
-                    if(
-                        !message ||
-                        String(
-                            message.conversation_id
-                        ) !==
-                        String(
+                    ) +
+                    "-" +
+                    Date.now()
+                )
+                .on(
+                    "postgres_changes",
+                    {
+                        event:"INSERT",
+                        schema:"public",
+                        table:"messages",
+                        filter:
+                            "conversation_id=eq." +
                             conversationId
-                        )
-                    ){
+                    },
+                    async payload => {
 
-                        return;
+                        const message =
+                            payload?.new;
+
+                        if(
+                            !message ||
+                            String(
+                                message.conversation_id
+                            ) !==
+                            String(
+                                conversationId
+                            )
+                        ){
+
+                            return;
+
+                        }
+
+                        appendMessage(
+                            message,
+                            true
+                        );
+
+                        if(
+                            String(
+                                message.sender_id
+                            ) !==
+                            String(
+                                state.currentUser.id
+                            )
+                        ){
+
+                            await markMessagesRead(
+                                conversationId
+                            );
+
+                        }
 
                     }
-
-                    appendMessage(
-                        message,
-                        true
-                    );
-
-                    if(
-                        String(
-                            message.sender_id
-                        ) !==
-                        String(
-                            state.currentUser.id
-                        )
-                    ){
-
-                        await markMessagesRead(
+                )
+                .on(
+                    "postgres_changes",
+                    {
+                        event:"UPDATE",
+                        schema:"public",
+                        table:"messages",
+                        filter:
+                            "conversation_id=eq." +
                             conversationId
+                    },
+                    payload => {
+
+                        updateRenderedMessage(
+                            payload?.new
                         );
 
                     }
+                )
+                .subscribe(
+                    status => {
 
-                }
-            )
-            .on(
-                "postgres_changes",
-                {
-                    event:"UPDATE",
-                    schema:"public",
-                    table:"messages",
-                    filter:
-                        "conversation_id=eq." +
-                        conversationId
-                },
-                payload => {
+                        console.log(
+                            "[HAVKAR] Chat realtime:",
+                            status
+                        );
 
-                    updateRenderedMessage(
-                        payload?.new
-                    );
+                    }
+                );
 
-                }
-            )
-            .subscribe(
-                status => {
+    }catch(error){
 
-                    console.log(
-                        "[HAVKAR] Chat realtime:",
-                        status
-                    );
+        console.warn(
+            "[HAVKAR] Chat realtime subscription failed:",
+            error
+        );
 
-                }
-            );
+    }
 
 }
 
@@ -4167,9 +4407,20 @@ function removeRealtimeSubscription(){
         state.realtimeChannel
     ){
 
-        supabaseClient.removeChannel(
-            state.realtimeChannel
-        );
+        try{
+
+            supabaseClient.removeChannel(
+                state.realtimeChannel
+            );
+
+        }catch(error){
+
+            console.warn(
+                "[HAVKAR] Chat channel removal failed:",
+                error
+            );
+
+        }
 
         state.realtimeChannel =
             null;
@@ -4221,6 +4472,7 @@ function updateRenderedMessage(
 
     if(
         element &&
+        state.currentUser &&
         String(
             message.sender_id
         ) ===
@@ -4669,44 +4921,66 @@ document.addEventListener(
    AUTH STATE
 ========================================================= */
 
-supabaseClient.auth.onAuthStateChange(
-    (
-        event,
-        session
-    ) => {
+function setupAuthListener(){
 
-        if(
-            event ===
-            "SIGNED_OUT"
-        ){
-
-            state.currentUser =
-                null;
-
-            removeRealtimeSubscription();
-
-            removeReactionSubscription();
-
-            window.location.href =
-                "login.html";
-
-        }
-
-        if(
-            (
-                event ===
-                "SIGNED_IN"
-            ) &&
-            session?.user
-        ){
-
-            state.currentUser =
-                session.user;
-
-        }
-
+    if(!supabaseClient){
+        return;
     }
-);
+
+    supabaseClient.auth.onAuthStateChange(
+        (
+            event,
+            session
+        ) => {
+
+            if(
+                event ===
+                "SIGNED_OUT"
+            ){
+
+                state.currentUser =
+                    null;
+
+                removeRealtimeSubscription();
+
+                removeReactionSubscription();
+
+                redirectToLogin();
+
+                return;
+
+            }
+
+            if(
+                (
+                    event ===
+                    "SIGNED_IN"
+                ) &&
+                session?.user
+            ){
+
+                state.currentUser =
+                    session.user;
+
+            }
+
+            if(
+                (
+                    event ===
+                    "TOKEN_REFRESHED"
+                ) &&
+                session?.user
+            ){
+
+                state.currentUser =
+                    session.user;
+
+            }
+
+        }
+    );
+
+}
 
 
 /* =========================================================
@@ -4830,62 +5104,122 @@ function setupEvents(){
    PAGE START
 ========================================================= */
 
-document.addEventListener(
-    "DOMContentLoaded",
-    async () => {
+async function startPage(){
 
-        setupEvents();
+    if(state.pageStarted){
+        return;
+    }
+
+    if(!supabaseClient){
+        return;
+    }
+
+    state.pageStarted =
+        true;
+
+    setupEvents();
+
+    setupAuthListener();
+
+    try{
 
         state.currentUser =
             await loadCurrentUser();
 
-        if(
-            !state.currentUser
-        ){
+    }catch(error){
 
-            window.location.href =
-                "login.html";
+        console.error(
+            "[HAVKAR] Initial authentication failed:",
+            error
+        );
 
-            return;
+        showFatalError(
+            "HAVKAR connection error",
+            "The authentication service could not be reached. Please try again."
+        );
 
-        }
-
-        /*
-         * If a conversation ID exists,
-         * open it independently first.
-         * This prevents the conversation-list
-         * request from blocking a real chat.
-         */
-
-        const params =
-            new URLSearchParams(
-                window.location.search
-            );
-
-        const conversationId =
-            params.get(
-                "conversation_id"
-            );
-
-        if(conversationId){
-
-            await openConversationFromUrl();
-
-            /*
-             * Load the conversation list in the
-             * background; it must never block chat.
-             */
-
-            loadConversations();
-
-            return;
-
-        }
-
-        await loadConversations();
+        return;
 
     }
-);
+
+    if(
+        !state.currentUser
+    ){
+
+        redirectToLogin();
+
+        return;
+
+    }
+
+    const params =
+        new URLSearchParams(
+            window.location.search
+        );
+
+    const conversationId =
+        params.get(
+            "conversation_id"
+        );
+
+    if(conversationId){
+
+        /*
+         * Direct conversation is opened first.
+         * The list is always secondary.
+         */
+
+        await openConversationFromUrl();
+
+        /*
+         * Never block the chat screen on the list.
+         */
+
+        loadConversations();
+
+        return;
+
+    }
+
+    await loadConversations();
+
+}
+
+
+/* =========================================================
+   DOM READY
+========================================================= */
+
+if(
+    document.readyState ===
+    "loading"
+){
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        () => {
+
+            if(supabaseClient){
+
+                startPage();
+
+            }
+
+        },
+        {
+            once:true
+        }
+    );
+
+}else{
+
+    if(supabaseClient){
+
+        startPage();
+
+    }
+
+}
 
 
 /* =========================================================
