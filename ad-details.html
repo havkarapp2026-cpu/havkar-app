@@ -470,11 +470,6 @@ button:focus-visible{
     font-size:.78rem;
 }
 
-/*
- * Internal seller IDs are intentionally not displayed.
- * User identifiers must not be exposed in the public UI.
- */
-
 .seller-status{
     display:inline-flex;
     align-items:center;
@@ -536,6 +531,11 @@ button:focus-visible{
     background:#fff;
     color:var(--green-700);
     border:1px solid #dce5de;
+}
+
+.action-button.saved{
+    color:#d32f2f;
+    border-color:#e8caca;
 }
 
 .action-button.disabled,
@@ -753,7 +753,7 @@ button:focus-visible{
             aria-label="Save listing"
             aria-pressed="false"
         >
-            <i class="fas fa-heart"></i>
+            <i class="far fa-heart"></i>
         </button>
 
     </div>
@@ -824,7 +824,7 @@ button:focus-visible{
                     aria-label="Save listing"
                     aria-pressed="false"
                 >
-                    <i class="fas fa-heart"></i>
+                    <i class="far fa-heart"></i>
                 </button>
 
                 <div
@@ -945,15 +945,18 @@ button:focus-visible{
                 type="button"
             >
                 <i class="fas fa-comment"></i>
-                Message Seller
+                <span>
+                    Message Seller
+                </span>
             </button>
 
             <button
                 id="saveButton"
                 class="action-button secondary"
                 type="button"
+                aria-pressed="false"
             >
-                <i class="fas fa-heart"></i>
+                <i class="far fa-heart"></i>
                 <span>
                     Save
                 </span>
@@ -1041,17 +1044,15 @@ button:focus-visible{
 
 /* =========================================================
    HAVKAR — AD DETAILS
-   FINAL PRODUCTION-READY FRONTEND VERSION
+   FULL REPLACEMENT VERSION
 
-   Reads listing ID from:
-   ad-details.html?id=LISTING_ID
-
-   Important:
-   - Uses the current HAVKAR Supabase project.
-   - Does not expose internal seller IDs in the UI.
-   - Does not delete or modify listings.
-   - Keeps Saved state per authenticated user.
-   - Opens a real Supabase conversation when possible.
+   Saved system:
+   - One stable key per authenticated user.
+   - Uses Supabase session first.
+   - Keeps all three Save controls synchronized.
+   - Supports buy-sell.html#saved.
+   - Does not expose user IDs.
+   - Does not modify or delete ads.
    ========================================================= */
 
 const SUPABASE_URL =
@@ -1059,6 +1060,9 @@ const SUPABASE_URL =
 
 const SUPABASE_PUBLISHABLE_KEY =
     "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq";
+
+const SAVED_STORAGE_PREFIX =
+    "havkar_saved_ads_v1:";
 
 let supabaseClient = null;
 
@@ -1076,7 +1080,11 @@ const state = {
 
     isOwnListing:false,
 
-    setupComplete:false
+    setupComplete:false,
+
+    contentVisible:false,
+
+    savedKey:null
 
 };
 
@@ -1159,7 +1167,9 @@ function showToast(message){
     toast.textContent =
         String(message || "");
 
-    toast.classList.add("show");
+    toast.classList.add(
+        "show"
+    );
 
     window.clearTimeout(
         showToast.timer
@@ -1431,17 +1441,7 @@ function getCategoryIcon(category){
 
 
 /* =========================================================
-   PROFESSIONAL CATEGORY NORMALIZATION
-   =========================================================
-
-   Existing old listings can contain a broad/wrong category.
-   We do NOT modify the database here.
-
-   We only improve the category displayed on the details page
-   when the title/description clearly identifies restaurant
-   equipment.
-
-   This keeps old ads intact while presenting them correctly.
+   CATEGORY DISPLAY
    ========================================================= */
 
 function getDisplayCategory(ad){
@@ -1516,100 +1516,179 @@ function getDisplayCategory(ad){
 
 
 /* =========================================================
-   SAVED STORAGE
+   SAVED KEY
    ========================================================= */
 
 function getSavedStorageKey(){
 
-    const userPart =
-        state.currentUserId ||
-        "guest";
+    if(
+        !state.currentUserId
+    ){
+
+        return null;
+
+    }
 
     return (
-        "havkar_saved_ads_v1:" +
-        userPart
+        SAVED_STORAGE_PREFIX +
+        String(
+            state.currentUserId
+        )
     );
 
 }
 
 
-function loadSavedState(){
+/* =========================================================
+   READ SAVED IDS
+   ========================================================= */
 
-    try{
+function readSavedIds(){
 
-        const raw =
-            localStorage.getItem(
-                getSavedStorageKey()
-            );
+    const ids =
+        new Set();
 
-        const parsed =
-            raw ? JSON.parse(raw) : [];
+    const key =
+        getSavedStorageKey();
 
-        const savedIds =
-            Array.isArray(parsed)
-                ? parsed.map(String)
-                : [];
+    state.savedKey =
+        key;
 
-        state.saved =
-            savedIds.includes(
-                String(state.ad?.id)
-            );
+    if(!key){
 
-    }catch(error){
-
-        console.warn(
-            "[HAVKAR] Could not load Saved state:",
-            error
-        );
-
-        state.saved =
-            false;
-
-    }
-
-    updateSaveUI();
-
-}
-
-
-function persistSavedState(){
-
-    if(!state.ad?.id){
-
-        return;
+        return ids;
 
     }
 
     try{
-
-        const key =
-            getSavedStorageKey();
 
         const raw =
             localStorage.getItem(
                 key
             );
 
-        const parsed =
-            raw ? JSON.parse(raw) : [];
+        if(!raw){
 
-        const ids =
-            new Set(
-                Array.isArray(parsed)
-                    ? parsed.map(String)
-                    : []
+            return ids;
+
+        }
+
+        const parsed =
+            JSON.parse(raw);
+
+        if(Array.isArray(parsed)){
+
+            parsed.forEach(
+                id => {
+
+                    if(
+                        id !== null &&
+                        id !== undefined &&
+                        String(id).trim()
+                    ){
+
+                        ids.add(
+                            String(id)
+                        );
+
+                    }
+
+                }
             );
 
+        }
+
+    }catch(error){
+
+        console.warn(
+            "[HAVKAR] Could not read Saved state:",
+            error
+        );
+
+    }
+
+    return ids;
+
+}
+
+
+/* =========================================================
+   LOAD SAVED STATE
+   ========================================================= */
+
+function loadSavedState(){
+
+    if(!state.ad){
+
+        state.saved =
+            false;
+
+        updateSaveUI();
+
+        return;
+
+    }
+
+    const ids =
+        readSavedIds();
+
+    state.saved =
+        ids.has(
+            String(
+                state.ad.id
+            )
+        );
+
+    updateSaveUI();
+
+}
+
+
+/* =========================================================
+   PERSIST SAVED STATE
+   ========================================================= */
+
+function persistSavedState(){
+
+    if(
+        !state.ad ||
+        !state.currentUserId
+    ){
+
+        return false;
+
+    }
+
+    const key =
+        getSavedStorageKey();
+
+    if(!key){
+
+        return false;
+
+    }
+
+    try{
+
+        const ids =
+            readSavedIds();
+
         const adId =
-            String(state.ad.id);
+            String(
+                state.ad.id
+            );
 
         if(state.saved){
 
-            ids.add(adId);
+            ids.add(
+                adId
+            );
 
         }else{
 
-            ids.delete(adId);
+            ids.delete(
+                adId
+            );
 
         }
 
@@ -1620,16 +1699,19 @@ function persistSavedState(){
             )
         );
 
+        state.savedKey =
+            key;
+
+        return true;
+
     }catch(error){
 
-        console.warn(
-            "[HAVKAR] Could not save listing:",
+        console.error(
+            "[HAVKAR] Could not persist Saved state:",
             error
         );
 
-        showToast(
-            "Your browser could not save this listing."
-        );
+        return false;
 
     }
 
@@ -1642,15 +1724,17 @@ function persistSavedState(){
 
 function updateSaveUI(){
 
-    const buttons = [
+    const saveButtons = [
+
+        $("headerSave"),
 
         $("gallerySave"),
 
-        $("headerSave")
+        $("saveButton")
 
     ];
 
-    buttons.forEach(
+    saveButtons.forEach(
         button => {
 
             if(!button){
@@ -1679,7 +1763,9 @@ function updateSaveUI(){
             );
 
             const icon =
-                button.querySelector("i");
+                button.querySelector(
+                    "i"
+                );
 
             if(icon){
 
@@ -1690,45 +1776,40 @@ function updateSaveUI(){
 
             }
 
+            if(
+                button.id ===
+                "saveButton"
+            ){
+
+                button.classList.toggle(
+                    "saved",
+                    state.saved
+                );
+
+                const text =
+                    button.querySelector(
+                        "span"
+                    );
+
+                if(text){
+
+                    text.textContent =
+                        state.saved
+                            ? "Saved"
+                            : "Save";
+
+                }
+
+            }
+
         }
     );
-
-    const saveButton =
-        $("saveButton");
-
-    if(saveButton){
-
-        const icon =
-            saveButton.querySelector("i");
-
-        const text =
-            saveButton.querySelector("span");
-
-        if(icon){
-
-            icon.className =
-                state.saved
-                    ? "fas fa-heart"
-                    : "far fa-heart";
-
-        }
-
-        if(text){
-
-            text.textContent =
-                state.saved
-                    ? "Saved"
-                    : "Save";
-
-        }
-
-    }
 
 }
 
 
 /* =========================================================
-   TOGGLE SAVE
+   TOGGLE SAVED
    ========================================================= */
 
 function toggleSaved(){
@@ -1739,10 +1820,64 @@ function toggleSaved(){
 
     }
 
+    /*
+     * A listing must have a real authenticated user before
+     * we write a user-specific Saved key.
+     */
+
+    if(!state.currentUserId){
+
+        showToast(
+            "Please sign in to save listings."
+        );
+
+        window.setTimeout(
+            () => {
+
+                window.location.href =
+                    "login.html";
+
+            },
+            850
+        );
+
+        return;
+
+    }
+
+    /*
+     * Re-read the current state immediately before toggling.
+     * This avoids using a stale state after returning from
+     * another HAVKAR page.
+     */
+
+    loadSavedState();
+
     state.saved =
         !state.saved;
 
-    persistSavedState();
+    const persisted =
+        persistSavedState();
+
+    if(!persisted){
+
+        /*
+         * Do not show a false success state if the browser
+         * rejected localStorage.
+         */
+
+        state.saved =
+            !state.saved;
+
+        updateSaveUI();
+
+        showToast(
+            "Could not save this listing."
+        );
+
+        return;
+
+    }
 
     updateSaveUI();
 
@@ -1761,21 +1896,67 @@ function toggleSaved(){
 
 async function resolveCurrentUser(){
 
+    initializeSupabase();
+
+    /*
+     * Session is the authoritative persisted browser session.
+     * getUser() is used only as a fallback.
+     */
+
     try{
 
-        initializeSupabase();
+        const sessionResult =
+            await supabaseClient
+                .auth
+                .getSession();
 
-        const result =
-            await supabaseClient.auth.getUser();
+        const sessionUser =
+            sessionResult
+                ?.data
+                ?.session
+                ?.user;
 
-        state.currentUserId =
-            result?.data?.user?.id ||
-            null;
+        if(sessionUser?.id){
+
+            state.currentUserId =
+                String(
+                    sessionUser.id
+                );
+
+            return;
+
+        }
 
     }catch(error){
 
         console.warn(
-            "[HAVKAR] Could not resolve current user:",
+            "[HAVKAR] getSession failed:",
+            error
+        );
+
+    }
+
+    try{
+
+        const userResult =
+            await supabaseClient
+                .auth
+                .getUser();
+
+        const user =
+            userResult
+                ?.data
+                ?.user;
+
+        state.currentUserId =
+            user?.id
+                ? String(user.id)
+                : null;
+
+    }catch(error){
+
+        console.warn(
+            "[HAVKAR] getUser failed:",
             error
         );
 
@@ -1783,6 +1964,90 @@ async function resolveCurrentUser(){
             null;
 
     }
+
+}
+
+
+/* =========================================================
+   AUTH STATE LISTENER
+   ========================================================= */
+
+function setupAuthListener(){
+
+    initializeSupabase();
+
+    supabaseClient
+        .auth
+        .onAuthStateChange(
+            (event,session) => {
+
+                /*
+                 * SIGNED_OUT is the only event where we must
+                 * definitely clear the current user.
+                 */
+
+                if(
+                    event ===
+                    "SIGNED_OUT"
+                ){
+
+                    state.currentUserId =
+                        null;
+
+                    state.saved =
+                        false;
+
+                    updateSaveUI();
+
+                    return;
+
+                }
+
+                /*
+                 * Some auth events can temporarily provide no
+                 * session while the persisted session is being
+                 * restored. Do not destroy a valid existing user
+                 * state in that case.
+                 */
+
+                if(
+                    session?.user?.id
+                ){
+
+                    const nextUserId =
+                        String(
+                            session.user.id
+                        );
+
+                    if(
+                        nextUserId !==
+                        state.currentUserId
+                    ){
+
+                        state.currentUserId =
+                            nextUserId;
+
+                        loadSavedState();
+
+                        if(state.ad){
+
+                            state.isOwnListing =
+                                Boolean(
+                                    state.ad.user_id &&
+                                    String(state.ad.user_id) ===
+                                    nextUserId
+                                );
+
+                            updateSellerUI();
+
+                        }
+
+                    }
+
+                }
+
+            }
+        );
 
 }
 
@@ -1906,7 +2171,9 @@ function renderListing(){
         "No description provided.";
 
     const displayCategory =
-        getDisplayCategory(ad);
+        getDisplayCategory(
+            ad
+        );
 
     renderCategory(
         displayCategory
@@ -1916,8 +2183,12 @@ function renderListing(){
         Boolean(
             state.currentUserId &&
             ad.user_id &&
-            String(state.currentUserId) ===
-            String(ad.user_id)
+            String(
+                state.currentUserId
+            ) ===
+            String(
+                ad.user_id
+            )
         );
 
     updateSellerUI();
@@ -1935,10 +2206,14 @@ function updateSellerUI(){
         $("sellerName");
 
     const sellerNote =
-        document.querySelector(".seller-note");
+        document.querySelector(
+            ".seller-note"
+        );
 
     const sellerStatus =
-        document.querySelector(".seller-status");
+        document.querySelector(
+            ".seller-status"
+        );
 
     const messageButton =
         $("messageButton");
@@ -2092,6 +2367,9 @@ function showPhoto(index){
         image.style.display =
             "block";
 
+        $("imagePlaceholder").style.display =
+            "none";
+
     };
 
     image.onerror = () => {
@@ -2104,9 +2382,6 @@ function showPhoto(index){
 
     };
 
-    $("imagePlaceholder").style.display =
-        "none";
-
     $("galleryCounter").style.display =
         "block";
 
@@ -2114,7 +2389,9 @@ function showPhoto(index){
         `${state.photoIndex + 1} / ${state.photos.length}`;
 
     $("thumbnails")
-        .querySelectorAll(".thumbnail")
+        .querySelectorAll(
+            ".thumbnail"
+        )
         .forEach(
             (button,index) => {
 
@@ -2338,9 +2615,7 @@ async function openSellerMessage(){
 
     }
 
-    if(
-        state.isOwnListing
-    ){
+    if(state.isOwnListing){
 
         showToast(
             "This is your own listing."
@@ -2417,11 +2692,6 @@ async function openSellerMessage(){
 
         initializeSupabase();
 
-        /*
-         * Look for an existing conversation first.
-         * This prevents duplicate conversations.
-         */
-
         const existing =
             await supabaseClient
                 .from("conversations")
@@ -2457,11 +2727,6 @@ async function openSellerMessage(){
             existing.data?.id ||
             null;
 
-        /*
-         * Create a new conversation only when
-         * an existing conversation does not exist.
-         */
-
         if(!conversationId){
 
             const created =
@@ -2488,12 +2753,6 @@ async function openSellerMessage(){
                     "[HAVKAR] Conversation creation failed:",
                     created.error
                 );
-
-                /*
-                 * A concurrent request may have created
-                 * the conversation. Check once more before
-                 * reporting failure.
-                 */
 
                 const retry =
                     await supabaseClient
@@ -2545,14 +2804,11 @@ async function openSellerMessage(){
 
         }
 
-        const chatUrl =
+        window.location.href =
             "chat.html?conversation_id=" +
             encodeURIComponent(
                 conversationId
             );
-
-        window.location.href =
-            chatUrl;
 
     }catch(error){
 
@@ -2698,7 +2954,9 @@ function setupNavigation(){
         );
 
     document
-        .querySelectorAll(".nav-item")
+        .querySelectorAll(
+            ".nav-item"
+        )
         .forEach(
             item => {
 
@@ -2727,7 +2985,7 @@ function setupNavigation(){
 
 
 /* =========================================================
-   SIMPLE TOUCH SWIPE FOR GALLERY
+   SIMPLE TOUCH SWIPE
    ========================================================= */
 
 function setupGallerySwipe(){
@@ -2817,10 +3075,6 @@ function setupGallerySwipe(){
             startY =
                 null;
 
-            /*
-             * Ignore mostly vertical swipes.
-             */
-
             if(
                 Math.abs(deltaX) < 45 ||
                 Math.abs(deltaX) <
@@ -2855,7 +3109,7 @@ function setupGallerySwipe(){
 
 
 /* =========================================================
-   KEYBOARD GALLERY NAVIGATION
+   KEYBOARD GALLERY
    ========================================================= */
 
 function setupGalleryKeyboard(){
@@ -2873,7 +3127,10 @@ function setupGalleryKeyboard(){
 
             }
 
-            if(event.key === "ArrowRight"){
+            if(
+                event.key ===
+                "ArrowRight"
+            ){
 
                 showPhoto(
                     state.photoIndex + 1
@@ -2881,7 +3138,10 @@ function setupGalleryKeyboard(){
 
             }
 
-            if(event.key === "ArrowLeft"){
+            if(
+                event.key ===
+                "ArrowLeft"
+            ){
 
                 showPhoto(
                     state.photoIndex - 1
@@ -2918,6 +3178,12 @@ async function boot(){
 
         initializeSupabase();
 
+        /*
+         * Resolve the authenticated user BEFORE loading
+         * the Saved state. This is critical because the
+         * Saved key is user-specific.
+         */
+
         await resolveCurrentUser();
 
         state.ad =
@@ -2929,6 +3195,14 @@ async function boot(){
 
         renderGallery();
 
+        /*
+         * Load Saved only after both:
+         * 1. currentUserId
+         * 2. listing ID
+         *
+         * are known.
+         */
+
         loadSavedState();
 
         setupNavigation();
@@ -2936,6 +3210,8 @@ async function boot(){
         setupGallerySwipe();
 
         setupGalleryKeyboard();
+
+        setupAuthListener();
 
         state.contentVisible =
             true;
@@ -3017,4 +3293,4 @@ document.addEventListener(
 </script>
 
 </body>
-        </html>
+    </html>
