@@ -31,6 +31,10 @@
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     >
 
+    <script
+        src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+    ></script>
+
     <style>
 
         /* =========================================================
@@ -66,6 +70,10 @@
             color: #263238;
 
             padding-bottom: 82px;
+        }
+
+        body.loading {
+            overflow: hidden;
         }
 
         button,
@@ -329,6 +337,88 @@
         }
 
         /* =========================================================
+           STATUS
+           ========================================================= */
+
+        .page-status {
+            display: none;
+
+            margin-bottom: 14px;
+
+            padding: 12px 14px;
+
+            border-radius: 12px;
+
+            background: #ffffff;
+
+            border:
+                1px solid #e4e9e1;
+
+            color: #69736a;
+
+            font-size: 0.82rem;
+            line-height: 1.45;
+        }
+
+        .page-status.show {
+            display: block;
+        }
+
+        .page-status.error {
+            border-color: #efc7c7;
+            background: #fff8f8;
+            color: #b3261e;
+        }
+
+        .page-status.success {
+            border-color: #cfe4c5;
+            background: #f7fbf4;
+            color: #558b2f;
+        }
+
+        /* =========================================================
+           LOADING
+           ========================================================= */
+
+        .loading-state {
+            background: #ffffff;
+
+            border-radius: 18px;
+
+            padding: 45px 25px;
+
+            text-align: center;
+
+            box-shadow:
+                0 3px 16px
+                rgba(31, 48, 33, 0.06);
+        }
+
+        .loading-state i {
+            font-size: 2rem;
+            color: #7cb342;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-state p {
+            margin-top: 12px;
+
+            color: #778077;
+
+            font-size: 0.84rem;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* =========================================================
            AD CARD
            ========================================================= */
 
@@ -452,6 +542,11 @@
             color: #689f38;
         }
 
+        .save-ad-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
         .ad-content {
             padding: 16px;
         }
@@ -515,6 +610,10 @@
             font-weight: 700;
         }
 
+        .pending {
+            color: #a57b18;
+        }
+
         .ad-title {
             color: #263238;
 
@@ -534,6 +633,8 @@
             line-height: 1.55;
 
             margin-bottom: 13px;
+
+            white-space: pre-line;
         }
 
         .ad-meta {
@@ -625,11 +726,6 @@
         .action-btn.primary {
             background: #7cb342;
             color: #ffffff;
-        }
-
-        .action-btn.danger {
-            border-color: #e57373;
-            color: #c62828;
         }
 
         /* =========================================================
@@ -1048,6 +1144,11 @@
             color: #ffffff;
         }
 
+        .form-btn.submit:disabled {
+            opacity: 0.65;
+            cursor: wait;
+        }
+
         /* =========================================================
            TOAST
            ========================================================= */
@@ -1253,7 +1354,7 @@
             <input
                 id="searchInput"
                 type="search"
-                placeholder="Search businesses, ads or cities..."
+                placeholder="Search ads, categories or cities..."
                 autocomplete="off"
                 oninput="renderAds()"
             >
@@ -1282,14 +1383,6 @@
 
         <button
             class="tab"
-            data-category="featured"
-            onclick="setCategory('featured', this)"
-        >
-            Featured
-        </button>
-
-        <button
-            class="tab"
             data-category="restaurant"
             onclick="setCategory('restaurant', this)"
         >
@@ -1312,6 +1405,14 @@
             Services
         </button>
 
+        <button
+            class="tab"
+            data-category="other"
+            onclick="setCategory('other', this)"
+        >
+            Other
+        </button>
+
     </nav>
 
 
@@ -1323,7 +1424,10 @@
 
         <div class="results-header">
 
-            <div class="results-title">
+            <div
+                class="results-title"
+                id="resultsTitle"
+            >
                 Available Ads
             </div>
 
@@ -1336,7 +1440,26 @@
 
         </div>
 
-        <div id="adsContainer"></div>
+
+        <div
+            class="page-status"
+            id="pageStatus"
+        ></div>
+
+
+        <div id="adsContainer">
+
+            <div class="loading-state">
+
+                <i class="fas fa-circle-notch"></i>
+
+                <p>
+                    Loading advertisements...
+                </p>
+
+            </div>
+
+        </div>
 
     </main>
 
@@ -1381,6 +1504,7 @@
 
         <button
             class="nav-item"
+            id="savedNavButton"
             type="button"
             onclick="showSavedAds()"
         >
@@ -1442,25 +1566,25 @@
                     onsubmit="submitAd(event)"
                 >
 
-                    <!-- BUSINESS NAME -->
+                    <!-- TITLE -->
 
                     <div class="form-group">
 
                         <label
                             class="form-label"
-                            for="businessName"
+                            for="adTitle"
                         >
-                            Business Name
+                            Advertisement Title
                             <span>*</span>
                         </label>
 
                         <input
                             class="form-control"
-                            id="businessName"
+                            id="adTitle"
                             type="text"
-                            maxlength="80"
+                            maxlength="150"
                             required
-                            placeholder="Example: HAVKAR Restaurant"
+                            placeholder="Example: 20% OFF Italian Pizza"
                         >
 
                     </div>
@@ -1509,26 +1633,51 @@
                     </div>
 
 
-                    <!-- TITLE -->
+                    <!-- PRICE + LOCATION -->
 
-                    <div class="form-group">
+                    <div class="form-grid">
 
-                        <label
-                            class="form-label"
-                            for="adTitle"
-                        >
-                            Advertisement Title
-                            <span>*</span>
-                        </label>
+                        <div class="form-group">
 
-                        <input
-                            class="form-control"
-                            id="adTitle"
-                            type="text"
-                            maxlength="100"
-                            required
-                            placeholder="Example: 20% OFF this week"
-                        >
+                            <label
+                                class="form-label"
+                                for="adPrice"
+                            >
+                                Price / Offer
+                            </label>
+
+                            <input
+                                class="form-control"
+                                id="adPrice"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                placeholder="Example: 20"
+                            >
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label
+                                class="form-label"
+                                for="adLocation"
+                            >
+                                City / Location
+                                <span>*</span>
+                            </label>
+
+                            <input
+                                class="form-control"
+                                id="adLocation"
+                                type="text"
+                                maxlength="150"
+                                required
+                                placeholder="Crotone, Italy"
+                            >
+
+                        </div>
 
                     </div>
 
@@ -1548,104 +1697,10 @@
                         <textarea
                             class="form-control"
                             id="adDescription"
-                            maxlength="500"
+                            maxlength="1000"
                             required
-                            placeholder="Describe your business and offer..."
+                            placeholder="Describe your business, service or offer..."
                         ></textarea>
-
-                    </div>
-
-
-                    <!-- CITY + PRICE -->
-
-                    <div class="form-grid">
-
-                        <div class="form-group">
-
-                            <label
-                                class="form-label"
-                                for="adCity"
-                            >
-                                City
-                                <span>*</span>
-                            </label>
-
-                            <input
-                                class="form-control"
-                                id="adCity"
-                                type="text"
-                                maxlength="80"
-                                required
-                                placeholder="Rome, Italy"
-                            >
-
-                        </div>
-
-
-                        <div class="form-group">
-
-                            <label
-                                class="form-label"
-                                for="adOffer"
-                            >
-                                Price / Offer
-                            </label>
-
-                            <input
-                                class="form-control"
-                                id="adOffer"
-                                type="text"
-                                maxlength="60"
-                                placeholder="20% OFF"
-                            >
-
-                        </div>
-
-                    </div>
-
-
-                    <!-- PHONE + WEBSITE -->
-
-                    <div class="form-grid">
-
-                        <div class="form-group">
-
-                            <label
-                                class="form-label"
-                                for="adPhone"
-                            >
-                                Phone
-                            </label>
-
-                            <input
-                                class="form-control"
-                                id="adPhone"
-                                type="tel"
-                                maxlength="30"
-                                placeholder="+39 000 000 0000"
-                            >
-
-                        </div>
-
-
-                        <div class="form-group">
-
-                            <label
-                                class="form-label"
-                                for="adWebsite"
-                            >
-                                Website
-                            </label>
-
-                            <input
-                                class="form-control"
-                                id="adWebsite"
-                                type="url"
-                                maxlength="200"
-                                placeholder="https://example.com"
-                            >
-
-                        </div>
 
                     </div>
 
@@ -1709,6 +1764,7 @@
 
                         <button
                             class="form-btn submit"
+                            id="publishButton"
                             type="submit"
                         >
                             <i class="fas fa-paper-plane"></i>
@@ -1741,22 +1797,67 @@
     <script>
 
         /* =========================================================
-           HAVKAR ADS ENGINE
+           SUPABASE
            ========================================================= */
 
-        const STORAGE_KEY = "havkar_ads_v2";
+        const SUPABASE_URL =
+            "https://gispovnciifgikvgpzck.supabase.co";
 
-        const SAVED_KEY = "havkar_saved_ads_v2";
+        const SUPABASE_PUBLISHABLE_KEY =
+            "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq";
 
-        let activeCategory = "all";
+        const supabaseClient =
+            window.supabase.createClient(
+                SUPABASE_URL,
+                SUPABASE_PUBLISHABLE_KEY
+            );
 
-        let showingSavedOnly = false;
 
-        let selectedImageData = "";
+        /* =========================================================
+           CONSTANTS
+           ========================================================= */
+
+        const ADS_TABLE =
+            "ads";
+
+        const SAVES_TABLE =
+            "ad_saves";
+
+
+        /* =========================================================
+           STATE
+           ========================================================= */
+
+        let activeCategory =
+            "all";
+
+        let showingSavedOnly =
+            false;
+
+        let selectedImageData =
+            "";
+
+        let currentUser =
+            null;
+
+        let currentUserId =
+            null;
+
+        let adsData =
+            [];
+
+        let savedAdIds =
+            new Set();
+
+        let toastTimer =
+            null;
 
 
         /* =========================================================
            DEMO ADS
+           =========================================================
+           These are kept only as visual fallback if Supabase
+           cannot be reached. They are NOT written to the database.
            ========================================================= */
 
         const defaultAds = [
@@ -1764,155 +1865,124 @@
             {
                 id: "demo-pizza-milano",
 
-                businessName: "Pizza Milano",
+                created_at: null,
 
-                category: "restaurant",
+                title:
+                    "Authentic Italian Pizza - 20% OFF",
 
-                title: "Authentic Italian Pizza - 20% OFF",
+                category:
+                    "restaurant",
+
+                price:
+                    20,
+
+                location:
+                    "Milan, Italy",
 
                 description:
                     "Best pizza in Milan! Fresh ingredients, traditional recipes. Order now and get 20% discount on your first order.",
 
-                city: "Milan, Italy",
+                user_id:
+                    null,
 
-                hours: "Open Now",
+                photos:
+                    "",
 
-                rating: "4.8",
-
-                reviews: "520",
-
-                offer: "20% OFF",
-
-                phone: "",
-
-                website: "",
-
-                emoji: "🍕",
-
-                verified: true,
-
-                featured: true,
-
-                userCreated: false,
-
-                views: 520
+                status:
+                    "demo"
 
             },
-
 
             {
                 id: "demo-fashion-boutique",
 
-                businessName: "Fashion Boutique",
+                created_at: null,
 
-                category: "shop",
+                title:
+                    "Summer Collection - Up to 50% OFF",
 
-                title: "Summer Collection - Up to 50% OFF",
+                category:
+                    "shop",
+
+                price:
+                    50,
+
+                location:
+                    "Rome, Italy",
 
                 description:
-                    "Discover the latest fashion trends. Premium quality clothing at unbeatable prices. Visit us today!",
+                    "Discover the latest fashion trends. Premium quality clothing at unbeatable prices.",
 
-                city: "Rome, Italy",
+                user_id:
+                    null,
 
-                hours: "10 AM - 8 PM",
+                photos:
+                    "",
 
-                rating: "4.6",
-
-                reviews: "340",
-
-                offer: "Up to 50% OFF",
-
-                phone: "",
-
-                website: "",
-
-                emoji: "👗",
-
-                verified: true,
-
-                featured: false,
-
-                userCreated: false,
-
-                views: 340
+                status:
+                    "demo"
 
             },
-
 
             {
                 id: "demo-cafe",
 
-                businessName: "Café Italiano",
+                created_at: null,
 
-                category: "restaurant",
+                title:
+                    "Premium Coffee & Pastries",
 
-                title: "Premium Coffee & Pastries",
+                category:
+                    "restaurant",
+
+                price:
+                    null,
+
+                location:
+                    "Florence, Italy",
 
                 description:
-                    "Start your day with the best coffee in town. Freshly baked pastries every morning. Free WiFi available.",
+                    "Start your day with premium coffee and freshly baked pastries every morning.",
 
-                city: "Florence, Italy",
+                user_id:
+                    null,
 
-                hours: "7 AM - 9 PM",
+                photos:
+                    "",
 
-                rating: "4.9",
-
-                reviews: "680",
-
-                offer: "",
-
-                phone: "",
-
-                website: "",
-
-                emoji: "☕",
-
-                verified: true,
-
-                featured: true,
-
-                userCreated: false,
-
-                views: 680
+                status:
+                    "demo"
 
             },
-
 
             {
                 id: "demo-salon",
 
-                businessName: "Salon Eleganza",
+                created_at: null,
 
-                category: "service",
+                title:
+                    "Hair & Beauty Services - 15% OFF",
 
-                title: "Hair & Beauty Services",
+                category:
+                    "service",
+
+                price:
+                    15,
+
+                location:
+                    "Turin, Italy",
 
                 description:
-                    "Professional hairstyling and beauty treatments. Book your appointment online and get 15% off.",
+                    "Professional hairstyling and beauty treatments. Book your appointment and get 15% off.",
 
-                city: "Turin, Italy",
+                user_id:
+                    null,
 
-                hours: "9 AM - 7 PM",
+                photos:
+                    "",
 
-                rating: "4.7",
-
-                reviews: "290",
-
-                offer: "15% OFF",
-
-                phone: "",
-
-                website: "",
-
-                emoji: "💇",
-
-                verified: true,
-
-                featured: false,
-
-                userCreated: false,
-
-                views: 290
+                status:
+                    "demo"
 
             }
 
@@ -1920,105 +1990,438 @@
 
 
         /* =========================================================
-           STORAGE
+           AUTH
            ========================================================= */
 
-        function loadAds() {
+        async function resolveCurrentUser() {
 
             try {
 
-                const stored =
-                    localStorage.getItem(STORAGE_KEY);
+                const {
+                    data: sessionData
+                } =
+                    await supabaseClient.auth.getSession();
 
-                if (!stored) {
+                const session =
+                    sessionData
+                        ? sessionData.session
+                        : null;
 
-                    return defaultAds;
+                if (session && session.user) {
+
+                    currentUser =
+                        session.user;
+
+                    currentUserId =
+                        session.user.id;
+
+                    return currentUser;
 
                 }
 
-                const parsed =
-                    JSON.parse(stored);
 
-                if (!Array.isArray(parsed)) {
+                const {
+                    data: userData
+                } =
+                    await supabaseClient.auth.getUser();
 
-                    return defaultAds;
+                if (
+                    userData &&
+                    userData.user
+                ) {
+
+                    currentUser =
+                        userData.user;
+
+                    currentUserId =
+                        userData.user.id;
+
+                    return currentUser;
 
                 }
-
-                return parsed;
 
             } catch (error) {
 
                 console.error(
-                    "HAVKAR Ads storage error:",
+                    "HAVKAR auth error:",
                     error
                 );
 
-                return defaultAds;
-
             }
+
+            currentUser =
+                null;
+
+            currentUserId =
+                null;
+
+            return null;
 
         }
 
 
-        function saveAds(ads) {
+        function setupAuthListener() {
 
-            try {
+            supabaseClient.auth.onAuthStateChange(
+                async function(
+                    event,
+                    session
+                ) {
 
-                localStorage.setItem(
-                    STORAGE_KEY,
-                    JSON.stringify(ads)
-                );
+                    currentUser =
+                        session
+                            ? session.user
+                            : null;
 
-            } catch (error) {
+                    currentUserId =
+                        currentUser
+                            ? currentUser.id
+                            : null;
+
+
+                    await loadSavedIds();
+
+
+                    renderAds();
+
+                }
+            );
+
+        }
+
+
+        /* =========================================================
+           LOAD ADS FROM SUPABASE
+           ========================================================= */
+
+        async function loadAdsFromSupabase() {
+
+            const {
+                data,
+                error
+            } =
+                await supabaseClient
+                    .from(ADS_TABLE)
+                    .select(
+                        "id,created_at,title,category,price,location,description,user_id,photos,status"
+                    )
+                    .order(
+                        "created_at",
+                        {
+                            ascending: false
+                        }
+                    );
+
+
+            if (error) {
 
                 console.error(
-                    "HAVKAR Ads save error:",
+                    "HAVKAR ads load error:",
                     error
                 );
 
-                showToast(
-                    "Could not save the advertisement."
-                );
+                throw error;
 
             }
 
-        }
 
-
-        function loadSavedIds() {
-
-            try {
-
-                const stored =
-                    localStorage.getItem(SAVED_KEY);
-
-                if (!stored) {
-                    return [];
-                }
-
-                const parsed =
-                    JSON.parse(stored);
-
-                return Array.isArray(parsed)
-                    ? parsed
+            adsData =
+                Array.isArray(data)
+                    ? data
                     : [];
 
-            } catch (error) {
 
-                return [];
-
-            }
+            return adsData;
 
         }
 
 
-        function saveSavedIds(ids) {
+        /* =========================================================
+           SAVED ADS
+           ========================================================= */
 
-            localStorage.setItem(
-                SAVED_KEY,
-                JSON.stringify(ids)
-            );
+        async function loadSavedIds() {
+
+            savedAdIds =
+                new Set();
+
+
+            if (!currentUserId) {
+
+                return savedAdIds;
+
+            }
+
+
+            try {
+
+                const {
+                    data,
+                    error
+                } =
+                    await supabaseClient
+                        .from(SAVES_TABLE)
+                        .select(
+                            "ad_id"
+                        )
+                        .eq(
+                            "user_id",
+                            currentUserId
+                        );
+
+
+                if (error) {
+
+                    console.error(
+                        "HAVKAR saved ads load error:",
+                        error
+                    );
+
+                    return savedAdIds;
+
+                }
+
+
+                if (Array.isArray(data)) {
+
+                    data.forEach(
+                        row => {
+
+                            if (
+                                row &&
+                                row.ad_id !== null &&
+                                row.ad_id !== undefined
+                            ) {
+
+                                savedAdIds.add(
+                                    String(
+                                        row.ad_id
+                                    )
+                                );
+
+                            }
+
+                        }
+                    );
+
+                }
+
+            } catch (error) {
+
+                console.error(
+                    "HAVKAR saved ads exception:",
+                    error
+                );
+
+            }
+
+
+            return savedAdIds;
+
+        }
+
+
+        async function isAdSaved(
+            adId
+        ) {
+
+            if (!currentUserId) {
+
+                return false;
+
+            }
+
+
+            const {
+                data,
+                error
+            } =
+                await supabaseClient
+                    .from(SAVES_TABLE)
+                    .select(
+                        "id"
+                    )
+                    .eq(
+                        "ad_id",
+                        Number(adId)
+                    )
+                    .eq(
+                        "user_id",
+                        currentUserId
+                    )
+                    .maybeSingle();
+
+
+            if (error) {
+
+                console.error(
+                    "HAVKAR save check error:",
+                    error
+                );
+
+                return false;
+
+            }
+
+
+            return !!data;
+
+        }
+
+
+        async function toggleSaved(
+            id
+        ) {
+
+            if (!currentUserId) {
+
+                showToast(
+                    "Please log in to save advertisements."
+                );
+
+                setTimeout(
+                    function() {
+
+                        window.location.href =
+                            "login.html";
+
+                    },
+                    700
+                );
+
+                return;
+
+            }
+
+
+            const numericId =
+                Number(id);
+
+
+            if (
+                !Number.isFinite(
+                    numericId
+                )
+            ) {
+
+                showToast(
+                    "This advertisement cannot be saved."
+                );
+
+                return;
+
+            }
+
+
+            const button =
+                document.querySelector(
+                    `.save-ad-btn[data-ad-id="${numericId}"]`
+                );
+
+
+            if (button) {
+                button.disabled = true;
+            }
+
+
+            try {
+
+                const currentlySaved =
+                    await isAdSaved(
+                        numericId
+                    );
+
+
+                if (currentlySaved) {
+
+                    const {
+                        error
+                    } =
+                        await supabaseClient
+                            .from(SAVES_TABLE)
+                            .delete()
+                            .eq(
+                                "ad_id",
+                                numericId
+                            )
+                            .eq(
+                                "user_id",
+                                currentUserId
+                            );
+
+
+                    if (error) {
+
+                        throw error;
+
+                    }
+
+
+                    savedAdIds.delete(
+                        String(numericId)
+                    );
+
+
+                    showToast(
+                        "Advertisement removed from saved."
+                    );
+
+                } else {
+
+                    const {
+                        error
+                    } =
+                        await supabaseClient
+                            .from(SAVES_TABLE)
+                            .insert({
+                                ad_id:
+                                    numericId,
+
+                                user_id:
+                                    currentUserId
+                            });
+
+
+                    if (error) {
+
+                        throw error;
+
+                    }
+
+
+                    savedAdIds.add(
+                        String(numericId)
+                    );
+
+
+                    showToast(
+                        "Advertisement saved."
+                    );
+
+                }
+
+
+                renderAds();
+
+            } catch (error) {
+
+                console.error(
+                    "HAVKAR save toggle error:",
+                    error
+                );
+
+
+                showToast(
+                    "Could not update saved advertisement."
+                );
+
+            } finally {
+
+                if (button) {
+                    button.disabled = false;
+                }
+
+            }
 
         }
 
@@ -2027,21 +2430,41 @@
            CATEGORY
            ========================================================= */
 
-        function setCategory(category, button) {
+        function setCategory(
+            category,
+            button
+        ) {
 
-            activeCategory = category;
+            activeCategory =
+                category;
 
-            showingSavedOnly = false;
+            showingSavedOnly =
+                false;
+
 
             document
                 .querySelectorAll(".tab")
-                .forEach(tab => {
-                    tab.classList.remove("active");
-                });
+                .forEach(
+                    tab => {
+
+                        tab.classList.remove(
+                            "active"
+                        );
+
+                    }
+                );
+
 
             if (button) {
-                button.classList.add("active");
+
+                button.classList.add(
+                    "active"
+                );
+
             }
+
+
+            updateResultsTitle();
 
             renderAds();
 
@@ -2054,11 +2477,11 @@
 
         function getFilteredAds() {
 
-            const ads = loadAds();
-
             const searchInput =
-                document
-                    .getElementById("searchInput");
+                document.getElementById(
+                    "searchInput"
+                );
+
 
             const query =
                 searchInput
@@ -2067,79 +2490,95 @@
                         .toLowerCase()
                     : "";
 
-            const savedIds =
-                loadSavedIds();
 
-            return ads.filter(ad => {
-
-                if (showingSavedOnly) {
-
-                    if (!savedIds.includes(ad.id)) {
-                        return false;
-                    }
-
-                }
-
-                if (activeCategory === "featured") {
-
-                    if (!ad.featured) {
-                        return false;
-                    }
-
-                }
-
-                else if (
-                    activeCategory !== "all"
-                ) {
+            return adsData.filter(
+                ad => {
 
                     if (
-                        ad.category !==
-                        activeCategory
+                        showingSavedOnly
                     ) {
 
-                        return false;
+                        if (
+                            !savedAdIds.has(
+                                String(ad.id)
+                            )
+                        ) {
+
+                            return false;
+
+                        }
 
                     }
 
-                }
-
-                if (query) {
-
-                    const searchable = [
-
-                        ad.businessName,
-
-                        ad.title,
-
-                        ad.description,
-
-                        ad.city,
-
-                        ad.category
-
-                    ]
-                        .join(" ")
-                        .toLowerCase();
 
                     if (
-                        !searchable.includes(query)
+                        activeCategory !==
+                        "all"
                     ) {
 
-                        return false;
+                        if (
+                            String(
+                                ad.category || ""
+                            ).toLowerCase() !==
+                            activeCategory
+                        ) {
+
+                            return false;
+
+                        }
 
                     }
 
+
+                    if (query) {
+
+                        const searchable = [
+
+                            ad.title,
+
+                            ad.category,
+
+                            ad.location,
+
+                            ad.description,
+
+                            ad.status
+
+                        ]
+                            .map(
+                                value =>
+                                    value === null ||
+                                    value === undefined
+                                        ? ""
+                                        : String(value)
+                            )
+                            .join(" ")
+                            .toLowerCase();
+
+
+                        if (
+                            !searchable.includes(
+                                query
+                            )
+                        ) {
+
+                            return false;
+
+                        }
+
+                    }
+
+
+                    return true;
+
                 }
-
-                return true;
-
-            });
+            );
 
         }
 
 
         /* =========================================================
-           RENDER ADS
+           RENDER
            ========================================================= */
 
         function renderAds() {
@@ -2149,17 +2588,21 @@
                     "adsContainer"
                 );
 
+
             if (!container) {
                 return;
             }
 
+
             const ads =
                 getFilteredAds();
+
 
             const count =
                 document.getElementById(
                     "resultsCount"
                 );
+
 
             if (count) {
 
@@ -2172,6 +2615,7 @@
 
             }
 
+
             if (!ads.length) {
 
                 container.innerHTML = `
@@ -2181,12 +2625,19 @@
                         <i class="fas fa-bullhorn"></i>
 
                         <h3>
-                            No advertisements found
+                            ${
+                                showingSavedOnly
+                                    ? "No saved advertisements"
+                                    : "No advertisements found"
+                            }
                         </h3>
 
                         <p>
-                            Try another search or category,
-                            or create a new advertisement.
+                            ${
+                                showingSavedOnly
+                                    ? "Advertisements you save will appear here."
+                                    : "Try another search or category, or create a new advertisement."
+                            }
                         </p>
 
                     </div>
@@ -2197,79 +2648,161 @@
 
             }
 
+
             container.innerHTML =
                 ads
-                    .map(ad => createAdCard(ad))
+                    .map(
+                        ad =>
+                            createAdCard(
+                                ad
+                            )
+                    )
                     .join("");
 
         }
 
 
         /* =========================================================
-           ESCAPE HTML
+           IMAGE PARSING
            ========================================================= */
 
-        function escapeHTML(value) {
-
-            if (value === null ||
-                value === undefined) {
-
-                return "";
-
-            }
-
-            return String(value)
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-
-        }
-
-
-        /* =========================================================
-           SAFE URL
-           ========================================================= */
-
-        function safeWebsiteUrl(url) {
-
-            if (!url) {
-                return "";
-            }
-
-            let clean =
-                String(url).trim();
+        function getAdImages(
+            photos
+        ) {
 
             if (
-                !clean.startsWith("http://") &&
-                !clean.startsWith("https://")
+                photos === null ||
+                photos === undefined
             ) {
 
-                clean =
-                    "https://" + clean;
+                return [];
 
             }
+
+
+            if (
+                Array.isArray(
+                    photos
+                )
+            ) {
+
+                return photos
+                    .filter(
+                        item =>
+                            typeof item ===
+                            "string" &&
+                            item.trim()
+                    );
+
+            }
+
+
+            const text =
+                String(
+                    photos
+                ).trim();
+
+
+            if (!text) {
+
+                return [];
+
+            }
+
 
             try {
 
                 const parsed =
-                    new URL(clean);
+                    JSON.parse(
+                        text
+                    );
+
 
                 if (
-                    parsed.protocol !== "http:" &&
-                    parsed.protocol !== "https:"
+                    Array.isArray(
+                        parsed
+                    )
                 ) {
 
-                    return "";
+                    return parsed
+                        .filter(
+                            item =>
+                                typeof item ===
+                                "string" &&
+                                item.trim()
+                        );
 
                 }
 
-                return parsed.href;
+
+                if (
+                    typeof parsed ===
+                    "string" &&
+                    parsed.trim()
+                ) {
+
+                    return [
+                        parsed
+                    ];
+
+                }
 
             } catch (error) {
 
-                return "";
+                /* Not JSON; use the text itself. */
+
+            }
+
+
+            if (
+                text.startsWith(
+                    "http://"
+                ) ||
+                text.startsWith(
+                    "https://"
+                ) ||
+                text.startsWith(
+                    "data:image/"
+                )
+            ) {
+
+                return [
+                    text
+                ];
+
+            }
+
+
+            return [];
+
+        }
+
+
+        /* =========================================================
+           CATEGORY EMOJI
+           ========================================================= */
+
+        function getCategoryEmoji(
+            category
+        ) {
+
+            switch (
+                String(
+                    category || ""
+                ).toLowerCase()
+            ) {
+
+                case "restaurant":
+                    return "🍕";
+
+                case "shop":
+                    return "🛍️";
+
+                case "service":
+                    return "🛠️";
+
+                default:
+                    return "📢";
 
             }
 
@@ -2277,140 +2810,106 @@
 
 
         /* =========================================================
-           CREATE AD CARD
+           CREATE CARD
            ========================================================= */
 
-        function createAdCard(ad) {
+        function createAdCard(
+            ad
+        ) {
 
-            const savedIds =
-                loadSavedIds();
+            const adId =
+                String(
+                    ad.id
+                );
+
 
             const isSaved =
-                savedIds.includes(ad.id);
+                savedAdIds.has(
+                    adId
+                );
+
+
+            const images =
+                getAdImages(
+                    ad.photos
+                );
+
+
+            const firstImage =
+                images.length
+                    ? images[0]
+                    : "";
+
 
             const imageHTML =
-                ad.image
+                firstImage
                     ? `
+
                         <img
-                            src="${ad.image}"
-                            alt="${escapeHTML(
-                                ad.businessName
+                            src="${escapeAttribute(
+                                firstImage
                             )}"
+                            alt="${escapeHTML(
+                                ad.title ||
+                                "Advertisement"
+                            )}"
+                            loading="lazy"
+                            onerror="this.style.display='none'"
                         >
+
                     `
                     : `
+
                         <div
                             class="ad-banner-placeholder"
                             aria-hidden="true"
                         >
                             ${escapeHTML(
-                                ad.emoji || "📢"
+                                getCategoryEmoji(
+                                    ad.category
+                                )
                             )}
                         </div>
+
                     `;
 
-            const featuredHTML =
-                ad.featured
-                    ? `
-                        <div class="featured-badge">
-                            <i class="fas fa-star"></i>
-                            Featured
-                        </div>
-                    `
-                    : "";
 
-            const phone =
-                ad.phone
-                    ? String(ad.phone)
-                    : "";
-
-            const website =
-                safeWebsiteUrl(
-                    ad.website
+            const category =
+                String(
+                    ad.category ||
+                    "other"
                 );
 
-            let primaryAction = "";
 
-            if (website) {
-
-                primaryAction = `
-
-                    <a
-                        class="action-btn primary"
-                        href="${website}"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onclick="registerView('${escapeJS(
-                            ad.id
-                        )}')"
-                    >
-                        <i class="fas fa-external-link-alt"></i>
-                        Visit
-                    </a>
-
-                `;
-
-            } else {
-
-                primaryAction = `
-
-                    <button
-                        class="action-btn primary"
-                        type="button"
-                        onclick="visitAd('${escapeJS(
-                            ad.id
-                        )}')"
-                    >
-                        <i class="fas fa-eye"></i>
-                        View
-                    </button>
-
-                `;
-
-            }
+            const status =
+                String(
+                    ad.status ||
+                    ""
+                );
 
 
-            let callAction = "";
-
-            if (phone) {
-
-                callAction = `
-
-                    <a
-                        class="action-btn"
-                        href="tel:${escapeHTML(
-                            phone
-                        )}"
-                    >
-                        <i class="fas fa-phone"></i>
-                        Call Now
-                    </a>
-
-                `;
-
-            } else {
-
-                callAction = `
-
-                    <button
-                        class="action-btn"
-                        type="button"
-                        onclick="showToast(
-                            'Phone number is not available.'
-                        )"
-                    >
-                        <i class="fas fa-phone"></i>
-                        Call Now
-                    </button>
-
-                `;
-
-            }
+            const statusText =
+                status &&
+                status.toLowerCase() !==
+                    "active"
+                    ? status
+                    : "Active";
 
 
-            const offerHTML =
-                ad.offer
+            const statusClass =
+                status &&
+                status.toLowerCase() !==
+                    "active"
+                    ? "pending"
+                    : "";
+
+
+            const priceHTML =
+                ad.price !== null &&
+                ad.price !== undefined &&
+                String(ad.price).trim() !== ""
                     ? `
+
                         <div class="ad-price">
 
                             <i
@@ -2419,55 +2918,90 @@
                             ></i>
 
                             ${escapeHTML(
-                                ad.offer
+                                formatPrice(
+                                    ad.price
+                                )
                             )}
 
                         </div>
+
                     `
                     : "";
 
 
-            const deleteHTML =
-                ad.userCreated
+            const ownerHTML =
+                currentUserId &&
+                ad.user_id &&
+                String(
+                    ad.user_id
+                ) ===
+                    String(
+                        currentUserId
+                    )
                     ? `
 
-                        <button
-                            class="action-btn danger"
-                            type="button"
-                            onclick="deleteAd(
-                                '${escapeJS(ad.id)}'
-                            )"
-                        >
-                            <i class="fas fa-trash"></i>
-                            Delete
-                        </button>
+                        <div class="verified">
+
+                            <i
+                                class="fas fa-user-check"
+                            ></i>
+
+                            Your Advertisement
+
+                        </div>
 
                     `
-                    : "";
+                    : `
+
+                        <div
+                            class="verified ${statusClass}"
+                        >
+
+                            <i
+                                class="${
+                                    statusClass
+                                        ? "fas fa-clock"
+                                        : "fas fa-check-circle"
+                                }"
+                            ></i>
+
+                            ${escapeHTML(
+                                statusText
+                            )}
+
+                        </div>
+
+                    `;
 
 
             return `
 
                 <article
                     class="ad-card"
-                    data-ad-id="${escapeHTML(ad.id)}"
+                    data-ad-id="${escapeAttribute(
+                        adId
+                    )}"
                 >
 
                     <div class="ad-banner">
 
                         ${imageHTML}
 
-                        ${featuredHTML}
 
                         <button
                             class="
                                 save-ad-btn
                                 ${isSaved ? "saved" : ""}
                             "
+                            data-ad-id="${escapeAttribute(
+                                adId
+                            )}"
                             type="button"
                             onclick="
                                 toggleSaved(
-                                    '${escapeJS(ad.id)}'
+                                    '${escapeJS(
+                                        adId
+                                    )}'
                                 )
                             "
                             aria-label="${
@@ -2498,17 +3032,27 @@
                             <div class="company-logo">
 
                                 ${
-                                    ad.image
+                                    firstImage
                                         ? `
+
                                             <img
-                                                src="${ad.image}"
+                                                src="${escapeAttribute(
+                                                    firstImage
+                                                )}"
                                                 alt=""
+                                                loading="lazy"
+                                                onerror="this.style.display='none'"
                                             >
+
                                         `
                                         : `
+
                                             ${escapeHTML(
-                                                ad.emoji || "📢"
+                                                getCategoryEmoji(
+                                                    category
+                                                )
                                             )}
+
                                         `
                                 }
 
@@ -2520,37 +3064,15 @@
                                 <div class="company-name">
 
                                     ${escapeHTML(
-                                        ad.businessName
+                                        formatCategoryName(
+                                            category
+                                        )
                                     )}
 
                                 </div>
 
 
-                                ${
-                                    ad.verified
-                                        ? `
-                                            <div class="verified">
-
-                                                <i
-                                                    class="fas fa-check-circle"
-                                                ></i>
-
-                                                Verified Business
-
-                                            </div>
-                                        `
-                                        : `
-                                            <div class="verified">
-
-                                                <i
-                                                    class="fas fa-clock"
-                                                ></i>
-
-                                                Pending Verification
-
-                                            </div>
-                                        `
-                                }
+                                ${ownerHTML}
 
                             </div>
 
@@ -2560,7 +3082,8 @@
                         <div class="ad-title">
 
                             ${escapeHTML(
-                                ad.title
+                                ad.title ||
+                                "Untitled Advertisement"
                             )}
 
                         </div>
@@ -2569,13 +3092,14 @@
                         <div class="ad-description">
 
                             ${escapeHTML(
-                                ad.description
+                                ad.description ||
+                                ""
                             )}
 
                         </div>
 
 
-                        ${offerHTML}
+                        ${priceHTML}
 
 
                         <div class="ad-meta">
@@ -2587,52 +3111,46 @@
                                 ></i>
 
                                 ${escapeHTML(
-                                    ad.city
+                                    ad.location ||
+                                    "Location not specified"
+                                )}
+
+                            </div>
+
+
+                            <div class="meta-item">
+
+                                <i
+                                    class="fas fa-layer-group"
+                                ></i>
+
+                                ${escapeHTML(
+                                    formatCategoryName(
+                                        category
+                                    )
                                 )}
 
                             </div>
 
 
                             ${
-                                ad.hours
+                                ad.created_at
                                     ? `
+
                                         <div class="meta-item">
 
                                             <i
-                                                class="fas fa-clock"
+                                                class="fas fa-calendar-alt"
                                             ></i>
 
                                             ${escapeHTML(
-                                                ad.hours
+                                                formatDate(
+                                                    ad.created_at
+                                                )
                                             )}
 
                                         </div>
-                                    `
-                                    : ""
-                            }
 
-
-                            ${
-                                ad.rating
-                                    ? `
-                                        <div class="meta-item">
-
-                                            <i
-                                                class="fas fa-star"
-                                            ></i>
-
-                                            ${escapeHTML(
-                                                ad.rating
-                                            )}
-                                            ${
-                                                ad.reviews
-                                                    ? `(${escapeHTML(
-                                                        ad.reviews
-                                                    )})`
-                                                    : ""
-                                            }
-
-                                        </div>
                                     `
                                     : ""
                             }
@@ -2642,15 +3160,54 @@
 
                         <div class="ad-actions">
 
-                            ${callAction}
+                            <button
+                                class="action-btn primary"
+                                type="button"
+                                onclick="
+                                    openAdInfo(
+                                        '${escapeJS(
+                                            adId
+                                        )}'
+                                    )
+                                "
+                            >
 
-                            ${primaryAction}
+                                <i
+                                    class="fas fa-eye"
+                                ></i>
 
-                            ${
-                                deleteHTML
-                                    ? deleteHTML
-                                    : ""
-                            }
+                                View
+
+                            </button>
+
+
+                            <button
+                                class="action-btn"
+                                type="button"
+                                onclick="
+                                    saveFromCard(
+                                        '${escapeJS(
+                                            adId
+                                        )}'
+                                    )
+                                "
+                            >
+
+                                <i
+                                    class="${
+                                        isSaved
+                                            ? "fas"
+                                            : "far"
+                                    } fa-bookmark"
+                                ></i>
+
+                                ${
+                                    isSaved
+                                        ? "Saved"
+                                        : "Save"
+                                }
+
+                            </button>
 
                         </div>
 
@@ -2664,84 +3221,374 @@
 
 
         /* =========================================================
-           ESCAPE JAVASCRIPT
+           CARD ACTION
            ========================================================= */
 
-        function escapeJS(value) {
+        function saveFromCard(
+            id
+        ) {
 
-            return String(value || "")
-                .replace(/\\/g, "\\\\")
-                .replace(/'/g, "\\'")
-                .replace(/"/g, '\\"')
-                .replace(/\n/g, "\\n")
-                .replace(/\r/g, "\\r");
+            toggleSaved(
+                id
+            );
 
         }
 
 
-        /* =========================================================
-           SAVE / UNSAVE
-           ========================================================= */
+        function openAdInfo(
+            id
+        ) {
 
-        function toggleSaved(id) {
-
-            const ids =
-                loadSavedIds();
-
-            const index =
-                ids.indexOf(id);
-
-            if (index === -1) {
-
-                ids.push(id);
-
-                saveSavedIds(ids);
-
-                showToast(
-                    "Advertisement saved."
+            const ad =
+                adsData.find(
+                    item =>
+                        String(
+                            item.id
+                        ) ===
+                        String(
+                            id
+                        )
                 );
 
-            } else {
 
-                ids.splice(index, 1);
-
-                saveSavedIds(ids);
+            if (!ad) {
 
                 showToast(
-                    "Advertisement removed from saved."
+                    "Advertisement could not be found."
                 );
+
+                return;
 
             }
 
-            renderAds();
+
+            const textParts = [
+
+                ad.title
+                    ? String(
+                        ad.title
+                    )
+                    : "",
+
+                ad.location
+                    ? `Location: ${ad.location}`
+                    : "",
+
+                ad.description
+                    ? String(
+                        ad.description
+                    )
+                    : "",
+
+                ad.price !== null &&
+                ad.price !== undefined &&
+                String(
+                    ad.price
+                ).trim() !== ""
+                    ? `Price / Offer: ${formatPrice(ad.price)}`
+                    : ""
+
+            ]
+                .filter(
+                    Boolean
+                );
+
+
+            showToast(
+                textParts.join(
+                    " • "
+                )
+            );
 
         }
 
 
         /* =========================================================
-           SHOW SAVED ADS
+           FORMAT HELPERS
            ========================================================= */
 
-        function showSavedAds() {
+        function formatCategoryName(
+            category
+        ) {
 
-            showingSavedOnly = true;
+            const value =
+                String(
+                    category ||
+                    "other"
+                )
+                    .trim()
+                    .toLowerCase();
 
-            activeCategory = "all";
+
+            const map = {
+
+                restaurant:
+                    "Restaurant",
+
+                shop:
+                    "Shop",
+
+                service:
+                    "Service",
+
+                other:
+                    "Other"
+
+            };
+
+
+            if (
+                map[value]
+            ) {
+
+                return map[value];
+
+            }
+
+
+            return value
+                .replace(
+                    /[-_]+/g,
+                    " "
+                )
+                .replace(
+                    /\b\w/g,
+                    char =>
+                        char.toUpperCase()
+                );
+
+        }
+
+
+        function formatPrice(
+            value
+        ) {
+
+            const number =
+                Number(
+                    value
+                );
+
+
+            if (
+                Number.isFinite(
+                    number
+                )
+            ) {
+
+                return new Intl.NumberFormat(
+                    "en-IE",
+                    {
+                        minimumFractionDigits:
+                            0,
+
+                        maximumFractionDigits:
+                            2
+                    }
+                ).format(
+                    number
+                ) + " €";
+
+            }
+
+
+            return String(
+                value
+            );
+
+        }
+
+
+        function formatDate(
+            value
+        ) {
+
+            try {
+
+                const date =
+                    new Date(
+                        value
+                    );
+
+
+                if (
+                    Number.isNaN(
+                        date.getTime()
+                    )
+                ) {
+
+                    return "";
+
+                }
+
+
+                return new Intl.DateTimeFormat(
+                    "en-GB",
+                    {
+                        day:
+                            "2-digit",
+
+                        month:
+                            "short",
+
+                        year:
+                            "numeric"
+                    }
+                ).format(
+                    date
+                );
+
+            } catch (error) {
+
+                return "";
+
+            }
+
+        }
+
+
+        /* =========================================================
+           ESCAPE HTML
+           ========================================================= */
+
+        function escapeHTML(
+            value
+        ) {
+
+            if (
+                value === null ||
+                value === undefined
+            ) {
+
+                return "";
+
+            }
+
+
+            return String(
+                value
+            )
+                .replace(
+                    /&/g,
+                    "&amp;"
+                )
+                .replace(
+                    /</g,
+                    "&lt;"
+                )
+                .replace(
+                    />/g,
+                    "&gt;"
+                )
+                .replace(
+                    /"/g,
+                    "&quot;"
+                )
+                .replace(
+                    /'/g,
+                    "&#039;"
+                );
+
+        }
+
+
+        function escapeAttribute(
+            value
+        ) {
+
+            return escapeHTML(
+                value
+            );
+
+        }
+
+
+        function escapeJS(
+            value
+        ) {
+
+            return String(
+                value === null ||
+                value === undefined
+                    ? ""
+                    : value
+            )
+                .replace(
+                    /\\/g,
+                    "\\\\"
+                )
+                .replace(
+                    /'/g,
+                    "\\'"
+                )
+                .replace(
+                    /"/g,
+                    '\\"'
+                )
+                .replace(
+                    /\n/g,
+                    "\\n"
+                )
+                .replace(
+                    /\r/g,
+                    "\\r"
+                );
+
+        }
+
+
+        /* =========================================================
+           SHOW SAVED
+           ========================================================= */
+
+        async function showSavedAds() {
+
+            if (!currentUserId) {
+
+                showToast(
+                    "Please log in to view your saved advertisements."
+                );
+
+                setTimeout(
+                    function() {
+
+                        window.location.href =
+                            "login.html";
+
+                    },
+                    700
+                );
+
+                return;
+
+            }
+
+
+            showingSavedOnly =
+                true;
+
+            activeCategory =
+                "all";
+
 
             document
                 .querySelectorAll(".tab")
-                .forEach(tab => {
+                .forEach(
+                    tab => {
 
-                    tab.classList.remove(
-                        "active"
-                    );
+                        tab.classList.remove(
+                            "active"
+                        );
 
-                });
+                    }
+                );
+
 
             const allTab =
                 document.querySelector(
                     '.tab[data-category="all"]'
                 );
+
 
             if (allTab) {
 
@@ -2751,21 +3598,37 @@
 
             }
 
+
             const search =
                 document.getElementById(
                     "searchInput"
                 );
 
+
             if (search) {
-                search.value = "";
+
+                search.value =
+                    "";
+
             }
+
+
+            await loadSavedIds();
+
+
+            updateResultsTitle();
 
             renderAds();
 
+
             window.scrollTo({
-                top: 0,
-                behavior: "smooth"
+                top:
+                    0,
+
+                behavior:
+                    "smooth"
             });
+
 
             showToast(
                 "Showing your saved advertisements."
@@ -2775,243 +3638,52 @@
 
 
         /* =========================================================
-           VIEW
+           TITLE
            ========================================================= */
 
-        function registerView(id) {
+        function updateResultsTitle() {
 
-            const ads =
-                loadAds();
-
-            const ad =
-                ads.find(
-                    item => item.id === id
-                );
-
-            if (!ad) {
-                return;
-            }
-
-            ad.views =
-                Number(ad.views || 0) + 1;
-
-            saveAds(ads);
-
-        }
-
-
-        function visitAd(id) {
-
-            registerView(id);
-
-            showToast(
-                "Advertisement opened."
-            );
-
-        }
-
-
-        /* =========================================================
-           DELETE USER AD
-           ========================================================= */
-
-        function deleteAd(id) {
-
-            const ads =
-                loadAds();
-
-            const ad =
-                ads.find(
-                    item => item.id === id
-                );
-
-            if (!ad || !ad.userCreated) {
-
-                showToast(
-                    "This advertisement cannot be deleted here."
-                );
-
-                return;
-
-            }
-
-            const confirmed =
-                window.confirm(
-                    "Delete this advertisement?"
-                );
-
-            if (!confirmed) {
-                return;
-            }
-
-            const updated =
-                ads.filter(
-                    item => item.id !== id
-                );
-
-            saveAds(updated);
-
-
-            const savedIds =
-                loadSavedIds()
-                    .filter(
-                        savedId =>
-                            savedId !== id
-                    );
-
-            saveSavedIds(savedIds);
-
-            renderAds();
-
-            showToast(
-                "Advertisement deleted."
-            );
-
-        }
-
-
-        /* =========================================================
-           OPEN CREATE AD
-           ========================================================= */
-
-        function openCreateAd() {
-
-            const modal =
+            const title =
                 document.getElementById(
-                    "createAdModal"
+                    "resultsTitle"
                 );
 
-            if (!modal) {
+
+            if (!title) {
                 return;
             }
 
-            modal.classList.add("show");
-
-            document.body.style.overflow =
-                "hidden";
-
-            setTimeout(() => {
-
-                const first =
-                    document.getElementById(
-                        "businessName"
-                    );
-
-                if (first) {
-                    first.focus();
-                }
-
-            }, 100);
-
-        }
-
-
-        /* =========================================================
-           CLOSE CREATE AD
-           ========================================================= */
-
-        function closeCreateAd() {
-
-            const modal =
-                document.getElementById(
-                    "createAdModal"
-                );
-
-            if (modal) {
-
-                modal.classList.remove(
-                    "show"
-                );
-
-            }
-
-            document.body.style.overflow =
-                "";
-
-        }
-
-
-        function closeModalFromOverlay(event) {
 
             if (
-                event.target &&
-                event.target.id ===
-                    "createAdModal"
+                showingSavedOnly
             ) {
 
-                closeCreateAd();
-
-            }
-
-        }
-
-
-        /* =========================================================
-           IMAGE PREVIEW
-           ========================================================= */
-
-        function previewImage(event) {
-
-            const file =
-                event.target.files &&
-                event.target.files[0];
-
-            if (!file) {
-                return;
-            }
-
-            if (!file.type.startsWith("image/")) {
-
-                showToast(
-                    "Please select an image file."
-                );
-
-                event.target.value = "";
+                title.textContent =
+                    "Saved Advertisements";
 
                 return;
 
             }
 
-            const reader =
-                new FileReader();
 
-            reader.onload = function(e) {
+            if (
+                activeCategory ===
+                "all"
+            ) {
 
-                selectedImageData =
-                    e.target.result;
+                title.textContent =
+                    "Available Ads";
 
-                const preview =
-                    document.getElementById(
-                        "imagePreview"
-                    );
+                return;
 
-                const placeholder =
-                    document.getElementById(
-                        "uploadPlaceholder"
-                    );
+            }
 
-                if (preview) {
 
-                    preview.src =
-                        selectedImageData;
-
-                    preview.classList.add(
-                        "show"
-                    );
-
-                }
-
-                if (placeholder) {
-
-                    placeholder.classList.add(
-                        "hidden"
-                    );
-
-                }
-
-            };
-
-            reader.readAsDataURL(file);
+            title.textContent =
+                formatCategoryName(
+                    activeCategory
+                ) +
+                " Ads";
 
         }
 
@@ -3020,24 +3692,33 @@
            CREATE AD
            ========================================================= */
 
-        function submitAd(event) {
+        async function submitAd(
+            event
+        ) {
 
             event.preventDefault();
 
-            const businessName =
-                document
-                    .getElementById(
-                        "businessName"
-                    )
-                    .value
-                    .trim();
 
-            const category =
-                document
-                    .getElementById(
-                        "businessCategory"
-                    )
-                    .value;
+            if (!currentUserId) {
+
+                showToast(
+                    "Please log in before publishing an advertisement."
+                );
+
+                setTimeout(
+                    function() {
+
+                        window.location.href =
+                            "login.html";
+
+                    },
+                    700
+                );
+
+                return;
+
+            }
+
 
             const title =
                 document
@@ -3047,6 +3728,33 @@
                     .value
                     .trim();
 
+
+            const category =
+                document
+                    .getElementById(
+                        "businessCategory"
+                    )
+                    .value;
+
+
+            const priceInput =
+                document
+                    .getElementById(
+                        "adPrice"
+                    )
+                    .value
+                    .trim();
+
+
+            const location =
+                document
+                    .getElementById(
+                        "adLocation"
+                    )
+                    .value
+                    .trim();
+
+
             const description =
                 document
                     .getElementById(
@@ -3055,45 +3763,12 @@
                     .value
                     .trim();
 
-            const city =
-                document
-                    .getElementById(
-                        "adCity"
-                    )
-                    .value
-                    .trim();
-
-            const offer =
-                document
-                    .getElementById(
-                        "adOffer"
-                    )
-                    .value
-                    .trim();
-
-            const phone =
-                document
-                    .getElementById(
-                        "adPhone"
-                    )
-                    .value
-                    .trim();
-
-            const website =
-                document
-                    .getElementById(
-                        "adWebsite"
-                    )
-                    .value
-                    .trim();
-
 
             if (
-                !businessName ||
-                !category ||
                 !title ||
-                !description ||
-                !city
+                !category ||
+                !location ||
+                !description
             ) {
 
                 showToast(
@@ -3105,172 +3780,488 @@
             }
 
 
-            const newAd = {
-
-                id:
-                    "user-" +
-                    Date.now() +
-                    "-" +
-                    Math.random()
-                        .toString(36)
-                        .slice(2, 9),
-
-                businessName:
-                    businessName,
-
-                category:
-                    category,
-
-                title:
-                    title,
-
-                description:
-                    description,
-
-                city:
-                    city,
-
-                hours:
-                    "Contact Business",
-
-                rating:
-                    "",
-
-                reviews:
-                    "",
-
-                offer:
-                    offer,
-
-                phone:
-                    phone,
-
-                website:
-                    website,
-
-                image:
-                    selectedImageData || "",
-
-                emoji:
-                    getCategoryEmoji(
-                        category
-                    ),
-
-                verified:
-                    false,
-
-                featured:
-                    false,
-
-                userCreated:
-                    true,
-
-                views:
-                    0,
-
-                createdAt:
-                    new Date().toISOString()
-
-            };
+            let price =
+                null;
 
 
-            const ads =
-                loadAds();
+            if (
+                priceInput !== ""
+            ) {
 
-            ads.unshift(
-                newAd
-            );
-
-            saveAds(ads);
-
-
-            closeCreateAd();
+                const parsedPrice =
+                    Number(
+                        priceInput
+                    );
 
 
-            resetAdForm();
+                if (
+                    !Number.isFinite(
+                        parsedPrice
+                    ) ||
+                    parsedPrice < 0
+                ) {
+
+                    showToast(
+                        "Please enter a valid price."
+                    );
+
+                    return;
+
+                }
 
 
-            activeCategory =
-                "all";
+                price =
+                    parsedPrice;
 
-            showingSavedOnly =
-                false;
+            }
 
 
-            document
-                .querySelectorAll(".tab")
-                .forEach(tab => {
+            const publishButton =
+                document.getElementById(
+                    "publishButton"
+                );
 
-                    tab.classList.remove(
+
+            if (publishButton) {
+
+                publishButton.disabled =
+                    true;
+
+                publishButton.innerHTML = `
+
+                    <i class="fas fa-circle-notch fa-spin"></i>
+
+                    Publishing...
+
+                `;
+
+            }
+
+
+            try {
+
+                const {
+                    data: freshSessionData
+                } =
+                    await supabaseClient.auth.getSession();
+
+
+                const freshSession =
+                    freshSessionData
+                        ? freshSessionData.session
+                        : null;
+
+
+                if (
+                    !freshSession ||
+                    !freshSession.user
+                ) {
+
+                    throw new Error(
+                        "AUTH_REQUIRED"
+                    );
+
+                }
+
+
+                currentUser =
+                    freshSession.user;
+
+                currentUserId =
+                    freshSession.user.id;
+
+
+                const photos =
+                    selectedImageData
+                        ? JSON.stringify(
+                            [
+                                selectedImageData
+                            ]
+                        )
+                        : "";
+
+
+                const newAd = {
+
+                    title:
+                        title,
+
+                    category:
+                        category,
+
+                    price:
+                        price,
+
+                    location:
+                        location,
+
+                    description:
+                        description,
+
+                    user_id:
+                        currentUserId,
+
+                    photos:
+                        photos,
+
+                    status:
+                        "active"
+
+                };
+
+
+                const {
+                    data,
+                    error
+                } =
+                    await supabaseClient
+                        .from(ADS_TABLE)
+                        .insert(
+                            newAd
+                        )
+                        .select(
+                            "id,created_at,title,category,price,location,description,user_id,photos,status"
+                        )
+                        .single();
+
+
+                if (error) {
+
+                    console.error(
+                        "HAVKAR create ad error:",
+                        error
+                    );
+
+                    throw error;
+
+                }
+
+
+                if (data) {
+
+                    adsData.unshift(
+                        data
+                    );
+
+                }
+
+
+                closeCreateAd();
+
+                resetAdForm();
+
+
+                activeCategory =
+                    "all";
+
+                showingSavedOnly =
+                    false;
+
+
+                document
+                    .querySelectorAll(".tab")
+                    .forEach(
+                        tab => {
+
+                            tab.classList.remove(
+                                "active"
+                            );
+
+                        }
+                    );
+
+
+                const allTab =
+                    document.querySelector(
+                        '.tab[data-category="all"]'
+                    );
+
+
+                if (allTab) {
+
+                    allTab.classList.add(
                         "active"
                     );
 
+                }
+
+
+                const search =
+                    document.getElementById(
+                        "searchInput"
+                    );
+
+
+                if (search) {
+
+                    search.value =
+                        "";
+
+                }
+
+
+                updateResultsTitle();
+
+                renderAds();
+
+
+                window.scrollTo({
+                    top:
+                        0,
+
+                    behavior:
+                        "smooth"
                 });
 
 
-            const allTab =
-                document.querySelector(
-                    '.tab[data-category="all"]'
+                showToast(
+                    "Your advertisement was published successfully."
                 );
 
-            if (allTab) {
+            } catch (error) {
 
-                allTab.classList.add(
-                    "active"
+                console.error(
+                    "HAVKAR publish exception:",
+                    error
                 );
+
+
+                if (
+                    error &&
+                    error.message ===
+                        "AUTH_REQUIRED"
+                ) {
+
+                    showToast(
+                        "Your login session has expired. Please log in again."
+                    );
+
+                } else {
+
+                    showToast(
+                        getSupabaseErrorMessage(
+                            error
+                        )
+                    );
+
+                }
+
+            } finally {
+
+                if (publishButton) {
+
+                    publishButton.disabled =
+                        false;
+
+                    publishButton.innerHTML = `
+
+                        <i class="fas fa-paper-plane"></i>
+
+                        Publish Ad
+
+                    `;
+
+                }
 
             }
-
-
-            const search =
-                document.getElementById(
-                    "searchInput"
-                );
-
-            if (search) {
-                search.value = "";
-            }
-
-
-            renderAds();
-
-
-            window.scrollTo({
-                top: 0,
-                behavior: "smooth"
-            });
-
-
-            showToast(
-                "Your advertisement was published successfully."
-            );
 
         }
 
 
         /* =========================================================
-           CATEGORY EMOJI
+           SUPABASE ERROR MESSAGE
            ========================================================= */
 
-        function getCategoryEmoji(
-            category
+        function getSupabaseErrorMessage(
+            error
         ) {
 
-            switch (category) {
+            if (!error) {
 
-                case "restaurant":
-                    return "🍕";
-
-                case "shop":
-                    return "🛍️";
-
-                case "service":
-                    return "🛠️";
-
-                default:
-                    return "📢";
+                return "Could not complete the request.";
 
             }
+
+
+            const message =
+                String(
+                    error.message ||
+                    error.error_description ||
+                    ""
+                );
+
+
+            if (
+                message
+                    .toLowerCase()
+                    .includes(
+                        "row-level security"
+                    )
+            ) {
+
+                return "Supabase security policy blocked this operation.";
+
+            }
+
+
+            if (
+                message
+                    .toLowerCase()
+                    .includes(
+                        "permission"
+                    )
+            ) {
+
+                return "You do not have permission to perform this action.";
+
+            }
+
+
+            if (
+                message
+                    .toLowerCase()
+                    .includes(
+                        "duplicate"
+                    )
+            ) {
+
+                return "This advertisement already exists.";
+
+            }
+
+
+            if (message) {
+
+                return message;
+
+            }
+
+
+            return "Could not complete the request.";
+
+        }
+
+
+        /* =========================================================
+           IMAGE PREVIEW
+           ========================================================= */
+
+        function previewImage(
+            event
+        ) {
+
+            const file =
+                event.target.files &&
+                event.target.files[0];
+
+
+            if (!file) {
+                return;
+            }
+
+
+            if (
+                !file.type.startsWith(
+                    "image/"
+                )
+            ) {
+
+                showToast(
+                    "Please select an image file."
+                );
+
+                event.target.value =
+                    "";
+
+                return;
+
+            }
+
+
+            const MAX_SIZE =
+                4 *
+                1024 *
+                1024;
+
+
+            if (
+                file.size >
+                MAX_SIZE
+            ) {
+
+                showToast(
+                    "Please choose an image smaller than 4 MB."
+                );
+
+                event.target.value =
+                    "";
+
+                return;
+
+            }
+
+
+            const reader =
+                new FileReader();
+
+
+            reader.onload =
+                function(
+                    e
+                ) {
+
+                    selectedImageData =
+                        e.target.result;
+
+
+                    const preview =
+                        document.getElementById(
+                            "imagePreview"
+                        );
+
+
+                    const placeholder =
+                        document.getElementById(
+                            "uploadPlaceholder"
+                        );
+
+
+                    if (preview) {
+
+                        preview.src =
+                            selectedImageData;
+
+                        preview.classList.add(
+                            "show"
+                        );
+
+                    }
+
+
+                    if (placeholder) {
+
+                        placeholder.classList.add(
+                            "hidden"
+                        );
+
+                    }
+
+                };
+
+
+            reader.onerror =
+                function() {
+
+                    showToast(
+                        "Could not read the selected image."
+                    );
+
+                };
+
+
+            reader.readAsDataURL(
+                file
+            );
 
         }
 
@@ -3286,8 +4277,11 @@
                     "adForm"
                 );
 
+
             if (form) {
+
                 form.reset();
+
             }
 
 
@@ -3299,6 +4293,7 @@
                 document.getElementById(
                     "imagePreview"
                 );
+
 
             if (preview) {
 
@@ -3317,11 +4312,121 @@
                     "uploadPlaceholder"
                 );
 
+
             if (placeholder) {
 
                 placeholder.classList.remove(
                     "hidden"
                 );
+
+            }
+
+        }
+
+
+        /* =========================================================
+           MODAL
+           ========================================================= */
+
+        function openCreateAd() {
+
+            const modal =
+                document.getElementById(
+                    "createAdModal"
+                );
+
+
+            if (!modal) {
+                return;
+            }
+
+
+            if (!currentUserId) {
+
+                showToast(
+                    "Please log in to create an advertisement."
+                );
+
+                setTimeout(
+                    function() {
+
+                        window.location.href =
+                            "login.html";
+
+                    },
+                    700
+                );
+
+                return;
+
+            }
+
+
+            modal.classList.add(
+                "show"
+            );
+
+
+            document.body.style.overflow =
+                "hidden";
+
+
+            setTimeout(
+                function() {
+
+                    const first =
+                        document.getElementById(
+                            "adTitle"
+                        );
+
+
+                    if (first) {
+
+                        first.focus();
+
+                    }
+
+                },
+                100
+            );
+
+        }
+
+
+        function closeCreateAd() {
+
+            const modal =
+                document.getElementById(
+                    "createAdModal"
+                );
+
+
+            if (modal) {
+
+                modal.classList.remove(
+                    "show"
+                );
+
+            }
+
+
+            document.body.style.overflow =
+                "";
+
+        }
+
+
+        function closeModalFromOverlay(
+            event
+        ) {
+
+            if (
+                event.target &&
+                event.target.id ===
+                    "createAdModal"
+            ) {
+
+                closeCreateAd();
 
             }
 
@@ -3339,22 +4444,28 @@
                     "searchInput"
                 );
 
+
             if (!search) {
                 return;
             }
 
+
             search.focus();
 
+
             search.scrollIntoView({
-                behavior: "smooth",
-                block: "center"
+                behavior:
+                    "smooth",
+
+                block:
+                    "center"
             });
 
         }
 
 
         /* =========================================================
-           HOME
+           NAVIGATION
            ========================================================= */
 
         function goHome() {
@@ -3364,10 +4475,6 @@
 
         }
 
-
-        /* =========================================================
-           PROFILE
-           ========================================================= */
 
         function goProfile() {
 
@@ -3381,22 +4488,24 @@
            TOAST
            ========================================================= */
 
-        let toastTimer = null;
-
-
-        function showToast(message) {
+        function showToast(
+            message
+        ) {
 
             const toast =
                 document.getElementById(
                     "toast"
                 );
 
+
             if (!toast) {
                 return;
             }
 
+
             toast.textContent =
                 message;
+
 
             toast.classList.add(
                 "show"
@@ -3410,15 +4519,146 @@
 
             toastTimer =
                 setTimeout(
-                    () => {
+                    function() {
 
                         toast.classList.remove(
                             "show"
                         );
 
                     },
-                    2600
+                    3000
                 );
+
+        }
+
+
+        /* =========================================================
+           PAGE STATUS
+           ========================================================= */
+
+        function showPageStatus(
+            message,
+            type
+        ) {
+
+            const status =
+                document.getElementById(
+                    "pageStatus"
+                );
+
+
+            if (!status) {
+                return;
+            }
+
+
+            status.textContent =
+                message;
+
+
+            status.className =
+                "page-status show";
+
+
+            if (type) {
+
+                status.classList.add(
+                    type
+                );
+
+            }
+
+        }
+
+
+        function hidePageStatus() {
+
+            const status =
+                document.getElementById(
+                    "pageStatus"
+                );
+
+
+            if (!status) {
+                return;
+            }
+
+
+            status.textContent =
+                "";
+
+            status.className =
+                "page-status";
+
+        }
+
+
+        /* =========================================================
+           FALLBACK
+           ========================================================= */
+
+        function showDemoFallback() {
+
+            adsData =
+                defaultAds.slice();
+
+
+            showPageStatus(
+                "The live advertisement database could not be reached. Showing the built-in demonstration advertisements.",
+                "error"
+            );
+
+
+            renderAds();
+
+        }
+
+
+        /* =========================================================
+           INITIAL LOAD
+           ========================================================= */
+
+        async function initializeAdsPage() {
+
+            try {
+
+                await resolveCurrentUser();
+
+
+                await loadSavedIds();
+
+
+                try {
+
+                    await loadAdsFromSupabase();
+
+                    hidePageStatus();
+
+                } catch (error) {
+
+                    showDemoFallback();
+
+                    return;
+
+                }
+
+
+                updateResultsTitle();
+
+                renderAds();
+
+
+            } catch (error) {
+
+                console.error(
+                    "HAVKAR Ads initialization error:",
+                    error
+                );
+
+
+                showDemoFallback();
+
+            }
 
         }
 
@@ -3429,10 +4669,13 @@
 
         document.addEventListener(
             "keydown",
-            function(event) {
+            function(
+                event
+            ) {
 
                 if (
-                    event.key === "Escape"
+                    event.key ===
+                    "Escape"
                 ) {
 
                     closeCreateAd();
@@ -3444,14 +4687,16 @@
 
 
         /* =========================================================
-           INITIALIZE
+           START
            ========================================================= */
 
         document.addEventListener(
             "DOMContentLoaded",
-            function() {
+            async function() {
 
-                renderAds();
+                setupAuthListener();
+
+                await initializeAdsPage();
 
             }
         );
@@ -3459,4 +4704,4 @@
     </script>
 
 </body>
-                    </html>
+    </html>
