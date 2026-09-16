@@ -1001,6 +1001,15 @@ input:focus-visible{
 /* =========================================================
    HAVKAR BUY & SELL
    REAL SUPABASE SAVED SYSTEM
+
+   Saved source of truth:
+       public.ad_saves
+
+   The page uses:
+       public.ads
+       public.ad_saves
+
+   Saved records are user-specific and protected by RLS.
    ========================================================= */
 
 const SUPABASE_URL =
@@ -1008,9 +1017,6 @@ const SUPABASE_URL =
 
 const SUPABASE_PUBLISHABLE_KEY =
     "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq";
-
-const SAVED_TABLE =
-    "ad_saves";
 
 let supabaseClient = null;
 
@@ -1040,7 +1046,9 @@ const state = {
 
     authReady: false,
 
-    savedLoading: false
+    savedLoading: false,
+
+    savedOperation: false
 
 };
 
@@ -1408,40 +1416,121 @@ function formatDate(value){
 
 
 /* =========================================================
-   REAL SUPABASE SAVED SYSTEM
-   TABLE:
-       ad_saves
-   COLUMNS:
-       id
-       user_id
-       ad_id
-   UNIQUE:
-       user_id + ad_id
+   AUTHENTICATED USER
+   ========================================================= */
+
+async function resolveCurrentUser(){
+
+    initializeSupabase();
+
+    let userId =
+        null;
+
+    /*
+     * The persisted browser session is checked first.
+     */
+
+    try{
+
+        const sessionResult =
+            await supabaseClient
+                .auth
+                .getSession();
+
+        userId =
+            sessionResult
+                ?.data
+                ?.session
+                ?.user
+                ?.id ||
+            null;
+
+    }catch(error){
+
+        console.warn(
+            "[HAVKAR] getSession failed:",
+            error
+        );
+
+    }
+
+    /*
+     * Fallback to getUser().
+     */
+
+    if(!userId){
+
+        try{
+
+            const userResult =
+                await supabaseClient
+                    .auth
+                    .getUser();
+
+            userId =
+                userResult
+                    ?.data
+                    ?.user
+                    ?.id ||
+                null;
+
+        }catch(error){
+
+            console.warn(
+                "[HAVKAR] getUser failed:",
+                error
+            );
+
+        }
+
+    }
+
+    state.currentUserId =
+        userId
+            ? String(userId)
+            : null;
+
+    state.authReady =
+        true;
+
+    return state.currentUserId;
+
+}
+
+
+/* =========================================================
+   REAL DATABASE SAVED IDS
    ========================================================= */
 
 async function loadSavedIds(){
 
     initializeSupabase();
 
-    state.savedIds =
-        new Set();
-
-    if(
-        !state.currentUserId
-    ){
-
-        return;
-
-    }
-
     state.savedLoading =
         true;
+
+    /*
+     * No authenticated user means there is no personal
+     * Saved collection to display.
+     */
+
+    if(!state.currentUserId){
+
+        state.savedIds =
+            new Set();
+
+        state.savedLoading =
+            false;
+
+        return state.savedIds;
+
+    }
 
     try{
 
         const result =
             await supabaseClient
-                .from(SAVED_TABLE)
+                .from("ad_saves")
                 .select(
                     "ad_id"
                 )
@@ -1450,67 +1539,45 @@ async function loadSavedIds(){
                     state.currentUserId
                 );
 
-        if(
-            result.error
-        ){
+        if(result.error){
 
             throw result.error;
 
         }
 
-        const rows =
+        const ids =
+            new Set();
+
+        if(
             Array.isArray(
                 result.data
             )
-                ? result.data
-                : [];
-
-        rows.forEach(
-            row => {
-
-                if(
-                    row?.ad_id !== null &&
-                    row?.ad_id !== undefined
-                ){
-
-                    state.savedIds.add(
-                        String(
-                            row.ad_id
-                        )
-                    );
-
-                }
-
-            }
-        );
-
-    }catch(error){
-
-        console.error(
-            "[HAVKAR] Could not load Saved listings from ad_saves:",
-            error
-        );
-
-        state.savedIds =
-            new Set();
-
-        /*
-         * Do not silently pretend that Saved data is empty
-         * when Supabase rejected the request.
-         */
-
-        if(
-            state.savedOnly
         ){
 
-            showStatus(
-                "error",
-                getSavedErrorMessage(
-                    error
-                )
+            result.data.forEach(
+                row => {
+
+                    if(
+                        row?.ad_id !== null &&
+                        row?.ad_id !== undefined &&
+                        String(row.ad_id).trim()
+                    ){
+
+                        ids.add(
+                            String(row.ad_id)
+                        );
+
+                    }
+
+                }
             );
 
         }
+
+        state.savedIds =
+            ids;
+
+        return state.savedIds;
 
     }finally{
 
@@ -1533,65 +1600,8 @@ function isSaved(
 }
 
 
-function getSavedErrorMessage(
-    error
-){
-
-    const message =
-        String(
-            error?.message ||
-            error?.details ||
-            error?.hint ||
-            error ||
-            ""
-        ).trim();
-
-    if(
-        /row-level security|rls|policy|permission|not allowed/i.test(
-            message
-        )
-    ){
-
-        return "Supabase blocked access to Saved listings. Check the RLS policies for the ad_saves table.";
-
-    }
-
-    if(
-        /relation .* does not exist|table .* does not exist/i.test(
-            message
-        )
-    ){
-
-        return "The Supabase ad_saves table could not be found.";
-
-    }
-
-    if(
-        /column .* does not exist/i.test(
-            message
-        )
-    ){
-
-        return "The ad_saves table columns do not match the HAVKAR Saved system.";
-
-    }
-
-    if(message){
-
-        return (
-            "Saved error: " +
-            message
-        );
-
-    }
-
-    return "HAVKAR could not load Saved listings.";
-
-}
-
-
 /* =========================================================
-   SAVE / UNSAVE
+   SAVE / REMOVE — DATABASE
    ========================================================= */
 
 async function toggleSaved(
@@ -1612,9 +1622,13 @@ async function toggleSaved(
 
     }
 
-    if(
-        !state.currentUserId
-    ){
+    if(state.savedOperation){
+
+        return;
+
+    }
+
+    if(!state.currentUserId){
 
         showToast(
             "Please sign in to save listings."
@@ -1634,52 +1648,50 @@ async function toggleSaved(
 
     }
 
-    if(
-        state.savedLoading
-    ){
+    initializeSupabase();
 
-        return;
-
-    }
-
-    const key =
-        String(adId);
-
-    const wasSaved =
-        state.savedIds.has(
-            key
-        );
-
-    state.savedLoading =
+    state.savedOperation =
         true;
 
     try{
 
-        if(wasSaved){
+        /*
+         * Re-read the real database state immediately before
+         * changing it.
+         */
+
+        await loadSavedIds();
+
+        const adKey =
+            String(adId);
+
+        if(
+            state.savedIds.has(
+                adKey
+            )
+        ){
 
             const result =
                 await supabaseClient
-                    .from(SAVED_TABLE)
+                    .from("ad_saves")
                     .delete()
-                    .eq(
-                        "user_id",
-                        state.currentUserId
-                    )
                     .eq(
                         "ad_id",
                         adId
+                    )
+                    .eq(
+                        "user_id",
+                        state.currentUserId
                     );
 
-            if(
-                result.error
-            ){
+            if(result.error){
 
                 throw result.error;
 
             }
 
             state.savedIds.delete(
-                key
+                adKey
             );
 
             showToast(
@@ -1690,27 +1702,55 @@ async function toggleSaved(
 
             const result =
                 await supabaseClient
-                    .from(SAVED_TABLE)
-                    .insert([
-                        {
-                            user_id:
-                                state.currentUserId,
-                            ad_id:
-                                adId
-                        }
-                    ]);
+                    .from("ad_saves")
+                    .insert({
+                        ad_id:
+                            adId,
 
-            if(
-                result.error
-            ){
+                        user_id:
+                            state.currentUserId
+                    });
 
-                throw result.error;
+            if(result.error){
+
+                /*
+                 * If the row was created by another request
+                 * at exactly the same time, verify instead of
+                 * reporting a false failure.
+                 */
+
+                if(
+                    String(
+                        result.error.code ||
+                        ""
+                    ) === "23505"
+                ){
+
+                    await loadSavedIds();
+
+                    if(
+                        !state.savedIds.has(
+                            adKey
+                        )
+                    ){
+
+                        throw result.error;
+
+                    }
+
+                }else{
+
+                    throw result.error;
+
+                }
+
+            }else{
+
+                state.savedIds.add(
+                    adKey
+                );
 
             }
-
-            state.savedIds.add(
-                key
-            );
 
             showToast(
                 "Saved listing"
@@ -1718,39 +1758,71 @@ async function toggleSaved(
 
         }
 
+        /*
+         * Re-render so the heart changes immediately.
+         */
+
         applyFilters();
 
     }catch(error){
 
         console.error(
-            "[HAVKAR] Saved update failed:",
+            "[HAVKAR] Saved operation failed:",
             error
         );
 
-        /*
-         * Re-read the database so the interface never
-         * remains in a state different from Supabase.
-         */
+        const code =
+            String(
+                error?.code ||
+                ""
+            );
 
-        await loadSavedIds();
-
-        showToast(
-            getSavedErrorMessage(
-                error
-            )
-        );
+        const message =
+            String(
+                error?.message ||
+                ""
+            ).toLowerCase();
 
         if(
-            state.savedOnly
+            code === "42501" ||
+            message.includes("permission") ||
+            message.includes("policy") ||
+            message.includes("row-level")
         ){
 
-            applyFilters();
+            showToast(
+                "HAVKAR could not update Saved because of database permissions."
+            );
+
+        }else if(
+            message.includes("failed to fetch") ||
+            message.includes("network")
+        ){
+
+            showToast(
+                "HAVKAR could not connect to Supabase."
+            );
+
+        }else if(
+            message.includes("relation") &&
+            message.includes("ad_saves")
+        ){
+
+            showToast(
+                "The HAVKAR Saved database is not available."
+            );
+
+        }else{
+
+            showToast(
+                "Could not update Saved."
+            );
 
         }
 
     }finally{
 
-        state.savedLoading =
+        state.savedOperation =
             false;
 
     }
@@ -1764,9 +1836,7 @@ async function toggleSaved(
 
 async function showSavedListings(){
 
-    if(
-        !state.currentUserId
-    ){
+    if(!state.currentUserId){
 
         showToast(
             "Please sign in to view Saved listings."
@@ -1811,12 +1881,41 @@ async function showSavedListings(){
         "Saved listings";
 
     /*
-     * Read the real current Saved rows from Supabase.
+     * Read the real Saved records from Supabase.
      */
 
-    await loadSavedIds();
+    try{
 
-    applyFilters();
+        await loadSavedIds();
+
+        applyFilters();
+
+    }catch(error){
+
+        console.error(
+            "[HAVKAR] Saved listings load failed:",
+            error
+        );
+
+        state.savedIds =
+            new Set();
+
+        $("adsGrid")
+            .innerHTML =
+            "";
+
+        $("resultsCount")
+            .textContent =
+            "Unavailable";
+
+        showStatus(
+            "error",
+            getSavedErrorMessage(
+                error
+            )
+        );
+
+    }
 
 }
 
@@ -1837,95 +1936,6 @@ function showAllListings(){
 
 
 /* =========================================================
-   AUTHENTICATED USER
-   ========================================================= */
-
-async function loadSavedUser(){
-
-    initializeSupabase();
-
-    let userId =
-        null;
-
-    /*
-     * FIRST:
-     * getSession() reads the persisted browser session.
-     */
-
-    try{
-
-        const sessionResult =
-            await supabaseClient
-                .auth
-                .getSession();
-
-        userId =
-            sessionResult
-                ?.data
-                ?.session
-                ?.user
-                ?.id ||
-            null;
-
-    }catch(error){
-
-        console.warn(
-            "[HAVKAR] getSession failed:",
-            error
-        );
-
-    }
-
-    /*
-     * FALLBACK:
-     * ask Supabase for the authenticated user.
-     */
-
-    if(!userId){
-
-        try{
-
-            const userResult =
-                await supabaseClient
-                    .auth
-                    .getUser();
-
-            userId =
-                userResult
-                    ?.data
-                    ?.user
-                    ?.id ||
-                null;
-
-        }catch(error){
-
-            console.warn(
-                "[HAVKAR] getUser failed:",
-                error
-            );
-
-        }
-
-    }
-
-    state.currentUserId =
-        userId
-            ? String(userId)
-            : null;
-
-    state.authReady =
-        true;
-
-    /*
-     * Saved is now loaded from the real database.
-     */
-
-    await loadSavedIds();
-
-}
-
-
-/* =========================================================
    AUTH STATE
    ========================================================= */
 
@@ -1936,7 +1946,7 @@ function setupAuthListener(){
     supabaseClient
         .auth
         .onAuthStateChange(
-            async (event,session) => {
+            (event,session) => {
 
                 if(
                     event ===
@@ -1952,28 +1962,7 @@ function setupAuthListener(){
                     state.savedOnly =
                         false;
 
-                    if(
-                        window.location.hash.toLowerCase() ===
-                        "#saved"
-                    ){
-
-                        try{
-
-                            window.history.replaceState(
-                                null,
-                                "",
-                                window.location.pathname +
-                                window.location.search
-                            );
-
-                        }catch(_){
-
-                            window.location.hash =
-                                "";
-
-                        }
-
-                    }
+                    renderCategories();
 
                     if(
                         state.ads.length
@@ -2004,21 +1993,36 @@ function setupAuthListener(){
                         state.currentUserId =
                             nextUserId;
 
-                        await loadSavedIds();
+                        loadSavedIds()
+                            .then(
+                                () => {
 
-                        if(
-                            state.savedOnly
-                        ){
+                                    if(
+                                        state.savedOnly
+                                    ){
 
-                            applyFilters();
+                                        applyFilters();
 
-                        }else{
+                                    }else{
 
-                            renderAds(
-                                state.filteredAds
+                                        renderAds(
+                                            state.filteredAds
+                                        );
+
+                                    }
+
+                                }
+                            )
+                            .catch(
+                                error => {
+
+                                    console.error(
+                                        "[HAVKAR] Saved refresh failed:",
+                                        error
+                                    );
+
+                                }
                             );
-
-                        }
 
                     }
 
@@ -2443,6 +2447,67 @@ function getErrorMessage(
     }
 
     return "HAVKAR could not load the listings.";
+
+}
+
+
+function getSavedErrorMessage(
+    error
+){
+
+    const message =
+        String(
+            error?.message ||
+            error?.details ||
+            error?.hint ||
+            error ||
+            ""
+        ).trim();
+
+    const code =
+        String(
+            error?.code ||
+            ""
+        );
+
+    if(
+        code === "42501"
+    ){
+
+        return "HAVKAR cannot read your Saved listings because of database permissions.";
+
+    }
+
+    if(
+        /failed to fetch|network|fetch/i.test(
+            message
+        )
+    ){
+
+        return "HAVKAR could not connect to Supabase while loading Saved listings.";
+
+    }
+
+    if(
+        /relation .*ad_saves|table .*ad_saves/i.test(
+            message
+        )
+    ){
+
+        return "The `ad_saves` table could not be found.";
+
+    }
+
+    if(message){
+
+        return (
+            "Saved error: " +
+            message
+        );
+
+    }
+
+    return "HAVKAR could not load Saved listings.";
 
 }
 
@@ -3034,6 +3099,24 @@ async function loadListings(){
 
         state.imageCache.clear();
 
+        /*
+         * Saved IDs are loaded from the database before
+         * the cards are rendered.
+         */
+
+        if(
+            state.currentUserId
+        ){
+
+            await loadSavedIds();
+
+        }else{
+
+            state.savedIds =
+                new Set();
+
+        }
+
         applyFilters();
 
     }catch(error){
@@ -3263,11 +3346,7 @@ function setupNavigation(){
     $("navSaved")
         .addEventListener(
             "click",
-            () => {
-
-                showSavedListings();
-
-            }
+            showSavedListings
         );
 
     $("navMessages")
@@ -3399,23 +3478,35 @@ async function handleInitialHash(){
         ).toLowerCase();
 
     if(
-        hash === "#saved"
+        hash !== "#saved"
     ){
 
-        await showSavedListings();
-
-        try{
-
-            window.history.replaceState(
-                null,
-                "",
-                window.location.pathname +
-                window.location.search
-            );
-
-        }catch(_){}
+        return;
 
     }
+
+    /*
+     * At this point boot has already resolved the user and
+     * loaded the listings.
+     */
+
+    await showSavedListings();
+
+    /*
+     * Keep the Saved view active but remove the hash from
+     * the visible URL.
+     */
+
+    try{
+
+        window.history.replaceState(
+            null,
+            "",
+            window.location.pathname +
+            window.location.search
+        );
+
+    }catch(_){}
 
 }
 
@@ -3431,10 +3522,10 @@ async function boot(){
         initializeSupabase();
 
         /*
-         * Resolve the authenticated user first.
+         * Resolve the real Supabase user before Saved data.
          */
 
-        await loadSavedUser();
+        await resolveCurrentUser();
 
         renderCategories();
 
@@ -3446,15 +3537,24 @@ async function boot(){
 
         renderSkeletons();
 
+        /*
+         * Listen for future login/logout/session changes.
+         */
+
         setupAuthListener();
+
+        /*
+         * Load real ads and real Saved records.
+         */
 
         await loadListings();
 
         /*
-         * Process #saved only after:
-         * 1. session is resolved
-         * 2. Saved rows are loaded
-         * 3. listings are loaded
+         * Support:
+         *
+         *     buy-sell.html#saved
+         *
+         * which is used by ad-details.html.
          */
 
         await handleInitialHash();
