@@ -1,4952 +1,4956 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-
-<meta charset="UTF-8">
-
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0">
-
-<title>HAVKAR - Wallet</title>
-
-<link rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-<!-- =========================================================
-     PI NETWORK SDK - TESTNET
-     ========================================================= -->
-
-<script src="https://sdk.minepi.com/pi-sdk.js"></script>
-
-<script>
-Pi.init({
-    version: "2.0",
-    sandbox: true
-});
-</script>
-
-<style>
-
-/* =========================================================
-   GLOBAL
-   ========================================================= */
-
-*{
-    box-sizing:border-box;
-    margin:0;
-    padding:0;
-}
-
-html{
-    scroll-behavior:smooth;
-}
-
-body{
-    font-family:
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Roboto,
-        Arial,
-        sans-serif;
-
-    background:#f5f5f5;
-    color:#333;
-
-    padding-bottom:90px;
-}
-
-button,
-input,
-textarea,
-select{
-    font-family:inherit;
-}
-
-button{
-    cursor:pointer;
-}
-
-button:disabled{
-    opacity:.55;
-    cursor:not-allowed;
-}
-
-
-/* =========================================================
-   HEADER
-   ========================================================= */
-
-.header{
-    background:
-        linear-gradient(
-            135deg,
-            #689f38,
-            #7cb342
-        );
-
-    color:#fff;
-    padding:15px 20px;
-
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-
-    box-shadow:0 2px 10px rgba(0,0,0,.12);
-
-    position:sticky;
-    top:0;
-    z-index:40;
-}
-
-.header-left{
-    display:flex;
-    align-items:center;
-    gap:15px;
-}
-
-.back-btn{
-    border:0;
-    background:none;
-    color:#fff;
-    font-size:24px;
-}
-
-.header h1{
-    font-size:21px;
-}
-
-.icon-btn{
-    width:40px;
-    height:40px;
-
-    border:0;
-    border-radius:50%;
-
-    color:#fff;
-    background:rgba(255,255,255,.2);
-}
-
-
-/* =========================================================
-   ERROR
-   ========================================================= */
-
-#errorContainer{
-    padding:0 20px;
-}
-
-.error{
-    margin-top:15px;
-    padding:14px;
-
-    border-radius:12px;
-
-    background:#ffebee;
-    color:#c62828;
-
-    word-break:break-word;
-}
-
-
-/* =========================================================
-   BALANCE
-   ========================================================= */
-
-.balance-card{
-    margin:20px;
-    padding:25px;
-
-    border-radius:20px;
-
-    color:#fff;
-
-    background:
-        linear-gradient(
-            135deg,
-            #689f38,
-            #7cb342
-        );
-
-    box-shadow:
-        0 5px 20px rgba(104,159,56,.3);
-}
-
-.balance-label{
-    font-size:14px;
-    opacity:.9;
-}
-
-.balance-amount{
-    font-size:40px;
-    font-weight:800;
-    margin:8px 0 4px;
-}
-
-.balance-subtitle{
-    font-size:14px;
-    opacity:.85;
-    margin-bottom:20px;
-}
-
-.card-actions{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:10px;
-}
-
-.action-btn{
-    border:0;
-    border-radius:12px;
-
-    padding:14px 5px;
-
-    color:#fff;
-    background:rgba(255,255,255,.2);
-
-    font-weight:600;
-}
-
-.action-btn i{
-    display:block;
-    font-size:22px;
-    margin-bottom:7px;
-}
-
-.action-btn:active{
-    transform:scale(.97);
-}
-
-
-/* =========================================================
-   PI NETWORK
-   ========================================================= */
-
-.pi-card{
-    margin:0 20px 20px;
-
-    padding:20px;
-
-    border-radius:20px;
-
-    background:
-        linear-gradient(
-            145deg,
-            #ffffff 0%,
-            #f7f9ff 100%
-        );
-
-    border:1px solid #e1e5ef;
-
-    box-shadow:
-        0 4px 15px rgba(0,0,0,.07);
-}
-
-.pi-header{
-    display:flex;
-    align-items:center;
-    gap:13px;
-
-    margin-bottom:15px;
-}
-
-.pi-logo{
-    width:50px;
-    height:50px;
-
-    border-radius:50%;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    background:#6f3fa0;
-    color:#fff;
-
-    font-size:24px;
-    font-weight:900;
-
-    box-shadow:
-        0 5px 12px rgba(111,63,160,.25);
-}
-
-.pi-title{
-    font-size:20px;
-    font-weight:800;
-}
-
-.pi-subtitle{
-    margin-top:3px;
-
-    color:#888;
-    font-size:12px;
-}
-
-.pi-user{
-    display:none;
-
-    margin-bottom:14px;
-
-    padding:10px 12px;
-
-    border-radius:10px;
-
-    background:#f4f1f8;
-    color:#68418d;
-
-    font-size:13px;
-    font-weight:700;
-}
-
-.pi-description{
-    color:#666;
-
-    font-size:13px;
-    line-height:1.6;
-
-    margin-bottom:15px;
-}
-
-.pi-input-label{
-    display:block;
-
-    font-size:13px;
-    font-weight:700;
-
-    margin-bottom:7px;
-}
-
-.pi-input{
-    width:100%;
-
-    padding:13px;
-
-    margin-bottom:10px;
-
-    border:1px solid #ddd;
-    border-radius:10px;
-
-    font-size:16px;
-
-    outline:none;
-}
-
-.pi-input:focus{
-    border-color:#7b4bab;
-}
-
-.pi-pay-button{
-    width:100%;
-
-    border:0;
-    border-radius:11px;
-
-    padding:14px;
-
-    background:
-        linear-gradient(
-            135deg,
-            #673ab7,
-            #8e5ac8
-        );
-
-    color:#fff;
-
-    font-size:16px;
-    font-weight:800;
-
-    box-shadow:
-        0 6px 16px rgba(103,58,183,.22);
-}
-
-.pi-pay-button:active{
-    transform:scale(.985);
-}
-
-.pi-status{
-    display:none;
-
-    margin-top:12px;
-
-    padding:11px;
-
-    border-radius:10px;
-
-    font-size:13px;
-
-    line-height:1.5;
-
-    word-break:break-word;
-}
-
-.pi-status.success{
-    display:block;
-
-    background:#e8f5e9;
-    color:#2e7d32;
-}
-
-.pi-status.error{
-    display:block;
-
-    background:#ffebee;
-    color:#c62828;
-}
-
-.pi-status.info{
-    display:block;
-
-    background:#f3eef8;
-    color:#633c87;
-}
-
-
-/* =========================================================
-   PORTFOLIO
-   ========================================================= */
-
-.portfolio-bar{
-    margin:0 20px 20px;
-
-    padding:15px 18px;
-
-    border-radius:15px;
-
-    background:#fff;
-
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-
-    box-shadow:0 2px 8px rgba(0,0,0,.06);
-}
-
-.portfolio-label{
-    color:#777;
-    font-size:14px;
-}
-
-.currency-select{
-    border:0;
-
-    background:#f4f8ef;
-    color:#558b2f;
-
-    padding:10px 12px;
-
-    border-radius:10px;
-
-    font-weight:700;
-}
-
-
-/* =========================================================
-   SECTIONS
-   ========================================================= */
-
-.section-title{
-    padding:20px 20px 10px;
-
-    font-size:19px;
-    font-weight:700;
-}
-
-.market-header{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-
-    padding-right:20px;
-}
-
-.market-refresh{
-    border:0;
-
-    width:38px;
-    height:38px;
-
-    border-radius:50%;
-
-    background:#fff;
-    color:#689f38;
-
-    box-shadow:0 2px 8px rgba(0,0,0,.08);
-}
-
-.price-time{
-    padding:0 20px 8px;
-
-    color:#999;
-    font-size:12px;
-}
-
-.list{
-    padding:0 20px;
-}
-
-
-/* =========================================================
-   WALLET ITEM
-   ========================================================= */
-
-.item{
-    background:#fff;
-
-    border-radius:15px;
-
-    padding:15px;
-    margin-bottom:12px;
-
-    display:flex;
-    align-items:center;
-
-    gap:14px;
-
-    box-shadow:0 2px 8px rgba(0,0,0,.06);
-}
-
-.circle{
-    width:46px;
-    height:46px;
-
-    min-width:46px;
-
-    border-radius:50%;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    background:#e8f5e9;
-    color:#558b2f;
-
-    font-size:22px;
-    font-weight:700;
-}
-
-.info{
-    flex:1;
-    min-width:0;
-}
-
-.name{
-    font-weight:700;
-    margin-bottom:4px;
-}
-
-.small{
-    color:#999;
-    font-size:13px;
-    word-break:break-word;
-}
-
-.amount{
-    text-align:right;
-
-    font-weight:700;
-    white-space:nowrap;
-}
-
-.positive{
-    color:#2e7d32;
-}
-
-.negative{
-    color:#c62828;
-}
-
-.loading,
-.empty{
-    background:#fff;
-
-    border-radius:15px;
-
-    padding:20px;
-    margin-bottom:12px;
-
-    text-align:center;
-    color:#999;
-}
-
-
-/* =========================================================
-   CRYPTO MARKET
-   ========================================================= */
-
-.market-item{
-    background:#fff;
-
-    border-radius:15px;
-
-    padding:15px;
-    margin-bottom:12px;
-
-    display:flex;
-    align-items:center;
-
-    gap:14px;
-
-    box-shadow:0 2px 8px rgba(0,0,0,.06);
-
-    cursor:pointer;
-}
-
-.market-item:active{
-    transform:scale(.985);
-}
-
-.market-icon{
-    width:46px;
-    height:46px;
-
-    min-width:46px;
-
-    border-radius:50%;
-
-    background:#f4f8ef;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    color:#689f38;
-
-    font-weight:800;
-    font-size:18px;
-}
-
-.market-info{
-    flex:1;
-    min-width:0;
-}
-
-.market-name{
-    font-weight:700;
-}
-
-.market-symbol{
-    color:#999;
-    font-size:12px;
-    margin-top:3px;
-}
-
-.market-price{
-    text-align:right;
-    font-weight:700;
-    white-space:nowrap;
-}
-
-.market-change{
-    font-size:12px;
-    margin-top:4px;
-}
-
-.market-up{
-    color:#2e7d32;
-}
-
-.market-down{
-    color:#c62828;
-}
-
-
-/* =========================================================
-   BOTTOM NAV
-   ========================================================= */
-
-.bottom-nav{
-    position:fixed;
-
-    left:0;
-    right:0;
-    bottom:0;
-
-    height:75px;
-
-    background:#fff;
-
-    display:flex;
-    justify-content:space-around;
-    align-items:center;
-
-    box-shadow:0 -2px 10px rgba(0,0,0,.1);
-
-    z-index:50;
-}
-
-.nav-item{
-    min-width:60px;
-
-    color:#999;
-    text-align:center;
-
-    font-size:12px;
-}
-
-.nav-item i{
-    display:block;
-
-    font-size:21px;
-    margin-bottom:5px;
-}
-
-.nav-item.active{
-    color:#7cb342;
-}
-
-
-/* =========================================================
-   MODALS
-   ========================================================= */
-
-.modal{
-    display:none;
-
-    position:fixed;
-    inset:0;
-
-    background:rgba(0,0,0,.55);
-
-    z-index:100;
-
-    align-items:center;
-    justify-content:center;
-
-    padding:15px;
-}
-
-.modal-box{
-    width:100%;
-    max-width:460px;
-
-    max-height:92vh;
-    overflow:auto;
-
-    background:#fff;
-
-    border-radius:20px;
-    padding:22px;
-}
-
-.modal-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-
-    margin-bottom:20px;
-}
-
-.modal-header h2{
-    font-size:24px;
-}
-
-.close{
-    width:38px;
-    height:38px;
-
-    border:0;
-    border-radius:50%;
-
-    background:#eee;
-
-    font-size:21px;
-}
-
-
-/* =========================================================
-   FORM
-   ========================================================= */
-
-label{
-    display:block;
-
-    font-weight:600;
-    margin-bottom:7px;
-}
-
-input,
-textarea,
-select{
-    width:100%;
-
-    padding:13px;
-
-    border:1px solid #ddd;
-    border-radius:10px;
-
-    font-size:16px;
-
-    margin-bottom:15px;
-
-    outline:none;
-}
-
-input:focus,
-textarea:focus,
-select:focus{
-    border-color:#7cb342;
-}
-
-.primary{
-    width:100%;
-
-    border:0;
-
-    padding:14px;
-
-    border-radius:11px;
-
-    background:#7cb342;
-    color:#fff;
-
-    font-size:16px;
-    font-weight:700;
-}
-
-.status{
-    margin-top:12px;
-
-    padding:10px;
-
-    border-radius:9px;
-
-    display:none;
-
-    word-break:break-word;
-}
-
-.status.success{
-    display:block;
-
-    background:#e8f5e9;
-    color:#2e7d32;
-}
-
-.status.error{
-    display:block;
-
-    background:#ffebee;
-    color:#c62828;
-}
-
-
-/* =========================================================
-   USER ID
-   ========================================================= */
-
-.user-id{
-    background:#f4f8ef;
-
-    padding:15px;
-
-    border-radius:12px;
-
-    word-break:break-all;
-
-    font-size:13px;
-
-    margin-bottom:15px;
-}
-
-.copy{
-    border:0;
-
-    background:#689f38;
-    color:#fff;
-
-    padding:10px 14px;
-
-    border-radius:8px;
-}
-
-
-/* =========================================================
-   CRYPTO DETAILS
-   ========================================================= */
-
-.crypto-details-header{
-    display:flex;
-    align-items:center;
-
-    gap:12px;
-
-    margin-bottom:10px;
-}
-
-.crypto-details-icon{
-    width:55px;
-    height:55px;
-
-    min-width:55px;
-
-    border-radius:50%;
-
-    background:#f4f8ef;
-    color:#689f38;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    font-size:25px;
-    font-weight:800;
-
-    overflow:hidden;
-}
-
-.crypto-details-icon img{
-    width:55px;
-    height:55px;
-
-    object-fit:cover;
-}
-
-.crypto-details-name{
-    font-size:22px;
-    font-weight:800;
-}
-
-.crypto-details-symbol{
-    color:#999;
-    font-size:13px;
-}
-
-.crypto-details-price{
-    font-size:34px;
-    font-weight:800;
-
-    margin:15px 0 4px;
-}
-
-.crypto-details-change{
-    font-size:14px;
-    font-weight:700;
-
-    margin-bottom:18px;
-}
-
-
-/* =========================================================
-   BUY SELL
-   ========================================================= */
-
-.trade-panel{
-    margin-top:18px;
-
-    padding:16px;
-
-    border-radius:15px;
-
-    background:#f7f9f4;
-
-    border:1px solid #e6eadf;
-}
-
-.trade-title{
-    font-size:18px;
-    font-weight:800;
-
-    margin-bottom:12px;
-}
-
-.trade-side{
-    display:grid;
-
-    grid-template-columns:1fr 1fr;
-
-    gap:10px;
-
-    margin-bottom:15px;
-}
-
-.trade-side button{
-    border:0;
-
-    padding:13px;
-
-    border-radius:11px;
-
-    font-size:15px;
-    font-weight:800;
-
-    background:#e8e8e8;
-    color:#555;
-}
-
-.trade-side button.active-buy{
-    background:#2e7d32;
-    color:#fff;
-}
-
-.trade-side button.active-sell{
-    background:#c62828;
-    color:#fff;
-}
-
-.trade-balance{
-    padding:11px;
-
-    border-radius:10px;
-
-    background:#fff;
-
-    margin-bottom:12px;
-
-    font-size:13px;
-    color:#777;
-}
-
-.trade-balance strong{
-    color:#333;
-}
-
-.trade-input-label{
-    display:block;
-
-    font-size:13px;
-    font-weight:700;
-
-    margin-bottom:6px;
-}
-
-.trade-preview{
-    background:#fff;
-
-    border-radius:11px;
-
-    padding:13px;
-    margin-bottom:12px;
-
-    line-height:1.8;
-
-    font-size:14px;
-}
-
-.trade-preview-row{
-    display:flex;
-
-    justify-content:space-between;
-
-    gap:10px;
-}
-
-.trade-preview-row strong{
-    text-align:right;
-}
-
-.buy-button{
-    background:#2e7d32 !important;
-}
-
-.sell-button{
-    background:#c62828 !important;
-}
-
-
-/* =========================================================
-   STATS
-   ========================================================= */
-
-.crypto-stats{
-    display:grid;
-
-    grid-template-columns:1fr 1fr;
-
-    gap:10px;
-
-    margin-top:15px;
-}
-
-.crypto-stat{
-    background:#f7f9f4;
-
-    border-radius:12px;
-
-    padding:14px;
-}
-
-.crypto-stat-label{
-    color:#999;
-
-    font-size:12px;
-
-    margin-bottom:6px;
-}
-
-.crypto-stat-value{
-    font-weight:700;
-
-    font-size:14px;
-
-    word-break:break-word;
-}
-
-.crypto-description{
-    margin-top:15px;
-
-    padding:15px;
-
-    background:#f7f9f4;
-
-    border-radius:12px;
-
-    color:#666;
-
-    line-height:1.6;
-
-    font-size:13px;
-
-    max-height:160px;
-    overflow:auto;
-}
-
-
-/* =========================================================
-   RESPONSIVE
-   ========================================================= */
-
-@media(max-width:420px){
-
-    .balance-card,
-    .pi-card{
-        margin-left:15px;
-        margin-right:15px;
-    }
-
-    .balance-card{
-        padding:20px;
-    }
-
-    .list{
-        padding:0 15px;
-    }
-
-    .section-title{
-        padding-left:15px;
-    }
-
-    .market-header{
-        padding-right:15px;
-    }
-
-    .price-time{
-        padding-left:15px;
-    }
-
-    .portfolio-bar{
-        margin-left:15px;
-        margin-right:15px;
-    }
-
-    .crypto-details-price{
-        font-size:30px;
-    }
-
-}
-
-@media(prefers-reduced-motion:reduce){
-
-    *{
-        scroll-behavior:auto !important;
-        transition:none !important;
-    }
-
-}
-
-</style>
-
-</head>
-
-<body>
-
-
-<!-- =========================================================
-     HEADER
-     ========================================================= -->
-
-<div class="header">
-
-    <div class="header-left">
-
-        <button
-            class="back-btn"
-            type="button"
-            onclick="goHome()"
-            aria-label="Back">
-
-            <i class="fas fa-arrow-left"></i>
-
-        </button>
-
-        <h1>Wallet</h1>
-
-    </div>
-
-    <button
-        class="icon-btn"
-        id="walletRefreshButton"
-        type="button"
-        onclick="refreshWallet()"
-        aria-label="Refresh">
-
-        <i class="fas fa-rotate"></i>
-
-    </button>
+<!DOCTYPE html>  <html lang="en">  
+<head>  <meta charset="UTF-8">  <meta name="viewport"  
+content="width=device-width, initial-scale=1.0">
+
+<title>HAVKAR - Wallet</title>  <link rel="stylesheet"  
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  <!-- =========================================================  
+     PI NETWORK SDK - TESTNET  
+     ========================================================= -->  <script src="https://sdk.minepi.com/pi-sdk.js"></script>  <script>  
+Pi.init({  
+    version: "2.0",  
+    sandbox: true  
+});  
+</script>  <style>  
+  
+/* =========================================================  
+   GLOBAL  
+   ========================================================= */  
+  
+*{  
+    box-sizing:border-box;  
+    margin:0;  
+    padding:0;  
+}  
+  
+html{  
+    scroll-behavior:smooth;  
+}  
+  
+body{  
+    font-family:  
+        -apple-system,  
+        BlinkMacSystemFont,  
+        "Segoe UI",  
+        Roboto,  
+        Arial,  
+        sans-serif;  
+  
+    background:#f5f5f5;  
+    color:#333;  
+  
+    padding-bottom:90px;  
+}  
+  
+button,  
+input,  
+textarea,  
+select{  
+    font-family:inherit;  
+}  
+  
+button{  
+    cursor:pointer;  
+}  
+  
+button:disabled{  
+    opacity:.55;  
+    cursor:not-allowed;  
+}  
+  
+  
+/* =========================================================  
+   HEADER  
+   ========================================================= */  
+  
+.header{  
+    background:  
+        linear-gradient(  
+            135deg,  
+            #689f38,  
+            #7cb342  
+        );  
+  
+    color:#fff;  
+    padding:15px 20px;  
+  
+    display:flex;  
+    align-items:center;  
+    justify-content:space-between;  
+  
+    box-shadow:0 2px 10px rgba(0,0,0,.12);  
+  
+    position:sticky;  
+    top:0;  
+    z-index:40;  
+}  
+  
+.header-left{  
+    display:flex;  
+    align-items:center;  
+    gap:15px;  
+}  
+  
+.back-btn{  
+    border:0;  
+    background:none;  
+    color:#fff;  
+    font-size:24px;  
+}  
+  
+.header h1{  
+    font-size:21px;  
+}  
+  
+.icon-btn{  
+    width:40px;  
+    height:40px;  
+  
+    border:0;  
+    border-radius:50%;  
+  
+    color:#fff;  
+    background:rgba(255,255,255,.2);  
+}  
+  
+  
+/* =========================================================  
+   ERROR  
+   ========================================================= */  
+  
+#errorContainer{  
+    padding:0 20px;  
+}  
+  
+.error{  
+    margin-top:15px;  
+    padding:14px;  
+  
+    border-radius:12px;  
+  
+    background:#ffebee;  
+    color:#c62828;  
+  
+    word-break:break-word;  
+}  
+  
+  
+/* =========================================================  
+   BALANCE  
+   ========================================================= */  
+  
+.balance-card{  
+    margin:20px;  
+    padding:25px;  
+  
+    border-radius:20px;  
+  
+    color:#fff;  
+  
+    background:  
+        linear-gradient(  
+            135deg,  
+            #689f38,  
+            #7cb342  
+        );  
+  
+    box-shadow:  
+        0 5px 20px rgba(104,159,56,.3);  
+}  
+  
+.balance-label{  
+    font-size:14px;  
+    opacity:.9;  
+}  
+  
+.balance-amount{  
+    font-size:40px;  
+    font-weight:800;  
+    margin:8px 0 4px;  
+}  
+  
+.balance-subtitle{  
+    font-size:14px;  
+    opacity:.85;  
+    margin-bottom:20px;  
+}  
+  
+.card-actions{  
+    display:grid;  
+    grid-template-columns:repeat(3,1fr);  
+    gap:10px;  
+}  
+  
+.action-btn{  
+    border:0;  
+    border-radius:12px;  
+  
+    padding:14px 5px;  
+  
+    color:#fff;  
+    background:rgba(255,255,255,.2);  
+  
+    font-weight:600;  
+}  
+  
+.action-btn i{  
+    display:block;  
+    font-size:22px;  
+    margin-bottom:7px;  
+}  
+  
+.action-btn:active{  
+    transform:scale(.97);  
+}  
+  
+  
+/* =========================================================  
+   PI NETWORK  
+   ========================================================= */  
+  
+.pi-card{  
+    margin:0 20px 20px;  
+  
+    padding:20px;  
+  
+    border-radius:20px;  
+  
+    background:  
+        linear-gradient(  
+            145deg,  
+            #ffffff 0%,  
+            #f7f9ff 100%  
+        );  
+  
+    border:1px solid #e1e5ef;  
+  
+    box-shadow:  
+        0 4px 15px rgba(0,0,0,.07);  
+}  
+  
+.pi-header{  
+    display:flex;  
+    align-items:center;  
+    gap:13px;  
+  
+    margin-bottom:15px;  
+}  
+  
+.pi-logo{  
+    width:50px;  
+    height:50px;  
+  
+    border-radius:50%;  
+  
+    display:flex;  
+    align-items:center;  
+    justify-content:center;  
+  
+    background:#6f3fa0;  
+    color:#fff;  
+  
+    font-size:24px;  
+    font-weight:900;  
+  
+    box-shadow:  
+        0 5px 12px rgba(111,63,160,.25);  
+}  
+  
+.pi-title{  
+    font-size:20px;  
+    font-weight:800;  
+}  
+  
+.pi-subtitle{  
+    margin-top:3px;  
+  
+    color:#888;  
+    font-size:12px;  
+}  
+  
+.pi-user{  
+    display:none;  
+  
+    margin-bottom:14px;  
+  
+    padding:10px 12px;  
+  
+    border-radius:10px;  
+  
+    background:#f4f1f8;  
+    color:#68418d;  
+  
+    font-size:13px;  
+    font-weight:700;  
+}  
+  
+.pi-description{  
+    color:#666;  
+  
+    font-size:13px;  
+    line-height:1.6;  
+  
+    margin-bottom:15px;  
+}  
+  
+.pi-input-label{  
+    display:block;  
+  
+    font-size:13px;  
+    font-weight:700;  
+  
+    margin-bottom:7px;  
+}  
+  
+.pi-input{  
+    width:100%;  
+  
+    padding:13px;  
+  
+    margin-bottom:10px;  
+  
+    border:1px solid #ddd;  
+    border-radius:10px;  
+  
+    font-size:16px;  
+  
+    outline:none;  
+}  
+  
+.pi-input:focus{  
+    border-color:#7b4bab;  
+}  
+  
+.pi-pay-button{  
+    width:100%;  
+  
+    border:0;  
+    border-radius:11px;  
+  
+    padding:14px;  
+  
+    background:  
+        linear-gradient(  
+            135deg,  
+            #673ab7,  
+            #8e5ac8  
+        );  
+  
+    color:#fff;  
+  
+    font-size:16px;  
+    font-weight:800;  
+  
+    box-shadow:  
+        0 6px 16px rgba(103,58,183,.22);  
+}  
+  
+.pi-pay-button:active{  
+    transform:scale(.985);  
+}  
+  
+.pi-status{  
+    display:none;  
+  
+    margin-top:12px;  
+  
+    padding:11px;  
+  
+    border-radius:10px;  
+  
+    font-size:13px;  
+  
+    line-height:1.5;  
+  
+    word-break:break-word;  
+}  
+  
+.pi-status.success{  
+    display:block;  
+  
+    background:#e8f5e9;  
+    color:#2e7d32;  
+}  
+  
+.pi-status.error{  
+    display:block;  
+  
+    background:#ffebee;  
+    color:#c62828;  
+}  
+  
+.pi-status.info{  
+    display:block;  
+  
+    background:#f3eef8;  
+    color:#633c87;  
+}  
+  
+  
+/* =========================================================  
+   PORTFOLIO  
+   ========================================================= */  
+  
+.portfolio-bar{  
+    margin:0 20px 20px;  
+  
+    padding:15px 18px;  
+  
+    border-radius:15px;  
+  
+    background:#fff;  
+  
+    display:flex;  
+    align-items:center;  
+    justify-content:space-between;  
+  
+    box-shadow:0 2px 8px rgba(0,0,0,.06);  
+}  
+  
+.portfolio-label{  
+    color:#777;  
+    font-size:14px;  
+}  
+  
+.currency-select{  
+    border:0;  
+  
+    background:#f4f8ef;  
+    color:#558b2f;  
+  
+    padding:10px 12px;  
+  
+    border-radius:10px;  
+  
+    font-weight:700;  
+}  
+  
+  
+/* =========================================================  
+   SECTIONS  
+   ========================================================= */  
+  
+.section-title{  
+    padding:20px 20px 10px;  
+  
+    font-size:19px;  
+    font-weight:700;  
+}  
+  
+.market-header{  
+    display:flex;  
+    align-items:center;  
+    justify-content:space-between;  
+  
+    padding-right:20px;  
+}  
+  
+.market-refresh{  
+    border:0;  
+  
+    width:38px;  
+    height:38px;  
+  
+    border-radius:50%;  
+  
+    background:#fff;  
+    color:#689f38;  
+  
+    box-shadow:0 2px 8px rgba(0,0,0,.08);  
+}  
+  
+.price-time{  
+    padding:0 20px 8px;  
+  
+    color:#999;  
+    font-size:12px;  
+}  
+  
+.list{  
+    padding:0 20px;  
+}  
+  
+  
+/* =========================================================  
+   WALLET ITEM  
+   ========================================================= */  
+  
+.item{  
+    background:#fff;  
+  
+    border-radius:15px;  
+  
+    padding:15px;  
+    margin-bottom:12px;  
+  
+    display:flex;  
+    align-items:center;  
+  
+    gap:14px;  
+  
+    box-shadow:0 2px 8px rgba(0,0,0,.06);  
+}  
+  
+.circle{  
+    width:46px;  
+    height:46px;  
+  
+    min-width:46px;  
+  
+    border-radius:50%;  
+  
+    display:flex;  
+    align-items:center;  
+    justify-content:center;  
+  
+    background:#e8f5e9;  
+    color:#558b2f;  
+  
+    font-size:22px;  
+    font-weight:700;  
+}  
+  
+.info{  
+    flex:1;  
+    min-width:0;  
+}  
+  
+.name{  
+    font-weight:700;  
+    margin-bottom:4px;  
+}  
+  
+.small{  
+    color:#999;  
+    font-size:13px;  
+    word-break:break-word;  
+}  
+  
+.amount{  
+    text-align:right;  
+  
+    font-weight:700;  
+    white-space:nowrap;  
+}  
+  
+.positive{  
+    color:#2e7d32;  
+}  
+  
+.negative{  
+    color:#c62828;  
+}  
+  
+.loading,  
+.empty{  
+    background:#fff;  
+  
+    border-radius:15px;  
+  
+    padding:20px;  
+    margin-bottom:12px;  
+  
+    text-align:center;  
+    color:#999;  
+}  
+  
+  
+/* =========================================================  
+   CRYPTO MARKET  
+   ========================================================= */  
+  
+.market-item{  
+    background:#fff;  
+  
+    border-radius:15px;  
+  
+    padding:15px;  
+    margin-bottom:12px;  
+  
+    display:flex;  
+    align-items:center;  
+  
+    gap:14px;  
+  
+    box-shadow:0 2px 8px rgba(0,0,0,.06);  
+  
+    cursor:pointer;  
+}  
+  
+.market-item:active{  
+    transform:scale(.985);  
+}  
+  
+.market-icon{  
+    width:46px;  
+    height:46px;  
+  
+    min-width:46px;  
+  
+    border-radius:50%;  
+  
+    background:#f4f8ef;  
+  
+    display:flex;  
+    align-items:center;  
+    justify-content:center;  
+  
+    color:#689f38;  
+  
+    font-weight:800;  
+    font-size:18px;  
+}  
+  
+.market-info{  
+    flex:1;  
+    min-width:0;  
+}  
+  
+.market-name{  
+    font-weight:700;  
+}  
+  
+.market-symbol{  
+    color:#999;  
+    font-size:12px;  
+    margin-top:3px;  
+}  
+  
+.market-price{  
+    text-align:right;  
+    font-weight:700;  
+    white-space:nowrap;  
+}  
+  
+.market-change{  
+    font-size:12px;  
+    margin-top:4px;  
+}  
+  
+.market-up{  
+    color:#2e7d32;  
+}  
+  
+.market-down{  
+    color:#c62828;  
+}  
+  
+  
+/* =========================================================  
+   BOTTOM NAV  
+   ========================================================= */  
+  
+.bottom-nav{  
+    position:fixed;  
+  
+    left:0;  
+    right:0;  
+    bottom:0;  
+  
+    height:75px;  
+  
+    background:#fff;  
+  
+    display:flex;  
+    justify-content:space-around;  
+    align-items:center;  
+  
+    box-shadow:0 -2px 10px rgba(0,0,0,.1);  
+  
+    z-index:50;  
+}  
+  
+.nav-item{  
+    min-width:60px;  
+  
+    color:#999;  
+    text-align:center;  
+  
+    font-size:12px;  
+}  
+  
+.nav-item i{  
+    display:block;  
+  
+    font-size:21px;  
+    margin-bottom:5px;  
+}  
+  
+.nav-item.active{  
+    color:#7cb342;  
+}  
+  
+  
+/* =========================================================  
+   MODALS  
+   ========================================================= */  
+  
+.modal{  
+    display:none;  
+  
+    position:fixed;  
+    inset:0;  
+  
+    background:rgba(0,0,0,.55);  
+  
+    z-index:100;  
+  
+    align-items:center;  
+    justify-content:center;  
+  
+    padding:15px;  
+}  
+  
+.modal-box{  
+    width:100%;  
+    max-width:460px;  
+  
+    max-height:92vh;  
+    overflow:auto;  
+  
+    background:#fff;  
+  
+    border-radius:20px;  
+    padding:22px;  
+}  
+  
+.modal-header{  
+    display:flex;  
+    justify-content:space-between;  
+    align-items:center;  
+  
+    margin-bottom:20px;  
+}  
+  
+.modal-header h2{  
+    font-size:24px;  
+}  
+  
+.close{  
+    width:38px;  
+    height:38px;  
+  
+    border:0;  
+    border-radius:50%;  
+  
+    background:#eee;  
+  
+    font-size:21px;  
+}  
+  
+  
+/* =========================================================  
+   FORM  
+   ========================================================= */  
+  
+label{  
+    display:block;  
+  
+    font-weight:600;  
+    margin-bottom:7px;  
+}  
+  
+input,  
+textarea,  
+select{  
+    width:100%;  
+  
+    padding:13px;  
+  
+    border:1px solid #ddd;  
+    border-radius:10px;  
+  
+    font-size:16px;  
+  
+    margin-bottom:15px;  
+  
+    outline:none;  
+}  
+  
+input:focus,  
+textarea:focus,  
+select:focus{  
+    border-color:#7cb342;  
+}  
+  
+.primary{  
+    width:100%;  
+  
+    border:0;  
+  
+    padding:14px;  
+  
+    border-radius:11px;  
+  
+    background:#7cb342;  
+    color:#fff;  
+  
+    font-size:16px;  
+    font-weight:700;  
+}  
+  
+.status{  
+    margin-top:12px;  
+  
+    padding:10px;  
+  
+    border-radius:9px;  
+  
+    display:none;  
+  
+    word-break:break-word;  
+}  
+  
+.status.success{  
+    display:block;  
+  
+    background:#e8f5e9;  
+    color:#2e7d32;  
+}  
+  
+.status.error{  
+    display:block;  
+  
+    background:#ffebee;  
+    color:#c62828;  
+}  
+  
+  
+/* =========================================================  
+   USER ID  
+   ========================================================= */  
+  
+.user-id{  
+    background:#f4f8ef;  
+  
+    padding:15px;  
+  
+    border-radius:12px;  
+  
+    word-break:break-all;  
+  
+    font-size:13px;  
+  
+    margin-bottom:15px;  
+}  
+  
+.copy{  
+    border:0;  
+  
+    background:#689f38;  
+    color:#fff;  
+  
+    padding:10px 14px;  
+  
+    border-radius:8px;  
+}  
+  
+  
+/* =========================================================  
+   CRYPTO DETAILS  
+   ========================================================= */  
+  
+.crypto-details-header{  
+    display:flex;  
+    align-items:center;  
+  
+    gap:12px;  
+  
+    margin-bottom:10px;  
+}  
+  
+.crypto-details-icon{  
+    width:55px;  
+    height:55px;  
+  
+    min-width:55px;  
+  
+    border-radius:50%;  
+  
+    background:#f4f8ef;  
+    color:#689f38;  
+  
+    display:flex;  
+    align-items:center;  
+    justify-content:center;  
+  
+    font-size:25px;  
+    font-weight:800;  
+  
+    overflow:hidden;  
+}  
+  
+.crypto-details-icon img{  
+    width:55px;  
+    height:55px;  
+  
+    object-fit:cover;  
+}  
+  
+.crypto-details-name{  
+    font-size:22px;  
+    font-weight:800;  
+}  
+  
+.crypto-details-symbol{  
+    color:#999;  
+    font-size:13px;  
+}  
+  
+.crypto-details-price{  
+    font-size:34px;  
+    font-weight:800;  
+  
+    margin:15px 0 4px;  
+}  
+  
+.crypto-details-change{  
+    font-size:14px;  
+    font-weight:700;  
+  
+    margin-bottom:18px;  
+}  
+  
+  
+/* =========================================================  
+   BUY SELL  
+   ========================================================= */  
+  
+.trade-panel{  
+    margin-top:18px;  
+  
+    padding:16px;  
+  
+    border-radius:15px;  
+  
+    background:#f7f9f4;  
+  
+    border:1px solid #e6eadf;  
+}  
+  
+.trade-title{  
+    font-size:18px;  
+    font-weight:800;  
+  
+    margin-bottom:12px;  
+}  
+  
+.trade-side{  
+    display:grid;  
+  
+    grid-template-columns:1fr 1fr;  
+  
+    gap:10px;  
+  
+    margin-bottom:15px;  
+}  
+  
+.trade-side button{  
+    border:0;  
+  
+    padding:13px;  
+  
+    border-radius:11px;  
+  
+    font-size:15px;  
+    font-weight:800;  
+  
+    background:#e8e8e8;  
+    color:#555;  
+}  
+  
+.trade-side button.active-buy{  
+    background:#2e7d32;  
+    color:#fff;  
+}  
+  
+.trade-side button.active-sell{  
+    background:#c62828;  
+    color:#fff;  
+}  
+  
+.trade-balance{  
+    padding:11px;  
+  
+    border-radius:10px;  
+  
+    background:#fff;  
+  
+    margin-bottom:12px;  
+  
+    font-size:13px;  
+    color:#777;  
+}  
+  
+.trade-balance strong{  
+    color:#333;  
+}  
+  
+.trade-input-label{  
+    display:block;  
+  
+    font-size:13px;  
+    font-weight:700;  
+  
+    margin-bottom:6px;  
+}  
+  
+.trade-preview{  
+    background:#fff;  
+  
+    border-radius:11px;  
+  
+    padding:13px;  
+    margin-bottom:12px;  
+  
+    line-height:1.8;  
+  
+    font-size:14px;  
+}  
+  
+.trade-preview-row{  
+    display:flex;  
+  
+    justify-content:space-between;  
+  
+    gap:10px;  
+}  
+  
+.trade-preview-row strong{  
+    text-align:right;  
+}  
+  
+.buy-button{  
+    background:#2e7d32 !important;  
+}  
+  
+.sell-button{  
+    background:#c62828 !important;  
+}  
+  
+  
+/* =========================================================  
+   STATS  
+   ========================================================= */  
+  
+.crypto-stats{  
+    display:grid;  
+  
+    grid-template-columns:1fr 1fr;  
+  
+    gap:10px;  
+  
+    margin-top:15px;  
+}  
+  
+.crypto-stat{  
+    background:#f7f9f4;  
+  
+    border-radius:12px;  
+  
+    padding:14px;  
+}  
+  
+.crypto-stat-label{  
+    color:#999;  
+  
+    font-size:12px;  
+  
+    margin-bottom:6px;  
+}  
+  
+.crypto-stat-value{  
+    font-weight:700;  
+  
+    font-size:14px;  
+  
+    word-break:break-word;  
+}  
+  
+.crypto-description{  
+    margin-top:15px;  
+  
+    padding:15px;  
+  
+    background:#f7f9f4;  
+  
+    border-radius:12px;  
+  
+    color:#666;  
+  
+    line-height:1.6;  
+  
+    font-size:13px;  
+  
+    max-height:160px;  
+    overflow:auto;  
+}  
+  
+  
+  
+  
+/* =========================================================  
+   STELLAR / XLM  
+   ========================================================= */  
+  
+.stellar-card{margin:0 20px 20px;padding:20px;border-radius:20px;background:linear-gradient(145deg,#fff 0%,#f6f7ff 100%);border:1px solid #e1e5ef;box-shadow:0 4px 15px rgba(0,0,0,.07);}  
+.stellar-header{display:flex;align-items:center;gap:13px;margin-bottom:15px;}  
+.stellar-logo{width:50px;height:50px;min-width:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#111827;color:#fff;font-size:18px;font-weight:900;}  
+.stellar-title{font-size:20px;font-weight:800;}  
+.stellar-subtitle{margin-top:3px;color:#888;font-size:12px;}  
+.stellar-description{color:#666;font-size:13px;line-height:1.6;margin-bottom:15px;}  
+.stellar-address{display:none;margin-bottom:14px;padding:12px;border-radius:10px;background:#f3f4f6;color:#374151;font-size:12px;font-weight:700;word-break:break-all;}  
+.stellar-connect-button,.stellar-disconnect-button{width:100%;border:0;border-radius:11px;padding:14px;color:#fff;font-size:16px;font-weight:800;}  
+.stellar-connect-button{background:linear-gradient(135deg,#111827,#374151);}  
+.stellar-disconnect-button{display:none;margin-top:10px;background:#c62828;}  
+.stellar-status{display:none;margin-top:12px;padding:11px;border-radius:10px;font-size:13px;line-height:1.5;word-break:break-word;}  
+.stellar-status.success{display:block;background:#e8f5e9;color:#2e7d32;}  
+.stellar-status.error{display:block;background:#ffebee;color:#c62828;}  
+.stellar-status.info{display:block;background:#eef2ff;color:#3730a3;}  
+  
+/* =========================================================  
+   RESPONSIVE  
+   ========================================================= */  
+  
+@media(max-width:420px){  
+  
+    .balance-card,  
+    .pi-card,  
+    .stellar-card{  
+        margin-left:15px;  
+        margin-right:15px;  
+    }  
+  
+    .balance-card{  
+        padding:20px;  
+    }  
+  
+    .list{  
+        padding:0 15px;  
+    }  
+  
+    .section-title{  
+        padding-left:15px;  
+    }  
+  
+    .market-header{  
+        padding-right:15px;  
+    }  
+  
+    .price-time{  
+        padding-left:15px;  
+    }  
+  
+    .portfolio-bar{  
+        margin-left:15px;  
+        margin-right:15px;  
+    }  
+  
+    .crypto-details-price{  
+        font-size:30px;  
+    }  
+  
+}  
+  
+@media(prefers-reduced-motion:reduce){  
+  
+    *{  
+        scroll-behavior:auto !important;  
+        transition:none !important;  
+    }  
+  
+}  
+  
+</style>  </head>  <body>  <!-- =========================================================  
+     HEADER  
+     ========================================================= -->  <div class="header">  <div class="header-left">  
+
+    <button  
+        class="back-btn"  
+        type="button"  
+        onclick="goHome()"  
+        aria-label="Back">  
+
+        <i class="fas fa-arrow-left"></i>  
+
+    </button>  
+
+    <h1>Wallet</h1>  
+
+</div>  
+
+<button  
+    class="icon-btn"  
+    id="walletRefreshButton"  
+    type="button"  
+    onclick="refreshWallet()"  
+    aria-label="Refresh">  
+
+    <i class="fas fa-rotate"></i>  
+
+</button>
+
+</div>  <div id="errorContainer"></div>  <!-- =========================================================  
+     HAVKAR INTERNAL BALANCE  
+     ========================================================= -->  <div class="balance-card">  <div class="balance-label">  
+    Total Balance  
+</div>  
+
+<div  
+    class="balance-amount"  
+    id="totalBalance">  
+
+    €0.00  
+
+</div>  
+
+<div class="balance-subtitle">  
+    Portfolio value  
+</div>  
+
+<div class="card-actions">  
+
+    <button  
+        class="action-btn"  
+        type="button"  
+        onclick="openSend()">  
+
+        <i class="fas fa-paper-plane"></i>  
+        Send  
+
+    </button>  
+
+    <button  
+        class="action-btn"  
+        type="button"  
+        onclick="openReceive()">  
+
+        <i class="fas fa-download"></i>  
+        Receive  
+
+    </button>  
+
+    <button  
+        class="action-btn"  
+        type="button"  
+        onclick="openExchange()">  
+
+        <i class="fas fa-exchange-alt"></i>  
+        Exchange  
+
+    </button>  
 
 </div>
 
+</div>  <!-- =========================================================  
+     PI NETWORK TESTNET PAYMENT  
+     ========================================================= -->  <div class="pi-card">  <div class="pi-header">  
 
-<div id="errorContainer"></div>
+    <div class="pi-logo">  
+        π  
+    </div>  
+
+    <div>  
+
+        <div class="pi-title">  
+            Pi Network  
+        </div>  
+
+        <div class="pi-subtitle">  
+            Testnet Payment  
+        </div>  
+
+    </div>  
+
+</div>  
 
 
-<!-- =========================================================
-     HAVKAR INTERNAL BALANCE
-     ========================================================= -->
+<div  
+    class="pi-user"  
+    id="piUser">  
 
-<div class="balance-card">
+    Pi user: <span id="piUsername"></span>  
 
-    <div class="balance-label">
-        Total Balance
-    </div>
+</div>  
 
-    <div
-        class="balance-amount"
-        id="totalBalance">
 
-        €0.00
+<div class="pi-description">  
 
-    </div>
+    Pay HAVKAR directly with Pi.  
+    This payment uses the Pi Testnet and is separate  
+    from the internal HAVKAR Supabase wallet.  
 
-    <div class="balance-subtitle">
-        Portfolio value
-    </div>
+</div>  
 
-    <div class="card-actions">
 
-        <button
-            class="action-btn"
-            type="button"
-            onclick="openSend()">
+<label  
+    class="pi-input-label"  
+    for="piAmount">  
 
-            <i class="fas fa-paper-plane"></i>
-            Send
+    Amount in Pi  
 
-        </button>
+</label>  
 
-        <button
-            class="action-btn"
-            type="button"
-            onclick="openReceive()">
+<input  
+    id="piAmount"  
+    class="pi-input"  
+    type="number"  
+    min="0.01"  
+    step="0.0001"  
+    inputmode="decimal"  
+    placeholder="0.10">  
 
-            <i class="fas fa-download"></i>
-            Receive
 
-        </button>
+<button  
+    id="piPayButton"  
+    class="pi-pay-button"  
+    type="button"  
+    onclick="startPiPayment()">  
 
-        <button
-            class="action-btn"
-            type="button"
-            onclick="openExchange()">
+    <i class="fas fa-coins"></i>  
+    Pay with Pi  
 
-            <i class="fas fa-exchange-alt"></i>
-            Exchange
+</button>  
 
-        </button>
 
-    </div>
+<div  
+    id="piStatus"  
+    class="pi-status">  
+</div>
+
+</div>  <!-- =========================================================  
+     STELLAR / XLM WALLET  
+     ========================================================= -->  <div class="stellar-card">  
+    <div class="stellar-header">  
+        <div class="stellar-logo">XLM</div>  
+        <div>  
+            <div class="stellar-title">Stellar</div>  
+            <div class="stellar-subtitle">XLM Wallet • Public Network</div>  
+        </div>  
+    </div>  
+    <div class="stellar-description">  
+        Connect your Stellar wallet to HAVKAR. HAVKAR never stores your private key or recovery phrase.  
+    </div>  
+    <div id="stellarAddress" class="stellar-address"></div>  
+    <button id="stellarConnectButton" class="stellar-connect-button" type="button" onclick="connectHAVKARStellar()">  
+        <i class="fas fa-wallet"></i> Connect Stellar Wallet  
+    </button>  
+    <button id="stellarDisconnectButton" class="stellar-disconnect-button" type="button" onclick="disconnectHAVKARStellar()">  
+        <i class="fas fa-link-slash"></i> Disconnect Wallet  
+    </button>  
+    <div id="stellarStatus" class="stellar-status"></div>  
+</div>  <!-- =========================================================  
+     CURRENCY  
+     ========================================================= -->  <div class="portfolio-bar">  <div class="portfolio-label">  
+    Show portfolio in  
+</div>  
+
+<select  
+    id="displayCurrency"  
+    class="currency-select"  
+    onchange="changeDisplayCurrency()">  
+
+    <option value="EUR">  
+        EUR €  
+    </option>  
+
+    <option value="USD">  
+        USD $  
+    </option>  
+
+    <option value="CHF">  
+        CHF  
+    </option>  
+
+    <option value="GBP">  
+        GBP £  
+    </option>  
+
+</select>
+
+</div>  <!-- =========================================================  
+     WALLETS  
+     ========================================================= -->  <div class="section-title">  
+    My Wallets  
+</div>  <div  
+    class="list"  
+    id="walletList">  <div class="loading">  
+    Loading wallet...  
+</div>
+
+</div>  <!-- =========================================================  
+     CRYPTO MARKET  
+     ========================================================= -->  <div class="market-header">  <div class="section-title">  
+    Cryptocurrency Prices  
+</div>  
+
+<button  
+    class="market-refresh"  
+    id="cryptoRefreshButton"  
+    type="button"  
+    onclick="loadCryptoPrices()">  
+
+    <i class="fas fa-rotate"></i>  
+
+</button>
+
+</div>  <div  
+    class="price-time"  
+    id="priceUpdated">  Loading prices...
+
+</div>  <div  
+    class="list"  
+    id="cryptoList">  <div class="loading">  
+    Loading cryptocurrency prices...  
+</div>
+
+</div>  <!-- =========================================================  
+     TRANSACTIONS  
+     ========================================================= -->  <div class="section-title">  
+    Recent Transactions  
+</div>  <div  
+    class="list"  
+    id="transactionList">  <div class="loading">  
+    Loading transactions...  
+</div>
+
+</div>  <!-- =========================================================  
+     SEND MODAL  
+     ========================================================= -->  <div  
+    class="modal"  
+    id="sendModal">  <div class="modal-box">  
+
+    <div class="modal-header">  
+
+        <h2>Send Money</h2>  
+
+        <button  
+            class="close"  
+            type="button"  
+            onclick="closeModal('sendModal')">  
+
+            ×  
+
+        </button>  
+
+    </div>  
+
+    <label>  
+        Receiver User ID  
+    </label>  
+
+    <input  
+        id="receiverId"  
+        type="text"  
+        autocomplete="off"  
+        placeholder="Enter User ID">  
+
+    <label>  
+        Amount (€)  
+    </label>  
+
+    <input  
+        id="sendAmount"  
+        type="number"  
+        min="0.01"  
+        step="0.01"  
+        inputmode="decimal"  
+        placeholder="0.00">  
+
+    <label>  
+        Note  
+    </label>  
+
+    <textarea  
+        id="sendNote"  
+        rows="3"  
+        placeholder="Optional note"></textarea>  
+
+    <button  
+        class="primary"  
+        id="sendButton"  
+        type="button"  
+        onclick="sendMoney()">  
+
+        Send Money  
+
+    </button>  
+
+    <div  
+        id="sendStatus"  
+        class="status">  
+    </div>  
 
 </div>
 
+</div>  <!-- =========================================================  
+     RECEIVE MODAL  
+     ========================================================= -->  <div  
+    class="modal"  
+    id="receiveModal">  <div class="modal-box">  
 
-<!-- =========================================================
-     PI NETWORK TESTNET PAYMENT
-     ========================================================= -->
+    <div class="modal-header">  
 
-<div class="pi-card">
+        <h2>Receive Money</h2>  
 
-    <div class="pi-header">
+        <button  
+            class="close"  
+            type="button"  
+            onclick="closeModal('receiveModal')">  
 
-        <div class="pi-logo">
-            π
-        </div>
+            ×  
 
-        <div>
+        </button>  
 
-            <div class="pi-title">
-                Pi Network
-            </div>
+    </div>  
 
-            <div class="pi-subtitle">
-                Testnet Payment
-            </div>
+    <p style="margin-bottom:10px;">  
+        Your HAVKAR User ID  
+    </p>  
 
-        </div>
+    <div  
+        class="user-id"  
+        id="myUserId">  
 
-    </div>
+        Loading...  
 
+    </div>  
 
-    <div
-        class="pi-user"
-        id="piUser">
+    <button  
+        class="copy"  
+        type="button"  
+        onclick="copyId()">  
 
-        Pi user: <span id="piUsername"></span>
+        <i class="fas fa-copy"></i>  
+        Copy ID  
 
-    </div>
-
-
-    <div class="pi-description">
-
-        Pay HAVKAR directly with Pi.
-        This payment uses the Pi Testnet and is separate
-        from the internal HAVKAR Supabase wallet.
-
-    </div>
-
-
-    <label
-        class="pi-input-label"
-        for="piAmount">
-
-        Amount in Pi
-
-    </label>
-
-    <input
-        id="piAmount"
-        class="pi-input"
-        type="number"
-        min="0.01"
-        step="0.0001"
-        inputmode="decimal"
-        placeholder="0.10">
-
-
-    <button
-        id="piPayButton"
-        class="pi-pay-button"
-        type="button"
-        onclick="startPiPayment()">
-
-        <i class="fas fa-coins"></i>
-        Pay with Pi
-
-    </button>
-
-
-    <div
-        id="piStatus"
-        class="pi-status">
-    </div>
+    </button>  
 
 </div>
 
+</div>  <!-- =========================================================  
+     EXCHANGE MODAL  
+     ========================================================= -->  <div  
+    class="modal"  
+    id="exchangeModal">  <div class="modal-box">  
 
-<!-- =========================================================
-     CURRENCY
-     ========================================================= -->
+    <div class="modal-header">  
 
-<div class="portfolio-bar">
+        <h2>Exchange</h2>  
 
-    <div class="portfolio-label">
-        Show portfolio in
-    </div>
+        <button  
+            class="close"  
+            type="button"  
+            onclick="closeModal('exchangeModal')">  
 
-    <select
-        id="displayCurrency"
-        class="currency-select"
-        onchange="changeDisplayCurrency()">
+            ×  
 
-        <option value="EUR">
-            EUR €
-        </option>
+        </button>  
 
-        <option value="USD">
-            USD $
-        </option>
+    </div>  
 
-        <option value="CHF">
-            CHF
-        </option>
+    <p style="  
+        color:#777;  
+        line-height:1.6;  
+    ">  
 
-        <option value="GBP">
-            GBP £
-        </option>
+        Currency exchange is not activated yet.  
 
-    </select>
+    </p>  
 
 </div>
 
+</div>  <!-- =========================================================  
+     CRYPTO DETAILS MODAL  
+     ========================================================= -->  <div  
+    class="modal"  
+    id="cryptoDetailsModal">  <div class="modal-box">  
 
-<!-- =========================================================
-     WALLETS
-     ========================================================= -->
+    <div class="modal-header">  
 
-<div class="section-title">
-    My Wallets
-</div>
+        <h2 id="cryptoDetailsTitle">  
+            Cryptocurrency  
+        </h2>  
 
-<div
-    class="list"
-    id="walletList">
+        <button  
+            class="close"  
+            type="button"  
+            onclick="closeModal('cryptoDetailsModal')">  
 
-    <div class="loading">
-        Loading wallet...
-    </div>
+            ×  
 
-</div>
+        </button>  
 
+    </div>  
 
-<!-- =========================================================
-     CRYPTO MARKET
-     ========================================================= -->
+    <div id="cryptoDetailsContent">  
 
-<div class="market-header">
+        <div class="loading">  
+            Loading...  
+        </div>  
 
-    <div class="section-title">
-        Cryptocurrency Prices
-    </div>
-
-    <button
-        class="market-refresh"
-        id="cryptoRefreshButton"
-        type="button"
-        onclick="loadCryptoPrices()">
-
-        <i class="fas fa-rotate"></i>
-
-    </button>
+    </div>  
 
 </div>
 
-<div
-    class="price-time"
-    id="priceUpdated">
+</div>  <!-- =========================================================  
+     BOTTOM NAV  
+     ========================================================= -->  <div class="bottom-nav">  <div  
+    class="nav-item active"  
+    onclick="goPage('wallet.html')">  
 
-    Loading prices...
+    <i class="fas fa-wallet"></i>  
+    Wallet  
 
-</div>
+</div>  
 
-<div
-    class="list"
-    id="cryptoList">
+<div  
+    class="nav-item"  
+    onclick="goPage('market.html')">  
 
-    <div class="loading">
-        Loading cryptocurrency prices...
-    </div>
+    <i class="fas fa-chart-line"></i>  
+    Market  
 
-</div>
+</div>  
 
+<div  
+    class="nav-item"  
+    onclick="goPage('trade.html')">  
 
-<!-- =========================================================
-     TRANSACTIONS
-     ========================================================= -->
+    <i class="fas fa-exchange-alt"></i>  
+    Trade  
 
-<div class="section-title">
-    Recent Transactions
-</div>
+</div>  
 
-<div
-    class="list"
-    id="transactionList">
+<div  
+    class="nav-item"  
+    onclick="goPage('history.html')">  
 
-    <div class="loading">
-        Loading transactions...
-    </div>
+    <i class="fas fa-history"></i>  
+    History  
 
-</div>
+</div>  
 
+<div  
+    class="nav-item"  
+    onclick="goPage('profile.html')">  
 
-<!-- =========================================================
-     SEND MODAL
-     ========================================================= -->
-
-<div
-    class="modal"
-    id="sendModal">
-
-    <div class="modal-box">
-
-        <div class="modal-header">
-
-            <h2>Send Money</h2>
-
-            <button
-                class="close"
-                type="button"
-                onclick="closeModal('sendModal')">
-
-                ×
-
-            </button>
-
-        </div>
-
-        <label>
-            Receiver User ID
-        </label>
-
-        <input
-            id="receiverId"
-            type="text"
-            autocomplete="off"
-            placeholder="Enter User ID">
-
-        <label>
-            Amount (€)
-        </label>
-
-        <input
-            id="sendAmount"
-            type="number"
-            min="0.01"
-            step="0.01"
-            inputmode="decimal"
-            placeholder="0.00">
-
-        <label>
-            Note
-        </label>
-
-        <textarea
-            id="sendNote"
-            rows="3"
-            placeholder="Optional note"></textarea>
-
-        <button
-            class="primary"
-            id="sendButton"
-            type="button"
-            onclick="sendMoney()">
-
-            Send Money
-
-        </button>
-
-        <div
-            id="sendStatus"
-            class="status">
-        </div>
-
-    </div>
+    <i class="fas fa-user"></i>  
+    Profile  
 
 </div>
 
-
-<!-- =========================================================
-     RECEIVE MODAL
-     ========================================================= -->
-
-<div
-    class="modal"
-    id="receiveModal">
-
-    <div class="modal-box">
-
-        <div class="modal-header">
-
-            <h2>Receive Money</h2>
-
-            <button
-                class="close"
-                type="button"
-                onclick="closeModal('receiveModal')">
-
-                ×
-
-            </button>
-
-        </div>
-
-        <p style="margin-bottom:10px;">
-            Your HAVKAR User ID
-        </p>
-
-        <div
-            class="user-id"
-            id="myUserId">
-
-            Loading...
-
-        </div>
-
-        <button
-            class="copy"
-            type="button"
-            onclick="copyId()">
-
-            <i class="fas fa-copy"></i>
-            Copy ID
-
-        </button>
-
-    </div>
-
-</div>
-
-
-<!-- =========================================================
-     EXCHANGE MODAL
-     ========================================================= -->
-
-<div
-    class="modal"
-    id="exchangeModal">
-
-    <div class="modal-box">
-
-        <div class="modal-header">
-
-            <h2>Exchange</h2>
-
-            <button
-                class="close"
-                type="button"
-                onclick="closeModal('exchangeModal')">
-
-                ×
-
-            </button>
-
-        </div>
-
-        <p style="
-            color:#777;
-            line-height:1.6;
-        ">
-
-            Currency exchange is not activated yet.
-
-        </p>
-
-    </div>
-
-</div>
-
-
-<!-- =========================================================
-     CRYPTO DETAILS MODAL
-     ========================================================= -->
-
-<div
-    class="modal"
-    id="cryptoDetailsModal">
-
-    <div class="modal-box">
-
-        <div class="modal-header">
-
-            <h2 id="cryptoDetailsTitle">
-                Cryptocurrency
-            </h2>
-
-            <button
-                class="close"
-                type="button"
-                onclick="closeModal('cryptoDetailsModal')">
-
-                ×
-
-            </button>
-
-        </div>
-
-        <div id="cryptoDetailsContent">
-
-            <div class="loading">
-                Loading...
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
-
-<!-- =========================================================
-     BOTTOM NAV
-     ========================================================= -->
-
-<div class="bottom-nav">
-
-    <div
-        class="nav-item active"
-        onclick="goPage('wallet.html')">
-
-        <i class="fas fa-wallet"></i>
-        Wallet
-
-    </div>
-
-    <div
-        class="nav-item"
-        onclick="goPage('market.html')">
-
-        <i class="fas fa-chart-line"></i>
-        Market
-
-    </div>
-
-    <div
-        class="nav-item"
-        onclick="goPage('trade.html')">
-
-        <i class="fas fa-exchange-alt"></i>
-        Trade
-
-    </div>
-
-    <div
-        class="nav-item"
-        onclick="goPage('history.html')">
-
-        <i class="fas fa-history"></i>
-        History
-
-    </div>
-
-    <div
-        class="nav-item"
-        onclick="goPage('profile.html')">
-
-        <i class="fas fa-user"></i>
-        Profile
-
-    </div>
-
-</div>
-
-
-<!-- =========================================================
-     SUPABASE
-     ========================================================= -->
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<script>
-
-/* =========================================================
-   SUPABASE
-   ========================================================= */
-
-const SUPABASE_URL =
-    "https://gispovnciifgikvgpzck.supabase.co";
-
-const SUPABASE_KEY =
-    "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq";
-
-const supabaseClient =
-    window.supabase.createClient(
-        SUPABASE_URL,
-        SUPABASE_KEY,
-        {
-            auth:{
-                persistSession:true,
-                autoRefreshToken:true,
-                detectSessionInUrl:false
-            }
-        }
-    );
-
-
-/* =========================================================
-   STATE
-   ========================================================= */
-
-let currentUser = null;
-
-let walletsCache = [];
-
-let cryptoPrices = {};
-
-let selectedCoin = null;
-
-let tradeSide = "BUY";
-
-let piAuthResult = null;
-
-let piPaymentRunning = false;
-
-
-/* =========================================================
-   CRYPTO LIST
-   ========================================================= */
-
-const CRYPTO_LIST = [
-
-    {
-        id:"bitcoin",
-        symbol:"BTC",
-        name:"Bitcoin",
-        icon:"₿"
-    },
-
-    {
-        id:"ethereum",
-        symbol:"ETH",
-        name:"Ethereum",
-        icon:"Ξ"
-    },
-
-    {
-        id:"tether",
-        symbol:"USDT",
-        name:"Tether",
-        icon:"₮"
-    },
-
-    {
-        id:"binancecoin",
-        symbol:"BNB",
-        name:"BNB",
-        icon:"BNB"
-    },
-
-    {
-        id:"solana",
-        symbol:"SOL",
-        name:"Solana",
-        icon:"S"
-    },
-
-    {
-        id:"ripple",
-        symbol:"XRP",
-        name:"XRP",
-        icon:"X"
-    },
-
-    {
-        id:"cardano",
-        symbol:"ADA",
-        name:"Cardano",
-        icon:"A"
-    },
-
-    {
-        id:"dogecoin",
-        symbol:"DOGE",
-        name:"Dogecoin",
-        icon:"Ð"
-    }
-
-];
-
-
-/* =========================================================
-   TIMEOUT
-   ========================================================= */
-
-function withTimeout(
-    promise,
-    milliseconds,
-    message
-){
-
-    return Promise.race([
-
-        promise,
-
-        new Promise(
-            function(_,reject){
-
-                setTimeout(
-                    function(){
-
-                        reject(
-                            new Error(message)
-                        );
-
-                    },
-                    milliseconds
-                );
-
-            }
-        )
-
-    ]);
-
-}
-
-
-/* =========================================================
-   NAVIGATION
-   ========================================================= */
-
-function goPage(page){
-
-    window.location.href =
-        page;
-
-}
-
-function goHome(){
-
-    window.location.href =
-        "index.html";
-
-}
-
-
-/* =========================================================
-   AUTH
-   ========================================================= */
-
-async function getCurrentUser(){
-
-    try{
-
-        const result =
-            await withTimeout(
-                supabaseClient.auth.getSession(),
-                8000,
-                "Authentication timed out."
-            );
-
-        if(result.error){
-
-            throw result.error;
-
-        }
-
-        return result.data?.session?.user || null;
-
-    }
-    catch(error){
-
-        console.error(
-            "Authentication error:",
-            error
-        );
-
-        showError(
-            "Authentication error: " +
-            error.message
-        );
-
-        return null;
-
-    }
-
-}
-
-
-/* =========================================================
-   PI STATUS
-   ========================================================= */
-
-function setPiStatus(
-    message,
-    type
-){
-
-    const element =
-        document.getElementById(
-            "piStatus"
-        );
-
-    if(!element){
-
-        return;
-
-    }
-
-    if(!message){
-
-        element.textContent =
-            "";
-
-        element.className =
-            "pi-status";
-
-        return;
-
-    }
-
-    element.textContent =
-        message;
-
-    element.className =
-        "pi-status " +
-        type;
-
-}
-
-
-/* =========================================================
-   PI AUTHENTICATION
-   ========================================================= */
-
-async function initializePi(){
-
-    const button =
-        document.getElementById(
-            "piPayButton"
-        );
-
-    if(
-        typeof window.Pi ===
-        "undefined"
-    ){
-
-        if(button){
-
-            button.disabled =
-                true;
-
-        }
-
-        setPiStatus(
-            "Pi SDK is not available. Open HAVKAR inside Pi Browser.",
-            "error"
-        );
-
-        return;
-
-    }
-
-    try{
-
-        setPiStatus(
-            "Connecting to Pi Testnet...",
-            "info"
-        );
-
-        piAuthResult =
-            await Pi.authenticate(
-                [
-                    "payments",
-                    "username"
-                ],
-                handleIncompletePiPayment
-            );
-
-        const username =
-            piAuthResult?.user?.username || "";
-
-        const userElement =
-            document.getElementById(
-                "piUser"
-            );
-
-        const usernameElement =
-            document.getElementById(
-                "piUsername"
-            );
-
-        if(username){
-
-            usernameElement.textContent =
-                username;
-
-            userElement.style.display =
-                "block";
-
-        }
-
-        setPiStatus(
-            "Pi Testnet is connected. You can make a test payment.",
-            "success"
-        );
-
-    }
-    catch(error){
-
-        console.error(
-            "Pi authentication error:",
-            error
-        );
-
-        piAuthResult =
-            null;
-
-        setPiStatus(
-            "Pi authentication was not completed: " +
-            (error?.message || "Unknown error"),
-            "error"
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   PI INCOMPLETE PAYMENT
-   ========================================================= */
-
-async function handleIncompletePiPayment(
-    payment
-){
-
-    console.warn(
-        "Incomplete Pi payment found:",
-        payment
-    );
-
-    if(
-        !payment ||
-        !payment.identifier ||
-        !payment.transaction ||
-        !payment.transaction.txid
-    ){
-
-        setPiStatus(
-            "An incomplete Pi payment was found. It must be resolved before a new payment can be started.",
-            "error"
-        );
-
-        return;
-
-    }
-
-    try{
-
-        setPiStatus(
-            "Completing the previous Pi payment...",
-            "info"
-        );
-
-        const response =
-            await fetch(
-                "/api/pi-complete",
-                {
-                    method:"POST",
-
-                    headers:{
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body:JSON.stringify({
-                        paymentId:
-                            payment.identifier,
-
-                        txid:
-                            payment.transaction.txid
-                    })
-                }
-            );
-
-        const data =
-            await response.json()
-                .catch(
-                    function(){
-                        return {};
-                    }
-                );
-
-        if(!response.ok){
-
-            throw new Error(
-                data.error ||
-                "Previous Pi payment completion failed."
-            );
-
-        }
-
-        setPiStatus(
-            "Previous Pi payment was completed successfully.",
-            "success"
-        );
-
-    }
-    catch(error){
-
-        console.error(
-            "Incomplete Pi payment completion error:",
-            error
-        );
-
-        setPiStatus(
-            "The previous Pi payment could not be completed: " +
-            error.message,
-            "error"
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   START PI PAYMENT
-   ========================================================= */
-
-async function startPiPayment(){
-
-    const button =
-        document.getElementById(
-            "piPayButton"
-        );
-
-    const amountInput =
-        document.getElementById(
-            "piAmount"
-        );
-
-    const amount =
-        Number(
-            amountInput?.value
-        );
-
-    if(
-        typeof window.Pi ===
-        "undefined"
-    ){
-
-        setPiStatus(
-            "Pi SDK is not available. Open HAVKAR inside Pi Browser.",
-            "error"
-        );
-
-        return;
-
-    }
-
-    if(!piAuthResult){
-
-        setPiStatus(
-            "Pi is not authenticated yet. Please wait and try again.",
-            "error"
-        );
-
-        await initializePi();
-
-        return;
-
-    }
-
-    if(
-        !Number.isFinite(amount) ||
-        amount <= 0
-    ){
-
-        setPiStatus(
-            "Enter a valid Pi amount.",
-            "error"
-        );
-
-        return;
-
-    }
-
-    if(amount < 0.01){
-
-        setPiStatus(
-            "The minimum test payment is 0.01 Pi.",
-            "error"
-        );
-
-        return;
-
-    }
-
-    if(piPaymentRunning){
-
-        return;
-
-    }
-
-    piPaymentRunning =
-        true;
-
-    button.disabled =
-        true;
-
-    button.innerHTML =
-        '<i class="fas fa-spinner fa-spin"></i> Starting Pi payment...';
-
-    setPiStatus(
-        "Creating Pi Testnet payment...",
-        "info"
-    );
-
-
-    try{
-
-        Pi.createPayment(
-
-            {
-                amount:amount,
-
-                memo:
-                    "HAVKAR Testnet Payment",
-
-                metadata:{
-                    source:
-                        "HAVKAR wallet",
-
-                    network:
-                        "Pi Testnet",
-
-                    createdAt:
-                        new Date().toISOString()
-                }
-            },
-
-            {
-                onReadyForServerApproval:
-                    async function(paymentId){
-
-                        try{
-
-                            setPiStatus(
-                                "Payment created. Waiting for server approval...",
-                                "info"
-                            );
-
-                            const response =
-                                await fetch(
-                                    "/api/pi-approve",
-                                    {
-                                        method:"POST",
-
-                                        headers:{
-                                            "Content-Type":
-                                                "application/json"
-                                        },
-
-                                        body:
-                                            JSON.stringify({
-                                                paymentId:
-                                                    paymentId
-                                            })
-                                    }
-                                );
-
-                            const data =
-                                await response
-                                    .json()
-                                    .catch(
-                                        function(){
-                                            return {};
-                                        }
-                                    );
-
-                            if(!response.ok){
-
-                                throw new Error(
-                                    data.error ||
-                                    "Pi server approval failed."
-                                );
-
-                            }
-
-                            setPiStatus(
-                                "Payment approved. Confirm the transaction in Pi Wallet.",
-                                "info"
-                            );
-
-                        }
-                        catch(error){
-
-                            console.error(
-                                "Pi approval error:",
-                                error
-                            );
-
-                            setPiStatus(
-                                "Pi approval failed: " +
-                                error.message,
-                                "error"
-                            );
-
-                            throw error;
-
-                        }
-
-                    },
-
-
-                onReadyForServerCompletion:
-                    async function(
-                        paymentId,
-                        txid
-                    ){
-
-                        try{
-
-                            setPiStatus(
-                                "Transaction submitted. Completing payment with Pi...",
-                                "info"
-                            );
-
-                            const response =
-                                await fetch(
-                                    "/api/pi-complete",
-                                    {
-                                        method:"POST",
-
-                                        headers:{
-                                            "Content-Type":
-                                                "application/json"
-                                        },
-
-                                        body:
-                                            JSON.stringify({
-                                                paymentId:
-                                                    paymentId,
-
-                                                txid:
-                                                    txid
-                                            })
-                                    }
-                                );
-
-                            const data =
-                                await response
-                                    .json()
-                                    .catch(
-                                        function(){
-                                            return {};
-                                        }
-                                    );
-
-                            if(!response.ok){
-
-                                throw new Error(
-                                    data.error ||
-                                    "Pi server completion failed."
-                                );
-
-                            }
-
-                            setPiStatus(
-                                "Pi payment completed successfully. Transaction ID: " +
-                                txid,
-                                "success"
-                            );
-
-                            amountInput.value =
-                                "";
-
-                        }
-                        catch(error){
-
-                            console.error(
-                                "Pi completion error:",
-                                error
-                            );
-
-                            setPiStatus(
-                                "Pi payment was submitted but server completion failed: " +
-                                error.message,
-                                "error"
-                            );
-
-                            throw error;
-
-                        }
-
-                    },
-
-
-                onCancel:
-                    function(paymentId){
-
-                        console.log(
-                            "Pi payment cancelled:",
-                            paymentId
-                        );
-
-                        setPiStatus(
-                            "Pi payment was cancelled.",
-                            "error"
-                        );
-
-                    },
-
-
-                onError:
-                    function(
-                        error,
-                        payment
-                    ){
-
-                        console.error(
-                            "Pi payment error:",
-                            error,
-                            payment
-                        );
-
-                        setPiStatus(
-                            "Pi payment error: " +
-                            (
-                                error?.message ||
-                                "Unknown error"
-                            ),
-                            "error"
-                        );
-
-                    }
-
-            }
-
-        );
-
-    }
-    catch(error){
-
-        console.error(
-            "Pi createPayment error:",
-            error
-        );
-
-        setPiStatus(
-            "Could not start Pi payment: " +
-            error.message,
-            "error"
-        );
-
-    }
-    finally{
-
-        setTimeout(
-            function(){
-
-                piPaymentRunning =
-                    false;
-
-                button.disabled =
-                    false;
-
-                button.innerHTML =
-                    '<i class="fas fa-coins"></i> Pay with Pi';
-
-            },
-            1000
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   LOAD WALLET
-   ========================================================= */
-
-async function loadWallet(){
-
-    const list =
-        document.getElementById(
-            "walletList"
-        );
-
-    list.innerHTML =
-        '<div class="loading">Loading wallet...</div>';
-
-    const user =
-        await getCurrentUser();
-
-    if(!user){
-
-        currentUser = null;
-
-        walletsCache = [];
-
-        document.getElementById(
-            "totalBalance"
-        ).textContent =
-            "€0.00";
-
-        document.getElementById(
-            "myUserId"
-        ).textContent =
-            "Not logged in";
-
-        list.innerHTML =
-            '<div class="empty">Please log in first.</div>';
-
-        document.getElementById(
-            "transactionList"
-        ).innerHTML =
-            '<div class="empty">Please log in first.</div>';
-
-        return;
-
-    }
-
-    currentUser =
-        user;
-
-    document.getElementById(
-        "myUserId"
-    ).textContent =
-        user.id;
-
-    try{
-
-        const result =
-            await withTimeout(
-
-                supabaseClient
-                    .from("wallets")
-                    .select("*")
-                    .eq(
-                        "user_id",
-                        user.id
-                    ),
-
-                10000,
-
-                "Wallet request timed out."
-
-            );
-
-        if(result.error){
-
-            throw result.error;
-
-        }
-
-        walletsCache =
-            result.data || [];
-
-        renderWallets(
-            walletsCache
-        );
-
-    }
-    catch(error){
-
-        console.error(
-            "Wallet error:",
-            error
-        );
-
-        walletsCache = [];
-
-        list.innerHTML =
-            '<div class="empty">' +
-            'Unable to load wallet.<br><br>' +
-            escapeHtml(error.message) +
-            '</div>';
-
-        showError(
-            "Wallet error: " +
-            error.message
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   WALLET BALANCE
-   ========================================================= */
-
-function getWalletBalance(
-    symbol
-){
-
-    const wallet =
-        walletsCache.find(
-            function(item){
-
-                const currency =
-                    String(
-                        item.currency ||
-                        item.symbol ||
-                        ""
-                    ).toUpperCase();
-
-                return currency ===
-                    String(symbol).toUpperCase();
-
-            }
-        );
-
-    return wallet
-        ? Number(wallet.balance || 0)
-        : 0;
-
-}
-
-
-/* =========================================================
-   RENDER WALLETS
-   ========================================================= */
-
-function renderWallets(
-    wallets
-){
-
-    const list =
-        document.getElementById(
-            "walletList"
-        );
-
-    if(!wallets.length){
-
-        document.getElementById(
-            "totalBalance"
-        ).textContent =
-            "€0.00";
-
-        list.innerHTML =
-            '<div class="empty">' +
-            'No wallet found for this account.' +
-            '</div>';
-
-        return;
-
-    }
-
-    list.innerHTML = "";
-
-    let totalEUR = 0;
-
-    wallets.forEach(
-        function(wallet){
-
-            const currency =
-                String(
-                    wallet.currency ||
-                    wallet.symbol ||
-                    "EUR"
-                ).toUpperCase();
-
-            const balance =
-                Number(
-                    wallet.balance || 0
-                );
-
-            let valueEUR =
-                balance;
-
-            if(
-                currency !== "EUR" &&
-                cryptoPrices[currency]
-            ){
-
-                valueEUR =
-                    balance *
-                    Number(
-                        cryptoPrices[currency].eur || 0
-                    );
-
-            }
-
-            totalEUR +=
-                valueEUR;
-
-            let icon =
-                currency;
-
-            if(currency === "EUR"){
-                icon = "€";
-            }
-
-            if(currency === "BTC"){
-                icon = "₿";
-            }
-
-            if(currency === "ETH"){
-                icon = "Ξ";
-            }
-
-            if(currency === "USDT"){
-                icon = "₮";
-            }
-
-            const item =
-                document.createElement(
-                    "div"
-                );
-
-            item.className =
-                "item";
-
-            item.innerHTML = `
-
-                <div class="circle">
-                    ${escapeHtml(icon)}
-                </div>
-
-                <div class="info">
-
-                    <div class="name">
-                        ${escapeHtml(currency)}
-                    </div>
-
-                    <div class="small">
-
-                        ${formatCrypto(balance)}
-                        ${escapeHtml(currency)}
-
-                        ${
-                            currency !== "EUR"
-                            ? " • €" +
-                              formatMoney(valueEUR)
-                            : ""
-                        }
-
-                    </div>
-
-                </div>
-
-                <div class="amount">
-
-                    €${formatMoney(valueEUR)}
-
-                </div>
-
-            `;
-
-            list.appendChild(
-                item
-            );
-
-        }
-    );
-
-    document.getElementById(
-        "totalBalance"
-    ).textContent =
-        "€" +
-        formatMoney(totalEUR);
-
-}
-
-
-/* =========================================================
-   LOAD CRYPTO PRICES
-   ========================================================= */
-
-async function loadCryptoPrices(){
-
-    const list =
-        document.getElementById(
-            "cryptoList"
-        );
-
-    const updated =
-        document.getElementById(
-            "priceUpdated"
-        );
-
-    const button =
-        document.getElementById(
-            "cryptoRefreshButton"
-        );
-
-    button.disabled =
-        true;
-
-    list.innerHTML =
-        '<div class="loading">Loading cryptocurrency prices...</div>';
-
-    updated.textContent =
-        "Updating prices...";
-
-    const ids =
-        CRYPTO_LIST
-            .map(
-                coin => coin.id
-            )
-            .join(",");
-
-    const url =
-        "https://api.coingecko.com/api/v3/simple/price" +
-        "?ids=" +
-        encodeURIComponent(ids) +
-        "&vs_currencies=eur" +
-        "&include_24hr_change=true";
-
-    try{
-
-        const response =
-            await withTimeout(
-
-                fetch(
-                    url,
-                    {
-                        method:"GET",
-
-                        headers:{
-                            "Accept":
-                                "application/json"
-                        }
-                    }
-                ),
-
-                10000,
-
-                "Cryptocurrency price request timed out."
-
-            );
-
-        if(!response.ok){
-
-            throw new Error(
-                "CoinGecko HTTP " +
-                response.status
-            );
-
-        }
-
-        const data =
-            await response.json();
-
-        cryptoPrices = {};
-
-        CRYPTO_LIST.forEach(
-            function(coin){
-
-                if(data[coin.id]){
-
-                    cryptoPrices[
-                        coin.symbol
-                    ] =
-                        data[coin.id];
-
-                }
-
-            }
-        );
-
-        renderCryptoPrices();
-
-        if(currentUser){
-
-            renderWallets(
-                walletsCache
-            );
-
-        }
-
-        updated.textContent =
-            "Updated: " +
-            new Date()
-                .toLocaleTimeString();
-
-    }
-    catch(error){
-
-        console.error(
-            "Crypto price error:",
-            error
-        );
-
-        list.innerHTML =
-            '<div class="empty">' +
-            'Cryptocurrency prices unavailable.' +
-            '<br><br>' +
-            escapeHtml(error.message) +
-            '</div>';
-
-        updated.textContent =
-            "Price update unavailable";
-
-    }
-    finally{
-
-        button.disabled =
-            false;
-
-    }
-
-}
-
-
-/* =========================================================
-   RENDER CRYPTO
-   ========================================================= */
-
-function renderCryptoPrices(){
-
-    const list =
-        document.getElementById(
-            "cryptoList"
-        );
-
-    list.innerHTML = "";
-
-    let count = 0;
-
-    CRYPTO_LIST.forEach(
-        function(coin){
-
-            const price =
-                cryptoPrices[
-                    coin.symbol
-                ];
-
-            if(!price){
-
-                return;
-
-            }
-
-            count++;
-
-            const eur =
-                Number(
-                    price.eur || 0
-                );
-
-            const change =
-                Number(
-                    price.eur_24h_change || 0
-                );
-
-            const changeClass =
-                change >= 0
-                ? "market-up"
-                : "market-down";
-
-            const sign =
-                change >= 0
-                ? "+"
-                : "";
-
-            const item =
-                document.createElement(
-                    "div"
-                );
-
-            item.className =
-                "market-item";
-
-            item.setAttribute(
-                "role",
-                "button"
-            );
-
-            item.setAttribute(
-                "tabindex",
-                "0"
-            );
-
-            item.addEventListener(
-                "click",
-                function(){
-
-                    openCryptoDetails(
-                        coin.id
-                    );
-
-                }
-            );
-
-            item.addEventListener(
-                "keydown",
-                function(event){
-
-                    if(
-                        event.key === "Enter" ||
-                        event.key === " "
-                    ){
-
-                        event.preventDefault();
-
-                        openCryptoDetails(
-                            coin.id
-                        );
-
-                    }
-
-                }
-            );
-
-            item.innerHTML = `
-
-                <div class="market-icon">
-                    ${escapeHtml(coin.icon)}
-                </div>
-
-                <div class="market-info">
-
-                    <div class="market-name">
-                        ${escapeHtml(coin.name)}
-                    </div>
-
-                    <div class="market-symbol">
-                        ${escapeHtml(coin.symbol)}
-                    </div>
-
-                </div>
-
-                <div class="market-price">
-
-                    €${formatMarketPrice(eur)}
-
-                    <div
-                        class="market-change ${changeClass}">
-
-                        ${sign}${change.toFixed(2)}%
-
-                    </div>
-
-                </div>
-
-            `;
-
-            list.appendChild(
-                item
-            );
-
-        }
-    );
-
-    if(!count){
-
-        list.innerHTML =
-            '<div class="empty">' +
-            'No cryptocurrency prices available.' +
-            '</div>';
-
-    }
-
-}
-
-
-/* =========================================================
-   OPEN CRYPTO DETAILS
-   ========================================================= */
-
-async function openCryptoDetails(
-    coinId
-){
-
-    const modal =
-        document.getElementById(
-            "cryptoDetailsModal"
-        );
-
-    const title =
-        document.getElementById(
-            "cryptoDetailsTitle"
-        );
-
-    const content =
-        document.getElementById(
-            "cryptoDetailsContent"
-        );
-
-    const localCoin =
-        CRYPTO_LIST.find(
-            coin => coin.id === coinId
-        );
-
-    selectedCoin =
-        localCoin || null;
-
-    modal.style.display =
-        "flex";
-
-    title.textContent =
-        localCoin
-        ? localCoin.name
-        : "Cryptocurrency";
-
-    content.innerHTML =
-        '<div class="loading">Loading cryptocurrency details...</div>';
-
-    try{
-
-        const response =
-            await withTimeout(
-
-                fetch(
-                    "https://api.coingecko.com/api/v3/coins/" +
-                    encodeURIComponent(coinId) +
-                    "?localization=false" +
-                    "&tickers=false" +
-                    "&market_data=true" +
-                    "&community_data=false" +
-                    "&developer_data=false" +
-                    "&sparkline=false"
-                ),
-
-                12000,
-
-                "Cryptocurrency details timed out."
-
-            );
-
-        if(!response.ok){
-
-            throw new Error(
-                "CoinGecko HTTP " +
-                response.status
-            );
-
-        }
-
-        const coin =
-            await response.json();
-
-        renderCryptoDetails(
-            coin
-        );
-
-    }
-    catch(error){
-
-        console.error(
-            "Crypto detail error:",
-            error
-        );
-
-        content.innerHTML =
-            '<div class="empty">' +
-            'Unable to load details.<br><br>' +
-            escapeHtml(error.message) +
-            '</div>';
-
-    }
-
-}
-
-
-/* =========================================================
-   RENDER CRYPTO DETAILS
-   ========================================================= */
-
-function renderCryptoDetails(
-    coin
-){
-
-    const title =
-        document.getElementById(
-            "cryptoDetailsTitle"
-        );
-
-    const content =
-        document.getElementById(
-            "cryptoDetailsContent"
-        );
-
-    const market =
-        coin.market_data || {};
-
-    const symbol =
-        String(
-            coin.symbol || ""
-        ).toUpperCase();
-
-    const name =
-        coin.name ||
-        "Cryptocurrency";
-
-    const currentPrice =
-        Number(
-            market.current_price?.eur || 0
-        );
-
-    const change24 =
-        Number(
-            market.price_change_percentage_24h || 0
-        );
-
-    const high24 =
-        Number(
-            market.high_24h?.eur || 0
-        );
-
-    const low24 =
-        Number(
-            market.low_24h?.eur || 0
-        );
-
-    const marketCap =
-        Number(
-            market.market_cap?.eur || 0
-        );
-
-    const volume =
-        Number(
-            market.total_volume?.eur || 0
-        );
-
-    const rank =
-        coin.market_cap_rank || "-";
-
-    const image =
-        coin.image?.small || "";
-
-    const description =
-        coin.description?.en
-        ? stripHtml(
-            coin.description.en
-        )
-        : "";
-
-    title.textContent =
-        name;
-
-    const changeClass =
-        change24 >= 0
-        ? "market-up"
-        : "market-down";
-
-    const sign =
-        change24 >= 0
-        ? "+"
-        : "";
-
-    const iconHtml =
-        image
-        ? `
-            <img
-                src="${escapeHtml(image)}"
-                alt="${escapeHtml(name)}">
-          `
-        : escapeHtml(symbol);
-
-    const cryptoBalance =
-        getWalletBalance(
-            symbol
-        );
-
-    content.innerHTML = `
-
-        <div class="crypto-details-header">
-
-            <div class="crypto-details-icon">
-                ${iconHtml}
-            </div>
-
-            <div>
-
-                <div class="crypto-details-name">
-                    ${escapeHtml(name)}
-                </div>
-
-                <div class="crypto-details-symbol">
-                    ${escapeHtml(symbol)}
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <div class="crypto-details-price">
-            €${formatMarketPrice(currentPrice)}
-        </div>
-
-
-        <div
-            class="crypto-details-change ${changeClass}">
-
-            ${sign}${change24.toFixed(2)}% &nbsp; 24h
-
-        </div>
-
-
-        <div class="trade-panel">
-
-            <div class="trade-title">
-                Buy / Sell ${escapeHtml(symbol)}
-            </div>
-
-
-            <div class="trade-side">
-
-                <button
-                    id="buySideButton"
-                    type="button"
-                    class="active-buy"
-                    onclick="setTradeSide('BUY')">
-
-                    BUY
-
-                </button>
-
-                <button
-                    id="sellSideButton"
-                    type="button"
-                    onclick="setTradeSide('SELL')">
-
-                    SELL
-
-                </button>
-
-            </div>
-
-
-            <div class="trade-balance">
-
-                Your ${escapeHtml(symbol)} balance:
-
-                <strong id="tradeCryptoBalance">
-
-                    ${formatCrypto(cryptoBalance)}
-                    ${escapeHtml(symbol)}
-
-                </strong>
-
-            </div>
-
-
-            <label
-                class="trade-input-label"
-                for="tradeAmount">
-
-                Amount in ${escapeHtml(symbol)}
-
-            </label>
-
-
-            <input
-                id="tradeAmount"
-                type="number"
-                min="0"
-                step="any"
-                inputmode="decimal"
-                placeholder="0.00000000"
-                oninput="updateTradePreview">
-
-
-            <div
-                id="tradePreview"
-                class="trade-preview">
-
-                <div class="trade-preview-row">
-
-                    <span>Price</span>
-
-                    <strong>
-                        €${formatMarketPrice(currentPrice)}
-                    </strong>
-
-                </div>
-
-                <div class="trade-preview-row">
-
-                    <span>Total</span>
-
-                    <strong id="tradeTotal">
-                        €0.00
-                    </strong>
-
-                </div>
-
-            </div>
-
-
-            <button
-                id="tradeExecuteButton"
-                class="primary buy-button"
-                type="button"
-                onclick="executeCryptoTrade()">
-
-                BUY ${escapeHtml(symbol)}
-
-            </button>
-
-
-            <div
-                id="tradeStatus"
-                class="status">
-            </div>
-
-        </div>
-
-
-        <div class="crypto-stats">
-
-            <div class="crypto-stat">
-
-                <div class="crypto-stat-label">
-                    24h High
-                </div>
-
-                <div class="crypto-stat-value">
-                    €${formatMarketPrice(high24)}
-                </div>
-
-            </div>
-
-
-            <div class="crypto-stat">
-
-                <div class="crypto-stat-label">
-                    24h Low
-                </div>
-
-                <div class="crypto-stat-value">
-                    €${formatMarketPrice(low24)}
-                </div>
-
-            </div>
-
-
-            <div class="crypto-stat">
-
-                <div class="crypto-stat-label">
-                    Market Cap
-                </div>
-
-                <div class="crypto-stat-value">
-                    €${formatLargeNumber(marketCap)}
-                </div>
-
-            </div>
-
-
-            <div class="crypto-stat">
-
-                <div class="crypto-stat-label">
-                    24h Volume
-                </div>
-
-                <div class="crypto-stat-value">
-                    €${formatLargeNumber(volume)}
-                </div>
-
-            </div>
-
-
-            <div class="crypto-stat">
-
-                <div class="crypto-stat-label">
-                    Market Rank
-                </div>
-
-                <div class="crypto-stat-value">
-                    #${escapeHtml(rank)}
-                </div>
-
-            </div>
-
-
-            <div class="crypto-stat">
-
-                <div class="crypto-stat-label">
-                    Symbol
-                </div>
-
-                <div class="crypto-stat-value">
-                    ${escapeHtml(symbol)}
-                </div>
-
-            </div>
-
-        </div>
-
-
-        ${
-            description
-            ? `
-                <div class="crypto-description">
-                    ${escapeHtml(
-                        description.substring(
-                            0,
-                            1200
-                        )
-                    )}
-                </div>
-              `
-            : ""
-        }
-
-    `;
-
-    const tradeAmount =
-        document.getElementById(
-            "tradeAmount"
-        );
-
-    if(tradeAmount){
-
-        tradeAmount.addEventListener(
-            "input",
-            updateTradePreview
-        );
-
-    }
-
-    tradeSide =
-        "BUY";
-
-}
-
-
-/* =========================================================
-   SET BUY / SELL
-   ========================================================= */
-
-function setTradeSide(
-    side
-){
-
-    tradeSide =
-        side;
-
-    const buy =
-        document.getElementById(
-            "buySideButton"
-        );
-
-    const sell =
-        document.getElementById(
-            "sellSideButton"
-        );
-
-    const execute =
-        document.getElementById(
-            "tradeExecuteButton"
-        );
-
-    if(!buy || !sell || !execute){
-
-        return;
-
-    }
-
-    buy.classList.remove(
-        "active-buy"
-    );
-
-    sell.classList.remove(
-        "active-sell"
-    );
-
-    execute.classList.remove(
-        "buy-button",
-        "sell-button"
-    );
-
-    if(side === "BUY"){
-
-        buy.classList.add(
-            "active-buy"
-        );
-
-        execute.classList.add(
-            "buy-button"
-        );
-
-        execute.textContent =
-            "BUY " +
-            (
-                selectedCoin
-                ? selectedCoin.symbol
-                : ""
-            );
-
-    }
-    else{
-
-        sell.classList.add(
-            "active-sell"
-        );
-
-        execute.classList.add(
-            "sell-button"
-        );
-
-        execute.textContent =
-            "SELL " +
-            (
-                selectedCoin
-                ? selectedCoin.symbol
-                : ""
-            );
-
-    }
-
-    clearStatus(
-        "tradeStatus"
-    );
-
-    updateTradePreview();
-
-}
-
-
-/* =========================================================
-   TRADE PREVIEW
-   ========================================================= */
-
-function updateTradePreview(){
-
-    if(!selectedCoin){
-
-        return;
-
-    }
-
-    const input =
-        document.getElementById(
-            "tradeAmount"
-        );
-
-    const total =
-        document.getElementById(
-            "tradeTotal"
-        );
-
-    if(!input || !total){
-
-        return;
-
-    }
-
-    const amount =
-        Number(
-            input.value
-        );
-
-    const price =
-        Number(
-            cryptoPrices[
-                selectedCoin.symbol
-            ]?.eur || 0
-        );
-
-    if(
-        !Number.isFinite(amount) ||
-        amount <= 0 ||
-        !Number.isFinite(price) ||
-        price <= 0
-    ){
-
-        total.textContent =
-            "€0.00";
-
-        return;
-
-    }
-
-    total.textContent =
-        "€" +
-        formatMoney(
-            amount * price
-        );
-
-}
-
-
-/* =========================================================
-   EXECUTE CRYPTO TRADE
-   ========================================================= */
-
-async function executeCryptoTrade(){
-
-    const button =
-        document.getElementById(
-            "tradeExecuteButton"
-        );
-
-    const input =
-        document.getElementById(
-            "tradeAmount"
-        );
-
-    if(!currentUser){
-
-        showStatus(
-            "tradeStatus",
-            "Please log in first.",
-            "error"
-        );
-
-        return;
-
-    }
-
-    if(!selectedCoin){
-
-        showStatus(
-            "tradeStatus",
-            "No cryptocurrency selected.",
-            "error"
-        );
-
-        return;
-
-    }
-
-    const amount =
-        Number(
-            input?.value
-        );
-
-    const price =
-        Number(
-            cryptoPrices[
-                selectedCoin.symbol
-            ]?.eur || 0
-        );
-
-    if(
-        !Number.isFinite(amount) ||
-        amount <= 0
-    ){
-
-        showStatus(
-            "tradeStatus",
-            "Enter a valid cryptocurrency amount.",
-            "error"
-        );
-
-        return;
-
-    }
-
-    if(
-        !Number.isFinite(price) ||
-        price <= 0
-    ){
-
-        showStatus(
-            "tradeStatus",
-            "Current cryptocurrency price is unavailable.",
-            "error"
-        );
-
-        return;
-
-    }
-
-    const totalEUR =
-        amount *
-        price;
-
-    if(
-        !Number.isFinite(totalEUR) ||
-        totalEUR <= 0
-    ){
-
-        showStatus(
-            "tradeStatus",
-            "Invalid transaction total.",
-            "error"
-        );
-
-        return;
-
-    }
-
-    if(tradeSide === "SELL"){
-
-        const balance =
-            getWalletBalance(
-                selectedCoin.symbol
-            );
-
-        if(amount > balance){
-
-            showStatus(
-                "tradeStatus",
-                "Insufficient " +
-                selectedCoin.symbol +
-                " balance.",
-                "error"
-            );
-
-            return;
-
-        }
-
-    }
-
-    button.disabled =
-        true;
-
-    button.textContent =
-        tradeSide === "BUY"
-        ? "BUYING..."
-        : "SELLING...";
-
-    clearStatus(
-        "tradeStatus"
-    );
-
-    try{
-
-        const result =
-            await withTimeout(
-
-                supabaseClient.rpc(
-                    "trade_crypto",
-                    {
-                        p_side:
-                            tradeSide,
-
-                        p_symbol:
-                            selectedCoin.symbol,
-
-                        p_amount:
-                            amount,
-
-                        p_price_eur:
-                            price
-                    }
-                ),
-
-                15000,
-
-                "Trade request timed out."
-
-            );
-
-        if(result.error){
-
-            throw result.error;
-
-        }
-
-        showStatus(
-            "tradeStatus",
-            tradeSide === "BUY"
-            ? "BUY completed successfully."
-            : "SELL completed successfully.",
-            "success"
-        );
-
-        input.value =
-            "";
-
-        await loadWallet();
-
-        await loadTransactions();
-
-        const balance =
-            getWalletBalance(
-                selectedCoin.symbol
-            );
-
-        const balanceElement =
-            document.getElementById(
-                "tradeCryptoBalance"
-            );
-
-        if(balanceElement){
-
-            balanceElement.textContent =
-                formatCrypto(balance) +
-                " " +
-                selectedCoin.symbol;
-
-        }
-
-        updateTradePreview();
-
-    }
-    catch(error){
-
-        console.error(
-            "Crypto trade error:",
-            error
-        );
-
-        showStatus(
-            "tradeStatus",
-            "Trade failed: " +
-            error.message,
-            "error"
-        );
-
-    }
-    finally{
-
-        button.disabled =
-            false;
-
-        button.textContent =
-            tradeSide === "BUY"
-            ? "BUY " +
-              (
-                  selectedCoin
-                  ? selectedCoin.symbol
-                  : ""
-              )
-            : "SELL " +
-              (
-                  selectedCoin
-                  ? selectedCoin.symbol
-                  : ""
-              );
-
-    }
-
-}
-
-
-/* =========================================================
-   TRANSACTIONS
-   ========================================================= */
-
-async function loadTransactions(){
-
-    const list =
-        document.getElementById(
-            "transactionList"
-        );
-
-    if(!currentUser){
-
-        list.innerHTML =
-            '<div class="empty">Please log in first.</div>';
-
-        return;
-
-    }
-
-    list.innerHTML =
-        '<div class="loading">Loading transactions...</div>';
-
-    try{
-
-        const result =
-            await withTimeout(
-
-                supabaseClient
-                    .from("wallet_transfers")
-                    .select("*")
-                    .or(
-                        "sender_id.eq." +
-                        currentUser.id +
-                        ",receiver_id.eq." +
-                        currentUser.id
-                    )
-                    .order(
-                        "created_at",
-                        {
-                            ascending:false
-                        }
-                    )
-                    .limit(20),
-
-                10000,
-
-                "Transaction request timed out."
-
-            );
-
-        if(result.error){
-
-            throw result.error;
-
-        }
-
-        const data =
-            result.data || [];
-
-        if(!data.length){
-
-            list.innerHTML =
-                '<div class="empty">No transactions yet.</div>';
-
-            return;
-
-        }
-
-        renderTransactions(
-            data
-        );
-
-    }
-    catch(error){
-
-        console.error(
-            "Transaction error:",
-            error
-        );
-
-        list.innerHTML =
-            '<div class="empty">' +
-            'Unable to load transactions.<br><br>' +
-            escapeHtml(error.message) +
-            '</div>';
-
-    }
-
-}
-
-
-/* =========================================================
-   RENDER TRANSACTIONS
-   ========================================================= */
-
-function renderTransactions(
-    transactions
-){
-
-    const list =
-        document.getElementById(
-            "transactionList"
-        );
-
-    list.innerHTML = "";
-
-    transactions.forEach(
-        function(transaction){
-
-            const sent =
-                transaction.sender_id ===
-                currentUser.id;
-
-            const amount =
-                Number(
-                    transaction.amount || 0
-                );
-
-            const date =
-                transaction.created_at
-                ? new Date(
-                    transaction.created_at
-                ).toLocaleString()
-                : "";
-
-            const item =
-                document.createElement(
-                    "div"
-                );
-
-            item.className =
-                "item";
-
-            item.innerHTML = `
-
-                <div
-                    class="circle"
-                    style="
-                        background:${
-                            sent
-                            ? "#ffebee"
-                            : "#e8f5e9"
-                        };
-                        color:${
-                            sent
-                            ? "#d32f2f"
-                            : "#558b2f"
-                        };
-                    ">
-
-                    <i class="fas ${
-                        sent
-                        ? "fa-arrow-up"
-                        : "fa-arrow-down"
-                    }"></i>
-
-                </div>
-
-                <div class="info">
-
-                    <div class="name">
-
-                        ${
-                            sent
-                            ? "Sent Money"
-                            : "Received Money"
-                        }
-
-                    </div>
-
-                    <div class="small">
-
-                        ${escapeHtml(date)}
-
-                        ${
-                            transaction.note
-                            ? " • " +
-                              escapeHtml(
-                                  transaction.note
-                              )
-                            : ""
-                        }
-
-                    </div>
-
-                </div>
-
-                <div
-                    class="amount ${
-                        sent
-                        ? "negative"
-                        : "positive"
-                    }">
-
-                    ${sent ? "-" : "+"}
-                    €${formatMoney(amount)}
-
-                </div>
-
-            `;
-
-            list.appendChild(
-                item
-            );
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   SEND
-   ========================================================= */
-
-function openSend(){
-
-    clearStatus(
-        "sendStatus"
-    );
-
-    document.getElementById(
-        "sendModal"
-    ).style.display =
-        "flex";
-
-}
-
-
-async function sendMoney(){
-
-    if(!currentUser){
-
-        showStatus(
-            "sendStatus",
-            "Please log in first.",
-            "error"
-        );
-
-        return;
-
-    }
-
-    const receiverId =
-        document.getElementById(
-            "receiverId"
-        ).value.trim();
-
-    const amount =
-        Number(
-            document.getElementById(
-                "sendAmount"
-            ).value
-        );
-
-    const note =
-        document.getElementById(
-            "sendNote"
-        ).value.trim();
-
-    if(!receiverId){
-
-        showStatus(
-            "sendStatus",
-            "Enter receiver User ID.",
-            "error"
-        );
-
-        return;
-
-    }
-
-    if(
-        !Number.isFinite(amount) ||
-        amount <= 0
-    ){
-
-        showStatus(
-            "sendStatus",
-            "Enter a valid amount.",
-            "error"
-        );
-
-        return;
-
-    }
-
-    if(
-        receiverId ===
-        currentUser.id
-    ){
-
-        showStatus(
-            "sendStatus",
-            "You cannot send money to yourself.",
-            "error"
-        );
-
-        return;
-
-    }
-
-    const button =
-        document.getElementById(
-            "sendButton"
-        );
-
-    button.disabled =
-        true;
-
-    button.textContent =
-        "Sending...";
-
-    try{
-
-        const result =
-            await withTimeout(
-
-                supabaseClient.rpc(
-                    "transfer_money",
-                    {
-                        p_receiver_id:
-                            receiverId,
-
-                        p_amount:
-                            amount,
-
-                        p_note:
-                            note
-                    }
-                ),
-
-                15000,
-
-                "Transfer request timed out."
-
-            );
-
-        if(result.error){
-
-            throw result.error;
-
-        }
-
-        showStatus(
-            "sendStatus",
-            "Money sent successfully.",
-            "success"
-        );
-
-        document.getElementById(
-            "receiverId"
-        ).value = "";
-
-        document.getElementById(
-            "sendAmount"
-        ).value = "";
-
-        document.getElementById(
-            "sendNote"
-        ).value = "";
-
-        await loadWallet();
-
-        await loadTransactions();
-
-    }
-    catch(error){
-
-        console.error(
-            "Transfer error:",
-            error
-        );
-
-        showStatus(
-            "sendStatus",
-            "Transfer failed: " +
-            error.message,
-            "error"
-        );
-
-    }
-    finally{
-
-        button.disabled =
-            false;
-
-        button.textContent =
-            "Send Money";
-
-    }
-
-}
-
-
-/* =========================================================
-   RECEIVE
-   ========================================================= */
-
-function openReceive(){
-
-    document.getElementById(
-        "myUserId"
-    ).textContent =
-        currentUser
-        ? currentUser.id
-        : "Not logged in";
-
-    document.getElementById(
-        "receiveModal"
-    ).style.display =
-        "flex";
-
-}
-
-
-/* =========================================================
-   EXCHANGE
-   ========================================================= */
-
-function openExchange(){
-
-    document.getElementById(
-        "exchangeModal"
-    ).style.display =
-        "flex";
-
-}
-
-
-/* =========================================================
-   CURRENCY
-   ========================================================= */
-
-function changeDisplayCurrency(){
-
-    renderWallets(
-        walletsCache
-    );
-
-}
-
-
-/* =========================================================
-   MODAL
-   ========================================================= */
-
-function closeModal(
-    id
-){
-
-    const modal =
-        document.getElementById(
-            id
-        );
-
-    if(modal){
-
-        modal.style.display =
-            "none";
-
-    }
-
-}
-
-
-/* =========================================================
-   COPY
-   ========================================================= */
-
-async function copyId(){
-
-    if(!currentUser){
-
-        alert(
-            "User ID is not available."
-        );
-
-        return;
-
-    }
-
-    try{
-
-        await navigator.clipboard.writeText(
-            currentUser.id
-        );
-
-        alert(
-            "User ID copied."
-        );
-
-    }
-    catch(error){
-
-        alert(
-            "Could not copy User ID."
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   STATUS
-   ========================================================= */
-
-function showStatus(
-    id,
-    message,
-    type
-){
-
-    const element =
-        document.getElementById(
-            id
-        );
-
-    if(!element){
-
-        return;
-
-    }
-
-    element.textContent =
-        message;
-
-    element.className =
-        "status " +
-        type;
-
-}
-
-function clearStatus(
-    id
-){
-
-    const element =
-        document.getElementById(
-            id
-        );
-
-    if(element){
-
-        element.textContent =
-            "";
-
-        element.className =
-            "status";
-
-    }
-
-}
-
-
-/* =========================================================
-   ERROR
-   ========================================================= */
-
-function showError(
-    message
-){
-
-    const container =
-        document.getElementById(
-            "errorContainer"
-        );
-
-    container.innerHTML =
-        '<div class="error">' +
-        escapeHtml(message) +
-        '</div>';
-
-}
-
-function clearError(){
-
-    document.getElementById(
-        "errorContainer"
-    ).innerHTML =
-        "";
-
-}
-
-
-/* =========================================================
-   FORMAT MONEY
-   ========================================================= */
-
-function formatMoney(
-    value
-){
-
-    return Number(
-        value || 0
-    ).toLocaleString(
-        "en-US",
-        {
-            minimumFractionDigits:2,
-            maximumFractionDigits:2
-        }
-    );
-
-}
-
-
-/* =========================================================
-   FORMAT MARKET PRICE
-   ========================================================= */
-
-function formatMarketPrice(
-    value
-){
-
-    const number =
-        Number(value || 0);
-
-    if(number === 0){
-
-        return "0.00";
-
-    }
-
-    return number.toLocaleString(
-        "en-US",
-        {
-            minimumFractionDigits:2,
-            maximumFractionDigits:
-                Math.abs(number) < 0.01
-                ? 8
-                : 6
-        }
-    );
-
-}
-
-
-/* =========================================================
-   FORMAT LARGE
-   ========================================================= */
-
-function formatLargeNumber(
-    value
-){
-
-    const number =
-        Number(value || 0);
-
-    if(number >= 1e12){
-
-        return (
-            number / 1e12
-        ).toFixed(2) +
-        "T";
-
-    }
-
-    if(number >= 1e9){
-
-        return (
-            number / 1e9
-        ).toFixed(2) +
-        "B";
-
-    }
-
-    if(number >= 1e6){
-
-        return (
-            number / 1e6
-        ).toFixed(2) +
-        "M";
-
-    }
-
-    if(number >= 1e3){
-
-        return (
-            number / 1e3
-        ).toFixed(2) +
-        "K";
-
-    }
-
-    return formatMoney(
-        number
-    );
-
-}
-
-
-/* =========================================================
-   FORMAT CRYPTO
-   ========================================================= */
-
-function formatCrypto(
-    value
-){
-
-    const number =
-        Number(value || 0);
-
-    if(number === 0){
-
-        return "0";
-
-    }
-
-    if(
-        Math.abs(number) < 0.000001
-    ){
-
-        return number.toFixed(8);
-
-    }
-
-    return number.toLocaleString(
-        "en-US",
-        {
-            maximumFractionDigits:8
-        }
-    );
-
-}
-
-
-/* =========================================================
-   STRIP HTML
-   ========================================================= */
-
-function stripHtml(
-    value
-){
-
-    return String(value || "")
-        .replace(
-            /<[^>]*>/g,
-            ""
-        )
-        .replace(
-            /\s+/g,
-            " "
-        )
-        .trim();
-
-}
-
-
-/* =========================================================
-   ESCAPE HTML
-   ========================================================= */
-
-function escapeHtml(
-    value
-){
-
-    return String(value ?? "")
-
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-
-        .replace(
-            /</g,
-            "&lt;"
-        )
-
-        .replace(
-            />/g,
-            "&gt;"
-        )
-
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-
-        .replace(
-            /'/g,
-            "&#039;"
-        );
-
-}
-
-
-/* =========================================================
-   REFRESH
-   ========================================================= */
-
-async function refreshWallet(){
-
-    clearError();
-
-    const button =
-        document.getElementById(
-            "walletRefreshButton"
-        );
-
-    button.disabled =
-        true;
-
-    try{
-
-        await loadWallet();
-
-        await loadCryptoPrices();
-
-        if(currentUser){
-
-            await loadTransactions();
-
-        }
-
-    }
-    catch(error){
-
-        console.error(
-            "Refresh error:",
-            error
-        );
-
-        showError(
-            "Refresh error: " +
-            error.message
-        );
-
-    }
-    finally{
-
-        button.disabled =
-            false;
-
-    }
-
-}
-
-
-/* =========================================================
-   MODAL BACKGROUND
-   ========================================================= */
-
-document
-    .querySelectorAll(".modal")
-    .forEach(
-        function(modal){
-
-            modal.addEventListener(
-                "click",
-                function(event){
-
-                    if(
-                        event.target ===
-                        modal
-                    ){
-
-                        modal.style.display =
-                            "none";
-
-                    }
-
-                }
-            );
-
-        }
-    );
-
-
-/* =========================================================
-   ESC
-   ========================================================= */
-
-document.addEventListener(
-    "keydown",
-    function(event){
-
-        if(
-            event.key ===
-            "Escape"
-        ){
-
-            document
-                .querySelectorAll(".modal")
-                .forEach(
-                    function(modal){
-
-                        modal.style.display =
-                            "none";
-
-                    }
-                );
-
-        }
-
-    }
-);
-
-
-/* =========================================================
-   AUTH STATE
-   ========================================================= */
-
-supabaseClient.auth.onAuthStateChange(
-    function(
-        event,
-        session
-    ){
-
-        currentUser =
-            session?.user || null;
-
-    }
-);
-
-
-/* =========================================================
-   GLOBAL ERRORS
-   ========================================================= */
-
-window.addEventListener(
-    "error",
-    function(event){
-
-        console.error(
-            "JavaScript error:",
-            event.error ||
-            event.message
-        );
-
-    }
-);
-
-window.addEventListener(
-    "unhandledrejection",
-    function(event){
-
-        console.error(
-            "Unhandled promise:",
-            event.reason
-        );
-
-    }
-);
-
-
-/* =========================================================
-   START
-   ========================================================= */
-
-async function startWallet(){
-
-    clearError();
-
-    await Promise.allSettled([
-
-        loadCryptoPrices(),
-
-        loadWallet(),
-
-        initializePi()
-
-    ]);
-
-    if(currentUser){
-
-        await loadTransactions();
-
-    }
-
-}
-
-startWallet();
-
-</script>
-
-</body>
-      </html>
+</div>  <!-- =========================================================  
+     STELLAR WALLET BUNDLE  
+     ========================================================= -->  <script src="./stellar-wallet.js"></script>  <!-- =========================================================  
+     SUPABASE  
+     ========================================================= -->  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>  <script>  
+  
+/* =========================================================  
+   SUPABASE  
+   ========================================================= */  
+  
+const SUPABASE_URL =  
+    "https://gispovnciifgikvgpzck.supabase.co";  
+  
+const SUPABASE_KEY =  
+    "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq";  
+  
+const supabaseClient =  
+    window.supabase.createClient(  
+        SUPABASE_URL,  
+        SUPABASE_KEY,  
+        {  
+            auth:{  
+                persistSession:true,  
+                autoRefreshToken:true,  
+                detectSessionInUrl:false  
+            }  
+        }  
+    );  
+  
+  
+/* =========================================================  
+   STATE  
+   ========================================================= */  
+  
+let currentUser = null;  
+  
+let walletsCache = [];  
+  
+let cryptoPrices = {};  
+  
+let selectedCoin = null;  
+  
+let tradeSide = "BUY";  
+  
+let piAuthResult = null;  
+  
+let piPaymentRunning = false;  
+  
+  
+/* =========================================================  
+   CRYPTO LIST  
+   ========================================================= */  
+  
+const CRYPTO_LIST = [  
+  
+    {  
+        id:"bitcoin",  
+        symbol:"BTC",  
+        name:"Bitcoin",  
+        icon:"₿"  
+    },  
+  
+    {  
+        id:"ethereum",  
+        symbol:"ETH",  
+        name:"Ethereum",  
+        icon:"Ξ"  
+    },  
+  
+    {  
+        id:"tether",  
+        symbol:"USDT",  
+        name:"Tether",  
+        icon:"₮"  
+    },  
+  
+    {  
+        id:"binancecoin",  
+        symbol:"BNB",  
+        name:"BNB",  
+        icon:"BNB"  
+    },  
+  
+    {  
+        id:"solana",  
+        symbol:"SOL",  
+        name:"Solana",  
+        icon:"S"  
+    },  
+  
+    {  
+        id:"ripple",  
+        symbol:"XRP",  
+        name:"XRP",  
+        icon:"X"  
+    },  
+  
+    {  
+        id:"cardano",  
+        symbol:"ADA",  
+        name:"Cardano",  
+        icon:"A"  
+    },  
+  
+    {  
+        id:"dogecoin",  
+        symbol:"DOGE",  
+        name:"Dogecoin",  
+        icon:"Ð"  
+    }  
+  
+];  
+  
+  
+/* =========================================================  
+   TIMEOUT  
+   ========================================================= */  
+  
+function withTimeout(  
+    promise,  
+    milliseconds,  
+    message  
+){  
+  
+    return Promise.race([  
+  
+        promise,  
+  
+        new Promise(  
+            function(_,reject){  
+  
+                setTimeout(  
+                    function(){  
+  
+                        reject(  
+                            new Error(message)  
+                        );  
+  
+                    },  
+                    milliseconds  
+                );  
+  
+            }  
+        )  
+  
+    ]);  
+  
+}  
+  
+  
+/* =========================================================  
+   NAVIGATION  
+   ========================================================= */  
+  
+function goPage(page){  
+  
+    window.location.href =  
+        page;  
+  
+}  
+  
+function goHome(){  
+  
+    window.location.href =  
+        "index.html";  
+  
+}  
+  
+  
+/* =========================================================  
+   AUTH  
+   ========================================================= */  
+  
+async function getCurrentUser(){  
+  
+    try{  
+  
+        const result =  
+            await withTimeout(  
+                supabaseClient.auth.getSession(),  
+                8000,  
+                "Authentication timed out."  
+            );  
+  
+        if(result.error){  
+  
+            throw result.error;  
+  
+        }  
+  
+        return result.data?.session?.user || null;  
+  
+    }  
+    catch(error){  
+  
+        console.error(  
+            "Authentication error:",  
+            error  
+        );  
+  
+        showError(  
+            "Authentication error: " +  
+            error.message  
+        );  
+  
+        return null;  
+  
+    }  
+  
+}  
+  
+  
+/* =========================================================  
+   PI STATUS  
+   ========================================================= */  
+  
+function setPiStatus(  
+    message,  
+    type  
+){  
+  
+    const element =  
+        document.getElementById(  
+            "piStatus"  
+        );  
+  
+    if(!element){  
+  
+        return;  
+  
+    }  
+  
+    if(!message){  
+  
+        element.textContent =  
+            "";  
+  
+        element.className =  
+            "pi-status";  
+  
+        return;  
+  
+    }  
+  
+    element.textContent =  
+        message;  
+  
+    element.className =  
+        "pi-status " +  
+        type;  
+  
+}  
+  
+  
+/* =========================================================  
+   PI AUTHENTICATION  
+   ========================================================= */  
+  
+async function initializePi(){  
+  
+    const button =  
+        document.getElementById(  
+            "piPayButton"  
+        );  
+  
+    if(  
+        typeof window.Pi ===  
+        "undefined"  
+    ){  
+  
+        if(button){  
+  
+            button.disabled =  
+                true;  
+  
+        }  
+  
+        setPiStatus(  
+            "Pi SDK is not available. Open HAVKAR inside Pi Browser.",  
+            "error"  
+        );  
+  
+        return;  
+  
+    }  
+  
+    try{  
+  
+        setPiStatus(  
+            "Connecting to Pi Testnet...",  
+            "info"  
+        );  
+  
+        piAuthResult =  
+            await Pi.authenticate(  
+                [  
+                    "payments",  
+                    "username"  
+                ],  
+                handleIncompletePiPayment  
+            );  
+  
+        const username =  
+            piAuthResult?.user?.username || "";  
+  
+        const userElement =  
+            document.getElementById(  
+                "piUser"  
+            );  
+  
+        const usernameElement =  
+            document.getElementById(  
+                "piUsername"  
+            );  
+  
+        if(username){  
+  
+            usernameElement.textContent =  
+                username;  
+  
+            userElement.style.display =  
+                "block";  
+  
+        }  
+  
+        setPiStatus(  
+            "Pi Testnet is connected. You can make a test payment.",  
+            "success"  
+        );  
+  
+    }  
+    catch(error){  
+  
+        console.error(  
+            "Pi authentication error:",  
+            error  
+        );  
+  
+        piAuthResult =  
+            null;  
+  
+        setPiStatus(  
+            "Pi authentication was not completed: " +  
+            (error?.message || "Unknown error"),  
+            "error"  
+        );  
+  
+    }  
+  
+}  
+  
+  
+/* =========================================================  
+   PI INCOMPLETE PAYMENT  
+   ========================================================= */  
+  
+async function handleIncompletePiPayment(  
+    payment  
+){  
+  
+    console.warn(  
+        "Incomplete Pi payment found:",  
+        payment  
+    );  
+  
+    if(  
+        !payment ||  
+        !payment.identifier ||  
+        !payment.transaction ||  
+        !payment.transaction.txid  
+    ){  
+  
+        setPiStatus(  
+            "An incomplete Pi payment was found. It must be resolved before a new payment can be started.",  
+            "error"  
+        );  
+  
+        return;  
+  
+    }  
+  
+    try{  
+  
+        setPiStatus(  
+            "Completing the previous Pi payment...",  
+            "info"  
+        );  
+  
+        const response =  
+            await fetch(  
+                "/api/pi-complete",  
+                {  
+                    method:"POST",  
+  
+                    headers:{  
+                        "Content-Type":  
+                            "application/json"  
+                    },  
+  
+                    body:JSON.stringify({  
+                        paymentId:  
+                            payment.identifier,  
+  
+                        txid:  
+                            payment.transaction.txid  
+                    })  
+                }  
+            );  
+  
+        const data =  
+            await response.json()  
+                .catch(  
+                    function(){  
+                        return {};  
+                    }  
+                );  
+  
+        if(!response.ok){  
+  
+            throw new Error(  
+                data.error ||  
+                "Previous Pi payment completion failed."  
+            );  
+  
+        }  
+  
+        setPiStatus(  
+            "Previous Pi payment was completed successfully.",  
+            "success"  
+        );  
+  
+    }  
+    catch(error){  
+  
+        console.error(  
+            "Incomplete Pi payment completion error:",  
+            error  
+        );  
+  
+        setPiStatus(  
+            "The previous Pi payment could not be completed: " +  
+            error.message,  
+            "error"  
+        );  
+  
+    }  
+  
+}  
+  
+  
+/* =========================================================  
+   START PI PAYMENT  
+   ========================================================= */  
+  
+async function startPiPayment(){  
+  
+    const button =  
+        document.getElementById(  
+            "piPayButton"  
+        );  
+  
+    const amountInput =  
+        document.getElementById(  
+            "piAmount"  
+        );  
+  
+    const amount =  
+        Number(  
+            amountInput?.value  
+        );  
+  
+    if(  
+        typeof window.Pi ===  
+        "undefined"  
+    ){  
+  
+        setPiStatus(  
+            "Pi SDK is not available. Open HAVKAR inside Pi Browser.",  
+            "error"  
+        );  
+  
+        return;  
+  
+    }  
+  
+    if(!piAuthResult){  
+  
+        setPiStatus(  
+            "Pi is not authenticated yet. Please wait and try again.",  
+            "error"  
+        );  
+  
+        await initializePi();  
+  
+        return;  
+  
+    }  
+  
+    if(  
+        !Number.isFinite(amount) ||  
+        amount <= 0  
+    ){  
+  
+        setPiStatus(  
+            "Enter a valid Pi amount.",  
+            "error"  
+        );  
+  
+        return;  
+  
+    }  
+  
+    if(amount < 0.01){  
+  
+        setPiStatus(  
+            "The minimum test payment is 0.01 Pi.",  
+            "error"  
+        );  
+  
+        return;  
+  
+    }  
+  
+    if(piPaymentRunning){  
+  
+        return;  
+  
+    }  
+  
+    piPaymentRunning =  
+        true;  
+  
+    button.disabled =  
+        true;  
+  
+    button.innerHTML =  
+        '<i class="fas fa-spinner fa-spin"></i> Starting Pi payment...';  
+  
+    setPiStatus(  
+        "Creating Pi Testnet payment...",  
+        "info"  
+    );  
+  
+  
+    try{  
+  
+        Pi.createPayment(  
+  
+            {  
+                amount:amount,  
+  
+                memo:  
+                    "HAVKAR Testnet Payment",  
+  
+                metadata:{  
+                    source:  
+                        "HAVKAR wallet",  
+  
+                    network:  
+                        "Pi Testnet",  
+  
+                    createdAt:  
+                        new Date().toISOString()  
+                }  
+            },  
+  
+            {  
+                onReadyForServerApproval:  
+                    async function(paymentId){  
+  
+                        try{  
+  
+                            setPiStatus(  
+                                "Payment created. Waiting for server approval...",  
+                                "info"  
+                            );  
+  
+                            const response =  
+                                await fetch(  
+                                    "/api/pi-approve",  
+                                    {  
+                                        method:"POST",  
+  
+                                        headers:{  
+                                            "Content-Type":  
+                                                "application/json"  
+                                        },  
+  
+                                        body:  
+                                            JSON.stringify({  
+                                                paymentId:  
+                                                    paymentId  
+                                            })  
+                                    }  
+                                );  
+  
+                            const data =  
+                                await response  
+                                    .json()  
+                                    .catch(  
+                                        function(){  
+                                            return {};  
+                                        }  
+                                    );  
+  
+                            if(!response.ok){  
+  
+                                throw new Error(  
+                                    data.error ||  
+                                    "Pi server approval failed."  
+                                );  
+  
+                            }  
+  
+                            setPiStatus(  
+                                "Payment approved. Confirm the transaction in Pi Wallet.",  
+                                "info"  
+                            );  
+  
+                        }  
+                        catch(error){  
+  
+                            console.error(  
+                                "Pi approval error:",  
+                                error  
+                            );  
+  
+                            setPiStatus(  
+                                "Pi approval failed: " +  
+                                error.message,  
+                                "error"  
+                            );  
+  
+                            throw error;  
+  
+                        }  
+  
+                    },  
+  
+  
+                onReadyForServerCompletion:  
+                    async function(  
+                        paymentId,  
+                        txid  
+                    ){  
+  
+                        try{  
+  
+                            setPiStatus(  
+                                "Transaction submitted. Completing payment with Pi...",  
+                                "info"  
+                            );  
+  
+                            const response =  
+                                await fetch(  
+                                    "/api/pi-complete",  
+                                    {  
+                                        method:"POST",  
+  
+                                        headers:{  
+                                            "Content-Type":  
+                                                "application/json"  
+                                        },  
+  
+                                        body:  
+                                            JSON.stringify({  
+                                                paymentId:  
+                                                    paymentId,  
+  
+                                                txid:  
+                                                    txid  
+                                            })  
+                                    }  
+                                );  
+  
+                            const data =  
+                                await response  
+                                    .json()  
+                                    .catch(  
+                                        function(){  
+                                            return {};  
+                                        }  
+                                    );  
+  
+                            if(!response.ok){  
+  
+                                throw new Error(  
+                                    data.error ||  
+                                    "Pi server completion failed."  
+                                );  
+  
+                            }  
+  
+                            setPiStatus(  
+                                "Pi payment completed successfully. Transaction ID: " +  
+                                txid,  
+                                "success"  
+                            );  
+  
+                            amountInput.value =  
+                                "";  
+  
+                        }  
+                        catch(error){  
+  
+                            console.error(  
+                                "Pi completion error:",  
+                                error  
+                            );  
+  
+                            setPiStatus(  
+                                "Pi payment was submitted but server completion failed: " +  
+                                error.message,  
+                                "error"  
+                            );  
+  
+                            throw error;  
+  
+                        }  
+  
+                    },  
+  
+  
+                onCancel:  
+                    function(paymentId){  
+  
+                        console.log(  
+                            "Pi payment cancelled:",  
+                            paymentId  
+                        );  
+  
+                        setPiStatus(  
+                            "Pi payment was cancelled.",  
+                            "error"  
+                        );  
+  
+                    },  
+  
+  
+                onError:  
+                    function(  
+                        error,  
+                        payment  
+                    ){  
+  
+                        console.error(  
+                            "Pi payment error:",  
+                            error,  
+                            payment  
+                        );  
+  
+                        setPiStatus(  
+                            "Pi payment error: " +  
+                            (  
+                                error?.message ||  
+                                "Unknown error"  
+                            ),  
+                            "error"  
+                        );  
+  
+                    }  
+  
+            }  
+  
+        );  
+  
+    }  
+    catch(error){  
+  
+        console.error(  
+            "Pi createPayment error:",  
+            error  
+        );  
+  
+        setPiStatus(  
+            "Could not start Pi payment: " +  
+            error.message,  
+            "error"  
+        );  
+  
+    }  
+    finally{  
+  
+        setTimeout(  
+            function(){  
+  
+                piPaymentRunning =  
+                    false;  
+  
+                button.disabled =  
+                    false;  
+  
+                button.innerHTML =  
+                    '<i class="fas fa-coins"></i> Pay with Pi';  
+  
+            },  
+            1000  
+        );  
+  
+    }  
+  
+}  
+  
+  
+/* =========================================================  
+   LOAD WALLET  
+   ========================================================= */  
+  
+async function loadWallet(){  
+  
+    const list =  
+        document.getElementById(  
+            "walletList"  
+        );  
+  
+    list.innerHTML =  
+        '<div class="loading">Loading wallet...</div>';  
+  
+    const user =  
+        await getCurrentUser();  
+  
+    if(!user){  
+  
+        currentUser = null;  
+  
+        walletsCache = [];  
+  
+        document.getElementById(  
+            "totalBalance"  
+        ).textContent =  
+            "€0.00";  
+  
+        document.getElementById(  
+            "myUserId"  
+        ).textContent =  
+            "Not logged in";  
+  
+        list.innerHTML =  
+            '<div class="empty">Please log in first.</div>';  
+  
+        document.getElementById(  
+            "transactionList"  
+        ).innerHTML =  
+            '<div class="empty">Please log in first.</div>';  
+  
+        return;  
+  
+    }  
+  
+    currentUser =  
+        user;  
+  
+    document.getElementById(  
+        "myUserId"  
+    ).textContent =  
+        user.id;  
+  
+    try{  
+  
+        const result =  
+            await withTimeout(  
+  
+                supabaseClient  
+                    .from("wallets")  
+                    .select("*")  
+                    .eq(  
+                        "user_id",  
+                        user.id  
+                    ),  
+  
+                10000,  
+  
+                "Wallet request timed out."  
+  
+            );  
+  
+        if(result.error){  
+  
+            throw result.error;  
+  
+        }  
+  
+        walletsCache =  
+            result.data || [];  
+  
+        renderWallets(  
+            walletsCache  
+        );  
+  
+    }  
+    catch(error){  
+  
+        console.error(  
+            "Wallet error:",  
+            error  
+        );  
+  
+        walletsCache = [];  
+  
+        list.innerHTML =  
+            '<div class="empty">' +  
+            'Unable to load wallet.<br><br>' +  
+            escapeHtml(error.message) +  
+            '</div>';  
+  
+        showError(  
+            "Wallet error: " +  
+            error.message  
+        );  
+  
+    }  
+  
+}  
+  
+  
+/* =========================================================  
+   WALLET BALANCE  
+   ========================================================= */  
+  
+function getWalletBalance(  
+    symbol  
+){  
+  
+    const wallet =  
+        walletsCache.find(  
+            function(item){  
+  
+                const currency =  
+                    String(  
+                        item.currency ||  
+                        item.symbol ||  
+                        ""  
+                    ).toUpperCase();  
+  
+                return currency ===  
+                    String(symbol).toUpperCase();  
+  
+            }  
+        );  
+  
+    return wallet  
+        ? Number(wallet.balance || 0)  
+        : 0;  
+  
+}  
+  
+  
+/* =========================================================  
+   RENDER WALLETS  
+   ========================================================= */  
+  
+function renderWallets(  
+    wallets  
+){  
+  
+    const list =  
+        document.getElementById(  
+            "walletList"  
+        );  
+  
+    if(!wallets.length){  
+  
+        document.getElementById(  
+            "totalBalance"  
+        ).textContent =  
+            "€0.00";  
+  
+        list.innerHTML =  
+            '<div class="empty">' +  
+            'No wallet found for this account.' +  
+            '</div>';  
+  
+        return;  
+  
+    }  
+  
+    list.innerHTML = "";  
+  
+    let totalEUR = 0;  
+  
+    wallets.forEach(  
+        function(wallet){  
+  
+            const currency =  
+                String(  
+                    wallet.currency ||  
+                    wallet.symbol ||  
+                    "EUR"  
+                ).toUpperCase();  
+  
+            const balance =  
+                Number(  
+                    wallet.balance || 0  
+                );  
+  
+            let valueEUR =  
+                balance;  
+  
+            if(  
+                currency !== "EUR" &&  
+                cryptoPrices[currency]  
+            ){  
+  
+                valueEUR =  
+                    balance *  
+                    Number(  
+                        cryptoPrices[currency].eur || 0  
+                    );  
+  
+            }  
+  
+            totalEUR +=  
+                valueEUR;  
+  
+            let icon =  
+                currency;  
+  
+            if(currency === "EUR"){  
+                icon = "€";  
+            }  
+  
+            if(currency === "BTC"){  
+                icon = "₿";  
+            }  
+  
+            if(currency === "ETH"){  
+                icon = "Ξ";  
+            }  
+  
+            if(currency === "USDT"){  
+                icon = "₮";  
+            }  
+  
+            const item =  
+                document.createElement(  
+                    "div"  
+                );  
+  
+            item.className =  
+                "item";  
+  
+            item.innerHTML = `  
+  
+                <div class="circle">  
+                    ${escapeHtml(icon)}  
+                </div>  
+  
+                <div class="info">  
+  
+                    <div class="name">  
+                        ${escapeHtml(currency)}  
+                    </div>  
+  
+                    <div class="small">  
+  
+                        ${formatCrypto(balance)}  
+                        ${escapeHtml(currency)}  
+  
+                        ${  
+                            currency !== "EUR"  
+                            ? " • €" +  
+                              formatMoney(valueEUR)  
+                            : ""  
+                        }  
+  
+                    </div>  
+  
+                </div>  
+  
+                <div class="amount">  
+  
+                    €${formatMoney(valueEUR)}  
+  
+                </div>  
+  
+            `;  
+  
+            list.appendChild(  
+                item  
+            );  
+  
+        }  
+    );  
+  
+    document.getElementById(  
+        "totalBalance"  
+    ).textContent =  
+        "€" +  
+        formatMoney(totalEUR);  
+  
+}  
+  
+  
+/* =========================================================  
+   LOAD CRYPTO PRICES  
+   ========================================================= */  
+  
+async function loadCryptoPrices(){  
+  
+    const list =  
+        document.getElementById(  
+            "cryptoList"  
+        );  
+  
+    const updated =  
+        document.getElementById(  
+            "priceUpdated"  
+        );  
+  
+    const button =  
+        document.getElementById(  
+            "cryptoRefreshButton"  
+        );  
+  
+    button.disabled =  
+        true;  
+  
+    list.innerHTML =  
+        '<div class="loading">Loading cryptocurrency prices...</div>';  
+  
+    updated.textContent =  
+        "Updating prices...";  
+  
+    const ids =  
+        CRYPTO_LIST  
+            .map(  
+                coin => coin.id  
+            )  
+            .join(",");  
+  
+    const url =  
+        "https://api.coingecko.com/api/v3/simple/price" +  
+        "?ids=" +  
+        encodeURIComponent(ids) +  
+        "&vs_currencies=eur" +  
+        "&include_24hr_change=true";  
+  
+    try{  
+  
+        const response =  
+            await withTimeout(  
+  
+                fetch(  
+                    url,  
+                    {  
+                        method:"GET",  
+  
+                        headers:{  
+                            "Accept":  
+                                "application/json"  
+                        }  
+                    }  
+                ),  
+  
+                10000,  
+  
+                "Cryptocurrency price request timed out."  
+  
+            );  
+  
+        if(!response.ok){  
+  
+            throw new Error(  
+                "CoinGecko HTTP " +  
+                response.status  
+            );  
+  
+        }  
+  
+        const data =  
+            await response.json();  
+  
+        cryptoPrices = {};  
+  
+        CRYPTO_LIST.forEach(  
+            function(coin){  
+  
+                if(data[coin.id]){  
+  
+                    cryptoPrices[  
+                        coin.symbol  
+                    ] =  
+                        data[coin.id];  
+  
+                }  
+  
+            }  
+        );  
+  
+        renderCryptoPrices();  
+  
+        if(currentUser){  
+  
+            renderWallets(  
+                walletsCache  
+            );  
+  
+        }  
+  
+        updated.textContent =  
+            "Updated: " +  
+            new Date()  
+                .toLocaleTimeString();  
+  
+    }  
+    catch(error){  
+  
+        console.error(  
+            "Crypto price error:",  
+            error  
+        );  
+  
+        list.innerHTML =  
+            '<div class="empty">' +  
+            'Cryptocurrency prices unavailable.' +  
+            '<br><br>' +  
+            escapeHtml(error.message) +  
+            '</div>';  
+  
+        updated.textContent =  
+            "Price update unavailable";  
+  
+    }  
+    finally{  
+  
+        button.disabled =  
+            false;  
+  
+    }  
+  
+}  
+  
+  
+/* =========================================================  
+   RENDER CRYPTO  
+   ========================================================= */  
+  
+function renderCryptoPrices(){  
+  
+    const list =  
+        document.getElementById(  
+            "cryptoList"  
+        );  
+  
+    list.innerHTML = "";  
+  
+    let count = 0;  
+  
+    CRYPTO_LIST.forEach(  
+        function(coin){  
+  
+            const price =  
+                cryptoPrices[  
+                    coin.symbol  
+                ];  
+  
+            if(!price){  
+  
+                return;  
+  
+            }  
+  
+            count++;  
+  
+            const eur =  
+                Number(  
+                    price.eur || 0  
+                );  
+  
+            const change =  
+                Number(  
+                    price.eur_24h_change || 0  
+                );  
+  
+            const changeClass =  
+                change >= 0  
+                ? "market-up"  
+                : "market-down";  
+  
+            const sign =  
+                change >= 0  
+                ? "+"  
+                : "";  
+  
+            const item =  
+                document.createElement(  
+                    "div"  
+                );  
+  
+            item.className =  
+                "market-item";  
+  
+            item.setAttribute(  
+                "role",  
+                "button"  
+            );  
+  
+            item.setAttribute(  
+                "tabindex",  
+                "0"  
+            );  
+  
+            item.addEventListener(  
+                "click",  
+                function(){  
+  
+                    openCryptoDetails(  
+                        coin.id  
+                    );  
+  
+                }  
+            );  
+  
+            item.addEventListener(  
+                "keydown",  
+                function(event){  
+  
+                    if(  
+                        event.key === "Enter" ||  
+                        event.key === " "  
+                    ){  
+  
+                        event.preventDefault();  
+  
+                        openCryptoDetails(  
+                            coin.id  
+                        );  
+  
+                    }  
+  
+                }  
+            );  
+  
+            item.innerHTML = `  
+  
+                <div class="market-icon">  
+                    ${escapeHtml(coin.icon)}  
+                </div>  
+  
+                <div class="market-info">  
+  
+                    <div class="market-name">  
+                        ${escapeHtml(coin.name)}  
+                    </div>  
+  
+                    <div class="market-symbol">  
+                        ${escapeHtml(coin.symbol)}  
+                    </div>  
+  
+                </div>  
+  
+                <div class="market-price">  
+  
+                    €${formatMarketPrice(eur)}  
+  
+                    <div  
+                        class="market-change ${changeClass}">  
+  
+                        ${sign}${change.toFixed(2)}%  
+  
+                    </div>  
+  
+                </div>  
+  
+            `;  
+  
+            list.appendChild(  
+                item  
+            );  
+  
+        }  
+    );  
+  
+    if(!count){  
+  
+        list.innerHTML =  
+            '<div class="empty">' +  
+            'No cryptocurrency prices available.' +  
+            '</div>';  
+  
+    }  
+  
+}  
+  
+  
+/* =========================================================  
+   OPEN CRYPTO DETAILS  
+   ========================================================= */  
+  
+async function openCryptoDetails(  
+    coinId  
+){  
+  
+    const modal =  
+        document.getElementById(  
+            "cryptoDetailsModal"  
+        );  
+  
+    const title =  
+        document.getElementById(  
+            "cryptoDetailsTitle"  
+        );  
+  
+    const content =  
+        document.getElementById(  
+            "cryptoDetailsContent"  
+        );  
+  
+    const localCoin =  
+        CRYPTO_LIST.find(  
+            coin => coin.id === coinId  
+        );  
+  
+    selectedCoin =  
+        localCoin || null;  
+  
+    modal.style.display =  
+        "flex";  
+  
+    title.textContent =  
+        localCoin  
+        ? localCoin.name  
+        : "Cryptocurrency";  
+  
+    content.innerHTML =  
+        '<div class="loading">Loading cryptocurrency details...</div>';  
+  
+    try{  
+  
+        const response =  
+            await withTimeout(  
+  
+                fetch(  
+                    "https://api.coingecko.com/api/v3/coins/" +  
+                    encodeURIComponent(coinId) +  
+                    "?localization=false" +  
+                    "&tickers=false" +  
+                    "&market_data=true" +  
+                    "&community_data=false" +  
+                    "&developer_data=false" +  
+                    "&sparkline=false"  
+                ),  
+  
+                12000,  
+  
+                "Cryptocurrency details timed out."  
+  
+            );  
+  
+        if(!response.ok){  
+  
+            throw new Error(  
+                "CoinGecko HTTP " +  
+                response.status  
+            );  
+  
+        }  
+  
+        const coin =  
+            await response.json();  
+  
+        renderCryptoDetails(  
+            coin  
+        );  
+  
+    }  
+    catch(error){  
+  
+        console.error(  
+            "Crypto detail error:",  
+            error  
+        );  
+  
+        content.innerHTML =  
+            '<div class="empty">' +  
+            'Unable to load details.<br><br>' +  
+            escapeHtml(error.message) +  
+            '</div>';  
+  
+    }  
+  
+}  
+  
+  
+/* =========================================================  
+   RENDER CRYPTO DETAILS  
+   ========================================================= */  
+  
+function renderCryptoDetails(  
+    coin  
+){  
+  
+    const title =  
+        document.getElementById(  
+            "cryptoDetailsTitle"  
+        );  
+  
+    const content =  
+        document.getElementById(  
+            "cryptoDetailsContent"  
+        );  
+  
+    const market =  
+        coin.market_data || {};  
+  
+    const symbol =  
+        String(  
+            coin.symbol || ""  
+        ).toUpperCase();  
+  
+    const name =  
+        coin.name ||  
+        "Cryptocurrency";  
+  
+    const currentPrice =  
+        Number(  
+            market.current_price?.eur || 0  
+        );  
+  
+    const change24 =  
+        Number(  
+            market.price_change_percentage_24h || 0  
+        );  
+  
+    const high24 =  
+        Number(  
+            market.high_24h?.eur || 0  
+        );  
+  
+    const low24 =  
+        Number(  
+            market.low_24h?.eur || 0  
+        );  
+  
+    const marketCap =  
+        Number(  
+            market.market_cap?.eur || 0  
+        );  
+  
+    const volume =  
+        Number(  
+            market.total_volume?.eur || 0  
+        );  
+  
+    const rank =  
+        coin.market_cap_rank || "-";  
+  
+    const image =  
+        coin.image?.small || "";  
+  
+    const description =  
+        coin.description?.en  
+        ? stripHtml(  
+            coin.description.en  
+        )  
+        : "";  
+  
+    title.textContent =  
+        name;  
+  
+    const changeClass =  
+        change24 >= 0  
+        ? "market-up"  
+        : "market-down";  
+  
+    const sign =  
+        change24 >= 0  
+        ? "+"  
+        : "";  
+  
+    const iconHtml =  
+        image  
+        ? `  
+            <img  
+                src="${escapeHtml(image)}"  
+                alt="${escapeHtml(name)}">  
+          `  
+        : escapeHtml(symbol);  
+  
+    const cryptoBalance =  
+        getWalletBalance(  
+            symbol  
+        );  
+  
+    content.innerHTML = `  
+  
+        <div class="crypto-details-header">  
+  
+            <div class="crypto-details-icon">  
+                ${iconHtml}  
+            </div>  
+  
+            <div>  
+  
+                <div class="crypto-details-name">  
+                    ${escapeHtml(name)}  
+                </div>  
+  
+                <div class="crypto-details-symbol">  
+                    ${escapeHtml(symbol)}  
+                </div>  
+  
+            </div>  
+  
+        </div>  
+  
+  
+        <div class="crypto-details-price">  
+            €${formatMarketPrice(currentPrice)}  
+        </div>  
+  
+  
+        <div  
+            class="crypto-details-change ${changeClass}">  
+  
+            ${sign}${change24.toFixed(2)}% &nbsp; 24h  
+  
+        </div>  
+  
+  
+        <div class="trade-panel">  
+  
+            <div class="trade-title">  
+                Buy / Sell ${escapeHtml(symbol)}  
+            </div>  
+  
+  
+            <div class="trade-side">  
+  
+                <button  
+                    id="buySideButton"  
+                    type="button"  
+                    class="active-buy"  
+                    onclick="setTradeSide('BUY')">  
+  
+                    BUY  
+  
+                </button>  
+  
+                <button  
+                    id="sellSideButton"  
+                    type="button"  
+                    onclick="setTradeSide('SELL')">  
+  
+                    SELL  
+  
+                </button>  
+  
+            </div>  
+  
+  
+            <div class="trade-balance">  
+  
+                Your ${escapeHtml(symbol)} balance:  
+  
+                <strong id="tradeCryptoBalance">  
+  
+                    ${formatCrypto(cryptoBalance)}  
+                    ${escapeHtml(symbol)}  
+  
+                </strong>  
+  
+            </div>  
+  
+  
+            <label  
+                class="trade-input-label"  
+                for="tradeAmount">  
+  
+                Amount in ${escapeHtml(symbol)}  
+  
+            </label>  
+  
+  
+            <input  
+                id="tradeAmount"  
+                type="number"  
+                min="0"  
+                step="any"  
+                inputmode="decimal"  
+                placeholder="0.00000000"  
+                oninput="updateTradePreview">  
+  
+  
+            <div  
+                id="tradePreview"  
+                class="trade-preview">  
+  
+                <div class="trade-preview-row">  
+  
+                    <span>Price</span>  
+  
+                    <strong>  
+                        €${formatMarketPrice(currentPrice)}  
+                    </strong>  
+  
+                </div>  
+  
+                <div class="trade-preview-row">  
+  
+                    <span>Total</span>  
+  
+                    <strong id="tradeTotal">  
+                        €0.00  
+                    </strong>  
+  
+                </div>  
+  
+            </div>  
+  
+  
+            <button  
+                id="tradeExecuteButton"  
+                class="primary buy-button"  
+                type="button"  
+                onclick="executeCryptoTrade()">  
+  
+                BUY ${escapeHtml(symbol)}  
+  
+            </button>  
+  
+  
+            <div  
+                id="tradeStatus"  
+                class="status">  
+            </div>  
+  
+        </div>  
+  
+  
+        <div class="crypto-stats">  
+  
+            <div class="crypto-stat">  
+  
+                <div class="crypto-stat-label">  
+                    24h High  
+                </div>  
+  
+                <div class="crypto-stat-value">  
+                    €${formatMarketPrice(high24)}  
+                </div>  
+  
+            </div>  
+  
+  
+            <div class="crypto-stat">  
+  
+                <div class="crypto-stat-label">  
+                    24h Low  
+                </div>  
+  
+                <div class="crypto-stat-value">  
+                    €${formatMarketPrice(low24)}  
+                </div>  
+  
+            </div>  
+  
+  
+            <div class="crypto-stat">  
+  
+                <div class="crypto-stat-label">  
+                    Market Cap  
+                </div>  
+  
+                <div class="crypto-stat-value">  
+                    €${formatLargeNumber(marketCap)}  
+                </div>  
+  
+            </div>  
+  
+  
+            <div class="crypto-stat">  
+  
+                <div class="crypto-stat-label">  
+                    24h Volume  
+                </div>  
+  
+                <div class="crypto-stat-value">  
+                    €${formatLargeNumber(volume)}  
+                </div>  
+  
+            </div>  
+  
+  
+            <div class="crypto-stat">  
+  
+                <div class="crypto-stat-label">  
+                    Market Rank  
+                </div>  
+  
+                <div class="crypto-stat-value">  
+                    #${escapeHtml(rank)}  
+                </div>  
+  
+            </div>  
+  
+  
+            <div class="crypto-stat">  
+  
+                <div class="crypto-stat-label">  
+                    Symbol  
+                </div>  
+  
+                <div class="crypto-stat-value">  
+                    ${escapeHtml(symbol)}  
+                </div>  
+  
+            </div>  
+  
+        </div>  
+  
+  
+        ${  
+            description  
+            ? `  
+                <div class="crypto-description">  
+                    ${escapeHtml(  
+                        description.substring(  
+                            0,  
+                            1200  
+                        )  
+                    )}  
+                </div>  
+              `  
+            : ""  
+        }  
+  
+    `;  
+  
+    const tradeAmount =  
+        document.getElementById(  
+            "tradeAmount"  
+        );  
+  
+    if(tradeAmount){  
+  
+        tradeAmount.addEventListener(  
+            "input",  
+            updateTradePreview  
+        );  
+  
+    }  
+  
+    tradeSide =  
+        "BUY";  
+  
+}  
+  
+  
+/* =========================================================  
+   SET BUY / SELL  
+   ========================================================= */  
+  
+function setTradeSide(  
+    side  
+){  
+  
+    tradeSide =  
+        side;  
+  
+    const buy =  
+        document.getElementById(  
+            "buySideButton"  
+        );  
+  
+    const sell =  
+        document.getElementById(  
+            "sellSideButton"  
+        );  
+  
+    const execute =  
+        document.getElementById(  
+            "tradeExecuteButton"  
+        );  
+  
+    if(!buy || !sell || !execute){  
+  
+        return;  
+  
+    }  
+  
+    buy.classList.remove(  
+        "active-buy"  
+    );  
+  
+    sell.classList.remove(  
+        "active-sell"  
+    );  
+  
+    execute.classList.remove(  
+        "buy-button",  
+        "sell-button"  
+    );  
+  
+    if(side === "BUY"){  
+  
+        buy.classList.add(  
+            "active-buy"  
+        );  
+  
+        execute.classList.add(  
+            "buy-button"  
+        );  
+  
+        execute.textContent =  
+            "BUY " +  
+            (  
+                selectedCoin  
+                ? selectedCoin.symbol  
+                : ""  
+            );  
+  
+    }  
+    else{  
+  
+        sell.classList.add(  
+            "active-sell"  
+        );  
+  
+        execute.classList.add(  
+            "sell-button"  
+        );  
+  
+        execute.textContent =  
+            "SELL " +  
+            (  
+                selectedCoin  
+                ? selectedCoin.symbol  
+                : ""  
+            );  
+  
+    }  
+  
+    clearStatus(  
+        "tradeStatus"  
+    );  
+  
+    updateTradePreview();  
+  
+}  
+  
+  
+/* =========================================================  
+   TRADE PREVIEW  
+   ========================================================= */  
+  
+function updateTradePreview(){  
+  
+    if(!selectedCoin){  
+  
+        return;  
+  
+    }  
+  
+    const input =  
+        document.getElementById(  
+            "tradeAmount"  
+        );  
+  
+    const total =  
+        document.getElementById(  
+            "tradeTotal"  
+        );  
+  
+    if(!input || !total){  
+  
+        return;  
+  
+    }  
+  
+    const amount =  
+        Number(  
+            input.value  
+        );  
+  
+    const price =  
+        Number(  
+            cryptoPrices[  
+                selectedCoin.symbol  
+            ]?.eur || 0  
+        );  
+  
+    if(  
+        !Number.isFinite(amount) ||  
+        amount <= 0 ||  
+        !Number.isFinite(price) ||  
+        price <= 0  
+    ){  
+  
+        total.textContent =  
+            "€0.00";  
+  
+        return;  
+  
+    }  
+  
+    total.textContent =  
+        "€" +  
+        formatMoney(  
+            amount * price  
+        );  
+  
+}  
+  
+  
+/* =========================================================  
+   EXECUTE CRYPTO TRADE  
+   ========================================================= */  
+  
+async function executeCryptoTrade(){  
+  
+    const button =  
+        document.getElementById(  
+            "tradeExecuteButton"  
+        );  
+  
+    const input =  
+        document.getElementById(  
+            "tradeAmount"  
+        );  
+  
+    if(!currentUser){  
+  
+        showStatus(  
+            "tradeStatus",  
+            "Please log in first.",  
+            "error"  
+        );  
+  
+        return;  
+  
+    }  
+  
+    if(!selectedCoin){  
+  
+        showStatus(  
+            "tradeStatus",  
+            "No cryptocurrency selected.",  
+            "error"  
+        );  
+  
+        return;  
+  
+    }  
+  
+    const amount =  
+        Number(  
+            input?.value  
+        );  
+  
+    const price =  
+        Number(  
+            cryptoPrices[  
+                selectedCoin.symbol  
+            ]?.eur || 0  
+        );  
+  
+    if(  
+        !Number.isFinite(amount) ||  
+        amount <= 0  
+    ){  
+  
+        showStatus(  
+            "tradeStatus",  
+            "Enter a valid cryptocurrency amount.",  
+            "error"  
+        );  
+  
+        return;  
+  
+    }  
+  
+    if(  
+        !Number.isFinite(price) ||  
+        price <= 0  
+    ){  
+  
+        showStatus(  
+            "tradeStatus",  
+            "Current cryptocurrency price is unavailable.",  
+            "error"  
+        );  
+  
+        return;  
+  
+    }  
+  
+    const totalEUR =  
+        amount *  
+        price;  
+  
+    if(  
+        !Number.isFinite(totalEUR) ||  
+        totalEUR <= 0  
+    ){  
+  
+        showStatus(  
+            "tradeStatus",  
+            "Invalid transaction total.",  
+            "error"  
+        );  
+  
+        return;  
+  
+    }  
+  
+    if(tradeSide === "SELL"){  
+  
+        const balance =  
+            getWalletBalance(  
+                selectedCoin.symbol  
+            );  
+  
+        if(amount > balance){  
+  
+            showStatus(  
+                "tradeStatus",  
+                "Insufficient " +  
+                selectedCoin.symbol +  
+                " balance.",  
+                "error"  
+            );  
+  
+            return;  
+  
+        }  
+  
+    }  
+  
+    button.disabled =  
+        true;  
+  
+    button.textContent =  
+        tradeSide === "BUY"  
+        ? "BUYING..."  
+        : "SELLING...";  
+  
+    clearStatus(  
+        "tradeStatus"  
+    );  
+  
+    try{  
+  
+        const result =  
+            await withTimeout(  
+  
+                supabaseClient.rpc(  
+                    "trade_crypto",  
+                    {  
+                        p_side:  
+                            tradeSide,  
+  
+                        p_symbol:  
+                            selectedCoin.symbol,  
+  
+                        p_amount:  
+                            amount,  
+  
+                        p_price_eur:  
+                            price  
+                    }  
+                ),  
+  
+                15000,  
+  
+                "Trade request timed out."  
+  
+            );  
+  
+        if(result.error){  
+  
+            throw result.error;  
+  
+        }  
+  
+        showStatus(  
+            "tradeStatus",  
+            tradeSide === "BUY"  
+            ? "BUY completed successfully."  
+            : "SELL completed successfully.",  
+            "success"  
+        );  
+  
+        input.value =  
+            "";  
+  
+        await loadWallet();  
+  
+        await loadTransactions();  
+  
+        const balance =  
+            getWalletBalance(  
+                selectedCoin.symbol  
+            );  
+  
+        const balanceElement =  
+            document.getElementById(  
+                "tradeCryptoBalance"  
+            );  
+  
+        if(balanceElement){  
+  
+            balanceElement.textContent =  
+                formatCrypto(balance) +  
+                " " +  
+                selectedCoin.symbol;  
+  
+        }  
+  
+        updateTradePreview();  
+  
+    }  
+    catch(error){  
+  
+        console.error(  
+            "Crypto trade error:",  
+            error  
+        );  
+  
+        showStatus(  
+            "tradeStatus",  
+            "Trade failed: " +  
+            error.message,  
+            "error"  
+        );  
+  
+    }  
+    finally{  
+  
+        button.disabled =  
+            false;  
+  
+        button.textContent =  
+            tradeSide === "BUY"  
+            ? "BUY " +  
+              (  
+                  selectedCoin  
+                  ? selectedCoin.symbol  
+                  : ""  
+              )  
+            : "SELL " +  
+              (  
+                  selectedCoin  
+                  ? selectedCoin.symbol  
+                  : ""  
+              );  
+  
+    }  
+  
+}  
+  
+  
+/* =========================================================  
+   TRANSACTIONS  
+   ========================================================= */  
+  
+async function loadTransactions(){  
+  
+    const list =  
+        document.getElementById(  
+            "transactionList"  
+        );  
+  
+    if(!currentUser){  
+  
+        list.innerHTML =  
+            '<div class="empty">Please log in first.</div>';  
+  
+        return;  
+  
+    }  
+  
+    list.innerHTML =  
+        '<div class="loading">Loading transactions...</div>';  
+  
+    try{  
+  
+        const result =  
+            await withTimeout(  
+  
+                supabaseClient  
+                    .from("wallet_transfers")  
+                    .select("*")  
+                    .or(  
+                        "sender_id.eq." +  
+                        currentUser.id +  
+                        ",receiver_id.eq." +  
+                        currentUser.id  
+                    )  
+                    .order(  
+                        "created_at",  
+                        {  
+                            ascending:false  
+                        }  
+                    )  
+                    .limit(20),  
+  
+                10000,  
+  
+                "Transaction request timed out."  
+  
+            );  
+  
+        if(result.error){  
+  
+            throw result.error;  
+  
+        }  
+  
+        const data =  
+            result.data || [];  
+  
+        if(!data.length){  
+  
+            list.innerHTML =  
+                '<div class="empty">No transactions yet.</div>';  
+  
+            return;  
+  
+        }  
+  
+        renderTransactions(  
+            data  
+        );  
+  
+    }  
+    catch(error){  
+  
+        console.error(  
+            "Transaction error:",  
+            error  
+        );  
+  
+        list.innerHTML =  
+            '<div class="empty">' +  
+            'Unable to load transactions.<br><br>' +  
+            escapeHtml(error.message) +  
+            '</div>';  
+  
+    }  
+  
+}  
+  
+  
+/* =========================================================  
+   RENDER TRANSACTIONS  
+   ========================================================= */  
+  
+function renderTransactions(  
+    transactions  
+){  
+  
+    const list =  
+        document.getElementById(  
+            "transactionList"  
+        );  
+  
+    list.innerHTML = "";  
+  
+    transactions.forEach(  
+        function(transaction){  
+  
+            const sent =  
+                transaction.sender_id ===  
+                currentUser.id;  
+  
+            const amount =  
+                Number(  
+                    transaction.amount || 0  
+                );  
+  
+            const date =  
+                transaction.created_at  
+                ? new Date(  
+                    transaction.created_at  
+                ).toLocaleString()  
+                : "";  
+  
+            const item =  
+                document.createElement(  
+                    "div"  
+                );  
+  
+            item.className =  
+                "item";  
+  
+            item.innerHTML = `  
+  
+                <div  
+                    class="circle"  
+                    style="  
+                        background:${  
+                            sent  
+                            ? "#ffebee"  
+                            : "#e8f5e9"  
+                        };  
+                        color:${  
+                            sent  
+                            ? "#d32f2f"  
+                            : "#558b2f"  
+                        };  
+                    ">  
+  
+                    <i class="fas ${  
+                        sent  
+                        ? "fa-arrow-up"  
+                        : "fa-arrow-down"  
+                    }"></i>  
+  
+                </div>  
+  
+                <div class="info">  
+  
+                    <div class="name">  
+  
+                        ${  
+                            sent  
+                            ? "Sent Money"  
+                            : "Received Money"  
+                        }  
+  
+                    </div>  
+  
+                    <div class="small">  
+  
+                        ${escapeHtml(date)}  
+  
+                        ${  
+                            transaction.note  
+                            ? " • " +  
+                              escapeHtml(  
+                                  transaction.note  
+                              )  
+                            : ""  
+                        }  
+  
+                    </div>  
+  
+                </div>  
+  
+                <div  
+                    class="amount ${  
+                        sent  
+                        ? "negative"  
+                        : "positive"  
+                    }">  
+  
+                    ${sent ? "-" : "+"}  
+                    €${formatMoney(amount)}  
+  
+                </div>  
+  
+            `;  
+  
+            list.appendChild(  
+                item  
+            );  
+  
+        }  
+    );  
+  
+}  
+  
+  
+/* =========================================================  
+   SEND  
+   ========================================================= */  
+  
+function openSend(){  
+  
+    clearStatus(  
+        "sendStatus"  
+    );  
+  
+    document.getElementById(  
+        "sendModal"  
+    ).style.display =  
+        "flex";  
+  
+}  
+  
+  
+async function sendMoney(){  
+  
+    if(!currentUser){  
+  
+        showStatus(  
+            "sendStatus",  
+            "Please log in first.",  
+            "error"  
+        );  
+  
+        return;  
+  
+    }  
+  
+    const receiverId =  
+        document.getElementById(  
+            "receiverId"  
+        ).value.trim();  
+  
+    const amount =  
+        Number(  
+            document.getElementById(  
+                "sendAmount"  
+            ).value  
+        );  
+  
+    const note =  
+        document.getElementById(  
+            "sendNote"  
+        ).value.trim();  
+  
+    if(!receiverId){  
+  
+        showStatus(  
+            "sendStatus",  
+            "Enter receiver User ID.",  
+            "error"  
+        );  
+  
+        return;  
+  
+    }  
+  
+    if(  
+        !Number.isFinite(amount) ||  
+        amount <= 0  
+    ){  
+  
+        showStatus(  
+            "sendStatus",  
+            "Enter a valid amount.",  
+            "error"  
+        );  
+  
+        return;  
+  
+    }  
+  
+    if(  
+        receiverId ===  
+        currentUser.id  
+    ){  
+  
+        showStatus(  
+            "sendStatus",  
+            "You cannot send money to yourself.",  
+            "error"  
+        );  
+  
+        return;  
+  
+    }  
+  
+    const button =  
+        document.getElementById(  
+            "sendButton"  
+        );  
+  
+    button.disabled =  
+        true;  
+  
+    button.textContent =  
+        "Sending...";  
+  
+    try{  
+  
+        const result =  
+            await withTimeout(  
+  
+                supabaseClient.rpc(  
+                    "transfer_money",  
+                    {  
+                        p_receiver_id:  
+                            receiverId,  
+  
+                        p_amount:  
+                            amount,  
+  
+                        p_note:  
+                            note  
+                    }  
+                ),  
+  
+                15000,  
+  
+                "Transfer request timed out."  
+  
+            );  
+  
+        if(result.error){  
+  
+            throw result.error;  
+  
+        }  
+  
+        showStatus(  
+            "sendStatus",  
+            "Money sent successfully.",  
+            "success"  
+        );  
+  
+        document.getElementById(  
+            "receiverId"  
+        ).value = "";  
+  
+        document.getElementById(  
+            "sendAmount"  
+        ).value = "";  
+  
+        document.getElementById(  
+            "sendNote"  
+        ).value = "";  
+  
+        await loadWallet();  
+  
+        await loadTransactions();  
+  
+    }  
+    catch(error){  
+  
+        console.error(  
+            "Transfer error:",  
+            error  
+        );  
+  
+        showStatus(  
+            "sendStatus",  
+            "Transfer failed: " +  
+            error.message,  
+            "error"  
+        );  
+  
+    }  
+    finally{  
+  
+        button.disabled =  
+            false;  
+  
+        button.textContent =  
+            "Send Money";  
+  
+    }  
+  
+}  
+  
+  
+/* =========================================================  
+   RECEIVE  
+   ========================================================= */  
+  
+function openReceive(){  
+  
+    document.getElementById(  
+        "myUserId"  
+    ).textContent =  
+        currentUser  
+        ? currentUser.id  
+        : "Not logged in";  
+  
+    document.getElementById(  
+        "receiveModal"  
+    ).style.display =  
+        "flex";  
+  
+}  
+  
+  
+/* =========================================================  
+   EXCHANGE  
+   ========================================================= */  
+  
+function openExchange(){  
+  
+    document.getElementById(  
+        "exchangeModal"  
+    ).style.display =  
+        "flex";  
+  
+}  
+  
+  
+/* =========================================================  
+   CURRENCY  
+   ========================================================= */  
+  
+function changeDisplayCurrency(){  
+  
+    renderWallets(  
+        walletsCache  
+    );  
+  
+}  
+  
+  
+/* =========================================================  
+   MODAL  
+   ========================================================= */  
+  
+function closeModal(  
+    id  
+){  
+  
+    const modal =  
+        document.getElementById(  
+            id  
+        );  
+  
+    if(modal){  
+  
+        modal.style.display =  
+            "none";  
+  
+    }  
+  
+}  
+  
+  
+/* =========================================================  
+   COPY  
+   ========================================================= */  
+  
+async function copyId(){  
+  
+    if(!currentUser){  
+  
+        alert(  
+            "User ID is not available."  
+        );  
+  
+        return;  
+  
+    }  
+  
+    try{  
+  
+        await navigator.clipboard.writeText(  
+            currentUser.id  
+        );  
+  
+        alert(  
+            "User ID copied."  
+        );  
+  
+    }  
+    catch(error){  
+  
+        alert(  
+            "Could not copy User ID."  
+        );  
+  
+    }  
+  
+}  
+  
+  
+/* =========================================================  
+   STATUS  
+   ========================================================= */  
+  
+function showStatus(  
+    id,  
+    message,  
+    type  
+){  
+  
+    const element =  
+        document.getElementById(  
+            id  
+        );  
+  
+    if(!element){  
+  
+        return;  
+  
+    }  
+  
+    element.textContent =  
+        message;  
+  
+    element.className =  
+        "status " +  
+        type;  
+  
+}  
+  
+function clearStatus(  
+    id  
+){  
+  
+    const element =  
+        document.getElementById(  
+            id  
+        );  
+  
+    if(element){  
+  
+        element.textContent =  
+            "";  
+  
+        element.className =  
+            "status";  
+  
+    }  
+  
+}  
+  
+  
+/* =========================================================  
+   ERROR  
+   ========================================================= */  
+  
+function showError(  
+    message  
+){  
+  
+    const container =  
+        document.getElementById(  
+            "errorContainer"  
+        );  
+  
+    container.innerHTML =  
+        '<div class="error">' +  
+        escapeHtml(message) +  
+        '</div>';  
+  
+}  
+  
+function clearError(){  
+  
+    document.getElementById(  
+        "errorContainer"  
+    ).innerHTML =  
+        "";  
+  
+}  
+  
+  
+/* =========================================================  
+   FORMAT MONEY  
+   ========================================================= */  
+  
+function formatMoney(  
+    value  
+){  
+  
+    return Number(  
+        value || 0  
+    ).toLocaleString(  
+        "en-US",  
+        {  
+            minimumFractionDigits:2,  
+            maximumFractionDigits:2  
+        }  
+    );  
+  
+}  
+  
+  
+/* =========================================================  
+   FORMAT MARKET PRICE  
+   ========================================================= */  
+  
+function formatMarketPrice(  
+    value  
+){  
+  
+    const number =  
+        Number(value || 0);  
+  
+    if(number === 0){  
+  
+        return "0.00";  
+  
+    }  
+  
+    return number.toLocaleString(  
+        "en-US",  
+        {  
+            minimumFractionDigits:2,  
+            maximumFractionDigits:  
+                Math.abs(number) < 0.01  
+                ? 8  
+                : 6  
+        }  
+    );  
+  
+}  
+  
+  
+/* =========================================================  
+   FORMAT LARGE  
+   ========================================================= */  
+  
+function formatLargeNumber(  
+    value  
+){  
+  
+    const number =  
+        Number(value || 0);  
+  
+    if(number >= 1e12){  
+  
+        return (  
+            number / 1e12  
+        ).toFixed(2) +  
+        "T";  
+  
+    }  
+  
+    if(number >= 1e9){  
+  
+        return (  
+            number / 1e9  
+        ).toFixed(2) +  
+        "B";  
+  
+    }  
+  
+    if(number >= 1e6){  
+  
+        return (  
+            number / 1e6  
+        ).toFixed(2) +  
+        "M";  
+  
+    }  
+  
+    if(number >= 1e3){  
+  
+        return (  
+            number / 1e3  
+        ).toFixed(2) +  
+        "K";  
+  
+    }  
+  
+    return formatMoney(  
+        number  
+    );  
+  
+}  
+  
+  
+/* =========================================================  
+   FORMAT CRYPTO  
+   ========================================================= */  
+  
+function formatCrypto(  
+    value  
+){  
+  
+    const number =  
+        Number(value || 0);  
+  
+    if(number === 0){  
+  
+        return "0";  
+  
+    }  
+  
+    if(  
+        Math.abs(number) < 0.000001  
+    ){  
+  
+        return number.toFixed(8);  
+  
+    }  
+  
+    return number.toLocaleString(  
+        "en-US",  
+        {  
+            maximumFractionDigits:8  
+        }  
+    );  
+  
+}  
+  
+  
+/* =========================================================  
+   STRIP HTML  
+   ========================================================= */  
+  
+function stripHtml(  
+    value  
+){  
+  
+    return String(value || "")  
+        .replace(  
+            /<[^>]*>/g,  
+            ""  
+        )  
+        .replace(  
+            /\s+/g,  
+            " "  
+        )  
+        .trim();  
+  
+}  
+  
+  
+/* =========================================================  
+   ESCAPE HTML  
+   ========================================================= */  
+  
+function escapeHtml(  
+    value  
+){  
+  
+    return String(value ?? "")  
+  
+        .replace(  
+            /&/g,  
+            "&amp;"  
+        )  
+  
+        .replace(  
+            /</g,  
+            "&lt;"  
+        )  
+  
+        .replace(  
+            />/g,  
+            "&gt;"  
+        )  
+  
+        .replace(  
+            /"/g,  
+            "&quot;"  
+        )  
+  
+        .replace(  
+            /'/g,  
+            "&#039;"  
+        );  
+  
+}  
+  
+  
+/* =========================================================  
+   REFRESH  
+   ========================================================= */  
+  
+async function refreshWallet(){  
+  
+    clearError();  
+  
+    const button =  
+        document.getElementById(  
+            "walletRefreshButton"  
+        );  
+  
+    button.disabled =  
+        true;  
+  
+    try{  
+  
+        await loadWallet();  
+  
+        await loadCryptoPrices();  
+  
+        if(currentUser){  
+  
+            await loadTransactions();  
+  
+        }  
+  
+    }  
+    catch(error){  
+  
+        console.error(  
+            "Refresh error:",  
+            error  
+        );  
+  
+        showError(  
+            "Refresh error: " +  
+            error.message  
+        );  
+  
+    }  
+    finally{  
+  
+        button.disabled =  
+            false;  
+  
+    }  
+  
+}  
+  
+  
+/* =========================================================  
+   MODAL BACKGROUND  
+   ========================================================= */  
+  
+document  
+    .querySelectorAll(".modal")  
+    .forEach(  
+        function(modal){  
+  
+            modal.addEventListener(  
+                "click",  
+                function(event){  
+  
+                    if(  
+                        event.target ===  
+                        modal  
+                    ){  
+  
+                        modal.style.display =  
+                            "none";  
+  
+                    }  
+  
+                }  
+            );  
+  
+        }  
+    );  
+  
+  
+/* =========================================================  
+   ESC  
+   ========================================================= */  
+  
+document.addEventListener(  
+    "keydown",  
+    function(event){  
+  
+        if(  
+            event.key ===  
+            "Escape"  
+        ){  
+  
+            document  
+                .querySelectorAll(".modal")  
+                .forEach(  
+                    function(modal){  
+  
+                        modal.style.display =  
+                            "none";  
+  
+                    }  
+                );  
+  
+        }  
+  
+    }  
+);  
+  
+  
+/* =========================================================  
+   AUTH STATE  
+   ========================================================= */  
+  
+supabaseClient.auth.onAuthStateChange(  
+    function(  
+        event,  
+        session  
+    ){  
+  
+        currentUser =  
+            session?.user || null;  
+  
+    }  
+);  
+  
+  
+/* =========================================================  
+   GLOBAL ERRORS  
+   ========================================================= */  
+  
+window.addEventListener(  
+    "error",  
+    function(event){  
+  
+        console.error(  
+            "JavaScript error:",  
+            event.error ||  
+            event.message  
+        );  
+  
+    }  
+);  
+  
+window.addEventListener(  
+    "unhandledrejection",  
+    function(event){  
+  
+        console.error(  
+            "Unhandled promise:",  
+            event.reason  
+        );  
+  
+    }  
+);  
+  
+  
+  
+  
+/* =========================================================  
+   STELLAR / XLM WALLET  
+   ========================================================= */  
+  
+function setStellarStatus(message,type){  
+    const element=document.getElementById("stellarStatus");  
+    if(!element)return;  
+    if(!message){element.textContent="";element.className="stellar-status";return;}  
+    element.textContent=message;  
+    element.className="stellar-status "+type;  
+}  
+  
+function renderStellarConnection(address){  
+    const addressElement=document.getElementById("stellarAddress");  
+    const connectButton=document.getElementById("stellarConnectButton");  
+    const disconnectButton=document.getElementById("stellarDisconnectButton");  
+    if(!addressElement||!connectButton||!disconnectButton)return;  
+    if(address){  
+        addressElement.textContent=address;  
+        addressElement.style.display="block";  
+        connectButton.style.display="none";  
+        disconnectButton.style.display="block";  
+        setStellarStatus("Stellar wallet connected successfully.","success");  
+    }else{  
+        addressElement.textContent="";  
+        addressElement.style.display="none";  
+        connectButton.style.display="block";  
+        disconnectButton.style.display="none";  
+    }  
+}  
+  
+async function connectHAVKARStellar(){  
+    const button=document.getElementById("stellarConnectButton");  
+    if(typeof window.havkarConnectStellarWallet!=="function"){  
+        setStellarStatus("Stellar Wallet integration is not available.","error");  
+        return;  
+    }  
+    button.disabled=true;  
+    button.innerHTML='<i class="fas fa-spinner fa-spin"></i> Connecting...';  
+    setStellarStatus("Select your Stellar wallet...","info");  
+    try{  
+        const address=await window.havkarConnectStellarWallet();  
+        if(!address)throw new Error("No Stellar address returned.");  
+        renderStellarConnection(address);  
+    }catch(error){  
+        console.error("HAVKAR Stellar connection error:",error);  
+        setStellarStatus("Stellar wallet connection failed: "+(error?.message||"Unknown error"),"error");  
+    }finally{  
+        button.disabled=false;  
+        button.innerHTML='<i class="fas fa-wallet"></i> Connect Stellar Wallet';  
+    }  
+}  
+  
+async function disconnectHAVKARStellar(){  
+    const button=document.getElementById("stellarDisconnectButton");  
+    button.disabled=true;  
+    button.innerHTML='<i class="fas fa-spinner fa-spin"></i> Disconnecting...';  
+    try{  
+        if(typeof window.havkarDisconnectStellarWallet==="function")await window.havkarDisconnectStellarWallet();  
+        renderStellarConnection(null);  
+        setStellarStatus("Stellar wallet disconnected.","info");  
+    }catch(error){  
+        console.error("HAVKAR Stellar disconnect error:",error);  
+        setStellarStatus("Could not disconnect Stellar wallet: "+(error?.message||"Unknown error"),"error");  
+    }finally{  
+        button.disabled=false;  
+        button.innerHTML='<i class="fas fa-link-slash"></i> Disconnect Wallet';  
+    }  
+}  
+  
+window.addEventListener("havkar-stellar-connected",function(event){  
+    renderStellarConnection(event?.detail?.address||null);  
+});  
+window.addEventListener("havkar-stellar-disconnected",function(){  
+    renderStellarConnection(null);  
+});  
+window.addEventListener("havkar-stellar-error",function(event){  
+    setStellarStatus(event?.detail?.message||"Stellar wallet connection failed.","error");  
+});  
+  
+/* =========================================================  
+   START  
+   ========================================================= */  
+  
+async function startWallet(){  
+  
+    clearError();  
+  
+    if(window.HAVKAR_STELLAR?.connected && window.HAVKAR_STELLAR?.address){  
+        renderStellarConnection(window.HAVKAR_STELLAR.address);  
+    }  
+  
+    await Promise.allSettled([  
+  
+        loadCryptoPrices(),  
+  
+        loadWallet(),  
+  
+        initializePi()  
+  
+    ]);  
+  
+    if(currentUser){  
+  
+        await loadTransactions();  
+  
+    }  
+  
+}  
+  
+startWallet();  
+  
+</script>  </body>  
+      </html>  
