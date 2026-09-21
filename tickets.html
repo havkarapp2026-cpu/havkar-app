@@ -942,6 +942,17 @@ button{
     box-shadow:0 0 0 3px rgba(124,179,66,.11);
 }
 
+
+.birth-date-grid{
+    display:grid;
+    grid-template-columns:1fr 1.35fr 1.15fr;
+    gap:9px;
+}
+
+.birth-date-grid .checkout-select{
+    min-width:0;
+}
+
 .checkout-help{
     margin-top:5px;
     color:#999;
@@ -3568,11 +3579,50 @@ function createPassengerFormHtml(passenger,index){
                         <span class="required">*</span>
                     </label>
 
-                    <input
-                        class="checkout-input passenger-born-on"
-                        type="date"
-                        autocomplete="bday"
-                    >
+                    <div class="birth-date-grid">
+
+                        <select
+                            class="checkout-select passenger-birth-day"
+                            aria-label="Birth day"
+                        >
+                            <option value="">Day</option>
+                            ${Array.from({length:31},(_,day) => {
+                                const value = String(day + 1).padStart(2,"0");
+                                return `<option value="${value}">${day + 1}</option>`;
+                            }).join("")}
+                        </select>
+
+                        <select
+                            class="checkout-select passenger-birth-month"
+                            aria-label="Birth month"
+                        >
+                            <option value="">Month</option>
+                            ${[
+                                "January","February","March","April",
+                                "May","June","July","August",
+                                "September","October","November","December"
+                            ].map((month,index) => {
+                                const value = String(index + 1).padStart(2,"0");
+                                return `<option value="${value}">${month}</option>`;
+                            }).join("")}
+                        </select>
+
+                        <select
+                            class="checkout-select passenger-birth-year"
+                            aria-label="Birth year"
+                        >
+                            <option value="">Year</option>
+                            ${Array.from({length:120},(_,index) => {
+                                const year = new Date().getFullYear() - index;
+                                return `<option value="${year}">${year}</option>`;
+                            }).join("")}
+                        </select>
+
+                    </div>
+
+                    <div class="checkout-help">
+                        Select day, month and year separately.
+                    </div>
 
                 </div>
 
@@ -3962,13 +4012,34 @@ function collectPassengerCheckout(){
                     ""
                 ).trim();
 
-            const bornOn =
+            const birthDay =
                 String(
                     card.querySelector(
-                        ".passenger-born-on"
+                        ".passenger-birth-day"
                     )?.value ||
                     ""
                 ).trim();
+
+            const birthMonth =
+                String(
+                    card.querySelector(
+                        ".passenger-birth-month"
+                    )?.value ||
+                    ""
+                ).trim();
+
+            const birthYear =
+                String(
+                    card.querySelector(
+                        ".passenger-birth-year"
+                    )?.value ||
+                    ""
+                ).trim();
+
+            const bornOn =
+                birthYear && birthMonth && birthDay
+                    ? `${birthYear}-${birthMonth}-${birthDay}`
+                    : "";
 
             if(!id){
 
@@ -4005,14 +4076,28 @@ function collectPassengerCheckout(){
                 );
             }
 
+            if(!birthDay || !birthMonth || !birthYear){
+
+                throw new Error(
+                    `Select day, month and year of birth for passenger ${index + 1}.`
+                );
+            }
+
+            const birthDate =
+                new Date(
+                    Number(birthYear),
+                    Number(birthMonth) - 1,
+                    Number(birthDay)
+                );
+
             if(
-                !/^\d{4}-\d{2}-\d{2}$/.test(
-                    bornOn
-                )
+                birthDate.getFullYear() !== Number(birthYear) ||
+                birthDate.getMonth() !== Number(birthMonth) - 1 ||
+                birthDate.getDate() !== Number(birthDay)
             ){
 
                 throw new Error(
-                    `Enter the date of birth for passenger ${index + 1}.`
+                    `Select a valid date of birth for passenger ${index + 1}.`
                 );
             }
 
