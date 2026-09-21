@@ -1062,6 +1062,92 @@ button{
     word-break:break-all;
 }
 
+
+.my-tickets-list{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+
+.my-ticket-card{
+    border:1px solid var(--border);
+    border-radius:16px;
+    background:#fff;
+    padding:16px;
+    box-shadow:var(--shadow);
+}
+
+.my-ticket-top{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:12px;
+}
+
+.my-ticket-route{
+    font-size:18px;
+    font-weight:900;
+    color:var(--text);
+}
+
+.my-ticket-status{
+    flex:0 0 auto;
+    padding:6px 9px;
+    border-radius:999px;
+    background:var(--green-light);
+    color:var(--green-dark);
+    font-size:11px;
+    font-weight:900;
+}
+
+.my-ticket-meta{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
+
+.my-ticket-meta-item{
+    padding:10px;
+    border-radius:11px;
+    background:#f7f8f7;
+}
+
+.my-ticket-meta-label{
+    margin-bottom:4px;
+    color:var(--muted);
+    font-size:11px;
+}
+
+.my-ticket-meta-value{
+    color:var(--text);
+    font-size:13px;
+    font-weight:800;
+    word-break:break-word;
+}
+
+.my-tickets-empty{
+    padding:28px 18px;
+    border:1px dashed var(--border);
+    border-radius:16px;
+    text-align:center;
+    color:var(--muted);
+    background:#fafafa;
+}
+
+.my-tickets-empty i{
+    display:block;
+    margin-bottom:10px;
+    color:var(--green);
+    font-size:30px;
+}
+
+@media(max-width:600px){
+    .my-ticket-meta{
+        grid-template-columns:1fr;
+    }
+}
+
 .toast{
     position:fixed;
     left:50%;
@@ -4132,6 +4218,267 @@ function collectPassengerCheckout(){
     };
 }
 
+
+/* =========================================================
+   MY TICKETS
+========================================================= */
+
+const HAVKAR_TICKETS_STORAGE_KEY =
+    "havkar_my_tickets_v1";
+
+function readSavedTickets(){
+
+    try{
+
+        const raw =
+            localStorage.getItem(
+                HAVKAR_TICKETS_STORAGE_KEY
+            );
+
+        const parsed =
+            raw ? JSON.parse(raw) : [];
+
+        return Array.isArray(parsed)
+            ? parsed
+            : [];
+
+    }catch{
+        return [];
+    }
+}
+
+function writeSavedTickets(tickets){
+
+    try{
+
+        localStorage.setItem(
+            HAVKAR_TICKETS_STORAGE_KEY,
+            JSON.stringify(tickets)
+        );
+
+        return true;
+
+    }catch{
+        return false;
+    }
+}
+
+function saveSuccessfulDuffelOrder(payload){
+
+    const order =
+        payload?.order || {};
+
+    const offer =
+        payload?.offer ||
+        selectedFlightOffer?.data ||
+        {};
+
+    if(!order?.id){
+        return;
+    }
+
+    const slices =
+        Array.isArray(offer?.slices)
+            ? offer.slices
+            : [];
+
+    const firstSlice =
+        slices[0] || {};
+
+    const firstSegment =
+        Array.isArray(firstSlice?.segments)
+            ? firstSlice.segments[0]
+            : null;
+
+    const route =
+        getCheckoutRouteSummary(offer);
+
+    const airline =
+        offer?.owner?.name ||
+        firstSegment?.marketing_carrier?.name ||
+        firstSegment?.operating_carrier?.name ||
+        "Airline";
+
+    const totalAmount =
+        order.total_amount ||
+        offer.total_amount ||
+        "";
+
+    const totalCurrency =
+        order.total_currency ||
+        offer.total_currency ||
+        "";
+
+    const departureAt =
+        firstSegment?.departing_at ||
+        firstSlice?.departing_at ||
+        "";
+
+    const ticket = {
+        id:String(order.id),
+        booking_reference:String(
+            order.booking_reference ||
+            ""
+        ),
+        route:String(route),
+        airline:String(airline),
+        departure_at:String(departureAt),
+        total_amount:String(totalAmount),
+        total_currency:String(totalCurrency),
+        mode:"TEST",
+        status:"Created",
+        created_at:new Date().toISOString()
+    };
+
+    const tickets =
+        readSavedTickets();
+
+    const existingIndex =
+        tickets.findIndex(
+            item => item?.id === ticket.id
+        );
+
+    if(existingIndex >= 0){
+        tickets[existingIndex] = ticket;
+    }else{
+        tickets.unshift(ticket);
+    }
+
+    writeSavedTickets(
+        tickets.slice(0,100)
+    );
+}
+
+function renderMyTickets(){
+
+    const body =
+        $("bookingBody");
+
+    if(!body){
+        return;
+    }
+
+    const title =
+        $("bookingTitle");
+
+    const subtitle =
+        $("bookingSubtitle");
+
+    if(title){
+        title.textContent =
+            "My Tickets";
+    }
+
+    if(subtitle){
+        subtitle.textContent =
+            "HAVKAR booking history";
+    }
+
+    const tickets =
+        readSavedTickets();
+
+    if(!tickets.length){
+
+        body.innerHTML = `
+            <div class="my-tickets-empty">
+                <i class="fas fa-ticket"></i>
+                <strong>No saved tickets yet</strong>
+                <div style="margin-top:7px;">
+                    Successful HAVKAR bookings will appear here.
+                </div>
+            </div>
+        `;
+
+        return;
+    }
+
+    body.innerHTML = `
+        <div class="my-tickets-list">
+            ${tickets.map(ticket => {
+
+                const total =
+                    formatMoney(
+                        ticket?.total_amount,
+                        ticket?.total_currency
+                    );
+
+                const departure =
+                    ticket?.departure_at
+                        ? formatFlightDateTime(
+                            ticket.departure_at
+                        )
+                        : "—";
+
+                return `
+                    <article class="my-ticket-card">
+                        <div class="my-ticket-top">
+                            <div>
+                                <div class="my-ticket-route">
+                                    ${escapeHtml(ticket?.route || "Flight")}
+                                </div>
+                                <div class="checkout-help">
+                                    ${escapeHtml(ticket?.airline || "Airline")}
+                                </div>
+                            </div>
+                            <div class="my-ticket-status">
+                                ${escapeHtml(ticket?.mode || "TEST")}
+                            </div>
+                        </div>
+
+                        <div class="my-ticket-meta">
+                            <div class="my-ticket-meta-item">
+                                <div class="my-ticket-meta-label">Booking reference</div>
+                                <div class="my-ticket-meta-value">
+                                    ${escapeHtml(ticket?.booking_reference || "—")}
+                                </div>
+                            </div>
+
+                            <div class="my-ticket-meta-item">
+                                <div class="my-ticket-meta-label">Departure</div>
+                                <div class="my-ticket-meta-value">
+                                    ${escapeHtml(departure)}
+                                </div>
+                            </div>
+
+                            <div class="my-ticket-meta-item">
+                                <div class="my-ticket-meta-label">Total</div>
+                                <div class="my-ticket-meta-value">
+                                    ${escapeHtml(total)}
+                                </div>
+                            </div>
+
+                            <div class="my-ticket-meta-item">
+                                <div class="my-ticket-meta-label">Status</div>
+                                <div class="my-ticket-meta-value">
+                                    ${escapeHtml(ticket?.status || "Created")}
+                                </div>
+                            </div>
+
+                            <div class="my-ticket-meta-item">
+                                <div class="my-ticket-meta-label">Duffel Order ID</div>
+                                <div class="my-ticket-meta-value">
+                                    ${escapeHtml(ticket?.id || "—")}
+                                </div>
+                            </div>
+
+                            <div class="my-ticket-meta-item">
+                                <div class="my-ticket-meta-label">Saved</div>
+                                <div class="my-ticket-meta-value">
+                                    ${escapeHtml(
+                                        ticket?.created_at
+                                            ? formatFlightDateTime(ticket.created_at)
+                                            : "—"
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                `;
+            }).join("")}
+        </div>
+    `;
+}
+
 /* =========================================================
    CREATE DUFFEL TEST ORDER
 ========================================================= */
@@ -4243,6 +4590,10 @@ async function createDuffelTestOrder(){
                 "Duffel returned an invalid order response."
             );
         }
+
+        saveSuccessfulDuffelOrder(
+            payload
+        );
 
         renderOrderSuccess(
             payload
@@ -5109,10 +5460,19 @@ function goNotifications(){
 
 function goTickets(){
 
-    window.scrollTo({
-        top:0,
-        behavior:"smooth"
-    });
+    renderMyTickets();
+    openBookingOverlay();
+
+    document
+        .querySelectorAll(
+            ".bottom-nav .nav-item"
+        )
+        .forEach(item =>
+            item.classList.remove("active")
+        );
+
+    $("ticketsNav")
+        ?.classList.add("active");
 }
 
 function setupEnterSearch(elementId){
