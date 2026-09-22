@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <meta name="theme-color" content="#7cb342" />
+
+  <title>HAVKAR - Translate</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --green: #7cb342;
+      --green-dark: #558b2f;
+      --green-light: #eef7e8;
+      --background: #f5f6f5;
+      --white: #ffffff;
+      --text: #252525;
+      --muted: #777777;
+      --border: #e2e2e2;
+      --danger: #d32f2f;
+      --shadow: 0 4px 18px rgba(0, 0, 0, 0.07);
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--background);
+      color: var(--text);
+      font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+    }
+
+    button,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 760px;
+      min-height: 100vh;
+      margin: 0 auto;
+      background: var(--background);
+    }
+
+    /* =========================
+       HEADER
+    ========================= */
+
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+
+      height: 64px;
+
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      padding: 0 16px;
+
+      background: var(--white);
+
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-side {
+      width: 44px;
+      height: 44px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .back-button {
+      width: 42px;
+      height: 42px;
+
+      border: 0;
+      border-radius: 50%;
+
+      background: transparent;
+
+      font-size: 27px;
+      color: var(--text);
+    }
+
+    .back-button:hover {
+      background: #f1f1f1;
+    }
+
+    .header-title {
+      flex: 1;
+
+      text-align: center;
+
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .logo {
+      width: 40px;
+      height: 40px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      border-radius: 50%;
+
+      background: var(--green);
+
+      color: white;
+
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    /* =========================
+       CONTENT
+    ========================= */
+
+    .content {
+      padding: 18px 14px 40px;
+    }
+
+    .intro {
+      margin-bottom: 16px;
+
+      padding: 16px;
+
+      border: 1px solid #dfe8d8;
+      border-radius: 16px;
+
+      background: var(--green-light);
+    }
+
+    .intro-title {
+      margin-bottom: 5px;
+
+      color: var(--green-dark);
+
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .intro-text {
+      color: #52604a;
+
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* =========================
+       TRANSLATOR CARD
+    ========================= */
+
+    .translator-card {
+      overflow: hidden;
+
+      border: 1px solid var(--border);
+      border-radius: 18px;
+
+      background: var(--white);
+
+      box-shadow: var(--shadow);
+    }
+
+    /* =========================
+       LANGUAGES
+    ========================= */
+
+    .language-row {
+      display: grid;
+      grid-template-columns: 1fr 50px 1fr;
+      gap: 8px;
+
+      align-items: center;
+
+      padding: 14px;
+
+      border-bottom: 1px solid var(--border);
+    }
+
+    .language-box {
+      min-width: 0;
+    }
+
+    .language-label {
+      display: block;
+
+      margin-bottom: 6px;
+
+      color: var(--muted);
+
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .language-select {
+      width: 100%;
+      height: 45px;
+
+      padding: 0 10px;
+
+      border: 1px solid var(--border);
+      border-radius: 11px;
+
+      outline: none;
+
+      background: var(--white);
+
+      color: var(--text);
+
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .language-select:focus {
+      border-color: var(--green);
+    }
+
+    .swap-button {
+      width: 44px;
+      height: 44px;
+
+      align-self: end;
+
+      border: 0;
+      border-radius: 50%;
+
+      background: var(--green-light);
+
+      color: var(--green-dark);
+
+      font-size: 23px;
+      font-weight: 700;
+    }
+
+    .swap-button:hover {
+      background: #e1f0d7;
+    }
+
+    /* =========================
+       TEXT AREAS
+    ========================= */
+
+    .text-section {
+      padding: 14px;
+    }
+
+    .section-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      gap: 10px;
+
+      margin-bottom: 8px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .character-count {
+      color: var(--muted);
+
+      font-size: 12px;
+    }
+
+    .text-area {
+      width: 100%;
+      min-height: 170px;
+
+      resize: vertical;
+
+      padding: 14px;
+
+      border: 1px solid var(--border);
+      border-radius: 14px;
+
+      outline: none;
+
+      background: #ffffff;
+
+      color: var(--text);
+
+      font-size: 17px;
+      line-height: 1.6;
+    }
+
+    .text-area:focus {
+      border-color: var(--green);
+    }
+
+    .output-area {
+      min-height: 170px;
+
+      padding: 14px;
+
+      border: 1px solid var(--border);
+      border-radius: 14px;
+
+      background: #fafafa;
+
+      color: var(--text);
+
+      font-size: 17px;
+      line-height: 1.6;
+
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .output-placeholder {
+      color: #999;
+    }
+
+    /* =========================
+       ACTIONS
+    ========================= */
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+
+      padding: 0 14px 14px;
+    }
+
+    .action-button {
+      min-height: 48px;
+
+      border: 0;
+      border-radius: 12px;
+
+      font-weight: 700;
+    }
+
+    .translate-button {
+      background: var(--green);
+      color: white;
+    }
+
+    .translate-button:hover {
+      background: var(--green-dark);
+    }
+
+    .translate-button:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .clear-button {
+      border: 1px solid var(--border);
+
+      background: white;
+
+      color: var(--text);
+    }
+
+    /* =========================
+       RESULT
+    ========================= */
+
+    .result-section {
+      padding: 14px;
+
+      border-top: 1px solid var(--border);
+    }
+
+    .result-actions {
+      display: flex;
+      justify-content: flex-end;
+
+      margin-top: 10px;
+    }
+
+    .copy-button {
+      padding: 9px 14px;
+
+      border: 1px solid var(--border);
+      border-radius: 10px;
+
+      background: white;
+
+      color: var(--text);
+
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    /* =========================
+       STATUS
+    ========================= */
+
+    .status {
+      display: none;
+
+      margin-top: 14px;
+
+      padding: 12px 14px;
+
+      border-radius: 12px;
+
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .status.show {
+      display: block;
+    }
+
+    .status.loading {
+      border: 1px solid #dfe8d8;
+
+      background: var(--green-light);
+
+      color: var(--green-dark);
+    }
+
+    .status.error {
+      border: 1px solid #f1c5c5;
+
+      background: #fff1f1;
+
+      color: var(--danger);
+    }
+
+    .status.success {
+      border: 1px solid #dcebd2;
+
+      background: #f4faef;
+
+      color: var(--green-dark);
+    }
+
+    /* =========================
+       MOBILE
+    ========================= */
+
+    @media (max-width: 520px) {
+      .language-row {
+        grid-template-columns: 1fr 44px 1fr;
+        padding: 12px 10px;
+      }
+
+      .language-select {
+        padding: 0 6px;
+        font-size: 13px;
+      }
+
+      .content {
+        padding-left: 10px;
+        padding-right: 10px;
+      }
+
+      .text-area,
+      .output-area {
+        min-height: 150px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="app">
+
+    <!-- HEADER -->
+
+    <header class="header">
+
+      <div class="header-side">
+        <button
+          class="back-button"
+          type="button"
+          id="backButton"
+          aria-label="Back"
+        >
+          ‹
+        </button>
+      </div>
+
+      <div class="header-title">
+        Translate
+      </div>
+
+      <div class="header-side">
+        <div class="logo">
+          H
+        </div>
+      </div>
+
+    </header>
+
+    <!-- CONTENT -->
+
+    <section class="content">
+
+      <div class="intro">
+        <div class="intro-title">
+          HAVKAR Translate
+        </div>
+
+        <div class="intro-text">
+          Translate text using HAVKAR's secure
+          Google Cloud Translation service.
+        </div>
+      </div>
+
+      <div class="translator-card">
+
+        <!-- LANGUAGE SELECTORS -->
+
+        <div class="language-row">
+
+          <div class="language-box">
+
+            <label
+              class="language-label"
+              for="sourceLanguage"
+            >
+              From
+            </label>
+
+            <select
+              id="sourceLanguage"
+              class="language-select"
+            >
+              <option value="auto">
+                Detect language
+              </option>
+
+              <option value="fa">
+                Persian
+              </option>
+
+              <option value="en">
+                English
+              </option>
+
+              <option value="it">
+                Italian
+              </option>
+
+              <option value="ar">
+                Arabic
+              </option>
+
+              <option value="de">
+                German
+              </option>
+
+              <option value="fr">
+                French
+              </option>
+
+              <option value="es">
+                Spanish
+              </option>
+
+              <option value="sv">
+                Swedish
+              </option>
+
+              <option value="tr">
+                Turkish
+              </option>
+
+              <option value="ku">
+                Kurdish
+              </option>
+            </select>
+
+          </div>
+
+          <button
+            id="swapButton"
+            class="swap-button"
+            type="button"
+            title="Swap languages"
+            aria-label="Swap languages"
+          >
+            ⇄
+          </button>
+
+          <div class="language-box">
+
+            <label
+              class="language-label"
+              for="targetLanguage"
+            >
+              To
+            </label>
+
+            <select
+              id="targetLanguage"
+              class="language-select"
+            >
+              <option value="it">
+                Italian
+              </option>
+
+              <option value="en">
+                English
+              </option>
+
+              <option value="fa">
+                Persian
+              </option>
+
+              <option value="ar">
+                Arabic
+              </option>
+
+              <option value="de">
+                German
+              </option>
+
+              <option value="fr">
+                French
+              </option>
+
+              <option value="es">
+                Spanish
+              </option>
+
+              <option value="sv">
+                Swedish
+              </option>
+
+              <option value="tr">
+                Turkish
+              </option>
+
+              <option value="ku">
+                Kurdish
+              </option>
+            </select>
+
+          </div>
+
+        </div>
+
+        <!-- INPUT -->
+
+        <div class="text-section">
+
+          <div class="section-top">
+
+            <div class="section-title">
+              Text
+            </div>
+
+            <div
+              id="characterCount"
+              class="character-count"
+            >
+              0 / 30000
+            </div>
+
+          </div>
+
+          <textarea
+            id="sourceText"
+            class="text-area"
+            maxlength="30000"
+            placeholder="Type or paste text here..."
+          ></textarea>
+
+        </div>
+
+        <!-- BUTTONS -->
+
+        <div class="actions">
+
+          <button
+            id="clearButton"
+            class="action-button clear-button"
+            type="button"
+          >
+            Clear
+          </button>
+
+          <button
+            id="translateButton"
+            class="action-button translate-button"
+            type="button"
+          >
+            Translate
+          </button>
+
+        </div>
+
+        <!-- RESULT -->
+
+        <div class="result-section">
+
+          <div class="section-top">
+
+            <div class="section-title">
+              Translation
+            </div>
+
+            <div
+              id="detectedLanguage"
+              class="character-count"
+            ></div>
+
+          </div>
+
+          <div
+            id="translationOutput"
+            class="output-area"
+          >
+            <span class="output-placeholder">
+              Translation will appear here.
+            </span>
+          </div>
+
+          <div class="result-actions">
+
+            <button
+              id="copyButton"
+              class="copy-button"
+              type="button"
+            >
+              Copy
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <div
+        id="status"
+        class="status"
+      ></div>
+
+    </section>
+
+  </main>
+
+  <script>
+    "use strict";
+
+    /* ==========================================
+       HAVKAR TRANSLATION FRONTEND
+    ========================================== */
+
+    const API_URL = "/api/translate";
+
+    const sourceLanguage =
+      document.getElementById("sourceLanguage");
+
+    const targetLanguage =
+      document.getElementById("targetLanguage");
+
+    const sourceText =
+      document.getElementById("sourceText");
+
+    const translateButton =
+      document.getElementById("translateButton");
+
+    const clearButton =
+      document.getElementById("clearButton");
+
+    const swapButton =
+      document.getElementById("swapButton");
+
+    const copyButton =
+      document.getElementById("copyButton");
+
+    const translationOutput =
+      document.getElementById("translationOutput");
+
+    const characterCount =
+      document.getElementById("characterCount");
+
+    const detectedLanguage =
+      document.getElementById("detectedLanguage");
+
+    const statusBox =
+      document.getElementById("status");
+
+    const backButton =
+      document.getElementById("backButton");
+
+
+    /* ==========================================
+       STATUS
+    ========================================== */
+
+    function setStatus(type, message) {
+
+      statusBox.className =
+        "status show " + type;
+
+      statusBox.textContent =
+        message;
+    }
+
+
+    function clearStatus() {
+
+      statusBox.className =
+        "status";
+
+      statusBox.textContent =
+        "";
+    }
+
+
+    /* ==========================================
+       OUTPUT
+    ========================================== */
+
+    function setOutput(text) {
+
+      translationOutput.textContent =
+        text || "";
+    }
+
+
+    function resetOutput() {
+
+      translationOutput.innerHTML =
+        '<span class="output-placeholder">' +
+        'Translation will appear here.' +
+        '</span>';
+
+      detectedLanguage.textContent =
+        "";
+    }
+
+
+    /* ==========================================
+       CHARACTER COUNT
+    ========================================== */
+
+    function updateCharacterCount() {
+
+      const length =
+        sourceText.value.length;
+
+      characterCount.textContent =
+        length + " / 30000";
+    }
+
+
+    /* ==========================================
+       TRANSLATE
+    ========================================== */
+
+    async function translateText() {
+
+      clearStatus();
+
+      const text =
+        sourceText.value.trim();
+
+      const source =
+        sourceLanguage.value;
+
+      const target =
+        targetLanguage.value;
+
+      if (!text) {
+
+        setStatus(
+          "error",
+          "Please enter text to translate."
+        );
+
+        sourceText.focus();
+
+        return;
+      }
+
+
+      if (!target) {
+
+        setStatus(
+          "error",
+          "Please select a target language."
+        );
+
+        return;
+      }
+
+
+      if (
+        source !== "auto" &&
+        source === target
+      ) {
+
+        setOutput(text);
+
+        detectedLanguage.textContent =
+          source;
+
+        setStatus(
+          "success",
+          "Source and target languages are the same."
+        );
+
+        return;
+      }
+
+
+      translateButton.disabled =
+        true;
+
+      translateButton.textContent =
+        "Translating...";
+
+      setStatus(
+        "loading",
+        "Translating..."
+      );
+
+
+      try {
+
+        const response =
+          await fetch(API_URL, {
+
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+
+            body: JSON.stringify({
+
+              text: text,
+
+              sourceLanguage:
+                source,
+
+              targetLanguage:
+                target
+
+            })
+
+          });
+
+
+        const data =
+          await response
+            .json()
+            .catch(() => ({}));
+
+
+        if (!response.ok) {
+
+          throw new Error(
+            data.error ||
+            "Translation request failed."
+          );
+
+        }
+
+
+        const translatedText =
+          data.translatedText ||
+          data.translation ||
+          data.text ||
+          "";
+
+
+        if (!translatedText) {
+
+          throw new Error(
+            "No translation was returned."
+          );
+
+        }
+
+
+        setOutput(
+          translatedText
+        );
+
+
+        const detected =
+          data.sourceLanguage ||
+          source ||
+          "auto";
+
+
+        detectedLanguage.textContent =
+          detected === "auto"
+            ? ""
+            : "Detected: " + detected;
+
+
+        setStatus(
+          "success",
+          data.cached
+            ? "Translation loaded."
+            : "Translation completed."
+        );
+
+
+      } catch (error) {
+
+        console.error(
+          "[HAVKAR Translate]",
+          error
+        );
+
+
+        resetOutput();
+
+
+        setStatus(
+          "error",
+          error &&
+          error.message
+            ? error.message
+            : "Translation failed."
+        );
+
+
+      } finally {
+
+        translateButton.disabled =
+          false;
+
+        translateButton.textContent =
+          "Translate";
+
+      }
+
+    }
+
+
+    /* ==========================================
+       CLEAR
+    ========================================== */
+
+    function clearTranslator() {
+
+      sourceText.value =
+        "";
+
+      updateCharacterCount();
+
+      resetOutput();
+
+      clearStatus();
+
+      sourceText.focus();
+
+    }
+
+
+    /* ==========================================
+       SWAP LANGUAGES
+    ========================================== */
+
+    function swapLanguages() {
+
+      const source =
+        sourceLanguage.value;
+
+      const target =
+        targetLanguage.value;
+
+
+      /*
+       * Auto-detect cannot become a target.
+       */
+
+      if (source === "auto") {
+
+        sourceLanguage.value =
+          target;
+
+        targetLanguage.value =
+          "en";
+
+      } else {
+
+        sourceLanguage.value =
+          target;
+
+        targetLanguage.value =
+          source;
+
+      }
+
+
+      const currentTranslation =
+        translationOutput.textContent.trim();
+
+
+      const placeholderText =
+        "Translation will appear here.";
+
+
+      if (
+        currentTranslation &&
+        currentTranslation !==
+          placeholderText
+      ) {
+
+        const oldSource =
+          sourceText.value;
+
+        sourceText.value =
+          currentTranslation;
+
+        setOutput(
+          oldSource
+        );
+
+        updateCharacterCount();
+
+      }
+
+
+      clearStatus();
+
+    }
+
+
+    /* ==========================================
+       COPY
+    ========================================== */
+
+    async function copyTranslation() {
+
+      const text =
+        translationOutput.textContent.trim();
+
+
+      if (
+        !text ||
+        text ===
+          "Translation will appear here."
+      ) {
+
+        setStatus(
+          "error",
+          "There is no translation to copy."
+        );
+
+        return;
+      }
+
+
+      try {
+
+        await navigator.clipboard
+          .writeText(text);
+
+
+        setStatus(
+          "success",
+          "Translation copied."
+        );
+
+
+      } catch (error) {
+
+        /*
+         * Fallback for browsers where
+         * Clipboard API is unavailable.
+         */
+
+        const textarea =
+          document.createElement(
+            "textarea"
+          );
+
+        textarea.value =
+          text;
+
+        textarea.style.position =
+          "fixed";
+
+        textarea.style.opacity =
+          "0";
+
+        document.body.appendChild(
+          textarea
+        );
+
+        textarea.select();
+
+        document.execCommand(
+          "copy"
+        );
+
+        textarea.remove();
+
+
+        setStatus(
+          "success",
+          "Translation copied."
+        );
+
+      }
+
+    }
+
+
+    /* ==========================================
+       BACK
+    ========================================== */
+
+    function goBack() {
+
+      if (
+        window.history.length > 1
+      ) {
+
+        window.history.back();
+
+        return;
+
+      }
+
+      window.location.href =
+        "/";
+
+    }
+
+
+    /* ==========================================
+       EVENTS
+    ========================================== */
+
+    sourceText.addEventListener(
+      "input",
+      updateCharacterCount
+    );
+
+
+    translateButton.addEventListener(
+      "click",
+      translateText
+    );
+
+
+    clearButton.addEventListener(
+      "click",
+      clearTranslator
+    );
+
+
+    swapButton.addEventListener(
+      "click",
+      swapLanguages
+    );
+
+
+    copyButton.addEventListener(
+      "click",
+      copyTranslation
+    );
+
+
+    backButton.addEventListener(
+      "click",
+      goBack
+    );
+
+
+    sourceText.addEventListener(
+      "keydown",
+      function (event) {
+
+        if (
+          (event.ctrlKey ||
+            event.metaKey) &&
+          event.key === "Enter"
+        ) {
+
+          translateText();
+
+        }
+
+      }
+    );
+
+
+    /* ==========================================
+       START
+    ========================================== */
+
+    updateCharacterCount();
+
+  </script>
+
+</body>
+</html>
