@@ -1372,7 +1372,8 @@ select:focus-visible{
                 <option value="es">Spanish</option>
                 <option value="sv">Swedish</option>
                 <option value="tr">Turkish</option>
-                <option value="ku">Kurdish</option>
+                <option value="ckb">Kurdish (Sorani) — کوردی سۆرانی</option>
+                <option value="ku">Kurdish (Kurmanji) — Kurdî Kurmancî</option>
 
             </select>
 
@@ -2404,24 +2405,8 @@ async function loadCurrentUser(){
 
 function redirectToLogin(){
 
-    const currentPath =
-        window.location.pathname +
-        window.location.search;
-
-    if(
-        currentPath &&
-        currentPath !== "/login.html"
-    ){
-
-        window.location.href =
-            "login.html";
-
-    }else{
-
-        window.location.href =
-            "login.html";
-
-    }
+    window.location.href =
+        "login.html";
 
 }
 
@@ -2436,27 +2421,18 @@ async function loadConversations(){
         $("conversationList");
 
     if(!list){
-
         return;
-
     }
 
-    if(
-        !state.currentUser
-    ){
+    if(!state.currentUser){
 
         redirectToLogin();
-
         return;
 
     }
 
-    if(
-        state.loadingConversations
-    ){
-
+    if(state.loadingConversations){
         return;
-
     }
 
     state.loadingConversations =
@@ -2464,11 +2440,8 @@ async function loadConversations(){
 
     list.innerHTML = `
         <div class="loading">
-
             <i class="fas fa-circle-notch fa-spin"></i>
-
             <p>Loading conversations...</p>
-
         </div>
     `;
 
@@ -2502,9 +2475,7 @@ async function loadConversations(){
             );
 
         if(result.error){
-
             throw result.error;
-
         }
 
         state.conversations =
@@ -2570,10 +2541,7 @@ async function loadConversations(){
                 error?.message || ""
             );
 
-        if(
-            message ===
-            "REQUEST_TIMEOUT"
-        ){
+        if(message === "REQUEST_TIMEOUT"){
 
             showErrorState(
                 "Messages are taking too long",
@@ -2664,9 +2632,7 @@ async function enrichConversations(){
         !state.conversations.length ||
         !state.currentUser
     ){
-
         return;
-
     }
 
     const adIds =
@@ -2871,12 +2837,8 @@ function renderConversationList(){
         state.conversations.filter(
             conversation => {
 
-                if(
-                    !state.searchTerm
-                ){
-
+                if(!state.searchTerm){
                     return true;
-
                 }
 
                 const ad =
@@ -2923,15 +2885,11 @@ function renderConversationList(){
 
     }
 
-    if(
-        !state.conversations.length
-    ){
+    if(!state.conversations.length){
 
         if(noResults){
-
             noResults.style.display =
                 "none";
-
         }
 
         showEmptyState(
@@ -2945,14 +2903,11 @@ function renderConversationList(){
 
     if(!filtered.length){
 
-        list.innerHTML =
-            "";
+        list.innerHTML = "";
 
         if(noResults){
-
             noResults.style.display =
                 "block";
-
         }
 
         return;
@@ -2960,14 +2915,11 @@ function renderConversationList(){
     }
 
     if(noResults){
-
         noResults.style.display =
             "none";
-
     }
 
-    list.innerHTML =
-        "";
+    list.innerHTML = "";
 
     filtered.forEach(
         conversation => {
@@ -3102,9 +3054,7 @@ function createConversationElement(
     preview.className =
         "message-preview";
 
-    if(
-        conversation.lastMessage
-    ){
+    if(conversation.lastMessage){
 
         const prefix =
             String(
@@ -3209,12 +3159,8 @@ function getConversationRole(
     conversation
 ){
 
-    if(
-        !state.currentUser
-    ){
-
+    if(!state.currentUser){
         return "HAVKAR Member";
-
     }
 
     if(
@@ -3225,9 +3171,7 @@ function getConversationRole(
             state.currentUser.id
         )
     ){
-
         return "Buyer";
-
     }
 
     if(
@@ -3238,9 +3182,7 @@ function getConversationRole(
             state.currentUser.id
         )
     ){
-
         return "Seller";
-
     }
 
     return "HAVKAR Member";
@@ -3260,9 +3202,7 @@ async function openConversation(
         !conversation ||
         !conversation.id
     ){
-
         return;
-
     }
 
     state.currentConversation =
@@ -3399,9 +3339,7 @@ async function openConversationFromUrl(){
             );
 
         if(result.error){
-
             throw result.error;
-
         }
 
         if(!result.data){
@@ -3617,9 +3555,7 @@ async function loadMessages(
             );
 
         if(result.error){
-
             throw result.error;
-
         }
 
         renderMessages(
@@ -3691,8 +3627,7 @@ function renderMessages(
         return;
     }
 
-    box.innerHTML =
-        "";
+    box.innerHTML = "";
 
     if(!messages.length){
 
@@ -3742,9 +3677,7 @@ function appendMessage(
         !message.id ||
         !message.conversation_id
     ){
-
         return;
-
     }
 
     const box =
@@ -3784,9 +3717,7 @@ function appendMessage(
         );
 
     if(empty){
-
         empty.remove();
-
     }
 
     const sent =
@@ -3998,9 +3929,7 @@ function appendMessage(
     );
 
     if(scroll){
-
         scrollMessagesToBottom();
-
     }
 
 }
@@ -4136,8 +4065,7 @@ function loadReactions(
     conversationId
 ){
 
-    state.reactions =
-        {};
+    state.reactions = {};
 
     try{
 
@@ -4175,8 +4103,7 @@ function loadReactions(
             error
         );
 
-        state.reactions =
-            {};
+        state.reactions = {};
 
     }
 
@@ -4185,12 +4112,8 @@ function loadReactions(
 
 function saveReactions(){
 
-    if(
-        !state.currentConversationId
-    ){
-
+    if(!state.currentConversationId){
         return;
-
     }
 
     try{
@@ -4235,8 +4158,7 @@ function getMessageReactionData(
         "object"
     ){
 
-        state.reactions[key] =
-            {};
+        state.reactions[key] = {};
 
     }
 
@@ -4254,19 +4176,11 @@ function addOrToggleReaction(
         !state.currentUser ||
         !state.currentConversationId
     ){
-
         return;
-
     }
 
-    if(
-        !REACTIONS.includes(
-            emoji
-        )
-    ){
-
+    if(!REACTIONS.includes(emoji)){
         return;
-
     }
 
     const data =
@@ -4332,20 +4246,14 @@ function addOrToggleReaction(
         }
     );
 
-    if(
-        currentEmoji !==
-        emoji
-    ){
+    if(currentEmoji !== emoji){
 
         if(
             !Array.isArray(
                 data[emoji]
             )
         ){
-
-            data[emoji] =
-                [];
-
+            data[emoji] = [];
         }
 
         data[emoji].push(
@@ -4426,8 +4334,7 @@ function cloneReactionData(
     data
 ){
 
-    const output =
-        {};
+    const output = {};
 
     Object.keys(
         data || {}
@@ -4470,8 +4377,7 @@ function renderMessageReactions(
         return;
     }
 
-    bar.innerHTML =
-        "";
+    bar.innerHTML = "";
 
     const data =
         getMessageReactionData(
@@ -4623,18 +4529,14 @@ function subscribeToReactions(
                                 conversationId
                             )
                         ){
-
                             return;
-
                         }
 
                         if(
                             !data.messageId ||
                             !data.reactions
                         ){
-
                             return;
-
                         }
 
                         state.reactions[
@@ -4687,9 +4589,7 @@ function broadcastReaction(
         !state.reactionChannel ||
         !state.currentConversationId
     ){
-
         return;
-
     }
 
     state.reactionChannel
@@ -4720,9 +4620,7 @@ function broadcastReaction(
 
 function removeReactionSubscription(){
 
-    if(
-        state.reactionChannel
-    ){
+    if(state.reactionChannel){
 
         try{
 
@@ -4753,9 +4651,7 @@ function removeReactionSubscription(){
 
 async function sendMessage(){
 
-    if(
-        !state.currentUser
-    ){
+    if(!state.currentUser){
 
         showToast(
             "Please sign in first.",
@@ -4766,9 +4662,7 @@ async function sendMessage(){
 
     }
 
-    if(
-        !state.currentConversationId
-    ){
+    if(!state.currentConversationId){
 
         showToast(
             "Open a conversation first.",
@@ -4792,9 +4686,7 @@ async function sendMessage(){
         !input ||
         !button
     ){
-
         return;
-
     }
 
     const originalText =
@@ -4836,9 +4728,7 @@ async function sendMessage(){
 
     try{
 
-        if(
-            state.autoTranslate
-        ){
+        if(state.autoTranslate){
 
             state.translating =
                 true;
@@ -4903,7 +4793,6 @@ async function sendMessage(){
                             textToSend,
 
                         is_read:false
-
                     })
                     .select(
                         "id,conversation_id,sender_id,message_text,created_at,is_read"
@@ -4912,13 +4801,10 @@ async function sendMessage(){
             );
 
         if(result.error){
-
             throw result.error;
-
         }
 
-        input.value =
-            "";
+        input.value = "";
 
         appendMessage(
             result.data,
@@ -5011,12 +4897,8 @@ async function sendMessage(){
 
 async function updateConversationTimestamp(){
 
-    if(
-        !state.currentConversationId
-    ){
-
+    if(!state.currentConversationId){
         return;
-
     }
 
     try{
@@ -5069,9 +4951,7 @@ async function markMessagesRead(
         !state.currentUser ||
         !conversationId
     ){
-
         return;
-
     }
 
     try{
@@ -5182,9 +5062,7 @@ function subscribeToConversation(
                                 conversationId
                             )
                         ){
-
                             return;
-
                         }
 
                         appendMessage(
@@ -5252,9 +5130,7 @@ function subscribeToConversation(
 
 function removeRealtimeSubscription(){
 
-    if(
-        state.realtimeChannel
-    ){
+    if(state.realtimeChannel){
 
         try{
 
@@ -5292,9 +5168,7 @@ function updateRenderedMessage(
         !message.id ||
         !state.currentConversationId
     ){
-
         return;
-
     }
 
     if(
@@ -5305,9 +5179,7 @@ function updateRenderedMessage(
             state.currentConversationId
         )
     ){
-
         return;
-
     }
 
     const element =
@@ -5368,8 +5240,7 @@ function closeChat(){
     state.currentConversationId =
         null;
 
-    state.reactions =
-        {};
+    state.reactions = {};
 
     state.translationPanelOpen =
         false;
@@ -5515,9 +5386,7 @@ function formatTime(
             date.getTime()
         )
     ){
-
         return "";
-
     }
 
     const now =
@@ -5527,9 +5396,7 @@ function formatTime(
         now.getTime() -
         date.getTime();
 
-    if(
-        difference < 0
-    ){
+    if(difference < 0){
 
         return date.toLocaleDateString(
             undefined,
@@ -5546,23 +5413,12 @@ function formatTime(
             difference / 60000
         );
 
-    if(
-        minutes < 1
-    ){
-
+    if(minutes < 1){
         return "Now";
-
     }
 
-    if(
-        minutes < 60
-    ){
-
-        return (
-            minutes +
-            "m"
-        );
-
+    if(minutes < 60){
+        return minutes + "m";
     }
 
     const hours =
@@ -5570,15 +5426,8 @@ function formatTime(
             minutes / 60
         );
 
-    if(
-        hours < 24
-    ){
-
-        return (
-            hours +
-            "h"
-        );
-
+    if(hours < 24){
+        return hours + "h";
     }
 
     const days =
@@ -5586,15 +5435,8 @@ function formatTime(
             hours / 24
         );
 
-    if(
-        days < 7
-    ){
-
-        return (
-            days +
-            "d"
-        );
-
+    if(days < 7){
+        return days + "d";
     }
 
     return date.toLocaleDateString(
@@ -5626,9 +5468,7 @@ function formatMessageTime(
             date.getTime()
         )
     ){
-
         return "";
-
     }
 
     return date.toLocaleTimeString(
@@ -5756,10 +5596,7 @@ document.addEventListener(
     "keydown",
     event => {
 
-        if(
-            event.key ===
-            "Escape"
-        ){
+        if(event.key === "Escape"){
 
             closeHeaderMenu();
 
@@ -5789,10 +5626,7 @@ function setupAuthListener(){
             session
         ) => {
 
-            if(
-                event ===
-                "SIGNED_OUT"
-            ){
+            if(event === "SIGNED_OUT"){
 
                 state.currentUser =
                     null;
@@ -5808,10 +5642,7 @@ function setupAuthListener(){
             }
 
             if(
-                (
-                    event ===
-                    "SIGNED_IN"
-                ) &&
+                event === "SIGNED_IN" &&
                 session?.user
             ){
 
@@ -5821,10 +5652,7 @@ function setupAuthListener(){
             }
 
             if(
-                (
-                    event ===
-                    "TOKEN_REFRESHED"
-                ) &&
+                event === "TOKEN_REFRESHED" &&
                 session?.user
             ){
 
@@ -6032,9 +5860,7 @@ async function startPage(){
 
     }
 
-    if(
-        !state.currentUser
-    ){
+    if(!state.currentUser){
 
         redirectToLogin();
 
