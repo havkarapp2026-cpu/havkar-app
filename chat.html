@@ -42,7 +42,8 @@ body{
 }
 
 button,
-input{
+input,
+select{
     font:inherit;
 }
 
@@ -53,7 +54,8 @@ button{
 }
 
 button:focus-visible,
-input:focus-visible{
+input:focus-visible,
+select:focus-visible{
     outline:3px solid rgba(124,179,66,.25);
     outline-offset:2px;
 }
@@ -555,6 +557,131 @@ input:focus-visible{
 }
 
 /* =========================================================
+   TRANSLATION PANEL
+========================================================= */
+
+.translation-panel{
+    flex:0 0 auto;
+    display:none;
+    padding:10px 12px;
+    background:#fff;
+    border-bottom:1px solid #dfe4df;
+    box-shadow:0 2px 7px rgba(0,0,0,.04);
+}
+
+.translation-panel.show{
+    display:block;
+}
+
+.translation-panel-top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:9px;
+}
+
+.translation-title{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    color:#2e7d32;
+    font-size:13px;
+    font-weight:800;
+}
+
+.translation-close{
+    width:32px;
+    height:32px;
+    border-radius:50%;
+    background:#f1f3f1;
+    color:#666;
+    cursor:pointer;
+}
+
+.translation-controls{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:10px;
+    align-items:center;
+}
+
+.translation-language{
+    width:100%;
+    height:42px;
+    padding:0 10px;
+    border:1px solid #d7ddd7;
+    border-radius:11px;
+    outline:none;
+    background:#fff;
+    color:#333;
+    font-size:14px;
+    font-weight:650;
+}
+
+.translation-language:focus{
+    border-color:#7cb342;
+}
+
+.auto-translate-toggle{
+    min-height:42px;
+    padding:0 13px;
+    border-radius:11px;
+    display:flex;
+    align-items:center;
+    gap:7px;
+    background:#f0f2f0;
+    color:#666;
+    font-size:13px;
+    font-weight:800;
+    cursor:pointer;
+    white-space:nowrap;
+}
+
+.auto-translate-toggle.active{
+    background:#eaf5e5;
+    color:#2e7d32;
+    box-shadow:inset 0 0 0 1px #b9d8ab;
+}
+
+.auto-translate-toggle .toggle-dot{
+    width:10px;
+    height:10px;
+    border-radius:50%;
+    background:#aaa;
+}
+
+.auto-translate-toggle.active .toggle-dot{
+    background:#66a84b;
+}
+
+.translation-help{
+    margin-top:8px;
+    color:#777;
+    font-size:11px;
+    line-height:1.4;
+}
+
+.translation-active-bar{
+    flex:0 0 auto;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    min-height:29px;
+    padding:5px 12px;
+    background:#eef7e8;
+    border-bottom:1px solid #dcebd3;
+    color:#4d7f39;
+    font-size:11px;
+    font-weight:700;
+}
+
+.translation-active-bar.show{
+    display:flex;
+}
+
+/* =========================================================
    CHAT MESSAGES
 ========================================================= */
 
@@ -795,6 +922,37 @@ input:focus-visible{
     z-index:30;
 }
 
+.translate-btn{
+    width:49px;
+    height:49px;
+    min-width:49px;
+    border-radius:50%;
+    background:#eef7e8;
+    color:#558b2f;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:19px;
+    cursor:pointer;
+    position:relative;
+}
+
+.translate-btn.active{
+    background:#dff0d6;
+    color:#2e7d32;
+    box-shadow:inset 0 0 0 2px #8fc36e;
+}
+
+.translate-btn.translating i{
+    animation:havkarSpin .8s linear infinite;
+}
+
+@keyframes havkarSpin{
+    to{
+        transform:rotate(360deg);
+    }
+}
+
 .message-input{
     flex:1 1 auto;
     min-width:0;
@@ -833,11 +991,13 @@ input:focus-visible{
     box-shadow:0 4px 12px rgba(76,175,80,.22);
 }
 
-.send-btn:active{
+.send-btn:active,
+.translate-btn:active{
     transform:scale(.94);
 }
 
-.send-btn:disabled{
+.send-btn:disabled,
+.translate-btn:disabled{
     opacity:.55;
     cursor:not-allowed;
 }
@@ -921,6 +1081,31 @@ input:focus-visible{
         height:37px;
         min-width:37px;
     }
+
+    .translation-controls{
+        grid-template-columns:1fr;
+    }
+
+    .auto-translate-toggle{
+        justify-content:center;
+    }
+
+    .message-input-area{
+        gap:6px;
+        padding-left:7px;
+        padding-right:7px;
+    }
+
+    .translate-btn{
+        width:45px;
+        min-width:45px;
+        height:45px;
+    }
+
+    .send-btn{
+        width:47px;
+        min-width:47px;
+    }
 }
 
 @media(max-width:480px) and (max-height:700px){
@@ -952,11 +1137,13 @@ input:focus-visible{
     }
 
     .message-input,
-    .send-btn{
+    .send-btn,
+    .translate-btn{
         height:46px;
     }
 
-    .send-btn{
+    .send-btn,
+    .translate-btn{
         width:46px;
         min-width:46px;
     }
@@ -1145,6 +1332,84 @@ input:focus-visible{
 
     </header>
 
+    <!-- TRANSLATION SETTINGS -->
+
+    <section
+        id="translationPanel"
+        class="translation-panel"
+        aria-label="Translation settings">
+
+        <div class="translation-panel-top">
+
+            <div class="translation-title">
+                <i class="fas fa-language"></i>
+                <span>Message Translation</span>
+            </div>
+
+            <button
+                id="translationCloseButton"
+                class="translation-close"
+                type="button"
+                aria-label="Close translation settings">
+                <i class="fas fa-xmark"></i>
+            </button>
+
+        </div>
+
+        <div class="translation-controls">
+
+            <select
+                id="translationTargetLanguage"
+                class="translation-language"
+                aria-label="Translate messages to">
+
+                <option value="en">English</option>
+                <option value="it">Italian</option>
+                <option value="fa">Persian</option>
+                <option value="ar">Arabic</option>
+                <option value="de">German</option>
+                <option value="fr">French</option>
+                <option value="es">Spanish</option>
+                <option value="sv">Swedish</option>
+                <option value="tr">Turkish</option>
+                <option value="ku">Kurdish</option>
+
+            </select>
+
+            <button
+                id="autoTranslateToggle"
+                class="auto-translate-toggle"
+                type="button"
+                aria-pressed="false">
+
+                <span class="toggle-dot"></span>
+                <span id="autoTranslateLabel">
+                    Auto Translate: Off
+                </span>
+
+            </button>
+
+        </div>
+
+        <div class="translation-help">
+            When Auto Translate is on, your message is translated
+            to the selected language before it is sent.
+        </div>
+
+    </section>
+
+    <div
+        id="translationActiveBar"
+        class="translation-active-bar">
+
+        <i class="fas fa-language"></i>
+
+        <span id="translationActiveText">
+            Auto Translate
+        </span>
+
+    </div>
+
     <main id="chatMessages" class="chat-messages">
 
         <div class="chat-empty">
@@ -1158,6 +1423,17 @@ input:focus-visible{
     </main>
 
     <div class="message-input-area">
+
+        <button
+            id="translateSettingsButton"
+            class="translate-btn"
+            type="button"
+            aria-label="Translation settings"
+            aria-expanded="false">
+
+            <i class="fas fa-language"></i>
+
+        </button>
 
         <input
             id="messageInput"
@@ -1200,6 +1476,9 @@ const SUPABASE_URL =
 
 const SUPABASE_KEY =
     "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq";
+
+const TRANSLATION_API_URL =
+    "/api/translate";
 
 
 /* =========================================================
@@ -1294,6 +1573,11 @@ const MAX_MESSAGE_LENGTH = 4000;
 
 const REQUEST_TIMEOUT = 10000;
 
+const TRANSLATION_TIMEOUT = 15000;
+
+const TRANSLATION_STORAGE_KEY =
+    "havkar_chat_translation_v1";
+
 
 /* =========================================================
    STATE
@@ -1319,7 +1603,15 @@ const state = {
 
     loadingConversations:false,
 
-    pageStarted:false
+    pageStarted:false,
+
+    translationPanelOpen:false,
+
+    autoTranslate:false,
+
+    translationTarget:"en",
+
+    translating:false
 
 };
 
@@ -1400,6 +1692,464 @@ function withTimeout(
 
         }
     );
+
+}
+
+
+/* =========================================================
+   TRANSLATION STORAGE
+========================================================= */
+
+function loadTranslationPreferences(){
+
+    try{
+
+        const raw =
+            localStorage.getItem(
+                TRANSLATION_STORAGE_KEY
+            );
+
+        if(!raw){
+            return;
+        }
+
+        const saved =
+            JSON.parse(raw);
+
+        if(
+            saved &&
+            typeof saved === "object"
+        ){
+
+            state.autoTranslate =
+                saved.autoTranslate === true;
+
+            if(
+                typeof saved.target === "string" &&
+                saved.target.trim()
+            ){
+
+                state.translationTarget =
+                    saved.target.trim();
+
+            }
+
+        }
+
+    }catch(error){
+
+        console.warn(
+            "[HAVKAR] Translation preferences could not be loaded:",
+            error
+        );
+
+    }
+
+}
+
+
+function saveTranslationPreferences(){
+
+    try{
+
+        localStorage.setItem(
+            TRANSLATION_STORAGE_KEY,
+            JSON.stringify({
+                autoTranslate:
+                    state.autoTranslate,
+                target:
+                    state.translationTarget
+            })
+        );
+
+    }catch(error){
+
+        console.warn(
+            "[HAVKAR] Translation preferences could not be saved:",
+            error
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   TRANSLATION UI
+========================================================= */
+
+function getTranslationLanguageName(
+    code
+){
+
+    const select =
+        $("translationTargetLanguage");
+
+    if(select){
+
+        const option =
+            Array.from(
+                select.options
+            ).find(
+                item =>
+                    item.value === code
+            );
+
+        if(option){
+
+            return option.textContent.trim();
+
+        }
+
+    }
+
+    return String(code || "")
+        .toUpperCase();
+
+}
+
+
+function updateTranslationUI(){
+
+    const panel =
+        $("translationPanel");
+
+    const settingsButton =
+        $("translateSettingsButton");
+
+    const toggle =
+        $("autoTranslateToggle");
+
+    const label =
+        $("autoTranslateLabel");
+
+    const target =
+        $("translationTargetLanguage");
+
+    const activeBar =
+        $("translationActiveBar");
+
+    const activeText =
+        $("translationActiveText");
+
+    if(panel){
+
+        panel.classList.toggle(
+            "show",
+            state.translationPanelOpen
+        );
+
+    }
+
+    if(settingsButton){
+
+        settingsButton.classList.toggle(
+            "active",
+            state.autoTranslate
+        );
+
+        settingsButton.setAttribute(
+            "aria-expanded",
+            state.translationPanelOpen
+                ? "true"
+                : "false"
+        );
+
+        settingsButton.setAttribute(
+            "aria-label",
+            state.autoTranslate
+                ? "Auto Translate is on"
+                : "Translation settings"
+        );
+
+    }
+
+    if(toggle){
+
+        toggle.classList.toggle(
+            "active",
+            state.autoTranslate
+        );
+
+        toggle.setAttribute(
+            "aria-pressed",
+            state.autoTranslate
+                ? "true"
+                : "false"
+        );
+
+    }
+
+    if(label){
+
+        label.textContent =
+            state.autoTranslate
+                ? "Auto Translate: On"
+                : "Auto Translate: Off";
+
+    }
+
+    if(target){
+
+        const exists =
+            Array.from(
+                target.options
+            ).some(
+                option =>
+                    option.value ===
+                    state.translationTarget
+            );
+
+        if(exists){
+
+            target.value =
+                state.translationTarget;
+
+        }else{
+
+            state.translationTarget =
+                target.value;
+
+        }
+
+    }
+
+    if(activeBar){
+
+        activeBar.classList.toggle(
+            "show",
+            state.autoTranslate
+        );
+
+    }
+
+    if(activeText){
+
+        activeText.textContent =
+            state.autoTranslate
+                ? (
+                    "Auto Translate → " +
+                    getTranslationLanguageName(
+                        state.translationTarget
+                    )
+                )
+                : "Auto Translate";
+
+    }
+
+}
+
+
+function toggleTranslationPanel(){
+
+    state.translationPanelOpen =
+        !state.translationPanelOpen;
+
+    updateTranslationUI();
+
+}
+
+
+function closeTranslationPanel(){
+
+    state.translationPanelOpen =
+        false;
+
+    updateTranslationUI();
+
+}
+
+
+function toggleAutoTranslate(){
+
+    state.autoTranslate =
+        !state.autoTranslate;
+
+    saveTranslationPreferences();
+
+    updateTranslationUI();
+
+    showToast(
+        state.autoTranslate
+            ? (
+                "Auto Translate enabled: " +
+                getTranslationLanguageName(
+                    state.translationTarget
+                )
+            )
+            : "Auto Translate disabled.",
+        state.autoTranslate
+            ? "success"
+            : ""
+    );
+
+}
+
+
+function changeTranslationTarget(
+    value
+){
+
+    const target =
+        String(value || "")
+            .trim();
+
+    if(!target){
+        return;
+    }
+
+    state.translationTarget =
+        target;
+
+    saveTranslationPreferences();
+
+    updateTranslationUI();
+
+    if(state.autoTranslate){
+
+        showToast(
+            "Messages will be translated to " +
+            getTranslationLanguageName(
+                state.translationTarget
+            ) +
+            ".",
+            "success"
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   TRANSLATION API
+========================================================= */
+
+async function translateOutgoingMessage(
+    text
+){
+
+    const cleanText =
+        String(text || "")
+            .trim();
+
+    if(!cleanText){
+
+        throw new Error(
+            "EMPTY_TRANSLATION_TEXT"
+        );
+
+    }
+
+    if(
+        !state.translationTarget
+    ){
+
+        throw new Error(
+            "NO_TRANSLATION_TARGET"
+        );
+
+    }
+
+    const controller =
+        new AbortController();
+
+    const timeout =
+        window.setTimeout(
+            () => {
+
+                controller.abort();
+
+            },
+            TRANSLATION_TIMEOUT
+        );
+
+    try{
+
+        const response =
+            await fetch(
+                TRANSLATION_API_URL,
+                {
+                    method:"POST",
+
+                    headers:{
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:JSON.stringify({
+                        text:
+                            cleanText,
+
+                        sourceLanguage:
+                            "auto",
+
+                        targetLanguage:
+                            state.translationTarget
+                    }),
+
+                    signal:
+                        controller.signal
+                }
+            );
+
+        const data =
+            await response
+                .json()
+                .catch(
+                    () => ({})
+                );
+
+        if(!response.ok){
+
+            throw new Error(
+                data?.error ||
+                "Translation request failed."
+            );
+
+        }
+
+        const translatedText =
+            String(
+                data?.translatedText ||
+                data?.translation ||
+                data?.text ||
+                ""
+            )
+            .trim();
+
+        if(!translatedText){
+
+            throw new Error(
+                "No translation was returned."
+            );
+
+        }
+
+        return translatedText;
+
+    }catch(error){
+
+        if(
+            error?.name ===
+            "AbortError"
+        ){
+
+            throw new Error(
+                "Translation request timed out."
+            );
+
+        }
+
+        throw error;
+
+    }finally{
+
+        clearTimeout(
+            timeout
+        );
+
+    }
 
 }
 
@@ -1779,16 +2529,7 @@ async function loadConversations(){
             }
         );
 
-        /*
-         * MAIN LIST IS RENDERED IMMEDIATELY.
-         * Enrichment can never block the page.
-         */
-
         renderConversationList();
-
-        /*
-         * Secondary data loads in background.
-         */
 
         enrichConversations()
             .then(
@@ -2006,11 +2747,6 @@ async function enrichConversations(){
 
         }
     );
-
-    /*
-     * Each conversation is enriched independently.
-     * One failed request can never stop the others.
-     */
 
     await Promise.all(
         state.conversations.map(
@@ -2535,6 +3271,11 @@ async function openConversation(
     state.currentConversationId =
         conversation.id;
 
+    state.translationPanelOpen =
+        false;
+
+    updateTranslationUI();
+
     $("messageList")
         .style.display =
         "none";
@@ -2570,12 +3311,6 @@ async function openConversation(
     loadReactions(
         conversation.id
     );
-
-    /*
-     * Load messages independently.
-     * Even if read-status or realtime fails,
-     * the actual chat remains available.
-     */
 
     await loadMessages(
         conversation.id
@@ -4050,6 +4785,9 @@ async function sendMessage(){
     const button =
         $("sendButton");
 
+    const translationButton =
+        $("translateSettingsButton");
+
     if(
         !input ||
         !button
@@ -4059,15 +4797,15 @@ async function sendMessage(){
 
     }
 
-    const text =
+    const originalText =
         input.value.trim();
 
-    if(!text){
+    if(!originalText){
         return;
     }
 
     if(
-        text.length >
+        originalText.length >
         MAX_MESSAGE_LENGTH
     ){
 
@@ -4086,7 +4824,69 @@ async function sendMessage(){
     button.disabled =
         true;
 
+    if(translationButton){
+
+        translationButton.disabled =
+            true;
+
+    }
+
+    let textToSend =
+        originalText;
+
     try{
+
+        if(
+            state.autoTranslate
+        ){
+
+            state.translating =
+                true;
+
+            if(translationButton){
+
+                translationButton.classList.add(
+                    "translating"
+                );
+
+            }
+
+            showToast(
+                "Translating to " +
+                getTranslationLanguageName(
+                    state.translationTarget
+                ) +
+                "..."
+            );
+
+            textToSend =
+                await translateOutgoingMessage(
+                    originalText
+                );
+
+            if(
+                textToSend.length >
+                MAX_MESSAGE_LENGTH
+            ){
+
+                throw new Error(
+                    "Translated message is too long."
+                );
+
+            }
+
+            state.translating =
+                false;
+
+            if(translationButton){
+
+                translationButton.classList.remove(
+                    "translating"
+                );
+
+            }
+
+        }
 
         const result =
             await withTimeout(
@@ -4100,7 +4900,7 @@ async function sendMessage(){
                             state.currentUser.id,
 
                         message_text:
-                            text,
+                            textToSend,
 
                         is_read:false
 
@@ -4125,6 +4925,15 @@ async function sendMessage(){
             true
         );
 
+        if(state.autoTranslate){
+
+            showToast(
+                "Translated message sent.",
+                "success"
+            );
+
+        }
+
         await updateConversationTimestamp();
 
     }catch(error){
@@ -4134,14 +4943,54 @@ async function sendMessage(){
             error
         );
 
-        showToast(
-            error?.message === "REQUEST_TIMEOUT"
-                ? "Sending the message timed out."
-                : "Message could not be sent.",
-            "error"
-        );
+        const message =
+            String(
+                error?.message || ""
+            );
+
+        if(
+            state.autoTranslate &&
+            (
+                message.toLowerCase()
+                    .includes("translation") ||
+                message.toLowerCase()
+                    .includes("translate") ||
+                message.toLowerCase()
+                    .includes("timed out")
+            )
+        ){
+
+            showToast(
+                "Translation failed. Message was not sent.",
+                "error"
+            );
+
+        }else{
+
+            showToast(
+                message === "REQUEST_TIMEOUT"
+                    ? "Sending the message timed out."
+                    : "Message could not be sent.",
+                "error"
+            );
+
+        }
 
     }finally{
+
+        state.translating =
+            false;
+
+        if(translationButton){
+
+            translationButton.classList.remove(
+                "translating"
+            );
+
+            translationButton.disabled =
+                false;
+
+        }
 
         input.disabled =
             false;
@@ -4521,6 +5370,11 @@ function closeChat(){
 
     state.reactions =
         {};
+
+    state.translationPanelOpen =
+        false;
+
+    updateTranslationUI();
 
     $("chatScreen")
         .style.display =
@@ -4911,6 +5765,8 @@ document.addEventListener(
 
             closeAllReactionPickers();
 
+            closeTranslationPanel();
+
         }
 
     }
@@ -5097,6 +5953,36 @@ function setupEvents(){
             }
         );
 
+    $("translateSettingsButton")
+        ?.addEventListener(
+            "click",
+            toggleTranslationPanel
+        );
+
+    $("translationCloseButton")
+        ?.addEventListener(
+            "click",
+            closeTranslationPanel
+        );
+
+    $("autoTranslateToggle")
+        ?.addEventListener(
+            "click",
+            toggleAutoTranslate
+        );
+
+    $("translationTargetLanguage")
+        ?.addEventListener(
+            "change",
+            event => {
+
+                changeTranslationTarget(
+                    event.target.value
+                );
+
+            }
+        );
+
 }
 
 
@@ -5116,6 +6002,10 @@ async function startPage(){
 
     state.pageStarted =
         true;
+
+    loadTranslationPreferences();
+
+    updateTranslationUI();
 
     setupEvents();
 
@@ -5164,16 +6054,7 @@ async function startPage(){
 
     if(conversationId){
 
-        /*
-         * Direct conversation is opened first.
-         * The list is always secondary.
-         */
-
         await openConversationFromUrl();
-
-        /*
-         * Never block the chat screen on the list.
-         */
 
         loadConversations();
 
