@@ -2298,6 +2298,8 @@ body{
 </div>
 
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
 
 /* =========================================================
@@ -2306,296 +2308,125 @@ body{
 
 
 /* =========================================================
-   DEMO JOB DATA
+   SUPABASE / REAL JOB DATA
    ========================================================= */
 
-const demoJobs = [
-
-  {
-    id:"demo-1",
-
-    title:"Senior Frontend Developer",
-
-    company:"Tech Solutions Italy",
-
-    location:"Milan, Italy",
-
-    type:"Full-time",
-
-    salary:"€45k-65k",
-
-    skills:[
-      "React",
-      "JavaScript",
-      "CSS"
-    ],
-
-    description:
-      "We are looking for an experienced frontend developer to join our growing technology team.",
-
-    icon:"💼",
-
-    image:"",
-
-    owner:false,
-
-    status:"active"
-  },
-
-
-  {
-    id:"demo-2",
-
-    title:"Marketing Manager",
-
-    company:"Digital Agency Rome",
-
-    location:"Rome, Italy",
-
-    type:"Full-time",
-
-    salary:"€35k-50k",
-
-    skills:[
-      "Marketing",
-      "SEO",
-      "Social Media"
-    ],
-
-    description:
-      "Manage digital campaigns, social media strategy and marketing projects.",
-
-    icon:"🏢",
-
-    image:"",
-
-    owner:false,
-
-    status:"active"
-  },
-
-
-  {
-    id:"demo-3",
-
-    title:"Remote Customer Support",
-
-    company:"Global Services",
-
-    location:"Remote",
-
-    type:"Part-time",
-
-    salary:"€20k-30k",
-
-    skills:[
-      "Customer Service",
-      "English"
-    ],
-
-    description:
-      "Remote customer support position for an international service company.",
-
-    icon:"🌐",
-
-    image:"",
-
-    owner:false,
-
-    status:"active"
-  },
-
-
-  {
-    id:"demo-4",
-
-    title:"Graphic Designer",
-
-    company:"Creative Studio",
-
-    location:"Florence, Italy",
-
-    type:"Freelance",
-
-    salary:"€30k-40k",
-
-    skills:[
-      "Photoshop",
-      "Illustrator"
-    ],
-
-    description:
-      "Freelance graphic designer for branding and digital projects.",
-
-    icon:"🎨",
-
-    image:"",
-
-    owner:false,
-
-    status:"active"
-  },
-
-
-  {
-    id:"demo-5",
-
-    title:"Restaurant Server",
-
-    company:"Italian Restaurant",
-
-    location:"Venice, Italy",
-
-    type:"Part-time",
-
-    salary:"€18k-25k",
-
-    skills:[
-      "Hospitality",
-      "Italian"
-    ],
-
-    description:
-      "Restaurant server position in a busy Italian restaurant.",
-
-    icon:"🍕",
-
-    image:"",
-
-    owner:false,
-
-    status:"active"
-  }
-
-];
-
+const SUPABASE_URL =
+  "https://gispovnciifgikvgpzck.supabase.co";
+
+const SUPABASE_PUBLISHABLE_KEY =
+  "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq";
+
+const supabaseClient =
+  window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY,
+    {
+      auth:{
+        persistSession:true,
+        autoRefreshToken:true,
+        detectSessionInUrl:true
+      }
+    }
+  );
 
 let jobs = [];
-
+let currentUser = null;
 let selectedFilter = "All";
-
 let selectedPlan = {
   name:"Basic",
   price:9.99
 };
-
 let selectedJobImage = "";
-
-
-/* =========================================================
-   STORAGE KEYS
-   ========================================================= */
-
-const JOBS_STORAGE_KEY =
-  "havkar_jobs";
 
 const SAVED_STORAGE_KEY =
   "havkar_saved_jobs";
 
-
-/* =========================================================
-   LOAD JOBS
-   ========================================================= */
-
-function loadLocalJobs(){
-
-  jobs = [...demoJobs];
-
-
-  try{
-
-    const stored =
-      localStorage.getItem(
-        JOBS_STORAGE_KEY
-      );
-
-
-    if(!stored) return;
-
-
-    const localJobs =
-      JSON.parse(stored);
-
-
-    if(!Array.isArray(localJobs)) return;
-
-
-    localJobs.forEach(localJob => {
-
-      if(!localJob || !localJob.id) return;
-
-
-      const existingIndex =
-        jobs.findIndex(
-          job =>
-            String(job.id) ===
-            String(localJob.id)
-        );
-
-
-      if(existingIndex >= 0){
-
-        jobs[existingIndex] =
-          localJob;
-
-      }else{
-
-        jobs.unshift(localJob);
-
-      }
-
-    });
-
-
-  }catch(error){
-
-    console.error(
-      "HAVKAR: Could not load jobs.",
-      error
-    );
-
-  }
-
+function parseSkills(value){
+  if(Array.isArray(value)) return value.filter(Boolean);
+  if(!value) return [];
+  return String(value)
+    .split(",")
+    .map(item => item.trim())
+    .filter(Boolean);
 }
 
-
-/* =========================================================
-   SAVE OWNER JOBS
-   ========================================================= */
-
-function saveLocalJobs(){
-
-  try{
-
-    const ownJobs =
-      jobs.filter(
-        job =>
-          job.owner === true
-      );
-
-
-    localStorage.setItem(
-      JOBS_STORAGE_KEY,
-      JSON.stringify(ownJobs)
-    );
-
-
-  }catch(error){
-
-    console.error(
-      "HAVKAR: Could not save jobs.",
-      error
-    );
-
-
-    alert(
-      "The advertisement could not be saved on this device."
-    );
-
-  }
-
+function normalizeJob(row){
+  const type = row.job_type || row.type || "";
+  return {
+    ...row,
+    id:row.id,
+    type,
+    job_type:type,
+    skills:parseSkills(row.skills),
+    icon:"💼",
+    owner:Boolean(
+      currentUser &&
+      row.user_id &&
+      String(row.user_id) === String(currentUser.id)
+    )
+  };
 }
 
+async function refreshCurrentUser(){
+  const { data, error } =
+    await supabaseClient.auth.getSession();
+
+  if(error){
+    console.error("HAVKAR: Could not read Supabase session.", error);
+    currentUser = null;
+    return null;
+  }
+
+  currentUser = data?.session?.user || null;
+  return currentUser;
+}
+
+async function loadSupabaseJobs(){
+  const list = document.getElementById("jobsList");
+
+  if(list){
+    list.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon"><i class="fas fa-spinner fa-spin"></i></div>
+        <strong>Loading jobs...</strong>
+        <p>Connecting to HAVKAR.</p>
+      </div>
+    `;
+  }
+
+  await refreshCurrentUser();
+
+  const { data, error } =
+    await supabaseClient
+      .from("jobs")
+      .select("id,created_at,user_id,title,company,location,job_type,salary,description,requirements,contact,status,expires_at,application_url,remote,category,language,experience_level,education_level,skills,currency,salary_min,salary_max,type,image,plan,monthly_fee")
+      .order("created_at", { ascending:false });
+
+  if(error){
+    console.error("HAVKAR: Could not load jobs from Supabase.", error);
+    jobs = [];
+    if(list){
+      list.innerHTML = `
+        <div class="empty">
+          <div class="empty-icon"><i class="fas fa-triangle-exclamation"></i></div>
+          <strong>Jobs could not be loaded</strong>
+          <p>${escapeHTML(error.message || "Please try again.")}</p>
+        </div>
+      `;
+    }
+    return;
+  }
+
+  jobs = (data || [])
+    .map(normalizeJob)
+    .filter(job =>
+      job.status === "active" ||
+      job.owner === true
+    );
+
+  renderJobs();
+}
 
 /* =========================================================
    SAVED JOBS STORAGE
@@ -3394,13 +3225,18 @@ function applyJob(id){
    OPEN POST JOB
    ========================================================= */
 
-function openPostJob(){
+async function openPostJob(){
+
+  await refreshCurrentUser();
+
+  if(!currentUser){
+    alert("Please sign in to your HAVKAR account before posting a job.");
+    window.location.href = "profile.html";
+    return;
+  }
 
   resetPostForm();
-
-  openModal(
-    "postModal"
-  );
+  openModal("postModal");
 
 }
 
@@ -3804,177 +3640,98 @@ function removeJobImage(event){
    SUBMIT JOB
    ========================================================= */
 
-function submitJob(){
+async function submitJob(){
 
-  const title =
-    document.getElementById(
-      "jobTitle"
-    ).value.trim();
+  await refreshCurrentUser();
 
-
-  const company =
-    document.getElementById(
-      "jobCompany"
-    ).value.trim();
-
-
-  const location =
-    document.getElementById(
-      "jobLocation"
-    ).value.trim();
-
-
-  const type =
-    document.getElementById(
-      "jobType"
-    ).value;
-
-
-  const salary =
-    document.getElementById(
-      "jobSalary"
-    ).value.trim();
-
-
-  const skills =
-    document.getElementById(
-      "jobSkills"
-    ).value
-    .split(",")
-    .map(
-      item =>
-        item.trim()
-    )
-    .filter(Boolean);
-
-
-  const description =
-    document.getElementById(
-      "jobDescription"
-    ).value.trim();
-
-
-  if(
-    !title ||
-    !company ||
-    !location ||
-    !description
-  ){
-
-    alert(
-      "Please complete all required fields."
-    );
-
+  if(!currentUser){
+    alert("Please sign in before posting a job.");
+    window.location.href = "profile.html";
     return;
-
   }
 
+  const title = document.getElementById("jobTitle").value.trim();
+  const company = document.getElementById("jobCompany").value.trim();
+  const location = document.getElementById("jobLocation").value.trim();
+  const type = document.getElementById("jobType").value;
+  const salary = document.getElementById("jobSalary").value.trim();
+  const skills = document.getElementById("jobSkills").value
+    .split(",")
+    .map(item => item.trim())
+    .filter(Boolean);
+  const description = document.getElementById("jobDescription").value.trim();
+
+  if(!title || !company || !location || !description){
+    alert("Please complete all required fields.");
+    return;
+  }
 
   if(title.length < 2){
-
-    alert(
-      "Please enter a valid job title."
-    );
-
+    alert("Please enter a valid job title.");
     return;
-
   }
-
 
   if(company.length < 2){
-
-    alert(
-      "Please enter a valid company name."
-    );
-
+    alert("Please enter a valid company name.");
     return;
-
   }
-
 
   if(description.length < 10){
-
-    alert(
-      "Please provide a more detailed job description."
-    );
-
+    alert("Please provide a more detailed job description.");
     return;
-
   }
 
+  const submitButton = document.querySelector('#postModal button.primary');
+  const originalButtonHTML = submitButton ? submitButton.innerHTML : "";
 
-  const newJob = {
+  if(submitButton){
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+  }
 
-    id:
-      "job-" +
-      Date.now() +
-      "-" +
-      Math.random()
-        .toString(36)
-        .slice(2,8),
-
+  const payload = {
+    user_id:currentUser.id,
     title,
-
     company,
-
     location,
-
+    job_type:type,
     type,
-
-    salary:
-      salary ||
-      "Negotiable",
-
-    skills:
-      skills.length
-        ? skills
-        : ["General"],
-
+    salary:salary || "Negotiable",
+    skills:skills.length ? skills.join(", ") : "General",
     description,
-
-    icon:"💼",
-
-    image:
-      selectedJobImage,
-
-    owner:true,
-
-    status:
-      "pending_payment",
-
-    plan:
-      selectedPlan.name,
-
-    monthly_fee:
-      selectedPlan.price,
-
-    created_at:
-      new Date().toISOString()
-
+    image:selectedJobImage || null,
+    status:"pending_payment",
+    plan:selectedPlan.name,
+    monthly_fee:selectedPlan.price,
+    remote:type === "Remote"
   };
 
+  const { data, error } =
+    await supabaseClient
+      .from("jobs")
+      .insert(payload)
+      .select("id,created_at,user_id,title,company,location,job_type,salary,description,requirements,contact,status,expires_at,application_url,remote,category,language,experience_level,education_level,skills,currency,salary_min,salary_max,type,image,plan,monthly_fee")
+      .single();
 
-  jobs.unshift(
-    newJob
-  );
+  if(submitButton){
+    submitButton.disabled = false;
+    submitButton.innerHTML = originalButtonHTML;
+  }
 
+  if(error){
+    console.error("HAVKAR: Job insert failed.", error);
+    alert("The job could not be saved: " + (error.message || "Unknown error"));
+    return;
+  }
 
-  saveLocalJobs();
+  const newJob = normalizeJob(data);
+  jobs = [newJob, ...jobs.filter(job => String(job.id) !== String(newJob.id))];
 
-
-  closeModal(
-    "postModal"
-  );
-
-
+  closeModal("postModal");
   renderJobs();
+  showPaymentScreen(newJob);
 
-
-  showPaymentScreen(
-    newJob
-  );
-
-}
+} 
 
 
 /* =========================================================
@@ -4154,12 +3911,21 @@ function startRealPayment(jobId){
    MY JOBS
    ========================================================= */
 
-function openMyJobs(){
+async function openMyJobs(){
+
+  await refreshCurrentUser();
+
+  if(!currentUser){
+    alert("Please sign in to view your jobs.");
+    window.location.href = "profile.html";
+    return;
+  }
+
+  await loadSupabaseJobs();
 
   const ownJobs =
     jobs.filter(
-      job =>
-        job.owner === true
+      job => job.owner === true
     );
 
 
@@ -4896,9 +4662,13 @@ function escapeJS(value){
    INITIALIZE
    ========================================================= */
 
-loadLocalJobs();
+supabaseClient.auth.onAuthStateChange(
+  async (_event, session) => {
+    currentUser = session?.user || null;
+  }
+);
 
-renderJobs();
+loadSupabaseJobs();
 
 </script>
 
