@@ -1062,92 +1062,6 @@ button{
     word-break:break-all;
 }
 
-
-.my-tickets-list{
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-}
-
-.my-ticket-card{
-    border:1px solid var(--border);
-    border-radius:16px;
-    background:#fff;
-    padding:16px;
-    box-shadow:var(--shadow);
-}
-
-.my-ticket-top{
-    display:flex;
-    align-items:flex-start;
-    justify-content:space-between;
-    gap:12px;
-    margin-bottom:12px;
-}
-
-.my-ticket-route{
-    font-size:18px;
-    font-weight:900;
-    color:var(--text);
-}
-
-.my-ticket-status{
-    flex:0 0 auto;
-    padding:6px 9px;
-    border-radius:999px;
-    background:var(--green-light);
-    color:var(--green-dark);
-    font-size:11px;
-    font-weight:900;
-}
-
-.my-ticket-meta{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:10px;
-}
-
-.my-ticket-meta-item{
-    padding:10px;
-    border-radius:11px;
-    background:#f7f8f7;
-}
-
-.my-ticket-meta-label{
-    margin-bottom:4px;
-    color:var(--muted);
-    font-size:11px;
-}
-
-.my-ticket-meta-value{
-    color:var(--text);
-    font-size:13px;
-    font-weight:800;
-    word-break:break-word;
-}
-
-.my-tickets-empty{
-    padding:28px 18px;
-    border:1px dashed var(--border);
-    border-radius:16px;
-    text-align:center;
-    color:var(--muted);
-    background:#fafafa;
-}
-
-.my-tickets-empty i{
-    display:block;
-    margin-bottom:10px;
-    color:var(--green);
-    font-size:30px;
-}
-
-@media(max-width:600px){
-    .my-ticket-meta{
-        grid-template-columns:1fr;
-    }
-}
-
 .toast{
     position:fixed;
     left:50%;
@@ -1316,6 +1230,41 @@ select:focus-visible{
         grid-template-columns:1fr 45px 1fr;
     }
 }
+
+/* =========================================================
+   OMIO AFFILIATE WIDGETS
+========================================================= */
+.omio-real-section{
+    display:none;
+    max-width:1100px;
+    margin:18px auto 0;
+    padding:0 16px;
+}
+.omio-real-section.show{display:block;}
+.omio-real-card{
+    background:var(--white);
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:18px;
+    box-shadow:var(--shadow);
+}
+.omio-real-head{margin-bottom:14px;}
+.omio-real-head h2{font-size:20px;margin-bottom:6px;}
+.omio-real-head p{color:var(--muted);font-size:14px;line-height:1.5;}
+.omio-widget-panel{display:none;}
+.omio-widget-panel.active{display:block;}
+.omio-powered-note{
+    margin-top:12px;
+    color:var(--muted);
+    font-size:12px;
+    line-height:1.45;
+    text-align:center;
+}
+@media(max-width:600px){
+    .omio-real-section{padding:0 10px;margin-top:12px;}
+    .omio-real-card{padding:12px;border-radius:14px;}
+}
+
 </style>
 </head>
 
@@ -1369,13 +1318,12 @@ select:focus-visible{
 
 <div class="demo-notice">
 
-<i class="fas fa-flask"></i>
+<i class="fas fa-ticket"></i>
 
 <div>
     <strong>HAVKAR Tickets</strong><br>
-    Flight search, selected-offer verification and test checkout are connected to the Duffel Test API.
-    Train, Bus, Ferry, Taxi and Transfer currently remain demo services.
-    No real flight payment is processed in this test flow.
+    Train, Bus, Flight and Ferry searches are connected to the official Omio affiliate search widget.
+    Search results and final booking open on Omio. Taxi and Transfer remain HAVKAR demo services for now.
 </div>
 
 </div>
@@ -1414,7 +1362,59 @@ select:focus-visible{
 
 </div>
 
-<section class="search-section">
+<section id="omioRealSection" class="omio-real-section">
+<div class="omio-real-card">
+    <div class="omio-real-head">
+        <h2 id="omioRealTitle">Search with Omio</h2>
+        <p>Live travel search. Final results and booking continue securely on Omio in a new tab.</p>
+    </div>
+
+    <div id="omioWidgetTrain" class="omio-widget-panel">
+        <div
+          data-omio-widget="true"
+          data-partner-id="omio-affiliates"
+          data-new-tab="true"
+          data-redirect="https://omio.sjv.io/c/7763968/3963000/7385?u="
+        ></div>
+    </div>
+
+    <div id="omioWidgetBus" class="omio-widget-panel">
+        <div
+          data-omio-widget="true"
+          data-partner-id="omio-affiliates"
+          data-default-travel-mode="bus"
+          data-new-tab="true"
+          data-redirect="https://omio.sjv.io/c/7763968/3963000/7385?u="
+        ></div>
+    </div>
+
+    <div id="omioWidgetFlight" class="omio-widget-panel">
+        <div
+          data-omio-widget="true"
+          data-partner-id="omio-affiliates"
+          data-default-travel-mode="flight"
+          data-new-tab="true"
+          data-redirect="https://omio.sjv.io/c/7763968/3963000/7385?u="
+        ></div>
+    </div>
+
+    <div id="omioWidgetFerry" class="omio-widget-panel">
+        <div
+          data-omio-widget="true"
+          data-partner-id="omio-affiliates"
+          data-default-travel-mode="ferry"
+          data-new-tab="true"
+          data-redirect="https://omio.sjv.io/c/7763968/3963000/7385?u="
+        ></div>
+    </div>
+
+    <div class="omio-powered-note">
+        HAVKAR participates in the Omio affiliate program. Booking is completed on Omio.
+    </div>
+</div>
+</section>
+
+<section class="search-section" id="legacySearchSection">
 
 <div class="search-heading">
     <i id="searchTypeIcon" class="fas fa-plane"></i>
@@ -1559,7 +1559,7 @@ select:focus-visible{
 
 </section>
 
-<main class="content">
+<main class="content" id="legacyResultsSection">
 
 <div class="results-header">
 
@@ -1656,6 +1656,19 @@ select:focus-visible{
     role="status"
     aria-live="polite"
 ></div>
+
+<script>
+(function addWidget(d) {
+    var widgetStyle = d.createElement('link');
+    widgetStyle.setAttribute('rel', 'stylesheet');
+    widgetStyle.setAttribute('href', 'https://www.omio.com/gcs-proxy/b2b-nemo-prod/bundle/en/bundle.css?v=' + new Date().getTime());
+    d.head.appendChild(widgetStyle);
+
+    var widgetScript = d.createElement('script');
+    widgetScript.setAttribute('src', 'https://www.omio.com/gcs-proxy/b2b-nemo-prod/bundle/en/bundle.js?v=' + new Date().getTime());
+    d.body.appendChild(widgetScript);
+})(document);
+</script>
 
 <script>
 "use strict";
@@ -4218,312 +4231,6 @@ function collectPassengerCheckout(){
     };
 }
 
-
-/* =========================================================
-   MY TICKETS
-========================================================= */
-
-const HAVKAR_TICKETS_STORAGE_KEY =
-    "havkar_my_tickets_v1";
-
-function readSavedTickets(){
-
-    try{
-
-        const raw =
-            localStorage.getItem(
-                HAVKAR_TICKETS_STORAGE_KEY
-            );
-
-        const parsed =
-            raw ? JSON.parse(raw) : [];
-
-        return Array.isArray(parsed)
-            ? parsed
-            : [];
-
-    }catch{
-        return [];
-    }
-}
-
-function writeSavedTickets(tickets){
-
-    try{
-
-        localStorage.setItem(
-            HAVKAR_TICKETS_STORAGE_KEY,
-            JSON.stringify(tickets)
-        );
-
-        return true;
-
-    }catch{
-        return false;
-    }
-}
-
-function saveSuccessfulDuffelOrder(payload){
-
-    const order =
-        payload?.order || {};
-
-    const offer =
-        payload?.offer ||
-        selectedFlightOffer?.data ||
-        {};
-
-    if(!order?.id){
-        return;
-    }
-
-    const slices =
-        Array.isArray(offer?.slices)
-            ? offer.slices
-            : [];
-
-    const firstSlice =
-        slices[0] || {};
-
-    const firstSegment =
-        Array.isArray(firstSlice?.segments)
-            ? firstSlice.segments[0]
-            : null;
-
-    const route =
-        getCheckoutRouteSummary(offer);
-
-    const airline =
-        offer?.owner?.name ||
-        firstSegment?.marketing_carrier?.name ||
-        firstSegment?.operating_carrier?.name ||
-        "Airline";
-
-    const totalAmount =
-        order.total_amount ||
-        offer.total_amount ||
-        "";
-
-    const totalCurrency =
-        order.total_currency ||
-        offer.total_currency ||
-        "";
-
-    const lastSegment =
-        Array.isArray(firstSlice?.segments) &&
-        firstSlice.segments.length
-            ? firstSlice.segments[firstSlice.segments.length - 1]
-            : null;
-
-    const departureAt =
-        firstSegment?.departing_at ||
-        firstSlice?.departing_at ||
-        "";
-
-    const arrivalAt =
-        lastSegment?.arriving_at ||
-        firstSlice?.arriving_at ||
-        "";
-
-    const flight =
-        Array.isArray(firstSlice?.segments)
-            ? firstSlice.segments
-                .map(segment => getFlightCode(segment))
-                .filter(code => code && code !== "—")
-                .join(" · ")
-            : "";
-
-    const ticket = {
-        id:String(order.id),
-        booking_reference:String(
-            order.booking_reference ||
-            ""
-        ),
-        route:String(route),
-        airline:String(airline),
-        flight:String(flight),
-        departure_at:String(departureAt),
-        arrival_at:String(arrivalAt),
-        total_amount:String(totalAmount),
-        total_currency:String(totalCurrency),
-        mode:"TEST",
-        status:"Created",
-        created_at:new Date().toISOString()
-    };
-
-    const tickets =
-        readSavedTickets();
-
-    const existingIndex =
-        tickets.findIndex(
-            item => item?.id === ticket.id
-        );
-
-    if(existingIndex >= 0){
-        tickets[existingIndex] = ticket;
-    }else{
-        tickets.unshift(ticket);
-    }
-
-    writeSavedTickets(
-        tickets.slice(0,100)
-    );
-}
-
-function renderMyTickets(){
-
-    const body =
-        $("bookingBody");
-
-    if(!body){
-        return;
-    }
-
-    const title =
-        $("bookingTitle");
-
-    const subtitle =
-        $("bookingSubtitle");
-
-    if(title){
-        title.textContent =
-            "My Tickets";
-    }
-
-    if(subtitle){
-        subtitle.textContent =
-            "HAVKAR booking history";
-    }
-
-    const tickets =
-        readSavedTickets();
-
-    if(!tickets.length){
-
-        body.innerHTML = `
-            <div class="my-tickets-empty">
-                <i class="fas fa-ticket"></i>
-                <strong>No saved tickets yet</strong>
-                <div style="margin-top:7px;">
-                    Successful HAVKAR bookings will appear here.
-                </div>
-            </div>
-        `;
-
-        return;
-    }
-
-    body.innerHTML = `
-        <div class="my-tickets-list">
-            ${tickets.map(ticket => {
-
-                const total =
-                    formatMoney(
-                        ticket?.total_amount,
-                        ticket?.total_currency
-                    );
-
-                const departure =
-                    ticket?.departure_at
-                        ? formatFlightDateTime(
-                            ticket.departure_at
-                        )
-                        : "—";
-
-                const arrival =
-                    ticket?.arrival_at
-                        ? formatFlightDateTime(
-                            ticket.arrival_at
-                        )
-                        : "—";
-
-                const flight =
-                    ticket?.flight || "—";
-
-                return `
-                    <article class="my-ticket-card">
-                        <div class="my-ticket-top">
-                            <div>
-                                <div class="my-ticket-route">
-                                    ${escapeHtml(ticket?.route || "Flight")}
-                                </div>
-                                <div class="checkout-help">
-                                    ${escapeHtml(ticket?.airline || "Airline")}
-                                </div>
-                            </div>
-                            <div class="my-ticket-status">
-                                ${escapeHtml(ticket?.mode || "TEST")}
-                            </div>
-                        </div>
-
-                        <div class="my-ticket-meta">
-                            <div class="my-ticket-meta-item">
-                                <div class="my-ticket-meta-label">Booking reference</div>
-                                <div class="my-ticket-meta-value">
-                                    ${escapeHtml(ticket?.booking_reference || "—")}
-                                </div>
-                            </div>
-
-                            <div class="my-ticket-meta-item">
-                                <div class="my-ticket-meta-label">Flight</div>
-                                <div class="my-ticket-meta-value">
-                                    ${escapeHtml(flight)}
-                                </div>
-                            </div>
-
-                            <div class="my-ticket-meta-item">
-                                <div class="my-ticket-meta-label">Departure</div>
-                                <div class="my-ticket-meta-value">
-                                    ${escapeHtml(departure)}
-                                </div>
-                            </div>
-
-                            <div class="my-ticket-meta-item">
-                                <div class="my-ticket-meta-label">Arrival</div>
-                                <div class="my-ticket-meta-value">
-                                    ${escapeHtml(arrival)}
-                                </div>
-                            </div>
-
-                            <div class="my-ticket-meta-item">
-                                <div class="my-ticket-meta-label">Total</div>
-                                <div class="my-ticket-meta-value">
-                                    ${escapeHtml(total)}
-                                </div>
-                            </div>
-
-                            <div class="my-ticket-meta-item">
-                                <div class="my-ticket-meta-label">Status</div>
-                                <div class="my-ticket-meta-value">
-                                    ${escapeHtml(ticket?.status || "Created")}
-                                </div>
-                            </div>
-
-                            <div class="my-ticket-meta-item">
-                                <div class="my-ticket-meta-label">Duffel Order ID</div>
-                                <div class="my-ticket-meta-value">
-                                    ${escapeHtml(ticket?.id || "—")}
-                                </div>
-                            </div>
-
-                            <div class="my-ticket-meta-item">
-                                <div class="my-ticket-meta-label">Saved</div>
-                                <div class="my-ticket-meta-value">
-                                    ${escapeHtml(
-                                        ticket?.created_at
-                                            ? formatFlightDateTime(ticket.created_at)
-                                            : "—"
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </article>
-                `;
-            }).join("")}
-        </div>
-    `;
-}
-
 /* =========================================================
    CREATE DUFFEL TEST ORDER
 ========================================================= */
@@ -4635,10 +4342,6 @@ async function createDuffelTestOrder(){
                 "Duffel returned an invalid order response."
             );
         }
-
-        saveSuccessfulDuffelOrder(
-            payload
-        );
 
         renderOrderSuccess(
             payload
@@ -5322,6 +5025,97 @@ window.handleSelectFlightButton =
    TYPE SWITCHING
 ========================================================= */
 
+function updateOmioTicketView(type){
+
+    const omioTypes = [
+        "train",
+        "bus",
+        "flight",
+        "ferry"
+    ];
+
+    const isOmioType =
+        omioTypes.includes(type);
+
+    const omioSection =
+        $("omioRealSection");
+
+    const legacySearch =
+        $("legacySearchSection");
+
+    const legacyResults =
+        $("legacyResultsSection");
+
+    if(omioSection){
+        omioSection.classList.toggle(
+            "show",
+            isOmioType
+        );
+    }
+
+    if(legacySearch){
+        legacySearch.style.display =
+            isOmioType
+                ? "none"
+                : "block";
+    }
+
+    if(legacyResults){
+        legacyResults.style.display =
+            isOmioType
+                ? "none"
+                : "block";
+    }
+
+    document
+        .querySelectorAll(
+            ".omio-widget-panel"
+        )
+        .forEach(panel => {
+            panel.classList.remove(
+                "active"
+            );
+        });
+
+    if(!isOmioType){
+        return false;
+    }
+
+    const panelMap = {
+        train:"omioWidgetTrain",
+        bus:"omioWidgetBus",
+        flight:"omioWidgetFlight",
+        ferry:"omioWidgetFerry"
+    };
+
+    const titleMap = {
+        train:"Search Trains with Omio",
+        bus:"Search Buses with Omio",
+        flight:"Search Flights with Omio",
+        ferry:"Search Ferries with Omio"
+    };
+
+    const activePanel =
+        $(panelMap[type]);
+
+    if(activePanel){
+        activePanel.classList.add(
+            "active"
+        );
+    }
+
+    const title =
+        $("omioRealTitle");
+
+    if(title){
+        title.textContent =
+            titleMap[type] ||
+            "Search with Omio";
+    }
+
+    return true;
+}
+
 function setTicketType(type){
 
     if(!ticketConfig[type]){
@@ -5424,6 +5218,13 @@ function setTicketType(type){
 
     currentResults = [];
 
+    const usingOmio =
+        updateOmioTicketView(type);
+
+    if(usingOmio){
+        return;
+    }
+
     performSearch();
 }
 
@@ -5505,19 +5306,10 @@ function goNotifications(){
 
 function goTickets(){
 
-    renderMyTickets();
-    openBookingOverlay();
-
-    document
-        .querySelectorAll(
-            ".bottom-nav .nav-item"
-        )
-        .forEach(item =>
-            item.classList.remove("active")
-        );
-
-    $("ticketsNav")
-        ?.classList.add("active");
+    window.scrollTo({
+        top:0,
+        behavior:"smooth"
+    });
 }
 
 function setupEnterSearch(elementId){
