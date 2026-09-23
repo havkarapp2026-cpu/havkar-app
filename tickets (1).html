@@ -1,0 +1,5559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#7cb342">
+<title>HAVKAR - Tickets</title>
+
+<link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+:root{
+    --green:#7cb342;
+    --green-dark:#558b2f;
+    --green-light:#eef7e8;
+    --bg:#f5f6f5;
+    --white:#fff;
+    --text:#252525;
+    --muted:#777;
+    --border:#e2e2e2;
+    --warning-bg:#fff8e1;
+    --warning-border:#f0d98a;
+    --warning-text:#765c00;
+    --shadow:0 4px 18px rgba(0,0,0,.07);
+    --danger:#e53935;
+}
+
+html{
+    scroll-behavior:smooth;
+}
+
+body{
+    min-height:100vh;
+    padding-bottom:88px;
+    background:var(--bg);
+    color:var(--text);
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Arial,
+        sans-serif;
+}
+
+button,
+input,
+select{
+    font:inherit;
+    -webkit-tap-highlight-color:transparent;
+}
+
+button{
+    cursor:pointer;
+}
+
+.header{
+    min-height:76px;
+    padding:14px 18px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    color:#fff;
+    background:linear-gradient(135deg,#689f38,#7cb342);
+    box-shadow:0 3px 12px rgba(0,0,0,.12);
+}
+
+.header-left{
+    min-width:0;
+    display:flex;
+    align-items:center;
+    gap:13px;
+}
+
+.header-title{
+    overflow:hidden;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+    font-size:22px;
+    font-weight:800;
+}
+
+.header-right{
+    display:flex;
+    gap:9px;
+}
+
+.header-button,
+.back-button{
+    width:43px;
+    height:43px;
+    border:0;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#fff;
+    background:rgba(255,255,255,.18);
+    font-size:18px;
+}
+
+.demo-notice{
+    margin:14px 16px 0;
+    padding:14px 15px;
+    display:flex;
+    align-items:flex-start;
+    gap:11px;
+    border:1px solid var(--warning-border);
+    border-radius:15px;
+    background:var(--warning-bg);
+    color:var(--warning-text);
+    font-size:13px;
+    line-height:1.45;
+}
+
+.demo-notice i{
+    margin-top:2px;
+    color:#d49b00;
+    font-size:18px;
+}
+
+.demo-notice strong{
+    font-size:14px;
+}
+
+.ticket-types{
+    margin:14px 16px 0;
+    padding:5px;
+    display:grid;
+    grid-template-columns:repeat(6,1fr);
+    gap:4px;
+    border-radius:16px;
+    background:#fff;
+    box-shadow:var(--shadow);
+}
+
+.ticket-type{
+    min-width:0;
+    min-height:62px;
+    padding:5px 2px;
+    border:0;
+    border-radius:11px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:5px;
+    color:#666;
+    background:transparent;
+    font-size:10px;
+    font-weight:750;
+}
+
+.ticket-type i{
+    font-size:18px;
+}
+
+.ticket-type.active{
+    color:#fff;
+    background:linear-gradient(135deg,#689f38,#7cb342);
+}
+
+.search-section{
+    margin:14px 16px 0;
+    padding:17px;
+    border-radius:18px;
+    background:#fff;
+    box-shadow:var(--shadow);
+}
+
+.search-heading{
+    margin-bottom:14px;
+    display:flex;
+    align-items:center;
+    gap:9px;
+    color:var(--green-dark);
+    font-size:16px;
+    font-weight:800;
+}
+
+.search-heading i{
+    font-size:18px;
+}
+
+.search-row{
+    margin-bottom:10px;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
+
+.input-wrap{
+    position:relative;
+}
+
+.input-wrap > i{
+    position:absolute;
+    left:14px;
+    top:50%;
+    z-index:1;
+    transform:translateY(-50%);
+    color:var(--green);
+    pointer-events:none;
+}
+
+.search-input,
+.select-input{
+    width:100%;
+    height:54px;
+    border:2px solid var(--border);
+    border-radius:13px;
+    outline:none;
+    background:#fff;
+    color:#333;
+    font-size:15px;
+}
+
+.search-input{
+    padding:0 12px 0 40px;
+}
+
+.select-input{
+    padding:0 12px;
+}
+
+.search-input:focus,
+.select-input:focus{
+    border-color:var(--green);
+    box-shadow:0 0 0 3px rgba(124,179,66,.12);
+}
+
+.swap-row{
+    margin:0 0 10px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+}
+
+.swap-button{
+    width:42px;
+    height:42px;
+    border:1px solid #ddd;
+    border-radius:50%;
+    background:#fff;
+    color:var(--green-dark);
+    font-size:17px;
+}
+
+.filter-button{
+    border:0;
+    background:none;
+    color:var(--green-dark);
+    font-size:14px;
+    font-weight:750;
+}
+
+.extra-filters{
+    display:none;
+    margin-bottom:11px;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
+
+.extra-filters.show{
+    display:grid;
+}
+
+.select-wrap label{
+    display:block;
+    margin:0 0 5px 3px;
+    color:var(--muted);
+    font-size:12px;
+}
+
+.search-button{
+    width:100%;
+    height:54px;
+    margin-top:3px;
+    border:0;
+    border-radius:13px;
+    color:#fff;
+    background:linear-gradient(135deg,#689f38,#7cb342);
+    box-shadow:0 4px 12px rgba(124,179,66,.22);
+    font-size:16px;
+    font-weight:800;
+}
+
+.content{
+    padding:3px 16px 95px;
+}
+
+.results-header{
+    margin:20px 2px 13px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+}
+
+.results-title{
+    font-size:20px;
+    font-weight:800;
+}
+
+.result-count{
+    color:var(--muted);
+    font-size:13px;
+    white-space:nowrap;
+}
+
+.ticket-card{
+    margin-bottom:14px;
+    padding:17px;
+    border:1px solid rgba(0,0,0,.025);
+    border-radius:18px;
+    background:#fff;
+    box-shadow:var(--shadow);
+}
+
+.ticket-top{
+    margin-bottom:17px;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:10px;
+}
+
+.provider{
+    min-width:0;
+    display:flex;
+    align-items:center;
+    gap:11px;
+}
+
+.provider-logo{
+    width:47px;
+    height:47px;
+    flex:none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:13px;
+    background:var(--green-light);
+    color:var(--green-dark);
+    font-size:20px;
+}
+
+.provider-name{
+    font-size:15px;
+    font-weight:800;
+}
+
+.provider-code{
+    margin-top:3px;
+    color:#888;
+    font-size:12px;
+}
+
+.price-box{
+    flex:none;
+    text-align:right;
+}
+
+.price{
+    color:var(--green-dark);
+    font-size:22px;
+    font-weight:850;
+}
+
+.price-label{
+    margin-top:2px;
+    color:#888;
+    font-size:11px;
+}
+
+.route{
+    margin-bottom:13px;
+    display:grid;
+    grid-template-columns:1fr 65px 1fr;
+    align-items:center;
+    gap:5px;
+}
+
+.location{
+    min-width:0;
+}
+
+.location.right{
+    text-align:right;
+}
+
+.city{
+    overflow:hidden;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+    font-size:20px;
+    font-weight:850;
+}
+
+.time{
+    margin-top:3px;
+    color:#666;
+    font-size:13px;
+}
+
+.station{
+    margin-top:3px;
+    color:#999;
+    font-size:11px;
+}
+
+.route-center{
+    text-align:center;
+    color:var(--green);
+}
+
+.route-line{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+}
+
+.route-line::before,
+.route-line::after{
+    content:"";
+    width:18px;
+    height:1px;
+    background:#ddd;
+}
+
+.route-duration{
+    margin-top:5px;
+    color:#777;
+    font-size:11px;
+}
+
+.ticket-info{
+    padding:11px 0;
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    border-top:1px solid #eee;
+    border-bottom:1px solid #eee;
+}
+
+.info-item{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    color:#666;
+    font-size:12px;
+}
+
+.info-item i{
+    color:var(--green);
+}
+
+.demo-disabled,
+.select-flight-button{
+    width:100%;
+    min-height:48px;
+    margin-top:12px;
+    border:0;
+    border-radius:12px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    font-size:14px;
+    font-weight:750;
+}
+
+.demo-disabled{
+    color:#888;
+    background:#eee;
+}
+
+.select-flight-button{
+    color:#fff;
+    background:linear-gradient(135deg,#689f38,#7cb342);
+    box-shadow:0 4px 12px rgba(124,179,66,.20);
+}
+
+.select-flight-button:disabled{
+    color:#888;
+    background:#eee;
+    box-shadow:none;
+    cursor:not-allowed;
+}
+
+.empty-state,
+.loading{
+    padding:48px 18px;
+    border-radius:18px;
+    background:#fff;
+    box-shadow:var(--shadow);
+    text-align:center;
+}
+
+.empty-icon{
+    width:68px;
+    height:68px;
+    margin:0 auto 14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:50%;
+    background:#f0f0f0;
+    color:#aaa;
+    font-size:28px;
+}
+
+.empty-state h3{
+    margin-bottom:7px;
+    color:#666;
+    font-size:18px;
+}
+
+.empty-state p{
+    color:#999;
+    font-size:13px;
+    line-height:1.5;
+}
+
+.loading{
+    padding:45px 20px;
+    color:#777;
+}
+
+.loading i{
+    margin-bottom:10px;
+    color:var(--green);
+    font-size:25px;
+}
+
+/* =========================================================
+   SELECTED OFFER / BOOKING PANEL
+========================================================= */
+
+.booking-overlay{
+    position:fixed;
+    inset:0;
+    z-index:5000;
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    padding:18px;
+    background:rgba(0,0,0,.48);
+}
+
+.booking-overlay.show{
+    display:flex;
+}
+
+.booking-panel{
+    width:100%;
+    max-width:760px;
+    max-height:92vh;
+    overflow:auto;
+    border-radius:22px 22px 16px 16px;
+    background:#fff;
+    box-shadow:0 18px 60px rgba(0,0,0,.25);
+}
+
+.booking-header{
+    position:sticky;
+    top:0;
+    z-index:2;
+    padding:16px 17px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    border-bottom:1px solid #eee;
+    background:#fff;
+}
+
+.booking-header-title{
+    min-width:0;
+}
+
+.booking-header-title strong{
+    display:block;
+    font-size:18px;
+}
+
+.booking-header-title span{
+    display:block;
+    margin-top:3px;
+    color:#888;
+    font-size:12px;
+}
+
+.booking-close{
+    width:40px;
+    height:40px;
+    flex:none;
+    border:0;
+    border-radius:50%;
+    color:#555;
+    background:#f2f2f2;
+    font-size:17px;
+}
+
+.booking-body{
+    padding:17px;
+}
+
+.booking-loading{
+    padding:38px 15px;
+    text-align:center;
+    color:#777;
+}
+
+.booking-loading i{
+    display:block;
+    margin-bottom:10px;
+    color:var(--green);
+    font-size:26px;
+}
+
+.booking-error{
+    padding:15px;
+    border:1px solid #ffcdd2;
+    border-radius:13px;
+    color:#b71c1c;
+    background:#ffebee;
+    font-size:13px;
+    line-height:1.5;
+}
+
+.booking-card{
+    margin-bottom:14px;
+    padding:15px;
+    border:1px solid #e7e7e7;
+    border-radius:15px;
+    background:#fff;
+}
+
+.booking-card-title{
+    margin-bottom:12px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    color:#333;
+    font-size:15px;
+    font-weight:800;
+}
+
+.booking-card-title i{
+    color:var(--green);
+}
+
+.booking-price{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:12px;
+}
+
+.booking-price-main{
+    color:var(--green-dark);
+    font-size:26px;
+    font-weight:850;
+}
+
+.booking-price-label{
+    margin-top:3px;
+    color:#888;
+    font-size:11px;
+}
+
+.booking-status{
+    padding:7px 10px;
+    border-radius:999px;
+    color:#356b17;
+    background:var(--green-light);
+    font-size:11px;
+    font-weight:800;
+}
+
+.booking-status.expired{
+    color:#b71c1c;
+    background:#ffebee;
+}
+
+.booking-route{
+    padding:12px 0;
+    border-top:1px solid #eee;
+}
+
+.booking-route:first-of-type{
+    border-top:0;
+    padding-top:0;
+}
+
+.booking-route-label{
+    margin-bottom:9px;
+    color:#777;
+    font-size:11px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+}
+
+.booking-route-grid{
+    display:grid;
+    grid-template-columns:1fr 55px 1fr;
+    align-items:center;
+    gap:8px;
+}
+
+.booking-route-side:last-child{
+    text-align:right;
+}
+
+.booking-route-code{
+    font-size:19px;
+    font-weight:850;
+}
+
+.booking-route-name{
+    margin-top:2px;
+    color:#888;
+    font-size:11px;
+    line-height:1.35;
+}
+
+.booking-route-time{
+    margin-top:5px;
+    color:#555;
+    font-size:12px;
+}
+
+.booking-route-plane{
+    text-align:center;
+    color:var(--green);
+}
+
+.booking-route-plane i{
+    font-size:17px;
+}
+
+.booking-segment{
+    margin-top:10px;
+    padding:10px;
+    border-radius:11px;
+    background:#f7f8f7;
+    font-size:12px;
+    line-height:1.55;
+}
+
+.booking-segment strong{
+    color:#333;
+}
+
+.booking-details-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
+
+.booking-detail{
+    padding:11px;
+    border-radius:11px;
+    background:#f7f8f7;
+}
+
+.booking-detail-label{
+    color:#888;
+    font-size:10px;
+}
+
+.booking-detail-value{
+    margin-top:4px;
+    color:#333;
+    font-size:13px;
+    font-weight:750;
+    word-break:break-word;
+}
+
+.booking-warning{
+    margin-top:12px;
+    padding:12px;
+    border:1px solid var(--warning-border);
+    border-radius:12px;
+    color:var(--warning-text);
+    background:var(--warning-bg);
+    font-size:12px;
+    line-height:1.5;
+}
+
+.continue-booking-button{
+    width:100%;
+    min-height:51px;
+    margin-top:13px;
+    border:0;
+    border-radius:13px;
+    color:#fff;
+    background:linear-gradient(135deg,#689f38,#7cb342);
+    font-size:15px;
+    font-weight:850;
+}
+
+.continue-booking-button:disabled{
+    color:#888;
+    background:#eee;
+    cursor:not-allowed;
+}
+
+.booking-test-note{
+    margin-top:10px;
+    color:#888;
+    font-size:11px;
+    line-height:1.45;
+    text-align:center;
+}
+
+/* =========================================================
+   PASSENGER CHECKOUT
+========================================================= */
+
+.checkout-back{
+    margin-bottom:14px;
+    border:0;
+    background:none;
+    color:var(--green-dark);
+    font-size:13px;
+    font-weight:800;
+}
+
+.checkout-back i{
+    margin-right:5px;
+}
+
+.checkout-summary{
+    margin-bottom:14px;
+    padding:14px;
+    border:1px solid #dfead7;
+    border-radius:14px;
+    background:var(--green-light);
+}
+
+.checkout-summary-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+}
+
+.checkout-summary-route{
+    font-size:15px;
+    font-weight:850;
+}
+
+.checkout-summary-airline{
+    margin-top:4px;
+    color:#666;
+    font-size:12px;
+}
+
+.checkout-summary-price{
+    flex:none;
+    color:var(--green-dark);
+    font-size:20px;
+    font-weight:850;
+}
+
+.passenger-card{
+    margin-bottom:14px;
+    padding:15px;
+    border:1px solid #e5e5e5;
+    border-radius:15px;
+    background:#fff;
+}
+
+.passenger-heading{
+    margin-bottom:14px;
+    display:flex;
+    align-items:center;
+    gap:9px;
+    font-size:15px;
+    font-weight:850;
+}
+
+.passenger-heading i{
+    color:var(--green);
+}
+
+.form-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:11px;
+}
+
+.form-field{
+    min-width:0;
+}
+
+.form-field.full{
+    grid-column:1 / -1;
+}
+
+.form-field label{
+    display:block;
+    margin:0 0 6px 2px;
+    color:#555;
+    font-size:12px;
+    font-weight:750;
+}
+
+.form-field label .required{
+    color:var(--danger);
+}
+
+.checkout-input,
+.checkout-select{
+    width:100%;
+    height:50px;
+    padding:0 12px;
+    border:1.5px solid #ddd;
+    border-radius:11px;
+    outline:none;
+    color:#333;
+    background:#fff;
+    font-size:14px;
+}
+
+.checkout-input:focus,
+.checkout-select:focus{
+    border-color:var(--green);
+    box-shadow:0 0 0 3px rgba(124,179,66,.11);
+}
+
+
+.birth-date-grid{
+    display:grid;
+    grid-template-columns:1fr 1.35fr 1.15fr;
+    gap:9px;
+}
+
+.birth-date-grid .checkout-select{
+    min-width:0;
+}
+
+.checkout-help{
+    margin-top:5px;
+    color:#999;
+    font-size:10px;
+    line-height:1.4;
+}
+
+.checkout-section-title{
+    margin:18px 0 11px;
+    padding-top:14px;
+    border-top:1px solid #eee;
+    color:#444;
+    font-size:13px;
+    font-weight:850;
+}
+
+.order-button{
+    width:100%;
+    min-height:54px;
+    margin-top:4px;
+    border:0;
+    border-radius:13px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    color:#fff;
+    background:linear-gradient(135deg,#558b2f,#7cb342);
+    box-shadow:0 4px 13px rgba(124,179,66,.22);
+    font-size:15px;
+    font-weight:850;
+}
+
+.order-button:disabled{
+    color:#888;
+    background:#e8e8e8;
+    box-shadow:none;
+    cursor:not-allowed;
+}
+
+.checkout-security{
+    margin-top:11px;
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    color:#777;
+    font-size:11px;
+    line-height:1.45;
+}
+
+.checkout-security i{
+    margin-top:2px;
+    color:var(--green);
+}
+
+.order-success{
+    padding:18px;
+    border:1px solid #c5e1a5;
+    border-radius:15px;
+    background:#f1f8e9;
+}
+
+.order-success-icon{
+    width:64px;
+    height:64px;
+    margin:0 auto 13px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:50%;
+    color:#fff;
+    background:var(--green);
+    font-size:28px;
+}
+
+.order-success h3{
+    margin-bottom:6px;
+    text-align:center;
+    color:#33691e;
+}
+
+.order-success > p{
+    margin-bottom:16px;
+    text-align:center;
+    color:#5d6b54;
+    font-size:12px;
+    line-height:1.5;
+}
+
+.order-reference{
+    margin-top:10px;
+    padding:12px;
+    border-radius:11px;
+    background:#fff;
+}
+
+.order-reference-label{
+    color:#888;
+    font-size:10px;
+}
+
+.order-reference-value{
+    margin-top:4px;
+    color:#333;
+    font-size:14px;
+    font-weight:850;
+    word-break:break-all;
+}
+
+.toast{
+    position:fixed;
+    left:50%;
+    bottom:95px;
+    z-index:6000;
+    max-width:90%;
+    padding:11px 17px;
+    border-radius:11px;
+    transform:translateX(-50%) translateY(20px);
+    opacity:0;
+    pointer-events:none;
+    color:#fff;
+    background:#333;
+    font-size:13px;
+    text-align:center;
+    transition:.25s;
+}
+
+.toast.show{
+    transform:translateX(-50%) translateY(0);
+    opacity:1;
+}
+
+.bottom-nav{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    z-index:2000;
+    height:78px;
+    display:flex;
+    align-items:center;
+    justify-content:space-around;
+    background:#fff;
+    box-shadow:0 -3px 13px rgba(0,0,0,.09);
+}
+
+.nav-item{
+    flex:1;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:5px;
+    color:#999;
+    font-size:11px;
+    cursor:pointer;
+}
+
+.nav-item i{
+    font-size:20px;
+}
+
+.nav-item.active{
+    color:var(--green);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible{
+    outline:3px solid rgba(124,179,66,.25);
+    outline-offset:2px;
+}
+
+@media(max-width:600px){
+
+    .header{
+        padding:13px 15px;
+    }
+
+    .header-title{
+        font-size:20px;
+    }
+
+    .ticket-types{
+        gap:3px;
+        padding:4px;
+    }
+
+    .ticket-type{
+        min-height:57px;
+        font-size:9px;
+    }
+
+    .ticket-type i{
+        font-size:17px;
+    }
+
+    .search-section{
+        padding:15px;
+    }
+
+    .search-row{
+        gap:8px;
+    }
+
+    .city{
+        font-size:18px;
+    }
+
+    .route{
+        grid-template-columns:1fr 54px 1fr;
+    }
+
+    .booking-overlay{
+        padding:0;
+        align-items:flex-end;
+    }
+
+    .booking-panel{
+        max-height:94vh;
+        border-radius:22px 22px 0 0;
+    }
+}
+
+@media(max-width:420px){
+
+    .ticket-type{
+        min-height:53px;
+        font-size:8px;
+    }
+
+    .ticket-type i{
+        font-size:15px;
+    }
+
+    .ticket-card{
+        padding:14px;
+    }
+
+    .price{
+        font-size:19px;
+    }
+
+    .provider-name{
+        font-size:14px;
+    }
+
+    .booking-details-grid,
+    .form-grid{
+        grid-template-columns:1fr;
+    }
+
+    .form-field.full{
+        grid-column:auto;
+    }
+}
+
+@media(max-width:360px){
+
+    .ticket-types{
+        grid-template-columns:repeat(3,1fr);
+        row-gap:4px;
+    }
+
+    .ticket-type{
+        font-size:9px;
+    }
+
+    .search-row{
+        grid-template-columns:1fr;
+    }
+
+    .route{
+        grid-template-columns:1fr 45px 1fr;
+    }
+}
+
+/* =========================================================
+   OMIO AFFILIATE WIDGETS
+========================================================= */
+.omio-real-section{
+    display:none;
+    max-width:1100px;
+    margin:18px auto 0;
+    padding:0 16px;
+}
+.omio-real-section.show{display:block;}
+.omio-real-card{
+    background:var(--white);
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:18px;
+    box-shadow:var(--shadow);
+}
+.omio-real-head{margin-bottom:14px;}
+.omio-real-head h2{font-size:20px;margin-bottom:6px;}
+.omio-real-head p{color:var(--muted);font-size:14px;line-height:1.5;}
+.omio-widget-panel{display:none;}
+.omio-widget-panel.active{display:block;}
+.omio-powered-note{
+    margin-top:12px;
+    color:var(--muted);
+    font-size:12px;
+    line-height:1.45;
+    text-align:center;
+}
+@media(max-width:600px){
+    .omio-real-section{padding:0 10px;margin-top:12px;}
+    .omio-real-card{padding:12px;border-radius:14px;}
+}
+
+
+/* =========================================================
+   HAVKAR TICKETS — PROFESSIONAL UI UPGRADE
+   Visual layer only; booking/search logic preserved.
+========================================================= */
+body{background:radial-gradient(circle at 50% -140px,rgba(124,179,66,.14),transparent 360px),#f6f7f6;}
+.header{position:sticky;top:0;z-index:1500;min-height:72px;padding:12px max(16px,calc((100vw - 1100px)/2));background:linear-gradient(135deg,#4f8129 0%,#6fa638 52%,#7cb342 100%);box-shadow:0 5px 22px rgba(57,91,30,.18);}
+.header-title{font-size:21px;font-weight:850;letter-spacing:-.25px}.header-button,.back-button{width:42px;height:42px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.13);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:.18s ease}.header-button:active,.back-button:active{transform:scale(.94);background:rgba(255,255,255,.24)}
+.demo-notice{max-width:1068px;margin:18px auto 0;padding:15px 17px;align-items:center;border:1px solid #dcebd1;border-radius:17px;background:linear-gradient(135deg,#f7fbf4,#fff);color:#4c5a45;box-shadow:0 3px 14px rgba(0,0,0,.035);font-size:12.5px;line-height:1.55}.demo-notice i{width:39px;height:39px;margin:0;flex:none;display:flex;align-items:center;justify-content:center;border-radius:12px;color:#558b2f;background:#eaf5e2;font-size:17px}.demo-notice strong{display:inline-block;margin-bottom:2px;color:#315b1d;font-size:14px;font-weight:850}
+.ticket-types{max-width:1068px;margin:14px auto 0;padding:6px;gap:6px;border:1px solid rgba(0,0,0,.04);border-radius:18px;background:rgba(255,255,255,.96);box-shadow:0 6px 24px rgba(0,0,0,.055)}.ticket-type{position:relative;min-height:67px;padding:8px 4px;border-radius:13px;color:#6d7369;font-size:10.5px;font-weight:800;transition:.18s ease}.ticket-type i{font-size:19px;transition:transform .18s ease}.ticket-type:hover{color:#558b2f;background:#f4f8f1}.ticket-type:active{transform:scale(.97)}.ticket-type.active{color:#fff;background:linear-gradient(135deg,#5d922f,#7cb342);box-shadow:0 5px 14px rgba(85,139,47,.22)}.ticket-type.active i{transform:translateY(-1px)}
+.omio-real-section{display:none;width:100%;max-width:1100px;margin:16px auto 0;padding:0 16px}.omio-real-section.show{display:block;animation:havkarTicketFade .22s ease}@keyframes havkarTicketFade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}.omio-real-card{position:relative;overflow:hidden;padding:0;border:1px solid #e3e9df;border-radius:22px;background:#fff;box-shadow:0 8px 30px rgba(35,55,25,.075)}.omio-real-card:before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#558b2f,#7cb342,#9ccc65)}.omio-real-head{position:relative;margin:0;padding:21px 21px 17px;border-bottom:1px solid #edf0eb;background:linear-gradient(180deg,#fbfdf9,#fff)}.omio-real-head:after{content:"Secure partner search";position:absolute;top:21px;right:21px;padding:6px 9px;border-radius:999px;color:#4f7d32;background:#eef7e8;font-size:10px;font-weight:800}.omio-real-head h2{max-width:70%;margin:0 0 6px;color:#263321;font-size:21px;font-weight:850;letter-spacing:-.3px}.omio-real-head p{max-width:680px;margin:0;color:#777f73;font-size:13px;line-height:1.55}.omio-widget-panel{display:none;min-height:120px;padding:20px;background:#fff}.omio-widget-panel.active{display:block}.omio-widget-panel>div{width:100%;max-width:100%}.omio-powered-note{position:relative;margin:0;padding:13px 18px 15px 42px;border-top:1px solid #edf0eb;color:#7a8176;background:#fafbfa;font-size:11px;line-height:1.45;text-align:left}.omio-powered-note:before{content:"\f3ed";position:absolute;left:20px;top:50%;transform:translateY(-50%);color:#6a9e3b;font-family:"Font Awesome 6 Free";font-size:13px;font-weight:900}
+.search-section{width:calc(100% - 32px);max-width:1068px;margin:16px auto 0;padding:20px;border:1px solid #e6e9e4;border-radius:21px;box-shadow:0 7px 28px rgba(0,0,0,.06)}.search-input,.select-input{border:1.5px solid #e1e5de;background:#fbfcfb;transition:.18s ease}.search-input:focus,.select-input:focus{border-color:#7cb342;background:#fff;box-shadow:0 0 0 4px rgba(124,179,66,.10)}.content{width:100%;max-width:1100px;margin:0 auto}.ticket-card{border:1px solid #e8ebe6;border-radius:20px;box-shadow:0 6px 22px rgba(0,0,0,.05);transition:.18s ease}.ticket-card:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,0,0,.075)}
+.bottom-nav{height:76px;padding-bottom:env(safe-area-inset-bottom);border-top:1px solid #eee;box-shadow:0 -4px 22px rgba(0,0,0,.065)}.nav-item{position:relative}.nav-item.active{color:#669d36;font-weight:750}.nav-item.active:before{content:"";position:absolute;top:0;left:50%;width:28px;height:3px;border-radius:0 0 4px 4px;transform:translateX(-50%);background:#7cb342}
+@media(max-width:600px){body{padding-bottom:82px}.header{min-height:66px;padding:11px 13px}.header-title{font-size:19px}.header-button,.back-button{width:40px;height:40px}.demo-notice{margin:12px 10px 0;padding:12px;border-radius:14px;font-size:11.5px}.ticket-types{margin:10px 10px 0;padding:5px;gap:4px;border-radius:15px}.ticket-type{min-height:57px;padding:5px 1px;border-radius:10px;font-size:9px}.ticket-type i{font-size:16px}.omio-real-section{margin-top:11px;padding:0 10px}.omio-real-card{border-radius:17px}.omio-real-head{padding:17px 15px 14px}.omio-real-head:after{position:static;display:inline-block;margin-top:10px;padding:5px 8px}.omio-real-head h2{max-width:none;font-size:18px}.omio-real-head p{font-size:12px}.omio-widget-panel{min-height:100px;padding:13px 10px}.omio-powered-note{padding:11px 12px 12px 34px;font-size:10px}.omio-powered-note:before{left:14px}.search-section{width:calc(100% - 20px);margin-top:11px;padding:15px;border-radius:17px}.content{padding-left:10px;padding-right:10px}.bottom-nav{height:72px}}
+@media(max-width:390px){.ticket-types{grid-template-columns:repeat(3,1fr)}.ticket-type{min-height:52px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</head>
+
+<body>
+
+<header class="header">
+
+<div class="header-left">
+
+    <button
+        id="backButton"
+        class="back-button"
+        type="button"
+        aria-label="Back"
+    >
+        <i class="fas fa-arrow-left"></i>
+    </button>
+
+    <h1
+        id="pageTitle"
+        class="header-title"
+    >
+        Tickets
+    </h1>
+
+</div>
+
+<div class="header-right">
+
+    <button
+        id="notificationButton"
+        class="header-button"
+        type="button"
+        aria-label="Notifications"
+    >
+        <i class="fas fa-bell"></i>
+    </button>
+
+    <button
+        id="profileButton"
+        class="header-button"
+        type="button"
+        aria-label="Profile"
+    >
+        <i class="fas fa-user"></i>
+    </button>
+
+</div>
+
+</header>
+
+<div class="demo-notice">
+
+<i class="fas fa-ticket"></i>
+
+<div>
+    <strong>HAVKAR Tickets</strong><br>
+    Compare Flight, Train, Bus and Ferry options with Omio. Final booking is completed securely on Omio.
+    Taxi and Transfer are currently HAVKAR preview services.
+</div>
+
+</div>
+
+<div class="ticket-types">
+
+<button class="ticket-type active" data-type="flight" type="button">
+    <i class="fas fa-plane"></i>
+    <span>Flight</span>
+</button>
+
+<button class="ticket-type" data-type="train" type="button">
+    <i class="fas fa-train"></i>
+    <span>Train</span>
+</button>
+
+<button class="ticket-type" data-type="bus" type="button">
+    <i class="fas fa-bus"></i>
+    <span>Bus</span>
+</button>
+
+<button class="ticket-type" data-type="ferry" type="button">
+    <i class="fas fa-ship"></i>
+    <span>Ferry</span>
+</button>
+
+<button class="ticket-type" data-type="taxi" type="button">
+    <i class="fas fa-taxi"></i>
+    <span>Taxi</span>
+</button>
+
+<button class="ticket-type" data-type="transfer" type="button">
+    <i class="fas fa-van-shuttle"></i>
+    <span>Transfer</span>
+</button>
+
+</div>
+
+<section id="omioRealSection" class="omio-real-section">
+<div class="omio-real-card">
+    <div class="omio-real-head">
+        <h2 id="omioRealTitle">Search with Omio</h2>
+        <p>Live travel search. Final results and booking continue securely on Omio in a new tab.</p>
+    </div>
+
+    <div id="omioWidgetTrain" class="omio-widget-panel">
+        <div
+          data-omio-widget="true"
+          data-partner-id="omio-affiliates"
+          data-new-tab="true"
+          data-redirect="https://omio.sjv.io/c/7763968/3963000/7385?u="
+        ></div>
+    </div>
+
+    <div id="omioWidgetBus" class="omio-widget-panel">
+        <div
+          data-omio-widget="true"
+          data-partner-id="omio-affiliates"
+          data-default-travel-mode="bus"
+          data-new-tab="true"
+          data-redirect="https://omio.sjv.io/c/7763968/3963000/7385?u="
+        ></div>
+    </div>
+
+    <div id="omioWidgetFlight" class="omio-widget-panel">
+        <div
+          data-omio-widget="true"
+          data-partner-id="omio-affiliates"
+          data-default-travel-mode="flight"
+          data-new-tab="true"
+          data-redirect="https://omio.sjv.io/c/7763968/3963000/7385?u="
+        ></div>
+    </div>
+
+    <div id="omioWidgetFerry" class="omio-widget-panel">
+        <div
+          data-omio-widget="true"
+          data-partner-id="omio-affiliates"
+          data-default-travel-mode="ferry"
+          data-new-tab="true"
+          data-redirect="https://omio.sjv.io/c/7763968/3963000/7385?u="
+        ></div>
+    </div>
+
+    <div class="omio-powered-note">
+        HAVKAR participates in the Omio affiliate program. Booking is completed on Omio.
+    </div>
+</div>
+</section>
+
+<section class="search-section" id="legacySearchSection">
+
+<div class="search-heading">
+    <i id="searchTypeIcon" class="fas fa-plane"></i>
+    <span id="searchHeadingText">Search Flights</span>
+</div>
+
+<div class="search-row">
+
+    <div class="input-wrap">
+        <i class="fas fa-location-dot"></i>
+        <input
+            id="fromInput"
+            class="search-input"
+            type="text"
+            value="Rome"
+            placeholder="From"
+            autocomplete="off"
+        >
+    </div>
+
+    <div class="input-wrap">
+        <i class="fas fa-location-dot"></i>
+        <input
+            id="toInput"
+            class="search-input"
+            type="text"
+            value="Milan"
+            placeholder="To"
+            autocomplete="off"
+        >
+    </div>
+
+</div>
+
+<div class="swap-row">
+
+    <button
+        id="swapButton"
+        class="swap-button"
+        type="button"
+        aria-label="Swap locations"
+    >
+        <i class="fas fa-right-left"></i>
+    </button>
+
+    <button
+        id="filterButton"
+        class="filter-button"
+        type="button"
+    >
+        <i class="fas fa-sliders"></i>
+        Filters
+    </button>
+
+</div>
+
+<div class="search-row">
+
+    <div class="input-wrap">
+        <i class="fas fa-calendar"></i>
+        <input
+            id="dateInput"
+            class="search-input"
+            type="date"
+            aria-label="Travel date"
+        >
+    </div>
+
+    <div class="input-wrap">
+        <i class="fas fa-user"></i>
+        <input
+            id="passengersInput"
+            class="search-input"
+            type="number"
+            min="1"
+            max="9"
+            value="1"
+            inputmode="numeric"
+            aria-label="Passengers"
+        >
+    </div>
+
+</div>
+
+<div
+    id="transferExtra"
+    style="display:none;margin-bottom:10px;"
+>
+    <div class="input-wrap">
+        <i class="fas fa-clock"></i>
+        <input
+            id="timeInput"
+            class="search-input"
+            type="time"
+            aria-label="Pickup time"
+        >
+    </div>
+</div>
+
+<div
+    id="extraFilters"
+    class="extra-filters"
+>
+
+    <div class="select-wrap">
+        <label for="stopsSelect">Stops</label>
+
+        <select
+            id="stopsSelect"
+            class="select-input"
+        >
+            <option value="any">Any</option>
+            <option value="direct">Direct only</option>
+            <option value="one">Up to 1 stop</option>
+        </select>
+    </div>
+
+    <div class="select-wrap">
+        <label for="sortSelect">Sort by</label>
+
+        <select
+            id="sortSelect"
+            class="select-input"
+        >
+            <option value="recommended">Recommended</option>
+            <option value="price">Lowest price</option>
+            <option value="duration">Shortest trip</option>
+            <option value="departure">Earliest departure</option>
+        </select>
+    </div>
+
+</div>
+
+<button
+    id="searchButton"
+    class="search-button"
+    type="button"
+>
+    <i class="fas fa-search"></i>
+    <span id="searchButtonText">Search Flights</span>
+</button>
+
+</section>
+
+<main class="content" id="legacyResultsSection">
+
+<div class="results-header">
+
+    <div
+        id="resultsTitle"
+        class="results-title"
+    >
+        Duffel Test Flight Offers
+    </div>
+
+    <div
+        id="resultCount"
+        class="result-count"
+    >
+        0 results
+    </div>
+
+</div>
+
+<div id="resultsContainer"></div>
+
+</main>
+
+<nav class="bottom-nav">
+
+<div id="homeNav" class="nav-item" role="button" tabindex="0">
+    <i class="fas fa-home"></i>
+    <span>Home</span>
+</div>
+
+<div id="searchNav" class="nav-item active" role="button" tabindex="0">
+    <i class="fas fa-search"></i>
+    <span>Search</span>
+</div>
+
+<div id="ticketsNav" class="nav-item" role="button" tabindex="0">
+    <i class="fas fa-ticket"></i>
+    <span>Tickets</span>
+</div>
+
+<div id="alertsNav" class="nav-item" role="button" tabindex="0">
+    <i class="fas fa-bell"></i>
+    <span>Alerts</span>
+</div>
+
+<div id="profileNav" class="nav-item" role="button" tabindex="0">
+    <i class="fas fa-user"></i>
+    <span>Profile</span>
+</div>
+
+</nav>
+
+<div
+    id="bookingOverlay"
+    class="booking-overlay"
+    aria-hidden="true"
+>
+    <section
+        class="booking-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bookingTitle"
+    >
+
+        <div class="booking-header">
+
+            <div class="booking-header-title">
+                <strong id="bookingTitle">Selected Flight</strong>
+                <span id="bookingSubtitle">Duffel Test Offer</span>
+            </div>
+
+            <button
+                id="bookingClose"
+                class="booking-close"
+                type="button"
+                aria-label="Close"
+            >
+                <i class="fas fa-xmark"></i>
+            </button>
+
+        </div>
+
+        <div
+            id="bookingBody"
+            class="booking-body"
+        ></div>
+
+    </section>
+</div>
+
+<div
+    id="toast"
+    class="toast"
+    role="status"
+    aria-live="polite"
+></div>
+
+<script>
+(function addWidget(d) {
+    var widgetStyle = d.createElement('link');
+    widgetStyle.setAttribute('rel', 'stylesheet');
+    widgetStyle.setAttribute('href', 'https://www.omio.com/gcs-proxy/b2b-nemo-prod/bundle/en/bundle.css?v=' + new Date().getTime());
+    d.head.appendChild(widgetStyle);
+
+    var widgetScript = d.createElement('script');
+    widgetScript.setAttribute('src', 'https://www.omio.com/gcs-proxy/b2b-nemo-prod/bundle/en/bundle.js?v=' + new Date().getTime());
+    d.body.appendChild(widgetScript);
+})(document);
+</script>
+
+<script>
+"use strict";
+
+/* =========================================================
+   HAVKAR TICKETS
+
+   Flight:
+   /api/flights
+   /api/flight-offer
+   /api/flight-order
+
+   Train / Bus / Ferry / Taxi / Transfer:
+   Existing demo architecture preserved.
+========================================================= */
+
+let currentType = "flight";
+let currentResults = [];
+let toastTimer = null;
+let searchTimer = null;
+let flightSearchRequestId = 0;
+let selectedFlightOffer = null;
+let selectedFlightOfferRequestId = 0;
+let orderRequestInProgress = false;
+
+const ticketConfig = {
+
+    flight:{
+        title:"Flight Tickets",
+        searchTitle:"Search Flights",
+        button:"Search Flights",
+        results:"Duffel Test Flight Offers",
+        icon:"fa-plane",
+        station:"Airport"
+    },
+
+    train:{
+        title:"Train Tickets",
+        searchTitle:"Search Trains",
+        button:"Search Trains",
+        results:"Available Demo Trains",
+        icon:"fa-train",
+        station:"Station"
+    },
+
+    bus:{
+        title:"Bus Tickets",
+        searchTitle:"Search Buses",
+        button:"Search Buses",
+        results:"Available Demo Buses",
+        icon:"fa-bus",
+        station:"Bus Station"
+    },
+
+    ferry:{
+        title:"Ferry Tickets",
+        searchTitle:"Search Ferries",
+        button:"Search Ferries",
+        results:"Available Demo Ferries",
+        icon:"fa-ship",
+        station:"Port"
+    },
+
+    taxi:{
+        title:"Taxi",
+        searchTitle:"Find a Taxi",
+        button:"Search Taxis",
+        results:"Available Demo Taxis",
+        icon:"fa-taxi",
+        station:"Pickup"
+    },
+
+    transfer:{
+        title:"Transfer",
+        searchTitle:"Airport / City Transfer",
+        button:"Search Transfers",
+        results:"Available Demo Transfers",
+        icon:"fa-van-shuttle",
+        station:"Pickup"
+    }
+
+};
+
+/* =========================================================
+   EXISTING DEMO DATA
+========================================================= */
+
+const ticketData = {
+
+    flight:[],
+
+    train:[
+
+        {
+            provider:"Trenitalia",
+            code:"FR-DEMO-601",
+            from:"Rome",
+            to:"Milan",
+            fromTime:"07:00 AM",
+            toTime:"10:00 AM",
+            duration:"3h 00m",
+            durationMinutes:180,
+            stops:0,
+            stopsText:"Direct",
+            baggage:"Included",
+            price:49,
+            icon:"fa-train"
+        },
+
+        {
+            provider:"Italo",
+            code:"IT-DEMO-702",
+            from:"Rome",
+            to:"Milan",
+            fromTime:"09:40 AM",
+            toTime:"12:45 PM",
+            duration:"3h 05m",
+            durationMinutes:185,
+            stops:0,
+            stopsText:"Direct",
+            baggage:"Included",
+            price:55,
+            icon:"fa-train"
+        },
+
+        {
+            provider:"Trenitalia",
+            code:"IC-DEMO-803",
+            from:"Rome",
+            to:"Milan",
+            fromTime:"01:20 PM",
+            toTime:"06:40 PM",
+            duration:"5h 20m",
+            durationMinutes:320,
+            stops:2,
+            stopsText:"2 Stops",
+            baggage:"Included",
+            price:35,
+            icon:"fa-train"
+        }
+
+    ],
+
+    bus:[
+
+        {
+            provider:"FlixBus",
+            code:"FB-DEMO-901",
+            from:"Rome",
+            to:"Milan",
+            fromTime:"06:30 AM",
+            toTime:"01:15 PM",
+            duration:"6h 45m",
+            durationMinutes:405,
+            stops:0,
+            stopsText:"Direct",
+            baggage:"1 Bag",
+            price:29,
+            icon:"fa-bus"
+        },
+
+        {
+            provider:"MarinoBus",
+            code:"MB-DEMO-902",
+            from:"Rome",
+            to:"Milan",
+            fromTime:"09:00 AM",
+            toTime:"04:30 PM",
+            duration:"7h 30m",
+            durationMinutes:450,
+            stops:1,
+            stopsText:"1 Stop",
+            baggage:"1 Bag",
+            price:32,
+            icon:"fa-bus"
+        },
+
+        {
+            provider:"Itabus",
+            code:"ITB-DEMO-903",
+            from:"Rome",
+            to:"Milan",
+            fromTime:"10:30 PM",
+            toTime:"06:45 AM",
+            duration:"8h 15m",
+            durationMinutes:495,
+            stops:0,
+            stopsText:"Direct",
+            baggage:"1 Bag",
+            price:25,
+            icon:"fa-bus"
+        }
+
+    ],
+
+    ferry:[
+
+        {
+            provider:"Ferry Demo Partner",
+            code:"FRY-DEMO-101",
+            from:"Naples",
+            to:"Palermo",
+            fromTime:"08:00 AM",
+            toTime:"08:30 PM",
+            duration:"12h 30m",
+            durationMinutes:750,
+            stops:0,
+            stopsText:"Direct",
+            baggage:"Passenger",
+            price:59,
+            icon:"fa-ship"
+        },
+
+        {
+            provider:"Mediterranean Ferry Demo",
+            code:"FRY-DEMO-102",
+            from:"Naples",
+            to:"Palermo",
+            fromTime:"09:30 PM",
+            toTime:"09:00 AM",
+            duration:"11h 30m",
+            durationMinutes:690,
+            stops:0,
+            stopsText:"Direct",
+            baggage:"Passenger",
+            price:72,
+            icon:"fa-ship"
+        },
+
+        {
+            provider:"Island Ferry Demo",
+            code:"FRY-DEMO-103",
+            from:"Naples",
+            to:"Capri",
+            fromTime:"10:00 AM",
+            toTime:"11:00 AM",
+            duration:"1h 00m",
+            durationMinutes:60,
+            stops:0,
+            stopsText:"Direct",
+            baggage:"Passenger",
+            price:25,
+            icon:"fa-ship"
+        }
+
+    ],
+
+    taxi:[
+
+        {
+            provider:"HAVKAR Taxi Demo",
+            code:"TAXI-DEMO-01",
+            from:"Rome",
+            to:"Milan",
+            fromTime:"Now",
+            toTime:"—",
+            duration:"Approx. 5h 50m",
+            durationMinutes:350,
+            stops:0,
+            stopsText:"Private ride",
+            baggage:"Up to 4",
+            price:390,
+            icon:"fa-taxi"
+        },
+
+        {
+            provider:"City Taxi Demo",
+            code:"TAXI-DEMO-02",
+            from:"Rome",
+            to:"Milan",
+            fromTime:"Now",
+            toTime:"—",
+            duration:"Approx. 6h 00m",
+            durationMinutes:360,
+            stops:0,
+            stopsText:"Private ride",
+            baggage:"Up to 3",
+            price:420,
+            icon:"fa-taxi"
+        }
+
+    ],
+
+    transfer:[
+
+        {
+            provider:"HAVKAR Transfer Demo",
+            code:"TR-DEMO-01",
+            from:"Rome Airport",
+            to:"Rome City",
+            fromTime:"09:00 AM",
+            toTime:"09:45 AM",
+            duration:"45m",
+            durationMinutes:45,
+            stops:0,
+            stopsText:"Private transfer",
+            baggage:"Up to 4",
+            price:35,
+            icon:"fa-van-shuttle"
+        },
+
+        {
+            provider:"Airport Transfer Demo",
+            code:"TR-DEMO-02",
+            from:"Milan Airport",
+            to:"Milan City",
+            fromTime:"11:00 AM",
+            toTime:"11:55 AM",
+            duration:"55m",
+            durationMinutes:55,
+            stops:0,
+            stopsText:"Private transfer",
+            baggage:"Up to 4",
+            price:42,
+            icon:"fa-van-shuttle"
+        }
+
+    ]
+
+};
+
+/* =========================================================
+   FLIGHT LOCATION → IATA
+========================================================= */
+
+const flightLocationCodes = {
+
+    "rome":"FCO",
+    "roma":"FCO",
+    "fco":"FCO",
+    "fiumicino":"FCO",
+    "rome fiumicino":"FCO",
+
+    "milan":"MXP",
+    "milano":"MXP",
+    "mxp":"MXP",
+    "malpensa":"MXP",
+    "milan malpensa":"MXP",
+
+    "lin":"LIN",
+    "linate":"LIN",
+    "milan linate":"LIN",
+
+    "bgy":"BGY",
+    "bergamo":"BGY",
+
+    "naples":"NAP",
+    "napoli":"NAP",
+    "nap":"NAP",
+
+    "bari":"BRI",
+    "bri":"BRI",
+
+    "bologna":"BLQ",
+    "blq":"BLQ",
+
+    "venice":"VCE",
+    "venezia":"VCE",
+    "vce":"VCE",
+
+    "turin":"TRN",
+    "torino":"TRN",
+    "trn":"TRN",
+
+    "florence":"FLR",
+    "firenze":"FLR",
+    "flr":"FLR",
+
+    "pisa":"PSA",
+    "psa":"PSA",
+
+    "palermo":"PMO",
+    "pmo":"PMO",
+
+    "catania":"CTA",
+    "cta":"CTA",
+
+    "london":"LHR",
+    "lhr":"LHR",
+
+    "paris":"CDG",
+    "cdg":"CDG",
+
+    "berlin":"BER",
+    "ber":"BER",
+
+    "madrid":"MAD",
+    "mad":"MAD",
+
+    "barcelona":"BCN",
+    "bcn":"BCN",
+
+    "amsterdam":"AMS",
+    "ams":"AMS",
+
+    "lisbon":"LIS",
+    "lis":"LIS",
+
+    "vienna":"VIE",
+    "vie":"VIE",
+
+    "athens":"ATH",
+    "ath":"ATH",
+
+    "istanbul":"IST",
+    "ist":"IST",
+
+    "dubai":"DXB",
+    "dxb":"DXB"
+
+};
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function $(id){
+    return document.getElementById(id);
+}
+
+function normalize(value){
+    return String(value || "")
+        .trim()
+        .toLowerCase();
+}
+
+function escapeHtml(value){
+    return String(value ?? "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
+}
+
+function getFlightIataCode(value){
+
+    const raw =
+        String(value || "").trim();
+
+    if(/^[A-Za-z]{3}$/.test(raw)){
+        return raw.toUpperCase();
+    }
+
+    return flightLocationCodes[
+        normalize(raw)
+    ] || null;
+}
+
+function formatFlightTime(value){
+
+    if(!value){
+        return "—";
+    }
+
+    const date =
+        new Date(value);
+
+    if(Number.isNaN(date.getTime())){
+        return "—";
+    }
+
+    try{
+
+        return date.toLocaleTimeString(
+            [],
+            {
+                hour:"2-digit",
+                minute:"2-digit"
+            }
+        );
+
+    }catch{
+
+        return "—";
+    }
+}
+
+function formatFlightDateTime(value){
+
+    if(!value){
+        return "—";
+    }
+
+    const date = new Date(value);
+
+    if(Number.isNaN(date.getTime())){
+        return "—";
+    }
+
+    try{
+        return date.toLocaleString(
+            [],
+            {
+                year:"numeric",
+                month:"short",
+                day:"2-digit",
+                hour:"2-digit",
+                minute:"2-digit"
+            }
+        );
+    }catch{
+        return String(value);
+    }
+}
+
+function parseIsoDuration(value){
+
+    const duration =
+        String(value || "");
+
+    const match =
+        duration.match(
+            /P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?/i
+        );
+
+    if(!match){
+        return 0;
+    }
+
+    const days =
+        Number(match[1] || 0);
+
+    const hours =
+        Number(match[2] || 0);
+
+    const minutes =
+        Number(match[3] || 0);
+
+    return (
+        days * 1440 +
+        hours * 60 +
+        minutes
+    );
+}
+
+function formatDuration(minutes){
+
+    const total =
+        Math.max(
+            0,
+            Number(minutes) || 0
+        );
+
+    const hours =
+        Math.floor(total / 60);
+
+    const mins =
+        total % 60;
+
+    if(hours > 0 && mins > 0){
+        return `${hours}h ${mins}m`;
+    }
+
+    if(hours > 0){
+        return `${hours}h`;
+    }
+
+    return `${mins}m`;
+}
+
+function formatMoney(amount,currency){
+
+    const numeric =
+        Number(amount);
+
+    const safeAmount =
+        Number.isFinite(numeric)
+            ? numeric
+            : 0;
+
+    const safeCurrency =
+        String(currency || "EUR")
+            .toUpperCase();
+
+    try{
+
+        return new Intl.NumberFormat(
+            undefined,
+            {
+                style:"currency",
+                currency:safeCurrency
+            }
+        ).format(safeAmount);
+
+    }catch{
+
+        return `${safeAmount.toFixed(2)} ${safeCurrency}`;
+    }
+}
+
+function timeToMinutes(time){
+
+    const match =
+        String(time || "").match(
+            /(\d+):(\d+)\s*(AM|PM)/i
+        );
+
+    if(!match){
+        return 0;
+    }
+
+    let hour = Number(match[1]);
+    const minute = Number(match[2]);
+    const period = match[3].toUpperCase();
+
+    if(period === "PM" && hour !== 12){
+        hour += 12;
+    }
+
+    if(period === "AM" && hour === 12){
+        hour = 0;
+    }
+
+    return hour * 60 + minute;
+}
+
+function setToday(){
+
+    const input =
+        $("dateInput");
+
+    if(!input){
+        return;
+    }
+
+    const today =
+        new Date();
+
+    const year =
+        today.getFullYear();
+
+    const month =
+        String(
+            today.getMonth() + 1
+        ).padStart(2,"0");
+
+    const day =
+        String(
+            today.getDate()
+        ).padStart(2,"0");
+
+    const value =
+        `${year}-${month}-${day}`;
+
+    input.min = value;
+    input.value = value;
+}
+
+/* =========================================================
+   DEMO SEARCH
+========================================================= */
+
+function getCurrentData(){
+    return ticketData[currentType] || [];
+}
+
+function routeMatches(){
+
+    const from =
+        normalize(
+            $("fromInput")?.value
+        );
+
+    const to =
+        normalize(
+            $("toInput")?.value
+        );
+
+    if(!from || !to){
+        return false;
+    }
+
+    if(currentType === "flight"){
+
+        return Boolean(
+            getFlightIataCode(from) &&
+            getFlightIataCode(to)
+        );
+    }
+
+    if(currentType === "transfer"){
+
+        return (
+            from.includes("rome") &&
+            (
+                to.includes("rome") ||
+                to.includes("city")
+            )
+        );
+    }
+
+    if(currentType === "ferry"){
+
+        return (
+            (
+                from.includes("naples") &&
+                (
+                    to.includes("palermo") ||
+                    to.includes("capri")
+                )
+            ) ||
+            (
+                to.includes("naples") &&
+                (
+                    from.includes("palermo") ||
+                    from.includes("capri")
+                )
+            )
+        );
+    }
+
+    return (
+        from === "rome" &&
+        to === "milan"
+    );
+}
+
+function applyFiltersAndSorting(results){
+
+    let filtered =
+        Array.isArray(results)
+            ? [...results]
+            : [];
+
+    const stopFilter =
+        $("stopsSelect")?.value ||
+        "any";
+
+    if(stopFilter === "direct"){
+
+        filtered =
+            filtered.filter(
+                item =>
+                    Number(item.stops) === 0
+            );
+    }
+
+    if(stopFilter === "one"){
+
+        filtered =
+            filtered.filter(
+                item =>
+                    Number(item.stops) <= 1
+            );
+    }
+
+    const sort =
+        $("sortSelect")?.value ||
+        "recommended";
+
+    if(sort === "price"){
+
+        filtered.sort(
+            (a,b) =>
+                Number(a.price) -
+                Number(b.price)
+        );
+
+    }else if(sort === "duration"){
+
+        filtered.sort(
+            (a,b) =>
+                Number(a.durationMinutes) -
+                Number(b.durationMinutes)
+        );
+
+    }else if(sort === "departure"){
+
+        filtered.sort(
+            (a,b) =>
+                timeToMinutes(a.fromTime) -
+                timeToMinutes(b.fromTime)
+        );
+
+    }else{
+
+        filtered.sort((a,b) => {
+
+            const scoreA =
+                Number(a.price) +
+                Number(a.durationMinutes) * 0.08 +
+                Number(a.stops) * 15;
+
+            const scoreB =
+                Number(b.price) +
+                Number(b.durationMinutes) * 0.08 +
+                Number(b.stops) * 15;
+
+            return scoreA - scoreB;
+        });
+    }
+
+    return filtered;
+}
+
+function getFilteredResults(){
+
+    if(!routeMatches()){
+        return [];
+    }
+
+    let results =
+        getCurrentData().map(item => ({
+            ...item
+        }));
+
+    return applyFiltersAndSorting(
+        results
+    );
+}
+
+/* =========================================================
+   DUFFEL OFFER MAPPING
+========================================================= */
+
+function mapDuffelOffer(offer){
+
+    const slices =
+        Array.isArray(offer?.slices)
+            ? offer.slices
+            : [];
+
+    const outbound =
+        slices[0] || {};
+
+    const segments =
+        Array.isArray(outbound?.segments)
+            ? outbound.segments
+            : [];
+
+    const firstSegment =
+        segments[0] || {};
+
+    const lastSegment =
+        segments[
+            Math.max(
+                segments.length - 1,
+                0
+            )
+        ] || {};
+
+    const carrier =
+        firstSegment?.marketing_carrier ||
+        firstSegment?.operating_carrier ||
+        offer?.owner ||
+        {};
+
+    const origin =
+        outbound?.origin ||
+        firstSegment?.origin ||
+        {};
+
+    const destination =
+        outbound?.destination ||
+        lastSegment?.destination ||
+        {};
+
+    const departingAt =
+        firstSegment?.departing_at ||
+        "";
+
+    const arrivingAt =
+        lastSegment?.arriving_at ||
+        "";
+
+    let durationMinutes =
+        parseIsoDuration(
+            outbound?.duration
+        );
+
+    if(
+        !durationMinutes &&
+        departingAt &&
+        arrivingAt
+    ){
+
+        const start =
+            new Date(departingAt);
+
+        const end =
+            new Date(arrivingAt);
+
+        if(
+            !Number.isNaN(start.getTime()) &&
+            !Number.isNaN(end.getTime())
+        ){
+
+            durationMinutes =
+                Math.max(
+                    0,
+                    Math.round(
+                        (
+                            end.getTime() -
+                            start.getTime()
+                        ) / 60000
+                    )
+                );
+        }
+    }
+
+    const stops =
+        Math.max(
+            0,
+            segments.length - 1
+        );
+
+    const carrierCode =
+        carrier?.iata_code ||
+        "";
+
+    const flightNumber =
+        firstSegment
+            ?.marketing_carrier_flight_number ||
+        firstSegment
+            ?.operating_carrier_flight_number ||
+        "";
+
+    let code =
+        "Duffel Test Offer";
+
+    if(carrierCode && flightNumber){
+
+        code =
+            `${carrierCode}${flightNumber}`;
+
+    }else if(offer?.id){
+
+        code =
+            String(offer.id)
+                .slice(0,22);
+    }
+
+    return {
+
+        provider:
+            carrier?.name ||
+            offer?.owner?.name ||
+            "Airline",
+
+        code,
+
+        from:
+            origin?.iata_code ||
+            origin?.name ||
+            "Origin",
+
+        to:
+            destination?.iata_code ||
+            destination?.name ||
+            "Destination",
+
+        fromTime:
+            formatFlightTime(
+                departingAt
+            ),
+
+        toTime:
+            formatFlightTime(
+                arrivingAt
+            ),
+
+        duration:
+            formatDuration(
+                durationMinutes
+            ),
+
+        durationMinutes,
+
+        stops,
+
+        stopsText:
+            stops === 0
+                ? "Direct"
+                : stops === 1
+                    ? "1 Stop"
+                    : `${stops} Stops`,
+
+        baggage:
+            "See fare details",
+
+        price:
+            Number(
+                offer?.total_amount ||
+                0
+            ),
+
+        currency:
+            String(
+                offer?.total_currency ||
+                "EUR"
+            ).toUpperCase(),
+
+        icon:"fa-plane",
+
+        isDuffel:true,
+
+        offerId:
+            String(
+                offer?.id ||
+                ""
+            )
+    };
+}
+
+/* =========================================================
+   DUFFEL FLIGHT SEARCH
+========================================================= */
+
+async function searchDuffelFlights(){
+
+    const origin =
+        getFlightIataCode(
+            $("fromInput")?.value
+        );
+
+    const destination =
+        getFlightIataCode(
+            $("toInput")?.value
+        );
+
+    const departureDate =
+        $("dateInput")?.value;
+
+    let passengers =
+        Number(
+            $("passengersInput")?.value
+        );
+
+    if(
+        !Number.isFinite(passengers) ||
+        passengers < 1
+    ){
+        passengers = 1;
+    }
+
+    passengers =
+        Math.min(
+            Math.max(
+                Math.floor(passengers),
+                1
+            ),
+            9
+        );
+
+    if(!origin){
+
+        throw new Error(
+            "Enter a supported departure city or a 3-letter airport code, for example FCO."
+        );
+    }
+
+    if(!destination){
+
+        throw new Error(
+            "Enter a supported destination city or a 3-letter airport code, for example MXP."
+        );
+    }
+
+    if(origin === destination){
+
+        throw new Error(
+            "Origin and destination must be different."
+        );
+    }
+
+    if(!departureDate){
+
+        throw new Error(
+            "Select a departure date."
+        );
+    }
+
+    const response =
+        await fetch(
+            "/api/flights",
+            {
+                method:"POST",
+
+                headers:{
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body:JSON.stringify({
+
+                    origin,
+
+                    destination,
+
+                    departure_date:
+                        departureDate,
+
+                    passengers,
+
+                    cabin_class:
+                        "economy"
+                })
+            }
+        );
+
+    let payload = null;
+
+    try{
+        payload =
+            await response.json();
+    }catch{
+        payload = null;
+    }
+
+    if(!response.ok){
+
+        let message =
+            payload?.error ||
+            "Duffel flight search failed.";
+
+        if(
+            Array.isArray(
+                payload?.details
+            ) &&
+            payload.details[0]?.message
+        ){
+            message =
+                payload.details[0].message;
+        }
+
+        throw new Error(message);
+    }
+
+    if(payload?.ok !== true){
+
+        throw new Error(
+            payload?.error ||
+            "Duffel flight search failed."
+        );
+    }
+
+    const offers =
+        Array.isArray(
+            payload?.data?.offers
+        )
+            ? payload.data.offers
+            : [];
+
+    const mapped =
+        offers
+            .map(mapDuffelOffer)
+            .filter(item => {
+
+                return (
+                    item &&
+                    Number.isFinite(
+                        Number(item.price)
+                    )
+                );
+            });
+
+    return applyFiltersAndSorting(
+        mapped
+    );
+}
+
+/* =========================================================
+   SELECTED DUFFEL OFFER
+========================================================= */
+
+function openBookingOverlay(){
+
+    const overlay = $("bookingOverlay");
+
+    if(!overlay){
+        return;
+    }
+
+    overlay.classList.add("show");
+    overlay.setAttribute("aria-hidden","false");
+    document.body.style.overflow = "hidden";
+}
+
+function closeBookingOverlay(){
+
+    selectedFlightOfferRequestId++;
+    orderRequestInProgress = false;
+
+    const overlay = $("bookingOverlay");
+
+    if(!overlay){
+        return;
+    }
+
+    overlay.classList.remove("show");
+    overlay.setAttribute("aria-hidden","true");
+    document.body.style.overflow = "";
+
+    const title = $("bookingTitle");
+    const subtitle = $("bookingSubtitle");
+
+    if(title){
+        title.textContent = "Selected Flight";
+    }
+
+    if(subtitle){
+        subtitle.textContent = "Duffel Test Offer";
+    }
+}
+
+function getPlaceCode(place){
+
+    return (
+        place?.iata_code ||
+        place?.iata_city_code ||
+        "—"
+    );
+}
+
+function getPlaceName(place){
+
+    return (
+        place?.name ||
+        place?.city_name ||
+        ""
+    );
+}
+
+function getCarrierName(segment,offer){
+
+    return (
+        segment?.marketing_carrier?.name ||
+        segment?.operating_carrier?.name ||
+        offer?.owner?.name ||
+        "Airline"
+    );
+}
+
+function getFlightCode(segment){
+
+    const carrierCode =
+        segment?.marketing_carrier?.iata_code ||
+        segment?.operating_carrier?.iata_code ||
+        "";
+
+    const number =
+        segment?.marketing_carrier_flight_number ||
+        segment?.operating_carrier_flight_number ||
+        "";
+
+    if(carrierCode && number){
+        return `${carrierCode}${number}`;
+    }
+
+    return "—";
+}
+
+function getBaggageText(segment){
+
+    const passengers =
+        Array.isArray(segment?.passengers)
+            ? segment.passengers
+            : [];
+
+    const baggages = [];
+
+    passengers.forEach(passenger => {
+
+        const items =
+            Array.isArray(passenger?.baggages)
+                ? passenger.baggages
+                : [];
+
+        items.forEach(item => {
+
+            const type =
+                String(item?.type || "")
+                    .replace(/_/g," ");
+
+            const quantity =
+                Number(item?.quantity);
+
+            if(type){
+
+                baggages.push(
+                    `${
+                        Number.isFinite(quantity)
+                            ? quantity
+                            : ""
+                    } ${type}`.trim()
+                );
+            }
+        });
+    });
+
+    if(!baggages.length){
+        return "See fare conditions";
+    }
+
+    return [...new Set(baggages)].join(", ");
+}
+
+function createSelectedSliceHtml(slice,index,offer){
+
+    const segments =
+        Array.isArray(slice?.segments)
+            ? slice.segments
+            : [];
+
+    const first =
+        segments[0] || {};
+
+    const last =
+        segments[
+            Math.max(
+                segments.length - 1,
+                0
+            )
+        ] || {};
+
+    const origin =
+        slice?.origin ||
+        first?.origin ||
+        {};
+
+    const destination =
+        slice?.destination ||
+        last?.destination ||
+        {};
+
+    const label =
+        index === 0
+            ? "Outbound"
+            : index === 1
+                ? "Return"
+                : `Flight ${index + 1}`;
+
+    const segmentHtml =
+        segments.map(segment => {
+
+            const carrier =
+                getCarrierName(
+                    segment,
+                    offer
+                );
+
+            const flightCode =
+                getFlightCode(segment);
+
+            const aircraft =
+                segment?.aircraft?.name ||
+                "";
+
+            const originTerminal =
+                segment?.origin_terminal
+                    ? ` · Terminal ${escapeHtml(segment.origin_terminal)}`
+                    : "";
+
+            const destinationTerminal =
+                segment?.destination_terminal
+                    ? ` · Terminal ${escapeHtml(segment.destination_terminal)}`
+                    : "";
+
+            return `
+
+                <div class="booking-segment">
+
+                    <strong>
+                        ${escapeHtml(carrier)}
+                        ${escapeHtml(flightCode)}
+                    </strong>
+
+                    <br>
+
+                    ${escapeHtml(
+                        getPlaceCode(segment?.origin)
+                    )}
+                    ${originTerminal}
+                    →
+
+                    ${escapeHtml(
+                        getPlaceCode(segment?.destination)
+                    )}
+                    ${destinationTerminal}
+
+                    <br>
+
+                    ${escapeHtml(
+                        formatFlightDateTime(
+                            segment?.departing_at
+                        )
+                    )}
+                    →
+
+                    ${escapeHtml(
+                        formatFlightDateTime(
+                            segment?.arriving_at
+                        )
+                    )}
+
+                    ${
+                        aircraft
+                            ? `<br>${escapeHtml(aircraft)}`
+                            : ""
+                    }
+
+                    <br>
+
+                    Baggage:
+                    ${escapeHtml(
+                        getBaggageText(segment)
+                    )}
+
+                </div>
+            `;
+
+        }).join("");
+
+    return `
+
+        <div class="booking-route">
+
+            <div class="booking-route-label">
+                ${escapeHtml(label)}
+            </div>
+
+            <div class="booking-route-grid">
+
+                <div class="booking-route-side">
+
+                    <div class="booking-route-code">
+                        ${escapeHtml(
+                            getPlaceCode(origin)
+                        )}
+                    </div>
+
+                    <div class="booking-route-name">
+                        ${escapeHtml(
+                            getPlaceName(origin)
+                        )}
+                    </div>
+
+                    <div class="booking-route-time">
+                        ${escapeHtml(
+                            formatFlightDateTime(
+                                first?.departing_at
+                            )
+                        )}
+                    </div>
+
+                </div>
+
+                <div class="booking-route-plane">
+                    <i class="fas fa-plane"></i>
+                </div>
+
+                <div class="booking-route-side">
+
+                    <div class="booking-route-code">
+                        ${escapeHtml(
+                            getPlaceCode(destination)
+                        )}
+                    </div>
+
+                    <div class="booking-route-name">
+                        ${escapeHtml(
+                            getPlaceName(destination)
+                        )}
+                    </div>
+
+                    <div class="booking-route-time">
+                        ${escapeHtml(
+                            formatFlightDateTime(
+                                last?.arriving_at
+                            )
+                        )}
+                    </div>
+
+                </div>
+
+            </div>
+
+            ${segmentHtml}
+
+        </div>
+    `;
+}
+
+function renderSelectedFlightOffer(payload){
+
+    const body = $("bookingBody");
+
+    if(!body){
+        return;
+    }
+
+    const offer =
+        payload?.data || {};
+
+    const slices =
+        Array.isArray(offer?.slices)
+            ? offer.slices
+            : [];
+
+    const expired =
+        payload?.expired === true;
+
+    const bookingReady =
+        payload?.booking_ready === true &&
+        !expired;
+
+    const price =
+        formatMoney(
+            offer?.total_amount,
+            offer?.total_currency
+        );
+
+    const baseAmount =
+        offer?.base_amount != null
+            ? formatMoney(
+                offer.base_amount,
+                offer.base_currency ||
+                offer.total_currency
+            )
+            : "—";
+
+    const taxAmount =
+        offer?.tax_amount != null
+            ? formatMoney(
+                offer.tax_amount,
+                offer.tax_currency ||
+                offer.total_currency
+            )
+            : "—";
+
+    const owner =
+        offer?.owner?.name ||
+        "Airline";
+
+    const expiry =
+        offer?.expires_at
+            ? formatFlightDateTime(
+                offer.expires_at
+            )
+            : "Not provided";
+
+    const passengerCount =
+        Array.isArray(offer?.passengers)
+            ? offer.passengers.length
+            : 0;
+
+    const serviceCount =
+        Array.isArray(
+            offer?.available_services
+        )
+            ? offer.available_services.length
+            : 0;
+
+    const routes =
+        slices
+            .map(
+                (slice,index) =>
+                    createSelectedSliceHtml(
+                        slice,
+                        index,
+                        offer
+                    )
+            )
+            .join("");
+
+    body.innerHTML = `
+
+        <div class="booking-card">
+
+            <div class="booking-card-title">
+                <i class="fas fa-circle-check"></i>
+                Verified Duffel Offer
+            </div>
+
+            <div class="booking-price">
+
+                <div>
+
+                    <div class="booking-price-main">
+                        ${escapeHtml(price)}
+                    </div>
+
+                    <div class="booking-price-label">
+                        Duffel test total
+                    </div>
+
+                </div>
+
+                <div class="booking-status ${
+                    expired
+                        ? "expired"
+                        : ""
+                }">
+                    ${
+                        expired
+                            ? "Expired"
+                            : "Available"
+                    }
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="booking-card">
+
+            <div class="booking-card-title">
+                <i class="fas fa-plane-departure"></i>
+                Flight details
+            </div>
+
+            ${
+                routes ||
+                `
+                <div class="booking-error">
+                    No route details were returned for this offer.
+                </div>
+                `
+            }
+
+        </div>
+
+        <div class="booking-card">
+
+            <div class="booking-card-title">
+                <i class="fas fa-receipt"></i>
+                Offer details
+            </div>
+
+            <div class="booking-details-grid">
+
+                <div class="booking-detail">
+                    <div class="booking-detail-label">
+                        Sold by
+                    </div>
+                    <div class="booking-detail-value">
+                        ${escapeHtml(owner)}
+                    </div>
+                </div>
+
+                <div class="booking-detail">
+                    <div class="booking-detail-label">
+                        Passengers
+                    </div>
+                    <div class="booking-detail-value">
+                        ${escapeHtml(passengerCount)}
+                    </div>
+                </div>
+
+                <div class="booking-detail">
+                    <div class="booking-detail-label">
+                        Base fare
+                    </div>
+                    <div class="booking-detail-value">
+                        ${escapeHtml(baseAmount)}
+                    </div>
+                </div>
+
+                <div class="booking-detail">
+                    <div class="booking-detail-label">
+                        Taxes
+                    </div>
+                    <div class="booking-detail-value">
+                        ${escapeHtml(taxAmount)}
+                    </div>
+                </div>
+
+                <div class="booking-detail">
+                    <div class="booking-detail-label">
+                        Offer expires
+                    </div>
+                    <div class="booking-detail-value">
+                        ${escapeHtml(expiry)}
+                    </div>
+                </div>
+
+                <div class="booking-detail">
+                    <div class="booking-detail-label">
+                        Extras returned
+                    </div>
+                    <div class="booking-detail-value">
+                        ${escapeHtml(serviceCount)}
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="booking-warning">
+
+                <strong>Test mode:</strong>
+                This flight has been verified directly with Duffel.
+                The next step collects passenger details and can create a Duffel test order.
+
+            </div>
+
+            <button
+                id="continueBookingButton"
+                class="continue-booking-button"
+                type="button"
+                ${bookingReady ? "" : "disabled"}
+            >
+                <i class="fas fa-user"></i>
+                Continue to Passenger Details
+            </button>
+
+            <div class="booking-test-note">
+                No real customer payment is processed in this test checkout.
+            </div>
+
+        </div>
+    `;
+
+    $("continueBookingButton")
+        ?.addEventListener(
+            "click",
+            renderPassengerCheckout
+        );
+}
+
+async function selectFlightOffer(offerId){
+
+    const safeOfferId =
+        String(offerId || "").trim();
+
+    if(!safeOfferId){
+
+        showToast(
+            "This flight does not contain a Duffel offer ID."
+        );
+
+        return;
+    }
+
+    const requestId =
+        ++selectedFlightOfferRequestId;
+
+    selectedFlightOffer = null;
+
+    openBookingOverlay();
+
+    const body = $("bookingBody");
+
+    if(body){
+
+        body.innerHTML = `
+
+            <div class="booking-loading">
+
+                <i class="fas fa-spinner fa-spin"></i>
+
+                <div>
+                    Verifying selected flight with Duffel...
+                </div>
+
+            </div>
+        `;
+    }
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/flight-offer",
+                {
+                    method:"POST",
+
+                    headers:{
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:JSON.stringify({
+                        offer_id:
+                            safeOfferId
+                    })
+                }
+            );
+
+        let payload = null;
+
+        try{
+            payload =
+                await response.json();
+        }catch{
+            payload = null;
+        }
+
+        if(
+            requestId !==
+            selectedFlightOfferRequestId
+        ){
+            return;
+        }
+
+        if(!response.ok){
+
+            throw new Error(
+                payload?.error ||
+                "Unable to retrieve the selected flight offer."
+            );
+        }
+
+        if(
+            payload?.ok !== true ||
+            !payload?.data?.id
+        ){
+
+            throw new Error(
+                payload?.error ||
+                "Duffel returned an invalid selected offer."
+            );
+        }
+
+        selectedFlightOffer =
+            payload;
+
+        renderSelectedFlightOffer(
+            payload
+        );
+
+    }catch(error){
+
+        if(
+            requestId !==
+            selectedFlightOfferRequestId
+        ){
+            return;
+        }
+
+        if(body){
+
+            body.innerHTML = `
+
+                <div class="booking-error">
+
+                    <strong>
+                        Unable to verify this flight.
+                    </strong>
+
+                    <br><br>
+
+                    ${escapeHtml(
+                        error?.message ||
+                        "Selected flight verification failed."
+                    )}
+
+                    <br><br>
+
+                    Search again and select a fresh offer.
+
+                </div>
+            `;
+        }
+
+        showToast(
+            error?.message ||
+            "Selected flight verification failed."
+        );
+    }
+}
+
+/* =========================================================
+   PASSENGER DETAILS
+========================================================= */
+
+function getCheckoutRouteSummary(offer){
+
+    const slices =
+        Array.isArray(offer?.slices)
+            ? offer.slices
+            : [];
+
+    if(!slices.length){
+        return "Selected flight";
+    }
+
+    return slices.map(slice => {
+
+        const origin =
+            getPlaceCode(slice?.origin);
+
+        const destination =
+            getPlaceCode(slice?.destination);
+
+        return `${origin} → ${destination}`;
+
+    }).join(" · ");
+}
+
+function createPassengerFormHtml(passenger,index){
+
+    const passengerNumber =
+        index + 1;
+
+    const passengerId =
+        String(
+            passenger?.id ||
+            ""
+        );
+
+    const type =
+        String(
+            passenger?.type ||
+            ""
+        )
+            .replace(/_/g," ")
+            .trim();
+
+    const typeText =
+        type
+            ? ` · ${type}`
+            : "";
+
+    return `
+
+        <div
+            class="passenger-card"
+            data-passenger-index="${index}"
+            data-passenger-id="${escapeHtml(passengerId)}"
+        >
+
+            <div class="passenger-heading">
+
+                <i class="fas fa-user"></i>
+
+                Passenger ${passengerNumber}${escapeHtml(typeText)}
+
+            </div>
+
+            <div class="form-grid">
+
+                <div class="form-field">
+
+                    <label>
+                        Title
+                        <span class="required">*</span>
+                    </label>
+
+                    <select
+                        class="checkout-select passenger-title"
+                        autocomplete="honorific-prefix"
+                    >
+                        <option value="">Select</option>
+                        <option value="mr">Mr</option>
+                        <option value="mrs">Mrs</option>
+                        <option value="ms">Ms</option>
+                        <option value="miss">Miss</option>
+                        <option value="dr">Dr</option>
+                    </select>
+
+                </div>
+
+                <div class="form-field">
+
+                    <label>
+                        Gender
+                        <span class="required">*</span>
+                    </label>
+
+                    <select
+                        class="checkout-select passenger-gender"
+                    >
+                        <option value="">Select</option>
+                        <option value="m">Male</option>
+                        <option value="f">Female</option>
+                    </select>
+
+                </div>
+
+                <div class="form-field">
+
+                    <label>
+                        Given name
+                        <span class="required">*</span>
+                    </label>
+
+                    <input
+                        class="checkout-input passenger-given-name"
+                        type="text"
+                        autocomplete="given-name"
+                        placeholder="Given name"
+                    >
+
+                </div>
+
+                <div class="form-field">
+
+                    <label>
+                        Family name
+                        <span class="required">*</span>
+                    </label>
+
+                    <input
+                        class="checkout-input passenger-family-name"
+                        type="text"
+                        autocomplete="family-name"
+                        placeholder="Family name"
+                    >
+
+                </div>
+
+                <div class="form-field full">
+
+                    <label>
+                        Date of birth
+                        <span class="required">*</span>
+                    </label>
+
+                    <div class="birth-date-grid">
+
+                        <select
+                            class="checkout-select passenger-birth-day"
+                            aria-label="Birth day"
+                        >
+                            <option value="">Day</option>
+                            ${Array.from({length:31},(_,day) => {
+                                const value = String(day + 1).padStart(2,"0");
+                                return `<option value="${value}">${day + 1}</option>`;
+                            }).join("")}
+                        </select>
+
+                        <select
+                            class="checkout-select passenger-birth-month"
+                            aria-label="Birth month"
+                        >
+                            <option value="">Month</option>
+                            ${[
+                                "January","February","March","April",
+                                "May","June","July","August",
+                                "September","October","November","December"
+                            ].map((month,index) => {
+                                const value = String(index + 1).padStart(2,"0");
+                                return `<option value="${value}">${month}</option>`;
+                            }).join("")}
+                        </select>
+
+                        <select
+                            class="checkout-select passenger-birth-year"
+                            aria-label="Birth year"
+                        >
+                            <option value="">Year</option>
+                            ${Array.from({length:120},(_,index) => {
+                                const year = new Date().getFullYear() - index;
+                                return `<option value="${year}">${year}</option>`;
+                            }).join("")}
+                        </select>
+
+                    </div>
+
+                    <div class="checkout-help">
+                        Select day, month and year separately.
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    `;
+}
+
+function renderPassengerCheckout(){
+
+    const body =
+        $("bookingBody");
+
+    const payload =
+        selectedFlightOffer;
+
+    const offer =
+        payload?.data;
+
+    if(
+        !body ||
+        !offer?.id
+    ){
+
+        showToast(
+            "The selected flight is no longer available."
+        );
+
+        return;
+    }
+
+    const passengers =
+        Array.isArray(offer.passengers)
+            ? offer.passengers
+            : [];
+
+    if(!passengers.length){
+
+        showToast(
+            "Duffel did not return passenger references for this offer."
+        );
+
+        return;
+    }
+
+    const title =
+        $("bookingTitle");
+
+    const subtitle =
+        $("bookingSubtitle");
+
+    if(title){
+        title.textContent =
+            "Passenger Details";
+    }
+
+    if(subtitle){
+        subtitle.textContent =
+            "Duffel Test Checkout";
+    }
+
+    const route =
+        getCheckoutRouteSummary(
+            offer
+        );
+
+    const total =
+        formatMoney(
+            offer.total_amount,
+            offer.total_currency
+        );
+
+    const airline =
+        offer?.owner?.name ||
+        "Airline";
+
+    const passengerForms =
+        passengers
+            .map(
+                (passenger,index) =>
+                    createPassengerFormHtml(
+                        passenger,
+                        index
+                    )
+            )
+            .join("");
+
+    body.innerHTML = `
+
+        <button
+            id="checkoutBackButton"
+            class="checkout-back"
+            type="button"
+        >
+            <i class="fas fa-arrow-left"></i>
+            Back to flight details
+        </button>
+
+        <div class="checkout-summary">
+
+            <div class="checkout-summary-top">
+
+                <div>
+
+                    <div class="checkout-summary-route">
+                        ${escapeHtml(route)}
+                    </div>
+
+                    <div class="checkout-summary-airline">
+                        ${escapeHtml(airline)}
+                        · ${passengers.length}
+                        passenger${passengers.length === 1 ? "" : "s"}
+                    </div>
+
+                </div>
+
+                <div class="checkout-summary-price">
+                    ${escapeHtml(total)}
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="booking-card">
+
+            <div class="booking-card-title">
+                <i class="fas fa-address-card"></i>
+                Contact details
+            </div>
+
+            <div class="form-grid">
+
+                <div class="form-field">
+
+                    <label>
+                        Email
+                        <span class="required">*</span>
+                    </label>
+
+                    <input
+                        id="checkoutEmail"
+                        class="checkout-input"
+                        type="email"
+                        autocomplete="email"
+                        inputmode="email"
+                        placeholder="name@example.com"
+                    >
+
+                </div>
+
+                <div class="form-field">
+
+                    <label>
+                        Phone number
+                        <span class="required">*</span>
+                    </label>
+
+                    <input
+                        id="checkoutPhone"
+                        class="checkout-input"
+                        type="tel"
+                        autocomplete="tel"
+                        inputmode="tel"
+                        placeholder="+393331234567"
+                    >
+
+                    <div class="checkout-help">
+                        Use international format including + and country code.
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        ${passengerForms}
+
+        <div class="booking-card">
+
+            <div class="booking-card-title">
+                <i class="fas fa-credit-card"></i>
+                Test order
+            </div>
+
+            <div class="booking-details-grid">
+
+                <div class="booking-detail">
+
+                    <div class="booking-detail-label">
+                        Total
+                    </div>
+
+                    <div class="booking-detail-value">
+                        ${escapeHtml(total)}
+                    </div>
+
+                </div>
+
+                <div class="booking-detail">
+
+                    <div class="booking-detail-label">
+                        Environment
+                    </div>
+
+                    <div class="booking-detail-value">
+                        Duffel Test Mode
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="booking-warning">
+
+                <strong>Important:</strong>
+                This button creates a Duffel test order only.
+                It does not charge a real customer card.
+
+            </div>
+
+            <button
+                id="createTestOrderButton"
+                class="order-button"
+                type="button"
+            >
+                <i class="fas fa-flask"></i>
+                Create Duffel Test Order
+            </button>
+
+            <div class="checkout-security">
+
+                <i class="fas fa-lock"></i>
+
+                <span>
+                    HAVKAR sends the selected offer and passenger details to its secure server endpoint.
+                    The Duffel API token is not stored in this page.
+                </span>
+
+            </div>
+
+        </div>
+    `;
+
+    $("checkoutBackButton")
+        ?.addEventListener(
+            "click",
+            () => {
+
+                renderSelectedFlightOffer(
+                    selectedFlightOffer
+                );
+
+                const title =
+                    $("bookingTitle");
+
+                const subtitle =
+                    $("bookingSubtitle");
+
+                if(title){
+                    title.textContent =
+                        "Selected Flight";
+                }
+
+                if(subtitle){
+                    subtitle.textContent =
+                        "Duffel Test Offer";
+                }
+            }
+        );
+
+    $("createTestOrderButton")
+        ?.addEventListener(
+            "click",
+            createDuffelTestOrder
+        );
+
+    const panel =
+        document.querySelector(
+            ".booking-panel"
+        );
+
+    if(panel){
+        panel.scrollTop = 0;
+    }
+}
+
+function validateEmail(email){
+
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+        String(email || "").trim()
+    );
+}
+
+function normalizeCheckoutPhone(phone){
+
+    return String(phone || "")
+        .replace(/\s+/g,"")
+        .trim();
+}
+
+function collectPassengerCheckout(){
+
+    const email =
+        String(
+            $("checkoutEmail")?.value ||
+            ""
+        )
+            .trim()
+            .toLowerCase();
+
+    const phone =
+        normalizeCheckoutPhone(
+            $("checkoutPhone")?.value
+        );
+
+    if(!validateEmail(email)){
+
+        throw new Error(
+            "Enter a valid contact email."
+        );
+    }
+
+    if(
+        !/^\+[1-9]\d{6,14}$/.test(phone)
+    ){
+
+        throw new Error(
+            "Enter the phone number in international format, for example +393331234567."
+        );
+    }
+
+    const cards =
+        Array.from(
+            document.querySelectorAll(
+                ".passenger-card[data-passenger-id]"
+            )
+        );
+
+    if(!cards.length){
+
+        throw new Error(
+            "Passenger details are missing."
+        );
+    }
+
+    const passengers =
+        cards.map((card,index) => {
+
+            const id =
+                String(
+                    card.dataset.passengerId ||
+                    ""
+                ).trim();
+
+            const title =
+                String(
+                    card.querySelector(
+                        ".passenger-title"
+                    )?.value ||
+                    ""
+                ).trim();
+
+            const gender =
+                String(
+                    card.querySelector(
+                        ".passenger-gender"
+                    )?.value ||
+                    ""
+                ).trim();
+
+            const givenName =
+                String(
+                    card.querySelector(
+                        ".passenger-given-name"
+                    )?.value ||
+                    ""
+                ).trim();
+
+            const familyName =
+                String(
+                    card.querySelector(
+                        ".passenger-family-name"
+                    )?.value ||
+                    ""
+                ).trim();
+
+            const birthDay =
+                String(
+                    card.querySelector(
+                        ".passenger-birth-day"
+                    )?.value ||
+                    ""
+                ).trim();
+
+            const birthMonth =
+                String(
+                    card.querySelector(
+                        ".passenger-birth-month"
+                    )?.value ||
+                    ""
+                ).trim();
+
+            const birthYear =
+                String(
+                    card.querySelector(
+                        ".passenger-birth-year"
+                    )?.value ||
+                    ""
+                ).trim();
+
+            const bornOn =
+                birthYear && birthMonth && birthDay
+                    ? `${birthYear}-${birthMonth}-${birthDay}`
+                    : "";
+
+            if(!id){
+
+                throw new Error(
+                    `Passenger ${index + 1} is missing its Duffel reference.`
+                );
+            }
+
+            if(!title){
+
+                throw new Error(
+                    `Select a title for passenger ${index + 1}.`
+                );
+            }
+
+            if(!gender){
+
+                throw new Error(
+                    `Select a gender for passenger ${index + 1}.`
+                );
+            }
+
+            if(!givenName){
+
+                throw new Error(
+                    `Enter the given name for passenger ${index + 1}.`
+                );
+            }
+
+            if(!familyName){
+
+                throw new Error(
+                    `Enter the family name for passenger ${index + 1}.`
+                );
+            }
+
+            if(!birthDay || !birthMonth || !birthYear){
+
+                throw new Error(
+                    `Select day, month and year of birth for passenger ${index + 1}.`
+                );
+            }
+
+            const birthDate =
+                new Date(
+                    Number(birthYear),
+                    Number(birthMonth) - 1,
+                    Number(birthDay)
+                );
+
+            if(
+                birthDate.getFullYear() !== Number(birthYear) ||
+                birthDate.getMonth() !== Number(birthMonth) - 1 ||
+                birthDate.getDate() !== Number(birthDay)
+            ){
+
+                throw new Error(
+                    `Select a valid date of birth for passenger ${index + 1}.`
+                );
+            }
+
+            return {
+
+                id,
+
+                title,
+
+                gender,
+
+                given_name:
+                    givenName,
+
+                family_name:
+                    familyName,
+
+                born_on:
+                    bornOn,
+
+                email,
+
+                phone_number:
+                    phone
+            };
+        });
+
+    return {
+        email,
+        phone,
+        passengers
+    };
+}
+
+/* =========================================================
+   CREATE DUFFEL TEST ORDER
+========================================================= */
+
+async function createDuffelTestOrder(){
+
+    if(orderRequestInProgress){
+        return;
+    }
+
+    const offer =
+        selectedFlightOffer?.data;
+
+    if(!offer?.id){
+
+        showToast(
+            "Selected Duffel offer is missing."
+        );
+
+        return;
+    }
+
+    let checkout;
+
+    try{
+
+        checkout =
+            collectPassengerCheckout();
+
+    }catch(error){
+
+        showToast(
+            error?.message ||
+            "Check passenger details."
+        );
+
+        return;
+    }
+
+    const button =
+        $("createTestOrderButton");
+
+    orderRequestInProgress = true;
+
+    if(button){
+
+        button.disabled = true;
+
+        button.innerHTML = `
+            <i class="fas fa-spinner fa-spin"></i>
+            Creating Duffel Test Order...
+        `;
+    }
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/flight-order",
+                {
+                    method:"POST",
+
+                    headers:{
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:JSON.stringify({
+
+                        offer_id:
+                            offer.id,
+
+                        test_mode:
+                            true,
+
+                        passengers:
+                            checkout.passengers
+                    })
+                }
+            );
+
+        let payload = null;
+
+        try{
+
+            payload =
+                await response.json();
+
+        }catch{
+
+            payload = null;
+        }
+
+        if(!response.ok){
+
+            throw new Error(
+                payload?.error ||
+                "Duffel test order creation failed."
+            );
+        }
+
+        if(
+            payload?.ok !== true ||
+            !payload?.order?.id
+        ){
+
+            throw new Error(
+                payload?.error ||
+                "Duffel returned an invalid order response."
+            );
+        }
+
+        renderOrderSuccess(
+            payload
+        );
+
+    }catch(error){
+
+        showToast(
+            error?.message ||
+            "Duffel test order creation failed."
+        );
+
+        if(button){
+
+            button.disabled = false;
+
+            button.innerHTML = `
+                <i class="fas fa-flask"></i>
+                Create Duffel Test Order
+            `;
+        }
+
+    }finally{
+
+        orderRequestInProgress = false;
+    }
+}
+
+function renderOrderSuccess(payload){
+
+    const body =
+        $("bookingBody");
+
+    if(!body){
+        return;
+    }
+
+    const order =
+        payload?.order || {};
+
+    const offer =
+        payload?.offer || {};
+
+    const title =
+        $("bookingTitle");
+
+    const subtitle =
+        $("bookingSubtitle");
+
+    if(title){
+        title.textContent =
+            "Test Order Created";
+    }
+
+    if(subtitle){
+        subtitle.textContent =
+            "Duffel Test Mode";
+    }
+
+    const total =
+        formatMoney(
+            order.total_amount ||
+            offer.total_amount,
+            order.total_currency ||
+            offer.total_currency
+        );
+
+    body.innerHTML = `
+
+        <div class="order-success">
+
+            <div class="order-success-icon">
+                <i class="fas fa-check"></i>
+            </div>
+
+            <h3>
+                Duffel Test Order Created
+            </h3>
+
+            <p>
+                HAVKAR successfully created this order in Duffel test mode.
+                No real customer payment was charged.
+            </p>
+
+            <div class="order-reference">
+
+                <div class="order-reference-label">
+                    Duffel Order ID
+                </div>
+
+                <div class="order-reference-value">
+                    ${escapeHtml(
+                        order.id ||
+                        "—"
+                    )}
+                </div>
+
+            </div>
+
+            <div class="order-reference">
+
+                <div class="order-reference-label">
+                    Booking reference
+                </div>
+
+                <div class="order-reference-value">
+                    ${escapeHtml(
+                        order.booking_reference ||
+                        "Not returned"
+                    )}
+                </div>
+
+            </div>
+
+            <div class="order-reference">
+
+                <div class="order-reference-label">
+                    Total
+                </div>
+
+                <div class="order-reference-value">
+                    ${escapeHtml(total)}
+                </div>
+
+            </div>
+
+            <div class="order-reference">
+
+                <div class="order-reference-label">
+                    Mode
+                </div>
+
+                <div class="order-reference-value">
+                    TEST
+                </div>
+
+            </div>
+
+        </div>
+
+        <button
+            id="finishTestOrderButton"
+            class="continue-booking-button"
+            type="button"
+        >
+            <i class="fas fa-check"></i>
+            Done
+        </button>
+
+        <div class="booking-test-note">
+            This test order is for HAVKAR integration testing only.
+        </div>
+    `;
+
+    $("finishTestOrderButton")
+        ?.addEventListener(
+            "click",
+            closeBookingOverlay
+        );
+
+    const panel =
+        document.querySelector(
+            ".booking-panel"
+        );
+
+    if(panel){
+        panel.scrollTop = 0;
+    }
+
+    showToast(
+        "Duffel test order created successfully."
+    );
+}
+
+/* =========================================================
+   SEARCH
+========================================================= */
+
+async function performSearch(){
+
+    clearTimeout(searchTimer);
+
+    const container =
+        $("resultsContainer");
+
+    if(!container){
+        return;
+    }
+
+    if(currentType === "flight"){
+
+        const requestId =
+            ++flightSearchRequestId;
+
+        container.innerHTML = `
+
+            <div class="loading">
+
+                <i class="fas fa-spinner fa-spin"></i>
+
+                <div>
+                    Searching Duffel test flight offers...
+                </div>
+
+            </div>
+        `;
+
+        try{
+
+            const results =
+                await searchDuffelFlights();
+
+            if(
+                requestId !==
+                flightSearchRequestId
+            ){
+                return;
+            }
+
+            if(currentType !== "flight"){
+                return;
+            }
+
+            currentResults =
+                results;
+
+            renderResults();
+
+        }catch(error){
+
+            if(
+                requestId !==
+                flightSearchRequestId
+            ){
+                return;
+            }
+
+            if(currentType !== "flight"){
+                return;
+            }
+
+            currentResults = [];
+
+            const count =
+                $("resultCount");
+
+            if(count){
+                count.textContent =
+                    "0 test offers";
+            }
+
+            container.innerHTML = `
+
+                <div class="empty-state">
+
+                    <div class="empty-icon">
+
+                        <i class="fas fa-plane"></i>
+
+                    </div>
+
+                    <h3>
+                        Flight search unavailable
+                    </h3>
+
+                    <p>
+                        ${escapeHtml(
+                            error?.message ||
+                            "Unable to search Duffel flights."
+                        )}
+                    </p>
+
+                </div>
+            `;
+
+            showToast(
+                error?.message ||
+                "Flight search failed."
+            );
+        }
+
+        return;
+    }
+
+    container.innerHTML = `
+
+        <div class="loading">
+
+            <i class="fas fa-spinner fa-spin"></i>
+
+            <div>
+                Searching demo ${escapeHtml(currentType)} services...
+            </div>
+
+        </div>
+    `;
+
+    searchTimer =
+        setTimeout(() => {
+
+            if(currentType === "flight"){
+                return;
+            }
+
+            currentResults =
+                getFilteredResults();
+
+            renderResults();
+
+        },220);
+}
+
+/* =========================================================
+   RESULTS
+========================================================= */
+
+function renderResults(){
+
+    const container =
+        $("resultsContainer");
+
+    const count =
+        $("resultCount");
+
+    if(!container){
+        return;
+    }
+
+    if(count){
+
+        count.textContent =
+            currentType === "flight"
+                ? `${currentResults.length} test offers`
+                : `${currentResults.length} demo results`;
+    }
+
+    if(currentResults.length === 0){
+
+        if(currentType === "flight"){
+
+            container.innerHTML = `
+
+                <div class="empty-state">
+
+                    <div class="empty-icon">
+                        <i class="fas fa-plane"></i>
+                    </div>
+
+                    <h3>
+                        No flight offers found
+                    </h3>
+
+                    <p>
+                        Try another date, airport or route.
+                        You can also enter 3-letter airport codes,
+                        for example FCO and MXP.
+                    </p>
+
+                </div>
+            `;
+
+            return;
+        }
+
+        container.innerHTML = `
+
+            <div class="empty-state">
+
+                <div class="empty-icon">
+
+                    <i class="fas ${
+                        routeMatches()
+                            ? "fa-search"
+                            : "fa-location-dot"
+                    }"></i>
+
+                </div>
+
+                <h3>
+                    ${
+                        routeMatches()
+                            ? "No demo results"
+                            : "Enter a supported demo route"
+                    }
+                </h3>
+
+                <p>
+                    ${
+                        routeMatches()
+                            ? "There are currently no prepared demo services for this search."
+                            : getRouteHelpText()
+                    }
+                </p>
+
+            </div>
+        `;
+
+        return;
+    }
+
+    container.innerHTML =
+        currentResults
+            .map(
+                item =>
+                    createTicketCard(item)
+            )
+            .join("");
+}
+
+function getRouteHelpText(){
+
+    if(currentType === "ferry"){
+
+        return "Demo Ferry routes: Naples → Palermo, Naples → Capri, or the reverse.";
+
+    }
+
+    if(currentType === "transfer"){
+
+        return "Demo Transfer route: Rome Airport → Rome City.";
+
+    }
+
+    return "Demo routes currently use Rome → Milan. Real partner API routes will replace these demo routes later.";
+}
+
+/* =========================================================
+   TICKET CARD
+========================================================= */
+
+function createTicketCard(item){
+
+    const config =
+        ticketConfig[currentType];
+
+    const specialRide =
+        currentType === "taxi" ||
+        currentType === "transfer";
+
+    const isDuffel =
+        currentType === "flight" &&
+        item.isDuffel === true;
+
+    const displayedPrice =
+        isDuffel
+            ? formatMoney(
+                item.price,
+                item.currency
+            )
+            : `€${Number(item.price).toFixed(0)}`;
+
+    const priceLabel =
+        isDuffel
+            ? "Duffel test total"
+            : `demo price ${
+                specialRide
+                    ? "/ ride"
+                    : "/ passenger"
+            }`;
+
+    let actionButton = `
+
+        <button
+            class="demo-disabled"
+            type="button"
+            disabled
+        >
+
+            <i class="fas fa-lock"></i>
+
+            Demo Only — Booking Unavailable
+
+        </button>
+    `;
+
+    if(isDuffel){
+
+        const encodedOfferId =
+            encodeURIComponent(
+                String(
+                    item.offerId || ""
+                )
+            );
+
+        actionButton = `
+
+            <button
+                class="select-flight-button"
+                type="button"
+                data-offer-id="${escapeHtml(encodedOfferId)}"
+                onclick="handleSelectFlightButton(this)"
+            >
+
+                <i class="fas fa-circle-check"></i>
+
+                Select Flight
+
+            </button>
+        `;
+    }
+
+    return `
+
+        <article class="ticket-card">
+
+            <div class="ticket-top">
+
+                <div class="provider">
+
+                    <div class="provider-logo">
+
+                        <i class="fas ${
+                            escapeHtml(
+                                item.icon ||
+                                config.icon
+                            )
+                        }"></i>
+
+                    </div>
+
+                    <div>
+
+                        <div class="provider-name">
+                            ${escapeHtml(item.provider)}
+                        </div>
+
+                        <div class="provider-code">
+                            ${escapeHtml(item.code)}
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="price-box">
+
+                    <div class="price">
+                        ${escapeHtml(displayedPrice)}
+                    </div>
+
+                    <div class="price-label">
+                        ${escapeHtml(priceLabel)}
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="route">
+
+                <div class="location">
+
+                    <div class="city">
+                        ${escapeHtml(item.from)}
+                    </div>
+
+                    <div class="time">
+                        ${escapeHtml(item.fromTime)}
+                    </div>
+
+                    <div class="station">
+                        ${escapeHtml(
+                            item.station ||
+                            config.station
+                        )}
+                    </div>
+
+                </div>
+
+                <div class="route-center">
+
+                    <div class="route-line">
+
+                        <i class="fas ${
+                            escapeHtml(
+                                item.icon ||
+                                config.icon
+                            )
+                        }"></i>
+
+                    </div>
+
+                    <div class="route-duration">
+                        ${escapeHtml(item.duration)}
+                    </div>
+
+                </div>
+
+                <div class="location right">
+
+                    <div class="city">
+                        ${escapeHtml(item.to)}
+                    </div>
+
+                    <div class="time">
+                        ${escapeHtml(item.toTime)}
+                    </div>
+
+                    <div class="station">
+
+                        ${
+                            currentType === "taxi"
+                                ? "Destination"
+                                : currentType === "transfer"
+                                    ? "Drop-off"
+                                    : escapeHtml(config.station)
+                        }
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="ticket-info">
+
+                <div class="info-item">
+
+                    <i class="fas fa-clock"></i>
+
+                    ${escapeHtml(item.duration)}
+
+                </div>
+
+                <div class="info-item">
+
+                    <i class="fas fa-route"></i>
+
+                    ${escapeHtml(item.stopsText)}
+
+                </div>
+
+                <div class="info-item">
+
+                    <i class="fas fa-suitcase"></i>
+
+                    ${escapeHtml(item.baggage)}
+
+                </div>
+
+            </div>
+
+            ${actionButton}
+
+        </article>
+    `;
+}
+
+function handleSelectFlightButton(button){
+
+    if(!button){
+        return;
+    }
+
+    let offerId = "";
+
+    try{
+
+        offerId =
+            decodeURIComponent(
+                button.dataset.offerId ||
+                ""
+            );
+
+    }catch{
+
+        offerId =
+            button.dataset.offerId ||
+            "";
+    }
+
+    selectFlightOffer(
+        offerId
+    );
+}
+
+window.handleSelectFlightButton =
+    handleSelectFlightButton;
+
+/* =========================================================
+   TYPE SWITCHING
+========================================================= */
+
+function updateOmioTicketView(type){
+
+    const omioTypes = [
+        "train",
+        "bus",
+        "flight",
+        "ferry"
+    ];
+
+    const isOmioType =
+        omioTypes.includes(type);
+
+    const omioSection =
+        $("omioRealSection");
+
+    const legacySearch =
+        $("legacySearchSection");
+
+    const legacyResults =
+        $("legacyResultsSection");
+
+    if(omioSection){
+        omioSection.classList.toggle(
+            "show",
+            isOmioType
+        );
+    }
+
+    if(legacySearch){
+        legacySearch.style.display =
+            isOmioType
+                ? "none"
+                : "block";
+    }
+
+    if(legacyResults){
+        legacyResults.style.display =
+            isOmioType
+                ? "none"
+                : "block";
+    }
+
+    document
+        .querySelectorAll(
+            ".omio-widget-panel"
+        )
+        .forEach(panel => {
+            panel.classList.remove(
+                "active"
+            );
+        });
+
+    if(!isOmioType){
+        return false;
+    }
+
+    const panelMap = {
+        train:"omioWidgetTrain",
+        bus:"omioWidgetBus",
+        flight:"omioWidgetFlight",
+        ferry:"omioWidgetFerry"
+    };
+
+    const titleMap = {
+        train:"Search Trains with Omio",
+        bus:"Search Buses with Omio",
+        flight:"Search Flights with Omio",
+        ferry:"Search Ferries with Omio"
+    };
+
+    const activePanel =
+        $(panelMap[type]);
+
+    if(activePanel){
+        activePanel.classList.add(
+            "active"
+        );
+    }
+
+    const title =
+        $("omioRealTitle");
+
+    if(title){
+        title.textContent =
+            titleMap[type] ||
+            "Search with Omio";
+    }
+
+    return true;
+}
+
+function setTicketType(type){
+
+    if(!ticketConfig[type]){
+        return;
+    }
+
+    if(currentType === "flight"){
+        flightSearchRequestId++;
+    }
+
+    currentType = type;
+
+    const config =
+        ticketConfig[type];
+
+    document
+        .querySelectorAll(".ticket-type")
+        .forEach(button => {
+
+            button.classList.toggle(
+                "active",
+                button.dataset.type === type
+            );
+
+        });
+
+    $("pageTitle").textContent =
+        config.title;
+
+    $("searchTypeIcon").className =
+        `fas ${config.icon}`;
+
+    $("searchHeadingText").textContent =
+        config.searchTitle;
+
+    $("searchButtonText").textContent =
+        config.button;
+
+    $("resultsTitle").textContent =
+        config.results;
+
+    const transferExtra =
+        $("transferExtra");
+
+    if(transferExtra){
+
+        transferExtra.style.display =
+            type === "transfer"
+                ? "block"
+                : "none";
+    }
+
+    const filterButton =
+        $("filterButton");
+
+    if(filterButton){
+
+        filterButton.style.display =
+            (
+                type === "taxi" ||
+                type === "transfer"
+            )
+                ? "none"
+                : "block";
+    }
+
+    if(
+        type === "taxi" ||
+        type === "transfer"
+    ){
+
+        $("extraFilters")
+            ?.classList.remove("show");
+    }
+
+    if(type === "ferry"){
+
+        $("fromInput").value =
+            "Naples";
+
+        $("toInput").value =
+            "Palermo";
+
+    }else if(type === "transfer"){
+
+        $("fromInput").value =
+            "Rome Airport";
+
+        $("toInput").value =
+            "Rome City";
+
+    }else{
+
+        $("fromInput").value =
+            "Rome";
+
+        $("toInput").value =
+            "Milan";
+    }
+
+    currentResults = [];
+
+    const usingOmio =
+        updateOmioTicketView(type);
+
+    if(usingOmio){
+        return;
+    }
+
+    performSearch();
+}
+
+/* =========================================================
+   UI ACTIONS
+========================================================= */
+
+function swapLocations(){
+
+    const from =
+        $("fromInput");
+
+    const to =
+        $("toInput");
+
+    if(!from || !to){
+        return;
+    }
+
+    const temporary =
+        from.value;
+
+    from.value =
+        to.value;
+
+    to.value =
+        temporary;
+
+    performSearch();
+}
+
+function toggleFilters(){
+
+    const filters =
+        $("extraFilters");
+
+    if(!filters){
+        return;
+    }
+
+    filters.classList.toggle("show");
+}
+
+function showToast(message){
+
+    const toast =
+        $("toast");
+
+    if(!toast){
+        return;
+    }
+
+    toast.textContent =
+        String(message);
+
+    toast.classList.add("show");
+
+    clearTimeout(toastTimer);
+
+    toastTimer =
+        setTimeout(() => {
+
+            toast.classList.remove("show");
+
+        },2300);
+}
+
+function goHome(){
+    window.location.href = "index.html";
+}
+
+function goProfile(){
+    window.location.href = "profile.html";
+}
+
+function goNotifications(){
+    window.location.href = "notifications.html";
+}
+
+function goTickets(){
+
+    window.scrollTo({
+        top:0,
+        behavior:"smooth"
+    });
+}
+
+function setupEnterSearch(elementId){
+
+    const element =
+        $(elementId);
+
+    if(!element){
+        return;
+    }
+
+    element.addEventListener(
+        "keydown",
+        event => {
+
+            if(event.key === "Enter"){
+
+                event.preventDefault();
+
+                performSearch();
+            }
+        }
+    );
+}
+
+/* =========================================================
+   INITIALIZE
+========================================================= */
+
+function initializeHAVKAR(){
+
+    setToday();
+
+    document
+        .querySelectorAll(".ticket-type")
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    setTicketType(
+                        button.dataset.type
+                    );
+
+                }
+            );
+
+        });
+
+    $("searchButton")
+        ?.addEventListener(
+            "click",
+            performSearch
+        );
+
+    $("swapButton")
+        ?.addEventListener(
+            "click",
+            swapLocations
+        );
+
+    $("filterButton")
+        ?.addEventListener(
+            "click",
+            toggleFilters
+        );
+
+    $("stopsSelect")
+        ?.addEventListener(
+            "change",
+            performSearch
+        );
+
+    $("sortSelect")
+        ?.addEventListener(
+            "change",
+            performSearch
+        );
+
+    $("dateInput")
+        ?.addEventListener(
+            "change",
+            performSearch
+        );
+
+    $("passengersInput")
+        ?.addEventListener(
+            "change",
+            () => {
+
+                const input =
+                    $("passengersInput");
+
+                if(!input){
+                    return;
+                }
+
+                let value =
+                    Number(input.value);
+
+                if(
+                    !Number.isFinite(value) ||
+                    value < 1
+                ){
+                    value = 1;
+                }
+
+                if(value > 9){
+                    value = 9;
+                }
+
+                input.value =
+                    Math.floor(value);
+            }
+        );
+
+    setupEnterSearch("fromInput");
+    setupEnterSearch("toInput");
+
+    $("backButton")
+        ?.addEventListener(
+            "click",
+            goHome
+        );
+
+    $("notificationButton")
+        ?.addEventListener(
+            "click",
+            goNotifications
+        );
+
+    $("profileButton")
+        ?.addEventListener(
+            "click",
+            goProfile
+        );
+
+    $("homeNav")
+        ?.addEventListener(
+            "click",
+            goHome
+        );
+
+    $("searchNav")
+        ?.addEventListener(
+            "click",
+            () => {
+
+                document
+                    .querySelector(
+                        ".search-section"
+                    )
+                    ?.scrollIntoView({
+                        behavior:"smooth",
+                        block:"start"
+                    });
+            }
+        );
+
+    $("ticketsNav")
+        ?.addEventListener(
+            "click",
+            goTickets
+        );
+
+    $("alertsNav")
+        ?.addEventListener(
+            "click",
+            goNotifications
+        );
+
+    $("profileNav")
+        ?.addEventListener(
+            "click",
+            goProfile
+        );
+
+    $("bookingClose")
+        ?.addEventListener(
+            "click",
+            closeBookingOverlay
+        );
+
+    $("bookingOverlay")
+        ?.addEventListener(
+            "click",
+            event => {
+
+                if(
+                    event.target ===
+                    $("bookingOverlay")
+                ){
+                    closeBookingOverlay();
+                }
+            }
+        );
+
+    document.addEventListener(
+        "keydown",
+        event => {
+
+            if(
+                event.key === "Escape" &&
+                $("bookingOverlay")
+                    ?.classList.contains("show")
+            ){
+                closeBookingOverlay();
+            }
+        }
+    );
+
+    setTicketType("flight");
+}
+
+if(document.readyState === "loading"){
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        initializeHAVKAR,
+        {once:true}
+    );
+
+}else{
+
+    initializeHAVKAR();
+}
+</script>
+
+</body>
+    </html>
