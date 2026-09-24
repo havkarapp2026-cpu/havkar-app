@@ -2235,17 +2235,16 @@ input:focus-visible{
                 class="setting-select"
                 onchange="saveLanguage(this.value)">
 
-                <option value="en">
-                    English
-                </option>
-
-                <option value="ku">
-                    کوردی
-                </option>
-
-                <option value="fa">
-                    فارسی
-                </option>
+                <option value="en">English</option>
+                <option value="fa">فارسی</option>
+                <option value="ar">العربية</option>
+                <option value="ckb">کوردی</option>
+                <option value="it">Italiano</option>
+                <option value="sv">Svenska</option>
+                <option value="de">Deutsch</option>
+                <option value="fr">Français</option>
+                <option value="es">Español</option>
+                <option value="tr">Türkçe</option>
 
             </select>
 
@@ -4500,56 +4499,45 @@ function(
     language
 ){
 
-    const allowed =
-        [
-            "en",
-            "ku",
-            "fa"
-        ];
-
-
-    if(
-        !allowed.includes(
-            language
-        )
-    ){
-
-        language =
-            "en";
-
-    }
-
-
-    const settings =
-        getSettings();
-
-
-    settings.language =
-        language;
-
-
-    saveSettings(
-        settings
-    );
-
-
-    const names = {
-
-        en:"English",
-
-        ku:"کوردی",
-
-        fa:"فارسی"
-
+    const languages = {
+        en:{name:"English",dir:"ltr"},
+        fa:{name:"فارسی",dir:"rtl"},
+        ar:{name:"العربية",dir:"rtl"},
+        ckb:{name:"کوردی",dir:"rtl"},
+        it:{name:"Italiano",dir:"ltr"},
+        sv:{name:"Svenska",dir:"ltr"},
+        de:{name:"Deutsch",dir:"ltr"},
+        fr:{name:"Français",dir:"ltr"},
+        es:{name:"Español",dir:"ltr"},
+        tr:{name:"Türkçe",dir:"ltr"}
     };
 
+    if(!languages[language]){
+        language = "en";
+    }
+
+    const settings = getSettings();
+    settings.language = language;
+    saveSettings(settings);
+
+    const dir = languages[language].dir;
+
+    localStorage.setItem("havkar_language",language);
+    localStorage.setItem("havkar_language_dir",dir);
+    localStorage.setItem("selectedLanguage",language);
+    localStorage.setItem("language",language);
+
+    document.documentElement.lang = language;
+    document.documentElement.dir = dir;
 
     showMessage(
-        "Language selected: " +
-        names[language],
+        "Language selected: " + languages[language].name,
         "success"
     );
 
+    window.setTimeout(() => {
+        window.location.reload();
+    },300);
 };
 
 
