@@ -2232,20 +2232,11 @@ input:focus-visible{
 
             <select
                 id="languageSelect"
-                class="setting-select"
-                onchange="saveLanguage(this.value)">
-
-                <option value="en">English</option>
-                <option value="fa">فارسی</option>
-                <option value="ar">العربية</option>
-                <option value="ckb">کوردی</option>
-                <option value="it">Italiano</option>
-                <option value="sv">Svenska</option>
-                <option value="de">Deutsch</option>
-                <option value="fr">Français</option>
-                <option value="es">Español</option>
-                <option value="tr">Türkçe</option>
-
+                class="setting-select notranslate"
+                data-i18n-ignore
+                translate="no"
+                onchange="saveLanguage(this.value)"
+                aria-label="Language">
             </select>
 
         </div>
@@ -2850,6 +2841,13 @@ input:focus-visible{
 
 
 <!-- =========================================================
+     HAVKAR GLOBAL LANGUAGE SYSTEM
+========================================================= -->
+
+<script src="/havkar-i18n.js"></script>
+
+
+<!-- =========================================================
      SUPABASE
 ========================================================= -->
 
@@ -3065,8 +3063,27 @@ function applySettings(){
 
     if(language){
 
+        buildLanguageSelect();
+
+        const centralLanguage =
+            window.HAVKAR_I18N &&
+            typeof window.HAVKAR_I18N.getLanguage === "function"
+            ? window.HAVKAR_I18N.getLanguage()
+            : (settings.language || "en");
+
         language.value =
-            settings.language || "en";
+            centralLanguage;
+
+        if(settings.language !== centralLanguage){
+
+            settings.language =
+                centralLanguage;
+
+            saveSettings(
+                settings
+            );
+
+        }
 
     }
 
@@ -4494,50 +4511,196 @@ function(
    LANGUAGE
 ========================================================= */
 
+function buildLanguageSelect(){
+
+    const select =
+        document.getElementById(
+            "languageSelect"
+        );
+
+    const i18n =
+        window.HAVKAR_I18N;
+
+    if(
+        !select ||
+        !i18n ||
+        typeof i18n.getLanguages !== "function"
+    ){
+
+        return;
+
+    }
+
+    const currentValue =
+        typeof i18n.getLanguage === "function"
+        ? i18n.getLanguage()
+        : "en";
+
+    select.innerHTML =
+        "";
+
+    i18n.getLanguages().forEach(
+        function(language){
+
+            if(
+                Array.isArray(language.variants) &&
+                language.variants.length
+            ){
+
+                const group =
+                    document.createElement(
+                        "optgroup"
+                    );
+
+                group.label =
+                    language.name;
+
+                group.className =
+                    "notranslate";
+
+                group.setAttribute(
+                    "translate",
+                    "no"
+                );
+
+                group.setAttribute(
+                    "data-i18n-ignore",
+                    ""
+                );
+
+                language.variants.forEach(
+                    function(variant){
+
+                        const option =
+                            document.createElement(
+                                "option"
+                            );
+
+                        option.value =
+                            variant.code;
+
+                        option.textContent =
+                            variant.name;
+
+                        option.className =
+                            "notranslate";
+
+                        option.setAttribute(
+                            "translate",
+                            "no"
+                        );
+
+                        option.setAttribute(
+                            "data-i18n-ignore",
+                            ""
+                        );
+
+                        group.appendChild(
+                            option
+                        );
+
+                    }
+                );
+
+                select.appendChild(
+                    group
+                );
+
+                return;
+
+            }
+
+            if(language.selectable === false){
+
+                return;
+
+            }
+
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+            option.value =
+                language.code;
+
+            option.textContent =
+                language.name;
+
+            option.className =
+                "notranslate";
+
+            option.setAttribute(
+                "translate",
+                "no"
+            );
+
+            option.setAttribute(
+                "data-i18n-ignore",
+                ""
+            );
+
+            select.appendChild(
+                option
+            );
+
+        }
+    );
+
+    select.value =
+        currentValue;
+
+}
+
+
 window.saveLanguage =
 function(
     language
 ){
 
-    const languages = {
-        en:{name:"English",dir:"ltr"},
-        fa:{name:"فارسی",dir:"rtl"},
-        ar:{name:"العربية",dir:"rtl"},
-        ckb:{name:"کوردی",dir:"rtl"},
-        it:{name:"Italiano",dir:"ltr"},
-        sv:{name:"Svenska",dir:"ltr"},
-        de:{name:"Deutsch",dir:"ltr"},
-        fr:{name:"Français",dir:"ltr"},
-        es:{name:"Español",dir:"ltr"},
-        tr:{name:"Türkçe",dir:"ltr"}
-    };
+    const i18n =
+        window.HAVKAR_I18N;
 
-    if(!languages[language]){
-        language = "en";
+    if(
+        !i18n ||
+        typeof i18n.setLanguage !== "function" ||
+        typeof i18n.isSupportedLanguage !== "function"
+    ){
+
+        showMessage(
+            "Language system is not available.",
+            "error"
+        );
+
+        return;
+
     }
 
-    const settings = getSettings();
-    settings.language = language;
-    saveSettings(settings);
+    if(!i18n.isSupportedLanguage(language)){
 
-    const dir = languages[language].dir;
+        showMessage(
+            "This language is not supported.",
+            "error"
+        );
 
-    localStorage.setItem("havkar_language",language);
-    localStorage.setItem("havkar_language_dir",dir);
-    localStorage.setItem("selectedLanguage",language);
-    localStorage.setItem("language",language);
+        return;
 
-    document.documentElement.lang = language;
-    document.documentElement.dir = dir;
+    }
 
-    showMessage(
-        "Language selected: " + languages[language].name,
-        "success"
+    const settings =
+        getSettings();
+
+    settings.language =
+        language;
+
+    saveSettings(
+        settings
     );
 
-    window.setTimeout(() => {
-        window.location.reload();
-    },300);
+    i18n.setLanguage(
+        language
+    );
+
 };
 
 
@@ -6021,8 +6184,6 @@ loadProfile();
 
 </script>
 
-
-<script src="/havkar-i18n.js"></script>
 
 </body>
 
