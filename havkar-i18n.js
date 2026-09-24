@@ -1,9 +1,9 @@
 /**
  * HAVKAR Global i18n
  * =========================================================
- * Shared language engine for HAVKAR pages.
+ * Central language registry + shared translation engine.
  *
- * Reads the language selected in language.html:
+ * Storage:
  *   havkar_language
  *   havkar_language_dir
  *
@@ -21,106 +21,443 @@
     const STORAGE_DIR_KEY = "havkar_language_dir";
     const API_URL = "/api/translate";
 
-    const RTL_LANGUAGES = new Set([
-        "fa",
-        "ar",
-        "ckb"
-    ]);
-
-    const EXCLUDED_TAGS = new Set([
-        "SCRIPT",
-        "STYLE",
-        "NOSCRIPT",
-        "CODE",
-        "PRE",
-        "SVG",
-        "PATH",
-        "IFRAME",
-        "CANVAS"
-    ]);
-
     /*
-     * Attributes that normally contain user-visible text.
+     * HAVKAR CENTRAL LANGUAGE REGISTRY
+     *
+     * IMPORTANT:
+     * Language names are self-names.
+     * They must NOT be translated with the interface.
+     *
+     * Kurdî is one top-level option.
+     * It contains:
+     *   Sorani   = ckb / RTL
+     *   Kurmanji = kmr / LTR
      */
+    const LANGUAGE_REGISTRY = Object.freeze([
+        Object.freeze({
+            code: "en",
+            name: "English",
+            dir: "ltr"
+        }),
+
+        Object.freeze({
+            code: "it",
+            name: "Italiano",
+            dir: "ltr"
+        }),
+
+        Object.freeze({
+            code: "de",
+            name: "Deutsch",
+            dir: "ltr"
+        }),
+
+        Object.freeze({
+            code: "fr",
+            name: "Français",
+            dir: "ltr"
+        }),
+
+        Object.freeze({
+            code: "es",
+            name: "Español",
+            dir: "ltr"
+        }),
+
+        Object.freeze({
+            code: "pt",
+            name: "Português",
+            dir: "ltr"
+        }),
+
+        Object.freeze({
+            code: "nl",
+            name: "Nederlands",
+            dir: "ltr"
+        }),
+
+        Object.freeze({
+            code: "sv",
+            name: "Svenska",
+            dir: "ltr"
+        }),
+
+        Object.freeze({
+            code: "pl",
+            name: "Polski",
+            dir: "ltr"
+        }),
+
+        Object.freeze({
+            code: "id",
+            name: "Bahasa Indonesia",
+            dir: "ltr"
+        }),
+
+        Object.freeze({
+            code: "zh",
+            name: "中文",
+            dir: "ltr"
+        }),
+
+        Object.freeze({
+            code: "ja",
+            name: "日本語",
+            dir: "ltr"
+        }),
+
+        Object.freeze({
+            code: "ko",
+            name: "한국어",
+            dir: "ltr"
+        }),
+
+        Object.freeze({
+            code: "hi",
+            name: "हिन्दी",
+            dir: "ltr"
+        }),
+
+        Object.freeze({
+            code: "ru",
+            name: "Русский",
+            dir: "ltr"
+        }),
+
+        Object.freeze({
+            code: "ku",
+            name: "Kurdî",
+            dir: "ltr",
+            selectable: false,
+
+            variants: Object.freeze([
+                Object.freeze({
+                    code: "ckb",
+                    name: "کوردی — سۆرانی",
+                    dir: "rtl",
+                    parent: "ku"
+                }),
+
+                Object.freeze({
+                    code: "kmr",
+                    name: "Kurdî — Kurmancî",
+                    dir: "ltr",
+                    parent: "ku"
+                })
+            ])
+        }),
+
+        Object.freeze({
+            code: "tr",
+            name: "Türkçe",
+            dir: "ltr"
+        }),
+
+        Object.freeze({
+            code: "ar",
+            name: "العربية",
+            dir: "rtl"
+        }),
+
+        Object.freeze({
+            code: "fa",
+            name: "فارسی",
+            dir: "rtl"
+        }),
+
+        Object.freeze({
+            code: "ur",
+            name: "اردو",
+            dir: "rtl"
+        })
+    ]);
+
+
+    /* =====================================================
+       SELECTABLE LANGUAGES
+    ===================================================== */
+
+    const SELECTABLE_LANGUAGES = Object.freeze(
+        LANGUAGE_REGISTRY.flatMap(language => {
+
+            if (
+                Array.isArray(
+                    language.variants
+                )
+            ) {
+                return language.variants;
+            }
+
+            if (
+                language.selectable === false
+            ) {
+                return [];
+            }
+
+            return [language];
+        })
+    );
+
+
+    /* =====================================================
+       LANGUAGE LOOKUP
+    ===================================================== */
+
+    const LANGUAGE_BY_CODE =
+        new Map();
+
+    LANGUAGE_REGISTRY.forEach(
+        language => {
+
+            LANGUAGE_BY_CODE.set(
+                language.code,
+                language
+            );
+
+            if (
+                Array.isArray(
+                    language.variants
+                )
+            ) {
+                language.variants.forEach(
+                    variant => {
+
+                        LANGUAGE_BY_CODE.set(
+                            variant.code,
+                            variant
+                        );
+                    }
+                );
+            }
+        }
+    );
+
+
+    const RTL_LANGUAGES =
+        new Set([
+            "fa",
+            "ar",
+            "ur",
+            "ckb"
+        ]);
+
+
+    /* =====================================================
+       DOM CONFIGURATION
+    ===================================================== */
+
+    const EXCLUDED_TAGS =
+        new Set([
+            "SCRIPT",
+            "STYLE",
+            "NOSCRIPT",
+            "CODE",
+            "PRE",
+            "SVG",
+            "PATH",
+            "IFRAME",
+            "CANVAS"
+        ]);
+
+
     const TRANSLATABLE_ATTRIBUTES = [
         "placeholder",
         "title",
         "aria-label"
     ];
 
-    /*
-     * Do not translate content inside these elements.
-     *
-     * Add:
-     *   data-i18n-ignore
-     *
-     * to any element that must stay unchanged.
-     */
+
     const IGNORE_SELECTOR = [
         "[data-i18n-ignore]",
         "[translate='no']",
         ".notranslate"
     ].join(",");
 
+
     let translating = false;
+
     let observer = null;
+
     let observerTimer = null;
 
-    const originalTextMap = new WeakMap();
-    const originalAttributeMap = new WeakMap();
+
+    const originalTextMap =
+        new WeakMap();
+
+
+    const originalAttributeMap =
+        new WeakMap();
+
 
     /*
-     * Session cache prevents the same text from being sent
-     * repeatedly to the translation API while navigating or
-     * when dynamic content is re-rendered.
+     * Session cache prevents the same
+     * strings from being translated
+     * repeatedly during the same session.
      */
-    const sessionCache = new Map();
+    const sessionCache =
+        new Map();
 
 
     /* =====================================================
-       LANGUAGE
+       LANGUAGE REGISTRY API
     ===================================================== */
 
-    function getLanguage() {
+    function getLanguages() {
+
+        return LANGUAGE_REGISTRY;
+    }
+
+
+    function getSelectableLanguages() {
+
+        return SELECTABLE_LANGUAGES;
+    }
+
+
+    function getLanguageInfo(
+        language
+    ) {
+
+        const code =
+            String(
+                language || ""
+            ).trim();
+
         return (
-            localStorage.getItem(STORAGE_KEY) ||
-            localStorage.getItem("selectedLanguage") ||
-            localStorage.getItem("language") ||
-            "en"
+            LANGUAGE_BY_CODE.get(
+                code
+            ) ||
+            null
         );
     }
 
-    function getDirection(language = getLanguage()) {
-        const saved =
-            localStorage.getItem(STORAGE_DIR_KEY);
 
-        if (saved === "rtl" || saved === "ltr") {
-            return saved;
-        }
+    function isSupportedLanguage(
+        language
+    ) {
 
-        return RTL_LANGUAGES.has(language)
-            ? "rtl"
-            : "ltr";
+        const info =
+            getLanguageInfo(
+                language
+            );
+
+        return Boolean(
+            info &&
+            info.selectable !== false
+        );
     }
 
-    function applyDocumentLanguage(language) {
-        const dir = getDirection(language);
 
-        document.documentElement.lang = language;
-        document.documentElement.dir = dir;
+    /* =====================================================
+       CURRENT LANGUAGE
+    ===================================================== */
+
+    function getLanguage() {
+
+        const candidates = [
+
+            localStorage.getItem(
+                STORAGE_KEY
+            ),
+
+            localStorage.getItem(
+                "selectedLanguage"
+            ),
+
+            localStorage.getItem(
+                "language"
+            )
+        ];
+
+
+        for (
+            const candidate
+            of candidates
+        ) {
+
+            const code =
+                String(
+                    candidate || ""
+                ).trim();
+
+
+            if (
+                isSupportedLanguage(
+                    code
+                )
+            ) {
+
+                return code;
+            }
+        }
+
+
+        return "en";
+    }
+
+
+    function getDirection(
+        language = getLanguage()
+    ) {
+
+        const info =
+            getLanguageInfo(
+                language
+            );
+
+
+        if (
+            info &&
+            (
+                info.dir === "rtl" ||
+                info.dir === "ltr"
+            )
+        ) {
+
+            return info.dir;
+        }
+
+
+        return (
+            RTL_LANGUAGES.has(
+                language
+            )
+                ? "rtl"
+                : "ltr"
+        );
+    }
+
+
+    function applyDocumentLanguage(
+        language
+    ) {
+
+        const safeLanguage =
+            isSupportedLanguage(
+                language
+            )
+                ? language
+                : "en";
+
+
+        const dir =
+            getDirection(
+                safeLanguage
+            );
+
+
+        document.documentElement.lang =
+            safeLanguage;
+
+
+        document.documentElement.dir =
+            dir;
+
 
         document.documentElement.setAttribute(
             "dir",
             dir
         );
-
-        /*
-         * Important:
-         * We do NOT globally reverse flex/grid layouts.
-         * Existing HAVKAR page structure remains intact.
-         *
-         * Direction is applied at document level only.
-         */
     }
 
 
@@ -128,51 +465,94 @@
        TEXT VALIDATION
     ===================================================== */
 
-    function normalizeText(value) {
-        return String(value || "")
-            .replace(/\s+/g, " ")
+    function normalizeText(
+        value
+    ) {
+
+        return String(
+            value || ""
+        )
+            .replace(
+                /\s+/g,
+                " "
+            )
             .trim();
     }
 
-    function hasLetters(value) {
-        /*
-         * Works with Latin, Persian, Arabic, Kurdish,
-         * and most Unicode alphabetic scripts.
-         */
+
+    function hasLetters(
+        value
+    ) {
+
         try {
-            return /\p{L}/u.test(value);
+
+            return /\p{L}/u.test(
+                value
+            );
+
         } catch {
-            return /[A-Za-z\u0600-\u06FF]/.test(value);
+
+            return /[A-Za-z\u0600-\u06FF]/.test(
+                value
+            );
         }
     }
 
-    function shouldTranslateText(value) {
-        const text = normalizeText(value);
 
-        if (!text) return false;
+    function shouldTranslateText(
+        value
+    ) {
 
-        if (!hasLetters(text)) {
+        const text =
+            normalizeText(
+                value
+            );
+
+
+        if (!text) {
+
             return false;
         }
+
+
+        if (
+            !hasLetters(
+                text
+            )
+        ) {
+
+            return false;
+        }
+
 
         /*
-         * Avoid translating raw URLs.
+         * Do not translate URLs.
          */
         if (
-            /^https?:\/\//i.test(text) ||
-            /^www\./i.test(text)
+            /^https?:\/\//i.test(
+                text
+            ) ||
+            /^www\./i.test(
+                text
+            )
         ) {
+
             return false;
         }
 
+
         /*
-         * Avoid translating email addresses.
+         * Do not translate email addresses.
          */
         if (
-            /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)
+            /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+                text
+            )
         ) {
+
             return false;
         }
+
 
         return true;
     }
@@ -182,42 +562,82 @@
        ELEMENT FILTERING
     ===================================================== */
 
-    function isIgnoredElement(element) {
-        if (!element || element.nodeType !== 1) {
+    function isIgnoredElement(
+        element
+    ) {
+
+        if (
+            !element ||
+            element.nodeType !== 1
+        ) {
+
             return false;
         }
 
-        if (EXCLUDED_TAGS.has(element.tagName)) {
+
+        if (
+            EXCLUDED_TAGS.has(
+                element.tagName
+            )
+        ) {
+
             return true;
         }
+
 
         if (
             element.matches &&
-            element.matches(IGNORE_SELECTOR)
+            element.matches(
+                IGNORE_SELECTOR
+            )
         ) {
+
             return true;
         }
 
+
         if (
             element.closest &&
-            element.closest(IGNORE_SELECTOR)
+            element.closest(
+                IGNORE_SELECTOR
+            )
         ) {
+
             return true;
         }
+
 
         return false;
     }
 
-    function isIgnoredTextNode(node) {
-        if (!node || node.nodeType !== Node.TEXT_NODE) {
+
+    function isIgnoredTextNode(
+        node
+    ) {
+
+        if (
+            !node ||
+            node.nodeType !==
+                Node.TEXT_NODE
+        ) {
+
             return true;
         }
 
-        const parent = node.parentElement;
 
-        if (!parent) return true;
+        const parent =
+            node.parentElement;
 
-        return isIgnoredElement(parent);
+
+        if (!parent) {
+
+            return true;
+        }
+
+
+        return isIgnoredElement(
+            parent
+        );
     }
 
 
@@ -225,43 +645,72 @@
        ORIGINAL TEXT STORAGE
     ===================================================== */
 
-    function rememberOriginalText(node) {
-        if (!originalTextMap.has(node)) {
+    function rememberOriginalText(
+        node
+    ) {
+
+        if (
+            !originalTextMap.has(
+                node
+            )
+        ) {
+
             originalTextMap.set(
                 node,
                 node.nodeValue
             );
         }
 
-        return originalTextMap.get(node);
+
+        return originalTextMap.get(
+            node
+        );
     }
+
 
     function rememberOriginalAttribute(
         element,
         attribute
     ) {
+
         let attributes =
-            originalAttributeMap.get(element);
+            originalAttributeMap.get(
+                element
+            );
+
 
         if (!attributes) {
+
             attributes = {};
+
             originalAttributeMap.set(
                 element,
                 attributes
             );
         }
 
+
         if (
-            !Object.prototype.hasOwnProperty.call(
-                attributes,
-                attribute
-            )
+            !Object.prototype
+                .hasOwnProperty
+                .call(
+                    attributes,
+                    attribute
+                )
         ) {
-            attributes[attribute] =
-                element.getAttribute(attribute);
+
+            attributes[
+                attribute
+            ] =
+                element.getAttribute(
+                    attribute
+                );
         }
 
-        return attributes[attribute];
+
+        return attributes[
+            attribute
+        ];
     }
 
 
@@ -269,40 +718,88 @@
        COLLECT TEXT
     ===================================================== */
 
-    function collectTextNodes(root = document.body) {
+    function collectTextNodes(
+        root = document.body
+    ) {
+
         const results = [];
 
-        if (!root) return results;
+
+        if (!root) {
+
+            return results;
+        }
+
 
         const walker =
             document.createTreeWalker(
-                root,
-                NodeFilter.SHOW_TEXT,
-                {
-                    acceptNode(node) {
-                        if (isIgnoredTextNode(node)) {
-                            return NodeFilter.FILTER_REJECT;
-                        }
 
-                        const original =
-                            rememberOriginalText(node);
+                root,
+
+                NodeFilter.SHOW_TEXT,
+
+                {
+
+                    acceptNode(
+                        node
+                    ) {
 
                         if (
-                            !shouldTranslateText(original)
+                            isIgnoredTextNode(
+                                node
+                            )
                         ) {
-                            return NodeFilter.FILTER_REJECT;
+
+                            return (
+                                NodeFilter
+                                    .FILTER_REJECT
+                            );
                         }
 
-                        return NodeFilter.FILTER_ACCEPT;
+
+                        const original =
+                            rememberOriginalText(
+                                node
+                            );
+
+
+                        if (
+                            !shouldTranslateText(
+                                original
+                            )
+                        ) {
+
+                            return (
+                                NodeFilter
+                                    .FILTER_REJECT
+                            );
+                        }
+
+
+                        return (
+                            NodeFilter
+                                .FILTER_ACCEPT
+                        );
                     }
                 }
             );
 
+
         let node;
 
-        while ((node = walker.nextNode())) {
-            results.push(node);
+
+        while (
+            (
+                node =
+                    walker.nextNode()
+            )
+        ) {
+
+            results.push(
+                node
+            );
         }
+
 
         return results;
     }
@@ -315,64 +812,103 @@
     function collectAttributes(
         root = document.body
     ) {
+
         const results = [];
 
-        if (!root) return results;
+
+        if (!root) {
+
+            return results;
+        }
+
 
         const elements = [];
 
+
         if (
             root.nodeType === 1 &&
-            !isIgnoredElement(root)
+            !isIgnoredElement(
+                root
+            )
         ) {
-            elements.push(root);
-        }
 
-        if (root.querySelectorAll) {
-            root
-                .querySelectorAll("*")
-                .forEach(element => {
-                    if (
-                        !isIgnoredElement(element)
-                    ) {
-                        elements.push(element);
-                    }
-                });
-        }
-
-        elements.forEach(element => {
-            TRANSLATABLE_ATTRIBUTES.forEach(
-                attribute => {
-                    if (
-                        !element.hasAttribute(
-                            attribute
-                        )
-                    ) {
-                        return;
-                    }
-
-                    const original =
-                        rememberOriginalAttribute(
-                            element,
-                            attribute
-                        );
-
-                    if (
-                        !shouldTranslateText(
-                            original
-                        )
-                    ) {
-                        return;
-                    }
-
-                    results.push({
-                        element,
-                        attribute,
-                        original
-                    });
-                }
+            elements.push(
+                root
             );
-        });
+        }
+
+
+        if (
+            root.querySelectorAll
+        ) {
+
+            root
+                .querySelectorAll(
+                    "*"
+                )
+                .forEach(
+                    element => {
+
+                        if (
+                            !isIgnoredElement(
+                                element
+                            )
+                        ) {
+
+                            elements.push(
+                                element
+                            );
+                        }
+                    }
+                );
+        }
+
+
+        elements.forEach(
+            element => {
+
+                TRANSLATABLE_ATTRIBUTES
+                    .forEach(
+                        attribute => {
+
+                            if (
+                                !element
+                                    .hasAttribute(
+                                        attribute
+                                    )
+                            ) {
+
+                                return;
+                            }
+
+
+                            const original =
+                                rememberOriginalAttribute(
+                                    element,
+                                    attribute
+                                );
+
+
+                            if (
+                                !shouldTranslateText(
+                                    original
+                                )
+                            ) {
+
+                                return;
+                            }
+
+
+                            results.push({
+                                element,
+                                attribute,
+                                original
+                            });
+                        }
+                    );
+            }
+        );
+
 
         return results;
     }
@@ -386,13 +922,18 @@
         text,
         targetLanguage
     ) {
-        return `${targetLanguage}::${text}`;
+
+        return (
+            `${targetLanguage}::${text}`
+        );
     }
+
 
     function getCached(
         text,
         targetLanguage
     ) {
+
         return sessionCache.get(
             cacheKey(
                 text,
@@ -401,53 +942,86 @@
         );
     }
 
+
     function setCached(
         text,
         targetLanguage,
         translation
     ) {
+
         sessionCache.set(
+
             cacheKey(
                 text,
                 targetLanguage
             ),
+
             translation
         );
     }
 
 
     /* =====================================================
-       API
+       TRANSLATION API
     ===================================================== */
 
     async function requestTranslations(
         texts,
         targetLanguage
     ) {
-        if (!texts.length) {
+
+        if (
+            !texts.length
+        ) {
+
             return [];
         }
 
+
+        if (
+            !isSupportedLanguage(
+                targetLanguage
+            )
+        ) {
+
+            throw new Error(
+                `Unsupported HAVKAR language: ${targetLanguage}`
+            );
+        }
+
+
         const response =
-            await fetch(API_URL, {
-                method: "POST",
+            await fetch(
+                API_URL,
+                {
 
-                headers: {
-                    "Content-Type":
-                        "application/json"
-                },
+                    method:
+                        "POST",
 
-                body: JSON.stringify({
-                    texts,
-                    sourceLanguage: "en",
-                    targetLanguage
-                })
-            });
+                    headers: {
+
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify({
+                            texts,
+                            sourceLanguage:
+                                "en",
+                            targetLanguage
+                        })
+                }
+            );
+
 
         const data =
             await response
                 .json()
-                .catch(() => ({}));
+                .catch(
+                    () => ({})
+                );
+
 
         if (
             !response.ok ||
@@ -456,33 +1030,45 @@
                 data.translations
             )
         ) {
+
             throw new Error(
                 data.error ||
                 "HAVKAR translation failed."
             );
         }
 
+
         if (
             data.translations.length !==
             texts.length
         ) {
+
             throw new Error(
                 "Incomplete translation response."
             );
         }
 
-        return data.translations.map(
-            item => {
-                if (
-                    item &&
-                    typeof item.translatedText ===
-                        "string"
-                ) {
-                    return item.translatedText;
-                }
 
-                return "";
-            }
+        return (
+            data.translations.map(
+                item => {
+
+                    if (
+                        item &&
+                        typeof (
+                            item.translatedText
+                        ) === "string"
+                    ) {
+
+                        return (
+                            item.translatedText
+                        );
+                    }
+
+
+                    return "";
+                }
+            )
         );
     }
 
@@ -495,52 +1081,83 @@
         texts,
         targetLanguage
     ) {
-        const uniqueTexts =
-            [...new Set(
-                texts
-                    .map(normalizeText)
-                    .filter(Boolean)
-            )];
 
-        const resultMap = new Map();
+        const uniqueTexts =
+            [
+                ...new Set(
+
+                    texts
+                        .map(
+                            normalizeText
+                        )
+                        .filter(
+                            Boolean
+                        )
+                )
+            ];
+
+
+        const resultMap =
+            new Map();
+
 
         const missing = [];
 
-        uniqueTexts.forEach(text => {
-            const cached =
-                getCached(
-                    text,
-                    targetLanguage
-                );
 
-            if (
-                typeof cached === "string"
-            ) {
-                resultMap.set(
-                    text,
-                    cached
-                );
-            } else {
-                missing.push(text);
+        uniqueTexts.forEach(
+            text => {
+
+                const cached =
+                    getCached(
+                        text,
+                        targetLanguage
+                    );
+
+
+                if (
+                    typeof cached ===
+                        "string"
+                ) {
+
+                    resultMap.set(
+                        text,
+                        cached
+                    );
+
+                } else {
+
+                    missing.push(
+                        text
+                    );
+                }
             }
-        });
+        );
+
 
         /*
-         * API supports max 100 items/request.
-         * Use smaller batches to keep requests stable.
+         * Translation endpoint supports
+         * batches. Keep them moderate.
          */
         const BATCH_SIZE = 50;
 
+
         for (
             let start = 0;
-            start < missing.length;
-            start += BATCH_SIZE
+
+            start <
+            missing.length;
+
+            start +=
+                BATCH_SIZE
         ) {
+
             const batch =
                 missing.slice(
                     start,
-                    start + BATCH_SIZE
+                    start +
+                    BATCH_SIZE
                 );
+
 
             const translations =
                 await requestTranslations(
@@ -548,16 +1165,25 @@
                     targetLanguage
                 );
 
+
             batch.forEach(
-                (text, index) => {
+                (
+                    text,
+                    index
+                ) => {
+
                     const translated =
-                        translations[index] ||
+                        translations[
+                            index
+                        ] ||
                         text;
+
 
                     resultMap.set(
                         text,
                         translated
                     );
+
 
                     setCached(
                         text,
@@ -567,6 +1193,7 @@
                 }
             );
         }
+
 
         return resultMap;
     }
@@ -579,37 +1206,63 @@
     function restoreEnglish(
         root = document.body
     ) {
-        if (!root) return;
+
+        if (!root) {
+
+            return;
+        }
+
 
         const textNodes =
-            collectTextNodes(root);
+            collectTextNodes(
+                root
+            );
 
-        textNodes.forEach(node => {
-            const original =
-                originalTextMap.get(node);
 
-            if (
-                typeof original === "string"
-            ) {
-                node.nodeValue =
-                    original;
+        textNodes.forEach(
+            node => {
+
+                const original =
+                    originalTextMap.get(
+                        node
+                    );
+
+
+                if (
+                    typeof original ===
+                        "string"
+                ) {
+
+                    node.nodeValue =
+                        original;
+                }
             }
-        });
+        );
+
 
         const attributes =
-            collectAttributes(root);
+            collectAttributes(
+                root
+            );
 
-        attributes.forEach(item => {
-            if (
-                typeof item.original ===
-                    "string"
-            ) {
-                item.element.setAttribute(
-                    item.attribute,
-                    item.original
-                );
+
+        attributes.forEach(
+            item => {
+
+                if (
+                    typeof (
+                        item.original
+                    ) === "string"
+                ) {
+
+                    item.element
+                        .setAttribute(
+                            item.attribute,
+                            item.original
+                        );
+                }
             }
-        });
+        );
     }
 
 
@@ -620,56 +1273,104 @@
     async function translateRoot(
         root = document.body
     ) {
+
         const language =
             getLanguage();
 
-        applyDocumentLanguage(language);
 
-        if (!root) return;
+        applyDocumentLanguage(
+            language
+        );
 
-        if (language === "en") {
-            restoreEnglish(root);
+
+        if (!root) {
+
             return;
         }
 
+
+        if (
+            language === "en"
+        ) {
+
+            restoreEnglish(
+                root
+            );
+
+            return;
+        }
+
+
         const textNodes =
-            collectTextNodes(root);
+            collectTextNodes(
+                root
+            );
+
 
         const attributes =
-            collectAttributes(root);
+            collectAttributes(
+                root
+            );
+
 
         const originals = [];
 
-        textNodes.forEach(node => {
-            const original =
-                rememberOriginalText(node);
 
-            const normalized =
-                normalizeText(original);
+        textNodes.forEach(
+            node => {
 
-            if (normalized) {
-                originals.push(
+                const original =
+                    rememberOriginalText(
+                        node
+                    );
+
+
+                const normalized =
+                    normalizeText(
+                        original
+                    );
+
+
+                if (
                     normalized
-                );
+                ) {
+
+                    originals.push(
+                        normalized
+                    );
+                }
             }
-        });
+        );
 
-        attributes.forEach(item => {
-            const normalized =
-                normalizeText(
-                    item.original
-                );
 
-            if (normalized) {
-                originals.push(
+        attributes.forEach(
+            item => {
+
+                const normalized =
+                    normalizeText(
+                        item.original
+                    );
+
+
+                if (
                     normalized
-                );
-            }
-        });
+                ) {
 
-        if (!originals.length) {
+                    originals.push(
+                        normalized
+                    );
+                }
+            }
+        );
+
+
+        if (
+            !originals.length
+        ) {
+
             return;
         }
+
 
         const translations =
             await translateUniqueTexts(
@@ -677,64 +1378,86 @@
                 language
             );
 
-        textNodes.forEach(node => {
-            const original =
-                rememberOriginalText(node);
 
-            const normalized =
-                normalizeText(original);
+        textNodes.forEach(
+            node => {
 
-            const translated =
-                translations.get(
-                    normalized
-                );
+                const original =
+                    rememberOriginalText(
+                        node
+                    );
 
-            if (
-                typeof translated ===
-                    "string" &&
-                translated
-            ) {
-                /*
-                 * Preserve leading/trailing whitespace
-                 * around inline text nodes.
-                 */
-                const leading =
-                    original.match(/^\s*/)?.[0] ||
-                    "";
 
-                const trailing =
-                    original.match(/\s*$/)?.[0] ||
-                    "";
+                const normalized =
+                    normalizeText(
+                        original
+                    );
 
-                node.nodeValue =
-                    leading +
-                    translated +
-                    trailing;
-            }
-        });
 
-        attributes.forEach(item => {
-            const normalized =
-                normalizeText(
-                    item.original
-                );
+                const translated =
+                    translations.get(
+                        normalized
+                    );
 
-            const translated =
-                translations.get(
-                    normalized
-                );
 
-            if (
-                typeof translated ===
-                    "string" &&
-                translated
-            ) {
-                item.element.setAttribute(
-                    item.attribute,
+                if (
+                    typeof translated ===
+                        "string" &&
                     translated
-                );
+                ) {
+
+                    const leading =
+                        original.match(
+                            /^\s*/
+                        )?.[0] ||
+                        "";
+
+
+                    const trailing =
+                        original.match(
+                            /\s*$/
+                        )?.[0] ||
+                        "";
+
+
+                    node.nodeValue =
+                        leading +
+                        translated +
+                        trailing;
+                }
             }
-        });
+        );
+
+
+        attributes.forEach(
+            item => {
+
+                const normalized =
+                    normalizeText(
+                        item.original
+                    );
+
+
+                const translated =
+                    translations.get(
+                        normalized
+                    );
+
+
+                if (
+                    typeof translated ===
+                        "string" &&
+                    translated
+                ) {
+
+                    item.element
+                        .setAttribute(
+                            item.attribute,
+                            translated
+                        );
+                }
+            }
+        );
     }
 
 
@@ -743,22 +1466,35 @@
     ===================================================== */
 
     async function translatePage() {
-        if (translating) {
+
+        if (
+            translating
+        ) {
+
             return;
         }
 
+
         translating = true;
 
+
         try {
+
             await translateRoot(
                 document.body
             );
-        } catch (error) {
+
+        } catch (
+            error
+        ) {
+
             console.error(
                 "[HAVKAR i18n]",
                 error
             );
+
         } finally {
+
             translating = false;
         }
     }
@@ -769,138 +1505,223 @@
     ===================================================== */
 
     function scheduleDynamicTranslation() {
-        if (observerTimer) {
+
+        if (
+            observerTimer
+        ) {
+
             clearTimeout(
                 observerTimer
             );
         }
 
+
         observerTimer =
             setTimeout(
+
                 async () => {
-                    if (translating) {
+
+                    if (
+                        translating
+                    ) {
+
                         return;
                     }
 
+
                     await translatePage();
                 },
+
                 250
             );
     }
 
+
     function startObserver() {
+
         if (
             observer ||
             !document.body
         ) {
+
             return;
         }
 
+
         observer =
             new MutationObserver(
+
                 mutations => {
-                    if (translating) {
+
+                    if (
+                        translating
+                    ) {
+
                         return;
                     }
 
-                    let relevant = false;
+
+                    let relevant =
+                        false;
+
 
                     for (
                         const mutation
                         of mutations
                     ) {
-                        if (
-                            mutation.type ===
-                                "childList" &&
-                            mutation.addedNodes.length
-                        ) {
-                            relevant = true;
-                            break;
-                        }
 
                         if (
                             mutation.type ===
-                            "characterData"
+                                "childList" &&
+                            mutation
+                                .addedNodes
+                                .length
                         ) {
-                            relevant = true;
+
+                            relevant =
+                                true;
+
+                            break;
+                        }
+
+
+                        if (
+                            mutation.type ===
+                                "characterData"
+                        ) {
+
+                            relevant =
+                                true;
+
                             break;
                         }
                     }
 
-                    if (relevant) {
+
+                    if (
+                        relevant
+                    ) {
+
                         scheduleDynamicTranslation();
                     }
                 }
             );
 
+
         observer.observe(
+
             document.body,
+
             {
-                childList: true,
-                subtree: true,
-                characterData: true
+                childList:
+                    true,
+
+                subtree:
+                    true,
+
+                characterData:
+                    true
             }
         );
     }
 
 
     /* =====================================================
-       LANGUAGE CHANGE SUPPORT
+       LANGUAGE CHANGE
     ===================================================== */
 
     async function setLanguage(
         language,
         direction
     ) {
-        const safeLanguage =
-            String(
-                language || "en"
-            ).trim() || "en";
 
+        const requestedLanguage =
+            String(
+                language || ""
+            ).trim();
+
+
+        const safeLanguage =
+            isSupportedLanguage(
+                requestedLanguage
+            )
+                ? requestedLanguage
+                : "en";
+
+
+        const info =
+            getLanguageInfo(
+                safeLanguage
+            );
+
+
+        /*
+         * Direction comes from the
+         * central registry.
+         *
+         * direction remains as a parameter
+         * only for compatibility with
+         * existing HAVKAR pages.
+         */
         const safeDirection =
-            direction === "rtl" ||
-            direction === "ltr"
-                ? direction
+
+            info &&
+            (
+                info.dir === "rtl" ||
+                info.dir === "ltr"
+            )
+
+                ? info.dir
+
                 : (
-                    RTL_LANGUAGES.has(
-                        safeLanguage
-                    )
-                        ? "rtl"
+                    direction === "rtl" ||
+                    direction === "ltr"
+
+                        ? direction
+
                         : "ltr"
                 );
+
 
         localStorage.setItem(
             STORAGE_KEY,
             safeLanguage
         );
 
+
         localStorage.setItem(
             STORAGE_DIR_KEY,
             safeDirection
         );
 
+
         /*
-         * Compatibility with the current
-         * language.html implementation.
+         * Compatibility with existing
+         * HAVKAR pages.
          */
         localStorage.setItem(
             "selectedLanguage",
             safeLanguage
         );
 
+
         localStorage.setItem(
             "language",
             safeLanguage
         );
 
+
         applyDocumentLanguage(
             safeLanguage
         );
 
+
         /*
-         * Reloading is intentional.
-         * It restores the page's original English DOM,
-         * then translates cleanly into the new language.
+         * Reload is intentional.
+         *
+         * The original English DOM is loaded
+         * again and translated cleanly into
+         * the newly selected language.
          */
         window.location.reload();
     }
@@ -911,25 +1732,41 @@
     ===================================================== */
 
     async function initialize() {
+
         const language =
             getLanguage();
+
 
         applyDocumentLanguage(
             language
         );
 
+
         await translatePage();
+
 
         startObserver();
 
+
         document.dispatchEvent(
+
             new CustomEvent(
+
                 "havkar:i18n-ready",
+
                 {
+
                     detail: {
+
                         language,
+
                         direction:
                             getDirection(
+                                language
+                            ),
+
+                        languageInfo:
+                            getLanguageInfo(
                                 language
                             )
                     }
@@ -944,10 +1781,23 @@
     ===================================================== */
 
     window.HAVKAR_I18N = {
+
+        getLanguages,
+
+        getSelectableLanguages,
+
+        getLanguageInfo,
+
+        isSupportedLanguage,
+
         getLanguage,
+
         getDirection,
+
         translatePage,
+
         translateRoot,
+
         setLanguage,
 
         refresh:
@@ -963,14 +1813,21 @@
         document.readyState ===
         "loading"
     ) {
+
         document.addEventListener(
+
             "DOMContentLoaded",
+
             initialize,
+
             {
-                once: true
+                once:
+                    true
             }
         );
+
     } else {
+
         initialize();
     }
 
