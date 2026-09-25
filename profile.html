@@ -6055,7 +6055,38 @@ async function(event){
     }
 
     currentBusinessApplication = result.data;
-    showMessage("Business application submitted successfully.", "success");
+
+    let emailNotificationSent = false;
+
+    try{
+        const notificationResponse = await fetch("/api/business-application-notify", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                application: result.data
+            })
+        });
+
+        emailNotificationSent = notificationResponse.ok;
+
+        if(!notificationResponse.ok){
+            const notificationError = await notificationResponse.text().catch(() => "");
+            console.error("Business application email notification error:", notificationError);
+        }
+    }
+    catch(notificationError){
+        console.error("Business application email notification error:", notificationError);
+    }
+
+    if(emailNotificationSent){
+        showMessage("Business application submitted successfully and HAVKAR was notified at info@havkar.online.", "success");
+    }
+    else{
+        showMessage("Business application was saved successfully, but the email notification to info@havkar.online could not be sent. Please try again after the HAVKAR mail service is configured.", "error");
+    }
+
     renderBusinessApplication(result.data);
 };
 
