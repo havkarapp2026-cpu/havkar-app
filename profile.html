@@ -1218,6 +1218,164 @@ button{
 }
 
 
+
+/* =========================================================
+   BUSINESS APPLICATION — REAL SUPABASE FORM
+========================================================= */
+
+.business-application-form{
+    margin-top:16px;
+}
+
+.business-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+}
+
+.business-grid .full{
+    grid-column:1 / -1;
+}
+
+.business-field{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+
+.business-field label{
+    color:#66706a;
+    font-size:11px;
+    font-weight:800;
+}
+
+.business-field input,
+.business-field select,
+.business-field textarea{
+    width:100%;
+    border:1px solid #dfe4df;
+    border-radius:11px;
+    padding:12px 13px;
+    background:#fff;
+    color:#263238;
+    font:inherit;
+    font-size:13px;
+    outline:none;
+}
+
+.business-field textarea{
+    min-height:105px;
+    resize:vertical;
+}
+
+.business-field input:focus,
+.business-field select:focus,
+.business-field textarea:focus{
+    border-color:#689f38;
+    box-shadow:0 0 0 3px rgba(104,159,56,.10);
+}
+
+.business-required{
+    color:#c62828;
+}
+
+.business-status-card{
+    margin:0 0 15px;
+    padding:13px 14px;
+    border:1px solid #dfe7df;
+    border-radius:12px;
+    background:#f7faf7;
+    color:#52605a;
+    font-size:12px;
+    line-height:1.6;
+}
+
+.business-status-card.pending{
+    background:#fff8e1;
+    border-color:#ffe082;
+    color:#765c00;
+}
+
+.business-status-card.approved{
+    background:#e8f5e9;
+    border-color:#a5d6a7;
+    color:#256b2a;
+}
+
+.business-status-card.rejected{
+    background:#ffebee;
+    border-color:#ef9a9a;
+    color:#a32626;
+}
+
+.business-form-actions{
+    display:flex;
+    gap:10px;
+    margin-top:16px;
+    flex-wrap:wrap;
+}
+
+.business-form-actions .panel-button{
+    margin-top:0;
+}
+
+.business-help{
+    margin-top:12px;
+    color:#7a827d;
+    font-size:11px;
+    line-height:1.6;
+}
+
+.business-loading{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    padding:14px 0;
+    color:#66706a;
+    font-size:12px;
+}
+
+.business-loading i{
+    color:#689f38;
+}
+
+body.dark-mode .business-field input,
+body.dark-mode .business-field select,
+body.dark-mode .business-field textarea{
+    background:#222822;
+    color:#eee;
+    border-color:#3b443b;
+}
+
+body.dark-mode .business-field label,
+body.dark-mode .business-help{
+    color:#a9afa9;
+}
+
+body.dark-mode .business-status-card{
+    background:#222822;
+    color:#c9ceca;
+    border-color:#3b443b;
+}
+
+@media(max-width:560px){
+    .business-grid{
+        grid-template-columns:1fr;
+    }
+
+    .business-grid .full{
+        grid-column:auto;
+    }
+
+    .business-form-actions{
+        flex-direction:column;
+    }
+
+    .business-form-actions .panel-button{
+        width:100%;
+    }
+}
+
 /* =========================================================
    SECURITY INFO
 ========================================================= */
@@ -5536,59 +5694,369 @@ function(){
 
 
 /* =========================================================
-   BUSINESS ACCOUNT
+   BUSINESS ACCOUNT — REAL SUPABASE APPLICATION
 ========================================================= */
 
-window.openBusinessAccount =
-function(){
+let currentBusinessApplication = null;
+let businessApplicationBusy = false;
+
+function businessValue(value){
+    return value === null || value === undefined
+        ? ""
+        : String(value);
+}
+
+function businessStatusLabel(status){
+    const value = String(status || "draft").toLowerCase();
+
+    if(value === "approved") return "Approved";
+    if(value === "rejected") return "Rejected";
+    if(value === "pending") return "Pending review";
+    if(value === "under_review") return "Under review";
+
+    return "Draft";
+}
+
+function businessStatusClass(status){
+    const value = String(status || "draft").toLowerCase();
+
+    if(value === "approved") return "approved";
+    if(value === "rejected") return "rejected";
+    if(value === "pending" || value === "under_review") return "pending";
+
+    return "";
+}
+
+function businessApplicationStatusHtml(application){
+    if(!application){
+        return `
+            <div class="business-status-card">
+                <strong>No application submitted yet.</strong><br>
+                Complete the form below to create your HAVKAR business application.
+            </div>
+        `;
+    }
+
+    const status = businessStatusLabel(application.status);
+    const statusClass = businessStatusClass(application.status);
+    const rejection = application.rejection_reason
+        ? `<br><strong>Reason:</strong> ${escapeHtml(application.rejection_reason)}`
+        : "";
+    const notes = application.review_notes
+        ? `<br><strong>Review notes:</strong> ${escapeHtml(application.review_notes)}`
+        : "";
+
+    return `
+        <div class="business-status-card ${statusClass}">
+            <strong>Status: ${escapeHtml(status)}</strong>
+            ${rejection}
+            ${notes}
+        </div>
+    `;
+}
+
+function renderBusinessApplication(application){
+    currentBusinessApplication = application || null;
+
+    const locked = application &&
+        String(application.status || "").toLowerCase() === "approved";
+
+    const value = (key) =>
+        escapeHtml(businessValue(application && application[key]));
+
+    const type = businessValue(application && application.business_type) || "business";
 
     showSettingsPanel(
-
         "Business Account",
-
         "fas fa-store",
-
         `
-        HAVKAR supports three account types:
+        ${businessApplicationStatusHtml(application)}
 
-        <br><br>
+        <form
+            id="businessApplicationForm"
+            class="business-application-form"
+            onsubmit="submitBusinessApplication(event)">
 
-        <strong>Personal Account</strong><br>
-        For individual users.
+            <div class="business-grid">
 
-        <br><br>
+                <div class="business-field">
+                    <label for="businessType">
+                        Account type <span class="business-required">*</span>
+                    </label>
+                    <select id="businessType" required ${locked ? "disabled" : ""}>
+                        <option value="business" ${type === "business" ? "selected" : ""}>Business</option>
+                        <option value="company" ${type === "company" ? "selected" : ""}>Company / Factory</option>
+                    </select>
+                </div>
 
-        <strong>Business Account</strong><br>
-        For shops, service providers and businesses.
+                <div class="business-field">
+                    <label for="businessName">
+                        Business name <span class="business-required">*</span>
+                    </label>
+                    <input id="businessName" type="text" maxlength="160"
+                        value="${value("business_name")}" required ${locked ? "disabled" : ""}>
+                </div>
 
-        <br><br>
+                <div class="business-field">
+                    <label for="businessLegalName">Legal name</label>
+                    <input id="businessLegalName" type="text" maxlength="180"
+                        value="${value("legal_name")}" ${locked ? "disabled" : ""}>
+                </div>
 
-        <strong>Company / Factory</strong><br>
-        For registered companies, factories and larger organizations.
+                <div class="business-field">
+                    <label for="businessVat">VAT / registration number</label>
+                    <input id="businessVat" type="text" maxlength="80"
+                        value="${value("vat_number")}" ${locked ? "disabled" : ""}>
+                </div>
 
-        <br><br>
+                <div class="business-field">
+                    <label for="businessCountry">
+                        Country <span class="business-required">*</span>
+                    </label>
+                    <input id="businessCountry" type="text" maxlength="100"
+                        value="${value("country")}" required ${locked ? "disabled" : ""}>
+                </div>
 
-        Business registration and account-type changes
-        will be connected to the real verification process.
+                <div class="business-field">
+                    <label for="businessCity">
+                        City <span class="business-required">*</span>
+                    </label>
+                    <input id="businessCity" type="text" maxlength="120"
+                        value="${value("city")}" required ${locked ? "disabled" : ""}>
+                </div>
+
+                <div class="business-field full">
+                    <label for="businessAddress">Business address</label>
+                    <input id="businessAddress" type="text" maxlength="240"
+                        value="${value("address")}" ${locked ? "disabled" : ""}>
+                </div>
+
+                <div class="business-field">
+                    <label for="businessPhone">Phone</label>
+                    <input id="businessPhone" type="tel" maxlength="60"
+                        value="${value("phone")}" ${locked ? "disabled" : ""}>
+                </div>
+
+                <div class="business-field">
+                    <label for="businessEmail">
+                        Business email <span class="business-required">*</span>
+                    </label>
+                    <input id="businessEmail" type="email" maxlength="180"
+                        value="${value("email") || escapeHtml(currentUser && currentUser.email ? currentUser.email : "")}" required ${locked ? "disabled" : ""}>
+                </div>
+
+                <div class="business-field full">
+                    <label for="businessWebsite">Website</label>
+                    <input id="businessWebsite" type="url" maxlength="300"
+                        placeholder="https://example.com"
+                        value="${value("website")}" ${locked ? "disabled" : ""}>
+                </div>
+
+                <div class="business-field full">
+                    <label for="businessDescription">Business description</label>
+                    <textarea id="businessDescription" maxlength="2000"
+                        ${locked ? "disabled" : ""}>${value("description")}</textarea>
+                </div>
+
+            </div>
+
+            ${locked ? `
+                <div class="business-help">
+                    This business application is approved. Approved application data is locked from self-service editing to protect verification integrity.
+                </div>
+            ` : `
+                <div class="business-form-actions">
+                    <button id="businessSubmitButton" class="panel-button" type="submit">
+                        <i class="fas fa-paper-plane"></i>
+                        ${application ? "Update & submit for review" : "Submit application"}
+                    </button>
+
+                    <button class="panel-button secondary" type="button" onclick="openBusinessAccount()">
+                        <i class="fas fa-rotate"></i>
+                        Refresh status
+                    </button>
+                </div>
+
+                <div class="business-help">
+                    Required fields are marked with *. HAVKAR stores this application in your authenticated account. Review fields and approval status are controlled separately from this form.
+                </div>
+            `}
+
+        </form>
         `,
+        []
+    );
+}
 
-        [
-            `
-            <button
-                type="button"
-                class="panel-button"
-                onclick="openVerification()">
+async function loadBusinessApplication(){
+    if(!currentUser){
+        showMessage("Please log in before creating a business account.", "error");
+        return;
+    }
 
-                <i class="fas fa-circle-check"></i>
-
-                Verification
-
-            </button>
-            `
-        ]
-
+    showSettingsPanel(
+        "Business Account",
+        "fas fa-store",
+        `<div class="business-loading"><i class="fas fa-spinner fa-spin"></i> Loading your business application...</div>`,
+        []
     );
 
+    const { data, error } = await supabase
+        .from("business_applications")
+        .select("id,created_at,user_id,business_type,business_name,legal_name,vat_number,country,city,address,phone,email,website,description,status,updated_at,documents,submitted_at,rejection_reason,reviewed_by,reviewed_at,review_notes")
+        .eq("user_id", currentUser.id)
+        .order("created_at", { ascending:false })
+        .limit(1);
+
+    if(error){
+        console.error("Business application load error:", error);
+        showSettingsPanel(
+            "Business Account",
+            "fas fa-triangle-exclamation",
+            `HAVKAR could not load your business application right now.<br><br><strong>${escapeHtml(error.message)}</strong>`,
+            [
+                `<button class="panel-button" type="button" onclick="openBusinessAccount()"><i class="fas fa-rotate"></i> Try again</button>`
+            ]
+        );
+        return;
+    }
+
+    renderBusinessApplication(Array.isArray(data) && data.length ? data[0] : null);
+}
+
+window.openBusinessAccount =
+async function(){
+    await loadBusinessApplication();
+};
+
+function readBusinessField(id){
+    const element = document.getElementById(id);
+    return element ? String(element.value || "").trim() : "";
+}
+
+function validBusinessWebsite(value){
+    if(!value) return true;
+
+    try{
+        const url = new URL(value);
+        return url.protocol === "http:" || url.protocol === "https:";
+    }
+    catch(error){
+        return false;
+    }
+}
+
+window.submitBusinessApplication =
+async function(event){
+    event.preventDefault();
+
+    if(businessApplicationBusy) return;
+
+    if(!currentUser){
+        showMessage("Your session has expired. Please log in again.", "error");
+        return;
+    }
+
+    if(currentBusinessApplication &&
+       String(currentBusinessApplication.status || "").toLowerCase() === "approved"){
+        showMessage("Approved business data is locked.", "error");
+        return;
+    }
+
+    const businessType = readBusinessField("businessType");
+    const businessName = readBusinessField("businessName");
+    const legalName = readBusinessField("businessLegalName");
+    const vatNumber = readBusinessField("businessVat");
+    const country = readBusinessField("businessCountry");
+    const city = readBusinessField("businessCity");
+    const address = readBusinessField("businessAddress");
+    const phone = readBusinessField("businessPhone");
+    const email = readBusinessField("businessEmail");
+    const website = readBusinessField("businessWebsite");
+    const description = readBusinessField("businessDescription");
+
+    if(!businessName || !country || !city || !email){
+        showMessage("Please complete all required business fields.", "error");
+        return;
+    }
+
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+        showMessage("Please enter a valid business email.", "error");
+        return;
+    }
+
+    if(!validBusinessWebsite(website)){
+        showMessage("Website must start with http:// or https://", "error");
+        return;
+    }
+
+    const button = document.getElementById("businessSubmitButton");
+    businessApplicationBusy = true;
+
+    if(button){
+        button.disabled = true;
+        button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Submitting...`;
+    }
+
+    const now = new Date().toISOString();
+
+    const payload = {
+        user_id: currentUser.id,
+        business_type: businessType,
+        business_name: businessName,
+        legal_name: legalName || null,
+        vat_number: vatNumber || null,
+        country,
+        city,
+        address: address || null,
+        phone: phone || null,
+        email,
+        website: website || null,
+        description: description || null,
+        status: "pending",
+        submitted_at: now,
+        updated_at: now
+    };
+
+    let result;
+
+    if(currentBusinessApplication && currentBusinessApplication.id){
+        result = await supabase
+            .from("business_applications")
+            .update(payload)
+            .eq("id", currentBusinessApplication.id)
+            .eq("user_id", currentUser.id)
+            .select("id,created_at,user_id,business_type,business_name,legal_name,vat_number,country,city,address,phone,email,website,description,status,updated_at,documents,submitted_at,rejection_reason,reviewed_by,reviewed_at,review_notes")
+            .single();
+    }
+    else{
+        result = await supabase
+            .from("business_applications")
+            .insert({
+                ...payload,
+                documents: {}
+            })
+            .select("id,created_at,user_id,business_type,business_name,legal_name,vat_number,country,city,address,phone,email,website,description,status,updated_at,documents,submitted_at,rejection_reason,reviewed_by,reviewed_at,review_notes")
+            .single();
+    }
+
+    businessApplicationBusy = false;
+
+    if(result.error){
+        console.error("Business application submit error:", result.error);
+
+        if(button){
+            button.disabled = false;
+            button.innerHTML = `<i class="fas fa-paper-plane"></i> Submit application`;
+        }
+
+        showMessage(result.error.message || "Business application could not be submitted.", "error");
+        return;
+    }
+
+    currentBusinessApplication = result.data;
+    showMessage("Business application submitted successfully.", "success");
+    renderBusinessApplication(result.data);
 };
 
 
