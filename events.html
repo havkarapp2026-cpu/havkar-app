@@ -3910,9 +3910,73 @@
         };
 
 
+        async function handleEventCheckoutReturn() {
+            const params = new URLSearchParams(window.location.search);
+            const payment = params.get("payment");
+            const requestedView = params.get("open");
+            const ticketId = params.get("ticket_id");
+
+            if (payment !== "success" && payment !== "cancelled") {
+                return;
+            }
+
+            if (payment === "cancelled") {
+                showToast("Payment was cancelled. No paid ticket was issued.", "error");
+                window.history.replaceState({}, document.title, window.location.pathname);
+                return;
+            }
+
+            if (!currentUser) {
+                showToast("Payment completed. Sign in to view your event ticket.", "success");
+                return;
+            }
+
+            if (requestedView === "my-event-tickets") {
+                openModal("ticketsModal");
+            }
+
+            await loadMyEventTickets();
+
+            const numericTicketId = Number(ticketId);
+
+            if (Number.isSafeInteger(numericTicketId) && numericTicketId > 0) {
+                for (let attempt = 0; attempt < 5; attempt += 1) {
+                    const { data: returnedTicket, error: returnedTicketError } = await supabase
+                        .from("event_tickets")
+                        .select("id,payment_status,ticket_status")
+                        .eq("id", numericTicketId)
+                        .eq("user_id", currentUser.id)
+                        .maybeSingle();
+
+                    if (returnedTicketError) {
+                        console.error("HAVKAR checkout return ticket:", returnedTicketError);
+                        break;
+                    }
+
+                    if (returnedTicket?.payment_status === "paid" && returnedTicket?.ticket_status === "valid") {
+                        await loadMyEventTickets();
+                        break;
+                    }
+
+                    if (attempt < 4) {
+                        await new Promise(resolve => setTimeout(resolve, 1200));
+                    }
+                }
+            }
+
+            showToast(
+                "Payment completed. Your event ticket is shown in My Event Tickets.",
+                "success"
+            );
+
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+
         async function initializeEventsPage() {
             await loadCurrentUser();
             await refreshEvents();
+            await handleEventCheckoutReturn();
 
             supabase.auth.onAuthStateChange(
                 async (_event, session) => {
