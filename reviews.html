@@ -889,9 +889,9 @@ r.liked_by_me?"fas":"far"}
 </i> Helpful (<span>${
 Number(r.helpful_count||0)}
 </span>)</button>
-<button class="meta-btn" type="button" onclick="toggleReply(${
+<button class="meta-btn" type="button" data-review-action="reply" data-review-id="${
 Number(r.id)}
-)">
+">
 <i class="fas fa-reply">
 </i> Reply</button>
 </div>
@@ -907,9 +907,9 @@ r.id}
 <input id="reply-input-${
 r.id}
 " class="reply-input" type="text" maxlength="300" placeholder="Write a reply...">
-<button class="reply-send" type="button" aria-label="Send reply" onclick="sendReply(${
+<button class="reply-send" type="button" aria-label="Send reply" data-review-action="send-reply" data-review-id="${
 Number(r.id)}
-)">
+">
 <i class="fas fa-paper-plane">
 </i>
 </button>
@@ -994,9 +994,25 @@ showToast(r.liked_by_me?"Removed from Helpful.":"Marked as Helpful.")}
 
 function toggleReply(id){
 const b=document.getElementById("reply-"+id);
-if(!b)return;
+if(!b){
+console.error("Reply box not found for review:",id);
+showToast("Could not open reply box.","error");
+return}
 b.classList.toggle("show");
 if(b.classList.contains("show"))setTimeout(()=>document.getElementById("reply-input-"+id)?.focus(),100)}
+
+document.getElementById("reviewsList").addEventListener("click",event=>{
+const button=event.target.closest("[data-review-action]");
+if(!button)return;
+const id=Number(button.dataset.reviewId);
+if(!Number.isFinite(id))return;
+if(button.dataset.reviewAction==="reply"){
+toggleReply(id);
+return}
+if(button.dataset.reviewAction==="send-reply"){
+sendReply(id);
+}
+});
 
 async function sendReply(id){
 const user=await requireUser();
