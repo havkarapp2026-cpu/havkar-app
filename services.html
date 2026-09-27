@@ -1478,6 +1478,7 @@ textarea.form-control {
 
     <button
         class="nav-item active"
+        id="navSearch"
         type="button"
         onclick="focusSearch()">
 
@@ -1491,6 +1492,7 @@ textarea.form-control {
 
     <button
         class="nav-item"
+        id="navSaved"
         type="button"
         onclick="showSavedServices()">
 
@@ -2174,6 +2176,8 @@ async function loadServices() {
 
 function renderServices() {
 
+    updateServicesBottomNav();
+
     const search =
         searchInput.value
             .toLowerCase()
@@ -2313,6 +2317,14 @@ function buildServiceCard(service) {
                 ${escapeHtml(priceText)}
             </div>
 
+            ${service.provider_id === currentUser?.id ? `
+            <button
+                class="book-btn owner-delete-btn"
+                type="button"
+                style="margin-right:10px;background:#fff;color:#d32f2f;border:1px solid #ef9a9a;box-shadow:none">
+                Delete
+            </button>` : ""}
+
             <button
                 class="book-btn"
                 type="button">
@@ -2330,8 +2342,20 @@ function buildServiceCard(service) {
             }
         );
 
+    const deleteButton =
+        card.querySelector(".owner-delete-btn");
+
+    if (deleteButton) {
+        deleteButton.addEventListener(
+            "click",
+            function() {
+                deleteOwnService(service.id, this);
+            }
+        );
+    }
+
     card
-        .querySelector(".book-btn")
+        .querySelectorAll(".book-btn:not(.owner-delete-btn)")[0]
         .addEventListener(
             "click",
             function() {
@@ -2732,10 +2756,14 @@ async function submitService(event) {
         return;
     }
 
-    services.unshift(data);
     closeModal("offerModal");
     event.currentTarget.reset();
     showingSavedOnly = false;
+
+    /* Reload from Supabase immediately so the newly published
+       service appears without a browser refresh. */
+    await loadServices();
+    await loadSavedBookmarks();
     renderServices();
 
     showToast("Your service has been published.");
@@ -2890,6 +2918,7 @@ function showSavedServices() {
     }
 
     showingSavedOnly = true;
+    updateServicesBottomNav();
     renderServices();
 
     if (savedServiceIds.size === 0) {
@@ -2897,6 +2926,76 @@ function showSavedServices() {
     } else {
         showToast("Showing your saved services.");
     }
+
+}
+
+
+/* =========================================================
+   SERVICES NAV STATE + OWNER DELETE
+========================================================= */
+
+function updateServicesBottomNav() {
+
+    const searchNav = document.getElementById("navSearch");
+    const savedNav = document.getElementById("navSaved");
+
+    if (searchNav) {
+        searchNav.classList.toggle("active", !showingSavedOnly);
+    }
+
+    if (savedNav) {
+        savedNav.classList.toggle("active", showingSavedOnly);
+    }
+
+}
+
+
+async function deleteOwnService(serviceId, button) {
+
+    const user = await requireUser();
+
+    if (!user) {
+        return;
+    }
+
+    const service = services.find(function(item) {
+        return String(item.id) === String(serviceId);
+    });
+
+    if (!service || service.provider_id !== user.id) {
+        showToast("You can only delete your own service.");
+        return;
+    }
+
+    const confirmed = window.confirm(
+        "Delete this service permanently?"
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    button.disabled = true;
+
+    const { error } = await db
+        .from("services")
+        .delete()
+        .eq("id", serviceId)
+        .eq("provider_id", user.id);
+
+    button.disabled = false;
+
+    if (error) {
+        console.error("Delete service error:", error);
+        showToast("Could not delete service.");
+        return;
+    }
+
+    savedServiceIds.delete(String(serviceId));
+    await loadServices();
+    await loadSavedBookmarks();
+    renderServices();
+    showToast("Service deleted.");
 
 }
 
@@ -3095,6 +3194,7 @@ function goMessages() {
 function focusSearch() {
 
     showingSavedOnly = false;
+    updateServicesBottomNav();
     renderServices();
 
     window.scrollTo({
