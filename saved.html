@@ -862,12 +862,62 @@ function safeURL(value){
 
     if(
         url.startsWith("https://") ||
-        url.startsWith("http://")
+        url.startsWith("http://") ||
+        /^data:image\/(?:png|jpe?g|webp|gif|avif);base64,/i.test(url)
     ){
         return url;
     }
 
     return "";
+}
+
+function normalizePhotos(value){
+
+    if(!value){
+        return [];
+    }
+
+    if(Array.isArray(value)){
+
+        return value
+            .map(item => safeURL(item))
+            .filter(Boolean);
+
+    }
+
+    if(typeof value === "string"){
+
+        const raw =
+            value.trim();
+
+        if(!raw){
+            return [];
+        }
+
+        try{
+
+            const parsed =
+                JSON.parse(raw);
+
+            if(Array.isArray(parsed)){
+
+                return parsed
+                    .map(item => safeURL(item))
+                    .filter(Boolean);
+
+            }
+
+        }catch(_){}
+
+        const single =
+            safeURL(raw);
+
+        return single
+            ? [single]
+            : [];
+    }
+
+    return [];
 }
 
 function showToast(
@@ -1184,7 +1234,7 @@ async function loadAdDetails(){
         await db
             .from("ads")
             .select(
-                "id,title,category,price,location,description,user_id,created_at,status"
+                "id,title,category,price,location,description,user_id,created_at,status,photos"
             )
             .in(
                 "id",
@@ -1597,6 +1647,16 @@ function imageFor(item){
 
     const detail =
         detailFor(item);
+
+    if(type === "ad"){
+
+        const photos =
+            normalizePhotos(
+                detail?.photos
+            );
+
+        return photos[0] || "";
+    }
 
     if(type === "job"){
         return safeURL(
