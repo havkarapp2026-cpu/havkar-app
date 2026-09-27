@@ -760,6 +760,124 @@
             .event-footer { gap:8px; }
         }
 
+        /* =========================================================
+           MY EVENT TICKETS — HAVKAR PRODUCTION
+        ========================================================= */
+        .ticket-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .ticket-card {
+            border: 1px solid #dfe8d9;
+            border-radius: 16px;
+            overflow: hidden;
+            background: white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .ticket-card-top {
+            padding: 14px 15px;
+            background: linear-gradient(135deg,#f4faef,#e8f5e9);
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .ticket-card-title {
+            font-size: 1rem;
+            line-height: 1.35;
+            font-weight: 800;
+            color: #252525;
+        }
+
+        .ticket-payment-state {
+            margin-top: 4px;
+            font-size: .75rem;
+            color: #666;
+        }
+
+        .ticket-status {
+            flex: 0 0 auto;
+            padding: 6px 9px;
+            border-radius: 999px;
+            font-size: .68rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .ticket-status.valid {
+            background: #dcedc8;
+            color: #33691e;
+        }
+
+        .ticket-status.pending {
+            background: #fff3cd;
+            color: #7a5b00;
+        }
+
+        .ticket-status.other {
+            background: #eeeeee;
+            color: #555;
+        }
+
+        .ticket-card-body {
+            padding: 14px 15px;
+        }
+
+        .ticket-info-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin: 9px 0;
+            font-size: .83rem;
+            color: #555;
+        }
+
+        .ticket-info-row i {
+            width: 18px;
+            margin-top: 2px;
+            text-align: center;
+            color: var(--primary-light);
+        }
+
+        .ticket-reference {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px dashed #ddd;
+            color: #888;
+            font-size: .72rem;
+            word-break: break-all;
+        }
+
+        .ticket-loading,
+        .ticket-empty {
+            text-align: center;
+            padding: 42px 18px;
+            color: #777;
+        }
+
+        .ticket-empty i {
+            display: block;
+            margin-bottom: 12px;
+            color: var(--primary-light);
+            font-size: 2rem;
+        }
+
+        .ticket-empty h3 {
+            margin-bottom: 7px;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .ticket-empty p {
+            color: #888;
+            font-size: .84rem;
+            line-height: 1.55;
+        }
+
     </style>
     <!-- HAVKAR Events production source spacing -->
 
@@ -1830,6 +1948,28 @@
 
         </div>
 
+    </div>
+
+
+    <!-- MY EVENT TICKETS — real Supabase event_tickets data -->
+    <div class="modal-backdrop" id="ticketsModal" onclick="backdropClose(event,'ticketsModal')">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">My Event Tickets</div>
+                <button class="modal-close" type="button" onclick="closeModal('ticketsModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div id="myEventTickets">
+                    <div class="ticket-loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Loading your tickets...
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
 
@@ -3245,9 +3385,291 @@
         };
 
 
-        window.openTickets = function() {
-            window.location.href =
-                "tickets.html";
+        function ticketStatusClass(status) {
+            const value =
+                String(status || "")
+                    .trim()
+                    .toLowerCase();
+
+            if (value === "valid") {
+                return "valid";
+            }
+
+            if (value === "pending") {
+                return "pending";
+            }
+
+            return "other";
+        }
+
+
+        function formatTicketMoney(value, currency) {
+            const amount = Number(value);
+            const code =
+                String(currency || "EUR")
+                    .trim()
+                    .toUpperCase() || "EUR";
+
+            if (!Number.isFinite(amount)) {
+                return `${value ?? ""} ${code}`.trim();
+            }
+
+            try {
+                return new Intl.NumberFormat(
+                    undefined,
+                    {
+                        style: "currency",
+                        currency: code
+                    }
+                ).format(amount);
+            } catch {
+                return `${amount.toFixed(2)} ${code}`;
+            }
+        }
+
+
+        function formatTicketPaidAt(value) {
+            if (!value) {
+                return "";
+            }
+
+            const date = new Date(value);
+
+            if (Number.isNaN(date.getTime())) {
+                return String(value);
+            }
+
+            return new Intl.DateTimeFormat(
+                undefined,
+                {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit"
+                }
+            ).format(date);
+        }
+
+
+        async function loadMyEventTickets() {
+            const container =
+                document.getElementById("myEventTickets");
+
+            if (!container) {
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="ticket-loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    Loading your tickets...
+                </div>
+            `;
+
+            if (!currentUser) {
+                container.innerHTML = `
+                    <div class="ticket-empty">
+                        <i class="fas fa-lock"></i>
+                        <h3>Sign in required</h3>
+                        <p>Please sign in to view your event tickets.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const {
+                data: tickets,
+                error: ticketsError
+            } = await supabase
+                .from("event_tickets")
+                .select(
+                    "id,created_at,event_id,quantity,unit_price,currency,total_amount,payment_status,ticket_status,payment_provider,payment_reference,paid_at"
+                )
+                .eq("user_id", currentUser.id)
+                .order("created_at", {
+                    ascending: false
+                });
+
+            if (ticketsError) {
+                console.error(
+                    "HAVKAR My Event Tickets:",
+                    ticketsError
+                );
+
+                container.innerHTML = `
+                    <div class="ticket-empty">
+                        <i class="fas fa-circle-exclamation"></i>
+                        <h3>Could not load tickets</h3>
+                        <p>Please try again.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            if (!tickets?.length) {
+                container.innerHTML = `
+                    <div class="ticket-empty">
+                        <i class="fas fa-ticket"></i>
+                        <h3>No event tickets yet</h3>
+                        <p>Your HAVKAR event tickets will appear here after they are issued.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const eventIds = [
+                ...new Set(
+                    tickets
+                        .map(ticket => ticket.event_id)
+                        .filter(Boolean)
+                )
+            ];
+
+            const eventMap = new Map();
+
+            if (eventIds.length) {
+                const {
+                    data: ticketEvents,
+                    error: eventsError
+                } = await supabase
+                    .from("events")
+                    .select(
+                        "id,title,event_date,event_time,location,organizer"
+                    )
+                    .in("id", eventIds);
+
+                if (eventsError) {
+                    console.error(
+                        "HAVKAR My Ticket Events:",
+                        eventsError
+                    );
+                } else {
+                    (ticketEvents || [])
+                        .forEach(event => {
+                            eventMap.set(
+                                String(event.id),
+                                event
+                            );
+                        });
+                }
+            }
+
+            container.innerHTML = `
+                <div class="ticket-list">
+                    ${tickets.map(ticket => {
+                        const event =
+                            eventMap.get(
+                                String(ticket.event_id)
+                            ) || {};
+
+                        const ticketStatus =
+                            ticket.ticket_status ||
+                            "pending";
+
+                        const paymentStatus =
+                            ticket.payment_status ||
+                            "pending";
+
+                        const eventTime =
+                            event.event_time
+                                ? String(event.event_time).slice(0, 5)
+                                : "";
+
+                        const eventDateTime =
+                            event.event_date
+                                ? formatDateTime(
+                                    event.event_date,
+                                    eventTime
+                                )
+                                : "Event date unavailable";
+
+                        const paidAt =
+                            formatTicketPaidAt(
+                                ticket.paid_at
+                            );
+
+                        return `
+                            <article class="ticket-card">
+                                <div class="ticket-card-top">
+                                    <div>
+                                        <div class="ticket-card-title">
+                                            ${escapeHtml(
+                                                event.title ||
+                                                `Event #${ticket.event_id}`
+                                            )}
+                                        </div>
+
+                                        <div class="ticket-payment-state">
+                                            Payment:
+                                            ${escapeHtml(paymentStatus)}
+                                        </div>
+                                    </div>
+
+                                    <span class="ticket-status ${ticketStatusClass(ticketStatus)}">
+                                        ${escapeHtml(ticketStatus)}
+                                    </span>
+                                </div>
+
+                                <div class="ticket-card-body">
+                                    <div class="ticket-info-row">
+                                        <i class="far fa-calendar"></i>
+                                        <span>${escapeHtml(eventDateTime)}</span>
+                                    </div>
+
+                                    <div class="ticket-info-row">
+                                        <i class="fas fa-location-dot"></i>
+                                        <span>${escapeHtml(
+                                            event.location ||
+                                            "Location unavailable"
+                                        )}</span>
+                                    </div>
+
+                                    <div class="ticket-info-row">
+                                        <i class="fas fa-ticket"></i>
+                                        <span>
+                                            Quantity:
+                                            ${Number(ticket.quantity || 1)}
+                                        </span>
+                                    </div>
+
+                                    <div class="ticket-info-row">
+                                        <i class="fas fa-coins"></i>
+                                        <span>
+                                            ${escapeHtml(
+                                                formatTicketMoney(
+                                                    ticket.total_amount,
+                                                    ticket.currency
+                                                )
+                                            )}
+                                        </span>
+                                    </div>
+
+                                    ${paidAt ? `
+                                        <div class="ticket-info-row">
+                                            <i class="fas fa-circle-check"></i>
+                                            <span>
+                                                Paid: ${escapeHtml(paidAt)}
+                                            </span>
+                                        </div>
+                                    ` : ""}
+
+                                    <div class="ticket-reference">
+                                        Ticket ID:
+                                        ${escapeHtml(ticket.id)}
+                                    </div>
+                                </div>
+                            </article>
+                        `;
+                    }).join("")}
+                </div>
+            `;
+        }
+
+
+        window.openTickets = async function() {
+            openModal("ticketsModal");
+            await loadMyEventTickets();
         };
 
 
