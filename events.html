@@ -3053,36 +3053,195 @@
                 );
 
             if (!event) {
+                showToast(
+                    "Event could not be found.",
+                    "error"
+                );
                 return;
             }
 
 
-            const isFree =
-                String(event.price || "Free")
-                    .trim()
-                    .toLowerCase() === "free";
+            if (!currentUser) {
+                showToast(
+                    "Please sign in before getting a ticket.",
+                    "error"
+                );
+                return;
+            }
 
-            if (isFree) {
+
+            const eventId = Number(id);
+
+            if (
+                !Number.isSafeInteger(eventId) ||
+                eventId <= 0
+            ) {
+                showToast(
+                    "Invalid event.",
+                    "error"
+                );
+                return;
+            }
+
+
+            const button =
+                document.querySelector(
+                    `button[onclick="getTicket('${CSS.escape(String(id))}')"]`
+                );
+
+            const originalButtonHtml =
+                button ? button.innerHTML : "";
+
+            if (button?.disabled) {
+                return;
+            }
+
+
+            if (button) {
+                button.disabled = true;
+                button.innerHTML =
+                    '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            }
+
+
+            try {
+                const {
+                    data: sessionData,
+                    error: sessionError
+                } = await supabase.auth.getSession();
+
+                const accessToken =
+                    sessionData?.session?.access_token || "";
+
                 if (
-                    interestedIds.has(
-                        String(id)
-                    )
+                    sessionError ||
+                    !accessToken
                 ) {
+                    currentUser = null;
+
                     showToast(
-                        "You already joined this event.",
+                        "Your session has expired. Please sign in again.",
+                        "error"
+                    );
+                    return;
+                }
+
+
+                const response =
+                    await fetch(
+                        "/api/create-event-checkout",
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${accessToken}`
+                            },
+                            body: JSON.stringify({
+                                event_id: eventId,
+                                quantity: 1
+                            })
+                        }
+                    );
+
+                let result = null;
+
+                try {
+                    result = await response.json();
+                } catch {
+                    result = null;
+                }
+
+
+                if (
+                    !response.ok ||
+                    !result?.ok
+                ) {
+                    const message =
+                        typeof result?.error === "string" &&
+                        result.error.trim()
+                            ? result.error.trim()
+                            : "Unable to create ticket checkout.";
+
+                    showToast(
+                        message,
+                        "error"
+                    );
+                    return;
+                }
+
+
+                if (result.free === true) {
+                    closeModal("detailModal");
+
+                    showToast(
+                        "Your HAVKAR ticket has been issued successfully.",
                         "success"
                     );
                     return;
                 }
 
 
-                await window.toggleInterested(id);
-                return;
+                if (
+                    typeof result.checkout_url !== "string" ||
+                    !result.checkout_url.trim()
+                ) {
+                    showToast(
+                        "Stripe Checkout could not be opened.",
+                        "error"
+                    );
+                    return;
+                }
+
+
+                let checkoutUrl;
+
+                try {
+                    checkoutUrl =
+                        new URL(result.checkout_url);
+                } catch {
+                    showToast(
+                        "Invalid Stripe Checkout URL.",
+                        "error"
+                    );
+                    return;
+                }
+
+
+                if (
+                    checkoutUrl.protocol !== "https:" ||
+                    !(
+                        checkoutUrl.hostname === "checkout.stripe.com" ||
+                        checkoutUrl.hostname.endsWith(".stripe.com")
+                    )
+                ) {
+                    showToast(
+                        "Invalid Stripe Checkout destination.",
+                        "error"
+                    );
+                    return;
+                }
+
+
+                window.location.assign(
+                    checkoutUrl.href
+                );
+            } catch (error) {
+                console.error(
+                    "HAVKAR Event Ticket Checkout:",
+                    error
+                );
+
+                showToast(
+                    "Unable to start ticket checkout.",
+                    "error"
+                );
+            } finally {
+                if (button) {
+                    button.disabled = false;
+                    button.innerHTML =
+                        originalButtonHtml;
+                }
             }
-
-
-            window.location.href =
-                `tickets.html?event_id=${encodeURIComponent(id)}`;
         };
 
 
