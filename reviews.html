@@ -1006,9 +1006,21 @@ const button=event.target.closest("[data-review-action]");
 if(!button)return;
 const id=Number(button.dataset.reviewId);
 if(!Number.isFinite(id))return;
+
 if(button.dataset.reviewAction==="reply"){
-toggleReply(id);
+const card=button.closest(".review-card");
+const box=card?.querySelector(".reply-box");
+if(!box){
+console.error("Reply box not found inside review card:",id);
+showToast("Could not open reply box.","error");
 return}
+box.classList.toggle("show");
+if(box.classList.contains("show")){
+setTimeout(()=>box.querySelector(".reply-input")?.focus(),100);
+}
+return;
+}
+
 if(button.dataset.reviewAction==="send-reply"){
 sendReply(id);
 }
@@ -1017,7 +1029,10 @@ sendReply(id);
 async function sendReply(id){
 const user=await requireUser();
 if(!user)return;
-const input=document.getElementById("reply-input-"+id);
+const sendButton=document.querySelector(`[data-review-action="send-reply"][data-review-id="${id}"]`);
+const card=sendButton?.closest(".review-card");
+const box=card?.querySelector(".reply-box");
+const input=box?.querySelector(".reply-input");
 const text=input?.value.trim();
 if(!text){
 showToast("Please write a reply first.","error");
@@ -1032,7 +1047,7 @@ console.error(error);
 showToast("Could not publish reply.","error");
 return}
 input.value="";
-document.getElementById("reply-"+id)?.classList.remove("show");
+box?.classList.remove("show");
 await loadReviews();
 showToast("Reply published successfully.")}
 
