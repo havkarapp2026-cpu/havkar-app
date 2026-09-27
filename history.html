@@ -301,16 +301,13 @@ body{
             <option value="all">All transactions</option>
             <option value="sent">Sent</option>
             <option value="received">Received</option>
-            <option value="exchange">Exchange</option>
+            <option value="all-transfer">Transfers</option>
         </select>
 
         <select class="filter" id="currencyFilter" onchange="loadHistory()">
             <option value="all">All currencies</option>
             <option value="EUR">EUR €</option>
-            <option value="USDT">USDT</option>
-            <option value="TRX">TRX</option>
-            <option value="BTC">BTC</option>
-            <option value="ETH">ETH</option>
+
         </select>
     </div>
 
@@ -320,7 +317,7 @@ body{
 
 <nav class="bottom-nav">
 
-    <a class="nav-item" href="index.html">
+    <a class="nav-item" href="wallet.html">
         <i class="fa-solid fa-wallet"></i>
         <span>Wallet</span>
     </a>
@@ -347,7 +344,15 @@ body{
 
 </nav>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
+
+const SUPABASE_URL="https://gispovnciifgikvgpzck.supabase.co";
+const SUPABASE_ANON_KEY="sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq";
+const db=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let currentUser=null;
+let historyCache=[];
 
 function goBack(){
     if(document.referrer){
@@ -357,86 +362,31 @@ function goBack(){
     }
 }
 
-function getTransactions(){
+async function getTransactions(){
+    if(!currentUser)return [];
 
-    const possibleKeys=[
-        "havkar_transactions",
-        "transactions",
-        "transactionHistory",
-        "havkar_history"
-    ];
+    const {data,error}=await db
+        .from("wallet_transfers")
+        .select("*")
+        .or("sender_id.eq."+currentUser.id+",receiver_id.eq."+currentUser.id)
+        .order("created_at",{ascending:false})
+        .limit(200);
 
-    for(const key of possibleKeys){
-
-        try{
-
-            const data=localStorage.getItem(key);
-
-            if(data){
-
-                const parsed=JSON.parse(data);
-
-                if(Array.isArray(parsed)){
-                    return parsed;
-                }
-
-            }
-
-        }catch(error){
-            console.warn("History read error:",error);
-        }
-
-    }
-
-    return [];
+    if(error)throw error;
+    return data||[];
 }
 
 function getType(transaction){
-
-    const type=String(
-        transaction.type ||
-        transaction.transactionType ||
-        transaction.action ||
-        ""
-    ).toLowerCase();
-
-    if(type.includes("receive") || type.includes("received")){
-        return "received";
-    }
-
-    if(type.includes("exchange") || type.includes("swap")){
-        return "exchange";
-    }
-
-    return "sent";
+    return transaction.sender_id===currentUser.id ? "sent" : "received";
 }
 
 function getCurrency(transaction){
-
-    return String(
-        transaction.currency ||
-        transaction.symbol ||
-        transaction.asset ||
-        transaction.coin ||
-        "EUR"
-    ).toUpperCase();
-
+    return String(transaction.currency||"EUR").toUpperCase();
 }
 
 function getAmount(transaction){
-
-    const value=
-        transaction.amount ??
-        transaction.value ??
-        transaction.quantity ??
-        0;
-
-    const number=Number(value);
-
-    if(Number.isNaN(number)){
-        return "0.00";
-    }
-
+    const number=Number(transaction.amount||0);
+    if(!Number.isFinite(number))return "0.00";
     return number.toLocaleString(undefined,{
         minimumFractionDigits:2,
         maximumFractionDigits:8
@@ -444,197 +394,146 @@ function getAmount(transaction){
 }
 
 function getDate(transaction){
+    if(!transaction.created_at)return "Date unavailable";
+    const date=new Date(transaction.created_at);
+    if(Number.isNaN(date.getTime()))return "Date unavailable";
+    return date.toLocaleString();
+}
 
-    const raw=
-        transaction.date ||
-        transaction.createdAt ||
-        transaction.timestamp ||
-        transaction.time;
-
-    if(!raw){
-        return "Date unavailable";
-    }
-
-    try{
-
-        const date=new Date(raw);
-
-        if(Number.isNaN(date.getTime())){
-            return String(raw);
-        }
-
-        return date.toLocaleString();
-
-    }catch(error){
-
-        return String(raw);
-
-    }
-
+function shortId(value){
+    const id=String(value||"");
+    if(id.length<=14)return id;
+    return id.slice(0,8)+"…"+id.slice(-4);
 }
 
 function getDescription(transaction){
+    if(transaction.note)return transaction.note;
+    if(getType(transaction)==="sent"){
+        return transaction.receiver_id
+            ? "To "+shortId(transaction.receiver_id)
+            : "Money transfer";
+    }
+    return transaction.sender_id
+        ? "From "+shortId(transaction.sender_id)
+        : "Money transfer";
+}
 
-    return (
-        transaction.note ||
-        transaction.description ||
-        transaction.memo ||
-        transaction.recipient ||
-        transaction.receiver ||
-        "HAVKAR transaction"
-    );
-
+function escapeHtml(value){
+    const div=document.createElement("div");
+    div.textContent=String(value??"");
+    return div.innerHTML;
 }
 
 function createTransaction(transaction){
-
     const type=getType(transaction);
     const currency=getCurrency(transaction);
     const amount=getAmount(transaction);
     const date=getDate(transaction);
     const description=getDescription(transaction);
-
-    let icon="fa-right-left";
-
-    if(type==="sent"){
-        icon="fa-arrow-up";
-    }
-
-    if(type==="received"){
-        icon="fa-arrow-down";
-    }
-
-    if(type==="exchange"){
-        icon="fa-repeat";
-    }
+    const icon=type==="sent"?"fa-arrow-up":"fa-arrow-down";
+    const sign=type==="received"?"+":"-";
 
     const item=document.createElement("div");
-
     item.className="transaction";
 
     item.innerHTML=`
-
         <div class="icon">
             <i class="fa-solid ${icon}"></i>
         </div>
-
         <div class="info">
-            <strong>
-                ${type.charAt(0).toUpperCase()+type.slice(1)}
-                ${currency}
-            </strong>
-
+            <strong>${type==="sent"?"Sent":"Received"} ${escapeHtml(currency)}</strong>
             <span>${escapeHtml(description)}</span>
-
             <span>${escapeHtml(date)}</span>
         </div>
-
         <div class="amount ${type}">
-            ${type==="received" ? "+" : "-"}${amount} ${currency}
+            ${sign}${escapeHtml(amount)} ${escapeHtml(currency)}
             <small>${type.toUpperCase()}</small>
         </div>
-
     `;
-
     return item;
 }
 
-function escapeHtml(value){
-
-    const div=document.createElement("div");
-    div.textContent=String(value);
-    return div.innerHTML;
-
-}
-
-function loadHistory(){
-
+function renderHistory(){
     const list=document.getElementById("historyList");
-
-    list.innerHTML="";
-
     const typeFilter=document.getElementById("typeFilter").value;
     const currencyFilter=document.getElementById("currencyFilter").value;
 
-    let transactions=getTransactions();
-
-    transactions=transactions.filter(transaction=>{
-
+    let transactions=[...historyCache].filter(transaction=>{
         const type=getType(transaction);
         const currency=getCurrency(transaction);
-
-        const typeOK=
-            typeFilter==="all" ||
-            type===typeFilter;
-
-        const currencyOK=
-            currencyFilter==="all" ||
-            currency===currencyFilter;
-
-        return typeOK && currencyOK;
-
+        const typeOK=typeFilter==="all"||typeFilter==="all-transfer"||type===typeFilter;
+        const currencyOK=currencyFilter==="all"||currency===currencyFilter;
+        return typeOK&&currencyOK;
     });
 
     document.getElementById("transactionCount").textContent=
-        transactions.length+
-        (transactions.length===1
-        ? " transaction"
-        : " transactions");
+        transactions.length+(transactions.length===1?" transaction":" transactions");
 
-    if(transactions.length===0){
+    list.innerHTML="";
 
+    if(!transactions.length){
         list.innerHTML=`
-
             <div class="empty">
-
                 <i class="fa-solid fa-clock-rotate-left"></i>
-
                 <h3>No transactions yet</h3>
-
-                <p>
-                    Your completed payments, transfers,
-                    exchanges and other wallet activity
-                    will appear here.
-                </p>
-
-            </div>
-
-        `;
-
+                <p>Your completed HAVKAR wallet transfers will appear here.</p>
+            </div>`;
         return;
     }
 
-    transactions.sort((a,b)=>{
-
-        const da=new Date(
-            a.date ||
-            a.createdAt ||
-            a.timestamp ||
-            a.time ||
-            0
-        );
-
-        const db=new Date(
-            b.date ||
-            b.createdAt ||
-            b.timestamp ||
-            b.time ||
-            0
-        );
-
-        return db-da;
-
-    });
-
     transactions.forEach(transaction=>{
-        list.appendChild(
-            createTransaction(transaction)
-        );
+        list.appendChild(createTransaction(transaction));
     });
-
 }
 
-loadHistory();
+async function loadHistory(){
+    const list=document.getElementById("historyList");
+
+    list.innerHTML=`
+        <div class="empty">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <h3>Loading transactions...</h3>
+        </div>`;
+
+    try{
+        const {data,error}=await db.auth.getUser();
+        if(error)throw error;
+
+        currentUser=data.user||null;
+
+        if(!currentUser){
+            historyCache=[];
+            document.getElementById("transactionCount").textContent=
+                "Sign in to view your transaction history";
+            list.innerHTML=`
+                <div class="empty">
+                    <i class="fa-solid fa-user-lock"></i>
+                    <h3>Please sign in</h3>
+                    <p>Sign in to view your HAVKAR wallet transactions.</p>
+                </div>`;
+            return;
+        }
+
+        historyCache=await getTransactions();
+        renderHistory();
+
+    }catch(error){
+        console.error("History load error:",error);
+        historyCache=[];
+        document.getElementById("transactionCount").textContent=
+            "Unable to load transaction history";
+        list.innerHTML=`
+            <div class="empty">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <h3>Could not load history</h3>
+                <p>${escapeHtml(error.message||"Please try again.")}</p>
+            </div>`;
+    }
+}
+
+document.getElementById("typeFilter").addEventListener("change",renderHistory);
+document.getElementById("currencyFilter").addEventListener("change",renderHistory);
+document.addEventListener("DOMContentLoaded",loadHistory);
 
 </script>
 
