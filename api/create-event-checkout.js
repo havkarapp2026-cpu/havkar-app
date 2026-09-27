@@ -35,15 +35,6 @@ function normalizePrice(value) {
     return null;
   }
 
-  /*
-   * HAVKAR currently stores events.price as TEXT.
-   * Accept common European decimal notation such as:
-   * 10
-   * 10.50
-   * 10,50
-   *
-   * Do not silently accept arbitrary text.
-   */
   if (/^\d+,\d{1,2}$/.test(text)) {
     text = text.replace(",", ".");
   }
@@ -146,13 +137,6 @@ async function authenticateUser(req) {
 }
 
 async function countReservedTickets(eventId) {
-  /*
-   * Capacity is based on tickets that are already valid/paid.
-   * Pending Checkout Sessions are not counted as sold tickets.
-   *
-   * A database transaction/RPC can later make reservation
-   * locking even stronger under very high concurrency.
-   */
   const {
     data,
     error,
@@ -240,11 +224,6 @@ export default async function handler(req, res) {
       );
     }
 
-    /*
-     * IMPORTANT:
-     * The browser never sends the trusted price.
-     * Price is always read from HAVKAR's database.
-     */
     const {
       data: event,
       error: eventError,
@@ -347,12 +326,6 @@ export default async function handler(req, res) {
 
     const origin = getOrigin(req);
 
-    /*
-     * FREE EVENT
-     *
-     * No fake Stripe payment is created.
-     * A real valid HAVKAR ticket is issued directly.
-     */
     if (unitPrice === 0) {
       const {
         data: freeTicket,
@@ -386,13 +359,6 @@ export default async function handler(req, res) {
       });
     }
 
-    /*
-     * PAID EVENT
-     *
-     * First create a pending HAVKAR ticket/order.
-     * The Stripe webhook is the only component that
-     * changes this ticket to paid + valid.
-     */
     const {
       data: pendingTicket,
       error: ticketError,
@@ -484,7 +450,7 @@ export default async function handler(req, res) {
           success_url:
             `${origin}/events.html?payment=success&ticket_id=${encodeURIComponent(
               pendingTicket.id
-            )}&session_id={CHECKOUT_SESSION_ID}`,
+            )}&open=my-event-tickets&session_id={CHECKOUT_SESSION_ID}`,
 
           cancel_url:
             `${origin}/events.html?payment=cancelled&ticket_id=${encodeURIComponent(
@@ -492,10 +458,6 @@ export default async function handler(req, res) {
             )}`,
         });
     } catch (stripeError) {
-      /*
-       * If Stripe cannot create the Checkout Session,
-       * do not leave an unusable pending order behind.
-       */
       const {
         error: cleanupError,
       } = await supabaseAdmin
@@ -516,12 +478,6 @@ export default async function handler(req, res) {
       throw stripeError;
     }
 
-    /*
-     * Store the Stripe Checkout Session ID while the
-     * ticket is still pending. The webhook later
-     * replaces/confirms the payment reference and
-     * activates the ticket after verified payment.
-     */
     const {
       error: referenceError,
     } = await supabaseAdmin
@@ -563,4 +519,4 @@ export default async function handler(req, res) {
       "Unable to create checkout"
     );
   }
-    }
+}
