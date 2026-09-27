@@ -1,0 +1,3317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#7cb342">
+<meta name="description" content="HAVKAR Saved - private saved items and collections">
+<title>HAVKAR - Saved</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+    --green:#7cb342;
+    --green-dark:#558b2f;
+    --green-soft:#eef7e8;
+    --bg:#f5f6f5;
+    --card:#fff;
+    --text:#252525;
+    --muted:#777;
+    --border:#e4e7e2;
+    --danger:#d84343;
+    --shadow:0 5px 20px rgba(0,0,0,.07);
+    --nav-height:72px;
+}
+html{scroll-behavior:smooth}
+body{
+    min-height:100vh;
+    padding-bottom:calc(var(--nav-height) + env(safe-area-inset-bottom));
+    background:var(--bg);
+    color:var(--text);
+    font-family:Arial,Helvetica,sans-serif;
+}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+a{text-decoration:none;color:inherit}
+.hidden{display:none!important}
+
+.app-header{
+    position:sticky;
+    top:0;
+    z-index:40;
+    background:rgba(255,255,255,.96);
+    backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--border);
+}
+.header-inner{
+    max-width:980px;
+    height:64px;
+    margin:auto;
+    padding:0 16px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+}
+.round-btn{
+    width:42px;
+    height:42px;
+    border:0;
+    border-radius:50%;
+    background:#f1f3f0;
+    color:#333;
+    display:grid;
+    place-items:center;
+    font-size:18px;
+}
+.header-copy{flex:1;min-width:0}
+.header-copy h1{font-size:21px;line-height:1.1}
+.header-copy p{
+    margin-top:3px;
+    color:var(--muted);
+    font-size:12px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+main{max-width:980px;margin:auto;padding:16px}
+
+.hero{
+    margin-bottom:16px;
+    padding:20px;
+    border-radius:22px;
+    color:#fff;
+    background:linear-gradient(135deg,#7cb342,#5c9130);
+    box-shadow:var(--shadow);
+}
+.hero-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+}
+.hero h2{font-size:22px;margin-bottom:7px}
+.hero p{font-size:14px;line-height:1.5;opacity:.94}
+.saved-total{
+    flex:0 0 66px;
+    width:66px;
+    height:66px;
+    border-radius:19px;
+    background:rgba(255,255,255,.18);
+    display:grid;
+    place-items:center;
+    text-align:center;
+}
+.saved-total strong{display:block;font-size:23px}
+.saved-total span{font-size:9px;letter-spacing:.4px}
+
+.toolbar{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:9px;
+    margin-bottom:13px;
+}
+.search-box{
+    height:48px;
+    padding:0 13px;
+    border:1px solid var(--border);
+    border-radius:14px;
+    background:var(--card);
+    display:flex;
+    align-items:center;
+    gap:9px;
+}
+.search-box i{color:#777}
+.search-box input{
+    width:100%;
+    border:0;
+    outline:0;
+    background:transparent;
+    color:var(--text);
+}
+.sort-btn{
+    width:48px;
+    height:48px;
+    border:1px solid var(--border);
+    border-radius:14px;
+    background:var(--card);
+    color:#444;
+}
+
+.section-head{
+    margin:18px 0 10px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+}
+.section-head h3{font-size:16px}
+.text-btn{
+    border:0;
+    background:transparent;
+    color:var(--green-dark);
+    font-weight:700;
+}
+
+.horizontal-scroll{
+    display:flex;
+    gap:8px;
+    overflow-x:auto;
+    padding:2px 1px 8px;
+    scrollbar-width:none;
+}
+.horizontal-scroll::-webkit-scrollbar{display:none}
+.chip{
+    flex:0 0 auto;
+    padding:10px 14px;
+    border:1px solid var(--border);
+    border-radius:999px;
+    background:var(--card);
+    color:#555;
+    white-space:nowrap;
+}
+.chip.active{
+    border-color:var(--green);
+    background:var(--green);
+    color:#fff;
+}
+.type-chip{
+    flex:0 0 auto;
+    padding:9px 13px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    background:var(--card);
+    color:#555;
+    white-space:nowrap;
+}
+.type-chip.active{
+    border-color:#252525;
+    background:#252525;
+    color:#fff;
+}
+
+.saved-grid{
+    display:grid;
+    gap:12px;
+    margin-top:4px;
+}
+.saved-card{
+    padding:14px;
+    border:1px solid var(--border);
+    border-radius:18px;
+    background:var(--card);
+    box-shadow:0 2px 11px rgba(0,0,0,.035);
+}
+.card-main{display:flex;gap:13px}
+.thumb{
+    width:94px;
+    height:94px;
+    flex:0 0 94px;
+    overflow:hidden;
+    border-radius:14px;
+    background:#edf1eb;
+    color:#73826d;
+    display:grid;
+    place-items:center;
+    font-size:27px;
+}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.card-body{flex:1;min-width:0}
+.type-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:5px 8px;
+    border-radius:999px;
+    background:var(--green-soft);
+    color:var(--green-dark);
+    font-size:11px;
+    font-weight:700;
+}
+.card-title{
+    margin:7px 0 5px;
+    font-size:16px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+.card-meta{font-size:12px;color:var(--muted);line-height:1.5}
+.card-description{
+    margin-top:7px;
+    color:#555;
+    font-size:13px;
+    line-height:1.42;
+    display:-webkit-box;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:2;
+    overflow:hidden;
+}
+.card-actions{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-top:12px;
+    padding-top:11px;
+    border-top:1px solid #f0f0f0;
+}
+.card-action{
+    height:38px;
+    flex:1;
+    border:0;
+    border-radius:11px;
+    background:#f2f4f1;
+    color:#444;
+    font-size:12px;
+}
+.card-action.primary{
+    background:var(--green-soft);
+    color:var(--green-dark);
+    font-weight:700;
+}
+.card-action.danger{
+    flex:0 0 42px;
+    color:var(--danger);
+}
+
+.state{
+    margin-top:12px;
+    padding:38px 20px;
+    border:1px solid var(--border);
+    border-radius:18px;
+    background:var(--card);
+    text-align:center;
+}
+.state-icon{
+    width:64px;
+    height:64px;
+    margin:0 auto 14px;
+    border-radius:20px;
+    background:var(--green-soft);
+    color:var(--green-dark);
+    display:grid;
+    place-items:center;
+    font-size:25px;
+}
+.state h3{font-size:17px;margin-bottom:7px}
+.state p{color:var(--muted);font-size:13px;line-height:1.5}
+.state .btn{margin-top:15px}
+
+.skeleton{
+    height:126px;
+    border-radius:18px;
+    background:linear-gradient(90deg,#eceeeb 25%,#f8f8f8 50%,#eceeeb 75%);
+    background-size:200% 100%;
+    animation:shine 1.2s infinite;
+}
+@keyframes shine{to{background-position:-200% 0}}
+
+.modal-backdrop{
+    position:fixed;
+    inset:0;
+    z-index:90;
+    background:rgba(0,0,0,.43);
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+}
+.modal{
+    width:min(100%,620px);
+    max-height:86vh;
+    overflow:auto;
+    padding:18px 18px calc(18px + env(safe-area-inset-bottom));
+    border-radius:24px 24px 0 0;
+    background:#fff;
+}
+.modal-handle{
+    width:44px;
+    height:5px;
+    margin:0 auto 14px;
+    border-radius:10px;
+    background:#ddd;
+}
+.modal-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:16px;
+}
+.modal-head h3{font-size:18px}
+.close-btn{
+    width:38px;
+    height:38px;
+    border:0;
+    border-radius:50%;
+    background:#f1f1f1;
+}
+.field{margin-bottom:13px}
+.field label{
+    display:block;
+    margin-bottom:6px;
+    color:#555;
+    font-size:12px;
+    font-weight:700;
+}
+.field input,.field textarea,.field select{
+    width:100%;
+    padding:12px;
+    border:1px solid #ddd;
+    border-radius:12px;
+    outline:0;
+    background:#fff;
+}
+.field textarea{min-height:82px;resize:vertical}
+.btn{
+    padding:12px 15px;
+    border:0;
+    border-radius:12px;
+    font-weight:700;
+}
+.btn.primary{background:var(--green);color:#fff}
+.btn.secondary{background:#f0f2ef;color:#444}
+.full{width:100%}
+.modal-actions{display:flex;gap:9px;margin-top:14px}
+.modal-actions .primary{flex:1}
+
+.collection-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:12px 2px;
+    border-bottom:1px solid #eee;
+}
+.collection-row:last-child{border-bottom:0}
+.collection-row>i{color:var(--green-dark)}
+.collection-copy{flex:1;min-width:0}
+.collection-copy strong{
+    display:block;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+.collection-copy small{
+    display:block;
+    margin-top:3px;
+    color:var(--muted);
+}
+.collection-delete{
+    width:36px;
+    height:36px;
+    border:0;
+    border-radius:10px;
+    background:#f3f3f3;
+    color:var(--danger);
+}
+
+.toast{
+    position:fixed;
+    left:50%;
+    bottom:calc(86px + env(safe-area-inset-bottom));
+    z-index:120;
+    max-width:calc(100% - 30px);
+    padding:11px 15px;
+    border-radius:12px;
+    background:#252525;
+    color:#fff;
+    font-size:13px;
+    opacity:0;
+    pointer-events:none;
+    transform:translateX(-50%) translateY(18px);
+    transition:.22s;
+}
+.toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+}
+.toast.error{background:#b93636}
+
+.bottom-nav{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    z-index:50;
+    height:calc(var(--nav-height) + env(safe-area-inset-bottom));
+    padding-bottom:env(safe-area-inset-bottom);
+    border-top:1px solid var(--border);
+    background:#fff;
+}
+.nav-inner{
+    max-width:620px;
+    height:var(--nav-height);
+    margin:auto;
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+}
+.nav-item{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:5px;
+    color:#777;
+    font-size:11px;
+}
+.nav-item i{font-size:19px}
+.nav-item.active{color:var(--green-dark);font-weight:700}
+
+@media(min-width:700px){
+    .saved-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .modal-backdrop{align-items:center;padding:20px}
+    .modal{border-radius:24px}
+}
+</style>
+</head>
+
+<body>
+
+<header class="app-header">
+    <div class="header-inner">
+        <button class="round-btn" id="backBtn" aria-label="Back">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+
+        <div class="header-copy">
+            <h1 data-i18n>Saved</h1>
+            <p data-i18n>Your private saved items and collections</p>
+        </div>
+
+        <button class="round-btn" id="refreshBtn" aria-label="Refresh">
+            <i class="fa-solid fa-rotate"></i>
+        </button>
+    </div>
+</header>
+
+<main>
+
+    <section class="hero">
+        <div class="hero-row">
+            <div>
+                <h2 data-i18n>Everything you saved, in one place</h2>
+                <p data-i18n>
+                    Keep important HAVKAR content organized and find it again quickly.
+                </p>
+            </div>
+
+            <div class="saved-total">
+                <div>
+                    <strong id="savedCount">0</strong>
+                    <span data-i18n>SAVED</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="toolbar">
+        <label class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input
+                id="searchInput"
+                type="search"
+                autocomplete="off"
+                placeholder="Search saved items"
+                data-i18n-placeholder="Search saved items"
+            >
+        </label>
+
+        <button class="sort-btn" id="sortBtn" aria-label="Sort">
+            <i class="fa-solid fa-arrow-down-wide-short"></i>
+        </button>
+    </div>
+
+    <div class="section-head">
+        <h3 data-i18n>Collections</h3>
+
+        <button class="text-btn" id="manageCollectionsBtn">
+            <i class="fa-solid fa-plus"></i>
+            <span data-i18n>Manage</span>
+        </button>
+    </div>
+
+    <div class="horizontal-scroll" id="collectionsBar"></div>
+
+    <div class="section-head">
+        <h3 data-i18n>Saved items</h3>
+    </div>
+
+    <div class="horizontal-scroll" id="typeTabs"></div>
+
+    <div id="loadingState" class="saved-grid">
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+    </div>
+
+    <div id="errorState" class="state hidden">
+        <div class="state-icon">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+
+        <h3 data-i18n>Could not load saved items</h3>
+        <p id="errorText" data-i18n>
+            Please check your connection and try again.
+        </p>
+
+        <button class="btn primary" id="retryBtn" data-i18n>
+            Try again
+        </button>
+    </div>
+
+    <div id="emptyState" class="state hidden">
+        <div class="state-icon">
+            <i class="fa-regular fa-bookmark"></i>
+        </div>
+
+        <h3 id="emptyTitle" data-i18n>No saved items yet</h3>
+        <p id="emptyText" data-i18n>
+            When you save content across HAVKAR, it will appear here.
+        </p>
+    </div>
+
+    <div id="savedList" class="saved-grid hidden"></div>
+
+</main>
+
+<nav class="bottom-nav">
+    <div class="nav-inner">
+        <a class="nav-item" href="index.html">
+            <i class="fa-solid fa-house"></i>
+            <span data-i18n>Home</span>
+        </a>
+
+        <a class="nav-item" href="chat.html">
+            <i class="fa-solid fa-comments"></i>
+            <span data-i18n>Messages</span>
+        </a>
+
+        <a class="nav-item active" href="saved.html">
+            <i class="fa-solid fa-bookmark"></i>
+            <span data-i18n>Saved</span>
+        </a>
+
+        <a class="nav-item" href="profile.html">
+            <i class="fa-solid fa-user"></i>
+            <span data-i18n>Profile</span>
+        </a>
+    </div>
+</nav>
+
+<div class="modal-backdrop hidden" id="collectionsModal">
+    <section
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="collectionsTitle"
+    >
+        <div class="modal-handle"></div>
+
+        <div class="modal-head">
+            <h3 id="collectionsTitle" data-i18n>Manage collections</h3>
+
+            <button class="close-btn" data-close="collectionsModal">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="field">
+            <label for="collectionName" data-i18n>Collection name</label>
+
+            <input
+                id="collectionName"
+                maxlength="80"
+                placeholder="e.g. Cars, Jobs, For later"
+            >
+        </div>
+
+        <div class="field">
+            <label for="collectionDescription" data-i18n>
+                Description (optional)
+            </label>
+
+            <textarea
+                id="collectionDescription"
+                maxlength="300"
+            ></textarea>
+        </div>
+
+        <button
+            class="btn primary full"
+            id="createCollectionBtn"
+            data-i18n
+        >
+            Create collection
+        </button>
+
+        <div class="section-head">
+            <h3 data-i18n>Your collections</h3>
+        </div>
+
+        <div id="collectionManagerList"></div>
+    </section>
+</div>
+
+<div class="modal-backdrop hidden" id="moveModal">
+    <section class="modal" role="dialog" aria-modal="true">
+        <div class="modal-handle"></div>
+
+        <div class="modal-head">
+            <h3 data-i18n>Move to collection</h3>
+
+            <button class="close-btn" data-close="moveModal">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="field">
+            <label for="moveCollectionSelect" data-i18n>
+                Collection
+            </label>
+
+            <select id="moveCollectionSelect"></select>
+        </div>
+
+        <div class="modal-actions">
+            <button
+                class="btn secondary"
+                data-close="moveModal"
+                data-i18n
+            >
+                Cancel
+            </button>
+
+            <button
+                class="btn primary"
+                id="confirmMoveBtn"
+                data-i18n
+            >
+                Save
+            </button>
+        </div>
+    </section>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* =========================================================
+   HAVKAR SAVED
+   Central Saved source:
+       public.saved_items
+       public.saved_collections
+
+   Existing Buy & Sell compatibility:
+       public.ad_saves
+
+   Existing ad_saves rows remain visible here without
+   modifying or deleting the Buy & Sell Saved system.
+   ========================================================= */
+
+const SUPABASE_URL =
+    "https://gispovnciifgikvgpzck.supabase.co";
+
+const SUPABASE_PUBLISHABLE_KEY =
+    "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq";
+
+const db =
+    window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_PUBLISHABLE_KEY
+    );
+
+const state = {
+
+    user: null,
+
+    centralItems: [],
+
+    legacyAdIds: [],
+
+    items: [],
+
+    collections: [],
+
+    details: new Map(),
+
+    collectionId: "all",
+
+    type: "all",
+
+    search: "",
+
+    sort: "newest",
+
+    movingId: null
+
+};
+
+const TYPE_META = {
+
+    ad: {
+        label: "Ads",
+        icon: "fa-tag"
+    },
+
+    event: {
+        label: "Events",
+        icon: "fa-calendar-days"
+    },
+
+    job: {
+        label: "Jobs",
+        icon: "fa-briefcase"
+    },
+
+    service: {
+        label: "Services",
+        icon: "fa-screwdriver-wrench"
+    },
+
+    profile: {
+        label: "People",
+        icon: "fa-user"
+    },
+
+    user: {
+        label: "People",
+        icon: "fa-user"
+    },
+
+    business: {
+        label: "Businesses",
+        icon: "fa-building"
+    },
+
+    review: {
+        label: "Reviews",
+        icon: "fa-star"
+    }
+
+};
+
+const $ =
+    id =>
+        document.getElementById(id);
+
+function normalizeType(value){
+
+    const type =
+        String(value || "")
+            .trim()
+            .toLowerCase();
+
+    if(type === "ads"){
+        return "ad";
+    }
+
+    if(type === "events"){
+        return "event";
+    }
+
+    if(type === "jobs"){
+        return "job";
+    }
+
+    if(type === "users"){
+        return "user";
+    }
+
+    if(type === "businesses"){
+        return "business";
+    }
+
+    return type;
+}
+
+function typeMeta(type){
+
+    const normalized =
+        normalizeType(type);
+
+    if(TYPE_META[normalized]){
+        return TYPE_META[normalized];
+    }
+
+    return {
+        label:
+            normalized
+                ? normalized.charAt(0).toUpperCase() +
+                  normalized.slice(1)
+                : "Saved",
+        icon: "fa-bookmark"
+    };
+}
+
+function escapeHTML(value){
+
+    return String(value ?? "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+}
+
+function safeURL(value){
+
+    const url =
+        String(value || "").trim();
+
+    if(
+        url.startsWith("https://") ||
+        url.startsWith("http://")
+    ){
+        return url;
+    }
+
+    return "";
+}
+
+function showToast(
+    message,
+    kind = ""
+){
+
+    const toast =
+        $("toast");
+
+    toast.textContent =
+        message;
+
+    toast.className =
+        "toast show" +
+        (
+            kind
+                ? " " + kind
+                : ""
+        );
+
+    clearTimeout(
+        showToast.timer
+    );
+
+    showToast.timer =
+        setTimeout(
+            () => {
+                toast.className =
+                    "toast";
+            },
+            2600
+        );
+}
+
+function setView(name){
+
+    $("loadingState")
+        .classList
+        .toggle(
+            "hidden",
+            name !== "loading"
+        );
+
+    $("errorState")
+        .classList
+        .toggle(
+            "hidden",
+            name !== "error"
+        );
+
+    $("emptyState")
+        .classList
+        .toggle(
+            "hidden",
+            name !== "empty"
+        );
+
+    $("savedList")
+        .classList
+        .toggle(
+            "hidden",
+            name !== "list"
+        );
+}
+
+async function loadCurrentUser(){
+
+    const {
+        data,
+        error
+    } =
+        await db.auth.getUser();
+
+    if(error){
+
+        console.warn(
+            "HAVKAR Saved auth:",
+            error
+        );
+
+    }
+
+    state.user =
+        data?.user || null;
+
+    return state.user;
+}
+
+async function loadCollections(){
+
+    if(!state.user){
+
+        state.collections = [];
+
+        return;
+    }
+
+    const {
+        data,
+        error
+    } =
+        await db
+            .from("saved_collections")
+            .select(
+                "id,created_at,updated_at,user_id,name,description,is_default"
+            )
+            .order(
+                "created_at",
+                {
+                    ascending: true
+                }
+            );
+
+    if(error){
+        throw error;
+    }
+
+    state.collections =
+        data || [];
+}
+
+async function loadCentralSavedItems(){
+
+    if(!state.user){
+
+        state.centralItems = [];
+
+        return;
+    }
+
+    const {
+        data,
+        error
+    } =
+        await db
+            .from("saved_items")
+            .select(
+                "id,created_at,user_id,collection_id,item_type,item_id"
+            )
+            .order(
+                "created_at",
+                {
+                    ascending: false
+                }
+            );
+
+    if(error){
+        throw error;
+    }
+
+    state.centralItems =
+        (data || [])
+            .map(
+                item => ({
+                    ...item,
+                    source: "central",
+                    item_type:
+                        normalizeType(
+                            item.item_type
+                        ),
+                    item_id:
+                        String(
+                            item.item_id
+                        )
+                })
+            );
+}
+
+async function loadLegacyAdSaves(){
+
+    if(!state.user){
+
+        state.legacyAdIds = [];
+
+        return;
+    }
+
+    const {
+        data,
+        error
+    } =
+        await db
+            .from("ad_saves")
+            .select("ad_id")
+            .eq(
+                "user_id",
+                state.user.id
+            );
+
+    if(error){
+
+        console.warn(
+            "HAVKAR Saved legacy ad_saves:",
+            error
+        );
+
+        state.legacyAdIds = [];
+
+        return;
+    }
+
+    state.legacyAdIds =
+        (data || [])
+            .map(
+                row =>
+                    String(row.ad_id)
+            );
+}
+
+function mergeSavedSources(){
+
+    const items =
+        [...state.centralItems];
+
+    const centralAds =
+        new Set(
+            state.centralItems
+                .filter(
+                    item =>
+                        normalizeType(
+                            item.item_type
+                        ) === "ad"
+                )
+                .map(
+                    item =>
+                        String(
+                            item.item_id
+                        )
+                )
+        );
+
+    state.legacyAdIds
+        .forEach(
+            adId => {
+
+                if(
+                    centralAds.has(
+                        String(adId)
+                    )
+                ){
+                    return;
+                }
+
+                items.push({
+
+                    id:
+                        "legacy-ad-" +
+                        String(adId),
+
+                    created_at: null,
+
+                    user_id:
+                        state.user?.id ||
+                        null,
+
+                    collection_id: null,
+
+                    item_type: "ad",
+
+                    item_id:
+                        String(adId),
+
+                    source:
+                        "legacy_ad_saves"
+
+                });
+
+            }
+        );
+
+    state.items =
+        items;
+
+    $("savedCount")
+        .textContent =
+            String(
+                state.items.length
+            );
+}
+
+async function loadAdDetails(){
+
+    const ids =
+        [
+            ...new Set(
+                state.items
+                    .filter(
+                        item =>
+                            normalizeType(
+                                item.item_type
+                            ) === "ad"
+                    )
+                    .map(
+                        item =>
+                            Number(
+                                item.item_id
+                            )
+                    )
+                    .filter(
+                        Number.isFinite
+                    )
+            )
+        ];
+
+    if(!ids.length){
+        return;
+    }
+
+    const {
+        data,
+        error
+    } =
+        await db
+            .from("ads")
+            .select(
+                "id,title,category,price,location,description,user_id,created_at,status"
+            )
+            .in(
+                "id",
+                ids
+            );
+
+    if(error){
+
+        console.warn(
+            "HAVKAR Saved ads:",
+            error
+        );
+
+        return;
+    }
+
+    (data || [])
+        .forEach(
+            ad => {
+
+                state.details.set(
+                    "ad:" +
+                    String(ad.id),
+                    ad
+                );
+
+            }
+        );
+}
+
+async function loadJobDetails(){
+
+    const ids =
+        [
+            ...new Set(
+                state.items
+                    .filter(
+                        item =>
+                            normalizeType(
+                                item.item_type
+                            ) === "job"
+                    )
+                    .map(
+                        item =>
+                            String(
+                                item.item_id
+                            )
+                    )
+            )
+        ];
+
+    if(!ids.length){
+        return;
+    }
+
+    const {
+        data,
+        error
+    } =
+        await db
+            .from("jobs")
+            .select(
+                "id,title,company,location,job_type,salary,description,status,created_at,image"
+            )
+            .in(
+                "id",
+                ids
+            );
+
+    if(error){
+
+        console.warn(
+            "HAVKAR Saved jobs:",
+            error
+        );
+
+        return;
+    }
+
+    (data || [])
+        .forEach(
+            job => {
+
+                state.details.set(
+                    "job:" +
+                    String(job.id),
+                    job
+                );
+
+            }
+        );
+}
+
+async function loadEventDetails(){
+
+    const ids =
+        [
+            ...new Set(
+                state.items
+                    .filter(
+                        item =>
+                            normalizeType(
+                                item.item_type
+                            ) === "event"
+                    )
+                    .map(
+                        item =>
+                            Number(
+                                item.item_id
+                            )
+                    )
+                    .filter(
+                        Number.isFinite
+                    )
+            )
+        ];
+
+    if(!ids.length){
+        return;
+    }
+
+    const {
+        data,
+        error
+    } =
+        await db
+            .from("events")
+            .select(
+                "id,title,category,event_date,event_time,location,description,image_url,price,organizer,status,created_at"
+            )
+            .in(
+                "id",
+                ids
+            );
+
+    if(error){
+
+        console.warn(
+            "HAVKAR Saved events:",
+            error
+        );
+
+        return;
+    }
+
+    (data || [])
+        .forEach(
+            event => {
+
+                state.details.set(
+                    "event:" +
+                    String(event.id),
+                    event
+                );
+
+            }
+        );
+}
+
+async function hydrateDetails(){
+
+    state.details.clear();
+
+    await Promise.allSettled([
+        loadAdDetails(),
+        loadJobDetails(),
+        loadEventDetails()
+    ]);
+}
+
+async function refreshAll(){
+
+    setView("loading");
+
+    try{
+
+        const user =
+            await loadCurrentUser();
+
+        if(!user){
+
+            state.centralItems = [];
+            state.legacyAdIds = [];
+            state.items = [];
+            state.collections = [];
+
+            $("savedCount")
+                .textContent = "0";
+
+            renderCollections();
+            renderTypes();
+
+            $("emptyTitle")
+                .textContent =
+                    "Sign in to view Saved";
+
+            $("emptyText")
+                .textContent =
+                    "Your saved items are private and linked to your HAVKAR account.";
+
+            setView("empty");
+
+            return;
+        }
+
+        await Promise.all([
+            loadCollections(),
+            loadCentralSavedItems(),
+            loadLegacyAdSaves()
+        ]);
+
+        mergeSavedSources();
+
+        await hydrateDetails();
+
+        renderCollections();
+        renderCollectionManager();
+        renderTypes();
+        renderSaved();
+
+    }catch(error){
+
+        console.error(
+            "HAVKAR Saved:",
+            error
+        );
+
+        $("errorText")
+            .textContent =
+                error?.message ||
+                "Please check your connection and try again.";
+
+        setView("error");
+
+    }
+}
+
+function detailFor(item){
+
+    const key =
+        normalizeType(
+            item.item_type
+        ) +
+        ":" +
+        String(
+            item.item_id
+        );
+
+    return (
+        state.details.get(key) ||
+        null
+    );
+}
+
+function collectionName(id){
+
+    if(id == null){
+        return "Unfiled";
+    }
+
+    const collection =
+        state.collections
+            .find(
+                item =>
+                    String(item.id) ===
+                    String(id)
+            );
+
+    return (
+        collection?.name ||
+        "Collection"
+    );
+}
+
+function formatDate(value){
+
+    if(!value){
+        return "";
+    }
+
+    const date =
+        new Date(value);
+
+    if(
+        Number.isNaN(
+            date.getTime()
+        )
+    ){
+        return "";
+    }
+
+    try{
+
+        return new Intl.DateTimeFormat(
+            undefined,
+            {
+                year: "numeric",
+                month: "short",
+                day: "numeric"
+            }
+        ).format(date);
+
+    }catch(error){
+
+        return date.toLocaleDateString();
+
+    }
+}
+
+function formatPrice(value){
+
+    if(
+        value === null ||
+        value === undefined ||
+        value === ""
+    ){
+        return "";
+    }
+
+    const number =
+        Number(value);
+
+    if(!Number.isFinite(number)){
+        return String(value);
+    }
+
+    try{
+
+        return new Intl.NumberFormat(
+            undefined,
+            {
+                style: "currency",
+                currency: "EUR",
+                maximumFractionDigits: 2
+            }
+        ).format(number);
+
+    }catch(error){
+
+        return "€" +
+            number.toFixed(2);
+
+    }
+}
+
+function titleFor(item){
+
+    const type =
+        normalizeType(
+            item.item_type
+        );
+
+    const detail =
+        detailFor(item);
+
+    if(type === "ad"){
+
+        return (
+            detail?.title ||
+            "Ad #" +
+            String(item.item_id)
+        );
+
+    }
+
+    if(type === "job"){
+
+        return (
+            detail?.title ||
+            "Job #" +
+            String(item.item_id)
+        );
+
+    }
+
+    if(type === "event"){
+
+        return (
+            detail?.title ||
+            "Event #" +
+            String(item.item_id)
+        );
+
+    }
+
+    return (
+        typeMeta(type).label +
+        " #" +
+        String(item.item_id)
+    );
+}
+
+function descriptionFor(item){
+
+    const detail =
+        detailFor(item);
+
+    return (
+        detail?.description ||
+        ""
+    );
+}
+
+function imageFor(item){
+
+    const type =
+        normalizeType(
+            item.item_type
+        );
+
+    const detail =
+        detailFor(item);
+
+    if(type === "job"){
+        return safeURL(
+            detail?.image
+        );
+    }
+
+    if(type === "event"){
+        return safeURL(
+            detail?.image_url
+        );
+    }
+
+    return "";
+}
+
+function metaFor(item){
+
+    const type =
+        normalizeType(
+            item.item_type
+        );
+
+    const detail =
+        detailFor(item);
+
+    const parts = [];
+
+    if(type === "ad"){
+
+        if(
+            detail?.price !== null &&
+            detail?.price !== undefined &&
+            detail?.price !== ""
+        ){
+            parts.push(
+                formatPrice(
+                    detail.price
+                )
+            );
+        }
+
+        if(detail?.location){
+            parts.push(
+                detail.location
+            );
+        }
+
+        if(detail?.category){
+            parts.push(
+                detail.category
+            );
+        }
+
+    }
+
+    if(type === "job"){
+
+        if(detail?.company){
+            parts.push(
+                detail.company
+            );
+        }
+
+        if(detail?.location){
+            parts.push(
+                detail.location
+            );
+        }
+
+        if(detail?.job_type){
+            parts.push(
+                detail.job_type
+            );
+        }
+
+        if(detail?.salary){
+            parts.push(
+                detail.salary
+            );
+        }
+
+    }
+
+    if(type === "event"){
+
+        if(detail?.event_date){
+            parts.push(
+                detail.event_date
+            );
+        }
+
+        if(detail?.location){
+            parts.push(
+                detail.location
+            );
+        }
+
+        if(detail?.organizer){
+            parts.push(
+                detail.organizer
+            );
+        }
+
+    }
+
+    parts.push(
+        collectionName(
+            item.collection_id
+        )
+    );
+
+    if(item.created_at){
+
+        parts.push(
+            "Saved " +
+            formatDate(
+                item.created_at
+            )
+        );
+
+    }else if(
+        item.source ===
+        "legacy_ad_saves"
+    ){
+
+        parts.push(
+            "Saved in Buy & Sell"
+        );
+
+    }
+
+    return parts
+        .filter(Boolean)
+        .join(" • ");
+}
+
+function searchableText(item){
+
+    const detail =
+        detailFor(item);
+
+    return [
+        item.item_type,
+        item.item_id,
+        detail?.title,
+        detail?.category,
+        detail?.company,
+        detail?.organizer,
+        detail?.location,
+        detail?.description
+    ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+}
+
+function filteredItems(){
+
+    let items =
+        [...state.items];
+
+    if(
+        state.collectionId ===
+        "unfiled"
+    ){
+
+        items =
+            items.filter(
+                item =>
+                    item.collection_id == null
+            );
+
+    }else if(
+        state.collectionId !==
+        "all"
+    ){
+
+        items =
+            items.filter(
+                item =>
+                    String(
+                        item.collection_id
+                    ) ===
+                    String(
+                        state.collectionId
+                    )
+            );
+
+    }
+
+    if(
+        state.type !==
+        "all"
+    ){
+
+        items =
+            items.filter(
+                item =>
+                    normalizeType(
+                        item.item_type
+                    ) ===
+                    state.type
+            );
+
+    }
+
+    const query =
+        state.search
+            .trim()
+            .toLowerCase();
+
+    if(query){
+
+        items =
+            items.filter(
+                item =>
+                    searchableText(item)
+                        .includes(query)
+            );
+
+    }
+
+    items.sort(
+        (a,b) => {
+
+            const aTime =
+                a.created_at
+                    ? new Date(
+                        a.created_at
+                    ).getTime()
+                    : 0;
+
+            const bTime =
+                b.created_at
+                    ? new Date(
+                        b.created_at
+                    ).getTime()
+                    : 0;
+
+            return (
+                state.sort === "oldest"
+                    ? aTime - bTime
+                    : bTime - aTime
+            );
+
+        }
+    );
+
+    return items;
+}
+
+function renderCollections(){
+
+    const bar =
+        $("collectionsBar");
+
+    const allActive =
+        state.collectionId === "all"
+            ? " active"
+            : "";
+
+    const unfiledActive =
+        state.collectionId === "unfiled"
+            ? " active"
+            : "";
+
+    let html = `
+        <button
+            class="chip${allActive}"
+            data-collection="all"
+        >
+            All (${state.items.length})
+        </button>
+    `;
+
+    const unfiledCount =
+        state.items
+            .filter(
+                item =>
+                    item.collection_id == null
+            )
+            .length;
+
+    html += `
+        <button
+            class="chip${unfiledActive}"
+            data-collection="unfiled"
+        >
+            Unfiled (${unfiledCount})
+        </button>
+    `;
+
+    state.collections
+        .forEach(
+            collection => {
+
+                const count =
+                    state.items
+                        .filter(
+                            item =>
+                                String(
+                                    item.collection_id
+                                ) ===
+                                String(
+                                    collection.id
+                                )
+                        )
+                        .length;
+
+                const active =
+                    String(
+                        state.collectionId
+                    ) ===
+                    String(
+                        collection.id
+                    )
+                        ? " active"
+                        : "";
+
+                html += `
+                    <button
+                        class="chip${active}"
+                        data-collection="${collection.id}"
+                    >
+                        ${escapeHTML(collection.name)}
+                        (${count})
+                    </button>
+                `;
+
+            }
+        );
+
+    bar.innerHTML =
+        html;
+}
+
+function renderTypes(){
+
+    const types =
+        [
+            ...new Set(
+                state.items
+                    .map(
+                        item =>
+                            normalizeType(
+                                item.item_type
+                            )
+                    )
+                    .filter(Boolean)
+            )
+        ];
+
+    let html = `
+        <button
+            class="type-chip${
+                state.type === "all"
+                    ? " active"
+                    : ""
+            }"
+            data-type="all"
+        >
+            All
+        </button>
+    `;
+
+    types.forEach(
+        type => {
+
+            const meta =
+                typeMeta(type);
+
+            html += `
+                <button
+                    class="type-chip${
+                        state.type === type
+                            ? " active"
+                            : ""
+                    }"
+                    data-type="${escapeHTML(type)}"
+                >
+                    <i class="fa-solid ${meta.icon}"></i>
+                    ${escapeHTML(meta.label)}
+                </button>
+            `;
+
+        }
+    );
+
+    $("typeTabs")
+        .innerHTML =
+            html;
+}
+
+function itemCard(item){
+
+    const type =
+        normalizeType(
+            item.item_type
+        );
+
+    const meta =
+        typeMeta(type);
+
+    const detail =
+        detailFor(item);
+
+    const image =
+        imageFor(item);
+
+    const thumbnail =
+        image
+            ? `
+                <img
+                    src="${escapeHTML(image)}"
+                    alt=""
+                    loading="lazy"
+                >
+            `
+            : `
+                <i class="fa-solid ${meta.icon}"></i>
+            `;
+
+    const description =
+        descriptionFor(item);
+
+    const missing =
+        !detail &&
+        (
+            type === "ad" ||
+            type === "job" ||
+            type === "event"
+        );
+
+    let detailHTML = "";
+
+    if(missing){
+
+        detailHTML = `
+            <div class="card-description">
+                This saved item is unavailable or could not be loaded.
+            </div>
+        `;
+
+    }else if(description){
+
+        detailHTML = `
+            <div class="card-description">
+                ${escapeHTML(description)}
+            </div>
+        `;
+
+    }
+
+    const canMove =
+        item.source === "central";
+
+    return `
+        <article
+            class="saved-card"
+            data-id="${escapeHTML(item.id)}"
+        >
+
+            <div class="card-main">
+
+                <div class="thumb">
+                    ${thumbnail}
+                </div>
+
+                <div class="card-body">
+
+                    <span class="type-badge">
+                        <i class="fa-solid ${meta.icon}"></i>
+                        ${escapeHTML(meta.label)}
+                    </span>
+
+                    <h4 class="card-title">
+                        ${escapeHTML(titleFor(item))}
+                    </h4>
+
+                    <div class="card-meta">
+                        ${escapeHTML(metaFor(item))}
+                    </div>
+
+                    ${detailHTML}
+
+                </div>
+
+            </div>
+
+            <div class="card-actions">
+
+                <button
+                    class="card-action primary"
+                    data-action="open"
+                    data-id="${escapeHTML(item.id)}"
+                >
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    Open
+                </button>
+
+                ${
+                    canMove
+                        ? `
+                            <button
+                                class="card-action"
+                                data-action="move"
+                                data-id="${escapeHTML(item.id)}"
+                            >
+                                <i class="fa-solid fa-folder"></i>
+                                Collection
+                            </button>
+                        `
+                        : `
+                            <button
+                                class="card-action"
+                                data-action="import"
+                                data-id="${escapeHTML(item.id)}"
+                            >
+                                <i class="fa-solid fa-folder-plus"></i>
+                                Organize
+                            </button>
+                        `
+                }
+
+                <button
+                    class="card-action danger"
+                    data-action="remove"
+                    data-id="${escapeHTML(item.id)}"
+                    aria-label="Remove"
+                >
+                    <i class="fa-solid fa-bookmark"></i>
+                </button>
+
+            </div>
+
+        </article>
+    `;
+}
+
+function renderSaved(){
+
+    if(!state.user){
+
+        setView("empty");
+
+        return;
+    }
+
+    const items =
+        filteredItems();
+
+    if(!items.length){
+
+        if(state.items.length){
+
+            $("emptyTitle")
+                .textContent =
+                    "No matching saved items";
+
+            $("emptyText")
+                .textContent =
+                    "Try another search, type, or collection.";
+
+        }else{
+
+            $("emptyTitle")
+                .textContent =
+                    "No saved items yet";
+
+            $("emptyText")
+                .textContent =
+                    "When you save content across HAVKAR, it will appear here.";
+
+        }
+
+        setView("empty");
+
+        return;
+    }
+
+    $("savedList")
+        .innerHTML =
+            items
+                .map(itemCard)
+                .join("");
+
+    setView("list");
+}
+
+function renderCollectionManager(){
+
+    const root =
+        $("collectionManagerList");
+
+    if(!state.collections.length){
+
+        root.innerHTML = `
+            <div class="state">
+                <p>
+                    You have not created any collections yet.
+                </p>
+            </div>
+        `;
+
+        return;
+    }
+
+    root.innerHTML =
+        state.collections
+            .map(
+                collection => {
+
+                    const count =
+                        state.centralItems
+                            .filter(
+                                item =>
+                                    String(
+                                        item.collection_id
+                                    ) ===
+                                    String(
+                                        collection.id
+                                    )
+                            )
+                            .length;
+
+                    return `
+                        <div class="collection-row">
+
+                            <i class="fa-solid fa-folder"></i>
+
+                            <div class="collection-copy">
+
+                                <strong>
+                                    ${escapeHTML(collection.name)}
+                                </strong>
+
+                                <small>
+                                    ${count}
+                                    saved item${count === 1 ? "" : "s"}
+                                    ${
+                                        collection.description
+                                            ? " • " +
+                                              escapeHTML(
+                                                  collection.description
+                                              )
+                                            : ""
+                                    }
+                                </small>
+
+                            </div>
+
+                            <button
+                                class="collection-delete"
+                                data-delete-collection="${collection.id}"
+                                aria-label="Delete collection"
+                            >
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+
+                        </div>
+                    `;
+
+                }
+            )
+            .join("");
+}
+
+function openModal(id){
+
+    $(id)
+        .classList
+        .remove("hidden");
+
+    document.body.style.overflow =
+        "hidden";
+}
+
+function closeModal(id){
+
+    $(id)
+        .classList
+        .add("hidden");
+
+    document.body.style.overflow =
+        "";
+}
+
+async function createCollection(){
+
+    if(!state.user){
+
+        showToast(
+            "Please sign in first.",
+            "error"
+        );
+
+        return;
+    }
+
+    const name =
+        $("collectionName")
+            .value
+            .trim();
+
+    const description =
+        $("collectionDescription")
+            .value
+            .trim();
+
+    if(!name){
+
+        showToast(
+            "Enter a collection name.",
+            "error"
+        );
+
+        return;
+    }
+
+    const button =
+        $("createCollectionBtn");
+
+    button.disabled =
+        true;
+
+    try{
+
+        const {
+            data,
+            error
+        } =
+            await db
+                .from("saved_collections")
+                .insert({
+                    user_id:
+                        state.user.id,
+                    name,
+                    description:
+                        description || null,
+                    is_default: false
+                })
+                .select(
+                    "id,created_at,updated_at,user_id,name,description,is_default"
+                )
+                .single();
+
+        if(error){
+            throw error;
+        }
+
+        state.collections.push(data);
+
+        $("collectionName")
+            .value = "";
+
+        $("collectionDescription")
+            .value = "";
+
+        renderCollections();
+        renderCollectionManager();
+
+        showToast(
+            "Collection created."
+        );
+
+    }catch(error){
+
+        console.error(
+            "HAVKAR Saved collection:",
+            error
+        );
+
+        showToast(
+            error?.message ||
+            "Could not create collection.",
+            "error"
+        );
+
+    }finally{
+
+        button.disabled =
+            false;
+
+    }
+}
+
+async function deleteCollection(id){
+
+    const collection =
+        state.collections
+            .find(
+                item =>
+                    String(item.id) ===
+                    String(id)
+            );
+
+    if(!collection){
+        return;
+    }
+
+    const confirmed =
+        window.confirm(
+            `Delete "${collection.name}"? Saved items will remain in Saved.`
+        );
+
+    if(!confirmed){
+        return;
+    }
+
+    try{
+
+        const {
+            error
+        } =
+            await db
+                .from("saved_collections")
+                .delete()
+                .eq(
+                    "id",
+                    id
+                );
+
+        if(error){
+            throw error;
+        }
+
+        state.collections =
+            state.collections
+                .filter(
+                    item =>
+                        String(item.id) !==
+                        String(id)
+                );
+
+        state.centralItems =
+            state.centralItems
+                .map(
+                    item =>
+                        String(
+                            item.collection_id
+                        ) ===
+                        String(id)
+                            ? {
+                                ...item,
+                                collection_id: null
+                              }
+                            : item
+                );
+
+        if(
+            String(
+                state.collectionId
+            ) ===
+            String(id)
+        ){
+            state.collectionId =
+                "all";
+        }
+
+        mergeSavedSources();
+
+        renderCollections();
+        renderCollectionManager();
+        renderSaved();
+
+        showToast(
+            "Collection deleted. Saved items were kept."
+        );
+
+    }catch(error){
+
+        console.error(
+            "HAVKAR Saved delete collection:",
+            error
+        );
+
+        showToast(
+            error?.message ||
+            "Could not delete collection.",
+            "error"
+        );
+
+    }
+}
+
+function beginMove(savedId){
+
+    const item =
+        state.items
+            .find(
+                value =>
+                    String(value.id) ===
+                    String(savedId)
+            );
+
+    if(!item){
+        return;
+    }
+
+    if(
+        item.source !==
+        "central"
+    ){
+
+        return;
+    }
+
+    state.movingId =
+        item.id;
+
+    const select =
+        $("moveCollectionSelect");
+
+    select.innerHTML =
+        `
+            <option value="">
+                Unfiled
+            </option>
+        ` +
+        state.collections
+            .map(
+                collection => `
+                    <option
+                        value="${collection.id}"
+                        ${
+                            String(
+                                item.collection_id
+                            ) ===
+                            String(
+                                collection.id
+                            )
+                                ? "selected"
+                                : ""
+                        }
+                    >
+                        ${escapeHTML(collection.name)}
+                    </option>
+                `
+            )
+            .join("");
+
+    if(
+        item.collection_id == null
+    ){
+        select.value = "";
+    }
+
+    openModal(
+        "moveModal"
+    );
+}
+
+async function confirmMove(){
+
+    const item =
+        state.centralItems
+            .find(
+                value =>
+                    String(value.id) ===
+                    String(
+                        state.movingId
+                    )
+            );
+
+    if(!item){
+        return;
+    }
+
+    const raw =
+        $("moveCollectionSelect")
+            .value;
+
+    const collectionId =
+        raw
+            ? Number(raw)
+            : null;
+
+    try{
+
+        const {
+            data,
+            error
+        } =
+            await db
+                .from("saved_items")
+                .update({
+                    collection_id:
+                        collectionId
+                })
+                .eq(
+                    "id",
+                    item.id
+                )
+                .select(
+                    "id,created_at,user_id,collection_id,item_type,item_id"
+                )
+                .single();
+
+        if(error){
+            throw error;
+        }
+
+        const index =
+            state.centralItems
+                .findIndex(
+                    value =>
+                        String(value.id) ===
+                        String(item.id)
+                );
+
+        if(index >= 0){
+
+            state.centralItems[index] = {
+                ...data,
+                source: "central",
+                item_type:
+                    normalizeType(
+                        data.item_type
+                    ),
+                item_id:
+                    String(
+                        data.item_id
+                    )
+            };
+
+        }
+
+        mergeSavedSources();
+
+        closeModal(
+            "moveModal"
+        );
+
+        state.movingId =
+            null;
+
+        renderCollections();
+        renderCollectionManager();
+        renderSaved();
+
+        showToast(
+            "Saved item moved."
+        );
+
+    }catch(error){
+
+        console.error(
+            "HAVKAR Saved move:",
+            error
+        );
+
+        showToast(
+            error?.message ||
+            "Could not move saved item.",
+            "error"
+        );
+
+    }
+}
+
+async function importLegacyAd(savedId){
+
+    const item =
+        state.items
+            .find(
+                value =>
+                    String(value.id) ===
+                    String(savedId)
+            );
+
+    if(
+        !item ||
+        item.source !==
+        "legacy_ad_saves" ||
+        !state.user
+    ){
+        return;
+    }
+
+    try{
+
+        const {
+            data,
+            error
+        } =
+            await db
+                .from("saved_items")
+                .insert({
+                    user_id:
+                        state.user.id,
+                    collection_id:
+                        null,
+                    item_type:
+                        "ad",
+                    item_id:
+                        String(
+                            item.item_id
+                        )
+                })
+                .select(
+                    "id,created_at,user_id,collection_id,item_type,item_id"
+                )
+                .single();
+
+        if(error){
+
+            if(
+                String(
+                    error.code || ""
+                ) !== "23505"
+            ){
+                throw error;
+            }
+
+            await refreshAll();
+
+            return;
+        }
+
+        state.centralItems.push({
+            ...data,
+            source: "central",
+            item_type: "ad",
+            item_id:
+                String(
+                    data.item_id
+                )
+        });
+
+        mergeSavedSources();
+
+        renderCollections();
+        renderCollectionManager();
+        renderTypes();
+        renderSaved();
+
+        const central =
+            state.centralItems
+                .find(
+                    value =>
+                        value.item_type === "ad" &&
+                        String(
+                            value.item_id
+                        ) ===
+                        String(
+                            item.item_id
+                        )
+                );
+
+        if(central){
+
+            beginMove(
+                central.id
+            );
+
+        }
+
+    }catch(error){
+
+        console.error(
+            "HAVKAR Saved organize legacy ad:",
+            error
+        );
+
+        showToast(
+            error?.message ||
+            "Could not organize this saved ad.",
+            "error"
+        );
+
+    }
+}
+
+async function removeSaved(savedId){
+
+    const item =
+        state.items
+            .find(
+                value =>
+                    String(value.id) ===
+                    String(savedId)
+            );
+
+    if(!item){
+        return;
+    }
+
+    try{
+
+        if(
+            item.source ===
+            "legacy_ad_saves"
+        ){
+
+            const {
+                error
+            } =
+                await db
+                    .from("ad_saves")
+                    .delete()
+                    .eq(
+                        "user_id",
+                        state.user.id
+                    )
+                    .eq(
+                        "ad_id",
+                        Number(
+                            item.item_id
+                        )
+                    );
+
+            if(error){
+                throw error;
+            }
+
+            state.legacyAdIds =
+                state.legacyAdIds
+                    .filter(
+                        id =>
+                            String(id) !==
+                            String(
+                                item.item_id
+                            )
+                    );
+
+        }else{
+
+            const {
+                error
+            } =
+                await db
+                    .from("saved_items")
+                    .delete()
+                    .eq(
+                        "id",
+                        item.id
+                    );
+
+            if(error){
+                throw error;
+            }
+
+            state.centralItems =
+                state.centralItems
+                    .filter(
+                        value =>
+                            String(
+                                value.id
+                            ) !==
+                            String(
+                                item.id
+                            )
+                    );
+
+            if(
+                normalizeType(
+                    item.item_type
+                ) === "ad"
+            ){
+
+                const {
+                    error:
+                        legacyDeleteError
+                } =
+                    await db
+                        .from("ad_saves")
+                        .delete()
+                        .eq(
+                            "user_id",
+                            state.user.id
+                        )
+                        .eq(
+                            "ad_id",
+                            Number(
+                                item.item_id
+                            )
+                        );
+
+                if(legacyDeleteError){
+
+                    console.warn(
+                        "HAVKAR Saved legacy ad cleanup:",
+                        legacyDeleteError
+                    );
+
+                }
+
+                state.legacyAdIds =
+                    state.legacyAdIds
+                        .filter(
+                            id =>
+                                String(id) !==
+                                String(
+                                    item.item_id
+                                )
+                        );
+
+            }
+
+        }
+
+        mergeSavedSources();
+
+        renderCollections();
+        renderCollectionManager();
+        renderTypes();
+        renderSaved();
+
+        showToast(
+            "Removed from Saved."
+        );
+
+    }catch(error){
+
+        console.error(
+            "HAVKAR Saved remove:",
+            error
+        );
+
+        showToast(
+            error?.message ||
+            "Could not remove saved item.",
+            "error"
+        );
+
+    }
+}
+
+function openSavedItem(savedId){
+
+    const item =
+        state.items
+            .find(
+                value =>
+                    String(value.id) ===
+                    String(savedId)
+            );
+
+    if(!item){
+        return;
+    }
+
+    const type =
+        normalizeType(
+            item.item_type
+        );
+
+    const id =
+        encodeURIComponent(
+            String(
+                item.item_id
+            )
+        );
+
+    /*
+     * Verified from the current HAVKAR project:
+     * Buy & Sell opens an ad with:
+     * ad-details.html?id=AD_ID
+     */
+    if(type === "ad"){
+
+        window.location.href =
+            "ad-details.html?id=" +
+            id;
+
+        return;
+    }
+
+    /*
+     * Jobs currently opens job details inside jobs.html.
+     * The current file does not expose a verified standalone
+     * job-details URL, so we do not invent one here.
+     */
+    if(type === "job"){
+
+        window.location.href =
+            "jobs.html";
+
+        return;
+    }
+
+    /*
+     * Events currently renders details inside events.html.
+     * No separate event-details HTML file exists in the
+     * supplied project, so the safe destination is events.html.
+     */
+    if(type === "event"){
+
+        window.location.href =
+            "events.html";
+
+        return;
+    }
+
+    if(
+        type === "profile" ||
+        type === "user" ||
+        type === "business"
+    ){
+
+        window.location.href =
+            "profile.html";
+
+        return;
+    }
+
+    if(type === "review"){
+
+        window.location.href =
+            "reviews.html";
+
+        return;
+    }
+
+    if(type === "service"){
+
+        window.location.href =
+            "services.html";
+
+        return;
+    }
+
+    showToast(
+        "This saved content type is not connected to a destination yet.",
+        "error"
+    );
+}
+
+function cycleSort(){
+
+    state.sort =
+        state.sort === "newest"
+            ? "oldest"
+            : "newest";
+
+    $("sortBtn")
+        .innerHTML =
+            state.sort === "newest"
+                ? `
+                    <i class="fa-solid fa-arrow-down-wide-short"></i>
+                  `
+                : `
+                    <i class="fa-solid fa-arrow-up-wide-short"></i>
+                  `;
+
+    renderSaved();
+
+    showToast(
+        state.sort === "newest"
+            ? "Newest first"
+            : "Oldest first"
+    );
+}
+
+$("backBtn")
+    .addEventListener(
+        "click",
+        () => {
+
+            if(
+                window.history.length > 1
+            ){
+
+                window.history.back();
+
+            }else{
+
+                window.location.href =
+                    "profile.html";
+
+            }
+
+        }
+    );
+
+$("refreshBtn")
+    .addEventListener(
+        "click",
+        refreshAll
+    );
+
+$("retryBtn")
+    .addEventListener(
+        "click",
+        refreshAll
+    );
+
+$("sortBtn")
+    .addEventListener(
+        "click",
+        cycleSort
+    );
+
+$("manageCollectionsBtn")
+    .addEventListener(
+        "click",
+        () => {
+
+            openModal(
+                "collectionsModal"
+            );
+
+        }
+    );
+
+$("createCollectionBtn")
+    .addEventListener(
+        "click",
+        createCollection
+    );
+
+$("confirmMoveBtn")
+    .addEventListener(
+        "click",
+        confirmMove
+    );
+
+$("searchInput")
+    .addEventListener(
+        "input",
+        event => {
+
+            state.search =
+                event.target.value;
+
+            renderSaved();
+
+        }
+    );
+
+$("collectionsBar")
+    .addEventListener(
+        "click",
+        event => {
+
+            const button =
+                event.target.closest(
+                    "[data-collection]"
+                );
+
+            if(!button){
+                return;
+            }
+
+            state.collectionId =
+                button.dataset.collection;
+
+            renderCollections();
+            renderSaved();
+
+        }
+    );
+
+$("typeTabs")
+    .addEventListener(
+        "click",
+        event => {
+
+            const button =
+                event.target.closest(
+                    "[data-type]"
+                );
+
+            if(!button){
+                return;
+            }
+
+            state.type =
+                button.dataset.type;
+
+            renderTypes();
+            renderSaved();
+
+        }
+    );
+
+$("savedList")
+    .addEventListener(
+        "click",
+        event => {
+
+            const button =
+                event.target.closest(
+                    "[data-action]"
+                );
+
+            if(!button){
+                return;
+            }
+
+            const id =
+                button.dataset.id;
+
+            const action =
+                button.dataset.action;
+
+            if(action === "open"){
+
+                openSavedItem(id);
+
+            }else if(
+                action === "move"
+            ){
+
+                beginMove(id);
+
+            }else if(
+                action === "import"
+            ){
+
+                importLegacyAd(id);
+
+            }else if(
+                action === "remove"
+            ){
+
+                removeSaved(id);
+
+            }
+
+        }
+    );
+
+$("collectionManagerList")
+    .addEventListener(
+        "click",
+        event => {
+
+            const button =
+                event.target.closest(
+                    "[data-delete-collection]"
+                );
+
+            if(!button){
+                return;
+            }
+
+            deleteCollection(
+                button.dataset
+                    .deleteCollection
+            );
+
+        }
+    );
+
+document
+    .addEventListener(
+        "click",
+        event => {
+
+            const closeButton =
+                event.target.closest(
+                    "[data-close]"
+                );
+
+            if(closeButton){
+
+                closeModal(
+                    closeButton.dataset.close
+                );
+
+            }
+
+            if(
+                event.target
+                    .classList
+                    .contains(
+                        "modal-backdrop"
+                    )
+            ){
+
+                closeModal(
+                    event.target.id
+                );
+
+            }
+
+        }
+    );
+
+document
+    .addEventListener(
+        "keydown",
+        event => {
+
+            if(
+                event.key !==
+                "Escape"
+            ){
+                return;
+            }
+
+            document
+                .querySelectorAll(
+                    ".modal-backdrop:not(.hidden)"
+                )
+                .forEach(
+                    modal => {
+
+                        closeModal(
+                            modal.id
+                        );
+
+                    }
+                );
+
+        }
+    );
+
+refreshAll();
+
+</script>
+
+<script src="havkar-i18n.js"></script>
+
+</body>
+</html>
