@@ -3248,11 +3248,11 @@ async function openConversation(
 
     closeAllReactionPickers();
 
-    loadReactions(
+    await loadMessages(
         conversation.id
     );
 
-    await loadMessages(
+    await loadReactions(
         conversation.id
     );
 
@@ -4044,93 +4044,198 @@ function closeAllReactionPickers(){
 
 
 /* =========================================================
-   REACTION STORAGE
+   REACTION DATABASE STORAGE
+   Supabase public.message_reactions is the source of truth.
 ========================================================= */
 
-function getReactionStorageKey(
-    conversationId
-){
-
-    return (
-        "havkar_message_reactions_v2:" +
-        String(
-            conversationId
-        )
-    );
-
-}
-
-
-function loadReactions(
+async function loadReactions(
     conversationId
 ){
 
     state.reactions = {};
 
+    if(
+        !supabaseClient ||
+        !state.currentUser ||
+        !conversationId
+    ){
+        return;
+    }
+
     try{
 
-        const raw =
-            localStorage.getItem(
-                getReactionStorageKey(
-                    conversationId
-                )
+        const messagesResult =
+            await withTimeout(
+                supabaseClient
+                    .from("messages")
+                    .select("id")
+                    .eq(
+                        "conversation_id",
+                        conversationId
+                    )
             );
 
-        if(!raw){
+        if(messagesResult.error){
+            throw messagesResult.error;
+        }
+
+        const messageIds =
+            (messagesResult.data || [])
+                .map(item => String(item.id))
+                .filter(Boolean);
+
+        if(!messageIds.length){
             return;
         }
 
-        const parsed =
-            JSON.parse(
-                raw
+        const reactionResult =
+            await withTimeout(
+                supabaseClient
+                    .from("message_reactions")
+                    .select(
+                        "message_id,user_id,emoji"
+                    )
+                    .in(
+                        "message_id",
+                        messageIds
+                    )
             );
 
-        if(
-            parsed &&
-            typeof parsed ===
-            "object"
-        ){
-
-            state.reactions =
-                parsed;
-
+        if(reactionResult.error){
+            throw reactionResult.error;
         }
+
+        (reactionResult.data || [])
+            .forEach(reaction => {
+
+                const messageId =
+                    String(reaction.message_id);
+
+                const userId =
+                    String(reaction.user_id);
+
+                const emoji =
+                    String(reaction.emoji || "");
+
+                if(!REACTIONS.includes(emoji)){
+                    return;
+                }
+
+                if(!state.reactions[messageId]){
+                    state.reactions[messageId] = {};
+                }
+
+                if(
+                    !Array.isArray(
+                        state.reactions[messageId][emoji]
+                    )
+                ){
+                    state.reactions[messageId][emoji] = [];
+                }
+
+                if(
+                    !state.reactions[messageId][emoji]
+                        .some(id => String(id) === userId)
+                ){
+                    state.reactions[messageId][emoji]
+                        .push(userId);
+                }
+
+            });
+
+        messageIds.forEach(
+            messageId =>
+                renderMessageReactions(messageId)
+        );
 
     }catch(error){
 
         console.warn(
-            "[HAVKAR] Reaction storage load failed:",
+            "[HAVKAR] Reaction database load failed:",
             error
         );
 
-        state.reactions = {};
+        showToast(
+            "Message reactions could not be loaded.",
+            "error"
+        );
 
     }
 
 }
 
 
-function saveReactions(){
+async function refreshMessageReaction(
+    messageId
+){
 
-    if(!state.currentConversationId){
+    if(
+        !supabaseClient ||
+        !state.currentUser ||
+        !messageId
+    ){
         return;
     }
 
     try{
 
-        localStorage.setItem(
-            getReactionStorageKey(
-                state.currentConversationId
-            ),
-            JSON.stringify(
-                state.reactions
-            )
+        const result =
+            await withTimeout(
+                supabaseClient
+                    .from("message_reactions")
+                    .select(
+                        "message_id,user_id,emoji"
+                    )
+                    .eq(
+                        "message_id",
+                        messageId
+                    )
+            );
+
+        if(result.error){
+            throw result.error;
+        }
+
+        const data = {};
+
+        (result.data || [])
+            .forEach(reaction => {
+
+                const emoji =
+                    String(reaction.emoji || "");
+
+                const userId =
+                    String(reaction.user_id);
+
+                if(!REACTIONS.includes(emoji)){
+                    return;
+                }
+
+                if(!Array.isArray(data[emoji])){
+                    data[emoji] = [];
+                }
+
+                if(
+                    !data[emoji]
+                        .some(id => String(id) === userId)
+                ){
+                    data[emoji].push(userId);
+                }
+
+            });
+
+        state.reactions[
+            String(messageId)
+        ] = data;
+
+        renderMessageReactions(
+            String(messageId)
         );
 
     }catch(error){
 
         console.warn(
-            "[HAVKAR] Reaction storage save failed:",
+            "[HAVKAR] Reaction refresh failed:",
             error
         );
 
@@ -4167,14 +4272,15 @@ function getMessageReactionData(
 }
 
 
-function addOrToggleReaction(
+async function addOrToggleReaction(
     messageId,
     emoji
 ){
 
     if(
         !state.currentUser ||
-        !state.currentConversationId
+        !state.currentConversationId ||
+        !supabaseClient
     ){
         return;
     }
@@ -4183,110 +4289,95 @@ function addOrToggleReaction(
         return;
     }
 
-    const data =
-        getMessageReactionData(
-            messageId
-        );
-
     const userId =
-        String(
-            state.currentUser.id
-        );
+        String(state.currentUser.id);
 
-    let currentEmoji =
-        null;
+    closeAllReactionPickers();
 
-    Object.keys(
-        data
-    ).forEach(
-        reactionEmoji => {
+    try{
 
-            if(
-                Array.isArray(
-                    data[reactionEmoji]
-                ) &&
-                data[reactionEmoji].some(
-                    id =>
-                        String(id) ===
-                        userId
-                )
-            ){
+        const currentResult =
+            await withTimeout(
+                supabaseClient
+                    .from("message_reactions")
+                    .select("emoji")
+                    .eq("message_id", messageId)
+                    .eq("user_id", userId)
+                    .maybeSingle()
+            );
 
-                currentEmoji =
-                    reactionEmoji;
-
-            }
-
+        if(currentResult.error){
+            throw currentResult.error;
         }
-    );
 
-    Object.keys(
-        data
-    ).forEach(
-        reactionEmoji => {
+        const currentEmoji =
+            currentResult.data?.emoji || null;
 
-            if(
-                !Array.isArray(
-                    data[reactionEmoji]
-                )
-            ){
+        if(currentEmoji === emoji){
 
-                data[reactionEmoji] =
-                    [];
-
-            }
-
-            data[reactionEmoji] =
-                data[reactionEmoji].filter(
-                    id =>
-                        String(id) !==
-                        userId
+            const deleteResult =
+                await withTimeout(
+                    supabaseClient
+                        .from("message_reactions")
+                        .delete()
+                        .eq("message_id", messageId)
+                        .eq("user_id", userId)
                 );
 
+            if(deleteResult.error){
+                throw deleteResult.error;
+            }
+
+        }else{
+
+            const upsertResult =
+                await withTimeout(
+                    supabaseClient
+                        .from("message_reactions")
+                        .upsert(
+                            {
+                                message_id:
+                                    String(messageId),
+                                user_id:
+                                    userId,
+                                emoji:
+                                    emoji
+                            },
+                            {
+                                onConflict:
+                                    "message_id,user_id"
+                            }
+                        )
+                );
+
+            if(upsertResult.error){
+                throw upsertResult.error;
+            }
+
         }
-    );
 
-    if(currentEmoji !== emoji){
+        await refreshMessageReaction(
+            String(messageId)
+        );
 
-        if(
-            !Array.isArray(
-                data[emoji]
-            )
-        ){
-            data[emoji] = [];
-        }
+        broadcastReaction({
+            messageId:
+                String(messageId)
+        });
 
-        data[emoji].push(
-            userId
+    }catch(error){
+
+        console.error(
+            "[HAVKAR] Reaction database write failed:",
+            error
+        );
+
+        showToast(
+            "Reaction could not be saved.",
+            "error"
         );
 
     }
-
-    cleanupReactionData(
-        messageId
-    );
-
-    saveReactions();
-
-    renderMessageReactions(
-        messageId
-    );
-
-    broadcastReaction({
-        messageId:
-            String(
-                messageId
-            ),
-
-        reactions:
-            cloneReactionData(
-                getMessageReactionData(
-                    messageId
-                )
-            )
-    });
-
-    closeAllReactionPickers();
 
 }
 
@@ -4500,20 +4591,23 @@ function subscribeToReactions(
 
     try{
 
+        /*
+         * Database rows are authoritative. Broadcast is used only as
+         * a low-latency refresh signal, so persistence never depends
+         * on localStorage or Broadcast delivery.
+         */
         state.reactionChannel =
             supabaseClient
                 .channel(
                     "havkar-reactions-" +
-                    String(
-                        conversationId
-                    ) +
+                    String(conversationId) +
                     "-" +
                     Date.now()
                 )
                 .on(
                     "broadcast",
                     {
-                        event:"reaction"
+                        event:"reaction-refresh"
                     },
                     payload => {
 
@@ -4522,38 +4616,15 @@ function subscribeToReactions(
 
                         if(
                             !data ||
-                            String(
-                                data.conversationId
-                            ) !==
-                            String(
-                                conversationId
-                            )
+                            String(data.conversationId) !==
+                            String(conversationId) ||
+                            !data.messageId
                         ){
                             return;
                         }
 
-                        if(
-                            !data.messageId ||
-                            !data.reactions
-                        ){
-                            return;
-                        }
-
-                        state.reactions[
-                            String(
-                                data.messageId
-                            )
-                        ] =
-                            cloneReactionData(
-                                data.reactions
-                            );
-
-                        saveReactions();
-
-                        renderMessageReactions(
-                            String(
-                                data.messageId
-                            )
+                        refreshMessageReaction(
+                            String(data.messageId)
                         );
 
                     }
@@ -4562,7 +4633,7 @@ function subscribeToReactions(
                     status => {
 
                         console.log(
-                            "[HAVKAR] Reaction realtime:",
+                            "[HAVKAR] Reaction refresh channel:",
                             status
                         );
 
@@ -4587,7 +4658,8 @@ function broadcastReaction(
 
     if(
         !state.reactionChannel ||
-        !state.currentConversationId
+        !state.currentConversationId ||
+        !payload?.messageId
     ){
         return;
     }
@@ -4595,20 +4667,21 @@ function broadcastReaction(
     state.reactionChannel
         .send({
             type:"broadcast",
-            event:"reaction",
+            event:"reaction-refresh",
             payload:{
                 conversationId:
                     String(
                         state.currentConversationId
                     ),
-                ...payload
+                messageId:
+                    String(payload.messageId)
             }
         })
         .catch(
             error => {
 
                 console.warn(
-                    "[HAVKAR] Reaction broadcast failed:",
+                    "[HAVKAR] Reaction refresh broadcast failed:",
                     error
                 );
 
