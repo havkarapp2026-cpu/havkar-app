@@ -39,6 +39,64 @@ export default async function handler(req, res) {
 
     const pi = new PiNetwork(apiKey, walletPrivateSeed);
 
+    /*
+     * First recover any previous incomplete A2U payment.
+     * Pi only allows one incomplete server payment at a time.
+     */
+    const incompletePayments = await pi.getIncompleteServerPayments();
+
+    if (Array.isArray(incompletePayments) && incompletePayments.length > 0) {
+      const pending = incompletePayments[0];
+
+      if (!pending?.identifier) {
+        throw new Error("Incomplete Pi payment has no identifier");
+      }
+
+      let txid = pending?.transaction?.txid || null;
+
+      /*
+       * If the blockchain transaction already exists,
+       * only complete the existing payment.
+       */
+      if (txid) {
+        const completedPayment = await pi.completePayment(
+          pending.identifier,
+          txid
+        );
+
+        return res.status(200).json({
+          success: true,
+          recovered: true,
+          paymentId: pending.identifier,
+          txid,
+          payment: completedPayment
+        });
+      }
+
+      /*
+       * Payment exists but has not yet been submitted
+       * to the blockchain. Submit and then complete it.
+       */
+      txid = await pi.submitPayment(pending.identifier);
+
+      const completedPayment = await pi.completePayment(
+        pending.identifier,
+        txid
+      );
+
+      return res.status(200).json({
+        success: true,
+        recovered: true,
+        paymentId: pending.identifier,
+        txid,
+        payment: completedPayment
+      });
+    }
+
+    /*
+     * No incomplete payment exists.
+     * Create a new Testnet A2U payment.
+     */
     const paymentData = {
       amount: paymentAmount,
       memo: "HAVKAR Testnet A2U",
@@ -60,6 +118,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
+      recovered: false,
       paymentId,
       txid,
       payment
