@@ -1,102 +1,216 @@
-<!DOCTYPE html>  <html lang="en">  
-<head>  
-<meta charset="UTF-8">  
-<meta name="viewport" content="width=device-width, initial-scale=1.0">  
-<title>HAVKAR - Pi Testnet</title>  <script src="https://sdk.minepi.com/pi-sdk.js"></script>  <style>  
-body{  
-  margin:0;  
-  font-family:Arial,sans-serif;  
-  background:#f4f8f2;  
-  min-height:100vh;  
-  display:flex;  
-  align-items:center;  
-  justify-content:center;  
-}  
-.box{  
-  width:90%;  
-  max-width:430px;  
-  background:#fff;  
-  padding:30px 22px;  
-  border-radius:20px;  
-  text-align:center;  
-  box-shadow:0 5px 25px rgba(0,0,0,.10);  
-}  
-h1{color:#2e7d32;}  
-button{  
-  width:100%;  
-  padding:15px;  
-  border:0;  
-  border-radius:12px;  
-  background:#2e7d32;  
-  color:white;  
-  font-size:17px;  
-  font-weight:bold;  
-}  
-#status{margin-top:20px;}  
-#result{  
-  margin-top:20px;  
-  padding:15px;  
-  background:#eef7e8;  
-  border-radius:12px;  
-  text-align:left;  
-  word-break:break-word;  
-  display:none;  
-}  
-.error{color:#c62828;}  
-</style>  </head>  <body>  <div class="box">  <h1>HAVKAR</h1>  <button id="login">  
-Authenticate with Pi  
-</button>  <div id="status"></div>  
-<div id="result"></div>  </div>  <script>  
-  
-Pi.init({  
-  version: "2.0"  
-});  
-  
-const button = document.getElementById("login");  
-const status = document.getElementById("status");  
-const result = document.getElementById("result");  
-  
-function onIncompletePaymentFound(payment){  
-  console.log("Incomplete Pi payment:", payment);  
-}  
-  
-button.addEventListener("click", async () => {  
-  
-  button.disabled = true;  
-  status.textContent = "Authenticating...";  
-  
-  try {  
-  
-    const auth = await Pi.authenticate(  
-      ["username", "wallet_address"],  
-      onIncompletePaymentFound  
-    );  
-  
-    status.textContent = "Pi authentication successful ✅";  
-  
-    result.style.display = "block";  
-  
-    result.innerHTML =  
-      "<strong>Username:</strong><br>" +  
-      (auth.user.username || "—") +  
-      "<br><br>" +  
-      "<strong>Pi UID:</strong><br>" +  
-      auth.user.uid;  
-  
-  } catch(error) {  
-  
-    status.innerHTML =  
-      '<span class="error">Authentication failed ❌</span>';  
-  
-    result.style.display = "block";  
-    result.textContent =  
-      error?.message || String(error);  
-  
-  } finally {  
-    button.disabled = false;  
-  }  
-  
-});  
-  
-</script>  </body>  
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HAVKAR - Pi Testnet A2U</title>
+
+<script src="https://sdk.minepi.com/pi-sdk.js"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#f4f8f2;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.box{
+  width:90%;
+  max-width:430px;
+  background:#fff;
+  padding:30px 22px;
+  border-radius:20px;
+  text-align:center;
+  box-shadow:0 5px 25px rgba(0,0,0,.10);
+}
+h1{color:#2e7d32;}
+button{
+  width:100%;
+  padding:15px;
+  margin-top:12px;
+  border:0;
+  border-radius:12px;
+  background:#2e7d32;
+  color:white;
+  font-size:17px;
+  font-weight:bold;
+}
+button:disabled{
+  opacity:.6;
+}
+#status{
+  margin-top:20px;
+  line-height:1.5;
+}
+#result{
+  margin-top:20px;
+  padding:15px;
+  background:#eef7e8;
+  border-radius:12px;
+  text-align:left;
+  word-break:break-word;
+  display:none;
+}
+.error{color:#c62828;}
+.success{color:#2e7d32;font-weight:bold;}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+
+<h1>HAVKAR</h1>
+
+<button id="login">
+Authenticate with Pi
+</button>
+
+<button id="send" style="display:none;">
+Send 0.01 Testnet Pi
+</button>
+
+<div id="status"></div>
+<div id="result"></div>
+
+</div>
+
+<script>
+
+Pi.init({
+  version: "2.0"
+});
+
+const loginButton = document.getElementById("login");
+const sendButton = document.getElementById("send");
+const status = document.getElementById("status");
+const result = document.getElementById("result");
+
+let currentUser = null;
+
+function onIncompletePaymentFound(payment){
+  console.log("Incomplete Pi payment:", payment);
+}
+
+loginButton.addEventListener("click", async () => {
+
+  loginButton.disabled = true;
+  status.textContent = "Authenticating...";
+
+  try {
+
+    const auth = await Pi.authenticate(
+      ["username", "wallet_address"],
+      onIncompletePaymentFound
+    );
+
+    if (!auth?.user?.uid) {
+      throw new Error("Pi UID was not returned.");
+    }
+
+    currentUser = auth.user;
+
+    status.innerHTML =
+      '<span class="success">Pi authentication successful ✅</span>';
+
+    result.style.display = "block";
+
+    result.innerHTML =
+      "<strong>Username:</strong><br>" +
+      (currentUser.username || "—") +
+      "<br><br>" +
+      "<strong>Pi UID:</strong><br>" +
+      currentUser.uid;
+
+    sendButton.style.display = "block";
+
+  } catch(error) {
+
+    status.innerHTML =
+      '<span class="error">Authentication failed ❌</span>';
+
+    result.style.display = "block";
+    result.textContent =
+      error?.message || String(error);
+
+  } finally {
+    loginButton.disabled = false;
+  }
+
+});
+
+
+sendButton.addEventListener("click", async () => {
+
+  if (!currentUser?.uid) {
+    status.innerHTML =
+      '<span class="error">Authenticate first.</span>';
+    return;
+  }
+
+  sendButton.disabled = true;
+
+  status.textContent =
+    "Sending 0.01 Testnet Pi...";
+
+  try {
+
+    const response = await fetch(
+      "/api/pi-a2u-testnet",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          uid: currentUser.uid,
+          amount: 0.01
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data?.error || "Testnet A2U payment failed."
+      );
+    }
+
+    status.innerHTML =
+      '<span class="success">0.01 Testnet Pi sent successfully ✅</span>';
+
+    result.style.display = "block";
+
+    result.innerHTML =
+      "<strong>Username:</strong><br>" +
+      (currentUser.username || "—") +
+      "<br><br>" +
+      "<strong>Payment ID:</strong><br>" +
+      (data.paymentId || "—") +
+      "<br><br>" +
+      "<strong>Transaction ID:</strong><br>" +
+      (data.txid || "—");
+
+  } catch(error) {
+
+    status.innerHTML =
+      '<span class="error">Payment failed ❌</span>';
+
+    result.style.display = "block";
+    result.textContent =
+      error?.message || String(error);
+
+  } finally {
+    sendButton.disabled = false;
+  }
+
+});
+
+</script>
+
+</body>
 </html>
