@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>HAVKAR Pi Testnet Sign-In</title>
+
+<script src="https://sdk.minepi.com/pi-sdk.js"></script>
+
+<style>
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#f4f8f2;
+  font-family:Arial,sans-serif;
+  color:#222;
+}
+
+.card{
+  width:92%;
+  max-width:440px;
+  background:#fff;
+  border-radius:22px;
+  padding:30px 22px;
+  box-shadow:0 6px 25px rgba(0,0,0,.10);
+  text-align:center;
+}
+
+h1{
+  margin:0 0 8px;
+  color:#238b45;
+}
+
+.subtitle{
+  color:#666;
+  margin-bottom:25px;
+}
+
+button{
+  width:100%;
+  border:0;
+  border-radius:14px;
+  padding:16px;
+  font-size:17px;
+  font-weight:bold;
+  background:#6f3bb3;
+  color:white;
+  cursor:pointer;
+}
+
+button:disabled{
+  opacity:.6;
+}
+
+#status{
+  margin-top:20px;
+  line-height:1.5;
+}
+
+.result{
+  margin-top:20px;
+  padding:16px;
+  border-radius:14px;
+  background:#eef7e8;
+  text-align:left;
+  word-break:break-word;
+}
+
+.error{
+  color:#c62828;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+  <h1>HAVKAR</h1>
+
+  <div class="subtitle">
+    Pi Testnet User Verification
+  </div>
+
+  <button id="signin">
+    Sign in with Pi
+  </button>
+
+  <div id="status"></div>
+
+  <div id="result"></div>
+
+</div>
+
+<script>
+const CLIENT_ID =
+  "PASTE_YOUR_TESTNET_CLIENT_ID_HERE";
+
+const REDIRECT_URI =
+  "https://havkar-app.vercel.app/pi-signin-callback.html";
+
+const button =
+  document.getElementById("signin");
+
+const status =
+  document.getElementById("status");
+
+const result =
+  document.getElementById("result");
+
+Pi.init({
+  version: "2.0"
+});
+
+button.addEventListener("click", async () => {
+
+  button.disabled = true;
+
+  status.textContent =
+    "Opening Pi Sign-In...";
+
+  result.innerHTML = "";
+
+  try {
+
+    if (
+      !CLIENT_ID ||
+      CLIENT_ID === "PASTE_YOUR_TESTNET_CLIENT_ID_HERE"
+    ) {
+      throw new Error(
+        "Testnet OAuth Client ID has not been configured."
+      );
+    }
+
+    const state =
+      crypto.randomUUID();
+
+    sessionStorage.setItem(
+      "pi_oauth_state",
+      state
+    );
+
+    Pi.signIn({
+      clientId: CLIENT_ID,
+
+      redirectUri: REDIRECT_URI,
+
+      scopes: [
+        "username",
+        "wallet_address"
+      ],
+
+      state: state
+    });
+
+  } catch (error) {
+
+    button.disabled = false;
+
+    status.innerHTML =
+      "<span class='error'>Sign-In failed ❌</span>";
+
+    result.className = "result";
+
+    result.textContent =
+      error?.message ||
+      "Unable to start Pi Sign-In.";
+
+  }
+
+});
+</script>
+
+</body>
+</html>
