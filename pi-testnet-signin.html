@@ -1,61 +1,94 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#2e7d32">
 <title>HAVKAR - Pi Testnet A2U</title>
 
 <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 
 <style>
-body{
-  margin:0;
-  font-family:Arial,sans-serif;
-  background:#f4f8f2;
-  min-height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+* {
+  box-sizing: border-box;
 }
-.box{
-  width:90%;
-  max-width:430px;
-  background:#fff;
-  padding:30px 22px;
-  border-radius:20px;
-  text-align:center;
-  box-shadow:0 5px 25px rgba(0,0,0,.10);
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f8f2;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
 }
-h1{color:#2e7d32;}
-button{
-  width:100%;
-  padding:15px;
-  margin-top:12px;
-  border:0;
-  border-radius:12px;
-  background:#2e7d32;
-  color:white;
-  font-size:17px;
-  font-weight:bold;
+
+.box {
+  width: 100%;
+  max-width: 430px;
+  background: white;
+  padding: 30px 22px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 5px 25px rgba(0,0,0,.10);
 }
-button:disabled{
-  opacity:.6;
+
+h1 {
+  color: #2e7d32;
 }
-#status{
-  margin-top:20px;
-  line-height:1.5;
+
+button {
+  width: 100%;
+  padding: 15px;
+  margin-top: 12px;
+  border: 0;
+  border-radius: 12px;
+  background: #2e7d32;
+  color: white;
+  font-size: 17px;
+  font-weight: bold;
+  cursor: pointer;
 }
-#result{
-  margin-top:20px;
-  padding:15px;
-  background:#eef7e8;
-  border-radius:12px;
-  text-align:left;
-  word-break:break-word;
-  display:none;
+
+button:disabled {
+  opacity: .6;
+  cursor: not-allowed;
 }
-.error{color:#c62828;}
-.success{color:#2e7d32;font-weight:bold;}
+
+#status {
+  margin-top: 20px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+#result {
+  display: none;
+  margin-top: 20px;
+  padding: 15px;
+  background: #eef7e8;
+  border-radius: 12px;
+  text-align: left;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+
+.error {
+  color: #c62828;
+}
+
+.success {
+  color: #2e7d32;
+  font-weight: bold;
+}
+
+.note {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.6;
+  margin-top: 18px;
+}
 </style>
 </head>
 
@@ -63,104 +96,204 @@ button:disabled{
 
 <div class="box">
 
-<h1>HAVKAR</h1>
+  <h1>HAVKAR</h1>
 
-<button id="login">
-Authenticate with Pi
-</button>
+  <button id="login" type="button">
+    Authenticate with Pi
+  </button>
 
-<button id="send" style="display:none;">
-Send 0.01 Testnet Pi
-</button>
+  <button id="send" type="button" hidden>
+    Send 0.01 Testnet Pi
+  </button>
 
-<div id="status"></div>
-<div id="result"></div>
+  <div id="status" role="status" aria-live="polite"></div>
+
+  <div id="result"></div>
+
+  <p class="note">
+    Testnet only. Open this page inside Pi Browser.
+    No Mainnet Pi will be sent.
+  </p>
 
 </div>
 
 <script>
-
-Pi.init({
-  version: "2.0"
-});
+"use strict";
 
 const loginButton = document.getElementById("login");
 const sendButton = document.getElementById("send");
-const status = document.getElementById("status");
-const result = document.getElementById("result");
+const statusBox = document.getElementById("status");
+const resultBox = document.getElementById("result");
 
 let currentUser = null;
+let sdkReady = false;
+let authenticating = false;
+let sending = false;
 
-function onIncompletePaymentFound(payment){
-  console.log("Incomplete Pi payment:", payment);
+function setStatus(message, type = "") {
+  statusBox.textContent = message;
+  statusBox.className = type;
+}
+
+function showResult(rows) {
+  resultBox.replaceChildren();
+
+  for (const [label, value] of rows) {
+    const title = document.createElement("strong");
+    title.textContent = label;
+
+    const content = document.createElement("div");
+    content.textContent = String(value ?? "—");
+    content.style.marginBottom = "12px";
+
+    resultBox.append(title, content);
+  }
+
+  resultBox.style.display = "block";
+}
+
+function withTimeout(promise, milliseconds, message) {
+  let timeoutId;
+
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(message));
+    }, milliseconds);
+  });
+
+  return Promise.race([
+    promise,
+    timeout
+  ]).finally(() => {
+    clearTimeout(timeoutId);
+  });
+}
+
+function onIncompletePaymentFound(payment) {
+  // Existing user-to-app payments must not be
+  // approved or completed by this A2U test page.
+  console.info(
+    "An incomplete user-to-app payment was detected.",
+    payment?.identifier || ""
+  );
+}
+
+function initializePi() {
+  if (sdkReady) {
+    return true;
+  }
+
+  if (!window.Pi || typeof window.Pi.init !== "function") {
+    setStatus(
+      "Pi SDK is unavailable. Open this page in Pi Browser.",
+      "error"
+    );
+    return false;
+  }
+
+  try {
+    Pi.init({
+      version: "2.0"
+  });
+
+    sdkReady = true;
+    return true;
+
+  } catch (error) {
+    setStatus(
+      "Pi SDK initialization failed: " +
+      (error?.message || String(error)),
+      "error"
+    );
+
+    return false;
+  }
 }
 
 loginButton.addEventListener("click", async () => {
+  if (authenticating || sending) {
+    return;
+  }
+
+  if (!initializePi()) {
+    return;
+  }
+
+  authenticating = true;
+  currentUser = null;
 
   loginButton.disabled = true;
-  status.textContent = "Authenticating...";
+  sendButton.hidden = true;
+  resultBox.style.display = "none";
+
+  setStatus("Authenticating with Pi...");
 
   try {
-
-    const auth = await Pi.authenticate(
-      ["username", "wallet_address"],
-      onIncompletePaymentFound
+    const auth = await withTimeout(
+      Pi.authenticate(
+        ["username"],
+        onIncompletePaymentFound
+      ),
+      30000,
+      "Pi authentication timed out. Open HAVKAR inside Pi Browser and try again."
     );
 
     if (!auth?.user?.uid) {
-      throw new Error("Pi UID was not returned.");
+      throw new Error(
+        "Pi authentication did not return a user UID."
+      );
     }
 
     currentUser = auth.user;
 
-    status.innerHTML =
-      '<span class="success">Pi authentication successful ✅</span>';
+    setStatus(
+      "Pi authentication successful.",
+      "success"
+    );
 
-    result.style.display = "block";
+    showResult([
+      ["Username", currentUser.username || "—"],
+      ["Pi UID", currentUser.uid]
+    ]);
 
-    result.innerHTML =
-      "<strong>Username:</strong><br>" +
-      (currentUser.username || "—") +
-      "<br><br>" +
-      "<strong>Pi UID:</strong><br>" +
-      currentUser.uid;
+    sendButton.hidden = false;
 
-    sendButton.style.display = "block";
-
-  } catch(error) {
-
-    status.innerHTML =
-      '<span class="error">Authentication failed ❌</span>';
-
-    result.style.display = "block";
-    result.textContent =
-      error?.message || String(error);
+  } catch (error) {
+    setStatus(
+      error?.message || "Pi authentication failed.",
+      "error"
+    );
 
   } finally {
+    authenticating = false;
     loginButton.disabled = false;
   }
-
 });
 
-
 sendButton.addEventListener("click", async () => {
-
-  if (!currentUser?.uid) {
-    status.innerHTML =
-      '<span class="error">Authenticate first.</span>';
+  if (sending || authenticating) {
     return;
   }
 
-  sendButton.disabled = true;
+  if (!currentUser?.uid) {
+    setStatus(
+      "Authenticate with Pi first.",
+      "error"
+    );
+    return;
+  }
 
-  status.textContent =
-    "Sending 0.01 Testnet Pi...";
+  sending = true;
+  sendButton.disabled = true;
+  loginButton.disabled = true;
+
+  setStatus(
+    "Processing Testnet payment. Do not press again."
+  );
 
   try {
-
-    const response = await fetch(
-      "/api/pi-a2u-testnet",
-      {
+    const response = await withTimeout(
+      fetch("/api/pi-a2u-testnet", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -169,47 +302,68 @@ sendButton.addEventListener("click", async () => {
           uid: currentUser.uid,
           amount: 0.01
         })
-      }
+      }),
+      60000,
+      "The request timed out. Check the payment status before trying again."
     );
 
     const data = await response.json();
 
     if (!response.ok || !data.success) {
       throw new Error(
-        data?.error || "Testnet A2U payment failed."
+        data?.error || "Testnet payment failed."
       );
     }
 
-    status.innerHTML =
-      '<span class="success">0.01 Testnet Pi sent successfully ✅</span>';
+    setStatus(
+      data.recovered
+        ? "Previous Testnet payment recovered."
+        : "Testnet payment completed.",
+      "success"
+    );
 
-    result.style.display = "block";
+    showResult([
+      ["Username", currentUser.username || "—"],
+      ["Payment ID", data.paymentId || "—"],
+      ["Transaction ID", data.txid || "—"],
+      [
+        "Payment type",
+        data.recovered
+          ? "Recovered previous payment"
+          : "New Testnet payment"
+      ]
+    ]);
 
-    result.innerHTML =
-      "<strong>Username:</strong><br>" +
-      (currentUser.username || "—") +
-      "<br><br>" +
-      "<strong>Payment ID:</strong><br>" +
-      (data.paymentId || "—") +
-      "<br><br>" +
-      "<strong>Transaction ID:</strong><br>" +
-      (data.txid || "—");
+    // Prevent an accidental duplicate payment.
+    sendButton.hidden = true;
 
-  } catch(error) {
+  } catch (error) {
+    setStatus(
+      error?.message || "Testnet payment failed.",
+      "error"
+    );
 
-    status.innerHTML =
-      '<span class="error">Payment failed ❌</span>';
+    // A timed-out request may still have completed
+    // on the server. Do not automatically retry.
+    sendButton.hidden = true;
 
-    result.style.display = "block";
-    result.textContent =
-      error?.message || String(error);
+    showResult([
+      [
+        "Next step",
+        "Check the payment status before sending another payment."
+      ]
+    ]);
 
   } finally {
+    sending = false;
+    loginButton.disabled = false;
     sendButton.disabled = false;
   }
-
 });
 
+window.addEventListener("load", () => {
+  initializePi();
+});
 </script>
 
 </body>
