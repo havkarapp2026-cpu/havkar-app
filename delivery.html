@@ -1429,7 +1429,7 @@
                         >
 
                         <span class="checkbox-text">
-                            Tell us anything important about your delivery experience...
+                            I confirm that the information I provide is accurate and I agree to be contacted regarding my HAVKAR driver application.
                         </span>
 
                     </label>
@@ -1502,6 +1502,15 @@
   }
   document.addEventListener("DOMContentLoaded",()=>{
     translateTree(document.body);
+    // Explicitly localize form placeholders, including fields shown inside modals.
+    const placeholderFields = {
+      packageDetails: "What are you sending?",
+      driverNotes: "Tell us anything important about your delivery experience..."
+    };
+    for (const [id, english] of Object.entries(placeholderFields)) {
+      const field = document.getElementById(id);
+      if (field) field.setAttribute("placeholder", lookup(english));
+    }
     const observer=new MutationObserver(records=>{
       for(const record of records){
         if(record.type==="characterData")translateTextNode(record.target);
