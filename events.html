@@ -1997,9 +1997,9 @@
         const eventLanguage = (localStorage.getItem("havkar_language") || localStorage.getItem("selectedLanguage") || localStorage.getItem("language") || "en").toLowerCase();
         const isSwedish = eventLanguage === "sv" || eventLanguage.startsWith("sv-") || eventLanguage === "swedish";
         const sv = {
-            "Events":"Händelser", "Search events...":"Sök händelser...", "All Events":"Alla evenemang",
+            "Events":"Händelser", "Search events...":"Sök händelser...", "All Events":"Alla evenemang", "Alla kvällar":"Alla evenemang", "Alla kvällar ":"Alla evenemang",
             "Music":"Musik", "Cultural":"Kultur", "Sports":"Sport", "Food":"Mat", "Community":"Gemenskap",
-            "Home":"Hem", "My Tickets":"Mina evenemangsbiljetter", "My Event Tickets":"Evenemangsbiljetter", "Profile":"Profil", "Loading events...":"Laddar evenemang...",
+            "Home":"Hem", "My Tickets":"Evenemangsbiljetter", "My Event Tickets":"Evenemangsbiljetter", "Profile":"Profil", "Loading events...":"Laddar evenemang...",
             "Soonest":"Snarast", "Popular":"Populärast", "Latest":"Senaste", "No events found":"Inga evenemang hittades",
             "Try another search, category or date.":"Prova en annan sökning, kategori eller ett annat datum.",
             "Create New Event":"Skapa nytt evenemang", "Event Title":"Evenemangets namn", "Category":"Kategori",
@@ -2008,10 +2008,10 @@
             "Cancel":"Avbryt", "Create Event":"Skapa evenemang", "Event Details":"Evenemangsdetaljer",
             "Filter Events":"Filtrera evenemang", "All":"Alla", "Free":"Gratis", "Paid":"Betalt",
             "All categories":"Alla kategorier", "Reset":"Återställ", "Apply":"Tillämpa",
-            "My Event Tickets":"Mina evenemangsbiljetter", "Loading your tickets...":"Laddar dina biljetter...",
+            "My Event Tickets":"Evenemangsbiljetter", "Loading your tickets...":"Laddar dina biljetter...",
             "event":"evenemang", "events":"evenemang", "Organized by":"Arrangeras av",
             "expected":"förväntade", "interested":"intresserade", "Interested":"Intresserad", "I'm Interested":"Jag är intresserad",
-            "View Details":"Visa detaljer", "DATE & TIME":"DATUM OCH TID", "LOCATION":"PLATS",
+            "View Details":"Visa detaljer", "100 expected":"100 förväntade", "DATE & TIME":"DATUM OCH TID", "LOCATION":"PLATS",
             "ATTENDANCE":"DELTAGARE", "INTERESTED":"INTRESSERADE", "PRICE":"PRIS",
             "expected attendees":"förväntade deltagare", "About this event":"Om evenemanget",
             "No description available.":"Ingen beskrivning tillgänglig.", "Share":"Dela", "Join Event":"Delta",
@@ -2042,6 +2042,17 @@
                 const key = raw.trim();
                 if (sv[key]) node.nodeValue = raw.replace(key, sv[key]);
             });
+            const allTab = document.querySelector('.tab[data-category="all"]');
+            const ticketNav = document.querySelector('.bottom-nav button[onclick="openTickets()"] span');
+            if (allTab) allTab.textContent = "Alla evenemang";
+            if (ticketNav) ticketNav.textContent = "Biljetter";
+            const fixNavLabels = () => {
+                if (allTab && allTab.textContent !== "Alla evenemang") allTab.textContent = "Alla evenemang";
+                if (ticketNav && ticketNav.textContent !== "Biljetter") ticketNav.textContent = "Biljetter";
+            };
+            const labelObserver = new MutationObserver(fixNavLabels);
+            if (allTab) labelObserver.observe(allTab, {childList:true,characterData:true,subtree:true});
+            if (ticketNav) labelObserver.observe(ticketNav, {childList:true,characterData:true,subtree:true});
             document.querySelectorAll("[placeholder],[aria-label]").forEach(el => {
                 for (const attr of ["placeholder", "aria-label"]) {
                     const key = el.getAttribute(attr);
@@ -2560,7 +2571,7 @@
                                 <i class="fas fa-users"></i>
                                 <span>
                                     ${Number(event.attendees || 0).toLocaleString()}
-                                    expected
+                                    ${et("expected")}
                                 </span>
                             </div>
 
@@ -2589,7 +2600,7 @@
                                 onclick="toggleInterested('${escapeHtml(id)}')"
                             >
                                 <i class="${isInterested ? "fas" : "far"} fa-star"></i>
-                                ${isInterested ? "Interested" : "I'm Interested"}
+                                ${et(isInterested ? "Interested" : "I'm Interested")}
                             </button>
 
 
@@ -2598,7 +2609,7 @@
                                 type="button"
                                 onclick="openEventDetails('${escapeHtml(id)}')"
                             >
-                                View Details
+                                ${et("View Details")}
                             </button>
 
                         </div>
