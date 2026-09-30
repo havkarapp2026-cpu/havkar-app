@@ -335,11 +335,6 @@ h1 {
     color: #43a85b;
 }
 
-/* Taxi entry occupies the center of the final grid row. */
-.menu-item--taxi {
-    grid-column: 2;
-}
-
 /* =========================
    ABOUT HAVKAR
    ========================= */
@@ -532,6 +527,13 @@ h1 {
    LOGIN
    ========================= */
 
+.account-panel { margin: 14px 0 17px; padding: 14px; border: 1px solid #cbe4d0; background: #f4fbf5; border-radius: 18px; text-align: center; }
+.account-panel p { overflow-wrap: anywhere; font-size: .83rem; margin-bottom: 12px; color: #315c3d; }
+.account-actions { display: flex; gap: 10px; }
+.account-actions a, .account-actions button { flex: 1; padding: 13px 8px; border-radius: 12px; font-weight: 800; font-size: .82rem; text-decoration: none; cursor: pointer; }
+.account-actions a { background: #268c46; color: #fff; border: 1px solid #268c46; }
+.account-actions button { background: #fff; color: #267a3b; border: 1px solid #267a3b; }
+[hidden] { display: none !important; }
 .login {
     margin-top: 13px;
     margin-bottom: 17px;
@@ -807,11 +809,6 @@ Pi.init({
             <span data-i18n="support">Support</span>
         </a>
 
-        <a class="menu-item menu-item--taxi" href="taxi.html" aria-label="Taxi">
-            <i class="fas fa-taxi menu-icon icon-taxi" aria-hidden="true"></i>
-            <span data-i18n="taxi">Taxi</span>
-        </a>
-
     </nav>
 
 
@@ -840,6 +837,7 @@ Pi.init({
          ========================= -->
 
     <button
+        id="guestSignup"
         class="enter-button"
         type="button"
         onclick="window.location.href='login.html'"
@@ -855,7 +853,7 @@ Pi.init({
          LOGIN
          ========================= -->
 
-    <div class="login">
+    <div class="login" id="guestLogin">
         <span data-i18n="alreadyAccount">Already have an account?</span>
         <a href="login.html" data-i18n="login">Log In</a>
     </div>
@@ -895,12 +893,13 @@ Pi.init({
         language: "Language",
         reviews: "Reviews",
         support: "Support",
-        taxi: "Taxi",
-        aboutTitle: "About HAVKAR",
+            aboutTitle: "About HAVKAR",
         aboutDescription: "Learn about our platform, mission and services",
         createAccount: "Create New Account",
         alreadyAccount: "Already have an account?",
         login: "Log In",
+        myAccount: "My Account",
+        logout: "Log Out",
         security: "Safe • Secure • Trusted"
     };
 
@@ -1002,5 +1001,49 @@ Pi.init({
 })();
 </script>
 
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+const supabase = createClient(
+  "https://gispovnciifgikvgpzck.supabase.co",
+  "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq",
+  { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }
+);
+const guestSignup = document.getElementById("guestSignup");
+const guestLogin = document.getElementById("guestLogin");
+const signedInPanel = document.getElementById("signedInPanel");
+const signedInEmail = document.getElementById("signedInEmail");
+const homeLogout = document.getElementById("homeLogout");
+const homeAuthMessage = document.getElementById("homeAuthMessage");
+function updateAccount(user) {
+  guestSignup.hidden = !!user;
+  guestLogin.hidden = !!user;
+  signedInPanel.hidden = !user;
+  signedInEmail.textContent = user?.email || "";
+}
+// Avoid briefly displaying guest actions until the stored session is checked.
+guestSignup.hidden = true;
+guestLogin.hidden = true;
+try {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  updateAccount(data.session?.user || null);
+} catch (error) {
+  console.error("HAVKAR session check failed", error);
+  updateAccount(null);
+}
+supabase.auth.onAuthStateChange((_event, session) => updateAccount(session?.user || null));
+homeLogout.addEventListener("click", async () => {
+  if (!window.confirm("Log out of HAVKAR?")) return;
+  homeLogout.disabled = true;
+  homeAuthMessage.textContent = "";
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    updateAccount(null);
+  } catch (error) {
+    homeAuthMessage.textContent = error.message || "Log out failed. Please try again.";
+  } finally { homeLogout.disabled = false; }
+});
+</script>
 </body>
 </html>
