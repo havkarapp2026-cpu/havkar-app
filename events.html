@@ -1777,7 +1777,7 @@
         </button>
 
         <button class="nav-item" type="button" onclick="openTickets()">
-            <i class="fas fa-ticket-alt"></i><span>My Tickets</span>
+            <i class="fas fa-ticket-alt"></i><span>My Event Tickets</span>
         </button>
 
         <button class="nav-item" type="button" onclick="openProfile()">
@@ -1965,7 +1965,7 @@
                 <div id="myEventTickets">
                     <div class="ticket-loading">
                         <i class="fas fa-spinner fa-spin"></i>
-                        Loading your tickets...
+                        ${et("Loading your tickets...")}
                     </div>
                 </div>
             </div>
@@ -1991,6 +1991,64 @@
             SUPABASE_URL,
             SUPABASE_ANON_KEY
         );
+
+        // Swedish translations for Events-owned UI, including dynamic Supabase cards.
+        // Other selected languages remain delegated to havkar-i18n.js.
+        const eventLanguage = (localStorage.getItem("havkar_language") || localStorage.getItem("selectedLanguage") || localStorage.getItem("language") || "en").toLowerCase();
+        const isSwedish = eventLanguage === "sv" || eventLanguage.startsWith("sv-") || eventLanguage === "swedish";
+        const sv = {
+            "Events":"Händelser", "Search events...":"Sök händelser...", "All Events":"Alla evenemang",
+            "Music":"Musik", "Cultural":"Kultur", "Sports":"Sport", "Food":"Mat", "Community":"Gemenskap",
+            "Home":"Hem", "My Tickets":"Mina evenemangsbiljetter", "My Event Tickets":"Evenemangsbiljetter", "Profile":"Profil", "Loading events...":"Laddar evenemang...",
+            "Soonest":"Snarast", "Popular":"Populärast", "Latest":"Senaste", "No events found":"Inga evenemang hittades",
+            "Try another search, category or date.":"Prova en annan sökning, kategori eller ett annat datum.",
+            "Create New Event":"Skapa nytt evenemang", "Event Title":"Evenemangets namn", "Category":"Kategori",
+            "Select":"Välj", "Price":"Pris", "Date":"Datum", "Time":"Tid", "Location":"Plats",
+            "Organizer":"Arrangör", "Description":"Beskrivning", "Expected Attendees":"Förväntat antal deltagare",
+            "Cancel":"Avbryt", "Create Event":"Skapa evenemang", "Event Details":"Evenemangsdetaljer",
+            "Filter Events":"Filtrera evenemang", "All":"Alla", "Free":"Gratis", "Paid":"Betalt",
+            "All categories":"Alla kategorier", "Reset":"Återställ", "Apply":"Tillämpa",
+            "My Event Tickets":"Mina evenemangsbiljetter", "Loading your tickets...":"Laddar dina biljetter...",
+            "event":"evenemang", "events":"evenemang", "Organized by":"Arrangeras av",
+            "expected":"förväntade", "interested":"intresserade", "Interested":"Intresserad", "I'm Interested":"Jag är intresserad",
+            "View Details":"Visa detaljer", "DATE & TIME":"DATUM OCH TID", "LOCATION":"PLATS",
+            "ATTENDANCE":"DELTAGARE", "INTERESTED":"INTRESSERADE", "PRICE":"PRIS",
+            "expected attendees":"förväntade deltagare", "About this event":"Om evenemanget",
+            "No description available.":"Ingen beskrivning tillgänglig.", "Share":"Dela", "Join Event":"Delta",
+            "Get Ticket":"Skaffa biljett", "Delete My Event":"Ta bort mitt evenemang",
+            "Sign in required":"Inloggning krävs", "Please sign in to view your event tickets.":"Logga in för att se dina evenemangsbiljetter.",
+            "Could not load tickets":"Kunde inte ladda biljetter", "Please try again.":"Försök igen.",
+            "No event tickets yet":"Inga evenemangsbiljetter ännu",
+            "Your HAVKAR event tickets will appear here after they are issued.":"Dina HAVKAR-evenemangsbiljetter visas här när de har utfärdats.",
+            "Event date unavailable":"Datum saknas", "Location unavailable":"Plats saknas", "Payment:":"Betalning:",
+            "Quantity:":"Antal:", "Paid:":"Betald:", "Ticket ID:":"Biljett-ID:",
+            "pending":"väntande", "paid":"betald", "valid":"giltig", "cancelled":"avbruten",
+            "e.g. Community Dinner":"t.ex. gemensam middag", "Free / €10":"Gratis / 10 €",
+            "City, venue or address":"Stad, lokal eller adress", "Your name or organization":"Ditt namn eller organisation",
+            "Describe your event...":"Beskriv ditt evenemang...", "e.g. 100":"t.ex. 100",
+            "Clear search":"Rensa sökning", "Create event":"Skapa evenemang", "Calendar":"Kalender", "Filter":"Filter"
+        };
+        function et(key) { return isSwedish ? (sv[key] || key) : key; }
+        function localizeEventsStatic() {
+            if (!isSwedish) return;
+            document.documentElement.lang = "sv";
+            const root = document.querySelector("body");
+            const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+            const nodes = [];
+            while (walker.nextNode()) nodes.push(walker.currentNode);
+            nodes.forEach(node => {
+                if (node.parentElement?.closest("script,style")) return;
+                const raw = node.nodeValue;
+                const key = raw.trim();
+                if (sv[key]) node.nodeValue = raw.replace(key, sv[key]);
+            });
+            document.querySelectorAll("[placeholder],[aria-label]").forEach(el => {
+                for (const attr of ["placeholder", "aria-label"]) {
+                    const key = el.getAttribute(attr);
+                    if (key && sv[key]) el.setAttribute(attr, sv[key]);
+                }
+            });
+        }
 
         const FAVORITES_KEY = "havkar_event_favorites_v2";
 
@@ -2026,15 +2084,15 @@
 
         function categoryName(category) {
             const names = {
-                music: "Music",
-                cultural: "Cultural",
-                sports: "Sports",
-                food: "Food",
-                community: "Community"
+                music: et("Music"),
+                cultural: et("Cultural"),
+                sports: et("Sports"),
+                food: et("Food"),
+                community: et("Community")
             };
 
 
-            return names[category] || "Event";
+            return names[category] || et("Events");
         }
 
 
@@ -2073,7 +2131,7 @@
 
 
             return new Intl.DateTimeFormat(
-                "en-US",
+                isSwedish ? "sv-SE" : "en-US",
                 {
                     weekday: "short",
                     month: "short",
@@ -2095,7 +2153,7 @@
 
 
             return new Intl.DateTimeFormat(
-                "en-US",
+                isSwedish ? "sv-SE" : "en-US",
                 {
                     weekday: "long",
                     month: "long",
@@ -2411,8 +2469,8 @@
                 .textContent =
                     `${events.length} ${
                         events.length === 1
-                            ? "event"
-                            : "events"
+                            ? et("event")
+                            : et("events")
                     }`;
 
             empty.classList.toggle(
@@ -2486,7 +2544,7 @@
 
                         <div class="event-organizer">
                             <i class="far fa-user"></i>
-                            Organized by
+                            ${et("Organized by")}
                             ${escapeHtml(event.organizer || "HAVKAR Community")}
                         </div>
 
@@ -2513,7 +2571,7 @@
                             <div class="attendees">
                                 <i class="fas fa-heart"></i>
                                 ${Number(event.interested || 0).toLocaleString()}
-                                interested
+                                ${et("interested")}
                             </div>
 
 
@@ -2617,17 +2675,17 @@
                 currentSort = "popular";
                 document
                     .getElementById("sortLabel")
-                    .textContent = "Popular";
+                    .textContent = et("Popular");
             } else if (currentSort === "popular") {
                 currentSort = "latest";
                 document
                     .getElementById("sortLabel")
-                    .textContent = "Latest";
+                    .textContent = et("Latest");
             } else {
                 currentSort = "soonest";
                 document
                     .getElementById("sortLabel")
-                    .textContent = "Soonest";
+                    .textContent = et("Soonest");
             }
 
 
@@ -2829,7 +2887,7 @@
                     <div class="detail-row">
                         <i class="far fa-calendar"></i>
                         <div class="detail-row-content">
-                            <strong>DATE & TIME</strong>
+                            <strong>${et("DATE & TIME")}</strong>
                             <span>
                                 ${escapeHtml(
                                     formatDateTime(
@@ -2846,7 +2904,7 @@
                     <div class="detail-row">
                         <i class="fas fa-location-dot"></i>
                         <div class="detail-row-content">
-                            <strong>LOCATION</strong>
+                            <strong>${et("LOCATION")}</strong>
                             <span>${escapeHtml(event.location)}</span>
                         </div>
 
@@ -2856,10 +2914,10 @@
                     <div class="detail-row">
                         <i class="fas fa-users"></i>
                         <div class="detail-row-content">
-                            <strong>ATTENDANCE</strong>
+                            <strong>${et("ATTENDANCE")}</strong>
                             <span>
                                 ${Number(event.attendees || 0).toLocaleString()}
-                                expected attendees
+                                ${et("expected attendees")}
                             </span>
                         </div>
 
@@ -2869,10 +2927,10 @@
                     <div class="detail-row">
                         <i class="fas fa-heart"></i>
                         <div class="detail-row-content">
-                            <strong>INTERESTED</strong>
+                            <strong>${et("INTERESTED")}</strong>
                             <span>
                                 ${Number(event.interested || 0).toLocaleString()}
-                                interested
+                                ${et("interested")}
                             </span>
                         </div>
 
@@ -2882,7 +2940,7 @@
                     <div class="detail-row">
                         <i class="fas fa-ticket"></i>
                         <div class="detail-row-content">
-                            <strong>PRICE</strong>
+                            <strong>${et("PRICE")}</strong>
                             <span>
                                 ${escapeHtml(event.price || "Free")}
                             </span>
@@ -2892,9 +2950,9 @@
 
 
                     <div class="detail-description">
-                        <h3>About this event</h3>
+                        <h3>${et("About this event")}</h3>
                         <p>
-                            ${escapeHtml(event.description || "No description available.")}
+                            ${escapeHtml(event.description || et("No description available."))}
                         </p>
                     </div>
 
@@ -2906,7 +2964,7 @@
                             onclick="shareEvent('${escapeHtml(String(event.id))}')"
                         >
                             <i class="fas fa-share-nodes"></i>
-                            Share
+                            ${et("Share")}
                         </button>
 
 
@@ -2920,8 +2978,8 @@
                                 String(event.price || "Free")
                                     .trim()
                                     .toLowerCase() === "free"
-                                    ? "Join Event"
-                                    : "Get Ticket"
+                                    ? et("Join Event")
+                                    : et("Get Ticket")
                             }
 
                         </button>
@@ -2944,7 +3002,7 @@
                                     onclick="deleteCreatedEvent('${escapeHtml(String(event.id))}')"
                                 >
                                     <i class="fas fa-trash"></i>
-                                    Delete My Event
+                                    ${et("Delete My Event")}
                                 </button>
 
                             `
@@ -3463,7 +3521,7 @@
             container.innerHTML = `
                 <div class="ticket-loading">
                     <i class="fas fa-spinner fa-spin"></i>
-                    Loading your tickets...
+                    ${et("Loading your tickets...")}
                 </div>
             `;
 
@@ -3471,8 +3529,8 @@
                 container.innerHTML = `
                     <div class="ticket-empty">
                         <i class="fas fa-lock"></i>
-                        <h3>Sign in required</h3>
-                        <p>Please sign in to view your event tickets.</p>
+                        <h3>${et("Sign in required")}</h3>
+                        <p>${et("Please sign in to view your event tickets.")}</p>
                     </div>
                 `;
                 return;
@@ -3500,8 +3558,8 @@
                 container.innerHTML = `
                     <div class="ticket-empty">
                         <i class="fas fa-circle-exclamation"></i>
-                        <h3>Could not load tickets</h3>
-                        <p>Please try again.</p>
+                        <h3>${et("Could not load tickets")}</h3>
+                        <p>${et("Please try again.")}</p>
                     </div>
                 `;
                 return;
@@ -3511,8 +3569,8 @@
                 container.innerHTML = `
                     <div class="ticket-empty">
                         <i class="fas fa-ticket"></i>
-                        <h3>No event tickets yet</h3>
-                        <p>Your HAVKAR event tickets will appear here after they are issued.</p>
+                        <h3>${et("No event tickets yet")}</h3>
+                        <p>${et("Your HAVKAR event tickets will appear here after they are issued.")}</p>
                     </div>
                 `;
                 return;
@@ -3582,7 +3640,7 @@
                                     event.event_date,
                                     eventTime
                                 )
-                                : "Event date unavailable";
+                                : et("Event date unavailable");
 
                         const paidAt =
                             formatTicketPaidAt(
@@ -3601,13 +3659,13 @@
                                         </div>
 
                                         <div class="ticket-payment-state">
-                                            Payment:
-                                            ${escapeHtml(paymentStatus)}
+                                            ${et("Payment:")}
+                                            ${escapeHtml(et(paymentStatus))}
                                         </div>
                                     </div>
 
                                     <span class="ticket-status ${ticketStatusClass(ticketStatus)}">
-                                        ${escapeHtml(ticketStatus)}
+                                        ${escapeHtml(et(ticketStatus))}
                                     </span>
                                 </div>
 
@@ -3621,14 +3679,14 @@
                                         <i class="fas fa-location-dot"></i>
                                         <span>${escapeHtml(
                                             event.location ||
-                                            "Location unavailable"
+                                            et("Location unavailable")
                                         )}</span>
                                     </div>
 
                                     <div class="ticket-info-row">
                                         <i class="fas fa-ticket"></i>
                                         <span>
-                                            Quantity:
+                                            ${et("Quantity:")}
                                             ${Number(ticket.quantity || 1)}
                                         </span>
                                     </div>
@@ -3649,13 +3707,13 @@
                                         <div class="ticket-info-row">
                                             <i class="fas fa-circle-check"></i>
                                             <span>
-                                                Paid: ${escapeHtml(paidAt)}
+                                                ${et("Paid:")} ${escapeHtml(paidAt)}
                                             </span>
                                         </div>
                                     ` : ""}
 
                                     <div class="ticket-reference">
-                                        Ticket ID:
+                                        ${et("Ticket ID:")}
                                         ${escapeHtml(ticket.id)}
                                     </div>
                                 </div>
@@ -3974,6 +4032,7 @@
 
 
         async function initializeEventsPage() {
+            localizeEventsStatic();
             await loadCurrentUser();
             await refreshEvents();
             await handleEventCheckoutReturn();
