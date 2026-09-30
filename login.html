@@ -210,6 +210,15 @@ h1 {
 .forgot-btn:hover {
     text-decoration: underline;
 }
+.recovery-highlight {
+    display: block;
+    width: 100%;
+    margin-top: 14px;
+    padding: 13px;
+    background: #e8f5e9;
+    border: 1px solid #2e7d32;
+    border-radius: 12px;
+}
 
 .back-login-btn {
     display: inline-block;
@@ -277,6 +286,14 @@ button:disabled {
     line-height: 1.45;
 }
 
+.password-wrap { position: relative; }
+.password-wrap .input { padding-right: 58px; }
+.password-toggle { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); border: 0; background: transparent; padding: 12px; color: #267a3b; cursor: pointer; font-size: 14px; font-weight: 700; }
+.password-toggle:focus-visible { outline: 2px solid #267a3b; border-radius: 8px; }
+.account-actions { display: grid; gap: 12px; margin-top: 20px; }
+.account-actions button, .account-actions a { display: block; width: 100%; padding: 15px; border-radius: 13px; font: bold 17px Arial,sans-serif; text-align: center; text-decoration: none; cursor: pointer; }
+.account-actions a { color: #fff; background: #268f46; }
+.account-actions button { color: #267a3b; background: #fff; border: 2px solid #267a3b; }
 .hidden {
     display: none !important;
 }
@@ -377,6 +394,7 @@ button:disabled {
                 Password
             </label>
 
+            <div class="password-wrap">
             <input
                 id="password"
                 class="input"
@@ -384,6 +402,8 @@ button:disabled {
                 placeholder="Enter your password"
                 autocomplete="current-password"
             >
+            <button type="button" class="password-toggle" data-password-target="password" aria-label="Show password" aria-pressed="false">👁</button>
+            </div>
 
         </div>
 
@@ -423,6 +443,14 @@ button:disabled {
     <!-- =====================================================
          FORGOT PASSWORD MODE
     ====================================================== -->
+
+    <div id="accountMode" class="hidden">
+      <p class="session-notice" id="accountEmail"></p>
+      <div class="account-actions">
+        <a href="index.html">Go to HAVKAR</a>
+        <button type="button" id="accountLogout">Log Out</button>
+      </div>
+    </div>
 
     <div id="forgotMode" class="hidden">
 
@@ -479,6 +507,7 @@ button:disabled {
                 New Password
             </label>
 
+            <div class="password-wrap">
             <input
                 id="newPassword"
                 class="input"
@@ -486,6 +515,8 @@ button:disabled {
                 placeholder="Enter your new password"
                 autocomplete="new-password"
             >
+            <button type="button" class="password-toggle" data-password-target="newPassword" aria-label="Show password" aria-pressed="false">👁</button>
+            </div>
 
         </div>
 
@@ -496,6 +527,7 @@ button:disabled {
                 Confirm New Password
             </label>
 
+            <div class="password-wrap">
             <input
                 id="confirmPassword"
                 class="input"
@@ -503,6 +535,8 @@ button:disabled {
                 placeholder="Confirm your new password"
                 autocomplete="new-password"
             >
+            <button type="button" class="password-toggle" data-password-target="confirmPassword" aria-label="Show password" aria-pressed="false">👁</button>
+            </div>
 
         </div>
 
@@ -576,6 +610,47 @@ const supabase =
 /* =========================================================
    ELEMENTS
 ========================================================= */
+
+const accountMode = document.getElementById("accountMode");
+const accountEmail = document.getElementById("accountEmail");
+const accountLogout = document.getElementById("accountLogout");
+let recoveryModeActive = false;
+
+document.querySelectorAll("[data-password-target]").forEach(button => {
+  button.addEventListener("click", () => {
+    const field = document.getElementById(button.dataset.passwordTarget);
+    const visible = field.type === "password";
+    field.type = visible ? "text" : "password";
+    button.textContent = visible ? "🙈" : "👁";
+    button.setAttribute("aria-label", visible ? "Hide password" : "Show password");
+    button.setAttribute("aria-pressed", String(visible));
+  });
+});
+
+function showAccountMode(user) {
+  if (recoveryModeActive) return;
+  loginMode.classList.add("hidden");
+  forgotMode.classList.add("hidden");
+  resetMode.classList.add("hidden");
+  accountMode.classList.remove("hidden");
+  accountEmail.textContent = user.email || "Signed in to HAVKAR";
+  passwordInput.value = "";
+  showMessage("");
+}
+
+accountLogout.addEventListener("click", async () => {
+  if (!window.confirm("Log out of HAVKAR?")) return;
+  accountLogout.disabled = true;
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    accountMode.classList.add("hidden");
+    showLoginMode();
+    showMessage("You have logged out.", "success");
+  } catch (error) {
+    showMessage(error.message || "Log out failed. Please try again.", "error");
+  } finally { accountLogout.disabled = false; }
+});
 
 const loginMode =
     document.getElementById("loginMode");
@@ -683,6 +758,7 @@ function hideExistingSessionNotice() {
 ========================================================= */
 
 function showLoginMode() {
+    accountMode.classList.add("hidden");
 
     loginMode.classList.remove(
         "hidden"
@@ -705,6 +781,7 @@ function showLoginMode() {
 
 
 function showForgotMode() {
+    accountMode.classList.add("hidden");
 
     loginMode.classList.add(
         "hidden"
@@ -735,6 +812,8 @@ function showForgotMode() {
 
 
 function showResetMode() {
+    recoveryModeActive = true;
+    accountMode.classList.add("hidden");
 
     loginMode.classList.add(
         "hidden"
@@ -796,7 +875,8 @@ async function login() {
         true;
 
     showMessage("");
-
+    forgotBtn.textContent = "Forgot password?";
+    forgotBtn.classList.remove("recovery-highlight");
 
     try {
 
@@ -822,10 +902,17 @@ async function login() {
                 error
             );
 
+            const invalidCredentials = /invalid login credentials|invalid credentials|invalid password/i.test(error.message || "");
             showMessage(
-                error.message,
+                invalidCredentials
+                    ? "Email or password is incorrect. You can try again or reset your password below."
+                    : error.message,
                 "error"
             );
+            if (invalidCredentials) {
+                forgotBtn.textContent = "Reset your password →";
+                forgotBtn.classList.add("recovery-highlight");
+            }
 
             return;
         }
@@ -1216,6 +1303,7 @@ async function updatePassword() {
 
                 }
 
+                recoveryModeActive = false;
                 showLoginMode();
 
                 showMessage(
@@ -1502,7 +1590,7 @@ supabase.auth.onAuthStateChange(
             data.session.user
         ){
 
-            showExistingSessionNotice();
+            showAccountMode(data.session.user);
 
         }
 
