@@ -1341,12 +1341,12 @@
                     <p class="form-note" style="margin:8px 0 12px">Vehicle details below are optional at this stage. Only the vehicle owner or authorized driver should provide them. HAVKAR must verify documents before approving deliveries.</p>
                     <div id="vehicleDetails" hidden>
                         <div class="form-row">
-                            <div class="input-group"><label class="input-label" for="vehicleBrand">Vehicle Brand (optional)</label><input id="vehicleBrand" class="input-field" type="text" maxlength="80" placeholder="e.g. Fiat" autocomplete="off"></div>
-                            <div class="input-group"><label class="input-label" for="vehicleModel">Vehicle Model (optional)</label><input id="vehicleModel" class="input-field" type="text" maxlength="80" placeholder="e.g. Panda" autocomplete="off"></div>
+                            <div class="input-group"><label class="input-label" for="vehicleBrand">Vehicle Brand (optional)</label><input id="vehicleBrand" class="input-field" type="text" maxlength="80" autocomplete="off"></div>
+                            <div class="input-group"><label class="input-label" for="vehicleModel">Vehicle Model (optional)</label><input id="vehicleModel" class="input-field" type="text" maxlength="80" autocomplete="off"></div>
                         </div>
                         <div class="form-row">
-                            <div class="input-group"><label class="input-label" for="vehicleYear">Vehicle Year (optional)</label><input id="vehicleYear" class="input-field" type="number" min="1950" max="2100" step="1" placeholder="2023" inputmode="numeric"></div>
-                            <div class="input-group"><label class="input-label" for="vehiclePlate">License Plate (optional; owner only)</label><input id="vehiclePlate" class="input-field" type="text" maxlength="20" placeholder="AB123CD" autocapitalize="characters" autocomplete="off"></div>
+                            <div class="input-group"><label class="input-label" for="vehicleYear">Vehicle Year (optional)</label><input id="vehicleYear" class="input-field" type="number" min="1950" max="2100" step="1" inputmode="numeric"></div>
+                            <div class="input-group"><label class="input-label" for="vehiclePlate">License Plate (optional; owner only)</label><input id="vehiclePlate" class="input-field" type="text" maxlength="20" autocapitalize="characters" autocomplete="off"></div>
                         </div>
                     </div>
 
@@ -2120,7 +2120,13 @@
                 field.disabled = !needsDetails;
             }
         }
-        vehicleTypeSelect.addEventListener("change", syncVehicleDetails);
+        vehicleTypeSelect.addEventListener("change", () => {
+            // Details from a previously selected vehicle must not carry over.
+            for (const id of vehicleDetailIds) {
+                document.getElementById(id).value = "";
+            }
+            syncVehicleDetails();
+        });
         syncVehicleDetails();
 
         document
