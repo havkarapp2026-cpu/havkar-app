@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#7cb342">
+
+    <title>HAVKAR - Pi Testnet A2U</title>
+
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+
+    <style>
+        *{
+            box-sizing:border-box;
+            margin:0;
+            padding:0;
+        }
+
+        body{
+            font-family:Arial,sans-serif;
+            background:#f5f7f4;
+            color:#222;
+            min-height:100vh;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            padding:20px;
+        }
+
+        .card{
+            width:100%;
+            max-width:520px;
+            background:#fff;
+            border-radius:22px;
+            padding:28px;
+            box-shadow:0 8px 30px rgba(0,0,0,.08);
+        }
+
+        .logo{
+            width:72px;
+            height:72px;
+            border-radius:18px;
+            margin:0 auto 18px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background:#7cb342;
+            color:#fff;
+            font-size:38px;
+            font-weight:bold;
+        }
+
+        h1{
+            text-align:center;
+            color:#558b2f;
+            margin-bottom:8px;
+        }
+
+        .subtitle{
+            text-align:center;
+            color:#777;
+            margin-bottom:28px;
+            line-height:1.5;
+        }
+
+        .badge{
+            display:block;
+            width:max-content;
+            margin:0 auto 25px;
+            background:#fff3cd;
+            color:#7a5b00;
+            padding:7px 14px;
+            border-radius:20px;
+            font-weight:bold;
+        }
+
+        .info{
+            background:#f2f8ed;
+            border:1px solid #d9e9ce;
+            border-radius:14px;
+            padding:16px;
+            margin-bottom:20px;
+            line-height:1.6;
+        }
+
+        .row{
+            margin-top:8px;
+            word-break:break-word;
+        }
+
+        .label{
+            font-weight:bold;
+        }
+
+        button{
+            width:100%;
+            border:0;
+            border-radius:14px;
+            padding:16px;
+            font-size:17px;
+            font-weight:bold;
+            cursor:pointer;
+            margin-top:12px;
+        }
+
+        #connectButton{
+            background:#7cb342;
+            color:#fff;
+        }
+
+        #sendButton{
+            background:#558b2f;
+            color:#fff;
+        }
+
+        button:disabled{
+            opacity:.45;
+            cursor:not-allowed;
+        }
+
+        .status{
+            margin-top:20px;
+            padding:14px;
+            border-radius:12px;
+            display:none;
+            line-height:1.5;
+            word-break:break-word;
+        }
+
+        .status.info{
+            display:block;
+            background:#eef4ff;
+            color:#244b78;
+        }
+
+        .status.success{
+            display:block;
+            background:#edf8ed;
+            color:#246b2b;
+        }
+
+        .status.error{
+            display:block;
+            background:#ffeded;
+            color:#9b2525;
+        }
+
+        .warning{
+            margin-top:22px;
+            font-size:13px;
+            color:#777;
+            text-align:center;
+            line-height:1.5;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="card">
+
+    <div class="logo">π</div>
+
+    <h1>HAVKAR</h1>
+
+    <div class="subtitle">
+        Pi Network App-to-User Test
+    </div>
+
+    <div class="badge">
+        TESTNET ONLY
+    </div>
+
+    <div class="info">
+        <div>
+            This page is isolated from the HAVKAR Mainnet wallet.
+        </div>
+
+        <div class="row">
+            <span class="label">Pi user:</span>
+            <span id="username">Not connected</span>
+        </div>
+
+        <div class="row">
+            <span class="label">UID:</span>
+            <span id="uid">—</span>
+        </div>
+
+        <div class="row">
+            <span class="label">Amount:</span>
+            0.01 Test-Pi
+        </div>
+    </div>
+
+    <button id="connectButton">
+        Connect Pi Testnet
+    </button>
+
+    <button id="sendButton" disabled>
+        Send 0.01 Test-Pi
+    </button>
+
+    <div id="status" class="status"></div>
+
+    <div class="warning">
+        Do not enter a wallet seed, passphrase, private key or Server API Key on this page.
+    </div>
+
+</div>
+
+<script>
+    let piAuthResult = null;
+
+    const connectButton =
+        document.getElementById("connectButton");
+
+    const sendButton =
+        document.getElementById("sendButton");
+
+    const usernameElement =
+        document.getElementById("username");
+
+    const uidElement =
+        document.getElementById("uid");
+
+    const statusElement =
+        document.getElementById("status");
+
+
+    function setStatus(message,type){
+
+        statusElement.textContent =
+            message;
+
+        statusElement.className =
+            "status " + type;
+
+    }
+
+
+    function incompletePaymentFound(payment){
+
+        console.warn(
+            "Incomplete Pi payment:",
+            payment
+        );
+
+    }
+
+
+    async function connectPi(){
+
+        connectButton.disabled = true;
+        sendButton.disabled = true;
+
+        try{
+
+            if(
+                typeof window.Pi ===
+                "undefined"
+            ){
+
+                throw new Error(
+                    "Pi SDK is not available."
+                );
+
+            }
+
+            setStatus(
+                "Connecting to Pi Testnet...",
+                "info"
+            );
+
+            piAuthResult =
+                await window.Pi.authenticate(
+                    [
+                        "username",
+                        "payments"
+                    ],
+                    incompletePaymentFound
+                );
+
+            if(
+                !piAuthResult ||
+                !piAuthResult.accessToken ||
+                !piAuthResult.user ||
+                !piAuthResult.user.uid
+            ){
+
+                throw new Error(
+                    "Pi authentication did not return the required user information."
+                );
+
+            }
+
+            usernameElement.textContent =
+                piAuthResult.user.username ||
+                "Pi User";
+
+            uidElement.textContent =
+                piAuthResult.user.uid;
+
+            sendButton.disabled = false;
+
+            setStatus(
+                "Pi Testnet authentication completed.",
+                "success"
+            );
+
+        }
+        catch(error){
+
+            console.error(
+                "Pi Testnet authentication error:",
+                error
+            );
+
+            piAuthResult = null;
+
+            usernameElement.textContent =
+                "Not connected";
+
+            uidElement.textContent =
+                "—";
+
+            setStatus(
+                "Authentication failed: " +
+                (
+                    error?.message ||
+                    "Unknown error"
+                ),
+                "error"
+            );
+
+        }
+        finally{
+
+            connectButton.disabled = false;
+
+        }
+
+    }
+
+
+    async function sendTestPi(){
+
+        if(
+            !piAuthResult ||
+            !piAuthResult.accessToken
+        ){
+
+            setStatus(
+                "Connect the Pi Testnet account first.",
+                "error"
+            );
+
+            return;
+
+        }
+
+        sendButton.disabled = true;
+        connectButton.disabled = true;
+
+        try{
+
+            setStatus(
+                "Verifying the Pi user and preparing the Testnet A2U payment...",
+                "info"
+            );
+
+            /*
+             * IMPORTANT:
+             * We intentionally do NOT send the client-provided UID
+             * to /api/pi-a2u-testnet yet.
+             *
+             * The Pi access token must first be verified server-side
+             * with Pi /me, and the verified UID must then be used
+             * for the A2U payment.
+             *
+             * This prevents a forged client UID from being trusted.
+             */
+
+            const response =
+                await fetch(
+                    "/api/pi-a2u-testnet",
+                    {
+                        method:"POST",
+
+                        headers:{
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body:JSON.stringify({
+                            accessToken:
+                                piAuthResult.accessToken,
+
+                            amount:
+                                0.01
+                        })
+                    }
+                );
+
+            const data =
+                await response.json()
+                    .catch(
+                        function(){
+                            return {};
+                        }
+                    );
+
+            if(!response.ok){
+
+                throw new Error(
+                    data.error ||
+                    "Testnet A2U payment failed."
+                );
+
+            }
+
+            setStatus(
+                "Success. 0.01 Test-Pi was sent to this Pi user.",
+                "success"
+            );
+
+        }
+        catch(error){
+
+            console.error(
+                "HAVKAR Testnet A2U error:",
+                error
+            );
+
+            setStatus(
+                "Payment failed: " +
+                (
+                    error?.message ||
+                    "Unknown error"
+                ),
+                "error"
+            );
+
+        }
+        finally{
+
+            sendButton.disabled = false;
+            connectButton.disabled = false;
+
+        }
+
+    }
+
+
+    try{
+
+        window.Pi.init({
+            version:"2.0",
+            sandbox:true
+        });
+
+    }
+    catch(error){
+
+        console.error(
+            "Pi SDK initialization error:",
+            error
+        );
+
+        setStatus(
+            "Pi Testnet initialization failed.",
+            "error"
+        );
+
+    }
+
+
+    connectButton.addEventListener(
+        "click",
+        connectPi
+    );
+
+    sendButton.addEventListener(
+        "click",
+        sendTestPi
+    );
+</script>
+
+</body>
+</html>
