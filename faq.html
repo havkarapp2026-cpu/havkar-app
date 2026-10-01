@@ -1,0 +1,798 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#609b38">
+<title>HAVKAR | Help & FAQ</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+:root{
+  --green:#70a942;
+  --dark:#47782d;
+  --pale:#eff7ea;
+  --bg:#f6f8f5;
+  --text:#243126;
+  --muted:#718074;
+  --border:#e1e9df;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  padding-bottom:95px;
+}
+button,input,select{font:inherit}
+button{cursor:pointer}
+header{
+  background:linear-gradient(130deg,#477d2e,#83b74d);
+  color:white;
+  padding:22px 16px 42px;
+}
+.header-inner,main{max-width:900px;margin:auto}
+.top{display:flex;align-items:center;gap:13px}
+.back{
+  width:42px;height:42px;flex-shrink:0;
+  border:1px solid #ffffff55;
+  border-radius:13px;background:#ffffff25;
+  color:white;font-size:18px;
+}
+.heading{flex:1;min-width:0}
+h1{margin:0 0 5px;font-size:25px}
+.subtitle{font-size:12px;opacity:.9}
+.language{
+  max-width:155px;min-width:105px;
+  border:1px solid #ffffff70;
+  border-radius:12px;
+  background:#ffffff26;
+  color:white;padding:10px 5px;
+  font-size:12px;
+}
+.language option,.language optgroup{
+  color:#243126;background:white;
+}
+main{position:relative;margin-top:-19px;padding:0 15px}
+.search-card{
+  display:flex;align-items:center;gap:12px;
+  background:white;border:1px solid var(--border);
+  border-radius:17px;padding:0 16px;
+  box-shadow:0 6px 22px #24471a13;
+}
+.search-card i{color:var(--green)}
+.search-card input{
+  flex:1;width:100%;padding:19px 0;
+  border:0;outline:0;background:transparent;
+  color:var(--text);font-size:14px;
+}
+.categories{
+  display:flex;gap:9px;overflow-x:auto;
+  padding:20px 0 17px;
+  scrollbar-width:none;
+}
+.categories::-webkit-scrollbar{display:none}
+.category{
+  flex-shrink:0;
+  border:1px solid var(--border);
+  background:white;color:#637066;
+  border-radius:30px;padding:10px 16px;
+  font-size:13px;font-weight:600;
+}
+.category.active{
+  background:var(--green);
+  border-color:var(--green);color:white;
+}
+.section-head{
+  display:flex;align-items:center;
+  justify-content:space-between;
+  gap:10px;margin:4px 3px 16px;
+}
+.section-head h2{margin:0;font-size:19px}
+#count{font-size:12px;color:var(--muted)}
+.faq-list{display:grid;gap:11px}
+.faq{
+  background:white;border:1px solid var(--border);
+  border-radius:16px;overflow:hidden;
+  box-shadow:0 2px 10px #1d341008;
+}
+.question{
+  display:flex;align-items:center;gap:13px;
+  width:100%;padding:17px;
+  background:transparent;border:0;
+  color:var(--text);text-align:start;
+  font-size:14px;font-weight:650;line-height:1.6;
+}
+.question span{flex:1}
+.question i{
+  flex-shrink:0;color:var(--green);
+  transition:transform .2s;
+}
+.faq.open .question i{transform:rotate(180deg)}
+.answer{
+  display:none;padding:0 17px 19px;
+  color:#59685b;line-height:1.9;
+  font-size:14px;white-space:pre-line;
+}
+.faq.open .answer{display:block}
+.tag{
+  display:inline-block;
+  background:var(--pale);color:var(--dark);
+  padding:4px 10px;border-radius:20px;
+  font-size:11px;margin-bottom:9px;
+}
+.empty{
+  display:none;text-align:center;
+  background:white;border:1px solid var(--border);
+  border-radius:17px;padding:35px 18px;
+  color:var(--muted);
+}
+.empty i{font-size:35px;color:var(--green)}
+.support{
+  margin:25px 0 15px;padding:24px 18px;
+  background:linear-gradient(135deg,#edf7e7,white);
+  border:1px solid #dcead4;
+  border-radius:20px;text-align:center;
+}
+.support-icon{
+  width:55px;height:55px;margin:0 auto 12px;
+  display:grid;place-items:center;
+  background:#dceecf;color:var(--dark);
+  border-radius:17px;font-size:23px;
+}
+.support h2{font-size:19px;margin:8px 0}
+.support p{
+  font-size:13px;color:var(--muted);
+  line-height:1.8;
+}
+.support a{
+  display:inline-block;
+  margin-top:9px;padding:12px 23px;
+  background:var(--green);color:white;
+  text-decoration:none;border-radius:12px;
+  font-size:14px;font-weight:650;
+}
+footer{
+  position:fixed;bottom:0;left:0;right:0;
+  display:grid;grid-template-columns:repeat(4,1fr);
+  background:white;border-top:1px solid var(--border);
+  padding:12px 4px max(12px,env(safe-area-inset-bottom));
+  z-index:10;
+}
+footer a{
+  display:flex;align-items:center;
+  flex-direction:column;gap:5px;
+  color:#7a877c;text-decoration:none;
+  font-size:11px;
+}
+footer i{font-size:20px}
+footer a.active{color:var(--green)}
+[dir="rtl"] .question{text-align:right}
+[dir="rtl"] .categories{direction:rtl}
+@media(min-width:700px){
+  header{padding-top:35px;padding-bottom:52px}
+  h1{font-size:31px}
+  main{margin-top:-22px}
+  footer{
+    max-width:900px;margin:auto;
+    border-radius:18px 18px 0 0;
+  }
+}
+</style>
+</head>
+<body>
+
+<header>
+ <div class="header-inner">
+  <div class="top">
+   <button class="back" id="back" aria-label="Back">
+    <i class="fa-solid fa-arrow-left"></i>
+   </button>
+   <div class="heading">
+    <h1 id="title">Help & FAQ</h1>
+    <div class="subtitle">HAVKAR</div>
+   </div>
+   <select id="language" class="language" aria-label="Language">
+    <option value="en">English</option>
+    <option value="it">Italiano</option>
+    <option value="de">Deutsch</option>
+    <option value="fr">Français</option>
+    <option value="es">Español</option>
+    <option value="pt">Português</option>
+    <option value="nl">Nederlands</option>
+    <option value="sv">Svenska</option>
+    <option value="pl">Polski</option>
+    <option value="id">Bahasa Indonesia</option>
+    <option value="zh">中文</option>
+    <option value="ja">日本語</option>
+    <option value="ko">한국어</option>
+    <option value="hi">हिन्दी</option>
+    <option value="ru">Русский</option>
+    <optgroup label="Kurdish / کوردی">
+     <option value="ckb">کوردی — سۆرانی</option>
+     <option value="kmr">Kurdî — Kurmancî</option>
+    </optgroup>
+    <option value="tr">Türkçe</option>
+    <option value="ar">العربية</option>
+    <option value="fa">فارسی</option>
+    <option value="ur">اردو</option>
+   </select>
+  </div>
+ </div>
+</header>
+
+<main>
+ <div class="search-card">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input id="search" type="search" autocomplete="off"
+         placeholder="Search questions...">
+ </div>
+
+ <nav id="categories" class="categories"
+      aria-label="FAQ categories"></nav>
+
+ <div class="section-head">
+  <h2 id="sectionTitle">Frequently asked questions</h2>
+  <span id="count"></span>
+ </div>
+
+ <section id="faqList" class="faq-list"></section>
+
+ <div id="empty" class="empty">
+  <i class="fa-regular fa-circle-question"></i>
+  <p id="emptyText"></p>
+ </div>
+
+ <section class="support">
+  <div class="support-icon">
+   <i class="fa-solid fa-headset"></i>
+  </div>
+  <h2 id="supportTitle"></h2>
+  <p id="supportText"></p>
+  <a href="support.html" id="supportButton"></a>
+ </section>
+</main>
+
+<footer>
+ <a href="index.html">
+  <i class="fa-solid fa-house"></i>
+  <span id="navHome"></span>
+ </a>
+ <a href="chat.html">
+  <i class="fa-solid fa-comments"></i>
+  <span id="navMessages"></span>
+ </a>
+ <a href="alerts.html">
+  <i class="fa-solid fa-bell"></i>
+  <span id="navAlerts"></span>
+ </a>
+ <a href="profile.html">
+  <i class="fa-solid fa-user"></i>
+  <span id="navProfile"></span>
+ </a>
+</footer>
+
+<script>
+"use strict";
+
+/*
+HAVKAR FAQ — 21 language options.
+Question categories:
+0 Account
+1 Security
+2 Wallet
+3 Tickets
+4 Notifications
+
+Every language contains translated UI and five
+translated question-and-answer pairs.
+
+The page does not initiate payments or bookings.
+*/
+
+const rtlLanguages=new Set(["ckb","ar","fa","ur"]);
+
+const translations={
+
+en:{
+ui:["Help & FAQ","Search questions...","Frequently asked questions",
+"No matching questions found.","Need more help?",
+"Contact HAVKAR support if you cannot find your answer.",
+"Contact support","Home","Messages","Alerts","Profile"],
+cats:["All","Account","Security","Wallet","Tickets","Notifications"],
+qa:[
+["How do I sign in?","Open the HAVKAR login page and choose an available sign-in method. If Google sign-in is offered, select your Google account."],
+["How do I keep my account secure?","Protect your email, use strong passwords where required and never share verification codes. Sign out on devices you do not trust."],
+["Can I make real wallet payments?","Payment availability depends on the provider, your account and the specific feature. Check the provider's confirmation before considering a transaction complete."],
+["How do I book a ticket?","Open Tickets and choose an available service. Follow the provider's instructions. Your booking is confirmed only after a valid ticket or confirmation is issued."],
+["Where can I see my notifications?","Open Alerts in HAVKAR. You can read notifications and mark them as read."]
+]},
+
+it:{
+ui:["Aiuto e FAQ","Cerca nelle domande...","Domande frequenti",
+"Nessuna domanda trovata.","Hai bisogno di altro aiuto?",
+"Contatta l'assistenza HAVKAR se non trovi una risposta.",
+"Contatta l'assistenza","Home","Messaggi","Avvisi","Profilo"],
+cats:["Tutte","Account","Sicurezza","Portafoglio","Biglietti","Notifiche"],
+qa:[
+["Come posso accedere?","Apri la pagina di accesso HAVKAR e scegli un metodo disponibile. Se è presente l'accesso con Google, seleziona il tuo account Google."],
+["Come proteggo il mio account?","Proteggi la tua email, usa password robuste quando richieste e non condividere mai i codici di verifica. Esci dai dispositivi non affidabili."],
+["Posso effettuare pagamenti reali?","La disponibilità dipende dal fornitore, dal tuo account e dalla funzione. Verifica la conferma del fornitore prima di considerare conclusa una transazione."],
+["Come prenoto un biglietto?","Apri Biglietti e scegli un servizio disponibile. Segui le istruzioni del fornitore. La prenotazione è confermata solo dopo l'emissione di un biglietto o di una conferma valida."],
+["Dove trovo le notifiche?","Apri Avvisi in HAVKAR. Puoi leggere le notifiche e contrassegnarle come lette."]
+]},
+
+de:{
+ui:["Hilfe & FAQ","Fragen durchsuchen...","Häufig gestellte Fragen",
+"Keine passenden Fragen gefunden.","Benötigst du weitere Hilfe?",
+"Kontaktiere den HAVKAR-Support, wenn du keine Antwort findest.",
+"Support kontaktieren","Startseite","Nachrichten","Mitteilungen","Profil"],
+cats:["Alle","Konto","Sicherheit","Wallet","Tickets","Benachrichtigungen"],
+qa:[
+["Wie melde ich mich an?","Öffne die HAVKAR-Anmeldeseite und wähle eine verfügbare Anmeldemethode. Wenn Google angeboten wird, wähle dein Google-Konto."],
+["Wie schütze ich mein Konto?","Schütze dein E-Mail-Konto, verwende sichere Passwörter und gib niemals Bestätigungscodes weiter. Melde dich auf nicht vertrauenswürdigen Geräten ab."],
+["Kann ich echte Wallet-Zahlungen durchführen?","Die Verfügbarkeit hängt vom Anbieter, deinem Konto und der jeweiligen Funktion ab. Prüfe die Bestätigung des Anbieters, bevor du eine Transaktion als abgeschlossen betrachtest."],
+["Wie buche ich ein Ticket?","Öffne Tickets und wähle einen verfügbaren Dienst. Folge den Anweisungen des Anbieters. Die Buchung ist erst nach Ausstellung eines gültigen Tickets oder einer Bestätigung abgeschlossen."],
+["Wo finde ich meine Benachrichtigungen?","Öffne die Mitteilungen in HAVKAR. Dort kannst du Benachrichtigungen lesen und als gelesen markieren."]
+]},
+
+fr:{
+ui:["Aide et FAQ","Rechercher une question...","Questions fréquentes",
+"Aucune question correspondante.","Besoin d'aide supplémentaire ?",
+"Contactez l'assistance HAVKAR si vous ne trouvez pas votre réponse.",
+"Contacter l'assistance","Accueil","Messages","Alertes","Profil"],
+cats:["Toutes","Compte","Sécurité","Portefeuille","Billets","Notifications"],
+qa:[
+["Comment me connecter ?","Ouvrez la page de connexion HAVKAR et choisissez une méthode disponible. Si la connexion Google est proposée, sélectionnez votre compte Google."],
+["Comment protéger mon compte ?","Sécurisez votre messagerie, utilisez des mots de passe robustes et ne partagez jamais vos codes de vérification. Déconnectez-vous des appareils non fiables."],
+["Puis-je effectuer de vrais paiements ?","La disponibilité dépend du fournisseur, de votre compte et de la fonctionnalité concernée. Vérifiez la confirmation du fournisseur avant de considérer une transaction comme terminée."],
+["Comment réserver un billet ?","Ouvrez Billets et choisissez un service disponible. Suivez les instructions du fournisseur. La réservation n'est confirmée qu'après l'émission d'un billet ou d'une confirmation valide."],
+["Où consulter mes notifications ?","Ouvrez Alertes dans HAVKAR. Vous pouvez lire vos notifications et les marquer comme lues."]
+]},
+
+es:{
+ui:["Ayuda y preguntas frecuentes","Buscar preguntas...","Preguntas frecuentes",
+"No se encontraron preguntas.","¿Necesitas más ayuda?",
+"Contacta con el soporte de HAVKAR si no encuentras tu respuesta.",
+"Contactar con soporte","Inicio","Mensajes","Alertas","Perfil"],
+cats:["Todas","Cuenta","Seguridad","Billetera","Billetes","Notificaciones"],
+qa:[
+["¿Cómo inicio sesión?","Abre la página de acceso de HAVKAR y elige un método disponible. Si aparece Google, selecciona tu cuenta de Google."],
+["¿Cómo protejo mi cuenta?","Protege tu correo electrónico, utiliza contraseñas seguras y nunca compartas códigos de verificación. Cierra sesión en dispositivos que no sean de confianza."],
+["¿Puedo realizar pagos reales?","La disponibilidad depende del proveedor, tu cuenta y la función utilizada. Comprueba la confirmación del proveedor antes de considerar completada una transacción."],
+["¿Cómo reservo un billete?","Abre Billetes y selecciona un servicio disponible. Sigue las instrucciones del proveedor. La reserva se confirma únicamente cuando se emite un billete o una confirmación válida."],
+["¿Dónde veo mis notificaciones?","Abre Alertas en HAVKAR. Puedes leer las notificaciones y marcarlas como leídas."]
+]},
+
+pt:{
+ui:["Ajuda e perguntas frequentes","Pesquisar perguntas...","Perguntas frequentes",
+"Nenhuma pergunta encontrada.","Precisa de mais ajuda?",
+"Contacte o suporte HAVKAR se não encontrar a sua resposta.",
+"Contactar suporte","Início","Mensagens","Alertas","Perfil"],
+cats:["Todas","Conta","Segurança","Carteira","Bilhetes","Notificações"],
+qa:[
+["Como inicio sessão?","Abra a página de início de sessão do HAVKAR e escolha um método disponível. Se existir a opção Google, selecione a sua conta Google."],
+["Como protejo a minha conta?","Proteja o seu email, utilize palavras-passe fortes e nunca partilhe códigos de verificação. Termine a sessão em dispositivos não fiáveis."],
+["Posso efetuar pagamentos reais?","A disponibilidade depende do fornecedor, da sua conta e da funcionalidade. Verifique a confirmação do fornecedor antes de considerar uma transação concluída."],
+["Como reservo um bilhete?","Abra Bilhetes e escolha um serviço disponível. Siga as instruções do fornecedor. A reserva só fica confirmada após a emissão de um bilhete ou confirmação válida."],
+["Onde vejo as minhas notificações?","Abra Alertas no HAVKAR. Pode ler as notificações e marcá-las como lidas."]
+]},
+
+nl:{
+ui:["Hulp en veelgestelde vragen","Vragen zoeken...","Veelgestelde vragen",
+"Geen overeenkomende vragen gevonden.","Meer hulp nodig?",
+"Neem contact op met HAVKAR-support als je geen antwoord vindt.",
+"Contact opnemen","Home","Berichten","Meldingen","Profiel"],
+cats:["Alle","Account","Beveiliging","Portemonnee","Tickets","Meldingen"],
+qa:[
+["Hoe meld ik me aan?","Open de aanmeldpagina van HAVKAR en kies een beschikbare methode. Als aanmelden met Google beschikbaar is, selecteer je je Google-account."],
+["Hoe beveilig ik mijn account?","Beveilig je e-mail, gebruik sterke wachtwoorden en deel nooit verificatiecodes. Meld je af op apparaten die je niet vertrouwt."],
+["Kan ik echte betalingen doen?","De beschikbaarheid hangt af van de aanbieder, je account en de specifieke functie. Controleer de bevestiging van de aanbieder voordat je een transactie als voltooid beschouwt."],
+["Hoe boek ik een ticket?","Open Tickets en kies een beschikbare dienst. Volg de instructies van de aanbieder. Je boeking is pas bevestigd nadat een geldig ticket of een bevestiging is uitgegeven."],
+["Waar vind ik mijn meldingen?","Open Meldingen in HAVKAR. Je kunt meldingen lezen en als gelezen markeren."]
+]},
+
+sv:{
+ui:["Hjälp och vanliga frågor","Sök bland frågor...","Vanliga frågor",
+"Inga matchande frågor hittades.","Behöver du mer hjälp?",
+"Kontakta HAVKARs support om du inte hittar svaret.",
+"Kontakta support","Hem","Meddelanden","Aviseringar","Profil"],
+cats:["Alla","Konto","Säkerhet","Plånbok","Biljetter","Aviseringar"],
+qa:[
+["Hur loggar jag in?","Öppna HAVKARs inloggningssida och välj en tillgänglig metod. Om Google-inloggning erbjuds väljer du ditt Google-konto."],
+["Hur skyddar jag mitt konto?","Skydda din e-post, använd starka lösenord och dela aldrig verifieringskoder. Logga ut från enheter du inte litar på."],
+["Kan jag göra riktiga betalningar?","Tillgängligheten beror på leverantören, ditt konto och den aktuella funktionen. Kontrollera leverantörens bekräftelse innan du betraktar en transaktion som slutförd."],
+["Hur bokar jag en biljett?","Öppna Biljetter och välj en tillgänglig tjänst. Följ leverantörens instruktioner. Bokningen är bekräftad först när en giltig biljett eller bekräftelse har utfärdats."],
+["Var hittar jag mina aviseringar?","Öppna Aviseringar i HAVKAR. Du kan läsa aviseringar och markera dem som lästa."]
+]},
+
+pl:{
+ui:["Pomoc i FAQ","Szukaj pytań...","Najczęściej zadawane pytania",
+"Nie znaleziono pasujących pytań.","Potrzebujesz dodatkowej pomocy?",
+"Skontaktuj się z pomocą HAVKAR, jeśli nie możesz znaleźć odpowiedzi.",
+"Kontakt z pomocą","Strona główna","Wiadomości","Alerty","Profil"],
+cats:["Wszystkie","Konto","Bezpieczeństwo","Portfel","Bilety","Powiadomienia"],
+qa:[
+["Jak się zalogować?","Otwórz stronę logowania HAVKAR i wybierz dostępną metodę. Jeśli dostępne jest logowanie przez Google, wybierz swoje konto Google."],
+["Jak zabezpieczyć konto?","Zabezpiecz pocztę e-mail, używaj silnych haseł i nigdy nie udostępniaj kodów weryfikacyjnych. Wyloguj się na niezaufanych urządzeniach."],
+["Czy mogę dokonywać prawdziwych płatności?","Dostępność zależy od dostawcy, Twojego konta i konkretnej funkcji. Sprawdź potwierdzenie dostawcy, zanim uznasz transakcję za zakończoną."],
+["Jak zarezerwować bilet?","Otwórz Bilety i wybierz dostępną usługę. Postępuj zgodnie z instrukcjami dostawcy. Rezerwacja jest potwierdzona dopiero po wystawieniu ważnego biletu lub potwierdzenia."],
+["Gdzie znajdę powiadomienia?","Otwórz Alerty w HAVKAR. Możesz czytać powiadomienia i oznaczać je jako przeczytane."]
+]},
+
+id:{
+ui:["Bantuan & FAQ","Cari pertanyaan...","Pertanyaan yang sering diajukan",
+"Tidak ada pertanyaan yang cocok.","Butuh bantuan lebih lanjut?",
+"Hubungi dukungan HAVKAR jika Anda tidak menemukan jawaban.",
+"Hubungi dukungan","Beranda","Pesan","Peringatan","Profil"],
+cats:["Semua","Akun","Keamanan","Dompet","Tiket","Notifikasi"],
+qa:[
+["Bagaimana cara masuk?","Buka halaman masuk HAVKAR dan pilih metode yang tersedia. Jika masuk dengan Google tersedia, pilih akun Google Anda."],
+["Bagaimana cara mengamankan akun?","Lindungi email Anda, gunakan kata sandi yang kuat dan jangan pernah membagikan kode verifikasi. Keluar dari perangkat yang tidak tepercaya."],
+["Bisakah saya melakukan pembayaran nyata?","Ketersediaan bergantung pada penyedia, akun Anda dan fitur yang digunakan. Periksa konfirmasi penyedia sebelum menganggap transaksi selesai."],
+["Bagaimana cara memesan tiket?","Buka Tiket dan pilih layanan yang tersedia. Ikuti petunjuk penyedia. Pemesanan hanya dikonfirmasi setelah tiket atau konfirmasi yang sah diterbitkan."],
+["Di mana saya melihat notifikasi?","Buka Peringatan di HAVKAR. Anda dapat membaca notifikasi dan menandainya sebagai sudah dibaca."]
+]},
+
+zh:{
+ui:["帮助与常见问题","搜索问题...","常见问题",
+"没有找到匹配的问题。","需要更多帮助？",
+"如果找不到答案，请联系 HAVKAR 客服。",
+"联系客服","首页","消息","提醒","个人资料"],
+cats:["全部","账户","安全","钱包","票务","通知"],
+qa:[
+["如何登录？","打开 HAVKAR 登录页面并选择可用的登录方式。如果提供 Google 登录，请选择您的 Google 账户。"],
+["如何保护我的账户？","保护好电子邮箱，使用强密码，切勿分享验证码。在不可信的设备上退出登录。"],
+["我可以进行真实付款吗？","付款功能取决于服务提供商、您的账户及具体功能。在收到服务提供商的确认之前，不要将交易视为完成。"],
+["如何预订票务？","打开票务页面并选择可用服务。按照服务提供商的指引操作。只有收到有效票据或确认信息后，预订才算确认。"],
+["在哪里查看通知？","打开 HAVKAR 的提醒页面。您可以阅读通知并将其标记为已读。"]
+]},
+
+ja:{
+ui:["ヘルプとよくある質問","質問を検索...","よくある質問",
+"該当する質問がありません。","さらにサポートが必要ですか？",
+"回答が見つからない場合は、HAVKARサポートにお問い合わせください。",
+"サポートに連絡","ホーム","メッセージ","通知","プロフィール"],
+cats:["すべて","アカウント","セキュリティ","ウォレット","チケット","お知らせ"],
+qa:[
+["ログインするには？","HAVKARのログインページを開き、利用可能な方法を選択してください。Googleログインが表示される場合は、Googleアカウントを選択します。"],
+["アカウントを安全に保つには？","メールアカウントを保護し、強力なパスワードを使用してください。認証コードを他人に教えず、信頼できない端末ではログアウトしてください。"],
+["実際の支払いはできますか？","利用可否は決済事業者、アカウント、対象機能によって異なります。事業者からの確認を受けるまでは、取引が完了したと判断しないでください。"],
+["チケットを予約するには？","チケット画面で利用可能なサービスを選び、提供事業者の案内に従ってください。有効なチケットまたは確認書が発行されて初めて予約が確定します。"],
+["通知はどこで確認できますか？","HAVKARの通知画面を開いてください。通知を確認し、既読にすることができます。"]
+]},
+
+ko:{
+ui:["도움말 및 자주 묻는 질문","질문 검색...","자주 묻는 질문",
+"일치하는 질문이 없습니다.","추가 도움이 필요하신가요?",
+"답을 찾지 못했다면 HAVKAR 고객 지원에 문의하세요.",
+"고객 지원 문의","홈","메시지","알림","프로필"],
+cats:["전체","계정","보안","지갑","티켓","알림"],
+qa:[
+["어떻게 로그인하나요?","HAVKAR 로그인 페이지를 열고 사용 가능한 로그인 방법을 선택하세요. Google 로그인이 제공되면 Google 계정을 선택하세요."],
+["계정을 안전하게 보호하려면?","이메일을 보호하고 강력한 비밀번호를 사용하세요. 인증 코드를 공유하지 말고 신뢰할 수 없는 기기에서는 로그아웃하세요."],
+["실제 결제가 가능한가요?","결제 가능 여부는 제공업체, 계정 및 해당 기능에 따라 다릅니다. 제공업체의 확인을 받기 전에는 거래가 완료되었다고 판단하지 마세요."],
+["티켓은 어떻게 예약하나요?","티켓 메뉴에서 이용 가능한 서비스를 선택하고 제공업체의 안내를 따르세요. 유효한 티켓이나 확인서가 발급되어야 예약이 확정됩니다."],
+["알림은 어디에서 확인하나요?","HAVKAR의 알림 메뉴를 여세요. 알림을 읽고 읽음으로 표시할 수 있습니다."]
+]},
+
+hi:{
+ui:["सहायता और सामान्य प्रश्न","प्रश्न खोजें...","अक्सर पूछे जाने वाले प्रश्न",
+"कोई मेल खाता प्रश्न नहीं मिला।","और सहायता चाहिए?",
+"उत्तर न मिलने पर HAVKAR सहायता से संपर्क करें।",
+"सहायता से संपर्क करें","होम","संदेश","अलर्ट","प्रोफ़ाइल"],
+cats:["सभी","खाता","सुरक्षा","वॉलेट","टिकट","सूचनाएँ"],
+qa:[
+["मैं लॉग इन कैसे करूँ?","HAVKAR का लॉगिन पेज खोलें और उपलब्ध तरीका चुनें। यदि Google लॉगिन उपलब्ध है, तो अपना Google खाता चुनें।"],
+["मैं अपना खाता सुरक्षित कैसे रखूँ?","अपना ईमेल सुरक्षित रखें, मजबूत पासवर्ड इस्तेमाल करें और सत्यापन कोड किसी को न दें। अविश्वसनीय उपकरणों से लॉग आउट करें।"],
+["क्या मैं वास्तविक भुगतान कर सकता हूँ?","भुगतान की उपलब्धता प्रदाता, आपके खाते और संबंधित सुविधा पर निर्भर करती है। प्रदाता की पुष्टि मिलने से पहले लेनदेन को पूरा न मानें।"],
+["टिकट कैसे बुक करूँ?","टिकट अनुभाग खोलें और उपलब्ध सेवा चुनें। प्रदाता के निर्देशों का पालन करें। वैध टिकट या पुष्टि जारी होने पर ही बुकिंग की पुष्टि होती है।"],
+["सूचनाएँ कहाँ देखें?","HAVKAR में अलर्ट खोलें। आप सूचनाएँ पढ़ सकते हैं और उन्हें पढ़ा हुआ चिह्नित कर सकते हैं।"]
+]},
+
+ru:{
+ui:["Помощь и вопросы","Поиск вопросов...","Часто задаваемые вопросы",
+"Подходящих вопросов не найдено.","Нужна дополнительная помощь?",
+"Свяжитесь с поддержкой HAVKAR, если не нашли ответ.",
+"Связаться с поддержкой","Главная","Сообщения","Оповещения","Профиль"],
+cats:["Все","Аккаунт","Безопасность","Кошелёк","Билеты","Уведомления"],
+qa:[
+["Как войти в аккаунт?","Откройте страницу входа HAVKAR и выберите доступный способ. Если предлагается вход через Google, выберите свой аккаунт Google."],
+["Как защитить аккаунт?","Защитите электронную почту, используйте надёжные пароли и никому не сообщайте коды подтверждения. Выходите из аккаунта на ненадёжных устройствах."],
+["Можно ли совершать реальные платежи?","Доступность зависит от поставщика, вашего аккаунта и конкретной функции. Проверьте подтверждение поставщика, прежде чем считать операцию завершённой."],
+["Как забронировать билет?","Откройте раздел билетов и выберите доступную услугу. Следуйте инструкциям поставщика. Бронирование подтверждается только после выдачи действительного билета или подтверждения."],
+["Где посмотреть уведомления?","Откройте раздел оповещений HAVKAR. Здесь можно читать уведомления и отмечать их как прочитанные."]
+]},
+
+ckb:{
+ui:["یارمەتی و پرسیارە باوەکان","گەڕان لە پرسیارەکان...",
+"پرسیارە باوەکان","هیچ پرسیارێکی گونجاو نەدۆزرایەوە.",
+"پێویستت بە یارمەتی زیاترە؟",
+"ئەگەر وەڵامەکەت نەدۆزییەوە، پەیوەندی بە پشتگیری هاوکارەوە بکە.",
+"پەیوەندی بە پشتگیری","ماڵەوە","نامەکان",
+"ئاگادارکردنەوەکان","پرۆفایل"],
+cats:["هەموو","هەژمار","ئاسایش","جزدانی پارە",
+"بلیتەکان","ئاگادارکردنەوەکان"],
+qa:[
+["چۆن بچمە ژوورەوە؟","پەڕەی چوونەژوورەوەی هاوکار بکەرەوە و یەکێک لە ڕێگاکانی بەردەست هەڵبژێرە. ئەگەر چوونەژوورەوە بە گووگڵ بەردەست بوو، هەژماری گووگڵەکەت هەڵبژێرە."],
+["چۆن هەژمارەکەم بپارێزم؟","ئیمەیڵەکەت بپارێزە، وشەی نهێنی بەهێز بەکاربهێنە و کۆدی پشتڕاستکردنەوە بە هیچ کەسێک مەدە. لە ئامێری نەناسراو بچۆ دەرەوە."],
+["ئایا دەتوانم پارەدانێکی ڕاستەقینە بکەم؟","بەردەستبوونی پارەدان بە دابینکەر، هەژمارەکەت و تایبەتمەندییەکەوە بەستراوە. پێش ئەوەی مامەڵەکە بە تەواوبوو دابنێیت، پشتڕاستکردنەوەی دابینکەر بپشکنە."],
+["چۆن بلیتێک حجز بکەم؟","بەشی بلیتەکان بکەرەوە و خزمەتگوزارییەکی بەردەست هەڵبژێرە. ڕێنماییەکانی دابینکەر جێبەجێ بکە. حجز تەنها دوای دەرچوونی بلیتی دروست یان پشتڕاستکردنەوە تەواو دەبێت."],
+["لە کوێ ئاگادارکردنەوەکانم ببینم؟","بەشی ئاگادارکردنەوەکانی هاوکار بکەرەوە. دەتوانیت ئاگادارکردنەوەکان بخوێنیتەوە و وەک خوێندراو دیارییان بکەیت."]
+]},
+
+kmr:{
+ui:["Alîkarî û Pirsên Pir Tên Pirsîn","Di pirsan de bigere...",
+"Pirsên pir tên pirsîn","Tu pirsa guncaw nehat dîtin.",
+"Alîkariya zêdetir dixwazî?",
+"Heke te bersiva xwe nedît, bi piştgiriya HAVKAR re têkilî dayne.",
+"Bi piştgiriyê re têkilî dayne","Malper","Peyam","Agahdarî","Profîl"],
+cats:["Hemû","Hesab","Ewlehî","Berîka pereyan",
+"Bilêt","Agahdarî"],
+qa:[
+["Ez çawa têkevim hesabê xwe?","Rûpela têketinê ya HAVKAR veke û rêbazeke berdest hilbijêre. Heke têketina bi Google hebe, hesabê xwe yê Google hilbijêre."],
+["Ez çawa hesabê xwe biparêzim?","E-nameya xwe biparêze, şîfreyên bihêz bi kar bîne û kodên piştrastkirinê bi kesî re parve neke. Ji amûrên ku pê bawer nînî derkeve."],
+["Ez dikarim pereyên rastîn bidim?","Berdestbûna dayîna pereyan bi peydakêr, hesabê te û taybetmendiya têkildar ve girêdayî ye. Berî ku danûstandinê qediyayî bihesibînî, piştrastkirina peydakêr kontrol bike."],
+["Ez çawa bilêtekê rezerv bikim?","Beşa Bilêtan veke û xizmeteke berdest hilbijêre. Rêwerzên peydakêr bişopîne. Rezervasyon tenê piştî derxistina bilêteke derbasdar an piştrastkirinê tê pejirandin."],
+["Ez li ku derê agahdariyên xwe bibînim?","Beşa Agahdariyan a HAVKAR veke. Tu dikarî agahdariyan bixwînî û wan wekî xwendî nîşan bikî."]
+]},
+
+tr:{
+ui:["Yardım ve SSS","Sorularda ara...","Sık sorulan sorular",
+"Eşleşen soru bulunamadı.","Daha fazla yardıma mı ihtiyacınız var?",
+"Yanıtınızı bulamazsanız HAVKAR desteğiyle iletişime geçin.",
+"Destekle iletişim","Ana Sayfa","Mesajlar","Uyarılar","Profil"],
+cats:["Tümü","Hesap","Güvenlik","Cüzdan","Biletler","Bildirimler"],
+qa:[
+["Nasıl giriş yapabilirim?","HAVKAR giriş sayfasını açın ve kullanılabilir bir yöntem seçin. Google ile giriş sunuluyorsa Google hesabınızı seçin."],
+["Hesabımı nasıl korurum?","E-postanızı koruyun, güçlü şifreler kullanın ve doğrulama kodlarını kimseyle paylaşmayın. Güvenmediğiniz cihazlarda oturumu kapatın."],
+["Gerçek ödeme yapabilir miyim?","Ödeme kullanılabilirliği sağlayıcıya, hesabınıza ve ilgili özelliğe bağlıdır. İşlemi tamamlanmış saymadan önce sağlayıcının onayını kontrol edin."],
+["Nasıl bilet rezervasyonu yaparım?","Biletler bölümünü açın ve kullanılabilir bir hizmet seçin. Sağlayıcının talimatlarını izleyin. Rezervasyon yalnızca geçerli bir bilet veya onay düzenlendiğinde kesinleşir."],
+["Bildirimlerimi nerede görebilirim?","HAVKAR'da Uyarılar bölümünü açın. Bildirimleri okuyabilir ve okundu olarak işaretleyebilirsiniz."]
+]},
+
+ar:{
+ui:["المساعدة والأسئلة الشائعة","ابحث في الأسئلة...",
+"الأسئلة الشائعة","لم يتم العثور على أسئلة مطابقة.",
+"هل تحتاج إلى مزيد من المساعدة؟",
+"تواصل مع دعم HAVKAR إذا لم تجد إجابتك.",
+"تواصل مع الدعم","الرئيسية","الرسائل","التنبيهات","الملف الشخصي"],
+cats:["الكل","الحساب","الأمان","المحفظة","التذاكر","الإشعارات"],
+qa:[
+["كيف أسجل الدخول؟","افتح صفحة تسجيل الدخول في HAVKAR واختر إحدى الطرق المتاحة. إذا كان تسجيل الدخول عبر Google متاحًا، فاختر حسابك على Google."],
+["كيف أحمي حسابي؟","احمِ بريدك الإلكتروني، واستخدم كلمات مرور قوية، ولا تشارك رموز التحقق مع أي شخص. سجّل الخروج من الأجهزة غير الموثوقة."],
+["هل يمكنني إجراء مدفوعات حقيقية؟","يعتمد توفر الدفع على مزود الخدمة وحسابك والميزة المستخدمة. تحقق من تأكيد مزود الخدمة قبل اعتبار المعاملة مكتملة."],
+["كيف أحجز تذكرة؟","افتح قسم التذاكر واختر خدمة متاحة. اتبع تعليمات مزود الخدمة. لا يُعد الحجز مؤكدًا إلا بعد إصدار تذكرة صالحة أو تأكيد رسمي."],
+["أين أجد إشعاراتي؟","افتح قسم التنبيهات في HAVKAR. يمكنك قراءة الإشعارات ووضع علامة عليها كمقروءة."]
+]},
+
+fa:{
+ui:["راهنما و سؤالات متداول","جست‌وجو در سؤالات...",
+"سؤالات متداول","سؤالی مطابق جست‌وجوی شما پیدا نشد.",
+"به کمک بیشتری نیاز دارید؟",
+"اگر پاسخ خود را پیدا نکردید، با پشتیبانی هاوکار تماس بگیرید.",
+"تماس با پشتیبانی","خانه","پیام‌ها","اعلان‌ها","پروفایل"],
+cats:["همه","حساب کاربری","امنیت","کیف پول","بلیط‌ها","اعلان‌ها"],
+qa:[
+["چگونه وارد حسابم شوم؟","صفحه ورود هاوکار را باز کنید و یکی از روش‌های فعال را انتخاب کنید. اگر ورود با گوگل در دسترس است، حساب گوگل خود را انتخاب کنید."],
+["چگونه از حسابم محافظت کنم؟","ایمیل خود را ایمن نگه دارید، از رمزهای قوی استفاده کنید و کدهای تأیید را به دیگران ندهید. در دستگاه‌های ناشناس از حساب خارج شوید."],
+["آیا می‌توانم پرداخت واقعی انجام دهم؟","امکان پرداخت به ارائه‌دهنده، وضعیت حساب شما و قابلیت موردنظر بستگی دارد. پیش از قطعی دانستن تراکنش، تأییدیه ارائه‌دهنده را بررسی کنید."],
+["چگونه بلیط رزرو کنم؟","بخش بلیط‌ها را باز کنید و یکی از خدمات فعال را انتخاب کنید. مراحل ارائه‌دهنده را دنبال کنید. رزرو فقط پس از صدور بلیط یا تأییدیه معتبر قطعی است."],
+["اعلان‌هایم را کجا ببینم؟","بخش اعلان‌های هاوکار را باز کنید. می‌توانید اعلان‌ها را بخوانید و آن‌ها را به‌عنوان خوانده‌شده علامت بزنید."]
+]},
+
+ur:{
+ui:["مدد اور عام سوالات","سوالات تلاش کریں...",
+"اکثر پوچھے گئے سوالات","کوئی متعلقہ سوال نہیں ملا۔",
+"مزید مدد چاہیے؟",
+"اگر جواب نہ ملے تو HAVKAR سپورٹ سے رابطہ کریں۔",
+"سپورٹ سے رابطہ","ہوم","پیغامات","اطلاعات","پروفائل"],
+cats:["سب","اکاؤنٹ","سیکیورٹی","والیٹ","ٹکٹ","اطلاعات"],
+qa:[
+["میں لاگ اِن کیسے کروں؟","HAVKAR کا لاگ اِن صفحہ کھولیں اور دستیاب طریقہ منتخب کریں۔ اگر Google سے لاگ اِن دستیاب ہو تو اپنا Google اکاؤنٹ منتخب کریں۔"],
+["میں اپنا اکاؤنٹ کیسے محفوظ رکھوں؟","اپنی ای میل محفوظ رکھیں، مضبوط پاس ورڈ استعمال کریں اور تصدیقی کوڈ کسی کو نہ دیں۔ غیر معتبر آلات سے لاگ آؤٹ کریں۔"],
+["کیا میں حقیقی ادائیگی کر سکتا ہوں؟","ادائیگی کی دستیابی فراہم کنندہ، آپ کے اکاؤنٹ اور متعلقہ خصوصیت پر منحصر ہے۔ فراہم کنندہ کی تصدیق کے بغیر لین دین کو مکمل نہ سمجھیں۔"],
+["میں ٹکٹ کیسے بک کروں؟","ٹکٹ کا حصہ کھولیں اور دستیاب سروس منتخب کریں۔ فراہم کنندہ کی ہدایات پر عمل کریں۔ بکنگ صرف درست ٹکٹ یا تصدیق جاری ہونے پر مکمل ہوتی ہے۔"],
+["میں اپنی اطلاعات کہاں دیکھوں؟","HAVKAR میں اطلاعات کا حصہ کھولیں۔ آپ اطلاعات پڑھ سکتے ہیں اور انہیں پڑھا ہوا نشان زد کر سکتے ہیں۔"]
+]}
+
+};
+
+const $=id=>document.getElementById(id);
+const categoryKeys=["all","account","security","wallet","tickets","notifications"];
+
+let currentLanguage="en";
+let currentCategory=0;
+let searchTerm="";
+
+function normalizeLanguage(value){
+ if(!value||typeof value!=="string")return null;
+ const raw=value.trim().toLowerCase().replace(/_/g,"-");
+ if(translations[raw])return raw;
+ if(raw.startsWith("zh"))return "zh";
+ if(raw.startsWith("ja"))return "ja";
+ if(raw.startsWith("ko"))return "ko";
+ if(raw.startsWith("ckb"))return "ckb";
+ if(raw.startsWith("kmr")||raw==="ku"||raw.startsWith("ku-latn"))
+   return "kmr";
+ const base=raw.split("-")[0];
+ return translations[base]?base:null;
+}
+
+function readStoredLanguage(){
+ const params=new URLSearchParams(location.search);
+ const fromURL=normalizeLanguage(params.get("lang"));
+ if(fromURL)return fromURL;
+
+ const keys=[
+  "havkar_language",
+  "havkarLanguage",
+  "selectedLanguage",
+  "selected_language",
+  "app_language",
+  "language"
+ ];
+
+ for(const key of keys){
+  try{
+   const value=localStorage.getItem(key);
+   const lang=normalizeLanguage(value);
+   if(lang)return lang;
+  }catch(error){}
+ }
+
+ return normalizeLanguage(navigator.language)||"en";
+}
+
+function saveLanguage(lang){
+ try{
+  localStorage.setItem("havkar_language",lang);
+ }catch(error){}
+}
+
+function setLanguage(lang){
+ if(!translations[lang])lang="en";
+ currentLanguage=lang;
+ currentCategory=0;
+ searchTerm="";
+
+ const t=translations[lang];
+ document.documentElement.lang=lang;
+ document.documentElement.dir=
+   rtlLanguages.has(lang)?"rtl":"ltr";
+
+ $("language").value=lang;
+ $("title").textContent=t.ui[0];
+ $("search").placeholder=t.ui[1];
+ $("search").value="";
+ $("sectionTitle").textContent=t.ui[2];
+ $("emptyText").textContent=t.ui[3];
+ $("supportTitle").textContent=t.ui[4];
+ $("supportText").textContent=t.ui[5];
+ $("supportButton").textContent=t.ui[6];
+ $("navHome").textContent=t.ui[7];
+ $("navMessages").textContent=t.ui[8];
+ $("navAlerts").textContent=t.ui[9];
+ $("navProfile").textContent=t.ui[10];
+
+ document.title="HAVKAR | "+t.ui[0];
+ saveLanguage(lang);
+ renderCategories();
+ renderQuestions();
+}
+
+function renderCategories(){
+ const t=translations[currentLanguage];
+ const container=$("categories");
+ container.replaceChildren();
+
+ t.cats.forEach((label,index)=>{
+  const button=document.createElement("button");
+  button.type="button";
+  button.className="category"+
+    (index===currentCategory?" active":"");
+  button.textContent=label;
+  button.setAttribute(
+    "aria-pressed",
+    index===currentCategory?"true":"false"
+  );
+
+  button.addEventListener("click",()=>{
+   currentCategory=index;
+   renderCategories();
+   renderQuestions();
+  });
+
+  container.appendChild(button);
+ });
+}
+
+function createQuestion(question,answer,categoryLabel){
+ const article=document.createElement("article");
+ article.className="faq";
+
+ const button=document.createElement("button");
+ button.type="button";
+ button.className="question";
+ button.setAttribute("aria-expanded","false");
+
+ const questionText=document.createElement("span");
+ questionText.textContent=question;
+
+ const chevron=document.createElement("i");
+ chevron.className="fa-solid fa-chevron-down";
+ chevron.setAttribute("aria-hidden","true");
+
+ button.append(questionText,chevron);
+
+ const answerBox=document.createElement("div");
+ answerBox.className="answer";
+
+ const tag=document.createElement("span");
+ tag.className="tag";
+ tag.textContent=categoryLabel;
+
+ const text=document.createElement("div");
+ text.textContent=answer;
+
+ answerBox.append(tag,text);
+ article.append(button,answerBox);
+
+ button.addEventListener("click",()=>{
+  const open=article.classList.toggle("open");
+  button.setAttribute("aria-expanded",String(open));
+ });
+
+ return article;
+}
+
+function renderQuestions(){
+ const t=translations[currentLanguage];
+ const list=$("faqList");
+ list.replaceChildren();
+
+ const query=searchTerm.toLocaleLowerCase();
+ let count=0;
+
+ t.qa.forEach((item,index)=>{
+  const category=index+1;
+
+  if(currentCategory!==0&&currentCategory!==category)
+   return;
+
+  const searchable=(item[0]+" "+item[1])
+    .toLocaleLowerCase();
+
+  if(query&&!searchable.includes(query))
+   return;
+
+  list.appendChild(
+   createQuestion(item[0],item[1],t.cats[category])
+  );
+  count++;
+ });
+
+ $("count").textContent=String(count);
+ $("empty").style.display=count?"none":"block";
+}
+
+$("language").addEventListener("change",event=>{
+ setLanguage(event.target.value);
+});
+
+$("search").addEventListener("input",event=>{
+ searchTerm=event.target.value.trim();
+ renderQuestions();
+});
+
+$("back").addEventListener("click",()=>{
+ location.href="index.html";
+});
+
+setLanguage(readStoredLanguage());
+
+</script>
+</body>
+</html>
