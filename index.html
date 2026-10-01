@@ -694,19 +694,6 @@ h1 {
 
 </style>
 
-<!-- =========================
-     PI NETWORK SDK - TESTNET
-     ========================= -->
-
-<script src="https://sdk.minepi.com/pi-sdk.js"></script>
-
-<script>
-Pi.init({
-    version: "2.0",
-    sandbox: true
-});
-</script>
-
 </head>
 
 <body>
@@ -848,6 +835,16 @@ Pi.init({
         <span class="enter-arrow" aria-hidden="true">›</span>
     </button>
 
+
+    <!-- Signed-in account controls: hidden until authentication is confirmed. -->
+    <section id="signedInPanel" class="account-panel" hidden aria-label="HAVKAR account">
+        <p id="signedInEmail"></p>
+        <div class="account-actions">
+            <a href="profile.html" data-i18n="myAccount">My Account</a>
+            <button id="homeLogout" type="button" data-i18n="logout">Log Out</button>
+        </div>
+        <p id="homeAuthMessage" role="alert" aria-live="polite" style="margin:10px 0 0"></p>
+    </section>
 
     <!-- =========================
          LOGIN
@@ -1029,7 +1026,9 @@ try {
   updateAccount(data.session?.user || null);
 } catch (error) {
   console.error("HAVKAR session check failed", error);
-  updateAccount(null);
+  guestSignup.hidden = false;
+  guestLogin.hidden = false;
+  signedInPanel.hidden = true;
 }
 supabase.auth.onAuthStateChange((_event, session) => updateAccount(session?.user || null));
 homeLogout.addEventListener("click", async () => {
