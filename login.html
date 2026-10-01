@@ -416,6 +416,8 @@ button:disabled {
         </button>
 
 
+        <button id="googleBtn" class="google-btn" type="button"><span class="google-mark" aria-hidden="true">G</span> Continue with Google</button>
+
         <button
             id="forgotBtn"
             class="forgot-btn"
@@ -611,6 +613,7 @@ const supabase =
    ELEMENTS
 ========================================================= */
 
+const googleBtn = document.getElementById("googleBtn");
 const accountMode = document.getElementById("accountMode");
 const accountEmail = document.getElementById("accountEmail");
 const accountLogout = document.getElementById("accountLogout");
@@ -837,6 +840,30 @@ function showResetMode() {
     newPassword.focus();
 }
 
+
+/* =========================================================
+   GOOGLE OAUTH — SUPABASE
+========================================================= */
+googleBtn.addEventListener("click", async () => {
+    googleBtn.disabled = true;
+    googleBtn.textContent = "Connecting to Google...";
+    showMessage("");
+    try {
+        const redirectTo = new URL("login.html", window.location.href).href;
+        const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: "google",
+            options: { redirectTo }
+        });
+        if (error) throw error;
+        if (!data?.url) throw new Error("Google authorization URL was not returned.");
+        // Supabase redirects the browser to Google; the return is handled below.
+    } catch (error) {
+        console.error("HAVKAR Google OAuth Error:", error);
+        showMessage(error?.message || "Google sign-in failed. Please try again.", "error");
+        googleBtn.disabled = false;
+        googleBtn.innerHTML = '<span class="google-mark" aria-hidden="true">G</span> Continue with Google';
+    }
+});
 
 /* =========================================================
    LOGIN
@@ -1526,6 +1553,15 @@ supabase.auth.onAuthStateChange(
 (async function initializePage(){
 
     try {
+        const oauthParams = new URLSearchParams(window.location.search);
+        const oauthHash = new URLSearchParams(window.location.hash.slice(1));
+        const oauthError = oauthParams.get("error_description") || oauthHash.get("error_description") || oauthParams.get("error") || oauthHash.get("error");
+        if (oauthError) {
+            showMessage("Google sign-in: " + oauthError, "error");
+            window.history.replaceState({}, document.title, window.location.pathname);
+            return;
+        }
+
 
         const {
             data,
