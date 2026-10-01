@@ -1,0 +1,760 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#689f38">
+<title>HAVKAR - Alerts</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<style>
+:root {
+  --green:#689f38;
+  --dark-green:#467b25;
+  --light-green:#edf6e8;
+  --background:#f5f7f4;
+  --card:#fff;
+  --text:#25312a;
+  --muted:#78827b;
+  --border:#e4eae2;
+  --danger:#c62828;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0;
+  background:var(--background);
+  color:var(--text);
+  font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  padding-bottom:95px;
+}
+button { font:inherit; cursor:pointer; }
+button:disabled { opacity:.5; cursor:not-allowed; }
+header {
+  position:sticky;
+  top:0;
+  z-index:10;
+  background:linear-gradient(120deg,#588f30,#83b947);
+  color:white;
+  padding:18px 16px;
+  box-shadow:0 3px 15px #00000012;
+}
+.header-inner {
+  max-width:760px;
+  margin:auto;
+  display:flex;
+  align-items:center;
+  gap:13px;
+}
+.back {
+  border:0;
+  background:#ffffff24;
+  color:white;
+  width:42px;
+  height:42px;
+  border-radius:50%;
+}
+.heading { flex:1; }
+.heading h1 { font-size:21px; margin:0; }
+.heading p { font-size:12px; opacity:.85; margin:4px 0 0; }
+.refresh {
+  border:0;
+  background:#ffffff24;
+  color:white;
+  border-radius:50%;
+  width:42px;
+  height:42px;
+}
+main { max-width:760px; margin:auto; padding:18px 14px; }
+.summary {
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:19px;
+  padding:20px;
+  display:flex;
+  align-items:center;
+  gap:15px;
+  box-shadow:0 3px 15px #00000008;
+}
+.bell {
+  width:58px;
+  height:58px;
+  border-radius:17px;
+  display:grid;
+  place-items:center;
+  background:var(--light-green);
+  color:var(--green);
+  font-size:25px;
+}
+.summary-content { flex:1; }
+.summary-content strong { font-size:22px; }
+.summary-content p { color:var(--muted); font-size:12px; margin:5px 0 0; }
+.toolbar {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin:20px 0 12px;
+}
+.tabs { display:flex; gap:7px; }
+.tab {
+  padding:10px 13px;
+  background:white;
+  border:1px solid var(--border);
+  border-radius:11px;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:700;
+}
+.tab.active {
+  background:var(--green);
+  color:white;
+  border-color:var(--green);
+}
+.mark-all {
+  background:none;
+  border:0;
+  color:var(--dark-green);
+  font-size:12px;
+  font-weight:700;
+  text-align:right;
+}
+.notification-list { display:grid; gap:11px; }
+.notification {
+  display:flex;
+  gap:13px;
+  background:var(--card);
+  padding:16px 13px;
+  border:1px solid var(--border);
+  border-radius:16px;
+  box-shadow:0 2px 10px #00000007;
+}
+.notification.unread {
+  border-left:4px solid var(--green);
+  background:#fbfef9;
+}
+.notification-icon {
+  flex-shrink:0;
+  width:42px;
+  height:42px;
+  border-radius:13px;
+  display:grid;
+  place-items:center;
+  background:var(--light-green);
+  color:var(--green);
+}
+.notification-content { flex:1; min-width:0; }
+.notification-title {
+  font-size:14px;
+  font-weight:800;
+  overflow-wrap:anywhere;
+}
+.notification-message {
+  font-size:13px;
+  color:#657067;
+  line-height:1.6;
+  margin:7px 0 10px;
+  overflow-wrap:anywhere;
+  white-space:pre-wrap;
+}
+.notification-footer {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:10px;
+  justify-content:space-between;
+}
+.notification-time { font-size:11px; color:var(--muted); }
+.notification-actions { display:flex; gap:12px; }
+.small-action {
+  border:0;
+  background:none;
+  color:var(--dark-green);
+  font-size:12px;
+  font-weight:700;
+  padding:4px 0;
+}
+.unread-dot {
+  width:9px;
+  height:9px;
+  border-radius:50%;
+  background:var(--green);
+  margin-top:5px;
+  flex-shrink:0;
+}
+.state {
+  text-align:center;
+  background:white;
+  padding:45px 20px;
+  border-radius:18px;
+  color:var(--muted);
+  border:1px solid var(--border);
+  line-height:1.7;
+}
+.state i { font-size:34px; color:var(--green); margin-bottom:12px; }
+.state h2 { color:var(--text); font-size:17px; }
+.state button {
+  border:0;
+  background:var(--green);
+  color:white;
+  padding:11px 18px;
+  border-radius:10px;
+  margin-top:12px;
+}
+.error {
+  background:#ffebee;
+  border:1px solid #ffcdd2;
+  color:var(--danger);
+  border-radius:12px;
+  padding:13px;
+  font-size:12px;
+  margin-bottom:15px;
+  overflow-wrap:anywhere;
+}
+.hidden { display:none!important; }
+.bottom-nav {
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  height:75px;
+  background:white;
+  display:flex;
+  justify-content:space-around;
+  align-items:center;
+  border-top:1px solid var(--border);
+  z-index:10;
+}
+.bottom-nav a {
+  text-align:center;
+  text-decoration:none;
+  color:var(--muted);
+  font-size:10px;
+  min-width:65px;
+}
+.bottom-nav a i {
+  display:block;
+  font-size:20px;
+  margin-bottom:5px;
+}
+.bottom-nav a.active { color:var(--green); }
+body.dark-mode {
+  --background:#101510;
+  --card:#1d261e;
+  --text:#e9f0e8;
+  --muted:#a2afa2;
+  --border:#344235;
+  --light-green:#263b27;
+}
+body.dark-mode .tab,
+body.dark-mode .state,
+body.dark-mode .bottom-nav {
+  background:var(--card);
+  color:var(--text);
+}
+body.dark-mode .tab.active { background:var(--green); color:white; }
+body.dark-mode .notification.unread { background:#223123; }
+body.dark-mode .notification-message { color:#bdc9bd; }
+@media(max-width:400px) {
+  .toolbar { align-items:flex-start; }
+  .tab { padding:9px; }
+  .mark-all { max-width:95px; }
+}
+</style>
+</head>
+
+<body>
+<header>
+  <div class="header-inner">
+    <button class="back" onclick="location.href='index.html'" aria-label="Back">
+      <i class="fa-solid fa-arrow-left"></i>
+    </button>
+    <div class="heading">
+      <h1>Notifications</h1>
+      <p>Your HAVKAR updates</p>
+    </div>
+    <button id="refreshBtn" class="refresh" aria-label="Refresh">
+      <i class="fa-solid fa-rotate"></i>
+    </button>
+  </div>
+</header>
+
+<main>
+  <div id="errorBox" class="error hidden" role="alert"></div>
+
+  <section class="summary">
+    <div class="bell"><i class="fa-solid fa-bell"></i></div>
+    <div class="summary-content">
+      <strong id="unreadCount">0</strong>
+      <p>Unread notifications</p>
+    </div>
+  </section>
+
+  <div class="toolbar">
+    <div class="tabs" role="group" aria-label="Notification filters">
+      <button class="tab active" data-filter="all">All</button>
+      <button class="tab" data-filter="unread">Unread</button>
+    </div>
+    <button id="markAllBtn" class="mark-all" disabled>
+      Mark all as read
+    </button>
+  </div>
+
+  <section id="notificationList" class="notification-list" aria-live="polite">
+    <div class="state">
+      <i class="fa-solid fa-spinner fa-spin"></i>
+      <h2>Loading notifications...</h2>
+    </div>
+  </section>
+</main>
+
+<nav class="bottom-nav">
+  <a href="index.html">
+    <i class="fa-solid fa-house"></i>Home
+  </a>
+  <a href="chat.html">
+    <i class="fa-solid fa-comments"></i>Messages
+  </a>
+  <a href="alerts.html" class="active" aria-current="page">
+    <i class="fa-solid fa-bell"></i>Alerts
+  </a>
+  <a href="profile.html">
+    <i class="fa-solid fa-user"></i>Profile
+  </a>
+</nav>
+
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const SUPABASE_URL =
+  "https://gispovnciifgikvgpzck.supabase.co";
+
+const SUPABASE_KEY =
+  "sb_publishable_KD8yd063Xik2oMyjevwWYg_tJK2jEKq";
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const list = document.getElementById("notificationList");
+const errorBox = document.getElementById("errorBox");
+const unreadCount = document.getElementById("unreadCount");
+const markAllBtn = document.getElementById("markAllBtn");
+const refreshBtn = document.getElementById("refreshBtn");
+
+let currentUser = null;
+let notifications = [];
+let filter = "all";
+let channel = null;
+let loading = false;
+
+try {
+  const settings = JSON.parse(
+    localStorage.getItem("havkar_profile_settings") || "{}"
+  );
+  if (settings.darkMode === true) {
+    document.body.classList.add("dark-mode");
+  }
+} catch (_) {}
+
+function showError(message) {
+  errorBox.textContent = message;
+  errorBox.classList.remove("hidden");
+}
+
+function clearError() {
+  errorBox.textContent = "";
+  errorBox.classList.add("hidden");
+}
+
+function formatDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat(
+    navigator.language || "en",
+    { dateStyle:"medium", timeStyle:"short" }
+  ).format(date);
+}
+
+function iconFor(type) {
+  const icons = {
+    message:"fa-comment",
+    chat:"fa-comment",
+    wallet:"fa-wallet",
+    payment:"fa-credit-card",
+    delivery:"fa-truck",
+    ticket:"fa-ticket",
+    order:"fa-bag-shopping",
+    security:"fa-shield-halved",
+    warning:"fa-triangle-exclamation",
+    success:"fa-circle-check",
+    review:"fa-star"
+  };
+  return icons[String(type || "").toLowerCase()] || "fa-bell";
+}
+
+function safeInternalUrl(value) {
+  if (!value || typeof value !== "string") return null;
+  try {
+    const url = new URL(value, location.origin);
+    if (
+      url.origin !== location.origin ||
+      !["http:", "https:"].includes(url.protocol) ||
+      value.startsWith("//")
+    ) return null;
+    return url.href;
+  } catch (_) {
+    return null;
+  }
+}
+
+function stateView(icon, title, message, buttonText, action) {
+  list.replaceChildren();
+
+  const box = document.createElement("div");
+  box.className = "state";
+
+  const symbol = document.createElement("i");
+  symbol.className = `fa-solid ${icon}`;
+
+  const heading = document.createElement("h2");
+  heading.textContent = title;
+
+  const description = document.createElement("p");
+  description.textContent = message;
+
+  box.append(symbol, heading, description);
+
+  if (buttonText && action) {
+    const button = document.createElement("button");
+    button.textContent = buttonText;
+    button.addEventListener("click", action);
+    box.append(button);
+  }
+
+  list.append(box);
+}
+
+function createNotification(item) {
+  const card = document.createElement("article");
+  card.className =
+    "notification" + (item.is_read ? "" : " unread");
+
+  const iconBox = document.createElement("div");
+  iconBox.className = "notification-icon";
+
+  const icon = document.createElement("i");
+  icon.className = `fa-solid ${iconFor(item.type)}`;
+  iconBox.append(icon);
+
+  const content = document.createElement("div");
+  content.className = "notification-content";
+
+  const title = document.createElement("div");
+  title.className = "notification-title";
+  title.textContent = item.title || "HAVKAR notification";
+
+  const message = document.createElement("div");
+  message.className = "notification-message";
+  message.textContent = item.message || "";
+
+  const footer = document.createElement("div");
+  footer.className = "notification-footer";
+
+  const time = document.createElement("span");
+  time.className = "notification-time";
+  time.textContent = formatDate(item.created_at);
+
+  const actions = document.createElement("div");
+  actions.className = "notification-actions";
+
+  if (!item.is_read) {
+    const mark = document.createElement("button");
+    mark.className = "small-action";
+    mark.textContent = "Mark as read";
+    mark.addEventListener("click", () => markRead(item.id, mark));
+    actions.append(mark);
+  }
+
+  const url = safeInternalUrl(item.action_url);
+  if (url) {
+    const open = document.createElement("button");
+    open.className = "small-action";
+    open.textContent = "Open";
+    open.addEventListener("click", async () => {
+      if (!item.is_read) await markRead(item.id);
+      location.assign(url);
+    });
+    actions.append(open);
+  }
+
+  footer.append(time, actions);
+  content.append(title, message, footer);
+  card.append(iconBox, content);
+
+  if (!item.is_read) {
+    const dot = document.createElement("span");
+    dot.className = "unread-dot";
+    dot.setAttribute("aria-label", "Unread");
+    card.append(dot);
+  }
+
+  return card;
+}
+
+function render() {
+  const unread = notifications.filter(item => !item.is_read);
+  unreadCount.textContent = String(unread.length);
+  markAllBtn.disabled = unread.length === 0 || loading;
+
+  const visible = filter === "unread" ? unread : notifications;
+
+  list.replaceChildren();
+
+  if (!visible.length) {
+    stateView(
+      "fa-bell-slash",
+      filter === "unread" ? "All caught up" : "No notifications yet",
+      filter === "unread"
+        ? "You have no unread notifications."
+        : "Your HAVKAR notifications will appear here."
+    );
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  visible.forEach(item => fragment.append(createNotification(item)));
+  list.append(fragment);
+}
+
+async function loadNotifications(showLoading = false) {
+  if (!currentUser || loading) return;
+
+  loading = true;
+  refreshBtn.disabled = true;
+
+  if (showLoading) {
+    stateView(
+      "fa-spinner fa-spin",
+      "Loading notifications...",
+      "Please wait."
+    );
+  }
+
+  try {
+    clearError();
+
+    const { data, error } = await supabase
+      .from("notifications")
+      .select(
+        "id,created_at,user_id,type,title,message,is_read,read_at,action_url,reference_id,metadata"
+      )
+      .eq("user_id", currentUser.id)
+      .order("created_at", { ascending:false })
+      .limit(100);
+
+    if (error) throw error;
+
+    notifications = data || [];
+  } catch (error) {
+    showError(error.message || "Unable to load notifications.");
+    if (!notifications.length) {
+      stateView(
+        "fa-circle-exclamation",
+        "Unable to load notifications",
+        "Check your connection and try again.",
+        "Retry",
+        () => loadNotifications(true)
+      );
+    }
+  } finally {
+    loading = false;
+    refreshBtn.disabled = false;
+    render();
+  }
+}
+
+async function markRead(id, button) {
+  if (!currentUser) return;
+
+  if (button) button.disabled = true;
+
+  try {
+    clearError();
+
+    const { data, error } = await supabase
+      .from("notifications")
+      .update({
+        is_read:true,
+        read_at:new Date().toISOString()
+      })
+      .eq("id", id)
+      .eq("user_id", currentUser.id)
+      .select("id,is_read,read_at")
+      .single();
+
+    if (error) throw error;
+
+    notifications = notifications.map(item =>
+      item.id === id
+        ? { ...item, is_read:data.is_read, read_at:data.read_at }
+        : item
+    );
+
+    render();
+  } catch (error) {
+    showError(error.message || "Unable to update notification.");
+    if (button) button.disabled = false;
+  }
+}
+
+async function markAllRead() {
+  if (!currentUser) return;
+
+  const ids = notifications
+    .filter(item => !item.is_read)
+    .map(item => item.id);
+
+  if (!ids.length) return;
+
+  markAllBtn.disabled = true;
+
+  try {
+    clearError();
+
+    const { data, error } = await supabase
+      .from("notifications")
+      .update({
+        is_read:true,
+        read_at:new Date().toISOString()
+      })
+      .eq("user_id", currentUser.id)
+      .in("id", ids)
+      .select("id,is_read,read_at");
+
+    if (error) throw error;
+
+    const updated = new Map(
+      (data || []).map(item => [String(item.id), item])
+    );
+
+    notifications = notifications.map(item => {
+      const result = updated.get(String(item.id));
+      return result
+        ? { ...item, is_read:result.is_read, read_at:result.read_at }
+        : item;
+    });
+
+    render();
+  } catch (error) {
+    showError(error.message || "Unable to update notifications.");
+  } finally {
+    markAllBtn.disabled =
+      !notifications.some(item => !item.is_read);
+  }
+}
+
+function subscribeRealtime() {
+  if (!currentUser) return;
+
+  if (channel) {
+    supabase.removeChannel(channel);
+    channel = null;
+  }
+
+  channel = supabase
+    .channel(`havkar-alerts-${currentUser.id}`)
+    .on(
+      "postgres_changes",
+      {
+        event:"*",
+        schema:"public",
+        table:"notifications",
+        filter:`user_id=eq.${currentUser.id}`
+      },
+      () => {
+        if (!document.hidden) loadNotifications();
+      }
+    )
+    .subscribe(status => {
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        console.warn("HAVKAR Realtime:", status);
+      }
+    });
+}
+
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    filter = tab.dataset.filter;
+
+    document.querySelectorAll(".tab").forEach(item => {
+      item.classList.toggle("active", item === tab);
+    });
+
+    render();
+  });
+});
+
+markAllBtn.addEventListener("click", markAllRead);
+refreshBtn.addEventListener("click", () => loadNotifications(true));
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && currentUser) loadNotifications();
+});
+
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === "SIGNED_OUT" || (!session && event === "INITIAL_SESSION")) {
+    currentUser = null;
+    notifications = [];
+
+    if (channel) {
+      supabase.removeChannel(channel);
+      channel = null;
+    }
+
+    stateView(
+      "fa-user-lock",
+      "Sign in required",
+      "Sign in to view your notifications.",
+      "Sign in",
+      () => location.href = "login.html"
+    );
+  }
+});
+
+async function initialize() {
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) throw error;
+
+    if (!data.user) {
+      stateView(
+        "fa-user-lock",
+        "Sign in required",
+        "Sign in to view your notifications.",
+        "Sign in",
+        () => location.href = "login.html"
+      );
+      return;
+    }
+
+    currentUser = data.user;
+
+    await loadNotifications(true);
+    subscribeRealtime();
+  } catch (error) {
+    showError(error.message || "Authentication failed.");
+
+    stateView(
+      "fa-circle-exclamation",
+      "Connection error",
+      "Unable to verify your account.",
+      "Retry",
+      initialize
+    );
+  }
+}
+
+initialize();
+</script>
+</body>
+</html>
