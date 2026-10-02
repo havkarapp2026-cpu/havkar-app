@@ -14,44 +14,59 @@ function safePiError(error, stage) {
   };
 }
 
-async function finishExistingPayment(pi, payment) {
+function getPaymentTxid(payment) {
+  return (
+    payment?.transaction?.txid ||
+    payment?.transaction?.tx_id ||
+    null
+  );
+}
+
+/*
+ * Handle an already-existing A2U payment safely.
+ *
+ * 1. If it already has a blockchain transaction:
+ *    complete it.
+ *
+ * 2. If it has no blockchain transaction:
+ *    cancel it.
+ *
+ * IMPORTANT:
+ * We deliberately do NOT call submitPayment()
+ * for an old/incomplete payment here.
+ */
+async function resolveExistingPayment(pi, payment) {
   if (!payment?.identifier) {
     throw new Error("Existing Pi payment has no identifier");
   }
 
   const paymentId = payment.identifier;
+  const txid = getPaymentTxid(payment);
 
-  let txid =
-    payment?.transaction?.txid ||
-    null;
+  if (txid) {
+    const completedPayment =
+      await pi.completePayment(paymentId, txid);
 
-  /*
-   * If no blockchain transaction exists yet,
-   * submit the existing payment.
-   */
-  if (!txid) {
-    txid = await pi.submitPayment(paymentId);
+    return {
+      action: "completed",
+      paymentId,
+      txid,
+      payment: completedPayment
+    };
   }
 
-  /*
-   * Tell Pi that the blockchain transaction
-   * has been processed.
-   */
-  const completedPayment =
-    await pi.completePayment(
-      paymentId,
-      txid
-    );
+  const cancelledPayment =
+    await pi.cancelPayment(paymentId);
 
   return {
+    action: "cancelled",
     paymentId,
-    txid,
-    payment: completedPayment
+    txid: null,
+    payment: cancelledPayment
   };
 }
 
 export default async function handler(req, res) {
-
   if (req.method !== "POST") {
     return res.status(405).json({
       success: false,
@@ -60,7 +75,6 @@ export default async function handler(req, res) {
   }
 
   try {
-
     const {
       accessToken,
       amount = 0.01
@@ -76,8 +90,7 @@ export default async function handler(req, res) {
       });
     }
 
-    const paymentAmount =
-      Number(amount);
+    const paymentAmount = Number(amount);
 
     if (
       !Number.isFinite(paymentAmount) ||
@@ -113,33 +126,27 @@ export default async function handler(req, res) {
 
     /*
      * STEP 1
-     * Verify the Pi access token.
+     * Verify Pi access token server-side.
      */
 
     let meResponse;
 
     try {
-
-      meResponse =
-        await fetch(
-          PI_ME_URL,
-          {
-            method: "GET",
-            headers: {
-              Authorization:
-                `Bearer ${accessToken.trim()}`
-            }
+      meResponse = await fetch(
+        PI_ME_URL,
+        {
+          method: "GET",
+          headers: {
+            Authorization:
+              `Bearer ${accessToken.trim()}`
           }
-        );
-
+        }
+      );
     } catch (error) {
-
       console.error(
         "PI_STAGE",
         {
-          stage:
-            "VERIFY_USER_REQUEST",
-
+          stage: "VERIFY_USER_REQUEST",
           message:
             error?.message ||
             "Request failed"
@@ -148,9 +155,7 @@ export default async function handler(req, res) {
 
       return res.status(502).json({
         success: false,
-        stage:
-          "VERIFY_USER_REQUEST",
-
+        stage: "VERIFY_USER_REQUEST",
         error:
           "Could not contact Pi authentication API"
       });
@@ -159,48 +164,37 @@ export default async function handler(req, res) {
     let meData = null;
 
     try {
-      meData =
-        await meResponse.json();
+      meData = await meResponse.json();
     } catch {
       meData = null;
     }
 
     if (!meResponse.ok) {
-
       console.error(
         "PI_STAGE",
         {
-          stage:
-            "VERIFY_USER_RESPONSE",
-
-          status:
-            meResponse.status
+          stage: "VERIFY_USER_RESPONSE",
+          status: meResponse.status
         }
       );
 
       return res.status(401).json({
         success: false,
-        stage:
-          "VERIFY_USER_RESPONSE",
-
-        status:
-          meResponse.status,
-
+        stage: "VERIFY_USER_RESPONSE",
+        status: meResponse.status,
         error:
           "Pi authentication could not be verified"
       });
     }
 
     const verifiedUser =
-      meData?.user ||
-      meData;
+      meData?.user || meData;
 
     const verifiedUid =
       verifiedUser?.uid;
 
     const verifiedUsername =
-      verifiedUser?.username ||
-      null;
+      verifiedUser?.username || null;
 
     if (
       !verifiedUid ||
@@ -208,9 +202,7 @@ export default async function handler(req, res) {
     ) {
       return res.status(401).json({
         success: false,
-        stage:
-          "VERIFY_UID",
-
+        stage: "VERIFY_UID",
         error:
           "Verified Pi account did not return a UID"
       });
@@ -218,30 +210,25 @@ export default async function handler(req, res) {
 
     /*
      * STEP 2
-     * Initialize official Pi backend SDK.
+     * Initialize Pi backend SDK.
      */
 
-    const pi =
-      new PiNetwork(
-        apiKey,
-        walletPrivateSeed
-      );
+    const pi = new PiNetwork(
+      apiKey,
+      walletPrivateSeed
+    );
 
     /*
      * STEP 3
-     * First ask Pi whether this app already
-     * has an incomplete server payment.
+     * Check for incomplete server payments first.
      */
 
     let incompletePayments = [];
 
     try {
-
       incompletePayments =
         await pi.getIncompleteServerPayments();
-
     } catch (error) {
-
       const safeError =
         safePiError(
           error,
@@ -261,47 +248,91 @@ export default async function handler(req, res) {
 
     /*
      * STEP 4
-     * Recover an incomplete payment returned
-     * directly by Pi.
+     * Resolve the first incomplete payment.
+     *
+     * No transaction:
+     * CANCEL it.
+     *
+     * Existing transaction:
+     * COMPLETE it.
      */
 
     if (
       Array.isArray(incompletePayments) &&
       incompletePayments.length > 0
     ) {
-
       const pending =
         incompletePayments[0];
 
       try {
-
-        const recovered =
-          await finishExistingPayment(
+        const resolved =
+          await resolveExistingPayment(
             pi,
             pending
           );
 
+        if (
+          resolved.action === "cancelled"
+        ) {
+          console.log(
+            "PI_STAGE",
+            {
+              stage:
+                "CANCELLED_INCOMPLETE_PAYMENT",
+              paymentId:
+                resolved.paymentId
+            }
+          );
+
+          return res.status(200).json({
+            success: true,
+            recovered: true,
+            cancelled: true,
+            retryRequired: true,
+            stage:
+              "CANCELLED_INCOMPLETE_PAYMENT",
+            message:
+              "Old incomplete payment was cancelled. Send again to create a fresh payment.",
+            user: {
+              uid: verifiedUid,
+              username:
+                verifiedUsername
+            },
+            paymentId:
+              resolved.paymentId
+          });
+        }
+
+        console.log(
+          "PI_STAGE",
+          {
+            stage:
+              "COMPLETED_INCOMPLETE_PAYMENT",
+            paymentId:
+              resolved.paymentId
+          }
+        );
+
         return res.status(200).json({
           success: true,
           recovered: true,
+          cancelled: false,
+          retryRequired: false,
           stage:
-            "RECOVERED_INCOMPLETE_PAYMENT",
-
+            "COMPLETED_INCOMPLETE_PAYMENT",
           user: {
             uid: verifiedUid,
             username:
               verifiedUsername
           },
-
-          ...recovered
+          ...resolved
         });
 
       } catch (error) {
-
         const safeError =
           safePiError(
             error,
-            "RECOVER_INCOMPLETE_PAYMENT"
+            "RESOLVE_INCOMPLETE_PAYMENT"
           );
 
         console.error(
@@ -318,13 +349,12 @@ export default async function handler(req, res) {
 
     /*
      * STEP 5
-     * No incomplete payment was returned,
-     * so try to create a new A2U payment.
+     * No incomplete payment returned.
+     * Try to create a fresh A2U payment.
      */
 
     const paymentData = {
-      amount:
-        paymentAmount,
+      amount: paymentAmount,
 
       memo:
         "HAVKAR Testnet A2U",
@@ -341,74 +371,98 @@ export default async function handler(req, res) {
     let paymentId;
 
     try {
-
       paymentId =
         await pi.createPayment(
           paymentData
         );
-
     } catch (error) {
-
-      const safeError =
-        safePiError(
-          error,
-          "CREATE_PAYMENT"
-        );
-
-      /*
-       * Pi may return the existing payment
-       * directly with ongoing_payment_found.
-       *
-       * Recover THAT exact payment instead
-       * of creating another one.
-       */
-
       const piData =
         error?.response?.data;
 
       const ongoingPayment =
-        piData?.payment ||
-        null;
+        piData?.payment || null;
 
+      /*
+       * Pi can return the exact existing payment
+       * through ongoing_payment_found even when
+       * getIncompleteServerPayments() returned none.
+       */
       if (
         piData?.error ===
           "ongoing_payment_found" &&
         ongoingPayment?.identifier
       ) {
-
         try {
-
-          const recovered =
-            await finishExistingPayment(
+          const resolved =
+            await resolveExistingPayment(
               pi,
               ongoingPayment
             );
 
+          if (
+            resolved.action === "cancelled"
+          ) {
+            console.log(
+              "PI_STAGE",
+              {
+                stage:
+                  "CANCELLED_ONGOING_PAYMENT",
+                paymentId:
+                  resolved.paymentId
+              }
+            );
+
+            return res.status(200).json({
+              success: true,
+              recovered: true,
+              cancelled: true,
+              retryRequired: true,
+              stage:
+                "CANCELLED_ONGOING_PAYMENT",
+              message:
+                "Old ongoing payment was cancelled. Send again to create a fresh payment.",
+              user: {
+                uid:
+                  verifiedUid,
+                username:
+                  verifiedUsername
+              },
+              paymentId:
+                resolved.paymentId
+            });
+          }
+
+          console.log(
+            "PI_STAGE",
+            {
+              stage:
+                "COMPLETED_ONGOING_PAYMENT",
+              paymentId:
+                resolved.paymentId
+            }
+          );
+
           return res.status(200).json({
             success: true,
             recovered: true,
+            cancelled: false,
+            retryRequired: false,
             stage:
-              "RECOVERED_ONGOING_PAYMENT",
-
+              "COMPLETED_ONGOING_PAYMENT",
             user: {
               uid:
                 verifiedUid,
-
               username:
                 verifiedUsername
             },
-
-            ...recovered
+            ...resolved
           });
 
-        } catch (
-          recoveryError
-        ) {
-
+        } catch (recoveryError) {
           const recoverySafeError =
             safePiError(
               recoveryError,
-              "RECOVER_ONGOING_PAYMENT"
+              "RESOLVE_ONGOING_PAYMENT"
             );
 
           console.error(
@@ -423,6 +477,12 @@ export default async function handler(req, res) {
         }
       }
 
+      const safeError =
+        safePiError(
+          error,
+          "CREATE_PAYMENT"
+        );
+
       console.error(
         "PI_STAGE",
         safeError
@@ -436,20 +496,17 @@ export default async function handler(req, res) {
 
     /*
      * STEP 6
-     * Submit the newly-created payment.
+     * Submit fresh payment to Testnet.
      */
 
     let txid;
 
     try {
-
       txid =
         await pi.submitPayment(
           paymentId
         );
-
     } catch (error) {
-
       const safeError =
         safePiError(
           error,
@@ -469,21 +526,18 @@ export default async function handler(req, res) {
 
     /*
      * STEP 7
-     * Complete the new payment.
+     * Complete fresh payment.
      */
 
     let payment;
 
     try {
-
       payment =
         await pi.completePayment(
           paymentId,
           txid
         );
-
     } catch (error) {
-
       const safeError =
         safePiError(
           error,
@@ -501,16 +555,26 @@ export default async function handler(req, res) {
       });
     }
 
+    console.log(
+      "PI_STAGE",
+      {
+        stage:
+          "PAYMENT_COMPLETED",
+        paymentId
+      }
+    );
+
     return res.status(200).json({
       success: true,
       recovered: false,
+      cancelled: false,
+      retryRequired: false,
       stage:
         "PAYMENT_COMPLETED",
 
       user: {
         uid:
           verifiedUid,
-
         username:
           verifiedUsername
       },
@@ -521,13 +585,11 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-
     console.error(
       "PI_STAGE",
       {
         stage:
           "UNEXPECTED_ERROR",
-
         message:
           error?.message ||
           "Unexpected error"
@@ -538,7 +600,6 @@ export default async function handler(req, res) {
       success: false,
       stage:
         "UNEXPECTED_ERROR",
-
       error:
         error?.message ||
         "Pi Testnet A2U payment failed"
