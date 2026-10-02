@@ -271,11 +271,27 @@
                 "info"
             );
 
+            /*
+             * Required Testnet scopes:
+             *
+             * username:
+             * Allows HAVKAR to read the Pi username.
+             *
+             * payments:
+             * Enables Pi payment functionality.
+             *
+             * wallet_address:
+             * Required for App-to-User payments because
+             * the Pi Platform must be allowed to resolve
+             * the authenticated user's public wallet key.
+             */
+
             piAuthResult =
                 await window.Pi.authenticate(
                     [
                         "username",
-                        "payments"
+                        "payments",
+                        "wallet_address"
                     ],
                     incompletePaymentFound
                 );
@@ -369,15 +385,16 @@
             );
 
             /*
-             * IMPORTANT:
-             * We intentionally do NOT send the client-provided UID
-             * to /api/pi-a2u-testnet yet.
+             * SECURITY:
              *
-             * The Pi access token must first be verified server-side
-             * with Pi /me, and the verified UID must then be used
-             * for the A2U payment.
+             * The browser-provided UID is intentionally
+             * NOT sent to the backend.
              *
-             * This prevents a forged client UID from being trusted.
+             * The access token is verified server-side
+             * using Pi Platform /v2/me.
+             *
+             * The verified UID returned by Pi is then
+             * used for the App-to-User payment.
              */
 
             const response =
