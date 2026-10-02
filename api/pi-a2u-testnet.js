@@ -14,7 +14,44 @@ function safePiError(error, stage) {
   };
 }
 
+async function finishExistingPayment(pi, payment) {
+  if (!payment?.identifier) {
+    throw new Error("Existing Pi payment has no identifier");
+  }
+
+  const paymentId = payment.identifier;
+
+  let txid =
+    payment?.transaction?.txid ||
+    null;
+
+  /*
+   * If no blockchain transaction exists yet,
+   * submit the existing payment.
+   */
+  if (!txid) {
+    txid = await pi.submitPayment(paymentId);
+  }
+
+  /*
+   * Tell Pi that the blockchain transaction
+   * has been processed.
+   */
+  const completedPayment =
+    await pi.completePayment(
+      paymentId,
+      txid
+    );
+
+  return {
+    paymentId,
+    txid,
+    payment: completedPayment
+  };
+}
+
 export default async function handler(req, res) {
+
   if (req.method !== "POST") {
     return res.status(405).json({
       success: false,
@@ -23,18 +60,29 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { accessToken, amount = 0.01 } = req.body || {};
 
-    if (!accessToken || typeof accessToken !== "string") {
+    const {
+      accessToken,
+      amount = 0.01
+    } = req.body || {};
+
+    if (
+      !accessToken ||
+      typeof accessToken !== "string"
+    ) {
       return res.status(400).json({
         success: false,
         error: "Pi access token is required"
       });
     }
 
-    const paymentAmount = Number(amount);
+    const paymentAmount =
+      Number(amount);
 
-    if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+    if (
+      !Number.isFinite(paymentAmount) ||
+      paymentAmount <= 0
+    ) {
       return res.status(400).json({
         success: false,
         error: "Invalid payment amount"
@@ -44,99 +92,166 @@ export default async function handler(req, res) {
     if (paymentAmount > 0.01) {
       return res.status(400).json({
         success: false,
-        error: "Testnet payment amount cannot exceed 0.01 Pi"
+        error:
+          "Testnet payment amount cannot exceed 0.01 Pi"
       });
     }
 
-    const apiKey = process.env.PI_TESTNET_API_KEY;
-    const walletPrivateSeed = process.env.PI_TESTNET_WALLET_SECRET;
+    const apiKey =
+      process.env.PI_TESTNET_API_KEY;
+
+    const walletPrivateSeed =
+      process.env.PI_TESTNET_WALLET_SECRET;
 
     if (!apiKey || !walletPrivateSeed) {
       return res.status(500).json({
         success: false,
-        error: "Pi Testnet server credentials are not configured"
+        error:
+          "Pi Testnet server credentials are not configured"
       });
     }
 
     /*
-     * STEP 1 — Verify Pi user.
-     * Never trust a UID supplied by the browser.
+     * STEP 1
+     * Verify the Pi access token.
      */
+
     let meResponse;
 
     try {
-      meResponse = await fetch(PI_ME_URL, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken.trim()}`
-        }
-      });
+
+      meResponse =
+        await fetch(
+          PI_ME_URL,
+          {
+            method: "GET",
+            headers: {
+              Authorization:
+                `Bearer ${accessToken.trim()}`
+            }
+          }
+        );
+
     } catch (error) {
-      console.error("PI_STAGE", {
-        stage: "VERIFY_USER_REQUEST",
-        message: error?.message || "Request failed"
-      });
+
+      console.error(
+        "PI_STAGE",
+        {
+          stage:
+            "VERIFY_USER_REQUEST",
+
+          message:
+            error?.message ||
+            "Request failed"
+        }
+      );
 
       return res.status(502).json({
         success: false,
-        stage: "VERIFY_USER_REQUEST",
-        error: "Could not contact Pi authentication API"
+        stage:
+          "VERIFY_USER_REQUEST",
+
+        error:
+          "Could not contact Pi authentication API"
       });
     }
 
     let meData = null;
 
     try {
-      meData = await meResponse.json();
+      meData =
+        await meResponse.json();
     } catch {
       meData = null;
     }
 
     if (!meResponse.ok) {
-      console.error("PI_STAGE", {
-        stage: "VERIFY_USER_RESPONSE",
-        status: meResponse.status
-      });
 
-      return res.status(401).json({
-        success: false,
-        stage: "VERIFY_USER_RESPONSE",
-        status: meResponse.status,
-        error: "Pi authentication could not be verified"
-      });
-    }
+      console.error(
+        "PI_STAGE",
+        {
+          stage:
+            "VERIFY_USER_RESPONSE",
 
-    const verifiedUser = meData?.user || meData;
-    const verifiedUid = verifiedUser?.uid;
-    const verifiedUsername = verifiedUser?.username || null;
-
-    if (!verifiedUid || typeof verifiedUid !== "string") {
-      return res.status(401).json({
-        success: false,
-        stage: "VERIFY_UID",
-        error: "Verified Pi account did not return a UID"
-      });
-    }
-
-    /*
-     * STEP 2 — Initialize Pi backend SDK.
-     */
-    const pi = new PiNetwork(apiKey, walletPrivateSeed);
-
-    /*
-     * STEP 3 — Check incomplete server payments.
-     */
-    let incompletePayments;
-
-    try {
-      incompletePayments = await pi.getIncompleteServerPayments();
-    } catch (error) {
-      const safeError = safePiError(
-        error,
-        "GET_INCOMPLETE_SERVER_PAYMENTS"
+          status:
+            meResponse.status
+        }
       );
 
-      console.error("PI_STAGE", safeError);
+      return res.status(401).json({
+        success: false,
+        stage:
+          "VERIFY_USER_RESPONSE",
+
+        status:
+          meResponse.status,
+
+        error:
+          "Pi authentication could not be verified"
+      });
+    }
+
+    const verifiedUser =
+      meData?.user ||
+      meData;
+
+    const verifiedUid =
+      verifiedUser?.uid;
+
+    const verifiedUsername =
+      verifiedUser?.username ||
+      null;
+
+    if (
+      !verifiedUid ||
+      typeof verifiedUid !== "string"
+    ) {
+      return res.status(401).json({
+        success: false,
+        stage:
+          "VERIFY_UID",
+
+        error:
+          "Verified Pi account did not return a UID"
+      });
+    }
+
+    /*
+     * STEP 2
+     * Initialize official Pi backend SDK.
+     */
+
+    const pi =
+      new PiNetwork(
+        apiKey,
+        walletPrivateSeed
+      );
+
+    /*
+     * STEP 3
+     * First ask Pi whether this app already
+     * has an incomplete server payment.
+     */
+
+    let incompletePayments = [];
+
+    try {
+
+      incompletePayments =
+        await pi.getIncompleteServerPayments();
+
+    } catch (error) {
+
+      const safeError =
+        safePiError(
+          error,
+          "GET_INCOMPLETE_SERVER_PAYMENTS"
+        );
+
+      console.error(
+        "PI_STAGE",
+        safeError
+      );
 
       return res.status(502).json({
         success: false,
@@ -145,63 +260,54 @@ export default async function handler(req, res) {
     }
 
     /*
-     * STEP 4 — Recover an existing incomplete payment first.
+     * STEP 4
+     * Recover an incomplete payment returned
+     * directly by Pi.
      */
+
     if (
       Array.isArray(incompletePayments) &&
       incompletePayments.length > 0
     ) {
-      const pending = incompletePayments[0];
 
-      if (!pending?.identifier) {
-        return res.status(500).json({
-          success: false,
-          stage: "RECOVER_INCOMPLETE_PAYMENT",
-          error: "Incomplete Pi payment has no identifier"
-        });
-      }
-
-      let txid = pending?.transaction?.txid || null;
-
-      if (!txid) {
-        try {
-          txid = await pi.submitPayment(pending.identifier);
-        } catch (error) {
-          const safeError = safePiError(
-            error,
-            "SUBMIT_INCOMPLETE_PAYMENT"
-          );
-
-          console.error("PI_STAGE", safeError);
-
-          return res.status(502).json({
-            success: false,
-            ...safeError
-          });
-        }
-      }
+      const pending =
+        incompletePayments[0];
 
       try {
-        const completedPayment = await pi.completePayment(
-          pending.identifier,
-          txid
-        );
+
+        const recovered =
+          await finishExistingPayment(
+            pi,
+            pending
+          );
 
         return res.status(200).json({
           success: true,
           recovered: true,
-          stage: "COMPLETE_INCOMPLETE_PAYMENT",
-          paymentId: pending.identifier,
-          txid,
-          payment: completedPayment
-        });
-      } catch (error) {
-        const safeError = safePiError(
-          error,
-          "COMPLETE_INCOMPLETE_PAYMENT"
-        );
+          stage:
+            "RECOVERED_INCOMPLETE_PAYMENT",
 
-        console.error("PI_STAGE", safeError);
+          user: {
+            uid: verifiedUid,
+            username:
+              verifiedUsername
+          },
+
+          ...recovered
+        });
+
+      } catch (error) {
+
+        const safeError =
+          safePiError(
+            error,
+            "RECOVER_INCOMPLETE_PAYMENT"
+          );
+
+        console.error(
+          "PI_STAGE",
+          safeError
+        );
 
         return res.status(502).json({
           success: false,
@@ -211,26 +317,116 @@ export default async function handler(req, res) {
     }
 
     /*
-     * STEP 5 — Create a new A2U Testnet payment.
+     * STEP 5
+     * No incomplete payment was returned,
+     * so try to create a new A2U payment.
      */
+
     const paymentData = {
-      amount: paymentAmount,
-      memo: "HAVKAR Testnet A2U",
+      amount:
+        paymentAmount,
+
+      memo:
+        "HAVKAR Testnet A2U",
+
       metadata: {
         app: "HAVKAR",
         type: "testnet_a2u"
       },
-      uid: verifiedUid.trim()
+
+      uid:
+        verifiedUid.trim()
     };
 
     let paymentId;
 
     try {
-      paymentId = await pi.createPayment(paymentData);
-    } catch (error) {
-      const safeError = safePiError(error, "CREATE_PAYMENT");
 
-      console.error("PI_STAGE", safeError);
+      paymentId =
+        await pi.createPayment(
+          paymentData
+        );
+
+    } catch (error) {
+
+      const safeError =
+        safePiError(
+          error,
+          "CREATE_PAYMENT"
+        );
+
+      /*
+       * Pi may return the existing payment
+       * directly with ongoing_payment_found.
+       *
+       * Recover THAT exact payment instead
+       * of creating another one.
+       */
+
+      const piData =
+        error?.response?.data;
+
+      const ongoingPayment =
+        piData?.payment ||
+        null;
+
+      if (
+        piData?.error ===
+          "ongoing_payment_found" &&
+        ongoingPayment?.identifier
+      ) {
+
+        try {
+
+          const recovered =
+            await finishExistingPayment(
+              pi,
+              ongoingPayment
+            );
+
+          return res.status(200).json({
+            success: true,
+            recovered: true,
+            stage:
+              "RECOVERED_ONGOING_PAYMENT",
+
+            user: {
+              uid:
+                verifiedUid,
+
+              username:
+                verifiedUsername
+            },
+
+            ...recovered
+          });
+
+        } catch (
+          recoveryError
+        ) {
+
+          const recoverySafeError =
+            safePiError(
+              recoveryError,
+              "RECOVER_ONGOING_PAYMENT"
+            );
+
+          console.error(
+            "PI_STAGE",
+            recoverySafeError
+          );
+
+          return res.status(502).json({
+            success: false,
+            ...recoverySafeError
+          });
+        }
+      }
+
+      console.error(
+        "PI_STAGE",
+        safeError
+      );
 
       return res.status(502).json({
         success: false,
@@ -239,16 +435,31 @@ export default async function handler(req, res) {
     }
 
     /*
-     * STEP 6 — Submit payment to blockchain.
+     * STEP 6
+     * Submit the newly-created payment.
      */
+
     let txid;
 
     try {
-      txid = await pi.submitPayment(paymentId);
-    } catch (error) {
-      const safeError = safePiError(error, "SUBMIT_PAYMENT");
 
-      console.error("PI_STAGE", safeError);
+      txid =
+        await pi.submitPayment(
+          paymentId
+        );
+
+    } catch (error) {
+
+      const safeError =
+        safePiError(
+          error,
+          "SUBMIT_PAYMENT"
+        );
+
+      console.error(
+        "PI_STAGE",
+        safeError
+      );
 
       return res.status(502).json({
         success: false,
@@ -257,16 +468,32 @@ export default async function handler(req, res) {
     }
 
     /*
-     * STEP 7 — Complete payment with Pi.
+     * STEP 7
+     * Complete the new payment.
      */
+
     let payment;
 
     try {
-      payment = await pi.completePayment(paymentId, txid);
-    } catch (error) {
-      const safeError = safePiError(error, "COMPLETE_PAYMENT");
 
-      console.error("PI_STAGE", safeError);
+      payment =
+        await pi.completePayment(
+          paymentId,
+          txid
+        );
+
+    } catch (error) {
+
+      const safeError =
+        safePiError(
+          error,
+          "COMPLETE_PAYMENT"
+        );
+
+      console.error(
+        "PI_STAGE",
+        safeError
+      );
 
       return res.status(502).json({
         success: false,
@@ -277,31 +504,44 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       recovered: false,
-      stage: "PAYMENT_COMPLETED",
+      stage:
+        "PAYMENT_COMPLETED",
+
       user: {
-        uid: verifiedUid,
-        username: verifiedUsername
+        uid:
+          verifiedUid,
+
+        username:
+          verifiedUsername
       },
+
       paymentId,
       txid,
       payment
     });
 
   } catch (error) {
-    /*
-     * IMPORTANT:
-     * Do NOT log the complete Axios error object.
-     * It may contain sensitive request configuration.
-     */
-    console.error("PI_STAGE", {
-      stage: "UNEXPECTED_ERROR",
-      message: error?.message || "Unexpected error"
-    });
+
+    console.error(
+      "PI_STAGE",
+      {
+        stage:
+          "UNEXPECTED_ERROR",
+
+        message:
+          error?.message ||
+          "Unexpected error"
+      }
+    );
 
     return res.status(500).json({
       success: false,
-      stage: "UNEXPECTED_ERROR",
-      error: error?.message || "Pi Testnet A2U payment failed"
+      stage:
+        "UNEXPECTED_ERROR",
+
+      error:
+        error?.message ||
+        "Pi Testnet A2U payment failed"
     });
   }
 }
