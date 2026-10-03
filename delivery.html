@@ -184,45 +184,6 @@
         }
 
         /* =========================
-           CANCEL DELIVERY REQUEST
-        ========================== */
-        async function cancelDeliveryRequest(deliveryId, button) {
-            if (!currentUser) {
-                showToast(havkarDeliveryT("Please sign in to use HAVKAR Delivery."), "error");
-                return;
-            }
-            if (!window.confirm(havkarDeliveryT("Cancel this delivery request?"))) return;
-
-            const originalHtml = button?.innerHTML || "";
-            if (button) {
-                button.disabled = true;
-                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>&nbsp; ' +
-                    escapeHtml(havkarDeliveryT("Cancelling..."));
-            }
-
-            const { data, error } = await havkarSupabase
-                .from("delivery_requests")
-                .update({ status:"cancelled", cancelled_at:new Date().toISOString() })
-                .eq("id", deliveryId)
-                .eq("user_id", currentUser.id)
-                .eq("status", "pending")
-                .is("driver_id", null)
-                .select("id,status")
-                .maybeSingle();
-
-            if (error || !data) {
-                console.error("HAVKAR delivery cancellation error:", error || "No eligible request updated.");
-                if (button) { button.disabled=false; button.innerHTML=originalHtml; }
-                showToast(havkarDeliveryT("Unable to cancel the delivery request."), "error");
-                await loadDeliveries();
-                return;
-            }
-
-            showToast(havkarDeliveryT("Delivery request cancelled."));
-            await Promise.all([loadDeliveries(), loadDriverJobs()]);
-        }
-
-        /* =========================
            REQUEST DELIVERY
         ========================== */
 
@@ -2136,6 +2097,45 @@
             return items;
         }
 
+
+        /* =========================
+           CANCEL DELIVERY REQUEST
+        ========================== */
+        async function cancelDeliveryRequest(deliveryId, button) {
+            if (!currentUser) {
+                showToast(havkarDeliveryT("Please sign in to use HAVKAR Delivery."), "error");
+                return;
+            }
+            if (!window.confirm(havkarDeliveryT("Cancel this delivery request?"))) return;
+
+            const originalHtml = button?.innerHTML || "";
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>&nbsp; ' +
+                    escapeHtml(havkarDeliveryT("Cancelling..."));
+            }
+
+            const { data, error } = await havkarSupabase
+                .from("delivery_requests")
+                .update({ status:"cancelled", cancelled_at:new Date().toISOString() })
+                .eq("id", deliveryId)
+                .eq("user_id", currentUser.id)
+                .eq("status", "pending")
+                .is("driver_id", null)
+                .select("id,status")
+                .maybeSingle();
+
+            if (error || !data) {
+                console.error("HAVKAR delivery cancellation error:", error || "No eligible request updated.");
+                if (button) { button.disabled=false; button.innerHTML=originalHtml; }
+                showToast(havkarDeliveryT("Unable to cancel the delivery request."), "error");
+                await loadDeliveries();
+                return;
+            }
+
+            showToast(havkarDeliveryT("Delivery request cancelled."));
+            await Promise.all([loadDeliveries(), loadDriverJobs()]);
+        }
 
         /* =========================
            REQUEST DELIVERY
