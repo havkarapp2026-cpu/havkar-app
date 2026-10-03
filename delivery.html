@@ -2005,6 +2005,15 @@
                             </button>
                         </div>` : ""}
 
+                    ${item.status === "cancelled" && item.user_id === currentUser?.id ? `
+                        <div class="customer-delivery-actions">
+                            <button class="cancel-delivery-btn" type="button"
+                                onclick="deleteDeliveryRequest(${JSON.stringify(item.id)}, this)">
+                                <i class="fas fa-trash"></i>&nbsp;
+                                ${escapeHtml(havkarDeliveryT("Delete Permanently"))}
+                            </button>
+                        </div>` : ""}
+
                 </article>
             `;
         }
@@ -2101,6 +2110,49 @@
         /* =========================
            CANCEL DELIVERY REQUEST
         ========================== */
+        async function deleteDeliveryRequest(deliveryId, button) {
+            if (!currentUser) {
+                showToast(havkarDeliveryT("Please sign in to use HAVKAR Delivery."), "error");
+                return;
+            }
+
+            if (!window.confirm(havkarDeliveryT("Delete this cancelled delivery permanently?"))) return;
+
+            const originalHtml = button?.innerHTML || "";
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>&nbsp; ' +
+                    escapeHtml(havkarDeliveryT("Deleting..."));
+            }
+
+            const { data, error } = await havkarSupabase
+                .from("delivery_requests")
+                .delete()
+                .eq("id", deliveryId)
+                .eq("user_id", currentUser.id)
+                .eq("status", "cancelled")
+                .select("id")
+                .maybeSingle();
+
+            if (error || !data) {
+                console.error("HAVKAR delivery delete error:", error || "No eligible cancelled request deleted.");
+                if (button) {
+                    button.disabled = false;
+                    button.innerHTML = originalHtml;
+                }
+                showToast(
+                    error?.message || havkarDeliveryT("Unable to delete the delivery request."),
+                    "error"
+                );
+                await loadDeliveries();
+                return;
+            }
+
+            showToast(havkarDeliveryT("Delivery request deleted permanently."));
+            await Promise.all([loadDeliveries(), loadDriverJobs()]);
+        }
+
+
         async function cancelDeliveryRequest(deliveryId, button) {
             if (!currentUser) {
                 showToast(havkarDeliveryT("Please sign in to use HAVKAR Delivery."), "error");
