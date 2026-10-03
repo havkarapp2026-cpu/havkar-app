@@ -184,141 +184,6 @@
         }
 
         /* =========================
-           APPROVED DRIVER JOBS
-        ========================== */
-
-        function isApprovedDriver() {
-            return Boolean(
-                currentDriverApplication &&
-                currentDriverApplication.status === "approved"
-            );
-        }
-
-        function driverNextAction(item) {
-            if (item.status === "pending" && !item.driver_id) {
-                return { label: "Accept Delivery", action: "accept" };
-            }
-            if (item.driver_id === currentUser?.id && item.status === "accepted") {
-                return { label: "Mark Picked Up", action: "picked_up" };
-            }
-            if (item.driver_id === currentUser?.id && item.status === "picked_up") {
-                return { label: "Start Transit", action: "in_transit" };
-            }
-            if (item.driver_id === currentUser?.id && item.status === "in_transit") {
-                return { label: "Mark Delivered", action: "delivered" };
-            }
-            return null;
-        }
-
-        function driverJobCardHtml(item) {
-            const next = driverNextAction(item);
-            const mine = item.driver_id === currentUser?.id;
-            const actionHtml = next
-                ? `<div class="driver-job-actions"><button class="driver-action-btn" type="button" onclick="handleDriverAction(${Number(item.id)}, '${next.action}', this)">${escapeHtml(next.label)}</button></div>`
-                : "";
-
-            return `
-                <article class="card delivery-card">
-                    <div class="delivery-header">
-                        <div class="driver-info">
-                            <div class="driver-avatar">${mine ? "🚚" : "📦"}</div>
-                            <div>
-                                <div class="driver-name">${mine ? "My Delivery" : "Available Delivery"}</div>
-                                <div class="driver-rating">Request #${escapeHtml(item.id)}</div>
-                            </div>
-                        </div>
-                        <div class="status-badge ${statusClass(item.status)}">${escapeHtml(statusLabel(item.status))}</div>
-                    </div>
-                    <div class="delivery-route">
-                        <div class="route-point"><div class="route-label">${havkarDeliveryT("FROM")}</div><div class="route-address">${escapeHtml(item.pickup_address)}</div></div>
-                        <div class="route-icon"><i class="fas fa-arrow-right"></i></div>
-                        <div class="route-point"><div class="route-label">${havkarDeliveryT("TO")}</div><div class="route-address">${escapeHtml(item.delivery_address)}</div></div>
-                    </div>
-                    <div class="delivery-meta">
-                        <div class="meta-item"><i class="fas fa-box"></i>${escapeHtml(item.package_details)}</div>
-                        <div class="meta-item"><i class="fas fa-calendar"></i>${escapeHtml(formatDateTime(item.created_at))}</div>
-                        <div class="meta-item"><i class="fas fa-euro-sign"></i>${escapeHtml(formatMoney(item.price, item.currency))}</div>
-                    </div>
-                    ${actionHtml}
-                </article>`;
-        }
-
-        async function loadDriverJobs() {
-            const workspace = document.getElementById("driverWorkspace");
-            const container = document.getElementById("driverJobs");
-            if (!workspace || !container) return [];
-
-            if (!currentUser || !isApprovedDriver()) {
-                workspace.classList.remove("show");
-                container.innerHTML = "";
-                return [];
-            }
-
-            workspace.classList.add("show");
-
-            const { data, error } = await havkarSupabase
-                .from("delivery_requests")
-                .select("id,created_at,updated_at,user_id,pickup_address,delivery_address,package_details,status,driver_id,price,currency,accepted_at,picked_up_at,delivered_at,cancelled_at")
-                .in("status", ["pending", "accepted", "picked_up", "in_transit"])
-                .order("created_at", { ascending: false });
-
-            if (error) {
-                console.error("HAVKAR driver jobs load error:", error);
-                container.innerHTML = `<div class="empty-state"><i class="fas fa-triangle-exclamation"></i><p>Unable to load driver jobs.</p></div>`;
-                return [];
-            }
-
-            const jobs = (data || []).filter(item =>
-                item.user_id !== currentUser.id &&
-                ((item.status === "pending" && !item.driver_id) || item.driver_id === currentUser.id)
-            );
-
-            container.innerHTML = jobs.length
-                ? jobs.map(driverJobCardHtml).join("")
-                : `<div class="empty-state"><i class="fas fa-box-open"></i><p>No delivery jobs available.</p></div>`;
-
-            return jobs;
-        }
-
-        async function handleDriverAction(deliveryId, action, button) {
-            if (!currentUser || !isApprovedDriver()) {
-                showToast("Approved driver account required.", "error");
-                return;
-            }
-
-            const originalHtml = button?.innerHTML || "";
-            if (button) {
-                button.disabled = true;
-                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>&nbsp; Working...';
-            }
-
-            let result;
-            if (action === "accept") {
-                result = await havkarSupabase.rpc("accept_delivery", { p_delivery_id: deliveryId });
-            } else {
-                result = await havkarSupabase.rpc("update_delivery_status", {
-                    p_delivery_id: deliveryId,
-                    p_new_status: action
-                });
-            }
-
-            if (button) {
-                button.disabled = false;
-                button.innerHTML = originalHtml;
-            }
-
-            if (result.error) {
-                console.error("HAVKAR driver action error:", result.error);
-                showToast(result.error.message || "Unable to update delivery.", "error");
-                await loadDriverJobs();
-                return;
-            }
-
-            showToast(action === "accept" ? "Delivery accepted." : "Delivery status updated.");
-            await Promise.all([loadDriverJobs(), loadDeliveries()]);
-        }
-
-        /* =========================
            REQUEST DELIVERY
         ========================== */
 
@@ -1686,6 +1551,143 @@
 </script>
 
     <script>
+/* =========================
+   APPROVED DRIVER JOBS
+        ========================== */
+
+        function isApprovedDriver() {
+            return Boolean(
+                currentDriverApplication &&
+                currentDriverApplication.status === "approved"
+            );
+        }
+
+        function driverNextAction(item) {
+            if (item.status === "pending" && !item.driver_id) {
+                return { label: "Accept Delivery", action: "accept" };
+            }
+            if (item.driver_id === currentUser?.id && item.status === "accepted") {
+                return { label: "Mark Picked Up", action: "picked_up" };
+            }
+            if (item.driver_id === currentUser?.id && item.status === "picked_up") {
+                return { label: "Start Transit", action: "in_transit" };
+            }
+            if (item.driver_id === currentUser?.id && item.status === "in_transit") {
+                return { label: "Mark Delivered", action: "delivered" };
+            }
+            return null;
+        }
+
+        function driverJobCardHtml(item) {
+            const next = driverNextAction(item);
+            const mine = item.driver_id === currentUser?.id;
+            const actionHtml = next
+                ? `<div class="driver-job-actions"><button class="driver-action-btn" type="button" onclick="handleDriverAction(${Number(item.id)}, '${next.action}', this)">${escapeHtml(next.label)}</button></div>`
+                : "";
+
+            return `
+                <article class="card delivery-card">
+                    <div class="delivery-header">
+                        <div class="driver-info">
+                            <div class="driver-avatar">${mine ? "🚚" : "📦"}</div>
+                            <div>
+                                <div class="driver-name">${mine ? "My Delivery" : "Available Delivery"}</div>
+                                <div class="driver-rating">Request #${escapeHtml(item.id)}</div>
+                            </div>
+                        </div>
+                        <div class="status-badge ${statusClass(item.status)}">${escapeHtml(statusLabel(item.status))}</div>
+                    </div>
+                    <div class="delivery-route">
+                        <div class="route-point"><div class="route-label">${havkarDeliveryT("FROM")}</div><div class="route-address">${escapeHtml(item.pickup_address)}</div></div>
+                        <div class="route-icon"><i class="fas fa-arrow-right"></i></div>
+                        <div class="route-point"><div class="route-label">${havkarDeliveryT("TO")}</div><div class="route-address">${escapeHtml(item.delivery_address)}</div></div>
+                    </div>
+                    <div class="delivery-meta">
+                        <div class="meta-item"><i class="fas fa-box"></i>${escapeHtml(item.package_details)}</div>
+                        <div class="meta-item"><i class="fas fa-calendar"></i>${escapeHtml(formatDateTime(item.created_at))}</div>
+                        <div class="meta-item"><i class="fas fa-euro-sign"></i>${escapeHtml(formatMoney(item.price, item.currency))}</div>
+                    </div>
+                    ${actionHtml}
+                </article>`;
+        }
+
+        async function loadDriverJobs() {
+            const workspace = document.getElementById("driverWorkspace");
+            const container = document.getElementById("driverJobs");
+            if (!workspace || !container) return [];
+
+            if (!currentUser || !isApprovedDriver()) {
+                workspace.classList.remove("show");
+                container.innerHTML = "";
+                return [];
+            }
+
+            workspace.classList.add("show");
+
+            const { data, error } = await havkarSupabase
+                .from("delivery_requests")
+                .select("id,created_at,updated_at,user_id,pickup_address,delivery_address,package_details,status,driver_id,price,currency,accepted_at,picked_up_at,delivered_at,cancelled_at")
+                .in("status", ["pending", "accepted", "picked_up", "in_transit"])
+                .order("created_at", { ascending: false });
+
+            if (error) {
+                console.error("HAVKAR driver jobs load error:", error);
+                container.innerHTML = `<div class="empty-state"><i class="fas fa-triangle-exclamation"></i><p>Unable to load driver jobs.</p></div>`;
+                return [];
+            }
+
+            const jobs = (data || []).filter(item =>
+                item.user_id !== currentUser.id &&
+                ((item.status === "pending" && !item.driver_id) || item.driver_id === currentUser.id)
+            );
+
+            container.innerHTML = jobs.length
+                ? jobs.map(driverJobCardHtml).join("")
+                : `<div class="empty-state"><i class="fas fa-box-open"></i><p>No delivery jobs available.</p></div>`;
+
+            return jobs;
+        }
+
+        async function handleDriverAction(deliveryId, action, button) {
+            if (!currentUser || !isApprovedDriver()) {
+                showToast("Approved driver account required.", "error");
+                return;
+            }
+
+            const originalHtml = button?.innerHTML || "";
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>&nbsp; Working...';
+            }
+
+            let result;
+            if (action === "accept") {
+                result = await havkarSupabase.rpc("accept_delivery", { p_delivery_id: deliveryId });
+            } else {
+                result = await havkarSupabase.rpc("update_delivery_status", {
+                    p_delivery_id: deliveryId,
+                    p_new_status: action
+                });
+            }
+
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = originalHtml;
+            }
+
+            if (result.error) {
+                console.error("HAVKAR driver action error:", result.error);
+                showToast(result.error.message || "Unable to update delivery.", "error");
+                await loadDriverJobs();
+                return;
+            }
+
+            showToast(action === "accept" ? "Delivery accepted." : "Delivery status updated.");
+            await Promise.all([loadDriverJobs(), loadDeliveries()]);
+        }
+
+
+
 
         /* =====================================================
            HAVKAR DELIVERY
