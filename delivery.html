@@ -1174,7 +1174,7 @@
         class="fab-button"
         type="button"
         aria-label="Become a driver"
-        onclick="openDriverModal()"
+        onclick="handleDriverFab()"
     >
         <i class="fas fa-car"></i>
     </button>
@@ -1206,7 +1206,7 @@
 
         <a
             class="nav-item"
-            href="history.html"
+            href="#delivery-history" onclick="showHistory(); return false"
         >
             <i class="fas fa-history"></i>
             <span>History</span>
@@ -2296,6 +2296,24 @@
 
         const driverModal =
             document.getElementById("driverModal");
+
+
+        function handleDriverFab() {
+            if (currentUser && isApprovedDriver()) {
+                const workspace = document.getElementById("driverWorkspace");
+                if (workspace) {
+                    workspace.classList.add("show");
+                    loadDriverJobs();
+                    workspace.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start"
+                    });
+                    return;
+                }
+            }
+
+            openDriverModal();
+        }
 
 
         function openDriverModal() {
