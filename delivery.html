@@ -889,6 +889,17 @@
         ========================== */
         .driver-workspace { display:none; margin:18px; }
         .driver-workspace.show { display:block; }
+        .driver-workspace-close { display:none; flex:0 0 auto; width:42px; height:42px; border:0; border-radius:50%; background:var(--primary); color:#fff; font-size:1.1rem; align-items:center; justify-content:center; cursor:pointer; touch-action:manipulation; }
+        .driver-workspace.show.panel-open {
+            position:fixed; top:0; right:0; bottom:0; left:0; z-index:400; margin:0;
+            padding:calc(18px + env(safe-area-inset-top)) max(18px, calc((100vw - 760px) / 2)) calc(28px + env(safe-area-inset-bottom));
+            background:var(--background); overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
+            animation:havkarPanelIn .22s ease-out;
+        }
+        .driver-workspace.show.panel-open .driver-workspace-head { position:sticky; top:0; z-index:1; margin:0 0 14px; padding:6px 0 12px; background:var(--background); }
+        .driver-workspace.show.panel-open .driver-workspace-title { flex:1 1 auto; font-size:1.3rem; }
+        .driver-workspace.show.panel-open .driver-workspace-close { display:inline-flex; }
+        @keyframes havkarPanelIn { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
         #delivery-history, #driverWorkspace { scroll-margin-top:96px; }
         .havkar-section-flash { animation:havkarSectionFlash 1.6s ease-out; border-radius:16px; }
         @keyframes havkarSectionFlash {
@@ -1191,6 +1202,10 @@
             <div class="driver-workspace-head">
                 <h2 class="driver-workspace-title">Driver Jobs</h2>
                 <span class="driver-workspace-badge">Approved Driver</span>
+                <button type="button" class="driver-workspace-close" id="driverWorkspaceClose"
+                    onclick="closeDriverJobsPanel()" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
             <div id="driverJobs">
                 <div class="empty-state">
@@ -1695,6 +1710,7 @@
             if (!workspace || !container) return [];
 
             if (!currentUser || !isApprovedDriver()) {
+                closeDriverJobsPanel();
                 workspace.classList.remove("show");
                 container.innerHTML = "";
                 return [];
@@ -2400,19 +2416,60 @@
             document.getElementById("driverModal");
 
 
+        /* Driver Jobs window (opened by the car button) */
+
+        let driverJobsPanelOpen = false;
+
+        function openDriverJobsPanel() {
+            const workspace = document.getElementById("driverWorkspace");
+            if (!workspace) return;
+
+            workspace.classList.add("show", "panel-open");
+            workspace.scrollTop = 0;
+            document.body.style.overflow = "hidden";
+
+            if (!driverJobsPanelOpen) {
+                driverJobsPanelOpen = true;
+                try {
+                    window.history.pushState({ havkarDriverJobsPanel: true }, "");
+                } catch (error) {
+                    console.error("HAVKAR driver panel history error:", error);
+                }
+            }
+
+            Promise.resolve(loadDriverJobs())
+                .catch(error => console.error("HAVKAR driver jobs error:", error));
+        }
+
+        function hideDriverJobsPanel() {
+            const workspace = document.getElementById("driverWorkspace");
+            if (workspace) workspace.classList.remove("panel-open");
+            document.body.style.overflow = "";
+            driverJobsPanelOpen = false;
+        }
+
+        function closeDriverJobsPanel() {
+            if (!driverJobsPanelOpen) return;
+            hideDriverJobsPanel();
+            if (window.history.state && window.history.state.havkarDriverJobsPanel) {
+                window.history.back();
+            }
+        }
+
+        window.addEventListener("popstate", function() {
+            if (driverJobsPanelOpen) hideDriverJobsPanel();
+        });
+
+        document.addEventListener("keydown", function(event) {
+            if (event.key === "Escape" && driverJobsPanelOpen) closeDriverJobsPanel();
+        });
+
+
         function handleDriverFab() {
             if (currentUser && isApprovedDriver()) {
                 const workspace = document.getElementById("driverWorkspace");
                 if (workspace) {
-                    workspace.classList.add("show");
-                    focusDeliverySection(workspace);
-                    Promise.resolve(loadDriverJobs())
-                        .catch(error => console.error("HAVKAR driver jobs error:", error))
-                        .then(() => {
-                            if (sectionListIsEmpty("driverJobs")) {
-                                showToast(havkarDeliveryT("No delivery jobs available."));
-                            }
-                        });
+                    openDriverJobsPanel();
                     return;
                 }
             }
