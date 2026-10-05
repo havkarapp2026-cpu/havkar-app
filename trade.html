@@ -890,6 +890,22 @@ label{
             Tether (USDT)
         </option>
 
+        <option value="EURC">
+            Digital Euro (EURC)
+        </option>
+
+        <option value="TGBP">
+            Digital Pound (TGBP)
+        </option>
+
+        <option value="ZCHF">
+            Digital Franc (ZCHF)
+        </option>
+
+        <option value="TRX">
+            TRON (TRX)
+        </option>
+
         <option value="BNB">
             BNB
         </option>
@@ -910,11 +926,59 @@ label{
             Dogecoin (DOGE)
         </option>
 
+        <option value="LTC">
+            Litecoin (LTC)
+        </option>
+
+        <option value="DOT">
+            Polkadot (DOT)
+        </option>
+
+        <option value="LINK">
+            Chainlink (LINK)
+        </option>
+
+        <option value="AVAX">
+            Avalanche (AVAX)
+        </option>
+
+    </select>
+
+    <div class="section-title" style="margin-top:16px">
+        Price currency
+    </div>
+
+    <select
+        id="fiatSelect"
+        onchange="changeFiat()"
+        aria-label="Price currency"
+    >
+
+        <option value="EUR">
+            Euro (EUR) €
+        </option>
+
+        <option value="USD">
+            US Dollar (USD) $
+        </option>
+
+        <option value="SEK">
+            Swedish Krona (SEK) kr
+        </option>
+
+        <option value="GBP">
+            British Pound (GBP) £
+        </option>
+
+        <option value="CHF">
+            Swiss Franc (CHF) Fr
+        </option>
+
     </select>
 
     <div class="coin-select-note">
 
-        Prices are updated from live market data before trading.
+        The price and amount can use euro, dollar, krona, pound, or Swiss franc. Buy and sell still settle in the EUR wallet.
 
     </div>
 
@@ -968,7 +1032,7 @@ label{
                 class="price-value"
                 id="currentPrice"
             >
-                €0.00
+                —
             </div>
 
             <div
@@ -1067,8 +1131,8 @@ label{
                 Crypto
             </option>
 
-            <option value="eur">
-                EUR
+            <option value="fiat">
+                —
             </option>
 
         </select>
@@ -1098,7 +1162,7 @@ label{
             </span>
 
             <strong id="summaryPrice">
-                €0.00
+                —
             </strong>
 
         </div>
@@ -1346,6 +1410,27 @@ const coins = {
         image:"https://assets.coingecko.com/coins/images/325/large/Tether.png"
     },
 
+    EURC:{
+        id:"euro-coin",
+        name:"Digital Euro",
+        symbol:"EURC",
+        image:"https://coin-images.coingecko.com/coins/images/26045/large/EURC.png"
+    },
+
+    TGBP:{
+        id:"tokenised-gbp",
+        name:"Digital Pound",
+        symbol:"TGBP",
+        image:"https://coin-images.coingecko.com/coins/images/70647/large/tgbp-square.png"
+    },
+
+    ZCHF:{
+        id:"frankencoin",
+        name:"Digital Franc",
+        symbol:"ZCHF",
+        image:"https://coin-images.coingecko.com/coins/images/37150/large/Coin_Logo_Frankencoin_1024px.png"
+    },
+
     BNB:{
         id:"binancecoin",
         name:"BNB",
@@ -1379,6 +1464,71 @@ const coins = {
         name:"Dogecoin",
         symbol:"DOGE",
         image:"https://assets.coingecko.com/coins/images/5/large/dogecoin.png"
+    },
+
+    LTC:{
+        id:"litecoin",
+        name:"Litecoin",
+        symbol:"LTC",
+        image:"https://assets.coingecko.com/coins/images/2/large/litecoin.png"
+    },
+
+    TRX:{
+        id:"tron",
+        name:"TRON",
+        symbol:"TRX",
+        image:"https://assets.coingecko.com/coins/images/1094/large/tron-logo.png"
+    },
+
+    DOT:{
+        id:"polkadot",
+        name:"Polkadot",
+        symbol:"DOT",
+        image:"https://assets.coingecko.com/coins/images/12171/large/polkadot.png"
+    },
+
+    LINK:{
+        id:"chainlink",
+        name:"Chainlink",
+        symbol:"LINK",
+        image:"https://assets.coingecko.com/coins/images/877/large/chainlink-new-logo.png"
+    },
+
+    AVAX:{
+        id:"avalanche-2",
+        name:"Avalanche",
+        symbol:"AVAX",
+        image:"https://assets.coingecko.com/coins/images/12559/large/Avalanche_Circle_RedWhite_Trans.png"
+    }
+
+};
+
+
+const fiatCurrencies = {
+
+    EUR:{
+        name:"Euro",
+        vs:"eur"
+    },
+
+    USD:{
+        name:"US Dollar",
+        vs:"usd"
+    },
+
+    SEK:{
+        name:"Swedish Krona",
+        vs:"sek"
+    },
+
+    GBP:{
+        name:"British Pound",
+        vs:"gbp"
+    },
+
+    CHF:{
+        name:"Swiss Franc",
+        vs:"chf"
     }
 
 };
@@ -1390,6 +1540,9 @@ const coins = {
 
 let selectedCoin =
     "BTC";
+
+let selectedFiat =
+    initialFiat();
 
 let side =
     "buy";
@@ -1695,6 +1848,231 @@ function renderAvailableBalance(){
 
 
 /* =========================================================
+   QUOTE CURRENCY
+   ========================================================= */
+
+function quoteCode(){
+
+    return fiatCurrencies[
+        selectedFiat
+    ]
+        ? selectedFiat
+        : "EUR";
+
+}
+
+
+function quoteVs(){
+
+    return fiatCurrencies[
+        quoteCode()
+    ].vs;
+
+}
+
+
+function quotePrice(
+    symbol
+){
+
+    return Number(
+        prices[symbol]?.[
+            quoteVs()
+        ] || 0
+    );
+
+}
+
+
+function euroPrice(
+    symbol
+){
+
+    return Number(
+        prices[symbol]?.eur || 0
+    );
+
+}
+
+
+function readStoredFiat(){
+
+    try{
+
+        return String(
+            localStorage.getItem(
+                "havkar_trade_fiat"
+            ) || ""
+        ).toUpperCase();
+
+    }
+    catch(error){
+
+        return "";
+
+    }
+
+}
+
+
+function localeFiat(){
+
+    const language =
+        String(
+            navigator.language ||
+            ""
+        ).toLowerCase();
+
+
+    if(
+        language.startsWith(
+            "sv"
+        )
+    ){
+
+        return "SEK";
+
+    }
+
+
+    if(
+        language === "en-gb"
+    ){
+
+        return "GBP";
+
+    }
+
+
+    if(
+        language.endsWith(
+            "-ch"
+        )
+    ){
+
+        return "CHF";
+
+    }
+
+
+    if(
+        language === "en-us"
+    ){
+
+        return "USD";
+
+    }
+
+
+    return "EUR";
+
+}
+
+
+function initialFiat(){
+
+    const saved =
+        readStoredFiat();
+
+
+    if(
+        fiatCurrencies[saved]
+    ){
+
+        return saved;
+
+    }
+
+
+    const fromLocale =
+        localeFiat();
+
+
+    return fiatCurrencies[
+        fromLocale
+    ]
+        ? fromLocale
+        : "EUR";
+
+}
+
+
+function rememberFiat(
+    code
+){
+
+    try{
+
+        localStorage.setItem(
+            "havkar_trade_fiat",
+            code
+        );
+
+    }
+    catch(error){
+
+    }
+
+}
+
+
+function changeFiat(){
+
+    const select =
+        document.getElementById(
+            "fiatSelect"
+        );
+
+
+    const next =
+        String(
+            select.value ||
+            selectedFiat ||
+            "EUR"
+        ).toUpperCase();
+
+
+    selectedFiat =
+        fiatCurrencies[next]
+        ? next
+        : "EUR";
+
+
+    select.value =
+        selectedFiat;
+
+
+    rememberFiat(
+        selectedFiat
+    );
+
+
+    const unit =
+        document.getElementById(
+            "amountUnit"
+        );
+
+
+    if(unit.options[1]){
+
+        unit.options[1].text =
+            selectedFiat;
+
+    }
+
+
+    renderCoin();
+
+    calculateTotal();
+
+    clearStatus(
+        "tradeStatus"
+    );
+
+}
+
+
+/* =========================================================
    LOAD LIVE PRICE
    ========================================================= */
 
@@ -1720,7 +2098,7 @@ async function loadPrices(){
         encodeURIComponent(
             coinIds
         ) +
-        "&vs_currencies=eur" +
+        "&vs_currencies=eur,usd,sek,gbp,chf" +
         "&include_24hr_change=true";
 
 
@@ -1778,23 +2156,41 @@ async function loadPrices(){
                         data[coin.id]
                     ){
 
-                        prices[symbol] = {
+                        const row =
+                            data[coin.id];
 
-                            eur:
-                                Number(
-                                    data[
-                                        coin.id
-                                    ].eur || 0
-                                ),
+                        const quote = {};
 
-                            change:
-                                Number(
-                                    data[
-                                        coin.id
-                                    ].eur_24h_change || 0
-                                )
+                        Object.keys(
+                            fiatCurrencies
+                        ).forEach(
+                            function(code){
 
-                        };
+                                const vs =
+                                    fiatCurrencies[
+                                        code
+                                    ].vs;
+
+                                quote[vs] =
+                                    Number(
+                                        row[vs] || 0
+                                    );
+
+                                quote[
+                                    vs + "Change"
+                                ] =
+                                    Number(
+                                        row[
+                                            vs +
+                                            "_24h_change"
+                                        ] || 0
+                                    );
+
+                            }
+                        );
+
+                        prices[symbol] =
+                            quote;
 
                     }
 
@@ -1922,21 +2318,23 @@ function renderCoin(){
 
 
     const price =
-        Number(
-            market?.eur || 0
+        quotePrice(
+            selectedCoin
         );
 
 
     const change =
         Number(
-            market?.change || 0
+            market?.[
+                quoteVs() + "Change"
+            ] || 0
         );
 
 
     document.getElementById(
         "currentPrice"
     ).textContent =
-        formatEUR(price);
+        formatFiat(price);
 
 
     const changeElement =
@@ -1988,7 +2386,7 @@ function renderCoin(){
     document.getElementById(
         "summaryPrice"
     ).textContent =
-        formatEUR(price);
+        formatFiat(price);
 
 
     document.getElementById(
@@ -2097,10 +2495,14 @@ function calculateTotal(){
 
 
     const price =
-        Number(
-            prices[
-                selectedCoin
-            ]?.eur || 0
+        quotePrice(
+            selectedCoin
+        );
+
+
+    const euro =
+        euroPrice(
+            selectedCoin
         );
 
 
@@ -2112,11 +2514,17 @@ function calculateTotal(){
         0;
 
 
+    let fiatAmount =
+        0;
+
+
     if(
         Number.isFinite(amount) &&
         amount > 0 &&
         Number.isFinite(price) &&
-        price > 0
+        price > 0 &&
+        Number.isFinite(euro) &&
+        euro > 0
     ){
 
         if(unit === "coin"){
@@ -2124,19 +2532,30 @@ function calculateTotal(){
             cryptoAmount =
                 amount;
 
-            eurAmount =
+            fiatAmount =
                 amount *
                 price;
+
+            eurAmount =
+                amount *
+                euro;
 
         }
         else{
 
-            eurAmount =
+            fiatAmount =
                 amount;
 
             cryptoAmount =
                 amount /
                 price;
+
+            eurAmount =
+                amount *
+                (
+                    euro /
+                    price
+                );
 
         }
 
@@ -2154,8 +2573,18 @@ function calculateTotal(){
     document.getElementById(
         "estimatedTotal"
     ).textContent =
-        formatEUR(
-            eurAmount
+        selectedFiat === "EUR"
+        ? formatFiat(
+            eurAmount,
+            "EUR"
+        )
+        : formatFiat(
+            fiatAmount
+        ) +
+        " • " +
+        formatFiat(
+            eurAmount,
+            "EUR"
         );
 
 
@@ -2206,16 +2635,22 @@ function updateTradeButton(){
 
 
     const price =
-        Number(
-            prices[
-                selectedCoin
-            ]?.eur || 0
+        quotePrice(
+            selectedCoin
+        );
+
+
+    const euro =
+        euroPrice(
+            selectedCoin
         );
 
 
     if(
         !Number.isFinite(price) ||
-        price <= 0
+        price <= 0 ||
+        !Number.isFinite(euro) ||
+        euro <= 0
     ){
 
         disableTradeButton(
@@ -2332,16 +2767,22 @@ async function executeTrade(){
 
 
     const price =
-        Number(
-            prices[
-                selectedCoin
-            ]?.eur || 0
+        quotePrice(
+            selectedCoin
+        );
+
+
+    const euro =
+        euroPrice(
+            selectedCoin
         );
 
 
     if(
         !Number.isFinite(price) ||
-        price <= 0
+        price <= 0 ||
+        !Number.isFinite(euro) ||
+        euro <= 0
     ){
 
         showStatus(
@@ -2373,13 +2814,17 @@ async function executeTrade(){
 
         eurAmount =
             amount *
-            price;
+            euro;
 
     }
     else{
 
         eurAmount =
-            amount;
+            amount *
+            (
+                euro /
+                price
+            );
 
         cryptoAmount =
             amount /
@@ -2415,7 +2860,9 @@ async function executeTrade(){
 
         showStatus(
             "tradeStatus",
-            "Invalid EUR amount.",
+            "Invalid " +
+            selectedFiat +
+            " amount.",
             "error"
         );
 
@@ -2582,7 +3029,7 @@ async function executeTrade(){
                             cryptoAmount,
 
                         p_price_eur:
-                            price
+                            euro
 
                     }
                 ),
@@ -3010,9 +3457,16 @@ function loadActivity(){
    FORMATTING
    ========================================================= */
 
-function formatEUR(
-    value
+function formatFiat(
+    value,
+    code
 ){
+
+    const currency =
+        fiatCurrencies[code]
+        ? code
+        : quoteCode();
+
 
     const number =
         Number(
@@ -3026,19 +3480,40 @@ function formatEUR(
         )
     ){
 
-        return "€0.00";
+        return currency + " 0.00";
 
     }
 
 
-    return "€" +
-        number.toLocaleString(
-            "en-US",
-            {
-                minimumFractionDigits:2,
-                maximumFractionDigits:8
-            }
-        );
+    const digits =
+        Math.abs(number) >= 1
+        ? 2
+        : Math.abs(number) >= 0.01
+        ? 4
+        : 8;
+
+
+    return new Intl.NumberFormat(
+        "en-US",
+        {
+            style:"currency",
+            currency:currency,
+            minimumFractionDigits:2,
+            maximumFractionDigits:digits
+        }
+    ).format(number);
+
+}
+
+
+function formatEUR(
+    value
+){
+
+    return formatFiat(
+        value,
+        "EUR"
+    );
 
 }
 
@@ -3335,6 +3810,19 @@ window.addEventListener(
    ========================================================= */
 
 async function initializeTrade(){
+
+    const fiatSelect =
+        document.getElementById(
+            "fiatSelect"
+        );
+
+
+    fiatSelect.value =
+        initialFiat();
+
+
+    changeFiat();
+
 
     disableTradeButton(
         "Loading..."
