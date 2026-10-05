@@ -1032,7 +1032,7 @@ label{
                 class="price-value"
                 id="currentPrice"
             >
-                €0.00
+                —
             </div>
 
             <div
@@ -1132,7 +1132,7 @@ label{
             </option>
 
             <option value="fiat">
-                EUR
+                —
             </option>
 
         </select>
@@ -1162,7 +1162,7 @@ label{
             </span>
 
             <strong id="summaryPrice">
-                €0.00
+                —
             </strong>
 
         </div>
@@ -1542,7 +1542,7 @@ let selectedCoin =
     "BTC";
 
 let selectedFiat =
-    "EUR";
+    initialFiat();
 
 let side =
     "buy";
@@ -1895,6 +1895,127 @@ function euroPrice(
 }
 
 
+function readStoredFiat(){
+
+    try{
+
+        return String(
+            localStorage.getItem(
+                "havkar_trade_fiat"
+            ) || ""
+        ).toUpperCase();
+
+    }
+    catch(error){
+
+        return "";
+
+    }
+
+}
+
+
+function localeFiat(){
+
+    const language =
+        String(
+            navigator.language ||
+            ""
+        ).toLowerCase();
+
+
+    if(
+        language.startsWith(
+            "sv"
+        )
+    ){
+
+        return "SEK";
+
+    }
+
+
+    if(
+        language === "en-gb"
+    ){
+
+        return "GBP";
+
+    }
+
+
+    if(
+        language.endsWith(
+            "-ch"
+        )
+    ){
+
+        return "CHF";
+
+    }
+
+
+    if(
+        language === "en-us"
+    ){
+
+        return "USD";
+
+    }
+
+
+    return "EUR";
+
+}
+
+
+function initialFiat(){
+
+    const saved =
+        readStoredFiat();
+
+
+    if(
+        fiatCurrencies[saved]
+    ){
+
+        return saved;
+
+    }
+
+
+    const fromLocale =
+        localeFiat();
+
+
+    return fiatCurrencies[
+        fromLocale
+    ]
+        ? fromLocale
+        : "EUR";
+
+}
+
+
+function rememberFiat(
+    code
+){
+
+    try{
+
+        localStorage.setItem(
+            "havkar_trade_fiat",
+            code
+        );
+
+    }
+    catch(error){
+
+    }
+
+}
+
+
 function changeFiat(){
 
     const select =
@@ -1905,7 +2026,9 @@ function changeFiat(){
 
     const next =
         String(
-            select.value || "EUR"
+            select.value ||
+            selectedFiat ||
+            "EUR"
         ).toUpperCase();
 
 
@@ -1913,6 +2036,15 @@ function changeFiat(){
         fiatCurrencies[next]
         ? next
         : "EUR";
+
+
+    select.value =
+        selectedFiat;
+
+
+    rememberFiat(
+        selectedFiat
+    );
 
 
     const unit =
@@ -3678,6 +3810,19 @@ window.addEventListener(
    ========================================================= */
 
 async function initializeTrade(){
+
+    const fiatSelect =
+        document.getElementById(
+            "fiatSelect"
+        );
+
+
+    fiatSelect.value =
+        initialFiat();
+
+
+    changeFiat();
+
 
     disableTradeButton(
         "Loading..."
