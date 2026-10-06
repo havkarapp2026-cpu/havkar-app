@@ -147744,6 +147744,73 @@ ${value}`, dataLines++;
     const fraction = (absolute % 10000000n).toString().padStart(7, "0");
     return (negative ? "-" : "") + whole.toString() + "." + fraction;
   }
+  function describeHorizonFailure(error) {
+    const response = error && error.response ? error.response : {};
+    const data = response.data || {};
+    let codes = null;
+    try {
+      if (typeof error.getResultCodes === "function") {
+        codes = error.getResultCodes();
+      }
+    } catch (readError) {
+      codes = null;
+    }
+    if (!codes && data.extras && data.extras.result_codes) {
+      codes = data.extras.result_codes;
+    }
+    const transaction = codes && codes.transaction ? String(
+      codes.transaction
+    ) : "unavailable";
+    let operations = [];
+    if (codes && Array.isArray(
+      codes.operations
+    )) {
+      operations = codes.operations.map(
+        function(code2) {
+          return String(
+            code2
+          );
+        }
+      );
+    } else if (codes && codes.operations) {
+      operations = [
+        String(
+          codes.operations
+        )
+      ];
+    }
+    const parts = [];
+    if (typeof response.status === "number") {
+      parts.push(
+        "HTTP " + response.status
+      );
+    }
+    if (data.title) {
+      parts.push(
+        String(
+          data.title
+        )
+      );
+    }
+    if (data.detail) {
+      parts.push(
+        String(
+          data.detail
+        )
+      );
+    }
+    parts.push(
+      "Transaction code: " + transaction
+    );
+    parts.push(
+      "Operation codes: " + (operations.length ? operations.join(", ") : "none")
+    );
+    return {
+      transaction,
+      operations,
+      text: parts.join(". ")
+    };
+  }
   function safeErrorMessage(error) {
     const message = typeof error === "string" ? error : String(
       error?.message || ""
@@ -147755,25 +147822,25 @@ ${value}`, dataLines++;
       return "No Stellar account was found on " + currentNetwork().label + ".";
     }
     if (error instanceof TransactionFailedError) {
-      const codes = error.getResultCodes();
-      const operations = codes?.operations || [];
+      const horizon = describeHorizonFailure(
+        error
+      );
+      const operations = horizon.operations;
+      let friendly = "The Stellar network rejected the transaction.";
       if (operations.includes(
         "op_underfunded"
       )) {
-        return "The wallet does not have enough XLM for this payment.";
-      }
-      if (operations.includes(
+        friendly = "The wallet does not have enough XLM for this payment.";
+      } else if (operations.includes(
         "op_no_destination"
       )) {
-        return "The destination account does not exist on " + currentNetwork().label + ".";
+        friendly = "The destination account does not exist on " + currentNetwork().label + ".";
+      } else if (horizon.transaction === "tx_bad_seq") {
+        friendly = "The account sequence changed. Refresh the balance and try again.";
+      } else if (horizon.transaction === "tx_insufficient_fee") {
+        friendly = "The Stellar network rejected the transaction fee.";
       }
-      if (codes?.transaction === "tx_bad_seq") {
-        return "The account sequence changed. Refresh the balance and try again.";
-      }
-      if (codes?.transaction === "tx_insufficient_fee") {
-        return "The Stellar network rejected the transaction fee.";
-      }
-      return "The Stellar network rejected the transaction.";
+      return friendly + " " + horizon.text;
     }
     if (/failed to fetch|networkerror|load failed|timeout/i.test(message)) {
       return "Could not reach the Stellar network.";

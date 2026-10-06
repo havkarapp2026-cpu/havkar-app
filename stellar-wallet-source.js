@@ -359,6 +359,169 @@ function formatStroops(
 }
 
 
+function describeHorizonFailure(
+    error
+){
+
+    const response =
+        error &&
+        error.response
+        ? error.response
+        : {};
+
+    const data =
+        response.data || {};
+
+    let codes =
+        null;
+
+
+    try{
+
+        if(
+            typeof error.getResultCodes ===
+            "function"
+        ){
+
+            codes =
+                error.getResultCodes();
+
+        }
+
+    }
+    catch(readError){
+
+        codes =
+            null;
+
+    }
+
+
+    if(
+        !codes &&
+        data.extras &&
+        data.extras.result_codes
+    ){
+
+        codes =
+            data.extras.result_codes;
+
+    }
+
+
+    const transaction =
+        codes &&
+        codes.transaction
+        ? String(
+            codes.transaction
+        )
+        : "unavailable";
+
+    let operations =
+        [];
+
+
+    if(
+        codes &&
+        Array.isArray(
+            codes.operations
+        )
+    ){
+
+        operations =
+            codes.operations.map(
+                function(code){
+
+                    return String(
+                        code
+                    );
+
+                }
+            );
+
+    }
+    else if(
+        codes &&
+        codes.operations
+    ){
+
+        operations =
+            [
+                String(
+                    codes.operations
+                )
+            ];
+
+    }
+
+
+    const parts =
+        [];
+
+
+    if(
+        typeof response.status ===
+        "number"
+    ){
+
+        parts.push(
+            "HTTP " +
+            response.status
+        );
+
+    }
+
+
+    if(data.title){
+
+        parts.push(
+            String(
+                data.title
+            )
+        );
+
+    }
+
+
+    if(data.detail){
+
+        parts.push(
+            String(
+                data.detail
+            )
+        );
+
+    }
+
+
+    parts.push(
+        "Transaction code: " +
+        transaction
+    );
+
+    parts.push(
+        "Operation codes: " +
+        (
+            operations.length
+            ? operations.join(", ")
+            : "none"
+        )
+    );
+
+
+    return {
+
+        transaction:transaction,
+
+        operations:operations,
+
+        text:parts.join(". ")
+
+    };
+
+}
+
+
 function safeErrorMessage(
     error
 ){
@@ -397,11 +560,16 @@ function safeErrorMessage(
         error instanceof TransactionFailedError
     ){
 
-        const codes =
-            error.getResultCodes();
+        const horizon =
+            describeHorizonFailure(
+                error
+            );
 
         const operations =
-            codes?.operations || [];
+            horizon.operations;
+
+        let friendly =
+            "The Stellar network rejected the transaction.";
 
 
         if(
@@ -410,45 +578,45 @@ function safeErrorMessage(
             )
         ){
 
-            return "The wallet does not have enough XLM for this payment.";
+            friendly =
+                "The wallet does not have enough XLM for this payment.";
 
         }
-
-
-        if(
+        else if(
             operations.includes(
                 "op_no_destination"
             )
         ){
 
-            return "The destination account does not exist on " +
+            friendly =
+                "The destination account does not exist on " +
                 currentNetwork().label +
                 ".";
 
         }
-
-
-        if(
-            codes?.transaction ===
+        else if(
+            horizon.transaction ===
             "tx_bad_seq"
         ){
 
-            return "The account sequence changed. Refresh the balance and try again.";
+            friendly =
+                "The account sequence changed. Refresh the balance and try again.";
 
         }
-
-
-        if(
-            codes?.transaction ===
+        else if(
+            horizon.transaction ===
             "tx_insufficient_fee"
         ){
 
-            return "The Stellar network rejected the transaction fee.";
+            friendly =
+                "The Stellar network rejected the transaction fee.";
 
         }
 
 
-        return "The Stellar network rejected the transaction.";
+        return friendly +
+            " " +
+            horizon.text;
 
     }
 
