@@ -3796,6 +3796,30 @@ async function executeCryptoTrade(){
   
     }  
   
+    const cryptoQuantityText =  
+        String(  
+            input.value || ""  
+        ).trim();  
+  
+    if(  
+        !/^(?:0|[1-9]\d{0,17})(?:\.\d{1,18})?$/.test(  
+            cryptoQuantityText  
+        ) ||  
+        /^0+(?:\.0+)?$/.test(  
+            cryptoQuantityText  
+        )  
+    ){  
+  
+        showStatus(  
+            "tradeStatus",  
+            "Enter a valid cryptocurrency amount.",  
+            "error"  
+        );  
+  
+        return;  
+  
+    }  
+  
     button.disabled =  
         true;  
   
@@ -3810,35 +3834,97 @@ async function executeCryptoTrade(){
   
     try{  
   
-        const result =  
+        const sessionResult =  
             await withTimeout(  
   
-                supabaseClient.rpc(  
-                    "trade_crypto",  
+                supabaseClient.auth.getSession(),  
+  
+                8000,  
+  
+                "Authentication request timed out."  
+  
+            );  
+  
+        const accessToken =  
+            sessionResult.data?.session?.access_token ||  
+            "";  
+  
+        if(  
+            sessionResult.error ||  
+            !accessToken  
+        ){  
+  
+            throw new Error(  
+                "Please log in first."  
+            );  
+  
+        }  
+  
+        const response =  
+            await withTimeout(  
+  
+                fetch(  
+                    "/api/trade-crypto",  
                     {  
-                        p_side:  
-                            tradeSide,  
+                        method:"POST",  
   
-                        p_symbol:  
-                            selectedCoin.symbol,  
+                        headers:{  
+                            "Content-Type":  
+                                "application/json",  
   
-                        p_amount:  
-                            amount,  
+                            "Authorization":  
+                                "Bearer " +  
+                                accessToken  
+                        },  
   
-                        p_price_eur:  
-                            price  
+                        body:JSON.stringify({  
+                            side:  
+                                tradeSide,  
+  
+                            symbol:  
+                                selectedCoin.symbol,  
+  
+                            crypto_quantity:  
+                                cryptoQuantityText  
+                        })  
                     }  
                 ),  
   
-                15000,  
+                20000,  
   
                 "Trade request timed out."  
   
             );  
   
-        if(result.error){  
+        let payload =  
+            null;  
   
-            throw result.error;  
+        try{  
+  
+            payload =  
+                await response.json();  
+  
+        }  
+        catch(parseError){  
+  
+            payload =  
+                null;  
+  
+        }  
+  
+        if(  
+            !response.ok ||  
+            !payload ||  
+            payload.ok !== true ||  
+            !payload.trade  
+        ){  
+  
+            throw new Error(  
+                payload &&  
+                typeof payload.error === "string"  
+                ? payload.error  
+                : "Trade failed."  
+            );  
   
         }  
   
