@@ -1107,6 +1107,14 @@ select:focus{
 .stellar-status.error{display:block;background:#ffebee;color:#c62828;}  
 .stellar-status.info{display:block;background:#eef2ff;color:#3730a3;}  
   
+.stellar-label{display:block;margin:12px 0 6px;color:#555;font-size:12px;font-weight:700;}  
+.stellar-input{width:100%;border:1px solid #d7dce8;border-radius:11px;padding:12px;background:#fff;color:#111827;font-size:14px;}  
+.stellar-note{margin-top:8px;color:#666;font-size:12px;line-height:1.5;}  
+.stellar-balance{display:none;margin:12px 0;padding:12px;border-radius:10px;background:#f7f9f4;color:#1b5e20;font-size:14px;font-weight:800;word-break:break-word;}  
+.stellar-send{display:none;margin-top:14px;}  
+.stellar-send-button{width:100%;margin-top:14px;border:0;border-radius:11px;padding:14px;background:#2e7d32;color:#fff;font-size:16px;font-weight:800;}  
+  
+  
 /* =========================================================  
    RESPONSIVE  
    ========================================================= */  
@@ -1248,19 +1256,39 @@ select:focus{
         <div class="stellar-logo">XLM</div>  
         <div>  
             <div class="stellar-title">Stellar</div>  
-            <div class="stellar-subtitle">XLM Wallet • Public Network</div>  
+            <div class="stellar-subtitle" id="stellarNetworkLabel">XLM Wallet • Testnet</div>  
         </div>  
     </div>  
     <div class="stellar-description">  
-        Connect your Stellar wallet to HAVKAR. HAVKAR never stores your private key or recovery phrase.  
+        Connect your own Stellar wallet. HAVKAR prepares the XLM payment here. Your wallet keeps the secret key and must approve every signature. HAVKAR does not ask for a recovery phrase.  
+    </div>  
+    <label class="stellar-label" for="stellarNetwork">Network</label>  
+    <select id="stellarNetwork" class="stellar-input" onchange="changeHAVKARStellarNetwork()">  
+        <option value="TESTNET" selected>Testnet</option>  
+        <option value="PUBLIC">Mainnet</option>  
+    </select>  
+    <div id="stellarNetworkNote" class="stellar-note">  
+        Testnet uses test XLM. Nothing on this network is Mainnet money.  
     </div>  
     <div id="stellarAddress" class="stellar-address"></div>  
+    <div id="stellarBalance" class="stellar-balance"></div>  
     <button id="stellarConnectButton" class="stellar-connect-button" type="button" onclick="connectHAVKARStellar()">  
         <i class="fas fa-wallet"></i> Connect Stellar Wallet  
     </button>  
     <button id="stellarDisconnectButton" class="stellar-disconnect-button" type="button" onclick="disconnectHAVKARStellar()">  
         <i class="fas fa-link-slash"></i> Disconnect Wallet  
     </button>  
+    <div id="stellarSend" class="stellar-send">  
+        <label class="stellar-label" for="stellarDestination">Destination public key</label>  
+        <input id="stellarDestination" class="stellar-input" type="text" autocomplete="off" spellcheck="false" placeholder="G...">  
+        <label class="stellar-label" for="stellarAmount">Amount in XLM</label>  
+        <input id="stellarAmount" class="stellar-input" type="text" inputmode="decimal" autocomplete="off" placeholder="0.0000000">  
+        <label class="stellar-label" for="stellarMemo">Memo, optional</label>  
+        <input id="stellarMemo" class="stellar-input" type="text" maxlength="28" autocomplete="off">  
+        <button id="stellarSendButton" class="stellar-send-button" type="button" onclick="sendHAVKARStellarPayment()">  
+            Sign and send on Testnet  
+        </button>  
+    </div>  
     <div id="stellarStatus" class="stellar-status"></div>  
 </div>  <!-- =========================================================  
      PI NETWORK MAINNET PAYMENT  
@@ -1641,7 +1669,7 @@ select:focus{
 
 </div>  <!-- =========================================================  
      STELLAR WALLET BUNDLE  
-     ========================================================= -->  <script src="./stellar-wallet.js"></script>  <!-- =========================================================  
+     ========================================================= -->  <script src="./stellar-wallet-bundle.js"></script>  <!-- =========================================================  
      SUPABASE  
      ========================================================= -->  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>  <script>  
   
@@ -4852,22 +4880,78 @@ function setStellarStatus(message,type){
     element.className="stellar-status "+type;  
 }  
   
-function renderStellarConnection(address){  
+function renderStellarNetwork(){  
+    const network=window.havkarGetStellarNetwork?.()||{id:"TESTNET",label:"Testnet"};  
+    const select=document.getElementById("stellarNetwork");  
+    const subtitle=document.getElementById("stellarNetworkLabel");  
+    const note=document.getElementById("stellarNetworkNote");  
+    const sendButton=document.getElementById("stellarSendButton");  
+    if(select && document.activeElement!==select)select.value=network.id;  
+    if(subtitle)subtitle.textContent="XLM Wallet • "+network.label;  
+    if(note){  
+        note.textContent=network.id==="PUBLIC"  
+            ? "Mainnet is protected. HAVKAR will not create or send a Mainnet payment."  
+            : "Testnet uses test XLM. Nothing on this network is Mainnet money.";  
+    }  
+    if(sendButton){  
+        sendButton.textContent=network.id==="PUBLIC"  
+            ? "Mainnet payments are protected"  
+            : "Sign and send on Testnet";  
+    }  
+}  
+  
+function changeHAVKARStellarNetwork(){  
+    const select=document.getElementById("stellarNetwork");  
+    if(typeof window.havkarSetStellarNetwork==="function" && select){  
+        window.havkarSetStellarNetwork(select.value);  
+    }  
+    renderStellarNetwork();  
+    if(window.havkarIsStellarConnected?.())refreshHAVKARStellarBalance();  
+}  
+  
+function renderStellarConnection(address,options){  
     const addressElement=document.getElementById("stellarAddress");  
     const connectButton=document.getElementById("stellarConnectButton");  
     const disconnectButton=document.getElementById("stellarDisconnectButton");  
+    const send=document.getElementById("stellarSend");  
+    const balance=document.getElementById("stellarBalance");  
     if(!addressElement||!connectButton||!disconnectButton)return;  
     if(address){  
         addressElement.textContent=address;  
         addressElement.style.display="block";  
         connectButton.style.display="none";  
         disconnectButton.style.display="block";  
-        setStellarStatus("Stellar wallet connected successfully.","success");  
+        if(send)send.style.display="block";  
+        if(options?.restored){  
+            setStellarStatus("Public address restored in this browser. A payment still needs your wallet to sign it.","info");  
+        }else{  
+            setStellarStatus("Stellar wallet connected. The balance below is read from the Stellar network.","success");  
+        }  
+        refreshHAVKARStellarBalance();  
     }else{  
         addressElement.textContent="";  
         addressElement.style.display="none";  
         connectButton.style.display="block";  
         disconnectButton.style.display="none";  
+        if(send)send.style.display="none";  
+        if(balance){balance.textContent="";balance.style.display="none";}  
+    }  
+}  
+  
+async function refreshHAVKARStellarBalance(){  
+    const balance=document.getElementById("stellarBalance");  
+    if(!balance||typeof window.havkarFetchStellarBalance!=="function")return;  
+    balance.style.display="block";  
+    balance.textContent="Reading the Stellar balance...";  
+    try{  
+        const result=await window.havkarFetchStellarBalance();  
+        if(!result.exists){  
+            balance.textContent="No "+result.label+" account for this public key yet.";  
+            return;  
+        }  
+        balance.textContent=result.balance+" XLM on "+result.label;  
+    }catch(error){  
+        balance.textContent=error?.message||"Could not read the Stellar balance.";  
     }  
 }  
   
@@ -4882,11 +4966,10 @@ async function connectHAVKARStellar(){
     setStellarStatus("Select your Stellar wallet...","info");  
     try{  
         const address=await window.havkarConnectStellarWallet();  
-        if(!address)throw new Error("No Stellar address returned.");  
+        if(!address)throw new Error("The wallet did not return a Stellar public key.");  
         renderStellarConnection(address);  
     }catch(error){  
-        console.error("HAVKAR Stellar connection error:",error);  
-        setStellarStatus("Stellar wallet connection failed: "+(error?.message||"Unknown error"),"error");  
+        setStellarStatus(error?.message||"Stellar wallet connection failed.","error");  
     }finally{  
         button.disabled=false;  
         button.innerHTML='<i class="fas fa-wallet"></i> Connect Stellar Wallet';  
@@ -4902,11 +4985,42 @@ async function disconnectHAVKARStellar(){
         renderStellarConnection(null);  
         setStellarStatus("Stellar wallet disconnected.","info");  
     }catch(error){  
-        console.error("HAVKAR Stellar disconnect error:",error);  
-        setStellarStatus("Could not disconnect Stellar wallet: "+(error?.message||"Unknown error"),"error");  
+        setStellarStatus(error?.message||"Could not disconnect the Stellar wallet.","error");  
     }finally{  
         button.disabled=false;  
         button.innerHTML='<i class="fas fa-link-slash"></i> Disconnect Wallet';  
+    }  
+}  
+  
+async function sendHAVKARStellarPayment(){  
+    const button=document.getElementById("stellarSendButton");  
+    const destination=document.getElementById("stellarDestination")?.value||"";  
+    const amount=document.getElementById("stellarAmount")?.value||"";  
+    const memo=document.getElementById("stellarMemo")?.value||"";  
+    if(typeof window.havkarSignAndSubmitStellarPayment!=="function"){  
+        setStellarStatus("Stellar payments are not available.","error");  
+        return;  
+    }  
+    const network=window.havkarGetStellarNetwork?.()||{id:"TESTNET",label:"Testnet"};  
+    if(network.id==="PUBLIC"){  
+        setStellarStatus("Mainnet is protected. Switch to Testnet before sending.","error");  
+        return;  
+    }  
+    button.disabled=true;  
+    setStellarStatus("Waiting for your wallet to approve the signature...","info");  
+    try{  
+        const result=await window.havkarSignAndSubmitStellarPayment({  
+            destination:destination,  
+            amount:amount,  
+            memo:memo  
+        });  
+        setStellarStatus("Confirmed on "+result.label+". Transaction "+result.hash,"success");  
+        await refreshHAVKARStellarBalance();  
+    }catch(error){  
+        setStellarStatus(error?.message||"Stellar payment failed.","error");  
+    }finally{  
+        button.disabled=false;  
+        renderStellarNetwork();  
     }  
 }  
   
@@ -4928,7 +5042,12 @@ async function startWallet(){
   
     clearError();  
   
-    if(window.HAVKAR_STELLAR?.connected && window.HAVKAR_STELLAR?.address){  
+    renderStellarNetwork();  
+  
+    if(typeof window.havkarRestoreStellarAddress==="function"){  
+        const restored=await window.havkarRestoreStellarAddress();  
+        if(restored)renderStellarConnection(restored,{restored:true});  
+    }else if(window.HAVKAR_STELLAR?.connected && window.HAVKAR_STELLAR?.address){  
         renderStellarConnection(window.HAVKAR_STELLAR.address);  
     }  
   
