@@ -910,11 +910,47 @@ label{
             Dogecoin (DOGE)
         </option>
 
+        <option value="TRX">
+            TRON (TRX)
+        </option>
+
+        <option value="XLM">
+            Stellar (XLM)
+        </option>
+
+    </select>
+
+    <div class="section-title" style="margin-top:16px">
+        Price currency
+    </div>
+
+    <select
+        id="quoteCurrency"
+        onchange="changeQuoteCurrency()"
+        aria-label="Price currency"
+    >
+
+        <option value="eur">
+            EUR €
+        </option>
+
+        <option value="usd">
+            USD $
+        </option>
+
+        <option value="sek">
+            SEK kr
+        </option>
+
+        <option value="gbp">
+            GBP £
+        </option>
+
     </select>
 
     <div class="coin-select-note">
 
-        Prices are updated from live market data before trading.
+        EUR, USD, SEK, and GBP are the same price currencies as Market. EUR is the wallet currency used to settle a trade, not a cryptocurrency in this list.
 
     </div>
 
@@ -1067,7 +1103,7 @@ label{
                 Crypto
             </option>
 
-            <option value="eur">
+            <option value="fiat">
                 EUR
             </option>
 
@@ -1379,6 +1415,55 @@ const coins = {
         name:"Dogecoin",
         symbol:"DOGE",
         image:"https://assets.coingecko.com/coins/images/5/large/dogecoin.png"
+    },
+
+    TRX:{
+        id:"tron",
+        name:"TRON",
+        symbol:"TRX",
+        image:"https://coin-images.coingecko.com/coins/images/1094/large/photo_2026-04-13_09-59-16.png?1776048311"
+    },
+
+    XLM:{
+        id:"stellar",
+        name:"Stellar",
+        symbol:"XLM",
+        image:"https://coin-images.coingecko.com/coins/images/100/large/fmpFRHHQ_400x400.jpg?1735231350"
+    }
+
+};
+
+
+/* =========================================================
+   PRICE CURRENCIES
+   Same codes as market.html #currencySelect
+   and havkar_market_currency_v1.
+   ========================================================= */
+
+const QUOTE_CURRENCY_KEY =
+    "havkar_market_currency_v1";
+
+
+const quoteCurrencies = {
+
+    eur:{
+        code:"EUR",
+        symbol:"€"
+    },
+
+    usd:{
+        code:"USD",
+        symbol:"$"
+    },
+
+    sek:{
+        code:"SEK",
+        symbol:"kr"
+    },
+
+    gbp:{
+        code:"GBP",
+        symbol:"£"
     }
 
 };
@@ -1390,6 +1475,9 @@ const coins = {
 
 let selectedCoin =
     "BTC";
+
+let selectedQuote =
+    readQuoteCurrency();
 
 let side =
     "buy";
@@ -1720,7 +1808,7 @@ async function loadPrices(){
         encodeURIComponent(
             coinIds
         ) +
-        "&vs_currencies=eur" +
+        "&vs_currencies=eur,usd,sek,gbp" +
         "&include_24hr_change=true";
 
 
@@ -1778,21 +1866,34 @@ async function loadPrices(){
                         data[coin.id]
                     ){
 
+                        const row =
+                            data[coin.id];
+
                         prices[symbol] = {
 
-                            eur:
-                                Number(
-                                    data[
-                                        coin.id
-                                    ].eur || 0
-                                ),
+                            eur:Number(row.eur || 0),
 
-                            change:
-                                Number(
-                                    data[
-                                        coin.id
-                                    ].eur_24h_change || 0
-                                )
+                            usd:Number(row.usd || 0),
+
+                            sek:Number(row.sek || 0),
+
+                            gbp:Number(row.gbp || 0),
+
+                            eurChange:Number(
+                                row.eur_24h_change || 0
+                            ),
+
+                            usdChange:Number(
+                                row.usd_24h_change || 0
+                            ),
+
+                            sekChange:Number(
+                                row.sek_24h_change || 0
+                            ),
+
+                            gbpChange:Number(
+                                row.gbp_24h_change || 0
+                            )
 
                         };
 
@@ -1917,26 +2018,22 @@ function renderCoin(){
         coin.name;
 
 
-    const market =
-        prices[selectedCoin];
-
-
     const price =
-        Number(
-            market?.eur || 0
+        quotePrice(
+            selectedCoin
         );
 
 
     const change =
-        Number(
-            market?.change || 0
+        quoteChange(
+            selectedCoin
         );
 
 
     document.getElementById(
         "currentPrice"
     ).textContent =
-        formatEUR(price);
+        formatQuote(price);
 
 
     const changeElement =
@@ -1988,7 +2085,7 @@ function renderCoin(){
     document.getElementById(
         "summaryPrice"
     ).textContent =
-        formatEUR(price);
+        formatQuote(price);
 
 
     document.getElementById(
@@ -2097,14 +2194,22 @@ function calculateTotal(){
 
 
     const price =
-        Number(
-            prices[
-                selectedCoin
-            ]?.eur || 0
+        quotePrice(
+            selectedCoin
+        );
+
+
+    const euro =
+        euroPrice(
+            selectedCoin
         );
 
 
     let cryptoAmount =
+        0;
+
+
+    let quoteAmount =
         0;
 
 
@@ -2116,7 +2221,9 @@ function calculateTotal(){
         Number.isFinite(amount) &&
         amount > 0 &&
         Number.isFinite(price) &&
-        price > 0
+        price > 0 &&
+        Number.isFinite(euro) &&
+        euro > 0
     ){
 
         if(unit === "coin"){
@@ -2124,19 +2231,27 @@ function calculateTotal(){
             cryptoAmount =
                 amount;
 
-            eurAmount =
+            quoteAmount =
                 amount *
                 price;
+
+            eurAmount =
+                amount *
+                euro;
 
         }
         else{
 
-            eurAmount =
+            quoteAmount =
                 amount;
 
             cryptoAmount =
                 amount /
                 price;
+
+            eurAmount =
+                cryptoAmount *
+                euro;
 
         }
 
@@ -2154,6 +2269,14 @@ function calculateTotal(){
     document.getElementById(
         "estimatedTotal"
     ).textContent =
+        selectedQuote === "eur"
+        ? formatEUR(
+            eurAmount
+        )
+        : formatQuote(
+            quoteAmount
+        ) +
+        " • " +
         formatEUR(
             eurAmount
         );
@@ -2206,16 +2329,22 @@ function updateTradeButton(){
 
 
     const price =
-        Number(
-            prices[
-                selectedCoin
-            ]?.eur || 0
+        quotePrice(
+            selectedCoin
+        );
+
+
+    const euro =
+        euroPrice(
+            selectedCoin
         );
 
 
     if(
         !Number.isFinite(price) ||
-        price <= 0
+        price <= 0 ||
+        !Number.isFinite(euro) ||
+        euro <= 0
     ){
 
         disableTradeButton(
@@ -2332,16 +2461,22 @@ async function executeTrade(){
 
 
     const price =
-        Number(
-            prices[
-                selectedCoin
-            ]?.eur || 0
+        quotePrice(
+            selectedCoin
+        );
+
+
+    const euro =
+        euroPrice(
+            selectedCoin
         );
 
 
     if(
         !Number.isFinite(price) ||
-        price <= 0
+        price <= 0 ||
+        !Number.isFinite(euro) ||
+        euro <= 0
     ){
 
         showStatus(
@@ -2373,17 +2508,18 @@ async function executeTrade(){
 
         eurAmount =
             amount *
-            price;
+            euro;
 
     }
     else{
 
-        eurAmount =
-            amount;
-
         cryptoAmount =
             amount /
             price;
+
+        eurAmount =
+            cryptoAmount *
+            euro;
 
     }
 
@@ -2582,7 +2718,7 @@ async function executeTrade(){
                             cryptoAmount,
 
                         p_price_eur:
-                            price
+                            euro
 
                     }
                 ),
@@ -3010,6 +3146,173 @@ function loadActivity(){
    FORMATTING
    ========================================================= */
 
+function readQuoteCurrency(){
+
+    try{
+
+        const saved =
+            localStorage.getItem(
+                QUOTE_CURRENCY_KEY
+            );
+
+
+        if(quoteCurrencies[saved]){
+
+            return saved;
+
+        }
+
+    }
+    catch(error){
+
+    }
+
+
+    return "eur";
+
+}
+
+
+function quotePrice(
+    symbol
+){
+
+    return Number(
+        prices[symbol]?.[
+            selectedQuote
+        ] || 0
+    );
+
+}
+
+
+function euroPrice(
+    symbol
+){
+
+    return Number(
+        prices[symbol]?.eur || 0
+    );
+
+}
+
+
+function quoteChange(
+    symbol
+){
+
+    return Number(
+        prices[symbol]?.[
+            selectedQuote + "Change"
+        ] || 0
+    );
+
+}
+
+
+function changeQuoteCurrency(){
+
+    const select =
+        document.getElementById(
+            "quoteCurrency"
+        );
+
+
+    const next =
+        String(
+            select.value || "eur"
+        ).toLowerCase();
+
+
+    selectedQuote =
+        quoteCurrencies[next]
+        ? next
+        : "eur";
+
+
+    select.value =
+        selectedQuote;
+
+
+    try{
+
+        localStorage.setItem(
+            QUOTE_CURRENCY_KEY,
+            selectedQuote
+        );
+
+    }
+    catch(error){
+
+    }
+
+
+    const unit =
+        document.getElementById(
+            "amountUnit"
+        );
+
+
+    if(unit.options[1]){
+
+        unit.options[1].text =
+            quoteCurrencies[
+                selectedQuote
+            ].code;
+
+    }
+
+
+    renderCoin();
+
+    calculateTotal();
+
+    clearStatus(
+        "tradeStatus"
+    );
+
+}
+
+
+function formatQuote(
+    value
+){
+
+    const currency =
+        quoteCurrencies[
+            selectedQuote
+        ] || quoteCurrencies.eur;
+
+
+    const number =
+        Number(
+            value || 0
+        );
+
+
+    if(
+        !Number.isFinite(
+            number
+        )
+    ){
+
+        return currency.symbol + "0.00";
+
+    }
+
+
+    return currency.symbol +
+        number.toLocaleString(
+            "en-US",
+            {
+                minimumFractionDigits:2,
+                maximumFractionDigits:8
+            }
+        );
+
+}
+
+
 function formatEUR(
     value
 ){
@@ -3335,6 +3638,19 @@ window.addEventListener(
    ========================================================= */
 
 async function initializeTrade(){
+
+    const quoteSelect =
+        document.getElementById(
+            "quoteCurrency"
+        );
+
+
+    quoteSelect.value =
+        selectedQuote;
+
+
+    changeQuoteCurrency();
+
 
     disableTradeButton(
         "Loading..."
