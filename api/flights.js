@@ -1,3 +1,72 @@
+import { createClient } from "@supabase/supabase-js";
+
+function bearerToken(req) {
+    const header = req.headers?.authorization;
+    const value = Array.isArray(header) ? header[0] : header;
+    const authorization = typeof value === "string" ? value : "";
+
+    if (!authorization.startsWith("Bearer ")) {
+        return "";
+    }
+
+    return authorization.slice(7).trim();
+}
+
+async function requireHavkarUser(req) {
+    const accessToken = bearerToken(req);
+
+    if (!accessToken) {
+        return {
+            user: null,
+            status: 401,
+            error: "Authentication required"
+        };
+    }
+
+    if (
+        !process.env.SUPABASE_URL ||
+        !process.env.SUPABASE_SERVICE_ROLE_KEY
+    ) {
+        console.error(
+            "Missing required server environment variables"
+        );
+
+        return {
+            user: null,
+            status: 500,
+            error: "Server configuration error"
+        };
+    }
+
+    const supabaseAdmin = createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY,
+        {
+            auth: {
+                persistSession: false,
+                autoRefreshToken: false
+            }
+        }
+    );
+
+    const { data, error } =
+        await supabaseAdmin.auth.getUser(accessToken);
+
+    if (error || !data?.user) {
+        return {
+            user: null,
+            status: 401,
+            error: "Invalid or expired session"
+        };
+    }
+
+    return {
+        user: data.user,
+        status: null,
+        error: null
+    };
+}
+
 export default async function handler(req, res) {
     // =========================================================
     // HAVKAR GLOBAL FLIGHT SEARCH API
@@ -17,39 +86,28 @@ export default async function handler(req, res) {
     //
     // IMPORTANT:
     // Duffel secret token stays SERVER-SIDE only.
+    // A verified HAVKAR user is required before Duffel is called.
     // =========================================================
-
-    res.setHeader(
-        "Access-Control-Allow-Origin",
-        "*"
-    );
-
-    res.setHeader(
-        "Access-Control-Allow-Methods",
-        "POST, OPTIONS"
-    );
-
-    res.setHeader(
-        "Access-Control-Allow-Headers",
-        "Content-Type"
-    );
-
-    // =========================================================
-    // CORS PREFLIGHT
-    // =========================================================
-
-    if (req.method === "OPTIONS") {
-        return res.status(204).end();
-    }
 
     // =========================================================
     // METHOD
     // =========================================================
 
     if (req.method !== "POST") {
+        res.setHeader("Allow", "POST");
+
         return res.status(405).json({
             ok: false,
             error: "Method not allowed"
+        });
+    }
+
+    const auth = await requireHavkarUser(req);
+
+    if (!auth.user) {
+        return res.status(auth.status).json({
+            ok: false,
+            error: auth.error
         });
     }
 
