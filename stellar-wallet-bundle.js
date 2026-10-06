@@ -147891,7 +147891,7 @@ ${value}`, dataLines++;
       );
     }
   }
-  async function havkarPrepareStellarPayment(options) {
+  function readUnsignedPaymentRequest(options) {
     const network = currentNetwork();
     const source = String(
       HAVKAR_STELLAR.address || ""
@@ -147922,9 +147922,25 @@ ${value}`, dataLines++;
         "A Stellar text memo can contain at most 28 bytes."
       );
     }
-    const amount = parseXlm(
-      options?.amount
+    return {
+      network,
+      source,
+      destination,
+      memo,
+      amount: parseXlm(
+        options?.amount
+      )
+    };
+  }
+  async function havkarPrepareStellarPayment(options) {
+    const request2 = readUnsignedPaymentRequest(
+      options
     );
+    const network = request2.network;
+    const source = request2.source;
+    const destination = request2.destination;
+    const memo = request2.memo;
+    const amount = request2.amount;
     const server = horizonServer(network);
     const sourceAccount = await server.loadAccount(
       source
@@ -148057,6 +148073,216 @@ ${value}`, dataLines++;
     }
     return signed;
   }
+  var ALBEDO_WALLET_ID = "albedo";
+  var ALBEDO_WINDOW_NAME = "auth.albedo.link";
+  var ALBEDO_CONFIRM_URL = "https://albedo.link/confirm";
+  var ALBEDO_MODULE_STORAGE_KEY = "@StellarWalletsKit/selectedModuleId";
+  var ALBEDO_HANDSHAKE_MS = 2e4;
+  var WALLET_SIGNATURE_MS = 15e4;
+  function selectedStellarWalletId() {
+    try {
+      return String(
+        localStorage.getItem(
+          ALBEDO_MODULE_STORAGE_KEY
+        ) || ""
+      );
+    } catch (error) {
+      return "";
+    }
+  }
+  function closeSigningPopup(popup) {
+    if (!popup) {
+      return;
+    }
+    try {
+      if (!popup.closed) {
+        popup.close();
+      }
+    } catch (error) {
+    }
+  }
+  function reserveAlbedoSigningWindow() {
+    if (selectedStellarWalletId() !== ALBEDO_WALLET_ID) {
+      return null;
+    }
+    const popup = window.open(
+      "about:blank",
+      ALBEDO_WINDOW_NAME,
+      "height=600,width=480,top=80,left=80,menubar=0,toolbar=0,location=0,status=0,personalbar=0,scrollbars=0,dependent=1"
+    );
+    if (!popup || popup.closed) {
+      throw new Error(
+        "The browser blocked the Albedo window. Allow popups for this site, then try again."
+      );
+    }
+    try {
+      popup.document.title = "Albedo";
+      popup.document.body.textContent = "Opening Albedo to sign the Testnet transaction...";
+    } catch (error) {
+    }
+    try {
+      popup.focus();
+    } catch (error) {
+    }
+    return popup;
+  }
+  function waitForWalletSignature(signPromise, popup) {
+    return new Promise(
+      function(resolve, reject) {
+        let settled = false;
+        let sawHandshake = false;
+        function finish(settle, value) {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          clearTimeout(
+            signatureTimer
+          );
+          clearTimeout(
+            handshakeTimer
+          );
+          clearInterval(
+            closedTimer
+          );
+          window.removeEventListener(
+            "message",
+            onHandshake
+          );
+          settle(value);
+        }
+        function onHandshake(event) {
+          if (event && event.data && event.data.albedo) {
+            sawHandshake = true;
+          }
+        }
+        const signatureTimer = setTimeout(
+          function() {
+            closeSigningPopup(
+              popup
+            );
+            finish(
+              reject,
+              new Error(
+                "The wallet did not return a signature. You can try again."
+              )
+            );
+          },
+          WALLET_SIGNATURE_MS
+        );
+        const handshakeTimer = popup ? setTimeout(
+          function() {
+            if (sawHandshake) {
+              return;
+            }
+            closeSigningPopup(
+              popup
+            );
+            finish(
+              reject,
+              new Error(
+                "Albedo opened but did not receive the transaction. Allow popups for this site, then try again."
+              )
+            );
+          },
+          ALBEDO_HANDSHAKE_MS
+        ) : null;
+        const closedTimer = setInterval(
+          function() {
+            if (popup && popup.closed) {
+              finish(
+                reject,
+                new Error(
+                  "The Albedo window went away before the transaction was signed."
+                )
+              );
+            }
+          },
+          700
+        );
+        if (popup) {
+          window.addEventListener(
+            "message",
+            onHandshake
+          );
+        }
+        Promise.resolve(
+          signPromise
+        ).then(
+          function(value) {
+            finish(
+              resolve,
+              value
+            );
+          },
+          function(error) {
+            finish(
+              reject,
+              error
+            );
+          }
+        );
+      }
+    );
+  }
+  function requestWalletSignature(prepared, network, albedoPopup) {
+    const originalOpen = window.open.bind(
+      window
+    );
+    let patched = false;
+    if (albedoPopup) {
+      window.open = function(url, target, features) {
+        const next = String(
+          url || ""
+        );
+        if (target === ALBEDO_WINDOW_NAME && next.indexOf(
+          ALBEDO_CONFIRM_URL
+        ) === 0) {
+          if (!albedoPopup || albedoPopup.closed) {
+            throw new Error(
+              "The Albedo window went away before the transaction was signed."
+            );
+          }
+          try {
+            albedoPopup.location.href = ALBEDO_CONFIRM_URL;
+          } catch (error) {
+            throw new Error(
+              "The browser blocked the Albedo window. Allow popups for this site, then try again."
+            );
+          }
+          try {
+            albedoPopup.focus();
+          } catch (error) {
+          }
+          return albedoPopup;
+        }
+        return originalOpen(
+          url,
+          target,
+          features
+        );
+      };
+      patched = true;
+    }
+    let signPromise;
+    try {
+      signPromise = StellarWalletsKit.signTransaction(
+        prepared.xdr,
+        {
+          networkPassphrase: network.passphrase,
+          address: prepared.source
+        }
+      );
+    } finally {
+      if (patched) {
+        window.open = originalOpen;
+      }
+    }
+    return waitForWalletSignature(
+      signPromise,
+      albedoPopup
+    );
+  }
   async function havkarSignAndSubmitStellarPayment(options) {
     const network = currentNetwork();
     if (network.id === "PUBLIC") {
@@ -148064,16 +148290,19 @@ ${value}`, dataLines++;
         "Mainnet payments are protected. Use Testnet."
       );
     }
+    let albedoPopup = null;
     try {
+      readUnsignedPaymentRequest(
+        options
+      );
+      albedoPopup = reserveAlbedoSigningWindow();
       const prepared = await havkarPrepareStellarPayment(
         options
       );
-      const signedResult = await StellarWalletsKit.signTransaction(
-        prepared.xdr,
-        {
-          networkPassphrase: network.passphrase,
-          address: prepared.source
-        }
+      const signedResult = await requestWalletSignature(
+        prepared,
+        network,
+        albedoPopup
       );
       const signedXdr = signedResult?.signedTxXdr || "";
       if (!signedXdr) {
@@ -148113,6 +148342,9 @@ ${value}`, dataLines++;
         successful: true
       };
     } catch (error) {
+      closeSigningPopup(
+        albedoPopup
+      );
       throw new Error(
         safeErrorMessage(error)
       );
