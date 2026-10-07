@@ -128,9 +128,62 @@ function sendJSON(res, status, body) {
   return res.end(JSON.stringify(body));
 }
 
-const ALLOWED_ORIGINS = new Set([
+const BUILTIN_TRUSTED_ORIGINS = [
   "https://havkar-app.vercel.app",
   "https://testnet.havkar.online"
+];
+
+/*
+ * HAVKAR_ADDITIONAL_ORIGINS is optional. An absent or empty value
+ * leaves only the two built-in origins. Each entry must be one
+ * HTTPS origin: no wildcard, HTTP, path, query, or fragment.
+ * Invalid entries are ignored so the built-in origins stay trusted.
+ */
+function additionalTrustedOrigins(raw) {
+  if (typeof raw !== "string" || !raw.trim()) {
+    return [];
+  }
+
+  const accepted = [];
+
+  for (const part of raw.split(",")) {
+    const value = part.trim();
+
+    if (!value || value.includes("*")) {
+      continue;
+    }
+
+    let parsed;
+
+    try {
+      parsed = new URL(value);
+    } catch {
+      continue;
+    }
+
+    if (
+      parsed.protocol !== "https:" ||
+      parsed.username ||
+      parsed.password ||
+      parsed.pathname !== "/" ||
+      parsed.search ||
+      parsed.hash ||
+      value !== parsed.origin
+    ) {
+      continue;
+    }
+
+    accepted.push(parsed.origin);
+  }
+
+  return accepted;
+}
+
+const ALLOWED_ORIGINS = new Set([
+  ...BUILTIN_TRUSTED_ORIGINS,
+  ...additionalTrustedOrigins(
+    process.env.HAVKAR_ADDITIONAL_ORIGINS
+  )
 ]);
 
 const VERCEL_TRUSTED_IP_HEADER = "x-vercel-forwarded-for";
