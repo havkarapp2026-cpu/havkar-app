@@ -935,9 +935,17 @@ select:focus{
 .trade-title{  
     font-size:18px;  
     font-weight:800;  
-  
+
     margin-bottom:12px;  
 }  
+
+.trade-unavailable-note{  
+    margin:0 0 12px;  
+
+    color:#555;  
+    font-size:13px;  
+    line-height:1.5;  
+}
   
 .trade-side{  
     display:grid;  
@@ -3300,6 +3308,10 @@ function renderCryptoDetails(
                 Buy / Sell ${escapeHtml(symbol)}  
             </div>  
   
+            <p class="trade-unavailable-note">  
+                HAVKAR Trade is currently unavailable while the production trading service is being prepared.  
+            </p>  
+  
   
             <div class="trade-side">  
   
@@ -3389,9 +3401,9 @@ function renderCryptoDetails(
                 id="tradeExecuteButton"  
                 class="primary buy-button"  
                 type="button"  
-                onclick="executeCryptoTrade()">  
+                disabled>  
   
-                BUY ${escapeHtml(symbol)}  
+                Unavailable  
   
             </button>  
   
@@ -3607,6 +3619,9 @@ function setTradeSide(
   
     }  
   
+    execute.disabled = true;  
+    execute.textContent = "Unavailable";  
+  
     clearStatus(  
         "tradeStatus"  
     );  
@@ -3684,6 +3699,18 @@ function updateTradePreview(){
    ========================================================= */  
   
 async function executeCryptoTrade(){  
+  
+    const unavailableButton =  
+        document.getElementById(  
+            "tradeExecuteButton"  
+        );  
+  
+    if(unavailableButton){  
+        unavailableButton.disabled = true;  
+        unavailableButton.textContent = "Unavailable";  
+    }  
+  
+    return;  
   
     const button =  
         document.getElementById(  
