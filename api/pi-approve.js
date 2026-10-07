@@ -1,4 +1,10 @@
 export default async function handler(req, res) {
+    if (process.env.HAVKAR_PI_PAYMENTS_ENABLED !== "true") {
+        return res.status(404).json({
+            error: "Not found"
+        });
+    }
+
     if (req.method !== "POST") {
         return res.status(405).json({
             error: "Method not allowed"
