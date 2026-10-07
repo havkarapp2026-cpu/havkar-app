@@ -6017,21 +6017,39 @@ async function(event){
     let emailNotificationSent = false;
 
     try{
-        const notificationResponse = await fetch("/api/business-application-notify", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                application: result.data
-            })
-        });
+        const {
+            data: sessionData,
+            error: sessionError
+        } = await supabase.auth.getSession();
 
-        emailNotificationSent = notificationResponse.ok;
+        const accessToken =
+            sessionData &&
+            sessionData.session &&
+            sessionData.session.access_token
+            ? sessionData.session.access_token
+            : "";
 
-        if(!notificationResponse.ok){
-            const notificationError = await notificationResponse.text().catch(() => "");
-            console.error("Business application email notification error:", notificationError);
+        if(sessionError || !accessToken){
+            console.error("Business application email notification error: missing session");
+        }
+        else{
+            const notificationResponse = await fetch("/api/business-application-notify", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${accessToken}`
+                },
+                body: JSON.stringify({
+                    id: result.data.id
+                })
+            });
+
+            emailNotificationSent = notificationResponse.ok;
+
+            if(!notificationResponse.ok){
+                const notificationError = await notificationResponse.text().catch(() => "");
+                console.error("Business application email notification error:", notificationError);
+            }
         }
     }
     catch(notificationError){

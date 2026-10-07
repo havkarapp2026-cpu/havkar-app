@@ -1,95 +1,288 @@
-export default async function handler(req, res) {
-    if (req.method !== "POST") {
-        res.setHeader("Allow", ["POST"]);
-        return res.status(405).json({
-            ok: false,
-            error: "Method not allowed"
-        });
+import { createClient } from "@supabase/supabase-js";
+
+const FIELD_LIMITS = {
+    business_name: 160,
+    legal_name: 180,
+    business_type: 40,
+    vat_number: 80,
+    country: 100,
+    city: 120,
+    address: 240,
+    phone: 60,
+    email: 180,
+    website: 300,
+    description: 2000,
+    status: 40,
+    id: 20,
+    user_id: 36,
+    submitted_at: 40
+};
+
+function createDefaultSupabase() {
+    const url = process.env.SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!url || !serviceRoleKey) {
+        return null;
     }
 
-    const RESEND_API_KEY = process.env.RESEND_API_KEY;
+    return createClient(url, serviceRoleKey, {
+        auth: {
+            persistSession: false,
+            autoRefreshToken: false
+        }
+    });
+}
 
-    if (!RESEND_API_KEY) {
-        console.error("RESEND_API_KEY is not configured.");
+function bearerToken(req) {
+    const header = req.headers?.authorization
+        ?? req.headers?.Authorization
+        ?? "";
+    const value = Array.isArray(header)
+        ? String(header[0] || "")
+        : String(header || "");
 
-        return res.status(500).json({
-            ok: false,
-            error: "HAVKAR email service is not configured."
-        });
+    if (!value.startsWith("Bearer ")) {
+        return "";
     }
 
-    try {
-        const application = req.body?.application;
+    return value.slice("Bearer ".length).trim();
+}
 
-        if (!application || typeof application !== "object") {
-            return res.status(400).json({
+function applicationIdFromBody(body) {
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+        return null;
+    }
+
+    const value = body.id;
+    const numeric = typeof value === "number"
+        ? value
+        : typeof value === "string"
+            ? Number(value)
+            : NaN;
+
+    if (!Number.isSafeInteger(numeric) || numeric < 1) {
+        return null;
+    }
+
+    if (typeof value === "string" && String(numeric) !== value) {
+        return null;
+    }
+
+    return numeric;
+}
+
+function clip(value, max) {
+    if (value === null || value === undefined) {
+        return "";
+    }
+
+    const text = String(value);
+
+    return text.length > max ? text.slice(0, max) : text;
+}
+
+function clean(value, max) {
+    const text = clip(value, max);
+
+    if (!text) {
+        return "—";
+    }
+
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function trustedReplyTo(email) {
+    if (typeof email !== "string") {
+        return undefined;
+    }
+
+    const value = email.trim();
+
+    if (
+        !value ||
+        value.length > FIELD_LIMITS.email ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+    ) {
+        return undefined;
+    }
+
+    return value;
+}
+
+function subjectName(value) {
+    const text = clip(value, FIELD_LIMITS.business_name)
+        .replace(/[\r\n]+/g, " ")
+        .trim();
+
+    return text || "—";
+}
+
+export function createBusinessNotificationHandler({
+    fetchImpl = globalThis.fetch.bind(globalThis),
+    createSupabase = createDefaultSupabase
+} = {}) {
+    return async function handler(req, res) {
+        if (req.method !== "POST") {
+            res.setHeader("Allow", ["POST"]);
+
+            return res.status(405).json({
                 ok: false,
-                error: "Business application data is required."
+                error: "Method not allowed"
             });
         }
 
-        const clean = (value) => {
-            if (value === null || value === undefined || value === "") {
-                return "—";
-            }
+        const accessToken = bearerToken(req);
 
-            return String(value)
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-        };
+        if (!accessToken) {
+            return res.status(401).json({
+                ok: false,
+                error: "Authentication required"
+            });
+        }
 
-        const businessName =
-            clean(application.business_name);
+        const supabase = createSupabase();
 
-        const legalName =
-            clean(application.legal_name);
+        if (!supabase) {
+            console.error("Supabase server authentication is not configured.");
 
-        const businessType =
-            clean(application.business_type);
+            return res.status(500).json({
+                ok: false,
+                error: "HAVKAR authentication service is not configured."
+            });
+        }
 
-        const vatNumber =
-            clean(application.vat_number);
+        const {
+            data: userData,
+            error: userError
+        } = await supabase.auth.getUser(accessToken);
 
-        const country =
-            clean(application.country);
+        if (userError || !userData?.user?.id) {
+            return res.status(401).json({
+                ok: false,
+                error: "Invalid or expired session"
+            });
+        }
 
-        const city =
-            clean(application.city);
+        const applicationId = applicationIdFromBody(req.body);
 
-        const address =
-            clean(application.address);
+        if (!applicationId) {
+            return res.status(400).json({
+                ok: false,
+                error: "Business application id is required."
+            });
+        }
 
-        const phone =
-            clean(application.phone);
+        const userId = userData.user.id;
 
-        const email =
-            clean(application.email);
+        const {
+            data: application,
+            error: applicationError
+        } = await supabase
+            .from("business_applications")
+            .select("id,user_id,business_type,business_name,legal_name,vat_number,country,city,address,phone,email,website,description,status,submitted_at")
+            .eq("id", applicationId)
+            .eq("user_id", userId)
+            .maybeSingle();
 
-        const website =
-            clean(application.website);
+        if (applicationError) {
+            console.error(
+                "Business application lookup error:",
+                applicationError.message || "lookup failed"
+            );
 
-        const description =
-            clean(application.description);
+            return res.status(500).json({
+                ok: false,
+                error: "Business application could not be verified."
+            });
+        }
 
-        const status =
-            clean(application.status);
+        if (!application || String(application.user_id) !== String(userId)) {
+            return res.status(404).json({
+                ok: false,
+                error: "Business application not found."
+            });
+        }
 
-        const applicationId =
-            clean(application.id);
+        if (!process.env.RESEND_API_KEY) {
+            console.error("RESEND_API_KEY is not configured.");
 
-        const userId =
-            clean(application.user_id);
+            return res.status(500).json({
+                ok: false,
+                error: "HAVKAR email service is not configured."
+            });
+        }
 
-        const submittedAt =
-            clean(application.submitted_at);
+        const {
+            data: allowed,
+            error: rateError
+        } = await supabase.rpc("consume_business_notification_budget", {
+            p_user_id: userId,
+            p_application_id: applicationId
+        });
 
-        const subject =
-            `New HAVKAR Business Application — ${businessName}`;
+        if (rateError || typeof allowed !== "boolean") {
+            console.error(
+                "Business notification rate limit error:",
+                rateError?.message || "invalid rate limit result"
+            );
 
-        const html = `
+            return res.status(500).json({
+                ok: false,
+                error: "Notification could not be sent."
+            });
+        }
+
+        if (!allowed) {
+            return res.status(429).json({
+                ok: false,
+                error: "Too many notification attempts. Please try again later."
+            });
+        }
+
+        try {
+            const businessName = clean(
+                application.business_name,
+                FIELD_LIMITS.business_name
+            );
+            const legalName = clean(
+                application.legal_name,
+                FIELD_LIMITS.legal_name
+            );
+            const businessType = clean(
+                application.business_type,
+                FIELD_LIMITS.business_type
+            );
+            const vatNumber = clean(
+                application.vat_number,
+                FIELD_LIMITS.vat_number
+            );
+            const country = clean(application.country, FIELD_LIMITS.country);
+            const city = clean(application.city, FIELD_LIMITS.city);
+            const address = clean(application.address, FIELD_LIMITS.address);
+            const phone = clean(application.phone, FIELD_LIMITS.phone);
+            const email = clean(application.email, FIELD_LIMITS.email);
+            const website = clean(application.website, FIELD_LIMITS.website);
+            const description = clean(
+                application.description,
+                FIELD_LIMITS.description
+            );
+            const status = clean(application.status, FIELD_LIMITS.status);
+            const savedApplicationId = clean(application.id, FIELD_LIMITS.id);
+            const savedUserId = clean(application.user_id, FIELD_LIMITS.user_id);
+            const submittedAt = clean(
+                application.submitted_at,
+                FIELD_LIMITS.submitted_at
+            );
+            const subject = `New HAVKAR Business Application — ${subjectName(application.business_name)}`;
+            const replyTo = trustedReplyTo(application.email);
+
+            const html = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -257,7 +450,7 @@ export default async function handler(req, res) {
                     <strong>Application ID</strong>
                 </td>
                 <td style="border-bottom:1px solid #eee;">
-                    ${applicationId}
+                    ${savedApplicationId}
                 </td>
             </tr>
 
@@ -266,7 +459,7 @@ export default async function handler(req, res) {
                     <strong>User ID</strong>
                 </td>
                 <td style="border-bottom:1px solid #eee;">
-                    ${userId}
+                    ${savedUserId}
                 </td>
             </tr>
 
@@ -314,71 +507,59 @@ export default async function handler(req, res) {
 
 </body>
 </html>
-        `;
+            `;
 
-        const response = await fetch(
-            "https://api.resend.com/emails",
-            {
-                method: "POST",
+            const message = {
+                from: "HAVKAR <notifications@havkar.online>",
+                to: ["info@havkar.online"],
+                subject,
+                html
+            };
 
-                headers: {
-                    "Authorization":
-                        `Bearer ${RESEND_API_KEY}`,
-
-                    "Content-Type":
-                        "application/json"
-                },
-
-                body: JSON.stringify({
-                    from:
-                        "HAVKAR <notifications@havkar.online>",
-
-                    to: [
-                        "info@havkar.online"
-                    ],
-
-                    reply_to:
-                        application.email || undefined,
-
-                    subject,
-
-                    html
-                })
+            if (replyTo) {
+                message.reply_to = replyTo;
             }
-        );
 
-        const result =
-            await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-            console.error(
-                "Resend email error:",
-                result
+            const response = await fetchImpl(
+                "https://api.resend.com/emails",
+                {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(message)
+                }
             );
 
-            return res.status(response.status || 500).json({
-                ok: false,
-                error:
-                    result?.message ||
-                    "Email notification could not be sent."
+            const result = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                console.error("Resend email error:", result?.message || response.status);
+
+                return res.status(response.status || 500).json({
+                    ok: false,
+                    error: result?.message || "Email notification could not be sent."
+                });
+            }
+
+            return res.status(200).json({
+                ok: true,
+                emailId: result.id || null
             });
         }
+        catch (error) {
+            console.error(
+                "Business application notification error:",
+                error instanceof Error ? error.message : "send failed"
+            );
 
-        return res.status(200).json({
-            ok: true,
-            emailId: result.id || null
-        });
-    }
-    catch (error) {
-        console.error(
-            "Business application notification error:",
-            error
-        );
-
-        return res.status(500).json({
-            ok: false,
-            error:
-                "Internal email notification error."
-        });
-    }
+            return res.status(500).json({
+                ok: false,
+                error: "Internal email notification error."
+            });
+        }
+    };
 }
+
+export default createBusinessNotificationHandler();
