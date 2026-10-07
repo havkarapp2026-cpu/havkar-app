@@ -20,6 +20,8 @@
  */
 
 const crypto = require("crypto");
+const net = require("net");
+const { createClient } = require("@supabase/supabase-js");
 
 /* =========================================================
    CONFIG
@@ -126,28 +128,245 @@ function sendJSON(res, status, body) {
   return res.end(JSON.stringify(body));
 }
 
-function setCors(req, res) {
-  const origin = req.headers.origin || "*";
+const ALLOWED_ORIGINS = new Set([
+  "https://havkar-app.vercel.app",
+  "https://testnet.havkar.online"
+]);
 
-  res.setHeader(
-    "Access-Control-Allow-Origin",
-    origin
-  );
+const VERCEL_TRUSTED_IP_HEADER = "x-vercel-forwarded-for";
 
-  res.setHeader(
-    "Vary",
-    "Origin"
-  );
+function headerValue(req, name) {
+  const value = req.headers?.[name];
+  const selected = Array.isArray(value) ? value[0] : value;
 
+  return typeof selected === "string" ? selected.trim() : "";
+}
+
+function applyCors(req, res) {
+  const origin = headerValue(req, "origin");
+
+  res.setHeader("Vary", "Origin");
   res.setHeader(
     "Access-Control-Allow-Methods",
     "GET, POST, OPTIONS"
   );
-
   res.setHeader(
     "Access-Control-Allow-Headers",
     "Content-Type, Authorization"
   );
+
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+
+    return {
+      allowed: true,
+      origin
+    };
+  }
+
+  if (!origin) {
+    return {
+      allowed: true,
+      origin: ""
+    };
+  }
+
+  return {
+    allowed: false,
+    origin
+  };
+}
+
+/*
+ * Vercel documents x-vercel-forwarded-for as the client IP that
+ * remains when a proxy overwrites x-forwarded-for. The same page
+ * says x-real-ip is identical to x-forwarded-for, so this route
+ * does not read either of those headers.
+ * Off Vercel, x-vercel-forwarded-for can be sent by the client.
+ * Another host must name its own overwritten header in
+ * TRUSTED_CLIENT_IP_HEADER.
+ */
+function trustedIpHeaderName() {
+  if (process.env.VERCEL === "1") {
+    return VERCEL_TRUSTED_IP_HEADER;
+  }
+
+  const configured = String(
+    process.env.TRUSTED_CLIENT_IP_HEADER || ""
+  )
+    .trim()
+    .toLowerCase();
+
+  if (
+    !configured ||
+    configured === "x-forwarded-for" ||
+    configured === "x-real-ip" ||
+    configured === "x-vercel-forwarded-for" ||
+    !/^[a-z0-9-]{1,64}$/.test(configured)
+  ) {
+    return "";
+  }
+
+  return configured;
+}
+
+function normalizeClientIp(value) {
+  let token = String(value || "").trim();
+
+  if (!token || token.length > 128) {
+    return "";
+  }
+
+  if (token.startsWith("[") && token.includes("]")) {
+    token = token.slice(1, token.indexOf("]"));
+  } else if (/^\d{1,3}(?:\.\d{1,3}){3}:\d+$/.test(token)) {
+    token = token.slice(0, token.lastIndexOf(":"));
+  }
+
+  if (net.isIP(token) === 4) {
+    return token
+      .split(".")
+      .map((part) => String(Number(part)))
+      .join(".");
+  }
+
+  if (net.isIP(token) === 6) {
+    return token.toLowerCase();
+  }
+
+  return "";
+}
+
+function trustedClientIp(req) {
+  const headerName = trustedIpHeaderName();
+
+  if (!headerName) {
+    return "";
+  }
+
+  const raw = headerValue(req, headerName);
+
+  if (!raw || raw.length > 512) {
+    return "";
+  }
+
+  return normalizeClientIp(raw.split(",")[0]);
+}
+
+function getSupabaseAdmin() {
+  const url = process.env.SUPABASE_URL || "";
+  const serviceRoleKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+  if (!url || !serviceRoleKey) {
+    return null;
+  }
+
+  return createClient(url, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false
+    }
+  });
+}
+
+function sendRateLimited(res, retryAfter) {
+  const seconds =
+    Number.isInteger(retryAfter) && retryAfter > 0
+      ? retryAfter
+      : 60;
+
+  res.setHeader("Retry-After", String(seconds));
+
+  return sendJSON(res, 429, {
+    ok: false,
+    error:
+      "Too many translation requests. Please wait and try again."
+  });
+}
+
+function sendLimiterFailure(res) {
+  return sendJSON(res, 503, {
+    ok: false,
+    error: "Translation is temporarily unavailable."
+  });
+}
+
+async function consumeSharedBudget(kind, clientIp, characters) {
+  if (!clientIp) {
+    return {
+      ok: false,
+      status: 503
+    };
+  }
+
+  const supabase = getSupabaseAdmin();
+
+  if (!supabase) {
+    return {
+      ok: false,
+      status: 503
+    };
+  }
+
+  const { data, error } = await supabase.rpc(
+    "consume_translation_budget",
+    {
+      p_kind: kind,
+      p_client_ip: clientIp,
+      p_requests: 1,
+      p_characters: characters
+    }
+  );
+
+  if (error) {
+    console.error(
+      "[HAVKAR Translation] shared rate limit failed"
+    );
+
+    return {
+      ok: false,
+      status: 503
+    };
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+
+  if (!row || typeof row.allowed !== "boolean") {
+    console.error(
+      "[HAVKAR Translation] shared rate limit failed"
+    );
+
+    return {
+      ok: false,
+      status: 503
+    };
+  }
+
+  if (!row.allowed) {
+    const retryAfter = Number(row.retry_after);
+
+    return {
+      ok: false,
+      status: 429,
+      retryAfter:
+        Number.isInteger(retryAfter) && retryAfter > 0
+          ? retryAfter
+          : 60
+    };
+  }
+
+  return {
+    ok: true
+  };
+}
+
+function sendBudgetResult(res, budget) {
+  if (budget.status === 429) {
+    return sendRateLimited(res, budget.retryAfter);
+  }
+
+  return sendLimiterFailure(res);
 }
 
 function cleanLanguageCode(value) {
@@ -563,7 +782,14 @@ function healthResponse() {
 ========================================================= */
 
 module.exports = async function handler(req, res) {
-  setCors(req, res);
+  const cors = applyCors(req, res);
+
+  if (!cors.allowed) {
+    return sendJSON(res, 403, {
+      ok: false,
+      error: "Origin is not allowed."
+    });
+  }
 
   /* -------------------------------------------------------
      OPTIONS
@@ -595,6 +821,16 @@ module.exports = async function handler(req, res) {
             error:
               "Google Translation credentials are not configured."
           });
+        }
+
+        const languageBudget = await consumeSharedBudget(
+          "languages",
+          trustedClientIp(req),
+          0
+        );
+
+        if (!languageBudget.ok) {
+          return sendBudgetResult(res, languageBudget);
         }
 
         const displayLanguage =
@@ -752,6 +988,16 @@ module.exports = async function handler(req, res) {
         error:
           "Translation request is too large."
       });
+    }
+
+    const postBudget = await consumeSharedBudget(
+      "post",
+      trustedClientIp(req),
+      totalCharacters
+    );
+
+    if (!postBudget.ok) {
+      return sendBudgetResult(res, postBudget);
     }
 
     /* -----------------------------------------------------
