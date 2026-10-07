@@ -61,6 +61,17 @@ const translationCache = new Map();
 const CACHE_TTL = 1000 * 60 * 60; // 1 hour
 const MAX_CACHE_ITEMS = 1000;
 
+const ALLOWED_ORIGINS = new Set([
+  "https://havkar-app.vercel.app",
+  "https://testnet.havkar.online"
+]);
+
+const RATE_WINDOW_MS = 60 * 1000;
+const POST_REQUEST_LIMIT = 60;
+const POST_CHARACTER_LIMIT = 60000;
+const LANGUAGES_REQUEST_LIMIT = 20;
+const rateBuckets = new Map();
+
 let cachedAccessToken = null;
 let cachedAccessTokenExpiresAt = 0;
 
@@ -126,28 +137,154 @@ function sendJSON(res, status, body) {
   return res.end(JSON.stringify(body));
 }
 
-function setCors(req, res) {
-  const origin = req.headers.origin || "*";
+function headerValue(req, name) {
+  const value = req.headers?.[name];
+  const selected = Array.isArray(value) ? value[0] : value;
 
-  res.setHeader(
-    "Access-Control-Allow-Origin",
-    origin
-  );
+  return typeof selected === "string" ? selected.trim() : "";
+}
 
-  res.setHeader(
-    "Vary",
-    "Origin"
-  );
+function isIpAddress(value) {
+  if (!value || value.length > 64) {
+    return false;
+  }
 
+  const ipv4 = /^(?:\d{1,3}\.){3}\d{1,3}$/;
+
+  if (ipv4.test(value)) {
+    return value.split(".").every((part) => Number(part) <= 255);
+  }
+
+  return value.includes(":") && /^[0-9a-fA-F:]+$/.test(value);
+}
+
+function clientIp(req) {
+  const realIp = headerValue(req, "x-real-ip");
+
+  if (isIpAddress(realIp)) {
+    return realIp;
+  }
+
+  const forwarded = headerValue(req, "x-forwarded-for")
+    .split(",")[0]
+    .trim();
+
+  if (isIpAddress(forwarded)) {
+    return forwarded;
+  }
+
+  const socketIp = String(req.socket?.remoteAddress || "").trim();
+
+  if (isIpAddress(socketIp)) {
+    return socketIp;
+  }
+
+  return "unknown";
+}
+
+function requestOrigin(req) {
+  return headerValue(req, "origin");
+}
+
+function applyCors(req, res) {
+  const origin = requestOrigin(req);
+
+  res.setHeader("Vary", "Origin");
   res.setHeader(
     "Access-Control-Allow-Methods",
     "GET, POST, OPTIONS"
   );
-
   res.setHeader(
     "Access-Control-Allow-Headers",
     "Content-Type, Authorization"
   );
+
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+
+    return {
+      allowed: true,
+      origin
+    };
+  }
+
+  if (!origin) {
+    return {
+      allowed: true,
+      origin: ""
+    };
+  }
+
+  return {
+    allowed: false,
+    origin
+  };
+}
+
+function pruneRateBuckets(now) {
+  if (rateBuckets.size < 2000) {
+    return;
+  }
+
+  for (const [key, bucket] of rateBuckets) {
+    if (now - bucket.startedAt >= RATE_WINDOW_MS) {
+      rateBuckets.delete(key);
+    }
+  }
+}
+
+function retryAfterSeconds(bucket, now) {
+  const remaining = RATE_WINDOW_MS - (now - bucket.startedAt);
+
+  return Math.max(1, Math.ceil(remaining / 1000));
+}
+
+function consumeRateLimit(key, amount, limits) {
+  const now = Date.now();
+
+  pruneRateBuckets(now);
+
+  let bucket = rateBuckets.get(key);
+
+  if (!bucket || now - bucket.startedAt >= RATE_WINDOW_MS) {
+    bucket = {
+      startedAt: now,
+      requests: 0,
+      characters: 0
+    };
+
+    rateBuckets.set(key, bucket);
+  }
+
+  const nextRequests = bucket.requests + 1;
+  const nextCharacters = bucket.characters + amount.characters;
+
+  if (
+    nextRequests > limits.requests ||
+    nextCharacters > limits.characters
+  ) {
+    return {
+      ok: false,
+      retryAfter: retryAfterSeconds(bucket, now)
+    };
+  }
+
+  bucket.requests = nextRequests;
+  bucket.characters = nextCharacters;
+
+  return {
+    ok: true,
+    retryAfter: 0
+  };
+}
+
+function sendRateLimited(res, retryAfter) {
+  res.setHeader("Retry-After", String(retryAfter));
+
+  return sendJSON(res, 429, {
+    ok: false,
+    error: "Too many translation requests. Please wait and try again."
+  });
 }
 
 function cleanLanguageCode(value) {
@@ -563,7 +700,14 @@ function healthResponse() {
 ========================================================= */
 
 module.exports = async function handler(req, res) {
-  setCors(req, res);
+  const cors = applyCors(req, res);
+
+  if (!cors.allowed) {
+    return sendJSON(res, 403, {
+      ok: false,
+      error: "Origin is not allowed."
+    });
+  }
 
   /* -------------------------------------------------------
      OPTIONS
@@ -595,6 +739,19 @@ module.exports = async function handler(req, res) {
             error:
               "Google Translation credentials are not configured."
           });
+        }
+
+        const languagesLimit = consumeRateLimit(
+          `languages:${clientIp(req)}`,
+          { characters: 0 },
+          {
+            requests: LANGUAGES_REQUEST_LIMIT,
+            characters: Number.MAX_SAFE_INTEGER
+          }
+        );
+
+        if (!languagesLimit.ok) {
+          return sendRateLimited(res, languagesLimit.retryAfter);
         }
 
         const displayLanguage =
@@ -752,6 +909,19 @@ module.exports = async function handler(req, res) {
         error:
           "Translation request is too large."
       });
+    }
+
+    const postLimit = consumeRateLimit(
+      `post:${clientIp(req)}`,
+      { characters: totalCharacters },
+      {
+        requests: POST_REQUEST_LIMIT,
+        characters: POST_CHARACTER_LIMIT
+      }
+    );
+
+    if (!postLimit.ok) {
+      return sendRateLimited(res, postLimit.retryAfter);
     }
 
     /* -----------------------------------------------------
