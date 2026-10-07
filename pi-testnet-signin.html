@@ -7,7 +7,9 @@
 <meta name="theme-color" content="#2e7d32">
 <title>HAVKAR - Pi Testnet A2U</title>
 
+<!-- Pi Testnet SDK is kept for a later controlled test and is not loaded publicly.
 <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+-->
 
 <style>
 * {
@@ -94,7 +96,9 @@ button:disabled {
 
 <body>
 
-<div class="box">
+<p id="piTestUnavailable">Not found</p>
+
+<div class="box" hidden>
 
   <h1>HAVKAR</h1>
 
@@ -119,6 +123,8 @@ button:disabled {
 
 <script>
 "use strict";
+
+const HAVKAR_PI_TEST_PAGE_ENABLED = false;
 
 const loginButton = document.getElementById("login");
 const sendButton = document.getElementById("send");
@@ -211,7 +217,7 @@ function initializePi() {
 }
 
 loginButton.addEventListener("click", async () => {
-  if (authenticating || sending) {
+  if (!HAVKAR_PI_TEST_PAGE_ENABLED || authenticating || sending) {
     return;
   }
 
@@ -271,7 +277,7 @@ loginButton.addEventListener("click", async () => {
 });
 
 sendButton.addEventListener("click", async () => {
-  if (sending || authenticating) {
+  if (!HAVKAR_PI_TEST_PAGE_ENABLED || sending || authenticating) {
     return;
   }
 
@@ -362,6 +368,12 @@ sendButton.addEventListener("click", async () => {
 });
 
 window.addEventListener("load", () => {
+  if (!HAVKAR_PI_TEST_PAGE_ENABLED) {
+    return;
+  }
+
+  document.getElementById("piTestUnavailable").hidden = true;
+  document.querySelector(".box").hidden = false;
   initializePi();
 });
 </script>

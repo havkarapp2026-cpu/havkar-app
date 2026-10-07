@@ -7,7 +7,9 @@
 
     <title>HAVKAR - Pi Testnet A2U</title>
 
+    <!-- Pi Testnet SDK is kept for a later controlled test and is not loaded publicly.
     <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    -->
 
     <style>
         *{
@@ -157,7 +159,9 @@
 
 <body>
 
-<div class="card">
+<p id="piTestUnavailable">Not found</p>
+
+<div class="card" hidden>
 
     <div class="logo">π</div>
 
@@ -209,6 +213,8 @@
 </div>
 
 <script>
+    const HAVKAR_PI_TEST_PAGE_ENABLED = false;
+
     let piAuthResult = null;
 
     const connectButton =
@@ -468,38 +474,43 @@
     }
 
 
-    try{
+    if (HAVKAR_PI_TEST_PAGE_ENABLED) {
+        document.getElementById("piTestUnavailable").hidden = true;
+        document.querySelector(".card").hidden = false;
 
-        window.Pi.init({
-            version:"2.0",
-            sandbox:true
-        });
+        try{
 
-    }
-    catch(error){
+            window.Pi.init({
+                version:"2.0",
+                sandbox:true
+            });
 
-        console.error(
-            "Pi SDK initialization error:",
-            error
+        }
+        catch(error){
+
+            console.error(
+                "Pi SDK initialization error:",
+                error
+            );
+
+            setStatus(
+                "Pi Testnet initialization failed.",
+                "error"
+            );
+
+        }
+
+
+        connectButton.addEventListener(
+            "click",
+            connectPi
         );
 
-        setStatus(
-            "Pi Testnet initialization failed.",
-            "error"
+        sendButton.addEventListener(
+            "click",
+            sendTestPi
         );
-
     }
-
-
-    connectButton.addEventListener(
-        "click",
-        connectPi
-    );
-
-    sendButton.addEventListener(
-        "click",
-        sendTestPi
-    );
 </script>
 
 </body>
