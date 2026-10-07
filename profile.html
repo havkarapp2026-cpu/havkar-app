@@ -863,6 +863,11 @@ button{
     cursor:pointer;
 }
 
+.setting-row.settings-deferred,
+.settings-deferred{
+    display:none !important;
+}
+
 .setting-row:last-child{
     border-bottom:0;
 }
@@ -2321,9 +2326,9 @@ input:focus-visible{
     <div class="settings-card">
 
 
-        <!-- NOTIFICATIONS -->
+        <!-- NOTIFICATIONS: hidden until a real notification preference exists. -->
 
-        <div class="setting-row">
+        <div class="setting-row settings-deferred" hidden>
 
             <div class="setting-icon">
 
@@ -2359,9 +2364,9 @@ input:focus-visible{
         </div>
 
 
-        <!-- SHOW ONLINE STATUS -->
+        <!-- SHOW ONLINE STATUS: hidden until presence is actually enforced. -->
 
-        <div class="setting-row">
+        <div class="setting-row settings-deferred" hidden>
 
             <div class="setting-icon">
 
@@ -2397,9 +2402,9 @@ input:focus-visible{
         </div>
 
 
-        <!-- LAST SEEN -->
+        <!-- LAST SEEN: hidden until last-seen is actually enforced. -->
 
-        <div class="setting-row">
+        <div class="setting-row settings-deferred" hidden>
 
             <div class="setting-icon">
 
@@ -2453,7 +2458,7 @@ input:focus-visible{
                 </div>
 
                 <div class="setting-description">
-                    Use a darker interface.
+                    Use a darker interface on this device where the page supports it.
                 </div>
 
             </div>
@@ -2538,7 +2543,7 @@ input:focus-visible{
                     id="locationStatus"
                     class="setting-description">
 
-                    Location permission is not enabled.
+                    Browser permission only. HAVKAR does not save your location.
 
                 </div>
 
@@ -2554,11 +2559,12 @@ input:focus-visible{
         </button>
 
 
-        <!-- APP LOCK -->
+        <!-- APP LOCK: hidden until a real device lock is enforced. -->
 
         <button
-            class="setting-row"
+            class="setting-row settings-deferred"
             type="button"
+            hidden
             onclick="configureAppLock()">
 
             <div class="setting-icon">
@@ -2624,7 +2630,7 @@ input:focus-visible{
                 </div>
 
                 <div class="setting-description">
-                    Manage messaging, privacy and conversation preferences.
+                    Open your HAVKAR conversations.
                 </div>
 
             </div>
@@ -2639,11 +2645,12 @@ input:focus-visible{
         </button>
 
 
-        <!-- BLOCKED USERS -->
+        <!-- BLOCKED USERS: hidden until account-level blocking exists. -->
 
         <button
-            class="setting-row"
+            class="setting-row settings-deferred"
             type="button"
+            hidden
             onclick="openBlockedUsers()">
 
             <div class="setting-icon">
@@ -2696,7 +2703,7 @@ input:focus-visible{
                 </div>
 
                 <div class="setting-description">
-                    Manage account privacy and security.
+                    See how sign-in, password reset, and location permission work.
                 </div>
 
             </div>
@@ -2747,11 +2754,12 @@ input:focus-visible{
         </button>
 
 
-        <!-- VERIFICATION -->
+        <!-- VERIFICATION: hidden until verification submission exists. -->
 
         <button
-            class="setting-row"
+            class="setting-row settings-deferred"
             type="button"
+            hidden
             onclick="openVerification()">
 
             <div class="setting-icon">
@@ -2819,11 +2827,12 @@ input:focus-visible{
         </button>
 
 
-        <!-- SUBSCRIPTION -->
+        <!-- SUBSCRIPTION: hidden until a real subscription exists. -->
 
         <button
-            class="setting-row"
+            class="setting-row settings-deferred"
             type="button"
+            hidden
             onclick="openSubscription()">
 
             <div class="setting-icon">
@@ -2891,6 +2900,42 @@ input:focus-visible{
         </button>
 
 
+        <!-- CHANGE PASSWORD -->
+
+        <button
+            class="setting-row"
+            type="button"
+            onclick="changePassword()">
+
+            <div class="setting-icon">
+
+                <i class="fas fa-key"></i>
+
+            </div>
+
+
+            <div class="setting-content">
+
+                <div class="setting-title">
+                    Change password
+                </div>
+
+                <div class="setting-description">
+                    Email a reset link. You choose the new password on the login page.
+                </div>
+
+            </div>
+
+
+            <div class="setting-arrow">
+
+                <i class="fas fa-chevron-right"></i>
+
+            </div>
+
+        </button>
+
+
         <!-- ACCOUNT SETTINGS -->
 
         <button
@@ -2912,7 +2957,7 @@ input:focus-visible{
                 </div>
 
                 <div class="setting-description">
-                    View account details and sign out.
+                    View account details, change your password, and sign out.
                 </div>
 
             </div>
@@ -4249,25 +4294,14 @@ async function(){
                         </div>
 
 
-                        <button
-                            class="avatar-edit"
-                            type="button"
-                            onclick="openAvatarPicker()"
-                            aria-label="Change profile photo">
-
-                            <i class="fas fa-camera"></i>
-
-                        </button>
-
-
                     </div>
 
 
-                    <input
-                        type="file"
-                        id="avatarInput"
-                        accept="image/jpeg,image/png,image/webp"
-                        onchange="handleAvatarSelected(event)">
+                    <!--
+                        Change Photo controls stay unimplemented here.
+                        Avatar upload code remains below and can be
+                        shown again after a secure avatars bucket exists.
+                    -->
 
 
                     <div class="profile-name">
@@ -4313,46 +4347,6 @@ async function(){
 
 
                     ${verificationBadge}
-
-
-                    <div class="photo-actions">
-
-
-                        <button
-                            class="photo-btn primary"
-                            id="changePhotoBtn"
-                            type="button"
-                            onclick="openAvatarPicker()">
-
-                            <i class="fas fa-camera"></i>
-
-                            Change Photo
-
-                        </button>
-
-
-                        ${
-                            avatarUrl
-                            ?
-                            `
-                            <button
-                                class="photo-btn danger"
-                                id="removePhotoBtn"
-                                type="button"
-                                onclick="removeAvatar()">
-
-                                <i class="fas fa-trash"></i>
-
-                                Remove Photo
-
-                            </button>
-                            `
-                            :
-                            ""
-                        }
-
-
-                    </div>
 
 
                 </div>
@@ -5119,13 +5113,13 @@ function(){
         if(status){
 
             status.textContent =
-                "Location is not supported by this browser.";
+                "This browser cannot share location. HAVKAR does not save location.";
 
         }
 
 
         showMessage(
-            "Location is not supported by this browser.",
+            "This browser cannot share location. HAVKAR does not save it.",
             "error"
         );
 
@@ -5137,7 +5131,7 @@ function(){
     if(status){
 
         status.textContent =
-            "Requesting location permission...";
+            "Asking this browser for location. HAVKAR will not save it.";
 
     }
 
@@ -5149,13 +5143,13 @@ function(){
             if(status){
 
                 status.textContent =
-                    "Location permission is enabled.";
+                    "This browser allowed location for this request. HAVKAR did not save it.";
 
             }
 
 
             showMessage(
-                "Location permission enabled.",
+                "Location permission was granted for this request only. HAVKAR did not save your location.",
                 "success"
             );
 
@@ -5166,13 +5160,13 @@ function(){
             if(status){
 
                 status.textContent =
-                    "Location permission is not enabled.";
+                    "This browser did not grant location. HAVKAR does not save location.";
 
             }
 
 
             showMessage(
-                "Location permission was not enabled.",
+                "Location permission was not granted. HAVKAR does not save your location.",
                 "error"
             );
 
@@ -5445,32 +5439,7 @@ function(){
         "fas fa-comments",
 
         `
-        HAVKAR chat is designed around private conversations.
-
-        <br><br>
-
-        <strong>Online status:</strong>
-        receiving a message does not make a user online.
-        Online status should represent active HAVKAR usage.
-
-        <br><br>
-
-        <strong>Message privacy:</strong>
-        only participants of a conversation should be able
-        to access that conversation.
-
-        <br><br>
-
-        <strong>Message status:</strong>
-        one check means sent,
-        two grey checks mean delivered,
-        and two green checks mean read.
-
-        <br><br>
-
-        Chat can later include message requests,
-        reactions, media, blocking, reporting and
-        transaction/service conversation closure.
+        Open your HAVKAR conversations.
         `,
 
         [
@@ -5592,10 +5561,6 @@ function(){
         "Not available";
 
 
-    const settings =
-        getSettings();
-
-
     info.innerHTML = `
 
         <i class="fas fa-shield-halved"></i>
@@ -5606,7 +5571,8 @@ function(){
 
         <br><br>
 
-        Your authentication is handled by Supabase.
+        Sign-in is handled by Supabase Auth.
+        HAVKAR does not show or store your password on this page.
 
         <br><br>
 
@@ -5615,30 +5581,17 @@ function(){
 
         <br><br>
 
-        Online status:
-        ${
-            settings.onlineStatus
-            ?
-            "Visible according to your privacy settings."
-            :
-            "Hidden."
-        }
+        Change password sends a reset link to this email.
+        You choose the new password from that link on the login page.
 
         <br><br>
 
-        Last seen:
-        ${
-            settings.lastSeen
-            ?
-            "Visible according to your privacy settings."
-            :
-            "Hidden."
-        }
+        Location permission is only for the current browser request.
+        HAVKAR does not save your location.
 
         <br><br>
 
-        Your local HAVKAR preferences are stored
-        in this browser on this device.
+        Language and dark mode are stored in this browser on this device.
 
     `;
 
@@ -6190,15 +6143,128 @@ function(){
 
         Version:
         HAVKAR Web App
-
-        <br><br>
-
-        Safe • Secure • Trusted
         `,
 
         []
 
     );
+
+};
+
+
+/* =========================================================
+   CHANGE PASSWORD
+   Uses the existing Supabase recovery email.
+   The new password is chosen on login.html.
+========================================================= */
+
+let passwordResetBusy = false;
+
+window.changePassword =
+async function(){
+
+    if(
+        !currentUser ||
+        !currentUser.email
+    ){
+
+        showMessage(
+            "Please log in before changing your password.",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    if(passwordResetBusy){
+
+        return;
+
+    }
+
+
+    const proceed =
+        confirm(
+            "HAVKAR will email a password reset link to your account. Open that link to choose a new password on the login page."
+        );
+
+
+    if(!proceed){
+
+        return;
+
+    }
+
+
+    passwordResetBusy =
+        true;
+
+    clearMessage();
+
+
+    try{
+
+        const redirectTo =
+            new URL(
+                "login.html",
+                window.location.href
+            ).href;
+
+
+        const {
+            error
+        } =
+        await supabase.auth.resetPasswordForEmail(
+
+            currentUser.email,
+
+            {
+                redirectTo:
+                    redirectTo
+            }
+
+        );
+
+
+        if(error){
+
+            throw error;
+
+        }
+
+
+        showMessage(
+            "A password reset link has been sent to your account email. Open it to choose a new password.",
+            "success"
+        );
+
+    }
+    catch(error){
+
+        console.error(
+            "Password reset error:",
+            error
+        );
+
+
+        showMessage(
+            "Password reset could not be started: " +
+            (
+                error.message ||
+                "Unknown error"
+            ),
+            "error"
+        );
+
+    }
+    finally{
+
+        passwordResetBusy =
+            false;
+
+    }
 
 };
 
@@ -6257,6 +6323,19 @@ function(){
                 )
             )
         )}
+
+        <br><br>
+
+        <button
+            type="button"
+            class="panel-button"
+            onclick="changePassword()">
+
+            <i class="fas fa-key"></i>
+
+            Change password
+
+        </button>
 
         <br><br>
 
