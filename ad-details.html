@@ -606,6 +606,7 @@ button:focus-visible{
 }
 
 .edit-form input,
+.edit-form select,
 .edit-form textarea{
     width:100%;
     padding:12px 14px;
@@ -613,6 +614,7 @@ button:focus-visible{
     border-radius:12px;
     background:#fff;
     color:var(--text);
+    font-size:16px;
 }
 
 .edit-form textarea{
@@ -999,7 +1001,15 @@ button:focus-visible{
 
             <div class="meta-list">
 
-                <div class="meta-row">
+                <div class="meta-row" id="placeRow" hidden>
+
+                    <i class="fas fa-earth-americas"></i>
+
+                    <span id="place" class="notranslate"></span>
+
+                </div>
+
+                <div class="meta-row" id="locationRow">
 
                     <i class="fas fa-location-dot"></i>
 
@@ -1101,6 +1111,26 @@ button:focus-visible{
                     min="0"
                     step="0.01"
                     required
+                >
+
+                <label for="editCountry">
+                    Country
+                </label>
+
+                <select id="editCountry">
+                    <option value="">
+                        Country not specified
+                    </option>
+                </select>
+
+                <label for="editCity">
+                    City
+                </label>
+
+                <input
+                    id="editCity"
+                    type="text"
+                    maxlength="120"
                 >
 
                 <label for="editLocation">
@@ -1343,6 +1373,7 @@ button:focus-visible{
 </div>
 
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-countries.js"></script>
 <script>
 "use strict";
 
@@ -2415,21 +2446,68 @@ function setupAuthListener(){
    FETCH LISTING
    ========================================================= */
 
+function missingPlaceColumns(
+    error
+){
+
+    const message =
+        String(
+            error?.message ||
+            error?.details ||
+            ""
+        ).toLowerCase();
+
+    return message.includes(
+        "country_code"
+    ) || (
+        message.includes("column") &&
+        message.includes("city")
+    );
+
+}
+
+
 async function fetchListing(id){
 
     initializeSupabase();
 
-    const result =
+    const columns = [
+        "id,title,category,price,location,country_code,city,description,user_id,created_at,photos,status",
+        "id,title,category,price,location,description,user_id,created_at,photos,status"
+    ];
+
+    let result =
         await supabaseClient
             .from("ads")
             .select(
-                "id,title,category,price,location,description,user_id,created_at,photos,status"
+                columns[0]
             )
             .eq(
                 "id",
                 id
             )
             .maybeSingle();
+
+    if(
+        result.error &&
+        missingPlaceColumns(
+            result.error
+        )
+    ){
+
+        result =
+            await supabaseClient
+                .from("ads")
+                .select(
+                    columns[1]
+                )
+                .eq(
+                    "id",
+                    id
+                )
+                .maybeSingle();
+
+    }
 
     if(result.error){
 
@@ -2565,9 +2643,52 @@ function renderListing(){
             ad.price
         );
 
+    const place =
+        window.HAVKAR_COUNTRIES
+            ? window.HAVKAR_COUNTRIES.placeLabel(
+                ad
+            )
+            : "";
+
+    const locationText =
+        String(
+            ad.location ||
+            ""
+        ).trim();
+
     $("location").textContent =
-        ad.location ||
+        locationText ||
         "Location not specified";
+
+    const locationRow =
+        $("locationRow");
+
+    if(locationRow){
+
+        locationRow.hidden =
+            Boolean(
+                place &&
+                locationText === place
+            );
+
+    }
+
+    const placeRow =
+        $("placeRow");
+
+    if(placeRow){
+
+        placeRow.hidden =
+            !place;
+
+    }
+
+    if($("place")){
+
+        $("place").textContent =
+            place;
+
+    }
 
     $("date").textContent =
         formatDate(
@@ -3386,6 +3507,38 @@ function openEditForm(){
     $("editLocation").value =
         state.ad.location || "";
 
+    if(
+        window.HAVKAR_COUNTRIES &&
+        $("editCountry")
+    ){
+
+        window.HAVKAR_COUNTRIES.fillCountrySelect(
+            $("editCountry"),
+            "Country not specified"
+        );
+
+        const storedCountry =
+            String(
+                state.ad.country_code ||
+                ""
+            ).trim().toUpperCase();
+
+        $("editCountry").value =
+            window.HAVKAR_COUNTRIES.isCountryCode(
+                storedCountry
+            )
+                ? storedCountry
+                : "";
+
+    }
+
+    if($("editCity")){
+
+        $("editCity").value =
+            state.ad.city || "";
+
+    }
+
     $("editDescription").value =
         state.ad.description || "";
 
@@ -3411,6 +3564,16 @@ function readOwnerEdit(){
 
     const location =
         $("editLocation").value.trim();
+
+    const countryCode =
+        $("editCountry")
+            ? $("editCountry").value.trim().toUpperCase()
+            : "";
+
+    const city =
+        $("editCity")
+            ? $("editCity").value.trim()
+            : "";
 
     const description =
         $("editDescription").value.trim();
@@ -3461,6 +3624,22 @@ function readOwnerEdit(){
 
     }
 
+    if(
+        countryCode &&
+        (
+            !window.HAVKAR_COUNTRIES ||
+            !window.HAVKAR_COUNTRIES.isCountryCode(
+                countryCode
+            )
+        )
+    ){
+
+        throw new Error(
+            "Please select a valid country."
+        );
+
+    }
+
     if(!description){
 
         throw new Error(
@@ -3474,6 +3653,8 @@ function readOwnerEdit(){
         category,
         price,
         location,
+        country_code: countryCode || null,
+        city: city || null,
         description
     };
 
@@ -3520,7 +3701,7 @@ async function saveOwnerEdit(event){
 
         initializeSupabase();
 
-        const result =
+        let result =
             await supabaseClient
                 .from("ads")
                 .update(changes)
@@ -3533,9 +3714,57 @@ async function saveOwnerEdit(event){
                     state.currentUserId
                 )
                 .select(
-                    "id,title,category,price,location,description,user_id,created_at,photos,status"
+                    "id,title,category,price,location,country_code,city,description,user_id,created_at,photos,status"
                 )
                 .maybeSingle();
+
+        if(
+            result.error &&
+            missingPlaceColumns(
+                result.error
+            )
+        ){
+
+            if(
+                changes.country_code ||
+                changes.city
+            ){
+
+                throw new Error(
+                    "Country and city cannot be saved until the database update is applied."
+                );
+
+            }
+
+            const legacyChanges =
+                {
+                    title: changes.title,
+                    category: changes.category,
+                    price: changes.price,
+                    location: changes.location,
+                    description: changes.description
+                };
+
+            result =
+                await supabaseClient
+                    .from("ads")
+                    .update(
+                        legacyChanges
+                    )
+                    .eq(
+                        "id",
+                        state.ad.id
+                    )
+                    .eq(
+                        "user_id",
+                        state.currentUserId
+                    )
+                    .select(
+                        "id,title,category,price,location,description,user_id,created_at,photos,status"
+                    )
+                    .maybeSingle();
+
+        }
 
         if(result.error){
 

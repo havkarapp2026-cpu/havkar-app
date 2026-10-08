@@ -432,6 +432,36 @@ textarea {
       >
 
 
+      <!-- COUNTRY -->
+
+      <label for="country">
+        Country
+      </label>
+
+      <select
+        id="country"
+        required>
+        <option value="">
+          Select country
+        </option>
+      </select>
+
+
+      <!-- CITY -->
+
+      <label for="city">
+        City
+      </label>
+
+      <input
+        type="text"
+        id="city"
+        placeholder="City"
+        maxlength="120"
+        required
+      >
+
+
       <!-- LOCATION -->
 
       <label for="location">
@@ -508,6 +538,7 @@ textarea {
 
 
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-countries.js"></script>
 <script>
 
 /* =========================================================
@@ -537,6 +568,16 @@ const supabaseClient =
       }
     }
   );
+
+
+if (window.HAVKAR_COUNTRIES) {
+
+  window.HAVKAR_COUNTRIES.fillCountrySelect(
+    document.getElementById("country"),
+    "Select country"
+  );
+
+}
 
 
 /* =========================================================
@@ -1103,6 +1144,21 @@ function getFormData() {
       .trim();
 
 
+  const countryCode =
+    document
+      .getElementById("country")
+      .value
+      .trim()
+      .toUpperCase();
+
+
+  const city =
+    document
+      .getElementById("city")
+      .value
+      .trim();
+
+
   const location =
     document
       .getElementById("location")
@@ -1185,6 +1241,29 @@ function getFormData() {
   }
 
 
+  if (
+    !window.HAVKAR_COUNTRIES ||
+    !window.HAVKAR_COUNTRIES.isCountryCode(
+      countryCode
+    )
+  ) {
+
+    throw new Error(
+      "Please select a country."
+    );
+
+  }
+
+
+  if (!city) {
+
+    throw new Error(
+      "Please enter a city."
+    );
+
+  }
+
+
   if (!location) {
 
     throw new Error(
@@ -1208,7 +1287,9 @@ function getFormData() {
     category,
     price,
     location,
-    description
+    description,
+    countryCode,
+    city
   };
 
 }
@@ -1354,6 +1435,12 @@ adForm.addEventListener(
 
         location:
           formData.location,
+
+        country_code:
+          formData.countryCode,
+
+        city:
+          formData.city,
 
         description:
           formData.description,
