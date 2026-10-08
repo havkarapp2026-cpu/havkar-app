@@ -209,6 +209,15 @@ textarea {
   display: block;
   background: #ffebee;
   color: #c62828;
+  text-align: left;
+  word-break: break-word;
+}
+
+.status .orphan-files {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  text-align: left;
+  word-break: break-all;
 }
 
 /* MOBILE */
@@ -498,12 +507,12 @@ textarea {
       <input
         type="file"
         id="photos"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp"
         multiple
       >
 
       <div class="photo-info">
-        You can select up to 20 photos.
+        You can select up to 20 JPEG, PNG, or WebP photos. Large photos are resized before upload. Each uploaded image must be 5 MB or smaller.
       </div>
 
 
@@ -539,6 +548,7 @@ textarea {
 
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-countries.js"></script>
+<script src="/havkar-ad-images.js"></script>
 <script>
 
 /* =========================================================
@@ -657,14 +667,30 @@ categoryInput.addEventListener(
 
 function showStatus(
   message,
-  type
+  type,
+  failure
 ) {
 
-  statusBox.textContent =
-    message;
-
   statusBox.className =
-    "status " + type;
+    "status" +
+    (type ? " " + type : "");
+
+  if (
+    failure &&
+    window.HAVKAR_AD_IMAGES
+  ) {
+
+    window.HAVKAR_AD_IMAGES.renderFailure(
+      statusBox,
+      failure
+    );
+
+    return;
+
+  }
+
+  statusBox.textContent =
+    message || "";
 
 }
 
@@ -675,10 +701,12 @@ function showStatus(
 
 photoInput.addEventListener(
   "change",
-  function () {
+  async function () {
 
     const newFiles =
       Array.from(this.files || []);
+
+    this.value = "";
 
 
     if (
@@ -691,24 +719,53 @@ photoInput.addEventListener(
         "error"
       );
 
-      this.value = "";
+      return;
+
+    }
+
+
+    if (!window.HAVKAR_AD_IMAGES) {
+
+      showStatus(
+        "Image upload is unavailable.",
+        "error"
+      );
 
       return;
 
     }
 
 
+    let rejected =
+      false;
+
+
     for (
       const file of newFiles
     ) {
 
-      if (
-        file &&
-        file.type &&
-        file.type.startsWith("image/")
-      ) {
+      try {
+
+        await window.HAVKAR_AD_IMAGES.validateAdImage(
+          file,
+          {
+            enforceSize: false
+          }
+        );
 
         selectedFiles.push(file);
+
+      } catch (error) {
+
+        rejected =
+          true;
+
+        showStatus(
+          error && error.message
+            ? error.message
+            : "Please choose a JPEG, PNG, or WebP image.",
+          "error"
+        );
 
       }
 
@@ -717,7 +774,15 @@ photoInput.addEventListener(
 
     renderPhotos();
 
-    this.value = "";
+
+    if (!rejected) {
+
+      showStatus(
+        "",
+        ""
+      );
+
+    }
 
   }
 );
@@ -888,8 +953,8 @@ function readFile(file) {
    COMPRESS IMAGE
    =========================================================
    Important:
-   Large camera photos can make the Supabase request too large.
-   Images are resized before being stored in ads.photos.
+   Large camera photos are resized before upload.
+   The advertisement stores the public image address, not a data URL.
    ========================================================= */
 
 function compressImage(
@@ -1005,15 +1070,26 @@ function compressImage(
               );
 
 
-              const compressed =
-                canvas.toDataURL(
-                  "image/jpeg",
-                  quality
-                );
+              canvas.toBlob(
+                function (blob) {
 
+                  if (!blob) {
 
-              resolve(
-                compressed
+                    reject(
+                      new Error(
+                        "Could not prepare image."
+                      )
+                    );
+
+                    return;
+
+                  }
+
+                  resolve(blob);
+
+                },
+                "image/jpeg",
+                quality
               );
 
             };
@@ -1345,6 +1421,15 @@ adForm.addEventListener(
       }
 
 
+      if (!window.HAVKAR_AD_IMAGES) {
+
+        throw new Error(
+          "Image upload is unavailable."
+        );
+
+      }
+
+
       /* ---------------------------------------------
          GET FORM DATA
          --------------------------------------------- */
@@ -1365,13 +1450,13 @@ adForm.addEventListener(
       );
 
 
-      const photos = [];
+      const preparedPhotos = [];
 
 
       /*
-       * Images are compressed before being sent.
-       * This prevents large mobile camera images
-       * from producing an oversized HTTP request.
+       * Images are compressed before upload.
+       * This keeps large mobile camera photos
+       * within the 5 MB storage limit.
        */
 
       for (
@@ -1394,7 +1479,15 @@ adForm.addEventListener(
         );
 
 
-        const photoData =
+        await window.HAVKAR_AD_IMAGES.validateAdImage(
+          file,
+          {
+            enforceSize: false
+          }
+        );
+
+
+        const photoBlob =
           await compressImage(
             file,
             1600,
@@ -1402,20 +1495,32 @@ adForm.addEventListener(
           );
 
 
-        if (
-          typeof photoData === "string" &&
-          photoData.startsWith(
-            "data:image/"
-          )
-        ) {
+        await window.HAVKAR_AD_IMAGES.validateAdImage(
+          photoBlob
+        );
 
-          photos.push(
-            photoData
-          );
 
-        }
+        preparedPhotos.push(
+          photoBlob
+        );
 
       }
+
+
+      showStatus(
+        preparedPhotos.length
+          ? "Uploading your photos..."
+          : "Preparing your ad...",
+        "success"
+      );
+
+
+      const photos =
+        await window.HAVKAR_AD_IMAGES.uploadAdvertisementImages(
+          supabaseClient,
+          currentUser.id,
+          preparedPhotos
+        );
 
 
       /* ---------------------------------------------
@@ -1496,8 +1601,11 @@ adForm.addEventListener(
               function () {
 
                 reject(
-                  new Error(
-                    "The publish request timed out. Please check your internet connection and try again."
+                  window.HAVKAR_AD_IMAGES.incompleteSaveError(
+                    new Error(
+                      "The publish request timed out. Please check your internet connection and try again."
+                    ),
+                    photos
                   )
                 );
 
@@ -1509,19 +1617,44 @@ adForm.addEventListener(
         );
 
 
-      const result =
-        await Promise.race([
-          insertPromise,
-          timeoutPromise
-        ]);
+      let result;
+
+      try {
+
+        result =
+          await Promise.race([
+            insertPromise,
+            timeoutPromise
+          ]);
+
+      } catch (insertError) {
+
+        if (
+          insertError &&
+          insertError.orphans
+        ) {
+
+          throw insertError;
+
+        }
+
+        throw window.HAVKAR_AD_IMAGES.incompleteSaveError(
+          insertError,
+          photos
+        );
+
+      }
 
 
       if (
         !result
       ) {
 
-        throw new Error(
-          "Supabase returned no response."
+        throw window.HAVKAR_AD_IMAGES.incompleteSaveError(
+          new Error(
+            "Supabase returned no response."
+          ),
+          photos
         );
 
       }
@@ -1544,8 +1677,9 @@ adForm.addEventListener(
           "Supabase could not create the ad.";
 
 
-        throw new Error(
-          message
+        throw window.HAVKAR_AD_IMAGES.incompleteSaveError(
+          new Error(message),
+          photos
         );
 
       }
@@ -1634,11 +1768,38 @@ adForm.addEventListener(
       }
 
 
-      showStatus(
-        "Could not publish the ad: " +
-        message,
-        "error"
-      );
+      if (
+        error &&
+        (
+          (error.orphans && error.orphans.length) ||
+          (error.unconfirmed && error.unconfirmed.length)
+        )
+      ) {
+
+        const visible =
+          new Error(message);
+
+        visible.orphans =
+          error.orphans;
+
+        visible.unconfirmed =
+          error.unconfirmed;
+
+        showStatus(
+          message,
+          "error",
+          visible
+        );
+
+      } else {
+
+        showStatus(
+          "Could not publish the ad: " +
+          message,
+          "error"
+        );
+
+      }
 
 
       publishBtn.disabled =
@@ -1686,6 +1847,7 @@ supabaseClient.auth.onAuthStateChange(
 );
 
 </script>
+<script src="/havkar-i18n.js"></script>
 
 </body>
 

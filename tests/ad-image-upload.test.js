@@ -1,0 +1,210 @@
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const images = require("../havkar-ad-images.js");
+
+const OWNER =
+  "11111111-1111-4111-8111-111111111111";
+
+const OTHER =
+  "22222222-2222-4222-8222-222222222222";
+
+const PATH_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$/;
+
+function imageBlob(type, signature, size) {
+  const length = size || Math.max(signature.length, 32);
+  const bytes = new Uint8Array(length);
+  bytes.set(signature);
+  return new Blob([bytes], { type: type });
+}
+
+const JPEG = [0xff, 0xd8, 0xff, 0xe0];
+const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+const WEBP = [0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50];
+const GIF = [0x47, 0x49, 0x46, 0x38, 0x39, 0x61];
+
+function fakeClient(onUpload) {
+  const calls = [];
+  return {
+    calls: calls,
+    storage: {
+      from(bucket) {
+        calls.push({ op: "from", bucket: bucket });
+        return {
+          async upload(path, body, options) {
+            calls.push({
+              op: "upload",
+              path: path,
+              type: body && body.type,
+              options: options
+            });
+            if (onUpload) {
+              return onUpload(path, body, options, calls);
+            }
+            return { data: { path: path }, error: null };
+          },
+          getPublicUrl(path) {
+            calls.push({ op: "public", path: path });
+            return {
+              data: {
+                publicUrl:
+                  "https://project.supabase.co/storage/v1/object/public/ad-images/" +
+                  path
+              }
+            };
+          },
+          remove() {
+            throw new Error("delete must not be called");
+          }
+        };
+      }
+    }
+  };
+}
+
+async function rejects(fn) {
+  try {
+    await fn();
+  } catch (error) {
+    return error;
+  }
+  throw new Error("expected a rejection");
+}
+
+async function main() {
+  const source = fs.readFileSync(
+    require("node:path").join(__dirname, "../havkar-ad-images.js"),
+    "utf8"
+  );
+  assert.equal(source.includes("service_role"), false);
+  assert.equal(source.includes(".remove("), false);
+  assert.equal(source.includes("upsert: true"), false);
+  assert.equal(source.includes("data:image"), false);
+
+  const client = fakeClient();
+  const urls = await images.uploadAdvertisementImages(
+    client,
+    OWNER.toUpperCase(),
+    [
+      imageBlob("image/jpeg", JPEG),
+      imageBlob("image/png", PNG),
+      imageBlob("", WEBP)
+    ]
+  );
+
+  assert.equal(urls.length, 3);
+  assert.equal(client.calls.filter(call => call.op === "upload").length, 3);
+  const paths = client.calls
+    .filter(call => call.op === "upload")
+    .map(call => call.path);
+  assert.equal(new Set(paths).size, 3);
+  paths.forEach(path => {
+    assert.match(path, PATH_PATTERN);
+    assert.equal(path.startsWith(OWNER + "/"), true);
+  });
+  client.calls.filter(call => call.op === "upload").forEach(call => {
+    assert.equal(call.options.upsert, false);
+    assert.equal(
+      ["image/jpeg", "image/png", "image/webp"].includes(call.options.contentType),
+      true
+    );
+    assert.equal(call.options.cacheControl, "3600");
+  });
+  urls.forEach((url, index) => {
+    assert.equal(url.startsWith("https://"), true);
+    assert.equal(url.includes("/storage/v1/object/public/ad-images/" + paths[index]), true);
+    assert.equal(url.startsWith("data:"), false);
+  });
+
+  const anonClient = fakeClient();
+  const anonError = await rejects(() =>
+    images.uploadAdvertisementImages(anonClient, "", [imageBlob("image/jpeg", JPEG)])
+  );
+  assert.equal(anonError.code, "AUTH");
+  assert.equal(anonClient.calls.length, 0);
+
+  const gifClient = fakeClient();
+  const gifError = await rejects(() =>
+    images.uploadAdvertisementImages(gifClient, OWNER, [imageBlob("image/gif", GIF)])
+  );
+  assert.equal(gifError.code, "TYPE");
+  assert.equal(gifClient.calls.filter(call => call.op === "upload").length, 0);
+
+  const mismatch = await rejects(() =>
+    images.validateAdImage(imageBlob("image/jpeg", PNG))
+  );
+  assert.equal(mismatch.code, "TYPE");
+
+  const tooBig = await rejects(() =>
+    images.validateAdImage(imageBlob("image/jpeg", JPEG, images.MAX_BYTES + 1))
+  );
+  assert.equal(tooBig.code, "SIZE");
+
+  const exact = await images.validateAdImage(
+    imageBlob("image/jpeg", JPEG, images.MAX_BYTES)
+  );
+  assert.equal(exact.contentType, "image/jpeg");
+  assert.equal(exact.extension, "jpg");
+
+  let uploads = 0;
+  const partialClient = fakeClient(() => {
+    uploads += 1;
+    if (uploads === 2) {
+      return { data: null, error: { message: "denied" } };
+    }
+    return { data: { path: "ok" }, error: null };
+  });
+  const partial = await rejects(() =>
+    images.uploadAdvertisementImages(partialClient, OWNER, [
+      imageBlob("image/jpeg", JPEG),
+      imageBlob("image/png", PNG),
+      imageBlob("image/webp", WEBP)
+    ])
+  );
+  assert.equal(partial.orphans.length, 1);
+  assert.equal(partial.orphans[0].includes(paths[0].split("/")[0]), true);
+  assert.equal(partial.orphans[0].startsWith("https://"), true);
+  assert.equal(uploads, 2);
+  assert.equal(partial.message.includes("was not saved"), true);
+
+  const interruptedClient = fakeClient(() => {
+    throw new Error("socket closed");
+  });
+  const interrupted = await rejects(() =>
+    images.uploadAdvertisementImages(
+      interruptedClient,
+      OWNER,
+      [imageBlob("image/jpeg", JPEG)]
+    )
+  );
+  assert.equal(interrupted.orphans.length, 0);
+  assert.equal(interrupted.unconfirmed.length, 1);
+  assert.match(interrupted.unconfirmed[0], PATH_PATTERN);
+  assert.equal(interrupted.message.includes("was not saved"), true);
+
+  const saveError = images.incompleteSaveError(
+    new Error("permission denied"),
+    urls
+  );
+  assert.equal(saveError.orphans.length, 3);
+  assert.equal(saveError.message.includes("was not saved"), true);
+  assert.equal(saveError.message.includes("permission denied"), true);
+
+  const crossUser = images.normalizeUserId(OTHER);
+  assert.notEqual(crossUser, OWNER);
+  const crossClient = fakeClient();
+  const crossUrls = await images.uploadAdvertisementImages(
+    crossClient,
+    OTHER,
+    [imageBlob("image/webp", WEBP)]
+  );
+  assert.equal(crossUrls[0].includes("/" + OTHER + "/"), true);
+  assert.equal(crossUrls[0].includes("/" + OWNER + "/"), false);
+
+  console.log("AD_IMAGE_UPLOAD_TEST_OK");
+}
+
+main().catch(error => {
+  console.error(error);
+  process.exit(1);
+});

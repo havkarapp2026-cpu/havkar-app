@@ -932,6 +932,28 @@
                 translate(-50%, 0);
         }
 
+        .ad-image-message {
+            display: none;
+            margin-top: 10px;
+            color: #c62828;
+            font-size: 0.82rem;
+            font-weight: 600;
+            line-height: 1.45;
+            text-align: left;
+            word-break: break-word;
+        }
+
+        .ad-image-message.show {
+            display: block;
+        }
+
+        .ad-image-message .orphan-files {
+            margin: 8px 0 0;
+            padding-left: 18px;
+            word-break: break-all;
+            font-weight: 500;
+        }
+
         @media (min-width: 700px) {
 
             body {
@@ -1410,10 +1432,16 @@
                         <input
                             id="adImage"
                             type="file"
-                            accept="image/*"
+                            accept="image/jpeg,image/png,image/webp"
                             hidden
                             onchange="previewImage(event)"
                         >
+
+                        <div
+                            id="adImageMessage"
+                            class="ad-image-message"
+                            role="alert"
+                        ></div>
 
                     </div>
 
@@ -1454,6 +1482,7 @@
     ></div>
 
     <script src="/havkar-supabase-config.js"></script>
+    <script src="/havkar-ad-images.js"></script>
 <script>
 
         const SUPABASE_URL =
@@ -1482,6 +1511,9 @@
 
         let selectedImageData =
             "";
+
+        let selectedImageFile =
+            null;
 
         let currentUser =
             null;
@@ -3197,18 +3229,40 @@
                 /*
                  * IMAGE IS OPTIONAL.
                  *
-                 * With an image:
-                 * ["data:image/..."]
+                 * With an image, photos is a JSON array
+                 * containing one public HTTPS URL.
                  *
                  * Without an image:
                  * []
                  */
-                const photos =
-                    selectedImageData
-                        ? JSON.stringify(
+                clearAdImageMessage();
+
+                if (
+                    selectedImageFile &&
+                    !window.HAVKAR_AD_IMAGES
+                ) {
+
+                    throw new Error(
+                        "Image upload is unavailable."
+                    );
+
+                }
+
+                const uploadedUrls =
+                    selectedImageFile
+                        ? await window.HAVKAR_AD_IMAGES.uploadAdvertisementImages(
+                            supabaseClient,
+                            currentUserId,
                             [
-                                selectedImageData
+                                selectedImageFile
                             ]
+                        )
+                        : [];
+
+                const photos =
+                    uploadedUrls.length
+                        ? JSON.stringify(
+                            uploadedUrls
                         )
                         : "[]";
 
@@ -3240,19 +3294,39 @@
 
                 };
 
-                const {
-                    data,
-                    error
-                } =
-                    await supabaseClient
-                        .from(ADS_TABLE)
-                        .insert(
-                            newAd
-                        )
-                        .select(
-                            "id,created_at,title,category,price,location,description,user_id,photos,status"
-                        )
-                        .single();
+                let data =
+                    null;
+
+                let error =
+                    null;
+
+                try {
+
+                    const insertResult =
+                        await supabaseClient
+                            .from(ADS_TABLE)
+                            .insert(
+                                newAd
+                            )
+                            .select(
+                                "id,created_at,title,category,price,location,description,user_id,photos,status"
+                            )
+                            .single();
+
+                    data =
+                        insertResult.data;
+
+                    error =
+                        insertResult.error;
+
+                } catch (insertError) {
+
+                    throw window.HAVKAR_AD_IMAGES.incompleteSaveError(
+                        insertError,
+                        uploadedUrls
+                    );
+
+                }
 
                 if (error) {
 
@@ -3261,7 +3335,10 @@
                         error
                     );
 
-                    throw error;
+                    throw window.HAVKAR_AD_IMAGES.incompleteSaveError(
+                        error,
+                        uploadedUrls
+                    );
 
                 }
 
@@ -3350,6 +3427,23 @@
 
                     showToast(
                         "Your login session has expired. Please log in again."
+                    );
+
+                } else if (
+                    error &&
+                    (
+                        (error.orphans && error.orphans.length) ||
+                        (error.unconfirmed && error.unconfirmed.length)
+                    )
+                ) {
+
+                    showAdImageMessage(
+                        error
+                    );
+
+                    showToast(
+                        error.message,
+                        12000
                     );
 
                 } else {
@@ -3446,7 +3540,53 @@
 
         }
 
-        function previewImage(
+        function clearAdImageMessage() {
+
+            const box =
+                document.getElementById(
+                    "adImageMessage"
+                );
+
+            if (!box) {
+                return;
+            }
+
+            box.classList.remove(
+                "show"
+            );
+
+            box.replaceChildren();
+
+        }
+
+        function showAdImageMessage(
+            error
+        ) {
+
+            const box =
+                document.getElementById(
+                    "adImageMessage"
+                );
+
+            if (
+                !box ||
+                !window.HAVKAR_AD_IMAGES
+            ) {
+                return;
+            }
+
+            box.classList.add(
+                "show"
+            );
+
+            window.HAVKAR_AD_IMAGES.renderFailure(
+                box,
+                error
+            );
+
+        }
+
+        async function previewImage(
             event
         ) {
 
@@ -3458,14 +3598,12 @@
                 return;
             }
 
-            if (
-                !file.type.startsWith(
-                    "image/"
-                )
-            ) {
+            clearAdImageMessage();
+
+            if (!window.HAVKAR_AD_IMAGES) {
 
                 showToast(
-                    "Please select an image file."
+                    "Image upload is unavailable."
                 );
 
                 event.target.value =
@@ -3475,26 +3613,66 @@
 
             }
 
-            const MAX_SIZE =
-                4 *
-                1024 *
-                1024;
+            try {
 
-            if (
-                file.size >
-                MAX_SIZE
-            ) {
-
-                showToast(
-                    "Please choose an image smaller than 4 MB."
+                await window.HAVKAR_AD_IMAGES.validateAdImage(
+                    file
                 );
+
+            } catch (error) {
+
+                selectedImageFile =
+                    null;
+
+                selectedImageData =
+                    "";
 
                 event.target.value =
                     "";
 
+                const preview =
+                    document.getElementById(
+                        "imagePreview"
+                    );
+
+                const placeholder =
+                    document.getElementById(
+                        "uploadPlaceholder"
+                    );
+
+                if (preview) {
+
+                    preview.src =
+                        "";
+
+                    preview.classList.remove(
+                        "show"
+                    );
+
+                }
+
+                if (placeholder) {
+
+                    placeholder.classList.remove(
+                        "hidden"
+                    );
+
+                }
+
+                showAdImageMessage(
+                    error
+                );
+
+                showToast(
+                    error.message
+                );
+
                 return;
 
             }
+
+            selectedImageFile =
+                file;
 
             const reader =
                 new FileReader();
@@ -3541,6 +3719,9 @@
             reader.onerror =
                 function() {
 
+                    selectedImageFile =
+                        null;
+
                     showToast(
                         "Could not read the selected image."
                     );
@@ -3568,6 +3749,11 @@
 
             selectedImageData =
                 "";
+
+            selectedImageFile =
+                null;
+
+            clearAdImageMessage();
 
             const preview =
                 document.getElementById(
@@ -3731,7 +3917,8 @@
         }
 
         function showToast(
-            message
+            message,
+            duration
         ) {
 
             const toast =
@@ -3763,7 +3950,7 @@
                         );
 
                     },
-                    3000
+                    duration || 3000
                 );
 
         }
