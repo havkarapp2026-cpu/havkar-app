@@ -1515,6 +1515,37 @@
         let selectedImageFile =
             null;
 
+        let adSubmitInProgress =
+            false;
+
+        const adImageSelection =
+            window.HAVKAR_AD_IMAGES
+                ? window.HAVKAR_AD_IMAGES.createImageSelection()
+                : {
+                    begin: function () {
+                        return { token: 0 };
+                    },
+                    succeed: function () {
+                        return false;
+                    },
+                    fail: function () {
+                        return false;
+                    },
+                    clearIfCurrent: function () {
+                        return false;
+                    },
+                    reset: function () {},
+                    isPending: function () {
+                        return false;
+                    },
+                    canPublish: function () {
+                        return true;
+                    },
+                    selectedFile: function () {
+                        return null;
+                    }
+                };
+
         let currentUser =
             null;
 
@@ -3177,6 +3208,22 @@
 
             }
 
+            if (!adImageSelection.canPublish()) {
+
+                showToast(
+                    "Please wait until the selected image finishes checking."
+                );
+
+                return;
+
+            }
+
+            const imageToPublish =
+                adImageSelection.selectedFile();
+
+            adSubmitInProgress =
+                true;
+
             const publishButton =
                 document.getElementById(
                     "publishButton"
@@ -3238,7 +3285,7 @@
                 clearAdImageMessage();
 
                 if (
-                    selectedImageFile &&
+                    imageToPublish &&
                     !window.HAVKAR_AD_IMAGES
                 ) {
 
@@ -3249,18 +3296,18 @@
                 }
 
                 const uploadedUrls =
-                    selectedImageFile
+                    imageToPublish
                         ? await window.HAVKAR_AD_IMAGES.uploadAdvertisementImages(
                             supabaseClient,
                             currentUserId,
                             [
-                                selectedImageFile
+                                imageToPublish
                             ]
                         )
                         : [];
 
                 if (
-                    selectedImageFile &&
+                    imageToPublish &&
                     uploadedUrls.length !== 1
                 ) {
 
@@ -3472,10 +3519,13 @@
 
             } finally {
 
+                adSubmitInProgress =
+                    false;
+
                 if (publishButton) {
 
                     publishButton.disabled =
-                        false;
+                        adImageSelection.isPending();
 
                     publishButton.innerHTML = `
 
@@ -3600,6 +3650,63 @@
 
         }
 
+        function syncAdPublishButton() {
+
+            if (adSubmitInProgress) {
+
+                return;
+
+            }
+
+            const publishButton =
+                document.getElementById(
+                    "publishButton"
+                );
+
+            if (!publishButton) {
+
+                return;
+
+            }
+
+            publishButton.disabled =
+                adImageSelection.isPending();
+
+        }
+
+        function clearAdImagePreview() {
+
+            const preview =
+                document.getElementById(
+                    "imagePreview"
+                );
+
+            const placeholder =
+                document.getElementById(
+                    "uploadPlaceholder"
+                );
+
+            if (preview) {
+
+                preview.src =
+                    "";
+
+                preview.classList.remove(
+                    "show"
+                );
+
+            }
+
+            if (placeholder) {
+
+                placeholder.classList.remove(
+                    "hidden"
+                );
+
+            }
+
+        }
+
         async function previewImage(
             event
         ) {
@@ -3614,6 +3721,19 @@
 
             clearAdImageMessage();
 
+            if (adSubmitInProgress) {
+
+                event.target.value =
+                    "";
+
+                showToast(
+                    "Publishing is still in progress. Do not choose another image."
+                );
+
+                return;
+
+            }
+
             if (!window.HAVKAR_AD_IMAGES) {
 
                 showToast(
@@ -3627,6 +3747,21 @@
 
             }
 
+            const ticket =
+                adImageSelection.begin(
+                    file
+                );
+
+            selectedImageFile =
+                null;
+
+            selectedImageData =
+                "";
+
+            clearAdImagePreview();
+
+            syncAdPublishButton();
+
             try {
 
                 await window.HAVKAR_AD_IMAGES.validateAdImage(
@@ -3634,6 +3769,12 @@
                 );
 
             } catch (error) {
+
+                if (!adImageSelection.fail(ticket)) {
+
+                    return;
+
+                }
 
                 selectedImageFile =
                     null;
@@ -3644,34 +3785,9 @@
                 event.target.value =
                     "";
 
-                const preview =
-                    document.getElementById(
-                        "imagePreview"
-                    );
+                clearAdImagePreview();
 
-                const placeholder =
-                    document.getElementById(
-                        "uploadPlaceholder"
-                    );
-
-                if (preview) {
-
-                    preview.src =
-                        "";
-
-                    preview.classList.remove(
-                        "show"
-                    );
-
-                }
-
-                if (placeholder) {
-
-                    placeholder.classList.remove(
-                        "hidden"
-                    );
-
-                }
+                syncAdPublishButton();
 
                 showAdImageMessage(
                     error
@@ -3685,8 +3801,21 @@
 
             }
 
+            if (
+                !adImageSelection.succeed(
+                    ticket,
+                    file
+                )
+            ) {
+
+                return;
+
+            }
+
             selectedImageFile =
                 file;
+
+            syncAdPublishButton();
 
             const reader =
                 new FileReader();
@@ -3695,6 +3824,15 @@
                 function(
                     e
                 ) {
+
+                    if (
+                        adImageSelection.selectedFile() !==
+                        file
+                    ) {
+
+                        return;
+
+                    }
 
                     selectedImageData =
                         e.target.result;
@@ -3733,8 +3871,23 @@
             reader.onerror =
                 function() {
 
-                    selectedImageFile =
-                        null;
+                    if (
+                        adImageSelection.clearIfCurrent(
+                            file
+                        )
+                    ) {
+
+                        selectedImageFile =
+                            null;
+
+                        selectedImageData =
+                            "";
+
+                        clearAdImagePreview();
+
+                        syncAdPublishButton();
+
+                    }
 
                     showToast(
                         "Could not read the selected image."
@@ -3766,6 +3919,8 @@
 
             selectedImageFile =
                 null;
+
+            adImageSelection.reset();
 
             clearAdImageMessage();
 

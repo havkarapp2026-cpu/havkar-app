@@ -625,6 +625,46 @@ const statusBox =
 
 let selectedFiles = [];
 
+const postingGuard =
+  window.HAVKAR_AD_IMAGES
+    ? window.HAVKAR_AD_IMAGES.createPostingGuard()
+    : {
+        canSubmit: function () { return true; },
+        canEditImages: function () { return true; },
+        isValidating: function () { return false; },
+        phase: function () { return "idle"; },
+        blockedMessage: function () {
+          return "Image upload is unavailable.";
+        },
+        uncertainMessage: function () {
+          return "The server has not confirmed this advertisement yet. It may still be published. Do not submit it again.";
+        },
+        beginValidation: function () { return false; },
+        endValidation: function () {},
+        beginPublish: function () { return null; },
+        markUncertain: function () {
+          return {
+            changed: false,
+            claimNotSaved: false,
+            allowRetry: false,
+            message: ""
+          };
+        },
+        markSaved: function () { return false; },
+        markFailed: function () { return false; }
+      };
+
+
+function syncPublishAvailability() {
+
+  publishBtn.disabled =
+    !postingGuard.canSubmit();
+
+  photoInput.disabled =
+    !postingGuard.canEditImages();
+
+}
+
 
 /* =========================================================
    CATEGORY
@@ -709,6 +749,18 @@ photoInput.addEventListener(
     this.value = "";
 
 
+    if (!postingGuard.canEditImages()) {
+
+      showStatus(
+        postingGuard.blockedMessage(),
+        "error"
+      );
+
+      return;
+
+    }
+
+
     if (
       selectedFiles.length +
       newFiles.length > 20
@@ -736,43 +788,73 @@ photoInput.addEventListener(
     }
 
 
-    let rejected =
-      false;
+    if (!postingGuard.beginValidation()) {
 
+      showStatus(
+        postingGuard.blockedMessage(),
+        "error"
+      );
 
-    for (
-      const file of newFiles
-    ) {
-
-      try {
-
-        await window.HAVKAR_AD_IMAGES.validateAdImage(
-          file,
-          {
-            enforceSize: false
-          }
-        );
-
-        selectedFiles.push(file);
-
-      } catch (error) {
-
-        rejected =
-          true;
-
-        showStatus(
-          error && error.message
-            ? error.message
-            : "Please choose a JPEG, PNG, or WebP image.",
-          "error"
-        );
-
-      }
+      return;
 
     }
 
 
-    renderPhotos();
+    syncPublishAvailability();
+
+
+    let rejected =
+      false;
+
+
+    try {
+
+      for (
+        const file of newFiles
+      ) {
+
+        try {
+
+          await window.HAVKAR_AD_IMAGES.validateAdImage(
+            file,
+            {
+              enforceSize: false
+            }
+          );
+
+          if (!postingGuard.canEditImages()) {
+
+            break;
+
+          }
+
+          selectedFiles.push(file);
+
+        } catch (error) {
+
+          rejected =
+            true;
+
+          showStatus(
+            error && error.message
+              ? error.message
+              : "Please choose a JPEG, PNG, or WebP image.",
+            "error"
+          );
+
+        }
+
+      }
+
+    } finally {
+
+      postingGuard.endValidation();
+
+      renderPhotos();
+
+      syncPublishAvailability();
+
+    }
 
 
     if (!rejected) {
@@ -843,8 +925,18 @@ function renderPhotos() {
       );
 
 
+      removeBtn.disabled =
+        !postingGuard.canEditImages();
+
+
       removeBtn.onclick =
         function () {
+
+          if (!postingGuard.canEditImages()) {
+
+            return;
+
+          }
 
           selectedFiles.splice(
             index,
@@ -1382,17 +1474,45 @@ adForm.addEventListener(
     event.preventDefault();
 
 
-    if (
-      publishBtn.disabled
-    ) {
+    if (!postingGuard.canSubmit()) {
+
+      publishBtn.disabled =
+        true;
+
+      showStatus(
+        postingGuard.blockedMessage(),
+        "error"
+      );
 
       return;
 
     }
 
 
-    publishBtn.disabled =
-      true;
+    const filesToPublish =
+      postingGuard.beginPublish(
+        selectedFiles
+      );
+
+
+    if (!filesToPublish) {
+
+      publishBtn.disabled =
+        true;
+
+      showStatus(
+        postingGuard.blockedMessage(),
+        "error"
+      );
+
+      return;
+
+    }
+
+
+    syncPublishAvailability();
+
+    renderPhotos();
 
 
     showStatus(
@@ -1447,7 +1567,7 @@ adForm.addEventListener(
          --------------------------------------------- */
 
       showStatus(
-        selectedFiles.length > 0
+        filesToPublish.length > 0
           ? "Preparing your photos..."
           : "Preparing your ad...",
         "success"
@@ -1461,23 +1581,26 @@ adForm.addEventListener(
        * Images are compressed before upload.
        * This keeps large mobile camera photos
        * within the 5 MB storage limit.
+       * filesToPublish is the snapshot taken when
+       * publishing started, so later removals cannot
+       * change which images are uploaded.
        */
 
       for (
         let i = 0;
-        i < selectedFiles.length;
+        i < filesToPublish.length;
         i++
       ) {
 
         const file =
-          selectedFiles[i];
+          filesToPublish[i];
 
 
         showStatus(
           "Preparing photo " +
           (i + 1) +
           " of " +
-          selectedFiles.length +
+          filesToPublish.length +
           "...",
           "success"
         );
@@ -1606,31 +1729,35 @@ adForm.addEventListener(
           ]);
 
 
-      const timeoutPromise =
-        new Promise(
-          function (
-            _,
-            reject
-          ) {
+      /*
+       * A slow response stays in progress.
+       * The timeout must not say the advertisement
+       * was not saved, and it must not start another insert.
+       */
 
-            publishTimer =
-              window.setTimeout(
-                function () {
+      publishTimer =
+        window.setTimeout(
+          function () {
 
-                  reject(
-                    window.HAVKAR_AD_IMAGES.incompleteSaveError(
-                      new Error(
-                        "The publish request timed out. Please check your internet connection and try again."
-                      ),
-                      photos
-                    )
-                  );
+            const report =
+              postingGuard.markUncertain();
 
-                },
-                30000
-              );
+            if (!report.changed) {
 
-          }
+              return;
+
+            }
+
+            showStatus(
+              report.message,
+              "error"
+            );
+
+            publishBtn.disabled =
+              true;
+
+          },
+          30000
         );
 
 
@@ -1639,10 +1766,7 @@ adForm.addEventListener(
       try {
 
         result =
-          await Promise.race([
-            insertPromise,
-            timeoutPromise
-          ]);
+          await insertPromise;
 
       } catch (insertError) {
 
@@ -1711,21 +1835,30 @@ adForm.addEventListener(
       );
 
 
+      postingGuard.markSaved();
+
+      syncPublishAvailability();
+
+
       showStatus(
         "Your ad has been published successfully!",
         "success"
       );
 
 
-      publishBtn.disabled =
-        true;
-
-
       /*
        * Clear the form after successful insert.
+       * Reset restores the button, so lock it again.
        */
 
       adForm.reset();
+
+
+      publishBtn.disabled =
+        true;
+
+      photoInput.disabled =
+        true;
 
 
       selectedFiles =
@@ -1764,6 +1897,9 @@ adForm.addEventListener(
       window.clearTimeout(
         publishTimer
       );
+
+
+      postingGuard.markFailed();
 
 
       console.error(
@@ -1829,8 +1965,7 @@ adForm.addEventListener(
       }
 
 
-      publishBtn.disabled =
-        false;
+      syncPublishAvailability();
 
     }
 

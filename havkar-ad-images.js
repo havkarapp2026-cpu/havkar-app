@@ -639,6 +639,317 @@
   }
 
 
+  const UNCERTAIN_PUBLISH_MESSAGE =
+    "The server has not confirmed this advertisement yet. It may still be published. Do not submit it again.";
+
+
+  function createPostingGuard() {
+
+    let validationCount =
+      0;
+
+    let phase =
+      "idle";
+
+    let snapshot =
+      [];
+
+
+    function canSubmit() {
+
+      return validationCount === 0 &&
+        phase === "idle";
+
+    }
+
+
+    function canEditImages() {
+
+      return phase === "idle";
+
+    }
+
+
+    function blockedMessage() {
+
+      if (validationCount > 0) {
+
+        return "Please wait until the selected photos finish checking.";
+
+      }
+
+      if (phase === "publishing") {
+
+        return "Publishing is still in progress. Do not submit it again.";
+
+      }
+
+      if (phase === "saved") {
+
+        return "Your ad has been published successfully!";
+
+      }
+
+      if (phase === "uncertain") {
+
+        return UNCERTAIN_PUBLISH_MESSAGE;
+
+      }
+
+      return "Please wait until the selected photos finish checking.";
+
+    }
+
+
+    return {
+      canSubmit: canSubmit,
+      canEditImages: canEditImages,
+      isValidating: function () {
+
+        return validationCount > 0;
+
+      },
+      phase: function () {
+
+        return phase;
+
+      },
+      blockedMessage: blockedMessage,
+      uncertainMessage: function () {
+
+        return UNCERTAIN_PUBLISH_MESSAGE;
+
+      },
+      beginValidation: function () {
+
+        if (phase !== "idle") {
+
+          return false;
+
+        }
+
+        validationCount += 1;
+
+        return true;
+
+      },
+      endValidation: function () {
+
+        validationCount =
+          Math.max(
+            0,
+            validationCount - 1
+          );
+
+      },
+      beginPublish: function (files) {
+
+        if (!canSubmit()) {
+
+          return null;
+
+        }
+
+        phase =
+          "publishing";
+
+        snapshot =
+          Array.isArray(files)
+            ? files.slice()
+            : [];
+
+        return snapshot.slice();
+
+      },
+      markUncertain: function () {
+
+        if (phase !== "publishing") {
+
+          return {
+            changed: false,
+            claimNotSaved: false,
+            allowRetry: false,
+            message: ""
+          };
+
+        }
+
+        phase =
+          "uncertain";
+
+        return {
+          changed: true,
+          claimNotSaved: false,
+          allowRetry: false,
+          message: UNCERTAIN_PUBLISH_MESSAGE
+        };
+
+      },
+      markSaved: function () {
+
+        if (
+          phase !== "publishing" &&
+          phase !== "uncertain"
+        ) {
+
+          return false;
+
+        }
+
+        phase =
+          "saved";
+
+        return true;
+
+      },
+      markFailed: function () {
+
+        if (
+          phase !== "publishing" &&
+          phase !== "uncertain"
+        ) {
+
+          return false;
+
+        }
+
+        phase =
+          "idle";
+
+        snapshot =
+          [];
+
+        return true;
+
+      }
+    };
+
+  }
+
+
+  function createImageSelection() {
+
+    let token =
+      0;
+
+    let pending =
+      false;
+
+    let current =
+      null;
+
+
+    return {
+      begin: function (file) {
+
+        token += 1;
+
+        pending =
+          true;
+
+        current =
+          null;
+
+        return {
+          token: token,
+          file: file
+        };
+
+      },
+      succeed: function (ticket, file) {
+
+        if (
+          !ticket ||
+          ticket.token !== token
+        ) {
+
+          return false;
+
+        }
+
+        pending =
+          false;
+
+        current =
+          file;
+
+        return true;
+
+      },
+      fail: function (ticket) {
+
+        if (
+          !ticket ||
+          ticket.token !== token
+        ) {
+
+          return false;
+
+        }
+
+        pending =
+          false;
+
+        current =
+          null;
+
+        return true;
+
+      },
+      clearIfCurrent: function (file) {
+
+        if (
+          pending ||
+          current !== file
+        ) {
+
+          return false;
+
+        }
+
+        current =
+          null;
+
+        return true;
+
+      },
+      reset: function () {
+
+        token += 1;
+
+        pending =
+          false;
+
+        current =
+          null;
+
+      },
+      isPending: function () {
+
+        return pending;
+
+      },
+      canPublish: function () {
+
+        return !pending;
+
+      },
+      selectedFile: function () {
+
+        if (pending) {
+
+          return null;
+
+        }
+
+        return current;
+
+      }
+    };
+
+  }
+
+
   function incompleteSaveError(
     cause,
     orphans
@@ -794,6 +1105,8 @@
     validateAdImage: validateAdImage,
     uploadAdvertisementImages: uploadAdvertisementImages,
     incompleteSaveError: incompleteSaveError,
+    createPostingGuard: createPostingGuard,
+    createImageSelection: createImageSelection,
     describeFailure: describeFailure,
     renderFailure: renderFailure,
     normalizeUserId: normalizeUserId

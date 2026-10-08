@@ -259,6 +259,106 @@ async function main() {
   assert.equal(crossUrls[0].includes("/" + OTHER + "/"), true);
   assert.equal(crossUrls[0].includes("/" + OWNER + "/"), false);
 
+  const selection = images.createPostingGuard();
+  const accepted = [];
+  assert.equal(selection.beginValidation(), true);
+  assert.equal(selection.canSubmit(), false);
+  assert.equal(selection.beginPublish(accepted), null);
+  accepted.push("photo-a", "photo-b");
+  selection.endValidation();
+  assert.equal(selection.canSubmit(), true);
+  const publishFiles = selection.beginPublish(accepted);
+  accepted.splice(0, 1);
+  accepted.push("photo-c");
+  assert.deepEqual(publishFiles, ["photo-a", "photo-b"]);
+  assert.equal(selection.canEditImages(), false);
+  assert.equal(selection.beginPublish(["other"]), null);
+
+  const removal = images.createPostingGuard();
+  const liveFiles = ["keep", "remove-me", "next"];
+  const stableFiles = removal.beginPublish(liveFiles);
+  liveFiles.splice(1, 1);
+  assert.deepEqual(stableFiles, ["keep", "remove-me", "next"]);
+  assert.equal(removal.canEditImages(), false);
+  assert.equal(removal.beginValidation(), false);
+
+  const timeoutGuard = images.createPostingGuard();
+  assert.equal(timeoutGuard.beginPublish(["only"]).length, 1);
+  const uncertain = timeoutGuard.markUncertain();
+  assert.equal(uncertain.changed, true);
+  assert.equal(uncertain.claimNotSaved, false);
+  assert.equal(uncertain.allowRetry, false);
+  assert.equal(/not saved|was not saved|timed out/i.test(uncertain.message), false);
+  assert.equal(timeoutGuard.canSubmit(), false);
+  assert.equal(timeoutGuard.beginPublish(["again"]), null);
+  assert.equal(/not saved|was not saved/i.test(timeoutGuard.blockedMessage()), false);
+  assert.equal(timeoutGuard.markSaved(), true);
+  assert.equal(timeoutGuard.canSubmit(), false);
+  assert.equal(timeoutGuard.markUncertain().changed, false);
+  assert.equal(timeoutGuard.beginPublish(["after-save"]), null);
+
+  const failedAfterWait = images.createPostingGuard();
+  failedAfterWait.beginPublish(["pending"]);
+  failedAfterWait.markUncertain();
+  assert.equal(failedAfterWait.markFailed(), true);
+  assert.equal(failedAfterWait.phase(), "idle");
+  assert.deepEqual(failedAfterWait.beginPublish(["new-attempt"]), ["new-attempt"]);
+
+  const settledFirst = images.createPostingGuard();
+  settledFirst.beginPublish(["done"]);
+  assert.equal(settledFirst.markSaved(), true);
+  const lateTimeout = settledFirst.markUncertain();
+  assert.equal(lateTimeout.changed, false);
+  assert.equal(lateTimeout.claimNotSaved, false);
+  assert.equal(lateTimeout.allowRetry, false);
+
+  const picker = images.createImageSelection();
+  const older = picker.begin("older");
+  assert.equal(picker.canPublish(), false);
+  assert.equal(picker.selectedFile(), null);
+  const newer = picker.begin("newer");
+  assert.equal(picker.succeed(older, "older"), false);
+  assert.equal(picker.selectedFile(), null);
+  assert.equal(picker.canPublish(), false);
+  assert.equal(picker.succeed(newer, "newer"), true);
+  assert.equal(picker.selectedFile(), "newer");
+  assert.equal(picker.canPublish(), true);
+  const rejectedPick = picker.begin("bad");
+  assert.equal(picker.fail(newer), false);
+  assert.equal(picker.isPending(), true);
+  assert.equal(picker.fail(rejectedPick), true);
+  assert.equal(picker.selectedFile(), null);
+  assert.equal(picker.canPublish(), true);
+
+  const changeStart = postAd.indexOf("photoInput.addEventListener");
+  const submitStart = postAd.indexOf("adForm.addEventListener");
+  const changeBlock = postAd.slice(changeStart, submitStart);
+  assert.equal(changeBlock.indexOf("beginValidation") < changeBlock.indexOf("validateAdImage"), true);
+  assert.equal(changeBlock.indexOf("endValidation") > changeBlock.indexOf("validateAdImage"), true);
+  const publishBlock = postAd.slice(submitStart);
+  assert.equal(publishBlock.indexOf("beginPublish") < publishBlock.indexOf("getCurrentUser"), true);
+  assert.equal(publishBlock.includes("i < filesToPublish.length"), true);
+  assert.equal(publishBlock.includes("i < selectedFiles.length"), false);
+  assert.equal(publishBlock.includes("Promise.race"), false);
+  assert.equal(publishBlock.includes("The publish request timed out"), false);
+  assert.equal(publishBlock.includes("markUncertain"), true);
+  assert.equal(publishBlock.includes("await insertPromise"), true);
+  const removeStart = postAd.indexOf("removeBtn.onclick");
+  const removeBlock = postAd.slice(removeStart, removeStart + 500);
+  assert.equal(removeBlock.indexOf("canEditImages") < removeBlock.indexOf("splice"), true);
+
+  const previewStart = adsPage.indexOf("async function previewImage");
+  const previewBlock = adsPage.slice(previewStart, previewStart + 3500);
+  assert.equal(previewBlock.indexOf("adImageSelection.begin") < previewBlock.indexOf("validateAdImage"), true);
+  assert.equal(previewBlock.includes("adImageSelection.succeed"), true);
+  assert.equal(previewBlock.includes("adImageSelection.fail"), true);
+  const submitAdStart = adsPage.indexOf("async function submitAd");
+  const submitAdBlock = adsPage.slice(submitAdStart, previewStart);
+  assert.equal(submitAdBlock.indexOf("canPublish") < submitAdBlock.indexOf("getSession"), true);
+  assert.equal(submitAdBlock.indexOf("imageToPublish") < submitAdBlock.indexOf("getSession"), true);
+  assert.equal(submitAdBlock.includes("[\n                                imageToPublish\n                            ]"), true);
+  assert.equal(submitAdBlock.includes("selectedImageFile"), false);
+
   console.log("AD_IMAGE_UPLOAD_TEST_OK");
 }
 
