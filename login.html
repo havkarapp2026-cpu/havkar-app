@@ -722,6 +722,56 @@ function showMessage(
         type
             ? `message ${type}`
             : "message";
+
+    const i18n =
+        window.HAVKAR_I18N;
+
+    if(
+        text &&
+        i18n &&
+        typeof i18n.translatePage === "function"
+    ){
+
+        const translateMessage =
+            function(remaining){
+
+                i18n.translatePage()
+                    .catch(
+                        function(error){
+
+                            console.error(
+                                "HAVKAR Login Translation Error:",
+                                error
+                            );
+
+                        }
+                    )
+                    .finally(
+                        function(){
+
+                            if(remaining > 0){
+
+                                window.setTimeout(
+                                    function(){
+
+                                        translateMessage(
+                                            remaining - 1
+                                        );
+
+                                    },
+                                    300
+                                );
+
+                            }
+
+                        }
+                    );
+
+            };
+
+        translateMessage(3);
+
+    }
 }
 
 
@@ -932,13 +982,18 @@ async function login() {
             );
 
             const invalidCredentials = /invalid login credentials|invalid credentials|invalid password/i.test(error.message || "");
+            const emailNotConfirmed =
+                String(error.code || error.error_code || "").toLowerCase() === "email_not_confirmed" ||
+                /email not confirmed/i.test(error.message || "");
             showMessage(
-                invalidCredentials
+                emailNotConfirmed
+                    ? "Your email address is not confirmed. Please confirm your email before logging in."
+                    : invalidCredentials
                     ? "Email or password is incorrect. You can try again or reset your password below."
                     : "Sign-in could not be completed. Please try again.",
                 "error"
             );
-            if (invalidCredentials) {
+            if (invalidCredentials && !emailNotConfirmed) {
                 forgotBtn.textContent = "Reset your password →";
                 forgotBtn.classList.add("recovery-highlight");
             }
@@ -1545,19 +1600,130 @@ supabase.auth.onAuthStateChange(
 
 
 /* =========================================================
+   AUTH CALLBACK ERRORS
+   Email confirmation and Google OAuth stay separate.
+========================================================= */
+
+function readAuthParam(
+    name
+){
+
+    const search =
+        new URLSearchParams(
+            window.location.search
+        );
+
+    const hashValue =
+        window.location.hash &&
+        window.location.hash.charAt(0) === "#"
+            ? window.location.hash.slice(1)
+            : window.location.hash || "";
+
+    const hash =
+        new URLSearchParams(
+            hashValue
+        );
+
+    return String(
+        search.get(name) ||
+        hash.get(name) ||
+        ""
+    ).trim();
+
+}
+
+
+function authCallbackMessage(){
+
+    const errorCode =
+        readAuthParam("error_code")
+            .toLowerCase();
+
+    const errorName =
+        readAuthParam("error")
+            .toLowerCase();
+
+    const description =
+        readAuthParam(
+            "error_description"
+        );
+
+    const type =
+        readAuthParam("type")
+            .toLowerCase();
+
+    if(
+        !errorCode &&
+        !errorName &&
+        !description
+    ){
+
+        return "";
+
+    }
+
+    if(errorCode === "otp_expired"){
+
+        return "Your email confirmation link has expired. Please request a new confirmation email.";
+
+    }
+
+    const confirmationType =
+        type === "signup" ||
+        type === "invite" ||
+        type === "email" ||
+        type === "email_change";
+
+    const descriptionText =
+        description.toLowerCase();
+
+    const describesConfirmation =
+        descriptionText.indexOf("email link") !== -1 ||
+        descriptionText.indexOf("confirmation link") !== -1 ||
+        descriptionText.indexOf("email verification") !== -1;
+
+    if(
+        confirmationType ||
+        describesConfirmation
+    ){
+
+        return "This email confirmation link is invalid. Please request a new confirmation email.";
+
+    }
+
+    return "Google sign-in could not be completed. Please try again.";
+
+}
+
+
+/* =========================================================
    INITIAL SESSION / RECOVERY CHECK
 ========================================================= */
 
 (async function initializePage(){
 
     try {
-        const oauthParams = new URLSearchParams(window.location.search);
-        const oauthHash = new URLSearchParams(window.location.hash.slice(1));
-        const oauthError = oauthParams.get("error_description") || oauthHash.get("error_description") || oauthParams.get("error") || oauthHash.get("error");
-        if (oauthError) {
-            showMessage("Google sign-in could not be completed. Please try again.", "error");
-            console.error("HAVKAR Google OAuth Error:", oauthError);
-            window.history.replaceState({}, document.title, window.location.pathname);
+        const callbackMessage =
+            authCallbackMessage();
+
+        if(callbackMessage){
+
+            showMessage(
+                callbackMessage,
+                "error"
+            );
+
+            console.error(
+                "HAVKAR Auth Callback Error:",
+                readAuthParam("error_code") || "unspecified"
+            );
+
+            window.history.replaceState(
+                {},
+                document.title,
+                window.location.pathname
+            );
+
             return;
         }
 
