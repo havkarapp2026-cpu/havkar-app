@@ -1050,6 +1050,7 @@ aria-label="Post a new ad"
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-currencies.js"></script>
+<script src="/havkar-categories.js"></script>
 <script>
 "use strict";
 
@@ -1081,7 +1082,7 @@ const state = {
 
     filteredAds: [],
 
-    category: "All",
+    category: "all",
 
     search: "",
 
@@ -1108,32 +1109,6 @@ const state = {
     country: ""
 
 };
-
-const CATEGORIES = [
-
-    "All",
-    "Electronics",
-    "Mobile Phones",
-    "Phones & Tablets",
-    "Computers",
-    "TV & Audio",
-    "Appliances",
-    "Furniture",
-    "Home & Garden",
-    "Kitchen",
-    "Restaurant Equipment",
-    "Food & Catering",
-    "Tools & Machinery",
-    "Vehicles",
-    "Cars",
-    "Motorcycles",
-    "Trucks & Commercial Vehicles",
-    "Bicycles",
-    "Clothing",
-    "Services",
-    "Other"
-
-];
 
 const $ =
     id => document.getElementById(id);
@@ -1379,21 +1354,42 @@ function renderCountryFilter(){
 
 function renderCategories(){
 
+    const categories =
+        [
+            {
+                code: "all",
+                label: "All"
+            }
+        ].concat(
+            window.HAVKAR_CATEGORIES
+                ? window.HAVKAR_CATEGORIES.list.map(
+                    function (category) {
+
+                        return {
+                            code: category.code,
+                            label: category.label
+                        };
+
+                    }
+                )
+                : []
+        );
+
     $("filters")
         .innerHTML =
-        CATEGORIES
+        categories
             .map(
                 category => `
                     <button
                         type="button"
                         class="filter-button ${
-                            category === state.category
+                            category.code === state.category
                                 ? "active"
                                 : ""
                         }"
-                        data-category="${escapeHtml(category)}"
+                        data-category="${escapeHtml(category.code)}"
                     >
-                        ${escapeHtml(category)}
+                        ${escapeHtml(category.label)}
                     </button>
                 `
             )
@@ -1412,7 +1408,7 @@ function renderCategories(){
 
                         state.category =
                             button.dataset.category ||
-                            "All";
+                            "all";
 
                         state.savedOnly =
                             false;
@@ -1965,7 +1961,7 @@ async function showSavedListings(){
         true;
 
     state.category =
-        "All";
+        "all";
 
     state.search =
         "";
@@ -2031,7 +2027,7 @@ function showAllListings(){
         false;
 
     state.category =
-        "All";
+        "all";
 
     renderCategories();
 
@@ -2147,101 +2143,11 @@ function getCategoryIcon(
     category
 ){
 
-    const text =
-        String(
-            category || ""
-        ).toLowerCase();
+    if(window.HAVKAR_CATEGORIES){
 
-    if(
-        text.includes("phone") ||
-        text.includes("tablet")
-    ){
-
-        return "fa-mobile-screen";
-
-    }
-
-    if(
-        text.includes("computer")
-    ){
-
-        return "fa-laptop";
-
-    }
-
-    if(
-        text.includes("vehicle") ||
-        text.includes("car") ||
-        text.includes("motor") ||
-        text.includes("truck") ||
-        text.includes("bicycle")
-    ){
-
-        return "fa-car";
-
-    }
-
-    if(
-        text.includes("furniture")
-    ){
-
-        return "fa-couch";
-
-    }
-
-    if(
-        text.includes("kitchen")
-    ){
-
-        return "fa-kitchen-set";
-
-    }
-
-    if(
-        text.includes("restaurant")
-    ){
-
-        return "fa-utensils";
-
-    }
-
-    if(
-        text.includes("clothing")
-    ){
-
-        return "fa-shirt";
-
-    }
-
-    if(
-        text.includes("service")
-    ){
-
-        return "fa-handshake";
-
-    }
-
-    if(
-        text.includes("tool")
-    ){
-
-        return "fa-screwdriver-wrench";
-
-    }
-
-    if(
-        text.includes("food")
-    ){
-
-        return "fa-basket-shopping";
-
-    }
-
-    if(
-        text.includes("electronics")
-    ){
-
-        return "fa-microchip";
+        return window.HAVKAR_CATEGORIES.icon(
+            category
+        );
 
     }
 
@@ -2733,11 +2639,31 @@ function cardHtml(
             "Untitled listing"
         );
 
+    const categoryLabel =
+        window.HAVKAR_CATEGORIES
+            ? window.HAVKAR_CATEGORIES.displayLabel(
+                ad.category
+            )
+            : String(
+                ad.category || ""
+            ).trim();
+
     const category =
         escapeHtml(
-            ad.category ||
-            "Other"
+            categoryLabel ||
+            "Category not recorded"
         );
+
+    const categoryClass =
+        categoryLabel &&
+        !(
+            window.HAVKAR_CATEGORIES &&
+            window.HAVKAR_CATEGORIES.resolveCode(
+                ad.category
+            )
+        )
+            ? "condition-badge notranslate"
+            : "condition-badge";
 
     const legacyLocation =
         String(
@@ -2840,7 +2766,7 @@ function cardHtml(
                     <i class="fas fa-spinner fa-spin"></i>
                 </div>
 
-                <span class="condition-badge">
+                <span class="${categoryClass}">
                     ${category}
                 </span>
 
@@ -3257,13 +3183,12 @@ function applyFilters(){
                 }
 
                 const categoryMatch =
-                    category === "All" ||
-                    String(
-                        ad.category ||
-                        ""
-                    )
-                        .toLowerCase() ===
-                    category.toLowerCase();
+                    window.HAVKAR_CATEGORIES
+                        ? window.HAVKAR_CATEGORIES.matches(
+                            ad.category,
+                            category
+                        )
+                        : category === "all";
 
                 if(
                     !categoryMatch
@@ -3294,6 +3219,11 @@ function applyFilters(){
 
                     ad.title,
                     ad.category,
+                    window.HAVKAR_CATEGORIES
+                        ? window.HAVKAR_CATEGORIES.displayLabel(
+                            ad.category
+                        )
+                        : "",
                     ad.location,
                     ad.city,
                     window.HAVKAR_COUNTRIES
@@ -3321,7 +3251,7 @@ function applyFilters(){
             ? "Saved listings"
             : (
                 search ||
-                category !== "All"
+                category !== "all"
                     ? "Search results"
                     : "Latest listings"
             );

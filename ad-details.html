@@ -985,9 +985,7 @@ button:focus-visible{
 
                 <i class="fas fa-box"></i>
 
-                <span>
-                    Other
-                </span>
+                <span></span>
 
             </div>
 
@@ -1094,12 +1092,14 @@ button:focus-visible{
                     Category
                 </label>
 
-                <input
+                <select
                     id="editCategory"
-                    type="text"
-                    maxlength="120"
                     required
                 >
+                    <option value="">
+                        Select category
+                    </option>
+                </select>
 
                 <label for="editPrice">
                     Price
@@ -1385,6 +1385,7 @@ button:focus-visible{
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-currencies.js"></script>
+<script src="/havkar-categories.js"></script>
 <script>
 "use strict";
 
@@ -1713,158 +1714,15 @@ function formatDate(value){
 
 function getCategoryIcon(category){
 
-    const text =
-        String(category || "")
-            .toLowerCase();
+    if(window.HAVKAR_CATEGORIES){
 
-    if(
-        text.includes("phone") ||
-        text.includes("tablet")
-    ){
-
-        return "fa-mobile-screen";
-
-    }
-
-    if(text.includes("computer")){
-
-        return "fa-laptop";
-
-    }
-
-    if(
-        text.includes("vehicle") ||
-        text.includes("car") ||
-        text.includes("motor") ||
-        text.includes("truck") ||
-        text.includes("bicycle")
-    ){
-
-        return "fa-car";
-
-    }
-
-    if(text.includes("furniture")){
-
-        return "fa-couch";
-
-    }
-
-    if(
-        text.includes("kitchen") ||
-        text.includes("restaurant")
-    ){
-
-        return "fa-utensils";
-
-    }
-
-    if(text.includes("clothing")){
-
-        return "fa-shirt";
-
-    }
-
-    if(text.includes("service")){
-
-        return "fa-handshake";
-
-    }
-
-    if(text.includes("tool")){
-
-        return "fa-screwdriver-wrench";
-
-    }
-
-    if(text.includes("food")){
-
-        return "fa-basket-shopping";
-
-    }
-
-    if(text.includes("electronics")){
-
-        return "fa-microchip";
+        return window.HAVKAR_CATEGORIES.icon(
+            category
+        );
 
     }
 
     return "fa-box";
-
-}
-
-
-/* =========================================================
-   CATEGORY DISPLAY
-   ========================================================= */
-
-function getDisplayCategory(ad){
-
-    if(!ad){
-
-        return "Other";
-
-    }
-
-    const original =
-        String(ad.category || "").trim();
-
-    const title =
-        String(ad.title || "")
-            .toLowerCase();
-
-    const description =
-        String(ad.description || "")
-            .toLowerCase();
-
-    const combined =
-        `${title} ${description}`;
-
-    const restaurantEquipmentWords = [
-
-        "impastatrice",
-        "impastatore",
-        "pizza dough",
-        "dough mixer",
-        "spiral mixer",
-        "planetary mixer",
-        "pizza oven",
-        "forno pizza",
-        "forno professionale",
-        "attrezzatura pizzeria",
-        "attrezzatura ristorante",
-        "restaurant equipment",
-        "pizzeria equipment",
-        "bakery equipment",
-        "bread mixer",
-        "kneader",
-        "pizza machine",
-        "panificio",
-        "pizzeria",
-        "ristorante"
-
-    ];
-
-    const clearlyRestaurantEquipment =
-        restaurantEquipmentWords.some(
-            word =>
-                combined.includes(word)
-        );
-
-    const broadElectronicCategory =
-        original.toLowerCase() === "electronics" ||
-        original.toLowerCase() === "electronic";
-
-    if(
-        broadElectronicCategory &&
-        clearlyRestaurantEquipment
-    ){
-
-        return "Restaurant Equipment";
-
-    }
-
-    return original || "Other";
 
 }
 
@@ -2609,21 +2467,41 @@ function renderCategory(category){
     const text =
         element.querySelector("span");
 
-    const value =
-        category || "Other";
+    const label =
+        window.HAVKAR_CATEGORIES
+            ? window.HAVKAR_CATEGORIES.displayLabel(
+                category
+            )
+            : String(
+                category || ""
+            ).trim();
+
+    const known =
+        Boolean(
+            window.HAVKAR_CATEGORIES &&
+            window.HAVKAR_CATEGORIES.resolveCode(
+                category
+            )
+        );
 
     if(icon){
 
         icon.className =
             "fas " +
-            getCategoryIcon(value);
+            getCategoryIcon(category);
 
     }
 
     if(text){
 
         text.textContent =
-            value;
+            label ||
+            "Category not recorded";
+
+        text.classList.toggle(
+            "notranslate",
+            Boolean(label) && !known
+        );
 
     }
 
@@ -2760,13 +2638,8 @@ function renderListing(){
         ad.description ||
         "No description provided.";
 
-    const displayCategory =
-        getDisplayCategory(
-            ad
-        );
-
     renderCategory(
-        displayCategory
+        ad.category
     );
 
     state.isOwnListing =
@@ -3556,8 +3429,15 @@ function openEditForm(){
     $("editTitle").value =
         state.ad.title || "";
 
-    $("editCategory").value =
-        state.ad.category || "";
+    if(window.HAVKAR_CATEGORIES){
+
+        window.HAVKAR_CATEGORIES.fillSelect(
+            $("editCategory"),
+            "Select category",
+            state.ad.category || ""
+        );
+
+    }
 
     $("editPrice").value =
         state.ad.price === null ||
@@ -3642,8 +3522,18 @@ function readOwnerEdit(){
     const title =
         $("editTitle").value.trim();
 
+    const categoryInput =
+        $("editCategory");
+
     const category =
-        $("editCategory").value.trim();
+        categoryInput.value.trim();
+
+    const legacyCategory =
+        Boolean(
+            categoryInput.selectedOptions &&
+            categoryInput.selectedOptions[0] &&
+            categoryInput.selectedOptions[0].dataset.legacy === "true"
+        );
 
     const priceText =
         $("editPrice").value.trim();
@@ -3672,10 +3562,21 @@ function readOwnerEdit(){
 
     }
 
-    if(!category){
+    if(
+        !category ||
+        (
+            !legacyCategory &&
+            !(
+                window.HAVKAR_CATEGORIES &&
+                window.HAVKAR_CATEGORIES.resolveCode(
+                    category
+                )
+            )
+        )
+    ){
 
         throw new Error(
-            "Please enter a category."
+            "Please select a category."
         );
 
     }
