@@ -192,6 +192,33 @@ input:focus-visible{
     display:flex;
 }
 
+.country-filter{
+    padding:0 20px 10px;
+}
+
+.country-filter select{
+    width:100%;
+    min-height:44px;
+    padding:0 12px;
+    border:2px solid var(--border);
+    border-radius:14px;
+    background:#fff;
+    color:var(--text);
+    font-size:16px;
+}
+
+.visually-hidden{
+    position:absolute;
+    width:1px;
+    height:1px;
+    padding:0;
+    margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+    border:0;
+}
+
 /* FILTERS */
 
 .filters-wrapper{
@@ -703,6 +730,10 @@ input:focus-visible{
         padding:12px 12px 9px;
     }
 
+    .country-filter{
+        padding:0 12px 10px;
+    }
+
     .filters{
         padding-left:12px;
         padding-right:12px;
@@ -829,6 +860,23 @@ input:focus-visible{
         </button>
 
     </div>
+
+</div>
+
+<div class="country-filter">
+
+    <label class="visually-hidden" for="countryFilter">
+        Country
+    </label>
+
+    <select
+        id="countryFilter"
+        aria-label="Filter by country"
+    >
+        <option value="">
+            All countries
+        </option>
+    </select>
 
 </div>
 
@@ -1000,6 +1048,7 @@ aria-label="Post a new ad"
 ></div>
 
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-countries.js"></script>
 <script>
 "use strict";
 
@@ -1053,7 +1102,9 @@ const state = {
 
     savedLoading: false,
 
-    savedOperation: false
+    savedOperation: false,
+
+    country: ""
 
 };
 
@@ -1287,6 +1338,43 @@ function renderSkeletons(){
 /* =========================================================
    CATEGORIES
    ========================================================= */
+
+function renderCountryFilter(){
+
+    const select =
+        $("countryFilter");
+
+    if(
+        !select ||
+        !window.HAVKAR_COUNTRIES
+    ){
+
+        return;
+
+    }
+
+    window.HAVKAR_COUNTRIES.fillCountrySelect(
+        select,
+        "All countries"
+    );
+
+    select.value =
+        state.country ||
+        "";
+
+    select.onchange =
+        function(){
+
+            state.country =
+                select.value ||
+                "";
+
+            applyFilters();
+
+        };
+
+}
+
 
 function renderCategories(){
 
@@ -2265,48 +2353,94 @@ function isPublicListingStatus(
 }
 
 
+function missingPlaceColumns(
+    error
+){
+
+    const message =
+        String(
+            error?.message ||
+            error?.details ||
+            ""
+        ).toLowerCase();
+
+    return message.includes(
+        "country_code"
+    ) || (
+        message.includes("column") &&
+        message.includes("city")
+    );
+
+}
+
+
+async function queryListings(
+    columns
+){
+
+    return Promise.race([
+
+        supabaseClient
+            .from("ads")
+            .select(
+                columns
+            )
+            .order(
+                "created_at",
+                {
+                    ascending:false
+                }
+            )
+            .limit(
+                50
+            ),
+
+        new Promise(
+            (_,reject) => {
+
+                window.setTimeout(
+                    () => {
+
+                        reject(
+                            new Error(
+                                "The listings request timed out after 15 seconds."
+                            )
+                        );
+
+                    },
+                    15000
+                );
+
+            }
+        )
+
+    ]);
+
+}
+
+
 async function fetchListings(){
 
     initializeSupabase();
 
-    const result =
-        await Promise.race([
+    let result =
+        await queryListings(
+            "id,title,category,price,location,country_code,city,description,user_id,created_at,status"
+        );
 
-            supabaseClient
-                .from("ads")
-                .select(
-                    "id,title,category,price,location,description,user_id,created_at,status"
-                )
-                .order(
-                    "created_at",
-                    {
-                        ascending:false
-                    }
-                )
-                .limit(
-                    50
-                ),
+    if(
+        result?.error &&
+        missingPlaceColumns(
+            result.error
+        )
+    ){
 
-            new Promise(
-                (_,reject) => {
+        result =
+            await queryListings(
+                "id,title,category,price,location,description,user_id,created_at,status"
+            );
 
-                    window.setTimeout(
-                        () => {
-
-                            reject(
-                                new Error(
-                                    "The listings request timed out after 15 seconds."
-                                )
-                            );
-
-                        },
-                        15000
-                    );
-
-                }
-            )
-
-        ]);
+    }
 
     if(
         !result ||
@@ -2561,11 +2695,45 @@ function cardHtml(
             "Other"
         );
 
+    const legacyLocation =
+        String(
+            ad.location ||
+            ""
+        ).trim();
+
+    const place =
+        window.HAVKAR_COUNTRIES
+            ? window.HAVKAR_COUNTRIES.placeLabel(
+                ad
+            )
+            : "";
+
     const location =
         escapeHtml(
-            ad.location ||
-            "Location not specified"
+            legacyLocation &&
+            legacyLocation !== place
+                ? legacyLocation
+                : (
+                    place
+                        ? ""
+                        : "Location not specified"
+                )
         );
+
+    const placeHtml =
+        place
+            ? `
+                <div class="ad-location notranslate">
+
+                    <i class="fas fa-earth-americas"></i>
+
+                    <span>
+                        ${escapeHtml(place)}
+                    </span>
+
+                </div>
+            `
+            : "";
 
     const description =
         escapeHtml(
@@ -2649,15 +2817,23 @@ function cardHtml(
                     ${formatPrice(ad.price)}
                 </div>
 
-                <div class="ad-location">
+                ${placeHtml}
 
-                    <i class="fas fa-location-dot"></i>
+                ${
+                    location
+                        ? `
+                            <div class="ad-location">
 
-                    <span>
-                        ${location}
-                    </span>
+                                <i class="fas fa-location-dot"></i>
 
-                </div>
+                                <span>
+                                    ${location}
+                                </span>
+
+                            </div>
+                        `
+                        : ""
+                }
 
                 ${
                     date
@@ -3023,6 +3199,19 @@ function applyFilters(){
 
                 }
 
+                if(
+                    state.country &&
+                    String(
+                        ad.country_code ||
+                        ""
+                    ).trim().toUpperCase() !==
+                    state.country
+                ){
+
+                    return false;
+
+                }
+
                 const categoryMatch =
                     category === "All" ||
                     String(
@@ -3062,6 +3251,12 @@ function applyFilters(){
                     ad.title,
                     ad.category,
                     ad.location,
+                    ad.city,
+                    window.HAVKAR_COUNTRIES
+                        ? window.HAVKAR_COUNTRIES.countryName(
+                            ad.country_code
+                        )
+                        : "",
                     ad.description,
                     ad.price
 
@@ -3540,6 +3735,8 @@ async function boot(){
         await resolveCurrentUser();
 
         renderCategories();
+
+        renderCountryFilter();
 
         setupNavigation();
 
