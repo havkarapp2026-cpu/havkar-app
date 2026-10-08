@@ -6,12 +6,11 @@
 <style>
 *{box-sizing:border-box}body{margin:0;min-height:100vh;padding:20px;display:grid;place-items:center;font:16px Arial,Helvetica,sans-serif;color:#263529;background:linear-gradient(135deg,#b8e6bd,#37b85d)}main{width:100%;max-width:590px;background:#fff;border-radius:26px;padding:32px;box-shadow:0 15px 45px #0002}header{text-align:center}header img{width:88px;height:88px;object-fit:contain}h1{font-size:36px;color:#187a35;margin:8px 0}p.sub{color:#667;margin:0 0 25px}.field{margin:15px 0}label{display:block;font-weight:700;font-size:14px;margin-bottom:7px}input,select{width:100%;padding:14px;border:1.5px solid #cdd8ce;border-radius:12px;background:#fff;color:#263529;font:inherit}input:focus,select:focus{outline:2px solid #83d49a;border-color:#238943}.types{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.types label{margin:0;padding:12px 7px;text-align:center;border:1.5px solid #d1dfd4;border-radius:12px;cursor:pointer;font-size:13px}.types input{width:auto;accent-color:#248e46;margin:0 0 7px}.types label:has(input:checked){background:#e9f7ed;border-color:#238943}.hidden{display:none!important}button,.back{display:block;width:100%;border-radius:12px;padding:15px;font:700 16px Arial;cursor:pointer;text-align:center;text-decoration:none}button.primary{background:#218c45;color:white;border:0;margin-top:18px}button.google{background:white;border:1.5px solid #a8b9ac;color:#25372b;margin-top:12px}button:disabled{opacity:.55;cursor:wait}.back{color:#237e3d;margin-top:8px}.hint{font-size:12px;color:#63766a;line-height:1.5;margin:9px 0}.message{min-height:24px;margin-top:15px;line-height:1.5;overflow-wrap:anywhere}.error{color:#ba2828}.success{color:#237e3d}.password-line{display:flex;gap:8px}.password-line input{min-width:0}.password-line button{width:auto;padding:0 14px;background:#eaf5ed;border:1px solid #cdd8ce;color:#246d39}footer{text-align:center;font-size:12px;color:#778;margin-top:20px}@media(max-width:480px){body{padding:10px}main{padding:23px 17px}.types{gap:5px}.types label{font-size:12px;padding:10px 3px}}
 </style>
+<script src="/havkar-i18n.js"></script>
 </head><body><main>
-<header><img src="icon.png" alt="HAVKAR"><h1>HAVKAR</h1><p class="sub">Create your account</p></header>
+<header><img src="icon.png" alt="HAVKAR"><h1 translate="no" data-i18n-ignore>HAVKAR</h1><p class="sub">Create your account</p></header>
 <form id="signupForm" novalidate>
-<div class="field"><label for="language">Preferred language / زبان</label><select id="language" required>
-<option value="en">English</option><option value="it">Italiano</option><option value="fa">فارسی</option><option value="ckb">کوردی سۆرانی</option><option value="ar">العربية</option><option value="sv">Svenska</option><option value="tr">Türkçe</option><option value="de">Deutsch</option><option value="fr">Français</option><option value="es">Español</option><option value="pt">Português</option><option value="nl">Nederlands</option><option value="ru">Русский</option><option value="uk">Українська</option><option value="pl">Polski</option><option value="hi">हिन्दी</option><option value="ur">اردو</option><option value="bn">বাংলা</option><option value="zh">中文</option><option value="ja">日本語</option>
-</select><p class="hint">Your language preference is saved for HAVKAR. Full translation of this page is not yet enabled.</p></div>
+<div class="field"><label for="language">Preferred language</label><select id="language" required translate="no" data-i18n-ignore></select></div>
 <div class="field"><label>Account type</label><div class="types"><label><input type="radio" name="account_type" value="personal" checked> <br>Personal</label><label><input type="radio" name="account_type" value="business"><br>Business</label><label><input type="radio" name="account_type" value="company"><br>Company / Factory</label></div></div>
 <div class="field"><label for="firstName">First name</label><input id="firstName" autocomplete="given-name" maxlength="80" required></div>
 <div class="field"><label for="lastName">Last name</label><input id="lastName" autocomplete="family-name" maxlength="80" required></div>
@@ -28,9 +27,31 @@ import {createClient} from 'https://esm.sh/@supabase/supabase-js@2';
 const supabase=createClient(window.HAVKAR_SUPABASE_CONFIG.url,window.HAVKAR_SUPABASE_CONFIG.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const $=id=>document.getElementById(id), form=$('signupForm'),message=$('message'),createBtn=$('createBtn'),googleBtn=$('googleBtn');
 const language=$('language');
-const supported=new Set(Array.from(language.options).map(o=>o.value));
-const stored=localStorage.getItem('havkar_language');if(supported.has(stored))language.value=stored;
-function saveLanguage(){localStorage.setItem('havkar_language',language.value);localStorage.setItem('selectedLanguage',language.value);}
+const i18n=window.HAVKAR_I18N;
+function savedLanguage(){
+    const keys=['havkar_language','selectedLanguage','language'];
+    for(const key of keys){
+        const value=localStorage.getItem(key);
+        if(i18n.isSupportedLanguage(value)) return value;
+    }
+    return '';
+}
+for(const item of i18n.getSelectableLanguages()){
+    const option=document.createElement('option');
+    option.value=item.code;
+    option.textContent=item.name;
+    language.appendChild(option);
+}
+const stored=savedLanguage();
+if(stored) language.value=stored;
+function saveLanguage(){
+    const code=language.value;
+    if(!i18n.isSupportedLanguage(code)) return;
+    localStorage.setItem('havkar_language',code);
+    localStorage.setItem('havkar_language_dir',i18n.getDirection(code));
+    localStorage.setItem('selectedLanguage',code);
+    localStorage.setItem('language',code);
+}
 language.addEventListener('change',saveLanguage);
 function accountType(){return form.querySelector('input[name="account_type"]:checked').value;}
 function updateType(){const org=accountType()!=='personal';$('organizationFields').classList.toggle('hidden',!org);$('organizationName').required=org;}
@@ -49,7 +70,7 @@ if(!data?.user){show('Account creation could not be confirmed. Please try again.
 $('password').value='';$('confirmPassword').value='';
 if(data.session){show('Account created and signed in. You can open HAVKAR.','success');createBtn.textContent='Go to HAVKAR';createBtn.disabled=false;form.onsubmit=null;form.addEventListener('submit',e=>{e.preventDefault();location.href='index.html';},{once:true});}
 else{show('Registration request received. If email confirmation is required, check your inbox and confirm your email before logging in.','success');createBtn.textContent='Check your email';createBtn.disabled=true;}
-}catch(err){show(err?.message||'Connection error. Please try again.','error');}finally{googleBtn.disabled=false;if(!createBtn.disabled&&createBtn.textContent!=='Go to HAVKAR')setBusy(false);}
+}catch(err){console.error('HAVKAR Signup Error:',err);show('Account creation could not be completed. Please try again.','error');}finally{googleBtn.disabled=false;if(!createBtn.disabled&&createBtn.textContent!=='Go to HAVKAR')setBusy(false);}
 });
-googleBtn.addEventListener('click',async()=>{saveLanguage();googleBtn.disabled=true;show('');try{const {error}=await supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:new URL('login.html',location.href).href}});if(error)throw error;}catch(err){show(err?.message||'Google sign-in failed.','error');googleBtn.disabled=false;}});
+googleBtn.addEventListener('click',async()=>{saveLanguage();googleBtn.disabled=true;show('');try{const {error}=await supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:new URL('login.html',location.href).href}});if(error)throw error;}catch(err){console.error('HAVKAR Google OAuth Error:',err);show('Google sign-in could not be started. Please try again.','error');googleBtn.disabled=false;}});
 </script></body></html>

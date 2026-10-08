@@ -340,7 +340,7 @@ button:disabled {
 }
 
 </style>
-
+<script src="/havkar-i18n.js"></script>
 </head>
 
 <body>
@@ -357,7 +357,7 @@ button:disabled {
 
     </div>
 
-    <h1>HAVKAR</h1>
+    <h1 translate="no" data-i18n-ignore>HAVKAR</h1>
 
     <div class="subtitle">
         Connect • Trade • Work • Help
@@ -447,7 +447,7 @@ button:disabled {
     ====================================================== -->
 
     <div id="accountMode" class="hidden">
-      <p class="session-notice" id="accountEmail"></p>
+      <p class="session-notice" id="accountEmail" translate="no" data-i18n-ignore></p>
       <div class="account-actions">
         <a href="index.html">Go to HAVKAR</a>
         <button type="button" id="accountLogout">Log Out</button>
@@ -652,7 +652,8 @@ accountLogout.addEventListener("click", async () => {
     showLoginMode();
     showMessage("You have logged out.", "success");
   } catch (error) {
-    showMessage(error.message || "Log out failed. Please try again.", "error");
+    console.error("HAVKAR Logout Error:", error);
+    showMessage("Log out could not be completed. Please try again.", "error");
   } finally { accountLogout.disabled = false; }
 });
 
@@ -860,7 +861,7 @@ googleBtn.addEventListener("click", async () => {
         // Supabase redirects the browser to Google; the return is handled below.
     } catch (error) {
         console.error("HAVKAR Google OAuth Error:", error);
-        showMessage(error?.message || "Google sign-in failed. Please try again.", "error");
+        showMessage("Google sign-in could not be started. Please try again.", "error");
         googleBtn.disabled = false;
         googleBtn.innerHTML = '<span class="google-mark" aria-hidden="true">G</span> Continue with Google';
     }
@@ -934,7 +935,7 @@ async function login() {
             showMessage(
                 invalidCredentials
                     ? "Email or password is incorrect. You can try again or reset your password below."
-                    : error.message,
+                    : "Sign-in could not be completed. Please try again.",
                 "error"
             );
             if (invalidCredentials) {
@@ -1028,11 +1029,7 @@ async function login() {
         );
 
         showMessage(
-            "Connection error: " +
-            (
-                error?.message ||
-                "Please try again."
-            ),
+            "Sign-in could not be completed. Please try again.",
             "error"
         );
 
@@ -1136,7 +1133,7 @@ async function sendPasswordReset() {
             );
 
             showMessage(
-                error.message,
+                "Password reset could not be started. Please try again.",
                 "error"
             );
 
@@ -1274,7 +1271,7 @@ async function updatePassword() {
             );
 
             showMessage(
-                error.message,
+                "Password could not be changed. Please try again.",
                 "error"
             );
 
@@ -1558,7 +1555,8 @@ supabase.auth.onAuthStateChange(
         const oauthHash = new URLSearchParams(window.location.hash.slice(1));
         const oauthError = oauthParams.get("error_description") || oauthHash.get("error_description") || oauthParams.get("error") || oauthHash.get("error");
         if (oauthError) {
-            showMessage("Google sign-in: " + oauthError, "error");
+            showMessage("Google sign-in could not be completed. Please try again.", "error");
+            console.error("HAVKAR Google OAuth Error:", oauthError);
             window.history.replaceState({}, document.title, window.location.pathname);
             return;
         }
