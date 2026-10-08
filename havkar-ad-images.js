@@ -314,6 +314,33 @@
   }
 
 
+  function blobForUpload(
+    file,
+    contentType
+  ) {
+
+    const rawType =
+      String(file && file.type || "")
+        .toLowerCase()
+        .split(";")[0]
+        .trim();
+
+    if (rawType === contentType) {
+
+      return file;
+
+    }
+
+    return new Blob(
+      [file],
+      {
+        type: contentType
+      }
+    );
+
+  }
+
+
   function isSafePublicUrl(
     value,
     objectPath
@@ -530,7 +557,10 @@
         result =
           await bucket.upload(
             objectPath,
-            files[index],
+            blobForUpload(
+              files[index],
+              prepared.contentType
+            ),
             {
               contentType: prepared.contentType,
               cacheControl: "3600",

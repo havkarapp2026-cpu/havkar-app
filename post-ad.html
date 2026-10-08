@@ -1401,6 +1401,10 @@ adForm.addEventListener(
     );
 
 
+    let publishTimer =
+      0;
+
+
     try {
 
 
@@ -1523,6 +1527,18 @@ adForm.addEventListener(
         );
 
 
+      if (photos.length !== preparedPhotos.length) {
+
+        throw window.HAVKAR_AD_IMAGES.incompleteSaveError(
+          new Error(
+            "Could not upload every image."
+          ),
+          photos
+        );
+
+      }
+
+
       /* ---------------------------------------------
          CREATE AD OBJECT
          --------------------------------------------- */
@@ -1597,21 +1613,22 @@ adForm.addEventListener(
             reject
           ) {
 
-            window.setTimeout(
-              function () {
+            publishTimer =
+              window.setTimeout(
+                function () {
 
-                reject(
-                  window.HAVKAR_AD_IMAGES.incompleteSaveError(
-                    new Error(
-                      "The publish request timed out. Please check your internet connection and try again."
-                    ),
-                    photos
-                  )
-                );
+                  reject(
+                    window.HAVKAR_AD_IMAGES.incompleteSaveError(
+                      new Error(
+                        "The publish request timed out. Please check your internet connection and try again."
+                      ),
+                      photos
+                    )
+                  );
 
-              },
-              30000
-            );
+                },
+                30000
+              );
 
           }
         );
@@ -1689,6 +1706,11 @@ adForm.addEventListener(
          SUCCESS
          --------------------------------------------- */
 
+      window.clearTimeout(
+        publishTimer
+      );
+
+
       showStatus(
         "Your ad has been published successfully!",
         "success"
@@ -1738,6 +1760,11 @@ adForm.addEventListener(
 
 
     } catch (error) {
+
+      window.clearTimeout(
+        publishTimer
+      );
+
 
       console.error(
         "HAVKAR Publish error:",
