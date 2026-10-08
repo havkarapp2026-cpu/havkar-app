@@ -1082,50 +1082,9 @@
 
     <nav
         class="tabs"
+        id="categoryTabs"
         aria-label="Advertisement categories"
-    >
-
-        <button
-            class="tab active"
-            data-category="all"
-            onclick="setCategory('all', this)"
-        >
-            All
-        </button>
-
-        <button
-            class="tab"
-            data-category="restaurant"
-            onclick="setCategory('restaurant', this)"
-        >
-            Restaurants
-        </button>
-
-        <button
-            class="tab"
-            data-category="shop"
-            onclick="setCategory('shop', this)"
-        >
-            Shops
-        </button>
-
-        <button
-            class="tab"
-            data-category="service"
-            onclick="setCategory('service', this)"
-        >
-            Services
-        </button>
-
-        <button
-            class="tab"
-            data-category="other"
-            onclick="setCategory('other', this)"
-        >
-            Other
-        </button>
-
-    </nav>
+    ></nav>
 
     <main class="content">
 
@@ -1296,22 +1255,6 @@
                                 Select category
                             </option>
 
-                            <option value="restaurant">
-                                Restaurant
-                            </option>
-
-                            <option value="shop">
-                                Shop
-                            </option>
-
-                            <option value="service">
-                                Service
-                            </option>
-
-                            <option value="other">
-                                Other
-                            </option>
-
                         </select>
 
                     </div>
@@ -1475,6 +1418,7 @@
 
     <script src="/havkar-supabase-config.js"></script>
     <script src="/havkar-currencies.js"></script>
+    <script src="/havkar-categories.js"></script>
 <script>
 
         const SUPABASE_URL =
@@ -1496,6 +1440,17 @@
                     "adCurrency"
                 ),
                 "Currency"
+            );
+
+        }
+
+        if (window.HAVKAR_CATEGORIES) {
+
+            window.HAVKAR_CATEGORIES.fillSelect(
+                document.getElementById(
+                    "businessCategory"
+                ),
+                "Select category"
             );
 
         }
@@ -2068,11 +2023,16 @@
                         "all"
                     ) {
 
+                        const categoryMatch =
+                            window.HAVKAR_CATEGORIES
+                                ? window.HAVKAR_CATEGORIES.matches(
+                                    ad.category,
+                                    activeCategory
+                                )
+                                : false;
+
                         if (
-                            String(
-                                ad.category || ""
-                            ).toLowerCase() !==
-                            activeCategory
+                            !categoryMatch
                         ) {
 
                             return false;
@@ -2087,6 +2047,11 @@
 
                             ad.title,
                             ad.category,
+                            window.HAVKAR_CATEGORIES
+                                ? window.HAVKAR_CATEGORIES.displayLabel(
+                                    ad.category
+                                )
+                                : "",
                             ad.location,
                             ad.description,
                             ad.status
@@ -2306,25 +2271,20 @@
             category
         ) {
 
-            switch (
-                String(
-                    category || ""
-                ).toLowerCase()
+            if (
+                window.HAVKAR_CATEGORIES
             ) {
 
-                case "restaurant":
-                    return "🍕";
-
-                case "shop":
-                    return "🛍️";
-
-                case "service":
-                    return "🛠️";
-
-                default:
-                    return "📢";
+                return (
+                    window.HAVKAR_CATEGORIES.emoji(
+                        category
+                    ) ||
+                    "📢"
+                );
 
             }
+
+            return "📢";
 
         }
 
@@ -2386,9 +2346,24 @@
 
             const category =
                 String(
-                    ad.category ||
-                    "other"
+                    ad.category || ""
+                ).trim();
+
+            const categoryLegacy =
+                Boolean(
+                    category &&
+                    !(
+                        window.HAVKAR_CATEGORIES &&
+                        window.HAVKAR_CATEGORIES.resolveCode(
+                            category
+                        )
+                    )
                 );
+
+            const categoryClass =
+                categoryLegacy
+                    ? " notranslate"
+                    : "";
 
             const normalizedStatus =
                 String(
@@ -2545,7 +2520,7 @@
 
                             <div class="company-text">
 
-                                <div class="company-name">
+                                <div class="company-name${categoryClass}">
 
                                     ${escapeHTML(
                                         formatCategoryName(
@@ -2596,7 +2571,7 @@
 
                             </div>
 
-                            <div class="meta-item">
+                            <div class="meta-item${categoryClass}">
 
                                 <i
                                     class="fas fa-layer-group"
@@ -2772,47 +2747,101 @@
             category
         ) {
 
-            const value =
-                String(
-                    category ||
-                    "other"
-                )
-                    .trim()
-                    .toLowerCase();
-
-            const map = {
-
-                restaurant:
-                    "Restaurant",
-
-                shop:
-                    "Shop",
-
-                service:
-                    "Service",
-
-                other:
-                    "Other"
-
-            };
-
             if (
-                map[value]
+                window.HAVKAR_CATEGORIES
             ) {
 
-                return map[value];
+                return window.HAVKAR_CATEGORIES.displayLabel(
+                    category
+                );
 
             }
 
-            return value
-                .replace(
-                    /[-_]+/g,
-                    " "
+            return String(
+                category || ""
+            ).trim();
+
+        }
+
+        function renderCategoryTabs() {
+
+            const nav =
+                document.getElementById(
+                    "categoryTabs"
+                );
+
+            if (
+                !nav ||
+                !window.HAVKAR_CATEGORIES
+            ) {
+
+                return;
+
+            }
+
+            const categories = [
+                {
+                    code: "all",
+                    label: "All"
+                }
+            ].concat(
+                window.HAVKAR_CATEGORIES.list.map(
+                    function (category) {
+
+                        return {
+                            code: category.code,
+                            label: category.label
+                        };
+
+                    }
                 )
-                .replace(
-                    /\b\w/g,
-                    char =>
-                        char.toUpperCase()
+            );
+
+            nav.innerHTML =
+                categories.map(
+                    function (category) {
+
+                        return `
+
+                            <button
+                                type="button"
+                                class="tab ${
+                                    category.code === activeCategory
+                                        ? "active"
+                                        : ""
+                                }"
+                                data-category="${escapeHTML(
+                                    category.code
+                                )}"
+                            >
+                                ${escapeHTML(
+                                    category.label
+                                )}
+                            </button>
+
+                        `;
+
+                    }
+                ).join("");
+
+            nav.querySelectorAll(".tab")
+                .forEach(
+                    function (button) {
+
+                        button.addEventListener(
+                            "click",
+                            function () {
+
+                                setCategory(
+                                    button.dataset.category ||
+                                    "all",
+                                    button
+                                );
+
+                            }
+                        );
+
+                    }
                 );
 
         }
@@ -3179,9 +3208,12 @@
 
             if (
                 !title ||
-                !category ||
                 !location ||
-                !description
+                !description ||
+                !window.HAVKAR_CATEGORIES ||
+                !window.HAVKAR_CATEGORIES.resolveCode(
+                    category
+                )
             ) {
 
                 showToast(
@@ -4076,6 +4108,8 @@
         document.addEventListener(
             "DOMContentLoaded",
             async function() {
+
+                renderCategoryTabs();
 
                 setupAuthListener();
 

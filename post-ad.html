@@ -105,23 +105,6 @@ textarea {
   resize: vertical;
 }
 
-/* CATEGORY */
-
-.category-help {
-  margin-top: 7px;
-  font-size: 13px;
-  color: #777;
-}
-
-.custom-category {
-  display: none;
-  margin-top: 10px;
-}
-
-.custom-category.show {
-  display: block;
-}
-
 /* PHOTOS */
 
 .photo-info {
@@ -302,131 +285,7 @@ textarea {
           Select category
         </option>
 
-        <option value="Electronics">
-          Electronics
-        </option>
-
-        <option value="Furniture">
-          Furniture
-        </option>
-
-        <option value="Vehicles">
-          Vehicles
-        </option>
-
-        <option value="Real Estate">
-          Real Estate
-        </option>
-
-        <option value="Clothing">
-          Clothing
-        </option>
-
-        <option value="Books">
-          Books
-        </option>
-
-        <option value="Services">
-          Services
-        </option>
-
-        <option value="Jobs">
-          Jobs
-        </option>
-
-        <option value="Housing">
-          Housing
-        </option>
-
-        <option value="Food">
-          Food
-        </option>
-
-        <option value="Restaurant Equipment">
-          Restaurant Equipment
-        </option>
-
-        <option value="Used Items">
-          Used Items
-        </option>
-
-        <option value="Home Appliances">
-          Home Appliances
-        </option>
-
-        <option value="Tools & Machinery">
-          Tools & Machinery
-        </option>
-
-        <option value="Computers">
-          Computers
-        </option>
-
-        <option value="Mobile Phones">
-          Mobile Phones
-        </option>
-
-        <option value="Motorcycles">
-          Motorcycles
-        </option>
-
-        <option value="Cars">
-          Cars
-        </option>
-
-        <option value="Trucks">
-          Trucks
-        </option>
-
-        <option value="Baby & Kids">
-          Baby & Kids
-        </option>
-
-        <option value="Sports">
-          Sports
-        </option>
-
-        <option value="Beauty & Personal Care">
-          Beauty & Personal Care
-        </option>
-
-        <option value="Construction & Industrial">
-          Construction & Industrial
-        </option>
-
-        <option value="Agricultural Equipment">
-          Agricultural Equipment
-        </option>
-
-        <option value="Other">
-          Other / Custom
-        </option>
-
       </select>
-
-
-      <div class="category-help">
-        Choose a category or enter your own category.
-      </div>
-
-
-      <!-- CUSTOM CATEGORY -->
-
-      <div
-        id="customCategoryBox"
-        class="custom-category">
-
-        <label for="customCategory">
-          Your Category
-        </label>
-
-        <input
-          type="text"
-          id="customCategory"
-          placeholder="Enter your own category"
-        >
-
-      </div>
 
 
       <!-- PRICE AND CURRENCY -->
@@ -577,6 +436,7 @@ textarea {
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-currencies.js"></script>
+<script src="/havkar-categories.js"></script>
 <script>
 
 /* =========================================================
@@ -627,6 +487,16 @@ if (window.HAVKAR_CURRENCIES) {
 }
 
 
+if (window.HAVKAR_CATEGORIES) {
+
+  window.HAVKAR_CATEGORIES.fillSelect(
+    document.getElementById("category"),
+    "Select category"
+  );
+
+}
+
+
 /* =========================================================
    ELEMENTS
    ========================================================= */
@@ -637,11 +507,6 @@ const adForm =
 const categoryInput =
   document.getElementById("category");
 
-const customCategoryBox =
-  document.getElementById("customCategoryBox");
-
-const customCategoryInput =
-  document.getElementById("customCategory");
 
 const photoInput =
   document.getElementById("photos");
@@ -661,41 +526,6 @@ const statusBox =
    ========================================================= */
 
 let selectedFiles = [];
-
-
-/* =========================================================
-   CATEGORY
-   ========================================================= */
-
-categoryInput.addEventListener(
-  "change",
-  function () {
-
-    if (this.value === "Other") {
-
-      customCategoryBox
-        .classList
-        .add("show");
-
-      customCategoryInput.required =
-        true;
-
-    } else {
-
-      customCategoryBox
-        .classList
-        .remove("show");
-
-      customCategoryInput.required =
-        false;
-
-      customCategoryInput.value =
-        "";
-
-    }
-
-  }
-);
 
 
 /* =========================================================
@@ -1180,8 +1010,8 @@ function getFormData() {
       .trim();
 
 
-  let category =
-    categoryInput.value;
+  const category =
+    categoryInput.value.trim();
 
 
   const priceValue =
@@ -1237,32 +1067,16 @@ function getFormData() {
   }
 
 
-  if (!category) {
+  if (
+    !window.HAVKAR_CATEGORIES ||
+    !window.HAVKAR_CATEGORIES.resolveCode(
+      category
+    )
+  ) {
 
     throw new Error(
       "Please select a category."
     );
-
-  }
-
-
-  if (
-    category === "Other"
-  ) {
-
-    category =
-      customCategoryInput
-        .value
-        .trim();
-
-
-    if (!category) {
-
-      throw new Error(
-        "Please enter your category."
-      );
-
-    }
 
   }
 
@@ -1650,15 +1464,6 @@ adForm.addEventListener(
 
 
       renderPhotos();
-
-
-      customCategoryBox
-        .classList
-        .remove("show");
-
-
-      customCategoryInput.required =
-        false;
 
 
       /*

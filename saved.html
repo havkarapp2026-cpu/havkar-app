@@ -696,6 +696,7 @@ main{max-width:980px;margin:auto;padding:16px}
 
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-currencies.js"></script>
+<script src="/havkar-categories.js"></script>
 <script>
 "use strict";
 
@@ -1697,7 +1698,7 @@ function imageFor(item){
     return "";
 }
 
-function metaFor(item){
+function metaHtml(item){
 
     const type =
         normalizeType(
@@ -1709,6 +1710,29 @@ function metaFor(item){
 
     const parts = [];
 
+    function push(text, legacy){
+
+        if(
+            text === null ||
+            text === undefined ||
+            text === ""
+        ){
+            return;
+        }
+
+        const safe =
+            escapeHTML(
+                String(text)
+            );
+
+        parts.push(
+            legacy
+                ? `<span class="notranslate">${safe}</span>`
+                : safe
+        );
+
+    }
+
     if(type === "ad"){
 
         if(
@@ -1716,7 +1740,7 @@ function metaFor(item){
             detail?.price !== undefined &&
             detail?.price !== ""
         ){
-            parts.push(
+            push(
                 formatPrice(
                     detail.price,
                     detail.currency
@@ -1725,14 +1749,30 @@ function metaFor(item){
         }
 
         if(detail?.location){
-            parts.push(
+            push(
                 detail.location
             );
         }
 
         if(detail?.category){
-            parts.push(
-                detail.category
+            const label =
+                window.HAVKAR_CATEGORIES
+                    ? window.HAVKAR_CATEGORIES.displayLabel(
+                        detail.category
+                    )
+                    : detail.category;
+
+            const legacy =
+                !(
+                    window.HAVKAR_CATEGORIES &&
+                    window.HAVKAR_CATEGORIES.resolveCode(
+                        detail.category
+                    )
+                );
+
+            push(
+                label,
+                legacy
             );
         }
 
@@ -1741,25 +1781,25 @@ function metaFor(item){
     if(type === "job"){
 
         if(detail?.company){
-            parts.push(
+            push(
                 detail.company
             );
         }
 
         if(detail?.location){
-            parts.push(
+            push(
                 detail.location
             );
         }
 
         if(detail?.job_type){
-            parts.push(
+            push(
                 detail.job_type
             );
         }
 
         if(detail?.salary){
-            parts.push(
+            push(
                 detail.salary
             );
         }
@@ -1769,26 +1809,26 @@ function metaFor(item){
     if(type === "event"){
 
         if(detail?.event_date){
-            parts.push(
+            push(
                 detail.event_date
             );
         }
 
         if(detail?.location){
-            parts.push(
+            push(
                 detail.location
             );
         }
 
         if(detail?.organizer){
-            parts.push(
+            push(
                 detail.organizer
             );
         }
 
     }
 
-    parts.push(
+    push(
         collectionName(
             item.collection_id
         )
@@ -1796,7 +1836,7 @@ function metaFor(item){
 
     if(item.created_at){
 
-        parts.push(
+        push(
             "Saved " +
             formatDate(
                 item.created_at
@@ -1808,7 +1848,7 @@ function metaFor(item){
         "legacy_ad_saves"
     ){
 
-        parts.push(
+        push(
             "Saved in Buy & Sell"
         );
 
@@ -1829,6 +1869,11 @@ function searchableText(item){
         item.item_id,
         detail?.title,
         detail?.category,
+        window.HAVKAR_CATEGORIES
+            ? window.HAVKAR_CATEGORIES.displayLabel(
+                detail?.category
+            )
+            : "",
         detail?.company,
         detail?.organizer,
         detail?.location,
@@ -2163,7 +2208,7 @@ function itemCard(item){
                     </h4>
 
                     <div class="card-meta">
-                        ${escapeHTML(metaFor(item))}
+                        ${metaHtml(item)}
                     </div>
 
                     ${detailHTML}
