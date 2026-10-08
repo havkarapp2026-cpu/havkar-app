@@ -1518,6 +1518,47 @@
         let adSubmitInProgress =
             false;
 
+        const adPostingGuard =
+            window.HAVKAR_AD_IMAGES
+                ? window.HAVKAR_AD_IMAGES.createPostingGuard()
+                : {
+                    canSubmit: function () {
+                        return true;
+                    },
+                    canEditImages: function () {
+                        return true;
+                    },
+                    phase: function () {
+                        return "idle";
+                    },
+                    blockedMessage: function () {
+                        return "Image upload is unavailable.";
+                    },
+                    uncertainMessage: function () {
+                        return "The server has not confirmed this advertisement yet. It may still be published. Do not submit it again. Check your existing advertisements before posting again.";
+                    },
+                    beginPublish: function (files) {
+                        return Array.isArray(files)
+                            ? files.slice()
+                            : [];
+                    },
+                    markUncertain: function () {
+                        return {
+                            changed: false,
+                            message: ""
+                        };
+                    },
+                    markSaved: function () {
+                        return false;
+                    },
+                    markFailed: function () {
+                        return false;
+                    },
+                    releaseAfterSave: function () {
+                        return false;
+                    }
+                };
+
         const adImageSelection =
             window.HAVKAR_AD_IMAGES
                 ? window.HAVKAR_AD_IMAGES.createImageSelection()
@@ -3102,6 +3143,16 @@
 
             event.preventDefault();
 
+            if (!adPostingGuard.canSubmit()) {
+
+                showToast(
+                    adPostingGuard.blockedMessage()
+                );
+
+                return;
+
+            }
+
             if (!currentUserId) {
 
                 showToast(
@@ -3220,6 +3271,22 @@
 
             const imageToPublish =
                 adImageSelection.selectedFile();
+
+            if (
+                !adPostingGuard.beginPublish(
+                    imageToPublish
+                        ? [imageToPublish]
+                        : []
+                )
+            ) {
+
+                showToast(
+                    adPostingGuard.blockedMessage()
+                );
+
+                return;
+
+            }
 
             adSubmitInProgress =
                 true;
@@ -3355,15 +3422,12 @@
 
                 };
 
-                let data =
-                    null;
-
-                let error =
+                let insertResult =
                     null;
 
                 try {
 
-                    const insertResult =
+                    insertResult =
                         await supabaseClient
                             .from(ADS_TABLE)
                             .insert(
@@ -3374,34 +3438,91 @@
                             )
                             .single();
 
-                    data =
-                        insertResult.data;
-
-                    error =
-                        insertResult.error;
-
                 } catch (insertError) {
 
-                    throw window.HAVKAR_AD_IMAGES.incompleteSaveError(
-                        insertError,
-                        uploadedUrls
-                    );
+                    insertResult = {
+                        data: null,
+                        error: insertError,
+                        status: 0
+                    };
 
                 }
 
-                if (error) {
+                const outcome =
+                    window.HAVKAR_AD_IMAGES &&
+                    window.HAVKAR_AD_IMAGES.classifyInsertResult
+                        ? window.HAVKAR_AD_IMAGES.classifyInsertResult(
+                            insertResult
+                        )
+                        : {
+                            outcome: "uncertain",
+                            message: adPostingGuard.uncertainMessage()
+                        };
+
+                if (
+                    outcome.outcome === "uncertain"
+                ) {
+
+                    adPostingGuard.markUncertain();
+
+                    const uncertainBox =
+                        document.getElementById(
+                            "adImageMessage"
+                        );
+
+                    if (uncertainBox) {
+
+                        uncertainBox.classList.add(
+                            "show"
+                        );
+
+                        uncertainBox.replaceChildren();
+
+                        const uncertainText =
+                            document.createElement(
+                                "p"
+                            );
+
+                        uncertainText.textContent =
+                            adPostingGuard.uncertainMessage();
+
+                        uncertainBox.appendChild(
+                            uncertainText
+                        );
+
+                    }
+
+                    showToast(
+                        adPostingGuard.uncertainMessage(),
+                        12000
+                    );
+
+                    return;
+
+                }
+
+                if (
+                    outcome.outcome === "rejected"
+                ) {
 
                     console.error(
                         "HAVKAR create ad error:",
-                        error
+                        insertResult &&
+                        insertResult.error
                     );
 
                     throw window.HAVKAR_AD_IMAGES.incompleteSaveError(
-                        error,
+                        new Error(
+                            outcome.message
+                        ),
                         uploadedUrls
                     );
 
                 }
+
+                const data =
+                    insertResult &&
+                    insertResult.data;
 
                 if (data) {
 
@@ -3473,7 +3594,17 @@
                     "Your advertisement was published successfully."
                 );
 
+                adPostingGuard.releaseAfterSave();
+
             } catch (error) {
+
+                if (
+                    adPostingGuard.phase() !== "uncertain"
+                ) {
+
+                    adPostingGuard.markFailed();
+
+                }
 
                 console.error(
                     "HAVKAR publish exception:",
@@ -3519,12 +3650,17 @@
 
             } finally {
 
+                const insertUncertain =
+                    adPostingGuard.phase() === "uncertain" ||
+                    adPostingGuard.phase() === "publishing";
+
                 adSubmitInProgress =
                     false;
 
                 if (publishButton) {
 
                     publishButton.disabled =
+                        insertUncertain ||
                         adImageSelection.isPending();
 
                     publishButton.innerHTML = `
@@ -3721,13 +3857,16 @@
 
             clearAdImageMessage();
 
-            if (adSubmitInProgress) {
+            if (
+                adSubmitInProgress ||
+                !adPostingGuard.canEditImages()
+            ) {
 
                 event.target.value =
                     "";
 
                 showToast(
-                    "Publishing is still in progress. Do not choose another image."
+                    adPostingGuard.blockedMessage()
                 );
 
                 return;

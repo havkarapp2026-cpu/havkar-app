@@ -1761,65 +1761,71 @@ adForm.addEventListener(
         );
 
 
-      let result;
+      let result =
+        null;
+
+      let outcome;
+
 
       try {
 
         result =
           await insertPromise;
 
+        outcome =
+          window.HAVKAR_AD_IMAGES.classifyInsertResult(
+            result
+          );
+
       } catch (insertError) {
 
-        if (
-          insertError &&
-          insertError.orphans
-        ) {
-
-          throw insertError;
-
-        }
-
-        throw window.HAVKAR_AD_IMAGES.incompleteSaveError(
-          insertError,
-          photos
-        );
+        outcome =
+          window.HAVKAR_AD_IMAGES.classifyInsertResult({
+            error: insertError,
+            status: 0
+          });
 
       }
 
 
+      window.clearTimeout(
+        publishTimer
+      );
+
+
       if (
-        !result
+        outcome.outcome === "uncertain"
       ) {
 
-        throw window.HAVKAR_AD_IMAGES.incompleteSaveError(
-          new Error(
-            "Supabase returned no response."
-          ),
-          photos
+        postingGuard.markUncertain();
+
+        showStatus(
+          postingGuard.uncertainMessage(),
+          "error"
         );
+
+        publishBtn.disabled =
+          true;
+
+        return;
 
       }
 
 
       if (
-        result.error
+        outcome.outcome === "rejected"
       ) {
 
         console.error(
           "Supabase insert error:",
+          result &&
           result.error
         );
 
-
-        const message =
-          result.error.message ||
-          result.error.details ||
-          result.error.hint ||
-          "Supabase could not create the ad.";
-
-
         throw window.HAVKAR_AD_IMAGES.incompleteSaveError(
-          new Error(message),
+          new Error(
+            outcome.message
+          ),
           photos
         );
 
@@ -1829,11 +1835,6 @@ adForm.addEventListener(
       /* ---------------------------------------------
          SUCCESS
          --------------------------------------------- */
-
-      window.clearTimeout(
-        publishTimer
-      );
-
 
       postingGuard.markSaved();
 

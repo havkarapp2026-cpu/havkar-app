@@ -311,6 +311,85 @@ async function main() {
   assert.equal(lateTimeout.changed, false);
   assert.equal(lateTimeout.claimNotSaved, false);
   assert.equal(lateTimeout.allowRetry, false);
+  assert.equal(settledFirst.releaseAfterSave(), true);
+  assert.equal(settledFirst.canSubmit(), true);
+
+  const networkResult = images.classifyInsertResult({
+    data: null,
+    error: { message: "TypeError: Failed to fetch", code: "" },
+    status: 0
+  });
+  assert.equal(networkResult.outcome, "uncertain");
+  assert.equal(networkResult.claimNotSaved, false);
+  assert.equal(networkResult.allowRetry, false);
+  assert.equal(/not saved|was not saved|try again/i.test(networkResult.message), false);
+
+  const thrownNetwork = images.classifyInsertResult({
+    error: new TypeError("Failed to fetch"),
+    status: 0
+  });
+  assert.equal(thrownNetwork.outcome, "uncertain");
+  assert.equal(thrownNetwork.allowRetry, false);
+
+  const missingResult = images.classifyInsertResult(null);
+  assert.equal(missingResult.outcome, "uncertain");
+  assert.equal(missingResult.claimNotSaved, false);
+
+  const gateway = images.classifyInsertResult({
+    data: null,
+    error: { message: "Bad gateway", code: "" },
+    status: 502
+  });
+  assert.equal(gateway.outcome, "uncertain");
+  assert.equal(gateway.allowRetry, false);
+
+  const requestTimeout = images.classifyInsertResult({
+    data: null,
+    error: { message: "Request Timeout", code: "" },
+    status: 408
+  });
+  assert.equal(requestTimeout.outcome, "uncertain");
+
+  const denied = images.classifyInsertResult({
+    data: null,
+    error: {
+      message: "new row violates row-level security policy",
+      code: "42501"
+    },
+    status: 403
+  });
+  assert.equal(denied.outcome, "rejected");
+  assert.equal(denied.claimNotSaved, true);
+  assert.equal(denied.allowRetry, true);
+
+  const singleRow = images.classifyInsertResult({
+    data: null,
+    error: {
+      message: "JSON object requested, multiple (or no) rows returned",
+      code: "PGRST116"
+    },
+    status: 406
+  });
+  assert.equal(singleRow.outcome, "rejected");
+  assert.equal(singleRow.claimNotSaved, true);
+
+  const saved = images.classifyInsertResult({
+    data: null,
+    error: null,
+    status: 201
+  });
+  assert.equal(saved.outcome, "saved");
+  assert.equal(saved.allowRetry, false);
+
+  const disconnect = images.createPostingGuard();
+  disconnect.beginPublish(["photo"]);
+  const disconnected = disconnect.markUncertain();
+  assert.equal(disconnected.allowRetry, false);
+  assert.equal(disconnect.markUncertain().changed, false);
+  assert.equal(disconnect.phase(), "uncertain");
+  assert.equal(disconnect.beginPublish(["retry"]), null);
+  assert.equal(disconnect.releaseAfterSave(), false);
+  assert.equal(disconnect.canSubmit(), false);
 
   const picker = images.createImageSelection();
   const older = picker.begin("older");
@@ -343,6 +422,10 @@ async function main() {
   assert.equal(publishBlock.includes("The publish request timed out"), false);
   assert.equal(publishBlock.includes("markUncertain"), true);
   assert.equal(publishBlock.includes("await insertPromise"), true);
+  assert.equal(publishBlock.includes("classifyInsertResult"), true);
+  const uncertainOutcome = publishBlock.indexOf("outcome === \"uncertain\"");
+  const failedOutcome = publishBlock.indexOf("markFailed");
+  assert.equal(uncertainOutcome > -1 && uncertainOutcome < failedOutcome, true);
   const removeStart = postAd.indexOf("removeBtn.onclick");
   const removeBlock = postAd.slice(removeStart, removeStart + 500);
   assert.equal(removeBlock.indexOf("canEditImages") < removeBlock.indexOf("splice"), true);
@@ -358,6 +441,10 @@ async function main() {
   assert.equal(submitAdBlock.indexOf("imageToPublish") < submitAdBlock.indexOf("getSession"), true);
   assert.equal(submitAdBlock.includes("[\n                                imageToPublish\n                            ]"), true);
   assert.equal(submitAdBlock.includes("selectedImageFile"), false);
+  assert.equal(submitAdBlock.includes("classifyInsertResult"), true);
+  assert.equal(submitAdBlock.includes("outcome === \"uncertain\""), true);
+  assert.equal(submitAdBlock.includes("insertUncertain"), true);
+  assert.equal(submitAdBlock.indexOf("beginPublish") < submitAdBlock.indexOf(".insert("), true);
 
   console.log("AD_IMAGE_UPLOAD_TEST_OK");
 }

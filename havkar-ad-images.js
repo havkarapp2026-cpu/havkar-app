@@ -640,7 +640,92 @@
 
 
   const UNCERTAIN_PUBLISH_MESSAGE =
-    "The server has not confirmed this advertisement yet. It may still be published. Do not submit it again.";
+    "The server has not confirmed this advertisement yet. It may still be published. Do not submit it again. Check your existing advertisements before posting again.";
+
+
+  function classifyInsertResult(
+    result
+  ) {
+
+    const uncertain = {
+      outcome: "uncertain",
+      claimNotSaved: false,
+      allowRetry: false,
+      message: UNCERTAIN_PUBLISH_MESSAGE
+    };
+
+    if (
+      !result ||
+      typeof result !== "object"
+    ) {
+
+      return uncertain;
+
+    }
+
+    if (!result.error) {
+
+      return {
+        outcome: "saved",
+        claimNotSaved: false,
+        allowRetry: false,
+        message: ""
+      };
+
+    }
+
+    const status =
+      Number(
+        result.status
+      );
+
+    const code =
+      String(
+        result.error.code ||
+        ""
+      );
+
+    const serverCode =
+      /^[0-9A-Z]{5}$/.test(code) ||
+      code.indexOf("PGRST") === 0;
+
+    if (
+      status === 0 ||
+      status === 408 ||
+      status >= 500
+    ) {
+
+      return uncertain;
+
+    }
+
+    if (
+      (
+        Number.isInteger(status) &&
+        status >= 400 &&
+        status < 500
+      ) ||
+      serverCode
+    ) {
+
+      const reason =
+        result.error.message ||
+        result.error.details ||
+        result.error.hint ||
+        "Supabase could not create the ad.";
+
+      return {
+        outcome: "rejected",
+        claimNotSaved: true,
+        allowRetry: true,
+        message: String(reason)
+      };
+
+    }
+
+    return uncertain;
+
+  }
 
 
   function createPostingGuard() {
@@ -763,6 +848,17 @@
       },
       markUncertain: function () {
 
+        if (phase === "uncertain") {
+
+          return {
+            changed: false,
+            claimNotSaved: false,
+            allowRetry: false,
+            message: UNCERTAIN_PUBLISH_MESSAGE
+          };
+
+        }
+
         if (phase !== "publishing") {
 
           return {
@@ -798,6 +894,23 @@
 
         phase =
           "saved";
+
+        return true;
+
+      },
+      releaseAfterSave: function () {
+
+        if (phase !== "saved") {
+
+          return false;
+
+        }
+
+        phase =
+          "idle";
+
+        snapshot =
+          [];
 
         return true;
 
@@ -1105,6 +1218,7 @@
     validateAdImage: validateAdImage,
     uploadAdvertisementImages: uploadAdvertisementImages,
     incompleteSaveError: incompleteSaveError,
+    classifyInsertResult: classifyInsertResult,
     createPostingGuard: createPostingGuard,
     createImageSelection: createImageSelection,
     describeFailure: describeFailure,
