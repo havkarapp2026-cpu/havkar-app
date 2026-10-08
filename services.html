@@ -390,6 +390,60 @@ textarea {
     color: #689f38;
 }
 
+.bookings-btn,
+.owner-actions button {
+    border: 1px solid #c5e1a5;
+    background: #fff;
+    color: #558b2f;
+    border-radius: 12px;
+    font-weight: 800;
+    min-height: 36px;
+    padding: 0 12px;
+}
+
+.bookings-btn {
+    margin-left: 10px;
+}
+
+.owner-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.booking-tabs {
+    display: flex;
+    gap: 8px;
+    margin: 14px 0;
+}
+
+.booking-tabs button.active {
+    background: #7cb342;
+    color: #fff;
+    border-color: #7cb342;
+}
+
+.booking-card {
+    border: 1px solid #eeeeee;
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 12px;
+}
+
+.booking-card p {
+    margin: 6px 0 0;
+    color: #666;
+    line-height: 1.45;
+}
+
+.booking-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
 /* =========================================================
    SERVICE GRID
 ========================================================= */
@@ -1263,9 +1317,8 @@ textarea.form-control {
 
             <span
                 class="notification-badge"
-                id="notificationBadge">
-                4
-            </span>
+                id="notificationBadge"
+                style="display:none"></span>
 
         </button>
 
@@ -1406,10 +1459,19 @@ textarea.form-control {
             Available Services
         </div>
 
-        <div
-            class="service-count"
-            id="serviceCount">
-            0 services
+        <div style="display:flex;align-items:center">
+            <button
+                class="bookings-btn"
+                type="button"
+                onclick="openBookings()">
+                Bookings
+            </button>
+            <div
+                class="service-count"
+                id="serviceCount"
+                style="margin-left:10px">
+                0 services
+            </div>
         </div>
 
     </div>
@@ -1816,7 +1878,7 @@ textarea.form-control {
                     class="form-control"
                     type="text"
                     placeholder="Example: Plumbing"
-                    maxlength="80"
+                    maxlength="120"
                     required>
 
             </div>
@@ -1922,7 +1984,7 @@ textarea.form-control {
                     id="newServiceDescription"
                     class="form-control"
                     placeholder="Describe your service..."
-                    maxlength="500"
+                    maxlength="3000"
                     required></textarea>
 
             </div>
@@ -1948,6 +2010,241 @@ textarea.form-control {
 
 
 <!-- =========================================================
+     BOOKINGS
+========================================================= -->
+
+<div
+    class="modal"
+    id="bookingsModal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="bookingsTitle">
+
+    <div class="modal-box">
+
+        <button
+            class="close-btn"
+            type="button"
+            onclick="closeModal('bookingsModal')"
+            aria-label="Close">
+
+            <i class="fas fa-times"></i>
+
+        </button>
+
+        <div class="modal-header">
+
+            <div class="modal-title" id="bookingsTitle">
+                Bookings
+            </div>
+
+            <div class="modal-subtitle">
+                Your requests and requests you received.
+            </div>
+
+        </div>
+
+        <div class="booking-tabs">
+
+            <button
+                class="bookings-btn active"
+                id="customerBookingsTab"
+                type="button"
+                onclick="showBookingRole('customer')">
+                My requests
+            </button>
+
+            <button
+                class="bookings-btn"
+                id="providerBookingsTab"
+                type="button"
+                onclick="showBookingRole('provider')">
+                Received
+            </button>
+
+        </div>
+
+        <div id="bookingsList"></div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     EDIT SERVICE
+========================================================= -->
+
+<div
+    class="modal"
+    id="editServiceModal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="editServiceTitle">
+
+    <div class="modal-box">
+
+        <button
+            class="close-btn"
+            type="button"
+            onclick="closeModal('editServiceModal')"
+            aria-label="Close">
+
+            <i class="fas fa-times"></i>
+
+        </button>
+
+        <div class="modal-header">
+
+            <div class="modal-title" id="editServiceTitle">
+                Edit service
+            </div>
+
+            <div class="modal-subtitle">
+                Changes apply only to your own service.
+            </div>
+
+        </div>
+
+        <form id="editServiceForm">
+
+            <input id="editServiceId" type="hidden">
+            <input id="editServiceFromStatus" type="hidden">
+
+            <div class="form-group">
+
+                <label class="form-label" for="editServiceName">
+                    Service Name
+                </label>
+
+                <input
+                    id="editServiceName"
+                    class="form-control"
+                    type="text"
+                    maxlength="120"
+                    required>
+
+            </div>
+
+            <div class="form-group">
+
+                <label class="form-label" for="editServiceCategory">
+                    Category
+                </label>
+
+                <select
+                    id="editServiceCategory"
+                    class="form-control"
+                    required>
+
+                    <option value="Plumbing">Plumbing</option>
+                    <option value="Electrical">Electrical</option>
+                    <option value="Cleaning">Cleaning</option>
+                    <option value="Carpentry">Carpentry</option>
+                    <option value="Painting">Painting</option>
+                    <option value="Moving">Moving</option>
+
+                </select>
+
+            </div>
+
+            <div class="form-group">
+
+                <label class="form-label" for="editServicePrice">
+                    Price
+                </label>
+
+                <input
+                    id="editServicePrice"
+                    class="form-control"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    required>
+
+            </div>
+
+            <div class="form-group">
+
+                <label class="form-label" for="editServicePriceType">
+                    Price type
+                </label>
+
+                <select id="editServicePriceType" class="form-control" required>
+                    <option value="fixed">fixed</option>
+                    <option value="hourly">hourly</option>
+                    <option value="daily">daily</option>
+                    <option value="negotiable">negotiable</option>
+                </select>
+
+            </div>
+
+            <div class="form-group">
+
+                <label class="form-label" for="editServiceCurrency">
+                    Currency
+                </label>
+
+                <select id="editServiceCurrency" class="form-control" required>
+                    <option value="EUR">EUR</option>
+                    <option value="USD">USD</option>
+                    <option value="GBP">GBP</option>
+                    <option value="SEK">SEK</option>
+                </select>
+
+            </div>
+
+            <div class="form-group">
+
+                <label class="form-label" for="editServiceLocation">
+                    Location
+                </label>
+
+                <input
+                    id="editServiceLocation"
+                    class="form-control"
+                    type="text"
+                    maxlength="120"
+                    required>
+
+            </div>
+
+            <div class="form-group">
+
+                <label class="form-label" for="editServiceDescription">
+                    Description
+                </label>
+
+                <textarea
+                    id="editServiceDescription"
+                    class="form-control"
+                    maxlength="3000"
+                    required></textarea>
+
+            </div>
+
+            <div class="form-group">
+
+                <label class="form-label" for="editServiceStatus">
+                    Status
+                </label>
+
+                <select id="editServiceStatus" class="form-control" required></select>
+
+            </div>
+
+            <button class="submit-btn" type="submit">
+                Save changes
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
      TOAST
 ========================================================= -->
 
@@ -1960,6 +2257,7 @@ textarea.form-control {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-services.js"></script>
 <script>
 
 /* =========================================================
@@ -1985,6 +2283,8 @@ let savedServiceIds = new Set();
 let showingSavedOnly = false;
 let selectedBookingService = null;
 let toastTimer = null;
+let bookingRole = "customer";
+let loadedBookings = [];
 
 const searchInput =
     document.getElementById("searchInput");
@@ -2146,18 +2446,19 @@ async function loadServices() {
 
     servicesContainer.innerHTML = "";
 
-    const { data, error } = await db
+    const columns =
+        window.HAVKAR_SERVICES.SERVICE_COLUMNS;
+
+    const activeResult = await db
         .from("services")
-        .select(
-            "id,created_at,updated_at,provider_id,title,category,description,price,currency,price_type,location,image_url,status"
-        )
+        .select(columns)
         .eq("status", "active")
         .order("created_at", { ascending: false })
         .limit(100);
 
-    if (error) {
+    if (activeResult.error) {
 
-        console.error("Services load error:", error);
+        console.error("Services load error:", activeResult.error);
         services = [];
         renderServices();
         showToast("Could not load services.");
@@ -2165,7 +2466,45 @@ async function loadServices() {
 
     }
 
-    services = Array.isArray(data) ? data : [];
+    const merged =
+        Array.isArray(activeResult.data)
+            ? activeResult.data.slice()
+            : [];
+
+    if (currentUser) {
+
+        const ownResult = await db
+            .from("services")
+            .select(columns)
+            .eq("provider_id", currentUser.id)
+            .order("created_at", { ascending: false });
+
+        if (ownResult.error) {
+
+            console.error("Own services load error:", ownResult.error);
+            showToast("Could not load your services.");
+
+        } else if (Array.isArray(ownResult.data)) {
+
+            ownResult.data.forEach(function(service) {
+
+                const index = merged.findIndex(function(item) {
+                    return String(item.id) === String(service.id);
+                });
+
+                if (index === -1) {
+                    merged.push(service);
+                } else {
+                    merged[index] = service;
+                }
+
+            });
+
+        }
+
+    }
+
+    services = merged;
     renderServices();
 
 }
@@ -2292,7 +2631,7 @@ function buildServiceCard(service) {
 
                 <div class="rating">
                     <i class="fas fa-circle-check"></i>
-                    Active Service
+                    ${escapeHtml(serviceStatusLabel(service))}
                 </div>
             </div>
         </div>
@@ -2305,7 +2644,7 @@ function buildServiceCard(service) {
 
             <div class="detail-item">
                 <i class="fas fa-clock"></i>
-                Available
+                ${escapeHtml(serviceAvailabilityLabel(service))}
             </div>
         </div>
 
@@ -2318,19 +2657,9 @@ function buildServiceCard(service) {
                 ${escapeHtml(priceText)}
             </div>
 
-            ${service.provider_id === currentUser?.id ? `
-            <button
-                class="book-btn owner-delete-btn"
-                type="button"
-                style="margin-right:10px;background:#fff;color:#d32f2f;border:1px solid #ef9a9a;box-shadow:none">
-                Delete
-            </button>` : ""}
-
-            <button
-                class="book-btn"
-                type="button">
-                Book Now
-            </button>
+            ${service.provider_id === currentUser?.id
+                ? ownerServiceActions(service)
+                : `<button class="book-btn" type="button">Book Now</button>`}
         </div>
     `;
 
@@ -2355,14 +2684,41 @@ function buildServiceCard(service) {
         );
     }
 
-    card
-        .querySelectorAll(".book-btn:not(.owner-delete-btn)")[0]
-        .addEventListener(
+    const editButton =
+        card.querySelector(".owner-edit-btn");
+
+    if (editButton) {
+        editButton.addEventListener(
+            "click",
+            function() {
+                openEditService(service.id);
+            }
+        );
+    }
+
+    card.querySelectorAll(".owner-status-btn").forEach(function(button) {
+        button.addEventListener(
+            "click",
+            function() {
+                changeOwnServiceStatus(
+                    service.id,
+                    button.dataset.status
+                );
+            }
+        );
+    });
+
+    const bookButton =
+        card.querySelector(".book-btn:not(.owner-delete-btn):not(.owner-edit-btn):not(.owner-status-btn)");
+
+    if (bookButton) {
+        bookButton.addEventListener(
             "click",
             function() {
                 openBooking(service);
             }
         );
+    }
 
     return card;
 
@@ -2440,6 +2796,17 @@ function updateServiceCount(
 ========================================================= */
 
 function openBooking(service) {
+
+    if (
+        currentUser &&
+        !window.HAVKAR_SERVICES.canBookService(
+            service,
+            currentUser.id
+        )
+    ) {
+        showToast("You cannot book your own service.");
+        return;
+    }
 
     selectedBookingService = service;
 
@@ -2546,6 +2913,13 @@ function bindForms() {
             submitService
         );
 
+    document
+        .getElementById("editServiceForm")
+        .addEventListener(
+            "submit",
+            submitServiceEdit
+        );
+
 }
 
 
@@ -2560,8 +2934,10 @@ async function submitBooking(event) {
     }
 
     if (
-        selectedBookingService.provider_id ===
-        user.id
+        !window.HAVKAR_SERVICES.canBookService(
+            selectedBookingService,
+            user.id
+        )
     ) {
         showToast("You cannot book your own service.");
         return;
@@ -2702,8 +3078,25 @@ async function submitService(event) {
     const parsedPrice =
         parsePriceInput(rawPrice);
 
-    if (!parsedPrice) {
-        showToast("Enter a valid price, for example 30 or €30 / hour.");
+    if (!parsedPrice.ok) {
+        showToast(serviceDraftMessage(parsedPrice.reason));
+        return;
+    }
+
+    const draft =
+        window.HAVKAR_SERVICES.validateServiceDraft({
+            title: title,
+            category: category,
+            description: description,
+            location: location,
+            currency: "EUR",
+            priceType: parsedPrice.priceType,
+            price: parsedPrice.amount,
+            status: "active"
+        });
+
+    if (!draft.ok) {
+        showToast(serviceDraftMessage(draft.reason));
         return;
     }
 
@@ -2724,21 +3117,21 @@ async function submitService(event) {
             provider_id:
                 user.id,
             title:
-                title,
+                draft.payload.title,
             category:
-                category,
+                draft.payload.category,
             description:
-                description,
+                draft.payload.description,
             price:
-                parsedPrice.amount,
+                draft.payload.price,
             currency:
-                "EUR",
+                draft.payload.currency,
             price_type:
-                parsedPrice.priceType,
+                draft.payload.price_type,
             location:
-                location,
+                draft.payload.location,
             status:
-                "active"
+                draft.payload.status
         })
         .select(
             "id,created_at,updated_at,provider_id,title,category,description,price,currency,price_type,location,image_url,status"
@@ -2774,42 +3167,7 @@ async function submitService(event) {
 
 function parsePriceInput(value) {
 
-    const normalized =
-        String(value)
-            .replace(",", ".")
-            .trim();
-
-    const match =
-        normalized.match(/(\d+(?:\.\d{1,2})?)/);
-
-    if (!match) {
-        return null;
-    }
-
-    const amount = Number(match[1]);
-
-    if (!Number.isFinite(amount) || amount < 0) {
-        return null;
-    }
-
-    const lower = normalized.toLowerCase();
-
-    let priceType = "fixed";
-
-    if (lower.includes("hour")) {
-        priceType = "hourly";
-    } else if (lower.includes("day")) {
-        priceType = "daily";
-    } else if (lower.includes("job")) {
-        priceType = "job";
-    } else if (lower.includes("visit")) {
-        priceType = "visit";
-    }
-
-    return {
-        amount,
-        priceType
-    };
+    return window.HAVKAR_SERVICES.parsePriceInput(value);
 
 }
 
@@ -3216,6 +3574,525 @@ function focusSearch() {
 /* =========================================================
    HELPERS
 ========================================================= */
+
+function serviceStatusLabel(service) {
+
+    if (service.status === "paused") {
+        return "Paused";
+    }
+
+    if (service.status === "closed") {
+        return "Closed";
+    }
+
+    return "Active Service";
+
+}
+
+
+function serviceAvailabilityLabel(service) {
+
+    if (service.status === "paused") {
+        return "Paused";
+    }
+
+    if (service.status === "closed") {
+        return "Closed";
+    }
+
+    return "Available";
+
+}
+
+
+function serviceDraftMessage(reason) {
+
+    if (reason === "unsupported_price_type") {
+        return "Use fixed, hourly, daily, or negotiable.";
+    }
+
+    if (reason === "invalid_title") {
+        return "Enter a service name between 3 and 120 characters.";
+    }
+
+    if (reason === "invalid_description") {
+        return "Describe the service in 10 to 3000 characters.";
+    }
+
+    if (reason === "invalid_price") {
+        return "Enter a valid price, for example 30 or €30 / hour.";
+    }
+
+    if (reason === "invalid_currency") {
+        return "Choose EUR, USD, GBP, or SEK.";
+    }
+
+    if (reason === "blocked_transition") {
+        return "That status change is not available.";
+    }
+
+    if (reason === "not_confirmed") {
+        return "The server did not confirm this change.";
+    }
+
+    return "Could not save the service.";
+
+}
+
+
+function ownerServiceActions(service) {
+
+    const actions =
+        window.HAVKAR_SERVICES.serviceStatusActions(
+            service.status
+        );
+
+    const statusButtons = actions.map(function(action) {
+
+        return `
+            <button
+                class="owner-status-btn"
+                type="button"
+                data-status="${escapeAttribute(action.to)}">
+                ${escapeHtml(action.label)}
+            </button>
+        `;
+
+    }).join("");
+
+    return `
+        <div class="owner-actions">
+            <button class="owner-edit-btn" type="button">Edit</button>
+            ${statusButtons}
+            <button class="owner-delete-btn" type="button">Delete</button>
+        </div>
+    `;
+
+}
+
+
+function bookingServiceTitle(booking) {
+
+    const related = booking.services;
+
+    if (related && related.title) {
+        return related.title;
+    }
+
+    return "Service";
+
+}
+
+
+async function openBookings() {
+
+    const user = await requireUser();
+
+    if (!user) {
+        return;
+    }
+
+    bookingRole = "customer";
+    document.getElementById("bookingsModal").classList.add("show");
+    document.body.style.overflow = "hidden";
+    await loadBookings();
+
+}
+
+
+function showBookingRole(role) {
+
+    bookingRole = role === "provider" ? "provider" : "customer";
+    renderBookings();
+
+}
+
+
+async function loadBookings() {
+
+    const list = document.getElementById("bookingsList");
+    list.textContent = "Loading bookings...";
+
+    const embedded = window.HAVKAR_SERVICES.BOOKING_COLUMNS + ",services(title,status)";
+    let result = await db
+        .from("service_bookings")
+        .select(embedded)
+        .order("created_at", { ascending: false })
+        .limit(200);
+
+    if (result.error) {
+
+        result = await db
+            .from("service_bookings")
+            .select(window.HAVKAR_SERVICES.BOOKING_COLUMNS)
+            .order("created_at", { ascending: false })
+            .limit(200);
+
+    }
+
+    if (result.error) {
+
+        console.error("Bookings load error:", result.error);
+        loadedBookings = [];
+        list.textContent = "Could not load bookings.";
+        return;
+
+    }
+
+    loadedBookings = Array.isArray(result.data) ? result.data : [];
+    renderBookings();
+
+}
+
+
+function renderBookings() {
+
+    document.getElementById("customerBookingsTab").classList.toggle(
+        "active",
+        bookingRole === "customer"
+    );
+    document.getElementById("providerBookingsTab").classList.toggle(
+        "active",
+        bookingRole === "provider"
+    );
+
+    const list = document.getElementById("bookingsList");
+    const mine = loadedBookings.filter(function(booking) {
+
+        if (!currentUser) {
+            return false;
+        }
+
+        const column = bookingRole === "provider"
+            ? booking.provider_id
+            : booking.customer_id;
+
+        return String(column) === String(currentUser.id);
+
+    });
+
+    list.innerHTML = "";
+
+    if (!mine.length) {
+
+        const empty = document.createElement("p");
+        empty.textContent = bookingRole === "provider"
+            ? "You have not received a booking request."
+            : "You have not requested a booking.";
+        list.appendChild(empty);
+        return;
+
+    }
+
+    mine.forEach(function(booking) {
+        list.appendChild(buildBookingCard(booking));
+    });
+
+}
+
+
+function buildBookingCard(booking) {
+
+    const card = document.createElement("article");
+    card.className = "booking-card";
+
+    const title = document.createElement("strong");
+    title.textContent = bookingServiceTitle(booking);
+
+    const status = document.createElement("p");
+    status.textContent = "Status: " + (booking.status || "");
+
+    const when = document.createElement("p");
+    when.textContent = [booking.booking_date, booking.booking_time]
+        .filter(Boolean)
+        .join(" ");
+
+    card.appendChild(title);
+    card.appendChild(status);
+
+    if (when.textContent) {
+        card.appendChild(when);
+    }
+
+    if (booking.message) {
+
+        const message = document.createElement("p");
+        message.textContent = booking.message;
+        card.appendChild(message);
+
+    }
+
+    const actions = document.createElement("div");
+    actions.className = "booking-actions";
+
+    bookingActions(booking).forEach(function(action) {
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "bookings-btn";
+        button.textContent = action.label;
+        button.addEventListener("click", function() {
+            changeBookingStatus(booking, action.toStatus);
+        });
+        actions.appendChild(button);
+
+    });
+
+    if (actions.childNodes.length) {
+        card.appendChild(actions);
+    }
+
+    return card;
+
+}
+
+
+function bookingActions(booking) {
+
+    const rules = window.HAVKAR_SERVICES;
+
+    if (bookingRole === "provider") {
+
+        return ["accepted", "declined", "completed"]
+            .filter(function(status) {
+                return rules.providerBookingTransition(booking.status, status);
+            })
+            .map(function(status) {
+
+                const labels = {
+                    accepted: "Accept",
+                    declined: "Decline",
+                    completed: "Mark completed"
+                };
+
+                return {
+                    toStatus: status,
+                    label: labels[status]
+                };
+
+            });
+
+    }
+
+    if (rules.customerBookingTransition(booking.status, "cancelled")) {
+
+        return [{
+            toStatus: "cancelled",
+            label: "Cancel request"
+        }];
+
+    }
+
+    return [];
+
+}
+
+
+async function changeBookingStatus(booking, toStatus) {
+
+    const user = await requireUser();
+
+    if (!user) {
+        return;
+    }
+
+    const role = bookingRole === "provider" ? "provider" : "customer";
+    const result = await window.HAVKAR_SERVICES.applyBookingTransition(db, {
+        role: role,
+        bookingId: booking.id,
+        userId: user.id,
+        fromStatus: booking.status,
+        toStatus: toStatus
+    });
+
+    if (!result.ok) {
+
+        showToast(
+            result.reason === "blocked_transition"
+                ? "That booking update is not available."
+                : "The server did not confirm this booking update."
+        );
+        return;
+
+    }
+
+    showToast("Booking updated.");
+    await loadBookings();
+
+}
+
+
+function openEditService(serviceId) {
+
+    const service = services.find(function(item) {
+        return String(item.id) === String(serviceId);
+    });
+
+    if (!service || !currentUser || service.provider_id !== currentUser.id) {
+        showToast("You can only edit your own service.");
+        return;
+    }
+
+    document.getElementById("editServiceId").value = service.id;
+    document.getElementById("editServiceFromStatus").value = service.status || "";
+    document.getElementById("editServiceName").value = service.title || "";
+    ensureCategoryOption(service.category);
+    document.getElementById("editServiceCategory").value = service.category || "Plumbing";
+    document.getElementById("editServicePrice").value =
+        service.price === null || service.price === undefined
+            ? ""
+            : service.price;
+    document.getElementById("editServicePriceType").value =
+        window.HAVKAR_SERVICES.PRICE_TYPES.indexOf(service.price_type) === -1
+            ? "fixed"
+            : service.price_type;
+    document.getElementById("editServiceCurrency").value =
+        window.HAVKAR_SERVICES.CURRENCIES.indexOf(service.currency) === -1
+            ? "EUR"
+            : service.currency;
+    document.getElementById("editServiceLocation").value = service.location || "";
+    document.getElementById("editServiceDescription").value = service.description || "";
+    fillServiceStatusOptions(service.status);
+    document.getElementById("editServiceModal").classList.add("show");
+    document.body.style.overflow = "hidden";
+
+}
+
+
+function ensureCategoryOption(category) {
+
+    const select = document.getElementById("editServiceCategory");
+    const value = String(category || "");
+
+    if (!value) {
+        return;
+    }
+
+    const exists = Array.from(select.options).some(function(option) {
+        return option.value === value;
+    });
+
+    if (!exists) {
+
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+
+    }
+
+}
+
+
+function fillServiceStatusOptions(fromStatus) {
+
+    const select = document.getElementById("editServiceStatus");
+    const next = window.HAVKAR_SERVICES.serviceStatusActions(fromStatus)
+        .map(function(action) {
+            return action.to;
+        });
+    const values = [fromStatus].concat(next).filter(function(status, index, all) {
+        return status && all.indexOf(status) === index;
+    });
+
+    select.innerHTML = "";
+    values.forEach(function(status) {
+
+        const option = document.createElement("option");
+        option.value = status;
+        option.textContent = status;
+        select.appendChild(option);
+
+    });
+
+    select.value = fromStatus;
+
+}
+
+
+async function submitServiceEdit(event) {
+
+    event.preventDefault();
+
+    const user = await requireUser();
+
+    if (!user) {
+        return;
+    }
+
+    const serviceId = document.getElementById("editServiceId").value;
+    const fromStatus = document.getElementById("editServiceFromStatus").value;
+    const button = event.currentTarget.querySelector(".submit-btn");
+
+    setButtonBusy(button, true, "Saving...");
+
+    const result = await window.HAVKAR_SERVICES.updateOwnService(db, {
+        serviceId: serviceId,
+        userId: user.id,
+        fromStatus: fromStatus,
+        draft: {
+            title: document.getElementById("editServiceName").value,
+            category: document.getElementById("editServiceCategory").value,
+            description: document.getElementById("editServiceDescription").value,
+            location: document.getElementById("editServiceLocation").value,
+            currency: document.getElementById("editServiceCurrency").value,
+            priceType: document.getElementById("editServicePriceType").value,
+            price: document.getElementById("editServicePrice").value,
+            status: document.getElementById("editServiceStatus").value
+        }
+    });
+
+    setButtonBusy(button, false, "Save changes");
+
+    if (!result.ok) {
+        showToast(serviceDraftMessage(result.reason));
+        return;
+    }
+
+    closeModal("editServiceModal");
+    await loadServices();
+    showToast("Service updated.");
+
+}
+
+
+async function changeOwnServiceStatus(serviceId, toStatus) {
+
+    const user = await requireUser();
+    const service = services.find(function(item) {
+        return String(item.id) === String(serviceId);
+    });
+
+    if (!user || !service || service.provider_id !== user.id) {
+        showToast("You can only update your own service.");
+        return;
+    }
+
+    if (toStatus === "closed" && !window.confirm("Close this service?")) {
+        return;
+    }
+
+    const result = await window.HAVKAR_SERVICES.updateOwnServiceStatus(db, {
+        serviceId: service.id,
+        userId: user.id,
+        fromStatus: service.status,
+        toStatus: toStatus
+    });
+
+    if (!result.ok) {
+        showToast(
+            result.reason === "blocked_transition"
+                ? "That status change is not available."
+                : "The server did not confirm this status change."
+        );
+        return;
+    }
+
+    await loadServices();
+    showToast("Service status updated.");
+
+}
+
 
 function getCurrentUserDisplayName() {
 
