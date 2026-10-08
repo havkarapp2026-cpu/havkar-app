@@ -974,6 +974,34 @@ body{
   cursor:pointer;
 }
 
+a.primary{
+  display:block;
+  box-sizing:border-box;
+  text-align:center;
+  text-decoration:none;
+}
+
+.primary:disabled,
+.secondary:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+  transform:none;
+}
+
+.danger{
+  width:100%;
+  border:1px solid #c62828;
+  border-radius:13px;
+  padding:13px;
+  margin-top:10px;
+  color:#c62828;
+  background:white;
+  font-family:inherit;
+  font-size:14px;
+  font-weight:750;
+  cursor:pointer;
+}
+
 .notice{
   background:#fff8e1;
   color:#725b35;
@@ -1249,6 +1277,31 @@ body{
         type="button"
         onclick="clearJobSearch()"
         aria-label="Clear search">
+
+        <i class="fas fa-times"></i>
+
+      </button>
+
+    </div>
+
+    <div class="search">
+
+      <i class="fas fa-location-dot search-icon"></i>
+
+      <input
+        id="locationInput"
+        type="search"
+        autocomplete="off"
+        placeholder="Filter by location"
+        aria-label="Filter by location"
+      >
+
+      <button
+        id="clearLocation"
+        class="clear-search"
+        type="button"
+        onclick="clearLocationFilter()"
+        aria-label="Clear location filter">
 
         <i class="fas fa-times"></i>
 
@@ -1536,6 +1589,37 @@ body{
       ></textarea>
     </div>
 
+    <div class="form-group">
+      <label>Requirements</label>
+      <textarea
+        id="jobRequirements"
+        maxlength="3000"
+        placeholder="Experience, language, or schedule"
+      ></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Application link</label>
+      <input
+        id="jobApplicationUrl"
+        type="url"
+        maxlength="500"
+        placeholder="https://example.com/apply"
+        autocomplete="off"
+      >
+    </div>
+
+    <div class="form-group">
+      <label>Contact email or phone</label>
+      <input
+        id="jobContact"
+        type="text"
+        maxlength="200"
+        placeholder="name@company.com or +391234567890"
+        autocomplete="off"
+      >
+    </div>
+
     <div class="plan-title">
       Choose a monthly publishing plan
     </div>
@@ -1711,9 +1795,147 @@ body{
 
 </div>
 
+<!-- =======================================================
+     EDIT JOB MODAL
+     ======================================================= -->
+
+<div class="modal" id="editJobModal">
+
+  <div class="modal-box">
+
+    <div class="modal-head">
+
+      <h2>
+        Edit job
+      </h2>
+
+      <button
+        class="close"
+        type="button"
+        onclick="closeModal('editJobModal')">
+        ×
+      </button>
+
+    </div>
+
+    <div class="form-group">
+
+      <label>
+        Advertisement image / Company logo
+      </label>
+
+      <div
+        class="image-upload"
+        onclick="document.getElementById('editJobImage').click()">
+
+        <i class="fas fa-cloud-arrow-up"></i>
+
+        <strong>
+          Change image
+        </strong>
+
+      </div>
+
+      <input id="editJobImage" type="file" accept="image/*">
+
+      <div id="editImagePreview" class="image-preview">
+
+        <img
+          id="editImagePreviewImg"
+          src=""
+          alt="Advertisement preview"
+        >
+
+        <button
+          type="button"
+          class="remove-image"
+          onclick="removeEditJobImage(event)">
+          ×
+        </button>
+
+      </div>
+
+    </div>
+
+    <div class="form-group">
+      <label>Job title *</label>
+      <input id="editJobTitle" type="text" maxlength="120">
+    </div>
+
+    <div class="form-group">
+      <label>Company / Business *</label>
+      <input id="editJobCompany" type="text" maxlength="120">
+    </div>
+
+    <div class="form-group">
+      <label>Location *</label>
+      <input id="editJobLocation" type="text" maxlength="120">
+    </div>
+
+    <div class="form-group">
+      <label>Job type</label>
+      <select id="editJobType">
+        <option value="Full-time">Full-time</option>
+        <option value="Part-time">Part-time</option>
+        <option value="Remote">Remote</option>
+        <option value="Freelance">Freelance</option>
+        <option value="Contract">Contract</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Salary / Payment</label>
+      <input id="editJobSalary" type="text" maxlength="100">
+    </div>
+
+    <div class="form-group">
+      <label>Skills</label>
+      <input id="editJobSkills" type="text" maxlength="250">
+    </div>
+
+    <div class="form-group">
+      <label>Job description *</label>
+      <textarea id="editJobDescription" maxlength="3000"></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Requirements</label>
+      <textarea id="editJobRequirements" maxlength="3000"></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Application link</label>
+      <input id="editJobApplicationUrl" type="url" maxlength="500" autocomplete="off">
+    </div>
+
+    <div class="form-group">
+      <label>Contact email or phone</label>
+      <input id="editJobContact" type="text" maxlength="200" autocomplete="off">
+    </div>
+
+    <div class="notice">
+      Editing does not activate an unpaid listing.
+      Payment status, plan, and fee stay unchanged.
+    </div>
+
+    <button
+      id="saveJobEdit"
+      class="primary"
+      type="button"
+      onclick="saveJobEdit()">
+
+      Save changes
+
+    </button>
+
+  </div>
+
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-jobs.js"></script>
 <script>
 
 /* =========================================================
@@ -1751,6 +1973,9 @@ let selectedPlan = {
   price:9.99
 };
 let selectedJobImage = "";
+let editingJobId = null;
+let editSelectedImage = "";
+let editImageChanged = false;
 
 const SAVED_STORAGE_KEY =
   "havkar_saved_jobs";
@@ -1834,8 +2059,9 @@ async function loadSupabaseJobs(){
   jobs = (data || [])
     .map(normalizeJob)
     .filter(job =>
-      job.status === "active" ||
-      job.owner === true
+      window.HAVKAR_JOBS
+        ? window.HAVKAR_JOBS.isListedJob(job)
+        : (job.status === "active" || job.owner === true)
     );
 
   renderJobs();
@@ -2003,42 +2229,27 @@ function renderJobs(){
           .trim()
       : "";
 
+  const locationInput =
+    document.getElementById(
+      "locationInput"
+    );
+
+  const location =
+    locationInput
+      ? locationInput.value.trim()
+      : "";
+
   const filtered =
-    jobs.filter(job => {
-
-      const filterOK =
-        selectedFilter === "All" ||
-        job.type === selectedFilter;
-
-      const skills =
-        Array.isArray(job.skills)
-          ? job.skills.join(" ")
-          : "";
-
-      const searchText =
-        (
-          String(job.title || "") +
-          " " +
-          String(job.company || "") +
-          " " +
-          String(job.location || "") +
-          " " +
-          String(job.type || "") +
-          " " +
-          skills +
-          " " +
-          String(job.description || "")
-        )
-        .toLowerCase();
-
-      return (
-        filterOK &&
-        (
-          !search ||
-          searchText.includes(search)
-        )
-      );
-    });
+    window.HAVKAR_JOBS
+      ? window.HAVKAR_JOBS.filterJobs(jobs, {
+          filter: selectedFilter,
+          query: search,
+          location: location
+        })
+      : jobs.filter(job =>
+          selectedFilter === "All" ||
+          job.type === selectedFilter
+        );
 
   const resultCount =
     document.getElementById(
@@ -2258,29 +2469,34 @@ function openJob(id){
     isJobSaved(job.id);
 
   const statusHTML =
-    job.status === "active"
+    jobStatusHTML(job);
+
+  const requirementsHTML =
+    job.requirements
       ? `
 
-        <span class="status-badge status-active">
+        <div style="margin-top:20px">
 
-          <i class="fas fa-check-circle"></i>
+          <h3>
+            Requirements
+          </h3>
 
-          Active
+          <p
+            style="
+              color:#68706b;
+              line-height:1.7;
+              margin-top:8px;
+              font-size:14px;
+            ">
 
-        </span>
+            ${escapeHTML(job.requirements)}
+
+          </p>
+
+        </div>
 
       `
-      : `
-
-        <span class="status-badge status-pending">
-
-          <i class="fas fa-clock"></i>
-
-          Pending payment
-
-        </span>
-
-      `;
+      : "";
 
   document.getElementById(
     "detailContent"
@@ -2453,10 +2669,47 @@ function openJob(id){
 
     </div>
 
+    ${requirementsHTML}
+
     ${
       job.owner
 
         ? `
+
+          ${
+            window.HAVKAR_JOBS &&
+            window.HAVKAR_JOBS.isPublicListing(job)
+              ? renderApplicationAction(job)
+              : ""
+          }
+
+          <button
+            class="secondary"
+            type="button"
+            onclick="
+              openEditJob(
+                '${escapeJS(job.id)}'
+              )
+            ">
+
+            <i class="fas fa-pen"></i>
+
+            Edit listing
+
+          </button>
+
+          <button
+            class="danger"
+            type="button"
+            onclick="
+              deleteJobListing(
+                '${escapeJS(job.id)}'
+              )
+            ">
+
+            Delete listing
+
+          </button>
 
           <button
             class="secondary"
@@ -2474,24 +2727,7 @@ function openJob(id){
 
         `
 
-        : `
-
-          <button
-            class="primary"
-            type="button"
-            onclick="
-              applyJob(
-                '${escapeJS(job.id)}'
-              )
-            ">
-
-            <i class="fas fa-paper-plane"></i>
-
-            Apply for this job
-
-          </button>
-
-        `
+        : renderApplicationAction(job)
     }
 
   `;
@@ -2516,28 +2752,102 @@ function toggleSaveFromDetail(jobId){
 }
 
 /* =========================================================
-   APPLY
+   STATUS AND APPLICATION
    ========================================================= */
 
-function applyJob(id){
+function jobStatusHTML(job){
 
-  const job =
-    jobs.find(
-      item =>
-        String(item.id) ===
-        String(id)
-    );
+  const kind =
+    window.HAVKAR_JOBS
+      ? window.HAVKAR_JOBS.jobStatusKind(job)
+      : (
+          job.status === "active"
+            ? "active"
+            : "pending_payment"
+        );
 
-  if(!job) return;
+  if(kind === "active"){
+    return `
+      <span class="status-badge status-active">
+        <i class="fas fa-check-circle"></i>
+        Active
+      </span>
+    `;
+  }
 
-  closeModal(
-    "detailModal"
-  );
+  if(kind === "expired"){
+    return `
+      <span class="status-badge status-pending">
+        <i class="fas fa-clock"></i>
+        Expired
+      </span>
+    `;
+  }
 
-  alert(
-    "Application started for: " +
-    job.title
-  );
+  if(kind === "pending_payment"){
+    return `
+      <span class="status-badge status-pending">
+        <i class="fas fa-clock"></i>
+        Pending payment
+      </span>
+    `;
+  }
+
+  return `
+    <span class="status-badge status-pending">
+      <i class="fas fa-clock"></i>
+      Not active
+    </span>
+  `;
+}
+
+function renderApplicationAction(job){
+
+  const action =
+    window.HAVKAR_JOBS
+      ? window.HAVKAR_JOBS.contactAction(job)
+      : {
+          available:false,
+          label:"Application contact is not available."
+        };
+
+  if(!action.available){
+    return `
+      <p class="notice">
+        ${escapeHTML(action.label)}
+      </p>
+    `;
+  }
+
+  if(action.kind === "text"){
+    return `
+      <div class="notice">
+        <strong>${escapeHTML(action.label)}</strong>
+        <br>
+        ${escapeHTML(action.text)}
+      </div>
+    `;
+  }
+
+  const detail =
+    action.text
+      ? `
+        <div class="upload-note">
+          ${escapeHTML(action.text)}
+        </div>
+      `
+      : "";
+
+  return `
+    <a
+      class="primary"
+      href="${escapeHTML(action.href)}"
+      target="_blank"
+      rel="noopener noreferrer">
+      ${escapeHTML(action.label)}
+    </a>
+    ${detail}
+  `;
 }
 
 /* =========================================================
@@ -2570,7 +2880,10 @@ function resetPostForm(){
     "jobLocation",
     "jobSalary",
     "jobSkills",
-    "jobDescription"
+    "jobDescription",
+    "jobRequirements",
+    "jobApplicationUrl",
+    "jobContact"
   ];
 
   fields.forEach(id => {
@@ -2682,6 +2995,122 @@ document.getElementById(
   handleImageUpload
 );
 
+document.getElementById(
+  "editJobImage"
+).addEventListener(
+  "change",
+  handleEditImageUpload
+);
+
+function prepareJobImage(file){
+
+  return new Promise(function(resolve){
+
+    if(
+      !file ||
+      !file.type ||
+      !file.type.startsWith("image/")
+    ){
+      resolve({
+        ok:false,
+        message:"Please select a valid image file."
+      });
+      return;
+    }
+
+    const maxFileSize =
+      8 * 1024 * 1024;
+
+    if(file.size > maxFileSize){
+      resolve({
+        ok:false,
+        message:"The image is too large. Please choose an image smaller than 8 MB."
+      });
+      return;
+    }
+
+    const reader =
+      new FileReader();
+
+    reader.onerror = function(){
+      resolve({
+        ok:false,
+        message:"The image could not be read."
+      });
+    };
+
+    reader.onload = function(e){
+
+      const img =
+        new Image();
+
+      img.onerror = function(){
+        resolve({
+          ok:false,
+          message:"The selected image could not be opened."
+        });
+      };
+
+      img.onload = function(){
+
+        const maxSize = 1200;
+        let width = img.width;
+        let height = img.height;
+
+        if(
+          width > maxSize ||
+          height > maxSize
+        ){
+          const ratio =
+            Math.min(
+              maxSize / width,
+              maxSize / height
+            );
+          width = width * ratio;
+          height = height * ratio;
+        }
+
+        const canvas =
+          document.createElement("canvas");
+
+        canvas.width = Math.round(width);
+        canvas.height = Math.round(height);
+
+        const context =
+          canvas.getContext("2d");
+
+        if(!context){
+          resolve({
+            ok:false,
+            message:"The image could not be processed."
+          });
+          return;
+        }
+
+        context.drawImage(
+          img,
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
+
+        resolve({
+          ok:true,
+          dataUrl:canvas.toDataURL(
+            "image/jpeg",
+            .82
+          )
+        });
+      };
+
+      img.src = e.target.result;
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
 function handleImageUpload(event){
 
   const file =
@@ -2690,145 +3119,25 @@ function handleImageUpload(event){
 
   if(!file) return;
 
-  if(
-    !file.type ||
-    !file.type.startsWith("image/")
-  ){
+  prepareJobImage(file)
+    .then(function(result){
 
-    alert(
-      "Please select a valid image file."
-    );
-
-    event.target.value = "";
-
-    return;
-  }
-
-  const maxFileSize =
-    8 * 1024 * 1024;
-
-  if(file.size > maxFileSize){
-
-    alert(
-      "The image is too large. Please choose an image smaller than 8 MB."
-    );
-
-    event.target.value = "";
-
-    return;
-  }
-
-  const reader =
-    new FileReader();
-
-  reader.onload = function(e){
-
-    const img =
-      new Image();
-
-    img.onload = function(){
-
-      const maxSize =
-        1200;
-
-      let width =
-        img.width;
-
-      let height =
-        img.height;
-
-      if(
-        width > maxSize ||
-        height > maxSize
-      ){
-
-        const ratio =
-          Math.min(
-            maxSize / width,
-            maxSize / height
-          );
-
-        width =
-          width * ratio;
-
-        height =
-          height * ratio;
-      }
-
-      const canvas =
-        document.createElement(
-          "canvas"
-        );
-
-      canvas.width =
-        Math.round(width);
-
-      canvas.height =
-        Math.round(height);
-
-      const context =
-        canvas.getContext(
-          "2d"
-        );
-
-      if(!context){
-
-        alert(
-          "The image could not be processed."
-        );
-
+      if(!result.ok){
+        alert(result.message);
+        event.target.value = "";
         return;
       }
 
-      context.drawImage(
-        img,
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
-
-      selectedJobImage =
-        canvas.toDataURL(
-          "image/jpeg",
-          .82
-        );
+      selectedJobImage = result.dataUrl;
 
       document.getElementById(
         "imagePreviewImg"
-      ).src =
-        selectedJobImage;
+      ).src = selectedJobImage;
 
       document.getElementById(
         "imagePreview"
-      ).classList.add(
-        "show"
-      );
-    };
-
-    img.onerror =
-      function(){
-
-        alert(
-          "The selected image could not be opened."
-        );
-
-      };
-
-    img.src =
-      e.target.result;
-  };
-
-  reader.onerror =
-    function(){
-
-      alert(
-        "The image could not be read."
-      );
-
-  };
-
-  reader.readAsDataURL(file);
+      ).classList.add("show");
+    });
 }
 
 /* =========================================================
@@ -2874,6 +3183,228 @@ function removeJobImage(event){
   }
 }
 
+function showEditImage(dataUrl){
+
+  const previewImage =
+    document.getElementById("editImagePreviewImg");
+  const preview =
+    document.getElementById("editImagePreview");
+
+  if(previewImage){
+    previewImage.src = dataUrl || "";
+  }
+
+  if(preview){
+    preview.classList.toggle("show", Boolean(dataUrl));
+  }
+}
+
+function handleEditImageUpload(event){
+
+  const file =
+    event.target.files &&
+    event.target.files[0];
+
+  if(!file) return;
+
+  prepareJobImage(file)
+    .then(function(result){
+
+      if(!result.ok){
+        alert(result.message);
+        event.target.value = "";
+        return;
+      }
+
+      editImageChanged = true;
+      editSelectedImage = result.dataUrl;
+      showEditImage(result.dataUrl);
+    });
+}
+
+function removeEditJobImage(event){
+
+  if(event){
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  editImageChanged = true;
+  editSelectedImage = "";
+
+  const input =
+    document.getElementById("editJobImage");
+
+  if(input) input.value = "";
+
+  showEditImage("");
+}
+
+function ownJob(id){
+
+  return jobs.find(
+    item => String(item.id) === String(id)
+  );
+}
+
+async function openEditJob(id){
+
+  await refreshCurrentUser();
+
+  const job = ownJob(id);
+
+  if(!currentUser || !job || job.owner !== true){
+    alert("You can only edit your own job listings.");
+    return;
+  }
+
+  editingJobId = job.id;
+  editImageChanged = false;
+  editSelectedImage = "";
+
+  document.getElementById("editJobTitle").value = job.title || "";
+  document.getElementById("editJobCompany").value = job.company || "";
+  document.getElementById("editJobLocation").value = job.location || "";
+  document.getElementById("editJobSalary").value =
+    job.salary && job.salary !== "Negotiable" ? job.salary : "";
+  document.getElementById("editJobSkills").value =
+    Array.isArray(job.skills) ? job.skills.join(", ") : (job.skills || "");
+  document.getElementById("editJobDescription").value = job.description || "";
+  document.getElementById("editJobRequirements").value = job.requirements || "";
+  document.getElementById("editJobApplicationUrl").value = job.application_url || "";
+  document.getElementById("editJobContact").value = job.contact || "";
+
+  const typeSelect = document.getElementById("editJobType");
+  const type = job.type || job.job_type || "Full-time";
+  const known = Array.from(typeSelect.options)
+    .some(option => option.value === type);
+
+  if(!known){
+    const option = document.createElement("option");
+    option.value = type;
+    option.textContent = type;
+    typeSelect.appendChild(option);
+  }
+
+  typeSelect.value = type;
+
+  const imageInput = document.getElementById("editJobImage");
+  if(imageInput) imageInput.value = "";
+  showEditImage(job.image || "");
+
+  openModal("editJobModal");
+}
+
+async function saveJobEdit(){
+
+  await refreshCurrentUser();
+
+  const job = ownJob(editingJobId);
+
+  if(!currentUser || !job || job.owner !== true || !window.HAVKAR_JOBS){
+    alert("You can only edit your own job listings.");
+    return;
+  }
+
+  const button = document.getElementById("saveJobEdit");
+  if(button) button.disabled = true;
+
+  const draft = {
+    title:document.getElementById("editJobTitle").value,
+    company:document.getElementById("editJobCompany").value,
+    location:document.getElementById("editJobLocation").value,
+    type:document.getElementById("editJobType").value,
+    existingType:job.type || job.job_type || "",
+    salary:document.getElementById("editJobSalary").value,
+    skills:document.getElementById("editJobSkills").value,
+    description:document.getElementById("editJobDescription").value,
+    requirements:document.getElementById("editJobRequirements").value,
+    application_url:document.getElementById("editJobApplicationUrl").value,
+    contact:document.getElementById("editJobContact").value
+  };
+
+  if(editImageChanged){
+    draft.image = editSelectedImage || null;
+  }
+
+  const result = await window.HAVKAR_JOBS.updateOwnJob(
+    supabaseClient,
+    {
+      jobId:job.id,
+      userId:currentUser.id,
+      draft:draft
+    }
+  );
+
+  if(button) button.disabled = false;
+
+  if(!result.ok){
+    alert(result.message || "The job could not be updated.");
+    return;
+  }
+
+  const updated = normalizeJob(result.row);
+  jobs = jobs.map(item =>
+    String(item.id) === String(updated.id) ? updated : item
+  );
+
+  closeModal("editJobModal");
+  renderJobs();
+
+  if(
+    document.getElementById("myJobsModal") &&
+    document.getElementById("myJobsModal").classList.contains("show")
+  ){
+    await openMyJobs();
+  }
+
+  openJob(updated.id);
+}
+
+async function deleteJobListing(id){
+
+  await refreshCurrentUser();
+
+  const job = ownJob(id);
+
+  if(!currentUser || !job || job.owner !== true || !window.HAVKAR_JOBS){
+    alert("You can only delete your own job listings.");
+    return;
+  }
+
+  if(!confirm("Delete this job listing? This cannot be undone.")){
+    return;
+  }
+
+  const result = await window.HAVKAR_JOBS.deleteOwnJob(
+    supabaseClient,
+    {
+      jobId:job.id,
+      userId:currentUser.id
+    }
+  );
+
+  if(!result.ok){
+    alert(result.message || "The job could not be deleted.");
+    return;
+  }
+
+  jobs = jobs.filter(
+    item => String(item.id) !== String(job.id)
+  );
+
+  closeModal("detailModal");
+  closeModal("editJobModal");
+  renderJobs();
+
+  if(
+    document.getElementById("myJobsModal") &&
+    document.getElementById("myJobsModal").classList.contains("show")
+  ){
+    await openMyJobs();
+  }
+}
+
 /* =========================================================
    SUBMIT JOB
    ========================================================= */
@@ -2898,24 +3429,12 @@ async function submitJob(){
     .map(item => item.trim())
     .filter(Boolean);
   const description = document.getElementById("jobDescription").value.trim();
+  const requirements = document.getElementById("jobRequirements").value.trim();
+  const applicationUrl = document.getElementById("jobApplicationUrl").value.trim();
+  const contact = document.getElementById("jobContact").value.trim();
 
-  if(!title || !company || !location || !description){
-    alert("Please complete all required fields.");
-    return;
-  }
-
-  if(title.length < 2){
-    alert("Please enter a valid job title.");
-    return;
-  }
-
-  if(company.length < 2){
-    alert("Please enter a valid company name.");
-    return;
-  }
-
-  if(description.length < 10){
-    alert("Please provide a more detailed job description.");
+  if(!window.HAVKAR_JOBS){
+    alert("Jobs tools could not be loaded.");
     return;
   }
 
@@ -2927,42 +3446,45 @@ async function submitJob(){
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
   }
 
-  const payload = {
-    user_id:currentUser.id,
-    title,
-    company,
-    location,
-    job_type:type,
-    type,
-    salary:salary || "Negotiable",
-    skills:skills.length ? skills.join(", ") : "General",
-    description,
-    image:selectedJobImage || null,
-    status:"pending_payment",
-    plan:selectedPlan.name,
-    monthly_fee:selectedPlan.price,
-    remote:type === "Remote"
-  };
-
-  const { data, error } =
-    await supabaseClient
-      .from("jobs")
-      .insert(payload)
-      .select("id,created_at,user_id,title,company,location,job_type,salary,description,requirements,contact,status,expires_at,application_url,remote,category,language,experience_level,education_level,skills,currency,salary_min,salary_max,type,image,plan,monthly_fee")
-      .single();
+  const result = await window.HAVKAR_JOBS.createOwnJob(
+    supabaseClient,
+    {
+      userId:currentUser.id,
+      plan:selectedPlan,
+      draft:{
+        title,
+        company,
+        location,
+        type,
+        salary,
+        skills,
+        description,
+        requirements,
+        application_url:applicationUrl,
+        contact,
+        image:selectedJobImage || null
+      }
+    }
+  );
 
   if(submitButton){
     submitButton.disabled = false;
     submitButton.innerHTML = originalButtonHTML;
   }
 
-  if(error){
-    console.error("HAVKAR: Job insert failed.", error);
-    alert("The job could not be saved: " + (error.message || "Unknown error"));
+  if(!result.ok){
+    console.error("HAVKAR: Job insert failed.", result);
+    alert(result.message || "The job could not be saved.");
     return;
   }
 
-  const newJob = normalizeJob(data);
+  if(result.row.status !== "pending_payment"){
+    if(submitButton) submitButton.disabled = true;
+    alert("The server has not confirmed that this job stayed unpaid. Do not submit it again. Check My Jobs before posting again.");
+    return;
+  }
+
+  const newJob = normalizeJob(result.row);
   jobs = [newJob, ...jobs.filter(job => String(job.id) !== String(newJob.id))];
 
   closeModal("postModal");
@@ -3197,19 +3719,7 @@ async function openMyJobs(){
         .map(job => {
 
           const status =
-            job.status === "active"
-              ? `
-                <span class="status-badge status-active">
-                  <i class="fas fa-check-circle"></i>
-                  Active
-                </span>
-              `
-              : `
-                <span class="status-badge status-pending">
-                  <i class="fas fa-clock"></i>
-                  Pending payment
-                </span>
-              `;
+            jobStatusHTML(job);
 
           return `
 
@@ -3274,6 +3784,26 @@ async function openMyJobs(){
                 </span>
 
               </div>
+
+              <button
+                class="secondary"
+                type="button"
+                onclick="
+                  event.stopPropagation();
+                  openEditJob('${escapeJS(job.id)}')
+                ">
+                Edit listing
+              </button>
+
+              <button
+                class="danger"
+                type="button"
+                onclick="
+                  event.stopPropagation();
+                  deleteJobListing('${escapeJS(job.id)}')
+                ">
+                Delete listing
+              </button>
 
             </div>
 
@@ -3590,6 +4120,59 @@ document
       );
     }
   );
+
+
+const locationInput =
+  document.getElementById(
+    "locationInput"
+  );
+
+if(locationInput){
+
+  locationInput.addEventListener(
+    "input",
+    function(){
+
+      const clearButton =
+        document.getElementById(
+          "clearLocation"
+        );
+
+      if(clearButton){
+        clearButton.classList.toggle(
+          "show",
+          Boolean(locationInput.value.trim())
+        );
+      }
+
+      renderJobs();
+    }
+  );
+}
+
+function clearLocationFilter(){
+
+  const input =
+    document.getElementById(
+      "locationInput"
+    );
+
+  if(!input) return;
+
+  input.value = "";
+
+  const clearButton =
+    document.getElementById(
+      "clearLocation"
+    );
+
+  if(clearButton){
+    clearButton.classList.remove("show");
+  }
+
+  renderJobs();
+  input.focus();
+}
 
 /* =========================================================
    MODALS
