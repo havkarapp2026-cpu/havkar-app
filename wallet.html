@@ -407,6 +407,8 @@ button:disabled{
     display:flex;  
     align-items:center;  
     justify-content:space-between;  
+    gap:10px;  
+    flex-wrap:wrap;  
   
     box-shadow:0 2px 8px rgba(0,0,0,.06);  
 }  
@@ -427,6 +429,8 @@ button:disabled{
     border-radius:10px;  
   
     font-weight:700;  
+    font-size:13px;  
+    max-width:100%;  
 }  
   
   
@@ -624,6 +628,14 @@ button:disabled{
     text-align:right;  
     font-weight:700;  
     white-space:nowrap;  
+}  
+  
+.market-price.is-unavailable{  
+    white-space:normal;  
+    max-width:118px;  
+    font-size:12px;  
+    font-weight:600;  
+    color:#888;  
 }  
   
 .market-change{  
@@ -1383,29 +1395,25 @@ select:focus{
 </div>  <!-- =========================================================  
      CURRENCY  
      ========================================================= -->  <div class="portfolio-bar">  <div class="portfolio-label">  
-    Show portfolio in  
+    Market prices in  
 </div>  
 
 <select  
     id="displayCurrency"  
     class="currency-select"  
-    onchange="changeDisplayCurrency()">  
+    onchange="changeDisplayCurrency()"  
+    translate="no"  
+    data-i18n-ignore>  
 
-    <option value="EUR">  
-        EUR €  
-    </option>  
-
-    <option value="USD">  
-        USD $  
-    </option>  
-
-    <option value="CHF">  
-        CHF  
-    </option>  
-
-    <option value="GBP">  
-        GBP £  
-    </option>  
+    <option value="EUR">EUR — Euro — €</option>  
+    <option value="USD">USD — US Dollar — $</option>  
+    <option value="GBP">GBP — British Pound — £</option>  
+    <option value="CHF">CHF — Swiss Franc — CHF</option>  
+    <option value="SEK">SEK — Swedish Krona — kr</option>  
+    <option value="CNY">CNY — Chinese Yuan — ¥</option>  
+    <option value="JPY">JPY — Japanese Yen — ¥</option>  
+    <option value="AED">AED — UAE Dirham — AED</option>  
+    <option value="RUB">RUB — Russian Ruble — ₽</option>  
 
 </select>
 
@@ -1729,6 +1737,228 @@ let tradeSide = "BUY";
 let piAuthResult = null;  
   
 let piPaymentRunning = false;  
+  
+let cryptoMarketReady = false;  
+  
+let cryptoDetailsCoin = null;  
+  
+  
+/* =========================================================  
+   DISPLAY CURRENCY  
+   Market prices only. Real wallet balances stay in EUR.  
+   ========================================================= */  
+  
+const DISPLAY_CURRENCIES = {  
+    EUR:{ symbol:"€", space:false },  
+    USD:{ symbol:"$", space:false },  
+    GBP:{ symbol:"£", space:false },  
+    CHF:{ symbol:"CHF", space:true },  
+    SEK:{ symbol:"kr", space:true },  
+    CNY:{ symbol:"¥", space:false },  
+    JPY:{ symbol:"¥", space:false },  
+    AED:{ symbol:"AED", space:true },  
+    RUB:{ symbol:"₽", space:false }  
+};  
+  
+const DISPLAY_CURRENCY_KEY =  
+    "havkar_wallet_display_currency";  
+  
+function displayCurrencyCode(){  
+  
+    const select =  
+        document.getElementById(  
+            "displayCurrency"  
+        );  
+  
+    const value =  
+        String(  
+            select && select.value || ""  
+        ).toUpperCase();  
+  
+    if(  
+        Object.prototype.hasOwnProperty.call(  
+            DISPLAY_CURRENCIES,  
+            value  
+        )  
+    ){  
+  
+        return value;  
+  
+    }  
+  
+    return "EUR";  
+  
+}  
+  
+function applySavedDisplayCurrency(){  
+  
+    const select =  
+        document.getElementById(  
+            "displayCurrency"  
+        );  
+  
+    if(!select){  
+  
+        return;  
+  
+    }  
+  
+    let saved = "";  
+  
+    try{  
+  
+        saved =  
+            String(  
+                localStorage.getItem(  
+                    DISPLAY_CURRENCY_KEY  
+                ) || ""  
+            ).toUpperCase();  
+  
+    }  
+    catch(error){  
+  
+        saved = "";  
+  
+    }  
+  
+    if(  
+        !Object.prototype.hasOwnProperty.call(  
+            DISPLAY_CURRENCIES,  
+            saved  
+        )  
+    ){  
+  
+        saved = "EUR";  
+  
+    }  
+  
+    select.value = saved;  
+  
+}  
+  
+function saveDisplayCurrency(  
+    code  
+){  
+  
+    try{  
+  
+        localStorage.setItem(  
+            DISPLAY_CURRENCY_KEY,  
+            code  
+        );  
+  
+    }  
+    catch(error){  
+  
+    }  
+  
+}  
+  
+function quoteNumber(  
+    source,  
+    code  
+){  
+  
+    if(  
+        !source ||  
+        typeof source !== "object"  
+    ){  
+  
+        return null;  
+  
+    }  
+  
+    const key =  
+        String(code || "")  
+            .toLowerCase();  
+  
+    if(  
+        !Object.prototype.hasOwnProperty.call(  
+            source,  
+            key  
+        )  
+    ){  
+  
+        return null;  
+  
+    }  
+  
+    const value =  
+        Number(source[key]);  
+  
+    if(!Number.isFinite(value)){  
+  
+        return null;  
+  
+    }  
+  
+    return value;  
+  
+}  
+  
+function quoteChange(  
+    source,  
+    code  
+){  
+  
+    if(  
+        !source ||  
+        typeof source !== "object"  
+    ){  
+  
+        return null;  
+  
+    }  
+  
+    const key =  
+        String(code || "")  
+            .toLowerCase() +  
+        "_24h_change";  
+  
+    if(  
+        !Object.prototype.hasOwnProperty.call(  
+            source,  
+            key  
+        )  
+    ){  
+  
+        return null;  
+  
+    }  
+  
+    const value =  
+        Number(source[key]);  
+  
+    if(!Number.isFinite(value)){  
+  
+        return null;  
+  
+    }  
+  
+    return value;  
+  
+}  
+  
+function formatQuotedAmount(  
+    amount,  
+    code,  
+    large  
+){  
+  
+    const meta =  
+        DISPLAY_CURRENCIES[code] ||  
+        DISPLAY_CURRENCIES.EUR;  
+  
+    const text =  
+        large  
+        ? formatLargeNumber(amount)  
+        : formatMarketPrice(amount);  
+  
+    return meta.space  
+        ? meta.symbol + " " + text  
+        : meta.symbol + text;  
+  
+}  
   
   
 /* =========================================================  
@@ -2816,7 +3046,7 @@ async function loadCryptoPrices(){
         "https://api.coingecko.com/api/v3/simple/price" +  
         "?ids=" +  
         encodeURIComponent(ids) +  
-        "&vs_currencies=eur" +  
+        "&vs_currencies=eur,usd,gbp,chf,sek,cny,jpy,aed,rub" +  
         "&include_24hr_change=true";  
   
     try{  
@@ -2870,6 +3100,8 @@ async function loadCryptoPrices(){
   
             }  
         );  
+  
+        cryptoMarketReady = true;  
   
         renderCryptoPrices();  
   
@@ -2946,25 +3178,49 @@ function renderCryptoPrices(){
   
             count++;  
   
-            const eur =  
-                Number(  
-                    price.eur || 0  
+            const code =  
+                displayCurrencyCode();  
+  
+            const quote =  
+                quoteNumber(  
+                    price,  
+                    code  
                 );  
   
             const change =  
-                Number(  
-                    price.eur_24h_change || 0  
+                quoteChange(  
+                    price,  
+                    code  
                 );  
   
             const changeClass =  
-                change >= 0  
+                change === null  
+                ? ""  
+                : change >= 0  
                 ? "market-up"  
                 : "market-down";  
   
             const sign =  
+                change !== null &&  
                 change >= 0  
                 ? "+"  
                 : "";  
+  
+            const priceText =  
+                quote === null  
+                ? "Price unavailable"  
+                : formatQuotedAmount(  
+                    quote,  
+                    code,  
+                    false  
+                );  
+  
+            const changeText =  
+                change === null  
+                ? "—"  
+                : sign +  
+                  change.toFixed(2) +  
+                  "%";  
   
             const item =  
                 document.createElement(  
@@ -3033,14 +3289,14 @@ function renderCryptoPrices(){
   
                 </div>  
   
-                <div class="market-price">  
+                <div class="market-price${quote === null ? " is-unavailable" : ""}">  
   
-                    €${formatMarketPrice(eur)}  
+                    ${priceText}  
   
                     <div  
                         class="market-change ${changeClass}">  
   
-                        ${sign}${change.toFixed(2)}%  
+                        ${changeText}  
   
                     </div>  
   
@@ -3098,6 +3354,9 @@ async function openCryptoDetails(
     selectedCoin =  
         localCoin || null;  
   
+    cryptoDetailsCoin =  
+        null;  
+  
     modal.style.display =  
         "flex";  
   
@@ -3142,6 +3401,9 @@ async function openCryptoDetails(
   
         const coin =  
             await response.json();  
+  
+        cryptoDetailsCoin =  
+            coin;  
   
         renderCryptoDetails(  
             coin  
@@ -3196,34 +3458,48 @@ function renderCryptoDetails(
         coin.name ||  
         "Cryptocurrency";  
   
-    const currentPrice =  
-        Number(  
-            market.current_price?.eur || 0  
+    const code =  
+        displayCurrencyCode();  
+  
+    const quotedPrice =  
+        quoteNumber(  
+            market.current_price,  
+            code  
         );  
   
     const change24 =  
-        Number(  
-            market.price_change_percentage_24h || 0  
+        quoteNumber(  
+            market.price_change_percentage_24h_in_currency,  
+            code  
         );  
   
     const high24 =  
-        Number(  
-            market.high_24h?.eur || 0  
+        quoteNumber(  
+            market.high_24h,  
+            code  
         );  
   
     const low24 =  
-        Number(  
-            market.low_24h?.eur || 0  
+        quoteNumber(  
+            market.low_24h,  
+            code  
         );  
   
     const marketCap =  
-        Number(  
-            market.market_cap?.eur || 0  
+        quoteNumber(  
+            market.market_cap,  
+            code  
         );  
   
     const volume =  
+        quoteNumber(  
+            market.total_volume,  
+            code  
+        );  
+  
+    const currentPrice =  
         Number(  
-            market.total_volume?.eur || 0  
+            market.current_price?.eur || 0  
         );  
   
     const rank =  
@@ -3243,14 +3519,68 @@ function renderCryptoDetails(
         name;  
   
     const changeClass =  
-        change24 >= 0  
-        ? "market-up"  
-        : "market-down";  
+        change24 !== null &&  
+        change24 < 0  
+        ? "market-down"  
+        : "market-up";  
   
     const sign =  
+        change24 !== null &&  
         change24 >= 0  
         ? "+"  
         : "";  
+  
+    const quotedPriceText =  
+        quotedPrice === null  
+        ? "Price unavailable"  
+        : formatQuotedAmount(  
+            quotedPrice,  
+            code,  
+            false  
+        );  
+  
+    const changeText =  
+        change24 === null  
+        ? "—"  
+        : sign +  
+          change24.toFixed(2) +  
+          "% &nbsp; 24h";  
+  
+    const highText =  
+        high24 === null  
+        ? "Unavailable"  
+        : formatQuotedAmount(  
+            high24,  
+            code,  
+            false  
+        );  
+  
+    const lowText =  
+        low24 === null  
+        ? "Unavailable"  
+        : formatQuotedAmount(  
+            low24,  
+            code,  
+            false  
+        );  
+  
+    const capText =  
+        marketCap === null  
+        ? "Unavailable"  
+        : formatQuotedAmount(  
+            marketCap,  
+            code,  
+            true  
+        );  
+  
+    const volumeText =  
+        volume === null  
+        ? "Unavailable"  
+        : formatQuotedAmount(  
+            volume,  
+            code,  
+            true  
+        );  
   
     const iconHtml =  
         image  
@@ -3290,14 +3620,14 @@ function renderCryptoDetails(
   
   
         <div class="crypto-details-price">  
-            €${formatMarketPrice(currentPrice)}  
+            ${quotedPriceText}  
         </div>  
   
   
         <div  
-            class="crypto-details-change ${changeClass}">  
+            class="crypto-details-change ${change24 === null ? "" : changeClass}">  
   
-            ${sign}${change24.toFixed(2)}% &nbsp; 24h  
+            ${changeText}  
   
         </div>  
   
@@ -3425,7 +3755,7 @@ function renderCryptoDetails(
                 </div>  
   
                 <div class="crypto-stat-value">  
-                    €${formatMarketPrice(high24)}  
+                    ${highText}  
                 </div>  
   
             </div>  
@@ -3438,7 +3768,7 @@ function renderCryptoDetails(
                 </div>  
   
                 <div class="crypto-stat-value">  
-                    €${formatMarketPrice(low24)}  
+                    ${lowText}  
                 </div>  
   
             </div>  
@@ -3451,7 +3781,7 @@ function renderCryptoDetails(
                 </div>  
   
                 <div class="crypto-stat-value">  
-                    €${formatLargeNumber(marketCap)}  
+                    ${capText}  
                 </div>  
   
             </div>  
@@ -3464,7 +3794,7 @@ function renderCryptoDetails(
                 </div>  
   
                 <div class="crypto-stat-value">  
-                    €${formatLargeNumber(volume)}  
+                    ${volumeText}  
                 </div>  
   
             </div>  
@@ -4476,6 +4806,50 @@ function openExchange(){
   
 function changeDisplayCurrency(){  
   
+    const code =  
+        displayCurrencyCode();  
+  
+    const select =  
+        document.getElementById(  
+            "displayCurrency"  
+        );  
+  
+    if(  
+        select &&  
+        select.value !== code  
+    ){  
+  
+        select.value = code;  
+  
+    }  
+  
+    saveDisplayCurrency(  
+        code  
+    );  
+  
+    if(cryptoMarketReady){  
+  
+        renderCryptoPrices();  
+  
+    }  
+  
+    const modal =  
+        document.getElementById(  
+            "cryptoDetailsModal"  
+        );  
+  
+    if(  
+        cryptoDetailsCoin &&  
+        modal &&  
+        modal.style.display === "flex"  
+    ){  
+  
+        renderCryptoDetails(  
+            cryptoDetailsCoin  
+        );  
+  
+    }  
+  
     renderWallets(  
         walletsCache  
     );  
@@ -5161,6 +5535,8 @@ window.addEventListener("havkar-stellar-error",function(event){
 async function startWallet(){  
   
     clearError();  
+  
+    applySavedDisplayCurrency();  
   
     renderStellarNetwork();  
   
