@@ -104,15 +104,17 @@ function assertPublishFlow(source, label) {
     source.indexOf("/havkar-ad-publish.js") !== -1,
     label + " loads the publish guard"
   );
-  assert.strictEqual(
-    source.indexOf("havkar-ad-images.js"),
-    -1,
-    label + " must not load Storage uploads"
+  assert.ok(
+    source.indexOf("/havkar-ad-images.js") !== -1,
+    label + " loads Storage uploads"
   );
-  assert.strictEqual(
-    source.indexOf("uploadAdvertisementImages"),
-    -1,
-    label + " must not upload to Storage"
+  assert.ok(
+    source.indexOf("uploadAdvertisementImages") !== -1,
+    label + " uploads new images to Storage"
+  );
+  assert.ok(
+    source.indexOf("HAVKAR_AD_PUBLISH.classifyInsertResult") !== -1,
+    label + " classifies inserts with the merged publish guard"
   );
   assert.strictEqual(
     source.indexOf("Promise.race"),
@@ -144,8 +146,10 @@ function assertPublishFlow(source, label) {
 assertPublishFlow(postAd, "post-ad.html");
 assertPublishFlow(ads, "ads.html");
 
-assert.ok(postAd.indexOf("canvas.toDataURL(") !== -1);
-assert.ok(postAd.indexOf('photoData.startsWith(\n            "data:image/"') !== -1 || postAd.indexOf("data:image/") !== -1);
+const buySell = fs.readFileSync(path.join(root, "buy-sell.html"), "utf8");
+const details = fs.readFileSync(path.join(root, "ad-details.html"), "utf8");
+assert.ok(buySell.indexOf("data:image/") !== -1);
+assert.ok(details.indexOf("data:image/") !== -1);
 assert.ok(ads.indexOf("readAsDataURL(") !== -1);
 assert.ok(ads.indexOf("selectedImageData") !== -1);
 assert.ok(ads.indexOf('outcome.outcome === "rejected"') !== -1);
