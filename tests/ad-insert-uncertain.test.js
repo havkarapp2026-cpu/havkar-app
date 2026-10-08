@@ -151,6 +151,10 @@ assert.ok(ads.indexOf("selectedImageData") !== -1);
 assert.ok(ads.indexOf('outcome.outcome === "rejected"') !== -1);
 assert.ok(postAd.indexOf('outcome.outcome === "rejected"') !== -1);
 assert.ok(ads.indexOf("releaseAfterSave(") !== -1);
+assert.ok(
+  ads.indexOf("markSaved(") !== -1 &&
+  ads.indexOf("markSaved(") < ads.indexOf("releaseAfterSave(")
+);
 assert.ok(postAd.indexOf("markSaved(") !== -1);
 assert.ok(postAd.indexOf("publishBtn.disabled =\n        false;") !== -1);
 
