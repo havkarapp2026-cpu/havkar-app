@@ -546,6 +546,136 @@ button:focus-visible{
     box-shadow:none;
 }
 
+/* OWNER */
+
+.owner-tools{
+    margin-top:15px;
+    padding:20px;
+    background:#fff;
+    border-radius:22px;
+    box-shadow:var(--shadow);
+}
+
+.owner-tools[hidden],
+.edit-form[hidden],
+.delete-dialog[hidden]{
+    display:none!important;
+}
+
+.owner-actions{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
+
+.owner-button{
+    min-height:48px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    border-radius:14px;
+    font-weight:800;
+    cursor:pointer;
+}
+
+.owner-button.edit{
+    background:var(--green-100);
+    color:var(--green-800);
+}
+
+.owner-button.delete{
+    background:var(--red-bg);
+    color:var(--red);
+}
+
+.owner-button:disabled{
+    cursor:not-allowed;
+    opacity:.58;
+}
+
+.edit-form{
+    margin-top:16px;
+}
+
+.edit-form label{
+    display:block;
+    margin:12px 0 6px;
+    font-size:.82rem;
+    font-weight:750;
+}
+
+.edit-form input,
+.edit-form textarea{
+    width:100%;
+    padding:12px 14px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    background:#fff;
+    color:var(--text);
+}
+
+.edit-form textarea{
+    min-height:120px;
+    resize:vertical;
+}
+
+.edit-note,
+.edit-message{
+    margin-top:10px;
+    color:var(--text-2);
+    font-size:.82rem;
+    line-height:1.5;
+}
+
+.edit-message{
+    color:var(--red);
+}
+
+.edit-actions{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-top:14px;
+}
+
+.delete-dialog{
+    position:fixed;
+    inset:0;
+    z-index:400;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    background:rgba(11,20,12,.45);
+}
+
+.delete-dialog-card{
+    width:min(100%,420px);
+    padding:22px;
+    border-radius:20px;
+    background:#fff;
+    box-shadow:var(--shadow-lg);
+}
+
+.delete-dialog-card h2{
+    margin-bottom:8px;
+    font-size:1.1rem;
+}
+
+.delete-dialog-card p{
+    color:var(--text-2);
+    line-height:1.55;
+    font-size:.9rem;
+}
+
+.delete-dialog-actions{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-top:16px;
+}
+
 /* TOAST */
 
 .toast{
@@ -634,7 +764,8 @@ button:focus-visible{
     }
 
     .detail-card,
-    .seller-card{
+    .seller-card,
+    .owner-tools{
         max-width:850px;
         margin-left:auto;
         margin-right:auto;
@@ -667,7 +798,8 @@ button:focus-visible{
     }
 
     .detail-card,
-    .seller-card{
+    .seller-card,
+    .owner-tools{
         padding:17px;
         border-radius:19px;
     }
@@ -899,6 +1031,133 @@ button:focus-visible{
 
         </section>
 
+        <section
+            id="ownerTools"
+            class="owner-tools"
+            hidden
+        >
+
+            <div class="section-title">
+                Your listing
+            </div>
+
+            <div class="owner-actions">
+
+                <button
+                    id="editButton"
+                    class="owner-button edit"
+                    type="button"
+                >
+                    <i class="fas fa-pen"></i>
+                    <span>Edit</span>
+                </button>
+
+                <button
+                    id="deleteButton"
+                    class="owner-button delete"
+                    type="button"
+                >
+                    <i class="fas fa-trash"></i>
+                    <span>Delete</span>
+                </button>
+
+            </div>
+
+            <form
+                id="editForm"
+                class="edit-form"
+                hidden
+            >
+
+                <label for="editTitle">
+                    Title
+                </label>
+
+                <input
+                    id="editTitle"
+                    type="text"
+                    maxlength="200"
+                    required
+                >
+
+                <label for="editCategory">
+                    Category
+                </label>
+
+                <input
+                    id="editCategory"
+                    type="text"
+                    maxlength="120"
+                    required
+                >
+
+                <label for="editPrice">
+                    Price
+                </label>
+
+                <input
+                    id="editPrice"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    required
+                >
+
+                <label for="editLocation">
+                    Location
+                </label>
+
+                <input
+                    id="editLocation"
+                    type="text"
+                    maxlength="200"
+                    required
+                >
+
+                <label for="editDescription">
+                    Description
+                </label>
+
+                <textarea
+                    id="editDescription"
+                    maxlength="5000"
+                    required
+                ></textarea>
+
+                <p class="edit-note">
+                    Existing photos stay on this listing and are not changed.
+                </p>
+
+                <p
+                    id="editMessage"
+                    class="edit-message"
+                    role="status"
+                ></p>
+
+                <div class="edit-actions">
+
+                    <button
+                        id="cancelEditButton"
+                        class="owner-button edit"
+                        type="button"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        id="saveEditButton"
+                        class="action-button primary"
+                        type="submit"
+                    >
+                        Save
+                    </button>
+
+                </div>
+
+            </form>
+
+        </section>
+
         <section class="seller-card">
 
             <div class="section-title">
@@ -1039,6 +1298,51 @@ button:focus-visible{
     aria-live="polite"
 ></div>
 
+<div
+    id="deleteDialog"
+    class="delete-dialog"
+    hidden
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="deleteDialogTitle"
+>
+
+    <div class="delete-dialog-card">
+
+        <h2 id="deleteDialogTitle">
+            Delete this listing?
+        </h2>
+
+        <p>
+            This removes only your advertisement.
+            Conversations, messages, and other people's records are not removed.
+            If anything still depends on this listing, deletion stops.
+        </p>
+
+        <div class="delete-dialog-actions">
+
+            <button
+                id="cancelDeleteButton"
+                class="owner-button edit"
+                type="button"
+            >
+                Cancel
+            </button>
+
+            <button
+                id="confirmDeleteButton"
+                class="owner-button delete"
+                type="button"
+            >
+                Delete listing
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
 <script src="/havkar-supabase-config.js"></script>
 <script>
 "use strict";
@@ -1052,7 +1356,8 @@ button:focus-visible{
    - localStorage is NOT used as the source of truth.
    - The authenticated Supabase user is required.
    - The database enforces user_id + ad_id uniqueness.
-   - Existing listing data in public.ads is never modified.
+   - Only the signed-in owner can update or delete this listing.
+   - Photos, user_id, and unrelated records are not changed here.
    ========================================================= */
 
 const SUPABASE_URL =
@@ -1081,7 +1386,9 @@ const state = {
 
     contentVisible:false,
 
-    saving:false
+    saving:false,
+
+    ownerOperation:false
 
 };
 
@@ -2052,7 +2359,12 @@ function setupAuthListener(){
                     state.saved =
                         false;
 
+                    state.isOwnListing =
+                        false;
+
                     updateSaveUI();
+
+                    updateOwnerTools();
 
                     return;
 
@@ -2362,6 +2674,8 @@ function updateSellerUI(){
         }
 
     }
+
+    updateOwnerTools();
 
 }
 
@@ -2930,6 +3244,532 @@ async function openSellerMessage(){
 
 
 /* =========================================================
+   OWNER EDIT / DELETE
+   ========================================================= */
+
+function updateOwnerTools(){
+
+    const tools =
+        $("ownerTools");
+
+    if(!tools){
+
+        return;
+
+    }
+
+    const owns =
+        Boolean(
+            state.isOwnListing &&
+            state.currentUserId &&
+            state.ad?.user_id &&
+            String(state.currentUserId) ===
+            String(state.ad.user_id)
+        );
+
+    tools.hidden =
+        !owns;
+
+    if(!owns){
+
+        closeEditForm();
+
+        closeDeleteDialog();
+
+    }
+
+}
+
+
+function closeEditForm(){
+
+    const form =
+        $("editForm");
+
+    if(form){
+
+        form.hidden =
+            true;
+
+    }
+
+    const message =
+        $("editMessage");
+
+    if(message){
+
+        message.textContent =
+            "";
+
+    }
+
+}
+
+
+function closeDeleteDialog(){
+
+    const dialog =
+        $("deleteDialog");
+
+    if(dialog){
+
+        dialog.hidden =
+            true;
+
+    }
+
+}
+
+
+function openEditForm(){
+
+    if(!state.isOwnListing || !state.ad){
+
+        return;
+
+    }
+
+    $("editTitle").value =
+        state.ad.title || "";
+
+    $("editCategory").value =
+        state.ad.category || "";
+
+    $("editPrice").value =
+        state.ad.price === null ||
+        state.ad.price === undefined
+            ? ""
+            : String(state.ad.price);
+
+    $("editLocation").value =
+        state.ad.location || "";
+
+    $("editDescription").value =
+        state.ad.description || "";
+
+    $("editMessage").textContent =
+        "";
+
+    $("editForm").hidden =
+        false;
+
+}
+
+
+function readOwnerEdit(){
+
+    const title =
+        $("editTitle").value.trim();
+
+    const category =
+        $("editCategory").value.trim();
+
+    const priceText =
+        $("editPrice").value.trim();
+
+    const location =
+        $("editLocation").value.trim();
+
+    const description =
+        $("editDescription").value.trim();
+
+    if(!title){
+
+        throw new Error(
+            "Please enter a title."
+        );
+
+    }
+
+    if(!category){
+
+        throw new Error(
+            "Please enter a category."
+        );
+
+    }
+
+    if(priceText === ""){
+
+        throw new Error(
+            "Please enter a price."
+        );
+
+    }
+
+    const price =
+        Number(priceText);
+
+    if(
+        !Number.isFinite(price) ||
+        price < 0
+    ){
+
+        throw new Error(
+            "Please enter a valid price."
+        );
+
+    }
+
+    if(!location){
+
+        throw new Error(
+            "Please enter a location."
+        );
+
+    }
+
+    if(!description){
+
+        throw new Error(
+            "Please enter a description."
+        );
+
+    }
+
+    return {
+        title,
+        category,
+        price,
+        location,
+        description
+    };
+
+}
+
+
+async function saveOwnerEdit(event){
+
+    event.preventDefault();
+
+    if(
+        !state.isOwnListing ||
+        !state.ad ||
+        !state.currentUserId ||
+        state.ownerOperation
+    ){
+
+        return;
+
+    }
+
+    const saveButton =
+        $("saveEditButton");
+
+    state.ownerOperation =
+        true;
+
+    if(saveButton){
+
+        saveButton.disabled =
+            true;
+
+    }
+
+    try{
+
+        const changes =
+            readOwnerEdit();
+
+        const photosBefore =
+            normalizePhotos(
+                state.ad.photos
+            );
+
+        initializeSupabase();
+
+        const result =
+            await supabaseClient
+                .from("ads")
+                .update(changes)
+                .eq(
+                    "id",
+                    state.ad.id
+                )
+                .eq(
+                    "user_id",
+                    state.currentUserId
+                )
+                .select(
+                    "id,title,category,price,location,description,user_id,created_at,photos"
+                )
+                .maybeSingle();
+
+        if(result.error){
+
+            throw result.error;
+
+        }
+
+        if(!result.data){
+
+            throw new Error(
+                "This listing was not changed. Only the owner can edit it."
+            );
+
+        }
+
+        if(
+            String(result.data.user_id || "") !==
+            String(state.currentUserId)
+        ){
+
+            throw new Error(
+                "Listing ownership could not be confirmed."
+            );
+
+        }
+
+        state.ad =
+            result.data;
+
+        renderListing();
+
+        renderGallery();
+
+        if(
+            JSON.stringify(
+                normalizePhotos(state.ad.photos)
+            ) !==
+            JSON.stringify(photosBefore)
+        ){
+
+            throw new Error(
+                "The listing photos changed unexpectedly."
+            );
+
+        }
+
+        closeEditForm();
+
+        showToast(
+            "Listing updated"
+        );
+
+    }catch(error){
+
+        console.error(
+            "[HAVKAR] Listing update failed:",
+            error
+        );
+
+        const message =
+            String(
+                error?.message ||
+                ""
+            );
+
+        $("editMessage").textContent =
+            /permission|policy|row-level|42501/i.test(
+                message
+            )
+                ? "HAVKAR could not update this listing because of database permissions."
+                : (
+                    message ||
+                    "Could not update this listing."
+                );
+
+    }finally{
+
+        state.ownerOperation =
+            false;
+
+        if(saveButton){
+
+            saveButton.disabled =
+                false;
+
+        }
+
+    }
+
+}
+
+
+async function confirmOwnerDelete(){
+
+    if(
+        !state.isOwnListing ||
+        !state.ad ||
+        !state.currentUserId ||
+        state.ownerOperation
+    ){
+
+        return;
+
+    }
+
+    const button =
+        $("confirmDeleteButton");
+
+    state.ownerOperation =
+        true;
+
+    if(button){
+
+        button.disabled =
+            true;
+
+    }
+
+    try{
+
+        initializeSupabase();
+
+        const dependency =
+            await supabaseClient
+                .rpc(
+                    "ad_has_blocking_dependencies",
+                    {
+                        target_ad_id:
+                            state.ad.id
+                    }
+                );
+
+        if(dependency.error){
+
+            throw new Error(
+                "Deletion was stopped because related records could not be checked. Nothing was deleted."
+            );
+
+        }
+
+        if(dependency.data !== false){
+
+            closeDeleteDialog();
+
+            showToast(
+                "This listing was not deleted. Related saves, comments, reactions, or conversations still depend on it."
+            );
+
+            return;
+
+        }
+
+        const result =
+            await supabaseClient
+                .from("ads")
+                .delete()
+                .eq(
+                    "id",
+                    state.ad.id
+                )
+                .eq(
+                    "user_id",
+                    state.currentUserId
+                )
+                .select(
+                    "id"
+                );
+
+        if(result.error){
+
+            throw result.error;
+
+        }
+
+        if(
+            !Array.isArray(result.data) ||
+            result.data.length !== 1
+        ){
+
+            closeDeleteDialog();
+
+            showToast(
+                "This listing was not deleted. Related records still depend on it, or you are not the owner."
+            );
+
+            return;
+
+        }
+
+        window.location.href =
+            "buy-sell.html";
+
+    }catch(error){
+
+        console.error(
+            "[HAVKAR] Listing delete failed:",
+            error
+        );
+
+        closeDeleteDialog();
+
+        showToast(
+            error?.message ||
+            "This listing was not deleted."
+        );
+
+    }finally{
+
+        state.ownerOperation =
+            false;
+
+        if(button){
+
+            button.disabled =
+                false;
+
+        }
+
+    }
+
+}
+
+
+function setupOwnerActions(){
+
+    $("editButton")
+        .addEventListener(
+            "click",
+            openEditForm
+        );
+
+    $("cancelEditButton")
+        .addEventListener(
+            "click",
+            closeEditForm
+        );
+
+    $("editForm")
+        .addEventListener(
+            "submit",
+            saveOwnerEdit
+        );
+
+    $("deleteButton")
+        .addEventListener(
+            "click",
+            () => {
+
+                if(!state.isOwnListing){
+
+                    return;
+
+                }
+
+                $("deleteDialog").hidden =
+                    false;
+
+            }
+        );
+
+    $("cancelDeleteButton")
+        .addEventListener(
+            "click",
+            closeDeleteDialog
+        );
+
+    $("confirmDeleteButton")
+        .addEventListener(
+            "click",
+            confirmOwnerDelete
+        );
+
+}
+
+
+/* =========================================================
    NAVIGATION SETUP
    ========================================================= */
 
@@ -2970,6 +3810,8 @@ function setupNavigation(){
             "click",
             openSellerMessage
         );
+
+    setupOwnerActions();
 
     $("navHome")
         .addEventListener(
