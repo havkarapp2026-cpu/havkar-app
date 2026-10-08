@@ -43,7 +43,11 @@ for(const item of i18n.getSelectableLanguages()){
     language.appendChild(option);
 }
 const stored=savedLanguage();
-if(stored) language.value=stored;
+if(stored){
+    language.value=stored;
+    document.documentElement.lang=stored;
+    document.documentElement.dir=i18n.getDirection(stored);
+}
 function saveLanguage(){
     const code=language.value;
     if(!i18n.isSupportedLanguage(code)) return;
@@ -51,26 +55,32 @@ function saveLanguage(){
     localStorage.setItem('havkar_language_dir',i18n.getDirection(code));
     localStorage.setItem('selectedLanguage',code);
     localStorage.setItem('language',code);
+    document.documentElement.lang=code;
+    document.documentElement.dir=i18n.getDirection(code);
 }
-language.addEventListener('change',saveLanguage);
+async function paint(){
+    try{await i18n.translatePage();}catch(error){console.error('HAVKAR Signup Translation Error:',error);}
+}
+language.addEventListener('change',async()=>{saveLanguage();await paint();});
 function accountType(){return form.querySelector('input[name="account_type"]:checked').value;}
 function updateType(){const org=accountType()!=='personal';$('organizationFields').classList.toggle('hidden',!org);$('organizationName').required=org;}
 form.querySelectorAll('input[name="account_type"]').forEach(r=>r.addEventListener('change',updateType));updateType();
-$('togglePassword').addEventListener('click',()=>{const p=$('password');const visible=p.type==='password';p.type=visible?'text':'password';$('togglePassword').textContent=visible?'Hide':'Show';});
+$('togglePassword').addEventListener('click',async()=>{const p=$('password');const visible=p.type==='password';p.type=visible?'text':'password';$('togglePassword').textContent=visible?'Hide':'Show';await paint();});
 function show(text,type=''){message.textContent=text;message.className='message '+type;}
 function setBusy(b){createBtn.disabled=b;googleBtn.disabled=b;createBtn.textContent=b?'Creating account...':'Create Account';}
 form.addEventListener('submit',async e=>{e.preventDefault();show('');const first=$('firstName').value.trim(),last=$('lastName').value.trim(),org=$('organizationName').value.trim(),email=$('email').value.trim(),pass=$('password').value,confirm=$('confirmPassword').value,type=accountType();
-if(!first||!last||(type!=='personal'&&!org)||!email||!pass||!confirm){show('Please fill in all required fields.','error');return;}
-if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){show('Enter a valid email address.','error');return;}
-if(pass.length<8){show('Password must be at least 8 characters.','error');return;}
-if(pass!==confirm){show('Passwords do not match.','error');return;}
+if(!first||!last||(type!=='personal'&&!org)||!email||!pass||!confirm){show('Please fill in all required fields.','error');await paint();return;}
+if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){show('Enter a valid email address.','error');await paint();return;}
+if(pass.length<8){show('Password must be at least 8 characters.','error');await paint();return;}
+if(pass!==confirm){show('Passwords do not match.','error');await paint();return;}
 saveLanguage();setBusy(true);
 try{const {data,error}=await supabase.auth.signUp({email,password:pass,options:{emailRedirectTo:new URL('login.html',location.href).href,data:{first_name:first,last_name:last,full_name:first+' '+last,account_type:type,organization_name:type==='personal'?null:org,preferred_language:language.value,verification_status:'unverified'}}});if(error)throw error;
-if(!data?.user){show('Account creation could not be confirmed. Please try again.','error');return;}
+if(!data?.user){show('Account creation could not be confirmed. Please try again.','error');await paint();return;}
 $('password').value='';$('confirmPassword').value='';
 if(data.session){show('Account created and signed in. You can open HAVKAR.','success');createBtn.textContent='Go to HAVKAR';createBtn.disabled=false;form.onsubmit=null;form.addEventListener('submit',e=>{e.preventDefault();location.href='index.html';},{once:true});}
 else{show('Registration request received. If email confirmation is required, check your inbox and confirm your email before logging in.','success');createBtn.textContent='Check your email';createBtn.disabled=true;}
 }catch(err){console.error('HAVKAR Signup Error:',err);show('Account creation could not be completed. Please try again.','error');}finally{googleBtn.disabled=false;if(!createBtn.disabled&&createBtn.textContent!=='Go to HAVKAR')setBusy(false);}
+await paint();
 });
-googleBtn.addEventListener('click',async()=>{saveLanguage();googleBtn.disabled=true;show('');try{const {error}=await supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:new URL('login.html',location.href).href}});if(error)throw error;}catch(err){console.error('HAVKAR Google OAuth Error:',err);show('Google sign-in could not be started. Please try again.','error');googleBtn.disabled=false;}});
+googleBtn.addEventListener('click',async()=>{saveLanguage();googleBtn.disabled=true;show('');try{const {error}=await supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:new URL('login.html',location.href).href}});if(error)throw error;}catch(err){console.error('HAVKAR Google OAuth Error:',err);show('Google sign-in could not be started. Please try again.','error');googleBtn.disabled=false;await paint();}});
 </script></body></html>
