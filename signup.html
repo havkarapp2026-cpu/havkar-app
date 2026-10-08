@@ -16,8 +16,8 @@
 <div class="field"><label for="lastName">Last name</label><input id="lastName" autocomplete="family-name" maxlength="80" required></div>
 <div id="organizationFields" class="hidden"><div class="field"><label for="organizationName">Registered business / company name</label><input id="organizationName" maxlength="160" autocomplete="organization"></div><p class="hint">Business and company status will remain unverified until HAVKAR completes verification. No verification badge is granted automatically.</p></div>
 <div class="field"><label for="email">Email</label><input id="email" type="email" autocomplete="email" maxlength="254" required></div>
-<div class="field"><label for="password">Password (at least 8 characters)</label><div class="password-line"><input id="password" type="password" autocomplete="new-password" minlength="8" required><button type="button" id="togglePassword" aria-label="Show password">Show</button></div></div>
-<div class="field"><label for="confirmPassword">Confirm password</label><input id="confirmPassword" type="password" autocomplete="new-password" minlength="8" required></div>
+<div class="field"><label for="password">Password (at least 8 characters)</label><div class="password-line"><input id="password" type="password" autocomplete="new-password" minlength="8" required><button type="button" id="togglePassword" aria-label="Show password" aria-pressed="false">Show</button></div></div>
+<div class="field"><label for="confirmPassword">Confirm password</label><div class="password-line"><input id="confirmPassword" type="password" autocomplete="new-password" minlength="8" required><button type="button" id="toggleConfirmPassword" aria-label="Show confirm password" aria-pressed="false">Show</button></div></div>
 <button id="createBtn" class="primary" type="submit">Create Account</button><button id="googleBtn" class="google" type="button">Continue with Google</button><a class="back" href="login.html">Back to Login</a>
 <div id="message" class="message" role="status" aria-live="polite"></div>
 </form><footer>HAVKAR • Safe • Secure 🔒</footer></main>
@@ -65,7 +65,19 @@ language.addEventListener('change',async()=>{saveLanguage();await paint();});
 function accountType(){return form.querySelector('input[name="account_type"]:checked').value;}
 function updateType(){const org=accountType()!=='personal';$('organizationFields').classList.toggle('hidden',!org);$('organizationName').required=org;}
 form.querySelectorAll('input[name="account_type"]').forEach(r=>r.addEventListener('change',updateType));updateType();
-$('togglePassword').addEventListener('click',async()=>{const p=$('password');const visible=p.type==='password';p.type=visible?'text':'password';$('togglePassword').textContent=visible?'Hide':'Show';await paint();});
+function bindPasswordToggle(buttonId,inputId){
+    $(buttonId).addEventListener('click',async()=>{
+        const input=$(inputId);
+        const button=$(buttonId);
+        const visible=input.type==='password';
+        input.type=visible?'text':'password';
+        button.textContent=visible?'Hide':'Show';
+        button.setAttribute('aria-pressed',String(visible));
+        await paint();
+    });
+}
+bindPasswordToggle('togglePassword','password');
+bindPasswordToggle('toggleConfirmPassword','confirmPassword');
 function show(text,type=''){message.textContent=text;message.className='message '+type;}
 function setBusy(b){createBtn.disabled=b;googleBtn.disabled=b;createBtn.textContent=b?'Creating account...':'Create Account';}
 form.addEventListener('submit',async e=>{e.preventDefault();show('');const first=$('firstName').value.trim(),last=$('lastName').value.trim(),org=$('organizationName').value.trim(),email=$('email').value.trim(),pass=$('password').value,confirm=$('confirmPassword').value,type=accountType();
