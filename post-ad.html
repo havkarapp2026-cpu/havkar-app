@@ -539,6 +539,7 @@ textarea {
 
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-countries.js"></script>
+<script src="/havkar-ad-publish.js"></script>
 <script>
 
 /* =========================================================
@@ -607,6 +608,11 @@ const publishBtn =
 
 const statusBox =
   document.getElementById("status");
+
+const postingGuard =
+  window.HAVKAR_AD_PUBLISH
+    ? window.HAVKAR_AD_PUBLISH.createPostingGuard()
+    : null;
 
 
 /* =========================================================
@@ -1307,8 +1313,44 @@ adForm.addEventListener(
 
 
     if (
-      publishBtn.disabled
+      !window.HAVKAR_AD_PUBLISH ||
+      !postingGuard
     ) {
+
+      showStatus(
+        "Publishing is unavailable. Reload the page and try again.",
+        "error"
+      );
+
+      return;
+
+    }
+
+
+    if (!postingGuard.canSubmit()) {
+
+      publishBtn.disabled =
+        true;
+
+      showStatus(
+        postingGuard.blockedMessage(),
+        "error"
+      );
+
+      return;
+
+    }
+
+
+    if (!postingGuard.beginPublish()) {
+
+      publishBtn.disabled =
+        true;
+
+      showStatus(
+        postingGuard.blockedMessage(),
+        "error"
+      );
 
       return;
 
@@ -1323,6 +1365,10 @@ adForm.addEventListener(
       "Checking your account...",
       "success"
     );
+
+
+    let publishTimer =
+      0;
 
 
     try {
@@ -1485,67 +1531,101 @@ adForm.addEventListener(
           ]);
 
 
-      const timeoutPromise =
-        new Promise(
-          function (
-            _,
-            reject
-          ) {
+      /*
+       * A slow response stays in progress.
+       * This timer does not cancel the INSERT and
+       * must not say the advertisement was not saved.
+       */
 
-            window.setTimeout(
-              function () {
+      publishTimer =
+        window.setTimeout(
+          function () {
 
-                reject(
-                  new Error(
-                    "The publish request timed out. Please check your internet connection and try again."
-                  )
-                );
+            const report =
+              postingGuard.markUncertain();
 
-              },
-              30000
+            if (!report.changed) {
+
+              return;
+
+            }
+
+            showStatus(
+              report.message,
+              "error"
             );
 
-          }
+            publishBtn.disabled =
+              true;
+
+          },
+          30000
         );
 
 
-      const result =
-        await Promise.race([
-          insertPromise,
-          timeoutPromise
-        ]);
+      let result =
+        null;
+
+      let outcome;
+
+
+      try {
+
+        result =
+          await insertPromise;
+
+        outcome =
+          window.HAVKAR_AD_PUBLISH.classifyInsertResult(
+            result
+          );
+
+      } catch (insertError) {
+
+        outcome =
+          window.HAVKAR_AD_PUBLISH.classifyInsertResult({
+            error: insertError,
+            status: 0
+          });
+
+      }
+
+
+      window.clearTimeout(
+        publishTimer
+      );
 
 
       if (
-        !result
+        outcome.outcome === "uncertain"
       ) {
 
-        throw new Error(
-          "Supabase returned no response."
+        postingGuard.markUncertain();
+
+        showStatus(
+          postingGuard.uncertainMessage(),
+          "error"
         );
+
+        publishBtn.disabled =
+          true;
+
+        return;
 
       }
 
 
       if (
-        result.error
+        outcome.outcome === "rejected"
       ) {
 
         console.error(
           "Supabase insert error:",
+          result &&
           result.error
         );
 
-
-        const message =
-          result.error.message ||
-          result.error.details ||
-          result.error.hint ||
-          "Supabase could not create the ad.";
-
-
         throw new Error(
-          message
+          outcome.message
         );
 
       }
@@ -1554,6 +1634,9 @@ adForm.addEventListener(
       /* ---------------------------------------------
          SUCCESS
          --------------------------------------------- */
+
+      postingGuard.markSaved();
+
 
       showStatus(
         "Your ad has been published successfully!",
@@ -1570,6 +1653,10 @@ adForm.addEventListener(
        */
 
       adForm.reset();
+
+
+      publishBtn.disabled =
+        true;
 
 
       selectedFiles =
@@ -1604,6 +1691,14 @@ adForm.addEventListener(
 
 
     } catch (error) {
+
+      window.clearTimeout(
+        publishTimer
+      );
+
+
+      postingGuard.markFailed();
+
 
       console.error(
         "HAVKAR Publish error:",
