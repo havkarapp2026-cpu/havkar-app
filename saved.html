@@ -695,6 +695,7 @@ main{max-width:980px;margin:auto;padding:16px}
 <div class="toast" id="toast"></div>
 
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-currencies.js"></script>
 <script>
 "use strict";
 
@@ -1228,19 +1229,44 @@ async function loadAdDetails(){
         return;
     }
 
-    const {
+    let {
         data,
         error
     } =
         await db
             .from("ads")
             .select(
-                "id,title,category,price,location,description,user_id,created_at,status,photos"
+                "id,title,category,price,currency,location,description,user_id,created_at,status,photos"
             )
             .in(
                 "id",
                 ids
             );
+
+    if(
+        error &&
+        String(
+            error.message ||
+            error.details ||
+            ""
+        ).toLowerCase().includes("currency")
+    ){
+
+        const fallback =
+            await db
+                .from("ads")
+                .select(
+                    "id,title,category,price,location,description,user_id,created_at,status,photos"
+                )
+                .in(
+                    "id",
+                    ids
+                );
+
+        data = fallback.data;
+        error = fallback.error;
+
+    }
 
     if(error){
 
@@ -1545,7 +1571,15 @@ function formatDate(value){
     }
 }
 
-function formatPrice(value){
+function formatPrice(value, currency){
+
+    if(window.HAVKAR_CURRENCIES){
+        return window.HAVKAR_CURRENCIES.formatAmount(
+            value,
+            currency,
+            ""
+        );
+    }
 
     if(
         value === null ||
@@ -1562,23 +1596,12 @@ function formatPrice(value){
         return String(value);
     }
 
-    try{
-
-        return new Intl.NumberFormat(
-            undefined,
-            {
-                style: "currency",
-                currency: "EUR",
-                maximumFractionDigits: 2
-            }
-        ).format(number);
-
-    }catch(error){
-
-        return "€" +
-            number.toFixed(2);
-
-    }
+    return new Intl.NumberFormat(
+        undefined,
+        {
+            maximumFractionDigits: 2
+        }
+    ).format(number);
 }
 
 function titleFor(item){
@@ -1695,7 +1718,8 @@ function metaFor(item){
         ){
             parts.push(
                 formatPrice(
-                    detail.price
+                    detail.price,
+                    detail.currency
                 )
             );
         }

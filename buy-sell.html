@@ -1049,6 +1049,7 @@ aria-label="Post a new ad"
 
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-countries.js"></script>
+<script src="/havkar-currencies.js"></script>
 <script>
 "use strict";
 
@@ -1433,7 +1434,19 @@ function renderCategories(){
    PRICE / DATE
    ========================================================= */
 
-function formatPrice(value){
+function formatPrice(value, currency){
+
+    if(
+        window.HAVKAR_CURRENCIES
+    ){
+
+        return window.HAVKAR_CURRENCIES.formatAmount(
+            value,
+            currency,
+            "Price on request"
+        );
+
+    }
 
     if(
         value === null ||
@@ -1455,14 +1468,13 @@ function formatPrice(value){
     ){
 
         return new Intl.NumberFormat(
-            "en-US",
+            undefined,
             {
-                minimumFractionDigits:0,
                 maximumFractionDigits:2
             }
         ).format(
             numeric
-        ) + " €";
+        );
 
     }
 
@@ -2374,6 +2386,24 @@ function missingPlaceColumns(
 }
 
 
+function missingCurrencyColumn(
+    error
+){
+
+    const message =
+        String(
+            error?.message ||
+            error?.details ||
+            ""
+        ).toLowerCase();
+
+    return message.includes(
+        "currency"
+    );
+
+}
+
+
 async function queryListings(
     columns
 ){
@@ -2425,8 +2455,22 @@ async function fetchListings(){
 
     let result =
         await queryListings(
-            "id,title,category,price,location,country_code,city,description,user_id,created_at,status"
+            "id,title,category,price,currency,location,country_code,city,description,user_id,created_at,status"
         );
+
+    if(
+        result?.error &&
+        missingCurrencyColumn(
+            result.error
+        )
+    ){
+
+        result =
+            await queryListings(
+                "id,title,category,price,location,country_code,city,description,user_id,created_at,status"
+            );
+
+    }
 
     if(
         result?.error &&
@@ -2814,7 +2858,7 @@ function cardHtml(
                 </div>
 
                 <div class="ad-price">
-                    ${formatPrice(ad.price)}
+                    ${formatPrice(ad.price, ad.currency)}
                 </div>
 
                 ${placeHtml}
