@@ -163,6 +163,19 @@ textarea {
   cursor: pointer;
 }
 
+.price-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 9.5rem;
+  gap: 10px;
+  align-items: end;
+}
+
+@media (max-width: 520px) {
+  .price-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* BUTTON */
 
 .publish-btn {
@@ -416,20 +429,44 @@ textarea {
       </div>
 
 
-      <!-- PRICE -->
+      <!-- PRICE AND CURRENCY -->
 
-      <label for="price">
-        Price
-      </label>
+      <div class="price-row">
 
-      <input
-        type="number"
-        id="price"
-        placeholder="Enter price"
-        min="0"
-        step="0.01"
-        required
-      >
+        <div>
+
+          <label for="price">
+            Price
+          </label>
+
+          <input
+            type="number"
+            id="price"
+            placeholder="Enter price"
+            min="0"
+            step="0.01"
+            required
+          >
+
+        </div>
+
+        <div>
+
+          <label for="currency">
+            Currency
+          </label>
+
+          <select
+            id="currency"
+            required>
+            <option value="">
+              Select currency
+            </option>
+          </select>
+
+        </div>
+
+      </div>
 
 
       <!-- COUNTRY -->
@@ -539,6 +576,7 @@ textarea {
 
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-countries.js"></script>
+<script src="/havkar-currencies.js"></script>
 <script>
 
 /* =========================================================
@@ -575,6 +613,15 @@ if (window.HAVKAR_COUNTRIES) {
   window.HAVKAR_COUNTRIES.fillCountrySelect(
     document.getElementById("country"),
     "Select country"
+  );
+
+}
+
+if (window.HAVKAR_CURRENCIES) {
+
+  window.HAVKAR_CURRENCIES.fillCurrencySelect(
+    document.getElementById("currency"),
+    "Select currency"
   );
 
 }
@@ -1144,6 +1191,14 @@ function getFormData() {
       .trim();
 
 
+  const currency =
+    document
+      .getElementById("currency")
+      .value
+      .trim()
+      .toUpperCase();
+
+
   const countryCode =
     document
       .getElementById("country")
@@ -1242,6 +1297,20 @@ function getFormData() {
 
 
   if (
+    !window.HAVKAR_CURRENCIES ||
+    !window.HAVKAR_CURRENCIES.isCurrencyCode(
+      currency
+    )
+  ) {
+
+    throw new Error(
+      "Please select a currency."
+    );
+
+  }
+
+
+  if (
     !window.HAVKAR_COUNTRIES ||
     !window.HAVKAR_COUNTRIES.isCountryCode(
       countryCode
@@ -1286,6 +1355,7 @@ function getFormData() {
     title,
     category,
     price,
+    currency,
     location,
     description,
     countryCode,
@@ -1432,6 +1502,9 @@ adForm.addEventListener(
 
         price:
           formData.price,
+
+        currency:
+          formData.currency,
 
         location:
           formData.location,

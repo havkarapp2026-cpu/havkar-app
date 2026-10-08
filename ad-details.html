@@ -1113,6 +1113,16 @@ button:focus-visible{
                     required
                 >
 
+                <label for="editCurrency">
+                    Currency
+                </label>
+
+                <select id="editCurrency">
+                    <option value="">
+                        Currency not recorded
+                    </option>
+                </select>
+
                 <label for="editCountry">
                     Country
                 </label>
@@ -1374,6 +1384,7 @@ button:focus-visible{
 
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-countries.js"></script>
+<script src="/havkar-currencies.js"></script>
 <script>
 "use strict";
 
@@ -1620,7 +1631,17 @@ function normalizePhotos(value){
    PRICE
    ========================================================= */
 
-function formatPrice(value){
+function formatPrice(value, currency){
+
+    if(window.HAVKAR_CURRENCIES){
+
+        return window.HAVKAR_CURRENCIES.formatAmount(
+            value,
+            currency,
+            "Price on request"
+        );
+
+    }
 
     if(
         value === null ||
@@ -1638,12 +1659,11 @@ function formatPrice(value){
     if(Number.isFinite(numeric)){
 
         return new Intl.NumberFormat(
-            "en-US",
+            undefined,
             {
-                minimumFractionDigits:0,
                 maximumFractionDigits:2
             }
-        ).format(numeric) + " €";
+        ).format(numeric);
 
     }
 
@@ -2467,11 +2487,30 @@ function missingPlaceColumns(
 }
 
 
+function missingCurrencyColumn(
+    error
+){
+
+    const message =
+        String(
+            error?.message ||
+            error?.details ||
+            ""
+        ).toLowerCase();
+
+    return message.includes(
+        "currency"
+    );
+
+}
+
+
 async function fetchListing(id){
 
     initializeSupabase();
 
     const columns = [
+        "id,title,category,price,currency,location,country_code,city,description,user_id,created_at,photos,status",
         "id,title,category,price,location,country_code,city,description,user_id,created_at,photos,status",
         "id,title,category,price,location,description,user_id,created_at,photos,status"
     ];
@@ -2490,7 +2529,7 @@ async function fetchListing(id){
 
     if(
         result.error &&
-        missingPlaceColumns(
+        missingCurrencyColumn(
             result.error
         )
     ){
@@ -2500,6 +2539,27 @@ async function fetchListing(id){
                 .from("ads")
                 .select(
                     columns[1]
+                )
+                .eq(
+                    "id",
+                    id
+                )
+                .maybeSingle();
+
+    }
+
+    if(
+        result.error &&
+        missingPlaceColumns(
+            result.error
+        )
+    ){
+
+        result =
+            await supabaseClient
+                .from("ads")
+                .select(
+                    columns[2]
                 )
                 .eq(
                     "id",
@@ -2640,7 +2700,8 @@ function renderListing(){
 
     $("price").textContent =
         formatPrice(
-            ad.price
+            ad.price,
+            ad.currency
         );
 
     const place =
@@ -3504,6 +3565,31 @@ function openEditForm(){
             ? ""
             : String(state.ad.price);
 
+    if(
+        window.HAVKAR_CURRENCIES &&
+        $("editCurrency")
+    ){
+
+        window.HAVKAR_CURRENCIES.fillCurrencySelect(
+            $("editCurrency"),
+            "Currency not recorded"
+        );
+
+        const storedCurrency =
+            String(
+                state.ad.currency ||
+                ""
+            ).trim().toUpperCase();
+
+        $("editCurrency").value =
+            window.HAVKAR_CURRENCIES.isCurrencyCode(
+                storedCurrency
+            )
+                ? storedCurrency
+                : "";
+
+    }
+
     $("editLocation").value =
         state.ad.location || "";
 
@@ -3605,6 +3691,11 @@ function readOwnerEdit(){
     const price =
         Number(priceText);
 
+    const currency =
+        $("editCurrency")
+            ? $("editCurrency").value.trim().toUpperCase()
+            : "";
+
     if(
         !Number.isFinite(price) ||
         price < 0
@@ -3612,6 +3703,22 @@ function readOwnerEdit(){
 
         throw new Error(
             "Please enter a valid price."
+        );
+
+    }
+
+    if(
+        currency &&
+        (
+            !window.HAVKAR_CURRENCIES ||
+            !window.HAVKAR_CURRENCIES.isCurrencyCode(
+                currency
+            )
+        )
+    ){
+
+        throw new Error(
+            "Please select a valid currency."
         );
 
     }
@@ -3652,6 +3759,7 @@ function readOwnerEdit(){
         title,
         category,
         price,
+        currency: currency || null,
         location,
         country_code: countryCode || null,
         city: city || null,
@@ -3714,9 +3822,55 @@ async function saveOwnerEdit(event){
                     state.currentUserId
                 )
                 .select(
-                    "id,title,category,price,location,country_code,city,description,user_id,created_at,photos,status"
+                    "id,title,category,price,currency,location,country_code,city,description,user_id,created_at,photos,status"
                 )
                 .maybeSingle();
+
+        if(
+            result.error &&
+            missingCurrencyColumn(
+                result.error
+            )
+        ){
+
+            if(changes.currency){
+
+                throw new Error(
+                    "Currency cannot be saved until the database update is applied."
+                );
+
+            }
+
+            const withoutCurrency = {
+                title: changes.title,
+                category: changes.category,
+                price: changes.price,
+                location: changes.location,
+                country_code: changes.country_code,
+                city: changes.city,
+                description: changes.description
+            };
+
+            result =
+                await supabaseClient
+                    .from("ads")
+                    .update(
+                        withoutCurrency
+                    )
+                    .eq(
+                        "id",
+                        state.ad.id
+                    )
+                    .eq(
+                        "user_id",
+                        state.currentUserId
+                    )
+                    .select(
+                        "id,title,category,price,location,country_code,city,description,user_id,created_at,photos,status"
+                    )
+                    .maybeSingle();
+
+        }
 
         if(
             result.error &&
