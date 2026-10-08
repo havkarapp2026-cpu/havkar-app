@@ -898,6 +898,17 @@
             cursor: wait;
         }
 
+        .ad-publish-message {
+            margin-top: 12px;
+            color: #6d4c41;
+            font-size: 14px;
+            line-height: 1.45;
+        }
+
+        .ad-publish-message[hidden] {
+            display: none;
+        }
+
         .toast {
             position: fixed;
             left: 50%;
@@ -1445,6 +1456,12 @@
 
                     </div>
 
+                    <p
+                        id="adPublishMessage"
+                        class="ad-publish-message"
+                        hidden
+                    ></p>
+
                     <div class="form-actions">
 
                         <button
@@ -1483,6 +1500,7 @@
 
     <script src="/havkar-supabase-config.js"></script>
     <script src="/havkar-ad-images.js"></script>
+    <script src="/havkar-ad-publish.js"></script>
 <script>
 
         const SUPABASE_URL =
@@ -1519,32 +1537,33 @@
             false;
 
         const adPostingGuard =
-            window.HAVKAR_AD_IMAGES
+            window.HAVKAR_AD_IMAGES &&
+            window.HAVKAR_AD_PUBLISH
                 ? window.HAVKAR_AD_IMAGES.createPostingGuard()
                 : {
                     canSubmit: function () {
-                        return true;
+                        return false;
                     },
                     canEditImages: function () {
-                        return true;
+                        return false;
                     },
                     phase: function () {
                         return "idle";
                     },
                     blockedMessage: function () {
-                        return "Image upload is unavailable.";
+                        return "Publishing is unavailable. Reload the page and try again.";
                     },
                     uncertainMessage: function () {
                         return "The server has not confirmed this advertisement yet. It may still be published. Do not submit it again. Check your existing advertisements before posting again.";
                     },
-                    beginPublish: function (files) {
-                        return Array.isArray(files)
-                            ? files.slice()
-                            : [];
+                    beginPublish: function () {
+                        return null;
                     },
                     markUncertain: function () {
                         return {
                             changed: false,
+                            claimNotSaved: false,
+                            allowRetry: false,
                             message: ""
                         };
                     },
@@ -3143,7 +3162,32 @@
 
             event.preventDefault();
 
+            if (
+                !window.HAVKAR_AD_PUBLISH ||
+                !window.HAVKAR_AD_IMAGES
+            ) {
+
+                showToast(
+                    "Publishing is unavailable. Reload the page and try again."
+                );
+
+                return;
+
+            }
+
             if (!adPostingGuard.canSubmit()) {
+
+                const lockedButton =
+                    document.getElementById(
+                        "publishButton"
+                    );
+
+                if (lockedButton) {
+
+                    lockedButton.disabled =
+                        true;
+
+                }
 
                 showToast(
                     adPostingGuard.blockedMessage()
@@ -3272,6 +3316,10 @@
             const imageToPublish =
                 adImageSelection.selectedFile();
 
+            showAdPublishMessage(
+                ""
+            );
+
             if (
                 !adPostingGuard.beginPublish(
                     imageToPublish
@@ -3310,6 +3358,9 @@
                 `;
 
             }
+
+            let publishTimer =
+                0;
 
             try {
 
@@ -3422,21 +3473,62 @@
 
                 };
 
+                const insertPromise =
+                    supabaseClient
+                        .from(ADS_TABLE)
+                        .insert(
+                            newAd
+                        )
+                        .select(
+                            "id,created_at,title,category,price,location,description,user_id,photos,status"
+                        )
+                        .single();
+
+                /*
+                 * A slow response stays in progress.
+                 * This timer does not cancel the INSERT and
+                 * must not say the advertisement was not saved.
+                 */
+                publishTimer =
+                    window.setTimeout(
+                        function () {
+
+                            const report =
+                                adPostingGuard.markUncertain();
+
+                            if (!report.changed) {
+
+                                return;
+
+                            }
+
+                            showAdPublishMessage(
+                                report.message
+                            );
+
+                            showToast(
+                                report.message,
+                                12000
+                            );
+
+                            if (publishButton) {
+
+                                publishButton.disabled =
+                                    true;
+
+                            }
+
+                        },
+                        30000
+                    );
+
                 let insertResult =
                     null;
 
                 try {
 
                     insertResult =
-                        await supabaseClient
-                            .from(ADS_TABLE)
-                            .insert(
-                                newAd
-                            )
-                            .select(
-                                "id,created_at,title,category,price,location,description,user_id,photos,status"
-                            )
-                            .single();
+                        await insertPromise;
 
                 } catch (insertError) {
 
@@ -3448,16 +3540,14 @@
 
                 }
 
+                window.clearTimeout(
+                    publishTimer
+                );
+
                 const outcome =
-                    window.HAVKAR_AD_IMAGES &&
-                    window.HAVKAR_AD_IMAGES.classifyInsertResult
-                        ? window.HAVKAR_AD_IMAGES.classifyInsertResult(
-                            insertResult
-                        )
-                        : {
-                            outcome: "uncertain",
-                            message: adPostingGuard.uncertainMessage()
-                        };
+                    window.HAVKAR_AD_PUBLISH.classifyInsertResult(
+                        insertResult
+                    );
 
                 if (
                     outcome.outcome === "uncertain"
@@ -3465,32 +3555,9 @@
 
                     adPostingGuard.markUncertain();
 
-                    const uncertainBox =
-                        document.getElementById(
-                            "adImageMessage"
-                        );
-
-                    if (uncertainBox) {
-
-                        uncertainBox.classList.add(
-                            "show"
-                        );
-
-                        uncertainBox.replaceChildren();
-
-                        const uncertainText =
-                            document.createElement(
-                                "p"
-                            );
-
-                        uncertainText.textContent =
-                            adPostingGuard.uncertainMessage();
-
-                        uncertainBox.appendChild(
-                            uncertainText
-                        );
-
-                    }
+                    showAdPublishMessage(
+                        adPostingGuard.uncertainMessage()
+                    );
 
                     showToast(
                         adPostingGuard.uncertainMessage(),
@@ -3519,6 +3586,8 @@
                     );
 
                 }
+
+                adPostingGuard.markSaved();
 
                 const data =
                     insertResult &&
@@ -3594,17 +3663,23 @@
                     "Your advertisement was published successfully."
                 );
 
+                showAdPublishMessage(
+                    ""
+                );
+
                 adPostingGuard.releaseAfterSave();
 
             } catch (error) {
 
-                if (
-                    adPostingGuard.phase() !== "uncertain"
-                ) {
+                window.clearTimeout(
+                    publishTimer
+                );
 
-                    adPostingGuard.markFailed();
+                showAdPublishMessage(
+                    ""
+                );
 
-                }
+                adPostingGuard.markFailed();
 
                 console.error(
                     "HAVKAR publish exception:",
@@ -4224,6 +4299,41 @@
 
         }
 
+        function showAdPublishMessage(
+            message
+        ) {
+
+            const box =
+                document.getElementById(
+                    "adPublishMessage"
+                );
+
+            if (!box) {
+
+                return;
+
+            }
+
+            if (!message) {
+
+                box.hidden =
+                    true;
+
+                box.textContent =
+                    "";
+
+                return;
+
+            }
+
+            box.hidden =
+                false;
+
+            box.textContent =
+                message;
+
+        }
+
         function showToast(
             message,
             duration
@@ -4258,7 +4368,9 @@
                         );
 
                     },
-                    duration || 3000
+                    Number.isFinite(duration)
+                        ? duration
+                        : 3000
                 );
 
         }

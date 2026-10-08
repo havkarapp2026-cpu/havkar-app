@@ -549,6 +549,7 @@ textarea {
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-ad-images.js"></script>
+<script src="/havkar-ad-publish.js"></script>
 <script>
 
 /* =========================================================
@@ -618,26 +619,20 @@ const publishBtn =
 const statusBox =
   document.getElementById("status");
 
-
-/* =========================================================
-   SELECTED PHOTOS
-   ========================================================= */
-
-let selectedFiles = [];
-
 const postingGuard =
-  window.HAVKAR_AD_IMAGES
+  window.HAVKAR_AD_IMAGES &&
+  window.HAVKAR_AD_PUBLISH
     ? window.HAVKAR_AD_IMAGES.createPostingGuard()
     : {
-        canSubmit: function () { return true; },
-        canEditImages: function () { return true; },
+        canSubmit: function () { return false; },
+        canEditImages: function () { return false; },
         isValidating: function () { return false; },
         phase: function () { return "idle"; },
         blockedMessage: function () {
-          return "Image upload is unavailable.";
+          return "Publishing is unavailable. Reload the page and try again.";
         },
         uncertainMessage: function () {
-          return "The server has not confirmed this advertisement yet. It may still be published. Do not submit it again.";
+          return "The server has not confirmed this advertisement yet. It may still be published. Do not submit it again. Check your existing advertisements before posting again.";
         },
         beginValidation: function () { return false; },
         endValidation: function () {},
@@ -651,8 +646,16 @@ const postingGuard =
           };
         },
         markSaved: function () { return false; },
-        markFailed: function () { return false; }
+        markFailed: function () { return false; },
+        releaseAfterSave: function () { return false; }
       };
+
+
+/* =========================================================
+   SELECTED PHOTOS
+   ========================================================= */
+
+let selectedFiles = [];
 
 
 function syncPublishAvailability() {
@@ -1474,6 +1477,21 @@ adForm.addEventListener(
     event.preventDefault();
 
 
+    if (
+      !window.HAVKAR_AD_PUBLISH ||
+      !window.HAVKAR_AD_IMAGES
+    ) {
+
+      showStatus(
+        "Publishing is unavailable. Reload the page and try again.",
+        "error"
+      );
+
+      return;
+
+    }
+
+
     if (!postingGuard.canSubmit()) {
 
       publishBtn.disabled =
@@ -1731,8 +1749,8 @@ adForm.addEventListener(
 
       /*
        * A slow response stays in progress.
-       * The timeout must not say the advertisement
-       * was not saved, and it must not start another insert.
+       * This timer does not cancel the INSERT and
+       * must not say the advertisement was not saved.
        */
 
       publishTimer =
@@ -1773,14 +1791,14 @@ adForm.addEventListener(
           await insertPromise;
 
         outcome =
-          window.HAVKAR_AD_IMAGES.classifyInsertResult(
+          window.HAVKAR_AD_PUBLISH.classifyInsertResult(
             result
           );
 
       } catch (insertError) {
 
         outcome =
-          window.HAVKAR_AD_IMAGES.classifyInsertResult({
+          window.HAVKAR_AD_PUBLISH.classifyInsertResult({
             error: insertError,
             status: 0
           });
@@ -1838,9 +1856,6 @@ adForm.addEventListener(
 
       postingGuard.markSaved();
 
-      syncPublishAvailability();
-
-
       showStatus(
         "Your ad has been published successfully!",
         "success"
@@ -1860,7 +1875,6 @@ adForm.addEventListener(
 
       photoInput.disabled =
         true;
-
 
       selectedFiles =
         [];
@@ -1967,6 +1981,9 @@ adForm.addEventListener(
 
 
       syncPublishAvailability();
+
+      publishBtn.disabled =
+        false;
 
     }
 
