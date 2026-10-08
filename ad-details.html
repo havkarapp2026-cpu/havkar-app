@@ -475,7 +475,7 @@ button:focus-visible{
     align-items:center;
     gap:6px;
     margin-top:9px;
-    color:var(--green-700);
+    color:var(--muted);
     font-size:.72rem;
     font-weight:700;
 }
@@ -1184,9 +1184,8 @@ button:focus-visible{
                     </div>
 
                     <div class="seller-status">
-                        <i class="fas fa-shield-halved"></i>
                         <span>
-                            Seller on HAVKAR
+                            HAVKAR Member
                         </span>
                     </div>
 
@@ -2424,7 +2423,7 @@ async function fetchListing(id){
         await supabaseClient
             .from("ads")
             .select(
-                "id,title,category,price,location,description,user_id,created_at,photos"
+                "id,title,category,price,location,description,user_id,created_at,photos,status"
             )
             .eq(
                 "id",
@@ -2493,6 +2492,30 @@ function renderCategory(category){
 }
 
 
+function isPublicListingStatus(
+    status
+){
+
+    if(
+        status === null ||
+        status === undefined
+    ){
+
+        return true;
+
+    }
+
+    const value =
+        String(status)
+            .trim()
+            .toLowerCase();
+
+    return value === "" ||
+        value === "active";
+
+}
+
+
 /* =========================================================
    LISTING RENDER
    ========================================================= */
@@ -2505,6 +2528,31 @@ function renderListing(){
     if(!ad){
 
         return;
+
+    }
+
+    const viewerOwnsListing =
+        Boolean(
+            state.currentUserId &&
+            ad.user_id &&
+            String(
+                state.currentUserId
+            ) ===
+            String(
+                ad.user_id
+            )
+        );
+
+    if(
+        !viewerOwnsListing &&
+        !isPublicListingStatus(
+            ad.status
+        )
+    ){
+
+        throw new Error(
+            "This listing could not be found."
+        );
 
     }
 
@@ -2596,11 +2644,8 @@ function updateSellerUI(){
 
         if(sellerStatus){
 
-            sellerStatus.innerHTML =
-                `
-                    <i class="fas fa-circle-check"></i>
-                    <span>Your listing</span>
-                `;
+            sellerStatus.textContent =
+                "Your listing";
 
         }
 
@@ -2644,11 +2689,8 @@ function updateSellerUI(){
 
         if(sellerStatus){
 
-            sellerStatus.innerHTML =
-                `
-                    <i class="fas fa-shield-halved"></i>
-                    <span>Seller on HAVKAR</span>
-                `;
+            sellerStatus.textContent =
+                "HAVKAR Member";
 
         }
 
@@ -3491,7 +3533,7 @@ async function saveOwnerEdit(event){
                     state.currentUserId
                 )
                 .select(
-                    "id,title,category,price,location,description,user_id,created_at,photos"
+                    "id,title,category,price,location,description,user_id,created_at,photos,status"
                 )
                 .maybeSingle();
 
