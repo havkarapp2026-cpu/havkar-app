@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-havkar-entry="home">
 <head>
 <meta charset="UTF-8">
 
@@ -693,7 +693,7 @@ h1 {
 }
 
 </style>
-
+<script src="/havkar-i18n.js"></script>
 </head>
 
 <body>
@@ -718,7 +718,7 @@ h1 {
             loading="eager"
         >
 
-        <h1>HAVKAR</h1>
+        <h1 translate="no" data-i18n-ignore>HAVKAR</h1>
 
         <div class="tagline" data-i18n="tagline">
             Connect • Trade • Work • Help
@@ -827,7 +827,7 @@ h1 {
         id="guestSignup"
         class="enter-button"
         type="button"
-        onclick="window.location.href='login.html'"
+        onclick="window.location.href='signup.html'"
         aria-label="Create New Account"
     >
         <i class="fas fa-user-plus enter-icon" aria-hidden="true"></i>
@@ -838,7 +838,7 @@ h1 {
 
     <!-- Signed-in account controls: hidden until authentication is confirmed. -->
     <section id="signedInPanel" class="account-panel" hidden aria-label="HAVKAR account">
-        <p id="signedInEmail"></p>
+        <p id="signedInEmail" translate="no" data-i18n-ignore></p>
         <div class="account-actions">
             <a href="profile.html" data-i18n="myAccount">My Account</a>
             <button id="homeLogout" type="button" data-i18n="logout">Log Out</button>
@@ -867,136 +867,6 @@ h1 {
     </div>
 
 </main>
-
-<script>
-(function () {
-    "use strict";
-
-    const STORAGE_KEY = "havkar_language";
-    const API_URL = "/api/translate";
-    const RTL_LANGUAGES = new Set(["fa", "ar", "ckb"]);
-
-    const english = {
-        tagline: "Connect • Trade • Work • Help",
-        buySell: "Buy & Sell",
-        jobs: "Jobs",
-        services: "Services",
-        wallet: "Wallet",
-        tickets: "Tickets",
-        ads: "Ads",
-        delivery: "Delivery",
-        events: "Events",
-        chat: "Chat",
-        language: "Language",
-        reviews: "Reviews",
-        support: "Support",
-            aboutTitle: "About HAVKAR",
-        aboutDescription: "Learn about our platform, mission and services",
-        createAccount: "Create New Account",
-        alreadyAccount: "Already have an account?",
-        login: "Log In",
-        myAccount: "My Account",
-        logout: "Log Out",
-        security: "Safe • Secure • Trusted"
-    };
-
-    function getLanguage() {
-        return (
-            localStorage.getItem(STORAGE_KEY) ||
-            localStorage.getItem("selectedLanguage") ||
-            localStorage.getItem("language") ||
-            "en"
-        );
-    }
-
-    function setDocumentLanguage(language) {
-        const rtl = RTL_LANGUAGES.has(language);
-        document.documentElement.lang = language;
-        document.documentElement.dir = rtl ? "rtl" : "ltr";
-
-        /*
-         * Keep the visual identity of the home screen stable.
-         * Text follows the selected language direction, while
-         * the 3-column service grid remains unchanged.
-         */
-        document.body.classList.toggle("rtl-language", rtl);
-    }
-
-    function applyTexts(keys, values) {
-        keys.forEach((key, index) => {
-            const node = document.querySelector(`[data-i18n="${key}"]`);
-            if (node && typeof values[index] === "string" && values[index]) {
-                node.textContent = values[index];
-            }
-        });
-    }
-
-    function applyEnglish() {
-        const keys = Object.keys(english);
-        applyTexts(keys, keys.map(key => english[key]));
-    }
-
-    async function translateHome(language) {
-        if (!language || language === "en") {
-            applyEnglish();
-            return;
-        }
-
-        const keys = Object.keys(english);
-        const texts = keys.map(key => english[key]);
-
-        const response = await fetch(API_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                texts,
-                sourceLanguage: "en",
-                targetLanguage: language
-            })
-        });
-
-        const data = await response.json().catch(() => ({}));
-
-        if (!response.ok || !data.ok || !Array.isArray(data.translations)) {
-            throw new Error(data.error || "Translation failed.");
-        }
-
-        const translated = data.translations.map(item => {
-            if (item && typeof item.translatedText === "string") {
-                return item.translatedText;
-            }
-            return "";
-        });
-
-        if (translated.length !== texts.length) {
-            throw new Error("Incomplete translation response.");
-        }
-
-        applyTexts(keys, translated);
-    }
-
-    async function initializeLanguage() {
-        const language = getLanguage();
-        setDocumentLanguage(language);
-
-        try {
-            await translateHome(language);
-        } catch (error) {
-            console.error("[HAVKAR Home Translation]", error);
-
-            /*
-             * Never break the home page if translation is temporarily
-             * unavailable. The original English UI remains usable.
-             */
-            applyEnglish();
-        }
-    }
-
-    initializeLanguage();
-})();
-</script>
 
 <script src="/havkar-supabase-config.js"></script>
 <script type="module">
@@ -1041,7 +911,8 @@ homeLogout.addEventListener("click", async () => {
     if (error) throw error;
     updateAccount(null);
   } catch (error) {
-    homeAuthMessage.textContent = error.message || "Log out failed. Please try again.";
+    console.error("HAVKAR logout failed", error);
+    homeAuthMessage.textContent = "Log out could not be completed. Please try again.";
   } finally { homeLogout.disabled = false; }
 });
 </script>

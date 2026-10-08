@@ -396,6 +396,87 @@
     }
 
 
+    function hasSavedLanguage() {
+
+        const keys = [
+            STORAGE_KEY,
+            "selectedLanguage",
+            "language"
+        ];
+
+
+        return keys.some(
+            key => {
+
+                try {
+
+                    return isSupportedLanguage(
+                        localStorage.getItem(
+                            key
+                        )
+                    );
+
+                } catch (error) {
+
+                    return false;
+                }
+            }
+        );
+    }
+
+
+    function redirectForEntry() {
+
+        const homeEntry =
+            document.documentElement?.dataset?.havkarEntry ===
+            "home";
+
+
+        if (
+            homeEntry &&
+            !hasSavedLanguage()
+        ) {
+
+            window.location.replace(
+                "language.html?entry=1"
+            );
+
+            return true;
+        }
+
+
+        const onLanguagePage =
+            /(?:^|\/)language\.html$/i.test(
+                window.location.pathname ||
+                ""
+            );
+
+        const fromFirstEntry =
+            new URLSearchParams(
+                window.location.search
+            ).get(
+                "entry"
+            ) === "1";
+
+
+        if (
+            onLanguagePage &&
+            fromFirstEntry &&
+            hasSavedLanguage()
+        ) {
+
+            window.location.replace(
+                "index.html"
+            );
+
+            return true;
+        }
+
+
+        return false;
+    }
+
+
     function getDirection(
         language = getLanguage()
     ) {
@@ -1790,6 +1871,8 @@
 
         isSupportedLanguage,
 
+        hasSavedLanguage,
+
         getLanguage,
 
         getDirection,
@@ -1810,25 +1893,30 @@
     ===================================================== */
 
     if (
-        document.readyState ===
-        "loading"
+        !redirectForEntry()
     ) {
 
-        document.addEventListener(
+        if (
+            document.readyState ===
+            "loading"
+        ) {
 
-            "DOMContentLoaded",
+            document.addEventListener(
 
-            initialize,
+                "DOMContentLoaded",
 
-            {
-                once:
-                    true
-            }
-        );
+                initialize,
 
-    } else {
+                {
+                    once:
+                        true
+                }
+            );
 
-        initialize();
+        } else {
+
+            initialize();
+        }
     }
 
 })();
