@@ -44,9 +44,16 @@ WITH CHECK (
 -- The existing owner UPDATE and DELETE policies stay in place:
 -- "Users can update own jobs"
 -- "Enable delete for users based on user_id"
--- Row Level Security cannot compare OLD.status with NEW.status.
--- The trigger below is the publication control for every role,
--- including service_role, which bypasses RLS.
+-- An UPDATE policy cannot compare OLD.status with NEW.status.
+-- Two permissive policies cannot express that comparison either:
+-- PostgreSQL ORs every USING expression together and every WITH CHECK
+-- expression together, so the pairs would cancel each other.
+-- The trigger is therefore the publication barrier for every role.
+-- service_role and the table owner bypass RLS, but they do not bypass
+-- this trigger. EXECUTE on the function is checked when the trigger is
+-- created, not when a row is written, so revoking API execution does not
+-- skip the trigger. The function owner still has EXECUTE, which is what
+-- CREATE TRIGGER requires.
 
 CREATE OR REPLACE FUNCTION public.enforce_job_publication_status()
 RETURNS trigger
@@ -90,6 +97,8 @@ BEGIN
         USING ERRCODE = '42501';
     END IF;
 
+    -- anon is already rejected above. Every remaining role reaches this
+    -- check, including authenticated, service_role, and the table owner.
     IF NEW.status IS NOT DISTINCT FROM 'active'
        AND OLD.status IS DISTINCT FROM 'active' THEN
       RAISE EXCEPTION 'unpaid jobs cannot become active until a server-side payment verifier is installed'
@@ -200,8 +209,11 @@ DECLARE
   service_owner uuid;
   service_status text;
 BEGIN
-  IF current_user = 'anon' THEN
-    RAISE EXCEPTION 'anonymous users cannot create or change service bookings'
+  -- PostgREST signs customers and providers in as exactly this role.
+  -- anon, service_role, and the table owner bypass or lack the booking
+  -- policies, so none of them may create or change a booking either.
+  IF current_user IS DISTINCT FROM 'authenticated' THEN
+    RAISE EXCEPTION 'only a signed-in customer or provider can change a service booking'
       USING ERRCODE = '42501';
   END IF;
 
@@ -215,11 +227,8 @@ BEGIN
         USING ERRCODE = '42501';
     END IF;
 
-    IF current_user = 'authenticated'
-       AND (
-         NEW.customer_id IS DISTINCT FROM auth.uid()
-         OR NEW.provider_id IS NOT DISTINCT FROM auth.uid()
-       ) THEN
+    IF NEW.customer_id IS DISTINCT FROM auth.uid()
+       OR NEW.provider_id IS NOT DISTINCT FROM auth.uid() THEN
       RAISE EXCEPTION 'customers can only book another provider'
         USING ERRCODE = '42501';
     END IF;
@@ -244,17 +253,22 @@ BEGIN
        OR NEW.created_at IS DISTINCT FROM OLD.created_at
        OR NEW.service_id IS DISTINCT FROM OLD.service_id
        OR NEW.customer_id IS DISTINCT FROM OLD.customer_id
-       OR NEW.provider_id IS DISTINCT FROM OLD.provider_id THEN
-      RAISE EXCEPTION 'booking identity and history cannot be reassigned'
+       OR NEW.provider_id IS DISTINCT FROM OLD.provider_id
+       OR NEW.booking_date IS DISTINCT FROM OLD.booking_date
+       OR NEW.booking_time IS DISTINCT FROM OLD.booking_time
+       OR NEW.message IS DISTINCT FROM OLD.message THEN
+      RAISE EXCEPTION 'service booking fields cannot be changed'
         USING ERRCODE = '42501';
     END IF;
 
+    -- updated_at is maintained by the existing service_bookings_updated_at
+    -- trigger and is intentionally not compared here.
     IF NEW.status IS NOT DISTINCT FROM OLD.status THEN
-      RETURN NEW;
+      RAISE EXCEPTION 'service booking update requires an allowed status transition'
+        USING ERRCODE = '42501';
     END IF;
 
-    IF current_user = 'authenticated'
-       AND auth.uid() = OLD.provider_id
+    IF auth.uid() = OLD.provider_id
        AND (
          (OLD.status = 'pending' AND NEW.status IN ('accepted', 'declined'))
          OR (OLD.status = 'accepted' AND NEW.status = 'completed')
@@ -262,8 +276,7 @@ BEGIN
       RETURN NEW;
     END IF;
 
-    IF current_user = 'authenticated'
-       AND auth.uid() = OLD.customer_id
+    IF auth.uid() = OLD.customer_id
        AND OLD.status IN ('pending', 'accepted')
        AND NEW.status = 'cancelled' THEN
       RETURN NEW;
