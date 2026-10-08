@@ -2241,6 +2241,30 @@ function normalizePhotos(
    LISTINGS
    ========================================================= */
 
+function isPublicListingStatus(
+    status
+){
+
+    if(
+        status === null ||
+        status === undefined
+    ){
+
+        return true;
+
+    }
+
+    const value =
+        String(status)
+            .trim()
+            .toLowerCase();
+
+    return value === "" ||
+        value === "active";
+
+}
+
+
 async function fetchListings(){
 
     initializeSupabase();
@@ -2251,7 +2275,7 @@ async function fetchListings(){
             supabaseClient
                 .from("ads")
                 .select(
-                    "id,title,category,price,location,description,user_id,created_at"
+                    "id,title,category,price,location,description,user_id,created_at,status"
                 )
                 .order(
                     "created_at",
@@ -2988,6 +3012,16 @@ function applyFilters(){
     state.filteredAds =
         state.ads.filter(
             ad => {
+
+                if(
+                    !isPublicListingStatus(
+                        ad.status
+                    )
+                ){
+
+                    return false;
+
+                }
 
                 const categoryMatch =
                     category === "All" ||

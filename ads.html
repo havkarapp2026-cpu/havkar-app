@@ -598,6 +598,28 @@
             line-height: 1.5;
         }
 
+        .member-label {
+            margin-top: 3px;
+            color: #667067;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        .retry-button {
+            margin-top: 12px;
+            border: 0;
+            border-radius: 999px;
+            background: #689f38;
+            color: #ffffff;
+            font-weight: 700;
+            padding: 10px 16px;
+            cursor: pointer;
+        }
+
+        .page-status p {
+            margin: 0;
+        }
+
         .fab-button {
             position: fixed;
             right: 20px;
@@ -1470,99 +1492,37 @@
         let adsData =
             [];
 
+        let adsReady =
+            false;
+
         let savedAdIds =
             new Set();
 
         let toastTimer =
             null;
 
-        const defaultAds = [
+        function isPublicListingStatus(
+            status
+        ) {
 
-            {
-                id: "demo-pizza-milano",
-                created_at: null,
-                title:
-                    "Authentic Italian Pizza - 20% OFF",
-                category:
-                    "restaurant",
-                price:
-                    20,
-                location:
-                    "Milan, Italy",
-                description:
-                    "Best pizza in Milan! Fresh ingredients, traditional recipes. Order now and get 20% discount on your first order.",
-                user_id:
-                    null,
-                photos:
-                    "",
-                status:
-                    "demo"
-            },
+            if (
+                status === null ||
+                status === undefined
+            ) {
 
-            {
-                id: "demo-fashion-boutique",
-                created_at: null,
-                title:
-                    "Summer Collection - Up to 50% OFF",
-                category:
-                    "shop",
-                price:
-                    50,
-                location:
-                    "Rome, Italy",
-                description:
-                    "Discover the latest fashion trends. Premium quality clothing at unbeatable prices.",
-                user_id:
-                    null,
-                photos:
-                    "",
-                status:
-                    "demo"
-            },
+                return true;
 
-            {
-                id: "demo-cafe",
-                created_at: null,
-                title:
-                    "Premium Coffee & Pastries",
-                category:
-                    "restaurant",
-                price:
-                    null,
-                location:
-                    "Florence, Italy",
-                description:
-                    "Start your day with premium coffee and freshly baked pastries every morning.",
-                user_id:
-                    null,
-                photos:
-                    "",
-                status:
-                    "demo"
-            },
-
-            {
-                id: "demo-salon",
-                created_at: null,
-                title:
-                    "Hair & Beauty Services - 15% OFF",
-                category:
-                    "service",
-                price:
-                    15,
-                location:
-                    "Turin, Italy",
-                description:
-                    "Professional hairstyling and beauty treatments. Book your appointment and get 15% off.",
-                user_id:
-                    null,
-                photos:
-                    "",
-                status:
-                    "demo"
             }
 
-        ];
+            const value =
+                String(status)
+                    .trim()
+                    .toLowerCase();
+
+            return value === "" ||
+                value === "active";
+
+        }
 
         async function resolveCurrentUser() {
 
@@ -2009,6 +1969,16 @@
                 ad => {
 
                     if (
+                        !isPublicListingStatus(
+                            ad.status
+                        )
+                    ) {
+
+                        return false;
+
+                    }
+
+                    if (
                         showingSavedOnly
                     ) {
 
@@ -2083,6 +2053,10 @@
         }
 
         function renderAds() {
+
+            if (!adsReady) {
+                return;
+            }
 
             const container =
                 document.getElementById(
@@ -2347,25 +2321,17 @@
                     "other"
                 );
 
-            const status =
+            const normalizedStatus =
                 String(
-                    ad.status ||
-                    ""
-                );
+                    ad.status || ""
+                )
+                    .trim()
+                    .toLowerCase();
 
-            const statusText =
-                status &&
-                status.toLowerCase() !==
-                    "active"
-                    ? status
-                    : "Active";
-
-            const statusClass =
-                status &&
-                status.toLowerCase() !==
-                    "active"
-                    ? "pending"
-                    : "";
+            const statusLabel =
+                normalizedStatus === "active"
+                    ? "HAVKAR Member · Active"
+                    : "HAVKAR Member";
 
             const priceHTML =
                 ad.price !== null &&
@@ -2402,11 +2368,9 @@
                     )
                     ? `
 
-                        <div class="verified">
+                        <div class="member-label">
 
-                            <i
-                                class="fas fa-user-check"
-                            ></i>
+                            <i class="fas fa-user"></i>
 
                             Your Advertisement
 
@@ -2415,20 +2379,12 @@
                     `
                     : `
 
-                        <div
-                            class="verified ${statusClass}"
-                        >
+                        <div class="member-label">
 
-                            <i
-                                class="${
-                                    statusClass
-                                        ? "fas fa-clock"
-                                        : "fas fa-check-circle"
-                                }"
-                            ></i>
+                            <i class="fas fa-user"></i>
 
                             ${escapeHTML(
-                                statusText
+                                statusLabel
                             )}
 
                         </div>
@@ -3861,21 +3817,110 @@
 
         }
 
-        function showDemoFallback() {
+        function showLoadingState() {
 
-            adsData =
-                defaultAds.slice();
+            adsReady = false;
 
-            showPageStatus(
-                "The live advertisement database could not be reached. Showing the built-in demonstration advertisements.",
-                "error"
-            );
+            hidePageStatus();
 
-            renderAds();
+            const container =
+                document.getElementById(
+                    "adsContainer"
+                );
+
+            if (!container) {
+                return;
+            }
+
+            container.innerHTML = `
+
+                <div class="loading-state">
+
+                    <i class="fas fa-circle-notch"></i>
+
+                    <p>
+                        Loading advertisements...
+                    </p>
+
+                </div>
+
+            `;
+
+        }
+
+        function showLoadError(
+            message
+        ) {
+
+            adsData = [];
+
+            adsReady = false;
+
+            const count =
+                document.getElementById(
+                    "resultsCount"
+                );
+
+            if (count) {
+
+                count.textContent =
+                    "Unavailable";
+
+            }
+
+            const status =
+                document.getElementById(
+                    "pageStatus"
+                );
+
+            if (status) {
+
+                status.className =
+                    "page-status show error";
+
+                status.innerHTML = `
+
+                    <p>
+                        ${escapeHTML(
+                            message
+                        )}
+                    </p>
+
+                    <button
+                        class="retry-button"
+                        type="button"
+                        onclick="retryLoadAds()"
+                    >
+                        Try again
+                    </button>
+
+                `;
+
+            }
+
+            const container =
+                document.getElementById(
+                    "adsContainer"
+                );
+
+            if (container) {
+
+                container.innerHTML =
+                    "";
+
+            }
+
+        }
+
+        async function retryLoadAds() {
+
+            await initializeAdsPage();
 
         }
 
         async function initializeAdsPage() {
+
+            showLoadingState();
 
             try {
 
@@ -3883,19 +3928,11 @@
 
                 await loadSavedIds();
 
-                try {
+                await loadAdsFromSupabase();
 
-                    await loadAdsFromSupabase();
+                adsReady = true;
 
-                    hidePageStatus();
-
-                } catch (error) {
-
-                    showDemoFallback();
-
-                    return;
-
-                }
+                hidePageStatus();
 
                 updateResultsTitle();
 
@@ -3908,7 +3945,9 @@
                     error
                 );
 
-                showDemoFallback();
+                showLoadError(
+                    "HAVKAR could not load advertisements. Check your connection and try again."
+                );
 
             }
 
