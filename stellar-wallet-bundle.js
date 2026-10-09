@@ -111628,12 +111628,12 @@ ${params.statement}
       }
     }
     function parseBaseString(x14, str, b16, v18) {
-      var c36, len, alphabet10 = ALPHABET2.slice(0, b16), i19 = 0, clean5 = "", hasDot = false, prevIsNumeral = false, caseChanged = false;
+      var c36, len, alphabet10 = ALPHABET2.slice(0, b16), i19 = 0, clean6 = "", hasDot = false, prevIsNumeral = false, caseChanged = false;
       x14.s = str.charCodeAt(0) === 45 ? (str = str.slice(1), -1) : 1;
       for (len = str.length; i19 < len; i19++) {
         c36 = str.charAt(i19);
         if (alphabet10.indexOf(c36) >= 0) {
-          clean5 += c36;
+          clean6 += c36;
           prevIsNumeral = true;
           continue;
         }
@@ -111645,8 +111645,8 @@ ${params.statement}
         } else if (c36 == ".") {
           if (i19 == 0 || !hasDot && prevIsNumeral) {
             if (i19 + 1 == len) break;
-            if (i19 == 0) clean5 = "0";
-            clean5 += c36;
+            if (i19 == 0) clean6 = "0";
+            clean6 += c36;
             hasDot = true;
             prevIsNumeral = false;
             continue;
@@ -111654,7 +111654,7 @@ ${params.statement}
         } else if (!caseChanged) {
           if (str == str.toUpperCase() && alphabet10 == alphabet10.toLowerCase() && (str = str.toLowerCase()) || str == str.toLowerCase() && alphabet10 == alphabet10.toUpperCase() && (str = str.toUpperCase())) {
             i19 = -1;
-            clean5 = "";
+            clean6 = "";
             caseChanged = true;
             hasDot = prevIsNumeral = false;
             continue;
@@ -111666,7 +111666,7 @@ ${params.statement}
         x14.s = x14.c = x14.e = null;
         return;
       }
-      parseValidString(x14, convertBase(clean5, b16, 10, x14.s));
+      parseValidString(x14, convertBase(clean6, b16, 10, x14.s));
     }
     convertBase = /* @__PURE__ */ (function() {
       var decimal = "0123456789";
@@ -147605,18 +147605,88 @@ ${value}`, dataLines++;
   init_strkey();
   init_scval();
 
+  // stellar-payment-rules.js
+  var PUBLIC_PASSPHRASE = "Public Global Stellar Network ; September 2015";
+  var TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
+  var PUBLIC_HORIZON = "https://horizon.stellar.org";
+  var TESTNET_HORIZON = "https://horizon-testnet.stellar.org";
+  var DEFAULT_STELLAR_NETWORK = "PUBLIC";
+  var STROOPS = 10000000n;
+  function clean5(value) {
+    return String(
+      value == null ? "" : value
+    ).trim();
+  }
+  function formatStroops(stroops) {
+    const amount = BigInt(stroops);
+    const negative = amount < 0n;
+    const absolute = negative ? -amount : amount;
+    const whole = absolute / STROOPS;
+    const fraction = (absolute % STROOPS).toString().padStart(7, "0");
+    return (negative ? "-" : "") + whole.toString() + "." + fraction;
+  }
+  function parseXlmAmount(value) {
+    const text = clean5(value);
+    if (!/^\d+(\.\d{1,7})?$/.test(text)) {
+      throw new Error(
+        "Enter an XLM amount with at most 7 decimal places."
+      );
+    }
+    const parts = text.split(".");
+    const whole = parts[0];
+    const fraction = parts[1] || "";
+    const stroops = BigInt(whole) * STROOPS + BigInt(fraction.padEnd(7, "0"));
+    if (stroops <= 0n) {
+      throw new Error(
+        "Enter an XLM amount greater than zero."
+      );
+    }
+    return {
+      text: formatStroops(stroops),
+      stroops
+    };
+  }
+  function spendableStroops(balanceStroops, minimumStroops, feeStroops) {
+    const balance = BigInt(balanceStroops);
+    const minimum = BigInt(minimumStroops);
+    const fee = BigInt(feeStroops);
+    const spendable = balance - minimum - fee;
+    return spendable > 0n ? spendable : 0n;
+  }
+  function hasExplicitApproval(options) {
+    return options != null && options.approved === true;
+  }
+  function stellarExplorerTxUrl(networkId, hash5) {
+    const id = clean5(hash5).toLowerCase();
+    if (!/^[a-f0-9]{64}$/.test(id)) {
+      return "";
+    }
+    if (networkId === "PUBLIC") {
+      return "https://stellar.expert/explorer/public/tx/" + id;
+    }
+    if (networkId === "TESTNET") {
+      return "https://stellar.expert/explorer/testnet/tx/" + id;
+    }
+    return "";
+  }
+
   // stellar-wallet-source.js
+  if (Networks2.PUBLIC !== PUBLIC_PASSPHRASE || Networks2.TESTNET !== TESTNET_PASSPHRASE) {
+    throw new Error(
+      "Stellar network passphrase does not match the official value."
+    );
+  }
   var STELLAR_NETWORKS = {
     TESTNET: {
       id: "TESTNET",
       label: "Testnet",
-      horizon: "https://horizon-testnet.stellar.org",
+      horizon: TESTNET_HORIZON,
       passphrase: Networks2.TESTNET
     },
     PUBLIC: {
       id: "PUBLIC",
       label: "Mainnet",
-      horizon: "https://horizon.stellar.org",
+      horizon: PUBLIC_HORIZON,
       passphrase: Networks2.PUBLIC
     }
   };
@@ -147658,7 +147728,7 @@ ${value}`, dataLines++;
       }
     } catch (error) {
     }
-    return "TESTNET";
+    return DEFAULT_STELLAR_NETWORK;
   }
   function currentNetwork() {
     return STELLAR_NETWORKS[HAVKAR_STELLAR.network] || STELLAR_NETWORKS.TESTNET;
@@ -147713,36 +147783,10 @@ ${value}`, dataLines++;
     );
   }
   function parseXlm(value) {
-    const text = String(value ?? "").trim();
-    if (!/^\d+(\.\d{1,7})?$/.test(
-      text
-    )) {
-      throw new Error(
-        "Enter an XLM amount with at most 7 decimal places."
-      );
-    }
-    const parts = text.split(".");
-    const whole = parts[0];
-    const fraction = parts[1] || "";
-    const stroops = BigInt(whole) * 10000000n + BigInt(
-      fraction.padEnd(7, "0")
-    );
-    if (stroops <= 0n) {
-      throw new Error(
-        "Enter an XLM amount greater than zero."
-      );
-    }
-    return {
-      text: formatStroops(stroops),
-      stroops
-    };
+    return parseXlmAmount(value);
   }
-  function formatStroops(stroops) {
-    const negative = stroops < 0n;
-    const absolute = negative ? -stroops : stroops;
-    const whole = absolute / 10000000n;
-    const fraction = (absolute % 10000000n).toString().padStart(7, "0");
-    return (negative ? "-" : "") + whole.toString() + "." + fraction;
+  function formatStroops2(stroops) {
+    return formatStroops(stroops);
   }
   function describeHorizonFailure(error) {
     const response = error && error.response ? error.response : {};
@@ -147925,7 +147969,11 @@ ${value}`, dataLines++;
         account,
         limits.baseReserve
       );
-      const spendable = balance.stroops - minimum - limits.baseFee;
+      const spendable = spendableStroops(
+        balance.stroops,
+        minimum,
+        limits.baseFee
+      );
       return {
         network: network.id,
         label: network.label,
@@ -147933,10 +147981,10 @@ ${value}`, dataLines++;
         address: publicKey,
         exists: true,
         balance: balance.text,
-        minimumBalance: formatStroops(
+        minimumBalance: formatStroops2(
           minimum
         ),
-        spendable: formatStroops(
+        spendable: formatStroops2(
           spendable > 0n ? spendable : 0n
         )
       };
@@ -148022,7 +148070,11 @@ ${value}`, dataLines++;
       sourceAccount,
       limits.baseReserve
     );
-    const spendable = balance.stroops - minimum - limits.baseFee;
+    const spendable = spendableStroops(
+      balance.stroops,
+      minimum,
+      limits.baseFee
+    );
     if (amount.stroops > spendable) {
       throw new Error(
         "The available XLM is not enough for this payment and the account reserve."
@@ -148043,7 +148095,7 @@ ${value}`, dataLines++;
     const createMinimum = 2n * limits.baseReserve;
     if (kind === "createAccount" && amount.stroops < createMinimum) {
       throw new Error(
-        "A new Stellar account on " + network.label + " needs at least " + formatStroops(createMinimum) + " XLM."
+        "A new Stellar account on " + network.label + " needs at least " + formatStroops2(createMinimum) + " XLM."
       );
     }
     let builder = new TransactionBuilder(
@@ -148084,7 +148136,11 @@ ${value}`, dataLines++;
       amount: amount.text,
       kind,
       memo,
-      fee: limits.baseFee.toString()
+      fee: limits.baseFee.toString(),
+      feeXlm: formatStroops2(
+        limits.baseFee
+      ),
+      horizon: network.horizon
     };
   }
   function memoText(memo) {
@@ -148184,7 +148240,7 @@ ${value}`, dataLines++;
     }
     try {
       popup.document.title = "Albedo";
-      popup.document.body.textContent = "Opening Albedo to sign the Testnet transaction...";
+      popup.document.body.textContent = "Opening Albedo to sign the " + currentNetwork().label + " transaction...";
     } catch (error) {
     }
     try {
@@ -148352,9 +148408,9 @@ ${value}`, dataLines++;
   }
   async function havkarSignAndSubmitStellarPayment(options) {
     const network = currentNetwork();
-    if (network.id === "PUBLIC") {
+    if (!hasExplicitApproval(options)) {
       throw new Error(
-        "Mainnet payments are protected. Use Testnet."
+        "Review the payment and approve it before your wallet signs it."
       );
     }
     let albedoPopup = null;
@@ -148366,6 +148422,11 @@ ${value}`, dataLines++;
       const prepared = await havkarPrepareStellarPayment(
         options
       );
+      if (prepared.network !== network.id) {
+        throw new Error(
+          "The Stellar network changed before the payment was signed."
+        );
+      }
       const signedResult = await requestWalletSignature(
         prepared,
         network,
@@ -148406,6 +148467,12 @@ ${value}`, dataLines++;
         source: prepared.source,
         destination: prepared.destination,
         amount: prepared.amount,
+        feeXlm: prepared.feeXlm,
+        horizon: prepared.horizon,
+        explorer: stellarExplorerTxUrl(
+          network.id,
+          record.hash
+        ),
         successful: true
       };
     } catch (error) {

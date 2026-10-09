@@ -21,6 +21,19 @@ import {
     TransactionFailedError
 } from "@stellar/stellar-sdk";
 
+import {
+    DEFAULT_STELLAR_NETWORK,
+    PUBLIC_HORIZON,
+    PUBLIC_PASSPHRASE,
+    TESTNET_HORIZON,
+    TESTNET_PASSPHRASE,
+    formatStroops as formatRuleStroops,
+    hasExplicitApproval,
+    parseXlmAmount,
+    spendableStroops,
+    stellarExplorerTxUrl
+} from "./stellar-payment-rules.js";
+
 
 /* =========================================================
    NETWORKS
@@ -29,19 +42,31 @@ import {
    PUBLIC:  Public Global Stellar Network ; September 2015
    ========================================================= */
 
+if(
+    Networks.PUBLIC !== PUBLIC_PASSPHRASE ||
+    Networks.TESTNET !== TESTNET_PASSPHRASE
+){
+
+    throw new Error(
+        "Stellar network passphrase does not match the official value."
+    );
+
+}
+
+
 const STELLAR_NETWORKS = {
 
     TESTNET:{
         id:"TESTNET",
         label:"Testnet",
-        horizon:"https://horizon-testnet.stellar.org",
+        horizon:TESTNET_HORIZON,
         passphrase:Networks.TESTNET
     },
 
     PUBLIC:{
         id:"PUBLIC",
         label:"Mainnet",
-        horizon:"https://horizon.stellar.org",
+        horizon:PUBLIC_HORIZON,
         passphrase:Networks.PUBLIC
     }
 
@@ -146,7 +171,7 @@ function readStoredNetwork(){
     }
 
 
-    return "TESTNET";
+    return DEFAULT_STELLAR_NETWORK;
 
 }
 
@@ -274,56 +299,7 @@ function parseXlm(
     value
 ){
 
-    const text =
-        String(value ?? "").trim();
-
-
-    if(
-        !/^\d+(\.\d{1,7})?$/.test(
-            text
-        )
-    ){
-
-        throw new Error(
-            "Enter an XLM amount with at most 7 decimal places."
-        );
-
-    }
-
-
-    const parts =
-        text.split(".");
-
-    const whole =
-        parts[0];
-
-    const fraction =
-        parts[1] || "";
-
-
-    const stroops =
-        BigInt(whole) * 10000000n +
-        BigInt(
-            fraction.padEnd(7,"0")
-        );
-
-
-    if(stroops <= 0n){
-
-        throw new Error(
-            "Enter an XLM amount greater than zero."
-        );
-
-    }
-
-
-    return {
-
-        text:formatStroops(stroops),
-
-        stroops:stroops
-
-    };
+    return parseXlmAmount(value);
 
 }
 
@@ -332,29 +308,7 @@ function formatStroops(
     stroops
 ){
 
-    const negative =
-        stroops < 0n;
-
-    const absolute =
-        negative
-        ? -stroops
-        : stroops;
-
-    const whole =
-        absolute / 10000000n;
-
-    const fraction =
-        (absolute % 10000000n)
-            .toString()
-            .padStart(7,"0");
-
-
-    return (
-        (negative ? "-" : "") +
-        whole.toString() +
-        "." +
-        fraction
-    );
+    return formatRuleStroops(stroops);
 
 }
 
@@ -827,9 +781,11 @@ async function havkarFetchStellarBalance(
             );
 
         const spendable =
-            balance.stroops -
-            minimum -
-            limits.baseFee;
+            spendableStroops(
+                balance.stroops,
+                minimum,
+                limits.baseFee
+            );
 
 
         return {
@@ -1034,9 +990,11 @@ async function havkarPrepareStellarPayment(
         );
 
     const spendable =
-        balance.stroops -
-        minimum -
-        limits.baseFee;
+        spendableStroops(
+            balance.stroops,
+            minimum,
+            limits.baseFee
+        );
 
 
     if(amount.stroops > spendable){
@@ -1185,7 +1143,13 @@ async function havkarPrepareStellarPayment(
 
         memo:memo,
 
-        fee:limits.baseFee.toString()
+        fee:limits.baseFee.toString(),
+
+        feeXlm:formatStroops(
+            limits.baseFee
+        ),
+
+        horizon:network.horizon
 
     };
 
@@ -1449,7 +1413,9 @@ function reserveAlbedoSigningWindow(){
             "Albedo";
 
         popup.document.body.textContent =
-            "Opening Albedo to sign the Testnet transaction...";
+            "Opening Albedo to sign the " +
+            currentNetwork().label +
+            " transaction...";
 
     }
     catch(error){
@@ -1803,10 +1769,10 @@ async function havkarSignAndSubmitStellarPayment(
         currentNetwork();
 
 
-    if(network.id === "PUBLIC"){
+    if(!hasExplicitApproval(options)){
 
         throw new Error(
-            "Mainnet payments are protected. Use Testnet."
+            "Review the payment and approve it before your wallet signs it."
         );
 
     }
@@ -1830,6 +1796,15 @@ async function havkarSignAndSubmitStellarPayment(
             await havkarPrepareStellarPayment(
                 options
             );
+
+
+        if(prepared.network !== network.id){
+
+            throw new Error(
+                "The Stellar network changed before the payment was signed."
+            );
+
+        }
 
 
         const signedResult =
@@ -1919,6 +1894,15 @@ async function havkarSignAndSubmitStellarPayment(
             destination:prepared.destination,
 
             amount:prepared.amount,
+
+            feeXlm:prepared.feeXlm,
+
+            horizon:prepared.horizon,
+
+            explorer:stellarExplorerTxUrl(
+                network.id,
+                record.hash
+            ),
 
             successful:true
 
