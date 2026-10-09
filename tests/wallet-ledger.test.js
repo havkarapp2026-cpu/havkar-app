@@ -5,8 +5,12 @@ const wallet = require("../havkar-wallet.js");
 
 const walletPage = fs.readFileSync(path.join(__dirname, "../wallet.html"), "utf8");
 const historyPage = fs.readFileSync(path.join(__dirname, "../history.html"), "utf8");
-const migration = fs.readFileSync(
-  path.join(__dirname, "../supabase/migrations/20261009070000_wallet_fiat_execution_disabled.sql"),
+const removedMigration = path.join(
+  __dirname,
+  "../supabase/migrations/20261009070000_wallet_fiat_execution_disabled.sql"
+);
+const appliedDisable = fs.readFileSync(
+  path.join(__dirname, "../supabase/migrations/20261009130102_disable_transfer_money.sql"),
   "utf8"
 );
 
@@ -123,15 +127,13 @@ assert.ok(historyPage.includes('window.location.replace("login.html")'));
 assert.ok(!historyPage.includes("Auth session missing"));
 assert.ok(!historyPage.includes("Please sign in"));
 
-assert.ok(migration.includes("FIAT_TRANSFERS_DISABLED"));
-assert.ok(migration.includes("fiat_execution_disabled"));
-assert.ok(migration.includes("licensed_payout_provider_required"));
-assert.ok(migration.includes("No euro balance was moved."));
-assert.ok(migration.includes("no balance was reduced"));
-assert.ok(!/balance\s*=\s*balance/i.test(migration));
-assert.ok(!/UPDATE\s+public\.wallets/i.test(migration));
-assert.ok(migration.includes('DROP POLICY IF EXISTS "Users can create their own exchanges"'));
-assert.ok(migration.includes('DROP POLICY IF EXISTS "Users can update their own exchanges"'));
+assert.strictEqual(fs.existsSync(removedMigration), false);
+assert.ok(appliedDisable.includes("FIAT_TRANSFERS_DISABLED"));
+assert.ok(appliedDisable.includes("CREATE OR REPLACE FUNCTION public.transfer_money"));
+assert.ok(!appliedDisable.includes("wallet_operation_requests"));
+assert.ok(!appliedDisable.includes("DROP POLICY"));
+assert.ok(!/UPDATE\s+public\.wallets/i.test(appliedDisable));
+assert.ok(!/INSERT\s+INTO\s+public\.wallets/i.test(appliedDisable));
 
 (async function verifyLiveQuote() {
   const quote = await import("../api/eur-usd-quote.js");
