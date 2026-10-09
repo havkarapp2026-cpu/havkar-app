@@ -943,6 +943,28 @@
                 translate(-50%, 0);
         }
 
+        .ad-image-message {
+            display: none;
+            margin-top: 10px;
+            color: #c62828;
+            font-size: 0.82rem;
+            font-weight: 600;
+            line-height: 1.45;
+            text-align: left;
+            word-break: break-word;
+        }
+
+        .ad-image-message.show {
+            display: block;
+        }
+
+        .ad-image-message .orphan-files {
+            margin: 8px 0 0;
+            padding-left: 18px;
+            word-break: break-all;
+            font-weight: 500;
+        }
+
         @media (min-width: 700px) {
 
             body {
@@ -1421,10 +1443,16 @@
                         <input
                             id="adImage"
                             type="file"
-                            accept="image/*"
+                            accept="image/jpeg,image/png,image/webp"
                             hidden
                             onchange="previewImage(event)"
                         >
+
+                        <div
+                            id="adImageMessage"
+                            class="ad-image-message"
+                            role="alert"
+                        ></div>
 
                     </div>
 
@@ -1471,6 +1499,7 @@
     ></div>
 
     <script src="/havkar-supabase-config.js"></script>
+    <script src="/havkar-ad-images.js"></script>
     <script src="/havkar-ad-publish.js"></script>
 <script>
 
@@ -1501,6 +1530,82 @@
         let selectedImageData =
             "";
 
+        let selectedImageFile =
+            null;
+
+        let adSubmitInProgress =
+            false;
+
+        const adPostingGuard =
+            window.HAVKAR_AD_IMAGES &&
+            window.HAVKAR_AD_PUBLISH
+                ? window.HAVKAR_AD_IMAGES.createPostingGuard()
+                : {
+                    canSubmit: function () {
+                        return false;
+                    },
+                    canEditImages: function () {
+                        return false;
+                    },
+                    phase: function () {
+                        return "idle";
+                    },
+                    blockedMessage: function () {
+                        return "Publishing is unavailable. Reload the page and try again.";
+                    },
+                    uncertainMessage: function () {
+                        return "The server has not confirmed this advertisement yet. It may still be published. Do not submit it again. Check your existing advertisements before posting again.";
+                    },
+                    beginPublish: function () {
+                        return null;
+                    },
+                    markUncertain: function () {
+                        return {
+                            changed: false,
+                            claimNotSaved: false,
+                            allowRetry: false,
+                            message: ""
+                        };
+                    },
+                    markSaved: function () {
+                        return false;
+                    },
+                    markFailed: function () {
+                        return false;
+                    },
+                    releaseAfterSave: function () {
+                        return false;
+                    }
+                };
+
+        const adImageSelection =
+            window.HAVKAR_AD_IMAGES
+                ? window.HAVKAR_AD_IMAGES.createImageSelection()
+                : {
+                    begin: function () {
+                        return { token: 0 };
+                    },
+                    succeed: function () {
+                        return false;
+                    },
+                    fail: function () {
+                        return false;
+                    },
+                    clearIfCurrent: function () {
+                        return false;
+                    },
+                    reset: function () {},
+                    isPending: function () {
+                        return false;
+                    },
+                    canPublish: function () {
+                        return true;
+                    },
+                    selectedFile: function () {
+                        return null;
+                    }
+                };
+
         let currentUser =
             null;
 
@@ -1518,11 +1623,6 @@
 
         let toastTimer =
             null;
-
-        const adPostingGuard =
-            window.HAVKAR_AD_PUBLISH
-                ? window.HAVKAR_AD_PUBLISH.createPostingGuard()
-                : null;
 
         function isPublicListingStatus(
             status
@@ -3064,7 +3164,7 @@
 
             if (
                 !window.HAVKAR_AD_PUBLISH ||
-                !adPostingGuard
+                !window.HAVKAR_AD_IMAGES
             ) {
 
                 showToast(
@@ -3203,7 +3303,30 @@
 
             }
 
-            if (!adPostingGuard.beginPublish()) {
+            if (!adImageSelection.canPublish()) {
+
+                showToast(
+                    "Please wait until the selected image finishes checking."
+                );
+
+                return;
+
+            }
+
+            const imageToPublish =
+                adImageSelection.selectedFile();
+
+            showAdPublishMessage(
+                ""
+            );
+
+            if (
+                !adPostingGuard.beginPublish(
+                    imageToPublish
+                        ? [imageToPublish]
+                        : []
+                )
+            ) {
 
                 showToast(
                     adPostingGuard.blockedMessage()
@@ -3213,9 +3336,8 @@
 
             }
 
-            showAdPublishMessage(
-                ""
-            );
+            adSubmitInProgress =
+                true;
 
             const publishButton =
                 document.getElementById(
@@ -3272,18 +3394,54 @@
                 /*
                  * IMAGE IS OPTIONAL.
                  *
-                 * With an image:
-                 * ["data:image/..."]
+                 * With an image, photos is a JSON array
+                 * containing one public HTTPS URL.
                  *
                  * Without an image:
                  * []
                  */
-                const photos =
-                    selectedImageData
-                        ? JSON.stringify(
+                clearAdImageMessage();
+
+                if (
+                    imageToPublish &&
+                    !window.HAVKAR_AD_IMAGES
+                ) {
+
+                    throw new Error(
+                        "Image upload is unavailable."
+                    );
+
+                }
+
+                const uploadedUrls =
+                    imageToPublish
+                        ? await window.HAVKAR_AD_IMAGES.uploadAdvertisementImages(
+                            supabaseClient,
+                            currentUserId,
                             [
-                                selectedImageData
+                                imageToPublish
                             ]
+                        )
+                        : [];
+
+                if (
+                    imageToPublish &&
+                    uploadedUrls.length !== 1
+                ) {
+
+                    throw window.HAVKAR_AD_IMAGES.incompleteSaveError(
+                        new Error(
+                            "Could not upload every image."
+                        ),
+                        uploadedUrls
+                    );
+
+                }
+
+                const photos =
+                    uploadedUrls.length
+                        ? JSON.stringify(
+                            uploadedUrls
                         )
                         : "[]";
 
@@ -3420,8 +3578,11 @@
                         insertResult.error
                     );
 
-                    throw new Error(
-                        outcome.message
+                    throw window.HAVKAR_AD_IMAGES.incompleteSaveError(
+                        new Error(
+                            outcome.message
+                        ),
+                        uploadedUrls
                     );
 
                 }
@@ -3535,6 +3696,23 @@
                         "Your login session has expired. Please log in again."
                     );
 
+                } else if (
+                    error &&
+                    (
+                        (error.orphans && error.orphans.length) ||
+                        (error.unconfirmed && error.unconfirmed.length)
+                    )
+                ) {
+
+                    showAdImageMessage(
+                        error
+                    );
+
+                    showToast(
+                        error.message,
+                        12000
+                    );
+
                 } else {
 
                     showToast(
@@ -3547,14 +3725,18 @@
 
             } finally {
 
-                const insertLocked =
+                const insertUncertain =
                     adPostingGuard.phase() === "uncertain" ||
                     adPostingGuard.phase() === "publishing";
+
+                adSubmitInProgress =
+                    false;
 
                 if (publishButton) {
 
                     publishButton.disabled =
-                        insertLocked;
+                        insertUncertain ||
+                        adImageSelection.isPending();
 
                     publishButton.innerHTML = `
 
@@ -3633,7 +3815,110 @@
 
         }
 
-        function previewImage(
+        function clearAdImageMessage() {
+
+            const box =
+                document.getElementById(
+                    "adImageMessage"
+                );
+
+            if (!box) {
+                return;
+            }
+
+            box.classList.remove(
+                "show"
+            );
+
+            box.replaceChildren();
+
+        }
+
+        function showAdImageMessage(
+            error
+        ) {
+
+            const box =
+                document.getElementById(
+                    "adImageMessage"
+                );
+
+            if (
+                !box ||
+                !window.HAVKAR_AD_IMAGES
+            ) {
+                return;
+            }
+
+            box.classList.add(
+                "show"
+            );
+
+            window.HAVKAR_AD_IMAGES.renderFailure(
+                box,
+                error
+            );
+
+        }
+
+        function syncAdPublishButton() {
+
+            if (adSubmitInProgress) {
+
+                return;
+
+            }
+
+            const publishButton =
+                document.getElementById(
+                    "publishButton"
+                );
+
+            if (!publishButton) {
+
+                return;
+
+            }
+
+            publishButton.disabled =
+                adImageSelection.isPending();
+
+        }
+
+        function clearAdImagePreview() {
+
+            const preview =
+                document.getElementById(
+                    "imagePreview"
+                );
+
+            const placeholder =
+                document.getElementById(
+                    "uploadPlaceholder"
+                );
+
+            if (preview) {
+
+                preview.src =
+                    "";
+
+                preview.classList.remove(
+                    "show"
+                );
+
+            }
+
+            if (placeholder) {
+
+                placeholder.classList.remove(
+                    "hidden"
+                );
+
+            }
+
+        }
+
+        async function previewImage(
             event
         ) {
 
@@ -3645,43 +3930,106 @@
                 return;
             }
 
+            clearAdImageMessage();
+
             if (
-                !file.type.startsWith(
-                    "image/"
+                adSubmitInProgress ||
+                !adPostingGuard.canEditImages()
+            ) {
+
+                event.target.value =
+                    "";
+
+                showToast(
+                    adPostingGuard.blockedMessage()
+                );
+
+                return;
+
+            }
+
+            if (!window.HAVKAR_AD_IMAGES) {
+
+                showToast(
+                    "Image upload is unavailable."
+                );
+
+                event.target.value =
+                    "";
+
+                return;
+
+            }
+
+            const ticket =
+                adImageSelection.begin(
+                    file
+                );
+
+            selectedImageFile =
+                null;
+
+            selectedImageData =
+                "";
+
+            clearAdImagePreview();
+
+            syncAdPublishButton();
+
+            try {
+
+                await window.HAVKAR_AD_IMAGES.validateAdImage(
+                    file
+                );
+
+            } catch (error) {
+
+                if (!adImageSelection.fail(ticket)) {
+
+                    return;
+
+                }
+
+                selectedImageFile =
+                    null;
+
+                selectedImageData =
+                    "";
+
+                event.target.value =
+                    "";
+
+                clearAdImagePreview();
+
+                syncAdPublishButton();
+
+                showAdImageMessage(
+                    error
+                );
+
+                showToast(
+                    error.message
+                );
+
+                return;
+
+            }
+
+            if (
+                !adImageSelection.succeed(
+                    ticket,
+                    file
                 )
             ) {
 
-                showToast(
-                    "Please select an image file."
-                );
-
-                event.target.value =
-                    "";
-
                 return;
 
             }
 
-            const MAX_SIZE =
-                4 *
-                1024 *
-                1024;
+            selectedImageFile =
+                file;
 
-            if (
-                file.size >
-                MAX_SIZE
-            ) {
-
-                showToast(
-                    "Please choose an image smaller than 4 MB."
-                );
-
-                event.target.value =
-                    "";
-
-                return;
-
-            }
+            syncAdPublishButton();
 
             const reader =
                 new FileReader();
@@ -3690,6 +4038,15 @@
                 function(
                     e
                 ) {
+
+                    if (
+                        adImageSelection.selectedFile() !==
+                        file
+                    ) {
+
+                        return;
+
+                    }
 
                     selectedImageData =
                         e.target.result;
@@ -3728,6 +4085,24 @@
             reader.onerror =
                 function() {
 
+                    if (
+                        adImageSelection.clearIfCurrent(
+                            file
+                        )
+                    ) {
+
+                        selectedImageFile =
+                            null;
+
+                        selectedImageData =
+                            "";
+
+                        clearAdImagePreview();
+
+                        syncAdPublishButton();
+
+                    }
+
                     showToast(
                         "Could not read the selected image."
                     );
@@ -3755,6 +4130,13 @@
 
             selectedImageData =
                 "";
+
+            selectedImageFile =
+                null;
+
+            adImageSelection.reset();
+
+            clearAdImageMessage();
 
             const preview =
                 document.getElementById(

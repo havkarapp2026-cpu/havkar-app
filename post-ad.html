@@ -209,6 +209,15 @@ textarea {
   display: block;
   background: #ffebee;
   color: #c62828;
+  text-align: left;
+  word-break: break-word;
+}
+
+.status .orphan-files {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  text-align: left;
+  word-break: break-all;
 }
 
 /* MOBILE */
@@ -498,12 +507,12 @@ textarea {
       <input
         type="file"
         id="photos"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp"
         multiple
       >
 
       <div class="photo-info">
-        You can select up to 20 photos.
+        You can select up to 20 JPEG, PNG, or WebP photos. Large photos are resized before upload. Each uploaded image must be 5 MB or smaller.
       </div>
 
 
@@ -539,6 +548,7 @@ textarea {
 
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-countries.js"></script>
+<script src="/havkar-ad-images.js"></script>
 <script src="/havkar-ad-publish.js"></script>
 <script>
 
@@ -610,9 +620,35 @@ const statusBox =
   document.getElementById("status");
 
 const postingGuard =
+  window.HAVKAR_AD_IMAGES &&
   window.HAVKAR_AD_PUBLISH
-    ? window.HAVKAR_AD_PUBLISH.createPostingGuard()
-    : null;
+    ? window.HAVKAR_AD_IMAGES.createPostingGuard()
+    : {
+        canSubmit: function () { return false; },
+        canEditImages: function () { return false; },
+        isValidating: function () { return false; },
+        phase: function () { return "idle"; },
+        blockedMessage: function () {
+          return "Publishing is unavailable. Reload the page and try again.";
+        },
+        uncertainMessage: function () {
+          return "The server has not confirmed this advertisement yet. It may still be published. Do not submit it again. Check your existing advertisements before posting again.";
+        },
+        beginValidation: function () { return false; },
+        endValidation: function () {},
+        beginPublish: function () { return null; },
+        markUncertain: function () {
+          return {
+            changed: false,
+            claimNotSaved: false,
+            allowRetry: false,
+            message: ""
+          };
+        },
+        markSaved: function () { return false; },
+        markFailed: function () { return false; },
+        releaseAfterSave: function () { return false; }
+      };
 
 
 /* =========================================================
@@ -620,6 +656,17 @@ const postingGuard =
    ========================================================= */
 
 let selectedFiles = [];
+
+
+function syncPublishAvailability() {
+
+  publishBtn.disabled =
+    !postingGuard.canSubmit();
+
+  photoInput.disabled =
+    !postingGuard.canEditImages();
+
+}
 
 
 /* =========================================================
@@ -663,14 +710,30 @@ categoryInput.addEventListener(
 
 function showStatus(
   message,
-  type
+  type,
+  failure
 ) {
 
-  statusBox.textContent =
-    message;
-
   statusBox.className =
-    "status " + type;
+    "status" +
+    (type ? " " + type : "");
+
+  if (
+    failure &&
+    window.HAVKAR_AD_IMAGES
+  ) {
+
+    window.HAVKAR_AD_IMAGES.renderFailure(
+      statusBox,
+      failure
+    );
+
+    return;
+
+  }
+
+  statusBox.textContent =
+    message || "";
 
 }
 
@@ -681,10 +744,24 @@ function showStatus(
 
 photoInput.addEventListener(
   "change",
-  function () {
+  async function () {
 
     const newFiles =
       Array.from(this.files || []);
+
+    this.value = "";
+
+
+    if (!postingGuard.canEditImages()) {
+
+      showStatus(
+        postingGuard.blockedMessage(),
+        "error"
+      );
+
+      return;
+
+    }
 
 
     if (
@@ -697,33 +774,100 @@ photoInput.addEventListener(
         "error"
       );
 
-      this.value = "";
+      return;
+
+    }
+
+
+    if (!window.HAVKAR_AD_IMAGES) {
+
+      showStatus(
+        "Image upload is unavailable.",
+        "error"
+      );
 
       return;
 
     }
 
 
-    for (
-      const file of newFiles
-    ) {
+    if (!postingGuard.beginValidation()) {
 
-      if (
-        file &&
-        file.type &&
-        file.type.startsWith("image/")
-      ) {
+      showStatus(
+        postingGuard.blockedMessage(),
+        "error"
+      );
 
-        selectedFiles.push(file);
-
-      }
+      return;
 
     }
 
 
-    renderPhotos();
+    syncPublishAvailability();
 
-    this.value = "";
+
+    let rejected =
+      false;
+
+
+    try {
+
+      for (
+        const file of newFiles
+      ) {
+
+        try {
+
+          await window.HAVKAR_AD_IMAGES.validateAdImage(
+            file,
+            {
+              enforceSize: false
+            }
+          );
+
+          if (!postingGuard.canEditImages()) {
+
+            break;
+
+          }
+
+          selectedFiles.push(file);
+
+        } catch (error) {
+
+          rejected =
+            true;
+
+          showStatus(
+            error && error.message
+              ? error.message
+              : "Please choose a JPEG, PNG, or WebP image.",
+            "error"
+          );
+
+        }
+
+      }
+
+    } finally {
+
+      postingGuard.endValidation();
+
+      renderPhotos();
+
+      syncPublishAvailability();
+
+    }
+
+
+    if (!rejected) {
+
+      showStatus(
+        "",
+        ""
+      );
+
+    }
 
   }
 );
@@ -784,8 +928,18 @@ function renderPhotos() {
       );
 
 
+      removeBtn.disabled =
+        !postingGuard.canEditImages();
+
+
       removeBtn.onclick =
         function () {
+
+          if (!postingGuard.canEditImages()) {
+
+            return;
+
+          }
 
           selectedFiles.splice(
             index,
@@ -894,8 +1048,8 @@ function readFile(file) {
    COMPRESS IMAGE
    =========================================================
    Important:
-   Large camera photos can make the Supabase request too large.
-   Images are resized before being stored in ads.photos.
+   Large camera photos are resized before upload.
+   The advertisement stores the public image address, not a data URL.
    ========================================================= */
 
 function compressImage(
@@ -1011,15 +1165,26 @@ function compressImage(
               );
 
 
-              const compressed =
-                canvas.toDataURL(
-                  "image/jpeg",
-                  quality
-                );
+              canvas.toBlob(
+                function (blob) {
 
+                  if (!blob) {
 
-              resolve(
-                compressed
+                    reject(
+                      new Error(
+                        "Could not prepare image."
+                      )
+                    );
+
+                    return;
+
+                  }
+
+                  resolve(blob);
+
+                },
+                "image/jpeg",
+                quality
               );
 
             };
@@ -1314,7 +1479,7 @@ adForm.addEventListener(
 
     if (
       !window.HAVKAR_AD_PUBLISH ||
-      !postingGuard
+      !window.HAVKAR_AD_IMAGES
     ) {
 
       showStatus(
@@ -1342,7 +1507,13 @@ adForm.addEventListener(
     }
 
 
-    if (!postingGuard.beginPublish()) {
+    const filesToPublish =
+      postingGuard.beginPublish(
+        selectedFiles
+      );
+
+
+    if (!filesToPublish) {
 
       publishBtn.disabled =
         true;
@@ -1357,8 +1528,9 @@ adForm.addEventListener(
     }
 
 
-    publishBtn.disabled =
-      true;
+    syncPublishAvailability();
+
+    renderPhotos();
 
 
     showStatus(
@@ -1391,6 +1563,15 @@ adForm.addEventListener(
       }
 
 
+      if (!window.HAVKAR_AD_IMAGES) {
+
+        throw new Error(
+          "Image upload is unavailable."
+        );
+
+      }
+
+
       /* ---------------------------------------------
          GET FORM DATA
          --------------------------------------------- */
@@ -1404,43 +1585,54 @@ adForm.addEventListener(
          --------------------------------------------- */
 
       showStatus(
-        selectedFiles.length > 0
+        filesToPublish.length > 0
           ? "Preparing your photos..."
           : "Preparing your ad...",
         "success"
       );
 
 
-      const photos = [];
+      const preparedPhotos = [];
 
 
       /*
-       * Images are compressed before being sent.
-       * This prevents large mobile camera images
-       * from producing an oversized HTTP request.
+       * Images are compressed before upload.
+       * This keeps large mobile camera photos
+       * within the 5 MB storage limit.
+       * filesToPublish is the snapshot taken when
+       * publishing started, so later removals cannot
+       * change which images are uploaded.
        */
 
       for (
         let i = 0;
-        i < selectedFiles.length;
+        i < filesToPublish.length;
         i++
       ) {
 
         const file =
-          selectedFiles[i];
+          filesToPublish[i];
 
 
         showStatus(
           "Preparing photo " +
           (i + 1) +
           " of " +
-          selectedFiles.length +
+          filesToPublish.length +
           "...",
           "success"
         );
 
 
-        const photoData =
+        await window.HAVKAR_AD_IMAGES.validateAdImage(
+          file,
+          {
+            enforceSize: false
+          }
+        );
+
+
+        const photoBlob =
           await compressImage(
             file,
             1600,
@@ -1448,18 +1640,42 @@ adForm.addEventListener(
           );
 
 
-        if (
-          typeof photoData === "string" &&
-          photoData.startsWith(
-            "data:image/"
-          )
-        ) {
+        await window.HAVKAR_AD_IMAGES.validateAdImage(
+          photoBlob
+        );
 
-          photos.push(
-            photoData
-          );
 
-        }
+        preparedPhotos.push(
+          photoBlob
+        );
+
+      }
+
+
+      showStatus(
+        preparedPhotos.length
+          ? "Uploading your photos..."
+          : "Preparing your ad...",
+        "success"
+      );
+
+
+      const photos =
+        await window.HAVKAR_AD_IMAGES.uploadAdvertisementImages(
+          supabaseClient,
+          currentUser.id,
+          preparedPhotos
+        );
+
+
+      if (photos.length !== preparedPhotos.length) {
+
+        throw window.HAVKAR_AD_IMAGES.incompleteSaveError(
+          new Error(
+            "Could not upload every image."
+          ),
+          photos
+        );
 
       }
 
@@ -1624,8 +1840,11 @@ adForm.addEventListener(
           result.error
         );
 
-        throw new Error(
-          outcome.message
+        throw window.HAVKAR_AD_IMAGES.incompleteSaveError(
+          new Error(
+            outcome.message
+          ),
+          photos
         );
 
       }
@@ -1637,19 +1856,15 @@ adForm.addEventListener(
 
       postingGuard.markSaved();
 
-
       showStatus(
         "Your ad has been published successfully!",
         "success"
       );
 
 
-      publishBtn.disabled =
-        true;
-
-
       /*
        * Clear the form after successful insert.
+       * Reset restores the button, so lock it again.
        */
 
       adForm.reset();
@@ -1658,6 +1873,8 @@ adForm.addEventListener(
       publishBtn.disabled =
         true;
 
+      photoInput.disabled =
+        true;
 
       selectedFiles =
         [];
@@ -1729,12 +1946,41 @@ adForm.addEventListener(
       }
 
 
-      showStatus(
-        "Could not publish the ad: " +
-        message,
-        "error"
-      );
+      if (
+        error &&
+        (
+          (error.orphans && error.orphans.length) ||
+          (error.unconfirmed && error.unconfirmed.length)
+        )
+      ) {
 
+        const visible =
+          new Error(message);
+
+        visible.orphans =
+          error.orphans;
+
+        visible.unconfirmed =
+          error.unconfirmed;
+
+        showStatus(
+          message,
+          "error",
+          visible
+        );
+
+      } else {
+
+        showStatus(
+          "Could not publish the ad: " +
+          message,
+          "error"
+        );
+
+      }
+
+
+      syncPublishAvailability();
 
       publishBtn.disabled =
         false;
@@ -1781,6 +2027,7 @@ supabaseClient.auth.onAuthStateChange(
 );
 
 </script>
+<script src="/havkar-i18n.js"></script>
 
 </body>
 
