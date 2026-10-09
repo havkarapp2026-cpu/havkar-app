@@ -1647,7 +1647,7 @@ select:focus{
     <label>Amount in EUR</label>  
     <input id="exchangeAmount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00">  
 
-    <button class="primary" type="button" onclick="loadExchangeQuote()">  
+    <button class="primary" id="exchangeQuoteButton" type="button" onclick="loadExchangeQuote()">  
         Get current quotation  
     </button>  
 
@@ -4973,6 +4973,7 @@ async function loadExchangeQuote(){
     const api = window.HAVKAR_WALLET;  
     const quote = document.getElementById("exchangeQuote");  
     const execute = document.getElementById("exchangeExecute");  
+    const button = document.getElementById("exchangeQuoteButton");  
   
     if(execute){  
         execute.disabled = true;  
@@ -4983,18 +4984,41 @@ async function loadExchangeQuote(){
         return;  
     }  
   
-    try{  
-        const response = await fetch("/api/eur-usd-quote");  
+    if(button){  
+        button.disabled = true;  
+    }  
   
-        if(!response.ok){  
+    if(quote){  
+        quote.textContent = "Loading the current EUR/USD quotation...";  
+        quote.className = "status info";  
+    }  
+  
+    showStatus("exchangeStatus", "", "");  
+  
+    try{  
+        const response = await fetch("/api/eur-usd-quote", {  
+            headers: { Accept: "application/json" },  
+            cache: "no-store"  
+        });  
+        let payload = null;  
+  
+        try{  
+            payload = await response.json();  
+        }catch(parseError){  
+            payload = null;  
+        }  
+  
+        if(!response.ok || !payload || payload.ok !== true){  
             throw new Error("Quotation could not be loaded.");  
         }  
   
-        const payload = await response.json();  
         const fetchedAt = Date.parse(payload.quoted_at);  
         const assessed = api.assessFrankfurterQuote(payload, fetchedAt, Date.now());  
   
         if(!assessed.ok){  
+            if(quote){  
+                quote.textContent = "";  
+            }  
             showStatus("exchangeStatus", "A current EUR/USD quotation was not available. No balance was converted.", "error");  
             return;  
         }  
@@ -5011,7 +5035,7 @@ async function loadExchangeQuote(){
             : " This quotation is stale and cannot be used.";  
   
         quote.textContent =  
-            "ECB rate via Frankfurter: 1 EUR = " + assessed.rate +  
+            "Frankfurter reference rate: 1 EUR = " + assessed.rate +  
             " USD on " + (assessed.date || "an unpublished date") +  
             ". HAVKAR fee: none, because no exchange is executed." +  
             estimateText + freshness + " " + api.FIAT_EXCHANGE_UNAVAILABLE;  
@@ -5019,7 +5043,17 @@ async function loadExchangeQuote(){
         showStatus("exchangeStatus", api.FIAT_EXCHANGE_UNAVAILABLE, "info");  
     }catch(error){  
         console.error("Exchange quote error:", error);  
+        if(quote){  
+            quote.textContent = "";  
+        }  
         showStatus("exchangeStatus", "A current EUR/USD quotation was not available. No balance was converted.", "error");  
+    }finally{  
+        if(button){  
+            button.disabled = false;  
+        }  
+        if(execute){  
+            execute.disabled = true;  
+        }  
     }  
 }  
   

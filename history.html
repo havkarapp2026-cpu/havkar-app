@@ -508,26 +508,19 @@ async function loadHistory(){
         </div>`;
 
     try{
+        const sessionResult=await db.auth.getSession();
+        const session=sessionResult&&sessionResult.data&&sessionResult.data.session;
+
+        if(!sessionResult||sessionResult.error||!session){
+            window.location.replace("login.html");
+            return;
+        }
+
         const {data,error}=await db.auth.getUser();
         currentUser=data&&data.user||null;
 
-        if(error && !currentUser){
-            const message=String(error.message||"");
-            if(message.toLowerCase().indexOf("session")===-1){
-                throw error;
-            }
-        }
-
-        if(!currentUser){
-            historyCache=[];
-            document.getElementById("transactionCount").textContent=
-                "Sign in to view your transaction history";
-            list.innerHTML=`
-                <div class="empty">
-                    <i class="fa-solid fa-user-lock"></i>
-                    <h3>Please sign in</h3>
-                    <p>Sign in to view your HAVKAR wallet transactions.</p>
-                </div>`;
+        if(error||!currentUser){
+            window.location.replace("login.html");
             return;
         }
 
@@ -544,7 +537,7 @@ async function loadHistory(){
             <div class="empty">
                 <i class="fa-solid fa-triangle-exclamation"></i>
                 <h3>Could not load history</h3>
-                <p>${escapeHtml(error.message||"Please try again.")}</p>
+                <p>Your transactions could not be loaded. Please try again.</p>
             </div>`;
     }
 }
