@@ -5657,7 +5657,50 @@ function clearStellarReview(){
     const review=document.getElementById("stellarReview");  
     const sendButton=document.getElementById("stellarSendButton");  
     if(review){review.textContent="";review.style.display="none";}  
-    if(sendButton)sendButton.disabled=true;  
+    if(sendButton)sendButton.disabled=!window.havkarStellarSubmissionPending?.();  
+}  
+
+function showPendingStellarSubmission(){  
+    const pending=window.havkarGetStellarSubmission?.();  
+    const review=document.getElementById("stellarReview");  
+    if(!pending)return;  
+    if(review){  
+        review.style.display="block";  
+        review.textContent=[  
+            "Original transaction is still unresolved.",  
+            "Network: "+(pending.label||pending.network)+".",  
+            "Hash: "+pending.hash+".",  
+            "Sequence: "+pending.sequence+".",  
+            "No new payment will be created."  
+        ].join(" ");  
+    }  
+    renderStellarNetwork();  
+}  
+
+function applyStellarSubmissionResult(result){  
+    if(!result)return;  
+    if(result.status==="confirmed" || result.successful===true){  
+        const explorer=result.explorer?" "+result.explorer:"";  
+        setStellarStatus("Confirmed on "+result.label+". Transaction "+result.hash+"."+explorer,"success");  
+        clearStellarReview();  
+        const destination=document.getElementById("stellarDestination");  
+        const amount=document.getElementById("stellarAmount");  
+        const memo=document.getElementById("stellarMemo");  
+        if(destination)destination.value="";  
+        if(amount)amount.value="";  
+        if(memo)memo.value="";  
+        refreshHAVKARStellarBalance();  
+        renderStellarNetwork();  
+        return;  
+    }  
+    if(result.status==="uncertain"){  
+        showPendingStellarSubmission();  
+        setStellarStatus(result.message||"The original transaction is still unresolved.","error");  
+        return;  
+    }  
+    clearStellarReview();  
+    setStellarStatus(result.message||"The original transaction was resolved.","error");  
+    renderStellarNetwork();  
 }  
 
 function renderStellarNetwork(){  
@@ -5674,15 +5717,22 @@ function renderStellarNetwork(){
             ? "Mainnet uses real XLM on the public Stellar network. Your wallet must approve every signature. HAVKAR never asks for a secret key."  
             : "Testnet uses test XLM. Nothing on this network is Mainnet money.";  
     }  
+    const pending=window.havkarStellarSubmissionPending?.();  
     if(reviewButton){  
+        reviewButton.disabled=!!pending;  
         reviewButton.textContent=network.id==="PUBLIC"  
             ? "Review Mainnet payment"  
             : "Review Testnet payment";  
     }  
     if(sendButton){  
-        sendButton.textContent=network.id==="PUBLIC"  
-            ? "Sign Mainnet payment with my wallet"  
-            : "Sign Testnet payment with my wallet";  
+        if(pending){  
+            sendButton.disabled=false;  
+            sendButton.textContent="Check original transaction";  
+        }else{  
+            sendButton.textContent=network.id==="PUBLIC"  
+                ? "Sign Mainnet payment with my wallet"  
+                : "Sign Testnet payment with my wallet";  
+        }  
     }  
 }  
   
@@ -5693,6 +5743,7 @@ function changeHAVKARStellarNetwork(){
     }  
     clearStellarReview();  
     renderStellarNetwork();  
+    if(window.havkarStellarSubmissionPending?.())showPendingStellarSubmission();  
     if(window.havkarIsStellarConnected?.())refreshHAVKARStellarBalance();  
 }  
   
@@ -5823,7 +5874,9 @@ async function reviewHAVKARStellarPayment(){
                 "From: "+prepared.source,  
                 "To: "+prepared.destination,  
                 "Amount: "+prepared.amount+" XLM.",  
-                "Network fee: "+prepared.feeXlm+" XLM.",  
+                "Maximum network fee: "+prepared.feeXlm+" XLM.",  
+                "Sequence: "+prepared.sequence+".",  
+                "Valid until: "+prepared.maxTime+".",  
                 kindText,  
                 prepared.memo?"Memo: "+prepared.memo:"No memo.",  
                 "Your wallet must still approve the signature."  
@@ -5846,6 +5899,20 @@ async function sendHAVKARStellarPayment(){
     const destination=document.getElementById("stellarDestination")?.value||"";  
     const amount=document.getElementById("stellarAmount")?.value||"";  
     const memo=document.getElementById("stellarMemo")?.value||"";  
+    if(window.havkarStellarSubmissionPending?.()){  
+        button.disabled=true;  
+        setStellarStatus("Checking the original transaction hash. No new payment will be created.","info");  
+        try{  
+            const result=await window.havkarResolveStellarSubmission();  
+            applyStellarSubmissionResult(result);  
+        }catch(error){  
+            showPendingStellarSubmission();  
+            setStellarStatus(error?.message||"The original transaction is still unresolved.","error");  
+        }finally{  
+            renderStellarNetwork();  
+        }  
+        return;  
+    }  
     if(typeof window.havkarSignAndSubmitStellarPayment!=="function"){  
         setStellarStatus("Stellar payments are not available.","error");  
         return;  
@@ -5864,16 +5931,15 @@ async function sendHAVKARStellarPayment(){
             memo:memo,  
             approved:true  
         });  
-        const explorer=result.explorer?" "+result.explorer:"";  
-        setStellarStatus("Confirmed on "+result.label+". Transaction "+result.hash+"."+explorer,"success");  
-        clearStellarReview();  
-        document.getElementById("stellarDestination").value="";  
-        document.getElementById("stellarAmount").value="";  
-        document.getElementById("stellarMemo").value="";  
-        await refreshHAVKARStellarBalance();  
+        applyStellarSubmissionResult(result);  
     }catch(error){  
-        setStellarStatus(error?.message||"Stellar payment failed.","error");  
-        button.disabled=false;  
+        if(window.havkarStellarSubmissionPending?.()){  
+            showPendingStellarSubmission();  
+            setStellarStatus(error?.message||"The original transaction is still unresolved.","error");  
+        }else{  
+            setStellarStatus(error?.message||"Stellar payment was not submitted.","error");  
+            button.disabled=false;  
+        }  
     }finally{  
         renderStellarNetwork();  
     }  
@@ -5881,7 +5947,10 @@ async function sendHAVKARStellarPayment(){
 
 ["stellarDestination","stellarAmount","stellarMemo"].forEach(function(id){  
     const field=document.getElementById(id);  
-    if(field)field.addEventListener("input",clearStellarReview);  
+    if(field)field.addEventListener("input",function(){  
+        clearStellarReview();  
+        if(window.havkarStellarSubmissionPending?.())showPendingStellarSubmission();  
+    });  
 });  
   
 window.addEventListener("havkar-stellar-connected",function(event){  
@@ -5905,6 +5974,7 @@ async function startWallet(){
     applySavedDisplayCurrency();  
   
     renderStellarNetwork();  
+    if(window.havkarStellarSubmissionPending?.())showPendingStellarSubmission();  
   
     if(typeof window.havkarRestoreStellarAddress==="function"){  
         const restored=await window.havkarRestoreStellarAddress();  

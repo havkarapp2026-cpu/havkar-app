@@ -10,6 +10,7 @@ import {
 } from "@creit.tech/stellar-wallets-kit/modules/wallet-connect";
 
 import {
+    AccountRequiresMemoError,
     Asset,
     Horizon,
     Memo,
@@ -27,11 +28,21 @@ import {
     PUBLIC_PASSPHRASE,
     TESTNET_HORIZON,
     TESTNET_PASSPHRASE,
+    accountDataRequiresMemo,
+    applySubmissionLookup,
+    applySubmitResult,
+    assertSignedPaymentMatches,
     formatStroops as formatRuleStroops,
     hasExplicitApproval,
+    initialSubmissionState,
+    lockSubmission,
     parseXlmAmount,
+    releaseUnsentSubmission,
+    rememberSignedSubmission,
+    selectNetworkFeeStroops,
     spendableStroops,
-    stellarExplorerTxUrl
+    stellarExplorerTxUrl,
+    submissionBlocksNewPayment
 } from "./stellar-payment-rules.js";
 
 
@@ -95,6 +106,107 @@ const HAVKAR_STELLAR = {
 
 window.HAVKAR_STELLAR =
     HAVKAR_STELLAR;
+
+
+const PENDING_STORAGE_KEY =
+    "havkar_stellar_pending_submission";
+
+let reviewedPayment =
+    null;
+
+let submissionState =
+    initialSubmissionState();
+
+
+function persistSubmissionState(){
+
+    try{
+
+        if(
+            typeof sessionStorage === "undefined"
+        ){
+
+            return;
+
+        }
+
+        if(submissionState.record){
+
+            sessionStorage.setItem(
+                PENDING_STORAGE_KEY,
+                JSON.stringify({
+                    phase:submissionState.phase,
+                    record:submissionState.record
+                })
+            );
+
+            return;
+
+        }
+
+        sessionStorage.removeItem(
+            PENDING_STORAGE_KEY
+        );
+
+    }
+    catch(error){
+
+    }
+
+}
+
+
+function restoreSubmissionState(){
+
+    try{
+
+        if(
+            typeof sessionStorage === "undefined"
+        ){
+
+            return initialSubmissionState();
+
+        }
+
+        const saved =
+            sessionStorage.getItem(
+                PENDING_STORAGE_KEY
+            );
+
+        if(!saved){
+
+            return initialSubmissionState();
+
+        }
+
+        const parsed =
+            JSON.parse(saved);
+
+        if(
+            parsed &&
+            parsed.record &&
+            parsed.record.hash
+        ){
+
+            return {
+                phase:"uncertain",
+                record:parsed.record
+            };
+
+        }
+
+    }
+    catch(error){
+
+    }
+
+    return initialSubmissionState();
+
+}
+
+
+submissionState =
+    restoreSubmissionState();
 
 
 /* =========================================================
@@ -658,6 +770,91 @@ async function ledgerLimits(
 }
 
 
+async function currentNetworkFee(
+    server
+){
+
+    const stats =
+        await server.feeStats();
+
+    return selectNetworkFeeStroops(
+        stats
+    );
+
+}
+
+
+function sourceAuthorization(
+    account
+){
+
+    const signers =
+        (account.signers || [])
+            .map(function(signer){
+
+                return {
+                    key:String(signer.key || ""),
+                    weight:Number(signer.weight || 0)
+                };
+
+            })
+            .filter(function(signer){
+
+                return signer.weight > 0 &&
+                    isPublicKey(signer.key);
+
+            });
+
+    const medThreshold =
+        Number(
+            account.thresholds &&
+            account.thresholds.med_threshold
+        );
+
+
+    if(
+        !(medThreshold >= 1) ||
+        signers.length < 1
+    ){
+
+        throw new Error(
+            "This Stellar account has no verifiable signer for a payment."
+        );
+
+    }
+
+
+    return {
+        signers:signers,
+        medThreshold:medThreshold
+    };
+
+}
+
+
+function networkById(
+    networkId
+){
+
+    if(networkId === "PUBLIC"){
+
+        return STELLAR_NETWORKS.PUBLIC;
+
+    }
+
+    if(networkId === "TESTNET"){
+
+        return STELLAR_NETWORKS.TESTNET;
+
+    }
+
+    throw new Error(
+        "The original transaction network is unknown."
+    );
+
+}
+
+
 function nativeBalance(
     account
 ){
@@ -769,6 +966,11 @@ async function havkarFetchStellarBalance(
                 server
             );
 
+        const fee =
+            await currentNetworkFee(
+                server
+            );
+
         const balance =
             nativeBalance(
                 account
@@ -784,7 +986,7 @@ async function havkarFetchStellarBalance(
             spendableStroops(
                 balance.stroops,
                 minimum,
-                limits.baseFee
+                fee
             );
 
 
@@ -945,6 +1147,18 @@ async function havkarPrepareStellarPayment(
     options
 ){
 
+    if(
+        submissionState.phase === "locked" ||
+        submissionState.phase === "uncertain"
+    ){
+
+        throw new Error(
+            "A Stellar payment is already in progress. HAVKAR will not create another transaction."
+        );
+
+    }
+
+
     const request =
         readUnsignedPaymentRequest(
             options
@@ -978,6 +1192,16 @@ async function havkarPrepareStellarPayment(
             server
         );
 
+    const fee =
+        await currentNetworkFee(
+            server
+        );
+
+    const authorization =
+        sourceAuthorization(
+            sourceAccount
+        );
+
     const balance =
         nativeBalance(
             sourceAccount
@@ -993,7 +1217,7 @@ async function havkarPrepareStellarPayment(
         spendableStroops(
             balance.stroops,
             minimum,
-            limits.baseFee
+            fee
         );
 
 
@@ -1006,15 +1230,16 @@ async function havkarPrepareStellarPayment(
     }
 
 
-    let destinationExists =
-        true;
+    let destinationAccount =
+        null;
 
 
     try{
 
-        await server.loadAccount(
-            destination
-        );
+        destinationAccount =
+            await server.loadAccount(
+                destination
+            );
 
     }
     catch(error){
@@ -1028,14 +1253,29 @@ async function havkarPrepareStellarPayment(
         }
 
 
-        destinationExists =
-            false;
+        destinationAccount =
+            null;
+
+    }
+
+
+    if(
+        destinationAccount &&
+        accountDataRequiresMemo(
+            destinationAccount.data_attr
+        ) &&
+        !memo
+    ){
+
+        throw new Error(
+            "This destination requires a memo before it can receive XLM."
+        );
 
     }
 
 
     const kind =
-        destinationExists
+        destinationAccount
         ? "payment"
         : "createAccount";
 
@@ -1064,7 +1304,7 @@ async function havkarPrepareStellarPayment(
             sourceAccount,
             {
 
-                fee:limits.baseFee.toString(),
+                fee:fee.toString(),
 
                 networkPassphrase:
                     network.passphrase
@@ -1125,13 +1365,53 @@ async function havkarPrepareStellarPayment(
             .build();
 
 
-    return {
+    try{
+
+        await server.checkMemoRequired(
+            transaction
+        );
+
+    }
+    catch(error){
+
+        if(
+            error instanceof AccountRequiresMemoError
+        ){
+
+            throw new Error(
+                "This destination requires a memo before it can receive XLM."
+            );
+
+        }
+
+        throw error;
+
+    }
+
+
+    if(
+        !transaction.timeBounds ||
+        !transaction.sequence
+    ){
+
+        throw new Error(
+            "The payment review did not receive a sequence and time bound."
+        );
+
+    }
+
+
+    reviewedPayment = {
 
         xdr:transaction.toXDR(),
 
         network:network.id,
 
         label:network.label,
+
+        passphrase:network.passphrase,
+
+        horizon:network.horizon,
 
         source:source,
 
@@ -1143,54 +1423,408 @@ async function havkarPrepareStellarPayment(
 
         memo:memo,
 
-        fee:limits.baseFee.toString(),
+        fee:fee.toString(),
 
-        feeXlm:formatStroops(
-            limits.baseFee
-        ),
+        feeXlm:formatStroops(fee),
 
-        horizon:network.horizon
+        sequence:transaction.sequence,
 
+        minTime:transaction.timeBounds.minTime,
+
+        maxTime:transaction.timeBounds.maxTime,
+
+        signers:authorization.signers,
+
+        medThreshold:authorization.medThreshold
+
+    };
+
+
+    return reviewedPayment;
+
+}
+
+
+function submitErrorInfo(
+    error
+){
+
+    if(
+        error instanceof TransactionFailedError
+    ){
+
+        let resultCode =
+            "";
+
+        try{
+
+            resultCode =
+                error.getResultCodes().transaction ||
+                "";
+
+        }
+        catch(readError){
+
+        }
+
+
+        return {
+            timeout:false,
+            resultCode:resultCode
+        };
+
+    }
+
+
+    return {
+        timeout:true,
+        resultCode:""
     };
 
 }
 
 
-function memoText(
-    memo
+function isMissingHorizonRecord(
+    error
 ){
 
-    if(
-        !memo ||
-        memo.type !== "text"
-    ){
+    return error instanceof NotFoundError ||
+        error?.response?.status === 404;
 
-        return "";
-
-    }
+}
 
 
-    if(
-        typeof memo.value === "string"
-    ){
+function publicSubmission(
+    record
+){
 
-        return memo.value;
+    if(!record){
+
+        return null;
 
     }
 
 
-    if(
-        memo.value instanceof Uint8Array
-    ){
+    return {
+        network:record.network,
+        label:record.label,
+        horizon:record.horizon,
+        hash:record.hash,
+        sequence:record.sequence,
+        source:record.source,
+        destination:record.destination,
+        amount:record.amount,
+        fee:record.fee,
+        memo:record.memo || "",
+        minTime:record.minTime,
+        maxTime:record.maxTime
+    };
 
-        return new TextDecoder().decode(
-            memo.value
+}
+
+
+function submissionResult(
+    status,
+    record,
+    message
+){
+
+    const network =
+        record
+        ? networkById(record.network)
+        : currentNetwork();
+
+
+    return {
+        status:status,
+        successful:status === "confirmed",
+        hash:record ? record.hash : "",
+        sequence:record ? record.sequence : "",
+        network:record ? record.network : network.id,
+        label:record ? record.label : network.label,
+        source:record ? record.source : "",
+        destination:record ? record.destination : "",
+        amount:record ? record.amount : "",
+        fee:record ? record.fee : "",
+        feeXlm:record && record.fee
+            ? formatStroops(record.fee)
+            : "",
+        horizon:record ? record.horizon : network.horizon,
+        memo:record ? (record.memo || "") : "",
+        explorer:record
+            ? stellarExplorerTxUrl(
+                record.network,
+                record.hash
+            )
+            : "",
+        message:message
+    };
+
+}
+
+
+function uncertainMessage(
+    record
+){
+
+    return "The Stellar network has not confirmed transaction " +
+        record.hash +
+        ". Sequence " +
+        record.sequence +
+        " is still reserved in HAVKAR. No new payment will be created until this original transaction is resolved.";
+
+}
+
+
+async function lookupOriginalTransaction(
+    record
+){
+
+    const network =
+        networkById(record.network);
+
+    const server =
+        horizonServer(network);
+
+
+    try{
+
+        const found =
+            await server
+                .transactions()
+                .transaction(record.hash)
+                .call();
+
+
+        return {
+            timeout:false,
+            found:true,
+            successful:found.successful === true,
+            hash:String(found.hash || "").toLowerCase(),
+            source:found.source_account
+        };
+
+    }
+    catch(error){
+
+        if(!isMissingHorizonRecord(error)){
+
+            return {
+                timeout:true
+            };
+
+        }
+
+    }
+
+
+    try{
+
+        const page =
+            await server
+                .transactions()
+                .forAccount(record.source)
+                .order("desc")
+                .limit(20)
+                .call();
+
+        const match =
+            (page.records || [])
+                .find(function(item){
+
+                    return String(
+                        item.source_account_sequence
+                    ) === String(record.sequence);
+
+                });
+
+
+        if(match){
+
+            const matchHash =
+                String(match.hash || "").toLowerCase();
+
+
+            if(matchHash === record.hash){
+
+                return {
+                    timeout:false,
+                    found:true,
+                    successful:match.successful === true,
+                    hash:matchHash,
+                    source:match.source_account
+                };
+
+            }
+
+
+            return {
+                timeout:false,
+                found:false,
+                consumedByOther:true
+            };
+
+        }
+
+    }
+    catch(error){
+
+        if(!isMissingHorizonRecord(error)){
+
+            return {
+                timeout:true
+            };
+
+        }
+
+    }
+
+
+    try{
+
+        const account =
+            await server.loadAccount(
+                record.source
+            );
+
+
+        return {
+            timeout:false,
+            found:false,
+            accountSequence:account.sequence,
+            now:Math.floor(Date.now() / 1000)
+        };
+
+    }
+    catch(error){
+
+        return {
+            timeout:true
+        };
+
+    }
+
+}
+
+
+function storeSubmissionOutcome(
+    next
+){
+
+    submissionState = {
+        phase:next.phase,
+        record:next.record
+    };
+
+
+    if(next.phase === "idle"){
+
+        reviewedPayment = null;
+
+    }
+
+
+    persistSubmissionState();
+
+
+    return next;
+
+}
+
+
+async function havkarResolveStellarSubmission(){
+
+    if(!submissionState.record){
+
+        return {
+            status:"idle",
+            successful:false,
+            message:"No original Stellar transaction is waiting."
+        };
+
+    }
+
+
+    const record =
+        submissionState.record;
+
+    const lookup =
+        await lookupOriginalTransaction(
+            record
+        );
+
+    const next =
+        storeSubmissionOutcome(
+            applySubmissionLookup(
+                {
+                    phase:"uncertain",
+                    record:record
+                },
+                lookup
+            )
+        );
+
+
+    if(next.outcome === "confirmed"){
+
+        return submissionResult(
+            "confirmed",
+            next.confirmed,
+            "Confirmed on " + next.confirmed.label + "."
         );
 
     }
 
 
-    return "";
+    if(next.outcome === "rejected"){
+
+        return submissionResult(
+            "rejected",
+            record,
+            "The Stellar network rejected transaction " +
+            record.hash +
+            ". No new payment was created."
+        );
+
+    }
+
+
+    if(next.outcome === "expired"){
+
+        return submissionResult(
+            "expired",
+            record,
+            "Transaction " +
+            record.hash +
+            " expired before the network accepted it. You can review a new payment."
+        );
+
+    }
+
+
+    return submissionResult(
+        "uncertain",
+        record,
+        uncertainMessage(record)
+    );
+
+}
+
+
+function havkarStellarSubmissionPending(){
+
+    return submissionBlocksNewPayment(
+        submissionState
+    );
+
+}
+
+
+function havkarGetStellarSubmission(){
+
+    return publicSubmission(
+        submissionState.record
+    );
 
 }
 
@@ -1200,573 +1834,32 @@ function assertSignedPayment(
     prepared
 ){
 
-    const network =
-        currentNetwork();
-
-    const signed =
-        TransactionBuilder.fromXDR(
-            signedXdr,
-            network.passphrase
-        );
-
-
-    if(
-        signed.source !==
-        prepared.source
-    ){
-
-        throw new Error(
-            "The signed transaction is not from the connected wallet."
-        );
-
-    }
-
-
-    if(
-        !signed.signatures ||
-        signed.signatures.length < 1
-    ){
-
-        throw new Error(
-            "The wallet did not attach a signature."
-        );
-
-    }
-
-
-    const operations =
-        signed.operations || [];
-
-
-    if(operations.length !== 1){
-
-        throw new Error(
-            "The signed transaction does not match the payment you reviewed."
-        );
-
-    }
-
-
-    const operation =
-        operations[0];
-
-    const amount =
-        operation.type === "createAccount"
-        ? operation.startingBalance
-        : operation.amount;
-
-
-    if(
-        operation.type !== prepared.kind ||
-        operation.destination !==
-            prepared.destination ||
-        parseXlm(amount).text !==
-            prepared.amount ||
-        (
-            operation.asset &&
-            !operation.asset.isNative()
-        )
-    ){
-
-        throw new Error(
-            "The signed transaction does not match the payment you reviewed."
-        );
-
-    }
-
-
-    const signedMemo =
-        memoText(
-            signed.memo
-        );
-
-
-    if(signedMemo !== prepared.memo){
-
-        throw new Error(
-            "The signed memo does not match the memo you entered."
-        );
-
-    }
-
-
-    return signed;
-
-}
-
-
-/* =========================================================
-   ALBEDO SIGNING WINDOW
-   Albedo only shows the approval screen after the parent
-   posts the unsigned XDR. That post happens after Albedo
-   announces that its confirm page loaded. Opening the page
-   after an await drops the browser user gesture, so mobile
-   Chrome keeps the logo and never delivers the request.
-   The named window is reserved in the click turn instead.
-   ========================================================= */
-
-const ALBEDO_WALLET_ID =
-    "albedo";
-
-const ALBEDO_WINDOW_NAME =
-    "auth.albedo.link";
-
-const ALBEDO_CONFIRM_URL =
-    "https://albedo.link/confirm";
-
-const ALBEDO_MODULE_STORAGE_KEY =
-    "@StellarWalletsKit/selectedModuleId";
-
-const ALBEDO_HANDSHAKE_MS =
-    20000;
-
-const WALLET_SIGNATURE_MS =
-    150000;
-
-
-function selectedStellarWalletId(){
-
-    try{
-
-        return String(
-            localStorage.getItem(
-                ALBEDO_MODULE_STORAGE_KEY
-            ) || ""
-        );
-
-    }
-    catch(error){
-
-        return "";
-
-    }
-
-}
-
-
-function closeSigningPopup(
-    popup
-){
-
-    if(!popup){
-
-        return;
-
-    }
-
-
-    try{
-
-        if(!popup.closed){
-
-            popup.close();
-
-        }
-
-    }
-    catch(error){
-
-    }
-
-}
-
-
-function reserveAlbedoSigningWindow(){
-
-    if(
-        selectedStellarWalletId() !==
-        ALBEDO_WALLET_ID
-    ){
-
-        return null;
-
-    }
-
-
-    const popup =
-        window.open(
-
-            "about:blank",
-
-            ALBEDO_WINDOW_NAME,
-
-            "height=600,width=480,top=80,left=80,menubar=0,toolbar=0,location=0,status=0,personalbar=0,scrollbars=0,dependent=1"
-
-        );
-
-
-    if(
-        !popup ||
-        popup.closed
-    ){
-
-        throw new Error(
-            "The browser blocked the Albedo window. Allow popups for this site, then try again."
-        );
-
-    }
-
-
-    try{
-
-        popup.document.title =
-            "Albedo";
-
-        popup.document.body.textContent =
-            "Opening Albedo to sign the " +
-            currentNetwork().label +
-            " transaction...";
-
-    }
-    catch(error){
-
-    }
-
-
-    try{
-
-        popup.focus();
-
-    }
-    catch(error){
-
-    }
-
-
-    return popup;
-
-}
-
-
-function waitForWalletSignature(
-    signPromise,
-    popup
-){
-
-    return new Promise(
-        function(
-            resolve,
-            reject
-        ){
-
-            let settled =
-                false;
-
-            let sawHandshake =
-                false;
-
-
-            function finish(
-                settle,
-                value
-            ){
-
-                if(settled){
-
-                    return;
-
-                }
-
-
-                settled =
-                    true;
-
-                clearTimeout(
-                    signatureTimer
-                );
-
-                clearTimeout(
-                    handshakeTimer
-                );
-
-                clearInterval(
-                    closedTimer
-                );
-
-                window.removeEventListener(
-                    "message",
-                    onHandshake
-                );
-
-                settle(value);
-
-            }
-
-
-            function onHandshake(
-                event
-            ){
-
-                if(
-                    event &&
-                    event.data &&
-                    event.data.albedo
-                ){
-
-                    sawHandshake =
-                        true;
-
-                }
-
-            }
-
-
-            const signatureTimer =
-                setTimeout(
-                    function(){
-
-                        closeSigningPopup(
-                            popup
-                        );
-
-                        finish(
-                            reject,
-                            new Error(
-                                "The wallet did not return a signature. You can try again."
-                            )
-                        );
-
-                    },
-                    WALLET_SIGNATURE_MS
-                );
-
-            const handshakeTimer =
-                popup
-                ? setTimeout(
-                    function(){
-
-                        if(sawHandshake){
-
-                            return;
-
-                        }
-
-
-                        closeSigningPopup(
-                            popup
-                        );
-
-                        finish(
-                            reject,
-                            new Error(
-                                "Albedo opened but did not receive the transaction. Allow popups for this site, then try again."
-                            )
-                        );
-
-                    },
-                    ALBEDO_HANDSHAKE_MS
-                )
-                : null;
-
-            const closedTimer =
-                setInterval(
-                    function(){
-
-                        if(
-                            popup &&
-                            popup.closed
-                        ){
-
-                            finish(
-                                reject,
-                                new Error(
-                                    "The Albedo window went away before the transaction was signed."
-                                )
-                            );
-
-                        }
-
-                    },
-                    700
-                );
-
-
-            if(popup){
-
-                window.addEventListener(
-                    "message",
-                    onHandshake
-                );
-
-            }
-
-
-            Promise.resolve(
-                signPromise
-            ).then(
-
-                function(value){
-
-                    finish(
-                        resolve,
-                        value
-                    );
-
-                },
-
-                function(error){
-
-                    finish(
-                        reject,
-                        error
-                    );
-
-                }
-
-            );
-
-        }
+    return assertSignedPaymentMatches(
+        signedXdr,
+        prepared
     );
 
 }
 
-
-function requestWalletSignature(
-    prepared,
-    network,
-    albedoPopup
-){
-
-    const originalOpen =
-        window.open.bind(
-            window
-        );
-
-    let patched =
-        false;
-
-
-    if(albedoPopup){
-
-        window.open =
-            function(
-                url,
-                target,
-                features
-            ){
-
-                const next =
-                    String(
-                        url || ""
-                    );
-
-
-                if(
-                    target ===
-                        ALBEDO_WINDOW_NAME &&
-                    next.indexOf(
-                        ALBEDO_CONFIRM_URL
-                    ) === 0
-                ){
-
-                    if(
-                        !albedoPopup ||
-                        albedoPopup.closed
-                    ){
-
-                        throw new Error(
-                            "The Albedo window went away before the transaction was signed."
-                        );
-
-                    }
-
-
-                    try{
-
-                        albedoPopup.location.href =
-                            ALBEDO_CONFIRM_URL;
-
-                    }
-                    catch(error){
-
-                        throw new Error(
-                            "The browser blocked the Albedo window. Allow popups for this site, then try again."
-                        );
-
-                    }
-
-
-                    try{
-
-                        albedoPopup.focus();
-
-                    }
-                    catch(error){
-
-                    }
-
-
-                    return albedoPopup;
-
-                }
-
-
-                return originalOpen(
-                    url,
-                    target,
-                    features
-                );
-
-            };
-
-        patched =
-            true;
-
-    }
-
-
-    let signPromise;
-
-
-    try{
-
-        signPromise =
-            StellarWalletsKit.signTransaction(
-
-                prepared.xdr,
-
-                {
-
-                    networkPassphrase:
-                        network.passphrase,
-
-                    address:prepared.source
-
-                }
-
-            );
-
-    }
-    finally{
-
-        if(patched){
-
-            window.open =
-                originalOpen;
-
-        }
-
-    }
-
-
-    return waitForWalletSignature(
-        signPromise,
-        albedoPopup
-    );
-
-}
-
-
-/* =========================================================
-   SIGN WITH THE USER WALLET, THEN SUBMIT
-   ========================================================= */
 
 async function havkarSignAndSubmitStellarPayment(
     options
 ){
 
-    const network =
-        currentNetwork();
+    if(submissionState.record){
+
+        return havkarResolveStellarSubmission();
+
+    }
+
+
+    if(submissionState.phase === "locked"){
+
+        throw new Error(
+            "A Stellar payment is already in progress. HAVKAR will not create another transaction."
+        );
+
+    }
 
 
     if(!hasExplicitApproval(options)){
@@ -1778,42 +1871,136 @@ async function havkarSignAndSubmitStellarPayment(
     }
 
 
+    const prepared =
+        reviewedPayment;
+
+
+    if(!prepared){
+
+        throw new Error(
+            "Review the payment and approve it before your wallet signs it."
+        );
+
+    }
+
+
+    const request =
+        readUnsignedPaymentRequest(
+            options
+        );
+
+
+    if(
+        request.destination !== prepared.destination ||
+        request.amount.text !== prepared.amount ||
+        request.memo !== prepared.memo ||
+        request.network.id !== prepared.network ||
+        request.source !== prepared.source
+    ){
+
+        reviewedPayment = null;
+
+        throw new Error(
+            "Review this payment before your wallet signs it."
+        );
+
+    }
+
+
+    if(
+        BigInt(Math.floor(Date.now() / 1000)) >
+        BigInt(prepared.maxTime)
+    ){
+
+        reviewedPayment = null;
+
+        throw new Error(
+            "This payment review expired. Review it again before signing. Nothing was submitted."
+        );
+
+    }
+
+
+    submissionState =
+        lockSubmission(submissionState);
+
+    persistSubmissionState();
+
     let albedoPopup =
         null;
 
 
     try{
 
-        readUnsignedPaymentRequest(
-            options
-        );
+        const server =
+            horizonServer(
+                networkById(prepared.network)
+            );
 
-        albedoPopup =
-            reserveAlbedoSigningWindow();
-
-
-        const prepared =
-            await havkarPrepareStellarPayment(
-                options
+        const account =
+            await server.loadAccount(
+                prepared.source
             );
 
 
-        if(prepared.network !== network.id){
+        if(
+            BigInt(account.sequence) + 1n !==
+            BigInt(prepared.sequence)
+        ){
+
+            reviewedPayment = null;
 
             throw new Error(
-                "The Stellar network changed before the payment was signed."
+                "The account sequence changed. Review the payment again. Nothing was submitted."
             );
 
         }
 
 
+        const authorization =
+            sourceAuthorization(account);
+
+        const balance =
+            nativeBalance(account);
+
+        const limits =
+            await ledgerLimits(server);
+
+        const minimum =
+            minimumBalance(
+                account,
+                limits.baseReserve
+            );
+
+        const spendable =
+            spendableStroops(
+                balance.stroops,
+                minimum,
+                BigInt(prepared.fee)
+            );
+
+
+        if(
+            parseXlm(prepared.amount).stroops >
+            spendable
+        ){
+
+            throw new Error(
+                "The available XLM is not enough for this payment and the account reserve."
+            );
+
+        }
+
+
+        albedoPopup =
+            reserveAlbedoSigningWindow();
+
         const signedResult =
             await requestWalletSignature(
                 prepared,
-                network,
+                networkById(prepared.network),
                 albedoPopup
             );
-
 
         const signedXdr =
             signedResult?.signedTxXdr || "";
@@ -1828,102 +2015,152 @@ async function havkarSignAndSubmitStellarPayment(
         }
 
 
-        const signed =
+        const checked =
             assertSignedPayment(
                 signedXdr,
-                prepared
+                {
+                    network:prepared.network,
+                    passphrase:prepared.passphrase,
+                    source:prepared.source,
+                    destination:prepared.destination,
+                    amount:prepared.amount,
+                    kind:prepared.kind,
+                    memo:prepared.memo,
+                    fee:prepared.fee,
+                    sequence:prepared.sequence,
+                    minTime:prepared.minTime,
+                    maxTime:prepared.maxTime,
+                    signers:authorization.signers,
+                    medThreshold:authorization.medThreshold
+                }
             );
 
-        const server =
-            horizonServer(network);
-
-        const submitted =
-            await server.submitTransaction(
-                signed
-            );
-
-
-        if(
-            !submitted?.hash ||
-            submitted.successful !== true
-        ){
-
-            throw new Error(
-                "The Stellar network did not confirm this transaction."
-            );
-
-        }
-
-
-        const record =
-            await server
-                .transactions()
-                .transaction(
-                    submitted.hash
-                )
-                .call();
-
-
-        if(
-            !record ||
-            record.successful !== true ||
-            record.hash !== submitted.hash ||
-            record.source_account !==
-                prepared.source
-        ){
-
-            throw new Error(
-                "The transaction hash could not be confirmed on Horizon."
-            );
-
-        }
-
-
-        return {
-
-            hash:record.hash,
-
-            ledger:record.ledger,
-
-            network:network.id,
-
-            label:network.label,
-
-            source:prepared.source,
-
-            destination:prepared.destination,
-
-            amount:prepared.amount,
-
-            feeXlm:prepared.feeXlm,
-
+        const record = {
+            network:prepared.network,
+            label:prepared.label,
             horizon:prepared.horizon,
-
-            explorer:stellarExplorerTxUrl(
-                network.id,
-                record.hash
-            ),
-
-            successful:true
-
+            hash:checked.hash,
+            sequence:prepared.sequence,
+            source:prepared.source,
+            destination:prepared.destination,
+            amount:prepared.amount,
+            fee:prepared.fee,
+            memo:prepared.memo,
+            minTime:prepared.minTime,
+            maxTime:prepared.maxTime
         };
+
+
+        submissionState =
+            rememberSignedSubmission(
+                submissionState,
+                record
+            );
+
+        persistSubmissionState();
+
+
+        try{
+
+            const submitted =
+                await server.submitTransaction(
+                    checked.transaction
+                );
+
+
+            if(
+                !submitted ||
+                String(submitted.hash || "").toLowerCase() !==
+                    checked.hash ||
+                submitted.successful !== true
+            ){
+
+                submissionState = {
+                    phase:"uncertain",
+                    record:record
+                };
+
+                persistSubmissionState();
+
+                return havkarResolveStellarSubmission();
+
+            }
+
+        }
+        catch(error){
+
+            const next =
+                storeSubmissionOutcome(
+                    applySubmitResult(
+                        submissionState,
+                        submitErrorInfo(error)
+                    )
+                );
+
+
+            if(next.outcome === "uncertain"){
+
+                return havkarResolveStellarSubmission();
+
+            }
+
+
+            return submissionResult(
+                "rejected",
+                record,
+                safeErrorMessage(error)
+            );
+
+        }
+
+
+        return havkarResolveStellarSubmission();
 
     }
     catch(error){
+
+        if(!submissionState.record){
+
+            submissionState =
+                releaseUnsentSubmission(
+                    submissionState
+                );
+
+            persistSubmissionState();
+
+            throw new Error(
+                safeErrorMessage(error)
+            );
+
+        }
+
+
+        submissionState = {
+            phase:"uncertain",
+            record:submissionState.record
+        };
+
+        persistSubmissionState();
+
+
+        return submissionResult(
+            "uncertain",
+            submissionState.record,
+            uncertainMessage(
+                submissionState.record
+            )
+        );
+
+    }
+    finally{
 
         closeSigningPopup(
             albedoPopup
         );
 
-
-        throw new Error(
-            safeErrorMessage(error)
-        );
-
     }
 
 }
-
 
 /* =========================================================
    CONNECT STELLAR WALLET
@@ -2153,6 +2390,15 @@ window.havkarPrepareStellarPayment =
 
 window.havkarSignAndSubmitStellarPayment =
     havkarSignAndSubmitStellarPayment;
+
+window.havkarResolveStellarSubmission =
+    havkarResolveStellarSubmission;
+
+window.havkarStellarSubmissionPending =
+    havkarStellarSubmissionPending;
+
+window.havkarGetStellarSubmission =
+    havkarGetStellarSubmission;
 
 window.havkarRestoreStellarAddress =
     havkarRestoreStellarAddress;
