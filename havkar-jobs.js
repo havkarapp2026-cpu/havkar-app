@@ -62,6 +62,20 @@
     return String(value == null ? "" : value).trim();
   }
 
+  function isStripeCheckoutUrl(value) {
+    let url;
+
+    try {
+      url = new URL(String(value || ""));
+    } catch (error) {
+      return false;
+    }
+
+    return url.protocol === "https:" &&
+      (url.hostname === "checkout.stripe.com" ||
+        url.hostname.endsWith(".stripe.com"));
+  }
+
   function isExpired(job, now) {
     if (!job || !job.expires_at) return false;
     const time = Date.parse(job.expires_at);
@@ -466,7 +480,8 @@
     buildJobInsert: buildJobInsert,
     createOwnJob: createOwnJob,
     updateOwnJob: updateOwnJob,
-    deleteOwnJob: deleteOwnJob
+    deleteOwnJob: deleteOwnJob,
+    isStripeCheckoutUrl: isStripeCheckoutUrl
   };
 
 });
