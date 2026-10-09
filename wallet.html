@@ -826,10 +826,17 @@ select:focus{
   
 .status.error{  
     display:block;  
-  
+
     background:#ffebee;  
     color:#c62828;  
 }  
+
+.status.info{  
+    display:block;  
+
+    background:#fff8e1;  
+    color:#725b35;  
+}
   
   
 /* =========================================================  
@@ -1236,8 +1243,16 @@ select:focus{
 
 </div>  
 
-<div class="balance-subtitle">  
-    Portfolio value  
+<div class="balance-subtitle" id="portfolioLabel">  
+    Portfolio estimate  
+</div>  
+
+<div class="balance-subtitle" id="availableBalanceLine">  
+    Available EUR: sign in to see your recorded balance  
+</div>  
+
+<div class="balance-subtitle" id="pendingBalanceLine">  
+    Pending: nothing is reserved  
 </div>  
 
 <div class="card-actions">  
@@ -1269,6 +1284,26 @@ select:focus{
 
         <i class="fas fa-exchange-alt"></i>  
         Exchange  
+
+    </button>  
+
+    <button  
+        class="action-btn"  
+        type="button"  
+        onclick="openAddMoney()">  
+
+        <i class="fas fa-plus"></i>  
+        Add money  
+
+    </button>  
+
+    <button  
+        class="action-btn"  
+        type="button"  
+        onclick="openWithdraw()">  
+
+        <i class="fas fa-building-columns"></i>  
+        Withdraw  
 
     </button>  
 
@@ -1315,6 +1350,9 @@ select:focus{
         </button>  
     </div>  
     <div id="stellarStatus" class="stellar-status"></div>  
+    <div class="stellar-note">  
+        Pi Network payment is disconnected on this screen. No Mainnet Pi payment is started from Wallet.  
+    </div>  
 </div>  <!-- =========================================================  
      PI NETWORK MAINNET PAYMENT  
      Hidden from normal wallet use. The handlers below stay
@@ -1521,7 +1559,7 @@ select:focus{
         type="button"  
         onclick="sendMoney()">  
 
-        Send Money  
+        Review transfer  
 
     </button>  
 
@@ -1555,6 +1593,10 @@ select:focus{
 
     <p style="margin-bottom:10px;">  
         Your HAVKAR User ID  
+    </p>  
+
+    <p style="color:#777;line-height:1.6;margin-bottom:10px;">  
+        Share this ID only with someone who will send through HAVKAR later. Euro transfers are not enabled, so this ID cannot receive spendable euros yet.  
     </p>  
 
     <div  
@@ -1598,14 +1640,70 @@ select:focus{
 
     </div>  
 
-    <p style="  
-        color:#777;  
-        line-height:1.6;  
-    ">  
-
-        Currency exchange is not activated yet.  
-
+    <p style="color:#777;line-height:1.6;">  
+        EUR to USD quotation only. HAVKAR does not convert balances.  
     </p>  
+
+    <label>Amount in EUR</label>  
+    <input id="exchangeAmount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00">  
+
+    <button class="primary" type="button" onclick="loadExchangeQuote()">  
+        Get current quotation  
+    </button>  
+
+    <div id="exchangeQuote" class="status info"></div>  
+
+    <button class="primary" id="exchangeExecute" type="button" disabled>  
+        Exchange is not available  
+    </button>  
+
+    <div id="exchangeStatus" class="status"></div>  
+
+</div>
+
+</div>  <!-- =========================================================  
+     ADD MONEY  
+     ========================================================= -->  <div class="modal" id="addMoneyModal">  <div class="modal-box">  
+
+    <div class="modal-header">  
+        <h2>Add money</h2>  
+        <button class="close" type="button" onclick="closeModal('addMoneyModal')">×</button>  
+    </div>  
+
+    <p style="color:#777;line-height:1.6;">  
+        Card payments, bank transfers, euro deposits, and dollar deposits are coming soon. They need a licensed provider and a safeguarding arrangement. A Stripe payment for tickets or job ads is not added to this wallet.  
+    </p>  
+
+    <div id="addMoneyStatus" class="status info"></div>  
+
+</div>
+
+</div>  <!-- =========================================================  
+     WITHDRAW  
+     ========================================================= -->  <div class="modal" id="withdrawModal">  <div class="modal-box">  
+
+    <div class="modal-header">  
+        <h2>Withdraw</h2>  
+        <button class="close" type="button" onclick="closeModal('withdrawModal')">×</button>  
+    </div>  
+
+    <label>Amount</label>  
+    <input id="withdrawAmount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00">  
+
+    <label>Currency</label>  
+    <select id="withdrawCurrency">  
+        <option value="EUR">EUR</option>  
+        <option value="USD">USD</option>  
+    </select>  
+
+    <label>IBAN</label>  
+    <input id="withdrawIban" type="text" autocomplete="off" spellcheck="false" placeholder="IBAN">  
+
+    <button class="primary" id="withdrawButton" type="button" onclick="reviewWithdrawal()">  
+        Review withdrawal  
+    </button>  
+
+    <div id="withdrawStatus" class="status"></div>  
 
 </div>
 
@@ -1694,6 +1792,7 @@ select:focus{
      ========================================================= -->  <script src="./stellar-wallet-bundle.js"></script>  <!-- =========================================================  
      SUPABASE  
      ========================================================= -->  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>  <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-wallet.js"></script>
 <script>  
   
 /* =========================================================  
@@ -2742,7 +2841,19 @@ async function loadWallet(){
         document.getElementById(  
             "totalBalance"  
         ).textContent =  
-            "€0.00";  
+            "—";  
+
+        document.getElementById(  
+            "availableBalanceLine"  
+        ).textContent =  
+            "Available EUR: sign in to see your recorded balance";  
+
+        document.getElementById(  
+            "pendingBalanceLine"  
+        ).textContent =  
+            window.HAVKAR_WALLET  
+            ? window.HAVKAR_WALLET.PENDING_BALANCE_TEXT  
+            : "Pending: nothing is reserved";  
   
         document.getElementById(  
             "myUserId"  
@@ -2877,12 +2988,22 @@ function renderWallets(
         document.getElementById(  
             "totalBalance"  
         ).textContent =  
-            "€0.00";  
-  
+            "—";  
+
+        document.getElementById(  
+            "availableBalanceLine"  
+        ).textContent =  
+            "Available EUR: no EUR wallet row was found.";  
+
+        document.getElementById(  
+            "pendingBalanceLine"  
+        ).textContent =  
+            window.HAVKAR_WALLET.PENDING_BALANCE_TEXT;  
+
         list.innerHTML =  
             '<div class="empty">' +  
             'No wallet found for this account.' +  
-            '</div>';  
+            '</div>';
   
         return;  
   
@@ -3001,8 +3122,25 @@ function renderWallets(
     ).textContent =  
         "€" +  
         formatMoney(totalEUR);  
-  
-}  
+
+    const eurWallet =  
+        wallets.find(function(item){  
+            return String(item.currency || "").toUpperCase() === "EUR";  
+        });  
+
+    document.getElementById(  
+        "availableBalanceLine"  
+    ).textContent =  
+        eurWallet  
+        ? "Available EUR: €" + formatMoney(Number(eurWallet.balance || 0)) + ". Recorded balance only."  
+        : "Available EUR: no EUR wallet row was found.";  
+
+    document.getElementById(  
+        "pendingBalanceLine"  
+    ).textContent =  
+        window.HAVKAR_WALLET.PENDING_BALANCE_TEXT;  
+
+}
   
   
 /* =========================================================  
@@ -4394,40 +4532,8 @@ async function loadTransactions(){
   
     try{  
   
-        const result =  
-            await withTimeout(  
-  
-                supabaseClient  
-                    .from("wallet_transfers")  
-                    .select("*")  
-                    .or(  
-                        "sender_id.eq." +  
-                        currentUser.id +  
-                        ",receiver_id.eq." +  
-                        currentUser.id  
-                    )  
-                    .order(  
-                        "created_at",  
-                        {  
-                            ascending:false  
-                        }  
-                    )  
-                    .limit(20),  
-  
-                10000,  
-  
-                "Transaction request timed out."  
-  
-            );  
-  
-        if(result.error){  
-  
-            throw result.error;  
-  
-        }  
-  
         const data =  
-            result.data || [];  
+            await collectWalletLedger();  
   
         if(!data.length){  
   
@@ -4480,8 +4586,7 @@ function renderTransactions(
         function(transaction){  
   
             const sent =  
-                transaction.sender_id ===  
-                currentUser.id;  
+                transaction.direction === "out";  
   
             const amount =  
                 Number(  
@@ -4489,9 +4594,9 @@ function renderTransactions(
                 );  
   
             const date =  
-                transaction.created_at  
+                transaction.createdAt  
                 ? new Date(  
-                    transaction.created_at  
+                    transaction.createdAt  
                 ).toLocaleString()  
                 : "";  
   
@@ -4532,26 +4637,15 @@ function renderTransactions(
   
                     <div class="name">  
   
-                        ${  
-                            sent  
-                            ? "Sent Money"  
-                            : "Received Money"  
-                        }  
+                        ${escapeHtml(transaction.type || "Ledger entry")}  
   
                     </div>  
   
                     <div class="small">  
   
                         ${escapeHtml(date)}  
-  
-                        ${  
-                            transaction.note  
-                            ? " • " +  
-                              escapeHtml(  
-                                  transaction.note  
-                              )  
-                            : ""  
-                        }  
+                        • ${escapeHtml(transaction.status || "Recorded")}  
+                        • ${escapeHtml(transaction.reference || "")}  
   
                     </div>  
   
@@ -4564,8 +4658,15 @@ function renderTransactions(
                         : "positive"  
                     }">  
   
-                    ${sent ? "-" : "+"}  
-                    €${formatMoney(amount)}  
+                    ${  
+                        transaction.direction === "in"  
+                        ? "+"  
+                        : transaction.direction === "out"  
+                        ? "-"  
+                        : ""  
+                    }  
+                    ${escapeHtml(transaction.currency || "EUR")}  
+                    ${formatMoney(amount)}  
   
                 </div>  
   
@@ -4601,165 +4702,82 @@ function openSend(){
   
 async function sendMoney(){  
   
+    const walletApi = window.HAVKAR_WALLET;  
+    const button = document.getElementById("sendButton");  
+  
+    if(!walletApi || walletApi.FIAT_TRANSFERS_ENABLED !== false){  
+        showStatus("sendStatus", "Euro transfers are disabled. No money was sent.", "error");  
+        return;  
+    }  
+  
     if(!currentUser){  
-  
-        showStatus(  
-            "sendStatus",  
-            "Please log in first.",  
-            "error"  
-        );  
-  
+        showStatus("sendStatus", "Please log in first. No money was sent.", "error");  
         return;  
-  
     }  
   
-    const receiverId =  
-        document.getElementById(  
-            "receiverId"  
-        ).value.trim();  
+    const receiver = walletApi.normalizeUserId(  
+        document.getElementById("receiverId").value  
+    );  
+    const money = walletApi.parseMoney(  
+        document.getElementById("sendAmount").value  
+    );  
   
-    const amount =  
-        Number(  
-            document.getElementById(  
-                "sendAmount"  
-            ).value  
-        );  
-  
-    const note =  
-        document.getElementById(  
-            "sendNote"  
-        ).value.trim();  
-  
-    if(!receiverId){  
-  
-        showStatus(  
-            "sendStatus",  
-            "Enter receiver User ID.",  
-            "error"  
-        );  
-  
+    if(!receiver.ok){  
+        showStatus("sendStatus", "Enter a valid HAVKAR User ID. No money was sent.", "error");  
         return;  
-  
     }  
   
-    if(  
-        !Number.isFinite(amount) ||  
-        amount <= 0  
-    ){  
-  
-        showStatus(  
-            "sendStatus",  
-            "Enter a valid amount.",  
-            "error"  
-        );  
-  
+    if(!money.ok){  
+        showStatus("sendStatus", "Enter an amount with up to two decimals. No money was sent.", "error");  
         return;  
-  
     }  
   
-    if(  
-        receiverId ===  
-        currentUser.id  
-    ){  
-  
-        showStatus(  
-            "sendStatus",  
-            "You cannot send money to yourself.",  
-            "error"  
-        );  
-  
+    if(receiver.id === String(currentUser.id).toLowerCase()){  
+        showStatus("sendStatus", "You cannot send money to yourself. No money was sent.", "error");  
         return;  
-  
     }  
   
-    const button =  
-        document.getElementById(  
-            "sendButton"  
-        );  
-  
-    button.disabled =  
-        true;  
-  
-    button.textContent =  
-        "Sending...";  
+    button.disabled = true;  
+    button.textContent = "Checking...";  
   
     try{  
-  
-        const result =  
-            await withTimeout(  
-  
-                supabaseClient.rpc(  
-                    "transfer_money",  
-                    {  
-                        p_receiver_id:  
-                            receiverId,  
-  
-                        p_amount:  
-                            amount,  
-  
-                        p_note:  
-                            note  
-                    }  
-                ),  
-  
-                15000,  
-  
-                "Transfer request timed out."  
-  
-            );  
+        const result = await withTimeout(  
+            supabaseClient.rpc("request_internal_transfer", {  
+                p_receiver_id: receiver.id,  
+                p_amount: money.amount,  
+                p_idempotency_key: walletApi.createIdempotencyKey()  
+            }),  
+            15000,  
+            "Transfer request timed out. No money was sent."  
+        );  
   
         if(result.error){  
+            if(isMissingWalletFunction(result.error)){  
+                showStatus("sendStatus", walletApi.FIAT_TRANSFER_UNAVAILABLE, "info");  
+                return;  
+            }  
   
             throw result.error;  
-  
         }  
   
         showStatus(  
             "sendStatus",  
-            "Money sent successfully.",  
-            "success"  
+            walletApi.transferResultMessage(result.data),  
+            "info"  
         );  
-  
-        document.getElementById(  
-            "receiverId"  
-        ).value = "";  
-  
-        document.getElementById(  
-            "sendAmount"  
-        ).value = "";  
-  
-        document.getElementById(  
-            "sendNote"  
-        ).value = "";  
-  
-        await loadWallet();  
-  
         await loadTransactions();  
-  
     }  
     catch(error){  
-  
-        console.error(  
-            "Transfer error:",  
-            error  
-        );  
-  
+        console.error("Transfer error:", error);  
         showStatus(  
             "sendStatus",  
-            "Transfer failed: " +  
-            error.message,  
+            "Transfer was not completed. No money was sent.",  
             "error"  
         );  
-  
     }  
     finally{  
-  
-        button.disabled =  
-            false;  
-  
-        button.textContent =  
-            "Send Money";  
-  
+        button.disabled = false;  
+        button.textContent = "Review transfer";  
     }  
   
 }  
@@ -4797,6 +4815,212 @@ function openExchange(){
     ).style.display =  
         "flex";  
   
+}  
+  
+function isMissingWalletFunction(error){  
+    const code = String(error && error.code || "");  
+    const message = String(error && error.message || "");  
+    return code === "PGRST202" ||  
+        code === "42883" ||  
+        code === "PGRST205" ||  
+        code === "42P01" ||  
+        message.indexOf("request_internal_transfer") !== -1 ||  
+        message.indexOf("request_withdrawal") !== -1 ||  
+        message.indexOf("wallet_operation_requests") !== -1;  
+}  
+  
+async function collectWalletLedger(){  
+    const api = window.HAVKAR_WALLET;  
+    const transfers = await withTimeout(  
+        supabaseClient  
+            .from("wallet_transfers")  
+            .select("*")  
+            .or("sender_id.eq." + currentUser.id + ",receiver_id.eq." + currentUser.id)  
+            .order("created_at", { ascending:false })  
+            .limit(100),  
+        10000,  
+        "Transaction request timed out."  
+    );  
+  
+    if(transfers.error){  
+        throw transfers.error;  
+    }  
+  
+    const transactions = await withTimeout(  
+        supabaseClient  
+            .from("wallet_transactions")  
+            .select("*")  
+            .eq("user_id", currentUser.id)  
+            .order("created_at", { ascending:false })  
+            .limit(100),  
+        10000,  
+        "Transaction request timed out."  
+    );  
+  
+    if(transactions.error){  
+        throw transactions.error;  
+    }  
+  
+    const entries = []  
+        .concat((transfers.data || []).map(function(row){  
+            return api.fromTransfer(row, currentUser.id);  
+        }))  
+        .concat((transactions.data || []).map(function(row){  
+            return api.fromTransaction(row);  
+        }));  
+  
+    const requests = await supabaseClient  
+        .from("wallet_operation_requests")  
+        .select("*")  
+        .eq("user_id", currentUser.id)  
+        .order("created_at", { ascending:false })  
+        .limit(100);  
+  
+    if(!requests.error){  
+        (requests.data || []).forEach(function(row){  
+            entries.push(api.fromOperation(row));  
+        });  
+    }else if(!isMissingWalletFunction(requests.error)){  
+        throw requests.error;  
+    }  
+  
+    return api.sortLedger(entries.filter(Boolean));  
+}  
+  
+function openAddMoney(){  
+    const api = window.HAVKAR_WALLET;  
+    document.getElementById("addMoneyModal").style.display = "flex";  
+    showStatus(  
+        "addMoneyStatus",  
+        api ? api.FIAT_DEPOSIT_UNAVAILABLE : "Adding money is not available.",  
+        "info"  
+    );  
+}  
+  
+function openWithdraw(){  
+    clearStatus("withdrawStatus");  
+    document.getElementById("withdrawModal").style.display = "flex";  
+}  
+  
+async function reviewWithdrawal(){  
+    const api = window.HAVKAR_WALLET;  
+    const button = document.getElementById("withdrawButton");  
+  
+    if(!api || api.FIAT_WITHDRAWALS_ENABLED !== false){  
+        showStatus("withdrawStatus", "Withdrawals are disabled. Your balance was not reduced.", "error");  
+        return;  
+    }  
+  
+    const money = api.parseMoney(document.getElementById("withdrawAmount").value);  
+    const iban = document.getElementById("withdrawIban").value;  
+    const currency = document.getElementById("withdrawCurrency").value;  
+  
+    if(!money.ok){  
+        showStatus("withdrawStatus", "Enter an amount with up to two decimals. Your balance was not reduced.", "error");  
+        return;  
+    }  
+  
+    if(currency !== "EUR" && currency !== "USD"){  
+        showStatus("withdrawStatus", "Choose EUR or USD. Your balance was not reduced.", "error");  
+        return;  
+    }  
+  
+    if(!api.isValidIban(iban)){  
+        showStatus("withdrawStatus", "Enter a valid IBAN. Your balance was not reduced.", "error");  
+        return;  
+    }  
+  
+    if(!currentUser){  
+        showStatus("withdrawStatus", "Please log in first. Your balance was not reduced.", "error");  
+        return;  
+    }  
+  
+    button.disabled = true;  
+  
+    try{  
+        const result = await withTimeout(  
+            supabaseClient.rpc("request_withdrawal", {  
+                p_amount: money.amount,  
+                p_currency: currency,  
+                p_iban: iban.replace(/\s+/g, ""),  
+                p_idempotency_key: api.createIdempotencyKey()  
+            }),  
+            15000,  
+            "Withdrawal request timed out. Your balance was not reduced."  
+        );  
+  
+        document.getElementById("withdrawIban").value = "";  
+  
+        if(result.error){  
+            if(isMissingWalletFunction(result.error)){  
+                showStatus("withdrawStatus", api.FIAT_WITHDRAWAL_UNAVAILABLE, "info");  
+                return;  
+            }  
+            throw result.error;  
+        }  
+  
+        showStatus("withdrawStatus", api.withdrawalResultMessage(result.data), "info");  
+        await loadTransactions();  
+    }catch(error){  
+        console.error("Withdrawal error:", error);  
+        showStatus("withdrawStatus", "The withdrawal was not submitted. Your balance was not reduced.", "error");  
+    }finally{  
+        button.disabled = false;  
+    }  
+}  
+  
+async function loadExchangeQuote(){  
+    const api = window.HAVKAR_WALLET;  
+    const quote = document.getElementById("exchangeQuote");  
+    const execute = document.getElementById("exchangeExecute");  
+  
+    if(execute){  
+        execute.disabled = true;  
+    }  
+  
+    if(!api || api.FIAT_EXCHANGE_ENABLED !== false){  
+        showStatus("exchangeStatus", "Currency exchange is disabled. No balance was converted.", "error");  
+        return;  
+    }  
+  
+    try{  
+        const response = await fetch("/api/eur-usd-quote");  
+  
+        if(!response.ok){  
+            throw new Error("Quotation could not be loaded.");  
+        }  
+  
+        const payload = await response.json();  
+        const fetchedAt = Date.parse(payload.quoted_at);  
+        const assessed = api.assessFrankfurterQuote(payload, fetchedAt, Date.now());  
+  
+        if(!assessed.ok){  
+            showStatus("exchangeStatus", "A current EUR/USD quotation was not available. No balance was converted.", "error");  
+            return;  
+        }  
+  
+        const estimate = api.estimateConversion(  
+            document.getElementById("exchangeAmount").value,  
+            assessed.rate  
+        );  
+        const estimateText = estimate.ok  
+            ? " Estimate: " + estimate.amount + " EUR = " + estimate.estimate + " USD."  
+            : " Enter an amount to see an estimate.";  
+        const freshness = assessed.fresh  
+            ? " Quotation age is under one minute."  
+            : " This quotation is stale and cannot be used.";  
+  
+        quote.textContent =  
+            "ECB rate via Frankfurter: 1 EUR = " + assessed.rate +  
+            " USD on " + (assessed.date || "an unpublished date") +  
+            ". HAVKAR fee: none, because no exchange is executed." +  
+            estimateText + freshness + " " + api.FIAT_EXCHANGE_UNAVAILABLE;  
+        quote.className = "status info";  
+        showStatus("exchangeStatus", api.FIAT_EXCHANGE_UNAVAILABLE, "info");  
+    }catch(error){  
+        console.error("Exchange quote error:", error);  
+        showStatus("exchangeStatus", "A current EUR/USD quotation was not available. No balance was converted.", "error");  
+    }  
 }  
   
   

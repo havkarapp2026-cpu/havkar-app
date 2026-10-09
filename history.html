@@ -297,18 +297,31 @@ body{
     </section>
 
     <div class="filters">
-        <select class="filter" id="typeFilter" onchange="loadHistory()">
+        <select class="filter" id="typeFilter">
             <option value="all">All transactions</option>
-            <option value="sent">Sent</option>
-            <option value="received">Received</option>
+            <option value="sent">Sent transfers</option>
+            <option value="received">Received transfers</option>
             <option value="all-transfer">Transfers</option>
+            <option value="deposit">Deposits</option>
+            <option value="withdrawal">Withdrawals</option>
+            <option value="payment">Payments</option>
+            <option value="refund">Refunds</option>
+            <option value="fee">Fees</option>
+            <option value="sale">Sales</option>
         </select>
 
-        <select class="filter" id="currencyFilter" onchange="loadHistory()">
+        <select class="filter" id="currencyFilter">
             <option value="all">All currencies</option>
             <option value="EUR">EUR €</option>
-
+            <option value="USD">USD $</option>
         </select>
+
+        <input class="filter" id="historySearch" type="search" placeholder="Search reference or details" autocomplete="off">
+    </div>
+
+    <div class="filters">
+        <button class="filter" id="historyPrev" type="button">Previous</button>
+        <button class="filter" id="historyNext" type="button">Next</button>
     </div>
 
     <section id="historyList"></section>
@@ -347,6 +360,7 @@ body{
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-wallet.js"></script>
 <script>
 
 const SUPABASE_URL=window.HAVKAR_SUPABASE_CONFIG.url;
@@ -354,6 +368,7 @@ const SUPABASE_ANON_KEY=window.HAVKAR_SUPABASE_CONFIG.publishableKey;
 const db=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 let currentUser=null;
 let historyCache=[];
+let historyPage=0;
 
 function goBack(){
     if(document.referrer){
@@ -363,60 +378,52 @@ function goBack(){
     }
 }
 
+function missingLedgerTable(error){
+    const code=String(error&&error.code||"");
+    const message=String(error&&error.message||"");
+    return code==="PGRST205"||code==="42P01"||message.indexOf("wallet_operation_requests")!==-1;
+}
+
 async function getTransactions(){
     if(!currentUser)return [];
+    const api=window.HAVKAR_WALLET;
 
-    const {data,error}=await db
+    const transfers=await db
         .from("wallet_transfers")
         .select("*")
         .or("sender_id.eq."+currentUser.id+",receiver_id.eq."+currentUser.id)
         .order("created_at",{ascending:false})
-        .limit(200);
+        .limit(100);
+    if(transfers.error)throw transfers.error;
 
-    if(error)throw error;
-    return data||[];
-}
+    const transactions=await db
+        .from("wallet_transactions")
+        .select("*")
+        .eq("user_id",currentUser.id)
+        .order("created_at",{ascending:false})
+        .limit(100);
+    if(transactions.error)throw transactions.error;
 
-function getType(transaction){
-    return transaction.sender_id===currentUser.id ? "sent" : "received";
-}
+    const entries=[]
+        .concat((transfers.data||[]).map(function(row){return api.fromTransfer(row,currentUser.id);}))
+        .concat((transactions.data||[]).map(function(row){return api.fromTransaction(row);}));
 
-function getCurrency(transaction){
-    return String(transaction.currency||"EUR").toUpperCase();
-}
+    const requests=await db
+        .from("wallet_operation_requests")
+        .select("*")
+        .eq("user_id",currentUser.id)
+        .order("created_at",{ascending:false})
+        .limit(100);
 
-function getAmount(transaction){
-    const number=Number(transaction.amount||0);
-    if(!Number.isFinite(number))return "0.00";
-    return number.toLocaleString(undefined,{
-        minimumFractionDigits:2,
-        maximumFractionDigits:8
-    });
-}
-
-function getDate(transaction){
-    if(!transaction.created_at)return "Date unavailable";
-    const date=new Date(transaction.created_at);
-    if(Number.isNaN(date.getTime()))return "Date unavailable";
-    return date.toLocaleString();
-}
-
-function shortId(value){
-    const id=String(value||"");
-    if(id.length<=14)return id;
-    return id.slice(0,8)+"…"+id.slice(-4);
-}
-
-function getDescription(transaction){
-    if(transaction.note)return transaction.note;
-    if(getType(transaction)==="sent"){
-        return transaction.receiver_id
-            ? "To "+shortId(transaction.receiver_id)
-            : "Money transfer";
+    if(!requests.error){
+        (requests.data||[]).forEach(function(row){
+            entries.push(api.fromOperation(row));
+        });
+    }else if(!missingLedgerTable(requests.error)){
+        throw requests.error;
     }
-    return transaction.sender_id
-        ? "From "+shortId(transaction.sender_id)
-        : "Money transfer";
+
+    return api.sortLedger(entries.filter(Boolean));
 }
 
 function escapeHtml(value){
@@ -426,63 +433,67 @@ function escapeHtml(value){
 }
 
 function createTransaction(transaction){
-    const type=getType(transaction);
-    const currency=getCurrency(transaction);
-    const amount=getAmount(transaction);
-    const date=getDate(transaction);
-    const description=getDescription(transaction);
-    const icon=type==="sent"?"fa-arrow-up":"fa-arrow-down";
-    const sign=type==="received"?"+":"-";
+    const api=window.HAVKAR_WALLET;
+    const amount=api.moneyText(transaction.amount)||"";
+    const date=transaction.createdAt
+        ? new Date(transaction.createdAt).toLocaleString()
+        : "Date unavailable";
+    const icon=transaction.direction==="out"?"fa-arrow-up":"fa-arrow-down";
+    const sign=transaction.direction==="in"?"+":transaction.direction==="out"?"-":"";
+    const counterparty=transaction.counterparty
+        ? "Counterparty "+transaction.counterparty
+        : "No counterparty recorded";
 
     const item=document.createElement("div");
     item.className="transaction";
-
     item.innerHTML=`
         <div class="icon">
             <i class="fa-solid ${icon}"></i>
         </div>
         <div class="info">
-            <strong>${type==="sent"?"Sent":"Received"} ${escapeHtml(currency)}</strong>
-            <span>${escapeHtml(description)}</span>
-            <span>${escapeHtml(date)}</span>
+            <strong>${escapeHtml(transaction.type)} ${escapeHtml(transaction.currency)}</strong>
+            <span>${escapeHtml(transaction.status)} · Fee ${escapeHtml(transaction.fee)}</span>
+            <span>${escapeHtml(counterparty)}</span>
+            <span>${escapeHtml(date)} · ${escapeHtml(transaction.reference)}</span>
+            <span>${escapeHtml(transaction.details)}</span>
         </div>
-        <div class="amount ${type}">
-            ${sign}${escapeHtml(amount)} ${escapeHtml(currency)}
-            <small>${type.toUpperCase()}</small>
+        <div class="amount ${transaction.direction==="out"?"sent":"received"}">
+            ${sign}${escapeHtml(amount)} ${escapeHtml(transaction.currency)}
+            <small>${escapeHtml(transaction.status)}</small>
         </div>
     `;
     return item;
 }
 
 function renderHistory(){
+    const api=window.HAVKAR_WALLET;
     const list=document.getElementById("historyList");
-    const typeFilter=document.getElementById("typeFilter").value;
-    const currencyFilter=document.getElementById("currencyFilter").value;
-
-    let transactions=[...historyCache].filter(transaction=>{
-        const type=getType(transaction);
-        const currency=getCurrency(transaction);
-        const typeOK=typeFilter==="all"||typeFilter==="all-transfer"||type===typeFilter;
-        const currencyOK=currencyFilter==="all"||currency===currencyFilter;
-        return typeOK&&currencyOK;
+    const filtered=api.filterLedger(historyCache,{
+        type:document.getElementById("typeFilter").value,
+        currency:document.getElementById("currencyFilter").value,
+        search:document.getElementById("historySearch").value
     });
+    const paged=api.pageLedger(filtered,historyPage);
+    historyPage=Math.min(historyPage,paged.pageCount-1);
+    const visible=api.pageLedger(filtered,historyPage);
 
     document.getElementById("transactionCount").textContent=
-        transactions.length+(transactions.length===1?" transaction":" transactions");
+        visible.total+(visible.total===1?" recorded row":" recorded rows")+
+        " · page "+(visible.page+1)+" of "+visible.pageCount;
 
     list.innerHTML="";
 
-    if(!transactions.length){
+    if(!visible.items.length){
         list.innerHTML=`
             <div class="empty">
                 <i class="fa-solid fa-clock-rotate-left"></i>
-                <h3>No transactions yet</h3>
-                <p>Your completed HAVKAR wallet transfers will appear here.</p>
+                <h3>No recorded transactions</h3>
+                <p>Only rows stored for your account are shown. Nothing is added as a sample.</p>
             </div>`;
         return;
     }
 
-    transactions.forEach(transaction=>{
+    visible.items.forEach(function(transaction){
         list.appendChild(createTransaction(transaction));
     });
 }
@@ -498,9 +509,14 @@ async function loadHistory(){
 
     try{
         const {data,error}=await db.auth.getUser();
-        if(error)throw error;
+        currentUser=data&&data.user||null;
 
-        currentUser=data.user||null;
+        if(error && !currentUser){
+            const message=String(error.message||"");
+            if(message.toLowerCase().indexOf("session")===-1){
+                throw error;
+            }
+        }
 
         if(!currentUser){
             historyCache=[];
@@ -516,6 +532,7 @@ async function loadHistory(){
         }
 
         historyCache=await getTransactions();
+        historyPage=0;
         renderHistory();
 
     }catch(error){
@@ -532,8 +549,11 @@ async function loadHistory(){
     }
 }
 
-document.getElementById("typeFilter").addEventListener("change",renderHistory);
-document.getElementById("currencyFilter").addEventListener("change",renderHistory);
+document.getElementById("typeFilter").addEventListener("change",function(){historyPage=0;renderHistory();});
+document.getElementById("currencyFilter").addEventListener("change",function(){historyPage=0;renderHistory();});
+document.getElementById("historySearch").addEventListener("input",function(){historyPage=0;renderHistory();});
+document.getElementById("historyPrev").addEventListener("click",function(){historyPage=Math.max(0,historyPage-1);renderHistory();});
+document.getElementById("historyNext").addEventListener("click",function(){historyPage+=1;renderHistory();});
 document.addEventListener("DOMContentLoaded",loadHistory);
 
 </script>
