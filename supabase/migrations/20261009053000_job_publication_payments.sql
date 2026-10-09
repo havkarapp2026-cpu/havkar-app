@@ -21,7 +21,7 @@ CREATE TABLE public.job_publication_payments (
   CONSTRAINT job_publication_payments_currency_check
     CHECK (currency = 'EUR'),
   CONSTRAINT job_publication_payments_status_check
-    CHECK (status = 'paid'),
+    CHECK (status IN ('paid', 'refunded', 'expired', 'failed')),
   CONSTRAINT job_publication_payments_plan_amount_check
     CHECK (
       (plan = 'Basic' AND amount = 9.99)
@@ -39,7 +39,8 @@ CREATE TABLE public.job_publication_payments (
 );
 
 CREATE UNIQUE INDEX job_publication_payments_one_paid_job
-  ON public.job_publication_payments (job_id);
+  ON public.job_publication_payments (job_id)
+  WHERE status = 'paid';
 
 CREATE INDEX job_publication_payments_user_idx
   ON public.job_publication_payments (user_id);
@@ -47,13 +48,10 @@ CREATE INDEX job_publication_payments_user_idx
 ALTER TABLE public.job_publication_payments ENABLE ROW LEVEL SECURITY;
 
 REVOKE ALL ON TABLE public.job_publication_payments
-  FROM PUBLIC, anon, authenticated;
-
-GRANT SELECT, INSERT ON TABLE public.job_publication_payments
-  TO service_role;
+  FROM PUBLIC, anon, authenticated, service_role;
 
 REVOKE ALL ON SEQUENCE public.job_publication_payments_id_seq
-  FROM PUBLIC, anon, authenticated;
+  FROM PUBLIC, anon, authenticated, service_role;
 
 CREATE OR REPLACE FUNCTION public.enforce_job_publication_status()
 RETURNS trigger
@@ -266,6 +264,115 @@ REVOKE ALL ON FUNCTION public.publish_paid_job(bigint, uuid, text, numeric, text
   FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.publish_paid_job(bigint, uuid, text, numeric, text, text, text)
+  TO service_role;
+
+CREATE OR REPLACE FUNCTION public.note_job_publication_outcome(
+  p_job_id bigint,
+  p_user_id uuid,
+  p_plan text,
+  p_amount numeric,
+  p_currency text,
+  p_checkout_session_id text,
+  p_event_id text,
+  p_status text
+)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_existing public.job_publication_payments%ROWTYPE;
+BEGIN
+  IF p_status IS DISTINCT FROM 'refunded'
+     AND p_status IS DISTINCT FROM 'expired'
+     AND p_status IS DISTINCT FROM 'failed' THEN
+    RAISE EXCEPTION 'unsupported publication outcome'
+      USING ERRCODE = '22023';
+  END IF;
+
+  IF p_checkout_session_id IS NULL
+     OR btrim(p_checkout_session_id) = ''
+     OR p_event_id IS NULL
+     OR btrim(p_event_id) = ''
+     OR p_checkout_session_id NOT LIKE 'cs_%'
+     OR p_event_id NOT LIKE 'evt_%' THEN
+    RAISE EXCEPTION 'missing stripe reference'
+      USING ERRCODE = '22023';
+  END IF;
+
+  IF p_currency IS DISTINCT FROM 'EUR' THEN
+    RAISE EXCEPTION 'unsupported publication currency'
+      USING ERRCODE = '22023';
+  END IF;
+
+  IF NOT (
+    (p_plan = 'Basic' AND p_amount = 9.99)
+    OR (p_plan = 'Professional' AND p_amount = 19.99)
+    OR (p_plan = 'Business' AND p_amount = 39.99)
+  ) THEN
+    RAISE EXCEPTION 'unknown job plan price'
+      USING ERRCODE = '22023';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.jobs
+    WHERE id = p_job_id
+      AND user_id = p_user_id
+  ) THEN
+    RAISE EXCEPTION 'job not found'
+      USING ERRCODE = 'P0002';
+  END IF;
+
+  SELECT *
+    INTO v_existing
+  FROM public.job_publication_payments
+  WHERE stripe_checkout_session_id = p_checkout_session_id
+     OR stripe_event_id = p_event_id
+  FOR UPDATE;
+
+  IF FOUND THEN
+    IF v_existing.job_id = p_job_id
+       AND v_existing.stripe_checkout_session_id = p_checkout_session_id
+       AND v_existing.stripe_event_id = p_event_id
+       AND v_existing.status = p_status THEN
+      RETURN 'duplicate';
+    END IF;
+
+    RETURN 'already_recorded';
+  END IF;
+
+  INSERT INTO public.job_publication_payments (
+    job_id,
+    user_id,
+    plan,
+    amount,
+    currency,
+    stripe_checkout_session_id,
+    stripe_event_id,
+    status,
+    paid_at
+  ) VALUES (
+    p_job_id,
+    p_user_id,
+    p_plan,
+    p_amount,
+    p_currency,
+    p_checkout_session_id,
+    p_event_id,
+    p_status,
+    NULL
+  );
+
+  RETURN 'recorded';
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.note_job_publication_outcome(bigint, uuid, text, numeric, text, text, text, text)
+  FROM PUBLIC, anon, authenticated;
+
+GRANT EXECUTE ON FUNCTION public.note_job_publication_outcome(bigint, uuid, text, numeric, text, text, text, text)
   TO service_role;
 
 DO $$

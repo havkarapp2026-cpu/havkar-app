@@ -1365,6 +1365,8 @@ a.primary{
 
   </div>
 
+  <div id="jobPaymentNotice" class="notice" style="display:none"></div>
+
   <div id="jobsList"></div>
 
 </main>
@@ -3634,6 +3636,17 @@ function isJobCheckoutUrl(value){
   return false;
 }
 
+function showJobPaymentNotice(message){
+  const notice = document.getElementById("jobPaymentNotice");
+
+  if(notice){
+    notice.textContent = message;
+    notice.style.display = "block";
+  }
+
+  alert(message);
+}
+
 function explainPaymentReturn(){
   const params = new URLSearchParams(window.location.search);
   const payment = params.get("payment");
@@ -3647,11 +3660,11 @@ function explainPaymentReturn(){
   );
 
   if(payment === "cancelled"){
-    alert("Payment was cancelled. Your advertisement has NOT been activated.");
+    showJobPaymentNotice("Payment was cancelled. Your advertisement has NOT been activated.");
   }else if(job && job.status === "active"){
-    alert("This job is already active.");
+    showJobPaymentNotice("The server has published this job. This page did not activate it from the payment link.");
   }else{
-    alert(
+    showJobPaymentNotice(
       "Returning from payment does not activate the advertisement. " +
       "Your advertisement has NOT been activated by this page."
     );
@@ -3685,7 +3698,7 @@ async function startRealPayment(jobId){
   const accessToken = sessionData?.session?.access_token || "";
 
   if(sessionError || !accessToken){
-    alert("Please sign in before paying. Your advertisement has NOT been activated.");
+    showJobPaymentNotice("Please sign in before paying. Your advertisement has NOT been activated.");
     return;
   }
 
@@ -3710,7 +3723,7 @@ async function startRealPayment(jobId){
     }
 
     if(result && result.pending_confirmation === true){
-      alert(
+      showJobPaymentNotice(
         "The server is still confirming the payment. " +
         "Your advertisement has NOT been activated by this page."
       );
@@ -3719,7 +3732,7 @@ async function startRealPayment(jobId){
     }
 
     if(!response.ok || !result || result.ok !== true || !isJobCheckoutUrl(result.checkout_url)){
-      alert(
+      showJobPaymentNotice(
         "The payment could not be started. " +
         "Your advertisement has NOT been activated."
       );
@@ -3730,7 +3743,7 @@ async function startRealPayment(jobId){
     window.location.assign(checkoutUrl.href);
   }catch(error){
     console.error("HAVKAR job checkout:", error);
-    alert(
+    showJobPaymentNotice(
       "The payment could not be started. " +
       "Your advertisement has NOT been activated."
     );

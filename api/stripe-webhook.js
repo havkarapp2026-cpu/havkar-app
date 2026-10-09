@@ -1,6 +1,10 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import { assessPaidJobSession } from "../lib/job-publication.mjs";
+import {
+  assessPaidJobSession,
+  assessRecordableJobSession,
+  unpaidJobOutcome,
+} from "../lib/job-publication.mjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -45,6 +49,40 @@ function paymentIntentId(session) {
   }
 
   return String(session.payment_intent.id || "");
+}
+
+async function noteJobOutcome(assessed, event, status) {
+  const { data, error } = await supabase.rpc("note_job_publication_outcome", {
+    p_job_id: assessed.jobId,
+    p_user_id: assessed.userId,
+    p_plan: assessed.plan,
+    p_amount: assessed.amount,
+    p_currency: assessed.currency,
+    p_checkout_session_id: assessed.sessionId,
+    p_event_id: event.id,
+    p_status: status,
+  });
+
+  if (error) {
+    if (
+      error.code === "23505" ||
+      error.code === "23503" ||
+      error.code === "P0002" ||
+      error.code === "22023"
+    ) {
+      console.error(
+        "Job publication outcome was not stored:",
+        assessed.jobId,
+        status,
+        error.code
+      );
+      return data;
+    }
+
+    throw error;
+  }
+
+  return data;
 }
 
 async function refundUnfulfilledJobCharge(session) {
@@ -128,6 +166,7 @@ async function confirmJobPublication(event) {
         error.code
       );
       await refundUnfulfilledJobCharge(session);
+      await noteJobOutcome(assessed, event, "refunded");
 
       return {
         status: 200,
@@ -164,6 +203,7 @@ async function confirmJobPublication(event) {
       assessed.jobId
     );
     await refundUnfulfilledJobCharge(session);
+    await noteJobOutcome(assessed, event, "refunded");
 
     return {
       status: 200,
@@ -172,6 +212,67 @@ async function confirmJobPublication(event) {
   }
 
   throw new Error("Unexpected job publication result");
+}
+
+async function noteUnpaidJobSession(event) {
+  const outcome = unpaidJobOutcome(event.type);
+  const eventSession = event.data?.object;
+  const sessionId = String(eventSession?.id || "");
+
+  if (
+    !outcome ||
+    !sessionId.startsWith("cs_") ||
+    !String(event.id || "").startsWith("evt_")
+  ) {
+    return {
+      status: 200,
+      body: { received: true, ignored: true },
+    };
+  }
+
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+  if (session.payment_status === "paid") {
+    return {
+      status: 200,
+      body: { received: true, ignored: true },
+    };
+  }
+
+  const assessed = assessRecordableJobSession(session);
+
+  if (!assessed.ok) {
+    console.error(
+      "Unpaid job session was not recorded:",
+      sessionId,
+      assessed.reason
+    );
+
+    return {
+      status: 200,
+      body: { received: true, ignored: true },
+    };
+  }
+
+  try {
+    const result = await noteJobOutcome(assessed, event, outcome);
+
+    return {
+      status: 200,
+      body: { received: true, result: result },
+    };
+  } catch (error) {
+    if (error.code === "PGRST202" || error.code === "42883") {
+      console.error("Job publication outcome function is not available");
+
+      return {
+        status: 200,
+        body: { received: true, ignored: true },
+      };
+    }
+
+    throw error;
+  }
 }
 
 export default async function handler(req, res) {
@@ -220,6 +321,27 @@ export default async function handler(req, res) {
   }
 
   try {
+    if (
+      event.type === "checkout.session.expired" ||
+      event.type === "checkout.session.async_payment_failed"
+    ) {
+      const outcomeSession = event.data?.object || {};
+      const outcomeTicketId = outcomeSession.metadata?.event_ticket_id;
+
+      if (
+        outcomeSession.metadata?.purpose === "job_publication" &&
+        !outcomeTicketId
+      ) {
+        const result = await noteUnpaidJobSession(event);
+
+        return res.status(result.status).json(result.body);
+      }
+
+      return res.status(200).json({
+        received: true,
+      });
+    }
+
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
 

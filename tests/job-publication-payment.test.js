@@ -107,6 +107,71 @@ const path = require("path");
     }).reason,
     "purpose"
   );
+  assert.strictEqual(
+    publication.assessPaidJobSession({
+      ...paid,
+      currency: "usd",
+    }).reason,
+    "currency"
+  );
+  assert.strictEqual(
+    publication.assessRecordableJobSession({
+      ...paid,
+      payment_status: "unpaid",
+    }).ok,
+    true
+  );
+  assert.strictEqual(
+    publication.assessRecordableJobSession({
+      ...paid,
+      payment_status: "unpaid",
+      amount_total: 50,
+    }).reason,
+    "amount"
+  );
+
+  assert.strictEqual(
+    publication.checkoutReuseAction({
+      status: "open",
+      url: "https://checkout.stripe.com/c/pay/cs_test_123",
+    }),
+    "reuse"
+  );
+  assert.strictEqual(
+    publication.checkoutReuseAction({
+      status: "complete",
+      payment_status: "paid",
+    }),
+    "confirm"
+  );
+  assert.strictEqual(
+    publication.checkoutReuseAction({
+      status: "expired",
+      url: "https://checkout.stripe.com/c/pay/cs_test_123",
+    }),
+    "replace"
+  );
+  assert.strictEqual(
+    publication.checkoutReuseAction({
+      status: "complete",
+      payment_status: "unpaid",
+      url: "https://checkout.stripe.com/c/pay/cs_test_123",
+    }),
+    "replace"
+  );
+  assert.strictEqual(
+    publication.checkoutReuseAction({
+      status: "open",
+      url: "https://evil.example/pay",
+    }),
+    "replace"
+  );
+  assert.strictEqual(publication.unpaidJobOutcome("checkout.session.expired"), "expired");
+  assert.strictEqual(
+    publication.unpaidJobOutcome("checkout.session.async_payment_failed"),
+    "failed"
+  );
+  assert.strictEqual(publication.unpaidJobOutcome("checkout.session.completed"), null);
 
   assert.ok(migration.includes("havkar.job_publication_job_id"));
   assert.ok(migration.includes("public.publish_paid_job"));
@@ -123,12 +188,27 @@ const path = require("path");
   assert.ok(!migration.includes("TO anon"));
   assert.ok(!migration.includes("TO authenticated"));
   assert.ok(migration.includes("enforce_job_publication_status trigger is missing"));
+  assert.ok(migration.includes("WHERE status = 'paid'"));
+  assert.ok(migration.includes("status IN ('paid', 'refunded', 'expired', 'failed')"));
+  assert.ok(migration.includes("public.note_job_publication_outcome"));
+  assert.ok(migration.includes("unsupported publication outcome"));
+  assert.ok(migration.includes("FROM PUBLIC, anon, authenticated, service_role"));
+  assert.ok(!migration.includes("GRANT SELECT, INSERT"));
   assert.ok(!/^\s*UPDATE\s+public\.jobs/im.test(
     migration.replace(/UPDATE public\.jobs[\s\S]*?monthly_fee IS NOT DISTINCT FROM p_amount;/, "")
   ));
 
   assert.ok(checkout.includes('purpose: "job_publication"'));
   assert.ok(checkout.includes("pending_confirmation"));
+  assert.ok(checkout.includes("checkout.sessions.retrieve"));
+  assert.ok(checkout.includes("checkoutReuseAction"));
+  assert.ok(checkout.includes("String(job.user_id) !== String(user.id)"));
+  assert.ok(checkout.includes("Number(req.body?.job_id)"));
+  assert.ok(jobsPage.includes("job_id: Number(job.id)"));
+  assert.ok(!checkout.includes("req.body.amount"));
+  assert.ok(!checkout.includes("req.body.price"));
+  assert.ok(!checkout.includes("req.body.monthly_fee"));
+  assert.ok(!checkout.includes("req.body.plan"));
   assert.ok(!checkout.includes('.update('));
   assert.ok(!checkout.includes("STRIPE_WEBHOOK_SECRET"));
 
@@ -139,11 +219,25 @@ const path = require("path");
   assert.ok(webhook.includes("stripe.webhooks.constructEvent"));
   assert.ok(webhook.includes("checkout.sessions.retrieve"));
   assert.ok(webhook.includes('supabase.rpc("publish_paid_job"'));
+  assert.ok(webhook.includes('supabase.rpc("note_job_publication_outcome"'));
+  assert.ok(webhook.includes("checkout.session.expired"));
+  assert.ok(webhook.includes("checkout.session.async_payment_failed"));
   assert.ok(webhook.includes("job-publication-refund-"));
   assert.ok(webhook.includes("event_tickets"));
+  assert.ok(webhook.includes('payment_status: "paid"'));
   assert.ok(!webhook.includes('.from("jobs")'));
+  const handlerSource = webhook.slice(webhook.indexOf("export default async function handler"));
+  assert.ok(handlerSource.includes("stripe.webhooks.constructEvent"));
+  assert.ok(
+    handlerSource.indexOf("stripe.webhooks.constructEvent") <
+      handlerSource.indexOf("confirmJobPublication")
+  );
 
   assert.ok(jobsPage.includes("isJobCheckoutUrl"));
+  assert.ok(jobsPage.includes('id="jobPaymentNotice"'));
+  assert.ok(jobsPage.includes("Payment was cancelled. Your advertisement has NOT been activated."));
+  assert.ok(jobsPage.includes("The payment could not be started."));
+  assert.ok(jobsPage.includes("The server has published this job."));
   assert.ok(jobsPage.includes('params.delete("session_id")'));
   assert.ok(!jobsPage.includes("checkout_session_id"));
   assert.ok(!jobsPage.includes('.from("jobs")\n      .update') && !jobsPage.includes(".update({"));

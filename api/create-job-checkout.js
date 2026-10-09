@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import { isStripeCheckoutUrl, planForStoredJob } from "../lib/job-publication.mjs";
+import { checkoutReuseAction, planForStoredJob } from "../lib/job-publication.mjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -113,14 +113,22 @@ function checkoutPayload(job, user, origin) {
 
 async function createOrReuseSession(job, user, origin) {
   const payload = checkoutPayload(job, user, origin);
-  let session = await stripe.checkout.sessions.create(payload, {
-    idempotencyKey: `job-publication-${job.id}`,
-  });
+  let idempotencyKey = `job-publication-${job.id}`;
+  let session = null;
 
-  if (session.status === "expired") {
-    session = await stripe.checkout.sessions.create(payload, {
-      idempotencyKey: `job-publication-${job.id}-after-${session.id}`,
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const created = await stripe.checkout.sessions.create(payload, {
+      idempotencyKey: idempotencyKey,
     });
+    session = await stripe.checkout.sessions.retrieve(created.id);
+
+    const action = checkoutReuseAction(session);
+
+    if (action === "reuse" || action === "confirm") {
+      return session;
+    }
+
+    idempotencyKey = `job-publication-${job.id}-after-${session.id}`;
   }
 
   return session;
@@ -182,16 +190,18 @@ export default async function handler(req, res) {
     }
 
     const session = await createOrReuseSession(job, user, getOrigin(req));
+    const action = checkoutReuseAction(session);
 
-    if (session.status === "complete" && session.payment_status === "paid") {
+    if (action === "confirm") {
       return res.status(200).json({
         ok: true,
         pending_confirmation: true,
       });
     }
 
-    if (!isStripeCheckoutUrl(session.url)) {
-      throw new Error("Stripe Checkout Session has no URL");
+    if (action !== "reuse") {
+      console.error("Job checkout session cannot be reused", job.id, session && session.status);
+      return sendError(res, 409, "The payment could not be started");
     }
 
     return res.status(200).json({
