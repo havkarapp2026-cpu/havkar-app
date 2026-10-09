@@ -71,7 +71,26 @@ const sdk = require("@stellar/stellar-sdk");
   assert.ok(source.includes("selectNetworkFeeStroops"));
   assert.ok(source.includes("checkMemoRequired"));
   assert.ok(source.includes("accountDataRequiresMemo"));
+  assert.ok(source.includes("function requestWalletSignature("));
+  assert.ok(source.includes("StellarWalletsKit.signTransaction("));
+  assert.ok(source.includes("networkPassphrase:"));
+  assert.ok(source.includes("address:prepared.source"));
+  assert.ok(source.includes("StellarWalletsKit.authModal()"));
+  assert.ok(source.includes("authModal:{"));
+  assert.ok(source.includes("showInstallLabel:true"));
+  assert.ok(source.includes("hideUnsupportedWallets:false"));
+  assert.ok(!source.includes("fromSecret"));
   assert.ok(!/console\.(log|debug|info|warn)\(/.test(source));
+
+  const connectStart = source.indexOf("async function havkarConnectStellarWallet(");
+  const connectEnd = source.indexOf("async function havkarDisconnectStellarWallet(");
+  const connectBody = source.slice(connectStart, connectEnd);
+  assert.ok(connectStart > 0 && connectEnd > connectStart);
+  assert.ok(connectBody.includes("StellarWalletsKit.authModal()"));
+  assert.ok(connectBody.includes("StellarWalletsKit.setNetwork("));
+  assert.ok(!connectBody.includes("showInstallLabel"));
+  assert.ok(!connectBody.includes("submitTransaction"));
+  assert.ok(!connectBody.includes("signTransaction"));
 
   assert.ok(page.includes("Check original transaction"));
   assert.ok(page.includes("havkarStellarSubmissionPending"));
