@@ -1,5 +1,10 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import {
+  assessPaidJobSession,
+  assessRecordableJobSession,
+  unpaidJobOutcome,
+} from "../lib/job-publication.mjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -32,6 +37,242 @@ async function getRawBody(req) {
   }
 
   return Buffer.concat(chunks);
+}
+
+function paymentIntentId(session) {
+  if (!session || !session.payment_intent) {
+    return "";
+  }
+
+  if (typeof session.payment_intent === "string") {
+    return session.payment_intent;
+  }
+
+  return String(session.payment_intent.id || "");
+}
+
+async function noteJobOutcome(assessed, event, status) {
+  const { data, error } = await supabase.rpc("note_job_publication_outcome", {
+    p_job_id: assessed.jobId,
+    p_user_id: assessed.userId,
+    p_plan: assessed.plan,
+    p_amount: assessed.amount,
+    p_currency: assessed.currency,
+    p_checkout_session_id: assessed.sessionId,
+    p_event_id: event.id,
+    p_status: status,
+  });
+
+  if (error) {
+    if (
+      error.code === "23505" ||
+      error.code === "23503" ||
+      error.code === "P0002" ||
+      error.code === "22023"
+    ) {
+      console.error(
+        "Job publication outcome was not stored:",
+        assessed.jobId,
+        status,
+        error.code
+      );
+      return data;
+    }
+
+    throw error;
+  }
+
+  return data;
+}
+
+async function refundUnfulfilledJobCharge(session) {
+  const intentId = paymentIntentId(session);
+
+  if (!intentId.startsWith("pi_")) {
+    throw new Error("Paid job session has no payment intent to refund");
+  }
+
+  await stripe.refunds.create(
+    {
+      payment_intent: intentId,
+    },
+    {
+      idempotencyKey: `job-publication-refund-${session.id}`,
+    }
+  );
+}
+
+async function confirmJobPublication(event) {
+  const eventSession = event.data?.object;
+  const sessionId = String(eventSession?.id || "");
+
+  if (!sessionId.startsWith("cs_") || !String(event.id || "").startsWith("evt_")) {
+    console.error("Job publication webhook is missing a Stripe reference");
+
+    return {
+      status: 200,
+      body: { received: true, ignored: true },
+    };
+  }
+
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+  const assessed = assessPaidJobSession(session);
+
+  if (!assessed.ok) {
+    console.error(
+      "Verified job Checkout Session was not fulfilled:",
+      sessionId,
+      assessed.reason
+    );
+
+    const refundable = [
+      "amount",
+      "currency",
+      "plan",
+      "job",
+      "user",
+      "mode",
+      "session",
+    ];
+
+    if (
+      session.payment_status === "paid" &&
+      refundable.includes(assessed.reason)
+    ) {
+      await refundUnfulfilledJobCharge(session);
+    }
+
+    return {
+      status: 200,
+      body: { received: true, ignored: true },
+    };
+  }
+
+  const { data, error } = await supabase.rpc("publish_paid_job", {
+    p_job_id: assessed.jobId,
+    p_user_id: assessed.userId,
+    p_plan: assessed.plan,
+    p_amount: assessed.amount,
+    p_currency: assessed.currency,
+    p_checkout_session_id: assessed.sessionId,
+    p_event_id: event.id,
+  });
+
+  if (error) {
+    if (error.code === "42501" || error.code === "P0002") {
+      console.error(
+        "Paid job could not be published:",
+        assessed.jobId,
+        error.code
+      );
+      await refundUnfulfilledJobCharge(session);
+      await noteJobOutcome(assessed, event, "refunded");
+
+      return {
+        status: 200,
+        body: { received: true, refunded: true },
+      };
+    }
+
+    if (error.code === "23505" || error.code === "22023") {
+      console.error(
+        "Job publication reference was rejected:",
+        assessed.jobId,
+        error.code
+      );
+
+      return {
+        status: 200,
+        body: { received: true },
+      };
+    }
+
+    throw error;
+  }
+
+  if (data === "duplicate" || data === "published") {
+    return {
+      status: 200,
+      body: { received: true, result: data },
+    };
+  }
+
+  if (data === "already_active") {
+    console.error(
+      "Job was already active for a different charge:",
+      assessed.jobId
+    );
+    await refundUnfulfilledJobCharge(session);
+    await noteJobOutcome(assessed, event, "refunded");
+
+    return {
+      status: 200,
+      body: { received: true, refunded: true },
+    };
+  }
+
+  throw new Error("Unexpected job publication result");
+}
+
+async function noteUnpaidJobSession(event) {
+  const outcome = unpaidJobOutcome(event.type);
+  const eventSession = event.data?.object;
+  const sessionId = String(eventSession?.id || "");
+
+  if (
+    !outcome ||
+    !sessionId.startsWith("cs_") ||
+    !String(event.id || "").startsWith("evt_")
+  ) {
+    return {
+      status: 200,
+      body: { received: true, ignored: true },
+    };
+  }
+
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+  if (session.payment_status === "paid") {
+    return {
+      status: 200,
+      body: { received: true, ignored: true },
+    };
+  }
+
+  const assessed = assessRecordableJobSession(session);
+
+  if (!assessed.ok) {
+    console.error(
+      "Unpaid job session was not recorded:",
+      sessionId,
+      assessed.reason
+    );
+
+    return {
+      status: 200,
+      body: { received: true, ignored: true },
+    };
+  }
+
+  try {
+    const result = await noteJobOutcome(assessed, event, outcome);
+
+    return {
+      status: 200,
+      body: { received: true, result: result },
+    };
+  } catch (error) {
+    if (error.code === "PGRST202" || error.code === "42883") {
+      console.error("Job publication outcome function is not available");
+
+      return {
+        status: 200,
+        body: { received: true, ignored: true },
+      };
+    }
+
+    throw error;
+  }
 }
 
 export default async function handler(req, res) {
@@ -80,10 +321,37 @@ export default async function handler(req, res) {
   }
 
   try {
+    if (
+      event.type === "checkout.session.expired" ||
+      event.type === "checkout.session.async_payment_failed"
+    ) {
+      const outcomeSession = event.data?.object || {};
+      const outcomeTicketId = outcomeSession.metadata?.event_ticket_id;
+
+      if (
+        outcomeSession.metadata?.purpose === "job_publication" &&
+        !outcomeTicketId
+      ) {
+        const result = await noteUnpaidJobSession(event);
+
+        return res.status(result.status).json(result.body);
+      }
+
+      return res.status(200).json({
+        received: true,
+      });
+    }
+
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
 
       const ticketId = session.metadata?.event_ticket_id;
+
+      if (session.metadata?.purpose === "job_publication" && !ticketId) {
+        const result = await confirmJobPublication(event);
+
+        return res.status(result.status).json(result.body);
+      }
 
       if (!ticketId) {
         console.error(
