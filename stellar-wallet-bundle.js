@@ -147620,6 +147620,86 @@ ${value}`, dataLines++;
     );
   }
 
+  // stellar-walletconnect.js
+  var WALLETCONNECT_RELAY_HOST = "relay.walletconnect.org";
+  var WALLETCONNECT_ORIGIN_MESSAGE = "WalletConnect blocked this website. The relay returned code 3000, origin not allowed. No payment was sent.";
+  var WALLETCONNECT_PUBLISH_MESSAGE = "WalletConnect could not publish the connection request. No payment was sent.";
+  function walletConnectRelayMessage(input) {
+    const details = input && typeof input === "object" ? input : { message: input };
+    const text = String(
+      details.message || details.reason || ""
+    );
+    if (details.code === 3e3 || /origin not allowed/i.test(text)) {
+      return WALLETCONNECT_ORIGIN_MESSAGE;
+    }
+    if (/Failed to publish custom payload/i.test(text)) {
+      return WALLETCONNECT_PUBLISH_MESSAGE;
+    }
+    return "";
+  }
+  function observeWalletConnectRelay(nativeWebSocket) {
+    let rejectRelay = function() {
+    };
+    const rejected = new Promise(
+      function(_resolve, reject) {
+        rejectRelay = reject;
+      }
+    );
+    let reported = false;
+    function report(details) {
+      if (reported) {
+        return;
+      }
+      const message = walletConnectRelayMessage(details);
+      if (!message) {
+        return;
+      }
+      reported = true;
+      rejectRelay(
+        new Error(message)
+      );
+    }
+    function RelaySocket(url, protocols) {
+      const socket = arguments.length < 2 ? new nativeWebSocket(url) : new nativeWebSocket(url, protocols);
+      if (String(url).indexOf(WALLETCONNECT_RELAY_HOST) === -1) {
+        return socket;
+      }
+      socket.addEventListener(
+        "message",
+        function(event) {
+          report({
+            message: String(
+              event && event.data || ""
+            )
+          });
+        }
+      );
+      socket.addEventListener(
+        "close",
+        function(event) {
+          report({
+            code: event && event.code,
+            message: event && event.reason
+          });
+        }
+      );
+      return socket;
+    }
+    RelaySocket.prototype = nativeWebSocket.prototype;
+    RelaySocket.CONNECTING = nativeWebSocket.CONNECTING;
+    RelaySocket.OPEN = nativeWebSocket.OPEN;
+    RelaySocket.CLOSING = nativeWebSocket.CLOSING;
+    RelaySocket.CLOSED = nativeWebSocket.CLOSED;
+    rejected.catch(
+      function() {
+      }
+    );
+    return {
+      Socket: RelaySocket,
+      rejected
+    };
+  }
+
   // stellar-payment-rules.js
   var PUBLIC_PASSPHRASE = "Public Global Stellar Network ; September 2015";
   var TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
@@ -148206,18 +148286,40 @@ ${value}`, dataLines++;
       return true;
     };
     module.getAddress = async function() {
+      const nativeSocket = window.WebSocket;
+      const relayWatch = observeWalletConnectRelay(
+        nativeSocket
+      );
+      window.WebSocket = relayWatch.Socket;
       const startedAt = Date.now();
-      while (!module.signClient && Date.now() - startedAt < 15e3) {
-        await new Promise(
-          function(resolve) {
-            setTimeout(
-              resolve,
-              100
-            );
-          }
+      try {
+        while (!module.signClient && Date.now() - startedAt < 15e3) {
+          await new Promise(
+            function(resolve) {
+              setTimeout(
+                resolve,
+                100
+              );
+            }
+          );
+        }
+        return await Promise.race([
+          readAddress(),
+          relayWatch.rejected
+        ]);
+      } catch (error) {
+        const relayMessage = walletConnectRelayMessage(
+          error
         );
+        if (module.modal && typeof module.modal.close === "function") {
+          module.modal.close();
+        }
+        throw new Error(
+          relayMessage || (error && error.message ? String(error.message) : "WalletConnect could not start. No payment was sent.")
+        );
+      } finally {
+        window.WebSocket = nativeSocket;
       }
-      return readAddress();
     };
     return module;
   }

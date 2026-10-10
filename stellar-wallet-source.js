@@ -21,6 +21,11 @@ import {
 } from "./stellar-albedo-connect.js";
 
 import {
+    observeWalletConnectRelay,
+    walletConnectRelayMessage,
+} from "./stellar-walletconnect.js";
+
+import {
     AccountRequiresMemoError,
     Asset,
     Horizon,
@@ -293,29 +298,82 @@ function walletConnectModule(){
     module.getAddress =
         async function(){
 
+            const nativeSocket =
+                window.WebSocket;
+
+            const relayWatch =
+                observeWalletConnectRelay(
+                    nativeSocket
+                );
+
+            window.WebSocket =
+                relayWatch.Socket;
+
             const startedAt =
                 Date.now();
 
-            while(
-                !module.signClient &&
-                Date.now() - startedAt < 15000
-            ){
 
-                await new Promise(
-                    function(resolve){
+            try{
 
-                        setTimeout(
-                            resolve,
-                            100
-                        );
+                while(
+                    !module.signClient &&
+                    Date.now() - startedAt < 15000
+                ){
 
-                    }
+                    await new Promise(
+                        function(resolve){
+
+                            setTimeout(
+                                resolve,
+                                100
+                            );
+
+                        }
+                    );
+
+                }
+
+
+                return await Promise.race([
+                    readAddress(),
+                    relayWatch.rejected
+                ]);
+
+            }
+            catch(error){
+
+                const relayMessage =
+                    walletConnectRelayMessage(
+                        error
+                    );
+
+
+                if(
+                    module.modal &&
+                    typeof module.modal.close === "function"
+                ){
+
+                    module.modal.close();
+
+                }
+
+
+                throw new Error(
+                    relayMessage ||
+                    (
+                        error && error.message
+                        ? String(error.message)
+                        : "WalletConnect could not start. No payment was sent."
+                    )
                 );
 
             }
+            finally{
 
+                window.WebSocket =
+                    nativeSocket;
 
-            return readAddress();
+            }
 
         };
 
