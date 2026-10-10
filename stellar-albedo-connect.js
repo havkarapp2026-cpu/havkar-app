@@ -14,6 +14,11 @@ import {
     hash
 } from "@stellar/stellar-sdk";
 
+import {
+    albedoFields,
+    albedoReturnQuery
+} from "./albedo-return-query.js";
+
 
 const ALBEDO_CONFIRM_URL =
     "https://albedo.link/confirm";
@@ -203,74 +208,6 @@ function verifyAlbedoPublicKeyProof(proof){
         return false;
 
     }
-
-}
-
-
-function albedoFields(input){
-
-    const source =
-        input && typeof input === "object"
-        ? input
-        : Object.fromEntries(
-            new URLSearchParams(clean(input))
-        );
-
-    return {
-        pubkey:clean(source.pubkey),
-        signed_message:clean(
-            source.signed_message
-        ),
-        signature:clean(source.signature),
-        reqid:clean(
-            source.__reqid || source.reqid
-        )
-    };
-
-}
-
-
-function albedoReturnQuery(input){
-
-    const fields =
-        albedoFields(input);
-
-
-    if(!StrKey.isValidEd25519PublicKey(fields.pubkey)){
-
-        return null;
-
-    }
-
-
-    if(
-        fields.signed_message.length < 58 ||
-        fields.signed_message.length > 180 ||
-        fields.signature.length !== 128 ||
-        fields.reqid.length > 80
-    ){
-
-        return null;
-
-    }
-
-
-    if(!/^[0-9a-fA-F]+$/.test(fields.signature)){
-
-        return null;
-
-    }
-
-
-    const params =
-        new URLSearchParams({
-            pubkey:fields.pubkey,
-            signed_message:fields.signed_message,
-            signature:fields.signature,
-            reqid:fields.reqid
-        });
-
-    return ALBEDO_RETURN_PAGE + "?" + params.toString();
 
 }
 

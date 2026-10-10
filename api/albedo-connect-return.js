@@ -1,4 +1,4 @@
-import { albedoReturnQuery } from "../stellar-albedo-connect.js";
+import { albedoReturnQuery } from "../albedo-return-query.js";
 
 const MAX_BODY_BYTES = 8192;
 
