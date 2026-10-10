@@ -147610,11 +147610,9 @@ ${value}`, dataLines++;
 
   // stellar-albedo-connect.js
   var ALBEDO_CONFIRM_URL = "https://albedo.link/confirm";
-  var ALBEDO_WINDOW_NAME = "auth.albedo.link";
-  var ALBEDO_ORIGIN = "https://albedo.link";
   var ALBEDO_PROTOCOL = 3;
   var ALBEDO_CONNECT_CHANNEL = "havkar-albedo-connect";
-  var ALBEDO_CONNECT_RETRY_MS = [800, 2e3, 4e3, 7e3, 12e3];
+  var ALBEDO_POPUP_RETRY_MS = [2500, 8e3, 2e4];
   var ALBEDO_CALLBACK_PATH = "/api/albedo-connect-return";
   function clean5(value) {
     return String(
@@ -147624,14 +147622,6 @@ ${value}`, dataLines++;
   function isAndroidBrowser(userAgent) {
     return /Android/i.test(
       clean5(userAgent)
-    );
-  }
-  function isAlbedoConfirmCall(url, target) {
-    return target === ALBEDO_WINDOW_NAME && clean5(url).indexOf(ALBEDO_CONFIRM_URL) === 0;
-  }
-  function isAlbedoHandshake(event) {
-    return Boolean(
-      event && event.origin === ALBEDO_ORIGIN && event.data && event.data.albedo
     );
   }
   function albedoCallbackValue(origin) {
@@ -147686,82 +147676,82 @@ ${value}`, dataLines++;
       return false;
     }
   }
-  function createAlbedoConnectOpen(originalOpen, options) {
-    const schedule = options.schedule;
-    const clearSchedule = options.clearSchedule;
-    const retryDelays = options.retryDelays || ALBEDO_CONNECT_RETRY_MS;
-    return function openAlbedoConnectWindow(url, target, features) {
+  function createAlbedoNamedPopupOpen(originalOpen, options) {
+    const token = clean5(options.token);
+    const callback = clean5(options.callback);
+    const retryDelays = options.retryDelays || ALBEDO_POPUP_RETRY_MS;
+    let stopBackup = function() {
+    };
+    function openAlbedoNamedPopup(url, target, features) {
+      if (clean5(url).indexOf(ALBEDO_CONFIRM_URL) !== 0) {
+        return originalOpen(
+          url,
+          target,
+          features
+        );
+      }
       const popup = originalOpen(
         url,
-        target,
-        features
+        "havkar.albedo." + token,
+        features || "popup,width=480,height=700"
       );
-      if (!isAlbedoConfirmCall(url, target) || !popup || typeof popup.postMessage !== "function") {
+      if (typeof options.onPopup === "function") {
+        options.onPopup(popup);
+      }
+      if (!popup || typeof popup.postMessage !== "function") {
         return popup;
       }
       const nativePost = popup.postMessage.bind(popup);
-      let handshakeSeen = false;
-      let payload = null;
+      let officialPosted = false;
       let attempt = 0;
-      let timer2 = schedule(
-        startIfNeeded,
-        retryDelays[0]
-      );
+      let timer2 = null;
       function stopTimer() {
         if (timer2 != null) {
-          clearSchedule(timer2);
+          options.clearSchedule(timer2);
           timer2 = null;
         }
       }
-      function startIfNeeded() {
+      stopBackup = stopTimer;
+      function sendBackup() {
         timer2 = null;
-        if (!handshakeSeen && typeof options.dispatchHandshake === "function") {
-          options.dispatchHandshake();
-        }
-      }
-      options.listen(
-        function(event) {
-          if (!isAlbedoHandshake(event)) {
-            return;
-          }
-          handshakeSeen = true;
-          if (!payload) {
-            stopTimer();
-          }
-        }
-      );
-      function send() {
-        if (!payload || popup.closed) {
-          stopTimer();
+        if (officialPosted || popup.closed) {
           return;
         }
         nativePost(
-          payload.message,
-          payload.origin
+          {
+            __reqid: token + "." + attempt,
+            __albedo_intent_version: ALBEDO_PROTOCOL,
+            intent: "public_key",
+            token,
+            callback
+          },
+          "*"
         );
         attempt += 1;
-        if (handshakeSeen || attempt >= retryDelays.length) {
-          stopTimer();
+        if (attempt >= retryDelays.length) {
           return;
         }
-        timer2 = schedule(
-          send,
+        timer2 = options.schedule(
+          sendBackup,
           retryDelays[attempt] - retryDelays[attempt - 1]
         );
       }
-      const proxy2 = new Proxy(
+      timer2 = options.schedule(
+        sendBackup,
+        retryDelays[0]
+      );
+      return new Proxy(
         popup,
         {
           get(object, property, receiver) {
             if (property === "postMessage") {
-              return function postAlbedoIntent(message, origin) {
-                payload = {
-                  message,
-                  origin: origin || "*"
-                };
+              return function postOfficialIntent(message, origin) {
+                officialPosted = true;
                 stopTimer();
-                attempt = 0;
-                send();
+                return nativePost(
+                  message,
+                  origin || "*"
+                );
               };
             }
             const value = Reflect.get(
@@ -147773,11 +147763,11 @@ ${value}`, dataLines++;
           }
         }
       );
-      if (typeof options.onPopup === "function") {
-        options.onPopup(popup);
-      }
-      return proxy2;
+    }
+    openAlbedoNamedPopup.cancel = function() {
+      stopBackup();
     };
+    return openAlbedoNamedPopup;
   }
   function raceAlbedoPublicKey(options) {
     const token = options.token;
@@ -148476,7 +148466,7 @@ ${value}`, dataLines++;
       this.moduleType = "HOT_WALLET";
       this.productId = "albedo";
       this.productName = "Albedo";
-      this.productUrl = "https://albedo.link/";
+      this.productUrl = "https://albedo.link/confirm";
       this.productIcon = "https://stellar.creit.tech/wallet-icons/albedo.png";
     }
     async isAvailable() {
@@ -148489,10 +148479,11 @@ ${value}`, dataLines++;
       );
       const originalOpen = window.open.bind(window);
       let popup = null;
-      const removeListeners = [];
-      window.open = createAlbedoConnectOpen(
+      const openAlbedo = createAlbedoNamedPopupOpen(
         originalOpen,
         {
+          token,
+          callback,
           schedule: function(fn5, ms3) {
             return window.setTimeout(
               fn5,
@@ -148502,39 +148493,12 @@ ${value}`, dataLines++;
           clearSchedule: function(timer2) {
             window.clearTimeout(timer2);
           },
-          dispatchHandshake: function() {
-            window.dispatchEvent(
-              new MessageEvent(
-                "message",
-                {
-                  data: {
-                    albedo: {
-                      protocol: ALBEDO_PROTOCOL
-                    }
-                  }
-                }
-              )
-            );
-          },
-          listen: function(handler) {
-            window.addEventListener(
-              "message",
-              handler
-            );
-            removeListeners.push(
-              function() {
-                window.removeEventListener(
-                  "message",
-                  handler
-                );
-              }
-            );
-          },
           onPopup: function(value) {
             popup = value;
           }
         }
       );
+      window.open = openAlbedo;
       let pending;
       try {
         pending = albedo3.publicKey({
@@ -148585,6 +148549,7 @@ ${value}`, dataLines++;
             if (channel) {
               channel.close();
             }
+            openAlbedo.cancel();
             try {
               if (popup && !popup.closed) {
                 popup.close();
@@ -148602,11 +148567,7 @@ ${value}`, dataLines++;
           address: pubkey
         };
       } finally {
-        removeListeners.forEach(
-          function(remove) {
-            remove();
-          }
-        );
+        openAlbedo.cancel();
       }
     }
     async signTransaction(xdr, opts) {
@@ -149372,7 +149333,7 @@ ${value}`, dataLines++;
     );
   }
   var ALBEDO_WALLET_ID = "albedo";
-  var ALBEDO_WINDOW_NAME2 = "auth.albedo.link";
+  var ALBEDO_WINDOW_NAME = "auth.albedo.link";
   var ALBEDO_CONFIRM_URL2 = "https://albedo.link/confirm";
   var ALBEDO_MODULE_STORAGE_KEY = "@StellarWalletsKit/selectedModuleId";
   var ALBEDO_HANDSHAKE_MS = 2e4;
@@ -149405,7 +149366,7 @@ ${value}`, dataLines++;
     }
     const popup = window.open(
       "about:blank",
-      ALBEDO_WINDOW_NAME2,
+      ALBEDO_WINDOW_NAME,
       "height=600,width=480,top=80,left=80,menubar=0,toolbar=0,location=0,status=0,personalbar=0,scrollbars=0,dependent=1"
     );
     if (!popup || popup.closed) {
@@ -149533,7 +149494,7 @@ ${value}`, dataLines++;
         const next = String(
           url || ""
         );
-        if (target === ALBEDO_WINDOW_NAME2 && next.indexOf(
+        if (target === ALBEDO_WINDOW_NAME && next.indexOf(
           ALBEDO_CONFIRM_URL2
         ) === 0) {
           if (!albedoPopup || albedoPopup.closed) {

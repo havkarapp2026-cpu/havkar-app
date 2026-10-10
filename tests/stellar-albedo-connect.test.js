@@ -50,6 +50,83 @@ function timerQueue() {
   assert.strictEqual(bridge.isAndroidBrowser("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/128.0.0.0 Safari/537.36"), false);
   assert.strictEqual(bridge.isAndroidBrowser(""), false);
 
+  const namedPosts = [];
+  const namedTimers = timerQueue();
+  const namedOpened = [];
+  const namedOpen = bridge.createAlbedoNamedPopupOpen(
+    function (url, target, features) {
+      const popup = {
+        url: url,
+        target: target,
+        features: features,
+        closed: false,
+        postMessage(message, origin) {
+          namedPosts.push({ message: message, origin: origin });
+        }
+      };
+      namedOpened.push(popup);
+      return popup;
+    },
+    {
+      token: "abc123",
+      callback: "url:https://havkar-app.vercel.app/api/albedo-connect-return",
+      retryDelays: [10, 20],
+      schedule: namedTimers.schedule,
+      clearSchedule: namedTimers.clear
+    }
+  );
+  const passedThrough = namedOpen("https://albedo.link/", "_blank", "");
+  assert.strictEqual(passedThrough.target, "_blank");
+  const namedProxy = namedOpen(
+    "https://albedo.link/confirm",
+    "auth.albedo.link",
+    "height=600,width=480"
+  );
+  const namedPopup = namedOpened[1];
+  assert.strictEqual(namedPopup.url, "https://albedo.link/confirm");
+  assert.strictEqual(namedPopup.target, "havkar.albedo.abc123");
+  assert.notStrictEqual(namedPopup.target, "auth.albedo.link");
+  assert.ok(!String(namedPopup.url).includes("about:blank"));
+  assert.strictEqual(namedPosts.length, 0);
+  namedProxy.postMessage({ intent: "public_key", token: "abc123" }, "*");
+  assert.strictEqual(namedPosts.length, 1);
+  assert.strictEqual(namedPosts[0].message.intent, "public_key");
+  assert.strictEqual(namedTimers.runNext(), false);
+  namedOpen.cancel();
+  const backupTimers = timerQueue();
+  const backupPosts = [];
+  const backupOpen = bridge.createAlbedoNamedPopupOpen(
+    function () {
+      return {
+        closed: false,
+        postMessage(message) {
+          backupPosts.push(message);
+        }
+      };
+    },
+    {
+      token: "abc123",
+      callback: "url:https://havkar.example/api/albedo-connect-return",
+      retryDelays: [10, 30],
+      schedule: backupTimers.schedule,
+      clearSchedule: backupTimers.clear
+    }
+  );
+  backupOpen("https://albedo.link/confirm", "auth.albedo.link", "popup");
+  assert.strictEqual(backupTimers.runNext(), true);
+  assert.strictEqual(backupPosts.length, 1);
+  assert.strictEqual(backupPosts[0].intent, "public_key");
+  assert.strictEqual(backupPosts[0].token, "abc123");
+  assert.strictEqual(backupPosts[0].__albedo_intent_version, 3);
+  assert.strictEqual(
+    backupPosts[0].callback,
+    "url:https://havkar.example/api/albedo-connect-return"
+  );
+  assert.strictEqual(backupTimers.runNext(), true);
+  assert.strictEqual(backupPosts.length, 2);
+  assert.strictEqual(backupTimers.runNext(), false);
+  backupOpen.cancel();
+
   assert.strictEqual(
     bridge.albedoCallbackValue("https://havkar-app.vercel.app"),
     "url:https://havkar-app.vercel.app/api/albedo-connect-return"

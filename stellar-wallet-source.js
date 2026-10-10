@@ -17,9 +17,8 @@ import albedoImport from "@albedo-link/intent";
 
 import {
     ALBEDO_CONNECT_CHANNEL,
-    ALBEDO_PROTOCOL,
     albedoCallbackValue,
-    createAlbedoConnectOpen,
+    createAlbedoNamedPopupOpen,
     isAndroidBrowser,
     raceAlbedoPublicKey,
 } from "./stellar-albedo-connect.js";
@@ -292,7 +291,7 @@ class HavkarAndroidAlbedoModule{
         this.moduleType = "HOT_WALLET";
         this.productId = "albedo";
         this.productName = "Albedo";
-        this.productUrl = "https://albedo.link/";
+        this.productUrl = "https://albedo.link/confirm";
         this.productIcon =
             "https://stellar.creit.tech/wallet-icons/albedo.png";
 
@@ -322,12 +321,14 @@ class HavkarAndroidAlbedoModule{
         let popup =
             null;
 
-        const removeListeners = [];
-
-        window.open =
-            createAlbedoConnectOpen(
+        const openAlbedo =
+            createAlbedoNamedPopupOpen(
                 originalOpen,
                 {
+
+                    token:token,
+
+                    callback:callback,
 
                     schedule:function(fn, ms){
 
@@ -344,45 +345,6 @@ class HavkarAndroidAlbedoModule{
 
                     },
 
-                    dispatchHandshake:function(){
-
-                        window.dispatchEvent(
-                            new MessageEvent(
-                                "message",
-                                {
-
-                                    data:{
-                                        albedo:{
-                                            protocol:ALBEDO_PROTOCOL
-                                        }
-                                    }
-
-                                }
-                            )
-                        );
-
-                    },
-
-                    listen:function(handler){
-
-                        window.addEventListener(
-                            "message",
-                            handler
-                        );
-
-                        removeListeners.push(
-                            function(){
-
-                                window.removeEventListener(
-                                    "message",
-                                    handler
-                                );
-
-                            }
-                        );
-
-                    },
-
                     onPopup:function(value){
 
                         popup = value;
@@ -391,6 +353,8 @@ class HavkarAndroidAlbedoModule{
 
                 }
             );
+
+        window.open = openAlbedo;
 
         let pending;
 
@@ -490,6 +454,9 @@ class HavkarAndroidAlbedoModule{
                         }
 
 
+                        openAlbedo.cancel();
+
+
                         try{
 
                             if(
@@ -527,13 +494,7 @@ class HavkarAndroidAlbedoModule{
         }
         finally{
 
-            removeListeners.forEach(
-                function(remove){
-
-                    remove();
-
-                }
-            );
+            openAlbedo.cancel();
 
         }
 

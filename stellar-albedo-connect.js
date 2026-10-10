@@ -1,11 +1,12 @@
 /*
  * Albedo connection bridge for Android browsers.
- * The confirm page draws the approval form only after it receives
- * the intent. Android Chrome often leaves window.opener null, so
- * Albedo's handshake never reaches HAVKAR and the form stays blank.
- * This file delivers that intent through the window handle returned
- * by window.open, and checks the signed public-key proof.
- * It never asks for a secret, seed, or recovery phrase.
+ * The confirm page draws "View public key" only after it receives
+ * the official public_key intent. Android Chrome focuses an existing
+ * Albedo window named auth.albedo.link, and that window stays on the
+ * account dashboard. A new auxiliary popup uses a different name so
+ * the confirm page actually loads, then the official handshake posts
+ * the intent. The signed public-key proof is checked before connect.
+ * This file never asks for a secret, seed, or recovery phrase.
  */
 
 import {
@@ -32,6 +33,9 @@ const ALBEDO_CONNECT_CHANNEL =
 
 const ALBEDO_CONNECT_RETRY_MS =
     [800, 2000, 4000, 7000, 12000];
+
+const ALBEDO_POPUP_RETRY_MS =
+    [2500, 8000, 20000];
 
 const ALBEDO_CALLBACK_PATH =
     "/api/albedo-connect-return";
@@ -203,6 +207,207 @@ function verifyAlbedoPublicKeyProof(proof){
         return false;
 
     }
+
+}
+
+
+function createAlbedoNamedPopupOpen(
+    originalOpen,
+    options
+){
+
+    const token =
+        clean(options.token);
+
+    const callback =
+        clean(options.callback);
+
+    const retryDelays =
+        options.retryDelays ||
+        ALBEDO_POPUP_RETRY_MS;
+
+    let stopBackup =
+        function(){};
+
+
+    function openAlbedoNamedPopup(
+        url,
+        target,
+        features
+    ){
+
+        if(
+            clean(url).indexOf(ALBEDO_CONFIRM_URL) !== 0
+        ){
+
+            return originalOpen(
+                url,
+                target,
+                features
+            );
+
+        }
+
+
+        const popup =
+            originalOpen(
+                url,
+                "havkar.albedo." + token,
+                features ||
+                    "popup,width=480,height=700"
+            );
+
+
+        if(typeof options.onPopup === "function"){
+
+            options.onPopup(popup);
+
+        }
+
+
+        if(
+            !popup ||
+            typeof popup.postMessage !== "function"
+        ){
+
+            return popup;
+
+        }
+
+
+        const nativePost =
+            popup.postMessage.bind(popup);
+
+        let officialPosted =
+            false;
+
+        let attempt =
+            0;
+
+        let timer =
+            null;
+
+
+        function stopTimer(){
+
+            if(timer != null){
+
+                options.clearSchedule(timer);
+                timer = null;
+
+            }
+
+        }
+
+
+        stopBackup = stopTimer;
+
+
+        function sendBackup(){
+
+            timer = null;
+
+            if(
+                officialPosted ||
+                popup.closed
+            ){
+
+                return;
+
+            }
+
+
+            nativePost(
+                {
+                    __reqid:token + "." + attempt,
+                    __albedo_intent_version:ALBEDO_PROTOCOL,
+                    intent:"public_key",
+                    token:token,
+                    callback:callback
+                },
+                "*"
+            );
+
+            attempt += 1;
+
+            if(attempt >= retryDelays.length){
+
+                return;
+
+            }
+
+
+            timer =
+                options.schedule(
+                    sendBackup,
+                    retryDelays[attempt] -
+                        retryDelays[attempt - 1]
+                );
+
+        }
+
+
+        timer =
+            options.schedule(
+                sendBackup,
+                retryDelays[0]
+            );
+
+
+        return new Proxy(
+            popup,
+            {
+
+                get(object, property, receiver){
+
+                    if(property === "postMessage"){
+
+                        return function postOfficialIntent(
+                            message,
+                            origin
+                        ){
+
+                            officialPosted = true;
+                            stopTimer();
+
+                            return nativePost(
+                                message,
+                                origin || "*"
+                            );
+
+                        };
+
+                    }
+
+
+                    const value =
+                        Reflect.get(
+                            object,
+                            property,
+                            receiver
+                        );
+
+                    return typeof value === "function"
+                        ? value.bind(object)
+                        : value;
+
+                }
+
+            }
+        );
+
+    }
+
+
+    openAlbedoNamedPopup.cancel =
+        function(){
+
+            stopBackup();
+
+        };
+
+
+    return openAlbedoNamedPopup;
 
 }
 
@@ -632,11 +837,13 @@ export {
     ALBEDO_CONNECT_CHANNEL,
     ALBEDO_CONNECT_RETRY_MS,
     ALBEDO_ORIGIN,
+    ALBEDO_POPUP_RETRY_MS,
     ALBEDO_PROTOCOL,
     ALBEDO_RETURN_PAGE,
     ALBEDO_WINDOW_NAME,
     albedoCallbackValue,
     createAlbedoConnectOpen,
+    createAlbedoNamedPopupOpen,
     isAlbedoConfirmCall,
     isAlbedoHandshake,
     isAndroidBrowser,
