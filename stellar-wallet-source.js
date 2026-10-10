@@ -21,7 +21,6 @@ import {
 } from "./stellar-albedo-connect.js";
 
 import {
-    observeWalletConnectRelay,
     walletConnectRelayMessage,
 } from "./stellar-walletconnect.js";
 
@@ -298,22 +297,18 @@ function walletConnectModule(){
     module.getAddress =
         async function(){
 
-            const nativeSocket =
-                window.WebSocket;
-
-            const relayWatch =
-                observeWalletConnectRelay(
-                    nativeSocket
-                );
-
-            window.WebSocket =
-                relayWatch.Socket;
-
             const startedAt =
                 Date.now();
 
 
             try{
+
+                if(window.__havkarWalletConnectFailure){
+
+                    throw window.__havkarWalletConnectFailure;
+
+                }
+
 
                 while(
                     !module.signClient &&
@@ -336,7 +331,8 @@ function walletConnectModule(){
 
                 return await Promise.race([
                     readAddress(),
-                    relayWatch.rejected
+                    window.__havkarWalletConnectRelay ||
+                        new Promise(function(){})
                 ]);
 
             }
@@ -366,12 +362,6 @@ function walletConnectModule(){
                         : "WalletConnect could not start. No payment was sent."
                     )
                 );
-
-            }
-            finally{
-
-                window.WebSocket =
-                    nativeSocket;
 
             }
 

@@ -147699,6 +147699,26 @@ ${value}`, dataLines++;
       rejected
     };
   }
+  function installWalletConnectRelayWatch(target) {
+    const root = target || globalThis;
+    if (!root || typeof root.WebSocket !== "function" || root.__havkarWalletConnectRelay) {
+      return root && root.__havkarWalletConnectRelay;
+    }
+    const watch2 = observeWalletConnectRelay(
+      root.WebSocket
+    );
+    root.WebSocket = watch2.Socket;
+    root.__havkarWalletConnectRelay = watch2.rejected;
+    watch2.rejected.catch(
+      function(error) {
+        root.__havkarWalletConnectFailure = error;
+      }
+    );
+    return watch2.rejected;
+  }
+  if (typeof window !== "undefined" && window.document) {
+    installWalletConnectRelayWatch(window);
+  }
 
   // stellar-payment-rules.js
   var PUBLIC_PASSPHRASE = "Public Global Stellar Network ; September 2015";
@@ -148286,13 +148306,11 @@ ${value}`, dataLines++;
       return true;
     };
     module.getAddress = async function() {
-      const nativeSocket = window.WebSocket;
-      const relayWatch = observeWalletConnectRelay(
-        nativeSocket
-      );
-      window.WebSocket = relayWatch.Socket;
       const startedAt = Date.now();
       try {
+        if (window.__havkarWalletConnectFailure) {
+          throw window.__havkarWalletConnectFailure;
+        }
         while (!module.signClient && Date.now() - startedAt < 15e3) {
           await new Promise(
             function(resolve) {
@@ -148305,7 +148323,8 @@ ${value}`, dataLines++;
         }
         return await Promise.race([
           readAddress(),
-          relayWatch.rejected
+          window.__havkarWalletConnectRelay || new Promise(function() {
+          })
         ]);
       } catch (error) {
         const relayMessage = walletConnectRelayMessage(
@@ -148317,8 +148336,6 @@ ${value}`, dataLines++;
         throw new Error(
           relayMessage || (error && error.message ? String(error.message) : "WalletConnect could not start. No payment was sent.")
         );
-      } finally {
-        window.WebSocket = nativeSocket;
       }
     };
     return module;

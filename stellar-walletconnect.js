@@ -174,10 +174,64 @@ function observeWalletConnectRelay(nativeWebSocket){
 }
 
 
+function installWalletConnectRelayWatch(target){
+
+    const root =
+        target || globalThis;
+
+
+    if(
+        !root ||
+        typeof root.WebSocket !== "function" ||
+        root.__havkarWalletConnectRelay
+    ){
+
+        return root && root.__havkarWalletConnectRelay;
+
+    }
+
+
+    const watch =
+        observeWalletConnectRelay(
+            root.WebSocket
+        );
+
+    root.WebSocket =
+        watch.Socket;
+
+    root.__havkarWalletConnectRelay =
+        watch.rejected;
+
+    watch.rejected.catch(
+        function(error){
+
+            root.__havkarWalletConnectFailure =
+                error;
+
+        }
+    );
+
+
+    return watch.rejected;
+
+}
+
+
+if(
+    typeof window !== "undefined" &&
+    window.document
+){
+
+    installWalletConnectRelayWatch(window);
+
+}
+
+
 export {
     WALLETCONNECT_ORIGIN_MESSAGE,
     WALLETCONNECT_PUBLISH_MESSAGE,
     WALLETCONNECT_RELAY_HOST,
+    installWalletConnectRelayWatch,
     observeWalletConnectRelay,
     walletConnectRelayMessage
 };

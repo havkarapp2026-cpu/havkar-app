@@ -83,8 +83,24 @@ FakeSocket.CLOSED = 3;
   await closePending;
   assert.strictEqual(closed.message, bridge.WALLETCONNECT_ORIGIN_MESSAGE);
 
-  assert.ok(source.includes("observeWalletConnectRelay("));
-  assert.ok(source.includes("relayWatch.rejected"));
+  const host = {};
+  host.WebSocket = NativeSocket;
+  const installed = bridge.installWalletConnectRelayWatch(host);
+  assert.strictEqual(typeof installed.then, "function");
+  const early = new host.WebSocket("wss://relay.walletconnect.org/?projectId=test");
+  let earlyError = null;
+  const earlyPending = installed.catch((error) => {
+    earlyError = error;
+  });
+  early.emit("close", { code: 3000, reason: "Unauthorized: origin not allowed" });
+  await earlyPending;
+  assert.strictEqual(earlyError.message, bridge.WALLETCONNECT_ORIGIN_MESSAGE);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.strictEqual(host.__havkarWalletConnectFailure, earlyError);
+  assert.strictEqual(bridge.installWalletConnectRelayWatch(host), installed);
+
+  assert.ok(source.includes("__havkarWalletConnectFailure"));
+  assert.ok(source.includes("__havkarWalletConnectRelay"));
   assert.ok(source.includes("8c21324f756127dbb906a072cc18f7e6"));
   assert.ok(!source.includes("fromSecret"));
 
