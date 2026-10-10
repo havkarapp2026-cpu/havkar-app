@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>HAVKAR Albedo</title>
+</head>
+<body>
+    <p id="albedo-return-status">Returning to HAVKAR…</p>
+    <script>
+        (function () {
+            var params = new URLSearchParams(window.location.search);
+            var payload = {
+                pubkey: params.get("pubkey") || "",
+                signed_message: params.get("signed_message") || "",
+                signature: params.get("signature") || "",
+                reqid: params.get("reqid") || ""
+            };
+            var status = document.getElementById("albedo-return-status");
+
+            if (!/^G[A-Z2-7]{55}$/.test(payload.pubkey)) {
+                status.textContent = "Albedo did not return a public key.";
+                return;
+            }
+
+            if (typeof BroadcastChannel === "function") {
+                var channel = new BroadcastChannel("havkar-albedo-connect");
+                channel.postMessage(payload);
+                channel.close();
+            }
+
+            status.textContent = "Albedo approved the connection. You can return to HAVKAR.";
+            window.close();
+        }());
+    </script>
+</body>
+</html>

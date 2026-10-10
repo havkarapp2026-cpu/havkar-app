@@ -111628,12 +111628,12 @@ ${params.statement}
       }
     }
     function parseBaseString(x14, str, b16, v18) {
-      var c36, len, alphabet10 = ALPHABET2.slice(0, b16), i19 = 0, clean6 = "", hasDot = false, prevIsNumeral = false, caseChanged = false;
+      var c36, len, alphabet10 = ALPHABET2.slice(0, b16), i19 = 0, clean7 = "", hasDot = false, prevIsNumeral = false, caseChanged = false;
       x14.s = str.charCodeAt(0) === 45 ? (str = str.slice(1), -1) : 1;
       for (len = str.length; i19 < len; i19++) {
         c36 = str.charAt(i19);
         if (alphabet10.indexOf(c36) >= 0) {
-          clean6 += c36;
+          clean7 += c36;
           prevIsNumeral = true;
           continue;
         }
@@ -111645,8 +111645,8 @@ ${params.statement}
         } else if (c36 == ".") {
           if (i19 == 0 || !hasDot && prevIsNumeral) {
             if (i19 + 1 == len) break;
-            if (i19 == 0) clean6 = "0";
-            clean6 += c36;
+            if (i19 == 0) clean7 = "0";
+            clean7 += c36;
             hasDot = true;
             prevIsNumeral = false;
             continue;
@@ -111654,7 +111654,7 @@ ${params.statement}
         } else if (!caseChanged) {
           if (str == str.toUpperCase() && alphabet10 == alphabet10.toLowerCase() && (str = str.toLowerCase()) || str == str.toLowerCase() && alphabet10 == alphabet10.toUpperCase() && (str = str.toUpperCase())) {
             i19 = -1;
-            clean6 = "";
+            clean7 = "";
             caseChanged = true;
             hasDot = prevIsNumeral = false;
             continue;
@@ -111666,7 +111666,7 @@ ${params.statement}
         x14.s = x14.c = x14.e = null;
         return;
       }
-      parseValidString(x14, convertBase(clean6, b16, 10, x14.s));
+      parseValidString(x14, convertBase(clean7, b16, 10, x14.s));
     }
     convertBase = /* @__PURE__ */ (function() {
       var decimal = "0123456789";
@@ -147586,6 +147586,7 @@ ${value}`, dataLines++;
   };
 
   // node_modules/@stellar/stellar-sdk/lib/esm/index.js
+  init_hashing();
   init_keypair();
   init_fee_bump_transaction2();
   init_transaction_builder();
@@ -147607,6 +147608,287 @@ ${value}`, dataLines++;
   init_strkey();
   init_scval();
 
+  // stellar-albedo-connect.js
+  var ALBEDO_CONFIRM_URL = "https://albedo.link/confirm";
+  var ALBEDO_WINDOW_NAME = "auth.albedo.link";
+  var ALBEDO_ORIGIN = "https://albedo.link";
+  var ALBEDO_PROTOCOL = 3;
+  var ALBEDO_CONNECT_CHANNEL = "havkar-albedo-connect";
+  var ALBEDO_CONNECT_RETRY_MS = [800, 2e3, 4e3, 7e3, 12e3];
+  var ALBEDO_CALLBACK_PATH = "/api/albedo-connect-return";
+  function clean5(value) {
+    return String(
+      value == null ? "" : value
+    ).trim();
+  }
+  function isAndroidBrowser(userAgent) {
+    return /Android/i.test(
+      clean5(userAgent)
+    );
+  }
+  function isAlbedoConfirmCall(url, target) {
+    return target === ALBEDO_WINDOW_NAME && clean5(url).indexOf(ALBEDO_CONFIRM_URL) === 0;
+  }
+  function isAlbedoHandshake(event) {
+    return Boolean(
+      event && event.origin === ALBEDO_ORIGIN && event.data && event.data.albedo
+    );
+  }
+  function albedoCallbackValue(origin) {
+    const url = new URL(origin);
+    const local = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+    if (url.protocol !== "https:" && !local) {
+      throw new Error(
+        "Albedo callback requires https."
+      );
+    }
+    return "url:" + url.origin + ALBEDO_CALLBACK_PATH;
+  }
+  function bytesFromHex(value) {
+    const hex = clean5(value);
+    if (hex.length % 2 !== 0 || !/^[0-9a-fA-F]+$/.test(hex)) {
+      return null;
+    }
+    const bytes = new Uint8Array(hex.length / 2);
+    for (let index2 = 0; index2 < bytes.length; index2 += 1) {
+      bytes[index2] = parseInt(
+        hex.slice(index2 * 2, index2 * 2 + 2),
+        16
+      );
+    }
+    return bytes;
+  }
+  function verifyAlbedoPublicKeyProof(proof) {
+    const pubkey = clean5(proof && proof.pubkey);
+    const token = clean5(proof && proof.token);
+    const signedMessage = clean5(proof && proof.signed_message);
+    const signature = bytesFromHex(
+      proof && proof.signature
+    );
+    if (!StrKey.isValidEd25519PublicKey(pubkey)) {
+      return false;
+    }
+    if (!/^[0-9a-z]{4,64}$/.test(token)) {
+      return false;
+    }
+    if (signedMessage !== pubkey + ":" + token) {
+      return false;
+    }
+    if (!signature || signature.length !== 64) {
+      return false;
+    }
+    try {
+      return Keypair.fromPublicKey(pubkey).verify(
+        hash4(new TextEncoder().encode(signedMessage)),
+        signature
+      );
+    } catch (error) {
+      return false;
+    }
+  }
+  function createAlbedoConnectOpen(originalOpen, options) {
+    const schedule = options.schedule;
+    const clearSchedule = options.clearSchedule;
+    const retryDelays = options.retryDelays || ALBEDO_CONNECT_RETRY_MS;
+    return function openAlbedoConnectWindow(url, target, features) {
+      const popup = originalOpen(
+        url,
+        target,
+        features
+      );
+      if (!isAlbedoConfirmCall(url, target) || !popup || typeof popup.postMessage !== "function") {
+        return popup;
+      }
+      const nativePost = popup.postMessage.bind(popup);
+      let handshakeSeen = false;
+      let payload = null;
+      let attempt = 0;
+      let timer2 = schedule(
+        startIfNeeded,
+        retryDelays[0]
+      );
+      function stopTimer() {
+        if (timer2 != null) {
+          clearSchedule(timer2);
+          timer2 = null;
+        }
+      }
+      function startIfNeeded() {
+        timer2 = null;
+        if (!handshakeSeen && typeof options.dispatchHandshake === "function") {
+          options.dispatchHandshake();
+        }
+      }
+      options.listen(
+        function(event) {
+          if (!isAlbedoHandshake(event)) {
+            return;
+          }
+          handshakeSeen = true;
+          if (!payload) {
+            stopTimer();
+          }
+        }
+      );
+      function send() {
+        if (!payload || popup.closed) {
+          stopTimer();
+          return;
+        }
+        nativePost(
+          payload.message,
+          payload.origin
+        );
+        attempt += 1;
+        if (handshakeSeen || attempt >= retryDelays.length) {
+          stopTimer();
+          return;
+        }
+        timer2 = schedule(
+          send,
+          retryDelays[attempt] - retryDelays[attempt - 1]
+        );
+      }
+      const proxy2 = new Proxy(
+        popup,
+        {
+          get(object, property, receiver) {
+            if (property === "postMessage") {
+              return function postAlbedoIntent(message, origin) {
+                payload = {
+                  message,
+                  origin: origin || "*"
+                };
+                stopTimer();
+                attempt = 0;
+                send();
+              };
+            }
+            const value = Reflect.get(
+              object,
+              property,
+              receiver
+            );
+            return typeof value === "function" ? value.bind(object) : value;
+          }
+        }
+      );
+      if (typeof options.onPopup === "function") {
+        options.onPopup(popup);
+      }
+      return proxy2;
+    };
+  }
+  function raceAlbedoPublicKey(options) {
+    const token = options.token;
+    const popup = options.popup || null;
+    const schedule = options.schedule;
+    const clearSchedule = options.clearSchedule;
+    const repeat = options.interval;
+    const clearRepeat = options.clearInterval;
+    return new Promise(
+      function(resolve, reject) {
+        let settled = false;
+        let closeTimer = null;
+        const timer2 = schedule(
+          function() {
+            finish(
+              new Error(
+                "Albedo did not return a public key."
+              )
+            );
+          },
+          options.timeoutMs
+        );
+        const closedTimer = popup && repeat ? repeat(
+          function() {
+            if (popup.closed && closeTimer == null) {
+              closeTimer = schedule(
+                function() {
+                  finish(
+                    new Error(
+                      "The Albedo window went away before a public key was returned."
+                    )
+                  );
+                },
+                options.closeGraceMs || 5e3
+              );
+            }
+          },
+          700
+        ) : null;
+        function cleanup() {
+          clearSchedule(timer2);
+          if (closeTimer != null) {
+            clearSchedule(closeTimer);
+          }
+          if (closedTimer != null) {
+            clearRepeat(closedTimer);
+          }
+          if (typeof options.closeChannel === "function") {
+            options.closeChannel();
+          }
+        }
+        function finish(error, value) {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          cleanup();
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve(value);
+        }
+        options.listen(
+          function(data) {
+            const proof = data || {};
+            if (verifyAlbedoPublicKeyProof({
+              pubkey: proof.pubkey,
+              signed_message: proof.signed_message,
+              signature: proof.signature,
+              token
+            })) {
+              finish(
+                null,
+                proof.pubkey
+              );
+            }
+          }
+        );
+        Promise.resolve(options.pending).then(
+          function(result) {
+            const proof = result || {};
+            if (verifyAlbedoPublicKeyProof({
+              pubkey: proof.pubkey,
+              signed_message: proof.signed_message,
+              signature: proof.signature,
+              token
+            })) {
+              finish(
+                null,
+                proof.pubkey
+              );
+              return;
+            }
+            finish(
+              new Error(
+                "Albedo returned a public key that did not match this connection request."
+              )
+            );
+          },
+          function(error) {
+            const message = error && error.message ? String(error.message) : "The wallet did not approve this request.";
+            finish(
+              error instanceof Error ? error : new Error(message)
+            );
+          }
+        );
+      }
+    );
+  }
+
   // stellar-payment-rules.js
   var PUBLIC_PASSPHRASE = "Public Global Stellar Network ; September 2015";
   var TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
@@ -147614,7 +147896,7 @@ ${value}`, dataLines++;
   var TESTNET_HORIZON = "https://horizon-testnet.stellar.org";
   var DEFAULT_STELLAR_NETWORK = "PUBLIC";
   var STROOPS = 10000000n;
-  function clean5(value) {
+  function clean6(value) {
     return String(
       value == null ? "" : value
     ).trim();
@@ -147628,7 +147910,7 @@ ${value}`, dataLines++;
     return (negative ? "-" : "") + whole.toString() + "." + fraction;
   }
   function parseXlmAmount(value) {
-    const text = clean5(value);
+    const text = clean6(value);
     if (!/^\d+(\.\d{1,7})?$/.test(text)) {
       throw new Error(
         "Enter an XLM amount with at most 7 decimal places."
@@ -148077,7 +148359,7 @@ ${value}`, dataLines++;
     };
   }
   function stellarExplorerTxUrl(networkId, hash5) {
-    const id = clean5(hash5).toLowerCase();
+    const id = clean6(hash5).toLowerCase();
     if (!/^[a-f0-9]{64}$/.test(id)) {
       return "";
     }
@@ -148164,30 +148446,217 @@ ${value}`, dataLines++;
     return initialSubmissionState();
   }
   submissionState = restoreSubmissionState();
+  var albedo3 = src_default && typeof src_default.publicKey === "function" ? src_default : src_default.default;
+  function browserUserAgent() {
+    try {
+      return navigator.userAgent || "";
+    } catch (error) {
+      return "";
+    }
+  }
+  function walletConnectModule() {
+    return new WalletConnectModule({
+      projectId: "8c21324f756127dbb906a072cc18f7e6",
+      metadata: {
+        name: "HAVKAR",
+        description: "HAVKAR multi-service platform",
+        url: "https://havkar-app.vercel.app",
+        icons: [
+          "https://havkar-app.vercel.app/icon.png"
+        ]
+      },
+      allowedChains: [
+        WalletConnectTargetChain.TESTNET,
+        WalletConnectTargetChain.PUBLIC
+      ]
+    });
+  }
+  var HavkarAndroidAlbedoModule = class {
+    constructor() {
+      this.moduleType = "HOT_WALLET";
+      this.productId = "albedo";
+      this.productName = "Albedo";
+      this.productUrl = "https://albedo.link/";
+      this.productIcon = "https://stellar.creit.tech/wallet-icons/albedo.png";
+    }
+    async isAvailable() {
+      return true;
+    }
+    async getAddress() {
+      const token = albedo3.generateRandomToken();
+      const callback = albedoCallbackValue(
+        window.location.origin
+      );
+      const originalOpen = window.open.bind(window);
+      let popup = null;
+      const removeListeners = [];
+      window.open = createAlbedoConnectOpen(
+        originalOpen,
+        {
+          schedule: function(fn5, ms3) {
+            return window.setTimeout(
+              fn5,
+              ms3
+            );
+          },
+          clearSchedule: function(timer2) {
+            window.clearTimeout(timer2);
+          },
+          dispatchHandshake: function() {
+            window.dispatchEvent(
+              new MessageEvent(
+                "message",
+                {
+                  data: {
+                    albedo: {
+                      protocol: ALBEDO_PROTOCOL
+                    }
+                  }
+                }
+              )
+            );
+          },
+          listen: function(handler) {
+            window.addEventListener(
+              "message",
+              handler
+            );
+            removeListeners.push(
+              function() {
+                window.removeEventListener(
+                  "message",
+                  handler
+                );
+              }
+            );
+          },
+          onPopup: function(value) {
+            popup = value;
+          }
+        }
+      );
+      let pending;
+      try {
+        pending = albedo3.publicKey({
+          token,
+          callback
+        });
+      } finally {
+        window.open = originalOpen;
+      }
+      const channel = typeof BroadcastChannel === "function" ? new BroadcastChannel(
+        ALBEDO_CONNECT_CHANNEL
+      ) : null;
+      try {
+        const pubkey = await raceAlbedoPublicKey({
+          token,
+          popup,
+          pending,
+          timeoutMs: 18e4,
+          schedule: function(fn5, ms3) {
+            return window.setTimeout(
+              fn5,
+              ms3
+            );
+          },
+          clearSchedule: function(timer2) {
+            window.clearTimeout(timer2);
+          },
+          interval: function(fn5, ms3) {
+            return window.setInterval(
+              fn5,
+              ms3
+            );
+          },
+          clearInterval: function(timer2) {
+            window.clearInterval(timer2);
+          },
+          listen: function(handler) {
+            if (!channel) {
+              return;
+            }
+            channel.onmessage = function(event) {
+              handler(
+                event && event.data
+              );
+            };
+          },
+          closeChannel: function() {
+            if (channel) {
+              channel.close();
+            }
+            try {
+              if (popup && !popup.closed) {
+                popup.close();
+              }
+            } catch (error) {
+            }
+          }
+        });
+        if (!StrKey.isValidEd25519PublicKey(pubkey)) {
+          throw new Error(
+            "The wallet did not return a valid Stellar public key."
+          );
+        }
+        return {
+          address: pubkey
+        };
+      } finally {
+        removeListeners.forEach(
+          function(remove) {
+            remove();
+          }
+        );
+      }
+    }
+    async signTransaction(xdr, opts) {
+      const result = await albedo3.tx({
+        xdr,
+        pubkey: opts && opts.address,
+        network: opts && opts.networkPassphrase ? opts.networkPassphrase === Networks2.PUBLIC ? "public" : "testnet" : void 0
+      });
+      return {
+        signedTxXdr: result.signed_envelope_xdr,
+        signerAddress: opts && opts.address
+      };
+    }
+    async signAuthEntry() {
+      throw new Error(
+        'Albedo does not support the "signAuthEntry" function'
+      );
+    }
+    async signMessage() {
+      throw new Error(
+        'Albedo does not support the "signMessage" function'
+      );
+    }
+    async getNetwork() {
+      throw new Error(
+        'Albedo does not support the "getNetwork" function'
+      );
+    }
+  };
+  function stellarKitModules() {
+    const modules = defaultModules().filter(
+      function(module) {
+        return module.productId !== "albedo";
+      }
+    );
+    modules.unshift(
+      isAndroidBrowser(browserUserAgent()) ? new HavkarAndroidAlbedoModule() : new AlbedoModule()
+    );
+    modules.push(
+      walletConnectModule()
+    );
+    return modules;
+  }
   StellarWalletsKit.init({
     network: currentNetwork().passphrase,
     authModal: {
       showInstallLabel: true,
       hideUnsupportedWallets: false
     },
-    modules: [
-      ...defaultModules(),
-      new WalletConnectModule({
-        projectId: "8c21324f756127dbb906a072cc18f7e6",
-        metadata: {
-          name: "HAVKAR",
-          description: "HAVKAR multi-service platform",
-          url: "https://havkar-app.vercel.app",
-          icons: [
-            "https://havkar-app.vercel.app/icon.png"
-          ]
-        },
-        allowedChains: [
-          WalletConnectTargetChain.TESTNET,
-          WalletConnectTargetChain.PUBLIC
-        ]
-      })
-    ]
+    modules: stellarKitModules()
   });
   function readStoredNetwork() {
     try {
@@ -148903,8 +149372,8 @@ ${value}`, dataLines++;
     );
   }
   var ALBEDO_WALLET_ID = "albedo";
-  var ALBEDO_WINDOW_NAME = "auth.albedo.link";
-  var ALBEDO_CONFIRM_URL = "https://albedo.link/confirm";
+  var ALBEDO_WINDOW_NAME2 = "auth.albedo.link";
+  var ALBEDO_CONFIRM_URL2 = "https://albedo.link/confirm";
   var ALBEDO_MODULE_STORAGE_KEY = "@StellarWalletsKit/selectedModuleId";
   var ALBEDO_HANDSHAKE_MS = 2e4;
   var WALLET_SIGNATURE_MS = 15e4;
@@ -148936,7 +149405,7 @@ ${value}`, dataLines++;
     }
     const popup = window.open(
       "about:blank",
-      ALBEDO_WINDOW_NAME,
+      ALBEDO_WINDOW_NAME2,
       "height=600,width=480,top=80,left=80,menubar=0,toolbar=0,location=0,status=0,personalbar=0,scrollbars=0,dependent=1"
     );
     if (!popup || popup.closed) {
@@ -149064,8 +149533,8 @@ ${value}`, dataLines++;
         const next = String(
           url || ""
         );
-        if (target === ALBEDO_WINDOW_NAME && next.indexOf(
-          ALBEDO_CONFIRM_URL
+        if (target === ALBEDO_WINDOW_NAME2 && next.indexOf(
+          ALBEDO_CONFIRM_URL2
         ) === 0) {
           if (!albedoPopup || albedoPopup.closed) {
             throw new Error(
@@ -149073,7 +149542,7 @@ ${value}`, dataLines++;
             );
           }
           try {
-            albedoPopup.location.href = ALBEDO_CONFIRM_URL;
+            albedoPopup.location.href = ALBEDO_CONFIRM_URL2;
           } catch (error) {
             throw new Error(
               "The browser blocked the Albedo window. Allow popups for this site, then try again."

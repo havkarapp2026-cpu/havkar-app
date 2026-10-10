@@ -10,6 +10,21 @@ import {
 } from "@creit.tech/stellar-wallets-kit/modules/wallet-connect";
 
 import {
+    AlbedoModule
+} from "@creit.tech/stellar-wallets-kit/modules/albedo";
+
+import albedoImport from "@albedo-link/intent";
+
+import {
+    ALBEDO_CONNECT_CHANNEL,
+    ALBEDO_PROTOCOL,
+    albedoCallbackValue,
+    createAlbedoConnectOpen,
+    isAndroidBrowser,
+    raceAlbedoPublicKey,
+} from "./stellar-albedo-connect.js";
+
+import {
     AccountRequiresMemoError,
     Asset,
     Horizon,
@@ -213,23 +228,32 @@ submissionState =
    STELLAR WALLET KIT
    ========================================================= */
 
-StellarWalletsKit.init({
+const albedo =
+    albedoImport &&
+    typeof albedoImport.publicKey === "function"
+    ? albedoImport
+    : albedoImport.default;
 
-    network:currentNetwork().passphrase,
 
-    authModal:{
+function browserUserAgent(){
 
-        showInstallLabel:true,
+    try{
 
-        hideUnsupportedWallets:false
+        return navigator.userAgent || "";
 
-    },
+    }
+    catch(error){
 
-    modules:[
+        return "";
 
-        ...defaultModules(),
+    }
 
-        new WalletConnectModule({
+}
+
+
+function walletConnectModule(){
+
+    return new WalletConnectModule({
 
             projectId:
                 "8c21324f756127dbb906a072cc18f7e6",
@@ -256,9 +280,360 @@ StellarWalletsKit.init({
                 WalletConnectTargetChain.PUBLIC
             ]
 
-        })
+        });
 
-    ]
+}
+
+
+class HavkarAndroidAlbedoModule{
+
+    constructor(){
+
+        this.moduleType = "HOT_WALLET";
+        this.productId = "albedo";
+        this.productName = "Albedo";
+        this.productUrl = "https://albedo.link/";
+        this.productIcon =
+            "https://stellar.creit.tech/wallet-icons/albedo.png";
+
+    }
+
+
+    async isAvailable(){
+
+        return true;
+
+    }
+
+
+    async getAddress(){
+
+        const token =
+            albedo.generateRandomToken();
+
+        const callback =
+            albedoCallbackValue(
+                window.location.origin
+            );
+
+        const originalOpen =
+            window.open.bind(window);
+
+        let popup =
+            null;
+
+        const removeListeners = [];
+
+        window.open =
+            createAlbedoConnectOpen(
+                originalOpen,
+                {
+
+                    schedule:function(fn, ms){
+
+                        return window.setTimeout(
+                            fn,
+                            ms
+                        );
+
+                    },
+
+                    clearSchedule:function(timer){
+
+                        window.clearTimeout(timer);
+
+                    },
+
+                    dispatchHandshake:function(){
+
+                        window.dispatchEvent(
+                            new MessageEvent(
+                                "message",
+                                {
+
+                                    data:{
+                                        albedo:{
+                                            protocol:ALBEDO_PROTOCOL
+                                        }
+                                    }
+
+                                }
+                            )
+                        );
+
+                    },
+
+                    listen:function(handler){
+
+                        window.addEventListener(
+                            "message",
+                            handler
+                        );
+
+                        removeListeners.push(
+                            function(){
+
+                                window.removeEventListener(
+                                    "message",
+                                    handler
+                                );
+
+                            }
+                        );
+
+                    },
+
+                    onPopup:function(value){
+
+                        popup = value;
+
+                    }
+
+                }
+            );
+
+        let pending;
+
+        try{
+
+            pending =
+                albedo.publicKey({
+                    token:token,
+                    callback:callback
+                });
+
+        }
+        finally{
+
+            window.open = originalOpen;
+
+        }
+
+
+        const channel =
+            typeof BroadcastChannel === "function"
+            ? new BroadcastChannel(
+                ALBEDO_CONNECT_CHANNEL
+            )
+            : null;
+
+
+        try{
+
+            const pubkey =
+                await raceAlbedoPublicKey({
+
+                    token:token,
+
+                    popup:popup,
+
+                    pending:pending,
+
+                    timeoutMs:180000,
+
+                    schedule:function(fn, ms){
+
+                        return window.setTimeout(
+                            fn,
+                            ms
+                        );
+
+                    },
+
+                    clearSchedule:function(timer){
+
+                        window.clearTimeout(timer);
+
+                    },
+
+                    interval:function(fn, ms){
+
+                        return window.setInterval(
+                            fn,
+                            ms
+                        );
+
+                    },
+
+                    clearInterval:function(timer){
+
+                        window.clearInterval(timer);
+
+                    },
+
+                    listen:function(handler){
+
+                        if(!channel){
+
+                            return;
+
+                        }
+
+
+                        channel.onmessage =
+                            function(event){
+
+                                handler(
+                                    event && event.data
+                                );
+
+                            };
+
+                    },
+
+                    closeChannel:function(){
+
+                        if(channel){
+
+                            channel.close();
+
+                        }
+
+
+                        try{
+
+                            if(
+                                popup &&
+                                !popup.closed
+                            ){
+
+                                popup.close();
+
+                            }
+
+                        }
+                        catch(error){
+
+                        }
+
+                    }
+
+                });
+
+
+            if(!StrKey.isValidEd25519PublicKey(pubkey)){
+
+                throw new Error(
+                    "The wallet did not return a valid Stellar public key."
+                );
+
+            }
+
+
+            return {
+                address:pubkey
+            };
+
+        }
+        finally{
+
+            removeListeners.forEach(
+                function(remove){
+
+                    remove();
+
+                }
+            );
+
+        }
+
+    }
+
+
+    async signTransaction(xdr, opts){
+
+        const result =
+            await albedo.tx({
+
+                xdr:xdr,
+
+                pubkey:opts && opts.address,
+
+                network:
+                    opts && opts.networkPassphrase
+                    ? opts.networkPassphrase === Networks.PUBLIC
+                        ? "public"
+                        : "testnet"
+                    : undefined
+
+            });
+
+        return {
+            signedTxXdr:result.signed_envelope_xdr,
+            signerAddress:opts && opts.address
+        };
+
+    }
+
+
+    async signAuthEntry(){
+
+        throw new Error(
+            'Albedo does not support the "signAuthEntry" function'
+        );
+
+    }
+
+
+    async signMessage(){
+
+        throw new Error(
+            'Albedo does not support the "signMessage" function'
+        );
+
+    }
+
+
+    async getNetwork(){
+
+        throw new Error(
+            'Albedo does not support the "getNetwork" function'
+        );
+
+    }
+
+}
+
+
+function stellarKitModules(){
+
+    const modules =
+        defaultModules().filter(
+            function(module){
+
+                return module.productId !== "albedo";
+
+            }
+        );
+
+    modules.unshift(
+        isAndroidBrowser(browserUserAgent())
+        ? new HavkarAndroidAlbedoModule()
+        : new AlbedoModule()
+    );
+
+    modules.push(
+        walletConnectModule()
+    );
+
+    return modules;
+
+}
+
+
+StellarWalletsKit.init({
+
+    network:currentNetwork().passphrase,
+
+    authModal:{
+
+        showInstallLabel:true,
+
+        hideUnsupportedWallets:false
+
+    },
+
+    modules:stellarKitModules()
 
 });
 
