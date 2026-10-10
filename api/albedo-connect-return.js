@@ -1,6 +1,38 @@
-import { albedoReturnQuery } from "../albedo-return-query.js";
-
 const MAX_BODY_BYTES = 8192;
+const RETURN_PAGE = "/albedo-return.html";
+
+function clean(value) {
+  return String(value == null ? "" : value).trim();
+}
+
+export function albedoReturnQuery(input) {
+  const source = input && typeof input === "object"
+    ? input
+    : Object.fromEntries(new URLSearchParams(clean(input)));
+  const pubkey = clean(source.pubkey);
+  const signedMessage = clean(source.signed_message);
+  const signature = clean(source.signature);
+  const reqid = clean(source.__reqid || source.reqid);
+
+  if (!/^G[A-Z2-7]{55}$/.test(pubkey)) return null;
+  if (
+    signedMessage.length < 58 ||
+    signedMessage.length > 180 ||
+    signature.length !== 128 ||
+    reqid.length > 80 ||
+    !/^[0-9a-fA-F]+$/.test(signature)
+  ) {
+    return null;
+  }
+
+  const params = new URLSearchParams({
+    pubkey: pubkey,
+    signed_message: signedMessage,
+    signature: signature,
+    reqid: reqid
+  });
+  return RETURN_PAGE + "?" + params.toString();
+}
 
 function send(res, status, message) {
   res.statusCode = status;

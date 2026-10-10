@@ -41,6 +41,7 @@ function timerQueue() {
 
 (async function run() {
   const bridge = await import("../stellar-albedo-connect.js");
+  const api = await import("../api/albedo-connect-return.js");
   const page = fs.readFileSync(path.join(__dirname, "../albedo-return.html"), "utf8");
   const source = fs.readFileSync(path.join(__dirname, "../stellar-wallet-source.js"), "utf8");
 
@@ -62,7 +63,7 @@ function timerQueue() {
   assert.strictEqual(bridge.verifyAlbedoPublicKeyProof({ ...proof, signature: "ab".repeat(64) }), false);
   assert.strictEqual(bridge.verifyAlbedoPublicKeyProof({ ...proof, pubkey: sdk.Keypair.random().publicKey() }), false);
 
-  const target = bridge.albedoReturnQuery({
+  const target = api.albedoReturnQuery({
     pubkey: proof.pubkey,
     signed_message: proof.signed_message,
     signature: proof.signature,
@@ -73,7 +74,7 @@ function timerQueue() {
   assert.strictEqual(params.get("pubkey"), proof.pubkey);
   assert.strictEqual(params.get("signed_message"), proof.signed_message);
   assert.strictEqual(params.get("reqid"), "req1");
-  assert.strictEqual(bridge.albedoReturnQuery({ pubkey: "not-a-key" }), null);
+  assert.strictEqual(api.albedoReturnQuery({ pubkey: "not-a-key" }), null);
   assert.ok(page.includes(bridge.ALBEDO_CONNECT_CHANNEL));
   assert.ok(source.includes("havkar-albedo-connect") || source.includes("ALBEDO_CONNECT_CHANNEL"));
   assert.ok(!source.includes("fromSecret"));
@@ -213,7 +214,7 @@ function timerQueue() {
   });
   await assert.rejects(rejected, /did not match/);
 
-  const handler = (await import("../api/albedo-connect-return.js")).default;
+  const handler = api.default;
   const response = {
     statusCode: 0,
     headers: {},

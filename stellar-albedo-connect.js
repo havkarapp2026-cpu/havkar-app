@@ -14,11 +14,6 @@ import {
     hash
 } from "@stellar/stellar-sdk";
 
-import {
-    albedoFields,
-    albedoReturnQuery
-} from "./albedo-return-query.js";
-
 
 const ALBEDO_CONFIRM_URL =
     "https://albedo.link/confirm";
@@ -641,8 +636,6 @@ export {
     ALBEDO_RETURN_PAGE,
     ALBEDO_WINDOW_NAME,
     albedoCallbackValue,
-    albedoFields,
-    albedoReturnQuery,
     createAlbedoConnectOpen,
     isAlbedoConfirmCall,
     isAlbedoHandshake,
