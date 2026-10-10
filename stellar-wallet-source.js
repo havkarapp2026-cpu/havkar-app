@@ -16,11 +16,8 @@ import {
 import albedoImport from "@albedo-link/intent";
 
 import {
-    ALBEDO_CONNECT_CHANNEL,
-    albedoCallbackValue,
-    createAlbedoNamedPopupOpen,
+    ANDROID_ALBEDO_BLOCKED_MESSAGE,
     isAndroidBrowser,
-    raceAlbedoPublicKey,
 } from "./stellar-albedo-connect.js";
 
 import {
@@ -252,7 +249,8 @@ function browserUserAgent(){
 
 function walletConnectModule(){
 
-    return new WalletConnectModule({
+    const module =
+        new WalletConnectModule({
 
             projectId:
                 "8c21324f756127dbb906a072cc18f7e6",
@@ -281,6 +279,49 @@ function walletConnectModule(){
 
         });
 
+    const readAddress =
+        module.getAddress.bind(module);
+
+
+    module.isAvailable =
+        async function(){
+
+            return true;
+
+        };
+
+    module.getAddress =
+        async function(){
+
+            const startedAt =
+                Date.now();
+
+            while(
+                !module.signClient &&
+                Date.now() - startedAt < 15000
+            ){
+
+                await new Promise(
+                    function(resolve){
+
+                        setTimeout(
+                            resolve,
+                            100
+                        );
+
+                    }
+                );
+
+            }
+
+
+            return readAddress();
+
+        };
+
+
+    return module;
+
 }
 
 
@@ -291,7 +332,7 @@ class HavkarAndroidAlbedoModule{
         this.moduleType = "HOT_WALLET";
         this.productId = "albedo";
         this.productName = "Albedo";
-        this.productUrl = "https://albedo.link/confirm";
+        this.productUrl = "https://albedo.link/";
         this.productIcon =
             "https://stellar.creit.tech/wallet-icons/albedo.png";
 
@@ -307,196 +348,9 @@ class HavkarAndroidAlbedoModule{
 
     async getAddress(){
 
-        const token =
-            albedo.generateRandomToken();
-
-        const callback =
-            albedoCallbackValue(
-                window.location.origin
-            );
-
-        const originalOpen =
-            window.open.bind(window);
-
-        let popup =
-            null;
-
-        const openAlbedo =
-            createAlbedoNamedPopupOpen(
-                originalOpen,
-                {
-
-                    token:token,
-
-                    callback:callback,
-
-                    schedule:function(fn, ms){
-
-                        return window.setTimeout(
-                            fn,
-                            ms
-                        );
-
-                    },
-
-                    clearSchedule:function(timer){
-
-                        window.clearTimeout(timer);
-
-                    },
-
-                    onPopup:function(value){
-
-                        popup = value;
-
-                    }
-
-                }
-            );
-
-        window.open = openAlbedo;
-
-        let pending;
-
-        try{
-
-            pending =
-                albedo.publicKey({
-                    token:token,
-                    callback:callback
-                });
-
-        }
-        finally{
-
-            window.open = originalOpen;
-
-        }
-
-
-        const channel =
-            typeof BroadcastChannel === "function"
-            ? new BroadcastChannel(
-                ALBEDO_CONNECT_CHANNEL
-            )
-            : null;
-
-
-        try{
-
-            const pubkey =
-                await raceAlbedoPublicKey({
-
-                    token:token,
-
-                    popup:popup,
-
-                    pending:pending,
-
-                    timeoutMs:180000,
-
-                    schedule:function(fn, ms){
-
-                        return window.setTimeout(
-                            fn,
-                            ms
-                        );
-
-                    },
-
-                    clearSchedule:function(timer){
-
-                        window.clearTimeout(timer);
-
-                    },
-
-                    interval:function(fn, ms){
-
-                        return window.setInterval(
-                            fn,
-                            ms
-                        );
-
-                    },
-
-                    clearInterval:function(timer){
-
-                        window.clearInterval(timer);
-
-                    },
-
-                    listen:function(handler){
-
-                        if(!channel){
-
-                            return;
-
-                        }
-
-
-                        channel.onmessage =
-                            function(event){
-
-                                handler(
-                                    event && event.data
-                                );
-
-                            };
-
-                    },
-
-                    closeChannel:function(){
-
-                        if(channel){
-
-                            channel.close();
-
-                        }
-
-
-                        openAlbedo.cancel();
-
-
-                        try{
-
-                            if(
-                                popup &&
-                                !popup.closed
-                            ){
-
-                                popup.close();
-
-                            }
-
-                        }
-                        catch(error){
-
-                        }
-
-                    }
-
-                });
-
-
-            if(!StrKey.isValidEd25519PublicKey(pubkey)){
-
-                throw new Error(
-                    "The wallet did not return a valid Stellar public key."
-                );
-
-            }
-
-
-            return {
-                address:pubkey
-            };
-
-        }
-        finally{
-
-            openAlbedo.cancel();
-
-        }
+        throw new Error(
+            ANDROID_ALBEDO_BLOCKED_MESSAGE
+        );
 
     }
 
@@ -567,15 +421,28 @@ function stellarKitModules(){
             }
         );
 
-    modules.unshift(
-        isAndroidBrowser(browserUserAgent())
-        ? new HavkarAndroidAlbedoModule()
-        : new AlbedoModule()
-    );
+    if(isAndroidBrowser(browserUserAgent())){
 
-    modules.push(
-        walletConnectModule()
-    );
+        modules.unshift(
+            new HavkarAndroidAlbedoModule()
+        );
+
+        modules.unshift(
+            walletConnectModule()
+        );
+
+    }
+    else{
+
+        modules.unshift(
+            new AlbedoModule()
+        );
+
+        modules.push(
+            walletConnectModule()
+        );
+
+    }
 
     return modules;
 

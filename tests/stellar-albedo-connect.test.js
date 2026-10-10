@@ -49,107 +49,14 @@ function timerQueue() {
   assert.strictEqual(bridge.isAndroidBrowser("Mozilla/5.0 (Linux; Android 14; SM-X200) AppleWebKit/537.36 Chrome/128.0.0.0 Safari/537.36"), true);
   assert.strictEqual(bridge.isAndroidBrowser("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/128.0.0.0 Safari/537.36"), false);
   assert.strictEqual(bridge.isAndroidBrowser(""), false);
-
-  const namedPosts = [];
-  const namedTimers = timerQueue();
-  const namedOpened = [];
-  const namedOpen = bridge.createAlbedoNamedPopupOpen(
-    function (url, target, features) {
-      const popup = {
-        url: url,
-        target: target,
-        features: features,
-        closed: false,
-        postMessage(message, origin) {
-          namedPosts.push({ message: message, origin: origin });
-        }
-      };
-      namedOpened.push(popup);
-      return popup;
-    },
-    {
-      token: "abc123",
-      callback: "url:https://havkar-app.vercel.app/api/albedo-connect-return",
-      retryDelays: [10, 20],
-      schedule: namedTimers.schedule,
-      clearSchedule: namedTimers.clear
-    }
-  );
-  const passedThrough = namedOpen("https://albedo.link/", "_blank", "");
-  assert.strictEqual(passedThrough.target, "_blank");
-  const namedProxy = namedOpen(
-    "https://albedo.link/confirm",
-    "auth.albedo.link",
-    "height=600,width=480"
-  );
-  const namedPopup = namedOpened[1];
-  assert.strictEqual(namedPopup.url, "https://albedo.link/confirm");
-  assert.strictEqual(namedPopup.target, "havkar.albedo.abc123");
-  assert.notStrictEqual(namedPopup.target, "auth.albedo.link");
-  assert.ok(!String(namedPopup.url).includes("about:blank"));
-  assert.strictEqual(namedPosts.length, 0);
-  namedProxy.postMessage({ intent: "public_key", token: "abc123" }, "*");
-  assert.strictEqual(namedPosts.length, 1);
-  assert.strictEqual(namedPosts[0].message.intent, "public_key");
-  assert.strictEqual(namedTimers.runNext(), false);
-  namedOpen.cancel();
-  const backupTimers = timerQueue();
-  const backupPosts = [];
-  const backupOpen = bridge.createAlbedoNamedPopupOpen(
-    function () {
-      return {
-        closed: false,
-        postMessage(message) {
-          backupPosts.push(message);
-        }
-      };
-    },
-    {
-      token: "abc123",
-      callback: "url:https://havkar.example/api/albedo-connect-return",
-      retryDelays: [10, 30],
-      schedule: backupTimers.schedule,
-      clearSchedule: backupTimers.clear
-    }
-  );
-  backupOpen("https://albedo.link/confirm", "auth.albedo.link", "popup");
-  assert.strictEqual(backupTimers.runNext(), true);
-  assert.strictEqual(backupPosts.length, 1);
-  assert.strictEqual(backupPosts[0].intent, "public_key");
-  assert.strictEqual(backupPosts[0].token, "abc123");
-  assert.strictEqual(backupPosts[0].__albedo_intent_version, 3);
-  assert.strictEqual(
-    backupPosts[0].callback,
-    "url:https://havkar.example/api/albedo-connect-return"
-  );
-  assert.strictEqual(backupTimers.runNext(), true);
-  assert.strictEqual(backupPosts.length, 2);
-  assert.strictEqual(backupTimers.runNext(), false);
-  backupOpen.cancel();
-  const closedPosts = [];
-  const closedTimers = timerQueue();
-  const closedOpen = bridge.createAlbedoNamedPopupOpen(
-    function () {
-      return {
-        closed: true,
-        postMessage(message) {
-          closedPosts.push(message);
-        }
-      };
-    },
-    {
-      token: "abc123",
-      callback: "url:https://havkar.example/api/albedo-connect-return",
-      retryDelays: [10],
-      schedule: closedTimers.schedule,
-      clearSchedule: closedTimers.clear
-    }
-  );
-  closedOpen("https://albedo.link/confirm", "auth.albedo.link", "popup");
-  assert.strictEqual(closedTimers.runNext(), true);
-  assert.strictEqual(closedPosts.length, 1);
-  assert.strictEqual(closedPosts[0].intent, "public_key");
-  closedOpen.cancel();
+  assert.strictEqual(typeof bridge.createAlbedoNamedPopupOpen, "undefined");
+  assert.strictEqual(typeof bridge.mountAlbedoConfirmFrame, "undefined");
+  assert.ok(bridge.ANDROID_ALBEDO_BLOCKED_MESSAGE.includes("WalletConnect"));
+  assert.ok(bridge.ANDROID_ALBEDO_BLOCKED_MESSAGE.includes("Lobstr"));
+  assert.ok(bridge.ANDROID_ALBEDO_BLOCKED_MESSAGE.includes("No payment is sent."));
+  assert.ok(!/reject|denied|cancel|closed|dismiss/i.test(bridge.ANDROID_ALBEDO_BLOCKED_MESSAGE));
+  assert.ok(!bridge.ANDROID_ALBEDO_BLOCKED_MESSAGE.toLowerCase().includes("secret"));
+  assert.ok(!bridge.ANDROID_ALBEDO_BLOCKED_MESSAGE.toLowerCase().includes("private"));
 
   assert.strictEqual(
     bridge.albedoCallbackValue("https://havkar-app.vercel.app"),
@@ -178,8 +85,22 @@ function timerQueue() {
   assert.strictEqual(params.get("reqid"), "req1");
   assert.strictEqual(api.albedoReturnQuery({ pubkey: "not-a-key" }), null);
   assert.ok(page.includes(bridge.ALBEDO_CONNECT_CHANNEL));
-  assert.ok(source.includes("havkar-albedo-connect") || source.includes("ALBEDO_CONNECT_CHANNEL"));
+  assert.ok(source.includes("ANDROID_ALBEDO_BLOCKED_MESSAGE"));
   assert.ok(!source.includes("fromSecret"));
+  const androidStart = source.indexOf("class HavkarAndroidAlbedoModule");
+  const androidEnd = source.indexOf("function stellarKitModules(");
+  const androidModule = source.slice(androidStart, androidEnd);
+  const androidConnect = androidModule.slice(
+    androidModule.indexOf("async getAddress("),
+    androidModule.indexOf("async signTransaction(")
+  );
+  assert.ok(androidConnect.includes("throw new Error("));
+  assert.ok(androidConnect.includes("ANDROID_ALBEDO_BLOCKED_MESSAGE"));
+  assert.ok(!androidConnect.includes("window.open"));
+  assert.ok(!androidConnect.includes("postMessage"));
+  assert.ok(!androidConnect.includes("albedo.publicKey"));
+  assert.ok(!androidConnect.includes("setTimeout"));
+  assert.ok(!androidConnect.includes("createAlbedo"));
 
   const posts = [];
   const popup = {

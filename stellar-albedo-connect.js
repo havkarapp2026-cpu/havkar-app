@@ -1,11 +1,14 @@
 /*
- * Albedo connection bridge for Android browsers.
- * /confirm keeps its logo until it receives the public_key intent.
- * Albedo posts the ready handshake to window.opener. Android often
- * leaves opener null, and the handle can report closed while that
- * tab is still showing the logo. The intent is posted to the handle
- * anyway. The signed public-key proof is checked before connect.
- * This file never asks for a secret, seed, or recovery phrase.
+ * Albedo connection bridge.
+ * /confirm draws "View public key" only after a public_key intent
+ * arrives by postMessage. Albedo answers window.opener, or
+ * window.parent when it is framed. Samsung Chrome shows the Albedo
+ * logo, and repeated posts to the window.open handle never reach that
+ * visible document. A third-party iframe can complete the parent
+ * handshake, but Chrome keeps it out of Albedo's first-party account
+ * storage, so the funded account is not there. Android therefore does
+ * not open Albedo. The signed proof helpers stay for the return path.
+ * This file never asks for a secret.
  */
 
 import {
@@ -33,14 +36,14 @@ const ALBEDO_CONNECT_CHANNEL =
 const ALBEDO_CONNECT_RETRY_MS =
     [800, 2000, 4000, 7000, 12000];
 
-const ALBEDO_POPUP_RETRY_MS =
-    [1000, 2500, 6000, 12000, 20000];
-
 const ALBEDO_CALLBACK_PATH =
     "/api/albedo-connect-return";
 
 const ALBEDO_RETURN_PAGE =
     "/albedo-return.html";
+
+const ANDROID_ALBEDO_BLOCKED_MESSAGE =
+    "Albedo cannot show its approval screen in this Android browser. Choose WalletConnect, then approve the public key in Lobstr, Freighter, or Scopuly. No payment is sent.";
 
 
 function clean(value){
@@ -206,211 +209,6 @@ function verifyAlbedoPublicKeyProof(proof){
         return false;
 
     }
-
-}
-
-
-function createAlbedoNamedPopupOpen(
-    originalOpen,
-    options
-){
-
-    const token =
-        clean(options.token);
-
-    const callback =
-        clean(options.callback);
-
-    const retryDelays =
-        options.retryDelays ||
-        ALBEDO_POPUP_RETRY_MS;
-
-    let stopBackup =
-        function(){};
-
-
-    function openAlbedoNamedPopup(
-        url,
-        target,
-        features
-    ){
-
-        if(
-            clean(url).indexOf(ALBEDO_CONFIRM_URL) !== 0
-        ){
-
-            return originalOpen(
-                url,
-                target,
-                features
-            );
-
-        }
-
-
-        const popup =
-            originalOpen(
-                url,
-                "havkar.albedo." + token,
-                features ||
-                    "popup,width=480,height=700"
-            );
-
-
-        if(typeof options.onPopup === "function"){
-
-            options.onPopup(popup);
-
-        }
-
-
-        if(
-            !popup ||
-            typeof popup.postMessage !== "function"
-        ){
-
-            return popup;
-
-        }
-
-
-        const nativePost =
-            popup.postMessage.bind(popup);
-
-        let officialPosted =
-            false;
-
-        let attempt =
-            0;
-
-        let timer =
-            null;
-
-
-        function stopTimer(){
-
-            if(timer != null){
-
-                options.clearSchedule(timer);
-                timer = null;
-
-            }
-
-        }
-
-
-        stopBackup = stopTimer;
-
-
-        function sendBackup(){
-
-            timer = null;
-
-            if(officialPosted){
-
-                return;
-
-            }
-
-
-            try{
-
-                nativePost(
-                    {
-                        __reqid:token + "." + attempt,
-                        __albedo_intent_version:ALBEDO_PROTOCOL,
-                        intent:"public_key",
-                        token:token,
-                        callback:callback
-                    },
-                    "*"
-                );
-
-            }
-            catch(error){
-
-            }
-
-            attempt += 1;
-
-            if(attempt >= retryDelays.length){
-
-                return;
-
-            }
-
-
-            timer =
-                options.schedule(
-                    sendBackup,
-                    retryDelays[attempt] -
-                        retryDelays[attempt - 1]
-                );
-
-        }
-
-
-        timer =
-            options.schedule(
-                sendBackup,
-                retryDelays[0]
-            );
-
-
-        return new Proxy(
-            popup,
-            {
-
-                get(object, property, receiver){
-
-                    if(property === "postMessage"){
-
-                        return function postOfficialIntent(
-                            message,
-                            origin
-                        ){
-
-                            officialPosted = true;
-                            stopTimer();
-
-                            return nativePost(
-                                message,
-                                origin || "*"
-                            );
-
-                        };
-
-                    }
-
-
-                    const value =
-                        Reflect.get(
-                            object,
-                            property,
-                            receiver
-                        );
-
-                    return typeof value === "function"
-                        ? value.bind(object)
-                        : value;
-
-                }
-
-            }
-        );
-
-    }
-
-
-    openAlbedoNamedPopup.cancel =
-        function(){
-
-            stopBackup();
-
-        };
-
-
-    return openAlbedoNamedPopup;
 
 }
 
@@ -840,13 +638,12 @@ export {
     ALBEDO_CONNECT_CHANNEL,
     ALBEDO_CONNECT_RETRY_MS,
     ALBEDO_ORIGIN,
-    ALBEDO_POPUP_RETRY_MS,
     ALBEDO_PROTOCOL,
     ALBEDO_RETURN_PAGE,
     ALBEDO_WINDOW_NAME,
+    ANDROID_ALBEDO_BLOCKED_MESSAGE,
     albedoCallbackValue,
     createAlbedoConnectOpen,
-    createAlbedoNamedPopupOpen,
     isAlbedoConfirmCall,
     isAlbedoHandshake,
     isAndroidBrowser,

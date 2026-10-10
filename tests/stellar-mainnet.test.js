@@ -97,10 +97,13 @@ const sdk = require("@stellar/stellar-sdk");
   assert.ok(source.includes("productId !== \"albedo\""));
   assert.ok(source.includes("new HavkarAndroidAlbedoModule()"));
   assert.ok(source.includes("new AlbedoModule()"));
-  assert.ok(source.includes("createAlbedoNamedPopupOpen("));
-  assert.ok(source.includes("https://albedo.link/confirm"));
+  assert.ok(!source.includes("createAlbedoNamedPopupOpen("));
+  assert.ok(source.includes("ANDROID_ALBEDO_BLOCKED_MESSAGE"));
+  assert.ok(source.includes("walletConnectModule()"));
+  assert.ok(source.includes("!module.signClient"));
   assert.ok(!source.includes("dispatchHandshake"));
   assert.ok(!source.includes("mountAlbedoConfirmFrame("));
+  assert.ok(!source.includes("sendBackup"));
 
   assert.ok(page.includes("Check original transaction"));
   assert.ok(page.includes("havkarStellarSubmissionPending"));

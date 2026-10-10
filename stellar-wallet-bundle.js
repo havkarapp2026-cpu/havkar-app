@@ -147586,7 +147586,6 @@ ${value}`, dataLines++;
   };
 
   // node_modules/@stellar/stellar-sdk/lib/esm/index.js
-  init_hashing();
   init_keypair();
   init_fee_bump_transaction2();
   init_transaction_builder();
@@ -147609,11 +147608,7 @@ ${value}`, dataLines++;
   init_scval();
 
   // stellar-albedo-connect.js
-  var ALBEDO_CONFIRM_URL = "https://albedo.link/confirm";
-  var ALBEDO_PROTOCOL = 3;
-  var ALBEDO_CONNECT_CHANNEL = "havkar-albedo-connect";
-  var ALBEDO_POPUP_RETRY_MS = [1e3, 2500, 6e3, 12e3, 2e4];
-  var ALBEDO_CALLBACK_PATH = "/api/albedo-connect-return";
+  var ANDROID_ALBEDO_BLOCKED_MESSAGE = "Albedo cannot show its approval screen in this Android browser. Choose WalletConnect, then approve the public key in Lobstr, Freighter, or Scopuly. No payment is sent.";
   function clean5(value) {
     return String(
       value == null ? "" : value
@@ -147622,263 +147617,6 @@ ${value}`, dataLines++;
   function isAndroidBrowser(userAgent) {
     return /Android/i.test(
       clean5(userAgent)
-    );
-  }
-  function albedoCallbackValue(origin) {
-    const url = new URL(origin);
-    const local = url.hostname === "localhost" || url.hostname === "127.0.0.1";
-    if (url.protocol !== "https:" && !local) {
-      throw new Error(
-        "Albedo callback requires https."
-      );
-    }
-    return "url:" + url.origin + ALBEDO_CALLBACK_PATH;
-  }
-  function bytesFromHex(value) {
-    const hex = clean5(value);
-    if (hex.length % 2 !== 0 || !/^[0-9a-fA-F]+$/.test(hex)) {
-      return null;
-    }
-    const bytes = new Uint8Array(hex.length / 2);
-    for (let index2 = 0; index2 < bytes.length; index2 += 1) {
-      bytes[index2] = parseInt(
-        hex.slice(index2 * 2, index2 * 2 + 2),
-        16
-      );
-    }
-    return bytes;
-  }
-  function verifyAlbedoPublicKeyProof(proof) {
-    const pubkey = clean5(proof && proof.pubkey);
-    const token = clean5(proof && proof.token);
-    const signedMessage = clean5(proof && proof.signed_message);
-    const signature = bytesFromHex(
-      proof && proof.signature
-    );
-    if (!StrKey.isValidEd25519PublicKey(pubkey)) {
-      return false;
-    }
-    if (!/^[0-9a-z]{4,64}$/.test(token)) {
-      return false;
-    }
-    if (signedMessage !== pubkey + ":" + token) {
-      return false;
-    }
-    if (!signature || signature.length !== 64) {
-      return false;
-    }
-    try {
-      return Keypair.fromPublicKey(pubkey).verify(
-        hash4(new TextEncoder().encode(signedMessage)),
-        signature
-      );
-    } catch (error) {
-      return false;
-    }
-  }
-  function createAlbedoNamedPopupOpen(originalOpen, options) {
-    const token = clean5(options.token);
-    const callback = clean5(options.callback);
-    const retryDelays = options.retryDelays || ALBEDO_POPUP_RETRY_MS;
-    let stopBackup = function() {
-    };
-    function openAlbedoNamedPopup(url, target, features) {
-      if (clean5(url).indexOf(ALBEDO_CONFIRM_URL) !== 0) {
-        return originalOpen(
-          url,
-          target,
-          features
-        );
-      }
-      const popup = originalOpen(
-        url,
-        "havkar.albedo." + token,
-        features || "popup,width=480,height=700"
-      );
-      if (typeof options.onPopup === "function") {
-        options.onPopup(popup);
-      }
-      if (!popup || typeof popup.postMessage !== "function") {
-        return popup;
-      }
-      const nativePost = popup.postMessage.bind(popup);
-      let officialPosted = false;
-      let attempt = 0;
-      let timer2 = null;
-      function stopTimer() {
-        if (timer2 != null) {
-          options.clearSchedule(timer2);
-          timer2 = null;
-        }
-      }
-      stopBackup = stopTimer;
-      function sendBackup() {
-        timer2 = null;
-        if (officialPosted) {
-          return;
-        }
-        try {
-          nativePost(
-            {
-              __reqid: token + "." + attempt,
-              __albedo_intent_version: ALBEDO_PROTOCOL,
-              intent: "public_key",
-              token,
-              callback
-            },
-            "*"
-          );
-        } catch (error) {
-        }
-        attempt += 1;
-        if (attempt >= retryDelays.length) {
-          return;
-        }
-        timer2 = options.schedule(
-          sendBackup,
-          retryDelays[attempt] - retryDelays[attempt - 1]
-        );
-      }
-      timer2 = options.schedule(
-        sendBackup,
-        retryDelays[0]
-      );
-      return new Proxy(
-        popup,
-        {
-          get(object, property, receiver) {
-            if (property === "postMessage") {
-              return function postOfficialIntent(message, origin) {
-                officialPosted = true;
-                stopTimer();
-                return nativePost(
-                  message,
-                  origin || "*"
-                );
-              };
-            }
-            const value = Reflect.get(
-              object,
-              property,
-              receiver
-            );
-            return typeof value === "function" ? value.bind(object) : value;
-          }
-        }
-      );
-    }
-    openAlbedoNamedPopup.cancel = function() {
-      stopBackup();
-    };
-    return openAlbedoNamedPopup;
-  }
-  function raceAlbedoPublicKey(options) {
-    const token = options.token;
-    const popup = options.popup || null;
-    const schedule = options.schedule;
-    const clearSchedule = options.clearSchedule;
-    const repeat = options.interval;
-    const clearRepeat = options.clearInterval;
-    return new Promise(
-      function(resolve, reject) {
-        let settled = false;
-        let closeTimer = null;
-        const timer2 = schedule(
-          function() {
-            finish(
-              new Error(
-                "Albedo did not return a public key."
-              )
-            );
-          },
-          options.timeoutMs
-        );
-        const closedTimer = popup && repeat ? repeat(
-          function() {
-            if (popup.closed && closeTimer == null) {
-              closeTimer = schedule(
-                function() {
-                  finish(
-                    new Error(
-                      "The Albedo window went away before a public key was returned."
-                    )
-                  );
-                },
-                options.closeGraceMs || 5e3
-              );
-            }
-          },
-          700
-        ) : null;
-        function cleanup() {
-          clearSchedule(timer2);
-          if (closeTimer != null) {
-            clearSchedule(closeTimer);
-          }
-          if (closedTimer != null) {
-            clearRepeat(closedTimer);
-          }
-          if (typeof options.closeChannel === "function") {
-            options.closeChannel();
-          }
-        }
-        function finish(error, value) {
-          if (settled) {
-            return;
-          }
-          settled = true;
-          cleanup();
-          if (error) {
-            reject(error);
-            return;
-          }
-          resolve(value);
-        }
-        options.listen(
-          function(data) {
-            const proof = data || {};
-            if (verifyAlbedoPublicKeyProof({
-              pubkey: proof.pubkey,
-              signed_message: proof.signed_message,
-              signature: proof.signature,
-              token
-            })) {
-              finish(
-                null,
-                proof.pubkey
-              );
-            }
-          }
-        );
-        Promise.resolve(options.pending).then(
-          function(result) {
-            const proof = result || {};
-            if (verifyAlbedoPublicKeyProof({
-              pubkey: proof.pubkey,
-              signed_message: proof.signed_message,
-              signature: proof.signature,
-              token
-            })) {
-              finish(
-                null,
-                proof.pubkey
-              );
-              return;
-            }
-            finish(
-              new Error(
-                "Albedo returned a public key that did not match this connection request."
-              )
-            );
-          },
-          function(error) {
-            const message = error && error.message ? String(error.message) : "The wallet did not approve this request.";
-            finish(
-              error instanceof Error ? error : new Error(message)
-            );
-          }
-        );
-      }
     );
   }
 
@@ -148448,7 +148186,7 @@ ${value}`, dataLines++;
     }
   }
   function walletConnectModule() {
-    return new WalletConnectModule({
+    const module = new WalletConnectModule({
       projectId: "8c21324f756127dbb906a072cc18f7e6",
       metadata: {
         name: "HAVKAR",
@@ -148463,115 +148201,41 @@ ${value}`, dataLines++;
         WalletConnectTargetChain.PUBLIC
       ]
     });
+    const readAddress = module.getAddress.bind(module);
+    module.isAvailable = async function() {
+      return true;
+    };
+    module.getAddress = async function() {
+      const startedAt = Date.now();
+      while (!module.signClient && Date.now() - startedAt < 15e3) {
+        await new Promise(
+          function(resolve) {
+            setTimeout(
+              resolve,
+              100
+            );
+          }
+        );
+      }
+      return readAddress();
+    };
+    return module;
   }
   var HavkarAndroidAlbedoModule = class {
     constructor() {
       this.moduleType = "HOT_WALLET";
       this.productId = "albedo";
       this.productName = "Albedo";
-      this.productUrl = "https://albedo.link/confirm";
+      this.productUrl = "https://albedo.link/";
       this.productIcon = "https://stellar.creit.tech/wallet-icons/albedo.png";
     }
     async isAvailable() {
       return true;
     }
     async getAddress() {
-      const token = albedo3.generateRandomToken();
-      const callback = albedoCallbackValue(
-        window.location.origin
+      throw new Error(
+        ANDROID_ALBEDO_BLOCKED_MESSAGE
       );
-      const originalOpen = window.open.bind(window);
-      let popup = null;
-      const openAlbedo = createAlbedoNamedPopupOpen(
-        originalOpen,
-        {
-          token,
-          callback,
-          schedule: function(fn5, ms3) {
-            return window.setTimeout(
-              fn5,
-              ms3
-            );
-          },
-          clearSchedule: function(timer2) {
-            window.clearTimeout(timer2);
-          },
-          onPopup: function(value) {
-            popup = value;
-          }
-        }
-      );
-      window.open = openAlbedo;
-      let pending;
-      try {
-        pending = albedo3.publicKey({
-          token,
-          callback
-        });
-      } finally {
-        window.open = originalOpen;
-      }
-      const channel = typeof BroadcastChannel === "function" ? new BroadcastChannel(
-        ALBEDO_CONNECT_CHANNEL
-      ) : null;
-      try {
-        const pubkey = await raceAlbedoPublicKey({
-          token,
-          popup,
-          pending,
-          timeoutMs: 18e4,
-          schedule: function(fn5, ms3) {
-            return window.setTimeout(
-              fn5,
-              ms3
-            );
-          },
-          clearSchedule: function(timer2) {
-            window.clearTimeout(timer2);
-          },
-          interval: function(fn5, ms3) {
-            return window.setInterval(
-              fn5,
-              ms3
-            );
-          },
-          clearInterval: function(timer2) {
-            window.clearInterval(timer2);
-          },
-          listen: function(handler) {
-            if (!channel) {
-              return;
-            }
-            channel.onmessage = function(event) {
-              handler(
-                event && event.data
-              );
-            };
-          },
-          closeChannel: function() {
-            if (channel) {
-              channel.close();
-            }
-            openAlbedo.cancel();
-            try {
-              if (popup && !popup.closed) {
-                popup.close();
-              }
-            } catch (error) {
-            }
-          }
-        });
-        if (!StrKey.isValidEd25519PublicKey(pubkey)) {
-          throw new Error(
-            "The wallet did not return a valid Stellar public key."
-          );
-        }
-        return {
-          address: pubkey
-        };
-      } finally {
-        openAlbedo.cancel();
-      }
     }
     async signTransaction(xdr, opts) {
       const result = await albedo3.tx({
@@ -148606,12 +148270,21 @@ ${value}`, dataLines++;
         return module.productId !== "albedo";
       }
     );
-    modules.unshift(
-      isAndroidBrowser(browserUserAgent()) ? new HavkarAndroidAlbedoModule() : new AlbedoModule()
-    );
-    modules.push(
-      walletConnectModule()
-    );
+    if (isAndroidBrowser(browserUserAgent())) {
+      modules.unshift(
+        new HavkarAndroidAlbedoModule()
+      );
+      modules.unshift(
+        walletConnectModule()
+      );
+    } else {
+      modules.unshift(
+        new AlbedoModule()
+      );
+      modules.push(
+        walletConnectModule()
+      );
+    }
     return modules;
   }
   StellarWalletsKit.init({
@@ -149337,7 +149010,7 @@ ${value}`, dataLines++;
   }
   var ALBEDO_WALLET_ID = "albedo";
   var ALBEDO_WINDOW_NAME = "auth.albedo.link";
-  var ALBEDO_CONFIRM_URL2 = "https://albedo.link/confirm";
+  var ALBEDO_CONFIRM_URL = "https://albedo.link/confirm";
   var ALBEDO_MODULE_STORAGE_KEY = "@StellarWalletsKit/selectedModuleId";
   var ALBEDO_HANDSHAKE_MS = 2e4;
   var WALLET_SIGNATURE_MS = 15e4;
@@ -149498,7 +149171,7 @@ ${value}`, dataLines++;
           url || ""
         );
         if (target === ALBEDO_WINDOW_NAME && next.indexOf(
-          ALBEDO_CONFIRM_URL2
+          ALBEDO_CONFIRM_URL
         ) === 0) {
           if (!albedoPopup || albedoPopup.closed) {
             throw new Error(
@@ -149506,7 +149179,7 @@ ${value}`, dataLines++;
             );
           }
           try {
-            albedoPopup.location.href = ALBEDO_CONFIRM_URL2;
+            albedoPopup.location.href = ALBEDO_CONFIRM_URL;
           } catch (error) {
             throw new Error(
               "The browser blocked the Albedo window. Allow popups for this site, then try again."
