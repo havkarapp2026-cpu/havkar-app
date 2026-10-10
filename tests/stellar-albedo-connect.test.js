@@ -41,7 +41,8 @@ function timerQueue() {
 
 (async function run() {
   const bridge = await import("../stellar-albedo-connect.js");
-  const api = await import("../api/albedo-connect-return.js");
+  const api = await import("../albedo-connect-return.js");
+  const piA2u = await import("../api/pi-a2u-testnet.js");
   const page = fs.readFileSync(path.join(__dirname, "../albedo-return.html"), "utf8");
   const source = fs.readFileSync(path.join(__dirname, "../stellar-wallet-source.js"), "utf8");
 
@@ -252,6 +253,54 @@ function timerQueue() {
   };
   await handler({ method: "GET", headers: {} }, denied);
   assert.strictEqual(denied.statusCode, 405);
+
+  function responseMock() {
+    return {
+      statusCode: 0,
+      headers: {},
+      body: "",
+      setHeader(name, value) {
+        this.headers[name] = value;
+      },
+      status(code) {
+        this.statusCode = code;
+        return this;
+      },
+      json(body) {
+        this.body = body;
+        this.ended = true;
+      },
+      end(body) {
+        this.body = body;
+        this.ended = true;
+      }
+    };
+  }
+
+  const delegated = responseMock();
+  await piA2u.default({
+    method: "POST",
+    url: "/api/pi-a2u-testnet?havkarRoute=albedo-connect-return",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      pubkey: proof.pubkey,
+      signed_message: proof.signed_message,
+      signature: proof.signature,
+      __reqid: "req1"
+    }).toString()
+  }, delegated);
+  assert.strictEqual(delegated.statusCode, 303);
+  assert.ok(delegated.headers.Location.startsWith("/albedo-return.html?"));
+
+  const piDisabled = responseMock();
+  await piA2u.default({
+    method: "POST",
+    url: "/api/pi-a2u-testnet",
+    headers: { "content-type": "application/json" },
+    body: {}
+  }, piDisabled);
+  assert.strictEqual(piDisabled.statusCode, 404);
+  assert.strictEqual(piDisabled.body.error, "Not found");
 
   console.log("STELLAR_ALBEDO_CONNECT_TEST_OK");
 })().catch((error) => {

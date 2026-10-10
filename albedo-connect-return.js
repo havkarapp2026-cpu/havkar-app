@@ -46,6 +46,16 @@ function headerValue(req, name) {
   return Array.isArray(value) ? String(value[0] || "") : String(value || "");
 }
 
+export function isAlbedoConnectReturnRequest(req) {
+  const url = String(req?.url || "");
+  const route = String(req?.query?.havkarRoute || "");
+  const matched = headerValue(req, "x-matched-path") || headerValue(req, "x-invoke-path");
+  return route === "albedo-connect-return"
+    || url.includes("havkarRoute=albedo-connect-return")
+    || matched.includes("/api/albedo-connect-return")
+    || url.includes("/api/albedo-connect-return");
+}
+
 async function readBody(req) {
   if (req.body && typeof req.body === "object" && !Buffer.isBuffer(req.body)) {
     return req.body;
@@ -84,7 +94,7 @@ async function readBody(req) {
   return Object.fromEntries(new URLSearchParams(raw || ""));
 }
 
-export default async function handler(req, res) {
+export async function handleAlbedoConnectReturn(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return send(res, 405, "Method not allowed");
@@ -105,3 +115,5 @@ export default async function handler(req, res) {
     return send(res, 400, "Invalid Albedo response");
   }
 }
+
+export default handleAlbedoConnectReturn;
