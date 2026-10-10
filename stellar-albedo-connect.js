@@ -1,11 +1,10 @@
 /*
  * Albedo connection bridge for Android browsers.
- * The confirm page draws "View public key" only after it receives
- * the official public_key intent. Android Chrome focuses an existing
- * Albedo window named auth.albedo.link, and that window stays on the
- * account dashboard. A new auxiliary popup uses a different name so
- * the confirm page actually loads, then the official handshake posts
- * the intent. The signed public-key proof is checked before connect.
+ * /confirm keeps its logo until it receives the public_key intent.
+ * Albedo posts the ready handshake to window.opener. Android often
+ * leaves opener null, and the handle can report closed while that
+ * tab is still showing the logo. The intent is posted to the handle
+ * anyway. The signed public-key proof is checked before connect.
  * This file never asks for a secret, seed, or recovery phrase.
  */
 
@@ -35,7 +34,7 @@ const ALBEDO_CONNECT_RETRY_MS =
     [800, 2000, 4000, 7000, 12000];
 
 const ALBEDO_POPUP_RETRY_MS =
-    [2500, 8000, 20000];
+    [1000, 2500, 6000, 12000, 20000];
 
 const ALBEDO_CALLBACK_PATH =
     "/api/albedo-connect-return";
@@ -307,26 +306,30 @@ function createAlbedoNamedPopupOpen(
 
             timer = null;
 
-            if(
-                officialPosted ||
-                popup.closed
-            ){
+            if(officialPosted){
 
                 return;
 
             }
 
 
-            nativePost(
-                {
-                    __reqid:token + "." + attempt,
-                    __albedo_intent_version:ALBEDO_PROTOCOL,
-                    intent:"public_key",
-                    token:token,
-                    callback:callback
-                },
-                "*"
-            );
+            try{
+
+                nativePost(
+                    {
+                        __reqid:token + "." + attempt,
+                        __albedo_intent_version:ALBEDO_PROTOCOL,
+                        intent:"public_key",
+                        token:token,
+                        callback:callback
+                    },
+                    "*"
+                );
+
+            }
+            catch(error){
+
+            }
 
             attempt += 1;
 

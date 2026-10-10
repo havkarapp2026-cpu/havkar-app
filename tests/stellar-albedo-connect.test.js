@@ -126,6 +126,30 @@ function timerQueue() {
   assert.strictEqual(backupPosts.length, 2);
   assert.strictEqual(backupTimers.runNext(), false);
   backupOpen.cancel();
+  const closedPosts = [];
+  const closedTimers = timerQueue();
+  const closedOpen = bridge.createAlbedoNamedPopupOpen(
+    function () {
+      return {
+        closed: true,
+        postMessage(message) {
+          closedPosts.push(message);
+        }
+      };
+    },
+    {
+      token: "abc123",
+      callback: "url:https://havkar.example/api/albedo-connect-return",
+      retryDelays: [10],
+      schedule: closedTimers.schedule,
+      clearSchedule: closedTimers.clear
+    }
+  );
+  closedOpen("https://albedo.link/confirm", "auth.albedo.link", "popup");
+  assert.strictEqual(closedTimers.runNext(), true);
+  assert.strictEqual(closedPosts.length, 1);
+  assert.strictEqual(closedPosts[0].intent, "public_key");
+  closedOpen.cancel();
 
   assert.strictEqual(
     bridge.albedoCallbackValue("https://havkar-app.vercel.app"),

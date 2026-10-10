@@ -147612,7 +147612,7 @@ ${value}`, dataLines++;
   var ALBEDO_CONFIRM_URL = "https://albedo.link/confirm";
   var ALBEDO_PROTOCOL = 3;
   var ALBEDO_CONNECT_CHANNEL = "havkar-albedo-connect";
-  var ALBEDO_POPUP_RETRY_MS = [2500, 8e3, 2e4];
+  var ALBEDO_POPUP_RETRY_MS = [1e3, 2500, 6e3, 12e3, 2e4];
   var ALBEDO_CALLBACK_PATH = "/api/albedo-connect-return";
   function clean5(value) {
     return String(
@@ -147714,19 +147714,22 @@ ${value}`, dataLines++;
       stopBackup = stopTimer;
       function sendBackup() {
         timer2 = null;
-        if (officialPosted || popup.closed) {
+        if (officialPosted) {
           return;
         }
-        nativePost(
-          {
-            __reqid: token + "." + attempt,
-            __albedo_intent_version: ALBEDO_PROTOCOL,
-            intent: "public_key",
-            token,
-            callback
-          },
-          "*"
-        );
+        try {
+          nativePost(
+            {
+              __reqid: token + "." + attempt,
+              __albedo_intent_version: ALBEDO_PROTOCOL,
+              intent: "public_key",
+              token,
+              callback
+            },
+            "*"
+          );
+        } catch (error) {
+        }
         attempt += 1;
         if (attempt >= retryDelays.length) {
           return;
