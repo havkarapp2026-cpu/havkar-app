@@ -43,6 +43,7 @@ import {
     PUBLIC_PASSPHRASE,
     TESTNET_HORIZON,
     TESTNET_PASSPHRASE,
+    accountAuthorization,
     accountDataRequiresMemo,
     applySubmissionLookup,
     applySubmitResult,
@@ -1047,46 +1048,7 @@ function sourceAuthorization(
     account
 ){
 
-    const signers =
-        (account.signers || [])
-            .map(function(signer){
-
-                return {
-                    key:String(signer.key || ""),
-                    weight:Number(signer.weight || 0)
-                };
-
-            })
-            .filter(function(signer){
-
-                return signer.weight > 0 &&
-                    isPublicKey(signer.key);
-
-            });
-
-    const medThreshold =
-        Number(
-            account.thresholds &&
-            account.thresholds.med_threshold
-        );
-
-
-    if(
-        !(medThreshold >= 1) ||
-        signers.length < 1
-    ){
-
-        throw new Error(
-            "This Stellar account has no verifiable signer for a payment."
-        );
-
-    }
-
-
-    return {
-        signers:signers,
-        medThreshold:medThreshold
-    };
+    return accountAuthorization(account);
 
 }
 

@@ -369,6 +369,74 @@ function operationAmount(operation){
 }
 
 
+function accountAuthorization(account){
+
+    const signers =
+        (account && account.signers || [])
+            .map(function(signer){
+
+                const key =
+                    clean(signer && signer.key);
+
+                const weight =
+                    Number(signer && signer.weight);
+
+
+                if(
+                    !StrKey.isValidEd25519PublicKey(key) ||
+                    !Number.isInteger(weight) ||
+                    weight < 1 ||
+                    weight > 255
+                ){
+
+                    return null;
+
+                }
+
+
+                return {
+                    key:key,
+                    weight:weight
+                };
+
+            })
+            .filter(Boolean);
+
+    const medThreshold =
+        Number(
+            account &&
+            account.thresholds &&
+            account.thresholds.med_threshold
+        );
+
+    /*
+     * A new Stellar account has medium threshold 0 and master weight 1.
+     * Payment authorization is weight >= threshold. Threshold 0 is valid.
+     * HAVKAR still requires one ed25519 signer so the returned signature
+     * can be checked. WalletConnect does not provide that signing key.
+     */
+    if(
+        signers.length < 1 ||
+        !Number.isInteger(medThreshold) ||
+        medThreshold < 0 ||
+        medThreshold > 255
+    ){
+
+        throw new Error(
+            "This Stellar account has no verifiable signer for a payment."
+        );
+
+    }
+
+
+    return {
+        signers:signers,
+        medThreshold:medThreshold
+    };
+
+}
+
+
 function assertReviewedShape(prepared){
 
     const passphrase =
@@ -406,10 +474,15 @@ function assertReviewedShape(prepared){
 
     }
 
+    const medThreshold =
+        Number(prepared.medThreshold);
+
     if(
         !Array.isArray(prepared.signers) ||
         prepared.signers.length < 1 ||
-        Number(prepared.medThreshold) < 1
+        !Number.isInteger(medThreshold) ||
+        medThreshold < 0 ||
+        medThreshold > 255
     ){
 
         throw new Error(
@@ -1012,6 +1085,7 @@ const api = {
     hasExplicitApproval:hasExplicitApproval,
     selectNetworkFeeStroops:selectNetworkFeeStroops,
     accountDataRequiresMemo:accountDataRequiresMemo,
+    accountAuthorization:accountAuthorization,
     assertSignedPaymentMatches:assertSignedPaymentMatches,
     initialSubmissionState:initialSubmissionState,
     submissionBlocksNewPayment:submissionBlocksNewPayment,
@@ -1038,6 +1112,7 @@ export {
     hasExplicitApproval,
     selectNetworkFeeStroops,
     accountDataRequiresMemo,
+    accountAuthorization,
     assertSignedPaymentMatches,
     initialSubmissionState,
     submissionBlocksNewPayment,

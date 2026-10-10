@@ -147877,6 +147877,31 @@ ${value}`, dataLines++;
       "The signed transaction does not match the payment you reviewed."
     );
   }
+  function accountAuthorization(account) {
+    const signers = (account && account.signers || []).map(function(signer) {
+      const key = clean6(signer && signer.key);
+      const weight = Number(signer && signer.weight);
+      if (!StrKey.isValidEd25519PublicKey(key) || !Number.isInteger(weight) || weight < 1 || weight > 255) {
+        return null;
+      }
+      return {
+        key,
+        weight
+      };
+    }).filter(Boolean);
+    const medThreshold = Number(
+      account && account.thresholds && account.thresholds.med_threshold
+    );
+    if (signers.length < 1 || !Number.isInteger(medThreshold) || medThreshold < 0 || medThreshold > 255) {
+      throw new Error(
+        "This Stellar account has no verifiable signer for a payment."
+      );
+    }
+    return {
+      signers,
+      medThreshold
+    };
+  }
   function assertReviewedShape(prepared) {
     const passphrase = passphraseForNetwork(prepared && prepared.network);
     if (prepared.passphrase !== passphrase) {
@@ -147899,7 +147924,8 @@ ${value}`, dataLines++;
         "The signed transaction fee does not match the reviewed fee."
       );
     }
-    if (!Array.isArray(prepared.signers) || prepared.signers.length < 1 || Number(prepared.medThreshold) < 1) {
+    const medThreshold = Number(prepared.medThreshold);
+    if (!Array.isArray(prepared.signers) || prepared.signers.length < 1 || !Number.isInteger(medThreshold) || medThreshold < 0 || medThreshold > 255) {
       throw new Error(
         "The signed transaction is not authorized by the source account."
       );
@@ -148616,26 +148642,7 @@ ${value}`, dataLines++;
     );
   }
   function sourceAuthorization(account) {
-    const signers = (account.signers || []).map(function(signer) {
-      return {
-        key: String(signer.key || ""),
-        weight: Number(signer.weight || 0)
-      };
-    }).filter(function(signer) {
-      return signer.weight > 0 && isPublicKey(signer.key);
-    });
-    const medThreshold = Number(
-      account.thresholds && account.thresholds.med_threshold
-    );
-    if (!(medThreshold >= 1) || signers.length < 1) {
-      throw new Error(
-        "This Stellar account has no verifiable signer for a payment."
-      );
-    }
-    return {
-      signers,
-      medThreshold
-    };
+    return accountAuthorization(account);
   }
   function networkById(networkId) {
     if (networkId === "PUBLIC") {

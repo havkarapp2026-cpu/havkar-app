@@ -252,6 +252,53 @@ const sdk = require("@stellar/stellar-sdk");
     /not authorized by the source account/
   );
 
+  const defaultThreshold = rules.accountAuthorization({
+    thresholds: {
+      low_threshold: 0,
+      med_threshold: 0,
+      high_threshold: 0
+    },
+    signers: [
+      { key: lowWeight.sourceKeys.publicKey(), weight: 1, type: "ed25519_public_key" },
+      { key: "not-a-stellar-key", weight: 1, type: "sha256_hash" }
+    ]
+  });
+  assert.strictEqual(defaultThreshold.medThreshold, 0);
+  assert.deepStrictEqual(defaultThreshold.signers, [
+    { key: lowWeight.sourceKeys.publicKey(), weight: 1 }
+  ]);
+  const defaultSigned = rules.assertSignedPaymentMatches(
+    lowWeight.tx.toXDR(),
+    reviewedFrom(lowWeight, {
+      medThreshold: 0,
+      signers: defaultThreshold.signers
+    })
+  );
+  assert.match(defaultSigned.hash, /^[a-f0-9]{64}$/);
+  const unsignedDefault = buildPayment({ sign: false });
+  assert.throws(
+    () => rules.assertSignedPaymentMatches(
+      unsignedDefault.tx.toXDR(),
+      reviewedFrom(unsignedDefault, { medThreshold: 0 })
+    ),
+    /did not attach a signature/
+  );
+  assert.throws(
+    () => rules.accountAuthorization({
+      thresholds: { med_threshold: 0 },
+      signers: [{ key: sdk.Keypair.random().publicKey(), weight: 0 }]
+    }),
+    /no verifiable signer/
+  );
+  assert.throws(
+    () => rules.accountAuthorization({
+      thresholds: {},
+      signers: [{ key: sdk.Keypair.random().publicKey(), weight: 1 }]
+    }),
+    /no verifiable signer/
+  );
+  assert.ok(source.includes("return accountAuthorization(account);"));
+
   const nonNative = buildPayment(Object.assign({
     asset: new sdk.Asset("USD", sdk.Keypair.random().publicKey())
   }, same));
