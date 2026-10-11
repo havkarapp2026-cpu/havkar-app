@@ -1826,8 +1826,9 @@ textarea.form-control {
                     Cash directly to the provider
                 </label>
                 <p>
-                    Cash stays unavailable until a real commission guarantee exists.
-                    Completion of work does not by itself mean the cash was paid.
+                    The customer pays the agreed price. The provider alone pays HAVKAR's 10% commission.
+                    Cash is not confirmed because that 10% cannot yet be secured. A saved card is not a guarantee.
+                    Completing the work does not by itself mean cash was paid.
                 </p>
             </fieldset>
 
@@ -2565,6 +2566,26 @@ async function loadServices() {
                 service.provider_verified = profile.verification_status === "verified";
             });
         }
+        const statsResult = await db
+            .from("service_provider_public_stats")
+            .select("provider_id,average_rating,review_count,completed_bookings,verification_status")
+            .in("provider_id", providerIds);
+        if (!statsResult.error && Array.isArray(statsResult.data)) {
+            const statsById = {};
+            statsResult.data.forEach(function(row) {
+                statsById[row.provider_id] = row;
+            });
+            merged.forEach(function(service) {
+                const stats = statsById[service.provider_id];
+                if (!stats) return;
+                service.average_rating = stats.average_rating;
+                service.review_count = stats.review_count;
+                service.completed_bookings = stats.completed_bookings;
+                if (stats.verification_status === "verified") {
+                    service.provider_verified = true;
+                }
+            });
+        }
     }
 
     services = merged;
@@ -2699,6 +2720,7 @@ function buildServiceCard(service) {
                 <div class="rating">
                     <i class="fas fa-circle-check"></i>
                     ${escapeHtml(serviceStatusLabel(service))}
+                    ${service.review_count == null ? "" : " · " + escapeHtml(String(service.average_rating)) + "/5 · " + escapeHtml(String(service.review_count)) + " reviews"}
                 </div>
             </div>
         </div>
@@ -3958,7 +3980,7 @@ function bookingActions(booking) {
 
     if (bookingRole === "provider") {
 
-        return ["accepted", "declined", "completed"]
+        return ["accepted", "declined", "completion_requested"]
             .filter(function(status) {
                 return rules.providerBookingTransition(booking.status, status);
             })

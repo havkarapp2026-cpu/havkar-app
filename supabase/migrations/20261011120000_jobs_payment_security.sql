@@ -11,7 +11,8 @@ ALTER TABLE public.jobs
   ADD COLUMN IF NOT EXISTS positions_count integer NOT NULL DEFAULT 1,
   ADD COLUMN IF NOT EXISTS employer_kind text NOT NULL DEFAULT 'ordinary',
   ADD COLUMN IF NOT EXISTS company_id uuid,
-  ADD COLUMN IF NOT EXISTS branch_id uuid;
+  ADD COLUMN IF NOT EXISTS branch_id uuid,
+  ADD COLUMN IF NOT EXISTS last_stripe_session_id text;
 
 ALTER TABLE public.jobs
   ALTER COLUMN status SET DEFAULT 'pending_payment';
@@ -99,6 +100,7 @@ CREATE TABLE IF NOT EXISTS public.job_payment_events (
   event_type text NOT NULL,
   outcome text NOT NULL,
   job_id bigint,
+  stripe_session_id text,
   stripe_payment_intent text,
   created_at timestamptz NOT NULL DEFAULT now()
 );
@@ -117,32 +119,35 @@ ALTER TABLE public.jobs
   ADD CONSTRAINT jobs_branch_id_fkey
   FOREIGN KEY (branch_id) REFERENCES public.job_company_branches(id) ON DELETE RESTRICT;
 
-CREATE OR REPLACE FUNCTION havkar_private.job_publicly_visible(target public.jobs)
+CREATE OR REPLACE FUNCTION havkar_private.job_publicly_visible(target_id bigint)
 RETURNS boolean
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT
-    target.status = 'active'
-    AND target.expires_at IS NOT NULL
-    AND target.expires_at > now()
-    AND (
-      target.employer_kind = 'ordinary'
-      OR EXISTS (
-        SELECT 1
-        FROM public.job_subscriptions subscription
-        WHERE subscription.company_id = target.company_id
-          AND subscription.status = 'active'
-          AND subscription.current_period_end IS NOT NULL
-          AND subscription.current_period_end > now()
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.jobs job
+    WHERE job.id = target_id
+      AND job.status = 'active'
+      AND (job.expires_at IS NULL OR job.expires_at > now())
+      AND (
+        job.employer_kind = 'ordinary'
+        OR EXISTS (
+          SELECT 1
+          FROM public.job_subscriptions subscription
+          WHERE subscription.company_id = job.company_id
+            AND subscription.status = 'active'
+            AND subscription.current_period_end IS NOT NULL
+            AND subscription.current_period_end > now()
+        )
       )
-    );
+  );
 $$;
 
-REVOKE ALL ON FUNCTION havkar_private.job_publicly_visible(public.jobs) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION havkar_private.job_publicly_visible(public.jobs) TO anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION havkar_private.job_publicly_visible(bigint) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION havkar_private.job_publicly_visible(bigint) TO anon, authenticated, service_role;
 
 CREATE OR REPLACE FUNCTION havkar_private.enforce_job_write()
 RETURNS trigger
@@ -212,7 +217,9 @@ BEGIN
       RAISE EXCEPTION 'job owner mismatch'
         USING ERRCODE = '42501';
     END IF;
-    IF NEW.status IS DISTINCT FROM 'pending_payment' OR NEW.expires_at IS NOT NULL THEN
+    IF NEW.status IS DISTINCT FROM 'pending_payment'
+       OR NEW.expires_at IS NOT NULL
+       OR NEW.last_stripe_session_id IS NOT NULL THEN
       RAISE EXCEPTION 'a new job cannot be activated by the client'
         USING ERRCODE = '42501';
     END IF;
@@ -227,6 +234,7 @@ BEGIN
        OR NEW.employer_kind IS DISTINCT FROM OLD.employer_kind
        OR NEW.company_id IS DISTINCT FROM OLD.company_id
        OR NEW.branch_id IS DISTINCT FROM OLD.branch_id
+       OR NEW.last_stripe_session_id IS DISTINCT FROM OLD.last_stripe_session_id
        OR NEW.id IS DISTINCT FROM OLD.id
        OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
       RAISE EXCEPTION 'job payment, ownership, and subscription fields are locked'
@@ -270,12 +278,12 @@ CREATE TRIGGER jobs_enforce_client_write
 
 DROP POLICY IF EXISTS "Enable read access for all users" ON public.jobs;
 
-CREATE POLICY "Jobs are visible to the public only while paid and unexpired"
+CREATE POLICY "Active jobs stay public until a stored expiry passes"
 ON public.jobs
 FOR SELECT
 TO anon, authenticated
 USING (
-  havkar_private.job_publicly_visible(jobs)
+  havkar_private.job_publicly_visible(id)
   OR user_id = (SELECT auth.uid())
 );
 

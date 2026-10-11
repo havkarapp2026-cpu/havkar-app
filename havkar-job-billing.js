@@ -324,6 +324,22 @@
     return { ok: false, reason: "ignored", retry: false };
   }
 
+  function eventClaimDecision(existingOutcome) {
+    if (!existingOutcome) {
+      return { proceed: true, duplicate: false };
+    }
+    if (existingOutcome === "processing") {
+      return { proceed: true, duplicate: false, resume: true };
+    }
+    return { proceed: false, duplicate: true };
+  }
+
+  function safeStripeId(value) {
+    const text = String(value || "");
+    if (!/^[A-Za-z0-9_]+$/.test(text)) return null;
+    return text;
+  }
+
   function isUniqueViolation(error) {
     if (!error) return false;
     return error.code === "23505" || /duplicate key/i.test(String(error.message || ""));
@@ -348,7 +364,19 @@
       .maybeSingle();
 
     if (inserted.error && isUniqueViolation(inserted.error)) {
-      return { duplicate: true };
+      const existing = await supabase
+        .from("job_payment_events")
+        .select("outcome")
+        .eq("stripe_event_id", event.id)
+        .maybeSingle();
+      if (existing.error || !existing.data) {
+        return { ok: false, retry: true, reason: "event_lookup_failed" };
+      }
+      const claim = eventClaimDecision(existing.data.outcome);
+      if (claim.duplicate) {
+        return { duplicate: true };
+      }
+      return { duplicate: false, resume: true };
     }
 
     if (inserted.error) {
@@ -387,7 +415,7 @@
     if (decision.action === "activate_ordinary_job") {
       const existing = await supabase
         .from("jobs")
-        .select("id,user_id,status,plan,expires_at,employer_kind")
+        .select("id,user_id,status,plan,expires_at,employer_kind,last_stripe_session_id")
         .eq("id", decision.jobId)
         .eq("user_id", decision.userId)
         .maybeSingle();
@@ -397,6 +425,22 @@
       }
 
       const job = existing.data;
+      const sessionId = safeStripeId(session.id);
+      if (!sessionId) {
+        await supabase.from("job_payment_events").update({ outcome: "rejected" }).eq("stripe_event_id", event.id);
+        return { ok: false, retry: false, reason: "invalid_session", activate: false };
+      }
+
+      if (job && job.last_stripe_session_id === sessionId) {
+        await supabase.from("job_payment_events").update({
+          outcome: "activated",
+          job_id: job.id,
+          stripe_session_id: sessionId,
+          stripe_payment_intent: session.payment_intent || null
+        }).eq("stripe_event_id", event.id);
+        return { ok: true, duplicate: true, retry: false, activated: true };
+      }
+
       if (!job || job.employer_kind === "company" || job.plan !== decision.plan) {
         await supabase.from("job_payment_events").update({ outcome: "rejected" }).eq("stripe_event_id", event.id);
         return { ok: false, retry: false, reason: "job_not_eligible", activate: false };
@@ -419,20 +463,39 @@
         .from("jobs")
         .update({
           status: "active",
-          expires_at: expiry.expiresAt
+          expires_at: expiry.expiresAt,
+          last_stripe_session_id: sessionId
         })
         .eq("id", job.id)
         .eq("user_id", job.user_id)
         .in("status", ["pending_payment", "active"])
+        .or("last_stripe_session_id.is.null,last_stripe_session_id.neq." + sessionId)
         .select("id,status,expires_at");
 
-      if (updated.error || !updated.data || !updated.data.length) {
+      if (updated.error) {
+        return { ok: false, retry: true, reason: "activation_failed" };
+      }
+      if (!updated.data || !updated.data.length) {
+        const again = await supabase
+          .from("jobs")
+          .select("id,last_stripe_session_id")
+          .eq("id", job.id)
+          .maybeSingle();
+        if (again.data && again.data.last_stripe_session_id === sessionId) {
+          await supabase.from("job_payment_events").update({
+            outcome: "activated",
+            job_id: job.id,
+            stripe_session_id: sessionId
+          }).eq("stripe_event_id", event.id);
+          return { ok: true, duplicate: true, retry: false, activated: true };
+        }
         return { ok: false, retry: true, reason: "activation_failed" };
       }
 
       await supabase.from("job_payment_events").update({
         outcome: "activated",
         job_id: job.id,
+        stripe_session_id: sessionId,
         stripe_payment_intent: session.payment_intent || null
       }).eq("stripe_event_id", event.id);
 
@@ -498,6 +561,23 @@
       }
       await supabase.from("job_payment_events").update({ outcome: "past_due" }).eq("stripe_event_id", event.id);
       return { ok: true, deleteAdvertisements: false, hideFromPublicSearch: true };
+    }
+
+    if (decision.action === "subscription_paid") {
+      const current = await supabase
+        .from("job_subscriptions")
+        .select("plan_code")
+        .eq("stripe_subscription_id", decision.subscriptionId)
+        .maybeSingle();
+      const plan = companyPlan(current.data && current.data.plan_code);
+      if (current.error || !plan || !amountsMatch(plan.cents, decision.amountCents, decision.currency)) {
+        await supabase
+          .from("job_subscriptions")
+          .update({ status: "needs_review" })
+          .eq("stripe_subscription_id", decision.subscriptionId);
+        await supabase.from("job_payment_events").update({ outcome: "needs_review" }).eq("stripe_event_id", event.id);
+        return { ok: true, retry: false, activated: false, reason: "amount_mismatch" };
+      }
     }
 
     if (decision.action === "subscription_paid" || decision.action === "sync_subscription") {
@@ -576,6 +656,7 @@
     isJobBillingEvent: isJobBillingEvent,
     decideCheckoutSession: decideCheckoutSession,
     decideBillingEvent: decideBillingEvent,
+    eventClaimDecision: eventClaimDecision,
     planCodeFromCents: planCodeFromCents,
     applyVerifiedCheckoutSession: applyVerifiedCheckoutSession,
     applyVerifiedBillingEvent: applyVerifiedBillingEvent

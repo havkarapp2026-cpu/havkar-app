@@ -89,6 +89,41 @@ const failed = billing.decideBillingEvent({
 assert.strictEqual(failed.deleteAdvertisements, false);
 assert.strictEqual(failed.hideFromPublicSearch, true);
 
+const unpaid = billing.decideCheckoutSession({
+  mode: "payment",
+  payment_status: "unpaid",
+  amount_total: 999,
+  currency: "eur",
+  metadata: {
+    havkar_purpose: "job_advertisement",
+    job_id: "15",
+    user_id: "user-1",
+    plan: "Basic"
+  }
+});
+assert.strictEqual(unpaid.ok, false);
+assert.strictEqual(unpaid.reason, "not_paid");
+assert.strictEqual(billing.eventClaimDecision("processing").resume, true);
+assert.strictEqual(billing.eventClaimDecision("activated").duplicate, true);
+assert.strictEqual(billing.eventClaimDecision(null).proceed, true);
+assert.strictEqual(jobs.isPublicListing({
+  status: "pending_payment",
+  expires_at: "2026-12-01T00:00:00Z"
+}, now), false);
+assert.strictEqual(jobs.isListedJob({
+  status: "pending_payment",
+  owner: false,
+  expires_at: "2026-12-01T00:00:00Z"
+}, now), false);
+assert.strictEqual(jobs.isPublicListing({
+  status: "active",
+  expires_at: null
+}, now), true);
+assert.strictEqual(jobs.isPublicListing({
+  status: "active",
+  expires_at: "2026-09-01T00:00:00Z"
+}, now), false);
+
 assert.strictEqual(billing.isJobBillingEvent({
   type: "invoice.paid",
   data: { object: { metadata: {} } }
@@ -130,3 +165,103 @@ assert.strictEqual(migration.includes("DROP TABLE public.jobs"), false);
 assert.ok(migration.includes("pending_payment"));
 assert.ok(migration.includes("job_publicly_visible"));
 assert.ok(migration.includes("active_advertisement_limit"));
+
+async function verifyUnpaidDoesNotActivate() {
+  let jobUpdates = 0;
+  const supabase = {
+    from: function (table) {
+      return {
+        insert: function () {
+          return {
+            select: async function () {
+              return { data: { stripe_event_id: "evt_unpaid" }, error: null };
+            }
+          };
+        },
+        update: function () {
+          if (table === "jobs") jobUpdates += 1;
+          return this;
+        },
+        select: function () { return this; },
+        eq: function () { return this; },
+        in: function () { return this; },
+        or: function () { return this; },
+        maybeSingle: async function () {
+          return { data: null, error: null };
+        }
+      };
+    }
+  };
+  const unpaidSession = await billing.applyVerifiedCheckoutSession({
+    supabase: supabase,
+    event: { id: "evt_unpaid", type: "checkout.session.completed" },
+    session: {
+      id: "cs_unpaid",
+      mode: "payment",
+      payment_status: "unpaid",
+      amount_total: 999,
+      currency: "eur",
+      metadata: {
+        havkar_purpose: "job_advertisement",
+        job_id: "15",
+        user_id: "user-1",
+        plan: "Basic"
+      }
+    }
+  });
+  assert.strictEqual(unpaidSession.reason, "not_paid");
+  assert.strictEqual(jobUpdates, 0);
+
+  const calls = [];
+  const mismatch = await billing.applyVerifiedBillingEvent({
+    supabase: {
+      from: function (table) {
+        const api = {
+          insert: function () {
+            calls.push(table + ":insert");
+            return {
+              select: function () {
+                return {
+                  maybeSingle: async function () {
+                    return { data: { stripe_event_id: "evt_invoice_bad" }, error: null };
+                  }
+                };
+              }
+            };
+          },
+          update: function (patch) {
+            calls.push(table + ":update:" + (patch && patch.status || ""));
+            return api;
+          },
+          select: function () { return api; },
+          eq: function () { return api; },
+          maybeSingle: async function () {
+            return { data: { plan_code: "business" }, error: null };
+          }
+        };
+        return api;
+      }
+    },
+    event: {
+      id: "evt_invoice_bad",
+      type: "invoice.paid",
+      data: {
+        object: {
+          subscription: "sub_1",
+          amount_paid: 100,
+          currency: "eur",
+          metadata: { havkar_purpose: "job_subscription" }
+        }
+      }
+    }
+  });
+  assert.strictEqual(mismatch.reason, "amount_mismatch");
+  assert.strictEqual(mismatch.activated, false);
+  assert.strictEqual(calls.indexOf("jobs:update:"), -1);
+  assert.ok(calls.indexOf("job_subscriptions:update:needs_review") !== -1);
+}
+
+verifyUnpaidDoesNotActivate().catch(function (error) {
+  console.error(error);
+  process.exit(1);
+});

@@ -2080,13 +2080,11 @@ async function loadSupabaseJobs(){
   await refreshCurrentUser();
 
   const columns = "id,created_at,user_id,title,company,location,job_type,salary,description,requirements,contact,status,expires_at,application_url,remote,category,language,experience_level,education_level,skills,currency,salary_min,salary_max,type,image,plan,monthly_fee";
-  const nowIso = new Date().toISOString();
   const publicResult =
     await supabaseClient
       .from("jobs")
       .select(columns)
       .eq("status", "active")
-      .gt("expires_at", nowIso)
       .order("created_at", { ascending:false });
 
   let ownRows = [];
