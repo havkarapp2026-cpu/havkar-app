@@ -100,6 +100,18 @@
     return COMPANY_PLANS[planCode] || null;
   }
 
+  function companyMaySubscribe(company) {
+    if (!company || company.verification_status !== "verified") {
+      return {
+        ok: false,
+        status: 403,
+        code: "company_not_verified",
+        error: "A company subscription can only be started for a verified company. No charge was created."
+      };
+    }
+    return { ok: true };
+  }
+
   function withinAdvertisementLimit(planCode, activeAdvertisementCount) {
     const plan = companyPlan(planCode);
     if (!plan) {
@@ -266,13 +278,17 @@
     const object = event && event.data && event.data.object || {};
 
     if (type === "invoice.paid") {
+      const periodEnd = Number(object.period_end);
       return {
         ok: true,
         action: "subscription_paid",
         deleteAdvertisements: false,
         subscriptionId: object.subscription || null,
         amountCents: object.amount_paid,
-        currency: object.currency
+        currency: object.currency,
+        currentPeriodEnd: Number.isInteger(periodEnd) && periodEnd > 0
+          ? new Date(periodEnd * 1000).toISOString()
+          : null
       };
     }
 
@@ -649,6 +665,7 @@
     paymentsEnabled: paymentsEnabled,
     ordinaryAmountCents: ordinaryAmountCents,
     companyPlan: companyPlan,
+    companyMaySubscribe: companyMaySubscribe,
     withinAdvertisementLimit: withinAdvertisementLimit,
     subscriptionAllowsPublicAds: subscriptionAllowsPublicAds,
     nextOrdinaryExpiry: nextOrdinaryExpiry,

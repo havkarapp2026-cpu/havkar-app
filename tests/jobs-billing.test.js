@@ -20,6 +20,24 @@ assert.strictEqual(billing.COMPANY_PLANS.business.activeAdvertisementLimit, 10);
 assert.strictEqual(billing.COMPANY_PLANS.business_plus.activeAdvertisementLimit, 30);
 assert.strictEqual(billing.COMPANY_PLANS.enterprise.activeAdvertisementLimit, 100);
 assert.strictEqual(billing.FAILURE_POLICY.deleteAdvertisements, false);
+assert.strictEqual(billing.companyMaySubscribe(null).ok, false);
+assert.strictEqual(billing.companyMaySubscribe({ verification_status: "pending" }).code, "company_not_verified");
+assert.strictEqual(billing.companyMaySubscribe({ verification_status: "verified" }).ok, true);
+
+const paidInvoice = billing.decideBillingEvent({
+  type: "invoice.paid",
+  data: {
+    object: {
+      subscription: "sub_1",
+      amount_paid: 4999,
+      currency: "eur",
+      period_end: 1790000000
+    }
+  }
+});
+assert.strictEqual(paidInvoice.action, "subscription_paid");
+assert.strictEqual(paidInvoice.deleteAdvertisements, false);
+assert.strictEqual(paidInvoice.currentPeriodEnd, new Date(1790000000 * 1000).toISOString());
 
 assert.strictEqual(billing.paymentsEnabled({}), false);
 assert.strictEqual(billing.paymentsEnabled({ HAVKAR_JOB_PAYMENTS_ENABLED: "false" }), false);
@@ -146,6 +164,12 @@ assert.strictEqual(company.payload.status, "pending_payment");
 assert.strictEqual(company.payload.positions_count, 10);
 assert.strictEqual(company.payload.employer_kind, "company");
 assert.strictEqual(company.payload.monthly_fee, null);
+
+const commerceApi = fs.readFileSync(path.join(__dirname, "../havkar-commerce-api.js"), "utf8");
+const verificationGate = commerceApi.indexOf("companyMaySubscribe");
+const subscriptionCheckout = commerceApi.indexOf('mode: "subscription"');
+assert.ok(verificationGate > 0);
+assert.ok(verificationGate < subscriptionCheckout);
 
 const webhook = fs.readFileSync(path.join(__dirname, "../api/stripe-webhook.js"), "utf8");
 const noTicket = webhook.indexOf("if (!ticketId)");

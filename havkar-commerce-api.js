@@ -135,6 +135,29 @@ async function createCompanySubscription(ctx, user) {
     });
   }
 
+  const companyResult = await ctx.supabaseAdmin
+    .from("job_companies")
+    .select("id,verification_status")
+    .eq("id", body.companyId)
+    .maybeSingle();
+
+  if (companyResult.error) {
+    return json(ctx.res, 503, {
+      ok: false,
+      code: "schema_not_ready",
+      error: "Company verification could not be read. No charge was created."
+    });
+  }
+
+  const subscriptionGate = jobBilling.companyMaySubscribe(companyResult.data);
+  if (!subscriptionGate.ok) {
+    return json(ctx.res, subscriptionGate.status, {
+      ok: false,
+      code: subscriptionGate.code,
+      error: subscriptionGate.error
+    });
+  }
+
   const origin = ctx.getOrigin(ctx.req);
   const session = await ctx.stripe.checkout.sessions.create({
     mode: "subscription",
