@@ -167,6 +167,12 @@ assert.ok(migration.includes("job_publicly_visible"));
 assert.ok(migration.includes("DROP TRIGGER IF EXISTS enforce_job_publication_status ON public.jobs"));
 assert.ok(migration.includes("DROP FUNCTION IF EXISTS public.enforce_job_publication_status()"));
 assert.ok(migration.includes("active_advertisement_limit"));
+assert.strictEqual(/^\s*BEGIN\s*;/m.test(migration), false);
+assert.strictEqual(/^\s*COMMIT\s*;/m.test(migration), false);
+for (const match of migration.matchAll(/CREATE POLICY\s+("[^"]+"|[A-Za-z_][A-Za-z0-9_]*)\s+ON\s+((?:public|storage)\.[A-Za-z_][A-Za-z0-9_]*)/g)) {
+  const drop = "DROP POLICY IF EXISTS " + match[1] + " ON " + match[2];
+  assert.ok(migration.lastIndexOf(drop, match.index) >= 0, drop);
+}
 
 async function verifyUnpaidDoesNotActivate() {
   let jobUpdates = 0;

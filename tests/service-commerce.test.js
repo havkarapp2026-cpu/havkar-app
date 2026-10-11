@@ -186,6 +186,12 @@ assert.strictEqual(migration.includes("code_plaintext"), false);
 assert.ok(migration.includes("security_invoker = true"));
 assert.strictEqual(/GRANT SELECT \([^)]*stripe_account_id/.test(migration), false);
 assert.ok(migration.includes("GRANT SELECT (booking_id, expires_at, used_at, attempts)"));
+assert.strictEqual(/^\s*BEGIN\s*;/m.test(migration), false);
+assert.strictEqual(/^\s*COMMIT\s*;/m.test(migration), false);
+for (const match of migration.matchAll(/CREATE POLICY\s+("[^"]+"|[A-Za-z_][A-Za-z0-9_]*)\s+ON\s+((?:public|storage)\.[A-Za-z_][A-Za-z0-9_]*)/g)) {
+  const drop = "DROP POLICY IF EXISTS " + match[1] + " ON " + match[2];
+  assert.ok(migration.lastIndexOf(drop, match.index) >= 0, drop);
+}
 
 assert.strictEqual(services.providerBookingTransition("pending", "completed"), false);
 assert.strictEqual(services.customerBookingTransition("accepted", "completed"), false);

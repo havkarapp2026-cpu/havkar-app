@@ -2,6 +2,16 @@
 -- Prepared for owner review. This migration was not executed.
 -- It does not delete job rows.
 
+-- Transaction handling:
+-- Supabase runs each migration file inside one transaction. These files
+-- do not issue BEGIN or COMMIT, so that transaction stays intact and a
+-- failed statement rolls the file back.
+-- Apply a manual session as one transaction too:
+--   psql -v ON_ERROR_STOP=1 -1 -f this_file.sql
+-- Policies are dropped before they are created, so a partially applied
+-- autocommit run can be executed again. Row level security stays enabled.
+-- Until a policy is created again, a missing policy denies rows.
+
 CREATE SCHEMA IF NOT EXISTS havkar_private;
 
 REVOKE ALL ON SCHEMA havkar_private FROM PUBLIC;
@@ -285,6 +295,7 @@ CREATE TRIGGER jobs_enforce_client_write
 
 DROP POLICY IF EXISTS "Enable read access for all users" ON public.jobs;
 
+DROP POLICY IF EXISTS "Active jobs stay public until a stored expiry passes" ON public.jobs;
 CREATE POLICY "Active jobs stay public until a stored expiry passes"
 ON public.jobs
 FOR SELECT
@@ -300,6 +311,7 @@ ALTER TABLE public.job_company_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.job_subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.job_payment_events ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS job_companies_member_select ON public.job_companies;
 CREATE POLICY job_companies_member_select
 ON public.job_companies
 FOR SELECT
@@ -313,6 +325,7 @@ USING (
   )
 );
 
+DROP POLICY IF EXISTS job_companies_owner_insert ON public.job_companies;
 CREATE POLICY job_companies_owner_insert
 ON public.job_companies
 FOR INSERT
@@ -322,12 +335,14 @@ WITH CHECK (
   AND verification_status = 'unverified'
 );
 
+DROP POLICY IF EXISTS job_company_members_select ON public.job_company_members;
 CREATE POLICY job_company_members_select
 ON public.job_company_members
 FOR SELECT
 TO authenticated
 USING (user_id = (SELECT auth.uid()));
 
+DROP POLICY IF EXISTS job_company_branches_select ON public.job_company_branches;
 CREATE POLICY job_company_branches_select
 ON public.job_company_branches
 FOR SELECT
@@ -340,6 +355,7 @@ USING (
   )
 );
 
+DROP POLICY IF EXISTS job_subscriptions_member_select ON public.job_subscriptions;
 CREATE POLICY job_subscriptions_member_select
 ON public.job_subscriptions
 FOR SELECT

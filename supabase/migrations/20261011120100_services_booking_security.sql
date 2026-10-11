@@ -8,6 +8,16 @@
 -- must not receive booking-row access, and the view returns counts only.
 -- It does not select phone numbers or Stripe account ids.
 
+-- Transaction handling:
+-- Supabase runs each migration file inside one transaction. These files
+-- do not issue BEGIN or COMMIT, so that transaction stays intact and a
+-- failed statement rolls the file back.
+-- Apply a manual session as one transaction too:
+--   psql -v ON_ERROR_STOP=1 -1 -f this_file.sql
+-- Policies are dropped before they are created, so a partially applied
+-- autocommit run can be executed again. Row level security stays enabled.
+-- Until a policy is created again, a missing policy denies rows.
+
 CREATE SCHEMA IF NOT EXISTS havkar_private;
 
 REVOKE ALL ON SCHEMA havkar_private FROM PUBLIC;
@@ -174,6 +184,7 @@ DROP POLICY IF EXISTS "Customers can create bookings" ON public.service_bookings
 DROP POLICY IF EXISTS "Providers can update received bookings" ON public.service_bookings;
 DROP POLICY IF EXISTS "Customers can cancel own bookings" ON public.service_bookings;
 
+DROP POLICY IF EXISTS "Customers can create bookings for the real provider" ON public.service_bookings;
 CREATE POLICY "Customers can create bookings for the real provider"
 ON public.service_bookings
 FOR INSERT
@@ -192,6 +203,7 @@ WITH CHECK (
   )
 );
 
+DROP POLICY IF EXISTS "Booking parties can update allowed states" ON public.service_bookings;
 CREATE POLICY "Booking parties can update allowed states"
 ON public.service_bookings
 FOR UPDATE
@@ -513,6 +525,7 @@ ALTER TABLE public.service_completion_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.service_booking_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.service_provider_profiles ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS service_agreements_party_select ON public.service_agreements;
 CREATE POLICY service_agreements_party_select
 ON public.service_agreements FOR SELECT TO authenticated
 USING (
@@ -523,6 +536,7 @@ USING (
   )
 );
 
+DROP POLICY IF EXISTS service_agreements_party_insert ON public.service_agreements;
 CREATE POLICY service_agreements_party_insert
 ON public.service_agreements FOR INSERT TO authenticated
 WITH CHECK (
@@ -534,6 +548,7 @@ WITH CHECK (
   )
 );
 
+DROP POLICY IF EXISTS service_agreements_party_update ON public.service_agreements;
 CREATE POLICY service_agreements_party_update
 ON public.service_agreements FOR UPDATE TO authenticated
 USING (
@@ -551,6 +566,7 @@ WITH CHECK (
   )
 );
 
+DROP POLICY IF EXISTS service_agreement_revisions_party_select ON public.service_agreement_revisions;
 CREATE POLICY service_agreement_revisions_party_select
 ON public.service_agreement_revisions FOR SELECT TO authenticated
 USING (
@@ -563,6 +579,7 @@ USING (
   )
 );
 
+DROP POLICY IF EXISTS service_agreement_revisions_party_insert ON public.service_agreement_revisions;
 CREATE POLICY service_agreement_revisions_party_insert
 ON public.service_agreement_revisions FOR INSERT TO authenticated
 WITH CHECK (
@@ -570,6 +587,7 @@ WITH CHECK (
   AND (proposed_by = (SELECT auth.uid()) OR approved_by = (SELECT auth.uid()))
 );
 
+DROP POLICY IF EXISTS service_complaints_party_select ON public.service_complaints;
 CREATE POLICY service_complaints_party_select
 ON public.service_complaints FOR SELECT TO authenticated
 USING (
@@ -580,6 +598,7 @@ USING (
   )
 );
 
+DROP POLICY IF EXISTS service_complaints_party_insert ON public.service_complaints;
 CREATE POLICY service_complaints_party_insert
 ON public.service_complaints FOR INSERT TO authenticated
 WITH CHECK (
@@ -592,6 +611,7 @@ WITH CHECK (
   )
 );
 
+DROP POLICY IF EXISTS service_complaint_messages_party_select ON public.service_complaint_messages;
 CREATE POLICY service_complaint_messages_party_select
 ON public.service_complaint_messages FOR SELECT TO authenticated
 USING (
@@ -604,6 +624,7 @@ USING (
   )
 );
 
+DROP POLICY IF EXISTS service_complaint_messages_party_insert ON public.service_complaint_messages;
 CREATE POLICY service_complaint_messages_party_insert
 ON public.service_complaint_messages FOR INSERT TO authenticated
 WITH CHECK (
@@ -617,10 +638,12 @@ WITH CHECK (
   )
 );
 
+DROP POLICY IF EXISTS service_reviews_public_select ON public.service_reviews;
 CREATE POLICY service_reviews_public_select
 ON public.service_reviews FOR SELECT TO anon, authenticated
 USING (status = 'published');
 
+DROP POLICY IF EXISTS service_reviews_customer_insert ON public.service_reviews;
 CREATE POLICY service_reviews_customer_insert
 ON public.service_reviews FOR INSERT TO authenticated
 WITH CHECK (
@@ -628,19 +651,23 @@ WITH CHECK (
   AND status = 'published'
 );
 
+DROP POLICY IF EXISTS service_reviews_provider_update ON public.service_reviews;
 CREATE POLICY service_reviews_provider_update
 ON public.service_reviews FOR UPDATE TO authenticated
 USING (provider_id = (SELECT auth.uid()))
 WITH CHECK (provider_id = (SELECT auth.uid()));
 
+DROP POLICY IF EXISTS service_review_reports_insert ON public.service_review_reports;
 CREATE POLICY service_review_reports_insert
 ON public.service_review_reports FOR INSERT TO authenticated
 WITH CHECK (reporter_id = (SELECT auth.uid()));
 
+DROP POLICY IF EXISTS service_review_reports_own_select ON public.service_review_reports;
 CREATE POLICY service_review_reports_own_select
 ON public.service_review_reports FOR SELECT TO authenticated
 USING (reporter_id = (SELECT auth.uid()));
 
+DROP POLICY IF EXISTS service_completion_codes_customer_select ON public.service_completion_codes;
 CREATE POLICY service_completion_codes_customer_select
 ON public.service_completion_codes FOR SELECT TO authenticated
 USING (
@@ -649,6 +676,7 @@ USING (
   AND expires_at > now()
 );
 
+DROP POLICY IF EXISTS service_booking_messages_party ON public.service_booking_messages;
 CREATE POLICY service_booking_messages_party
 ON public.service_booking_messages FOR SELECT TO authenticated
 USING (
@@ -659,6 +687,7 @@ USING (
   )
 );
 
+DROP POLICY IF EXISTS service_booking_messages_insert ON public.service_booking_messages;
 CREATE POLICY service_booking_messages_insert
 ON public.service_booking_messages FOR INSERT TO authenticated
 WITH CHECK (
@@ -670,10 +699,12 @@ WITH CHECK (
   )
 );
 
+DROP POLICY IF EXISTS service_provider_profiles_public_select ON public.service_provider_profiles;
 CREATE POLICY service_provider_profiles_public_select
 ON public.service_provider_profiles FOR SELECT TO anon, authenticated
 USING (true);
 
+DROP POLICY IF EXISTS service_provider_profiles_owner_write ON public.service_provider_profiles;
 CREATE POLICY service_provider_profiles_owner_write
 ON public.service_provider_profiles FOR INSERT TO authenticated
 WITH CHECK (
@@ -681,6 +712,7 @@ WITH CHECK (
   AND verification_status = 'unverified'
 );
 
+DROP POLICY IF EXISTS service_provider_profiles_owner_update ON public.service_provider_profiles;
 CREATE POLICY service_provider_profiles_owner_update
 ON public.service_provider_profiles FOR UPDATE TO authenticated
 USING (user_id = (SELECT auth.uid()))
@@ -771,6 +803,7 @@ CREATE TRIGGER service_commission_entries_force_split
 
 ALTER TABLE public.service_commission_entries ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS service_commission_entries_party_select ON public.service_commission_entries;
 CREATE POLICY service_commission_entries_party_select
 ON public.service_commission_entries
 FOR SELECT
@@ -894,10 +927,12 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
+DROP POLICY IF EXISTS service_images_public_read ON storage.objects;
 CREATE POLICY service_images_public_read
 ON storage.objects FOR SELECT TO anon, authenticated
 USING (bucket_id = 'service-images');
 
+DROP POLICY IF EXISTS service_images_owner_insert ON storage.objects;
 CREATE POLICY service_images_owner_insert
 ON storage.objects FOR INSERT TO authenticated
 WITH CHECK (
@@ -905,6 +940,7 @@ WITH CHECK (
   AND (storage.foldername(name))[1] = (SELECT auth.uid())::text
 );
 
+DROP POLICY IF EXISTS service_dispute_evidence_party_select ON storage.objects;
 CREATE POLICY service_dispute_evidence_party_select
 ON storage.objects FOR SELECT TO authenticated
 USING (
@@ -921,6 +957,7 @@ USING (
   )
 );
 
+DROP POLICY IF EXISTS service_dispute_evidence_party_insert ON storage.objects;
 CREATE POLICY service_dispute_evidence_party_insert
 ON storage.objects FOR INSERT TO authenticated
 WITH CHECK (
