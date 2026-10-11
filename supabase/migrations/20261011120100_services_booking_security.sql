@@ -103,6 +103,11 @@ BEGIN
        OR NEW.customer_id IS DISTINCT FROM OLD.customer_id
        OR NEW.provider_id IS DISTINCT FROM OLD.provider_id
        OR NEW.created_at IS DISTINCT FROM OLD.created_at
+       OR NEW.booking_date IS DISTINCT FROM OLD.booking_date
+       OR NEW.booking_time IS DISTINCT FROM OLD.booking_time
+       OR NEW.message IS DISTINCT FROM OLD.message
+       OR NEW.payment_method IS DISTINCT FROM OLD.payment_method
+       OR NEW.terms IS DISTINCT FROM OLD.terms
        OR NEW.commission_bps IS DISTINCT FROM OLD.commission_bps
        OR NEW.commission_amount IS DISTINCT FROM OLD.commission_amount
        OR NEW.completion_confirmed_at IS DISTINCT FROM OLD.completion_confirmed_at
@@ -151,6 +156,13 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION havkar_private.enforce_service_booking_write() FROM PUBLIC, anon, authenticated;
+
+-- The live public.enforce_service_booking_write trigger rejects every
+-- role except authenticated, so a verified webhook cannot record
+-- commission or request completion. Drop it before installing the
+-- private replacement. service_bookings_updated_at stays in place.
+DROP TRIGGER IF EXISTS enforce_service_booking_write ON public.service_bookings;
+DROP FUNCTION IF EXISTS public.enforce_service_booking_write();
 
 DROP TRIGGER IF EXISTS service_bookings_enforce_write ON public.service_bookings;
 CREATE TRIGGER service_bookings_enforce_write

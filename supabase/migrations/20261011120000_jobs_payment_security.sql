@@ -270,6 +270,13 @@ CREATE TRIGGER job_companies_add_owner
   FOR EACH ROW
   EXECUTE FUNCTION havkar_private.add_job_company_owner();
 
+-- Live trigger public.enforce_job_publication_status blocks every role,
+-- including service_role, from moving a job to active. The replacement
+-- below keeps that block for anon and authenticated, and allows the
+-- verified webhook role to publish after the company checks above.
+DROP TRIGGER IF EXISTS enforce_job_publication_status ON public.jobs;
+DROP FUNCTION IF EXISTS public.enforce_job_publication_status();
+
 DROP TRIGGER IF EXISTS jobs_enforce_client_write ON public.jobs;
 CREATE TRIGGER jobs_enforce_client_write
   BEFORE INSERT OR UPDATE ON public.jobs

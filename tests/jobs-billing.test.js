@@ -164,6 +164,8 @@ assert.strictEqual(migration.includes("DELETE FROM public.jobs"), false);
 assert.strictEqual(migration.includes("DROP TABLE public.jobs"), false);
 assert.ok(migration.includes("pending_payment"));
 assert.ok(migration.includes("job_publicly_visible"));
+assert.ok(migration.includes("DROP TRIGGER IF EXISTS enforce_job_publication_status ON public.jobs"));
+assert.ok(migration.includes("DROP FUNCTION IF EXISTS public.enforce_job_publication_status()"));
 assert.ok(migration.includes("active_advertisement_limit"));
 
 async function verifyUnpaidDoesNotActivate() {
