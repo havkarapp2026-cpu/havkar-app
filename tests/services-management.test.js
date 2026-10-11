@@ -121,6 +121,20 @@ function filterValue(call, column) {
   assert.strictEqual(blockedResult.reason, "blocked_transition");
   assert.strictEqual(blocked.calls.length, 0);
 
+  const completionDirect = mockClient(function () {
+    throw new Error("completion must stay on the server");
+  });
+  const completionResult = await services.applyBookingTransition(completionDirect, {
+    role: "provider",
+    bookingId: 5,
+    userId: "provider-1",
+    fromStatus: "accepted",
+    toStatus: "completion_requested"
+  });
+  assert.strictEqual(completionResult.ok, false);
+  assert.strictEqual(completionResult.reason, "blocked_transition");
+  assert.strictEqual(completionDirect.calls.length, 0);
+
   const accepted = mockClient(function () {
     return {
       data: [{ id: 5, status: "accepted", provider_id: "provider-1" }],
@@ -229,6 +243,13 @@ function filterValue(call, column) {
   assert.strictEqual(page.indexOf('priceType = "job"'), -1);
   assert.strictEqual(page.indexOf('priceType = "visit"'), -1);
   assert.ok(page.indexOf("You cannot book your own service.") !== -1);
+  const cashGate = page.indexOf("cashBookingDecision()");
+  const onlineBooking = page.indexOf('payment_method: "online"');
+  const completionRequest = page.indexOf('toStatus === "completion_requested"');
+  const directTransition = page.indexOf("applyBookingTransition(db,");
+  assert.ok(cashGate > 0 && cashGate < onlineBooking);
+  assert.strictEqual(page.indexOf('payment_method: "cash"'), -1);
+  assert.ok(completionRequest > 0 && completionRequest < directTransition);
   assert.ok(page.indexOf('from("service_bookings")') !== -1);
   assert.ok(page.indexOf('from("service_saves")') !== -1);
   assert.ok(page.indexOf("/havkar-i18n.js") !== -1);

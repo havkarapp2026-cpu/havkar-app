@@ -232,6 +232,10 @@ assert.strictEqual(commerce.completionRequestDecision({
 const page = fs.readFileSync(path.join(__dirname, "../services.html"), "utf8");
 assert.ok(page.includes("The provider alone pays HAVKAR's 10% commission."));
 assert.ok(page.includes("completion_requested"));
+const cashGate = page.indexOf("cashBookingDecision()");
+const onlineBooking = page.indexOf('payment_method: "online"');
+assert.ok(cashGate > 0 && cashGate < onlineBooking);
+assert.strictEqual(page.indexOf('payment_method: "cash"'), -1);
 const commerceApi = fs.readFileSync(path.join(__dirname, "../havkar-commerce-api.js"), "utf8");
 const completionRoute = commerceApi.indexOf('action === "request-completion"');
 const paymentGate = commerceApi.indexOf("servicePaymentsEnabled");
