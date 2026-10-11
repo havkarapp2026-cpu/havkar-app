@@ -72,7 +72,7 @@
       return true;
     }
 
-    if (fromStatus === "accepted" && toStatus === "completed") {
+    if (fromStatus === "accepted" && toStatus === "completion_requested") {
       return true;
     }
 

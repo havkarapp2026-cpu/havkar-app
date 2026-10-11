@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import jobBilling from "../havkar-job-billing.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -86,6 +87,28 @@ export default async function handler(req, res) {
       const ticketId = session.metadata?.event_ticket_id;
 
       if (!ticketId) {
+        if (
+          session.metadata?.havkar_purpose === "job_advertisement" ||
+          session.metadata?.havkar_purpose === "job_subscription"
+        ) {
+          const outcome = await jobBilling.applyVerifiedCheckoutSession({
+            supabase,
+            event,
+            session,
+          });
+
+          if (!outcome.ok && outcome.retry) {
+            return res.status(500).json({
+              error: "Webhook processing failed",
+            });
+          }
+
+          return res.status(200).json({
+            received: true,
+            duplicate: Boolean(outcome.duplicate),
+          });
+        }
+
         console.error(
           "checkout.session.completed has no event_ticket_id metadata",
           session.id
@@ -178,6 +201,17 @@ export default async function handler(req, res) {
         ticketId,
         session.id
       );
+    } else if (jobBilling.isJobBillingEvent(event)) {
+      const outcome = await jobBilling.applyVerifiedBillingEvent({
+        supabase,
+        event,
+      });
+
+      if (!outcome.ok && outcome.retry) {
+        return res.status(500).json({
+          error: "Webhook processing failed",
+        });
+      }
     }
 
     return res.status(200).json({

@@ -83,7 +83,8 @@ function filterValue(call, column) {
 
   assert.strictEqual(services.providerBookingTransition("pending", "accepted"), true);
   assert.strictEqual(services.providerBookingTransition("pending", "declined"), true);
-  assert.strictEqual(services.providerBookingTransition("accepted", "completed"), true);
+  assert.strictEqual(services.providerBookingTransition("accepted", "completion_requested"), true);
+  assert.strictEqual(services.providerBookingTransition("accepted", "completed"), false);
   assert.strictEqual(services.providerBookingTransition("pending", "completed"), false);
   assert.strictEqual(services.providerBookingTransition("pending", "cancelled"), false);
   assert.strictEqual(services.providerBookingTransition("declined", "accepted"), false);

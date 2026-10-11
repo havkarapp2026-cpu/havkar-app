@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { handleCommerceRoute, isCommerceRoute } from "../havkar-commerce-api.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -159,6 +160,22 @@ async function countReservedTickets(eventId) {
 }
 
 export default async function handler(req, res) {
+  const commerceRoute = typeof req.query?.havkarRoute === "string"
+    ? req.query.havkarRoute
+    : "";
+
+  if (isCommerceRoute(commerceRoute)) {
+    return handleCommerceRoute({
+      route: commerceRoute,
+      req,
+      res,
+      stripe,
+      supabaseAdmin,
+      authenticateUser,
+      getOrigin,
+    });
+  }
+
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
 

@@ -1620,8 +1620,20 @@ a.primary{
       >
     </div>
 
+    <div class="form-group">
+      <label for="jobPositions">Open positions</label>
+      <input
+        id="jobPositions"
+        type="number"
+        min="1"
+        max="100000"
+        step="1"
+        value="1"
+      >
+    </div>
+
     <div class="plan-title">
-      Choose a monthly publishing plan
+      Choose a one-time 30-day publishing plan
     </div>
 
     <div class="plans">
@@ -1632,7 +1644,7 @@ a.primary{
         data-plan="Basic"
         onclick="selectPlan(this)">
 
-        <strong>Basic — €9.99 / month</strong>
+        <strong>Basic — €9.99 for 30 days</strong>
 
         <span>
           For small businesses and one active job.
@@ -1646,7 +1658,7 @@ a.primary{
         data-plan="Professional"
         onclick="selectPlan(this)">
 
-        <strong>Professional — €19.99 / month</strong>
+        <strong>Professional — €19.99 for 30 days</strong>
 
         <span>
           More visibility and multiple active jobs.
@@ -1660,7 +1672,7 @@ a.primary{
         data-plan="Business"
         onclick="selectPlan(this)">
 
-        <strong>Business — €39.99 / month</strong>
+        <strong>Business — €39.99 for 30 days</strong>
 
         <span>
           For businesses with regular recruitment.
@@ -1670,10 +1682,40 @@ a.primary{
 
     </div>
 
+    <div class="plan-title">
+      Company monthly subscription
+    </div>
+
+    <p class="notice">
+      A company subscription covers advertisements for that verified company and its branches.
+      The limit counts advertisements, not open positions.
+      If payment fails, is canceled, or expires, advertisements stay in history and leave public search.
+    </p>
+
+    <div class="plans">
+      <div class="plan" data-price="49.99" data-plan="business" data-kind="company" onclick="selectPlan(this)">
+        <strong>Business — €49.99 / month</strong>
+        <span>Maximum 10 simultaneously active advertisements.</span>
+      </div>
+      <div class="plan" data-price="99.99" data-plan="business_plus" data-kind="company" onclick="selectPlan(this)">
+        <strong>Business Plus — €99.99 / month</strong>
+        <span>Maximum 30 simultaneously active advertisements.</span>
+      </div>
+      <div class="plan" data-price="199.99" data-plan="enterprise" data-kind="company" onclick="selectPlan(this)">
+        <strong>Enterprise — €199.99 / month</strong>
+        <span>Maximum 100 simultaneously active advertisements.</span>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="jobCompanyId">Verified company id</label>
+      <input id="jobCompanyId" type="text" maxlength="80" autocomplete="off" placeholder="Required only for a company subscription">
+    </div>
+
     <div class="summary">
 
       <strong>
-        Monthly publishing fee
+        One-time publishing fee
       </strong>
 
       <br>
@@ -1691,7 +1733,8 @@ a.primary{
     <div class="notice">
       Your job will remain
       <strong>Pending payment</strong>
-      until a real payment provider confirms the subscription.
+      until a verified payment confirms this 30-day advertisement.
+      It does not renew automatically.
     </div>
 
     <button
@@ -1935,6 +1978,7 @@ a.primary{
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-job-billing.js"></script>
 <script src="/havkar-jobs.js"></script>
 <script>
 
@@ -2035,11 +2079,37 @@ async function loadSupabaseJobs(){
 
   await refreshCurrentUser();
 
-  const { data, error } =
+  const columns = "id,created_at,user_id,title,company,location,job_type,salary,description,requirements,contact,status,expires_at,application_url,remote,category,language,experience_level,education_level,skills,currency,salary_min,salary_max,type,image,plan,monthly_fee";
+  const nowIso = new Date().toISOString();
+  const publicResult =
     await supabaseClient
       .from("jobs")
-      .select("id,created_at,user_id,title,company,location,job_type,salary,description,requirements,contact,status,expires_at,application_url,remote,category,language,experience_level,education_level,skills,currency,salary_min,salary_max,type,image,plan,monthly_fee")
+      .select(columns)
+      .eq("status", "active")
+      .gt("expires_at", nowIso)
       .order("created_at", { ascending:false });
+
+  let ownRows = [];
+  if(currentUser){
+    const ownResult =
+      await supabaseClient
+        .from("jobs")
+        .select(columns)
+        .eq("user_id", currentUser.id)
+        .order("created_at", { ascending:false });
+    if(ownResult.error){
+      console.error("HAVKAR: Could not load your jobs from Supabase.", ownResult.error);
+    }else{
+      ownRows = ownResult.data || [];
+    }
+  }
+
+  const data = []
+    .concat(publicResult.data || [], ownRows)
+    .filter((job, index, list) =>
+      list.findIndex(item => String(item.id) === String(job.id)) === index
+    );
+  const error = publicResult.error;
 
   if(error){
     console.error("HAVKAR: Could not load jobs from Supabase.", error);
@@ -2969,7 +3039,10 @@ function selectPlan(element){
     price:
       Number(
         element.dataset.price
-      )
+      ),
+
+    kind:
+      element.dataset.kind || "ordinary"
 
   };
 
@@ -3446,26 +3519,50 @@ async function submitJob(){
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
   }
 
-  const result = await window.HAVKAR_JOBS.createOwnJob(
-    supabaseClient,
-    {
-      userId:currentUser.id,
-      plan:selectedPlan,
-      draft:{
-        title,
-        company,
-        location,
-        type,
-        salary,
-        skills,
-        description,
-        requirements,
-        application_url:applicationUrl,
-        contact,
-        image:selectedJobImage || null
-      }
+  const draft = {
+    title,
+    company,
+    location,
+    type,
+    salary,
+    skills,
+    description,
+    requirements,
+    application_url:applicationUrl,
+    contact,
+    positions:document.getElementById("jobPositions").value,
+    image:selectedJobImage || null
+  };
+  let result;
+  if(selectedPlan.kind === "company"){
+    const built = window.HAVKAR_JOBS.buildCompanyJobInsert(
+      draft,
+      currentUser.id,
+      selectedPlan.name,
+      document.getElementById("jobCompanyId").value.trim()
+    );
+    if(!built.ok){
+      result = built;
+    }else{
+      const inserted = await supabaseClient
+        .from("jobs")
+        .insert(built.payload)
+        .select(window.HAVKAR_JOBS.JOB_COLUMNS)
+        .single();
+      result = inserted.error
+        ? { ok:false, message:inserted.error.message || "The company advertisement could not be saved." }
+        : { ok:true, row:inserted.data };
     }
-  );
+  }else{
+    result = await window.HAVKAR_JOBS.createOwnJob(
+      supabaseClient,
+      {
+        userId:currentUser.id,
+        plan:selectedPlan,
+        draft:draft
+      }
+    );
+  }
 
   if(submitButton){
     submitButton.disabled = false;
@@ -3485,6 +3582,15 @@ async function submitJob(){
   }
 
   const newJob = normalizeJob(result.row);
+  if(selectedPlan.kind === "company"){
+    newJob.employer_kind = "company";
+    newJob.company_id = document.getElementById("jobCompanyId").value.trim();
+    newJob.plan = selectedPlan.name;
+    newJob.monthly_fee = selectedPlan.price;
+  }
+  if(result.positionsStored === false && Number(draft.positions) > 1){
+    alert("The advertisement was saved as unpaid. The open-position count is not stored until the jobs database update is applied.");
+  }
   jobs = [newJob, ...jobs.filter(job => String(job.id) !== String(newJob.id))];
 
   closeModal("postModal");
@@ -3546,7 +3652,7 @@ function showPaymentScreen(job){
       <div class="detail-row">
 
         <span class="detail-label">
-          Monthly plan
+          30-day plan
         </span>
 
         <span class="detail-value">
@@ -3558,7 +3664,7 @@ function showPaymentScreen(job){
       <div class="detail-row">
 
         <span class="detail-label">
-          Monthly fee
+          One-time fee
         </span>
 
         <span class="detail-value">
@@ -3596,7 +3702,7 @@ function showPaymentScreen(job){
 
       Pay €${Number(
         job.monthly_fee
-      ).toFixed(2)} / month
+      ).toFixed(2)} for 30 days
 
     </button>
 
@@ -3622,15 +3728,7 @@ function showPaymentScreen(job){
    PAYMENT
    ========================================================= */
 
-function startRealPayment(jobId){
-
-  /*
-    IMPORTANT:
-    No fake payment confirmation.
-
-    A real payment provider/backend
-    must be connected before activation.
-  */
+async function startRealPayment(jobId){
 
   const job =
     jobs.find(
@@ -3641,9 +3739,34 @@ function startRealPayment(jobId){
 
   if(!job) return;
 
+  const { data } = await supabaseClient.auth.getSession();
+  const token = data && data.session && data.session.access_token;
+  if(!token){
+    alert("Please sign in before payment. The advertisement has NOT been activated.");
+    return;
+  }
+
+  const companyJob = job.employer_kind === "company";
+  const response = await fetch(companyJob ? "/api/job-billing" : "/api/job-checkout", {
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization":"Bearer " + token
+    },
+    body:JSON.stringify(companyJob
+      ? { companyId:job.company_id, planCode:job.plan }
+      : { jobId:job.id })
+  });
+  const payload = await response.json().catch(() => ({}));
+
+  if(payload.url && payload.activated !== true){
+    window.location.href = payload.url;
+    return;
+  }
+
   alert(
-    "The payment gateway is not connected yet. " +
-    "Your advertisement has NOT been activated."
+    (payload.error || "Payment is not available.") +
+    " Your advertisement has NOT been activated."
   );
 }
 
