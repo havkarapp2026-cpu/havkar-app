@@ -111,6 +111,109 @@
             !!source.stripe_price_id;
     }
 
+    function applicationError(record) {
+        var source = record || {};
+        var streetNumber = String(source.streetNumber || "").trim();
+
+        if (MARKETING_TYPES.indexOf(source.marketingType) === -1) {
+            return "Choose a property type.";
+        }
+
+        if (LEGAL_CATEGORIES.indexOf(source.legalCategory) === -1) {
+            return "Choose an Italian legal category.";
+        }
+
+        if (String(source.displayName || "").trim().length < 2) {
+            return "Property name is required.";
+        }
+
+        if (!String(source.city || "").trim()) {
+            return "City is required.";
+        }
+
+        if (!String(source.street || "").trim()) {
+            return "Street is required.";
+        }
+
+        if (!streetNumber) {
+            return "Building number is required.";
+        }
+
+        if (streetNumber.length > 20) {
+            return "Building number is too long.";
+        }
+
+        if (!cinShapeValid(source.cin)) {
+            return "Italian CIN must be 15 letters or digits.";
+        }
+
+        if (source.countryCode && source.countryCode !== "IT") {
+            return "Submission is open for Italy only.";
+        }
+
+        return "";
+    }
+
+    function identityStatusText(status) {
+        if (status === "not_started") {
+            return "Not started. Identity Verified stays off.";
+        }
+
+        if (status === "awaiting_provider") {
+            return "Waiting for an identity provider. None is connected.";
+        }
+
+        if (status === "needs_more_info") {
+            return "The identity file needs more information.";
+        }
+
+        if (status === "rejected") {
+            return "The identity file was rejected.";
+        }
+
+        if (status === "suspended") {
+            return "The identity file is suspended.";
+        }
+
+        return "Identity Verified stays off.";
+    }
+
+    function propertyStatusText(status) {
+        if (status === "draft") {
+            return "Draft saved. Submit it when the property file is complete.";
+        }
+
+        if (status === "submitted") {
+            return "Submitted for review. The listing stays unpublished.";
+        }
+
+        if (status === "in_review") {
+            return "A reviewer has the property file. The listing stays unpublished.";
+        }
+
+        if (status === "needs_more_info") {
+            return "More property information is required before another review.";
+        }
+
+        if (status === "approved") {
+            return "The property file was approved. Identity stays unverified and the listing stays unpublished.";
+        }
+
+        if (status === "rejected") {
+            return "The property file was rejected.";
+        }
+
+        if (status === "suspended") {
+            return "The property file is suspended.";
+        }
+
+        if (status === "revoked") {
+            return "The property file was revoked.";
+        }
+
+        return "The property file is recorded.";
+    }
+
     return {
         MARKETING_TYPES: MARKETING_TYPES,
         LEGAL_CATEGORIES: LEGAL_CATEGORIES,
@@ -124,6 +227,9 @@
         verifiedFromMetadata: verifiedFromMetadata,
         publicationAllowed: publicationAllowed,
         reviewDecisionError: reviewDecisionError,
-        planIsChargeable: planIsChargeable
+        planIsChargeable: planIsChargeable,
+        applicationError: applicationError,
+        identityStatusText: identityStatusText,
+        propertyStatusText: propertyStatusText
     };
 });
