@@ -1277,6 +1277,10 @@
 
             <div class="modal-body">
 
+                <p>
+                    This form publishes a Buy &amp; Sell listing.
+                </p>
+
                 <form
                     id="adForm"
                     onsubmit="submitAd(event)"
@@ -1748,7 +1752,11 @@
                 await supabaseClient
                     .from(ADS_TABLE)
                     .select(
-                        "id,created_at,title,category,price,location,description,user_id,photos,status"
+                        "id,created_at,title,category,price,location,description,user_id,photos,status,listing_kind"
+                    )
+                    .eq(
+                        "listing_kind",
+                        "commercial"
                     )
                     .order(
                         "created_at",
@@ -2102,6 +2110,15 @@
                     }
 
                     if (
+                        ad.listing_kind !==
+                        "commercial"
+                    ) {
+
+                        return false;
+
+                    }
+
+                    if (
                         showingSavedOnly
                     ) {
 
@@ -2229,7 +2246,7 @@
                             ${
                                 showingSavedOnly
                                     ? "Advertisements you save will appear here."
-                                    : "Try another search or category, or create a new advertisement."
+                                    : "Approved business and sponsored advertisements will appear here."
                             }
                         </p>
 
@@ -3469,7 +3486,10 @@
                         photos,
 
                     status:
-                        "active"
+                        "active",
+
+                    listing_kind:
+                        "buy_sell"
 
                 };
 
@@ -3480,7 +3500,7 @@
                             newAd
                         )
                         .select(
-                            "id,created_at,title,category,price,location,description,user_id,photos,status"
+                            "id,created_at,title,category,price,location,description,user_id,photos,status,listing_kind"
                         )
                         .single();
 
@@ -3660,7 +3680,7 @@
                 });
 
                 showToast(
-                    "Your advertisement was published successfully."
+                    "Your listing was published in Buy & Sell."
                 );
 
                 showAdPublishMessage(
