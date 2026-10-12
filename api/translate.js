@@ -601,8 +601,20 @@ async function getGoogleAccessToken() {
  * Only the provider request is mapped. Cache keys stay on the
  * HAVKAR code, so the two Kurdish varieties are not merged.
  */
-function googleLanguageCode(language) {
+function havkarLanguageCode(language) {
   const code = String(language || "").trim();
+
+  // The parent tag "ku" is not a HAVKAR language. Older chat
+  // settings used it for Kurmanji, which is kmr.
+  if (code === "ku") {
+    return "kmr";
+  }
+
+  return code;
+}
+
+function googleLanguageCode(language) {
+  const code = havkarLanguageCode(language);
 
   if (code === "kmr") {
     return "ku";
@@ -1001,10 +1013,10 @@ async function handler(req, res) {
       extractTexts(body);
 
     const targetLanguage =
-      extractTargetLanguage(body);
+      havkarLanguageCode(extractTargetLanguage(body));
 
     const sourceLanguage =
-      extractSourceLanguage(body);
+      havkarLanguageCode(extractSourceLanguage(body));
 
     const mimeType =
       body.mimeType === "text/html" ||
@@ -1250,3 +1262,4 @@ async function handler(req, res) {
 
 module.exports = handler;
 module.exports.googleLanguageCode = googleLanguageCode;
+module.exports.havkarLanguageCode = havkarLanguageCode;
