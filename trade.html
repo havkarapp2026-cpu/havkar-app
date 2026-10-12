@@ -649,6 +649,11 @@ label{
     margin-right:5px;
 }
 
+#tradeLoginPrompt a{
+    color:var(--green-dark);
+    font-weight:700;
+}
+
 
 /* =========================================================
    BOTTOM NAV
@@ -1181,6 +1186,11 @@ label{
         id="tradeStatus"
     ></div>
 
+    <p id="tradeLoginPrompt" class="info-box" hidden>
+        Please sign in before using Trade. No order is placed from this page.
+        <a href="login.html">Log in</a>
+    </p>
+
 </section>
 
 
@@ -1519,9 +1529,60 @@ function withTimeout(
    AUTHENTICATION
    ========================================================= */
 
+function isMissingAuthSession(error){
+
+    const name =
+        String(
+            error && error.name || ""
+        );
+
+    const message =
+        String(
+            error && error.message || ""
+        );
+
+
+    return name === "AuthSessionMissingError" ||
+        /auth session missing/i.test(message);
+
+}
+
+
 async function getCurrentUser(){
 
     try{
+
+        const sessionResult =
+            await withTimeout(
+
+                supabaseClient.auth.getSession(),
+
+                8000,
+
+                "Authentication request timed out."
+
+            );
+
+
+        if(sessionResult.error){
+
+            if(isMissingAuthSession(sessionResult.error)){
+
+                return null;
+
+            }
+
+            throw sessionResult.error;
+
+        }
+
+
+        if(!sessionResult.data || !sessionResult.data.session){
+
+            return null;
+
+        }
+
 
         const result =
             await withTimeout(
@@ -1537,6 +1598,12 @@ async function getCurrentUser(){
 
         if(result.error){
 
+            if(isMissingAuthSession(result.error)){
+
+                return null;
+
+            }
+
             throw result.error;
 
         }
@@ -1547,12 +1614,64 @@ async function getCurrentUser(){
     }
     catch(error){
 
+        if(isMissingAuthSession(error)){
+
+            return null;
+
+        }
+
+
         console.error(
             "Authentication error:",
             error
         );
 
         return null;
+
+    }
+
+}
+
+
+/* =========================================================
+   LOGIN PROMPT
+   ========================================================= */
+
+function showTradeLoginPrompt(){
+
+    const prompt =
+        document.getElementById(
+            "tradeLoginPrompt"
+        );
+
+
+    if(prompt){
+
+        prompt.hidden =
+            false;
+
+    }
+
+
+    clearStatus(
+        "tradeStatus"
+    );
+
+}
+
+
+function hideTradeLoginPrompt(){
+
+    const prompt =
+        document.getElementById(
+            "tradeLoginPrompt"
+        );
+
+
+    if(prompt){
+
+        prompt.hidden =
+            true;
 
     }
 
@@ -1570,11 +1689,7 @@ async function loadUser(){
 
     if(!currentUser){
 
-        showStatus(
-            "tradeStatus",
-            "Please log in before using Trade.",
-            "error"
-        );
+        showTradeLoginPrompt();
 
         disableTradeButton(
             "Please Log In"
@@ -1583,6 +1698,9 @@ async function loadUser(){
         return false;
 
     }
+
+
+    hideTradeLoginPrompt();
 
     return true;
 
@@ -2274,6 +2392,17 @@ function calculateTotal(){
    ========================================================= */
 
 function updateTradeButton(){
+
+    if(!currentUser){
+
+        disableTradeButton(
+            "Please Log In"
+        );
+
+        return;
+
+    }
+
 
     disableTradeButton(
         "Unavailable"
@@ -3723,6 +3852,8 @@ supabaseClient.auth.onAuthStateChange(
 
         if(currentUser){
 
+            hideTradeLoginPrompt();
+
             loadWallet();
 
             loadActivity();
@@ -3798,9 +3929,10 @@ async function initializeTrade(){
 
         await loadWallet();
 
-        loadActivity();
-
     }
+
+
+    loadActivity();
 
 
     await loadPrices();
