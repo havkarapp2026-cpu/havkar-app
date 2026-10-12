@@ -331,8 +331,17 @@ function savedRow(payload, id) {
   assert.ok(page.includes("filterJobs"));
   assert.ok(page.includes('id="locationInput"'));
   assert.ok(page.includes("pending_payment"));
-  assert.ok(page.includes("The payment gateway is not connected yet."));
+  assert.ok(page.includes("/api/create-job-checkout"));
+  assert.ok(page.includes("pending_confirmation"));
+  assert.ok(page.includes("Returning from payment does not activate the advertisement."));
   assert.ok(page.includes("Your advertisement has NOT been activated."));
+  assert.ok(moduleSource.includes("isStripeCheckoutUrl"));
+  assert.ok(moduleSource.includes("checkout.stripe.com"));
+  assert.strictEqual(
+    jobs.isStripeCheckoutUrl("https://checkout.stripe.com/c/pay/cs_test_123"),
+    true
+  );
+  assert.strictEqual(jobs.isStripeCheckoutUrl("https://jobs.example/pay"), false);
   assert.ok(!page.includes("Application started for"));
   assert.ok(!page.includes('status:"active"'));
   assert.ok(!page.includes("status: \"active\""));

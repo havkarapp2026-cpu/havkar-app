@@ -1365,6 +1365,8 @@ a.primary{
 
   </div>
 
+  <div id="jobPaymentNotice" class="notice" style="display:none"></div>
+
   <div id="jobsList"></div>
 
 </main>
@@ -1691,7 +1693,8 @@ a.primary{
     <div class="notice">
       Your job will remain
       <strong>Pending payment</strong>
-      until a real payment provider confirms the subscription.
+      until the payment server confirms a one-time publication charge.
+      This does not start a monthly subscription.
     </div>
 
     <button
@@ -2053,6 +2056,7 @@ async function loadSupabaseJobs(){
         </div>
       `;
     }
+    explainPaymentReturn();
     return;
   }
 
@@ -2065,6 +2069,7 @@ async function loadSupabaseJobs(){
     );
 
   renderJobs();
+  explainPaymentReturn();
 }
 
 /* =========================================================
@@ -3558,7 +3563,7 @@ function showPaymentScreen(job){
       <div class="detail-row">
 
         <span class="detail-label">
-          Monthly fee
+          One-time amount
         </span>
 
         <span class="detail-value">
@@ -3578,8 +3583,9 @@ function showPaymentScreen(job){
       Your advertisement is currently
       <strong>pending payment</strong>.
 
-      It will not be treated as an active paid advertisement
-      until the real payment provider confirms the transaction.
+      The button starts a one-time card payment for this plan amount.
+      It does not start a monthly subscription.
+      This page does not activate the advertisement.
 
     </div>
 
@@ -3596,7 +3602,7 @@ function showPaymentScreen(job){
 
       Pay €${Number(
         job.monthly_fee
-      ).toFixed(2)} / month
+      ).toFixed(2)}
 
     </button>
 
@@ -3622,29 +3628,126 @@ function showPaymentScreen(job){
    PAYMENT
    ========================================================= */
 
-function startRealPayment(jobId){
+function isJobCheckoutUrl(value){
+  if(window.HAVKAR_JOBS && window.HAVKAR_JOBS.isStripeCheckoutUrl){
+    return window.HAVKAR_JOBS.isStripeCheckoutUrl(value);
+  }
 
-  /*
-    IMPORTANT:
-    No fake payment confirmation.
+  return false;
+}
 
-    A real payment provider/backend
-    must be connected before activation.
-  */
+function showJobPaymentNotice(message){
+  const notice = document.getElementById("jobPaymentNotice");
 
-  const job =
-    jobs.find(
-      item =>
-        String(item.id) ===
-        String(jobId)
-    );
+  if(notice){
+    notice.textContent = message;
+    notice.style.display = "block";
+  }
 
-  if(!job) return;
+  alert(message);
+}
 
-  alert(
-    "The payment gateway is not connected yet. " +
-    "Your advertisement has NOT been activated."
+function explainPaymentReturn(){
+  const params = new URLSearchParams(window.location.search);
+  const payment = params.get("payment");
+
+  if(payment !== "return" && payment !== "cancelled"){
+    return;
+  }
+
+  const job = jobs.find(
+    item => String(item.id) === String(params.get("job_id") || "")
   );
+
+  if(payment === "cancelled"){
+    showJobPaymentNotice("Payment was cancelled. Your advertisement has NOT been activated.");
+  }else if(job && job.status === "active"){
+    showJobPaymentNotice("The server has published this job. This page did not activate it from the payment link.");
+  }else{
+    showJobPaymentNotice(
+      "Returning from payment does not activate the advertisement. " +
+      "Your advertisement has NOT been activated by this page."
+    );
+  }
+
+  params.delete("payment");
+  params.delete("job_id");
+  params.delete("session_id");
+
+  const next = params.toString();
+  window.history.replaceState(
+    {},
+    "",
+    window.location.pathname + (next ? "?" + next : "") + window.location.hash
+  );
+}
+
+async function startRealPayment(jobId){
+  const job = jobs.find(
+    item => String(item.id) === String(jobId)
+  );
+
+  if(!job || job.status !== "pending_payment"){
+    return;
+  }
+
+  await refreshCurrentUser();
+
+  const { data: sessionData, error: sessionError } =
+    await supabaseClient.auth.getSession();
+  const accessToken = sessionData?.session?.access_token || "";
+
+  if(sessionError || !accessToken){
+    showJobPaymentNotice("Please sign in before paying. Your advertisement has NOT been activated.");
+    return;
+  }
+
+  try{
+    const response = await fetch("/api/create-job-checkout", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + accessToken
+      },
+      body: JSON.stringify({
+        job_id: Number(job.id)
+      })
+    });
+
+    let result = null;
+
+    try{
+      result = await response.json();
+    }catch(parseError){
+      result = null;
+    }
+
+    if(result && result.pending_confirmation === true){
+      showJobPaymentNotice(
+        "The server is still confirming the payment. " +
+        "Your advertisement has NOT been activated by this page."
+      );
+      await loadSupabaseJobs();
+      return;
+    }
+
+    if(!response.ok || !result || result.ok !== true || !isJobCheckoutUrl(result.checkout_url)){
+      showJobPaymentNotice(
+        "The payment could not be started. " +
+        "Your advertisement has NOT been activated."
+      );
+      return;
+    }
+
+    const checkoutUrl = new URL(result.checkout_url);
+    window.location.assign(checkoutUrl.href);
+  }catch(error){
+    console.error("HAVKAR job checkout:", error);
+    showJobPaymentNotice(
+      "The payment could not be started. " +
+      "Your advertisement has NOT been activated."
+    );
+  }
 }
 
 /* =========================================================
@@ -3784,6 +3887,22 @@ async function openMyJobs(){
                 </span>
 
               </div>
+
+              ${
+                job.status === "pending_payment"
+                  ? `
+                    <button
+                      class="primary"
+                      type="button"
+                      onclick="
+                        event.stopPropagation();
+                        startRealPayment('${escapeJS(job.id)}')
+                      ">
+                      Pay to publish
+                    </button>
+                  `
+                  : ""
+              }
 
               <button
                 class="secondary"
