@@ -70,6 +70,8 @@ SET search_path = public
 AS $$
 DECLARE
   service_provider uuid;
+  service_price numeric;
+  service_currency text;
 BEGIN
   IF current_user NOT IN ('anon', 'authenticated') THEN
     IF TG_OP = 'UPDATE'
@@ -84,8 +86,8 @@ BEGIN
   END IF;
 
   IF TG_OP = 'INSERT' THEN
-    SELECT provider_id
-      INTO service_provider
+    SELECT provider_id, price, currency
+      INTO service_provider, service_price, service_currency
     FROM public.services
     WHERE id = NEW.service_id
       AND status = 'active';
@@ -105,6 +107,20 @@ BEGIN
       RAISE EXCEPTION 'booking insert is outside the allowed request'
         USING ERRCODE = '42501';
     END IF;
+
+    IF NEW.agreed_price IS NOT NULL AND NEW.agreed_price IS DISTINCT FROM service_price THEN
+      RAISE EXCEPTION 'booking price is taken from the service'
+        USING ERRCODE = '42501';
+    END IF;
+
+    IF NEW.currency IS NOT NULL
+       AND lower(btrim(NEW.currency)) IS DISTINCT FROM lower(btrim(COALESCE(service_currency, ''))) THEN
+      RAISE EXCEPTION 'booking currency is taken from the service'
+        USING ERRCODE = '42501';
+    END IF;
+
+    NEW.agreed_price := service_price;
+    NEW.currency := service_currency;
   END IF;
 
   IF TG_OP = 'UPDATE' THEN
@@ -120,6 +136,8 @@ BEGIN
        OR NEW.terms IS DISTINCT FROM OLD.terms
        OR NEW.commission_bps IS DISTINCT FROM OLD.commission_bps
        OR NEW.commission_amount IS DISTINCT FROM OLD.commission_amount
+       OR NEW.agreed_price IS DISTINCT FROM OLD.agreed_price
+       OR NEW.currency IS DISTINCT FROM OLD.currency
        OR NEW.completion_confirmed_at IS DISTINCT FROM OLD.completion_confirmed_at
        OR NEW.cash_payment_acknowledged_at IS DISTINCT FROM OLD.cash_payment_acknowledged_at THEN
       RAISE EXCEPTION 'booking identity and settlement fields are locked'

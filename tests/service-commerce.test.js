@@ -179,6 +179,9 @@ assert.ok(migration.includes("DROP TRIGGER IF EXISTS enforce_service_booking_wri
 assert.ok(migration.includes("DROP FUNCTION IF EXISTS public.enforce_service_booking_write()"));
 assert.ok(migration.includes("NEW.booking_date IS DISTINCT FROM OLD.booking_date"));
 assert.ok(migration.includes("NEW.message IS DISTINCT FROM OLD.message"));
+assert.ok(migration.includes("NEW.agreed_price IS DISTINCT FROM OLD.agreed_price"));
+assert.ok(migration.includes("NEW.currency IS DISTINCT FROM OLD.currency"));
+assert.ok(migration.includes("booking price is taken from the service"));
 assert.ok(migration.includes("commission_bps = 1000"));
 assert.ok(migration.includes("customer_charge_cents = agreed_amount_cents"));
 assert.ok(migration.includes("service_review_public"));

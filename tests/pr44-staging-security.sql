@@ -415,6 +415,48 @@ EXCEPTION WHEN OTHERS THEN
 END $$;
 
 DO $$
+DECLARE
+  copied numeric;
+  service_id bigint;
+BEGIN
+  SELECT id INTO service_id FROM public.services WHERE title = 'Staging service';
+  PERFORM set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000002', true);
+  SET LOCAL ROLE authenticated;
+  INSERT INTO public.service_bookings (service_id, customer_id, provider_id, status, payment_method)
+  VALUES (service_id, '00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000003', 'pending', 'online')
+  RETURNING agreed_price INTO copied;
+  PERFORM public.staging_record('booking_price_comes_from_service', copied = 100.00, 'copied=' || COALESCE(copied::text, 'null'));
+EXCEPTION WHEN OTHERS THEN
+  PERFORM public.staging_record('booking_price_comes_from_service', false, SQLSTATE || ' ' || SQLERRM);
+END $$;
+
+DO $$
+DECLARE
+  service_id bigint;
+BEGIN
+  SELECT id INTO service_id FROM public.services WHERE title = 'Staging service';
+  PERFORM set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000002', true);
+  SET LOCAL ROLE authenticated;
+  INSERT INTO public.service_bookings (service_id, customer_id, provider_id, status, payment_method, agreed_price)
+  VALUES (service_id, '00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000003', 'pending', 'online', 0.01);
+  PERFORM public.staging_record('customer_cannot_choose_booking_price', false, 'insert succeeded');
+EXCEPTION WHEN OTHERS THEN
+  PERFORM public.staging_record('customer_cannot_choose_booking_price', SQLSTATE = '42501', SQLSTATE || ' ' || SQLERRM);
+END $$;
+
+DO $$
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000002', true);
+  SET LOCAL ROLE authenticated;
+  UPDATE public.service_bookings
+     SET agreed_price = 0.01, currency = 'USD'
+   WHERE id = 1;
+  PERFORM public.staging_record('customer_cannot_rewrite_booking_price', false, 'update succeeded');
+EXCEPTION WHEN OTHERS THEN
+  PERFORM public.staging_record('customer_cannot_rewrite_booking_price', SQLSTATE = '42501', SQLSTATE || ' ' || SQLERRM);
+END $$;
+
+DO $$
 BEGIN
   PERFORM set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000002', true);
   SET LOCAL ROLE authenticated;
