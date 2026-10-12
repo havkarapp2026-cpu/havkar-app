@@ -595,6 +595,22 @@ async function getGoogleAccessToken() {
    TRANSLATE ONE OR MORE TEXTS
 ========================================================= */
 
+/*
+ * HAVKAR keeps Sorani (ckb) and Kurmanji (kmr) as separate
+ * language choices. Google names Kurmanji "ku" and Sorani "ckb".
+ * Only the provider request is mapped. Cache keys stay on the
+ * HAVKAR code, so the two Kurdish varieties are not merged.
+ */
+function googleLanguageCode(language) {
+  const code = String(language || "").trim();
+
+  if (code === "kmr") {
+    return "ku";
+  }
+
+  return code;
+}
+
 async function translateTexts({
   texts,
   sourceLanguage,
@@ -605,7 +621,7 @@ async function translateTexts({
 
   const payload = {
     contents: texts,
-    targetLanguageCode: targetLanguage,
+    targetLanguageCode: googleLanguageCode(targetLanguage),
     mimeType:
       mimeType === "text/html"
         ? "text/html"
@@ -621,7 +637,7 @@ async function translateTexts({
     sourceLanguage !== "auto"
   ) {
     payload.sourceLanguageCode =
-      sourceLanguage;
+      googleLanguageCode(sourceLanguage);
   }
 
   const response = await fetch(TRANSLATE_URL, {
@@ -834,7 +850,7 @@ function healthResponse() {
    MAIN VERCEL HANDLER
 ========================================================= */
 
-module.exports = async function handler(req, res) {
+async function handler(req, res) {
   const cors = applyCors(req, res);
 
   if (!cors.allowed) {
@@ -1230,4 +1246,7 @@ module.exports = async function handler(req, res) {
         "Translation failed."
     });
   }
-};
+}
+
+module.exports = handler;
+module.exports.googleLanguageCode = googleLanguageCode;

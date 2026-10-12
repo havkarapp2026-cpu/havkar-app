@@ -666,6 +666,22 @@
         }
 
 
+        /*
+         * The transfer widget marks its own form translate="no".
+         * When HAVKAR asks to translate that form, keep Sorani and
+         * Kurmanji independent of the partner's English copy.
+         */
+        if (
+            element.closest &&
+            element.closest(
+                "#welcomepickups[data-havkar-translate-widget='true']"
+            )
+        ) {
+
+            return false;
+        }
+
+
         if (
             element.matches &&
             element.matches(
