@@ -71,6 +71,49 @@
         return false;
     }
 
+    function availabilityState(value) {
+        const state = String(value || "").trim();
+        if (state === "open" || state === "blocked") {
+            return state;
+        }
+        return "";
+    }
+
+    function priceDraftChargeable() {
+        return false;
+    }
+
+    function ownerPhotoAllowed(userId, propertyId, fileName) {
+        const name = String(fileName || "");
+        const safeName = name.split(/[/\\]/).pop();
+
+        if (!safeName || safeName.length > 80 || !/^[A-Za-z0-9._-]+$/.test(safeName)) {
+            return false;
+        }
+
+        if (/identity|passport|selfie/i.test(safeName)) {
+            return false;
+        }
+
+        const property = String(propertyId || "");
+        const owner = String(userId || "");
+
+        if (!/^[0-9a-f-]{36}$/i.test(property) || !/^[0-9a-f-]{36}$/i.test(owner)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    function ownerPhotoPath(userId, propertyId, fileName) {
+        if (!ownerPhotoAllowed(userId, propertyId, fileName)) {
+            return "";
+        }
+
+        const safeName = String(fileName).split(/[/\\]/).pop();
+        return String(userId) + "/" + propertyId + "/photo/" + safeName;
+    }
+
     function verifiedFromMetadata() {
         return {
             identity: false,
@@ -224,6 +267,10 @@
         identityEvidenceBlocked: identityEvidenceBlocked,
         evidencePathAllowed: evidencePathAllowed,
         identityVerifiedAllowed: identityVerifiedAllowed,
+        availabilityState: availabilityState,
+        priceDraftChargeable: priceDraftChargeable,
+        ownerPhotoAllowed: ownerPhotoAllowed,
+        ownerPhotoPath: ownerPhotoPath,
         verifiedFromMetadata: verifiedFromMetadata,
         publicationAllowed: publicationAllowed,
         reviewDecisionError: reviewDecisionError,
