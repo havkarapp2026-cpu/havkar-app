@@ -400,6 +400,22 @@
     return { ok: true, row: row };
   }
 
+  function normalizePositions(value) {
+    if (value == null || value === "") {
+      return { ok: true, positions: 1 };
+    }
+    const number = Number(value);
+    if (!Number.isInteger(number) || number < 1 || number > 100000) {
+      return { ok: false, reason: "invalid_positions" };
+    }
+    return { ok: true, positions: number };
+  }
+
+  function isUnknownJobColumn(error) {
+    const message = String(error && error.message || "");
+    return /positions_count|employer_kind|schema cache|Could not find the/i.test(message);
+  }
+
   async function createOwnJob(client, input) {
     const source = input || {};
     const built = buildJobInsert(source.draft, source.userId, source.plan);
@@ -407,12 +423,79 @@
     if (built.payload.status !== "pending_payment") {
       return { ok: false, reason: "payment_required", message: MESSAGES.payment_required };
     }
-    const result = await client
+    const positions = normalizePositions(source.draft && source.draft.positions);
+    if (!positions.ok) {
+      return {
+        ok: false,
+        reason: positions.reason,
+        message: "Enter a valid number of open positions."
+      };
+    }
+    const migrated = Object.assign({}, built.payload, {
+      positions_count: positions.positions,
+      employer_kind: "ordinary"
+    });
+    let result = await client
       .from("jobs")
-      .insert(built.payload)
+      .insert(migrated)
       .select(JOB_COLUMNS)
       .single();
-    return confirmed(result);
+    if (result && result.error && isUnknownJobColumn(result.error)) {
+      result = await client
+        .from("jobs")
+        .insert(built.payload)
+        .select(JOB_COLUMNS)
+        .single();
+      const legacy = confirmed(result);
+      if (legacy.ok) legacy.positionsStored = false;
+      return legacy;
+    }
+    const saved = confirmed(result);
+    if (saved.ok) saved.positionsStored = true;
+    return saved;
+  }
+
+  function companyPlanTable() {
+    if (typeof require === "function") {
+      try {
+        return require("./havkar-job-billing.js").COMPANY_PLANS;
+      } catch (error) {
+        return null;
+      }
+    }
+    if (typeof globalThis !== "undefined" && globalThis.HAVKAR_JOB_BILLING) {
+      return globalThis.HAVKAR_JOB_BILLING.COMPANY_PLANS;
+    }
+    return null;
+  }
+
+  function buildCompanyJobInsert(draft, userId, planCode, companyId) {
+    const plans = companyPlanTable();
+    const plan = plans && plans[planCode];
+    const validation = validateJobDraft(draft, { mode: "create" });
+    if (!validation.ok) return validation;
+    if (!plan || !userId || !companyId) {
+      return { ok: false, reason: "invalid_plan", message: MESSAGES.invalid_plan };
+    }
+    const positions = normalizePositions(draft && draft.positions);
+    if (!positions.ok) {
+      return {
+        ok: false,
+        reason: positions.reason,
+        message: "Enter a valid number of open positions."
+      };
+    }
+    const payload = contentPayload(validation.value);
+    payload.user_id = userId;
+    payload.image = null;
+    payload.status = "pending_payment";
+    payload.plan = planCode;
+    payload.monthly_fee = null;
+    payload.positions_count = positions.positions;
+    payload.employer_kind = "company";
+    payload.company_id = companyId;
+    payload.branch_id = draft && draft.branch_id ? draft.branch_id : null;
+    return { ok: true, payload: payload };
   }
 
   async function updateOwnJob(client, input) {
@@ -464,6 +547,8 @@
     validateJobDraft: validateJobDraft,
     buildJobUpdate: buildJobUpdate,
     buildJobInsert: buildJobInsert,
+    normalizePositions: normalizePositions,
+    buildCompanyJobInsert: buildCompanyJobInsert,
     createOwnJob: createOwnJob,
     updateOwnJob: updateOwnJob,
     deleteOwnJob: deleteOwnJob

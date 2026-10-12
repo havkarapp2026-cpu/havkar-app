@@ -72,7 +72,7 @@
       return true;
     }
 
-    if (fromStatus === "accepted" && toStatus === "completed") {
+    if (fromStatus === "accepted" && toStatus === "completion_requested") {
       return true;
     }
 
@@ -221,6 +221,9 @@
     const role = action && action.role;
     const fromStatus = action && action.fromStatus;
     const toStatus = action && action.toStatus;
+    if (toStatus === "completion_requested" || toStatus === "completed") {
+      return { ok: false, reason: "blocked_transition" };
+    }
     const allowed = role === "provider"
       ? providerBookingTransition(fromStatus, toStatus)
       : role === "customer"

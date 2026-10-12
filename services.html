@@ -1482,6 +1482,14 @@ textarea.form-control {
         id="servicesContainer">
     </div>
 
+    <button
+        id="loadMoreServices"
+        class="submit-btn"
+        type="button"
+        hidden>
+        Load more services
+    </button>
+
 
     <!-- EMPTY SEARCH RESULT -->
 
@@ -1807,6 +1815,24 @@ textarea.form-control {
             </div>
 
 
+            <fieldset class="form-group">
+                <legend class="form-label">Payment method</legend>
+                <label>
+                    <input type="radio" name="bookingPaymentMethod" value="online" checked>
+                    Pay through HAVKAR after the price is approved
+                </label>
+                <label>
+                    <input type="radio" name="bookingPaymentMethod" value="cash">
+                    Cash directly to the provider
+                </label>
+                <p>
+                    The customer pays the agreed price. The provider alone pays HAVKAR's 10% commission.
+                    Cash is not confirmed because that 10% cannot yet be secured. A saved card is not a guarantee.
+                    Completing the work does not by itself mean cash was paid.
+                </p>
+            </fieldset>
+
+
             <button
                 class="submit-btn"
                 type="submit">
@@ -1987,6 +2013,13 @@ textarea.form-control {
                     maxlength="3000"
                     required></textarea>
 
+            </div>
+
+
+            <div class="form-group">
+                <label class="form-label" for="newServiceImage">Service image</label>
+                <input id="newServiceImage" class="form-control" type="file" accept="image/jpeg,image/png,image/webp">
+                <p>Images are stored only in the service-images bucket. They are not uploaded to advertisement storage.</p>
             </div>
 
 
@@ -2258,6 +2291,7 @@ textarea.form-control {
 
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-services.js"></script>
+<script src="/havkar-service-commerce.js"></script>
 <script>
 
 /* =========================================================
@@ -2285,6 +2319,7 @@ let selectedBookingService = null;
 let toastTimer = null;
 let bookingRole = "customer";
 let loadedBookings = [];
+let serviceFetchLimit = 24;
 
 const searchInput =
     document.getElementById("searchInput");
@@ -2308,6 +2343,13 @@ document.addEventListener(
         bindCategoryButtons();
         bindSearch();
         bindForms();
+        const loadMoreButton = document.getElementById("loadMoreServices");
+        if (loadMoreButton) {
+            loadMoreButton.addEventListener("click", async function() {
+                serviceFetchLimit += 24;
+                await loadServices();
+            });
+        }
 
         const {
             data: { user },
@@ -2454,7 +2496,7 @@ async function loadServices() {
         .select(columns)
         .eq("status", "active")
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(serviceFetchLimit);
 
     if (activeResult.error) {
 
@@ -2504,7 +2546,53 @@ async function loadServices() {
 
     }
 
+    const providerIds = merged
+        .map(function(service) { return service.provider_id; })
+        .filter(Boolean);
+    if (providerIds.length) {
+        const profileResult = await db
+            .from("service_provider_profiles")
+            .select("user_id,display_name,verification_status")
+            .in("user_id", providerIds);
+        if (!profileResult.error && Array.isArray(profileResult.data)) {
+            const profilesById = {};
+            profileResult.data.forEach(function(profile) {
+                profilesById[profile.user_id] = profile;
+            });
+            merged.forEach(function(service) {
+                const profile = profilesById[service.provider_id];
+                if (!profile) return;
+                service.public_display_name = profile.display_name || "";
+                service.provider_verified = profile.verification_status === "verified";
+            });
+        }
+        const statsResult = await db
+            .from("service_provider_public_stats")
+            .select("provider_id,average_rating,review_count,completed_bookings,verification_status")
+            .in("provider_id", providerIds);
+        if (!statsResult.error && Array.isArray(statsResult.data)) {
+            const statsById = {};
+            statsResult.data.forEach(function(row) {
+                statsById[row.provider_id] = row;
+            });
+            merged.forEach(function(service) {
+                const stats = statsById[service.provider_id];
+                if (!stats) return;
+                service.average_rating = stats.average_rating;
+                service.review_count = stats.review_count;
+                service.completed_bookings = stats.completed_bookings;
+                if (stats.verification_status === "verified") {
+                    service.provider_verified = true;
+                }
+            });
+        }
+    }
+
     services = merged;
+    const loadMoreButton = document.getElementById("loadMoreServices");
+    if (loadMoreButton) {
+        loadMoreButton.hidden = !activeResult.data || activeResult.data.length < serviceFetchLimit;
+    }
     renderServices();
 
 }
@@ -2595,7 +2683,7 @@ function buildServiceCard(service) {
     const providerName =
         service.provider_id === currentUser?.id
             ? getCurrentUserDisplayName()
-            : "HAVKAR Provider";
+            : publicProviderName(service);
 
     const priceText =
         formatServicePrice(service);
@@ -2632,6 +2720,7 @@ function buildServiceCard(service) {
                 <div class="rating">
                     <i class="fas fa-circle-check"></i>
                     ${escapeHtml(serviceStatusLabel(service))}
+                    ${service.review_count == null ? "" : " · " + escapeHtml(String(service.average_rating)) + "/5 · " + escapeHtml(String(service.review_count)) + " reviews"}
                 </div>
             </div>
         </div>
@@ -2819,7 +2908,7 @@ function openBooking(service) {
     ).value =
         service.provider_id === currentUser?.id
             ? getCurrentUserDisplayName()
-            : "HAVKAR Provider";
+            : publicProviderName(service);
 
     document.getElementById(
         "bookingPrice"
@@ -2963,6 +3052,13 @@ async function submitBooking(event) {
         return;
     }
 
+    const paymentMethod = document.querySelector('input[name="bookingPaymentMethod"]:checked');
+    if (!paymentMethod || paymentMethod.value !== "online") {
+        const decision = window.HAVKAR_SERVICE_COMMERCE.cashBookingDecision();
+        showToast(decision.error);
+        return;
+    }
+
     const submitButton =
         event.currentTarget.querySelector(
             '.submit-btn'
@@ -2974,24 +3070,29 @@ async function submitBooking(event) {
         "Booking..."
     );
 
-    const { error } = await db
+    const bookingPayload = {
+        service_id: selectedBookingService.id,
+        customer_id: user.id,
+        provider_id: selectedBookingService.provider_id,
+        booking_date: date,
+        booking_time: time,
+        message: message || null,
+        status: "pending",
+        payment_method: "online"
+    };
+    let bookingResult = await db
         .from("service_bookings")
-        .insert({
-            service_id:
-                selectedBookingService.id,
-            customer_id:
-                user.id,
-            provider_id:
-                selectedBookingService.provider_id,
-            booking_date:
-                date,
-            booking_time:
-                time,
-            message:
-                message || null,
-            status:
-                "pending"
-        });
+        .insert(bookingPayload);
+    if (
+        bookingResult.error &&
+        /payment_method|schema cache|Could not find the/i.test(bookingResult.error.message || "")
+    ) {
+        delete bookingPayload.payment_method;
+        bookingResult = await db
+            .from("service_bookings")
+            .insert(bookingPayload);
+    }
+    const error = bookingResult.error;
 
     setButtonBusy(
         submitButton,
@@ -3037,6 +3138,12 @@ async function submitService(event) {
 
     if (!user) {
         return;
+    }
+
+    const imageInput = document.getElementById("newServiceImage");
+    if (imageInput && imageInput.files && imageInput.files.length) {
+        showToast("The service image was not uploaded. service-images storage is not active on this database yet.");
+        imageInput.value = "";
     }
 
     const title =
@@ -3842,6 +3949,26 @@ function buildBookingCard(booking) {
         card.appendChild(actions);
     }
 
+    const complaintButton = document.createElement("button");
+    complaintButton.type = "button";
+    complaintButton.className = "bookings-btn";
+    complaintButton.textContent = "File complaint";
+    complaintButton.addEventListener("click", function() {
+        fileServiceComplaint(booking);
+    });
+    card.appendChild(complaintButton);
+
+    if (bookingRole !== "provider") {
+        const ratingButton = document.createElement("button");
+        ratingButton.type = "button";
+        ratingButton.className = "bookings-btn";
+        ratingButton.textContent = "Rate provider";
+        ratingButton.addEventListener("click", function() {
+            rateServiceProvider(booking);
+        });
+        card.appendChild(ratingButton);
+    }
+
     return card;
 
 }
@@ -3853,7 +3980,7 @@ function bookingActions(booking) {
 
     if (bookingRole === "provider") {
 
-        return ["accepted", "declined", "completed"]
+        return ["accepted", "declined", "completion_requested"]
             .filter(function(status) {
                 return rules.providerBookingTransition(booking.status, status);
             })
@@ -3862,7 +3989,7 @@ function bookingActions(booking) {
                 const labels = {
                     accepted: "Accept",
                     declined: "Decline",
-                    completed: "Mark completed"
+                    completion_requested: "Request completion code"
                 };
 
                 return {
@@ -3893,6 +4020,25 @@ async function changeBookingStatus(booking, toStatus) {
     const user = await requireUser();
 
     if (!user) {
+        return;
+    }
+
+    if (toStatus === "completion_requested") {
+        const { data } = await db.auth.getSession();
+        const token = data && data.session && data.session.access_token;
+        const response = await fetch("/api/service-commerce", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": token ? "Bearer " + token : ""
+            },
+            body: JSON.stringify({
+                action: "request-completion",
+                bookingId: booking.id
+            })
+        });
+        const payload = await response.json().catch(function() { return {}; });
+        showToast(payload.error || "Completion confirmation is not available yet. The booking was not marked completed.");
         return;
     }
 
@@ -4094,6 +4240,70 @@ async function changeOwnServiceStatus(serviceId, toStatus) {
 }
 
 
+function publicProviderName(service) {
+    const name = service && (service.public_display_name || service.display_name);
+    const label = typeof name === "string" && name.trim() && name.trim() !== "HAVKAR Provider"
+        ? name.trim()
+        : "Service provider";
+    return service && service.provider_verified === true
+        ? label + " (verified)"
+        : label;
+}
+
+
+async function fileServiceComplaint(booking) {
+    const user = await requireUser();
+    if (!user || !window.HAVKAR_SERVICE_COMMERCE) return;
+    const category = window.prompt(
+        "Complaint category: service_not_completed, poor_service_quality, incorrect_price, payment_disagreement, provider_did_not_arrive, customer_did_not_pay, other"
+    );
+    const explanation = category ? window.prompt("Describe the complaint. This text cannot be edited after it is saved.") : "";
+    const draft = window.HAVKAR_SERVICE_COMMERCE.complaintDraft({
+        bookingId: booking.id,
+        authorId: user.id,
+        category: category,
+        explanation: explanation
+    });
+    if (!draft.ok) {
+        showToast("The complaint was not saved.");
+        return;
+    }
+    const result = await db.from("service_complaints").insert(draft.row);
+    if (result.error) {
+        showToast("The complaint could not be saved. The database update may still need approval.");
+        return;
+    }
+    showToast("Complaint submitted. It stays linked to this booking.");
+}
+
+
+async function rateServiceProvider(booking) {
+    const user = await requireUser();
+    if (!user || !window.HAVKAR_SERVICE_COMMERCE) return;
+    const rating = Number(window.prompt("Rate the provider from 1 to 5. A rating is separate from a complaint."));
+    const reviewText = window.prompt("Write the review. The provider can reply, but cannot change this rating.");
+    const draft = window.HAVKAR_SERVICE_COMMERCE.reviewDraft({
+        bookingId: booking.id,
+        customerId: user.id,
+        providerId: booking.provider_id,
+        bookingCustomerId: booking.customer_id,
+        bookingStatus: booking.status,
+        rating: rating,
+        reviewText: reviewText
+    });
+    if (!draft.ok) {
+        showToast("This booking cannot take a verified review yet.");
+        return;
+    }
+    const result = await db.from("service_reviews").insert(draft.row);
+    if (result.error) {
+        showToast("The review was not saved. Only an eligible booking customer can review once.");
+        return;
+    }
+    showToast("Review submitted.");
+}
+
+
 function getCurrentUserDisplayName() {
 
     const meta =
@@ -4122,10 +4332,7 @@ function safeImageUrl(value) {
             window.location.origin
         );
 
-        if (
-            url.protocol === "https:" ||
-            url.protocol === "http:"
-        ) {
+        if (url.protocol === "https:" && !url.username && !url.password) {
             return url.href;
         }
     } catch (_) {}

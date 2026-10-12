@@ -83,7 +83,8 @@ function filterValue(call, column) {
 
   assert.strictEqual(services.providerBookingTransition("pending", "accepted"), true);
   assert.strictEqual(services.providerBookingTransition("pending", "declined"), true);
-  assert.strictEqual(services.providerBookingTransition("accepted", "completed"), true);
+  assert.strictEqual(services.providerBookingTransition("accepted", "completion_requested"), true);
+  assert.strictEqual(services.providerBookingTransition("accepted", "completed"), false);
   assert.strictEqual(services.providerBookingTransition("pending", "completed"), false);
   assert.strictEqual(services.providerBookingTransition("pending", "cancelled"), false);
   assert.strictEqual(services.providerBookingTransition("declined", "accepted"), false);
@@ -119,6 +120,20 @@ function filterValue(call, column) {
   assert.strictEqual(blockedResult.ok, false);
   assert.strictEqual(blockedResult.reason, "blocked_transition");
   assert.strictEqual(blocked.calls.length, 0);
+
+  const completionDirect = mockClient(function () {
+    throw new Error("completion must stay on the server");
+  });
+  const completionResult = await services.applyBookingTransition(completionDirect, {
+    role: "provider",
+    bookingId: 5,
+    userId: "provider-1",
+    fromStatus: "accepted",
+    toStatus: "completion_requested"
+  });
+  assert.strictEqual(completionResult.ok, false);
+  assert.strictEqual(completionResult.reason, "blocked_transition");
+  assert.strictEqual(completionDirect.calls.length, 0);
 
   const accepted = mockClient(function () {
     return {
@@ -228,6 +243,13 @@ function filterValue(call, column) {
   assert.strictEqual(page.indexOf('priceType = "job"'), -1);
   assert.strictEqual(page.indexOf('priceType = "visit"'), -1);
   assert.ok(page.indexOf("You cannot book your own service.") !== -1);
+  const cashGate = page.indexOf("cashBookingDecision()");
+  const onlineBooking = page.indexOf('payment_method: "online"');
+  const completionRequest = page.indexOf('toStatus === "completion_requested"');
+  const directTransition = page.indexOf("applyBookingTransition(db,");
+  assert.ok(cashGate > 0 && cashGate < onlineBooking);
+  assert.strictEqual(page.indexOf('payment_method: "cash"'), -1);
+  assert.ok(completionRequest > 0 && completionRequest < directTransition);
   assert.ok(page.indexOf('from("service_bookings")') !== -1);
   assert.ok(page.indexOf('from("service_saves")') !== -1);
   assert.ok(page.indexOf("/havkar-i18n.js") !== -1);
