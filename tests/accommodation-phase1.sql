@@ -355,6 +355,12 @@ BEGIN
     RAISE EXCEPTION 'A price or public evidence bucket was created.';
   END IF;
 
+  IF NOT has_function_privilege('anon', 'havkar_private.job_publicly_visible(bigint)', 'EXECUTE')
+     OR NOT has_function_privilege('authenticated', 'havkar_private.job_publicly_visible(bigint)', 'EXECUTE')
+     OR NOT has_function_privilege('service_role', 'havkar_private.job_publicly_visible(bigint)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'Existing private function execute was revoked.';
+  END IF;
+
   BEGIN
     UPDATE public.accommodation_plans
     SET monthly_amount_cents = 1900;
@@ -364,5 +370,36 @@ BEGIN
       NULL;
   END;
 END $$;
+
+SET ROLE authenticated;
+DO $$
+BEGIN
+  BEGIN
+    INSERT INTO public.accommodation_reviewers (user_id, active)
+    VALUES ('11111111-1111-4111-8111-111111111111', true);
+    RAISE EXCEPTION 'A user assigned their own reviewer role.';
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      NULL;
+  END;
+END $$;
+RESET ROLE;
+
+GRANT SELECT, UPDATE ON public.accommodation_operators TO havkar_bypass_test;
+SET ROLE havkar_bypass_test;
+DO $$
+BEGIN
+  BEGIN
+    UPDATE public.accommodation_operators
+    SET identity_status = 'verified';
+    RAISE EXCEPTION 'Bypass role verified an identity.';
+  EXCEPTION
+    WHEN check_violation THEN
+      IF SQLERRM NOT LIKE '%Identity verification cannot be recorded%' THEN
+        RAISE;
+      END IF;
+  END;
+END $$;
+RESET ROLE;
 
 SELECT 'ACCOMMODATION_PHASE1_OK';

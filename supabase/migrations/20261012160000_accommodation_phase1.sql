@@ -10,7 +10,9 @@
 
 CREATE SCHEMA IF NOT EXISTS havkar_private;
 
-REVOKE ALL ON SCHEMA havkar_private FROM PUBLIC, anon, authenticated;
+-- Do not revoke existing privileges. havkar_private already holds
+-- Jobs and Services functions, including job_publicly_visible, which
+-- the public jobs policy executes.
 GRANT USAGE ON SCHEMA havkar_private TO service_role;
 
 CREATE OR REPLACE FUNCTION havkar_private.touch_updated_at()
@@ -1184,5 +1186,8 @@ CREATE POLICY accommodation_evidence_storage_select_reviewer
     )
   );
 
-REVOKE ALL ON ALL FUNCTIONS IN SCHEMA havkar_private FROM PUBLIC, anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION havkar_private.listing_is_public(uuid) TO anon, authenticated;
+REVOKE ALL ON FUNCTION havkar_private.block_identity_checks() FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION havkar_private.create_identity_check() FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION havkar_private.guard_property() FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION havkar_private.create_listing() FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION havkar_private.guard_listing() FROM PUBLIC, anon, authenticated, service_role;

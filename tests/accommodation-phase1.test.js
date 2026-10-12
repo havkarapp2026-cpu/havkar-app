@@ -8,7 +8,7 @@ const root = path.join(__dirname, "..");
 const database = "havkar_accommodation_phase1";
 
 function psql(args, input) {
-    return execFileSync("sudo", ["-u", "postgres", "psql", "-p", "5432", "-v", "ON_ERROR_STOP=1", ...args], {
+    return execFileSync("sudo", ["-u", "postgres", "psql", "-p", process.env.PGPORT || "5432", "-v", "ON_ERROR_STOP=1", ...args], {
         cwd: root,
         encoding: "utf8",
         input

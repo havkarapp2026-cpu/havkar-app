@@ -54,6 +54,19 @@ AS $$
   SELECT string_to_array(name, '/');
 $$;
 
+CREATE SCHEMA IF NOT EXISTS havkar_private;
+
+CREATE OR REPLACE FUNCTION havkar_private.job_publicly_visible(target_id bigint)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT true;
+$$;
+
+GRANT USAGE ON SCHEMA havkar_private TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION havkar_private.job_publicly_visible(bigint) TO anon, authenticated, service_role;
+
 GRANT USAGE ON SCHEMA auth, storage, public TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION auth.uid() TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION storage.foldername(text) TO anon, authenticated, service_role;
