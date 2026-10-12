@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 
 <meta name="viewport"
-      content="width=device-width, initial-scale=1.0">
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
 <meta name="theme-color"
       content="#689f38">
@@ -46,7 +46,7 @@ body{
 
     min-height:100vh;
 
-    padding-bottom:92px;
+    padding-bottom:calc(108px + env(safe-area-inset-bottom, 0px));
 
     transition:
         background .25s ease,
@@ -1565,7 +1565,8 @@ body.dark-mode .business-status-card{
     right:0;
     bottom:0;
 
-    height:76px;
+    height:calc(76px + env(safe-area-inset-bottom, 0px));
+    padding-bottom:env(safe-area-inset-bottom, 0px);
 
     background:white;
 
@@ -3163,6 +3164,7 @@ input:focus-visible{
 ========================================================= -->
 
 <script src="/havkar-i18n.js"></script>
+<script src="/havkar-verification.js"></script>
 
 
 <!-- =========================================================
@@ -3899,48 +3901,22 @@ function getAccountTypeLabel(
 ========================================================= */
 
 function getVerificationType(
-    metadata
+    user
 ){
 
-    const verified =
-        metadata.verified === true ||
-        metadata.is_verified === true;
-
-
-    if(!verified){
+    if(
+        !window.HAVKAR_VERIFICATION ||
+        typeof window.HAVKAR_VERIFICATION.serverVerifiedType !== "function"
+    ){
 
         return "";
 
     }
 
 
-    const type =
-        String(
-            metadata.verification_type ||
-            metadata.verificationType ||
-            metadata.account_type ||
-            "personal"
-        ).toLowerCase();
-
-
-    if(
-        type === "company" ||
-        type === "factory"
-    ){
-
-        return "company";
-
-    }
-
-
-    if(type === "business"){
-
-        return "business";
-
-    }
-
-
-    return "personal";
+    return window.HAVKAR_VERIFICATION.serverVerifiedType(
+        user
+    );
 
 }
 
@@ -4275,7 +4251,7 @@ async function(){
 
         const verificationBadge =
             renderVerificationBadge(
-                metadata
+                user
             );
 
 
