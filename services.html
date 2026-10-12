@@ -1689,6 +1689,38 @@ textarea.form-control {
             </div>
 
 
+            <p class="form-label" id="bookingCommission">
+                The customer pays the listed price. The provider owes 10%. Fees and taxes are separate. This screen does not collect the commission.
+            </p>
+
+
+            <div class="form-group">
+
+                <label
+                    class="form-label"
+                    for="bookingPayment">
+
+                    Payment
+
+                </label>
+
+                <select
+                    id="bookingPayment"
+                    class="form-control">
+
+                    <option value="unset">
+                        Request only
+                    </option>
+
+                    <option value="cash">
+                        Cash / manual
+                    </option>
+
+                </select>
+
+            </div>
+
+
             <div class="form-group">
 
                 <label
@@ -2285,6 +2317,7 @@ let selectedBookingService = null;
 let toastTimer = null;
 let bookingRole = "customer";
 let loadedBookings = [];
+let commissionByBooking = {};
 
 const searchInput =
     document.getElementById("searchInput");
@@ -2974,24 +3007,37 @@ async function submitBooking(event) {
         "Booking..."
     );
 
-    const { error } = await db
+    const payment =
+        document.getElementById("bookingPayment").value;
+
+    const payload = {
+        service_id:
+            selectedBookingService.id,
+        customer_id:
+            user.id,
+        provider_id:
+            selectedBookingService.provider_id,
+        booking_date:
+            date,
+        booking_time:
+            time,
+        message:
+            message || null,
+        status:
+            "pending"
+    };
+
+    if (payment === "cash") {
+        payload.payment_method = "cash";
+    }
+
+    const inserted = await db
         .from("service_bookings")
-        .insert({
-            service_id:
-                selectedBookingService.id,
-            customer_id:
-                user.id,
-            provider_id:
-                selectedBookingService.provider_id,
-            booking_date:
-                date,
-            booking_time:
-                time,
-            message:
-                message || null,
-            status:
-                "pending"
-        });
+        .insert(payload)
+        .select("id")
+        .single();
+
+    const error = inserted.error;
 
     setButtonBusy(
         submitButton,
@@ -3001,7 +3047,11 @@ async function submitBooking(event) {
 
     if (error) {
         console.error("Booking error:", error);
-        showToast("Could not create booking.");
+        showToast(
+            payment === "cash"
+                ? "The cash request was not recorded. Nothing was collected."
+                : "Could not create booking."
+        );
         return;
     }
 
@@ -3009,7 +3059,12 @@ async function submitBooking(event) {
     event.currentTarget.reset();
     selectedBookingService = null;
 
-    showToast("Booking request sent successfully.");
+    const ledger = await readCommissionEntry(inserted.data && inserted.data.id);
+    showToast(
+        ledger
+            ? window.HAVKAR_SERVICES.liabilityText(ledger.liability_state)
+            : "Booking request sent. Nothing was collected."
+    );
 
 }
 
@@ -3713,6 +3768,84 @@ function showBookingRole(role) {
 }
 
 
+function centsText(cents) {
+
+    const amount = Number(cents);
+
+    if (!Number.isInteger(amount)) {
+        return "";
+    }
+
+    return (amount / 100).toFixed(2);
+
+}
+
+
+function commissionLine(entry) {
+
+    const rules = window.HAVKAR_SERVICES;
+
+    return [
+        "Customer pays " + centsText(entry.customer_charge_cents),
+        "Provider commission " + centsText(entry.commission_cents),
+        "Fee " + centsText(entry.processing_fee_cents),
+        "Tax " + centsText(entry.tax_cents),
+        rules.liabilityText(entry.liability_state)
+    ].filter(Boolean).join(". ");
+
+}
+
+
+async function readCommissionEntry(bookingId) {
+
+    if (!bookingId) {
+        return null;
+    }
+
+    const result = await db
+        .from("service_commission_entries")
+        .select("booking_id,customer_charge_cents,commission_cents,processing_fee_cents,tax_cents,liability_state,collection_state")
+        .eq("booking_id", bookingId)
+        .maybeSingle();
+
+    if (result.error || !result.data || result.data.collection_state !== "uncollected") {
+        return null;
+    }
+
+    return result.data;
+
+}
+
+
+async function loadCommissionEntries(bookings) {
+
+    commissionByBooking = {};
+    const ids = (bookings || []).map(function(booking) {
+        return booking.id;
+    }).filter(Boolean);
+
+    if (!ids.length) {
+        return;
+    }
+
+    const result = await db
+        .from("service_commission_entries")
+        .select("booking_id,customer_charge_cents,commission_cents,processing_fee_cents,tax_cents,liability_state,collection_state")
+        .in("booking_id", ids);
+
+    if (result.error || !Array.isArray(result.data)) {
+        return;
+    }
+
+    result.data.forEach(function(entry) {
+        if (entry.collection_state === "uncollected") {
+            commissionByBooking[String(entry.booking_id)] = entry;
+        }
+    });
+
+}
+
+
 async function loadBookings() {
 
     const list = document.getElementById("bookingsList");
@@ -3745,6 +3878,7 @@ async function loadBookings() {
     }
 
     loadedBookings = Array.isArray(result.data) ? result.data : [];
+    await loadCommissionEntries(loadedBookings);
     renderBookings();
 
 }
@@ -3824,6 +3958,16 @@ function buildBookingCard(booking) {
         const message = document.createElement("p");
         message.textContent = booking.message;
         card.appendChild(message);
+
+    }
+
+    const ledger = commissionByBooking[String(booking.id)];
+
+    if (ledger) {
+
+        const money = document.createElement("p");
+        money.textContent = commissionLine(ledger);
+        card.appendChild(money);
 
     }
 

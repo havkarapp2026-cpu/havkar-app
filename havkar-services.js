@@ -17,11 +17,48 @@
 
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
 
+  const COMMISSION_BPS = 1000;
   const PRICE_TYPES = ["fixed", "hourly", "daily", "negotiable"];
   const CURRENCIES = ["EUR", "USD", "GBP", "SEK"];
   const SERVICE_STATUSES = ["active", "paused", "closed"];
   const SERVICE_COLUMNS = "id,created_at,updated_at,provider_id,title,category,description,price,currency,price_type,location,image_url,status";
   const BOOKING_COLUMNS = "id,created_at,updated_at,service_id,customer_id,provider_id,booking_date,booking_time,message,status";
+
+  function commissionFromCents(agreedCents) {
+    if (!Number.isInteger(agreedCents) || agreedCents < 0 || agreedCents > 100000000) {
+      return null;
+    }
+
+    const commissionCents = Math.round(agreedCents * COMMISSION_BPS / 10000);
+
+    return {
+      agreedCents: agreedCents,
+      customerChargeCents: agreedCents,
+      commissionBps: COMMISSION_BPS,
+      commissionCents: commissionCents,
+      providerSettlementCents: agreedCents - commissionCents,
+      payer: "provider",
+      processingFeeCents: 0,
+      taxCents: 0,
+      collectionState: "uncollected"
+    };
+  }
+
+  function liabilityText(state) {
+    if (state === "owed") {
+      return "Owed by the provider. Not collected.";
+    }
+
+    if (state === "void") {
+      return "Not owed. Not collected.";
+    }
+
+    if (state === "recorded") {
+      return "Price recorded. The provider commission is not due until completion and is not collected.";
+    }
+
+    return "";
+  }
 
   function parsePriceInput(value) {
 
@@ -326,6 +363,9 @@
     SERVICE_STATUSES: SERVICE_STATUSES,
     SERVICE_COLUMNS: SERVICE_COLUMNS,
     BOOKING_COLUMNS: BOOKING_COLUMNS,
+    COMMISSION_BPS: COMMISSION_BPS,
+    commissionFromCents: commissionFromCents,
+    liabilityText: liabilityText,
     parsePriceInput: parsePriceInput,
     providerBookingTransition: providerBookingTransition,
     customerBookingTransition: customerBookingTransition,
