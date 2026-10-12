@@ -9,6 +9,10 @@ function show(id, text) {
     if (node) {
         node.textContent = text || "";
     }
+
+    if (window.HAVKAR_ACCOMMODATION_I18N) {
+        window.HAVKAR_ACCOMMODATION_I18N.apply();
+    }
 }
 
 async function sessionUser(supabase) {
@@ -70,7 +74,18 @@ async function saveOperator(supabase, user) {
     }
 }
 
-async function saveProperty(supabase, user) {
+async function saveProperty(supabase, user, submitAfter) {
+    const saveButton = document.getElementById("saveProperty");
+    const submitButton = document.getElementById("submitProperty");
+
+    if (saveButton) {
+        saveButton.disabled = true;
+    }
+
+    if (submitButton) {
+        submitButton.disabled = true;
+    }
+
     const { data: operator, error: operatorError } = await supabase
         .from("accommodation_operators")
         .select("id")
@@ -78,6 +93,14 @@ async function saveProperty(supabase, user) {
         .maybeSingle();
 
     if (operatorError || !operator) {
+        if (saveButton) {
+            saveButton.disabled = false;
+        }
+
+        if (submitButton) {
+            submitButton.disabled = false;
+        }
+
         show("message", operatorError ? operatorError.message : "Create the operator record first.");
         return;
     }
@@ -86,14 +109,31 @@ async function saveProperty(supabase, user) {
     const displayName = document.getElementById("displayName").value.trim();
     const city = document.getElementById("city").value.trim();
     const street = document.getElementById("street").value.trim();
+    const streetNumber = document.getElementById("streetNumber").value.trim();
+    const fieldError = accommodation.applicationError({
+        displayName: displayName,
+        marketingType: document.getElementById("marketingType").value,
+        legalCategory: document.getElementById("legalCategory").value,
+        cin: cin,
+        city: city,
+        street: street,
+        streetNumber: streetNumber,
+        countryCode: "IT"
+    });
 
-    if (!accommodation.cinShapeValid(cin)) {
-        show("message", "Italian CIN must be 15 letters or digits.");
-        return;
+    function releasePropertyButtons() {
+        if (saveButton) {
+            saveButton.disabled = false;
+        }
+
+        if (submitButton) {
+            submitButton.disabled = false;
+        }
     }
 
-    if (!displayName || !city || !street) {
-        show("message", "Name, city, and street are required.");
+    if (fieldError) {
+        releasePropertyButtons();
+        show("message", fieldError);
         return;
     }
 
@@ -110,6 +150,7 @@ async function saveProperty(supabase, user) {
         .single();
 
     if (propertyError) {
+        releasePropertyButtons();
         show("message", propertyError.message);
         return;
     }
@@ -121,12 +162,14 @@ async function saveProperty(supabase, user) {
         city: city,
         postal_code: document.getElementById("postalCode").value.trim() || null,
         street: street,
+        street_number: streetNumber,
         cadastral_sheet: document.getElementById("cadastralSheet").value.trim() || null,
         cadastral_parcel: document.getElementById("cadastralParcel").value.trim() || null,
         cadastral_subaltern: document.getElementById("cadastralSubaltern").value.trim() || null
     });
 
     if (addressError) {
+        releasePropertyButtons();
         show("message", addressError.message);
         return;
     }
@@ -138,11 +181,120 @@ async function saveProperty(supabase, user) {
         issuing_country: "IT"
     });
 
-    show("message", cinError ? cinError.message : "Draft property saved. It is not published.");
-
-    if (!cinError) {
-        window.location.href = "accommodation-documents.html?property=" + property.id;
+    if (cinError) {
+        releasePropertyButtons();
+        show("message", cinError.message);
+        return;
     }
+
+    if (submitAfter) {
+        await submitApplication(supabase, user, property.id);
+        return;
+    }
+
+    show("message", "Draft property saved. It is not published.");
+    window.location.href = "accommodation-documents.html?property=" + property.id;
+}
+
+async function submitApplication(supabase, user, propertyId) {
+    const clicked = document.activeElement;
+
+    function releaseSubmitButton() {
+        if (clicked && clicked.tagName === "BUTTON") {
+            clicked.disabled = false;
+        }
+    }
+
+    if (clicked && clicked.tagName === "BUTTON") {
+        clicked.disabled = true;
+    }
+
+    const { data: operator, error: operatorError } = await supabase
+        .from("accommodation_operators")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+    const { data: property, error: propertyError } = await supabase
+        .from("accommodation_properties")
+        .select("id,operator_id,display_name,marketing_type,legal_category,property_status")
+        .eq("id", propertyId)
+        .maybeSingle();
+
+    if (operatorError || propertyError || !operator || !property || property.operator_id !== operator.id) {
+        releaseSubmitButton();
+        show("message", "Property not found.");
+        return;
+    }
+
+    if (property.property_status !== "draft" && property.property_status !== "needs_more_info") {
+        releaseSubmitButton();
+        show("message", "This application was already submitted.");
+        return;
+    }
+
+    const { data: address, error: addressError } = await supabase
+        .from("accommodation_addresses")
+        .select("country_code,city,street,street_number")
+        .eq("property_id", propertyId)
+        .maybeSingle();
+    const { data: credential, error: credentialError } = await supabase
+        .from("accommodation_credentials")
+        .select("credential_value")
+        .eq("property_id", propertyId)
+        .eq("credential_type", "cin")
+        .maybeSingle();
+
+    if (addressError || credentialError) {
+        releaseSubmitButton();
+        show("message", addressError ? addressError.message : credentialError.message);
+        return;
+    }
+
+    const fieldError = accommodation.applicationError({
+        displayName: property.display_name,
+        marketingType: property.marketing_type,
+        legalCategory: property.legal_category,
+        cin: credential ? credential.credential_value : "",
+        city: address ? address.city : "",
+        street: address ? address.street : "",
+        streetNumber: address ? address.street_number : "",
+        countryCode: address ? address.country_code : ""
+    });
+
+    if (fieldError) {
+        releaseSubmitButton();
+        show("message", fieldError);
+        return;
+    }
+
+    const { data: updated, error: updateError } = await supabase
+        .from("accommodation_properties")
+        .update({ property_status: "submitted" })
+        .eq("id", propertyId)
+        .eq("operator_id", operator.id)
+        .in("property_status", ["draft", "needs_more_info"])
+        .select("id");
+
+    if (updateError) {
+        releaseSubmitButton();
+        show("message", updateError.message);
+        return;
+    }
+
+    if (!updated || !updated.length) {
+        releaseSubmitButton();
+        show("message", "This application was already submitted.");
+        return;
+    }
+
+    show("message", "Submitted for review. The listing stays unpublished.");
+
+    if (page === "status") {
+        await loadStatus(supabase, user);
+        return;
+    }
+
+    window.location.href = "accommodation-status.html";
 }
 
 async function uploadEvidence(supabase, user) {
@@ -214,27 +366,60 @@ async function loadStatus(supabase, user) {
             .maybeSingle()
         : { data: null };
 
-    show("identityStatus", operator ? operator.identity_status : "not_started");
-    show("identityCheck", identity ? identity.provider + " / " + identity.status : "none / blocked");
+    show("identityStatus", accommodation.identityStatusText(operator ? operator.identity_status : "not_started"));
+    show("identityCheck", "No identity provider is connected.");
+
+    const target = document.getElementById("properties");
 
     if (!operator) {
+        target.textContent = "No property file yet.";
+
+        if (window.HAVKAR_ACCOMMODATION_I18N) {
+            window.HAVKAR_ACCOMMODATION_I18N.apply();
+        }
+
         return;
     }
 
     const { data: properties } = await supabase
         .from("accommodation_properties")
-        .select("id,display_name,property_status,accommodation_listings(publication_status)")
+        .select("id,operator_id,display_name,property_status")
         .eq("operator_id", operator.id);
-    const target = document.getElementById("properties");
 
-    target.textContent = (properties || []).map(function (property) {
-        const listing = Array.isArray(property.accommodation_listings)
-            ? property.accommodation_listings[0]
-            : property.accommodation_listings;
-        return property.display_name +
-            " — property " + property.property_status +
-            " — listing " + (listing ? listing.publication_status : "draft");
-    }).join("\n");
+    target.replaceChildren();
+
+    if (!properties || !properties.length) {
+        target.textContent = "No property file yet.";
+        return;
+    }
+
+    properties.forEach(function (property) {
+        const card = document.createElement("article");
+        card.className = "card";
+        const title = document.createElement("h2");
+        title.dataset.userText = "true";
+        title.textContent = property.display_name || "";
+        const status = document.createElement("p");
+        status.textContent = accommodation.propertyStatusText(property.property_status);
+        card.append(title, status);
+
+        if (property.property_status === "draft" || property.property_status === "needs_more_info") {
+            const button = document.createElement("button");
+            button.className = "primary";
+            button.type = "button";
+            button.textContent = "Submit for review";
+            button.addEventListener("click", function () {
+                submitApplication(supabase, user, property.id);
+            });
+            card.append(button);
+        }
+
+        target.append(card);
+    });
+
+    if (window.HAVKAR_ACCOMMODATION_I18N) {
+        window.HAVKAR_ACCOMMODATION_I18N.apply();
+    }
 }
 
 async function loadReviewQueue(supabase) {
@@ -258,7 +443,12 @@ async function loadReviewQueue(supabase) {
     data.forEach(function (property) {
         const link = document.createElement("a");
         link.href = "accommodation-review-case.html?property=" + property.id;
-        link.textContent = property.display_name + " (" + property.property_status + ")";
+        const name = document.createElement("span");
+        name.dataset.userText = "true";
+        name.textContent = property.display_name || "";
+        const state = document.createElement("span");
+        state.textContent = accommodation.propertyStatusText(property.property_status);
+        link.append(name, document.createTextNode(" — "), state);
         const row = document.createElement("p");
         row.appendChild(link);
         list.appendChild(row);
@@ -302,8 +492,13 @@ async function start() {
     }
 
     const supabase = createClient(config.url, config.publishableKey);
-    const session = page === "public" ? null : await sessionUser(supabase);
+    const session = await sessionUser(supabase);
     const user = session?.user || null;
+    const authLinks = document.getElementById("authLinks");
+
+    if (authLinks && user) {
+        authLinks.hidden = true;
+    }
 
     if (page !== "public" && !user) {
         show("message", "Sign in before continuing.");
@@ -327,13 +522,26 @@ async function start() {
 
     if (page === "property") {
         document.getElementById("saveProperty").addEventListener("click", function () {
-            saveProperty(supabase, user);
+            saveProperty(supabase, user, false);
+        });
+        document.getElementById("submitProperty").addEventListener("click", function () {
+            saveProperty(supabase, user, true);
         });
     }
 
     if (page === "documents") {
         document.getElementById("uploadEvidence").addEventListener("click", function () {
             uploadEvidence(supabase, user);
+        });
+        document.getElementById("submitApplication").addEventListener("click", function () {
+            const propertyId = new URLSearchParams(window.location.search).get("property") || "";
+
+            if (!propertyId) {
+                show("message", "Choose a property document and open this page from the property draft.");
+                return;
+            }
+
+            submitApplication(supabase, user, propertyId);
         });
     }
 
@@ -372,7 +580,17 @@ async function start() {
             return;
         }
 
-        show("case", data.display_name + " — " + data.property_status + " — " + data.legal_category);
+        const caseNode = document.getElementById("case");
+        const caseName = document.createElement("span");
+        caseName.dataset.userText = "true";
+        caseName.textContent = data.display_name || "";
+        const caseState = document.createElement("span");
+        caseState.textContent = accommodation.propertyStatusText(data.property_status);
+        caseNode.replaceChildren(caseName, document.createTextNode(" — "), caseState);
+
+        if (window.HAVKAR_ACCOMMODATION_I18N) {
+            window.HAVKAR_ACCOMMODATION_I18N.apply();
+        }
         document.getElementById("recordDecision").addEventListener("click", function () {
             submitDecision(session);
         });
