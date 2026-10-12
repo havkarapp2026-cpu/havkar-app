@@ -164,6 +164,17 @@
             return;
         }
 
+        /*
+         * The Android guard is already the current history entry.
+         * Pop it so the same listener replaces this page with the
+         * parent. Assigning here would leave the guard underneath
+         * and the next system back would reopen this page.
+         */
+        if (window.history.state && window.history.state.havkarBackGuard) {
+            window.history.back();
+            return;
+        }
+
         window.location.assign(decision.href);
     }
 
@@ -186,16 +197,25 @@
             return;
         }
 
+        function replaceOnSystemBack() {
+            window.addEventListener("popstate", function onPop() {
+                window.removeEventListener("popstate", onPop);
+                window.location.replace(decision.href);
+            });
+        }
+
+        /*
+         * A reload keeps the guard state but drops the listener.
+         * Attach it again without pushing a second guard entry, so
+         * a language reload does not leave this page by itself.
+         */
         if (window.history.state && window.history.state.havkarBackGuard) {
+            replaceOnSystemBack();
             return;
         }
 
         window.history.pushState({ havkarBackGuard: true }, "");
-
-        window.addEventListener("popstate", function onPop() {
-            window.removeEventListener("popstate", onPop);
-            window.location.replace(decision.href);
-        });
+        replaceOnSystemBack();
     }
 
     function install() {
