@@ -23,7 +23,8 @@ const applied = psql([
   "-f", "tests/accommodation-phase1.sql",
   "-f", "supabase/migrations/20261013120000_accommodation_phase2_submission.sql",
   "-f", "tests/auth-jwt-stub.sql",
-  "-f", "supabase/migrations/20261013140100_accommodation_owner_tools.sql",
+  "-f", "tests/service-commission-prelude.sql",
+  "-f", "supabase/migrations/20261012231344_service_commission_and_accommodation_owner_tools.sql",
   "-f", "tests/accommodation-owner-tools.sql"
 ]);
 
