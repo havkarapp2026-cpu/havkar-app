@@ -76,4 +76,14 @@ assert.match(translate, /Google Cloud Translation API/);
 const apiFiles = fs.readdirSync(path.join(root, "api")).filter((name) => name.endsWith(".js"));
 assert.equal(apiFiles.length, 12);
 
+const testPage = read("ai-assistant-test.html");
+assert.match(testPage, /supabase\.auth\.getSession\(\)/);
+assert.match(testPage, /\/functions\/v1\/havkar-ai-assistant/);
+assert.match(testPage, /سلام\. این فقط یک آزمایش کوتاه است\./);
+assert.match(testPage, /havkar-supabase-config\.js/);
+assert.doesNotMatch(testPage, /HAVKAR_AI_API_KEY/);
+assert.doesNotMatch(testPage, /console\.(log|debug|info|error)/);
+assert.doesNotMatch(testPage, /service_role/);
+assert.doesNotMatch(testPage, /localStorage\.setItem/);
+
 console.log("AI_ASSISTANT_TEST_OK");
