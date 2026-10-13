@@ -55,6 +55,24 @@ function confirmation(body) {
   return body.confirm === "DELETE" && Object.keys(body).length === 1;
 }
 
+function authenticatedUserId(user) {
+  const id = user?.id;
+
+  if (typeof id !== "string") {
+    return "";
+  }
+
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+    ? id
+    : "";
+}
+
+function canContinueAfterSignOut(error) {
+  const status = Number(error?.status);
+
+  return status === 401 || status === 403 || status === 404;
+}
+
 function defaultAdmin() {
   const url = process.env.SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -121,18 +139,64 @@ export function createDeleteAccountHandler({ getAdmin = defaultAdmin } = {}) {
       });
     }
 
-    const userResult = await admin.auth.getUser(accessToken);
+    let userResult;
 
-    if (userResult.error || !userResult.data?.user?.id) {
+    try {
+      userResult = await admin.auth.getUser(accessToken);
+    } catch {
+      console.error("Account authentication failed.");
+
       return sendJson(res, 401, {
         ok: false,
         error: "Authentication required."
       });
     }
 
-    const deleted = await admin.auth.admin.deleteUser(userResult.data.user.id);
+    const userId = authenticatedUserId(userResult?.data?.user);
 
-    if (deleted.error) {
+    if (!userResult || userResult.error || !userId) {
+      return sendJson(res, 401, {
+        ok: false,
+        error: "Authentication required."
+      });
+    }
+
+    let revoked;
+
+    try {
+      revoked = await admin.auth.admin.signOut(accessToken, "global");
+    } catch {
+      console.error("Account session revocation failed.");
+
+      return sendJson(res, 500, {
+        ok: false,
+        error: "The account could not be deleted."
+      });
+    }
+
+    if (revoked?.error && !canContinueAfterSignOut(revoked.error)) {
+      console.error("Account session revocation failed.");
+
+      return sendJson(res, 500, {
+        ok: false,
+        error: "The account could not be deleted."
+      });
+    }
+
+    let deleted;
+
+    try {
+      deleted = await admin.auth.admin.deleteUser(userId);
+    } catch {
+      console.error("Account deletion failed.");
+
+      return sendJson(res, 500, {
+        ok: false,
+        error: "The account could not be deleted."
+      });
+    }
+
+    if (!deleted || deleted.error) {
       console.error("Account deletion failed.");
 
       return sendJson(res, 500, {

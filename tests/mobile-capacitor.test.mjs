@@ -42,6 +42,11 @@ for (const language of LANGUAGES) {
 assert.equal(config.includes("server.url"), false);
 assert.match(config, /allowNavigation:\s*\[\]/);
 assert.match(config, /allowMixedContent:\s*false/);
+assert.match(config, /initialViewportFitValueHint:\s*"cover"/);
+
+const appCss = fs.readFileSync(new URL("../mobile/www/app.css", import.meta.url), "utf8");
+assert.match(appCss, /var\(--safe-area-inset-top/);
+assert.match(appCss, /env\(safe-area-inset-top, 0px\)/);
 assert.equal(html.includes("<iframe"), false);
 assert.equal(html.includes("havkar-app.vercel.app"), false);
 
@@ -175,18 +180,23 @@ function mockResponse() {
 }
 
 const token = "test-access-token";
-const deleted = [];
+const userId = "11111111-1111-4111-8111-111111111111";
+const events = [];
 const handler = createDeleteAccountHandler({
   getAdmin() {
     return {
       auth: {
         async getUser(accessToken) {
           assert.equal(accessToken, token);
-          return { data: { user: { id: "user-1", email: "person@example.com" } }, error: null };
+          return { data: { user: { id: userId, email: "person@example.com" } }, error: null };
         },
         admin: {
+          async signOut(accessToken, scope) {
+            events.push(["signOut", accessToken, scope]);
+            return { error: null };
+          },
           async deleteUser(id) {
-            deleted.push(id);
+            events.push(["delete", id]);
             return { error: null };
           }
         }
@@ -206,9 +216,93 @@ await handler({
 }, ok);
 assert.equal(ok.statusCode, 200);
 assert.deepEqual(ok.body, { ok: true });
-assert.deepEqual(deleted, ["user-1"]);
+assert.deepEqual(events, [
+  ["signOut", token, "global"],
+  ["delete", userId]
+]);
 assert.equal(JSON.stringify(ok.body).includes(token), false);
 assert.equal(JSON.stringify(ok.body).includes("person@example.com"), false);
+assert.equal(JSON.stringify(ok.body).includes(userId), false);
+
+const otherUser = mockResponse();
+await handler({
+  method: "POST",
+  headers: {
+    origin: "https://localhost",
+    authorization: "Bearer " + token
+  },
+  body: {
+    confirm: "DELETE",
+    userId: "22222222-2222-4222-8222-222222222222"
+  }
+}, otherUser);
+assert.equal(otherUser.statusCode, 400);
+assert.deepEqual(events, [
+  ["signOut", token, "global"],
+  ["delete", userId]
+]);
+
+const revokeFailed = [];
+const revokeHandler = createDeleteAccountHandler({
+  getAdmin() {
+    return {
+      auth: {
+        async getUser() {
+          return { data: { user: { id: userId } }, error: null };
+        },
+        admin: {
+          async signOut() {
+            revokeFailed.push("signOut");
+            return { error: { status: 500 } };
+          },
+          async deleteUser(id) {
+            revokeFailed.push(id);
+            return { error: null };
+          }
+        }
+      }
+    };
+  }
+});
+const revokeResponse = mockResponse();
+await revokeHandler({
+  method: "POST",
+  headers: { authorization: "Bearer " + token },
+  body: { confirm: "DELETE" }
+}, revokeResponse);
+assert.equal(revokeResponse.statusCode, 500);
+assert.deepEqual(revokeFailed, ["signOut"]);
+
+const foreignIdentity = [];
+const foreignHandler = createDeleteAccountHandler({
+  getAdmin() {
+    return {
+      auth: {
+        async getUser() {
+          return { data: { user: { id: "not-a-user" } }, error: null };
+        },
+        admin: {
+          async signOut() {
+            foreignIdentity.push("signOut");
+            return { error: null };
+          },
+          async deleteUser(id) {
+            foreignIdentity.push(id);
+            return { error: null };
+          }
+        }
+      }
+    };
+  }
+});
+const foreignResponse = mockResponse();
+await foreignHandler({
+  method: "POST",
+  headers: { authorization: "Bearer " + token },
+  body: { confirm: "DELETE" }
+}, foreignResponse);
+assert.equal(foreignResponse.statusCode, 401);
+assert.deepEqual(foreignIdentity, []);
 
 const denied = mockResponse();
 await handler({

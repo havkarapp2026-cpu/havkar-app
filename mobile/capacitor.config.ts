@@ -14,6 +14,13 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: false
   },
+  plugins: {
+    SystemBars: {
+      // The page already sets viewport-fit=cover. Hinting it avoids a
+      // startup jump between native padding and CSS safe-area insets.
+      initialViewportFitValueHint: "cover"
+    }
+  },
   ios: {
     contentInset: "automatic"
   }
