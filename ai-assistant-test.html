@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#2e7d32">
+<title>HAVKAR — آزمایش دستیار</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;padding:20px;display:grid;place-items:center;font:16px Arial,Helvetica,sans-serif;color:#263529;background:linear-gradient(135deg,#b8e6bd,#37b85d)}
+main{width:100%;max-width:560px;background:#fff;border-radius:26px;padding:28px;box-shadow:0 15px 45px #0002}
+h1{margin:0 0 8px;color:#187a35;font-size:28px}
+p{margin:0 0 14px;line-height:1.5}
+button,a.button{display:inline-block;border:0;border-radius:12px;background:#238943;color:#fff;font:inherit;font-weight:700;padding:12px 16px;text-decoration:none;cursor:pointer}
+button[disabled]{opacity:.6;cursor:wait}
+.result{margin-top:16px;padding:14px;border-radius:12px;background:#f4faf5;white-space:pre-wrap}
+.label{font-weight:700}
+</style>
+</head>
+<body>
+<main>
+<h1>آزمایش دستیار HAVKAR</h1>
+<p id="sessionState">در حال بررسی نشست ورود...</p>
+<p>این صفحه فقط یک پیام کوتاه فارسی می‌فرستد و پاسخ را نشان می‌دهد.</p>
+<button id="runTest" type="button" disabled>اجرای یک آزمایش</button>
+<p><a href="login.html">ورود با حساب موجود</a></p>
+<div class="result" aria-live="polite">
+<p><span class="label">وضعیت HTTP:</span> <span id="httpStatus">—</span></p>
+<p><span class="label">پاسخ:</span></p>
+<p id="assistantReply">هنوز آزمایشی انجام نشده است.</p>
+</div>
+</main>
+<script src="/havkar-supabase-config.js"></script>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const TEST_MESSAGE = "سلام. این فقط یک آزمایش کوتاه است.";
+const sessionState = document.getElementById("sessionState");
+const runTest = document.getElementById("runTest");
+const httpStatus = document.getElementById("httpStatus");
+const assistantReply = document.getElementById("assistantReply");
+const config = window.HAVKAR_SUPABASE_CONFIG;
+
+if (!config || !config.url || !config.publishableKey) {
+  sessionState.textContent = "پیکربندی HAVKAR در این صفحه پیدا نشد.";
+} else {
+  const supabase = createClient(config.url, config.publishableKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    }
+  });
+
+  const sessionResult = await supabase.auth.getSession();
+  const session = sessionResult.data && sessionResult.data.session;
+
+  if (sessionResult.error || !session || !session.access_token) {
+    sessionState.textContent = "نشست ورود پیدا نشد. ابتدا با همان حساب موجود وارد شوید و دوباره این صفحه را باز کنید.";
+  } else {
+    sessionState.textContent = "نشست ورود HAVKAR آماده است.";
+    runTest.disabled = false;
+    runTest.addEventListener("click", async () => {
+      runTest.disabled = true;
+      httpStatus.textContent = "...";
+      assistantReply.textContent = "در حال دریافت پاسخ...";
+      const current = await supabase.auth.getSession();
+      const accessToken = current.data && current.data.session && current.data.session.access_token;
+      if (current.error || !accessToken) {
+        httpStatus.textContent = "—";
+        assistantReply.textContent = "نشست ورود دیگر در دسترس نیست. دوباره وارد شوید.";
+        runTest.disabled = false;
+        return;
+      }
+      try {
+        const response = await fetch(config.url + "/functions/v1/havkar-ai-assistant", {
+          method: "POST",
+          headers: {
+            "Authorization": "Bearer " + accessToken,
+            "apikey": config.publishableKey,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            language: "fa",
+            messages: [{ role: "user", content: TEST_MESSAGE }]
+          })
+        });
+        httpStatus.textContent = String(response.status);
+        let payload = null;
+        try {
+          payload = await response.json();
+        } catch {
+          payload = null;
+        }
+        const text = payload && typeof payload.message === "string"
+          ? payload.message
+          : payload && typeof payload.error === "string"
+            ? payload.error
+            : "پاسخ قابل نمایش نیست.";
+        assistantReply.textContent = text;
+        if (response.status !== 200) {
+          runTest.disabled = false;
+        }
+      } catch {
+        httpStatus.textContent = "—";
+        assistantReply.textContent = "ارتباط با دستیار برقرار نشد.";
+        runTest.disabled = false;
+      }
+    });
+  }
+}
+</script>
+</body>
+</html>
