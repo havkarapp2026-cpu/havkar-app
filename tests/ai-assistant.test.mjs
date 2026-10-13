@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import {
   assistantInstruction,
   normalizeLanguage,
+  providerErrorStatus,
   validateAssistantRequest
 } from "../supabase/functions/havkar-ai-assistant/policy.mjs";
 
@@ -63,7 +64,18 @@ const translate = read("api/translate.js");
 assert.match(source, /admin\.auth\.getUser\(accessToken\)/);
 assert.match(source, /HAVKAR_AI_API_KEY/);
 assert.match(source, /x-goog-api-key/);
+assert.match(source, /const DEFAULT_MODEL = "gemini-3\.5-flash-lite"/);
+assert.match(source, /gemini_http_status=/);
+assert.match(source, /gemini_error_status=/);
 assert.match(source, /thinkingBudget: 0/);
+assert.match(source, /model\.startsWith\("gemini-2\.5-flash"\)/);
+assert.equal(providerErrorStatus({ error: { status: "NOT_FOUND" } }), "NOT_FOUND");
+assert.equal(providerErrorStatus({ error: { status: "RESOURCE_EXHAUSTED" } }), "RESOURCE_EXHAUSTED");
+assert.equal(providerErrorStatus({ error: { status: "AIzaSysecretkeyvalue" } }), "");
+assert.equal(providerErrorStatus({ error: { status: "model is unavailable" } }), "");
+assert.equal(providerErrorStatus({ error: { message: "NOT_FOUND" } }), "");
+assert.doesNotMatch(source, /console\.error\([^)]*providerKey/);
+assert.doesNotMatch(source, /console\.error\([^)]*payload/);
 assert.match(source, /part\.thought !== true/);
 assert.doesNotMatch(source, /AIza[0-9A-Za-z_-]{20,}/);
 assert.doesNotMatch(source, /\/api\/translate/);

@@ -2,6 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   LIMITS,
   assistantInstruction,
+  providerErrorStatus,
   validateAssistantRequest
 } from "./policy.mjs";
 
@@ -10,7 +11,7 @@ const ALLOWED_ORIGINS = new Set([
   "https://testnet.havkar.online"
 ]);
 
-const DEFAULT_MODEL = "gemini-2.5-flash";
+const DEFAULT_MODEL = "gemini-3.5-flash-lite";
 const MAX_PROVIDER_RESPONSE_CHARACTERS = 20000;
 const MAX_ASSISTANT_MESSAGE_CHARACTERS = 4000;
 
@@ -83,6 +84,14 @@ function generationConfig(model) {
   }
 
   return config;
+}
+
+function logProviderFailure(httpStatus, payload) {
+  const errorStatus = providerErrorStatus(payload) || "none";
+  console.error(
+    "gemini_http_status=" + String(httpStatus) +
+    " gemini_error_status=" + errorStatus
+  );
 }
 
 function assistantMessage(payload) {
@@ -231,10 +240,12 @@ Deno.serve(async (request) => {
       }
     );
   } catch {
+    logProviderFailure(0, null);
     return json(502, { ok: false, error: "The assistant could not answer. Please try again." }, headers);
   }
 
   if (!providerResponse.ok) {
+    logProviderFailure(providerResponse.status, await readProviderPayload(providerResponse));
     return json(502, { ok: false, error: "The assistant could not answer. Please try again." }, headers);
   }
 
@@ -248,6 +259,7 @@ Deno.serve(async (request) => {
   const message = assistantMessage(payload);
 
   if (!message) {
+    logProviderFailure(providerResponse.status, payload);
     return json(502, { ok: false, error: "The assistant could not answer. Please try again." }, headers);
   }
 
