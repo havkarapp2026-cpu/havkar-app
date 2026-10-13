@@ -40,13 +40,29 @@ for (const language of LANGUAGES) {
 }
 
 assert.equal(config.includes("server.url"), false);
+assert.equal(config.includes("errorPath"), false);
 assert.match(config, /allowNavigation:\s*\[\]/);
 assert.match(config, /allowMixedContent:\s*false/);
+assert.match(config, /appStartPath:\s*"\/index\.html"/);
 assert.match(config, /initialViewportFitValueHint:\s*"cover"/);
+
+const androidAppGradle = fs.readFileSync(
+  new URL("../mobile/android/app/build.gradle", import.meta.url),
+  "utf8"
+);
+assert.match(androidAppGradle, /noCompress 'html'/);
+assert.match(androidAppGradle, /noCompress 'js'/);
+assert.match(androidAppGradle, /noCompress 'css'/);
+assert.match(androidAppGradle, /noCompress 'json'/);
+
+const androidStartUrl = "https://localhost" + "/index.html";
+assert.equal(androidStartUrl, "https://localhost/index.html");
+assert.equal(new URL(androidStartUrl).pathname, "/index.html");
 
 const appCss = fs.readFileSync(new URL("../mobile/www/app.css", import.meta.url), "utf8");
 assert.match(appCss, /var\(--safe-area-inset-top/);
 assert.match(appCss, /env\(safe-area-inset-top, 0px\)/);
+assert.match(html, /<base href="\/">/);
 assert.equal(html.includes("<iframe"), false);
 assert.equal(html.includes("havkar-app.vercel.app"), false);
 
