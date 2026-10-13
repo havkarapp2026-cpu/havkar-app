@@ -11,6 +11,8 @@ const ALLOWED_ORIGINS = new Set([
 ]);
 
 const DEFAULT_MODEL = "gemini-2.5-flash";
+const MAX_PROVIDER_RESPONSE_CHARACTERS = 20000;
+const MAX_ASSISTANT_MESSAGE_CHARACTERS = 4000;
 
 function json(status, body, headers) {
   return new Response(JSON.stringify(body), {
@@ -67,6 +69,49 @@ function providerContents(messages) {
     role: message.role === "assistant" ? "model" : "user",
     parts: [{ text: message.content }]
   }));
+}
+
+function generationConfig(model) {
+  const config: Record<string, unknown> = {
+    temperature: 0.4,
+    maxOutputTokens: LIMITS.maxOutputTokens,
+    candidateCount: 1
+  };
+
+  if (model.startsWith("gemini-2.5-flash")) {
+    config.thinkingConfig = { thinkingBudget: 0 };
+  }
+
+  return config;
+}
+
+function assistantMessage(payload) {
+  const parts = payload?.candidates?.[0]?.content?.parts;
+
+  if (!Array.isArray(parts)) {
+    return "";
+  }
+
+  return parts
+    .filter((part) => part && part.thought !== true && typeof part.text === "string")
+    .map((part) => part.text)
+    .join("")
+    .trim()
+    .slice(0, MAX_ASSISTANT_MESSAGE_CHARACTERS);
+}
+
+async function readProviderPayload(response) {
+  try {
+    const text = await response.text();
+
+    if (!text || text.length > MAX_PROVIDER_RESPONSE_CHARACTERS) {
+      return null;
+    }
+
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
 }
 
 async function readJson(request) {
@@ -181,11 +226,7 @@ Deno.serve(async (request) => {
             parts: [{ text: assistantInstruction(validation.languageName) }]
           },
           contents: providerContents(validation.messages),
-          generationConfig: {
-            temperature: 0.4,
-            maxOutputTokens: LIMITS.maxOutputTokens,
-            candidateCount: 1
-          }
+          generationConfig: generationConfig(model)
         })
       }
     );
@@ -197,18 +238,14 @@ Deno.serve(async (request) => {
     return json(502, { ok: false, error: "The assistant could not answer. Please try again." }, headers);
   }
 
-  const payload = await providerResponse.json();
+  const payload = await readProviderPayload(providerResponse);
   const blocked = payload?.promptFeedback?.blockReason;
 
   if (blocked) {
     return json(400, { ok: false, error: "This request cannot be answered." }, headers);
   }
 
-  const parts = payload?.candidates?.[0]?.content?.parts || [];
-  const message = parts
-    .map((part) => typeof part?.text === "string" ? part.text : "")
-    .join("")
-    .trim();
+  const message = assistantMessage(payload);
 
   if (!message) {
     return json(502, { ok: false, error: "The assistant could not answer. Please try again." }, headers);

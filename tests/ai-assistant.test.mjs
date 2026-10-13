@@ -63,6 +63,8 @@ const translate = read("api/translate.js");
 assert.match(source, /admin\.auth\.getUser\(accessToken\)/);
 assert.match(source, /HAVKAR_AI_API_KEY/);
 assert.match(source, /x-goog-api-key/);
+assert.match(source, /thinkingBudget: 0/);
+assert.match(source, /part\.thought !== true/);
 assert.doesNotMatch(source, /AIza[0-9A-Za-z_-]{20,}/);
 assert.doesNotMatch(source, /\/api\/translate/);
 assert.match(config, /verify_jwt = true/);
