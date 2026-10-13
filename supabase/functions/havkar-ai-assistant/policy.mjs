@@ -100,6 +100,14 @@ function validateAssistantRequest(body) {
   };
 }
 
+function providerErrorStatus(payload) {
+  const status = payload && payload.error ? payload.error.status : "";
+
+  return typeof status === "string" && /^[A-Z_]{1,40}$/.test(status)
+    ? status
+    : "";
+}
+
 function assistantInstruction(languageName) {
   return [
     "You are the HAVKAR assistant.",
@@ -117,5 +125,6 @@ export {
   LIMITS,
   assistantInstruction,
   normalizeLanguage,
+  providerErrorStatus,
   validateAssistantRequest
 };
