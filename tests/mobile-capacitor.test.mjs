@@ -224,6 +224,9 @@ const handler = createDeleteAccountHandler({
             return { error: null };
           }
         }
+      },
+      async rpc() {
+        return { data: true, error: null };
       }
     };
   }
@@ -241,7 +244,6 @@ await handler({
 assert.equal(ok.statusCode, 200);
 assert.deepEqual(ok.body, { ok: true });
 assert.deepEqual(events, [
-  ["signOut", token, "global"],
   ["delete", userId]
 ]);
 assert.equal(JSON.stringify(ok.body).includes(token), false);
@@ -262,7 +264,6 @@ await handler({
 }, otherUser);
 assert.equal(otherUser.statusCode, 400);
 assert.deepEqual(events, [
-  ["signOut", token, "global"],
   ["delete", userId]
 ]);
 
@@ -284,6 +285,9 @@ const revokeHandler = createDeleteAccountHandler({
             return { error: null };
           }
         }
+      },
+      async rpc() {
+        return { data: true, error: null };
       }
     };
   }
@@ -294,8 +298,8 @@ await revokeHandler({
   headers: { authorization: "Bearer " + token },
   body: { confirm: "DELETE" }
 }, revokeResponse);
-assert.equal(revokeResponse.statusCode, 500);
-assert.deepEqual(revokeFailed, ["signOut"]);
+assert.equal(revokeResponse.statusCode, 200);
+assert.deepEqual(revokeFailed, [userId]);
 
 const foreignIdentity = [];
 const foreignHandler = createDeleteAccountHandler({

@@ -4191,9 +4191,10 @@ function renderAvatar(
 
 /* =========================================================
    ADMINISTRATION ENTRY
-   Shown only when havkar_session_is_admin returns true.
-   The database role is app_metadata.role = admin.
-   There is no separate staff role in the current schema.
+   Shown when the database reports an admin assignment
+   or the single owner identity.
+   Staff permissions do not reveal this button.
+   JWT role claims are not an authorization source.
 ========================================================= */
 
 async function revealAdministration(
@@ -4245,11 +4246,24 @@ async function revealAdministration(
                 "havkar_session_is_admin"
             );
 
+        const owner =
+            await supabase.rpc(
+                "havkar_session_is_owner"
+            );
 
-        button.hidden = !(
+        const adminAllowed =
             admin &&
             admin.error == null &&
-            admin.data === true
+            admin.data === true;
+
+        const ownerAllowed =
+            owner &&
+            owner.error == null &&
+            owner.data === true;
+
+        button.hidden = !(
+            adminAllowed ||
+            ownerAllowed
         );
 
     }

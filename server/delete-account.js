@@ -67,12 +67,6 @@ function authenticatedUserId(user) {
     : "";
 }
 
-function canContinueAfterSignOut(error) {
-  const status = Number(error?.status);
-
-  return status === 401 || status === 403 || status === 404;
-}
-
 function requestPath(req) {
   const url = typeof req?.url === "string" ? req.url : "";
 
@@ -219,12 +213,14 @@ export function createDeleteAccountHandler({ getAdmin = defaultAdmin } = {}) {
       });
     }
 
-    let revoked;
+    let deletionAllowed;
 
     try {
-      revoked = await admin.auth.admin.signOut(accessToken, "global");
+      deletionAllowed = await admin.rpc("havkar_account_deletion_allowed", {
+        p_user_id: userId
+      });
     } catch {
-      console.error("Account session revocation failed.");
+      console.error("Account deletion check failed.");
 
       return sendJson(res, 500, {
         ok: false,
@@ -232,12 +228,19 @@ export function createDeleteAccountHandler({ getAdmin = defaultAdmin } = {}) {
       });
     }
 
-    if (revoked?.error && !canContinueAfterSignOut(revoked.error)) {
-      console.error("Account session revocation failed.");
+    if (!deletionAllowed || deletionAllowed.error || deletionAllowed.data == null) {
+      console.error("Account deletion check failed.");
 
       return sendJson(res, 500, {
         ok: false,
         error: "The account could not be deleted."
+      });
+    }
+
+    if (deletionAllowed.data !== true) {
+      return sendJson(res, 403, {
+        ok: false,
+        error: "This account cannot be deleted."
       });
     }
 
