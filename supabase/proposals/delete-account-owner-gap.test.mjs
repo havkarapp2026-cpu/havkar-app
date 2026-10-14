@@ -9,12 +9,9 @@ const source = fs.readFileSync(
   "utf8"
 );
 
+assert.equal(source.includes('signOut(accessToken, "global")'), false);
 assert.ok(
   source.indexOf("havkar_account_deletion_allowed")
-  < source.indexOf('signOut(accessToken, "global")')
-);
-assert.ok(
-  source.indexOf('signOut(accessToken, "global")')
   < source.indexOf("deleteUser(userId)")
 );
 

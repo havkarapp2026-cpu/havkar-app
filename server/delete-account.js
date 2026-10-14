@@ -67,12 +67,6 @@ function authenticatedUserId(user) {
     : "";
 }
 
-function canContinueAfterSignOut(error) {
-  const status = Number(error?.status);
-
-  return status === 401 || status === 403 || status === 404;
-}
-
 function requestPath(req) {
   const url = typeof req?.url === "string" ? req.url : "";
 
@@ -247,28 +241,6 @@ export function createDeleteAccountHandler({ getAdmin = defaultAdmin } = {}) {
       return sendJson(res, 403, {
         ok: false,
         error: "This account cannot be deleted."
-      });
-    }
-
-    let revoked;
-
-    try {
-      revoked = await admin.auth.admin.signOut(accessToken, "global");
-    } catch {
-      console.error("Account session revocation failed.");
-
-      return sendJson(res, 500, {
-        ok: false,
-        error: "The account could not be deleted."
-      });
-    }
-
-    if (revoked?.error && !canContinueAfterSignOut(revoked.error)) {
-      console.error("Account session revocation failed.");
-
-      return sendJson(res, 500, {
-        ok: false,
-        error: "The account could not be deleted."
       });
     }
 

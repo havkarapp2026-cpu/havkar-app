@@ -202,9 +202,9 @@ assert.deepEqual(deleted.body, { ok: true });
 assert.deepEqual(events, [
   "delete-admin",
   ["getUser", token],
-  ["signOut", token, "global"],
   ["deleteUser", userId]
 ]);
+assert.equal(JSON.stringify(events).includes("signOut"), false);
 
 const ownerEvents = [];
 const ownerRoute = routedHandler(ownerEvents, {
@@ -346,34 +346,6 @@ const anonymous = await call(handler, deleteRequest({
 }));
 assert.equal(anonymous.statusCode, 401);
 assert.deepEqual(anonymous.body, { ok: false, error: "Authentication required." });
-
-for (const status of [401, 403, 404]) {
-  const continued = [];
-  const continuedRoute = routedHandler(continued, { signOutStatus: status });
-  const continuedResponse = await call(continuedRoute.handler, deleteRequest());
-  assert.equal(continuedResponse.statusCode, 200, String(status));
-  assert.deepEqual(continued.at(-1), ["deleteUser", userId]);
-  assert.deepEqual(continuedRoute.businessCalls, []);
-}
-
-for (const status of [400, 500]) {
-  const stopped = [];
-  const stoppedRoute = routedHandler(stopped, { signOutStatus: status });
-  const previousError = console.error;
-  console.error = () => {};
-  let stoppedResponse;
-  try {
-    stoppedResponse = await call(stoppedRoute.handler, deleteRequest());
-  } finally {
-    console.error = previousError;
-  }
-  assert.equal(stoppedResponse.statusCode, 500, String(status));
-  assert.equal(stopped.includes("deleteUser"), false);
-  assert.deepEqual(stoppedResponse.body, {
-    ok: false,
-    error: "The account could not be deleted."
-  });
-}
 
 const foreignEvents = [];
 const foreign = routedHandler(foreignEvents, { userId: "not-a-user" });
@@ -562,12 +534,11 @@ const businessSource = fs.readFileSync(
 );
 assert.match(deleteSource, /body\.confirm === "DELETE" && Object\.keys\(body\)\.length === 1/);
 assert.match(deleteSource, /havkar_account_deletion_allowed/);
+assert.doesNotMatch(deleteSource, /signOut\(accessToken, "global"\)/);
 assert.ok(
   deleteSource.indexOf("havkar_account_deletion_allowed")
-  < deleteSource.indexOf('signOut(accessToken, "global")')
+  < deleteSource.indexOf("deleteUser(userId)")
 );
-assert.match(deleteSource, /signOut\(accessToken, "global"\)/);
-assert.match(deleteSource, /status === 401 \|\| status === 403 \|\| status === 404/);
 assert.match(deleteSource, /SUPABASE_SERVICE_ROLE_KEY/);
 assert.doesNotMatch(deleteSource, /business_applications|api\.resend\.com|RESEND_API_KEY/);
 assert.match(businessSource, /if \(isDeleteAccountRequest\(req\)\)/);
