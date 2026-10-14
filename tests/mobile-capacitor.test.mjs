@@ -224,6 +224,9 @@ const handler = createDeleteAccountHandler({
             return { error: null };
           }
         }
+      },
+      async rpc() {
+        return { data: true, error: null };
       }
     };
   }
@@ -284,6 +287,9 @@ const revokeHandler = createDeleteAccountHandler({
             return { error: null };
           }
         }
+      },
+      async rpc() {
+        return { data: true, error: null };
       }
     };
   }

@@ -96,6 +96,18 @@ function adminClient(events, options = {}) {
           return { error: null };
         }
       }
+    },
+    async rpc(name, args) {
+      if (options.recordRpc) {
+        events.push(["rpc", name, args]);
+      }
+      if (options.rpcThrows) {
+        throw new Error("rpc unavailable");
+      }
+      if (options.rpc) {
+        return options.rpc;
+      }
+      return { data: true, error: null };
     }
   };
 }
@@ -193,6 +205,61 @@ assert.deepEqual(events, [
   ["signOut", token, "global"],
   ["deleteUser", userId]
 ]);
+
+const ownerEvents = [];
+const ownerRoute = routedHandler(ownerEvents, {
+  recordRpc: true,
+  rpc: { data: false, error: null }
+});
+const previousOwnerError = console.error;
+console.error = () => {};
+let ownerResponse;
+try {
+  ownerResponse = await call(ownerRoute.handler, deleteRequest());
+} finally {
+  console.error = previousOwnerError;
+}
+assert.equal(ownerResponse.statusCode, 403);
+assert.deepEqual(ownerResponse.body, {
+  ok: false,
+  error: "This account cannot be deleted."
+});
+assert.deepEqual(ownerEvents, [
+  "delete-admin",
+  ["getUser", token],
+  ["rpc", "havkar_account_deletion_allowed", { p_user_id: userId }]
+]);
+
+for (const rpc of [
+  { data: null, error: { message: "missing function" } },
+  { data: null, error: null }
+]) {
+  const failedCheck = [];
+  const failedRoute = routedHandler(failedCheck, { recordRpc: true, rpc });
+  console.error = () => {};
+  let failedCheckResponse;
+  try {
+    failedCheckResponse = await call(failedRoute.handler, deleteRequest());
+  } finally {
+    console.error = previousOwnerError;
+  }
+  assert.equal(failedCheckResponse.statusCode, 500);
+  assert.equal(JSON.stringify(failedCheck).includes("signOut"), false);
+  assert.equal(JSON.stringify(failedCheck).includes("deleteUser"), false);
+}
+
+const thrownCheck = [];
+const thrownRoute = routedHandler(thrownCheck, { recordRpc: true, rpcThrows: true });
+console.error = () => {};
+let thrownCheckResponse;
+try {
+  thrownCheckResponse = await call(thrownRoute.handler, deleteRequest());
+} finally {
+  console.error = previousOwnerError;
+}
+assert.equal(thrownCheckResponse.statusCode, 500);
+assert.equal(JSON.stringify(thrownCheck).includes("signOut"), false);
+assert.equal(JSON.stringify(thrownCheck).includes("deleteUser"), false);
 assert.deepEqual(businessCalls, []);
 assert.equal(JSON.stringify(deleted.body).includes(token), false);
 assert.equal(JSON.stringify(deleted.body).includes(userId), false);
@@ -494,6 +561,11 @@ const businessSource = fs.readFileSync(
   "utf8"
 );
 assert.match(deleteSource, /body\.confirm === "DELETE" && Object\.keys\(body\)\.length === 1/);
+assert.match(deleteSource, /havkar_account_deletion_allowed/);
+assert.ok(
+  deleteSource.indexOf("havkar_account_deletion_allowed")
+  < deleteSource.indexOf('signOut(accessToken, "global")')
+);
 assert.match(deleteSource, /signOut\(accessToken, "global"\)/);
 assert.match(deleteSource, /status === 401 \|\| status === 403 \|\| status === 404/);
 assert.match(deleteSource, /SUPABASE_SERVICE_ROLE_KEY/);

@@ -219,6 +219,37 @@ export function createDeleteAccountHandler({ getAdmin = defaultAdmin } = {}) {
       });
     }
 
+    let deletionAllowed;
+
+    try {
+      deletionAllowed = await admin.rpc("havkar_account_deletion_allowed", {
+        p_user_id: userId
+      });
+    } catch {
+      console.error("Account deletion check failed.");
+
+      return sendJson(res, 500, {
+        ok: false,
+        error: "The account could not be deleted."
+      });
+    }
+
+    if (!deletionAllowed || deletionAllowed.error || deletionAllowed.data == null) {
+      console.error("Account deletion check failed.");
+
+      return sendJson(res, 500, {
+        ok: false,
+        error: "The account could not be deleted."
+      });
+    }
+
+    if (deletionAllowed.data !== true) {
+      return sendJson(res, 403, {
+        ok: false,
+        error: "This account cannot be deleted."
+      });
+    }
+
     let revoked;
 
     try {

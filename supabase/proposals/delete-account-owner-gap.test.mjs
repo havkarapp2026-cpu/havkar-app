@@ -1,8 +1,22 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { createDeleteAccountHandler } from "../../server/delete-account.js";
 
 const token = "test-access-token";
 const ownerId = "11111111-1111-4111-8111-111111111111";
+const source = fs.readFileSync(
+  new URL("../../server/delete-account.js", import.meta.url),
+  "utf8"
+);
+
+assert.ok(
+  source.indexOf("havkar_account_deletion_allowed")
+  < source.indexOf('signOut(accessToken, "global")')
+);
+assert.ok(
+  source.indexOf('signOut(accessToken, "global")')
+  < source.indexOf("deleteUser(userId)")
+);
 
 function mockResponse() {
   return {
@@ -44,8 +58,8 @@ const handler = createDeleteAccountHandler({
           }
         }
       },
-      rpc() {
-        events.push("rpc");
+      rpc(name, args) {
+        events.push(["rpc", name, args.p_user_id]);
         return Promise.resolve({ data: false, error: null });
       }
     };
@@ -66,7 +80,15 @@ await handler(
   response
 );
 
-assert.deepEqual(events, ["getUser", "signOut", "deleteUser"]);
-assert.equal(response.statusCode, 500);
-assert.equal(events.includes("rpc"), false);
-console.log("DELETE_ACCOUNT_OWNER_GAP_CONFIRMED");
+assert.deepEqual(events, [
+  "getUser",
+  ["rpc", "havkar_account_deletion_allowed", ownerId]
+]);
+assert.equal(response.statusCode, 403);
+assert.deepEqual(response.body, {
+  ok: false,
+  error: "This account cannot be deleted."
+});
+assert.equal(events.includes("signOut"), false);
+assert.equal(events.includes("deleteUser"), false);
+console.log("DELETE_ACCOUNT_OWNER_BLOCKED_BEFORE_SIGNOUT");
