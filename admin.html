@@ -71,10 +71,24 @@ async function start() {
     return;
   }
 
-  const admin = await db.rpc("havkar_session_is_admin");
+  let admin;
+  let owner;
 
-  if (admin.error) {
+  try {
+    admin = await db.rpc("havkar_session_is_admin");
+    owner = await db.rpc("havkar_session_is_owner");
+  } catch (error) {
+    message.textContent = "Administration is not available.";
+    return;
+  }
+
+  if (admin.error && owner.error) {
     message.textContent = "Administration is not available until the database migration is applied.";
+    return;
+  }
+
+  if (owner.data === true && admin.data !== true) {
+    message.textContent = "Owner access is active. Administrator records stay separate.";
     return;
   }
 
