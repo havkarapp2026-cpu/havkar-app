@@ -760,6 +760,18 @@ button{
     color:#d32f2f;
 }
 
+#profileAdministration[hidden]{
+    display:none !important;
+}
+
+.settings-account-email{
+    margin-top:6px;
+    color:#2e7d32;
+    font-size:12px;
+    font-weight:700;
+    overflow-wrap:anywhere;
+}
+
 
 /* =========================================================
    SETTINGS
@@ -2167,6 +2179,40 @@ input:focus-visible{
         </button>
 
 
+        <!-- ADMINISTRATION: hidden until the server confirms an administrator. -->
+
+        <button
+            id="profileAdministration"
+            class="action"
+            type="button"
+            hidden
+            onclick="goTo('admin.html')">
+
+            <div class="action-icon">
+
+                <i class="fas fa-user-shield"></i>
+
+            </div>
+
+            <div class="action-content">
+
+                <div class="action-title">
+                    Administration
+                </div>
+
+                <div class="action-subtitle">
+                    Server-confirmed administrators only
+                </div>
+
+            </div>
+
+            <div class="action-arrow">
+                <i class="fas fa-chevron-right"></i>
+            </div>
+
+        </button>
+
+
         <!-- LOGOUT -->
 
         <button
@@ -2237,6 +2283,8 @@ input:focus-visible{
             <p>
                 Manage your HAVKAR preferences
             </p>
+
+            <p id="settingsAccountEmail" class="settings-account-email" translate="no" data-i18n-ignore></p>
 
         </div>
 
@@ -4052,6 +4100,84 @@ function renderAvatar(
 
 
 /* =========================================================
+   ADMINISTRATION ENTRY
+   Shown only when havkar_session_is_admin returns true.
+   The database role is app_metadata.role = admin.
+   There is no separate staff role in the current schema.
+========================================================= */
+
+async function revealAdministration(
+    user
+){
+
+    const button =
+        document.getElementById(
+            "profileAdministration"
+        );
+
+    const settingsEmail =
+        document.getElementById(
+            "settingsAccountEmail"
+        );
+
+
+    if(settingsEmail){
+
+        settingsEmail.textContent =
+            user && user.email
+            ? user.email
+            : "";
+
+    }
+
+
+    if(!button){
+
+        return;
+
+    }
+
+
+    button.hidden = true;
+
+
+    if(!user){
+
+        return;
+
+    }
+
+
+    try{
+
+        const admin =
+            await supabase.rpc(
+                "havkar_session_is_admin"
+            );
+
+
+        button.hidden = !(
+            admin &&
+            admin.error == null &&
+            admin.data === true
+        );
+
+    }
+    catch(error){
+
+        console.error(
+            "Administration check failed:",
+            error
+        );
+
+        button.hidden = true;
+
+    }
+
+}
+
+
+/* =========================================================
    LOAD PROFILE
 ========================================================= */
 
@@ -4202,6 +4328,9 @@ async function(){
             }
 
 
+            revealAdministration(null);
+
+
             return;
 
         }
@@ -4235,6 +4364,9 @@ async function(){
         const email =
             user.email ||
             "No email";
+
+
+        revealAdministration(user);
 
 
         const avatarUrl =

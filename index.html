@@ -81,7 +81,7 @@ body {
 
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: safe center;
 
     padding:
         max(12px, env(safe-area-inset-top))
@@ -332,9 +332,41 @@ h1 {
 .icon-reviews,
 .icon-events,
 .icon-support,
-.icon-admin,
+.icon-ai,
+.icon-about,
 .icon-accommodation {
     color: #43a85b;
+}
+
+.menu-item .language-mark {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 1px;
+    line-height: 1;
+    color: #43a85b;
+    font-weight: 900;
+}
+
+.menu-item .language-mark span {
+    display: block;
+    color: #43a85b;
+    line-height: 1;
+}
+
+.menu-item .language-latin {
+    font-size: 1.45rem;
+    font-weight: 900;
+}
+
+.menu-item .language-kurdish {
+    font-size: .92rem;
+    font-weight: 800;
+}
+
+.menu-item .language-east {
+    font-size: .68rem;
+    font-weight: 700;
 }
 
 /* =========================
@@ -652,6 +684,18 @@ h1 {
         font-size: 1.55rem;
     }
 
+    .menu-item .language-latin {
+        font-size: 1.22rem;
+    }
+
+    .menu-item .language-kurdish {
+        font-size: .78rem;
+    }
+
+    .menu-item .language-east {
+        font-size: .58rem;
+    }
+
     .menu-item span {
         font-size: .67rem;
     }
@@ -789,7 +833,11 @@ h1 {
         </a>
 
         <a class="menu-item" href="language.html" aria-label="Language">
-            <i class="fas fa-language menu-icon icon-language" aria-hidden="true"></i>
+            <span class="menu-icon icon-language language-mark" aria-hidden="true">
+                <span class="language-latin">A</span>
+                <span class="language-kurdish">س</span>
+                <span class="language-east">あ</span>
+            </span>
             <span data-i18n="language">Language</span>
         </a>
 
@@ -803,32 +851,17 @@ h1 {
             <span data-i18n="support">Support</span>
         </a>
 
-        <a class="menu-item" href="admin.html" aria-label="Administration">
-            <i class="fas fa-user-shield menu-icon icon-admin" aria-hidden="true"></i>
-            <span>Administration</span>
+        <a class="menu-item" href="havkar-ai.html" aria-label="HAVKAR AI">
+            <i class="fas fa-robot menu-icon icon-ai" aria-hidden="true"></i>
+            <span>HAVKAR AI</span>
+        </a>
+
+        <a class="menu-item" href="about.html" aria-label="About HAVKAR">
+            <i class="fas fa-circle-info menu-icon icon-about" aria-hidden="true"></i>
+            <span data-i18n="aboutTitle">About HAVKAR</span>
         </a>
 
     </nav>
-
-
-    <!-- =========================
-         ABOUT HAVKAR
-         ========================= -->
-
-    <a class="about-link" href="about.html" aria-label="About HAVKAR">
-
-        <span class="about-icon" aria-hidden="true">
-            <i class="fas fa-circle-info"></i>
-        </span>
-
-        <span class="about-text">
-            <span class="about-title" data-i18n="aboutTitle">About HAVKAR</span>
-            <span class="about-description" data-i18n="aboutDescription">Learn about our platform, mission and services</span>
-        </span>
-
-        <i class="fas fa-chevron-right about-arrow" aria-hidden="true"></i>
-
-    </a>
 
 
     <!-- =========================
@@ -847,16 +880,6 @@ h1 {
         <span class="enter-arrow" aria-hidden="true">›</span>
     </button>
 
-
-    <!-- Signed-in account controls: hidden until authentication is confirmed. -->
-    <section id="signedInPanel" class="account-panel" hidden aria-label="HAVKAR account">
-        <p id="signedInEmail" translate="no" data-i18n-ignore></p>
-        <div class="account-actions">
-            <a href="profile.html" data-i18n="myAccount">My Account</a>
-            <button id="homeLogout" type="button" data-i18n="logout">Log Out</button>
-        </div>
-        <p id="homeAuthMessage" role="alert" aria-live="polite" style="margin:10px 0 0"></p>
-    </section>
 
     <!-- =========================
          LOGIN
@@ -890,15 +913,9 @@ const supabase = createClient(
 );
 const guestSignup = document.getElementById("guestSignup");
 const guestLogin = document.getElementById("guestLogin");
-const signedInPanel = document.getElementById("signedInPanel");
-const signedInEmail = document.getElementById("signedInEmail");
-const homeLogout = document.getElementById("homeLogout");
-const homeAuthMessage = document.getElementById("homeAuthMessage");
 function updateAccount(user) {
   guestSignup.hidden = !!user;
   guestLogin.hidden = !!user;
-  signedInPanel.hidden = !user;
-  signedInEmail.textContent = user?.email || "";
 }
 // Avoid briefly displaying guest actions until the stored session is checked.
 guestSignup.hidden = true;
@@ -911,22 +928,8 @@ try {
   console.error("HAVKAR session check failed", error);
   guestSignup.hidden = false;
   guestLogin.hidden = false;
-  signedInPanel.hidden = true;
 }
 supabase.auth.onAuthStateChange((_event, session) => updateAccount(session?.user || null));
-homeLogout.addEventListener("click", async () => {
-  if (!window.confirm("Log out of HAVKAR?")) return;
-  homeLogout.disabled = true;
-  homeAuthMessage.textContent = "";
-  try {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-    updateAccount(null);
-  } catch (error) {
-    console.error("HAVKAR logout failed", error);
-    homeAuthMessage.textContent = "Log out could not be completed. Please try again.";
-  } finally { homeLogout.disabled = false; }
-});
 </script>
 </body>
 </html>
