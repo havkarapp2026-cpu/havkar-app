@@ -1,10 +1,22 @@
 import UIKit
+import WebKit
 import Capacitor
 
 class HavkarBridgeViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
         webView?.allowsBackForwardNavigationGestures = true
+        installSafeAreaScript()
+    }
+
+    private func installSafeAreaScript() {
+        guard let url = Bundle.main.url(forResource: "havkar-safe-area", withExtension: "js"),
+              let source = try? String(contentsOf: url, encoding: .utf8),
+              let controller = webView?.configuration.userContentController else {
+            return
+        }
+        let script = WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+        controller.addUserScript(script)
     }
 }
 

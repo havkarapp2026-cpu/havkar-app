@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { createDeleteAccountHandler } from "../api/delete-account.js";
 import { LANGUAGES } from "../mobile/src/languages.mjs";
 import {
@@ -53,8 +56,8 @@ const androidAppGradle = fs.readFileSync(
   new URL("../mobile/android/app/build.gradle", import.meta.url),
   "utf8"
 );
-assert.match(androidAppGradle, /versionCode 3/);
-assert.match(androidAppGradle, /versionName "1\.0\.2"/);
+assert.match(androidAppGradle, /versionCode 4/);
+assert.match(androidAppGradle, /versionName "1\.0\.3"/);
 assert.match(androidAppGradle, /noCompress 'html'/);
 assert.match(androidAppGradle, /noCompress 'js'/);
 assert.match(androidAppGradle, /noCompress 'css'/);
@@ -340,5 +343,62 @@ await handler({
   body: { confirm: "delete" }
 }, unconfirmed);
 assert.equal(unconfirmed.statusCode, 400);
+
+const profile = fs.readFileSync(new URL("../profile.html", import.meta.url), "utf8");
+assert.match(profile, /height:calc\(68px \+ env\(safe-area-inset-top, 0px\)\)/);
+assert.match(profile, /padding:env\(safe-area-inset-top, 0px\) 18px 0;/);
+const indexPage = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
+assert.equal(indexPage.split("safe-area-inset-top").length - 1, 1);
+const androidSafeArea = fs.readFileSync(
+  new URL("../mobile/android/app/src/main/assets/havkar-safe-area.js", import.meta.url),
+  "utf8"
+);
+const iosSafeArea = fs.readFileSync(
+  new URL("../mobile/ios/App/App/havkar-safe-area.js", import.meta.url),
+  "utf8"
+);
+assert.equal(androidSafeArea, iosSafeArea);
+assert.match(androidSafeArea, /function havkarApplySafeArea/);
+const mainActivity = fs.readFileSync(
+  new URL("../mobile/android/app/src/main/java/online/havkar/app/MainActivity.java", import.meta.url),
+  "utf8"
+);
+assert.match(mainActivity, /havkar-safe-area\.js/);
+const sceneDelegate = fs.readFileSync(
+  new URL("../mobile/ios/App/App/SceneDelegate.swift", import.meta.url),
+  "utf8"
+);
+assert.match(sceneDelegate, /WKUserScript/);
+assert.match(sceneDelegate, /havkar-safe-area/);
+assert.match(config, /contentInset:\s*"automatic"/);
+
+const safeDir = fs.mkdtempSync(path.join(os.tmpdir(), "havkar-safe-"));
+const safeHtml = path.join(safeDir, "safe.html");
+fs.writeFileSync(safeHtml, `<!DOCTYPE html><html><head><style>
+*{box-sizing:border-box}
+.header{position:sticky;top:0;height:68px;padding:0 18px;background:#5f9634}
+.ready{position:fixed;top:0;height:70px;padding-top:24px}
+body{margin:0}
+</style></head><body>
+<div class="header" id="profile">Profile</div>
+<div class="ready" id="ready">Ready</div>
+<script>window.__HAVKAR_SAFE_TOP_TEST=24;<\/script>
+<script>${androidSafeArea}<\/script>
+</body></html>`);
+const chrome = spawnSync("timeout", [
+  "12",
+  "google-chrome",
+  "--headless",
+  "--disable-gpu",
+  "--no-sandbox",
+  `--user-data-dir=${path.join(safeDir, "profile")}`,
+  "--virtual-time-budget=2000",
+  "--dump-dom",
+  safeHtml
+], { encoding: "utf8" });
+assert.ok(chrome.status === 0 || chrome.status === 124, chrome.stderr);
+assert.match(chrome.stdout, /id="profile"[^>]*style="padding-top: 24px; height: 92px;"/);
+assert.match(chrome.stdout, /id="ready"[^>]*data-havkar-safe-top="1"/);
+assert.doesNotMatch(chrome.stdout, /id="ready"[^>]*padding-top: 48px/);
 
 console.log("MOBILE_CAPACITOR_TEST_OK");
