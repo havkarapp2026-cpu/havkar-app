@@ -1,5 +1,7 @@
 apply plugin: 'com.android.application'
 
+def havkarUploadStore = System.getenv("HAVKAR_UPLOAD_STORE_FILE")
+
 android {
     namespace = "online.havkar.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -26,11 +28,33 @@ android {
             noCompress 'wasm'
         }
     }
+    signingConfigs {
+        release {
+            if (havkarUploadStore) {
+                storeFile file(havkarUploadStore)
+                storePassword System.getenv("HAVKAR_UPLOAD_STORE_PASSWORD")
+                keyAlias System.getenv("HAVKAR_UPLOAD_KEY_ALIAS")
+                keyPassword System.getenv("HAVKAR_UPLOAD_KEY_PASSWORD")
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (havkarUploadStore) {
+                signingConfig signingConfigs.release
+            }
         }
+    }
+}
+
+gradle.taskGraph.whenReady { graph ->
+    def releaseRequested = graph.allTasks.any { task ->
+        task.name == "bundleRelease" || task.name == "assembleRelease"
+    }
+    if (releaseRequested && !havkarUploadStore) {
+        throw new GradleException("HAVKAR release signing is not configured. Set HAVKAR_UPLOAD_STORE_FILE, HAVKAR_UPLOAD_STORE_PASSWORD, HAVKAR_UPLOAD_KEY_ALIAS and HAVKAR_UPLOAD_KEY_PASSWORD from the Play upload key. This build does not use the debug key and does not submit to Google Play.")
     }
 }
 
