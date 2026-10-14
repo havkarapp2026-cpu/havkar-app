@@ -80,8 +80,39 @@ BEGIN
   EXECUTE 'SET ROLE authenticated';
 
   SELECT count(*) INTO seen FROM public.accommodation_availability;
-  IF seen <> 1 THEN
-    RAISE EXCEPTION 'server admin could not read availability';
+  IF seen <> 0 OR public.havkar_session_is_admin() THEN
+    RAISE EXCEPTION 'jwt admin claim read accommodation availability';
+  END IF;
+
+  EXECUTE 'RESET ROLE';
+  INSERT INTO auth.sessions (id, user_id) VALUES (
+    '33333333-3333-4333-8333-333333333333',
+    '33333333-3333-4333-8333-333333333333'
+  );
+  INSERT INTO havkar_private.role_assignments (
+    user_id, role, role_generation, granted_by
+  ) VALUES (
+    '33333333-3333-4333-8333-333333333333',
+    'admin',
+    1,
+    '11111111-1111-4111-8111-111111111111'
+  );
+  INSERT INTO havkar_private.admin_permissions (user_id, permission) VALUES
+    ('33333333-3333-4333-8333-333333333333', 'admin.read_commission'),
+    ('33333333-3333-4333-8333-333333333333', 'admin.read_accommodation_drafts');
+  PERFORM set_config(
+    'havkar.test_jwt',
+    '{"session_id":"33333333-3333-4333-8333-333333333333","app_metadata":{"role":"admin","role_generation":1}}',
+    false
+  );
+  EXECUTE 'SET ROLE authenticated';
+
+  SELECT count(*) INTO seen FROM public.accommodation_availability;
+  IF seen <> 1 OR public.havkar_session_is_admin() IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'database admin could not read availability';
+  END IF;
+  IF public.havkar_session_is_owner() THEN
+    RAISE EXCEPTION 'database admin was treated as owner';
   END IF;
 
   IF (

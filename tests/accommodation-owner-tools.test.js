@@ -15,8 +15,13 @@ function psql(args, input) {
 
 psql(["-c", `DROP DATABASE IF EXISTS ${database}`]);
 psql(["-c", `CREATE DATABASE ${database}`]);
+// Supabase service_role bypasses row security. The local role does not.
+// The existing review call reads the property id as service_role.
+psql(["-c", "ALTER ROLE service_role BYPASSRLS"]);
 
-const applied = psql([
+let applied;
+try {
+applied = psql([
   "-d", database,
   "-f", "tests/accommodation-phase1-prelude.sql",
   "-f", "supabase/migrations/20261012160000_accommodation_phase1.sql",
@@ -25,8 +30,12 @@ const applied = psql([
   "-f", "tests/auth-jwt-stub.sql",
   "-f", "tests/service-commission-prelude.sql",
   "-f", "supabase/migrations/20261012231344_service_commission_and_accommodation_owner_tools.sql",
+  "-f", "supabase/migrations/20261014224500_owner_identity.sql",
   "-f", "tests/accommodation-owner-tools.sql"
 ]);
+} finally {
+  psql(["-c", "ALTER ROLE service_role NOBYPASSRLS"]);
+}
 
 assert.match(applied, /ACCOMMODATION_PHASE1_OK/);
 assert.match(applied, /ACCOMMODATION_OWNER_TOOLS_OK/);

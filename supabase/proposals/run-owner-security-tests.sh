@@ -106,8 +106,9 @@ psql_migrator() {
 
 psql_migrator -f "$ROOT/owner-security-harness.sql" >>"$LOG"
 psql_migrator -f "$ROOT/owner-security-precheck.sql" >>"$LOG"
-psql_migrator -f "$ROOT/20261014210000_owner_identity_NOT_APPROVED.sql" >>"$LOG"
+psql_migrator -f "$ROOT/../migrations/20261014224500_owner_identity.sql" >>"$LOG"
 psql_migrator -f "$ROOT/owner-security-tests.sql" >>"$LOG"
+psql_migrator -f "$ROOT/owner-recovery-procedure.sql" >>"$LOG"
 
 echo "=== service role bypass still cannot write owner ===" >>"$LOG"
 psql_migrator -v ON_ERROR_STOP=1 >>"$LOG" <<'SQL'

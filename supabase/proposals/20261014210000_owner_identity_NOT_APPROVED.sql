@@ -1,7 +1,10 @@
--- PROPOSAL ONLY. NOT APPROVED. DO NOT APPLY TO PRODUCTION.
--- This file is not in supabase/migrations and must not be run on
--- gispovnciifgikvgpzck until the project owner explicitly approves it.
--- It inserts no owner, updates no auth user, and activates no payment.
+-- Development migration for one Owner, database-backed Admin checks, and Staff permissions.
+-- Do not apply this file to production until a separate owner approval.
+-- It assigns no Owner and activates no payment.
+-- Account recovery uses arm_owner_recovery and commit_owner_recovery.
+-- Do not replace caller_is_admin with a JWT role comparison.
+-- Do not apply this file to gispovnciifgikvgpzck until a separate approval.
+-- Running it inserts no owner and updates no auth user.
 
 CREATE SCHEMA IF NOT EXISTS havkar_private;
 
@@ -459,6 +462,48 @@ $$;
 
 REVOKE ALL ON FUNCTION public.havkar_session_is_admin() FROM PUBLIC, anon, service_role;
 GRANT EXECUTE ON FUNCTION public.havkar_session_is_admin() TO authenticated;
+
+CREATE OR REPLACE FUNCTION havkar_private.caller_is_owner()
+RETURNS boolean
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  actor uuid := auth.uid();
+  generation bigint := havkar_private.jwt_role_generation();
+BEGIN
+  IF actor IS NULL OR generation IS NULL THEN
+    RETURN false;
+  END IF;
+  IF NOT havkar_private.session_is_live(actor) THEN
+    RETURN false;
+  END IF;
+  RETURN EXISTS (
+    SELECT 1
+    FROM havkar_private.owner_identity owner_row
+    WHERE owner_row.singleton
+      AND owner_row.user_id = actor
+      AND owner_row.role_generation = generation
+  );
+EXCEPTION WHEN OTHERS THEN
+  RETURN false;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.havkar_session_is_owner()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY INVOKER
+SET search_path = ''
+AS $$
+  SELECT havkar_private.caller_is_owner();
+$$;
+
+REVOKE ALL ON FUNCTION public.havkar_session_is_owner() FROM PUBLIC, anon, service_role;
+GRANT EXECUTE ON FUNCTION public.havkar_session_is_owner() TO authenticated;
 
 CREATE OR REPLACE FUNCTION havkar_private.phrases_match(p_phrase text, p_hash text)
 RETURNS boolean
@@ -1176,6 +1221,7 @@ GRANT EXECUTE ON FUNCTION public.havkar_account_deletion_allowed(uuid) TO servic
 
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA havkar_private FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION havkar_private.caller_is_admin() TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION havkar_private.caller_is_owner() TO authenticated;
 GRANT EXECUTE ON FUNCTION havkar_private.accept_owner_identity(text) TO authenticated;
 GRANT EXECUTE ON FUNCTION havkar_private.grant_admin(uuid, text, bigint) TO authenticated;
 GRANT EXECUTE ON FUNCTION havkar_private.revoke_admin(uuid, text, bigint) TO authenticated;

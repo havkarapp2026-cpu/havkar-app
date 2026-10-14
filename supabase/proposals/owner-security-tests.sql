@@ -39,6 +39,19 @@ BEGIN
   )) > 0 THEN
     RAISE EXCEPTION 'bootstrap function can order accounts';
   END IF;
+  IF position('caller_matches_admin_assignment' IN pg_get_functiondef(
+    'havkar_private.caller_is_admin()'::regprocedure
+  )) = 0
+     OR position('app_metadata' IN pg_get_functiondef(
+       'havkar_private.caller_is_admin()'::regprocedure
+     )) > 0 THEN
+    RAISE EXCEPTION 'admin authorization is not database-backed';
+  END IF;
+  IF position('owner_identity' IN pg_get_functiondef(
+    'havkar_private.caller_is_owner()'::regprocedure
+  )) = 0 THEN
+    RAISE EXCEPTION 'owner authorization does not read the owner row';
+  END IF;
   IF has_function_privilege(
     'service_role',
     'havkar_private.establish_initial_owner(uuid,uuid,text,text,text,text)',
@@ -311,6 +324,10 @@ BEGIN
     pg_temp.owner_jwt(1, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')
   );
   EXECUTE 'SET ROLE authenticated';
+  IF public.havkar_session_is_owner() IS DISTINCT FROM true
+     OR public.havkar_session_is_admin() THEN
+    RAISE EXCEPTION 'owner gate was not separate from admin';
+  END IF;
   PERFORM havkar_private.grant_admin(
     '22222222-2222-4222-8222-222222222222',
     'owner-phrase-local-1',
@@ -332,6 +349,9 @@ BEGIN
   SELECT count(*) INTO seen FROM public.service_commission_entries;
   IF seen <> 1 OR NOT public.havkar_session_is_admin() THEN
     RAISE EXCEPTION 'assigned admin could not read through the existing policy';
+  END IF;
+  IF public.havkar_session_is_owner() THEN
+    RAISE EXCEPTION 'assigned admin was treated as owner';
   END IF;
   SELECT count(*) INTO seen FROM public.accommodation_price_drafts;
   IF seen <> 1 THEN
@@ -387,8 +407,8 @@ BEGIN
   );
   EXECUTE 'SET ROLE authenticated';
   SELECT count(*) INTO seen FROM public.service_commission_entries;
-  IF seen <> 0 OR public.havkar_session_is_admin() THEN
-    RAISE EXCEPTION 'staff permission satisfied the admin policy';
+  IF seen <> 0 OR public.havkar_session_is_admin() OR public.havkar_session_is_owner() THEN
+    RAISE EXCEPTION 'staff permission satisfied an owner or admin gate';
   END IF;
   EXECUTE 'RESET ROLE';
   IF NOT havkar_private.caller_has_permission('staff.read_commission') THEN

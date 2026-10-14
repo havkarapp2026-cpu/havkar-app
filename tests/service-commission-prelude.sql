@@ -1,8 +1,19 @@
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+
 CREATE SCHEMA IF NOT EXISTS auth;
 
 CREATE TABLE IF NOT EXISTS auth.users (
   id uuid PRIMARY KEY,
   email_confirmed_at timestamptz
+);
+
+ALTER TABLE auth.users
+  ADD COLUMN IF NOT EXISTS raw_app_meta_data jsonb NOT NULL DEFAULT '{}'::jsonb;
+
+CREATE TABLE IF NOT EXISTS auth.sessions (
+  id uuid PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE
 );
 
 CREATE OR REPLACE FUNCTION auth.uid()
