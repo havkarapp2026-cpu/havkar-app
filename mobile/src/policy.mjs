@@ -1,6 +1,8 @@
 /**
- * Navigation and sign-in policy for the bundled HAVKAR app.
- * The app never loads the public website inside its WebView.
+ * Navigation and sign-in policy for the unused local shell in mobile/www.
+ * The installed Android and iOS apps open the existing website through
+ * Capacitor server.url. This module still treats that origin as an in-app
+ * URL, not a system-browser URL.
  */
 
 export const ROUTES = Object.freeze([
