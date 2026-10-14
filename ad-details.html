@@ -455,9 +455,18 @@ button:focus-visible{
     align-items:center;
     justify-content:center;
     border-radius:50%;
-    background:var(--green-100);
-    color:var(--green-700);
+    overflow:hidden;
+    background:linear-gradient(135deg,#689f38,#9ccc65);
+    color:white;
     font-size:1.2rem;
+    font-weight:800;
+}
+
+.seller-avatar img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
 }
 
 .seller-name{
@@ -1373,6 +1382,7 @@ button:focus-visible{
 </div>
 
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-profile-photo.js"></script>
 <script src="/havkar-countries.js"></script>
 <script>
 "use strict";
@@ -2838,7 +2848,46 @@ function updateSellerUI(){
 
     }
 
+    mountSellerPhoto();
+
     updateOwnerTools();
+
+}
+
+
+function mountSellerPhoto(){
+
+    const sellerAvatar =
+        document.querySelector(
+            ".seller-avatar"
+        );
+
+
+    if(
+        !sellerAvatar ||
+        !state.ad ||
+        !window.HAVKAR_PROFILE_PHOTO
+    ){
+
+        return;
+
+    }
+
+
+    const sellerName =
+        $("sellerName");
+
+
+    window.HAVKAR_PROFILE_PHOTO.mount(
+        sellerAvatar,
+        {
+            supabaseUrl: SUPABASE_URL,
+            userId: state.ad.user_id,
+            name: sellerName
+                ? sellerName.textContent
+                : "HAVKAR Member"
+        }
+    );
 
 }
 
