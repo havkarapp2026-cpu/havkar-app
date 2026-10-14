@@ -285,10 +285,12 @@ select:focus-visible{
     display:flex;
     align-items:center;
     justify-content:center;
-    background:linear-gradient(135deg,#e8f5e9,#c8e6c9);
-    color:#4d963f;
-    font-size:24px;
+    background:linear-gradient(135deg,#689f38,#9ccc65);
+    color:white;
+    font-size:22px;
+    font-weight:800;
     flex-shrink:0;
+    overflow:hidden;
 }
 
 .chat-info{
@@ -528,6 +530,7 @@ select:focus-visible{
     font-size:19px;
     background:rgba(255,255,255,.20);
     color:#fff;
+    overflow:hidden;
 }
 
 .chat-title-area{
@@ -1466,6 +1469,7 @@ select:focus-visible{
 
 
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-profile-photo.js"></script>
 <script>
 "use strict";
 
@@ -3000,8 +3004,30 @@ function createConversationElement(
     avatar.className =
         "avatar";
 
-    avatar.innerHTML =
-        '<i class="fas fa-user"></i>';
+    const otherId =
+        conversationPartyId(
+            conversation
+        );
+
+    if(window.HAVKAR_PROFILE_PHOTO){
+
+        window.HAVKAR_PROFILE_PHOTO.mount(
+            avatar,
+            {
+                supabaseUrl: SUPABASE_URL,
+                userId: otherId,
+                name: getConversationRole(
+                    conversation
+                )
+            }
+        );
+
+    }else{
+
+        avatar.textContent =
+            "H";
+
+    }
 
     const info =
         document.createElement(
@@ -3161,6 +3187,45 @@ function createConversationElement(
    ROLE
 ========================================================= */
 
+function conversationPartyId(
+    conversation
+){
+
+    if(
+        !conversation ||
+        !state.currentUser
+    ){
+
+        return "";
+
+    }
+
+
+    if(
+        String(conversation.seller_id) ===
+        String(state.currentUser.id)
+    ){
+
+        return conversation.buyer_id || "";
+
+    }
+
+
+    if(
+        String(conversation.buyer_id) ===
+        String(state.currentUser.id)
+    ){
+
+        return conversation.seller_id || "";
+
+    }
+
+
+    return "";
+
+}
+
+
 function getConversationRole(
     conversation
 ){
@@ -3235,6 +3300,23 @@ async function openConversation(
         getConversationRole(
             conversation
         );
+
+    if(window.HAVKAR_PROFILE_PHOTO){
+
+        window.HAVKAR_PROFILE_PHOTO.mount(
+            $("chatAvatar"),
+            {
+                supabaseUrl: SUPABASE_URL,
+                userId: conversationPartyId(
+                    conversation
+                ),
+                name: getConversationRole(
+                    conversation
+                )
+            }
+        );
+
+    }
 
     $("chatSubtitle")
         .textContent =
