@@ -133,6 +133,76 @@ REVOKE INSERT ON havkar_private.owner_identity FROM service_role;
 SELECT 'SERVICE_ROLE_BYPASS_INSERT_BLOCKED' AS result;
 SQL
 
+echo "=== deletion guard race ===" >>"$LOG"
+psql_migrator -v ON_ERROR_STOP=1 >>"$LOG" <<'SQL'
+INSERT INTO auth.sessions (id, user_id) VALUES
+  ('dddddddd-dddd-4ddd-8ddd-dddddddddddd', '44444444-4444-4444-8444-444444444444')
+ON CONFLICT (id) DO NOTHING;
+SQL
+DELETION_HOLDER_LOG="$(mktemp)"
+DELETION_LOSER_LOG="$(mktemp)"
+psql_migrator -v ON_ERROR_STOP=1 >"$DELETION_HOLDER_LOG" <<'SQL' &
+BEGIN;
+SELECT public.havkar_account_deletion_allowed('44444444-4444-4444-8444-444444444444');
+SELECT pg_sleep(3);
+COMMIT;
+SQL
+DELETION_HOLDER_PID=$!
+sleep 0.4
+set +e
+psql_migrator -v ON_ERROR_STOP=1 >"$DELETION_LOSER_LOG" <<'SQL'
+SELECT set_config('havkar.test_uid', '11111111-1111-4111-8111-111111111111', false);
+SELECT set_config(
+  'havkar.test_jwt',
+  (
+    SELECT pg_catalog.jsonb_build_object(
+      'session_id', '99999999-9999-4999-8999-999999999999',
+      'app_metadata', pg_catalog.jsonb_build_object(
+        'role', 'owner',
+        'role_generation', role_generation
+      )
+    )::text
+    FROM havkar_private.owner_identity
+  ),
+  false
+);
+SELECT havkar_private.arm_ownership_transfer(
+  '44444444-4444-4444-8444-444444444444',
+  '44444444-4444-4444-8444-444444444444',
+  'owner-phrase-local-2',
+  (SELECT role_generation FROM havkar_private.owner_identity)
+);
+SQL
+DELETION_LOSER_STATUS=$?
+set -e
+wait "$DELETION_HOLDER_PID"
+cat "$DELETION_HOLDER_LOG" >>"$LOG"
+echo "deletion_loser_status=${DELETION_LOSER_STATUS}" >>"$LOG"
+cat "$DELETION_LOSER_LOG" >>"$LOG"
+if [[ "$DELETION_LOSER_STATUS" -eq 0 ]]; then
+  echo "deletion race assigned a guarded account" >>"$LOG"
+  exit 1
+fi
+psql_migrator -v ON_ERROR_STOP=1 >>"$LOG" <<'SQL'
+DO $$
+BEGIN
+  IF (SELECT user_id FROM havkar_private.owner_identity)
+     <> '11111111-1111-4111-8111-111111111111'::uuid THEN
+    RAISE EXCEPTION 'deletion race changed the owner';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM havkar_private.account_deletion_guard
+    WHERE user_id = '44444444-4444-4444-8444-444444444444'
+  ) OR EXISTS (
+    SELECT 1 FROM auth.sessions
+    WHERE user_id = '44444444-4444-4444-8444-444444444444'
+  ) THEN
+    RAISE EXCEPTION 'deletion race did not keep the guard and revoke sessions';
+  END IF;
+END $$;
+SELECT 'DELETION_GUARD_RACE_BLOCKED' AS result;
+SQL
+
 echo "=== transfer race ===" >>"$LOG"
 psql_migrator -v ON_ERROR_STOP=1 >>"$LOG" <<'SQL'
 SELECT set_config(
@@ -164,6 +234,7 @@ HOLDER_LOG="$(mktemp)"
 LOSER_LOG="$(mktemp)"
 psql_migrator -v ON_ERROR_STOP=1 >"$HOLDER_LOG" <<'SQL' &
 BEGIN;
+SELECT pg_catalog.pg_advisory_xact_lock(841420261);
 SELECT set_config('havkar.test_uid', '11111111-1111-4111-8111-111111111111', false);
 SELECT set_config(
   'havkar.test_jwt',

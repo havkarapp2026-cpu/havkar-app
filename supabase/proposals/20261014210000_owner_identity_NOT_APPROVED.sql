@@ -96,6 +96,11 @@ CREATE TABLE IF NOT EXISTS havkar_private.role_audit (
   created_at timestamptz NOT NULL DEFAULT pg_catalog.now()
 );
 
+CREATE TABLE IF NOT EXISTS havkar_private.account_deletion_guard (
+  user_id uuid PRIMARY KEY REFERENCES auth.users (id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT pg_catalog.now()
+);
+
 ALTER TABLE havkar_private.owner_identity ENABLE ROW LEVEL SECURITY;
 ALTER TABLE havkar_private.owner_identity FORCE ROW LEVEL SECURITY;
 ALTER TABLE havkar_private.bootstrap_seal ENABLE ROW LEVEL SECURITY;
@@ -118,6 +123,8 @@ ALTER TABLE havkar_private.security_approvals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE havkar_private.security_approvals FORCE ROW LEVEL SECURITY;
 ALTER TABLE havkar_private.role_audit ENABLE ROW LEVEL SECURITY;
 ALTER TABLE havkar_private.role_audit FORCE ROW LEVEL SECURITY;
+ALTER TABLE havkar_private.account_deletion_guard ENABLE ROW LEVEL SECURITY;
+ALTER TABLE havkar_private.account_deletion_guard FORCE ROW LEVEL SECURITY;
 
 REVOKE ALL ON ALL TABLES IN SCHEMA havkar_private FROM PUBLIC, anon, authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA havkar_private
@@ -137,6 +144,15 @@ BEGIN
 
   IF current_setting('havkar.owner_mutation', true) IS DISTINCT FROM 'on' THEN
     RAISE EXCEPTION 'owner identity cannot be written directly'
+      USING ERRCODE = '42501';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM havkar_private.account_deletion_guard guard_row
+    WHERE guard_row.user_id = NEW.user_id
+  ) THEN
+    RAISE EXCEPTION 'owner assignment refused during account deletion'
       USING ERRCODE = '42501';
   END IF;
 
@@ -576,6 +592,7 @@ AS $$
 DECLARE
   owner_row havkar_private.owner_identity;
 BEGIN
+  PERFORM pg_catalog.pg_advisory_xact_lock(841420261);
   SELECT * INTO owner_row
   FROM havkar_private.owner_identity
   WHERE singleton
@@ -709,6 +726,10 @@ BEGIN
        WHERE acceptance.user_id = p_user_id
          AND acceptance.purpose = 'bootstrap'
          AND acceptance.expires_at > pg_catalog.now()
+     )
+     OR EXISTS (
+       SELECT 1 FROM havkar_private.account_deletion_guard guard_row
+       WHERE guard_row.user_id = p_user_id
      ) THEN
     RAISE EXCEPTION 'initial owner was not established'
       USING ERRCODE = '42501';
@@ -989,7 +1010,11 @@ BEGIN
      OR p_target IS DISTINCT FROM p_confirm_target
      OR p_target = owner_row.user_id
      OR NOT EXISTS (SELECT 1 FROM auth.users WHERE id = p_target)
-     OR havkar_private.jwt_session_id() IS NULL THEN
+     OR havkar_private.jwt_session_id() IS NULL
+     OR EXISTS (
+       SELECT 1 FROM havkar_private.account_deletion_guard guard_row
+       WHERE guard_row.user_id = p_target
+     ) THEN
     RAISE EXCEPTION 'transfer arm refused'
       USING ERRCODE = '42501';
   END IF;
@@ -1048,7 +1073,11 @@ BEGIN
      OR arm.session_id IS DISTINCT FROM havkar_private.jwt_session_id()
      OR arm.expected_generation IS DISTINCT FROM owner_row.role_generation
      OR arm.expires_at <= pg_catalog.now()
-     OR EXISTS (SELECT 1 FROM havkar_private.consumed_arms WHERE arm_id = p_arm_id) THEN
+     OR EXISTS (SELECT 1 FROM havkar_private.consumed_arms WHERE arm_id = p_arm_id)
+     OR EXISTS (
+       SELECT 1 FROM havkar_private.account_deletion_guard guard_row
+       WHERE guard_row.user_id = p_target
+     ) THEN
     RAISE EXCEPTION 'transfer commit refused'
       USING ERRCODE = '42501';
   END IF;
@@ -1092,7 +1121,11 @@ BEGIN
      OR p_target IS DISTINCT FROM p_confirm_target
      OR p_target = owner_row.user_id
      OR NOT EXISTS (SELECT 1 FROM auth.users WHERE id = p_target)
-     OR NOT havkar_private.phrases_match(p_recovery_code, owner_row.recovery_code_hash) THEN
+     OR NOT havkar_private.phrases_match(p_recovery_code, owner_row.recovery_code_hash)
+     OR EXISTS (
+       SELECT 1 FROM havkar_private.account_deletion_guard guard_row
+       WHERE guard_row.user_id = p_target
+     ) THEN
     RAISE EXCEPTION 'recovery arm refused'
       USING ERRCODE = '42501';
   END IF;
@@ -1160,6 +1193,10 @@ BEGIN
      OR EXISTS (
        SELECT 1 FROM havkar_private.consumed_arms consumed
        WHERE consumed.arm_id = p_arm_id
+     )
+     OR EXISTS (
+       SELECT 1 FROM havkar_private.account_deletion_guard guard_row
+       WHERE guard_row.user_id = p_target
      ) THEN
     RAISE EXCEPTION 'recovery commit refused'
       USING ERRCODE = '42501';
@@ -1202,17 +1239,68 @@ GRANT EXECUTE ON FUNCTION havkar_private.authorize_payment_activation(text, bigi
 GRANT EXECUTE ON FUNCTION havkar_private.arm_ownership_transfer(uuid, uuid, text, bigint) TO authenticated;
 GRANT EXECUTE ON FUNCTION havkar_private.commit_ownership_transfer(uuid, uuid, uuid, text, bigint) TO authenticated;
 
-CREATE OR REPLACE FUNCTION public.havkar_account_deletion_allowed(p_user_id uuid)
-RETURNS boolean
-LANGUAGE sql
-STABLE
+CREATE OR REPLACE FUNCTION havkar_private.enforce_deletion_guard()
+RETURNS trigger
+LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
 AS $$
-  SELECT NOT EXISTS (
-    SELECT 1 FROM havkar_private.owner_identity owner_row
-    WHERE owner_row.user_id = p_user_id
-  );
+BEGIN
+  IF current_setting('havkar.deletion_guard', true) IS DISTINCT FROM 'on' THEN
+    RAISE EXCEPTION 'deletion guard cannot be written directly'
+      USING ERRCODE = '42501';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS account_deletion_guard_write ON havkar_private.account_deletion_guard;
+CREATE TRIGGER account_deletion_guard_write
+  BEFORE INSERT OR UPDATE ON havkar_private.account_deletion_guard
+  FOR EACH ROW EXECUTE FUNCTION havkar_private.enforce_deletion_guard();
+
+CREATE OR REPLACE FUNCTION havkar_private.prepare_account_deletion(p_user_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  owner_id uuid;
+BEGIN
+  PERFORM pg_catalog.pg_advisory_xact_lock(841420261);
+  SELECT owner_row.user_id INTO owner_id
+  FROM havkar_private.owner_identity owner_row
+  WHERE owner_row.singleton
+  FOR UPDATE;
+
+  IF p_user_id IS NULL
+     OR p_user_id = owner_id
+     OR NOT EXISTS (SELECT 1 FROM auth.users WHERE id = p_user_id) THEN
+    RETURN false;
+  END IF;
+
+  PERFORM set_config('havkar.deletion_guard', 'on', true);
+  INSERT INTO havkar_private.account_deletion_guard (user_id)
+  VALUES (p_user_id)
+  ON CONFLICT (user_id) DO NOTHING;
+  DELETE FROM auth.sessions WHERE user_id = p_user_id;
+  RETURN true;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION havkar_private.prepare_account_deletion(uuid)
+  FROM PUBLIC, anon, authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public.havkar_account_deletion_allowed(p_user_id uuid)
+RETURNS boolean
+LANGUAGE sql
+VOLATILE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT havkar_private.prepare_account_deletion(p_user_id);
 $$;
 
 REVOKE ALL ON FUNCTION public.havkar_account_deletion_allowed(uuid)

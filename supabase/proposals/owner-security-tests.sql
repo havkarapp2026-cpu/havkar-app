@@ -68,8 +68,24 @@ BEGIN
     'service_role',
     'havkar_private.commit_owner_recovery(uuid,uuid,uuid,text,text,text,text,text)',
     'EXECUTE'
+  ) OR has_function_privilege(
+    'anon',
+    'public.havkar_account_deletion_allowed(uuid)',
+    'EXECUTE'
+  ) OR has_function_privilege(
+    'authenticated',
+    'public.havkar_account_deletion_allowed(uuid)',
+    'EXECUTE'
+  ) OR has_function_privilege(
+    'service_role',
+    'havkar_private.prepare_account_deletion(uuid)',
+    'EXECUTE'
+  ) OR has_function_privilege(
+    'authenticated',
+    'havkar_private.prepare_account_deletion(uuid)',
+    'EXECUTE'
   ) THEN
-    RAISE EXCEPTION 'bootstrap or recovery is executable by an API role';
+    RAISE EXCEPTION 'bootstrap, recovery, or deletion preparation is executable by the wrong role';
   END IF;
 END $$;
 
@@ -307,11 +323,63 @@ BEGIN
     WHEN foreign_key_violation THEN
       NULL;
   END;
+  INSERT INTO auth.sessions (id, user_id) VALUES
+    ('77777777-7777-4777-8777-777777777777', '77777777-7777-4777-8777-777777777777')
+  ON CONFLICT (id) DO NOTHING;
   IF public.havkar_account_deletion_allowed('11111111-1111-4111-8111-111111111111') THEN
     RAISE EXCEPTION 'owner account was reported as deletable';
   END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM auth.sessions
+    WHERE user_id = '11111111-1111-4111-8111-111111111111'
+  ) OR EXISTS (
+    SELECT 1 FROM havkar_private.account_deletion_guard
+    WHERE user_id = '11111111-1111-4111-8111-111111111111'
+  ) THEN
+    RAISE EXCEPTION 'owner deletion revoked sessions or created a guard';
+  END IF;
   IF NOT public.havkar_account_deletion_allowed('77777777-7777-4777-8777-777777777777') THEN
     RAISE EXCEPTION 'ordinary account was reported as protected';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM auth.sessions
+    WHERE user_id = '77777777-7777-4777-8777-777777777777'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM havkar_private.account_deletion_guard
+    WHERE user_id = '77777777-7777-4777-8777-777777777777'
+  ) THEN
+    RAISE EXCEPTION 'ordinary deletion did not guard and revoke atomically';
+  END IF;
+  IF NOT public.havkar_account_deletion_allowed('77777777-7777-4777-8777-777777777777')
+     OR (
+       SELECT count(*) FROM havkar_private.account_deletion_guard
+       WHERE user_id = '77777777-7777-4777-8777-777777777777'
+     ) <> 1 THEN
+    RAISE EXCEPTION 'repeated deletion preparation was not idempotent';
+  END IF;
+  PERFORM set_config('havkar.deletion_guard', 'off', true);
+  BEGIN
+    INSERT INTO havkar_private.account_deletion_guard (user_id)
+    VALUES ('44444444-4444-4444-8444-444444444444');
+    RAISE EXCEPTION 'direct deletion guard insert was accepted';
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      NULL;
+  END;
+  BEGIN
+    PERFORM set_config('havkar.owner_mutation', 'on', true);
+    UPDATE havkar_private.owner_identity
+    SET user_id = '77777777-7777-4777-8777-777777777777',
+        role_generation = role_generation + 1
+    WHERE singleton;
+    RAISE EXCEPTION 'guarded account became owner';
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      NULL;
+  END;
+  IF (SELECT user_id FROM havkar_private.owner_identity)
+     <> '11111111-1111-4111-8111-111111111111'::uuid THEN
+    RAISE EXCEPTION 'failed owner assignment changed the owner';
   END IF;
 END $$;
 
@@ -782,6 +850,9 @@ BEGIN
   DELETE FROM auth.users WHERE id = '77777777-7777-4777-8777-777777777777';
   IF EXISTS (
     SELECT 1 FROM auth.users WHERE id = '77777777-7777-4777-8777-777777777777'
+  ) OR EXISTS (
+    SELECT 1 FROM havkar_private.account_deletion_guard
+    WHERE user_id = '77777777-7777-4777-8777-777777777777'
   ) THEN
     RAISE EXCEPTION 'ordinary account delete failed';
   END IF;
