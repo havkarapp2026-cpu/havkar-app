@@ -49,9 +49,33 @@ for (const name of [
 assert.match(home, /class="language-latin">A</);
 assert.match(home, /class="language-kurdish">س</);
 assert.match(home, /class="language-east">あ</);
+assert.match(home, /class="visually-hidden language-mark" translate="no" data-i18n-ignore/);
 assert.match(home, /\.menu-item \.language-latin[\s\S]*font-size:\s*1\.45rem/);
 assert.match(home, /\.menu-item \.language-kurdish[\s\S]*font-size:\s*\.92rem/);
 assert.match(home, /\.menu-item \.language-east[\s\S]*font-size:\s*\.68rem/);
+assert.match(home, /\.menu-item \.tile-label[\s\S]*text-align:\s*center/);
+assert.doesNotMatch(home, /\.menu-grid[\s\S]{0,180}direction:\s*ltr/);
+assert.doesNotMatch(home, /<a class="menu-item"[^>]*aria-label=/);
+
+const labels = [...home.matchAll(/<span class="tile-label"(?: data-i18n="([^"]*)")?>([^<]*)<\/span>/g)];
+assert.deepEqual(labels.map((match) => match[2]), [
+  "Buy &amp; Sell",
+  "Jobs",
+  "Services",
+  "Wallet",
+  "Tickets",
+  "Accommodation",
+  "Ads",
+  "Delivery",
+  "Events",
+  "Chat",
+  "Languages",
+  "Reviews",
+  "Support",
+  "HAVKAR AI",
+  "About HAVKAR"
+]);
+assert.equal(labels.length, tiles.length);
 assert.doesNotMatch(home, /href="admin\.html"/);
 assert.doesNotMatch(home, /id="signedInPanel"|id="signedInEmail"|id="homeLogout"/);
 assert.match(home, /id="guestSignup"/);
