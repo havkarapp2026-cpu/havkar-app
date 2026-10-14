@@ -5,14 +5,20 @@ const config: CapacitorConfig = {
   appName: "HAVKAR",
   webDir: "www",
   server: {
+    // The installed app opens the existing website. Pages, APIs, and sessions
+    // stay on this origin. The trailing slash gives Android a path so the
+    // local-server matcher is not asked to read a null path.
+    url: "https://havkar-app.vercel.app/",
     androidScheme: "https",
     hostname: "localhost",
-    // External sites stay in the system browser. Do not add the public website.
-    allowNavigation: [],
-    // Android loads this URL as the first document. A bare https://localhost has
-    // no path; Capacitor 8 then calls path.equals before it can open
-    // assets/public/index.html, and the WebView shows that as file-not-found.
-    appStartPath: "/index.html"
+    // Same-origin pages are already allowed by server.url. These hosts are the
+    // top-level navigations the current login and Stripe Checkout already use.
+    allowNavigation: [
+      "gispovnciifgikvgpzck.supabase.co",
+      "*.google.com",
+      "appleid.apple.com",
+      "checkout.stripe.com"
+    ]
   },
   android: {
     allowMixedContent: false

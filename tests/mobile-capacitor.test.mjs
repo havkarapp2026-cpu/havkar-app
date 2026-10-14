@@ -39,25 +39,30 @@ for (const language of LANGUAGES) {
   assert.match(i18n, new RegExp(`dir:\\s*"${language.dir}"`));
 }
 
-assert.equal(config.includes("server.url"), false);
+assert.match(config, /url:\s*"https:\/\/havkar-app\.vercel\.app\/"/);
+assert.equal(config.includes("appStartPath"), false);
 assert.equal(config.includes("errorPath"), false);
-assert.match(config, /allowNavigation:\s*\[\]/);
+assert.match(config, /"gispovnciifgikvgpzck\.supabase\.co"/);
+assert.match(config, /"\*\.google\.com"/);
+assert.match(config, /"appleid\.apple\.com"/);
+assert.match(config, /"checkout\.stripe\.com"/);
 assert.match(config, /allowMixedContent:\s*false/);
-assert.match(config, /appStartPath:\s*"\/index\.html"/);
 assert.match(config, /initialViewportFitValueHint:\s*"cover"/);
 
 const androidAppGradle = fs.readFileSync(
   new URL("../mobile/android/app/build.gradle", import.meta.url),
   "utf8"
 );
+assert.match(androidAppGradle, /versionCode 3/);
+assert.match(androidAppGradle, /versionName "1\.0\.2"/);
 assert.match(androidAppGradle, /noCompress 'html'/);
 assert.match(androidAppGradle, /noCompress 'js'/);
 assert.match(androidAppGradle, /noCompress 'css'/);
 assert.match(androidAppGradle, /noCompress 'json'/);
 
-const androidStartUrl = "https://localhost" + "/index.html";
-assert.equal(androidStartUrl, "https://localhost/index.html");
-assert.equal(new URL(androidStartUrl).pathname, "/index.html");
+const androidStartUrl = "https://havkar-app.vercel.app/";
+assert.equal(new URL(androidStartUrl).pathname, "/");
+assert.equal(new URL(androidStartUrl).hostname, "havkar-app.vercel.app");
 
 const appCss = fs.readFileSync(new URL("../mobile/www/app.css", import.meta.url), "utf8");
 assert.match(appCss, /var\(--safe-area-inset-top/);
