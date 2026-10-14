@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { createDeleteAccountHandler } from "../api/delete-account.js";
+import { createDeleteAccountHandler } from "../server/delete-account.js";
 import { LANGUAGES } from "../mobile/src/languages.mjs";
 import {
   AUTH_CALLBACK,

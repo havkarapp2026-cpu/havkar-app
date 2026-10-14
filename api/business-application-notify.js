@@ -1,4 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
+import {
+    createDeleteAccountHandler,
+    isAmbiguousDeleteAccountRequest,
+    isDeleteAccountRequest
+} from "../server/delete-account.js";
+
+const accountDeletionHandler = createDeleteAccountHandler();
 
 const FIELD_LIMITS = {
     business_name: 160,
@@ -562,4 +569,32 @@ export function createBusinessNotificationHandler({
     };
 }
 
-export default createBusinessNotificationHandler();
+export function createRoutedBusinessNotificationHandler({
+    deleteAccountHandler = accountDeletionHandler,
+    fetchImpl,
+    createSupabase
+} = {}) {
+    const businessHandler = createBusinessNotificationHandler({
+        fetchImpl,
+        createSupabase
+    });
+
+    return async function handler(req, res) {
+        if (isDeleteAccountRequest(req)) {
+            return deleteAccountHandler(req, res);
+        }
+
+        if (isAmbiguousDeleteAccountRequest(req)) {
+            res.setHeader("Cache-Control", "no-store");
+
+            return res.status(400).json({
+                ok: false,
+                error: "The account could not be deleted."
+            });
+        }
+
+        return businessHandler(req, res);
+    };
+}
+
+export default createRoutedBusinessNotificationHandler();

@@ -73,6 +73,64 @@ function canContinueAfterSignOut(error) {
   return status === 401 || status === 403 || status === 404;
 }
 
+function requestPath(req) {
+  const url = typeof req?.url === "string" ? req.url : "";
+
+  return url.split("?")[0];
+}
+
+function routeMarker(req) {
+  const query = req?.query;
+
+  if (!query || typeof query !== "object" || Array.isArray(query)) {
+    return { kind: "absent" };
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(query, "havkarRoute")) {
+    return { kind: "absent" };
+  }
+
+  const value = query.havkarRoute;
+
+  if (value === "delete-account") {
+    return { kind: "exact" };
+  }
+
+  if (
+    Array.isArray(value) &&
+    value.length === 1 &&
+    value[0] === "delete-account"
+  ) {
+    return { kind: "exact" };
+  }
+
+  return { kind: "rejected" };
+}
+
+function isDeleteAccountPath(req) {
+  const path = requestPath(req);
+
+  return path === "/api/delete-account" || path.endsWith("/api/delete-account");
+}
+
+export function isDeleteAccountRequest(req) {
+  const marker = routeMarker(req);
+
+  if (marker.kind === "exact") {
+    return true;
+  }
+
+  if (marker.kind === "rejected") {
+    return false;
+  }
+
+  return isDeleteAccountPath(req);
+}
+
+export function isAmbiguousDeleteAccountRequest(req) {
+  return routeMarker(req).kind === "rejected";
+}
+
 function defaultAdmin() {
   const url = process.env.SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

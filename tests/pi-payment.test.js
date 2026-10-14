@@ -198,6 +198,10 @@ async function main() {
         {
             source: "/api/pi-complete",
             destination: "/api/pi-approve?piAction=complete"
+        },
+        {
+            source: "/api/delete-account",
+            destination: "/api/business-application-notify?havkarRoute=delete-account"
         }
     ]);
     assert.strictEqual(JSON.stringify(vercel).includes("/api/:path*"), false);
@@ -205,6 +209,7 @@ async function main() {
     const apiFiles = fs.readdirSync(path.join(root, "api"))
         .filter((name) => name.endsWith(".js"));
     assert.strictEqual(apiFiles.includes("pi-complete.js"), false);
+    assert.strictEqual(apiFiles.includes("delete-account.js"), false);
     assert.strictEqual(apiFiles.includes("pi-approve.js"), true);
     assert.ok(apiFiles.length <= 12, `expected at most 12 functions, found ${apiFiles.length}`);
     assert.strictEqual(apiFiles.length, 12);
