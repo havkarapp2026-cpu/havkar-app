@@ -19,8 +19,8 @@ Until every gate below is actually complete, the command exits with an error and
 ## What the current repository contains
 
 - The website is the existing static HAVKAR app plus the `api/` functions. It is not rebuilt here.
-- The Android and iOS projects load the existing website at `https://havkar-app.vercel.app/`. They do not copy or rebuild the site. Android version is `1.0.2` (`versionCode` 3). iOS marketing version is `1.0.2` and build number is `2`.
-- The installed v1.0.1 local WebView failure on Samsung is not diagnosed. No device logcat was captured. This build does not use that local `https://localhost/index.html` document. A Samsung install of 1.0.2 is still required before the screen can be called fixed.
+- The Android and iOS projects load the existing website at `https://havkar-app.vercel.app/`. They do not copy or rebuild the site. Android version is `1.0.3` (`versionCode` 4). iOS marketing version is `1.0.3` and build number is `3`.
+- Android 1.0.2 opened the existing website on the tested Samsung tablet. Version 1.0.3 keeps titles below the status bar on pages whose headers did not include the top safe area. Pages that already include that inset are not padded again. iOS uses the safe-area script, and that iOS layout has not been run on a device.
 - Stellar payment submission rejects the Public network with “Mainnet payments are protected. Use Testnet.” The stored default network is Testnet.
 - The public wallet page does not initialize the Pi SDK.
 - The Delivery debug overlay has been removed from `delivery.html`.
@@ -60,7 +60,7 @@ The Data safety and App Privacy answers must match the real Supabase account dat
 
 ## Remaining sequence
 
-1. Install Android 1.0.2 on the Samsung device and confirm the existing website opens. The Swedish screen on v1.0.1 is still unexplained without logcat.
+1. Install Android 1.0.3 on the Samsung tablet and confirm the Profile title and back button sit below the status bar, and that Home, Wallet, and Delivery do not gain a second top gap.
 2. Publish the owner-approved privacy policy and support URL.
 3. Create the Play upload key and the Apple distribution certificate outside this repository.
 4. Build a signed AAB on a machine that has the upload key. Build a signed iOS archive on a Mac.
