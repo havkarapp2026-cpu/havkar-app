@@ -541,11 +541,29 @@ textarea {
 }
 
 .provider-name {
+    display:flex;
+    align-items:center;
+    gap:8px;
     font-size: 14px;
 
     color: #707070;
 
     margin-bottom: 6px;
+}
+
+.provider-person{
+    width:28px;
+    height:28px;
+    min-width:28px;
+    border-radius:50%;
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:linear-gradient(135deg,#689f38,#9ccc65);
+    color:white;
+    font-size:13px;
+    font-weight:800;
 }
 
 .rating {
@@ -2289,6 +2307,7 @@ textarea.form-control {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-profile-photo.js"></script>
 <script src="/havkar-services.js"></script>
 <script>
 
@@ -2659,6 +2678,7 @@ function buildServiceCard(service) {
                 </div>
 
                 <div class="provider-name">
+                    <span class="provider-person"></span>
                     ${escapeHtml(providerName)}
                 </div>
 
@@ -2695,6 +2715,23 @@ function buildServiceCard(service) {
                 : `<button class="book-btn" type="button">Book Now</button>`}
         </div>
     `;
+
+    const person =
+        card.querySelector(".provider-person");
+
+    if (
+        person &&
+        window.HAVKAR_PROFILE_PHOTO
+    ) {
+        window.HAVKAR_PROFILE_PHOTO.mount(
+            person,
+            {
+                supabaseUrl: SUPABASE_URL,
+                userId: service.provider_id,
+                name: providerName
+            }
+        );
+    }
 
     card
         .querySelector(".save-btn")

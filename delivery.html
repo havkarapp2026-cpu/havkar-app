@@ -960,65 +960,6 @@
 
 <body>
 
-    <!-- HAVKAR DIAGNOSTIC (temporary): active only when the URL ends with ?debug=1 -->
-    <script>
-    (function(){
-      if(!/[?&]debug=1(&|$)/.test(window.location.search)) return;
-      var lines=[], box=null, t0=Date.now(), beat=0, last=Date.now();
-      function ts(){ return ((Date.now()-t0)/1000).toFixed(1)+"s "; }
-      function log(m){ lines.push(ts()+m); if(lines.length>60) lines.shift(); render(); }
-      function render(){
-        if(!box){
-          if(!document.body) return;
-          box=document.createElement("pre");
-          box.id="havkarDebugPanel";
-          box.setAttribute("style","position:fixed;top:0;left:0;right:0;z-index:2147483647;margin:0;padding:6px 8px;max-height:50vh;overflow:hidden;background:rgba(0,0,0,.88);color:#00ff66;font:12px/1.4 monospace;white-space:pre-wrap;word-break:break-all;pointer-events:none;direction:ltr;text-align:left;");
-          document.body.appendChild(box);
-        }
-        box.textContent="HAVKAR DEBUG | alive "+beat+" | "+ts()+"\n"+lines.slice(-16).join("\n");
-      }
-      function desc(el){
-        if(!el||!el.tagName) return String(el);
-        var c=(el.getAttribute&&el.getAttribute("class"))||"";
-        var t=(el.textContent||"").replace(/\s+/g," ").trim().slice(0,18);
-        return el.tagName.toLowerCase()+(el.id?"#"+el.id:"")+(c?"."+c.split(" ").join("."):"")+(t?" '"+t+"'":"");
-      }
-      window.addEventListener("error",function(e){
-        if(e&&e.target&&e.target!==window&&(e.target.src||e.target.href)){ log("LOAD FAIL "+(e.target.src||e.target.href)); return; }
-        log("ERROR "+(e&&e.message)+" @"+(e&&e.lineno)+":"+(e&&e.colno));
-      },true);
-      window.addEventListener("unhandledrejection",function(e){
-        var r=e&&e.reason; log("REJECT "+((r&&(r.message||r.code))||r));
-      });
-      var ce=console.error;
-      console.error=function(){
-        try{ var a=[]; for(var i=0;i<arguments.length;i++){ var x=arguments[i]; a.push(x&&x.message?x.message:(typeof x==="object"?JSON.stringify(x):String(x))); } log("console.error "+a.join(" ").slice(0,200)); }catch(_){}
-        return ce.apply(console,arguments);
-      };
-      ["pointerdown","touchstart","click"].forEach(function(type){
-        document.addEventListener(type,function(e){
-          var p=(e.touches&&e.touches[0])||e, top=null;
-          try{ top=document.elementFromPoint(p.clientX,p.clientY); }catch(_){}
-          log(type+" -> "+desc(e.target)+(top&&top!==e.target?" | top: "+desc(top):"")+(e.defaultPrevented?" [prevented]":""));
-        },true);
-      });
-      window.addEventListener("beforeunload",function(){ log("beforeunload (page is leaving)"); });
-      window.addEventListener("pagehide",function(){ log("pagehide"); });
-      function report(tag){
-        var lang="?"; try{ lang=localStorage.getItem("havkar_language"); }catch(_){ lang="blocked"; }
-        log(tag+" supabase="+typeof window.supabase+" T="+typeof window.havkarDeliveryT+" hist="+typeof window.goToDeliveryHistory+" fab="+typeof window.handleDriverFab+" lang="+lang+" "+window.innerWidth+"x"+window.innerHeight);
-      }
-      document.addEventListener("DOMContentLoaded",function(){ report("DOMready"); });
-      window.addEventListener("load",function(){ report("load"); });
-      setTimeout(function(){ report("t+4s"); log("UA "+navigator.userAgent.slice(0,110)); },4000);
-      setInterval(function(){
-        var now=Date.now(); if(now-last>2000) log("MAIN THREAD BLOCKED "+(now-last)+"ms");
-        last=now; beat++; render();
-      },500);
-      log("debug started");
-    })();
-    </script>
-
     <!-- =========================
          HEADER
     ========================== -->
