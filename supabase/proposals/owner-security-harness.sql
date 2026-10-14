@@ -135,6 +135,45 @@ INSERT INTO public.service_commission_entries (id, booking_id) VALUES (1, 1);
 INSERT INTO public.accommodation_price_drafts (property_id, nightly_amount_cents) VALUES
   ('88888888-8888-4888-8888-888888888888', 1000);
 
+CREATE TABLE havkar_private.ai_usage_buckets (
+  bucket_key text PRIMARY KEY,
+  window_start timestamptz NOT NULL,
+  requests integer NOT NULL,
+  characters integer NOT NULL
+);
+ALTER TABLE havkar_private.ai_usage_buckets ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE havkar_private.ai_usage_buckets FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE havkar_private.ai_usage_buckets TO service_role;
+
+CREATE OR REPLACE FUNCTION public.havkar_ai_budget_probe()
+RETURNS integer
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT count(*)::integer FROM havkar_private.ai_usage_buckets;
+$$;
+REVOKE ALL ON FUNCTION public.havkar_ai_budget_probe() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.havkar_ai_budget_probe() TO service_role;
+
+CREATE OR REPLACE FUNCTION havkar_private.accommodation_booking_enabled()
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE
+SET search_path = public
+AS $$
+  SELECT false;
+$$;
+REVOKE ALL ON FUNCTION havkar_private.accommodation_booking_enabled() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION havkar_private.accommodation_booking_enabled() TO anon, authenticated, service_role;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA havkar_private
+  GRANT ALL ON TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA havkar_private
+  GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA havkar_private
+  GRANT ALL ON FUNCTIONS TO anon, authenticated, service_role;
+
 INSERT INTO auth.sessions (id, user_id) VALUES
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '11111111-1111-4111-8111-111111111111'),
   ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '22222222-2222-4222-8222-222222222222'),

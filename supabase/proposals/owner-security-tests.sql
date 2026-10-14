@@ -84,8 +84,82 @@ BEGIN
     'authenticated',
     'havkar_private.prepare_account_deletion(uuid)',
     'EXECUTE'
-  ) THEN
-    RAISE EXCEPTION 'bootstrap, recovery, or deletion preparation is executable by the wrong role';
+  ) OR has_function_privilege(
+    'anon',
+    'havkar_private.write_role_claim(uuid,text,bigint)',
+    'EXECUTE'
+  ) OR has_function_privilege(
+    'authenticated',
+    'havkar_private.lock_owner()',
+    'EXECUTE'
+  ) OR has_function_privilege(
+    'service_role',
+    'havkar_private.enforce_deletion_guard()',
+    'EXECUTE'
+  ) OR has_table_privilege(
+    'service_role',
+    'havkar_private.owner_identity',
+    'SELECT'
+  ) OR has_table_privilege(
+    'authenticated',
+    'havkar_private.account_deletion_guard',
+    'INSERT'
+  ) OR has_table_privilege(
+    'anon',
+    'havkar_private.role_audit',
+    'SELECT'
+  ) OR has_sequence_privilege(
+    'service_role',
+    'havkar_private.role_audit_id_seq',
+    'USAGE'
+  ) OR NOT has_table_privilege(
+    'service_role',
+    'havkar_private.ai_usage_buckets',
+    'SELECT'
+  ) OR NOT has_function_privilege(
+    'anon',
+    'havkar_private.accommodation_booking_enabled()',
+    'EXECUTE'
+  ) OR NOT has_function_privilege(
+    'service_role',
+    'havkar_private.accommodation_booking_enabled()',
+    'EXECUTE'
+  ) OR NOT has_function_privilege(
+    'service_role',
+    'public.havkar_account_deletion_allowed(uuid)',
+    'EXECUTE'
+  ) OR NOT has_function_privilege(
+    'authenticated',
+    'havkar_private.caller_is_admin()',
+    'EXECUTE'
+  ) OR NOT has_function_privilege(
+    'service_role',
+    'havkar_private.caller_is_admin()',
+    'EXECUTE'
+  ) OR NOT has_schema_privilege('authenticated', 'havkar_private', 'USAGE')
+     OR NOT has_schema_privilege('service_role', 'havkar_private', 'USAGE')
+     OR has_schema_privilege('authenticated', 'havkar_private', 'CREATE')
+     OR has_schema_privilege('service_role', 'havkar_private', 'CREATE') THEN
+    RAISE EXCEPTION 'owner migration changed an existing private grant or exposed a new object';
+  END IF;
+END $$;
+
+DO $$
+DECLARE
+  probe integer;
+  booking boolean;
+BEGIN
+  EXECUTE 'SET ROLE service_role';
+  SELECT public.havkar_ai_budget_probe() INTO probe;
+  EXECUTE 'RESET ROLE';
+  IF probe IS DISTINCT FROM 0 THEN
+    RAISE EXCEPTION 'existing assistant budget probe failed';
+  END IF;
+  EXECUTE 'SET ROLE anon';
+  SELECT havkar_private.accommodation_booking_enabled() INTO booking;
+  EXECUTE 'RESET ROLE';
+  IF booking IS DISTINCT FROM false THEN
+    RAISE EXCEPTION 'existing accommodation booking gate changed';
   END IF;
 END $$;
 
@@ -357,6 +431,11 @@ BEGIN
      ) <> 1 THEN
     RAISE EXCEPTION 'repeated deletion preparation was not idempotent';
   END IF;
+  EXECUTE 'SET ROLE service_role';
+  IF NOT public.havkar_account_deletion_allowed('77777777-7777-4777-8777-777777777777') THEN
+    RAISE EXCEPTION 'service role could not repeat deletion preparation';
+  END IF;
+  EXECUTE 'RESET ROLE';
   PERFORM set_config('havkar.deletion_guard', 'off', true);
   BEGIN
     INSERT INTO havkar_private.account_deletion_guard (user_id)

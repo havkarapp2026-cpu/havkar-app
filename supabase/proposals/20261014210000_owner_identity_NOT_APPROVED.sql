@@ -126,9 +126,23 @@ ALTER TABLE havkar_private.role_audit FORCE ROW LEVEL SECURITY;
 ALTER TABLE havkar_private.account_deletion_guard ENABLE ROW LEVEL SECURITY;
 ALTER TABLE havkar_private.account_deletion_guard FORCE ROW LEVEL SECURITY;
 
-REVOKE ALL ON ALL TABLES IN SCHEMA havkar_private FROM PUBLIC, anon, authenticated, service_role;
-ALTER DEFAULT PRIVILEGES IN SCHEMA havkar_private
-  REVOKE ALL ON TABLES FROM PUBLIC, anon, authenticated, service_role;
+-- Only the tables and sequence created above. Existing havkar_private objects keep their grants.
+REVOKE ALL ON TABLE
+  havkar_private.owner_identity,
+  havkar_private.bootstrap_seal,
+  havkar_private.owner_acceptance,
+  havkar_private.role_assignments,
+  havkar_private.admin_permissions,
+  havkar_private.staff_permissions,
+  havkar_private.owner_transfer_arm,
+  havkar_private.owner_recovery_arm,
+  havkar_private.consumed_arms,
+  havkar_private.security_approvals,
+  havkar_private.role_audit,
+  havkar_private.account_deletion_guard
+FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON SEQUENCE havkar_private.role_audit_id_seq
+  FROM PUBLIC, anon, authenticated, service_role;
 
 CREATE OR REPLACE FUNCTION havkar_private.enforce_owner_identity_guard()
 RETURNS trigger
@@ -1307,7 +1321,35 @@ REVOKE ALL ON FUNCTION public.havkar_account_deletion_allowed(uuid)
   FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.havkar_account_deletion_allowed(uuid) TO service_role;
 
-REVOKE ALL ON ALL FUNCTIONS IN SCHEMA havkar_private FROM PUBLIC;
+REVOKE ALL ON FUNCTION
+  havkar_private.enforce_owner_identity_guard(),
+  havkar_private.enforce_acceptance_guard(),
+  havkar_private.enforce_bootstrap_seal(),
+  havkar_private.enforce_recovery_acceptance(),
+  havkar_private.enforce_role_separation(),
+  havkar_private.jwt_role_generation(),
+  havkar_private.jwt_session_id(),
+  havkar_private.session_is_live(uuid),
+  havkar_private.caller_has_permission(text),
+  havkar_private.caller_matches_admin_assignment(),
+  havkar_private.caller_is_owner(),
+  havkar_private.phrases_match(text, text),
+  havkar_private.assert_secret_pair(text, text, integer),
+  havkar_private.write_role_claim(uuid, text, bigint),
+  havkar_private.lock_owner(),
+  havkar_private.assert_owner_action(text, text, bigint),
+  havkar_private.accept_owner_identity(text),
+  havkar_private.grant_admin(uuid, text, bigint),
+  havkar_private.revoke_admin(uuid, text, bigint),
+  havkar_private.grant_staff_permission(uuid, text, text, bigint),
+  havkar_private.revoke_staff_permission(uuid, text, text, bigint),
+  havkar_private.approve_security_change(text, text, bigint),
+  havkar_private.authorize_payment_activation(text, bigint),
+  havkar_private.arm_ownership_transfer(uuid, uuid, text, bigint),
+  havkar_private.commit_ownership_transfer(uuid, uuid, uuid, text, bigint),
+  havkar_private.enforce_deletion_guard()
+FROM PUBLIC, anon, authenticated, service_role;
+
 GRANT EXECUTE ON FUNCTION havkar_private.caller_is_admin() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION havkar_private.caller_is_owner() TO authenticated;
 GRANT EXECUTE ON FUNCTION havkar_private.accept_owner_identity(text) TO authenticated;
