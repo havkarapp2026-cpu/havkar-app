@@ -35,7 +35,17 @@ assert.deepEqual(tiles, [
 ]);
 
 assert.equal(tiles.length, 15);
-assert.match(home, /grid-template-columns:\s*repeat\(3,/);
+assert.match(home, /assets\/home\/header\.png/);
+assert.match(home, /assets\/home\/languages\.png/);
+assert.match(home, /assets\/home\/havkar-ai\.png/);
+assert.match(home, /assets\/home\/about\.png/);
+for (const name of [
+  "header.png", "buy-sell.png", "jobs.png", "services.png", "wallet.png",
+  "tickets.png", "accommodation.png", "ads.png", "delivery.png", "events.png",
+  "chat.png", "languages.png", "reviews.png", "support.png", "havkar-ai.png", "about.png"
+]) {
+  assert.ok(fs.existsSync(path.join(root, "assets/home", name)), name);
+}
 assert.match(home, /class="language-latin">A</);
 assert.match(home, /class="language-kurdish">س</);
 assert.match(home, /class="language-east">あ</);
