@@ -73,7 +73,7 @@ button{
     top:0;
     z-index:200;
 
-    height:68px;
+    height:calc(68px + env(safe-area-inset-top, 0px));
 
     background:
         linear-gradient(
@@ -84,7 +84,7 @@ button{
 
     color:white;
 
-    padding:0 18px;
+    padding:env(safe-area-inset-top, 0px) 18px 0;
 
     display:flex;
     align-items:center;
@@ -359,8 +359,67 @@ button{
     transform:scale(.95);
 }
 
-#avatarInput{
+#avatarInput,
+#avatarCamera{
     display:none;
+}
+
+.photo-crop[hidden]{
+    display:none !important;
+}
+
+.photo-crop{
+    position:fixed;
+    inset:0;
+    z-index:4000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    background:rgba(0,0,0,.55);
+}
+
+.photo-crop-card{
+    width:min(100%, 380px);
+    padding:18px;
+    border-radius:18px;
+    background:white;
+    text-align:center;
+}
+
+.photo-crop-card h2{
+    margin:0 0 8px;
+    font-size:18px;
+}
+
+.photo-crop-card p{
+    margin:0 0 14px;
+    color:#667066;
+    font-size:13px;
+    line-height:1.45;
+}
+
+#photoCropCanvas{
+    width:min(100%, 280px);
+    height:auto;
+    border-radius:50%;
+    background:#dfe8d8;
+    touch-action:none;
+    cursor:grab;
+}
+
+.photo-zoom{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin:14px 0;
+    color:#455a64;
+    font-size:13px;
+    font-weight:700;
+}
+
+.photo-zoom input{
+    flex:1;
 }
 
 .profile-name{
@@ -758,6 +817,18 @@ button{
 .action.logout .action-icon{
     background:#ffebee;
     color:#d32f2f;
+}
+
+#profileAdministration[hidden]{
+    display:none !important;
+}
+
+.settings-account-email{
+    margin-top:6px;
+    color:#2e7d32;
+    font-size:12px;
+    font-weight:700;
+    overflow-wrap:anywhere;
 }
 
 
@@ -2167,6 +2238,40 @@ input:focus-visible{
         </button>
 
 
+        <!-- ADMINISTRATION: hidden until the server confirms an administrator. -->
+
+        <button
+            id="profileAdministration"
+            class="action"
+            type="button"
+            hidden
+            onclick="goTo('admin.html')">
+
+            <div class="action-icon">
+
+                <i class="fas fa-user-shield"></i>
+
+            </div>
+
+            <div class="action-content">
+
+                <div class="action-title">
+                    Administration
+                </div>
+
+                <div class="action-subtitle">
+                    Server-confirmed administrators only
+                </div>
+
+            </div>
+
+            <div class="action-arrow">
+                <i class="fas fa-chevron-right"></i>
+            </div>
+
+        </button>
+
+
         <!-- LOGOUT -->
 
         <button
@@ -2237,6 +2342,8 @@ input:focus-visible{
             <p>
                 Manage your HAVKAR preferences
             </p>
+
+            <p id="settingsAccountEmail" class="settings-account-email" translate="no" data-i18n-ignore></p>
 
         </div>
 
@@ -3172,6 +3279,27 @@ input:focus-visible{
 ========================================================= -->
 
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-profile-photo.js"></script>
+
+<input id="avatarInput" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif">
+<input id="avatarCamera" type="file" accept="image/*" capture="environment">
+
+<div id="photoCrop" class="photo-crop" hidden>
+    <div class="photo-crop-card" role="dialog" aria-modal="true" aria-labelledby="photoCropTitle">
+        <h2 id="photoCropTitle">Adjust photo</h2>
+        <p>Drag the photo and use the slider. The circle is the photo other members see.</p>
+        <canvas id="photoCropCanvas" width="280" height="280"></canvas>
+        <label class="photo-zoom">
+            Zoom
+            <input id="photoZoom" type="range" min="1" max="3" step="0.01" value="1">
+        </label>
+        <div class="photo-actions">
+            <button id="photoCropCancel" class="photo-btn secondary" type="button">Cancel</button>
+            <button id="photoCropSave" class="photo-btn primary" type="button">Use photo</button>
+        </div>
+    </div>
+</div>
+
 <script type="module">
 
 import {
@@ -3202,6 +3330,8 @@ const supabase =
 ========================================================= */
 
 let currentUser = null;
+
+let profileAvatarUrl = "";
 
 let isLoading = false;
 
@@ -3827,14 +3957,22 @@ function getAvatarUrl(
     }
 
 
-    const metadata =
-        user.user_metadata || {};
+    if (
+        !profileAvatarUrl ||
+        !window.HAVKAR_PROFILE_PHOTO ||
+        !window.HAVKAR_PROFILE_PHOTO.isOwnAvatarUrl(
+            profileAvatarUrl,
+            window.HAVKAR_SUPABASE_CONFIG.url,
+            user.id
+        )
+    ) {
+
+        return "";
+
+    }
 
 
-    return (
-        metadata.avatar_url ||
-        ""
-    );
+    return profileAvatarUrl;
 
 }
 
@@ -4052,6 +4190,84 @@ function renderAvatar(
 
 
 /* =========================================================
+   ADMINISTRATION ENTRY
+   Shown only when havkar_session_is_admin returns true.
+   The database role is app_metadata.role = admin.
+   There is no separate staff role in the current schema.
+========================================================= */
+
+async function revealAdministration(
+    user
+){
+
+    const button =
+        document.getElementById(
+            "profileAdministration"
+        );
+
+    const settingsEmail =
+        document.getElementById(
+            "settingsAccountEmail"
+        );
+
+
+    if(settingsEmail){
+
+        settingsEmail.textContent =
+            user && user.email
+            ? user.email
+            : "";
+
+    }
+
+
+    if(!button){
+
+        return;
+
+    }
+
+
+    button.hidden = true;
+
+
+    if(!user){
+
+        return;
+
+    }
+
+
+    try{
+
+        const admin =
+            await supabase.rpc(
+                "havkar_session_is_admin"
+            );
+
+
+        button.hidden = !(
+            admin &&
+            admin.error == null &&
+            admin.data === true
+        );
+
+    }
+    catch(error){
+
+        console.error(
+            "Administration check failed:",
+            error
+        );
+
+        button.hidden = true;
+
+    }
+
+}
+
+
+/* =========================================================
    LOAD PROFILE
 ========================================================= */
 
@@ -4185,6 +4401,9 @@ async function(){
             currentUser =
                 null;
 
+            profileAvatarUrl =
+                "";
+
 
             if(area){
 
@@ -4202,6 +4421,9 @@ async function(){
             }
 
 
+            revealAdministration(null);
+
+
             return;
 
         }
@@ -4213,6 +4435,36 @@ async function(){
 
         const user =
             currentUser;
+
+
+        profileAvatarUrl =
+            "";
+
+
+        if(window.HAVKAR_PROFILE_PHOTO){
+
+            try{
+
+                profileAvatarUrl =
+                    await window.HAVKAR_PROFILE_PHOTO.readOwnAvatar(
+                        supabase,
+                        user.id,
+                        window.HAVKAR_SUPABASE_CONFIG.url
+                    );
+
+            }catch(avatarError){
+
+                profileAvatarUrl =
+                    "";
+
+                console.error(
+                    "Profile photo could not be read:",
+                    avatarError
+                );
+
+            }
+
+        }
 
 
         const metadata =
@@ -4235,6 +4487,9 @@ async function(){
         const email =
             user.email ||
             "No email";
+
+
+        revealAdministration(user);
 
 
         const avatarUrl =
@@ -4278,11 +4533,53 @@ async function(){
                     </div>
 
 
-                    <!--
-                        Change Photo controls stay unimplemented here.
-                        Avatar upload code remains below and can be
-                        shown again after a secure avatars bucket exists.
-                    -->
+                    <div class="photo-actions">
+
+                        <button
+                            id="changePhotoBtn"
+                            class="photo-btn primary"
+                            type="button"
+                            onclick="openAvatarPicker()">
+
+                            <i class="fas fa-image"></i>
+
+                            Choose photo
+
+                        </button>
+
+                        <button
+                            id="cameraPhotoBtn"
+                            class="photo-btn secondary"
+                            type="button"
+                            onclick="openAvatarCamera()">
+
+                            <i class="fas fa-camera"></i>
+
+                            Take photo
+
+                        </button>
+
+                        ${
+                            avatarUrl
+                            ?
+                            `
+                            <button
+                                id="removePhotoBtn"
+                                class="photo-btn danger"
+                                type="button"
+                                onclick="removeAvatar()">
+
+                                <i class="fas fa-trash"></i>
+
+                                Remove photo
+
+                            </button>
+                            `
+                            :
+                            ""
+                        }
+
+                    </div>
 
 
                     <div class="profile-name">
@@ -6354,6 +6651,213 @@ function(){
    OPEN AVATAR PICKER
 ========================================================= */
 
+let cropImage =
+    null;
+
+let cropZoom =
+    1;
+
+let cropOffsetX =
+    0;
+
+let cropOffsetY =
+    0;
+
+let cropDrag =
+    null;
+
+
+function profilePhotoApi(){
+
+    if(!window.HAVKAR_PROFILE_PHOTO){
+
+        throw new Error(
+            "Profile photo tools are unavailable."
+        );
+
+    }
+
+
+    return window.HAVKAR_PROFILE_PHOTO;
+
+}
+
+
+function closePhotoCrop(){
+
+    const modal =
+        document.getElementById(
+            "photoCrop"
+        );
+
+
+    if(modal){
+
+        modal.hidden =
+            true;
+
+    }
+
+
+    if(
+        cropImage &&
+        cropImage.src &&
+        cropImage.src.indexOf("blob:") === 0
+    ){
+
+        URL.revokeObjectURL(
+            cropImage.src
+        );
+
+    }
+
+
+    cropImage =
+        null;
+
+    cropDrag =
+        null;
+
+}
+
+
+function drawPhotoCrop(){
+
+    const canvas =
+        document.getElementById(
+            "photoCropCanvas"
+        );
+
+
+    if(
+        !canvas ||
+        !cropImage
+    ){
+
+        return;
+
+    }
+
+
+    const fitted =
+        profilePhotoApi().fitCrop(
+            cropImage.naturalWidth,
+            cropImage.naturalHeight,
+            canvas.width,
+            cropZoom,
+            cropOffsetX,
+            cropOffsetY
+        );
+
+
+    cropOffsetX =
+        fitted.offsetX;
+
+    cropOffsetY =
+        fitted.offsetY;
+
+
+    const context =
+        canvas.getContext("2d");
+
+
+    context.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    context.save();
+
+    context.beginPath();
+
+    context.arc(
+        canvas.width / 2,
+        canvas.height / 2,
+        canvas.width / 2,
+        0,
+        Math.PI * 2
+    );
+
+    context.clip();
+
+    context.drawImage(
+        cropImage,
+        fitted.offsetX,
+        fitted.offsetY,
+        fitted.drawWidth,
+        fitted.drawHeight
+    );
+
+    context.restore();
+
+}
+
+
+function openPhotoCrop(
+    image
+){
+
+    const canvas =
+        document.getElementById(
+            "photoCropCanvas"
+        );
+
+    const modal =
+        document.getElementById(
+            "photoCrop"
+        );
+
+    const zoom =
+        document.getElementById(
+            "photoZoom"
+        );
+
+
+    cropImage =
+        image;
+
+
+    const initial =
+        profilePhotoApi().initialCrop(
+            image.naturalWidth,
+            image.naturalHeight,
+            canvas.width
+        );
+
+
+    cropZoom =
+        initial.zoom;
+
+    cropOffsetX =
+        initial.offsetX;
+
+    cropOffsetY =
+        initial.offsetY;
+
+
+    if(zoom){
+
+        zoom.value =
+            "1";
+
+    }
+
+
+    if(modal){
+
+        modal.hidden =
+            false;
+
+    }
+
+
+    drawPhotoCrop();
+
+}
+
+
 window.openAvatarPicker =
 function(){
 
@@ -6376,6 +6880,42 @@ function(){
 
 
     if(input){
+
+        input.value =
+            "";
+
+        input.click();
+
+    }
+
+};
+
+
+window.openAvatarCamera =
+function(){
+
+    if(!currentUser){
+
+        showMessage(
+            "Please log in first.",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    const input =
+        document.getElementById(
+            "avatarCamera"
+        );
+
+
+    if(input){
+
+        input.value =
+            "";
 
         input.click();
 
@@ -6412,55 +6952,6 @@ async function(
         input.files[0];
 
 
-    const allowedTypes = [
-
-        "image/jpeg",
-
-        "image/png",
-
-        "image/webp"
-
-    ];
-
-
-    if(
-        !allowedTypes.includes(
-            file.type
-        )
-    ){
-
-        showMessage(
-            "Please select a JPG, PNG or WEBP image.",
-            "error"
-        );
-
-        input.value =
-            "";
-
-        return;
-
-    }
-
-
-    const maxSize =
-        5 * 1024 * 1024;
-
-
-    if(file.size > maxSize){
-
-        showMessage(
-            "Profile photo must be smaller than 5 MB.",
-            "error"
-        );
-
-        input.value =
-            "";
-
-        return;
-
-    }
-
-
     if(!currentUser){
 
         showMessage(
@@ -6468,196 +6959,78 @@ async function(
             "error"
         );
 
+        input.value =
+            "";
+
         return;
 
     }
 
 
-    const button =
-        document.getElementById(
-            "changePhotoBtn"
-        );
-
-
-    if(button){
-
-        button.disabled =
-            true;
-
-        button.innerHTML =
-            `
-            <i class="fas fa-spinner fa-spin"></i>
-            Uploading...
-            `;
-
-    }
-
-
-    clearMessage();
-
-
     try{
 
-        const extension =
-            file.name
-                .split(".")
-                .pop()
-                .toLowerCase();
-
-
-        const uniqueId =
-            typeof crypto !== "undefined" &&
-            crypto.randomUUID
-            ?
-            crypto.randomUUID()
-            :
-            String(
-                Date.now()
-            );
-
-
-        const filePath =
-            currentUser.id +
-            "/" +
-            Date.now() +
-            "-" +
-            uniqueId +
-            "." +
-            extension;
-
-
-        const {
-            error:uploadError
-        } =
-        await supabase.storage
-            .from("avatars")
-            .upload(
-                filePath,
-                file,
-                {
-                    cacheControl:"3600",
-
-                    upsert:false,
-
-                    contentType:file.type
-                }
-            );
-
-
-        if(uploadError){
-
-            throw uploadError;
-
-        }
-
-
-        const {
-            data:publicData
-        } =
-        supabase.storage
-            .from("avatars")
-            .getPublicUrl(
-                filePath
-            );
-
-
-        const publicUrl =
-            publicData &&
-            publicData.publicUrl
-            ?
-            publicData.publicUrl
-            :
-            "";
-
-
-        if(!publicUrl){
-
-            throw new Error(
-                "Could not create image URL."
-            );
-
-        }
-
-
-        const {
-            data:updateData,
-            error:updateError
-        } =
-        await supabase.auth.updateUser({
-
-            data:{
-                avatar_url:
-                    publicUrl
-            }
-
-        });
-
-
-        if(updateError){
-
-            throw updateError;
-
-        }
-
-
-        if(
-            updateData &&
-            updateData.user
-        ){
-
-            currentUser =
-                updateData.user;
-
-        }
-
-
-        await loadProfile();
-
-
-        showMessage(
-            "Profile photo updated successfully.",
-            "success"
+        profilePhotoApi().assertSource(
+            file
         );
 
-    }
-    catch(error){
-
-        console.error(
-            "Avatar upload error:",
-            error
-        );
-
+    }catch(error){
 
         showMessage(
-            "Could not upload profile photo: " +
-            (
-                error.message ||
-                "Unknown error"
-            ),
+            error.message ||
+            "This photo cannot be used.",
             "error"
         );
-
-    }
-    finally{
 
         input.value =
             "";
 
-
-        if(button){
-
-            button.disabled =
-                false;
-
-            button.innerHTML =
-                `
-                <i class="fas fa-camera"></i>
-                Change Photo
-                `;
-
-        }
+        return;
 
     }
+
+
+    const previewUrl =
+        URL.createObjectURL(
+            file
+        );
+
+    const image =
+        new Image();
+
+
+    image.onload =
+        function(){
+
+            input.value =
+                "";
+
+            openPhotoCrop(
+                image
+            );
+
+        };
+
+
+    image.onerror =
+        function(){
+
+            URL.revokeObjectURL(
+                previewUrl
+            );
+
+            input.value =
+                "";
+
+            showMessage(
+                "This photo could not be opened. Choose a JPG, PNG, or WEBP image.",
+                "error"
+            );
+
+        };
+
+
+    image.src =
+        previewUrl;
 
 };
 
@@ -6681,16 +7054,7 @@ async function(){
     }
 
 
-    const metadata =
-        currentUser.user_metadata || {};
-
-
-    const avatarUrl =
-        metadata.avatar_url ||
-        "";
-
-
-    if(!avatarUrl){
+    if(!profileAvatarUrl){
 
         showMessage(
             "No profile photo to remove.",
@@ -6737,35 +7101,10 @@ async function(){
 
     try{
 
-        const {
-            data,
-            error
-        } =
-        await supabase.auth.updateUser({
-
-            data:{
-                avatar_url:null
-            }
-
-        });
-
-
-        if(error){
-
-            throw error;
-
-        }
-
-
-        if(
-            data &&
-            data.user
-        ){
-
-            currentUser =
-                data.user;
-
-        }
+        await profilePhotoApi().removeAvatar(
+            supabase,
+            currentUser.id
+        );
 
 
         await loadProfile();
@@ -6793,6 +7132,16 @@ async function(){
             ),
             "error"
         );
+
+    }
+    finally{
+
+        if(button){
+
+            button.disabled =
+                false;
+
+        }
 
     }
 
@@ -6995,6 +7344,279 @@ supabase.auth.onAuthStateChange(
 ========================================================= */
 
 applySettings();
+
+const avatarLibrary =
+    document.getElementById(
+        "avatarInput"
+    );
+
+const avatarCamera =
+    document.getElementById(
+        "avatarCamera"
+    );
+
+const photoZoom =
+    document.getElementById(
+        "photoZoom"
+    );
+
+const photoCanvas =
+    document.getElementById(
+        "photoCropCanvas"
+    );
+
+
+if(avatarLibrary){
+
+    avatarLibrary.addEventListener(
+        "change",
+        window.handleAvatarSelected
+    );
+
+}
+
+
+if(avatarCamera){
+
+    avatarCamera.addEventListener(
+        "change",
+        window.handleAvatarSelected
+    );
+
+}
+
+
+if(photoZoom){
+
+    photoZoom.addEventListener(
+        "input",
+        function(){
+
+            if(!cropImage){
+
+                return;
+
+            }
+
+
+            const canvas =
+                document.getElementById(
+                    "photoCropCanvas"
+                );
+
+            const nextZoom =
+                Number(photoZoom.value);
+
+            const previous =
+                profilePhotoApi().fitCrop(
+                    cropImage.naturalWidth,
+                    cropImage.naturalHeight,
+                    canvas.width,
+                    cropZoom,
+                    cropOffsetX,
+                    cropOffsetY
+                );
+
+            const nextScale =
+                profilePhotoApi().fitCrop(
+                    cropImage.naturalWidth,
+                    cropImage.naturalHeight,
+                    canvas.width,
+                    nextZoom,
+                    0,
+                    0
+                ).scale;
+
+
+            cropOffsetX =
+                profilePhotoApi().zoomOffset(
+                    previous.offsetX,
+                    canvas.width,
+                    previous.scale,
+                    nextScale
+                );
+
+            cropOffsetY =
+                profilePhotoApi().zoomOffset(
+                    previous.offsetY,
+                    canvas.height,
+                    previous.scale,
+                    nextScale
+                );
+
+            cropZoom =
+                nextZoom;
+
+            drawPhotoCrop();
+
+        }
+    );
+
+}
+
+
+if(photoCanvas){
+
+    photoCanvas.addEventListener(
+        "pointerdown",
+        function(event){
+
+            cropDrag = {
+                id: event.pointerId,
+                x: event.clientX,
+                y: event.clientY,
+                offsetX: cropOffsetX,
+                offsetY: cropOffsetY
+            };
+
+            photoCanvas.setPointerCapture(
+                event.pointerId
+            );
+
+        }
+    );
+
+    photoCanvas.addEventListener(
+        "pointermove",
+        function(event){
+
+            if(
+                !cropDrag ||
+                cropDrag.id !== event.pointerId
+            ){
+
+                return;
+
+            }
+
+
+            cropOffsetX =
+                cropDrag.offsetX +
+                event.clientX -
+                cropDrag.x;
+
+            cropOffsetY =
+                cropDrag.offsetY +
+                event.clientY -
+                cropDrag.y;
+
+            drawPhotoCrop();
+
+        }
+    );
+
+    photoCanvas.addEventListener(
+        "pointerup",
+        function(){
+
+            cropDrag =
+                null;
+
+        }
+    );
+
+}
+
+
+document.getElementById(
+    "photoCropCancel"
+).addEventListener(
+    "click",
+    closePhotoCrop
+);
+
+
+document.getElementById(
+    "photoCropSave"
+).addEventListener(
+    "click",
+    async function(){
+
+        const button =
+            document.getElementById(
+                "photoCropSave"
+            );
+
+
+        if(
+            !cropImage ||
+            !currentUser
+        ){
+
+            return;
+
+        }
+
+
+        button.disabled =
+            true;
+
+
+        try{
+
+            const canvas =
+                document.getElementById(
+                    "photoCropCanvas"
+                );
+
+            const blob =
+                await profilePhotoApi().exportWebp(
+                    cropImage,
+                    {
+                        viewSize: canvas.width,
+                        outputSize: 512,
+                        zoom: cropZoom,
+                        offsetX: cropOffsetX,
+                        offsetY: cropOffsetY
+                    }
+                );
+
+
+            await profilePhotoApi().uploadAvatar(
+                supabase,
+                currentUser.id,
+                blob,
+                window.HAVKAR_SUPABASE_CONFIG.url
+            );
+
+
+            closePhotoCrop();
+
+            await loadProfile();
+
+
+            showMessage(
+                "Profile photo updated successfully.",
+                "success"
+            );
+
+        }catch(error){
+
+            console.error(
+                "Avatar upload error:",
+                error
+            );
+
+
+            showMessage(
+                "Could not upload profile photo: " +
+                (
+                    error.message ||
+                    "Unknown error"
+                ),
+                "error"
+            );
+
+        }finally{
+
+            button.disabled =
+                false;
+
+        }
+
+    }
+);
+
 
 loadProfile();
 

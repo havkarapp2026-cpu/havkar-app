@@ -130,12 +130,15 @@ function sendJSON(res, status, body) {
 
 const BUILTIN_TRUSTED_ORIGINS = [
   "https://havkar-app.vercel.app",
-  "https://testnet.havkar.online"
+  "https://testnet.havkar.online",
+  // Bundled Capacitor origins only. These are exact origins, not wildcards.
+  "https://localhost",
+  "capacitor://localhost"
 ];
 
 /*
  * HAVKAR_ADDITIONAL_ORIGINS is optional. An absent or empty value
- * leaves only the two built-in origins. Each entry must be one
+ * leaves only the built-in origins. Each entry must be one
  * HTTPS origin: no wildcard, HTTP, path, query, or fragment.
  * Invalid entries are ignored so the built-in origins stay trusted.
  */
@@ -623,6 +626,43 @@ function googleLanguageCode(language) {
   return code;
 }
 
+/*
+ * Exact replacements for source strings whose isolated automatic
+ * translation was verified wrong. Any other source text, and any
+ * other target language, continues through Google unchanged.
+ * HAVKAR and HAVKAR AI stay the Latin brand in every language.
+ */
+const EXACT_TRANSLATION_OVERRIDES = Object.freeze({
+  Services: Object.freeze({
+    it: "Servizi"
+  }),
+  Support: Object.freeze({
+    ar: "الدعم"
+  }),
+  "About HAVKAR": Object.freeze({
+    fa: "درباره HAVKAR",
+    ar: "نبذة عن HAVKAR",
+    kmr: "Derbarê HAVKAR de"
+  })
+});
+
+function exactTranslationOverride(text, targetLanguage) {
+  const source = cleanText(text).replace(/\s+/g, " ");
+  const language = havkarLanguageCode(targetLanguage);
+
+  if (source === "HAVKAR" || source === "HAVKAR AI") {
+    return source;
+  }
+
+  const row = EXACT_TRANSLATION_OVERRIDES[source];
+
+  if (!row || !language) {
+    return "";
+  }
+
+  return row[language] || "";
+}
+
 async function translateTexts({
   texts,
   sourceLanguage,
@@ -1092,6 +1132,25 @@ async function handler(req, res) {
     const missingIndexes = [];
 
     texts.forEach((text, index) => {
+      const override = exactTranslationOverride(
+        text,
+        targetLanguage
+      );
+
+      if (override) {
+        results[index] = {
+          text: override,
+          translatedText: override,
+          sourceLanguage:
+            sourceLanguage && sourceLanguage !== "auto"
+              ? sourceLanguage
+              : "en",
+          targetLanguage,
+          cached: false
+        };
+        return;
+      }
+
       const cacheKey =
         makeCacheKey(
           text,
@@ -1263,3 +1322,4 @@ async function handler(req, res) {
 module.exports = handler;
 module.exports.googleLanguageCode = googleLanguageCode;
 module.exports.havkarLanguageCode = havkarLanguageCode;
+module.exports.exactTranslationOverride = exactTranslationOverride;

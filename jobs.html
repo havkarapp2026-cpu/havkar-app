@@ -384,6 +384,21 @@ body{
   display:block;
 }
 
+.poster-photo{
+  width:28px;
+  height:28px;
+  margin-bottom:6px;
+  border-radius:50%;
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(135deg,#689f38,#9ccc65);
+  color:white;
+  font-size:13px;
+  font-weight:800;
+}
+
 .job-main{
   flex:1;
   min-width:0;
@@ -1935,6 +1950,7 @@ a.primary{
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-profile-photo.js"></script>
 <script src="/havkar-jobs.js"></script>
 <script>
 
@@ -2206,6 +2222,86 @@ function renderJobImage(job){
   `;
 }
 
+function mountJobPhotos(root){
+
+  if(
+    !root ||
+    !window.HAVKAR_PROFILE_PHOTO
+  ){
+
+    return;
+
+  }
+
+
+  const nodes = [];
+
+
+  if(
+    root.matches &&
+    root.matches("[data-poster-id]")
+  ){
+
+    nodes.push(root);
+
+  }
+
+
+  root.querySelectorAll("[data-poster-id]").forEach(
+    function(node){
+
+      nodes.push(node);
+
+    }
+  );
+
+
+  nodes.forEach(function(node){
+
+    const main =
+      node.querySelector(".job-main");
+
+
+    if(!main){
+
+      return;
+
+    }
+
+
+    let photo =
+      main.querySelector(".poster-photo");
+
+
+    if(!photo){
+
+      photo =
+        document.createElement("div");
+
+      photo.className =
+        "poster-photo";
+
+      main.insertBefore(
+        photo,
+        main.firstChild
+      );
+
+    }
+
+
+    window.HAVKAR_PROFILE_PHOTO.mount(
+      photo,
+      {
+        supabaseUrl: SUPABASE_URL,
+        userId: node.getAttribute("data-poster-id") || "",
+        name: node.getAttribute("data-poster-name") || ""
+      }
+    );
+
+  });
+
+}
+
 /* =========================================================
    RENDER JOBS
    ========================================================= */
@@ -2309,6 +2405,8 @@ function renderJobs(){
 
         <article
           class="job-card"
+          data-poster-id="${escapeHTML(job.user_id || "")}"
+          data-poster-name="${escapeHTML(job.company || "")}"
           onclick="
             openJob('${escapeJS(job.id)}')
           ">
@@ -2425,6 +2523,8 @@ function renderJobs(){
       `;
 
     }).join("");
+
+  mountJobPhotos(list);
 }
 
 /* =========================================================
@@ -2731,6 +2831,23 @@ function openJob(id){
     }
 
   `;
+
+  const detail =
+    document.getElementById(
+      "detailContent"
+    );
+
+  if(detail){
+
+    detail.dataset.posterId =
+      job.user_id || "";
+
+    detail.dataset.posterName =
+      job.company || "";
+
+    mountJobPhotos(detail);
+
+  }
 
   openModal(
     "detailModal"
@@ -3725,6 +3842,8 @@ async function openMyJobs(){
 
             <div
               class="saved-job-card"
+              data-poster-id="${escapeHTML(job.user_id || "")}"
+              data-poster-name="${escapeHTML(job.company || "")}"
               onclick="
                 openJob(
                   '${escapeJS(job.id)}'
@@ -3811,6 +3930,8 @@ async function openMyJobs(){
 
         })
         .join("");
+
+    mountJobPhotos(container);
   }
 
   openModal(
@@ -3875,6 +3996,8 @@ function openSavedJobs(){
 
             <div
               class="saved-job-card"
+              data-poster-id="${escapeHTML(job.user_id || "")}"
+              data-poster-name="${escapeHTML(job.company || "")}"
               onclick="
                 openJob(
                   '${escapeJS(job.id)}'
@@ -3952,6 +4075,8 @@ function openSavedJobs(){
 
         })
         .join("");
+
+    mountJobPhotos(container);
   }
 
   openModal(
