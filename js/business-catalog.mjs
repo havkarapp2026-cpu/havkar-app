@@ -48,7 +48,9 @@ const LIMITS = Object.freeze({
 });
 
 const SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
-const IMAGE_PATH_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/(?:logo|cover|image-(?:[1-9]|1[0-2]))\.webp$/;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const IMAGE_PATH_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/(?:logo|cover|image-(?:[1-9]|1[0-2]))\.webp$/;
+const MENU_NUMBER_MAX = 9999;
 
 function categoryByCode(code) {
   return BUSINESS_CATEGORIES.find((category) => category.code === code) || null;
@@ -81,32 +83,50 @@ function escapeText(value) {
 
 function parseMenuText(text) {
   const lines = String(text || "").split(/\r?\n/);
-  const items = [];
+  const raw = [];
+  let explicit = 0;
+  let plain = 0;
 
   for (const line of lines) {
-    const cleaned = line.replace(/^\s*\d+\s*[.)]\s*/, "").trim();
-    if (!cleaned) {
+    if (!line.trim()) {
       continue;
     }
-    const parts = cleaned.split("|").map((part) => part.trim());
-    items.push({
+
+    const numbered = line.match(/^\s*(\d+)\s*[.)]\s*(.*)$/);
+    if (numbered) {
+      explicit += 1;
+      raw.push({ itemNumber: Number(numbered[1]), body: numbered[2] });
+    } else {
+      plain += 1;
+      raw.push({ itemNumber: null, body: line });
+    }
+  }
+
+  if (explicit > 0 && plain > 0) {
+    return { ok: false, error: "Number every menu line, or leave every line unnumbered." };
+  }
+
+  return normalizeMenuItems(raw.map((row, index) => {
+    const parts = row.body.split("|").map((part) => part.trim());
+    return {
+      itemNumber: row.itemNumber == null ? index + 1 : row.itemNumber,
       name: parts[0] || "",
       details: parts[1] || "",
       priceLabel: parts[2] || ""
-    });
-  }
-
-  return normalizeMenuItems(items);
+    };
+  }));
 }
 
 function normalizeMenuItems(items) {
   const source = Array.isArray(items) ? items : [];
   const menu = [];
+  const seen = new Set();
 
   for (const item of source) {
     const name = cleanLine(item && item.name, LIMITS.menuName);
     const details = cleanLine(item && item.details, LIMITS.menuDetails);
     const priceLabel = cleanLine(item && (item.priceLabel ?? item.price_label), LIMITS.priceLabel);
+    const itemNumber = Number(item && (item.itemNumber ?? item.item_number));
 
     if (!name && !details && !priceLabel) {
       continue;
@@ -116,7 +136,16 @@ function normalizeMenuItems(items) {
       return { ok: false, error: "Each menu item needs a name." };
     }
 
-    menu.push({ name, details, priceLabel });
+    if (!Number.isInteger(itemNumber) || itemNumber < 1 || itemNumber > MENU_NUMBER_MAX) {
+      return { ok: false, error: "Menu numbers must be whole numbers from 1 to 9999." };
+    }
+
+    if (seen.has(itemNumber)) {
+      return { ok: false, error: "Each menu item needs its own number." };
+    }
+
+    seen.add(itemNumber);
+    menu.push({ name, details, priceLabel, itemNumber });
   }
 
   if (menu.length > LIMITS.menuItems) {
@@ -127,7 +156,7 @@ function normalizeMenuItems(items) {
     ok: true,
     items: menu.map((item, index) => ({
       position: index + 1,
-      itemNumber: index + 1,
+      itemNumber: item.itemNumber,
       name: item.name,
       details: item.details,
       priceLabel: item.priceLabel
@@ -204,9 +233,33 @@ function normalizeSections(items) {
   };
 }
 
-function normalizeImages(items, ownerId) {
+function mediaPath(pageId, slot) {
+  const id = String(pageId || "").toLowerCase();
+  if (!UUID_PATTERN.test(id) || !/^(?:logo|cover|image-(?:[1-9]|1[0-2]))$/.test(slot)) {
+    return "";
+  }
+
+  return id + "/" + slot + ".webp";
+}
+
+function fittedImageSize(width, height, maxEdge = 1600) {
+  const sourceWidth = Number(width);
+  const sourceHeight = Number(height);
+  if (!Number.isFinite(sourceWidth) || !Number.isFinite(sourceHeight) || sourceWidth < 1 || sourceHeight < 1) {
+    return null;
+  }
+
+  const scale = Math.min(1, maxEdge / Math.max(sourceWidth, sourceHeight));
+  return {
+    width: Math.max(1, Math.round(sourceWidth * scale)),
+    height: Math.max(1, Math.round(sourceHeight * scale))
+  };
+}
+
+function normalizeImages(items, pageId) {
   const source = Array.isArray(items) ? items : [];
   const images = [];
+  const id = String(pageId || "").toLowerCase();
 
   for (const item of source) {
     const objectPath = String(item && (item.objectPath || item.object_path) || "").trim();
@@ -216,7 +269,7 @@ function normalizeImages(items, ownerId) {
       continue;
     }
 
-    if (!IMAGE_PATH_PATTERN.test(objectPath) || objectPath.split("/")[0] !== ownerId) {
+    if (!IMAGE_PATH_PATTERN.test(objectPath) || objectPath.split("/")[0] !== id || objectPath.split("/").length !== 2) {
       return { ok: false, error: "An image path is not valid for this business page." };
     }
 
@@ -240,6 +293,7 @@ function normalizeImages(items, ownerId) {
 function buildPageWrite(input) {
   const source = input && typeof input === "object" ? input : {};
   const ownerId = String(source.ownerId || "").toLowerCase();
+  const pageId = String(source.pageId || source.page_id || "").toLowerCase();
   const slug = cleanLine(source.slug, 64).toLowerCase();
   const displayName = cleanLine(source.displayName || source.display_name, LIMITS.name);
   const categoryCode = String(source.categoryCode || source.category_code || "").trim();
@@ -271,17 +325,23 @@ function buildPageWrite(input) {
     return { ok: false, error: "Name the business category." };
   }
 
-  for (const path of [logoPath, coverPath]) {
-    if (path && (!IMAGE_PATH_PATTERN.test(path) || path.split("/")[0] !== ownerId)) {
-      return { ok: false, error: "An image path is not valid for this business page." };
-    }
+  if ((logoPath || coverPath || (Array.isArray(source.images) && source.images.length)) && !UUID_PATTERN.test(pageId)) {
+    return { ok: false, error: "An image path is not valid for this business page." };
+  }
+
+  if (logoPath && logoPath !== mediaPath(pageId, "logo")) {
+    return { ok: false, error: "An image path is not valid for this business page." };
+  }
+
+  if (coverPath && coverPath !== mediaPath(pageId, "cover")) {
+    return { ok: false, error: "An image path is not valid for this business page." };
   }
 
   const sections = normalizeSections(source.sections);
   const services = normalizeOfferings(source.services, "service");
   const products = normalizeOfferings(source.products, "product");
   const menu = normalizeMenuItems(source.menu);
-  const images = normalizeImages(source.images, ownerId);
+  const images = normalizeImages(source.images, pageId);
 
   for (const result of [sections, services, products, menu, images]) {
     if (!result.ok) {
@@ -291,6 +351,7 @@ function buildPageWrite(input) {
 
   return {
     ok: true,
+    pageId,
     page: {
       owner_id: ownerId,
       slug,
@@ -320,14 +381,12 @@ function categoryLabel(page) {
   return (categoryByCode(page.category_code) || {}).label || "Business";
 }
 
-function mediaUrl(baseUrl, objectPath) {
-  if (!baseUrl || !objectPath) {
+function mediaTag(className, objectPath, alt) {
+  if (!IMAGE_PATH_PATTERN.test(String(objectPath || ""))) {
     return "";
   }
 
-  return String(baseUrl).replace(/\/$/, "") +
-    "/storage/v1/object/public/business-media/" +
-    objectPath.split("/").map(encodeURIComponent).join("/");
+  return '<img class="' + className + '" alt="' + escapeText(alt) + '" data-media-path="' + escapeText(objectPath) + '">';
 }
 
 function priceMarkup(priceLabel) {
@@ -344,9 +403,8 @@ function renderPublicPage(model) {
     return "";
   }
 
-  const baseUrl = model.mediaBaseUrl || "";
-  const logo = mediaUrl(baseUrl, page.logo_path);
-  const cover = mediaUrl(baseUrl, page.cover_path);
+  const logo = mediaTag("logo", page.logo_path, page.display_name + " logo");
+  const cover = mediaTag("cover", page.cover_path, "");
   const sections = Array.isArray(model.sections) ? model.sections : [];
   const services = Array.isArray(model.services) ? model.services : [];
   const products = Array.isArray(model.products) ? model.products : [];
@@ -359,7 +417,7 @@ function renderPublicPage(model) {
   parts.push("<h1>" + escapeText(page.display_name) + "</h1>");
 
   if (logo) {
-    parts.push('<img class="logo" src="' + escapeText(logo) + '" alt="' + escapeText(page.display_name) + ' logo">');
+    parts.push(logo);
   }
 
   if (page.summary) {
@@ -367,7 +425,7 @@ function renderPublicPage(model) {
   }
 
   if (cover) {
-    parts.push('<img class="cover" src="' + escapeText(cover) + '" alt="">');
+    parts.push(cover);
   }
 
   if (page.description) {
@@ -377,9 +435,9 @@ function renderPublicPage(model) {
   if (images.length) {
     parts.push('<section><h2>Images</h2><div class="image-grid">');
     for (const image of images.slice().sort((a, b) => a.position - b.position)) {
-      const src = mediaUrl(baseUrl, image.object_path || image.objectPath);
-      if (src) {
-        parts.push('<img src="' + escapeText(src) + '" alt="' + escapeText(image.alt_text || image.altText || "") + '">');
+      const tag = mediaTag("", image.object_path || image.objectPath, image.alt_text || image.altText || "");
+      if (tag) {
+        parts.push(tag);
       }
     }
     parts.push("</div></section>");
@@ -448,7 +506,9 @@ export {
   buildPageWrite,
   categoryByCode,
   escapeText,
+  fittedImageSize,
   isPublicSlug,
+  mediaPath,
   normalizeMenuItems,
   parseMenuText,
   publicPagePath,

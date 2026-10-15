@@ -69,6 +69,9 @@ assert.equal(validateAssistantRequest({
   messages: [{ role: "user", content: "x".repeat(6001) }]
 }).ok, false);
 assert.match(assistantInstruction("English", "menu"), /same order/);
+assert.match(assistantInstruction("English", "menu"), /same numbers/);
+assert.match(assistantInstruction("English", "menu"), /101/);
+assert.match(read("supabase/functions/havkar-ai-assistant/index.ts"), /generateContent/);
 assert.match(assistantInstruction("English", "logo"), /#2e7d32/);
 assert.match(assistantInstruction("English", "business_page"), /display text/);
 assert.equal(assistantInstruction("English"), assistantInstruction("English", "general"));

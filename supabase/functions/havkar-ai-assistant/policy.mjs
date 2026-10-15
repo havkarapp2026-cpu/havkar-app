@@ -166,7 +166,7 @@ function assistantInstruction(languageName, task) {
   }
 
   if (task === "menu") {
-    return base + " Draft a numbered menu. Keep every item the user supplied, in the same order, with the same numbers. Do not drop, merge, or reorder items. Leave a price blank when the user did not provide one. Do not turn a price into a charge or a payment. Do not claim that the menu was published.";
+    return base + " Draft a numbered menu. Keep every item the user supplied, in the same order, with the same numbers, including numbers such as 101. Do not drop, merge, or reorder items. Leave a price blank when the user did not provide one. Do not turn a price into a charge or a payment. Do not claim that the menu was published.";
   }
 
   return base;

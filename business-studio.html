@@ -28,6 +28,9 @@ button[disabled]{opacity:.65;cursor:wait}
 .pages button{margin-top:0}
 #menuPreview{margin:8px 0 0;padding-left:1.4rem}
 #menuPreview li{margin:4px 0}
+.gallery-item{display:flex;gap:8px;align-items:center;margin-top:8px}
+.gallery-item input{margin:0}
+.gallery-item button{margin-top:0}
 #qr svg{width:180px;height:180px}
 .check{display:flex;align-items:center;gap:8px;font-weight:800}
 .check input{width:auto}
@@ -59,15 +62,18 @@ button[disabled]{opacity:.65;cursor:wait}
 <textarea id="products"></textarea>
 <label for="sections">Sections, one per block separated by a blank line. First line is the title.</label>
 <textarea id="sections"></textarea>
-<label for="menu">Numbered menu, one item per line, in the exact order you want. A menu can hold 60 or more items. Format: name | details | display price</label>
+<label for="menu">Numbered menu, one item per line, in the exact order you want. Keep printed numbers such as 12. or 101). A menu can hold 500 items. Format: number. name | details | display price</label>
 <textarea id="menu"></textarea>
 <ol id="menuPreview"></ol>
 <label for="logo">Logo image</label>
 <input id="logo" type="file" accept="image/jpeg,image/png,image/webp">
 <label for="cover">Cover image</label>
 <input id="cover" type="file" accept="image/jpeg,image/png,image/webp">
+<label for="gallery">Gallery images, up to 12</label>
+<input id="gallery" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+<div id="galleryList"></div>
 <label class="check" for="published"><input id="published" type="checkbox">Publish this page</label>
-<p class="note">Publishing shows the page to anyone with the link. It does not verify the business and it does not charge anyone.</p>
+<p class="note">Publishing is available after HAVKAR approves the business application. You cannot approve your own application. Publishing does not charge anyone. Images stay private until the page is public.</p>
 <button id="save" type="submit">Save business page</button>
 </form>
 <p><a href="login.html">Log in</a> · <a href="profile.html">Profile</a> · <a href="havkar-ai.html">HAVKAR AI</a></p>
@@ -80,7 +86,7 @@ button[disabled]{opacity:.65;cursor:wait}
 <script src="/havkar-supabase-config.js"></script>
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { BUSINESS_CATEGORIES, buildPageWrite, parseMenuText, unavailableMessage } from "./js/business-catalog.mjs";
+import { BUSINESS_CATEGORIES, buildPageWrite, fittedImageSize, mediaPath, parseMenuText, unavailableMessage } from "./js/business-catalog.mjs";
 import { qrSvg } from "./js/havkar-qr.mjs";
 
 const status = document.getElementById("status");
@@ -99,6 +105,7 @@ const config = window.HAVKAR_SUPABASE_CONFIG;
 let activePageId = "";
 let keptLogo = "";
 let keptCover = "";
+let gallery = [];
 
 for (const item of BUSINESS_CATEGORIES) {
   const option = document.createElement("option");
@@ -169,10 +176,10 @@ async function imageBlob(file) {
     throw new Error("Use a JPEG, PNG, or WebP image.");
   }
   const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+  const fitted = fittedImageSize(bitmap.width, bitmap.height, 1600);
   const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  canvas.width = fitted.width;
+  canvas.height = fitted.height;
   canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.9));
   if (!blob) {
@@ -182,6 +189,61 @@ async function imageBlob(file) {
     throw new Error("The image is larger than 5 MB.");
   }
   return blob;
+}
+
+function renderGallery() {
+  const list = document.getElementById("galleryList");
+  list.replaceChildren();
+  gallery.forEach((item, index) => {
+    const row = document.createElement("div");
+    row.className = "gallery-item";
+    const input = document.createElement("input");
+    input.maxLength = 160;
+    input.placeholder = "Image description";
+    input.value = item.altText || "";
+    input.addEventListener("input", () => {
+      gallery[index].altText = input.value;
+    });
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "secondary";
+    remove.textContent = "Remove";
+    remove.addEventListener("click", () => {
+      gallery.splice(index, 1);
+      renderGallery();
+    });
+    row.append(input, remove);
+    list.append(row);
+  });
+}
+
+document.getElementById("gallery").addEventListener("change", (event) => {
+  const files = Array.from(event.target.files || []);
+  for (const file of files) {
+    if (gallery.length >= 12) {
+      break;
+    }
+    gallery.push({ objectPath: "", altText: "", file });
+  }
+  event.target.value = "";
+  renderGallery();
+});
+
+function saveMessage(error) {
+  const text = String(error && error.message || "");
+  if (error && error.code === "23505") {
+    return "This public link is already used.";
+  }
+  if (/approved application/i.test(text)) {
+    return "Only an approved business can publish a public page. You cannot approve your own application.";
+  }
+  if (/page limit/i.test(text)) {
+    return "You can keep up to 8 business pages.";
+  }
+  if (/own number/i.test(text)) {
+    return "Each menu item needs its own number.";
+  }
+  return unavailableMessage(error || { message: "missing" });
 }
 
 if (!config || !config.url || !config.publishableKey) {
@@ -197,7 +259,7 @@ if (!config || !config.url || !config.publishableKey) {
   } else {
     status.textContent = "Your HAVKAR session is ready.";
     editor.hidden = false;
-    const owned = await supabase.from("business_pages").select("id,slug,display_name,published").order("updated_at", { ascending: false });
+    const owned = await supabase.from("business_pages").select("id,slug,display_name,published,moderation_state").order("updated_at", { ascending: false });
     if (owned.error) {
       status.textContent = unavailableMessage(owned.error);
     } else {
@@ -205,18 +267,19 @@ if (!config || !config.url || !config.publishableKey) {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "secondary";
-        button.textContent = row.display_name + (row.published ? "" : " (draft)");
+        button.textContent = row.display_name + (row.moderation_state === "hidden" ? " (hidden)" : row.published ? "" : " (draft)");
         button.addEventListener("click", () => loadPage(row.id));
         pages.appendChild(button);
       }
     }
 
     async function loadPage(pageId) {
-      const [pageResult, sectionResult, offeringResult, menuResult] = await Promise.all([
-        supabase.from("business_pages").select("id,slug,display_name,category_code,category_label,summary,description,logo_path,cover_path,published").eq("id", pageId).maybeSingle(),
+      const [pageResult, sectionResult, offeringResult, menuResult, imageResult] = await Promise.all([
+        supabase.from("business_pages").select("id,slug,display_name,category_code,category_label,summary,description,logo_path,cover_path,published,moderation_state").eq("id", pageId).maybeSingle(),
         supabase.from("business_sections").select("position,title,body").eq("page_id", pageId).order("position"),
         supabase.from("business_offerings").select("kind,position,title,details,price_label").eq("page_id", pageId).order("position"),
-        supabase.from("business_menu_items").select("position,item_number,name,details,price_label").eq("page_id", pageId).order("position")
+        supabase.from("business_menu_items").select("position,item_number,name,details,price_label").eq("page_id", pageId).order("position"),
+        supabase.from("business_images").select("position,object_path,alt_text").eq("page_id", pageId).order("position")
       ]);
       if (pageResult.error || !pageResult.data) {
         status.textContent = unavailableMessage(pageResult.error || { message: "missing" });
@@ -237,21 +300,40 @@ if (!config || !config.url || !config.publishableKey) {
       const offeringLines = (kind) => (offeringResult.data || []).filter((row) => row.kind === kind).map((row) => [row.title, row.details, row.price_label].filter(Boolean).join(" | ")).join("\n");
       document.getElementById("services").value = offeringLines("service");
       document.getElementById("products").value = offeringLines("product");
-      menu.value = (menuResult.data || []).map((row) => [row.name, row.details, row.price_label].filter(Boolean).join(" | ")).join("\n");
+      menu.value = (menuResult.data || []).map((row) => row.item_number + ". " + [row.name, row.details, row.price_label].filter(Boolean).join(" | ")).join("\n");
+      gallery = (imageResult.data || []).map((row) => ({ objectPath: row.object_path, altText: row.alt_text || "", file: null }));
+      renderGallery();
       refreshMenu();
       showShare(pageResult.data.slug);
       status.textContent = "Loaded " + pageResult.data.display_name + ".";
     }
 
-    async function replaceRows(table, rows) {
-      if (!activePageId) {
-        return { error: { message: "missing page" } };
-      }
-      const removed = await supabase.from(table).delete().eq("page_id", activePageId);
-      if (removed.error || rows.length === 0) {
-        return removed;
-      }
-      return supabase.from(table).insert(rows);
+    async function storePage(draft) {
+      const savedPage = await supabase.rpc("save_business_page", {
+        p_page_id: activePageId,
+        p_page: draft.page,
+        p_sections: draft.sections.map((row) => ({ position: row.position, title: row.title, body: row.body })),
+        p_offerings: draft.services.concat(draft.products).map((row) => ({
+          kind: row.kind,
+          position: row.position,
+          title: row.title,
+          details: row.details,
+          price_label: row.priceLabel
+        })),
+        p_menu: draft.menu.map((row) => ({
+          position: row.position,
+          item_number: row.itemNumber,
+          name: row.name,
+          details: row.details,
+          price_label: row.priceLabel
+        })),
+        p_images: draft.images.map((row) => ({
+          position: row.position,
+          object_path: row.objectPath,
+          alt_text: row.altText
+        }))
+      });
+      return savedPage;
     }
 
     editor.addEventListener("submit", async (event) => {
@@ -268,21 +350,29 @@ if (!config || !config.url || !config.publishableKey) {
         status.textContent = parsedMenu.error;
         return;
       }
-      const draft = buildPageWrite({
+      if (!activePageId) {
+        activePageId = crypto.randomUUID();
+      }
+      const pageInput = {
         ownerId,
+        pageId: activePageId,
         slug: document.getElementById("slug").value,
         displayName: document.getElementById("displayName").value,
         categoryCode: category.value,
         categoryLabel: categoryLabel.value,
         summary: document.getElementById("summary").value,
         description: document.getElementById("description").value,
-        logoPath: keptLogo,
-        coverPath: keptCover,
         published: document.getElementById("published").checked,
         services: linesToRecords(document.getElementById("services").value),
         products: linesToRecords(document.getElementById("products").value),
         sections: sectionsFromText(document.getElementById("sections").value),
         menu: parsedMenu.items
+      };
+      const draft = buildPageWrite({
+        ...pageInput,
+        logoPath: keptLogo,
+        coverPath: keptCover,
+        images: gallery.filter((item) => item.objectPath)
       });
       if (!draft.ok) {
         status.textContent = draft.error;
@@ -290,63 +380,81 @@ if (!config || !config.url || !config.publishableKey) {
       }
       save.disabled = true;
       status.textContent = "Saving the business page...";
-      const pageWrite = activePageId
-        ? await supabase.from("business_pages").update(draft.page).eq("id", activePageId).select("id,slug").maybeSingle()
-        : await supabase.from("business_pages").insert(draft.page).select("id,slug").maybeSingle();
-      if (pageWrite.error || !pageWrite.data) {
-        status.textContent = pageWrite.error && pageWrite.error.code === "23505"
-          ? "This public link is already used."
-          : unavailableMessage(pageWrite.error || { message: "missing" });
-        save.disabled = false;
-        return;
-      }
-      activePageId = pageWrite.data.id;
-      const withPage = (rows) => rows.map((row) => ({ ...row, page_id: activePageId }));
-      const writes = [
-        await replaceRows("business_sections", withPage(draft.sections.map((row) => ({ position: row.position, title: row.title, body: row.body })))),
-        await replaceRows("business_offerings", withPage(draft.services.concat(draft.products).map((row) => ({ kind: row.kind, position: row.position, title: row.title, details: row.details, price_label: row.priceLabel })))),
-        await replaceRows("business_menu_items", withPage(parsedMenu.items.map((row) => ({ position: row.position, item_number: row.itemNumber, name: row.name, details: row.details, price_label: row.priceLabel }))))
-      ];
-      const failed = writes.find((result) => result.error);
-      if (failed) {
-        status.textContent = "The page was saved, but part of its content was not. " + unavailableMessage(failed.error);
+      const pageWrite = await storePage(draft);
+      if (pageWrite.error) {
+        status.textContent = saveMessage(pageWrite.error);
         save.disabled = false;
         return;
       }
       try {
         const logo = await imageBlob(document.getElementById("logo").files[0]);
         const cover = await imageBlob(document.getElementById("cover").files[0]);
-        const paths = {};
-        for (const [name, blob] of [["logo", logo], ["cover", cover]]) {
-          if (!blob) {
+        const uploads = [];
+        if (logo) {
+          uploads.push(["logo", logo]);
+        }
+        if (cover) {
+          uploads.push(["cover", cover]);
+        }
+        const used = new Set(gallery.filter((item) => item.objectPath).map((item) => item.objectPath));
+        for (const item of gallery) {
+          if (!item.file) {
             continue;
           }
-          const objectPath = ownerId + "/" + activePageId + "/" + name + ".webp";
-          const upload = await supabase.storage.from("business-media").upload(objectPath, blob, { upsert: true, contentType: "image/webp" });
+          let slot = 0;
+          for (let number = 1; number <= 12; number += 1) {
+            const candidate = mediaPath(activePageId, "image-" + number);
+            if (!used.has(candidate)) {
+              slot = number;
+              used.add(candidate);
+              break;
+            }
+          }
+          if (!slot) {
+            throw new Error("A page can show at most 12 images.");
+          }
+          const blob = await imageBlob(item.file);
+          uploads.push(["image-" + slot, blob, item]);
+        }
+        for (const uploadItem of uploads) {
+          const objectPath = mediaPath(activePageId, uploadItem[0]);
+          const upload = await supabase.storage.from("business-media").upload(objectPath, uploadItem[1], { upsert: true, contentType: "image/webp" });
           if (upload.error) {
             throw new Error("Image storage is not enabled on this server yet.");
           }
-          paths[name + "_path"] = objectPath;
-          if (name === "logo") {
+          if (uploadItem[0] === "logo") {
             keptLogo = objectPath;
-          } else {
+          } else if (uploadItem[0] === "cover") {
             keptCover = objectPath;
+          } else if (uploadItem[2]) {
+            uploadItem[2].objectPath = objectPath;
+            uploadItem[2].file = null;
           }
         }
-        if (paths.logo_path || paths.cover_path) {
-          const imageUpdate = await supabase.from("business_pages").update(paths).eq("id", activePageId);
-          if (imageUpdate.error) {
-            throw new Error("The image was uploaded, but the page could not store its path.");
-          }
+        const withImages = buildPageWrite({
+          ...pageInput,
+          logoPath: keptLogo,
+          coverPath: keptCover,
+          images: gallery.filter((item) => item.objectPath)
+        });
+        if (!withImages.ok) {
+          throw new Error(withImages.error);
         }
+        const imageWrite = await storePage(withImages);
+        if (imageWrite.error) {
+          throw new Error("The image was uploaded, but the page could not store its path.");
+        }
+        document.getElementById("logo").value = "";
+        document.getElementById("cover").value = "";
+        renderGallery();
       } catch (error) {
         status.textContent = error.message || "The image could not be saved.";
-        showShare(pageWrite.data.slug);
+        showShare(draft.page.slug);
         save.disabled = false;
         return;
       }
       status.textContent = draft.page.published ? "The public page is saved." : "The draft is saved. It stays private until you publish it.";
-      showShare(pageWrite.data.slug);
+      showShare(draft.page.slug);
       save.disabled = false;
     });
   }

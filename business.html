@@ -31,6 +31,9 @@ li span{display:block;color:#3d5342}
 .price{display:inline-block;margin-left:6px;color:#17652a;font-weight:800}
 .menu-list{list-style:decimal}
 .price-note,.status{color:#3d5342}
+label{display:block;font-weight:800;margin:14px 0 6px}
+textarea,select{width:100%;border:1px solid #cbe4d0;border-radius:14px;padding:12px;font:inherit}
+button{margin-top:12px;border:0;border-radius:14px;background:#16833c;color:#fff;font:inherit;font-weight:800;padding:12px 16px;cursor:pointer}
 .share{margin-top:22px;padding-top:14px;border-top:1px solid #d7ead9}
 .share a{color:#16833c;font-weight:800}
 #qr{margin-top:10px}
@@ -46,6 +49,21 @@ li span{display:block;color:#3d5342}
 <h2>Share this page</h2>
 <p><a id="shareLink" href=""></a></p>
 <div id="qr"></div>
+<form id="report" hidden>
+<h2>Report this page</h2>
+<label for="reportReason">Reason</label>
+<select id="reportReason">
+<option value="spam">Spam</option>
+<option value="scam">Scam</option>
+<option value="impersonation">Impersonation</option>
+<option value="illegal">Illegal content</option>
+<option value="other">Other</option>
+</select>
+<label for="reportDetails">Details</label>
+<textarea id="reportDetails" maxlength="1000"></textarea>
+<button id="reportSend" type="submit">Send report</button>
+<p id="reportStatus" class="status"></p>
+</form>
 </section>
 </main>
 <script src="/havkar-supabase-config.js"></script>
@@ -73,10 +91,10 @@ if (!isPublicSlug(slug)) {
   showStatus("HAVKAR configuration was not found on this page.");
 } else {
   const supabase = createClient(config.url, config.publishableKey, {
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
   });
   const pageResult = await supabase
-    .from("business_pages")
+    .from("business_pages_public")
     .select("id,slug,display_name,category_code,category_label,summary,description,logo_path,cover_path,published")
     .eq("slug", slug)
     .eq("published", true)
@@ -112,7 +130,37 @@ if (!isPublicSlug(slug)) {
       } else {
         status.hidden = true;
         page.innerHTML = html;
+        for (const image of page.querySelectorAll("[data-media-path]")) {
+          const downloaded = await supabase.storage.from("business-media").download(image.getAttribute("data-media-path"));
+          if (downloaded.error || !downloaded.data) {
+            image.remove();
+            continue;
+          }
+          image.src = URL.createObjectURL(downloaded.data);
+        }
         document.title = pageResult.data.display_name + " · HAVKAR";
+        const sessionResult = await supabase.auth.getSession();
+        const session = sessionResult.data && sessionResult.data.session;
+        const report = document.getElementById("report");
+        if (session && session.user) {
+          report.hidden = false;
+          report.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const reportSend = document.getElementById("reportSend");
+            const reportStatus = document.getElementById("reportStatus");
+            reportSend.disabled = true;
+            const inserted = await supabase.from("business_page_reports").insert({
+              page_id: pageId,
+              reporter_id: session.user.id,
+              reason: document.getElementById("reportReason").value,
+              details: document.getElementById("reportDetails").value.slice(0, 1000)
+            });
+            reportStatus.textContent = inserted.error
+              ? "This report could not be sent."
+              : "The report was sent for review.";
+            reportSend.disabled = false;
+          });
+        }
         const url = new URL("business.html?slug=" + encodeURIComponent(slug), window.location.href).href;
         share.hidden = false;
         shareLink.href = url;

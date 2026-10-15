@@ -19,6 +19,7 @@ CREATE TABLE public.business_pages (
   logo_path text,
   cover_path text,
   published boolean NOT NULL DEFAULT false,
+  moderation_state text NOT NULL DEFAULT 'visible',
   created_at timestamptz NOT NULL DEFAULT pg_catalog.clock_timestamp(),
   updated_at timestamptz NOT NULL DEFAULT pg_catalog.clock_timestamp(),
   CONSTRAINT business_pages_slug_format
@@ -46,22 +47,12 @@ CREATE TABLE public.business_pages (
     CHECK (char_length(summary) <= 280),
   CONSTRAINT business_pages_description_length
     CHECK (char_length(description) <= 4000),
+  CONSTRAINT business_pages_moderation_state
+    CHECK (moderation_state IN ('visible', 'hidden')),
   CONSTRAINT business_pages_logo_path
-    CHECK (
-      logo_path IS NULL
-      OR (
-        logo_path ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'
-        AND split_part(logo_path, '/', 1) = owner_id::text
-      )
-    ),
+    CHECK (logo_path IS NULL OR logo_path = id::text || '/logo.webp'),
   CONSTRAINT business_pages_cover_path
-    CHECK (
-      cover_path IS NULL
-      OR (
-        cover_path ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'
-        AND split_part(cover_path, '/', 1) = owner_id::text
-      )
-    )
+    CHECK (cover_path IS NULL OR cover_path = id::text || '/cover.webp')
 );
 
 CREATE UNIQUE INDEX business_pages_slug_key ON public.business_pages (slug);
@@ -107,7 +98,7 @@ CREATE TABLE public.business_menu_items (
   details text NOT NULL DEFAULT '',
   price_label text NOT NULL DEFAULT '',
   CONSTRAINT business_menu_items_position CHECK (position BETWEEN 1 AND 500),
-  CONSTRAINT business_menu_items_number CHECK (item_number BETWEEN 1 AND 500),
+  CONSTRAINT business_menu_items_number CHECK (item_number BETWEEN 1 AND 9999),
   CONSTRAINT business_menu_items_name CHECK (char_length(name) BETWEEN 1 AND 160),
   CONSTRAINT business_menu_items_details CHECK (char_length(details) <= 1000),
   CONSTRAINT business_menu_items_price_label CHECK (char_length(price_label) <= 40),
@@ -129,7 +120,11 @@ CREATE TABLE public.business_images (
   CONSTRAINT business_images_position CHECK (position BETWEEN 1 AND 12),
   CONSTRAINT business_images_alt CHECK (char_length(alt_text) <= 160),
   CONSTRAINT business_images_path
-    CHECK (object_path ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'),
+    CHECK (
+      split_part(object_path, '/', 1) = page_id::text
+      AND split_part(object_path, '/', 2) ~ '^image-(?:[1-9]|1[0-2])\.webp$'
+      AND split_part(object_path, '/', 3) = ''
+    ),
   CONSTRAINT business_images_page_position UNIQUE (page_id, position)
 );
 
@@ -137,6 +132,100 @@ CREATE INDEX business_sections_page_idx ON public.business_sections (page_id, po
 CREATE INDEX business_offerings_page_idx ON public.business_offerings (page_id, kind, position);
 CREATE INDEX business_menu_items_page_idx ON public.business_menu_items (page_id, position);
 CREATE INDEX business_images_page_idx ON public.business_images (page_id, position);
+
+CREATE OR REPLACE FUNCTION havkar_private.owner_has_approved_business(target_owner uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.business_applications
+    WHERE user_id = target_owner
+      AND lower(status) = 'approved'
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION havkar_private.business_row_is_public(
+  is_published boolean,
+  target_owner uuid,
+  moderation text
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT is_published IS TRUE
+    AND moderation = 'visible'
+    AND havkar_private.owner_has_approved_business(target_owner);
+$$;
+
+REVOKE ALL ON FUNCTION havkar_private.owner_has_approved_business(uuid)
+  FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION havkar_private.business_row_is_public(boolean, uuid, text)
+  FROM PUBLIC, anon, authenticated, service_role;
+GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role;
+GRANT USAGE ON SCHEMA havkar_private TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION havkar_private.business_row_is_public(boolean, uuid, text)
+  TO anon, authenticated;
+
+CREATE OR REPLACE FUNCTION havkar_private.business_page_is_public(target_page uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.business_pages AS page
+    WHERE page.id = target_page
+      AND havkar_private.business_row_is_public(page.published, page.owner_id, page.moderation_state)
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION havkar_private.caller_owns_business_page(target_page uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.business_pages AS page
+    WHERE page.id = target_page
+      AND page.owner_id = auth.uid()
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION havkar_private.caller_owns_media_folder(folder text)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT folder ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    AND havkar_private.caller_owns_business_page(folder::uuid);
+$$;
+
+REVOKE ALL ON FUNCTION havkar_private.business_page_is_public(uuid)
+  FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION havkar_private.caller_owns_business_page(uuid)
+  FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION havkar_private.caller_owns_media_folder(text)
+  FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION havkar_private.business_page_is_public(uuid)
+  TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION havkar_private.caller_owns_business_page(uuid)
+  TO authenticated;
+GRANT EXECUTE ON FUNCTION havkar_private.caller_owns_media_folder(text)
+  TO authenticated;
 
 CREATE OR REPLACE FUNCTION havkar_private.guard_business_page()
 RETURNS trigger
@@ -147,6 +236,25 @@ AS $$
 DECLARE
   page_count integer;
 BEGIN
+  IF pg_catalog.current_setting('havkar.business_moderation', true) = 'on' THEN
+    IF TG_OP = 'INSERT'
+       OR NEW.owner_id IS DISTINCT FROM OLD.owner_id
+       OR NEW.slug IS DISTINCT FROM OLD.slug
+       OR NEW.display_name IS DISTINCT FROM OLD.display_name
+       OR NEW.category_code IS DISTINCT FROM OLD.category_code
+       OR NEW.category_label IS DISTINCT FROM OLD.category_label
+       OR NEW.summary IS DISTINCT FROM OLD.summary
+       OR NEW.description IS DISTINCT FROM OLD.description
+       OR NEW.logo_path IS DISTINCT FROM OLD.logo_path
+       OR NEW.cover_path IS DISTINCT FROM OLD.cover_path
+       OR NEW.published IS DISTINCT FROM OLD.published THEN
+      RAISE EXCEPTION 'business moderation cannot change page content' USING ERRCODE = '42501';
+    END IF;
+
+    NEW.updated_at := pg_catalog.clock_timestamp();
+    RETURN NEW;
+  END IF;
+
   IF TG_OP = 'UPDATE' AND NEW.owner_id IS DISTINCT FROM OLD.owner_id THEN
     RAISE EXCEPTION 'business page owner mismatch' USING ERRCODE = '42501';
   END IF;
@@ -156,6 +264,11 @@ BEGIN
   END IF;
 
   IF TG_OP = 'INSERT' THEN
+    PERFORM pg_catalog.pg_advisory_xact_lock(
+      841420262,
+      pg_catalog.hashtext(NEW.owner_id::text)
+    );
+
     SELECT count(*)
       INTO page_count
     FROM public.business_pages
@@ -164,6 +277,21 @@ BEGIN
     IF page_count >= 8 THEN
       RAISE EXCEPTION 'business page limit reached' USING ERRCODE = '54000';
     END IF;
+
+    IF pg_catalog.current_setting('havkar.business_moderation', true) IS DISTINCT FROM 'on' THEN
+      NEW.moderation_state := 'visible';
+    END IF;
+  END IF;
+
+  IF TG_OP = 'UPDATE'
+     AND NEW.moderation_state IS DISTINCT FROM OLD.moderation_state
+     AND pg_catalog.current_setting('havkar.business_moderation', true) IS DISTINCT FROM 'on' THEN
+    RAISE EXCEPTION 'business moderation cannot be self-approved' USING ERRCODE = '42501';
+  END IF;
+
+  IF NEW.published IS TRUE
+     AND NOT havkar_private.owner_has_approved_business(NEW.owner_id) THEN
+    RAISE EXCEPTION 'business publication requires an approved application' USING ERRCODE = '42501';
   END IF;
 
   NEW.updated_at := pg_catalog.clock_timestamp();
@@ -190,8 +318,8 @@ BEGIN
   END IF;
 
   IF TG_TABLE_NAME = 'business_images' THEN
-    IF split_part(NEW.object_path, '/', 1) IS DISTINCT FROM owner::text THEN
-      RAISE EXCEPTION 'business image owner mismatch' USING ERRCODE = '42501';
+    IF split_part(NEW.object_path, '/', 1) IS DISTINCT FROM NEW.page_id::text THEN
+      RAISE EXCEPTION 'business image path mismatch' USING ERRCODE = '42501';
     END IF;
   END IF;
 
@@ -237,7 +365,7 @@ CREATE POLICY business_pages_public_read
 ON public.business_pages
 FOR SELECT
 TO anon, authenticated
-USING (published = true);
+USING (havkar_private.business_row_is_public(published, owner_id, moderation_state));
 
 CREATE POLICY business_pages_owner_select
 ON public.business_pages
@@ -268,137 +396,53 @@ CREATE POLICY business_sections_public_read
 ON public.business_sections
 FOR SELECT
 TO anon, authenticated
-USING (
-  EXISTS (
-    SELECT 1
-    FROM public.business_pages AS page
-    WHERE page.id = page_id
-      AND page.published = true
-  )
-);
+USING (havkar_private.business_page_is_public(page_id));
 
 CREATE POLICY business_sections_owner_all
 ON public.business_sections
 FOR ALL
 TO authenticated
-USING (
-  EXISTS (
-    SELECT 1
-    FROM public.business_pages AS page
-    WHERE page.id = page_id
-      AND page.owner_id = (SELECT auth.uid())
-  )
-)
-WITH CHECK (
-  EXISTS (
-    SELECT 1
-    FROM public.business_pages AS page
-    WHERE page.id = page_id
-      AND page.owner_id = (SELECT auth.uid())
-  )
-);
+USING (havkar_private.caller_owns_business_page(page_id))
+WITH CHECK (havkar_private.caller_owns_business_page(page_id));
 
 CREATE POLICY business_offerings_public_read
 ON public.business_offerings
 FOR SELECT
 TO anon, authenticated
-USING (
-  EXISTS (
-    SELECT 1
-    FROM public.business_pages AS page
-    WHERE page.id = page_id
-      AND page.published = true
-  )
-);
+USING (havkar_private.business_page_is_public(page_id));
 
 CREATE POLICY business_offerings_owner_all
 ON public.business_offerings
 FOR ALL
 TO authenticated
-USING (
-  EXISTS (
-    SELECT 1
-    FROM public.business_pages AS page
-    WHERE page.id = page_id
-      AND page.owner_id = (SELECT auth.uid())
-  )
-)
-WITH CHECK (
-  EXISTS (
-    SELECT 1
-    FROM public.business_pages AS page
-    WHERE page.id = page_id
-      AND page.owner_id = (SELECT auth.uid())
-  )
-);
+USING (havkar_private.caller_owns_business_page(page_id))
+WITH CHECK (havkar_private.caller_owns_business_page(page_id));
 
 CREATE POLICY business_menu_items_public_read
 ON public.business_menu_items
 FOR SELECT
 TO anon, authenticated
-USING (
-  EXISTS (
-    SELECT 1
-    FROM public.business_pages AS page
-    WHERE page.id = page_id
-      AND page.published = true
-  )
-);
+USING (havkar_private.business_page_is_public(page_id));
 
 CREATE POLICY business_menu_items_owner_all
 ON public.business_menu_items
 FOR ALL
 TO authenticated
-USING (
-  EXISTS (
-    SELECT 1
-    FROM public.business_pages AS page
-    WHERE page.id = page_id
-      AND page.owner_id = (SELECT auth.uid())
-  )
-)
-WITH CHECK (
-  EXISTS (
-    SELECT 1
-    FROM public.business_pages AS page
-    WHERE page.id = page_id
-      AND page.owner_id = (SELECT auth.uid())
-  )
-);
+USING (havkar_private.caller_owns_business_page(page_id))
+WITH CHECK (havkar_private.caller_owns_business_page(page_id));
 
 CREATE POLICY business_images_public_read
 ON public.business_images
 FOR SELECT
 TO anon, authenticated
-USING (
-  EXISTS (
-    SELECT 1
-    FROM public.business_pages AS page
-    WHERE page.id = page_id
-      AND page.published = true
-  )
-);
+USING (havkar_private.business_page_is_public(page_id));
 
 CREATE POLICY business_images_owner_all
 ON public.business_images
 FOR ALL
 TO authenticated
-USING (
-  EXISTS (
-    SELECT 1
-    FROM public.business_pages AS page
-    WHERE page.id = page_id
-      AND page.owner_id = (SELECT auth.uid())
-  )
-)
-WITH CHECK (
-  EXISTS (
-    SELECT 1
-    FROM public.business_pages AS page
-    WHERE page.id = page_id
-      AND page.owner_id = (SELECT auth.uid())
-  )
-);
+USING (havkar_private.caller_owns_business_page(page_id))
+WITH CHECK (havkar_private.caller_owns_business_page(page_id));
 
 REVOKE ALL ON TABLE public.business_pages FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON TABLE public.business_sections FROM PUBLIC, anon, authenticated, service_role;
@@ -406,8 +450,27 @@ REVOKE ALL ON TABLE public.business_offerings FROM PUBLIC, anon, authenticated, 
 REVOKE ALL ON TABLE public.business_menu_items FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON TABLE public.business_images FROM PUBLIC, anon, authenticated, service_role;
 
-GRANT SELECT ON TABLE public.business_pages TO anon;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.business_pages TO authenticated;
+GRANT SELECT (
+  id, slug, display_name, category_code, category_label, summary, description,
+  logo_path, cover_path, published, created_at, updated_at
+) ON TABLE public.business_pages TO anon;
+
+GRANT SELECT (
+  id, slug, display_name, category_code, category_label, summary, description,
+  logo_path, cover_path, published, moderation_state, created_at, updated_at
+) ON TABLE public.business_pages TO authenticated;
+
+GRANT INSERT (
+  id, owner_id, slug, display_name, category_code, category_label, summary,
+  description, logo_path, cover_path, published
+) ON TABLE public.business_pages TO authenticated;
+
+GRANT UPDATE (
+  slug, display_name, category_code, category_label, summary, description,
+  logo_path, cover_path, published
+) ON TABLE public.business_pages TO authenticated;
+
+GRANT DELETE ON TABLE public.business_pages TO authenticated;
 GRANT ALL ON TABLE public.business_pages TO service_role;
 
 GRANT SELECT ON TABLE public.business_sections TO anon;
@@ -426,7 +489,302 @@ GRANT SELECT ON TABLE public.business_images TO anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.business_images TO authenticated;
 GRANT ALL ON TABLE public.business_images TO service_role;
 
-REVOKE SELECT (owner_id) ON TABLE public.business_pages FROM anon, authenticated;
+CREATE VIEW public.business_pages_public
+WITH (security_invoker = true) AS
+SELECT
+  id,
+  slug,
+  display_name,
+  category_code,
+  category_label,
+  summary,
+  description,
+  logo_path,
+  cover_path,
+  published,
+  created_at,
+  updated_at
+FROM public.business_pages;
+
+REVOKE ALL ON TABLE public.business_pages_public FROM PUBLIC, anon, authenticated, service_role;
+GRANT SELECT ON TABLE public.business_pages_public TO anon, authenticated;
+GRANT ALL ON TABLE public.business_pages_public TO service_role;
+
+COMMENT ON VIEW public.business_pages_public IS
+  'Public business page columns. The account identifier is not part of this view.';
+
+CREATE TABLE public.business_page_reports (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  page_id uuid NOT NULL REFERENCES public.business_pages (id) ON DELETE CASCADE,
+  reporter_id uuid NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
+  reason text NOT NULL,
+  details text NOT NULL DEFAULT '',
+  status text NOT NULL DEFAULT 'open',
+  created_at timestamptz NOT NULL DEFAULT pg_catalog.clock_timestamp(),
+  CONSTRAINT business_page_reports_reason
+    CHECK (reason IN ('spam', 'scam', 'impersonation', 'illegal', 'other')),
+  CONSTRAINT business_page_reports_details
+    CHECK (char_length(details) <= 1000),
+  CONSTRAINT business_page_reports_status
+    CHECK (status IN ('open', 'reviewed', 'dismissed')),
+  CONSTRAINT business_page_reports_once UNIQUE (page_id, reporter_id)
+);
+
+CREATE INDEX business_page_reports_page_idx ON public.business_page_reports (page_id, created_at);
+
+CREATE OR REPLACE FUNCTION havkar_private.guard_business_page_report()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $$
+BEGIN
+  IF NEW.reporter_id IS DISTINCT FROM auth.uid() THEN
+    RAISE EXCEPTION 'business report owner mismatch' USING ERRCODE = '42501';
+  END IF;
+
+  IF TG_OP = 'INSERT' THEN
+    NEW.status := 'open';
+  ELSIF NEW.status IS DISTINCT FROM OLD.status
+        OR NEW.reporter_id IS DISTINCT FROM OLD.reporter_id
+        OR NEW.page_id IS DISTINCT FROM OLD.page_id THEN
+    RAISE EXCEPTION 'business report status cannot be self-approved' USING ERRCODE = '42501';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION havkar_private.guard_business_page_report()
+  FROM PUBLIC, anon, authenticated;
+
+CREATE TRIGGER business_page_reports_guard
+BEFORE INSERT OR UPDATE ON public.business_page_reports
+FOR EACH ROW
+EXECUTE FUNCTION havkar_private.guard_business_page_report();
+
+ALTER TABLE public.business_page_reports ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY business_page_reports_insert
+ON public.business_page_reports
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  reporter_id = (SELECT auth.uid())
+  AND status = 'open'
+  AND havkar_private.business_page_is_public(page_id)
+);
+
+CREATE POLICY business_page_reports_select_own
+ON public.business_page_reports
+FOR SELECT
+TO authenticated
+USING (reporter_id = (SELECT auth.uid()));
+
+REVOKE ALL ON TABLE public.business_page_reports FROM PUBLIC, anon, authenticated, service_role;
+GRANT INSERT (
+  page_id, reporter_id, reason, details
+) ON TABLE public.business_page_reports TO authenticated;
+GRANT SELECT (
+  id, page_id, reporter_id, reason, details, status, created_at
+) ON TABLE public.business_page_reports TO authenticated;
+GRANT ALL ON TABLE public.business_page_reports TO service_role;
+
+CREATE TABLE havkar_private.business_page_moderation (
+  page_id uuid PRIMARY KEY REFERENCES public.business_pages (id) ON DELETE CASCADE,
+  state text NOT NULL,
+  note text NOT NULL DEFAULT '',
+  updated_at timestamptz NOT NULL DEFAULT pg_catalog.clock_timestamp(),
+  CONSTRAINT business_page_moderation_state CHECK (state IN ('visible', 'hidden')),
+  CONSTRAINT business_page_moderation_note CHECK (char_length(note) <= 1000)
+);
+
+ALTER TABLE havkar_private.business_page_moderation ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE havkar_private.business_page_moderation
+  FROM PUBLIC, anon, authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION havkar_private.set_business_page_moderation(
+  p_page_id uuid,
+  p_state text,
+  p_note text
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF p_state NOT IN ('visible', 'hidden') THEN
+    RAISE EXCEPTION 'invalid moderation state' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_note IS NULL OR char_length(p_note) > 1000 THEN
+    RAISE EXCEPTION 'invalid moderation note' USING ERRCODE = '22023';
+  END IF;
+
+  PERFORM pg_catalog.set_config('havkar.business_moderation', 'on', true);
+
+  UPDATE public.business_pages
+  SET moderation_state = p_state
+  WHERE id = p_page_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'business page was not found' USING ERRCODE = 'P0002';
+  END IF;
+
+  INSERT INTO havkar_private.business_page_moderation (page_id, state, note)
+  VALUES (p_page_id, p_state, p_note)
+  ON CONFLICT (page_id) DO UPDATE
+  SET state = EXCLUDED.state,
+      note = EXCLUDED.note,
+      updated_at = pg_catalog.clock_timestamp();
+END;
+$$;
+
+REVOKE ALL ON FUNCTION havkar_private.set_business_page_moderation(uuid, text, text)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION havkar_private.set_business_page_moderation(uuid, text, text)
+  TO service_role;
+
+CREATE OR REPLACE FUNCTION public.save_business_page(
+  p_page_id uuid,
+  p_page jsonb,
+  p_sections jsonb,
+  p_offerings jsonb,
+  p_menu jsonb,
+  p_images jsonb
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = ''
+AS $$
+DECLARE
+  v_owner uuid;
+  v_existing uuid;
+BEGIN
+  v_owner := auth.uid();
+
+  IF v_owner IS NULL OR p_page_id IS NULL OR pg_catalog.jsonb_typeof(p_page) IS DISTINCT FROM 'object' THEN
+    RAISE EXCEPTION 'business page owner mismatch' USING ERRCODE = '42501';
+  END IF;
+
+  p_sections := COALESCE(p_sections, '[]'::jsonb);
+  p_offerings := COALESCE(p_offerings, '[]'::jsonb);
+  p_menu := COALESCE(p_menu, '[]'::jsonb);
+  p_images := COALESCE(p_images, '[]'::jsonb);
+
+  IF pg_catalog.jsonb_typeof(p_sections) IS DISTINCT FROM 'array'
+     OR pg_catalog.jsonb_typeof(p_offerings) IS DISTINCT FROM 'array'
+     OR pg_catalog.jsonb_typeof(p_menu) IS DISTINCT FROM 'array'
+     OR pg_catalog.jsonb_typeof(p_images) IS DISTINCT FROM 'array'
+     OR pg_catalog.jsonb_array_length(p_sections) > 40
+     OR pg_catalog.jsonb_array_length(p_offerings) > 200
+     OR pg_catalog.jsonb_array_length(p_menu) > 500
+     OR pg_catalog.jsonb_array_length(p_images) > 12 THEN
+    RAISE EXCEPTION 'business page content is too large' USING ERRCODE = '22023';
+  END IF;
+
+  IF NULLIF(p_page->>'logo_path', '') IS NOT NULL
+     AND p_page->>'logo_path' IS DISTINCT FROM p_page_id::text || '/logo.webp' THEN
+    RAISE EXCEPTION 'business image path mismatch' USING ERRCODE = '42501';
+  END IF;
+
+  IF NULLIF(p_page->>'cover_path', '') IS NOT NULL
+     AND p_page->>'cover_path' IS DISTINCT FROM p_page_id::text || '/cover.webp' THEN
+    RAISE EXCEPTION 'business image path mismatch' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT id
+    INTO v_existing
+  FROM public.business_pages
+  WHERE id = p_page_id;
+
+  IF v_existing IS NULL THEN
+    INSERT INTO public.business_pages (
+      id, owner_id, slug, display_name, category_code, category_label,
+      summary, description, logo_path, cover_path, published
+    ) VALUES (
+      p_page_id,
+      v_owner,
+      p_page->>'slug',
+      p_page->>'display_name',
+      p_page->>'category_code',
+      COALESCE(p_page->>'category_label', ''),
+      COALESCE(p_page->>'summary', ''),
+      COALESCE(p_page->>'description', ''),
+      NULLIF(p_page->>'logo_path', ''),
+      NULLIF(p_page->>'cover_path', ''),
+      COALESCE((p_page->>'published')::boolean, false)
+    );
+  ELSE
+    UPDATE public.business_pages
+    SET slug = p_page->>'slug',
+        display_name = p_page->>'display_name',
+        category_code = p_page->>'category_code',
+        category_label = COALESCE(p_page->>'category_label', ''),
+        summary = COALESCE(p_page->>'summary', ''),
+        description = COALESCE(p_page->>'description', ''),
+        logo_path = NULLIF(p_page->>'logo_path', ''),
+        cover_path = NULLIF(p_page->>'cover_path', ''),
+        published = COALESCE((p_page->>'published')::boolean, false)
+    WHERE id = p_page_id
+      AND havkar_private.caller_owns_business_page(p_page_id);
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'business page owner mismatch' USING ERRCODE = '42501';
+    END IF;
+  END IF;
+
+  DELETE FROM public.business_sections WHERE page_id = p_page_id;
+  DELETE FROM public.business_offerings WHERE page_id = p_page_id;
+  DELETE FROM public.business_menu_items WHERE page_id = p_page_id;
+  DELETE FROM public.business_images WHERE page_id = p_page_id;
+
+  INSERT INTO public.business_sections (page_id, position, title, body)
+  SELECT
+    p_page_id,
+    (item->>'position')::integer,
+    item->>'title',
+    COALESCE(item->>'body', '')
+  FROM pg_catalog.jsonb_array_elements(p_sections) AS item;
+
+  INSERT INTO public.business_offerings (page_id, kind, position, title, details, price_label)
+  SELECT
+    p_page_id,
+    item->>'kind',
+    (item->>'position')::integer,
+    item->>'title',
+    COALESCE(item->>'details', ''),
+    COALESCE(item->>'price_label', '')
+  FROM pg_catalog.jsonb_array_elements(p_offerings) AS item;
+
+  INSERT INTO public.business_menu_items (page_id, position, item_number, name, details, price_label)
+  SELECT
+    p_page_id,
+    (item->>'position')::integer,
+    (item->>'item_number')::integer,
+    item->>'name',
+    COALESCE(item->>'details', ''),
+    COALESCE(item->>'price_label', '')
+  FROM pg_catalog.jsonb_array_elements(p_menu) AS item;
+
+  INSERT INTO public.business_images (page_id, position, object_path, alt_text)
+  SELECT
+    p_page_id,
+    (item->>'position')::integer,
+    item->>'object_path',
+    COALESCE(item->>'alt_text', '')
+  FROM pg_catalog.jsonb_array_elements(p_images) AS item;
+
+  RETURN p_page_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.save_business_page(uuid, jsonb, jsonb, jsonb, jsonb, jsonb)
+  FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.save_business_page(uuid, jsonb, jsonb, jsonb, jsonb, jsonb)
+  TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.consume_ai_budget(
   p_user_id uuid,
@@ -579,22 +937,36 @@ COMMENT ON FUNCTION public.consume_ai_budget(uuid, integer) IS
   'Atomically consumes the HAVKAR assistant budget for one verified user. One request can use at most 6000 characters. Hourly and daily caps stay in this function.';
 
 DO $business_media$
+DECLARE
+  existing_public boolean;
+  existing_limit bigint;
 BEGIN
   IF to_regclass('storage.buckets') IS NULL OR to_regclass('storage.objects') IS NULL THEN
     RAISE NOTICE 'business-media bucket skipped because storage tables are absent';
     RETURN;
   END IF;
 
-  IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'business-media') THEN
+  SELECT public, file_size_limit
+    INTO existing_public, existing_limit
+  FROM storage.buckets
+  WHERE id = 'business-media';
+
+  IF FOUND THEN
+    IF existing_public IS DISTINCT FROM false OR existing_limit IS DISTINCT FROM 5242880 THEN
+      RAISE EXCEPTION 'business-media bucket settings do not match the private page media bucket';
+    END IF;
+  ELSE
     INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
     VALUES (
       'business-media',
       'business-media',
-      true,
+      false,
       5242880,
       ARRAY['image/jpeg', 'image/png', 'image/webp']
     );
   END IF;
+
+  EXECUTE 'ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY';
 END
 $business_media$;
 
@@ -606,6 +978,7 @@ BEGIN
 
   EXECUTE 'DROP POLICY IF EXISTS business_media_insert_own ON storage.objects';
   EXECUTE 'DROP POLICY IF EXISTS business_media_select_own ON storage.objects';
+  EXECUTE 'DROP POLICY IF EXISTS business_media_select_public ON storage.objects';
   EXECUTE 'DROP POLICY IF EXISTS business_media_update_own ON storage.objects';
   EXECUTE 'DROP POLICY IF EXISTS business_media_delete_own ON storage.objects';
 
@@ -617,9 +990,9 @@ BEGIN
     WITH CHECK (
       bucket_id = 'business-media'
       AND (SELECT auth.uid()) IS NOT NULL
-      AND lower((storage.foldername(name))[1]) = lower((SELECT auth.uid())::text)
       AND cardinality(storage.foldername(name)) = 2
-      AND name ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'
+      AND havkar_private.caller_owns_media_folder(lower((storage.foldername(name))[1]))
+      AND name ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'
     )
   $policy$;
 
@@ -631,9 +1004,9 @@ BEGIN
     USING (
       bucket_id = 'business-media'
       AND (SELECT auth.uid()) IS NOT NULL
-      AND lower((storage.foldername(name))[1]) = lower((SELECT auth.uid())::text)
       AND cardinality(storage.foldername(name)) = 2
-      AND name ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'
+      AND havkar_private.caller_owns_media_folder(lower((storage.foldername(name))[1]))
+      AND name ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'
     )
   $policy$;
 
@@ -645,16 +1018,16 @@ BEGIN
     USING (
       bucket_id = 'business-media'
       AND (SELECT auth.uid()) IS NOT NULL
-      AND lower((storage.foldername(name))[1]) = lower((SELECT auth.uid())::text)
       AND cardinality(storage.foldername(name)) = 2
-      AND name ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'
+      AND havkar_private.caller_owns_media_folder(lower((storage.foldername(name))[1]))
+      AND name ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'
     )
     WITH CHECK (
       bucket_id = 'business-media'
       AND (SELECT auth.uid()) IS NOT NULL
-      AND lower((storage.foldername(name))[1]) = lower((SELECT auth.uid())::text)
       AND cardinality(storage.foldername(name)) = 2
-      AND name ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'
+      AND havkar_private.caller_owns_media_folder(lower((storage.foldername(name))[1]))
+      AND name ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'
     )
   $policy$;
 
@@ -666,9 +1039,33 @@ BEGIN
     USING (
       bucket_id = 'business-media'
       AND (SELECT auth.uid()) IS NOT NULL
-      AND lower((storage.foldername(name))[1]) = lower((SELECT auth.uid())::text)
       AND cardinality(storage.foldername(name)) = 2
-      AND name ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'
+      AND havkar_private.caller_owns_media_folder(lower((storage.foldername(name))[1]))
+      AND name ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'
+    )
+  $policy$;
+
+  EXECUTE $policy$
+    CREATE POLICY business_media_select_public
+    ON storage.objects
+    FOR SELECT
+    TO anon, authenticated
+    USING (
+      bucket_id = 'business-media'
+      AND (
+        EXISTS (
+          SELECT 1
+          FROM public.business_pages AS page
+          WHERE havkar_private.business_page_is_public(page.id)
+            AND (page.logo_path = name OR page.cover_path = name)
+        )
+        OR EXISTS (
+          SELECT 1
+          FROM public.business_images AS image
+          WHERE image.object_path = name
+            AND havkar_private.business_page_is_public(image.page_id)
+        )
+      )
     )
   $policy$;
 END
