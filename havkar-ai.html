@@ -6,6 +6,8 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#2e7d32">
 <title>HAVKAR AI</title>
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
 <style>
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#18251c;background:linear-gradient(135deg,#c8e6c9,#a5d6a7)}
@@ -18,14 +20,27 @@ button,a.button{display:inline-block;margin-top:12px;border:0;border-radius:14px
 button[disabled]{opacity:.65;cursor:wait}
 .reply{margin-top:16px;padding:14px;border-radius:14px;background:#f4fbf5;white-space:pre-wrap;overflow-wrap:anywhere}
 .back{display:inline-block;margin-bottom:12px;color:#21863f;font-weight:800;text-decoration:none}
+.brandbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;color:#2e7d32;text-decoration:none}
+.brandbar img{width:40px;height:40px;border-radius:10px}
+.brandbar strong{display:block}
+select{width:100%;border:1px solid #cbe4d0;border-radius:14px;padding:12px;font:inherit;background:#fff}
 </style>
 </head>
 <body>
 <main>
+<a class="brandbar" href="index.html"><img src="icon.png" alt="HAVKAR" width="40" height="40"><span><strong>HAVKAR</strong><span>AI assistant</span></span></a>
 <a class="back" href="index.html">Home</a>
 <h1>HAVKAR AI</h1>
+<p>Draft a logo brief, business-page text, or a numbered menu. HAVKAR AI does not publish a page, upload a file, or take a payment.</p>
 <p id="sessionState">Checking your HAVKAR session...</p>
 <form id="askForm">
+<label for="task">Help with</label>
+<select id="task" name="task">
+<option value="general">General question</option>
+<option value="logo">Logo brief</option>
+<option value="business_page">Business page text</option>
+<option value="menu">Numbered menu</option>
+</select>
 <label for="question">Question</label>
 <textarea id="question" name="question" maxlength="1200" required></textarea>
 <button id="ask" type="submit" disabled>Ask HAVKAR AI</button>
@@ -40,9 +55,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const sessionState = document.getElementById("sessionState");
 const askForm = document.getElementById("askForm");
 const question = document.getElementById("question");
+const task = document.getElementById("task");
 const ask = document.getElementById("ask");
 const reply = document.getElementById("reply");
 const config = window.HAVKAR_SUPABASE_CONFIG;
+const taskLimits = { general: 1200, logo: 1500, business_page: 2000, menu: 6000 };
+
+task.addEventListener("change", () => {
+  question.maxLength = taskLimits[task.value] || 1200;
+});
 
 function languageCode() {
   const stored = localStorage.getItem("havkar_language") || localStorage.getItem("selectedLanguage") || "en";
@@ -90,6 +111,7 @@ if (!config || !config.url || !config.publishableKey) {
           },
           body: JSON.stringify({
             language: languageCode(),
+            task: task.value,
             messages: [{ role: "user", content }]
           })
         });

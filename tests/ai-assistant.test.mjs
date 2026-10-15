@@ -50,6 +50,32 @@ assert.equal(validateAssistantRequest({
 
 assert.equal(validateAssistantRequest({
   language: "en",
+  task: "unknown",
+  messages: [{ role: "user", content: "Hello" }]
+}).ok, false);
+
+const menuItems = Array.from({ length: 60 }, (_, index) => (index + 1) + ". Pizza " + String(index + 1).padStart(2, "0")).join("\n");
+const menuDraft = validateAssistantRequest({
+  language: "en",
+  task: "menu",
+  messages: [{ role: "user", content: menuItems }]
+});
+assert.equal(menuDraft.ok, true);
+assert.equal(menuDraft.task, "menu");
+assert.equal(menuDraft.maxOutputTokens, 2048);
+assert.equal(validateAssistantRequest({
+  language: "en",
+  task: "menu",
+  messages: [{ role: "user", content: "x".repeat(6001) }]
+}).ok, false);
+assert.match(assistantInstruction("English", "menu"), /same order/);
+assert.match(assistantInstruction("English", "logo"), /#2e7d32/);
+assert.match(assistantInstruction("English", "business_page"), /display text/);
+assert.equal(assistantInstruction("English"), assistantInstruction("English", "general"));
+assert.doesNotMatch(assistantInstruction("English", "menu"), /supabase|service_role|gispovnciifgikvgpzck/i);
+
+assert.equal(validateAssistantRequest({
+  language: "en",
   messages: [
     { role: "user", content: "One" },
     { role: "assistant", content: "Two" }
@@ -68,6 +94,10 @@ assert.match(source, /const DEFAULT_MODEL = "gemini-3\.5-flash-lite"/);
 assert.match(source, /gemini_http_status=/);
 assert.match(source, /gemini_error_status=/);
 assert.match(source, /thinkingBudget: 0/);
+assert.match(source, /validation\.maxOutputTokens/);
+assert.match(source, /validation\.task/);
+assert.match(source, /This draft is longer than the active assistant limit/);
+assert.doesNotMatch(source, /json\([^)]*budgetText/);
 assert.match(source, /model\.startsWith\("gemini-2\.5-flash"\)/);
 assert.equal(providerErrorStatus({ error: { status: "NOT_FOUND" } }), "NOT_FOUND");
 assert.equal(providerErrorStatus({ error: { status: "RESOURCE_EXHAUSTED" } }), "RESOURCE_EXHAUSTED");

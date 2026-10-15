@@ -1,6 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
-  LIMITS,
   assistantInstruction,
   providerErrorStatus,
   validateAssistantRequest
@@ -72,10 +71,10 @@ function providerContents(messages) {
   }));
 }
 
-function generationConfig(model) {
+function generationConfig(model, maxOutputTokens) {
   const config: Record<string, unknown> = {
     temperature: 0.4,
-    maxOutputTokens: LIMITS.maxOutputTokens,
+    maxOutputTokens,
     candidateCount: 1
   };
 
@@ -94,7 +93,7 @@ function logProviderFailure(httpStatus, payload) {
   );
 }
 
-function assistantMessage(payload) {
+function assistantMessage(payload, limit) {
   const parts = payload?.candidates?.[0]?.content?.parts;
 
   if (!Array.isArray(parts)) {
@@ -106,7 +105,7 @@ function assistantMessage(payload) {
     .map((part) => part.text)
     .join("")
     .trim()
-    .slice(0, MAX_ASSISTANT_MESSAGE_CHARACTERS);
+    .slice(0, limit);
 }
 
 async function readProviderPayload(response) {
@@ -198,6 +197,16 @@ Deno.serve(async (request) => {
   const budgetRow = Array.isArray(budget.data) ? budget.data[0] : budget.data;
 
   if (budget.error || !budgetRow || typeof budgetRow.allowed !== "boolean") {
+    const budgetText = budget.error && budget.error.message ? String(budget.error.message) : "";
+    const budgetCode = budget.error && budget.error.code ? String(budget.error.code) : "";
+
+    if (
+      validation.characters > 2000 &&
+      (budgetCode === "22023" || budgetText.includes("invalid assistant budget request"))
+    ) {
+      return json(400, { ok: false, error: "This draft is longer than the active assistant limit." }, headers);
+    }
+
     return json(503, { ok: false, error: "The assistant is temporarily unavailable." }, headers);
   }
 
@@ -232,10 +241,10 @@ Deno.serve(async (request) => {
         signal: AbortSignal.timeout(20000),
         body: JSON.stringify({
           systemInstruction: {
-            parts: [{ text: assistantInstruction(validation.languageName) }]
+            parts: [{ text: assistantInstruction(validation.languageName, validation.task) }]
           },
           contents: providerContents(validation.messages),
-          generationConfig: generationConfig(model)
+          generationConfig: generationConfig(model, validation.maxOutputTokens)
         })
       }
     );
@@ -256,7 +265,10 @@ Deno.serve(async (request) => {
     return json(400, { ok: false, error: "This request cannot be answered." }, headers);
   }
 
-  const message = assistantMessage(payload);
+  const message = assistantMessage(
+    payload,
+    validation.task === "menu" ? 12000 : MAX_ASSISTANT_MESSAGE_CHARACTERS
+  );
 
   if (!message) {
     logProviderFailure(providerResponse.status, payload);
