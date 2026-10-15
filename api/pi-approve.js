@@ -1,3 +1,8 @@
+import {
+    realPaymentsAllowed,
+    requestHostname
+} from "../server/supabase-target.cjs";
+
 function piAction(req) {
     const queryAction = req.query?.piAction;
     const action = Array.isArray(queryAction) ? queryAction[0] : queryAction;
@@ -27,7 +32,10 @@ function readPiResponse(text) {
 }
 
 export default async function handler(req, res) {
-    if (process.env.HAVKAR_PI_PAYMENTS_ENABLED !== "true") {
+    if (
+        process.env.HAVKAR_PI_PAYMENTS_ENABLED !== "true" ||
+        !realPaymentsAllowed(requestHostname(req))
+    ) {
         return res.status(404).json({
             error: "Not found"
         });

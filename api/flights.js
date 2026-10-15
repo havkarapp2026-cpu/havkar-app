@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { enforcedSupabaseUrl } from "../server/supabase-target.cjs";
 
 function bearerToken(req) {
     const header = req.headers?.authorization;
@@ -23,8 +24,10 @@ async function requireHavkarUser(req) {
         };
     }
 
+    const supabaseUrl = enforcedSupabaseUrl(req, process.env.SUPABASE_URL);
+
     if (
-        !process.env.SUPABASE_URL ||
+        !supabaseUrl ||
         !process.env.SUPABASE_SERVICE_ROLE_KEY
     ) {
         console.error(
@@ -39,7 +42,7 @@ async function requireHavkarUser(req) {
     }
 
     const supabaseAdmin = createClient(
-        process.env.SUPABASE_URL,
+        supabaseUrl,
         process.env.SUPABASE_SERVICE_ROLE_KEY,
         {
             auth: {

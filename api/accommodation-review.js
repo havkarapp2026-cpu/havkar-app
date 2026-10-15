@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { enforcedSupabaseUrl } from "../server/supabase-target.cjs";
 
 const REVIEW_DECISIONS = new Set([
     "needs_more_info",
@@ -36,13 +37,15 @@ function bearerToken(req) {
     return authorization.slice(7).trim();
 }
 
-function serviceClient() {
-    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+function serviceClient(req) {
+    const url = enforcedSupabaseUrl(req, process.env.SUPABASE_URL);
+
+    if (!url || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
         return null;
     }
 
     return createClient(
-        process.env.SUPABASE_URL,
+        url,
         process.env.SUPABASE_SERVICE_ROLE_KEY,
         {
             auth: {
@@ -78,7 +81,7 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: "Authentication required" });
     }
 
-    const admin = serviceClient();
+    const admin = serviceClient(req);
 
     if (!admin) {
         return res.status(500).json({ error: "Server configuration error" });

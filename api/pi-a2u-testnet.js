@@ -1,4 +1,8 @@
 import PiNetwork from "pi-backend";
+import {
+  realPaymentsAllowed,
+  requestHostname
+} from "../server/supabase-target.cjs";
 
 const PI_ME_URL = "https://api.minepi.com/v2/me";
 
@@ -67,7 +71,10 @@ async function resolveExistingPayment(pi, payment) {
 }
 
 export default async function handler(req, res) {
-  if (process.env.HAVKAR_PI_PAYMENTS_ENABLED !== "true") {
+  if (
+    process.env.HAVKAR_PI_PAYMENTS_ENABLED !== "true" ||
+    !realPaymentsAllowed(requestHostname(req))
+  ) {
     return res.status(404).json({
       error: "Not found"
     });

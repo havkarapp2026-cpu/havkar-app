@@ -1,4 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
+import {
+  enforcedSupabaseUrl,
+  realPaymentsAllowed,
+  requestHostname
+} from "../server/supabase-target.cjs";
 
 const SYMBOL_IDS = {
   BTC: "bitcoin",
@@ -39,9 +44,9 @@ function sendError(res, status, message) {
   });
 }
 
-function getSupabaseAdmin() {
+function getSupabaseAdmin(req) {
   return createClient(
-    process.env.SUPABASE_URL,
+    enforcedSupabaseUrl(req, process.env.SUPABASE_URL),
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     {
       auth: {
@@ -307,7 +312,7 @@ async function authenticateUser(req) {
     };
   }
 
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getSupabaseAdmin(req);
   const { data, error } = await supabaseAdmin.auth.getUser(accessToken);
 
   if (error || !data?.user) {
@@ -324,7 +329,10 @@ async function authenticateUser(req) {
 }
 
 export default async function handler(req, res) {
-  if (process.env.HAVKAR_TRADE_ENABLED !== "true") {
+  if (
+    process.env.HAVKAR_TRADE_ENABLED !== "true" ||
+    !realPaymentsAllowed(requestHostname(req))
+  ) {
     return sendError(res, 403, "Trade is currently unavailable.");
   }
 
@@ -344,7 +352,7 @@ export default async function handler(req, res) {
   }
 
   if (
-    !process.env.SUPABASE_URL ||
+    !enforcedSupabaseUrl(req, process.env.SUPABASE_URL) ||
     !process.env.SUPABASE_SERVICE_ROLE_KEY
   ) {
     console.error("Missing required server environment variables");
@@ -380,7 +388,7 @@ export default async function handler(req, res) {
       return sendError(res, 503, priceErrorMessage(error));
     }
 
-    const supabaseAdmin = getSupabaseAdmin();
+    const supabaseAdmin = getSupabaseAdmin(req);
     const { data, error } = await supabaseAdmin.rpc("trade_crypto", {
       p_user_id: user.id,
       p_side: trade.side,

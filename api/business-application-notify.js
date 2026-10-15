@@ -4,6 +4,7 @@ import {
     isAmbiguousDeleteAccountRequest,
     isDeleteAccountRequest
 } from "../server/delete-account.js";
+import { enforcedSupabaseUrl } from "../server/supabase-target.cjs";
 
 const accountDeletionHandler = createDeleteAccountHandler();
 
@@ -25,8 +26,8 @@ const FIELD_LIMITS = {
     submitted_at: 40
 };
 
-function createDefaultSupabase() {
-    const url = process.env.SUPABASE_URL;
+function createDefaultSupabase(req) {
+    const url = enforcedSupabaseUrl(req, process.env.SUPABASE_URL);
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!url || !serviceRoleKey) {
@@ -153,7 +154,7 @@ export function createBusinessNotificationHandler({
             });
         }
 
-        const supabase = createSupabase();
+        const supabase = createSupabase(req);
 
         if (!supabase) {
             console.error("Supabase server authentication is not configured.");

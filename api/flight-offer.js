@@ -11,6 +11,7 @@
 // A verified HAVKAR user is required before Duffel is called.
 
 import { createClient } from "@supabase/supabase-js";
+import { enforcedSupabaseUrl } from "../server/supabase-target.cjs";
 
 const DUFFEL_API_BASE = "https://api.duffel.com";
 
@@ -37,8 +38,10 @@ async function requireHavkarUser(req) {
     };
   }
 
+  const supabaseUrl = enforcedSupabaseUrl(req, process.env.SUPABASE_URL);
+
   if (
-    !process.env.SUPABASE_URL ||
+    !supabaseUrl ||
     !process.env.SUPABASE_SERVICE_ROLE_KEY
   ) {
     console.error("Missing required server environment variables");
@@ -51,7 +54,7 @@ async function requireHavkarUser(req) {
   }
 
   const supabaseAdmin = createClient(
-    process.env.SUPABASE_URL,
+    supabaseUrl,
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     {
       auth: {
