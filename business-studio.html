@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#2e7d32">
+<title>HAVKAR Business Studio</title>
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#18251c;background:linear-gradient(160deg,#e8f5e9,#c8e6c9)}
+main{width:100%;max-width:760px;margin:0 auto;background:#fff;border:2px solid rgba(46,125,50,.18);border-radius:28px;padding:22px 18px 28px}
+.brandbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;text-decoration:none;color:#2e7d32}
+.brandbar img{width:40px;height:40px;border-radius:10px}
+.brandbar strong{display:block}
+.brandbar span{display:block;color:#4d6b52;font-size:.85rem;font-weight:700}
+h1{margin:0 0 8px;color:#17652a}
+label{display:block;font-weight:800;margin:14px 0 6px}
+input,textarea,select{width:100%;border:1px solid #cbe4d0;border-radius:14px;padding:12px;font:inherit}
+textarea{min-height:96px;resize:vertical}
+button,a.button{display:inline-block;margin-top:12px;border:0;border-radius:14px;background:#16833c;color:#fff;font:inherit;font-weight:800;padding:12px 16px;text-decoration:none;cursor:pointer}
+button.secondary{background:#e8f5e9;color:#17652a}
+button[disabled]{opacity:.65;cursor:wait}
+.note,.status{color:#3d5342;line-height:1.45}
+.pages{display:flex;flex-wrap:wrap;gap:8px}
+.pages button{margin-top:0}
+#menuPreview{margin:8px 0 0;padding-left:1.4rem}
+#menuPreview li{margin:4px 0}
+#qr svg{width:180px;height:180px}
+.check{display:flex;align-items:center;gap:8px;font-weight:800}
+.check input{width:auto}
+</style>
+</head>
+<body>
+<main>
+<a class="brandbar" href="index.html"><img src="icon.png" alt="HAVKAR" width="40" height="40"><span><strong>HAVKAR</strong><span>Business studio</span></span></a>
+<h1>Public business page</h1>
+<p class="note">Create a public page for a restaurant, factory, shop, service, or any other legitimate business. Prices are display text. This page does not take a payment.</p>
+<p id="status" class="status">Checking your HAVKAR session...</p>
+<div id="pages" class="pages"></div>
+<form id="editor" hidden>
+<label for="displayName">Business name</label>
+<input id="displayName" maxlength="120" required>
+<label for="slug">Public link</label>
+<input id="slug" maxlength="64" autocapitalize="off" spellcheck="false" required>
+<label for="category">Category</label>
+<select id="category" required></select>
+<label for="categoryLabel" id="categoryLabelWrap" hidden>Category name</label>
+<input id="categoryLabel" maxlength="80" hidden>
+<label for="summary">Short summary</label>
+<input id="summary" maxlength="280">
+<label for="description">Description</label>
+<textarea id="description" maxlength="4000"></textarea>
+<label for="services">Services, one per line: title | details | display price</label>
+<textarea id="services"></textarea>
+<label for="products">Products, one per line: title | details | display price</label>
+<textarea id="products"></textarea>
+<label for="sections">Sections, one per block separated by a blank line. First line is the title.</label>
+<textarea id="sections"></textarea>
+<label for="menu">Numbered menu, one item per line, in the exact order you want. A menu can hold 60 or more items. Format: name | details | display price</label>
+<textarea id="menu"></textarea>
+<ol id="menuPreview"></ol>
+<label for="logo">Logo image</label>
+<input id="logo" type="file" accept="image/jpeg,image/png,image/webp">
+<label for="cover">Cover image</label>
+<input id="cover" type="file" accept="image/jpeg,image/png,image/webp">
+<label class="check" for="published"><input id="published" type="checkbox">Publish this page</label>
+<p class="note">Publishing shows the page to anyone with the link. It does not verify the business and it does not charge anyone.</p>
+<button id="save" type="submit">Save business page</button>
+</form>
+<p><a href="login.html">Log in</a> · <a href="profile.html">Profile</a> · <a href="havkar-ai.html">HAVKAR AI</a></p>
+<section id="saved" hidden>
+<h2>Share link</h2>
+<p><a id="shareLink" href=""></a></p>
+<div id="qr"></div>
+</section>
+</main>
+<script src="/havkar-supabase-config.js"></script>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { BUSINESS_CATEGORIES, buildPageWrite, parseMenuText, unavailableMessage } from "./js/business-catalog.mjs";
+import { qrSvg } from "./js/havkar-qr.mjs";
+
+const status = document.getElementById("status");
+const editor = document.getElementById("editor");
+const pages = document.getElementById("pages");
+const category = document.getElementById("category");
+const categoryLabel = document.getElementById("categoryLabel");
+const categoryLabelWrap = document.getElementById("categoryLabelWrap");
+const menu = document.getElementById("menu");
+const menuPreview = document.getElementById("menuPreview");
+const save = document.getElementById("save");
+const saved = document.getElementById("saved");
+const shareLink = document.getElementById("shareLink");
+const qr = document.getElementById("qr");
+const config = window.HAVKAR_SUPABASE_CONFIG;
+let activePageId = "";
+let keptLogo = "";
+let keptCover = "";
+
+for (const item of BUSINESS_CATEGORIES) {
+  const option = document.createElement("option");
+  option.value = item.code;
+  option.textContent = item.label;
+  category.appendChild(option);
+}
+
+function linesToRecords(text, kind) {
+  return String(text || "").split(/\r?\n/).map((line) => {
+    const parts = line.split("|").map((part) => part.trim());
+    if (!parts[0]) {
+      return null;
+    }
+    return kind === "section"
+      ? null
+      : { title: parts[0], details: parts[1] || "", priceLabel: parts[2] || "" };
+  }).filter(Boolean);
+}
+
+function sectionsFromText(text) {
+  return String(text || "").split(/\n\s*\n/).map((block) => {
+    const lines = block.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    if (!lines.length) {
+      return null;
+    }
+    return { title: lines[0], body: lines.slice(1).join(" ") };
+  }).filter(Boolean);
+}
+
+function refreshMenu() {
+  const parsed = parseMenuText(menu.value);
+  menuPreview.replaceChildren();
+  if (!parsed.ok) {
+    const item = document.createElement("li");
+    item.textContent = parsed.error;
+    menuPreview.appendChild(item);
+    return;
+  }
+  for (const row of parsed.items) {
+    const item = document.createElement("li");
+    item.value = row.itemNumber;
+    item.textContent = row.name + (row.priceLabel ? " — " + row.priceLabel : "");
+    menuPreview.appendChild(item);
+  }
+}
+
+category.addEventListener("change", () => {
+  const other = category.value === "other";
+  categoryLabel.hidden = !other;
+  categoryLabelWrap.hidden = !other;
+});
+menu.addEventListener("input", refreshMenu);
+
+function showShare(slug) {
+  const url = new URL("business.html?slug=" + encodeURIComponent(slug), window.location.href).href;
+  saved.hidden = false;
+  shareLink.href = url;
+  shareLink.textContent = url;
+  qr.innerHTML = qrSvg(url, { color: "#2e7d32" });
+}
+
+async function imageBlob(file) {
+  if (!file) {
+    return null;
+  }
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+    throw new Error("Use a JPEG, PNG, or WebP image.");
+  }
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.9));
+  if (!blob) {
+    throw new Error("This image could not be prepared.");
+  }
+  if (blob.size > 5242880) {
+    throw new Error("The image is larger than 5 MB.");
+  }
+  return blob;
+}
+
+if (!config || !config.url || !config.publishableKey) {
+  status.textContent = "HAVKAR configuration was not found on this page.";
+} else {
+  const supabase = createClient(config.url, config.publishableKey, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+  });
+  const sessionResult = await supabase.auth.getSession();
+  const session = sessionResult.data && sessionResult.data.session;
+  if (sessionResult.error || !session) {
+    status.textContent = "Sign in before creating a public business page.";
+  } else {
+    status.textContent = "Your HAVKAR session is ready.";
+    editor.hidden = false;
+    const owned = await supabase.from("business_pages").select("id,slug,display_name,published").order("updated_at", { ascending: false });
+    if (owned.error) {
+      status.textContent = unavailableMessage(owned.error);
+    } else {
+      for (const row of owned.data || []) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "secondary";
+        button.textContent = row.display_name + (row.published ? "" : " (draft)");
+        button.addEventListener("click", () => loadPage(row.id));
+        pages.appendChild(button);
+      }
+    }
+
+    async function loadPage(pageId) {
+      const [pageResult, sectionResult, offeringResult, menuResult] = await Promise.all([
+        supabase.from("business_pages").select("id,slug,display_name,category_code,category_label,summary,description,logo_path,cover_path,published").eq("id", pageId).maybeSingle(),
+        supabase.from("business_sections").select("position,title,body").eq("page_id", pageId).order("position"),
+        supabase.from("business_offerings").select("kind,position,title,details,price_label").eq("page_id", pageId).order("position"),
+        supabase.from("business_menu_items").select("position,item_number,name,details,price_label").eq("page_id", pageId).order("position")
+      ]);
+      if (pageResult.error || !pageResult.data) {
+        status.textContent = unavailableMessage(pageResult.error || { message: "missing" });
+        return;
+      }
+      activePageId = pageResult.data.id;
+      keptLogo = pageResult.data.logo_path || "";
+      keptCover = pageResult.data.cover_path || "";
+      document.getElementById("displayName").value = pageResult.data.display_name;
+      document.getElementById("slug").value = pageResult.data.slug;
+      category.value = pageResult.data.category_code;
+      category.dispatchEvent(new Event("change"));
+      categoryLabel.value = pageResult.data.category_label || "";
+      document.getElementById("summary").value = pageResult.data.summary || "";
+      document.getElementById("description").value = pageResult.data.description || "";
+      document.getElementById("published").checked = pageResult.data.published === true;
+      document.getElementById("sections").value = (sectionResult.data || []).map((row) => row.title + (row.body ? "\n" + row.body : "")).join("\n\n");
+      const offeringLines = (kind) => (offeringResult.data || []).filter((row) => row.kind === kind).map((row) => [row.title, row.details, row.price_label].filter(Boolean).join(" | ")).join("\n");
+      document.getElementById("services").value = offeringLines("service");
+      document.getElementById("products").value = offeringLines("product");
+      menu.value = (menuResult.data || []).map((row) => [row.name, row.details, row.price_label].filter(Boolean).join(" | ")).join("\n");
+      refreshMenu();
+      showShare(pageResult.data.slug);
+      status.textContent = "Loaded " + pageResult.data.display_name + ".";
+    }
+
+    async function replaceRows(table, rows) {
+      if (!activePageId) {
+        return { error: { message: "missing page" } };
+      }
+      const removed = await supabase.from(table).delete().eq("page_id", activePageId);
+      if (removed.error || rows.length === 0) {
+        return removed;
+      }
+      return supabase.from(table).insert(rows);
+    }
+
+    editor.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const current = await supabase.auth.getSession();
+      const userId = current.data && current.data.session && current.data.session.user && current.data.session.user.id;
+      const ownerId = String(userId || "").toLowerCase();
+      if (!ownerId) {
+        status.textContent = "Sign in before creating a public business page.";
+        return;
+      }
+      const parsedMenu = parseMenuText(menu.value);
+      if (!parsedMenu.ok) {
+        status.textContent = parsedMenu.error;
+        return;
+      }
+      const draft = buildPageWrite({
+        ownerId,
+        slug: document.getElementById("slug").value,
+        displayName: document.getElementById("displayName").value,
+        categoryCode: category.value,
+        categoryLabel: categoryLabel.value,
+        summary: document.getElementById("summary").value,
+        description: document.getElementById("description").value,
+        logoPath: keptLogo,
+        coverPath: keptCover,
+        published: document.getElementById("published").checked,
+        services: linesToRecords(document.getElementById("services").value),
+        products: linesToRecords(document.getElementById("products").value),
+        sections: sectionsFromText(document.getElementById("sections").value),
+        menu: parsedMenu.items
+      });
+      if (!draft.ok) {
+        status.textContent = draft.error;
+        return;
+      }
+      save.disabled = true;
+      status.textContent = "Saving the business page...";
+      const pageWrite = activePageId
+        ? await supabase.from("business_pages").update(draft.page).eq("id", activePageId).select("id,slug").maybeSingle()
+        : await supabase.from("business_pages").insert(draft.page).select("id,slug").maybeSingle();
+      if (pageWrite.error || !pageWrite.data) {
+        status.textContent = pageWrite.error && pageWrite.error.code === "23505"
+          ? "This public link is already used."
+          : unavailableMessage(pageWrite.error || { message: "missing" });
+        save.disabled = false;
+        return;
+      }
+      activePageId = pageWrite.data.id;
+      const withPage = (rows) => rows.map((row) => ({ ...row, page_id: activePageId }));
+      const writes = [
+        await replaceRows("business_sections", withPage(draft.sections.map((row) => ({ position: row.position, title: row.title, body: row.body })))),
+        await replaceRows("business_offerings", withPage(draft.services.concat(draft.products).map((row) => ({ kind: row.kind, position: row.position, title: row.title, details: row.details, price_label: row.priceLabel })))),
+        await replaceRows("business_menu_items", withPage(parsedMenu.items.map((row) => ({ position: row.position, item_number: row.itemNumber, name: row.name, details: row.details, price_label: row.priceLabel }))))
+      ];
+      const failed = writes.find((result) => result.error);
+      if (failed) {
+        status.textContent = "The page was saved, but part of its content was not. " + unavailableMessage(failed.error);
+        save.disabled = false;
+        return;
+      }
+      try {
+        const logo = await imageBlob(document.getElementById("logo").files[0]);
+        const cover = await imageBlob(document.getElementById("cover").files[0]);
+        const paths = {};
+        for (const [name, blob] of [["logo", logo], ["cover", cover]]) {
+          if (!blob) {
+            continue;
+          }
+          const objectPath = ownerId + "/" + activePageId + "/" + name + ".webp";
+          const upload = await supabase.storage.from("business-media").upload(objectPath, blob, { upsert: true, contentType: "image/webp" });
+          if (upload.error) {
+            throw new Error("Image storage is not enabled on this server yet.");
+          }
+          paths[name + "_path"] = objectPath;
+          if (name === "logo") {
+            keptLogo = objectPath;
+          } else {
+            keptCover = objectPath;
+          }
+        }
+        if (paths.logo_path || paths.cover_path) {
+          const imageUpdate = await supabase.from("business_pages").update(paths).eq("id", activePageId);
+          if (imageUpdate.error) {
+            throw new Error("The image was uploaded, but the page could not store its path.");
+          }
+        }
+      } catch (error) {
+        status.textContent = error.message || "The image could not be saved.";
+        showShare(pageWrite.data.slug);
+        save.disabled = false;
+        return;
+      }
+      status.textContent = draft.page.published ? "The public page is saved." : "The draft is saved. It stays private until you publish it.";
+      showShare(pageWrite.data.slug);
+      save.disabled = false;
+    });
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#2e7d32">
+<title>HAVKAR Business</title>
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#18251c;background:linear-gradient(160deg,#e8f5e9,#c8e6c9)}
+main{width:100%;max-width:760px;margin:0 auto;background:#fff;border:2px solid rgba(46,125,50,.18);border-radius:28px;padding:22px 18px 28px}
+.brandbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;text-decoration:none;color:#2e7d32}
+.brandbar img{width:40px;height:40px;border-radius:10px}
+.brandbar strong{display:block;font-size:1rem}
+.brandbar span{display:block;color:#4d6b52;font-size:.85rem;font-weight:700}
+h1{margin:0 0 8px;color:#17652a;font-size:2rem}
+h2{margin:22px 0 8px;color:#2e7d32;font-size:1.15rem}
+p{line-height:1.5}
+.category{margin:0;color:#16833c;font-weight:800;letter-spacing:.04em;text-transform:uppercase;font-size:.78rem}
+.summary{font-size:1.05rem}
+.logo,.cover,.image-grid img{display:block;max-width:100%;border-radius:16px}
+.logo{width:88px;height:88px;object-fit:cover;margin:8px 0}
+.cover{width:100%;max-height:280px;object-fit:cover;margin:8px 0 4px}
+.image-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+ol{margin:0;padding-left:1.4rem}
+li{margin:8px 0}
+li span{display:block;color:#3d5342}
+.price{display:inline-block;margin-left:6px;color:#17652a;font-weight:800}
+.menu-list{list-style:decimal}
+.price-note,.status{color:#3d5342}
+.share{margin-top:22px;padding-top:14px;border-top:1px solid #d7ead9}
+.share a{color:#16833c;font-weight:800}
+#qr{margin-top:10px}
+#qr svg{width:180px;height:180px}
+</style>
+</head>
+<body>
+<main>
+<a class="brandbar" href="index.html"><img src="icon.png" alt="HAVKAR" width="40" height="40"><span><strong>HAVKAR</strong><span>Public business page</span></span></a>
+<div id="status" class="status">Loading the business page...</div>
+<div id="page"></div>
+<section class="share" id="share" hidden>
+<h2>Share this page</h2>
+<p><a id="shareLink" href=""></a></p>
+<div id="qr"></div>
+</section>
+</main>
+<script src="/havkar-supabase-config.js"></script>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isPublicSlug, renderPublicPage, unavailableMessage } from "./js/business-catalog.mjs";
+import { qrSvg } from "./js/havkar-qr.mjs";
+
+const status = document.getElementById("status");
+const page = document.getElementById("page");
+const share = document.getElementById("share");
+const shareLink = document.getElementById("shareLink");
+const qr = document.getElementById("qr");
+const config = window.HAVKAR_SUPABASE_CONFIG;
+const slug = new URLSearchParams(window.location.search).get("slug") || "";
+
+function showStatus(message) {
+  status.hidden = false;
+  status.textContent = message;
+}
+
+if (!isPublicSlug(slug)) {
+  showStatus("Open a business page with its public link.");
+} else if (!config || !config.url || !config.publishableKey) {
+  showStatus("HAVKAR configuration was not found on this page.");
+} else {
+  const supabase = createClient(config.url, config.publishableKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+  });
+  const pageResult = await supabase
+    .from("business_pages")
+    .select("id,slug,display_name,category_code,category_label,summary,description,logo_path,cover_path,published")
+    .eq("slug", slug)
+    .eq("published", true)
+    .maybeSingle();
+
+  if (pageResult.error) {
+    showStatus(unavailableMessage(pageResult.error));
+  } else if (!pageResult.data) {
+    showStatus("This public business page is not available.");
+  } else {
+    const pageId = pageResult.data.id;
+    const [sections, offerings, menu, images] = await Promise.all([
+      supabase.from("business_sections").select("position,title,body").eq("page_id", pageId).order("position"),
+      supabase.from("business_offerings").select("kind,position,title,details,price_label").eq("page_id", pageId).order("position"),
+      supabase.from("business_menu_items").select("position,item_number,name,details,price_label").eq("page_id", pageId).order("position"),
+      supabase.from("business_images").select("position,object_path,alt_text").eq("page_id", pageId).order("position")
+    ]);
+    const failed = [sections, offerings, menu, images].find((result) => result.error);
+    if (failed) {
+      showStatus(unavailableMessage(failed.error));
+    } else {
+      const html = renderPublicPage({
+        page: pageResult.data,
+        sections: sections.data || [],
+        services: (offerings.data || []).filter((row) => row.kind === "service"),
+        products: (offerings.data || []).filter((row) => row.kind === "product"),
+        menu: menu.data || [],
+        images: images.data || [],
+        mediaBaseUrl: config.url
+      });
+      if (!html) {
+        showStatus("This public business page is not available.");
+      } else {
+        status.hidden = true;
+        page.innerHTML = html;
+        document.title = pageResult.data.display_name + " · HAVKAR";
+        const url = new URL("business.html?slug=" + encodeURIComponent(slug), window.location.href).href;
+        share.hidden = false;
+        shareLink.href = url;
+        shareLink.textContent = url;
+        qr.innerHTML = qrSvg(url, { color: "#2e7d32" });
+      }
+    }
+  }
+}
+</script>
+</body>
+</html>
