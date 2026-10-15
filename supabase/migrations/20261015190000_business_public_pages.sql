@@ -976,6 +976,7 @@ BEGIN
     RETURN;
   END IF;
 
+  -- storage.foldername omits the filename, so {page_id}/logo.webp has one folder.
   EXECUTE 'DROP POLICY IF EXISTS business_media_insert_own ON storage.objects';
   EXECUTE 'DROP POLICY IF EXISTS business_media_select_own ON storage.objects';
   EXECUTE 'DROP POLICY IF EXISTS business_media_select_public ON storage.objects';
@@ -990,9 +991,9 @@ BEGIN
     WITH CHECK (
       bucket_id = 'business-media'
       AND (SELECT auth.uid()) IS NOT NULL
-      AND cardinality(storage.foldername(name)) = 2
+      AND cardinality(storage.foldername(name)) = 1
       AND havkar_private.caller_owns_media_folder(lower((storage.foldername(name))[1]))
-      AND name ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'
+      AND name ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'
     )
   $policy$;
 
@@ -1004,9 +1005,9 @@ BEGIN
     USING (
       bucket_id = 'business-media'
       AND (SELECT auth.uid()) IS NOT NULL
-      AND cardinality(storage.foldername(name)) = 2
+      AND cardinality(storage.foldername(name)) = 1
       AND havkar_private.caller_owns_media_folder(lower((storage.foldername(name))[1]))
-      AND name ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'
+      AND name ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'
     )
   $policy$;
 
@@ -1018,16 +1019,16 @@ BEGIN
     USING (
       bucket_id = 'business-media'
       AND (SELECT auth.uid()) IS NOT NULL
-      AND cardinality(storage.foldername(name)) = 2
+      AND cardinality(storage.foldername(name)) = 1
       AND havkar_private.caller_owns_media_folder(lower((storage.foldername(name))[1]))
-      AND name ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'
+      AND name ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'
     )
     WITH CHECK (
       bucket_id = 'business-media'
       AND (SELECT auth.uid()) IS NOT NULL
-      AND cardinality(storage.foldername(name)) = 2
+      AND cardinality(storage.foldername(name)) = 1
       AND havkar_private.caller_owns_media_folder(lower((storage.foldername(name))[1]))
-      AND name ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'
+      AND name ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'
     )
   $policy$;
 
@@ -1039,9 +1040,9 @@ BEGIN
     USING (
       bucket_id = 'business-media'
       AND (SELECT auth.uid()) IS NOT NULL
-      AND cardinality(storage.foldername(name)) = 2
+      AND cardinality(storage.foldername(name)) = 1
       AND havkar_private.caller_owns_media_folder(lower((storage.foldername(name))[1]))
-      AND name ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'
+      AND name ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(logo|cover|image-[1-9]|image-1[0-2])\.webp$'
     )
   $policy$;
 

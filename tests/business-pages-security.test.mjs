@@ -18,6 +18,16 @@ function psql(args, sql) {
   });
 }
 
+function expectRlsDenial(sql) {
+  let denied = "";
+  try {
+    psql(["-d", database, "-v", "ON_ERROR_STOP=1"], sql);
+  } catch (error) {
+    denied = String(error.stderr || error.stdout || "");
+  }
+  assert.match(denied, /row-level security policy|permission denied/);
+}
+
 function psqlFile(databaseName, sql) {
   const scriptPath = path.join(os.tmpdir(), "havkar-business-security.sql");
   fs.writeFileSync(scriptPath, sql);
@@ -99,9 +109,12 @@ CREATE TABLE storage.objects (
   name text
 );
 ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
-CREATE FUNCTION storage.foldername(object_name text) RETURNS text[]
+CREATE FUNCTION storage.foldername(name text) RETURNS text[]
 LANGUAGE sql IMMUTABLE AS $$
-  SELECT string_to_array(object_name, '/')
+  SELECT CASE
+    WHEN name IS NULL OR strpos(name, '/') = 0 THEN ARRAY[]::text[]
+    ELSE (string_to_array(name, '/'))[1:cardinality(string_to_array(name, '/')) - 1]
+  END
 $$;
 GRANT USAGE ON SCHEMA storage TO anon, authenticated, service_role;
 GRANT SELECT ON storage.objects TO anon, authenticated;
@@ -317,6 +330,141 @@ SELECT public.save_business_page(
   assert.equal(kept.trim(), "500");
   const pizzaKept = psql(["-d", database, "-tA"], `SELECT name FROM public.business_menu_items WHERE page_id = '${pageId}';`);
   assert.equal(pizzaKept.trim(), "Kept");
+
+  psql(["-d", database, "-v", "ON_ERROR_STOP=1"], `
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '${owner}', false);
+SELECT public.save_business_page(
+  '${pageId}'::uuid,
+  jsonb_build_object(
+    'slug','pizza-house','display_name','Pizza House','category_code','restaurant',
+    'category_label','','summary','','description','',
+    'logo_path','${pageId}/logo.webp','cover_path','${pageId}/cover.webp','published',true
+  ),
+  '[]'::jsonb, '[]'::jsonb,
+  jsonb_build_array(jsonb_build_object(
+    'position',1,'item_number',101,'name','Kept','details','','price_label',''
+  )),
+  jsonb_build_array(
+    jsonb_build_object('position',1,'object_path','${pageId}/image-1.webp','alt_text','Oven'),
+    jsonb_build_object('position',12,'object_path','${pageId}/image-12.webp','alt_text','Gallery')
+  )
+);
+INSERT INTO storage.objects (bucket_id, name) VALUES
+  ('business-media', '${pageId}/cover.webp'),
+  ('business-media', '${pageId}/image-12.webp');
+RESET ROLE;
+`);
+  const ownerPaths = psql(["-d", database, "-tA"], `
+SET ROLE authenticated;
+DO $$ BEGIN PERFORM set_config('request.jwt.claim.sub', '${owner}', false); END $$;
+SELECT name FROM storage.objects WHERE bucket_id = 'business-media' ORDER BY name;
+`);
+  assert.deepEqual(ownerPaths.trim().split("\n").filter((line) => line.includes("/")), [
+    `${pageId}/cover.webp`,
+    `${pageId}/image-1.webp`,
+    `${pageId}/image-12.webp`,
+    `${pageId}/logo.webp`
+  ]);
+  const publicPaths = psql(["-d", database, "-tA"], `
+SET ROLE anon;
+SELECT name FROM storage.objects WHERE bucket_id = 'business-media' ORDER BY name;
+`);
+  assert.deepEqual(publicPaths.trim().split("\n").filter((line) => line.includes("/")), [
+    `${pageId}/cover.webp`,
+    `${pageId}/image-1.webp`,
+    `${pageId}/image-12.webp`,
+    `${pageId}/logo.webp`
+  ]);
+  for (const badPath of [
+    `${pageId}/logo.jpg`,
+    `${pageId}/logo.WEBP`,
+    `${pageId}/image-0.webp`,
+    `${pageId}/image-13.webp`,
+    `${pageId}/extra/logo.webp`,
+    `${pageId}/../logo.webp`,
+    "logo.webp",
+    `${other}/logo.webp`
+  ]) {
+    expectRlsDenial(`
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '${owner}', false);
+INSERT INTO storage.objects (bucket_id, name) VALUES ('business-media', '${badPath}');
+`);
+  }
+  expectRlsDenial(`
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '${other}', false);
+INSERT INTO storage.objects (bucket_id, name) VALUES ('business-media', '${pageId}/logo.webp');
+`);
+  psql(["-d", database, "-v", "ON_ERROR_STOP=1"], `
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '${other}', false);
+DELETE FROM storage.objects WHERE bucket_id = 'business-media' AND name = '${pageId}/logo.webp';
+RESET ROLE;
+`);
+  const logoRemains = psql(["-d", database, "-tA"], `
+SELECT count(*) FROM storage.objects
+WHERE bucket_id = 'business-media' AND name = '${pageId}/logo.webp';
+`);
+  assert.equal(logoRemains.trim(), "1");
+  psql(["-d", database, "-v", "ON_ERROR_STOP=1"], `
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '${owner}', false);
+SELECT public.save_business_page(
+  '${pageId}'::uuid,
+  jsonb_build_object(
+    'slug','pizza-house','display_name','Pizza House','category_code','restaurant',
+    'category_label','','summary','','description','',
+    'logo_path','${pageId}/logo.webp','cover_path','${pageId}/cover.webp','published',false
+  ),
+  '[]'::jsonb, '[]'::jsonb,
+  jsonb_build_array(jsonb_build_object(
+    'position',1,'item_number',101,'name','Kept','details','','price_label',''
+  )),
+  jsonb_build_array(
+    jsonb_build_object('position',1,'object_path','${pageId}/image-1.webp','alt_text','Oven'),
+    jsonb_build_object('position',12,'object_path','${pageId}/image-12.webp','alt_text','Gallery')
+  )
+);
+RESET ROLE;
+`);
+  const hiddenFromAnon = psql(["-d", database, "-tA"], `
+SET ROLE anon;
+SELECT count(*) FROM storage.objects WHERE bucket_id = 'business-media';
+`);
+  const hiddenFromOther = psql(["-d", database, "-tA"], `
+SET ROLE authenticated;
+DO $$ BEGIN PERFORM set_config('request.jwt.claim.sub', '${other}', false); END $$;
+SELECT count(*) FROM storage.objects WHERE bucket_id = 'business-media';
+`);
+  const keptForOwner = psql(["-d", database, "-tA"], `
+SET ROLE authenticated;
+DO $$ BEGIN PERFORM set_config('request.jwt.claim.sub', '${owner}', false); END $$;
+SELECT count(*) FROM storage.objects WHERE bucket_id = 'business-media';
+`);
+  const numericResult = (output) => output.trim().split("\n").filter((line) => /^\d+$/.test(line)).at(-1);
+  assert.equal(numericResult(hiddenFromAnon), "0");
+  assert.equal(numericResult(hiddenFromOther), "0");
+  assert.equal(numericResult(keptForOwner), "4");
+  psql(["-d", database, "-v", "ON_ERROR_STOP=1"], `
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '${owner}', false);
+SELECT public.save_business_page(
+  '${pageId}'::uuid,
+  jsonb_build_object(
+    'slug','pizza-house','display_name','Pizza House','category_code','restaurant',
+    'category_label','','summary','','description','',
+    'logo_path','${pageId}/logo.webp','published',true
+  ),
+  '[]'::jsonb, '[]'::jsonb,
+  jsonb_build_array(jsonb_build_object(
+    'position',1,'item_number',101,'name','Kept','details','','price_label',''
+  )),
+  '[]'::jsonb
+);
+RESET ROLE;
+`);
 
   let moderation = "";
   try {
