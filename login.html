@@ -599,7 +599,9 @@ button:disabled {
     <div
         id="message"
         class="message"
-        aria-live="polite">
+        aria-live="polite"
+        data-i18n-ignore
+        translate="no">
     </div>
 
 
@@ -620,6 +622,12 @@ import {
 import {
     googleSignInAvailability
 } from "/havkar-login-google.mjs";
+
+import {
+    authDirection,
+    authFailureMessage,
+    authMessage
+} from "/havkar-auth-messages.mjs";
 
 
 /* =========================================================
@@ -646,7 +654,8 @@ const supabase =
             auth: {
                 persistSession: true,
                 autoRefreshToken: true,
-                detectSessionInUrl: true
+                detectSessionInUrl: true,
+                flowType: "pkce"
             }
         }
     );
@@ -757,16 +766,26 @@ function showMessage(
     type = ""
 ) {
 
-    message.textContent =
-        text;
+    const i18n =
+        window.HAVKAR_I18N;
+
+    const language =
+        i18n &&
+        typeof i18n.getLanguage === "function"
+            ? i18n.getLanguage()
+            : "en";
+
+    document.documentElement.lang = language;
+    document.documentElement.dir = authDirection(language);
+
+    message.textContent = text
+        ? authMessage(text, language)
+        : "";
 
     message.className =
         type
             ? `message ${type}`
             : "message";
-
-    const i18n =
-        window.HAVKAR_I18N;
 
     if(
         text &&
@@ -1259,7 +1278,10 @@ async function sendPasswordReset() {
             );
 
             showMessage(
-                "Password reset could not be started. Please try again.",
+                authFailureMessage(
+                    error,
+                    "Password reset could not be started. Please try again."
+                ),
                 "error"
             );
 
@@ -1733,9 +1755,24 @@ function authCallbackMessage(){
 
     }
 
-    if(errorCode === "otp_expired"){
+    const descriptionText =
+        description.toLowerCase();
 
-        return "Your email confirmation link has expired. Please request a new confirmation email.";
+    if(
+        errorCode.indexOf("pkce") !== -1 ||
+        descriptionText.indexOf("code verifier") !== -1 ||
+        descriptionText.indexOf("code challenge") !== -1
+    ){
+
+        return "Open this link in the same browser where you requested it, or request a new link.";
+
+    }
+
+    if(errorCode === "otp_expired" || descriptionText.indexOf("expired") !== -1){
+
+        return type === "recovery"
+            ? "Password could not be changed. Please request a new reset link."
+            : "Your email confirmation link has expired. Please request a new confirmation email.";
 
     }
 
@@ -1744,9 +1781,6 @@ function authCallbackMessage(){
         type === "invite" ||
         type === "email" ||
         type === "email_change";
-
-    const descriptionText =
-        description.toLowerCase();
 
     const describesConfirmation =
         descriptionText.indexOf("email link") !== -1 ||
@@ -1762,7 +1796,26 @@ function authCallbackMessage(){
 
     }
 
-    return "Google sign-in could not be completed. Please try again.";
+    if(
+        type === "recovery" ||
+        descriptionText.indexOf("recovery") !== -1
+    ){
+
+        return "Password could not be changed. Please request a new reset link.";
+
+    }
+
+    if(
+        errorCode.indexOf("provider") !== -1 ||
+        descriptionText.indexOf("oauth") !== -1 ||
+        descriptionText.indexOf("google") !== -1
+    ){
+
+        return "Google sign-in could not be completed. Please try again.";
+
+    }
+
+    return "This sign-in link could not be completed. Please try again.";
 
 }
 
