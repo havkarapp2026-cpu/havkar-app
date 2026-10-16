@@ -7,7 +7,8 @@ import {
 
 const ALLOWED_ORIGINS = new Set([
   "https://havkar-app.vercel.app",
-  "https://testnet.havkar.online"
+  "https://testnet.havkar.online",
+  "https://staging.havkar.online"
 ]);
 
 const DEFAULT_MODEL = "gemini-3.5-flash-lite";

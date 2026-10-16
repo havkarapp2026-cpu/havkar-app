@@ -91,6 +91,9 @@ const config = read("supabase/config.toml");
 const translate = read("api/translate.js");
 
 assert.match(source, /admin\.auth\.getUser\(accessToken\)/);
+assert.match(source, /https:\/\/staging\.havkar\.online/);
+assert.match(source, /https:\/\/havkar-app\.vercel\.app/);
+assert.match(source, /https:\/\/testnet\.havkar\.online/);
 assert.match(source, /HAVKAR_AI_API_KEY/);
 assert.match(source, /x-goog-api-key/);
 assert.match(source, /const DEFAULT_MODEL = "gemini-3\.5-flash-lite"/);
