@@ -253,4 +253,48 @@ try {
   }
 }
 
+const previousStripeKey = process.env.STRIPE_SECRET_KEY;
+const previousSupabaseUrl = process.env.SUPABASE_URL;
+const previousServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+delete process.env.STRIPE_SECRET_KEY;
+process.env.SUPABASE_URL = previousSupabaseUrl || "https://example.supabase.co";
+process.env.SUPABASE_SERVICE_ROLE_KEY = previousServiceRole || "test-service-role";
+
+try {
+  const { default: checkout } = await import("../api/create-event-checkout.js");
+  const { default: webhook } = await import("../api/stripe-webhook.js");
+  const checkoutRes = mockRes();
+  await checkout({
+    method: "POST",
+    headers: { host: "staging.havkar.online" },
+    body: {}
+  }, checkoutRes);
+  assert.equal(checkoutRes.statusCode, 404);
+  assert.equal(checkoutRes.body.error, "Not found");
+
+  const webhookRes = mockRes();
+  await webhook({
+    method: "POST",
+    headers: { host: "staging.havkar.online" }
+  }, webhookRes);
+  assert.equal(webhookRes.statusCode, 404);
+  assert.equal(webhookRes.body.error, "Not found");
+} finally {
+  if (previousStripeKey === undefined) {
+    delete process.env.STRIPE_SECRET_KEY;
+  } else {
+    process.env.STRIPE_SECRET_KEY = previousStripeKey;
+  }
+  if (previousSupabaseUrl === undefined) {
+    delete process.env.SUPABASE_URL;
+  } else {
+    process.env.SUPABASE_URL = previousSupabaseUrl;
+  }
+  if (previousServiceRole === undefined) {
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  } else {
+    process.env.SUPABASE_SERVICE_ROLE_KEY = previousServiceRole;
+  }
+}
+
 console.log("STAGING_WEB_CONFIG_TEST_OK");

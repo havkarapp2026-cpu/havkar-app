@@ -6,8 +6,6 @@ import {
   requestHostname
 } from "../server/supabase-target.cjs";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -81,6 +79,7 @@ export default async function handler(req, res) {
 
   try {
     const rawBody = await getRawBody(req);
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
     event = stripe.webhooks.constructEvent(
       rawBody,
