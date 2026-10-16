@@ -22,6 +22,7 @@
 const crypto = require("crypto");
 const net = require("net");
 const { createClient } = require("@supabase/supabase-js");
+const { enforcedSupabaseUrl } = require("../server/supabase-target.cjs");
 
 /* =========================================================
    CONFIG
@@ -309,8 +310,8 @@ function trustedClientIp(req) {
   return normalizeClientIp(raw.split(",")[0]);
 }
 
-function getSupabaseAdmin() {
-  const url = process.env.SUPABASE_URL || "";
+function getSupabaseAdmin(req) {
+  const url = enforcedSupabaseUrl(req, process.env.SUPABASE_URL || "");
   const serviceRoleKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
@@ -348,7 +349,7 @@ function sendLimiterFailure(res) {
   });
 }
 
-async function consumeSharedBudget(kind, clientIp, characters) {
+async function consumeSharedBudget(kind, clientIp, characters, req) {
   if (!clientIp) {
     return {
       ok: false,
@@ -356,7 +357,7 @@ async function consumeSharedBudget(kind, clientIp, characters) {
     };
   }
 
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseAdmin(req);
 
   if (!supabase) {
     return {
@@ -947,7 +948,8 @@ async function handler(req, res) {
         const languageBudget = await consumeSharedBudget(
           "languages",
           trustedClientIp(req),
-          0
+          0,
+          req
         );
 
         if (!languageBudget.ok) {
@@ -1114,7 +1116,8 @@ async function handler(req, res) {
     const postBudget = await consumeSharedBudget(
       "post",
       trustedClientIp(req),
-      totalCharacters
+      totalCharacters,
+      req
     );
 
     if (!postBudget.ok) {

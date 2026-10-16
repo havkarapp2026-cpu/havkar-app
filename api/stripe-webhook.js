@@ -1,7 +1,10 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+import {
+  enforcedSupabaseUrl,
+  realPaymentsAllowed,
+  requestHostname
+} from "../server/supabase-target.cjs";
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -35,6 +38,20 @@ async function getRawBody(req) {
 }
 
 export default async function handler(req, res) {
+  if (!realPaymentsAllowed(requestHostname(req))) {
+    return res.status(404).json({
+      error: "Not found",
+    });
+  }
+
+  if (!enforcedSupabaseUrl(req, process.env.SUPABASE_URL)) {
+    console.error("Supabase target is not allowed for this host");
+
+    return res.status(500).json({
+      error: "Webhook configuration error",
+    });
+  }
+
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({
@@ -62,6 +79,7 @@ export default async function handler(req, res) {
 
   try {
     const rawBody = await getRawBody(req);
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
     event = stripe.webhooks.constructEvent(
       rawBody,

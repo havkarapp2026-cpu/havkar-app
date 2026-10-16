@@ -5,6 +5,9 @@
 
 <meta charset="UTF-8">
 
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+
 <meta name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
@@ -513,6 +516,32 @@ button{
 .badge-symbol{
     font-size:15px;
     line-height:1;
+}
+
+.badge-legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:12px;
+}
+
+.badge-legend p{
+    flex-basis:100%;
+    margin:0;
+    color:#4d6b52;
+    font-size:13px;
+    font-weight:700;
+    line-height:1.4;
+}
+
+.verification-badge.pending{
+    background:#f4f7f4;
+    color:#6d7f72;
+}
+
+.verification-badge.diamond{
+    background:#e8f5e9;
+    color:#17652a;
 }
 
 
@@ -2862,6 +2891,37 @@ input:focus-visible{
         </button>
 
 
+        <a class="setting-row" href="business-studio.html" style="text-decoration:none">
+
+            <div class="setting-icon">
+
+                <i class="fas fa-id-card"></i>
+
+            </div>
+
+
+            <div class="setting-content">
+
+                <div class="setting-title">
+                    Public Business Page
+                </div>
+
+                <div class="setting-description">
+                    Publish a page, numbered menu, services, and products.
+                </div>
+
+            </div>
+
+
+            <div class="setting-arrow">
+
+                <i class="fas fa-chevron-right"></i>
+
+            </div>
+
+        </a>
+
+
         <!-- VERIFICATION: hidden until verification submission exists. -->
 
         <button
@@ -3272,6 +3332,7 @@ input:focus-visible{
 
 <script src="/havkar-i18n.js"></script>
 <script src="/havkar-verification.js"></script>
+<script src="/havkar-badges.js"></script>
 
 
 <!-- =========================================================
@@ -4102,7 +4163,7 @@ function renderVerificationBadge(
             <div class="verification-badge company">
 
                 <span class="badge-symbol">
-                    ◆
+                    ★
                 </span>
 
                 Verified Company / Factory
@@ -4640,10 +4701,20 @@ async function(){
 
                     ${verificationBadge}
 
+                    <div id="serverBadgeRow"></div>
 
                 </div>
 
             `;
+
+            if(window.HAVKAR_BADGES){
+                window.HAVKAR_BADGES.mountAccount(
+                    document.getElementById("serverBadgeRow"),
+                    supabase,
+                    user.id,
+                    getVerificationType(user)
+                );
+            }
 
         }
 

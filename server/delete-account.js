@@ -1,4 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
+import {
+  enforcedSupabaseUrl,
+  requestHostname
+} from "./supabase-target.cjs";
 
 export const DELETE_ACCOUNT_ORIGINS = Object.freeze([
   "https://havkar-app.vercel.app",
@@ -24,7 +28,10 @@ function applyCors(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
   res.setHeader("Cache-Control", "no-store");
 
-  if (origin && ORIGINS.has(origin)) {
+  const stagingOrigin = origin === "https://staging.havkar.online"
+    && requestHostname(req) === "staging.havkar.online";
+
+  if (origin && (ORIGINS.has(origin) || stagingOrigin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
 
     return true;
@@ -125,8 +132,8 @@ export function isAmbiguousDeleteAccountRequest(req) {
   return routeMarker(req).kind === "rejected";
 }
 
-function defaultAdmin() {
-  const url = process.env.SUPABASE_URL;
+function defaultAdmin(req) {
+  const url = enforcedSupabaseUrl(req, process.env.SUPABASE_URL);
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !serviceRoleKey) {
@@ -180,7 +187,7 @@ export function createDeleteAccountHandler({ getAdmin = defaultAdmin } = {}) {
       });
     }
 
-    const admin = getAdmin();
+    const admin = getAdmin(req);
 
     if (!admin) {
       console.error("Account deletion is not configured.");

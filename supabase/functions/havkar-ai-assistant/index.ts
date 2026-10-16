@@ -1,17 +1,23 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
-  LIMITS,
   assistantInstruction,
   providerErrorStatus,
+  providerFailureMessage,
+  providerRetryDelayMs,
+  providerStatusIsRetryable,
   validateAssistantRequest
 } from "./policy.mjs";
 
 const ALLOWED_ORIGINS = new Set([
   "https://havkar-app.vercel.app",
-  "https://testnet.havkar.online"
+  "https://testnet.havkar.online",
+  "https://staging.havkar.online"
 ]);
 
 const DEFAULT_MODEL = "gemini-3.5-flash-lite";
+const MAX_PROVIDER_ATTEMPTS = 3;
+const MAX_SIMULTANEOUS_PROVIDER_CALLS = 8;
+let activeProviderCalls = 0;
 const MAX_PROVIDER_RESPONSE_CHARACTERS = 20000;
 const MAX_ASSISTANT_MESSAGE_CHARACTERS = 4000;
 
@@ -72,10 +78,10 @@ function providerContents(messages) {
   }));
 }
 
-function generationConfig(model) {
+function generationConfig(model, maxOutputTokens) {
   const config: Record<string, unknown> = {
     temperature: 0.4,
-    maxOutputTokens: LIMITS.maxOutputTokens,
+    maxOutputTokens,
     candidateCount: 1
   };
 
@@ -86,6 +92,25 @@ function generationConfig(model) {
   return config;
 }
 
+function reserveProviderSlot() {
+  if (activeProviderCalls >= MAX_SIMULTANEOUS_PROVIDER_CALLS) {
+    return false;
+  }
+
+  activeProviderCalls += 1;
+  return true;
+}
+
+function releaseProviderSlot() {
+  if (activeProviderCalls > 0) {
+    activeProviderCalls -= 1;
+  }
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function logProviderFailure(httpStatus, payload) {
   const errorStatus = providerErrorStatus(payload) || "none";
   console.error(
@@ -94,7 +119,7 @@ function logProviderFailure(httpStatus, payload) {
   );
 }
 
-function assistantMessage(payload) {
+function assistantMessage(payload, limit) {
   const parts = payload?.candidates?.[0]?.content?.parts;
 
   if (!Array.isArray(parts)) {
@@ -106,7 +131,7 @@ function assistantMessage(payload) {
     .map((part) => part.text)
     .join("")
     .trim()
-    .slice(0, MAX_ASSISTANT_MESSAGE_CHARACTERS);
+    .slice(0, limit);
 }
 
 async function readProviderPayload(response) {
@@ -121,6 +146,69 @@ async function readProviderPayload(response) {
   } catch {
     return null;
   }
+}
+
+async function requestAssistantContent(
+  model: string,
+  validation: { languageName: string; task: string; messages: { role: string; content: string }[]; maxOutputTokens: number },
+  providerKey: string
+) {
+  const body = JSON.stringify({
+    systemInstruction: {
+      parts: [{ text: assistantInstruction(validation.languageName, validation.task) }]
+    },
+    contents: providerContents(validation.messages),
+    generationConfig: generationConfig(model, validation.maxOutputTokens)
+  });
+  let lastStatus = 0;
+
+  for (let attempt = 0; attempt < MAX_PROVIDER_ATTEMPTS; attempt += 1) {
+    try {
+      const providerResponse = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/" +
+          encodeURIComponent(model) +
+          ":generateContent",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": providerKey
+          },
+          signal: AbortSignal.timeout(12000),
+          body
+        }
+      );
+
+      if (providerResponse.ok) {
+        return {
+          ok: true,
+          status: providerResponse.status,
+          payload: await readProviderPayload(providerResponse)
+        };
+      }
+
+      lastStatus = providerResponse.status;
+      const retryAfter = providerResponse.headers.get("retry-after") || "";
+      logProviderFailure(lastStatus, await readProviderPayload(providerResponse));
+
+      if (!providerStatusIsRetryable(lastStatus) || attempt === MAX_PROVIDER_ATTEMPTS - 1) {
+        return { ok: false, status: lastStatus, payload: null };
+      }
+
+      await sleep(providerRetryDelayMs(attempt, retryAfter));
+    } catch {
+      logProviderFailure(0, null);
+      lastStatus = 0;
+
+      if (attempt === MAX_PROVIDER_ATTEMPTS - 1) {
+        return { ok: false, status: 0, payload: null };
+      }
+
+      await sleep(providerRetryDelayMs(attempt, ""));
+    }
+  }
+
+  return { ok: false, status: lastStatus, payload: null };
 }
 
 async function readJson(request) {
@@ -191,81 +279,94 @@ Deno.serve(async (request) => {
     return json(401, { ok: false, error: "Sign in before using the assistant." }, headers);
   }
 
-  const budget = await admin.rpc("consume_ai_budget", {
-    p_user_id: userResult.data.user.id,
-    p_characters: validation.characters
-  });
-  const budgetRow = Array.isArray(budget.data) ? budget.data[0] : budget.data;
-
-  if (budget.error || !budgetRow || typeof budgetRow.allowed !== "boolean") {
-    return json(503, { ok: false, error: "The assistant is temporarily unavailable." }, headers);
-  }
-
-  if (!budgetRow.allowed) {
-    const retryAfter = Number(budgetRow.retry_after) > 0
-      ? String(budgetRow.retry_after)
-      : "60";
-
+  if (!reserveProviderSlot()) {
     return json(429, {
       ok: false,
-      error: "The assistant limit has been reached. Please wait and try again."
+      error: providerFailureMessage(429)
     }, {
       ...headers,
-      "Retry-After": retryAfter
+      "Retry-After": "2"
     });
   }
 
-  const model = modelName();
-  let providerResponse;
-
   try {
-    providerResponse = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/" +
-        encodeURIComponent(model) +
-        ":generateContent",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": providerKey
-        },
-        signal: AbortSignal.timeout(20000),
-        body: JSON.stringify({
-          systemInstruction: {
-            parts: [{ text: assistantInstruction(validation.languageName) }]
-          },
-          contents: providerContents(validation.messages),
-          generationConfig: generationConfig(model)
-        })
+    const budget = await admin.rpc("consume_ai_budget", {
+      p_user_id: userResult.data.user.id,
+      p_characters: validation.characters
+    });
+    const budgetRow = Array.isArray(budget.data) ? budget.data[0] : budget.data;
+
+    if (budget.error || !budgetRow || typeof budgetRow.allowed !== "boolean") {
+      const budgetText = budget.error && budget.error.message ? String(budget.error.message) : "";
+      const budgetCode = budget.error && budget.error.code ? String(budget.error.code) : "";
+
+      if (
+        validation.characters > 2000 &&
+        (budgetCode === "22023" || budgetText.includes("invalid assistant budget request"))
+      ) {
+        return json(400, { ok: false, error: "This draft is longer than the active assistant limit." }, headers);
       }
+
+      return json(503, { ok: false, error: "The assistant is temporarily unavailable." }, headers);
+    }
+
+    if (!budgetRow.allowed) {
+      const retryAfter = Number(budgetRow.retry_after) > 0
+        ? String(budgetRow.retry_after)
+        : "60";
+
+      return json(429, {
+        ok: false,
+        error: "The assistant limit has been reached. Please wait and try again."
+      }, {
+        ...headers,
+        "Retry-After": retryAfter
+      });
+    }
+
+    const providerResult = await requestAssistantContent(
+      modelName(),
+      validation,
+      providerKey
     );
-  } catch {
-    logProviderFailure(0, null);
-    return json(502, { ok: false, error: "The assistant could not answer. Please try again." }, headers);
+
+    if (!providerResult.ok) {
+      const status = providerResult.status === 429 || providerResult.status === 503
+        ? providerResult.status
+        : 502;
+
+      return json(status, {
+        ok: false,
+        error: providerFailureMessage(providerResult.status)
+      }, status === 502 ? headers : {
+        ...headers,
+        "Retry-After": "3"
+      });
+    }
+
+    const payload = providerResult.payload;
+    const blocked = payload?.promptFeedback?.blockReason;
+
+    if (blocked) {
+      return json(400, { ok: false, error: "This request cannot be answered." }, headers);
+    }
+
+    const message = assistantMessage(
+      payload,
+      validation.task === "menu" ? 12000 : MAX_ASSISTANT_MESSAGE_CHARACTERS
+    );
+
+    if (!message) {
+      logProviderFailure(providerResult.status, payload);
+      return json(502, { ok: false, error: providerFailureMessage(0) }, headers);
+    }
+
+    return json(200, {
+      ok: true,
+      language: validation.language,
+      message
+    }, headers);
+  } finally {
+    releaseProviderSlot();
   }
-
-  if (!providerResponse.ok) {
-    logProviderFailure(providerResponse.status, await readProviderPayload(providerResponse));
-    return json(502, { ok: false, error: "The assistant could not answer. Please try again." }, headers);
-  }
-
-  const payload = await readProviderPayload(providerResponse);
-  const blocked = payload?.promptFeedback?.blockReason;
-
-  if (blocked) {
-    return json(400, { ok: false, error: "This request cannot be answered." }, headers);
-  }
-
-  const message = assistantMessage(payload);
-
-  if (!message) {
-    logProviderFailure(providerResponse.status, payload);
-    return json(502, { ok: false, error: "The assistant could not answer. Please try again." }, headers);
-  }
-
-  return json(200, {
-    ok: true,
-    language: validation.language,
-    message
-  }, headers);
 });

@@ -1,7 +1,10 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+import {
+  enforcedSupabaseUrl,
+  realPaymentsAllowed,
+  requestHostname
+} from "../server/supabase-target.cjs";
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL,
@@ -169,9 +172,17 @@ export default async function handler(req, res) {
     );
   }
 
+  if (!realPaymentsAllowed(requestHostname(req))) {
+    return sendError(
+      res,
+      404,
+      "Not found"
+    );
+  }
+
   if (
     !process.env.STRIPE_SECRET_KEY ||
-    !process.env.SUPABASE_URL ||
+    !enforcedSupabaseUrl(req, process.env.SUPABASE_URL) ||
     !process.env.SUPABASE_SERVICE_ROLE_KEY
   ) {
     console.error(
@@ -387,6 +398,7 @@ export default async function handler(req, res) {
     let session;
 
     try {
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
       session =
         await stripe.checkout.sessions.create({
           mode: "payment",
