@@ -213,6 +213,41 @@ h1 {
 .forgot-btn:hover {
     text-decoration: underline;
 }
+
+.google-btn {
+    width: 100%;
+    margin-top: 12px;
+    padding: 17px;
+    border: 2px solid #c5d4c8;
+    border-radius: 13px;
+    background: #fff;
+    color: #263529;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.google-btn:hover {
+    background: #f7fbf8;
+}
+
+.google-mark {
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    color: #1a73e8;
+    border: 1px solid #dadce0;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+}
 .recovery-highlight {
     display: block;
     width: 100%;
@@ -582,6 +617,10 @@ import {
     createClient
 } from "https://esm.sh/@supabase/supabase-js@2";
 
+import {
+    googleSignInAvailability
+} from "/havkar-login-google.mjs";
+
 
 /* =========================================================
    HAVKAR SUPABASE CONFIGURATION
@@ -899,11 +938,41 @@ function showResetMode() {
 /* =========================================================
    GOOGLE OAUTH — SUPABASE
 ========================================================= */
+const googleButtonLabel = '<span class="google-mark" aria-hidden="true">G</span> Continue with Google';
+
+function restoreGoogleButton() {
+    googleBtn.disabled = false;
+    googleBtn.innerHTML = googleButtonLabel;
+}
+
+window.addEventListener("pageshow", restoreGoogleButton);
+
 googleBtn.addEventListener("click", async () => {
     googleBtn.disabled = true;
-    googleBtn.textContent = "Connecting to Google...";
     showMessage("");
     try {
+        const availability = await googleSignInAvailability(
+            SUPABASE_URL,
+            SUPABASE_KEY
+        );
+
+        if (availability === "unavailable") {
+            showMessage(
+                "Sign-in is not available on this address.",
+                "error"
+            );
+            return;
+        }
+
+        if (availability === "disabled") {
+            showMessage(
+                "Google sign-in is not enabled for this environment.",
+                "error"
+            );
+            return;
+        }
+
+        googleBtn.textContent = "Connecting to Google...";
         const redirectTo = new URL("login.html", window.location.href).href;
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: "google",
@@ -911,12 +980,11 @@ googleBtn.addEventListener("click", async () => {
         });
         if (error) throw error;
         if (!data?.url) throw new Error("Google authorization URL was not returned.");
-        // Supabase redirects the browser to Google; the return is handled below.
     } catch (error) {
         console.error("HAVKAR Google OAuth Error:", error);
         showMessage("Google sign-in could not be started. Please try again.", "error");
-        googleBtn.disabled = false;
-        googleBtn.innerHTML = '<span class="google-mark" aria-hidden="true">G</span> Continue with Google';
+    } finally {
+        restoreGoogleButton();
     }
 });
 
