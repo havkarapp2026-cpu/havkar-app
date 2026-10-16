@@ -518,6 +518,32 @@ button{
     line-height:1;
 }
 
+.badge-legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:12px;
+}
+
+.badge-legend p{
+    flex-basis:100%;
+    margin:0;
+    color:#4d6b52;
+    font-size:13px;
+    font-weight:700;
+    line-height:1.4;
+}
+
+.verification-badge.pending{
+    background:#f4f7f4;
+    color:#6d7f72;
+}
+
+.verification-badge.diamond{
+    background:#e8f5e9;
+    color:#17652a;
+}
+
 
 /* =========================================================
    ACCOUNT TYPE BADGE
@@ -3306,6 +3332,7 @@ input:focus-visible{
 
 <script src="/havkar-i18n.js"></script>
 <script src="/havkar-verification.js"></script>
+<script src="/havkar-badges.js"></script>
 
 
 <!-- =========================================================
@@ -4136,7 +4163,7 @@ function renderVerificationBadge(
             <div class="verification-badge company">
 
                 <span class="badge-symbol">
-                    ◆
+                    ★
                 </span>
 
                 Verified Company / Factory
@@ -4674,10 +4701,20 @@ async function(){
 
                     ${verificationBadge}
 
+                    <div id="serverBadgeRow"></div>
 
                 </div>
 
             `;
+
+            if(window.HAVKAR_BADGES){
+                window.HAVKAR_BADGES.mountAccount(
+                    document.getElementById("serverBadgeRow"),
+                    supabase,
+                    user.id,
+                    getVerificationType(user)
+                );
+            }
 
         }
 

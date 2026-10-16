@@ -16,6 +16,7 @@ main{width:100%;max-width:760px;margin:0 auto;background:#fff;border:2px solid r
 .brandbar img{width:40px;height:40px;border-radius:10px}
 .brandbar strong{display:block;font-size:1rem}
 .brandbar span{display:block;color:#4d6b52;font-size:.85rem;font-weight:700}
+.havkar-badge{display:inline-flex;align-items:center;margin:0 0 12px;padding:7px 12px;border-radius:20px;background:#e8f5e9;color:#17652a;font-weight:800}
 h1{margin:0 0 8px;color:#17652a;font-size:2rem}
 h2{margin:22px 0 8px;color:#2e7d32;font-size:1.15rem}
 p{line-height:1.5}
@@ -67,6 +68,7 @@ button{margin-top:12px;border:0;border-radius:14px;background:#16833c;color:#fff
 </section>
 </main>
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-badges.js"></script>
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isPublicSlug, renderPublicPage, unavailableMessage } from "./js/business-catalog.mjs";
@@ -116,6 +118,12 @@ if (!isPublicSlug(slug)) {
     if (failed) {
       showStatus(unavailableMessage(failed.error));
     } else {
+      const badgeResult = await supabase.rpc("list_visible_page_badges", {
+        target_page: pageId
+      });
+      const badges = badgeResult.error || !Array.isArray(badgeResult.data)
+        ? []
+        : badgeResult.data.map((row) => row.badge_code);
       const html = renderPublicPage({
         page: pageResult.data,
         sections: sections.data || [],
@@ -123,7 +131,8 @@ if (!isPublicSlug(slug)) {
         products: (offerings.data || []).filter((row) => row.kind === "product"),
         menu: menu.data || [],
         images: images.data || [],
-        mediaBaseUrl: config.url
+        mediaBaseUrl: config.url,
+        badges
       });
       if (!html) {
         showStatus("This public business page is not available.");

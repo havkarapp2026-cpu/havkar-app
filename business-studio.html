@@ -40,6 +40,7 @@ button[disabled]{opacity:.65;cursor:wait}
 <main>
 <a class="brandbar" href="index.html"><img src="icon.png" alt="HAVKAR" width="40" height="40"><span><strong>HAVKAR</strong><span>Business studio</span></span></a>
 <h1>Public business page</h1>
+<div id="badgeRow"></div>
 <p class="note">Create a public page for a restaurant, factory, shop, service, or any other legitimate business. Prices are display text. This page does not take a payment.</p>
 <p id="status" class="status">Checking your HAVKAR session...</p>
 <div id="pages" class="pages"></div>
@@ -84,6 +85,7 @@ button[disabled]{opacity:.65;cursor:wait}
 </section>
 </main>
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-badges.js"></script>
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { BUSINESS_CATEGORIES, buildPageWrite, fittedImageSize, mediaPath, parseMenuText, unavailableMessage } from "./js/business-catalog.mjs";
@@ -258,6 +260,14 @@ if (!config || !config.url || !config.publishableKey) {
     status.textContent = "Sign in before creating a public business page.";
   } else {
     status.textContent = "Your HAVKAR session is ready.";
+    if (window.HAVKAR_BADGES) {
+      window.HAVKAR_BADGES.mountAccount(
+        document.getElementById("badgeRow"),
+        supabase,
+        session.user.id,
+        ""
+      );
+    }
     editor.hidden = false;
     const owned = await supabase.from("business_pages").select("id,slug,display_name,published,moderation_state").order("updated_at", { ascending: false });
     if (owned.error) {

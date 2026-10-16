@@ -415,6 +415,9 @@ function renderPublicPage(model) {
   const parts = ['<article class="business-page">'];
   parts.push('<p class="category">' + escapeText(categoryLabel(page)) + "</p>");
   parts.push("<h1>" + escapeText(page.display_name) + "</h1>");
+  if (Array.isArray(model.badges) && model.badges.indexOf("business_verified") !== -1) {
+    parts.push('<p class="havkar-badge">★ Verified business</p>');
+  }
 
   if (logo) {
     parts.push(logo);
