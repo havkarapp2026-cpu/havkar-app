@@ -42,13 +42,14 @@ select{width:100%;border:1px solid #cbe4d0;border-radius:14px;padding:12px;font:
 <option value="menu">Numbered menu</option>
 </select>
 <label for="question">Question</label>
-<textarea id="question" name="question" maxlength="1200" required></textarea>
+<textarea id="question" name="question" maxlength="1200" required dir="auto" data-i18n-ignore translate="no"></textarea>
 <button id="ask" type="submit" disabled>Ask HAVKAR AI</button>
 </form>
 <p><a href="login.html">Log in</a></p>
-<div class="reply" aria-live="polite" id="reply">No answer yet.</div>
+<div class="reply" aria-live="polite" id="reply" dir="auto" data-i18n-ignore translate="no">No answer yet.</div>
 </main>
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-i18n.js"></script>
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -66,9 +67,26 @@ task.addEventListener("change", () => {
 });
 
 function languageCode() {
+  const i18n = window.HAVKAR_I18N;
+  if (i18n && typeof i18n.getLanguage === "function") {
+    return i18n.getLanguage();
+  }
   const stored = localStorage.getItem("havkar_language") || localStorage.getItem("selectedLanguage") || "en";
   return String(stored).trim().toLowerCase() || "en";
 }
+
+function applyInterfaceDirection() {
+  const i18n = window.HAVKAR_I18N;
+  const code = languageCode();
+  const dir = i18n && typeof i18n.getDirection === "function"
+    ? i18n.getDirection(code)
+    : "ltr";
+  document.documentElement.lang = code || "en";
+  document.documentElement.dir = dir === "rtl" ? "rtl" : "ltr";
+}
+
+applyInterfaceDirection();
+let requestInFlight = false;
 
 if (!config || !config.url || !config.publishableKey) {
   sessionState.textContent = "HAVKAR configuration was not found on this page.";
@@ -88,20 +106,20 @@ if (!config || !config.url || !config.publishableKey) {
     askForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const content = question.value.trim();
-      if (!content) {
-        reply.textContent = "Enter a question first.";
+      if (!content || requestInFlight) {
+        if (!content) reply.textContent = "Enter a question first.";
         return;
       }
+      requestInFlight = true;
       ask.disabled = true;
       reply.textContent = "Waiting for HAVKAR AI...";
-      const current = await supabase.auth.getSession();
-      const accessToken = current.data && current.data.session && current.data.session.access_token;
-      if (current.error || !accessToken) {
-        reply.textContent = "Sign in before using HAVKAR AI.";
-        ask.disabled = false;
-        return;
-      }
       try {
+        const current = await supabase.auth.getSession();
+        const accessToken = current.data && current.data.session && current.data.session.access_token;
+        if (current.error || !accessToken) {
+          reply.textContent = "Sign in before using HAVKAR AI.";
+          return;
+        }
         const response = await fetch(config.url + "/functions/v1/havkar-ai-assistant", {
           method: "POST",
           headers: {
@@ -122,6 +140,7 @@ if (!config || !config.url || !config.publishableKey) {
       } catch (error) {
         reply.textContent = "HAVKAR AI could not be reached.";
       } finally {
+        requestInFlight = false;
         ask.disabled = false;
       }
     });

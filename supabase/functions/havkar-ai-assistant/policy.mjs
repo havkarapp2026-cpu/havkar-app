@@ -138,6 +138,36 @@ function validateAssistantRequest(body) {
   };
 }
 
+function providerStatusIsRetryable(status) {
+  return status === 429 || status === 503;
+}
+
+function providerRetryDelayMs(attempt, retryAfterHeader, random) {
+  const roll = typeof random === "function" ? Number(random()) : Math.random();
+  const unit = Number.isFinite(roll) ? Math.min(Math.max(roll, 0), 0.999) : 0;
+  const header = Number(retryAfterHeader);
+
+  if (Number.isFinite(header) && header > 0) {
+    return Math.min(Math.round(Math.min(header, 4) * 1000) + Math.floor(unit * 200), 4000);
+  }
+
+  const step = Number.isInteger(attempt) && attempt > 0 ? Math.min(attempt, 3) : 0;
+
+  return Math.min((400 * (2 ** step)) + Math.floor(unit * 250), 4000);
+}
+
+function providerFailureMessage(status) {
+  if (status === 429) {
+    return "The assistant is busy. Please wait a moment and try again.";
+  }
+
+  if (status === 503) {
+    return "The assistant is temporarily unavailable. Please try again.";
+  }
+
+  return "The assistant could not answer. Please try again.";
+}
+
 function providerErrorStatus(payload) {
   const status = payload && payload.error ? payload.error.status : "";
 
@@ -150,6 +180,7 @@ function assistantInstruction(languageName, task) {
   const base = [
     "You are the HAVKAR assistant.",
     "Reply only in " + languageName + ".",
+    "If the user's latest message is written in another language, reply in that language instead.",
     "Answer practical questions about using HAVKAR.",
     "Do not claim that a payment, booking, identity check, wallet balance, or trade has been completed.",
     "Do not invent account data, prices, or verification status.",
@@ -179,5 +210,8 @@ export {
   assistantInstruction,
   normalizeLanguage,
   providerErrorStatus,
+  providerFailureMessage,
+  providerRetryDelayMs,
+  providerStatusIsRetryable,
   validateAssistantRequest
 };

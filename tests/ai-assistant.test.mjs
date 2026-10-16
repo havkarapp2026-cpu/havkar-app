@@ -6,6 +6,9 @@ import {
   assistantInstruction,
   normalizeLanguage,
   providerErrorStatus,
+  providerFailureMessage,
+  providerRetryDelayMs,
+  providerStatusIsRetryable,
   validateAssistantRequest
 } from "../supabase/functions/havkar-ai-assistant/policy.mjs";
 
@@ -27,6 +30,7 @@ const accepted = validateAssistantRequest({
 assert.equal(accepted.ok, true);
 assert.equal(accepted.language, "fa");
 assert.match(assistantInstruction(accepted.languageName), /فارسی/);
+assert.match(assistantInstruction("English"), /another language/);
 
 const kurdish = validateAssistantRequest({
   language: "ku",
@@ -110,6 +114,24 @@ assert.equal(providerErrorStatus({ error: { status: "RESOURCE_EXHAUSTED" } }), "
 assert.equal(providerErrorStatus({ error: { status: "AIzaSysecretkeyvalue" } }), "");
 assert.equal(providerErrorStatus({ error: { status: "model is unavailable" } }), "");
 assert.equal(providerErrorStatus({ error: { message: "NOT_FOUND" } }), "");
+assert.equal(providerStatusIsRetryable(429), true);
+assert.equal(providerStatusIsRetryable(503), true);
+assert.equal(providerStatusIsRetryable(400), false);
+assert.equal(providerStatusIsRetryable(502), false);
+assert.equal(providerRetryDelayMs(0, "", () => 0), 400);
+assert.equal(providerRetryDelayMs(1, "", () => 0), 800);
+assert.equal(providerRetryDelayMs(2, "", () => 0), 1600);
+assert.equal(providerRetryDelayMs(0, "", () => 0.999), 649);
+assert.equal(providerRetryDelayMs(0, "2", () => 0), 2000);
+assert.equal(providerRetryDelayMs(0, "30", () => 0), 4000);
+assert.match(providerFailureMessage(429), /busy/);
+assert.match(providerFailureMessage(503), /temporarily unavailable/);
+assert.match(providerFailureMessage(0), /could not answer/);
+assert.equal(source.indexOf("reserveProviderSlot") < source.indexOf("consume_ai_budget"), true);
+assert.match(source, /MAX_PROVIDER_ATTEMPTS = 3/);
+assert.match(source, /MAX_SIMULTANEOUS_PROVIDER_CALLS = 8/);
+assert.match(source, /providerRetryDelayMs/);
+assert.match(source, /providerFailureMessage/);
 assert.doesNotMatch(source, /console\.error\([^)]*providerKey/);
 assert.doesNotMatch(source, /console\.error\([^)]*payload/);
 assert.match(source, /part\.thought !== true/);
@@ -123,6 +145,17 @@ assert.match(translate, /Google Cloud Translation API/);
 
 const apiFiles = fs.readdirSync(path.join(root, "api")).filter((name) => name.endsWith(".js"));
 assert.equal(apiFiles.length, 12);
+
+const assistantPage = read("havkar-ai.html");
+assert.match(assistantPage, /havkar-i18n\.js/);
+assert.match(assistantPage, /getDirection/);
+assert.match(assistantPage, /dir="auto"/);
+assert.match(assistantPage, /requestInFlight/);
+assert.match(assistantPage, /data-i18n-ignore/);
+assert.doesNotMatch(assistantPage, /HAVKAR_AI_API_KEY/);
+assert.match(read("havkar-i18n.js"), /code: "ckb"[\s\S]*?dir: "rtl"/);
+assert.match(read("havkar-i18n.js"), /code: "kmr"[\s\S]*?dir: "ltr"/);
+assert.match(read("havkar-i18n.js"), /"fa",\s*"ar",\s*"ur",\s*"ckb"/);
 
 const testPage = read("ai-assistant-test.html");
 assert.match(testPage, /supabase\.auth\.getSession\(\)/);
