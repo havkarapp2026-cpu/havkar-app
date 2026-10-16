@@ -12,6 +12,9 @@ function draft(extra) {
     title: "Pizza Chef",
     company: "HAVKAR Kitchen",
     location: "Crotone, Italy",
+    city: "Crotone",
+    country: "Italy",
+    category: "Hospitality",
     type: "Full-time",
     salary: "€1,800/month",
     skills: ["Pizza", "Cooking"],
@@ -99,12 +102,16 @@ function savedRow(payload, id) {
     { name: "Basic", price: 9.99 }
   );
   assert.strictEqual(inserted.ok, true);
-  assert.strictEqual(inserted.payload.status, "pending_payment");
+  assert.strictEqual(inserted.payload.status, "active");
   assert.strictEqual(inserted.payload.plan, "Basic");
   assert.strictEqual(inserted.payload.monthly_fee, 9.99);
   assert.strictEqual(inserted.payload.user_id, ownerId);
+  assert.strictEqual(inserted.payload.city, "Crotone");
+  assert.strictEqual(inserted.payload.country, "Italy");
+  assert.strictEqual(inserted.payload.category, "Hospitality");
   assert.strictEqual(inserted.payload.application_url, "https://jobs.example.com/apply");
-  assert.strictEqual(inserted.payload.contact, "chef@example.com");
+  assert.strictEqual(inserted.payload.contact, undefined);
+  assert.ok(Date.parse(inserted.payload.expires_at) > Date.now());
   assert.strictEqual(inserted.payload.remote, false);
 
   const remoteInsert = jobs.buildJobInsert(
@@ -114,8 +121,8 @@ function savedRow(payload, id) {
   );
   assert.strictEqual(remoteInsert.payload.remote, true);
   assert.strictEqual(remoteInsert.payload.application_url, null);
-  assert.strictEqual(remoteInsert.payload.contact, null);
-  assert.strictEqual(remoteInsert.payload.status, "pending_payment");
+  assert.strictEqual(remoteInsert.payload.contact, undefined);
+  assert.strictEqual(remoteInsert.payload.status, "active");
 
   assert.strictEqual(
     jobs.buildJobInsert(draft(), ownerId, { name: "Basic", price: 1 }).ok,
@@ -188,6 +195,16 @@ function savedRow(payload, id) {
   assert.deepStrictEqual(deleteCall.filters, [["id", 7], ["user_id", ownerId]]);
   assert.strictEqual(deleteCall.select, "id");
 
+  const closed = await jobs.closeOwnJob(client, {
+    jobId: 7,
+    userId: ownerId
+  });
+  assert.strictEqual(closed.ok, true);
+  const closeCall = client.calls[client.calls.length - 1];
+  assert.strictEqual(closeCall.op, "update");
+  assert.strictEqual(closeCall.payload.status, "closed");
+  assert.deepStrictEqual(closeCall.filters, [["id", 7], ["user_id", ownerId]]);
+
   const emptyDelete = await jobs.deleteOwnJob(emptyClient, {
     jobId: 7,
     userId: ownerId
@@ -196,16 +213,17 @@ function savedRow(payload, id) {
   assert.strictEqual(emptyDelete.reason, "not_confirmed");
 
   const createClient = mockClient(function (state) {
-    assert.strictEqual(state.payload.status, "pending_payment");
+    assert.strictEqual(state.payload.status, "active");
+    assert.strictEqual(state.payload.contact, undefined);
     return { data: savedRow(state.payload, 8), error: null };
   });
   const created = await jobs.createOwnJob(createClient, {
     userId: ownerId,
     plan: { name: "Business", price: 39.99 },
-    draft: draft({ status: "active" })
+    draft: draft({ status: "pending_payment" })
   });
   assert.strictEqual(created.ok, true);
-  assert.strictEqual(created.row.status, "pending_payment");
+  assert.strictEqual(created.row.status, "active");
   assert.strictEqual(createClient.calls[0].single, true);
 
   const active = {
@@ -259,6 +277,7 @@ function savedRow(payload, id) {
   assert.strictEqual(expired.available, false);
 
   assert.strictEqual(jobs.jobStatusKind({ status: "pending_payment" }), "pending_payment");
+  assert.strictEqual(jobs.jobStatusKind({ status: "closed" }), "closed");
   assert.strictEqual(jobs.jobStatusKind({ status: "active", expires_at: null }), "active");
   assert.strictEqual(jobs.jobStatusKind({
     status: "active",
@@ -316,6 +335,12 @@ function savedRow(payload, id) {
   assert.strictEqual(jobs.filterJobs(listings, { query: "hospitality" })[0].title, "Chef");
   assert.strictEqual(jobs.filterJobs(listings, { query: "junior" })[0].title, "Driver");
   assert.strictEqual(jobs.filterJobs(listings, { location: "crotone" })[0].title, "Chef");
+  listings[0].city = "Crotone";
+  listings[0].country = "Italy";
+  assert.strictEqual(jobs.filterJobs(listings, { city: "Crotone" })[0].title, "Chef");
+  assert.strictEqual(jobs.filterJobs(listings, { country: "Italy" })[0].title, "Chef");
+  assert.strictEqual(jobs.filterJobs(listings, { category: "Hospitality" })[0].title, "Chef");
+  assert.strictEqual(jobs.filterJobs(listings, { category: "Health" }).length, 0);
   assert.strictEqual(jobs.filterJobs(listings, { query: "secret@example.com" }).length, 0);
   assert.strictEqual(jobs.filterJobs(listings, { query: "secret.example" }).length, 0);
   assert.strictEqual(jobs.jobSearchHaystack(listings[0]).includes("secret@example.com"), false);
@@ -330,15 +355,27 @@ function savedRow(payload, id) {
   assert.ok(page.includes("contactAction"));
   assert.ok(page.includes("filterJobs"));
   assert.ok(page.includes('id="locationInput"'));
+  assert.ok(page.includes('id="cityInput"'));
+  assert.ok(page.includes('id="countryInput"'));
+  assert.ok(page.includes('id="categoryFilter"'));
   assert.ok(page.includes("pending_payment"));
   assert.ok(page.includes("The payment gateway is not connected yet."));
-  assert.ok(page.includes("Your advertisement has NOT been activated."));
+  assert.ok(page.includes("No payment was taken."));
+  assert.ok(page.includes("havkar-job-applications.js"));
+  assert.ok(page.includes("closeOwnJob"));
+  assert.ok(page.includes("submitJobApplication"));
   assert.ok(!page.includes("Application started for"));
-  assert.ok(!page.includes('status:"active"'));
-  assert.ok(!page.includes("status: \"active\""));
-  assert.ok(!moduleSource.includes('status:"active"'));
-  assert.ok(!moduleSource.includes("status: \"active\""));
-  assert.ok(moduleSource.includes('payload.status = "pending_payment"'));
+  assert.ok(!page.includes("payment confirmed"));
+  assert.ok(moduleSource.includes('payload.status = "active"'));
+  assert.ok(!moduleSource.includes('payload.status = "pending_payment"'));
+  assert.ok(!moduleSource.includes("getPublicUrl"));
+  assert.ok(!moduleSource.includes("service_role"));
+
+  const applications = fs.readFileSync(path.join(__dirname, "../havkar-job-applications.js"), "utf8");
+  assert.ok(applications.includes('RESUME_BUCKET = "job-resumes"'));
+  assert.ok(!applications.includes("getPublicUrl"));
+  assert.ok(!applications.includes("service_role"));
+  assert.ok(applications.includes('ad_id: null'));
 
   const services = fs.readFileSync(path.join(__dirname, "../services.html"), "utf8");
   assert.ok(!services.includes("havkar-jobs.js"));
