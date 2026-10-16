@@ -1,9 +1,9 @@
 /*
  * HAVKAR jobs rules.
  *
- * Uses only columns that already exist on public.jobs.
+ * A new listing is public and unpaid. Paid promotion is not confirmed here.
+ * Employer contact is stored in job_contacts, not on the public jobs row.
  * Update and delete stay limited to the signed-in owner.
- * This file never marks a listing active and never confirms payment.
  */
 (function (root, factory) {
 
@@ -17,7 +17,18 @@
 
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
 
-  const JOB_COLUMNS = "id,created_at,user_id,title,company,location,job_type,salary,description,requirements,contact,status,expires_at,application_url,remote,category,language,experience_level,education_level,skills,currency,salary_min,salary_max,type,image,plan,monthly_fee";
+  const JOB_COLUMNS = "id,created_at,user_id,title,company,location,city,country,job_type,salary,description,requirements,contact,status,expires_at,application_url,remote,category,language,experience_level,education_level,skills,currency,salary_min,salary_max,type,image,plan,monthly_fee";
+
+  const CATEGORIES = [
+    "Hospitality",
+    "Technology",
+    "Health",
+    "Education",
+    "Construction",
+    "Transport",
+    "Retail",
+    "Other"
+  ];
 
   const JOB_TYPES = [
     "Full-time",
@@ -51,11 +62,13 @@
     invalid_application_url: "Enter a full http or https application link, or leave it empty.",
     invalid_plan: "Please choose a publishing plan.",
     invalid_image: "Please select a valid image file.",
+    invalid_category: "Please choose a job category.",
     missing: "Please sign in before continuing.",
     rejected: "The server rejected this change.",
     not_confirmed: "The server did not confirm this change.",
     blocked_fields: "This change is not available.",
-    payment_required: "The job stays inactive until a real payment provider confirms it."
+    duplicate: "An open listing with this title, city, and country already exists.",
+    payment_required: "Paid promotion is not connected. No payment was taken."
   };
 
   function clean(value) {
@@ -84,6 +97,7 @@
     if (!job) return "inactive";
     if (job.status === "active" && isExpired(job, now)) return "expired";
     if (job.status === "active") return "active";
+    if (job.status === "closed") return "closed";
     if (job.status === "pending_payment") return "pending_payment";
     return "inactive";
   }
@@ -106,6 +120,8 @@
       job && job.title,
       job && job.company,
       job && job.location,
+      job && job.city,
+      job && job.country,
       job && job.type,
       job && job.job_type,
       skills,
@@ -120,15 +136,29 @@
     }).join(" ").toLowerCase();
   }
 
+  function placeText(job) {
+    return [
+      job && job.location,
+      job && job.city,
+      job && job.country
+    ].map(function (value) {
+      return String(value == null ? "" : value);
+    }).join(" ").toLowerCase();
+  }
+
   function filterJobs(list, options) {
     const settings = options || {};
     const query = clean(settings.query).toLowerCase();
     const location = clean(settings.location).toLowerCase();
+    const city = clean(settings.city).toLowerCase();
+    const country = clean(settings.country).toLowerCase();
+    const category = clean(settings.category).toLowerCase();
     return (list || []).filter(function (job) {
       if (!jobMatchesType(job, settings.filter)) return false;
-      if (location && !String(job.location || "").toLowerCase().includes(location)) {
-        return false;
-      }
+      if (location && !placeText(job).includes(location)) return false;
+      if (city && !placeText(job).includes(city)) return false;
+      if (country && !placeText(job).includes(country)) return false;
+      if (category && clean(job && job.category).toLowerCase() !== category) return false;
       if (query && !jobSearchHaystack(job).includes(query)) return false;
       return true;
     });
@@ -250,6 +280,9 @@
     const title = clean(source.title);
     const company = clean(source.company);
     const location = clean(source.location);
+    const city = clean(source.city);
+    const country = clean(source.country);
+    const category = clean(source.category);
     const description = clean(source.description);
     const type = clean(source.type || source.job_type);
     const salary = clean(source.salary);
@@ -257,8 +290,14 @@
     const requirements = clean(source.requirements);
     const contact = clean(source.contact);
 
-    if (!title || !company || !location || !description) {
+    if (!title || !company || !location || !description || !city || !country) {
       return { ok: false, reason: "required_fields", message: MESSAGES.required_fields };
+    }
+    if (city.length < 2 || city.length > 80 || country.length < 2 || country.length > 80) {
+      return { ok: false, reason: "required_fields", message: MESSAGES.required_fields };
+    }
+    if (CATEGORIES.indexOf(category) === -1) {
+      return { ok: false, reason: "invalid_category", message: MESSAGES.invalid_category };
     }
     if (title.length < 2 || title.length > 120) {
       return { ok: false, reason: "title_short", message: MESSAGES.title_short };
@@ -288,6 +327,9 @@
       title: title,
       company: company,
       location: location,
+      city: city,
+      country: country,
+      category: category,
       type: type,
       salary: salary,
       skills: skills,
@@ -313,13 +355,15 @@
       title: value.title,
       company: value.company,
       location: value.location,
+      city: value.city,
+      country: value.country,
+      category: value.category,
       job_type: value.type,
       type: value.type,
       salary: value.salary || "Negotiable",
       skills: value.skills || "General",
       description: value.description,
       requirements: value.requirements || null,
-      contact: value.contact || null,
       application_url: value.application_url,
       remote: value.type === "Remote"
     };
@@ -368,10 +412,11 @@
     const payload = contentPayload(validation.value);
     payload.user_id = userId;
     payload.image = image.image;
-    payload.status = "pending_payment";
+    payload.status = "active";
     payload.plan = chosen.name;
     payload.monthly_fee = chosen.price;
-    if (payload.status !== "pending_payment") {
+    payload.expires_at = new Date(Date.now() + (60 * 24 * 60 * 60 * 1000)).toISOString();
+    if (payload.status !== "active" || Object.prototype.hasOwnProperty.call(payload, "contact")) {
       return { ok: false, reason: "payment_required", message: MESSAGES.payment_required };
     }
     return { ok: true, payload: payload };
@@ -387,10 +432,13 @@
 
   function confirmed(result) {
     if (!result || result.error) {
+      const code = result && result.error && result.error.code;
       return {
         ok: false,
-        reason: "rejected",
-        message: (result && result.error && result.error.message) || MESSAGES.rejected
+        reason: code === "23505" ? "duplicate" : "rejected",
+        message: code === "23505"
+          ? MESSAGES.duplicate
+          : ((result && result.error && result.error.message) || MESSAGES.rejected)
       };
     }
     const row = oneRow(result.data);
@@ -404,7 +452,7 @@
     const source = input || {};
     const built = buildJobInsert(source.draft, source.userId, source.plan);
     if (!built.ok) return built;
-    if (built.payload.status !== "pending_payment") {
+    if (built.payload.status !== "active" || Object.prototype.hasOwnProperty.call(built.payload, "contact")) {
       return { ok: false, reason: "payment_required", message: MESSAGES.payment_required };
     }
     const result = await client
@@ -434,6 +482,55 @@
     return confirmed(result);
   }
 
+  async function closeOwnJob(client, input) {
+    const source = input || {};
+    if (!client || !source.jobId || !source.userId) {
+      return { ok: false, reason: "missing", message: MESSAGES.missing };
+    }
+    const result = await client
+      .from("jobs")
+      .update({ status: "closed" })
+      .eq("id", source.jobId)
+      .eq("user_id", source.userId)
+      .select(JOB_COLUMNS);
+    return confirmed(result);
+  }
+
+  async function saveJobContact(client, input) {
+    const source = input || {};
+    const contact = clean(source.contact);
+    if (!client || !source.jobId || !source.userId) {
+      return { ok: false, reason: "missing", message: MESSAGES.missing };
+    }
+    if (!contact) {
+      const removed = await client
+        .from("job_contacts")
+        .delete()
+        .eq("job_id", source.jobId)
+        .eq("user_id", source.userId);
+      if (removed && removed.error) {
+        return {
+          ok: false,
+          reason: "rejected",
+          message: removed.error.message || MESSAGES.rejected
+        };
+      }
+      return { ok: true };
+    }
+    if (contact.length < 3 || contact.length > 200) {
+      return { ok: false, reason: "required_fields", message: MESSAGES.required_fields };
+    }
+    const saved = await client
+      .from("job_contacts")
+      .upsert({
+        job_id: source.jobId,
+        user_id: source.userId,
+        contact: contact
+      }, { onConflict: "job_id" })
+      .select("job_id,user_id,contact");
+    return confirmed(saved);
+  }
+
   async function deleteOwnJob(client, input) {
     const source = input || {};
     if (!client || !source.jobId || !source.userId) {
@@ -451,6 +548,7 @@
   return {
     JOB_COLUMNS: JOB_COLUMNS,
     JOB_TYPES: JOB_TYPES,
+    CATEGORIES: CATEGORIES,
     BLOCKED_UPDATE_FIELDS: BLOCKED_UPDATE_FIELDS,
     isExpired: isExpired,
     isPublicListing: isPublicListing,
@@ -466,6 +564,8 @@
     buildJobInsert: buildJobInsert,
     createOwnJob: createOwnJob,
     updateOwnJob: updateOwnJob,
+    closeOwnJob: closeOwnJob,
+    saveJobContact: saveJobContact,
     deleteOwnJob: deleteOwnJob
   };
 

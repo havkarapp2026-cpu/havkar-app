@@ -116,6 +116,14 @@ body{
   letter-spacing:.2px;
 }
 
+.header-mark{
+  width:36px;
+  height:36px;
+  border-radius:10px;
+  object-fit:cover;
+  background:#f8fcf8;
+}
+
 .header-right{
   display:flex;
   align-items:center;
@@ -210,6 +218,62 @@ body{
   font-size:15px;
   outline:none;
   transition:.2s;
+}
+
+.search select{
+  width:100%;
+  height:50px;
+  padding:0 16px;
+  border:1px solid var(--border);
+  border-radius:15px;
+  background:#fafcfb;
+  color:var(--text);
+  font-size:15px;
+}
+
+.job-filters-extra{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+  margin-top:12px;
+}
+
+.job-filters-extra input,
+.job-filters-extra select{
+  width:100%;
+  height:50px;
+  padding:0 16px;
+  border:1px solid var(--border);
+  border-radius:15px;
+  background:#fafcfb;
+  color:var(--text);
+  font-size:15px;
+}
+
+.apply-panel,
+.application-card{
+  margin-top:16px;
+  padding:14px;
+  border:1px solid var(--border);
+  border-radius:16px;
+  background:#fafcfb;
+}
+
+.apply-panel textarea,
+.application-card p{
+  width:100%;
+  margin-top:8px;
+}
+
+.apply-panel input[type="file"]{
+  width:100%;
+  margin:8px 0 12px;
+}
+
+@media(min-width:720px){
+  .job-filters-extra{
+    grid-template-columns:1fr 1fr 1fr;
+  }
 }
 
 .search input:focus{
@@ -1231,6 +1295,8 @@ a.primary{
 
     </button>
 
+    <img class="header-mark" src="/icon.png" alt="HAVKAR">
+
     <h1>Jobs</h1>
 
   </div>
@@ -1244,6 +1310,16 @@ a.primary{
       aria-label="Notifications">
 
       <i class="fas fa-bell"></i>
+
+    </button>
+
+    <button
+      class="icon-btn"
+      type="button"
+      onclick="openMyApplications()"
+      aria-label="My applications">
+
+      <i class="fas fa-file-lines"></i>
 
     </button>
 
@@ -1324,6 +1400,40 @@ a.primary{
         <i class="fas fa-times"></i>
 
       </button>
+
+    </div>
+
+    <div class="job-filters-extra">
+
+      <input
+        id="cityInput"
+        type="search"
+        autocomplete="off"
+        maxlength="80"
+        placeholder="City"
+        aria-label="City"
+      >
+
+      <input
+        id="countryInput"
+        type="search"
+        autocomplete="off"
+        maxlength="80"
+        placeholder="Country"
+        aria-label="Country"
+      >
+
+      <select id="categoryFilter" aria-label="Category">
+        <option value="">All categories</option>
+        <option value="Hospitality">Hospitality</option>
+        <option value="Technology">Technology</option>
+        <option value="Health">Health</option>
+        <option value="Education">Education</option>
+        <option value="Construction">Construction</option>
+        <option value="Transport">Transport</option>
+        <option value="Retail">Retail</option>
+        <option value="Other">Other</option>
+      </select>
 
     </div>
 
@@ -1565,6 +1675,31 @@ a.primary{
     </div>
 
     <div class="form-group">
+      <label>City *</label>
+      <input id="jobCity" type="text" maxlength="80" placeholder="Crotone">
+    </div>
+
+    <div class="form-group">
+      <label>Country *</label>
+      <input id="jobCountry" type="text" maxlength="80" placeholder="Italy">
+    </div>
+
+    <div class="form-group">
+      <label>Category *</label>
+      <select id="jobCategory">
+        <option value="">Choose a category</option>
+        <option value="Hospitality">Hospitality</option>
+        <option value="Technology">Technology</option>
+        <option value="Health">Health</option>
+        <option value="Education">Education</option>
+        <option value="Construction">Construction</option>
+        <option value="Transport">Transport</option>
+        <option value="Retail">Retail</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <div class="form-group">
 
       <label>Job type</label>
 
@@ -1707,9 +1842,9 @@ a.primary{
     </div>
 
     <div class="notice">
-      Your job will remain
-      <strong>Pending payment</strong>
-      until a real payment provider confirms the subscription.
+      The listing is published without a charge.
+      Paid promotion stays unavailable until a real payment provider is connected.
+      No payment is taken on this screen.
     </div>
 
     <button
@@ -1717,8 +1852,8 @@ a.primary{
       type="button"
       onclick="submitJob()">
 
-      <i class="fas fa-arrow-right"></i>
-      Continue to payment
+      <i class="fas fa-check"></i>
+      Publish listing
 
     </button>
 
@@ -1813,6 +1948,31 @@ a.primary{
 
 </div>
 
+<div class="modal" id="applicationsModal">
+
+  <div class="modal-box">
+
+    <div class="modal-head">
+
+      <h2>
+        My applications
+      </h2>
+
+      <button
+        class="close"
+        type="button"
+        onclick="closeModal('applicationsModal')">
+        ×
+      </button>
+
+    </div>
+
+    <div id="myApplicationsContent"></div>
+
+  </div>
+
+</div>
+
 <!-- =======================================================
      EDIT JOB MODAL
      ======================================================= -->
@@ -1891,6 +2051,30 @@ a.primary{
     </div>
 
     <div class="form-group">
+      <label>City *</label>
+      <input id="editJobCity" type="text" maxlength="80">
+    </div>
+
+    <div class="form-group">
+      <label>Country *</label>
+      <input id="editJobCountry" type="text" maxlength="80">
+    </div>
+
+    <div class="form-group">
+      <label>Category *</label>
+      <select id="editJobCategory">
+        <option value="Hospitality">Hospitality</option>
+        <option value="Technology">Technology</option>
+        <option value="Health">Health</option>
+        <option value="Education">Education</option>
+        <option value="Construction">Construction</option>
+        <option value="Transport">Transport</option>
+        <option value="Retail">Retail</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <div class="form-group">
       <label>Job type</label>
       <select id="editJobType">
         <option value="Full-time">Full-time</option>
@@ -1955,6 +2139,7 @@ a.primary{
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-profile-photo.js"></script>
 <script src="/havkar-jobs.js"></script>
+<script src="/havkar-job-applications.js"></script>
 <script>
 
 /* =========================================================
@@ -2057,7 +2242,7 @@ async function loadSupabaseJobs(){
   const { data, error } =
     await supabaseClient
       .from("jobs")
-      .select("id,created_at,user_id,title,company,location,job_type,salary,description,requirements,contact,status,expires_at,application_url,remote,category,language,experience_level,education_level,skills,currency,salary_min,salary_max,type,image,plan,monthly_fee")
+      .select("id,created_at,user_id,title,company,location,city,country,job_type,salary,description,requirements,contact,status,expires_at,application_url,remote,category,language,experience_level,education_level,skills,currency,salary_min,salary_max,type,image,plan,monthly_fee")
       .order("created_at", { ascending:false });
 
   if(error){
@@ -2338,12 +2523,19 @@ function renderJobs(){
       ? locationInput.value.trim()
       : "";
 
+  const cityInput = document.getElementById("cityInput");
+  const countryInput = document.getElementById("countryInput");
+  const categoryFilter = document.getElementById("categoryFilter");
+
   const filtered =
     window.HAVKAR_JOBS
       ? window.HAVKAR_JOBS.filterJobs(jobs, {
           filter: selectedFilter,
           query: search,
-          location: location
+          location: location,
+          city: cityInput ? cityInput.value : "",
+          country: countryInput ? countryInput.value : "",
+          category: categoryFilter ? categoryFilter.value : ""
         })
       : jobs.filter(job =>
           selectedFilter === "All" ||
@@ -2485,6 +2677,7 @@ function renderJobs(){
               <i class="fas fa-location-dot"></i>
 
               ${escapeHTML(
+                [job.city, job.country].filter(Boolean).join(", ") ||
                 job.location ||
                 "Not specified"
               )}
@@ -2674,6 +2867,48 @@ function openJob(id){
       <div class="detail-row">
 
         <span class="detail-label">
+          City
+        </span>
+
+        <span class="detail-value">
+
+          ${escapeHTML(job.city || "Not specified")}
+
+        </span>
+
+      </div>
+
+      <div class="detail-row">
+
+        <span class="detail-label">
+          Country
+        </span>
+
+        <span class="detail-value">
+
+          ${escapeHTML(job.country || "Not specified")}
+
+        </span>
+
+      </div>
+
+      <div class="detail-row">
+
+        <span class="detail-label">
+          Category
+        </span>
+
+        <span class="detail-value">
+
+          ${escapeHTML(job.category || "Not specified")}
+
+        </span>
+
+      </div>
+
+      <div class="detail-row">
+
+        <span class="detail-label">
           Job type
         </span>
 
@@ -2779,12 +3014,7 @@ function openJob(id){
 
         ? `
 
-          ${
-            window.HAVKAR_JOBS &&
-            window.HAVKAR_JOBS.isPublicListing(job)
-              ? renderApplicationAction(job)
-              : ""
-          }
+          ${renderOwnerJobActions(job)}
 
           <button
             class="secondary"
@@ -2830,7 +3060,7 @@ function openJob(id){
 
         `
 
-        : renderApplicationAction(job)
+        : renderApplyPanel(job)
     }
 
   `;
@@ -2855,6 +3085,11 @@ function openJob(id){
   openModal(
     "detailModal"
   );
+
+  translateJobsFragment(detail);
+  if(!job.owner){
+    refreshApplicantState(job.id);
+  }
 }
 
 /* =========================================================
@@ -2904,6 +3139,15 @@ function jobStatusHTML(job){
     `;
   }
 
+  if(kind === "closed"){
+    return `
+      <span class="status-badge status-pending">
+        <i class="fas fa-lock"></i>
+        Closed
+      </span>
+    `;
+  }
+
   if(kind === "pending_payment"){
     return `
       <span class="status-badge status-pending">
@@ -2921,53 +3165,372 @@ function jobStatusHTML(job){
   `;
 }
 
-function renderApplicationAction(job){
+function translateJobsFragment(node){
+  if(
+    node &&
+    window.HAVKAR_I18N &&
+    typeof window.HAVKAR_I18N.translateRoot === "function"
+  ){
+    window.HAVKAR_I18N.translateRoot(node);
+  }
+}
 
+function externalApplyLink(job){
   const action =
     window.HAVKAR_JOBS
       ? window.HAVKAR_JOBS.contactAction(job)
-      : {
-          available:false,
-          label:"Application contact is not available."
-        };
+      : null;
 
-  if(!action.available){
-    return `
-      <p class="notice">
-        ${escapeHTML(action.label)}
-      </p>
-    `;
+  if(!action || !action.available || action.kind !== "url"){
+    return "";
   }
-
-  if(action.kind === "text"){
-    return `
-      <div class="notice">
-        <strong>${escapeHTML(action.label)}</strong>
-        <br>
-        ${escapeHTML(action.text)}
-      </div>
-    `;
-  }
-
-  const detail =
-    action.text
-      ? `
-        <div class="upload-note">
-          ${escapeHTML(action.text)}
-        </div>
-      `
-      : "";
 
   return `
     <a
-      class="primary"
+      class="secondary"
       href="${escapeHTML(action.href)}"
       target="_blank"
       rel="noopener noreferrer">
       ${escapeHTML(action.label)}
     </a>
-    ${detail}
   `;
+}
+
+function renderOwnerJobActions(job){
+  const closed = job.status === "closed";
+  return `
+    <button
+      class="secondary"
+      type="button"
+      onclick="showEmployerApplications('${escapeJS(job.id)}')">
+      View applications
+    </button>
+    ${
+      closed
+        ? ""
+        : `
+          <button
+            class="secondary"
+            type="button"
+            onclick="closeJobListing('${escapeJS(job.id)}')">
+            Close listing
+          </button>
+        `
+    }
+    <button
+      class="secondary"
+      type="button"
+      onclick="startRealPayment('${escapeJS(job.id)}')">
+      Paid promotion
+    </button>
+    <div id="employerApplications"></div>
+  `;
+}
+
+function renderApplyPanel(job){
+  const open =
+    window.HAVKAR_JOBS &&
+    window.HAVKAR_JOBS.isPublicListing(job);
+
+  if(!open){
+    return `
+      <p class="notice">
+        This listing is not open for applications.
+      </p>
+    `;
+  }
+
+  return `
+    <div class="apply-panel" id="applyPanel">
+      <label for="applyCover">Cover letter</label>
+      <textarea
+        id="applyCover"
+        maxlength="2000"
+        placeholder="Introduce yourself"></textarea>
+      <label for="applyResume">Resume</label>
+      <input
+        id="applyResume"
+        type="file"
+        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+      <p class="upload-note">
+        PDF, DOC, or DOCX. Maximum 5 MB.
+        Only you and this employer can open the file.
+      </p>
+      <button
+        class="primary"
+        type="button"
+        onclick="submitJobApplication('${escapeJS(job.id)}')">
+        Send application
+      </button>
+      <div id="applyStatus"></div>
+      ${externalApplyLink(job)}
+    </div>
+  `;
+}
+
+function renderApplicationAction(job){
+  return renderApplyPanel(job);
+}
+
+let loadedApplications = [];
+
+function applicationById(id){
+  return loadedApplications.find(
+    item => String(item.id) === String(id)
+  );
+}
+
+function applicationCard(row, job){
+  const employerId = (job && job.user_id) || (row.jobs && row.jobs.user_id) || "";
+  const resume = row.resume_path
+    ? `
+      <button
+        class="secondary"
+        type="button"
+        onclick="openResume('${escapeJS(row.resume_path)}')">
+        Open resume
+      </button>
+    `
+    : "";
+  const decision = row.status === "pending" && job && job.owner
+    ? `
+      <button
+        class="secondary"
+        type="button"
+        onclick="decideApplication('${escapeJS(row.id)}','accepted','${escapeJS(job.id)}')">
+        Accept
+      </button>
+      <button
+        class="danger"
+        type="button"
+        onclick="decideApplication('${escapeJS(row.id)}','rejected','${escapeJS(job.id)}')">
+        Reject
+      </button>
+    `
+    : "";
+  const withdraw = row.status === "pending" && !job
+    ? `
+      <button
+        class="secondary"
+        type="button"
+        onclick="decideApplication('${escapeJS(row.id)}','withdrawn','')">
+        Withdraw
+      </button>
+    `
+    : "";
+  return `
+    <article class="application-card">
+      <strong>${escapeHTML(row.status || "pending")}</strong>
+      <p>${escapeHTML(row.cover_letter || "No cover letter")}</p>
+      ${resume}
+      ${decision}
+      ${withdraw}
+      <button
+        class="secondary"
+        type="button"
+        onclick="openJobConversation('${escapeJS(row.id)}','${escapeJS(employerId)}')">
+        Message
+      </button>
+    </article>
+  `;
+}
+
+async function refreshApplicantState(jobId){
+  if(!window.HAVKAR_JOB_APPLICATIONS) return;
+  await refreshCurrentUser();
+  const box = document.getElementById("applyStatus");
+  if(!currentUser || !box) return;
+  const result = await window.HAVKAR_JOB_APPLICATIONS.listMine(
+    supabaseClient,
+    currentUser.id
+  );
+  if(!result.ok){
+    box.textContent = result.message || "Applications could not be loaded.";
+    return;
+  }
+  loadedApplications = result.rows;
+  const mine = result.rows.find(
+    item => String(item.job_id) === String(jobId)
+  );
+  if(!mine){
+    box.textContent = "";
+    return;
+  }
+  box.innerHTML = applicationCard(mine, null);
+  translateJobsFragment(box);
+}
+
+async function submitJobApplication(jobId){
+  await refreshCurrentUser();
+  if(!currentUser){
+    alert("Please sign in before applying.");
+    window.location.href = "profile.html";
+    return;
+  }
+  if(!window.HAVKAR_JOB_APPLICATIONS){
+    alert("Application tools could not be loaded.");
+    return;
+  }
+  const job = jobs.find(item => String(item.id) === String(jobId));
+  if(!job || job.owner){
+    alert("You can apply to another employer's open listing.");
+    return;
+  }
+  const cover = document.getElementById("applyCover");
+  const fileInput = document.getElementById("applyResume");
+  const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+  const result = await window.HAVKAR_JOB_APPLICATIONS.submitApplication(
+    supabaseClient,
+    {
+      jobId: job.id,
+      applicantId: currentUser.id,
+      coverLetter: cover ? cover.value : "",
+      file: file
+    }
+  );
+  if(!result.ok){
+    alert(result.message || "The application could not be sent.");
+    return;
+  }
+  await refreshApplicantState(job.id);
+  alert("Your application was sent. You can follow its status in My applications.");
+}
+
+async function showEmployerApplications(jobId){
+  const job = ownJob(jobId);
+  const box = document.getElementById("employerApplications");
+  if(!currentUser || !job || job.owner !== true || !box || !window.HAVKAR_JOB_APPLICATIONS){
+    alert("You can only view applications for your own listing.");
+    return;
+  }
+  const result = await window.HAVKAR_JOB_APPLICATIONS.listForJob(
+    supabaseClient,
+    job.id
+  );
+  if(!result.ok){
+    box.textContent = result.message || "Applications could not be loaded.";
+    return;
+  }
+  loadedApplications = result.rows;
+  box.innerHTML = result.rows.length
+    ? result.rows.map(row => applicationCard(row, job)).join("")
+    : `<p class="notice">No applications yet.</p>`;
+  translateJobsFragment(box);
+}
+
+async function decideApplication(applicationId, status, jobId){
+  await refreshCurrentUser();
+  if(!currentUser || !window.HAVKAR_JOB_APPLICATIONS){
+    alert("Please sign in before continuing.");
+    return;
+  }
+  const result = await window.HAVKAR_JOB_APPLICATIONS.decideApplication(
+    supabaseClient,
+    {
+      applicationId: applicationId,
+      status: status
+    }
+  );
+  if(!result.ok){
+    alert(result.message || "The application could not be updated.");
+    return;
+  }
+  if(jobId){
+    await showEmployerApplications(jobId);
+  }else{
+    await openMyApplications();
+  }
+}
+
+async function openResume(path){
+  if(!window.HAVKAR_JOB_APPLICATIONS) return;
+  const signed = await window.HAVKAR_JOB_APPLICATIONS.resumeSignedUrl(
+    supabaseClient,
+    path
+  );
+  if(!signed.ok || !signed.url){
+    alert(signed.message || "This resume is not available to you.");
+    return;
+  }
+  window.open(signed.url, "_blank", "noopener,noreferrer");
+}
+
+async function openJobConversation(applicationId, employerId){
+  await refreshCurrentUser();
+  const application = applicationById(applicationId);
+  if(!currentUser || !application || !window.HAVKAR_JOB_APPLICATIONS){
+    alert("This conversation is not available.");
+    return;
+  }
+  const job = jobs.find(item => String(item.id) === String(application.job_id));
+  const sellerId = employerId || (job && job.user_id) || "";
+  const result = await window.HAVKAR_JOB_APPLICATIONS.openConversation(
+    supabaseClient,
+    {
+      application: application,
+      applicantId: application.applicant_id,
+      employerId: sellerId
+    }
+  );
+  if(!result.ok || !result.conversationId){
+    alert(result.message || "The conversation could not be opened.");
+    return;
+  }
+  window.location.href =
+    "chat.html?conversation_id=" +
+    encodeURIComponent(result.conversationId);
+}
+
+async function openMyApplications(){
+  await refreshCurrentUser();
+  if(!currentUser){
+    alert("Please sign in to view your applications.");
+    window.location.href = "profile.html";
+    return;
+  }
+  const box = document.getElementById("myApplicationsContent");
+  if(!box || !window.HAVKAR_JOB_APPLICATIONS) return;
+  const result = await window.HAVKAR_JOB_APPLICATIONS.listMine(
+    supabaseClient,
+    currentUser.id
+  );
+  if(!result.ok){
+    box.textContent = result.message || "Applications could not be loaded.";
+  }else{
+    loadedApplications = result.rows;
+    box.innerHTML = result.rows.length
+      ? result.rows.map(row => applicationCard(row, null)).join("")
+      : `<p class="notice">You have not applied to a job yet.</p>`;
+    translateJobsFragment(box);
+  }
+  openModal("applicationsModal");
+}
+
+async function closeJobListing(id){
+  await refreshCurrentUser();
+  const job = ownJob(id);
+  if(!currentUser || !job || job.owner !== true || !window.HAVKAR_JOBS){
+    alert("You can only close your own job listings.");
+    return;
+  }
+  if(!confirm("Close this listing? New applications will stop.")) return;
+  const result = await window.HAVKAR_JOBS.closeOwnJob(
+    supabaseClient,
+    {
+      jobId: job.id,
+      userId: currentUser.id
+    }
+  );
+  if(!result.ok){
+    alert(result.message || "The listing could not be closed.");
+    return;
+  }
+  const updated = normalizeJob(result.row);
+  jobs = jobs.map(item =>
+    String(item.id) === String(updated.id) ? updated : item
+  );
+  renderJobs();
+  openJob(updated.id);
 }
 
 /* =========================================================
@@ -2998,6 +3561,8 @@ function resetPostForm(){
     "jobTitle",
     "jobCompany",
     "jobLocation",
+    "jobCity",
+    "jobCountry",
     "jobSalary",
     "jobSkills",
     "jobDescription",
@@ -3021,6 +3586,9 @@ function resetPostForm(){
     "jobType"
   ).value =
     "Full-time";
+
+  const category = document.getElementById("jobCategory");
+  if(category) category.value = "";
 
   removeJobImage();
 
@@ -3385,6 +3953,12 @@ async function openEditJob(id){
   document.getElementById("editJobTitle").value = job.title || "";
   document.getElementById("editJobCompany").value = job.company || "";
   document.getElementById("editJobLocation").value = job.location || "";
+  document.getElementById("editJobCity").value = job.city || "";
+  document.getElementById("editJobCountry").value = job.country || "";
+  const categorySelect = document.getElementById("editJobCategory");
+  if(categorySelect){
+    categorySelect.value = job.category || "Other";
+  }
   document.getElementById("editJobSalary").value =
     job.salary && job.salary !== "Negotiable" ? job.salary : "";
   document.getElementById("editJobSkills").value =
@@ -3392,7 +3966,16 @@ async function openEditJob(id){
   document.getElementById("editJobDescription").value = job.description || "";
   document.getElementById("editJobRequirements").value = job.requirements || "";
   document.getElementById("editJobApplicationUrl").value = job.application_url || "";
-  document.getElementById("editJobContact").value = job.contact || "";
+  document.getElementById("editJobContact").value = "";
+  const ownContact = await supabaseClient
+    .from("job_contacts")
+    .select("contact")
+    .eq("job_id", job.id)
+    .eq("user_id", currentUser.id)
+    .maybeSingle();
+  if(ownContact && ownContact.data && ownContact.data.contact){
+    document.getElementById("editJobContact").value = ownContact.data.contact;
+  }
 
   const typeSelect = document.getElementById("editJobType");
   const type = job.type || job.job_type || "Full-time";
@@ -3433,6 +4016,9 @@ async function saveJobEdit(){
     title:document.getElementById("editJobTitle").value,
     company:document.getElementById("editJobCompany").value,
     location:document.getElementById("editJobLocation").value,
+    city:document.getElementById("editJobCity").value,
+    country:document.getElementById("editJobCountry").value,
+    category:document.getElementById("editJobCategory").value,
     type:document.getElementById("editJobType").value,
     existingType:job.type || job.job_type || "",
     salary:document.getElementById("editJobSalary").value,
@@ -3461,6 +4047,18 @@ async function saveJobEdit(){
   if(!result.ok){
     alert(result.message || "The job could not be updated.");
     return;
+  }
+
+  const contactResult = await window.HAVKAR_JOBS.saveJobContact(
+    supabaseClient,
+    {
+      jobId: job.id,
+      userId: currentUser.id,
+      contact: document.getElementById("editJobContact").value
+    }
+  );
+  if(!contactResult.ok){
+    alert(contactResult.message || "The listing was saved, but the private contact was not.");
   }
 
   const updated = normalizeJob(result.row);
@@ -3542,6 +4140,9 @@ async function submitJob(){
   const title = document.getElementById("jobTitle").value.trim();
   const company = document.getElementById("jobCompany").value.trim();
   const location = document.getElementById("jobLocation").value.trim();
+  const city = document.getElementById("jobCity").value.trim();
+  const country = document.getElementById("jobCountry").value.trim();
+  const category = document.getElementById("jobCategory").value;
   const type = document.getElementById("jobType").value;
   const salary = document.getElementById("jobSalary").value.trim();
   const skills = document.getElementById("jobSkills").value
@@ -3575,6 +4176,9 @@ async function submitJob(){
         title,
         company,
         location,
+        city,
+        country,
+        category,
         type,
         salary,
         skills,
@@ -3598,18 +4202,30 @@ async function submitJob(){
     return;
   }
 
-  if(result.row.status !== "pending_payment"){
-    if(submitButton) submitButton.disabled = true;
-    alert("The server has not confirmed that this job stayed unpaid. Do not submit it again. Check My Jobs before posting again.");
+  if(result.row.status !== "active"){
+    alert("The server did not publish this listing. Check My Jobs before posting again.");
     return;
   }
+
+  const contactResult = await window.HAVKAR_JOBS.saveJobContact(
+    supabaseClient,
+    {
+      jobId: result.row.id,
+      userId: currentUser.id,
+      contact: contact
+    }
+  );
 
   const newJob = normalizeJob(result.row);
   jobs = [newJob, ...jobs.filter(job => String(job.id) !== String(newJob.id))];
 
   closeModal("postModal");
   renderJobs();
-  showPaymentScreen(newJob);
+  if(!contactResult.ok && contact){
+    alert(contactResult.message || "The listing is public, but the private contact was not saved.");
+    return;
+  }
+  alert("Your listing is public. No payment was taken. Paid promotion is not connected.");
 }
 
 /* =========================================================
@@ -3763,7 +4379,8 @@ function startRealPayment(jobId){
 
   alert(
     "The payment gateway is not connected yet. " +
-    "Your advertisement has NOT been activated."
+    "No payment was taken. " +
+    "This listing was not marked as a paid promotion."
   );
 }
 
@@ -4276,6 +4893,17 @@ if(locationInput){
       renderJobs();
     }
   );
+}
+
+["cityInput", "countryInput"].forEach(function(id){
+  const field = document.getElementById(id);
+  if(!field) return;
+  field.addEventListener("input", renderJobs);
+});
+
+const categoryFilter = document.getElementById("categoryFilter");
+if(categoryFilter){
+  categoryFilter.addEventListener("change", renderJobs);
 }
 
 function clearLocationFilter(){
