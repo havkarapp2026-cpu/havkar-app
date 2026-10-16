@@ -7,6 +7,10 @@ const sql = fs.readFileSync(
   new URL("../supabase/migrations/20261016140000_badge_infrastructure.sql", import.meta.url),
   "utf8"
 );
+const entry = fs.readFileSync(
+  new URL("../supabase/migrations/20261016183000_badge_issuance_entry.sql", import.meta.url),
+  "utf8"
+);
 const profile = fs.readFileSync(new URL("../profile.html", import.meta.url), "utf8");
 const studio = fs.readFileSync(new URL("../business-studio.html", import.meta.url), "utf8");
 const business = fs.readFileSync(new URL("../business.html", import.meta.url), "utf8");
@@ -18,7 +22,13 @@ assert.match(sql, /awarded_by <> user_id/);
 assert.match(sql, /REVOKE ALL ON FUNCTION havkar_private\.award_badge/);
 assert.match(sql, /FROM PUBLIC, anon, authenticated, service_role/);
 assert.doesNotMatch(sql, /GRANT EXECUTE ON FUNCTION havkar_private\.award_badge/);
-assert.doesNotMatch(sql, /INSERT INTO havkar_private\.user_badges \(\s*\n\s*'[0-9a-f-]+'/);
+assert.doesNotMatch(entry, /issuance_enabled\s*=\s*true/);
+assert.match(entry, /SECURITY INVOKER/);
+assert.match(entry, /GRANT EXECUTE ON FUNCTION public\.award_badge[\s\S]*TO authenticated/);
+assert.match(entry, /REVOKE ALL ON FUNCTION public\.award_badge[\s\S]*FROM PUBLIC, anon, service_role/);
+assert.doesNotMatch(entry, /GRANT EXECUTE ON FUNCTION public\.award_badge[\s\S]*TO (anon|service_role)/);
+assert.doesNotMatch(entry, /GRANT EXECUTE ON FUNCTION havkar_private\.award_badge[\s\S]*TO (anon|service_role)/);
+assert.doesNotMatch(sql + entry, /INSERT INTO havkar_private\.user_badges \(\s*\n\s*'[0-9a-f-]+'/);
 assert.doesNotMatch(client, /\.insert\(|\.update\(|\.upsert\(|award_badge/);
 
 const markup = badges.accountMarkup([], "");
