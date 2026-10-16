@@ -22,12 +22,14 @@
 <div class="field"><label for="password">Password (at least 8 characters)</label><div class="password-line"><input id="password" type="password" autocomplete="new-password" minlength="8" required><button type="button" id="togglePassword" aria-label="Show password" aria-pressed="false">Show</button></div></div>
 <div class="field"><label for="confirmPassword">Confirm password</label><div class="password-line"><input id="confirmPassword" type="password" autocomplete="new-password" minlength="8" required><button type="button" id="toggleConfirmPassword" aria-label="Show confirm password" aria-pressed="false">Show</button></div></div>
 <button id="createBtn" class="primary" type="submit">Create Account</button><button id="googleBtn" class="google" type="button">Continue with Google</button><a class="back" href="login.html">Back to Login</a>
-<div id="message" class="message" role="status" aria-live="polite"></div>
+<div id="message" class="message" role="status" aria-live="polite" data-i18n-ignore translate="no"></div>
 </form><footer>HAVKAR • Safe • Secure 🔒</footer></main>
 <script src="/havkar-supabase-config.js"></script>
 <script type="module">
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2';
-const supabase=createClient(window.HAVKAR_SUPABASE_CONFIG.url,window.HAVKAR_SUPABASE_CONFIG.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+import {googleSignInAvailability} from '/havkar-login-google.mjs';
+import {authDirection,authFailureMessage,authMessage} from '/havkar-auth-messages.mjs';
+const supabase=createClient(window.HAVKAR_SUPABASE_CONFIG.url,window.HAVKAR_SUPABASE_CONFIG.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}});
 const $=id=>document.getElementById(id), form=$('signupForm'),message=$('message'),createBtn=$('createBtn'),googleBtn=$('googleBtn');
 const language=$('language');
 const i18n=window.HAVKAR_I18N;
@@ -64,7 +66,7 @@ function saveLanguage(){
 async function paint(){
     try{await i18n.translatePage();}catch(error){console.error('HAVKAR Signup Translation Error:',error);}
 }
-language.addEventListener('change',async()=>{saveLanguage();await paint();});
+language.addEventListener('change',async()=>{saveLanguage();if(lastAuthText)show(lastAuthText,lastAuthType);await paint();});
 function accountType(){return form.querySelector('input[name="account_type"]:checked').value;}
 function updateType(){const org=accountType()!=='personal';$('organizationFields').classList.toggle('hidden',!org);$('organizationName').required=org;}
 form.querySelectorAll('input[name="account_type"]').forEach(r=>r.addEventListener('change',updateType));updateType();
@@ -81,7 +83,8 @@ function bindPasswordToggle(buttonId,inputId){
 }
 bindPasswordToggle('togglePassword','password');
 bindPasswordToggle('toggleConfirmPassword','confirmPassword');
-function show(text,type=''){message.textContent=text;message.className='message '+type;}
+let lastAuthText='',lastAuthType='';
+function show(text,type=''){lastAuthText=text||'';lastAuthType=type||'';const language=i18n&&typeof i18n.getLanguage==='function'?i18n.getLanguage():'en';document.documentElement.lang=language;document.documentElement.dir=authDirection(language);message.textContent=text?authMessage(text,language):'';message.className='message '+type;}
 function setBusy(b){createBtn.disabled=b;googleBtn.disabled=b;createBtn.textContent=b?'Creating account...':'Create Account';}
 form.addEventListener('submit',async e=>{e.preventDefault();show('');const first=$('firstName').value.trim(),last=$('lastName').value.trim(),org=$('organizationName').value.trim(),email=$('email').value.trim(),pass=$('password').value,confirm=$('confirmPassword').value,type=accountType();
 if(!first||!last||(type!=='personal'&&!org)||!email||!pass||!confirm){show('Please fill in all required fields.','error');await paint();return;}
@@ -94,8 +97,11 @@ if(!data?.user){show('Account creation could not be confirmed. Please try again.
 $('password').value='';$('confirmPassword').value='';
 if(data.session){show('Account created and signed in. You can open HAVKAR.','success');createBtn.textContent='Go to HAVKAR';createBtn.disabled=false;form.onsubmit=null;form.addEventListener('submit',e=>{e.preventDefault();location.href='index.html';},{once:true});}
 else{show('Registration request received. If email confirmation is required, check your inbox and confirm your email before logging in.','success');createBtn.textContent='Check your email';createBtn.disabled=true;}
-}catch(err){console.error('HAVKAR Signup Error:',err);show('Account creation could not be completed. Please try again.','error');}finally{googleBtn.disabled=false;if(!createBtn.disabled&&createBtn.textContent!=='Go to HAVKAR')setBusy(false);}
+}catch(err){console.error('HAVKAR Signup Error:',err);show(authFailureMessage(err,'Account creation could not be completed. Please try again.'),'error');}finally{googleBtn.disabled=false;if(!createBtn.disabled&&createBtn.textContent!=='Go to HAVKAR')setBusy(false);}
 await paint();
 });
-googleBtn.addEventListener('click',async()=>{saveLanguage();googleBtn.disabled=true;show('');try{const {error}=await supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:new URL('login.html',location.href).href}});if(error)throw error;}catch(err){console.error('HAVKAR Google OAuth Error:',err);show('Google sign-in could not be started. Please try again.','error');googleBtn.disabled=false;await paint();}});
+const googleLabel='Continue with Google';
+function restoreGoogle(){googleBtn.disabled=false;googleBtn.textContent=googleLabel;}
+window.addEventListener('pageshow',restoreGoogle);
+googleBtn.addEventListener('click',async()=>{saveLanguage();googleBtn.disabled=true;show('');try{const availability=await googleSignInAvailability(window.HAVKAR_SUPABASE_CONFIG.url,window.HAVKAR_SUPABASE_CONFIG.publishableKey);if(availability==='unavailable'){show('Sign-in is not available on this address.','error');return;}if(availability==='disabled'){show('Google sign-in is not enabled for this environment.','error');return;}googleBtn.textContent='Connecting to Google...';const {error}=await supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:new URL('login.html',location.href).href}});if(error)throw error;}catch(err){console.error('HAVKAR Google OAuth Error:',err);show(authFailureMessage(err,'Google sign-in could not be started. Please try again.'),'error');}finally{restoreGoogle();await paint();}});
 </script></body></html>
