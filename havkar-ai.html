@@ -33,8 +33,9 @@ button { cursor: pointer; }
 .app { min-height: 100dvh; }
 .topbar {
   height: 72px; display: flex; align-items: center; gap: 14px;
-  padding: 0 18px; background: #fff;
-  border-bottom: 1px solid #e7f3ea; position: sticky; top: 0; z-index: 6;
+  padding: 0 18px; background: rgba(255,255,255,.78);
+  border-bottom: 1px solid rgba(231,243,234,.9); position: sticky; top: 0; z-index: 6;
+  backdrop-filter: blur(16px);
 }
 .menu-toggle { display: none; width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
 .brand { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--deep); flex: 0 0 auto; }
@@ -125,12 +126,12 @@ h1 { margin: 0; max-width: 460px; font-size: clamp(1.85rem, 2.35vw, 2.45rem); li
 .chip[aria-pressed="true"] { background: #e7f8ec; border-color: #8ed3a0; }
 .flag { width: 18px; height: 18px; flex: none; }
 .more-lang { position: absolute; width: 1px; height: 1px; opacity: 0; }
-.chat { background: #fff; border: 1px solid #e6f2ea; border-radius: 24px; box-shadow: var(--shadow); padding: 14px 14px 12px; display: grid; gap: 10px; }
+.chat { background: rgba(255,255,255,.88); border: 1px solid rgba(230,242,234,.95); border-radius: 24px; box-shadow: var(--shadow); padding: 14px 14px 12px; display: grid; gap: 10px; backdrop-filter: blur(14px); }
 .chat-head { display: flex; align-items: center; gap: 10px; }
 .chat-head h2 { margin: 0; font-size: 1.05rem; display: flex; align-items: center; gap: 6px; }
 .verified { width: 16px; height: 16px; flex: none; }
 .chat-head p, .status { margin: 2px 0 0; color: var(--muted); font-size: .9rem; }
-.clock { margin-inline-start: auto; color: #7d9184; font-variant-numeric: tabular-nums; }
+.clock { color: #7d9184; font-variant-numeric: tabular-nums; }
 .chat-head .mark { width: 42px; height: 42px; }
 .chat-head .mark img { width: 114px; height: 114px; top: -29px; }
 .empty { display: flex; align-items: flex-start; gap: 8px; margin: 0; }
@@ -148,8 +149,22 @@ h1 { margin: 0; max-width: 460px; font-size: clamp(1.85rem, 2.35vw, 2.45rem); li
 .avatar { width: 28px; height: 28px; border-radius: 50%; }
 .avatar img { width: 80px; height: 80px; top: -20px; }
 .bubble { max-width: min(78%, 520px); padding: 10px 12px; border-radius: 16px; white-space: pre-wrap; overflow-wrap: anywhere; }
-.bubble.assistant { background: #f7fbf8; border: 1px solid #e3f0e6; border-end-start-radius: 5px; }
-.bubble.user { background: linear-gradient(180deg, #2f9d4a, #17652a); color: #fff; border-end-end-radius: 5px; }
+.bubble.assistant { background: rgba(247,251,248,.92); border: 1px solid #e3f0e6; border-end-start-radius: 5px; }
+.bubble.user { background: linear-gradient(180deg, #2f9d4a, #17652a); color: #fff; border-end-end-radius: 5px; box-shadow: 0 8px 18px rgba(18,110,42,.16); }
+.turn { animation: rise .28s ease; }
+.bubble-actions { display: flex; gap: 6px; margin-top: 6px; }
+.mini { border: 0; background: transparent; color: var(--green); font-size: .75rem; font-weight: 750; padding: 0; }
+.chat-tools { margin-inline-start: auto; display: flex; align-items: center; gap: 6px; }
+.lang-menu, .history-menu { position: relative; }
+.lang-pop, .history-list {
+  position: absolute; z-index: 5; top: calc(100% + 6px); inset-inline-start: 0; min-width: 220px;
+  display: grid; gap: 4px; padding: 8px; background: rgba(255,255,255,.96); border: 1px solid var(--line);
+  border-radius: 14px; box-shadow: var(--shadow);
+}
+.lang-pop button, .history-item { border: 0; background: #f6fbf7; border-radius: 10px; text-align: start; padding: 8px; font-weight: 700; }
+.history-list { max-height: 240px; overflow: auto; width: min(280px, 70vw); }
+.history-menu summary { list-style: none; }
+.history-menu summary::-webkit-details-marker { display: none; }
 .dots { display: inline-flex; gap: 4px; }
 .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--mid); animation: blink 1s infinite; }
 .suggestions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
@@ -199,7 +214,7 @@ textarea:focus { outline: none; }
 .count bdi { unicode-bidi: isolate; }
 .retry { justify-self: start; border: 1px solid var(--mid); background: #fff; color: var(--green); border-radius: 12px; padding: 8px 12px; font-weight: 800; }
 .rail { display: grid; gap: 12px; }
-.panel { background: #fff; border: 1px solid #e5f2e8; border-radius: 20px; box-shadow: var(--shadow); padding: 12px; }
+.panel { background: rgba(255,255,255,.9); border: 1px solid #e5f2e8; border-radius: 20px; box-shadow: var(--shadow); padding: 12px; backdrop-filter: blur(12px); }
 .rail-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .rail h3 { margin: 0; font-size: .98rem; display: flex; align-items: center; gap: 6px; }
 #refreshExamples { border: 0; background: transparent; color: #1c9a43; padding-inline: 6px; }
@@ -225,12 +240,31 @@ textarea:focus { outline: none; }
 .foot-meta { justify-self: end; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
 .foot-meta span { display: inline-flex; align-items: center; gap: 6px; }
 .side a[hidden], .example[hidden], .tool-note[hidden], .retry[hidden], #logout[hidden],
-#empty[hidden], #suggestions[hidden], #accountEmail[hidden] { display: none !important; }
+#empty[hidden], #suggestions[hidden], #accountEmail[hidden], .lang-pop[hidden], .mini[hidden] { display: none !important; }
+body.dark-mode { color: #e7f6ec; background: #0c1610; }
+body.dark-mode .topbar, body.dark-mode .chat, body.dark-mode .panel, body.dark-mode .lang-pop, body.dark-mode .history-list, body.dark-mode .tool-list {
+  background: rgba(16, 28, 20, .88); color: #e7f6ec; border-color: #1e3a28;
+}
+body.dark-mode .side { background: #101c14; border-color: #1e3a28; }
+body.dark-mode .side a, body.dark-mode .side button, body.dark-mode h1, body.dark-mode h2, body.dark-mode h3 { color: #e7f6ec; }
+body.dark-mode .side a[aria-current="page"] { background: #173222; }
+body.dark-mode .hero {
+  background: radial-gradient(circle at 58% 46%, rgba(40,90,55,.45), transparent 28%), linear-gradient(102deg, #102117 0%, #163524 55%, #1d4a30 100%);
+}
+body.dark-mode .lede, body.dark-mode .chat-head p, body.dark-mode .status, body.dark-mode .card small { color: #b7d0c0; }
+body.dark-mode .hero-actions button, body.dark-mode .card, body.dark-mode .chip, body.dark-mode .composer-box, body.dark-mode .ghost, body.dark-mode .round {
+  background: #13261b; color: #e7f6ec; border-color: #245236;
+}
+body.dark-mode .search, body.dark-mode textarea { background: transparent; color: #e7f6ec; }
+body.dark-mode .bubble.assistant, body.dark-mode .empty p { background: #173222; color: #e7f6ec; border-color: #245236; }
+body.dark-mode .tips { background: #241c10; border-color: #4a3a1c; }
+body.dark-mode .foot { color: #b7d0c0; }
 a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible {
   outline: 3px solid rgba(22,131,60,.45); outline-offset: 2px;
 }
 @keyframes blink { 50% { opacity: .35; } }
-@media (prefers-reduced-motion: reduce) { .dots i { animation: none; } }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .dots i, .turn { animation: none; } }
 @media (max-width: 1180px) {
   .hero { grid-template-columns: minmax(0, 1fr) 220px; }
   .hero-globe { display: none; }
@@ -285,7 +319,7 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 <label class="search"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="#7aa188" d="M10 4a6 6 0 1 0 3.7 10.7l4 4 1.4-1.4-4-4A6 6 0 0 0 10 4Z"/></svg><input id="navSearch" type="search" placeholder="Search anything in HAVKAR..." aria-label="Search HAVKAR pages"><kbd>⌘K</kbd></label>
 <div class="top-actions">
 <button id="focusLanguage" class="lang-btn" type="button"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm-7 9h3.1a13 13 0 0 0 0 4H5a7 7 0 0 1 0-4Zm3.1-2H5a7 7 0 0 1 3.1-4 13 13 0 0 0 0 4ZM12 19c-.8-1-1.6-2.6-1.9-5h3.8c-.3 2.4-1.1 4-1.9 5Zm2.1-7h-4.2a11 11 0 0 1 0-4h4.2a11 11 0 0 1 0 4Zm.8 6a7 7 0 0 0 3.1-4h-3.1a13 13 0 0 1 0 4Zm0-6h3.1a7 7 0 0 0-3.1-4 13 13 0 0 1 0 4Z"/></svg><span id="langShort" data-i18n-ignore translate="no">EN</span></button>
-<button class="icon-btn" type="button" disabled aria-disabled="true" title="Appearance settings are not available yet" aria-label="Appearance"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M14 3a8 8 0 1 0 7 12 7 7 0 0 1-7-12Z"/></svg></button>
+<button id="themeToggle" class="icon-btn" type="button" aria-pressed="false" aria-label="Appearance"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M14 3a8 8 0 1 0 7 12 7 7 0 0 1-7-12Z"/></svg></button>
 <a class="icon-btn" href="notifications.html" aria-label="Notifications"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 22a2.2 2.2 0 0 0 2.1-2h-4.2A2.2 2.2 0 0 0 12 22Zm7-6.2V11a7 7 0 0 0-5-6.7V3.5a2 2 0 1 0-4 0v.8A7 7 0 0 0 5 11v4.8L3.4 17.4V19h17.2v-1.6L19 15.8Z"/></svg></a>
 <a id="accountLink" class="account" href="login.html"><span class="avatar-fallback" id="accountMark">H</span><span id="accountLabel">Log in</span><span id="accountEmail" hidden data-i18n-ignore translate="no"></span></a>
 </div>
@@ -332,9 +366,13 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 <div class="main-col">
 <div class="lang-row">
 <button class="chip" type="button" data-lang="en" data-i18n-ignore translate="no"><svg class="flag" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="8" fill="#012169"/><path d="M0 8h16M8 0v16" stroke="#fff" stroke-width="4"/><path d="M0 8h16M8 0v16" stroke="#C8102E" stroke-width="2"/><path d="M0 0l16 16M16 0L0 16" stroke="#fff" stroke-width="1.6"/></svg>English</button>
-<button class="chip" type="button" data-lang="fa" data-i18n-ignore translate="no"><svg class="flag" viewBox="0 0 16 16" aria-hidden="true"><clipPath id="flag-fa"><circle cx="8" cy="8" r="8"/></clipPath><g clip-path="url(#flag-fa)"><rect width="16" height="5.4" fill="#239f40"/><rect y="5.4" width="16" height="5.2" fill="#fff"/><rect y="10.6" width="16" height="5.4" fill="#da0000"/></g></svg>فارسی</button>
-<button class="chip" type="button" data-lang="ckb" data-i18n-ignore translate="no"><svg class="flag" viewBox="0 0 16 16" aria-hidden="true"><clipPath id="flag-ckb"><circle cx="8" cy="8" r="8"/></clipPath><g clip-path="url(#flag-ckb)"><rect width="16" height="5.4" fill="#e31d1a"/><rect y="5.4" width="16" height="5.2" fill="#fff"/><rect y="10.6" width="16" height="5.4" fill="#278e3b"/><circle cx="8" cy="8" r="2" fill="#f2d000"/></g></svg>کوردی — سۆرانی</button>
-<button class="chip" type="button" data-lang="kmr" data-i18n-ignore translate="no"><svg class="flag" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="8" fill="#f2d000"/><path d="M3 8h10" stroke="#1d4e89" stroke-width="3"/><circle cx="8" cy="8" r="2" fill="#d71920"/></svg>Kurmancî</button>
+<div class="lang-menu">
+<button id="kurdishToggle" class="chip" type="button" aria-expanded="false" aria-controls="kurdishMenu" data-i18n-ignore translate="no"><svg class="flag" viewBox="0 0 16 16" aria-hidden="true"><clipPath id="flag-ku"><circle cx="8" cy="8" r="8"/></clipPath><g clip-path="url(#flag-ku)"><rect width="16" height="5.4" fill="#e31d1a"/><rect y="5.4" width="16" height="5.2" fill="#fff"/><rect y="10.6" width="16" height="5.4" fill="#278e3b"/><circle cx="8" cy="8" r="2" fill="#f2d000"/></g></svg>Kurdish</button>
+<div id="kurdishMenu" class="lang-pop" hidden>
+<button type="button" data-variant="ckb" data-i18n-ignore translate="no">کوردی — سۆرانی</button>
+<button type="button" data-variant="kmr" data-i18n-ignore translate="no">Kurdî — Kurmancî</button>
+</div>
+</div>
 <button id="moreLanguages" class="chip" type="button"><svg class="flag" viewBox="0 0 24 24" aria-hidden="true"><path fill="#1a9a42" d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm-7 9h3.1a13 13 0 0 0 0 4H5a7 7 0 0 1 0-4Zm3.1-2H5a7 7 0 0 1 3.1-4 13 13 0 0 0 0 4ZM12 19c-.8-1-1.6-2.6-1.9-5h3.8c-.3 2.4-1.1 4-1.9 5Zm2.1-7h-4.2a11 11 0 0 1 0-4h4.2a11 11 0 0 1 0 4Zm.8 6a7 7 0 0 0 3.1-4h-3.1a13 13 0 0 1 0 4Zm0-6h3.1a7 7 0 0 0-3.1-4 13 13 0 0 1 0 4Z"/></svg>More languages</button>
 <select id="language" class="more-lang" data-i18n-ignore translate="no" aria-label="More languages"></select>
 </div>
@@ -342,7 +380,14 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 <div class="chat-head">
 <span class="mark"><img src="icon.png" alt="" width="1024" height="1024"></span>
 <div><h2 id="ai-title" translate="no" data-i18n-ignore>HAVKAR AI <svg class="verified" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="8" fill="#1c9a43"/><path d="M4.2 8.2 6.7 10.6 11.8 5.4" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg></h2><p>Your multilingual business assistant</p></div>
+<div class="chat-tools">
+<button id="newConversation" class="ghost" type="button">New chat</button>
+<details class="history-menu">
+<summary class="ghost">History</summary>
+<div id="historyList" class="history-list"></div>
+</details>
 <time id="clock" class="clock" data-i18n-ignore translate="no"></time>
+</div>
 </div>
 <p id="sessionState" class="status">Checking your HAVKAR session...</p>
 <div id="empty" class="empty"><span class="bot" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M8 10h2v2H8Zm6 0h2v2h-2ZM12 3a8 8 0 0 0-8 8v6h4v-4h8v4h4v-6a8 8 0 0 0-8-8Z"/></svg></span><p>Hello, I am HAVKAR AI. How can I help you?</p></div>
@@ -472,6 +517,10 @@ let requestInFlight = false;
 let signedIn = false;
 let lastPayload = null;
 let supabase = null;
+let currentUserId = "";
+let activeThreadId = "";
+const THREAD_KEY = "havkar_ai_threads_v1";
+const PROFILE_SETTINGS = "havkar_profile_settings";
 
 function languageCode() {
   const i18n = window.HAVKAR_I18N;
@@ -501,6 +550,11 @@ function fillLanguages() {
   });
   document.querySelectorAll("[data-lang]").forEach((button) => {
     button.setAttribute("aria-pressed", button.dataset.lang === current ? "true" : "false");
+  });
+  const kurdish = document.getElementById("kurdishToggle");
+  if (kurdish) kurdish.setAttribute("aria-pressed", current === "ckb" || current === "kmr" ? "true" : "false");
+  document.querySelectorAll("[data-variant]").forEach((button) => {
+    button.setAttribute("aria-pressed", button.dataset.variant === current ? "true" : "false");
   });
   langShort.textContent = (current || "en").toUpperCase();
 }
@@ -557,11 +611,152 @@ function addBubble(role, text, pending) {
     dots.append(document.createElement("i"), document.createElement("i"), document.createElement("i"));
     bubble.appendChild(dots);
   } else bubble.textContent = text;
+  if (!pending && role === "assistant") {
+    const actions = document.createElement("div");
+    actions.className = "bubble-actions";
+    const copy = document.createElement("button");
+    copy.type = "button";
+    copy.className = "mini";
+    copy.textContent = "Copy";
+    copy.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(text);
+        copy.textContent = "Copied";
+      } catch (error) {
+        setStatus("Copy is not available in this browser.");
+      }
+    });
+    const regen = document.createElement("button");
+    regen.type = "button";
+    regen.className = "mini regen";
+    regen.textContent = "Regenerate";
+    regen.addEventListener("click", () => regenerate());
+    actions.append(copy, regen);
+    bubble.appendChild(actions);
+  }
   turn.appendChild(bubble);
   transcript.appendChild(turn);
   transcript.scrollTop = transcript.scrollHeight;
   hideIntro();
+  refreshRegen();
   return bubble;
+}
+
+function refreshRegen() {
+  const buttons = [...document.querySelectorAll(".regen")];
+  buttons.forEach((button, index) => { button.hidden = index !== buttons.length - 1; });
+}
+
+function readThreads() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(THREAD_KEY) || "{}");
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function renderHistory() {
+  const list = document.getElementById("historyList");
+  const stored = currentUserId && Array.isArray(readThreads()[currentUserId]) ? readThreads()[currentUserId] : [];
+  list.replaceChildren();
+  if (!stored.length) {
+    const note = document.createElement("p");
+    note.className = "status";
+    note.textContent = "No saved conversations on this browser.";
+    list.appendChild(note);
+    return;
+  }
+  stored.forEach((thread) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "history-item";
+    button.textContent = thread.title || "Conversation";
+    button.addEventListener("click", () => openThread(thread.id));
+    list.appendChild(button);
+  });
+}
+
+function saveThread() {
+  if (!currentUserId || !history.length) return;
+  if (!activeThreadId) activeThreadId = crypto.randomUUID();
+  const firstUser = history.find((item) => item.role === "user");
+  const title = (firstUser ? firstUser.content : "Conversation").replace(/\s+/g, " ").slice(0, 64);
+  const all = readThreads();
+  const existing = Array.isArray(all[currentUserId]) ? all[currentUserId] : [];
+  const next = { id: activeThreadId, title, updatedAt: new Date().toISOString(), messages: history.slice(-12).map((item) => ({ role: item.role, content: item.content })) };
+  all[currentUserId] = [next, ...existing.filter((item) => item.id !== activeThreadId)].slice(0, 20);
+  localStorage.setItem(THREAD_KEY, JSON.stringify(all));
+  renderHistory();
+}
+
+function openThread(id) {
+  const stored = currentUserId && Array.isArray(readThreads()[currentUserId]) ? readThreads()[currentUserId] : [];
+  const thread = stored.find((item) => item.id === id);
+  if (!thread || !Array.isArray(thread.messages)) return;
+  activeThreadId = thread.id;
+  history.splice(0, history.length, ...thread.messages.filter((item) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string").map((item) => ({ role: item.role, content: item.content })));
+  transcript.replaceChildren();
+  history.forEach((item) => addBubble(item.role, item.content, false));
+  if (!history.length) {
+    empty.hidden = false;
+    suggestions.hidden = false;
+  }
+  document.querySelector(".history-menu").open = false;
+}
+
+function newConversation() {
+  saveThread();
+  activeThreadId = "";
+  history.splice(0, history.length);
+  transcript.replaceChildren();
+  empty.hidden = false;
+  suggestions.hidden = false;
+  question.value = "";
+  updateCount();
+  setStatus("");
+}
+
+async function regenerate() {
+  if (requestInFlight || !signedIn) return;
+  if (history.length && history[history.length - 1].role === "assistant") history.pop();
+  const lastTurn = transcript.querySelector(".turn.assistant:last-of-type");
+  if (lastTurn) lastTurn.remove();
+  const payload = payloadFromHistory();
+  if (!payload.messages.length) {
+    setStatus("Enter a message first.");
+    return;
+  }
+  await askAssistant("", payload);
+}
+
+function readSettings() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PROFILE_SETTINGS) || "{}");
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function applyTheme() {
+  const dark = readSettings().darkMode === true;
+  document.body.classList.toggle("dark-mode", dark);
+  document.getElementById("themeToggle").setAttribute("aria-pressed", dark ? "true" : "false");
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = dark ? "#0c1610" : "#eef8f0";
+}
+
+async function chooseLanguage(code) {
+  if (supabase && signedIn) {
+    try {
+      await supabase.auth.updateUser({ data: { preferred_language: code } });
+    } catch (error) {
+      setStatus("The language was saved on this device. The profile update did not complete.");
+    }
+  }
+  const i18n = window.HAVKAR_I18N;
+  if (i18n && typeof i18n.setLanguage === "function") i18n.setLanguage(code);
 }
 
 function payloadFromHistory() {
@@ -626,6 +821,7 @@ async function askAssistant(content, reuse) {
     if (!reuse) question.value = "";
     updateCount();
     lastPayload = null;
+    saveThread();
   } catch (error) {
     pending.parentElement.remove();
     lastPayload = payload;
@@ -655,26 +851,37 @@ function showAccount(email) {
 }
 
 applyInterfaceDirection();
+applyTheme();
 fillLanguages();
 selectTool("general");
+renderHistory();
 clock.textContent = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 clock.dateTime = new Date().toISOString();
-language.addEventListener("change", () => {
-  const i18n = window.HAVKAR_I18N;
-  if (i18n && typeof i18n.setLanguage === "function") i18n.setLanguage(language.value);
-});
+language.addEventListener("change", () => chooseLanguage(language.value));
 function openLanguageList() {
   if (typeof language.showPicker === "function") language.showPicker();
   else language.focus();
 }
 document.getElementById("focusLanguage").addEventListener("click", openLanguageList);
 document.getElementById("moreLanguages").addEventListener("click", openLanguageList);
-document.querySelectorAll("[data-lang]").forEach((button) => {
-  button.addEventListener("click", () => {
-    const i18n = window.HAVKAR_I18N;
-    if (i18n && typeof i18n.setLanguage === "function") i18n.setLanguage(button.dataset.lang);
-  });
+document.getElementById("kurdishToggle").addEventListener("click", () => {
+  const menu = document.getElementById("kurdishMenu");
+  menu.hidden = !menu.hidden;
+  document.getElementById("kurdishToggle").setAttribute("aria-expanded", menu.hidden ? "false" : "true");
 });
+document.querySelectorAll("[data-variant]").forEach((button) => {
+  button.addEventListener("click", () => chooseLanguage(button.dataset.variant));
+});
+document.querySelectorAll("[data-lang]").forEach((button) => {
+  button.addEventListener("click", () => chooseLanguage(button.dataset.lang));
+});
+document.getElementById("themeToggle").addEventListener("click", () => {
+  const settings = readSettings();
+  settings.darkMode = settings.darkMode !== true;
+  localStorage.setItem(PROFILE_SETTINGS, JSON.stringify(settings));
+  applyTheme();
+});
+document.getElementById("newConversation").addEventListener("click", newConversation);
 document.querySelectorAll("[data-tool-button]").forEach((button) => {
   button.addEventListener("click", () => {
     selectTool(button.dataset.toolButton);
@@ -740,9 +947,19 @@ if (!config || !config.url || !config.publishableKey) {
     sessionState.textContent = "Sign in before using HAVKAR AI.";
   } else {
     signedIn = true;
+    currentUserId = session.user && session.user.id ? session.user.id : "";
     sessionState.textContent = "";
     ask.disabled = false;
     showAccount(session.user && session.user.email);
+    renderHistory();
+    const preferred = session.user && session.user.user_metadata && session.user.user_metadata.preferred_language;
+    const i18n = window.HAVKAR_I18N;
+    if (i18n && typeof i18n.hasSavedLanguage === "function" && !i18n.hasSavedLanguage() && typeof i18n.isSupportedLanguage === "function" && i18n.isSupportedLanguage(preferred)) {
+      await i18n.setLanguage(preferred);
+    } else {
+    if (currentUserId && preferred !== languageCode()) {
+      try { await supabase.auth.updateUser({ data: { preferred_language: languageCode() } }); } catch (error) {}
+    }
     askForm.addEventListener("submit", (event) => {
       event.preventDefault();
       const content = question.value.trim();
@@ -753,6 +970,7 @@ if (!config || !config.url || !config.publishableKey) {
       addBubble("user", content, false);
       askAssistant(content, null);
     });
+    }
   }
 }
 </script>
