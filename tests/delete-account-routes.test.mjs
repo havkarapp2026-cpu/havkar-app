@@ -512,6 +512,9 @@ const apiFiles = fs.readdirSync(path.join(root, "api"))
   .sort();
 assert.deepEqual(apiFiles, [
   "accommodation-review.js",
+  "ai-subscription-checkout.js",
+  "ai-subscription-portal.js",
+  "ai-subscription-webhook.js",
   "business-application-notify.js",
   "create-event-checkout.js",
   "eur-usd-quote.js",

@@ -19,7 +19,7 @@
   --shadow: 0 12px 30px rgba(16, 84, 36, .08);
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; min-height: 100%; }
+html, body { margin: 0; min-height: 100%; overflow-x: clip; }
 body {
   overflow-x: clip;
   font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -144,7 +144,10 @@ h1 { margin: 0; max-width: 460px; font-size: clamp(1.85rem, 2.35vw, 2.45rem); li
 .chat-head p, .status { margin: 2px 0 0; color: var(--muted); font-size: .9rem; }
 .clock { color: #7d9184; font-variant-numeric: tabular-nums; }
 .chat-head .mark { width: 42px; height: 42px; }
-.chat-head .mark img { width: 114px; height: 114px; top: -29px; }
+.chat-head .mark img {
+  inset: 0; left: 0; top: 0; width: 100%; height: 100%;
+  transform: none; object-fit: contain; max-width: 100%;
+}
 .empty { display: flex; align-items: flex-start; gap: 8px; margin: 0; }
 .bot {
   width: 34px; height: 34px; border-radius: 50%; background: #1c9a43; color: #fff;
@@ -269,6 +272,17 @@ textarea:focus { outline: none; }
 .tips li { display: flex; align-items: flex-start; gap: 8px; color: #3e5646; }
 .tips li::before { content: "✓"; color: #1c9a43; font-weight: 800; }
 .unavailable { margin: 0; font-size: .82rem; color: #5c6f62; }
+.extra-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+.extra-fields[hidden], #stopGeneration[hidden] { display: none !important; }
+.extra-fields label { display: grid; gap: 4px; font-size: .78rem; color: #3d5346; }
+.extra-fields input, .extra-fields select { width: 100%; min-height: 40px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: #fff; color: #173222; }
+body.dark-mode .extra-fields label { color: #d9f5e3; }
+body.dark-mode .extra-fields input, body.dark-mode .extra-fields select { background: #173222; color: #e7f6ec; border-color: #3d8f58; }
+#stopGeneration { min-width: 44px; min-height: 44px; }
+.history-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 4px; align-items: center; }
+.generated-image { display: block; max-width: 100%; height: auto; border-radius: 12px; }
+.plan-list { margin: 0; padding-inline-start: 18px; }
+@media (max-width: 720px) { .extra-fields { grid-template-columns: 1fr; } }
 .foot {
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;
   padding: 8px 22px 20px; color: var(--muted); font-size: .86rem;
@@ -369,6 +383,20 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
   .bubble { max-width: 88%; }
   .foot-meta { margin-inline-start: 0; }
 }
+@media (max-width: 359px) {
+  .topbar { gap: 4px; padding-inline: 6px; min-width: 0; flex-wrap: wrap; }
+  .brand, .word { gap: 4px; min-width: 0; }
+  .word strong { font-size: .84rem; letter-spacing: 0; }
+  .top-actions { gap: 2px; flex: 1 0 100%; justify-content: flex-end; }
+  #focusLanguage { width: auto; min-width: 44px; padding-inline: 6px; gap: 2px; }
+  .lang-row, .chat, .chat-head, .main-col > *, .chat > * { min-width: 0; max-width: 100%; }
+  .chat-head { width: 100%; }
+  .chat-head > div:nth-child(2) { flex-basis: 0; width: 0; }
+  .left-tools, .send-row, .composer-box { flex-wrap: wrap; min-width: 0; max-width: 100%; }
+  .composer-box > * { min-width: 0; max-width: 100%; }
+  .suggestions, .hero-actions { grid-template-columns: 1fr; }
+  .history-list { width: min(220px, calc(100vw - 24px)); inset-inline-start: auto; inset-inline-end: 0; }
+}
 </style>
 </head>
 <body>
@@ -460,7 +488,7 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 <div id="empty" class="empty"><span class="bot" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M8 10h2v2H8Zm6 0h2v2h-2ZM12 3a8 8 0 0 0-8 8v6h4v-4h8v4h4v-6a8 8 0 0 0-8-8Z"/></svg></span><p>Hello, I am HAVKAR AI. How can I help you?</p></div>
 <div id="transcript" class="transcript" aria-live="polite" dir="auto" data-i18n-ignore translate="no"></div>
 <div id="suggestions" class="suggestions">
-<button class="card" type="button" data-tool-button="logo"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/></svg></span><span><strong>Create a Logo</strong><small>Design brief and one SVG</small></span></button>
+<button class="card" type="button" data-tool-button="logo"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/></svg></span><span><strong>Create a Logo</strong><small>1K image from text</small></span></button>
 <button class="card" type="button" data-tool-button="business_page"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M6 3h8l5 5v13H6Zm8 1.6V9h4.4"/><path fill="currentColor" d="M8 12h8v1.6H8Zm0 3h6v1.6H8Z"/></svg></span><span><strong>Business Page Text</strong><small>Draft the page text</small></span></button>
 <button class="card" type="button" data-tool-button="menu" value="menu"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M8 3c1.2 4.2.4 8-.8 12.2-.4 1.4.4 2.8 1.8 2.8h.2c2.6 0 4-2.6 3.2-5.2C11.4 8.6 10.2 5 8 3Zm8.2 1.2c.6 2.4.2 4.6-.6 6.8 1.6.2 3.2 1.2 3.6 3.2.4 2.2-1.2 4-3.4 4h-.4c-.8 0-1.4-.6-1.2-1.4.6-3.4 1.4-6.6 2-12.6Z"/></svg></span><span><strong>Menu for Restaurant</strong><small>Draft a priced menu</small></span></button>
 <button class="card" type="button" data-tool-button="translation"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 5h7v2h-2.2c.5 1.5 1.5 2.8 2.8 3.8l-1.1 1.7A9 9 0 0 1 7 9H4V7h2.2A9 9 0 0 1 4.7 5Zm9 6h7v2h-1.6l-2.2 6h-2l.6-1.7h-3.3L12.1 19h-2l2.3-6H13Z"/></svg></span><span><strong>Translate Text</strong><small>Translate between languages</small></span></button>
@@ -469,9 +497,11 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 <button class="card" type="button" data-tool-button="social"><span class="ico pink" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16.6" cy="7.4" r="1" fill="currentColor"/></svg></span><span><strong>Social Media Content</strong><small>Draft post text only</small></span></button>
 <button class="card" type="button" data-tool-button="guidance"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M8 6h11v2H8Zm0 5h11v2H8Zm0 5h11v2H8ZM5 6h2v2H5Zm0 5h2v2H5Zm0 5h2v2H5Z"/></svg></span><span><strong>Step-by-Step Help</strong><small>Numbered instructions</small></span></button>
 <button class="card" type="button" data-tool-button="programming"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M8 8 4 12l4 4 1.4-1.4L6.8 12l2.6-2.6Zm8 0-1.4 1.4L17.2 12l-2.6 2.6L16 16l4-4ZM13 5l-2 14h2l2-14Z"/></svg></span><span><strong>Programming help</strong><small>Code and explanations</small></span></button>
+<button class="card" type="button" data-tool-button="image"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="1.4" fill="currentColor"/><path fill="currentColor" d="M7 16l3.2-3.2L13 16l2-2 2 2Z"/></svg></span><span><strong>Generate an image</strong><small>1K image from text</small></span></button>
 </div>
 <form id="askForm" class="composer">
-<p class="tool-note" data-tool-note="logo" hidden>This writes a design brief and one simple SVG. It does not create or upload an image file.</p>
+<p class="tool-note" data-tool-note="logo" hidden>This asks the image model for a 1K logo. A transparent background is not guaranteed.</p>
+<p class="tool-note" data-tool-note="image" hidden>This asks the image model for one 1K image. Files stay private and are not scanned.</p>
 <p class="tool-note" data-tool-note="menu" hidden>This drafts menu text. It does not publish a menu or take a payment.</p>
 <p class="tool-note" data-tool-note="business_page" hidden>This drafts page text. It does not publish the page.</p>
 <label class="visually-hidden" for="question" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Message</label>
@@ -496,15 +526,28 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 <button class="tool" type="button" data-tool-button="social">Social Media Content</button>
 <button class="tool" type="button" data-tool-button="guidance">Step-by-Step Guidance</button>
 <button class="tool" type="button" data-tool-button="programming">Programming help</button>
+<button class="tool" type="button" data-tool-button="image">Generate an image</button>
 </div>
 </details>
 <button id="showExamples" class="ghost" type="button"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="#e0a100" d="M9 18h6v1.4a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2Zm-1-3a6.2 6.2 0 1 1 8 0l-.4.6H8.4Z"/></svg> Examples</button>
 <button id="pickImage" class="ghost" type="button">Image</button>
 <input id="imageFile" type="file" accept="image/jpeg,image/png,image/webp" hidden>
 </div>
-<textarea id="question" name="question" required dir="auto" rows="4" placeholder="Type your question here..." enterkeyhint="enter"></textarea>
+<div id="imageFields" class="extra-fields" hidden>
+<label>Aspect ratio<select id="aspectRatio"><option>1:1</option><option>3:2</option><option>2:3</option><option>3:4</option><option>4:3</option><option>4:5</option><option>5:4</option><option>9:16</option><option>16:9</option><option>21:9</option></select></label>
+<label>Two variations<input id="twoVariations" type="checkbox"></label>
+<label>Request a transparent background<input id="transparentRequest" type="checkbox"></label>
+</div>
+<div id="logoFields" class="extra-fields" hidden>
+<label>Business name<input id="logoName" type="text" maxlength="80" dir="auto"></label>
+<label>Industry<input id="logoIndustry" type="text" maxlength="80" dir="auto"></label>
+<label>Preferred colors<input id="logoColors" type="text" maxlength="80" dir="auto"></label>
+<label>Design style<input id="logoStyle" type="text" maxlength="80" dir="auto"></label>
+</div>
+<textarea id="question" name="question" dir="auto" rows="4" placeholder="Type your question here..." enterkeyhint="enter"></textarea>
 <div class="send-row">
 <button id="voiceInput" class="round" type="button" aria-pressed="false" aria-label="Start voice input"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Zm-6 9h2a4 4 0 0 0 8 0h2a6 6 0 0 1-5 5.9V20h3v2H8v-2h3v-2.1A6 6 0 0 1 6 12Z"/></svg></button>
+<button id="stopGeneration" class="ghost" type="button" hidden>Stop</button>
 <button id="ask" class="send" type="submit" disabled aria-label="Send"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M3 11.5 21 3l-7.2 18-2.3-7.2Z"/></svg><span class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Send</span></button>
 </div>
 </div>
@@ -539,7 +582,22 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 <li>Get step-by-step guidance.</li>
 <li>Use examples for better results.</li>
 </ul>
-<p class="unavailable"><strong>Not available yet:</strong> Image generation stays off until a secure image service is tested. You can attach a JPEG, PNG, or WebP image for the assistant to read. Voice input uses this browser’s speech recognition and is not sent to HAVKAR as audio.</p>
+<section class="panel" id="plans">
+<h3>HAVKAR AI plans</h3>
+<p>Payment is not active. These prices are a proposal.</p>
+<ul class="plan-list">
+<li>Free: €0. The server allows 30 requests a day and 4 images a month.</li>
+<li>Plus proposal: €12 a month. 90 requests a day and 30 images a month. Payment is not active.</li>
+<li>Pro proposal: €29 a month. 200 requests a day and 80 images a month. Priority processing is not available. Payment is not active.</li>
+</ul>
+<button id="reviewPlus" class="ghost" type="button">Review Plus</button>
+<button id="reviewPro" class="ghost" type="button">Review Pro</button>
+<button id="manageBilling" class="ghost" type="button">Manage billing</button>
+</section>
+<p class="unavailable">This file has not been scanned for malware.</p>
+<p class="unavailable">Kurdish Kurmanji is not in the Google Speech-to-Text language list. Audio is not uploaded.</p>
+<p class="unavailable">Google Speech-to-Text lists Central Kurdish, but HAVKAR staging has no speech credential. Audio is not uploaded.</p>
+<p class="unavailable">Payment is not active. These prices are a proposal.</p>
 </section>
 </aside>
 </div>
@@ -553,9 +611,11 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 </div>
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-ui-dictionary.js"></script>
+<script src="/havkar-ai-phrases.js"></script>
 <script src="/havkar-i18n.js"></script>
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { renderAssistant, ssePayloads } from "/havkar-ai-render.mjs";
 
 const sessionState = document.getElementById("sessionState");
 const askForm = document.getElementById("askForm");
@@ -588,7 +648,8 @@ const limits = {
   advertising: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS },
   social: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS },
   guidance: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS },
-  programming: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS }
+  programming: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS },
+  image: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS }
 };
 let attachmentPath = "";
 let attachmentUrl = "";
@@ -596,6 +657,10 @@ let uploadBusy = false;
 const history = [];
 let currentTool = "general";
 let requestInFlight = false;
+let activeController = null;
+  let historyPage = 0;
+  let serverHistoryOffset = 0;
+  let serverHistoryHasMore = false;
 let signedIn = false;
 let lastPayload = null;
 let supabase = null;
@@ -755,7 +820,10 @@ function startVoice() {
   }
   const speechLocale = SPEECH_LOCALES[languageCode()];
   if (!speechLocale) {
-    setStatus("This browser cannot transcribe the selected language.");
+    const code = languageCode();
+    if (code === "ckb") setStatus("Google Speech-to-Text lists Central Kurdish, but HAVKAR staging has no speech credential. Audio is not uploaded.");
+    else if (code === "kmr") setStatus("Kurdish Kurmanji is not in the Google Speech-to-Text language list. Audio is not uploaded.");
+    else setStatus("This browser cannot transcribe the selected language.");
     return;
   }
   voiceBase = question.value;
@@ -842,6 +910,8 @@ function selectTool(name) {
   document.querySelectorAll("[data-tool-note]").forEach((note) => {
     note.hidden = note.dataset.toolNote !== name;
   });
+  document.getElementById("imageFields").hidden = name !== "image" && name !== "logo";
+  document.getElementById("logoFields").hidden = name !== "logo";
   updateCount();
 }
 
@@ -868,7 +938,7 @@ function addBubble(role, text, pending) {
     dots.className = "dots";
     dots.append(document.createElement("i"), document.createElement("i"), document.createElement("i"));
     bubble.appendChild(dots);
-  } else bubble.textContent = text;
+  } else renderAssistant(bubble, text);
   if (!pending && role === "assistant") {
     const actions = document.createElement("div");
     actions.className = "bubble-actions";
@@ -925,37 +995,212 @@ function renderHistory() {
     list.appendChild(note);
     return;
   }
-  stored.forEach((thread) => {
+  stored.slice(historyPage * 20, historyPage * 20 + 20).forEach((thread) => {
+    const row = document.createElement("div");
+    row.className = "history-row";
     const button = document.createElement("button");
     button.type = "button";
     button.className = "history-item";
     button.textContent = thread.title || "Conversation";
     button.addEventListener("click", () => openThread(thread.id));
-    list.appendChild(button);
+    const rename = document.createElement("button");
+    rename.type = "button";
+    rename.className = "mini";
+    rename.textContent = "Rename";
+    rename.addEventListener("click", () => renameThread(thread));
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "mini";
+    remove.textContent = "Delete";
+    remove.addEventListener("click", () => deleteThread(thread));
+    row.append(button, rename, remove);
+    list.appendChild(row);
   });
+  if (stored.length > (historyPage + 1) * 20 || serverHistoryHasMore) {
+    const older = document.createElement("button");
+    older.type = "button";
+    older.className = "ghost";
+    older.textContent = "Older conversations";
+    older.addEventListener("click", async () => {
+      if (stored.length > (historyPage + 1) * 20) {
+        historyPage += 1;
+        renderHistory();
+        return;
+      }
+      await loadServerHistory();
+      historyPage += 1;
+      renderHistory();
+    });
+    list.appendChild(older);
+  }
 }
 
 function saveThread() {
   if (!currentUserId || !history.length) return;
   if (!activeThreadId) activeThreadId = crypto.randomUUID();
   const firstUser = history.find((item) => item.role === "user");
-  const title = (firstUser ? firstUser.content : "Conversation").replace(/\s+/g, " ").slice(0, 64);
+  const title = (firstUser ? firstUser.content : "Conversation").replace(/\s+/g, " ").slice(0, 64) || "Conversation";
   const all = readThreads();
   const existing = Array.isArray(all[currentUserId]) ? all[currentUserId] : [];
-  const next = { id: activeThreadId, title, updatedAt: new Date().toISOString(), messages: history.slice(-12).map((item) => ({ role: item.role, content: item.content })) };
-  all[currentUserId] = [next, ...existing.filter((item) => item.id !== activeThreadId)].slice(0, 20);
+  const previous = existing.find((item) => item.id === activeThreadId) || {};
+  const next = {
+    id: activeThreadId,
+    serverId: previous.serverId || "",
+    title,
+    updatedAt: new Date().toISOString(),
+    messages: history.slice(-12).map((item) => ({
+      clientId: item.clientId || "",
+      role: item.role,
+      content: item.content,
+      status: item.status || "complete",
+      imagePath: item.imagePath || "",
+      attachmentPath: item.attachmentPath || "",
+      task: item.task || currentTool,
+      saved: item.saved === true
+    }))
+  };
+  all[currentUserId] = [next, ...existing.filter((item) => item.id !== activeThreadId)].slice(0, 40);
   localStorage.setItem(THREAD_KEY, JSON.stringify(all));
+  renderHistory();
+  syncThread(next);
+}
+
+async function syncThread(thread) {
+  if (!supabase || !currentUserId || !thread) return;
+  let serverId = thread.serverId;
+  if (!serverId) {
+    const created = await supabase.from("ai_conversations").insert({
+      user_id: currentUserId,
+      title: thread.title || "Conversation",
+      language: languageCode()
+    }).select("id").single();
+    if (created.error || !created.data) {
+      setStatus("Could not save this conversation on the server. It remains on this device.");
+      return;
+    }
+    serverId = created.data.id;
+    thread.serverId = serverId;
+    const all = readThreads();
+    const rows = Array.isArray(all[currentUserId]) ? all[currentUserId] : [];
+    all[currentUserId] = rows.map((item) => item.id === thread.id ? thread : item);
+    localStorage.setItem(THREAD_KEY, JSON.stringify(all));
+  } else {
+    await supabase.from("ai_conversations").update({ title: thread.title }).eq("id", serverId).eq("user_id", currentUserId);
+  }
+  for (const message of thread.messages) {
+    if (message.saved || !message.content) continue;
+    if (!message.clientId) message.clientId = crypto.randomUUID();
+    const saved = await supabase.from("ai_messages").upsert({
+      conversation_id: serverId,
+      user_id: currentUserId,
+      client_id: message.clientId,
+      role: message.role,
+      content: message.content,
+      status: message.status || "complete",
+      task: message.task || "general",
+      image_path: message.imagePath || null,
+      attachment_path: message.attachmentPath || null
+    }, { onConflict: "conversation_id,client_id", ignoreDuplicates: true });
+    if (saved.error) {
+      setStatus("Could not save this conversation on the server. It remains on this device.");
+      return;
+    }
+    message.saved = true;
+    const live = history.find((item) => item.clientId === message.clientId);
+    if (live) live.saved = true;
+  }
+  const allSaved = readThreads();
+  const rowsSaved = Array.isArray(allSaved[currentUserId]) ? allSaved[currentUserId] : [];
+  allSaved[currentUserId] = rowsSaved.map((item) => item.id === thread.id ? thread : item);
+  localStorage.setItem(THREAD_KEY, JSON.stringify(allSaved));
+}
+
+async function renameThread(thread) {
+  const title = window.prompt("Rename", thread.title || "Conversation");
+  if (!title) return;
+  const clean = title.replace(/\s+/g, " ").trim().slice(0, 80);
+  if (!clean) return;
+  const all = readThreads();
+  const rows = Array.isArray(all[currentUserId]) ? all[currentUserId] : [];
+  all[currentUserId] = rows.map((item) => item.id === thread.id ? { ...item, title: clean } : item);
+  localStorage.setItem(THREAD_KEY, JSON.stringify(all));
+  if (thread.serverId && supabase) {
+    await supabase.from("ai_conversations").update({ title: clean }).eq("id", thread.serverId).eq("user_id", currentUserId);
+  }
   renderHistory();
 }
 
-function openThread(id) {
+async function deleteThread(thread) {
+  const all = readThreads();
+  const rows = Array.isArray(all[currentUserId]) ? all[currentUserId] : [];
+  all[currentUserId] = rows.filter((item) => item.id !== thread.id);
+  localStorage.setItem(THREAD_KEY, JSON.stringify(all));
+  if (thread.serverId && supabase) {
+    const removed = await supabase.from("ai_conversations").update({ deleted_at: new Date().toISOString() }).eq("id", thread.serverId).eq("user_id", currentUserId);
+    if (removed.error) {
+      all[currentUserId] = rows;
+      localStorage.setItem(THREAD_KEY, JSON.stringify(all));
+      setStatus("Could not save this conversation on the server. It remains on this device.");
+    }
+  }
+  if (activeThreadId === thread.id) {
+    activeThreadId = "";
+    history.splice(0, history.length);
+    transcript.replaceChildren();
+    empty.hidden = false;
+    suggestions.hidden = false;
+    document.body.classList.remove("chat-active", "intro-open");
+    document.getElementById("toggleIntro").hidden = true;
+  }
+  renderHistory();
+}
+
+async function loadServerHistory() {
+  if (!supabase || !currentUserId) return;
+  const remote = await supabase.from("ai_conversations").select("id, title, updated_at").is("deleted_at", null).order("updated_at", { ascending: false }).range(serverHistoryOffset, serverHistoryOffset + 19);
+  if (remote.error || !Array.isArray(remote.data)) return;
+  serverHistoryHasMore = remote.data.length === 20;
+  serverHistoryOffset += remote.data.length;
+  const all = readThreads();
+  const local = Array.isArray(all[currentUserId]) ? all[currentUserId] : [];
+  const known = new Set(local.map((item) => item.serverId).filter(Boolean));
+  remote.data.forEach((row) => {
+    if (known.has(row.id)) return;
+    local.push({ id: row.id, serverId: row.id, title: row.title || "Conversation", updatedAt: row.updated_at, messages: [] });
+  });
+  all[currentUserId] = local;
+  localStorage.setItem(THREAD_KEY, JSON.stringify(all));
+  for (const thread of local) {
+    if (!thread.serverId && Array.isArray(thread.messages) && thread.messages.length) await syncThread(thread);
+  }
+  renderHistory();
+}
+
+async function openThread(id) {
   const stored = currentUserId && Array.isArray(readThreads()[currentUserId]) ? readThreads()[currentUserId] : [];
   const thread = stored.find((item) => item.id === id);
-  if (!thread || !Array.isArray(thread.messages)) return;
+  if (!thread) return;
+  if (thread.serverId && supabase && (!Array.isArray(thread.messages) || !thread.messages.length)) {
+    const rows = await supabase.from("ai_messages").select("client_id, role, content, status, image_path, attachment_path, task, created_at").eq("conversation_id", thread.serverId).eq("user_id", currentUserId).order("created_at", { ascending: true }).limit(50);
+    thread.messages = Array.isArray(rows.data) ? rows.data.map((item) => ({
+      clientId: item.client_id || "",
+      role: item.role,
+      content: item.content,
+      status: item.status,
+      imagePath: item.image_path || "",
+      attachmentPath: item.attachment_path || "",
+      task: item.task,
+      saved: true
+    })) : [];
+  }
+  if (!Array.isArray(thread.messages)) return;
   activeThreadId = thread.id;
-  history.splice(0, history.length, ...thread.messages.filter((item) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string").map((item) => ({ role: item.role, content: item.content })));
+  history.splice(0, history.length, ...thread.messages.filter((item) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string"));
   transcript.replaceChildren();
-  history.forEach((item) => addBubble(item.role, item.content, false));
+  for (const item of history) {
+    const bubble = addBubble(item.role, item.content, false);
+    if (item.imagePath) await showGeneratedImage(bubble, item.imagePath);
+  }
   if (!history.length) {
     empty.hidden = false;
     suggestions.hidden = false;
@@ -1033,7 +1278,7 @@ function payloadFromHistory() {
   return { language: languageCode(), task: currentTool, messages: selected };
 }
 
-async function sendPayload(payload) {
+async function accessTokenOrThrow() {
   if (!supabase) throw new Error("HAVKAR configuration was not found on this page.");
   const current = await supabase.auth.getSession();
   const accessToken = current.data && current.data.session && current.data.session.access_token;
@@ -1043,29 +1288,47 @@ async function sendPayload(payload) {
     sessionState.textContent = "Sign in before using HAVKAR AI.";
     throw new Error("Sign in before using HAVKAR AI.");
   }
-  const response = await fetch(config.url + "/functions/v1/havkar-ai-assistant", {
-    method: "POST",
-    headers: {
-      "Authorization": "Bearer " + accessToken,
-      "Content-Type": "application/json",
-      "apikey": config.publishableKey
-    },
-    body: JSON.stringify({
-      language: payload.language,
-      task: payload.task,
-      messages: Array.isArray(payload.messages) ? payload.messages.map((message) => ({
-        role: message.role === "assistant" ? "assistant" : "user",
-        content: String(message && message.content || "")
-      })) : [],
-      ...(payload.attachmentPath ? { attachment: { path: payload.attachmentPath } } : {})
-    })
-  });
-  const body = await response.json().catch(() => null);
-  if (!response.ok || !body || !body.message) {
-    const message = body && (body.error || body.message) ? (body.error || body.message) : "HAVKAR AI did not return an answer.";
-    throw new Error(message);
+  return accessToken;
+}
+
+async function readAssistantEvents(response, onEvent) {
+  const type = response.headers.get("content-type") || "";
+  if (!type.includes("text/event-stream")) {
+    const body = await response.json().catch(() => null);
+    if (!response.ok || !body || body.ok === false || !body.message) {
+      throw new Error(body && (body.error || body.message) ? (body.error || body.message) : "HAVKAR AI did not return an answer.");
+    }
+    onEvent({ type: "done", message: body.message });
+    return;
   }
-  return body.message;
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const chunk = await reader.read();
+    if (chunk.done) break;
+    buffer += decoder.decode(chunk.value, { stream: true });
+    const parsed = ssePayloads(buffer, false);
+    buffer = parsed.rest;
+    parsed.payloads.forEach((event) => { if (event) onEvent(event); });
+  }
+  ssePayloads(buffer, true).payloads.forEach((event) => { if (event) onEvent(event); });
+}
+
+async function showGeneratedImage(bubble, path) {
+  if (!supabase || !path) return;
+  const downloaded = await supabase.storage.from("ai-generated").download(path);
+  if (downloaded.error || !downloaded.data) return;
+  const url = URL.createObjectURL(downloaded.data);
+  const image = document.createElement("img");
+  image.className = "generated-image";
+  image.alt = "";
+  image.src = url;
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "havkar-image";
+  link.textContent = "Download image";
+  bubble.append(image, link);
 }
 
 let preserveComposer = false;
@@ -1145,7 +1408,13 @@ async function uploadImage(file) {
     });
     attachmentPath = path;
     document.getElementById("uploadProgress").textContent = "";
-    setStatus("");
+    await supabase.from("ai_file_reviews").insert({
+      path,
+      user_id: currentUserId,
+      bucket_id: "ai-attachments",
+      scan_status: "unscanned"
+    });
+    setStatus("This file has not been scanned for malware.");
   } catch (error) {
     clearAttachmentView();
     setStatus("The image could not be uploaded.");
@@ -1164,6 +1433,7 @@ function beginSend(sendPart) {
     return;
   }
   let content = question.value.trim();
+  if (!content && currentTool === "logo") content = document.getElementById("logoName").value.trim();
   if (!content) {
     setStatus("Enter a message first.");
     return;
@@ -1184,38 +1454,161 @@ function beginSend(sendPart) {
   askAssistant(content, null);
 }
 
+function addAssistantActions(bubble, text) {
+  if (!bubble || bubble.querySelector(".bubble-actions")) return;
+  const actions = document.createElement("div");
+  actions.className = "bubble-actions";
+  const copy = document.createElement("button");
+  copy.type = "button";
+  copy.className = "mini";
+  copy.textContent = "Copy";
+  copy.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      copy.textContent = "Copied";
+    } catch (error) {
+      setStatus("Copy is not available in this browser.");
+    }
+  });
+  const regen = document.createElement("button");
+  regen.type = "button";
+  regen.className = "mini regen";
+  regen.textContent = "Regenerate";
+  regen.addEventListener("click", () => regenerate());
+  actions.append(copy, regen);
+  bubble.appendChild(actions);
+  refreshRegen();
+}
+
 async function askAssistant(content, reuse) {
   if (requestInFlight) return;
-  if (!reuse) history.push({ role: "user", content });
+  const imageTool = currentTool === "image" || currentTool === "logo";
+  if (!reuse) history.push({
+    role: "user",
+    content,
+    task: currentTool,
+    clientId: crypto.randomUUID(),
+    attachmentPath: imageTool ? "" : (attachmentPath || "")
+  });
   const payload = reuse || payloadFromHistory();
-  if (!reuse && attachmentPath) payload.attachmentPath = attachmentPath;
-  if (!payload.messages.length) {
+  if (!reuse && attachmentPath && !imageTool) payload.attachmentPath = attachmentPath;
+  if (!imageTool && !payload.messages.length) {
     setStatus("Enter a message first.");
     return;
   }
   requestInFlight = true;
-  ask.disabled = true;
+  ask.hidden = true;
+  document.getElementById("stopGeneration").hidden = false;
   retry.hidden = true;
   setStatus("");
+  activeController = new AbortController();
   const pending = addBubble("assistant", "", true);
+  let partial = "";
+  let imagePath = "";
+  let failed = "";
+  let stopped = false;
   try {
-    const message = await sendPayload(payload);
-    pending.parentElement.remove();
-    history.push({ role: "assistant", content: message });
-    addBubble("assistant", message, false);
+    const accessToken = await accessTokenOrThrow();
+    const promptText = content || (payload.messages.length ? payload.messages[payload.messages.length - 1].content : "");
+    const response = await fetch(config.url + "/functions/v1/havkar-ai-assistant", {
+      method: "POST",
+      signal: activeController.signal,
+      headers: {
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json",
+        "apikey": config.publishableKey
+      },
+      body: JSON.stringify(imageTool ? {
+        mode: "image",
+        language: languageCode(),
+        task: currentTool,
+        aspect: document.getElementById("aspectRatio").value,
+        variations: document.getElementById("twoVariations").checked ? 2 : 1,
+        transparent: document.getElementById("transparentRequest").checked,
+        prompt: promptText,
+        logo: {
+          name: document.getElementById("logoName").value.trim(),
+          industry: document.getElementById("logoIndustry").value.trim(),
+          colors: document.getElementById("logoColors").value.trim(),
+          style: document.getElementById("logoStyle").value.trim(),
+          description: promptText
+        }
+      } : {
+        stream: true,
+        language: payload.language,
+        task: payload.task,
+        messages: payload.messages.map((message) => ({
+          role: message.role === "assistant" ? "assistant" : "user",
+          content: String(message.content || "")
+        })),
+        ...(payload.attachmentPath ? { attachment: { path: payload.attachmentPath } } : {})
+      })
+    });
+    await readAssistantEvents(response, (event) => {
+      if (event.type === "delta" && event.text) {
+        partial += event.text;
+        pending.classList.remove("pending");
+        renderAssistant(pending, partial);
+        transcript.scrollTop = transcript.scrollHeight;
+      }
+      if (event.type === "status" && event.status === "provider") setStatus("Generating image.");
+      if (event.type === "image" && event.path) imagePath = event.path;
+      if (event.type === "notice" && event.message) setStatus(event.message);
+      if (event.type === "done" && event.message) partial = event.message;
+      if (event.type === "error") failed = event.error || "The image could not be generated.";
+      if (event.type === "interrupted") {
+        stopped = true;
+        partial = event.message || partial;
+      }
+    });
+    if (stopped) {
+      pending.classList.remove("pending");
+      if (partial) renderAssistant(pending, partial);
+      if (imagePath) await showGeneratedImage(pending, imagePath);
+      addAssistantActions(pending, partial || "The image is ready.");
+      if (partial || imagePath) history.push({ role: "assistant", content: partial || "The image is ready.", status: "interrupted", imagePath, task: currentTool, clientId: crypto.randomUUID() });
+      else pending.parentElement.remove();
+      setStatus("Stopped on this device. The provider may still finish the request that was already sent.");
+      saveThread();
+      return;
+    }
+    if (failed && !partial && !imagePath) throw new Error(failed);
+    if (!partial && !imagePath) throw new Error("HAVKAR AI did not return an answer.");
+    if (failed) setStatus(failed);
+    pending.classList.remove("pending");
+    const answer = partial || "The image is ready.";
+    renderAssistant(pending, answer);
+    if (imagePath) await showGeneratedImage(pending, imagePath);
+    addAssistantActions(pending, answer);
+    history.push({ role: "assistant", content: answer, status: "complete", imagePath, task: currentTool, clientId: crypto.randomUUID() });
     if (!reuse && !preserveComposer) question.value = "";
     preserveComposer = false;
-    clearAttachmentView();
+    if (!imageTool) clearAttachmentView();
     updateCount();
     lastPayload = null;
+    if (!failed) setStatus(imagePath ? "The image is ready." : "");
     saveThread();
   } catch (error) {
+    if (error && error.name === "AbortError") {
+      pending.classList.remove("pending");
+      if (partial) renderAssistant(pending, partial);
+      if (imagePath) await showGeneratedImage(pending, imagePath);
+      addAssistantActions(pending, partial || "The image is ready.");
+      if (partial || imagePath) history.push({ role: "assistant", content: partial || "The image is ready.", status: "interrupted", imagePath, task: currentTool, clientId: crypto.randomUUID() });
+      else pending.parentElement.remove();
+      setStatus("Stopped on this device. The provider may still finish the request that was already sent.");
+      if (partial || imagePath) saveThread();
+      return;
+    }
     pending.parentElement.remove();
     lastPayload = payload;
     retry.hidden = false;
     setStatus(error && error.message ? error.message : "HAVKAR AI could not be reached.");
   } finally {
     requestInFlight = false;
+    activeController = null;
+    document.getElementById("stopGeneration").hidden = true;
+    ask.hidden = false;
     ask.disabled = !signedIn;
   }
 }
@@ -1267,6 +1660,52 @@ document.getElementById("removeAttachment").addEventListener("click", () => {
   removeStoredAttachment();
 });
 document.getElementById("sendPart").addEventListener("click", () => beginSend(true));
+document.getElementById("stopGeneration").addEventListener("click", () => {
+  if (activeController) activeController.abort();
+});
+async function reviewPlan(plan) {
+  try {
+    const accessToken = await accessTokenOrThrow();
+    const response = await fetch("/api/ai-subscription-checkout", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ plan })
+    });
+    const body = await response.json().catch(() => null);
+    if (body && body.url && body.url.startsWith("https://checkout.stripe.com/")) {
+      location.href = body.url;
+      return;
+    }
+    setStatus(body && body.error ? body.error : "Payment is not active. These prices are a proposal.");
+  } catch (error) {
+    setStatus(error && error.message ? error.message : "Payment is not active. These prices are a proposal.");
+  }
+}
+document.getElementById("reviewPlus").addEventListener("click", () => reviewPlan("plus"));
+document.getElementById("reviewPro").addEventListener("click", () => reviewPlan("pro"));
+document.getElementById("manageBilling").addEventListener("click", async () => {
+  try {
+    const accessToken = await accessTokenOrThrow();
+    const response = await fetch("/api/ai-subscription-portal", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json"
+      }
+    });
+    const body = await response.json().catch(() => null);
+    if (body && body.url && body.url.startsWith("https://billing.stripe.com/")) {
+      location.href = body.url;
+      return;
+    }
+    setStatus(body && body.error ? body.error : "Payment is not active. These prices are a proposal.");
+  } catch (error) {
+    setStatus(error && error.message ? error.message : "Payment is not active. These prices are a proposal.");
+  }
+});
 document.getElementById("themeToggle").addEventListener("click", () => {
   const settings = readSettings();
   settings.darkMode = settings.darkMode !== true;
@@ -1369,6 +1808,7 @@ if (!config || !config.url || !config.publishableKey) {
     ask.disabled = false;
     showAccount(session.user && session.user.email);
     renderHistory();
+    loadServerHistory();
     const preferred = session.user && session.user.user_metadata && session.user.user_metadata.preferred_language;
     const i18n = window.HAVKAR_I18N;
     if (i18n && typeof i18n.hasSavedLanguage === "function" && !i18n.hasSavedLanguage() && typeof i18n.isSupportedLanguage === "function" && i18n.isSupportedLanguage(preferred)) {

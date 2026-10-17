@@ -5,13 +5,23 @@ import { fileURLToPath } from "node:url";
 import {
   assistantInstruction,
   normalizeLanguage,
+  imageRequestBody,
   providerErrorStatus,
+  providerFailureLog,
   providerFailureMessage,
   providerRetryDelayMs,
   providerStatusIsRetryable,
+  activePlan,
+  imageBytesFromProvider,
+  sanitizeSvg,
+  ssePayloads,
+  streamPayloads,
+  subscriptionCheckoutStatus,
   validateAssistantRequest,
-  validateAttachment
+  validateAttachment,
+  validateImageRequest
 } from "../supabase/functions/havkar-ai-assistant/policy.mjs";
+import { assistantBlocks, ssePayloads as clientSsePayloads } from "../havkar-ai-render.mjs";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -136,8 +146,17 @@ assert.match(source, /https:\/\/testnet\.havkar\.online/);
 assert.match(source, /HAVKAR_AI_API_KEY/);
 assert.match(source, /x-goog-api-key/);
 assert.match(source, /const DEFAULT_MODEL = "gemini-3\.5-flash-lite"/);
-assert.match(source, /gemini_http_status=/);
-assert.match(source, /gemini_error_status=/);
+assert.match(read("supabase/functions/havkar-ai-assistant/policy.mjs"), /gemini_http_status=/);
+assert.match(source, /providerFailureLog/);
+assert.match(source, /imageRequestBody\(validation, prompt\)/);
+assert.equal(imageRequestBody({ model: "gemini-3.1-flash-lite-image", aspect: "1:1" }, "یک مربع").input[0].type, "text");
+assert.equal(imageRequestBody({ model: "gemini-3.1-flash-lite-image", aspect: "1:1" }, "یک مربع").response_format.image_size, "1K");
+assert.equal(Object.hasOwn(imageRequestBody({ model: "gemini-3.1-flash-lite-image", aspect: "1:1" }, "یک مربع").response_format, "mime_type"), false);
+assert.match(providerFailureLog(400, { error: { code: 400, status: "INVALID_ARGUMENT", message: "Unknown name image_size" } }), /gemini_reason=image_size/);
+assert.match(providerFailureLog(429, { error: { code: "429", message: "Quota exceeded for this model" } }), /gemini_error_code=429/);
+assert.match(providerFailureLog(429, { error: { code: "429", message: "Quota exceeded for this model" } }), /gemini_reason=quota/);
+assert.match(providerFailureLog(400, null), /gemini_reason=empty/);
+assert.doesNotMatch(providerFailureLog(400, { error: { message: "bad key AIzaSySECRETVALUE1234567890" } }), /AIza/);
 assert.match(source, /thinkingBudget: 0/);
 assert.match(source, /validation\.maxOutputTokens/);
 assert.match(source, /validation\.task/);
@@ -179,7 +198,48 @@ assert.doesNotMatch(migration, /translation_rate_buckets/);
 assert.match(translate, /Google Cloud Translation API/);
 
 const apiFiles = fs.readdirSync(path.join(root, "api")).filter((name) => name.endsWith(".js"));
-assert.equal(apiFiles.length, 12);
+assert.equal(apiFiles.length, 15);
+assert.equal(apiFiles.includes("ai-subscription-checkout.js"), true);
+assert.equal(apiFiles.includes("ai-subscription-portal.js"), true);
+assert.equal(apiFiles.includes("ai-subscription-webhook.js"), true);
+assert.equal(subscriptionCheckoutStatus({}).ok, false);
+assert.equal(subscriptionCheckoutStatus({ STRIPE_SECRET_KEY: "sk_live_example" }).ok, false);
+assert.equal(subscriptionCheckoutStatus({
+  STRIPE_SECRET_KEY: "sk_test_example",
+  STRIPE_AI_PLUS_PRICE_ID: "price_plus",
+  STRIPE_AI_PRO_PRICE_ID: "price_pro"
+}).ok, true);
+assert.equal(activePlan({ plan_code: "pro", status: "active", current_period_end: "2099-01-01T00:00:00Z" }, Date.parse("2026-10-17T00:00:00Z")), "pro");
+assert.equal(activePlan({ plan_code: "pro", status: "canceled" }, Date.now()), "free");
+assert.equal(validateImageRequest({ language: "fa", task: "image", aspect: "16:9", prompt: "یک تصویر" }).ok, true);
+assert.equal(validateImageRequest({ language: "fa", task: "image", aspect: "2:1", prompt: "نه" }).ok, false);
+assert.equal(sanitizeSvg("<svg><script>alert(1)</script><circle/></svg>").includes("<script"), false);
+assert.equal(assistantBlocks("Hello <script>alert(1)</script>").some((block) => block.text.includes("<script>")), true);
+assert.equal(imageBytesFromProvider({ output_image: { data: "abc123456789012345", mime_type: "image/png" } }).mime, "image/png");
+const historyMigration = read("supabase/migrations/20261017223000_ai_history_images_plans.sql");
+assert.match(historyMigration, /ENABLE ROW LEVEL SECURITY/);
+assert.match(historyMigration, /scan_status = 'unscanned'/);
+assert.doesNotMatch(historyMigration, /scan_status = 'safe'/);
+assert.match(historyMigration, /client_id/);
+assert.match(historyMigration, /release_ai_image_budget/);
+assert.match(historyMigration, /split_part\(path, '\/', 1\)/);
+assert.match(source, /release_ai_image_budget/);
+assert.match(source, /text\.startsWith\(full\)/);
+assert.match(source, /assistantMessage\(payload, limit, false\)/);
+assert.match(source, /trimEdges \? text\.trim\(\) : text/);
+assert.match(source, /streamPayloads\(buffer, true\)/);
+const unterminated = 'data: {"candidates":[{"content":{"parts":[{"text":"READY"}]}}]}';
+assert.equal(ssePayloads(unterminated, false).payloads.length, 0);
+assert.equal(ssePayloads(unterminated, true).payloads[0].candidates[0].content.parts[0].text, "READY");
+const singleNewline = unterminated + "\n" + 'data: {"candidates":[{"content":{"parts":[{"text":"NEXT"}]}}]}\n';
+assert.equal(ssePayloads(singleNewline, false).payloads.map((item) => item.candidates[0].content.parts[0].text).join(","), "READY,NEXT");
+const splitEvents = 'data: {"candidates":[{"content":{"parts":[{"text":"AB"}]}}]}\n\ndata: {"candidates":[{"content":{"parts":[{"text":"ABC"}]}}]}';
+const firstEvents = ssePayloads(splitEvents, false);
+assert.equal(firstEvents.payloads.length, 1);
+assert.equal(ssePayloads(firstEvents.rest, true).payloads[0].candidates[0].content.parts[0].text, "ABC");
+assert.equal(streamPayloads('{"candidates":[{"content":{"parts":[{"text":"JSON"}]}}]}', true).payloads[0].candidates[0].content.parts[0].text, "JSON");
+assert.equal(clientSsePayloads('data: {"type":"delta","text":"سلام"}\n', true).payloads[0].text, "سلام");
+assert.match(source, /readProviderPayload\(response, 12000000\)/);
 
 const assistantPage = read("havkar-ai.html");
 assert.match(assistantPage, /havkar-i18n\.js/);
@@ -188,8 +248,14 @@ assert.match(assistantPage, /dir="auto"/);
 assert.match(assistantPage, /requestInFlight/);
 assert.match(assistantPage, /data-i18n-ignore/);
 assert.match(assistantPage, /data-tool-button="guidance"/);
-assert.match(assistantPage, /Not available yet/);
-assert.match(assistantPage, /Image generation/);
+assert.match(assistantPage, /id="stopGeneration"/);
+assert.match(assistantPage, /stream: true/);
+assert.match(assistantPage, /mode: "image"/);
+assert.match(assistantPage, /has not been scanned for malware/);
+assert.match(assistantPage, /Generate an image/);
+assert.match(assistantPage, /id="manageBilling"/);
+assert.match(assistantPage, /https:\/\/billing\.stripe\.com\//);
+assert.match(assistantPage, /ignoreDuplicates: true/);
 assert.match(assistantPage, /icon\.png/);
 assert.match(assistantPage, /flowType: "pkce"/);
 assert.match(assistantPage, /<bdi dir="ltr">/);
