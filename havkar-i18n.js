@@ -1040,6 +1040,39 @@
     }
 
 
+    function dictionaryTranslation(
+        text,
+        targetLanguage
+    ) {
+
+        const dictionaries =
+            window.HAVKAR_UI_DICTIONARY;
+
+
+        const table =
+            dictionaries &&
+            dictionaries[
+                targetLanguage
+            ];
+
+
+        const value =
+            table &&
+            table[
+                text
+            ];
+
+
+        return (
+            typeof value ===
+                "string" &&
+            value
+        )
+            ? value
+            : "";
+    }
+
+
     function setCached(
         text,
         targetLanguage,
@@ -1223,9 +1256,34 @@
 
                 } else {
 
-                    missing.push(
-                        text
-                    );
+                    const local =
+                        dictionaryTranslation(
+                            text,
+                            targetLanguage
+                        );
+
+
+                    if (
+                        local
+                    ) {
+
+                        resultMap.set(
+                            text,
+                            local
+                        );
+
+                        setCached(
+                            text,
+                            targetLanguage,
+                            local
+                        );
+
+                    } else {
+
+                        missing.push(
+                            text
+                        );
+                    }
                 }
             }
         );
@@ -1234,9 +1292,13 @@
         /*
          * Translation endpoint supports
          * batches. Keep them moderate.
+         * A missing translation service must
+         * not discard the bundled dictionary.
          */
         const BATCH_SIZE = 50;
 
+
+        try {
 
         for (
             let start = 0;
@@ -1288,6 +1350,13 @@
                         translated
                     );
                 }
+            );
+        }
+
+        } catch (error) {
+            console.error(
+                "[HAVKAR i18n]",
+                error
             );
         }
 

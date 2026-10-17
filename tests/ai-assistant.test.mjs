@@ -5,12 +5,23 @@ import { fileURLToPath } from "node:url";
 import {
   assistantInstruction,
   normalizeLanguage,
+  imageRequestBody,
   providerErrorStatus,
+  providerFailureLog,
   providerFailureMessage,
   providerRetryDelayMs,
   providerStatusIsRetryable,
-  validateAssistantRequest
+  activePlan,
+  imageBytesFromProvider,
+  sanitizeSvg,
+  ssePayloads,
+  streamPayloads,
+  subscriptionCheckoutStatus,
+  validateAssistantRequest,
+  validateAttachment,
+  validateImageRequest
 } from "../supabase/functions/havkar-ai-assistant/policy.mjs";
+import { assistantBlocks, ssePayloads as clientSsePayloads } from "../havkar-ai-render.mjs";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -50,7 +61,25 @@ assert.equal(validateAssistantRequest({
 assert.equal(validateAssistantRequest({
   language: "en",
   messages: [{ role: "user", content: "x".repeat(1201) }]
+}).ok, true);
+assert.equal(validateAssistantRequest({
+  language: "en",
+  messages: [{ role: "user", content: "x".repeat(6001) }]
 }).ok, false);
+assert.equal(validateAssistantRequest({
+  language: "en",
+  task: "programming",
+  messages: [{ role: "user", content: "Show a small function." }]
+}).ok, true);
+assert.match(assistantInstruction("English", "programming"), /executed/);
+const owner = "514c9f0d-87c9-4393-80c8-197f0a0317a0";
+assert.equal(validateAttachment(null, owner).ok, true);
+assert.equal(validateAttachment({
+  path: owner + "/11111111-1111-4111-8111-111111111111.jpg"
+}, owner).path.endsWith(".jpg"), true);
+assert.equal(validateAttachment({
+  path: "00000000-0000-4000-8000-000000000000/11111111-1111-4111-8111-111111111111.jpg"
+}, owner).ok, false);
 
 assert.equal(validateAssistantRequest({
   language: "en",
@@ -79,7 +108,23 @@ assert.match(read("supabase/functions/havkar-ai-assistant/index.ts"), /generateC
 assert.match(assistantInstruction("English", "logo"), /#2e7d32/);
 assert.match(assistantInstruction("English", "business_page"), /display text/);
 assert.equal(assistantInstruction("English"), assistantInstruction("English", "general"));
+assert.equal(validateAssistantRequest({
+  language: "ckb",
+  task: "translation",
+  messages: [{ role: "user", content: "Hello" }]
+}).ok, true);
+assert.equal(validateAssistantRequest({
+  language: "kmr",
+  task: "guidance",
+  messages: [{ role: "user", content: "Steps" }]
+}).ok, true);
+assert.match(assistantInstruction("English", "translation"), /target language/);
+assert.match(assistantInstruction("English", "ideas"), /business ideas/);
+assert.match(assistantInstruction("English", "advertising"), /advertising copy/);
+assert.match(assistantInstruction("English", "social"), /social-media/);
+assert.match(assistantInstruction("English", "guidance"), /numbered steps/);
 assert.doesNotMatch(assistantInstruction("English", "menu"), /supabase|service_role|gispovnciifgikvgpzck/i);
+assert.doesNotMatch(assistantInstruction("English", "ideas"), /supabase|service_role|gispovnciifgikvgpzck/i);
 
 assert.equal(validateAssistantRequest({
   language: "en",
@@ -101,8 +146,17 @@ assert.match(source, /https:\/\/testnet\.havkar\.online/);
 assert.match(source, /HAVKAR_AI_API_KEY/);
 assert.match(source, /x-goog-api-key/);
 assert.match(source, /const DEFAULT_MODEL = "gemini-3\.5-flash-lite"/);
-assert.match(source, /gemini_http_status=/);
-assert.match(source, /gemini_error_status=/);
+assert.match(read("supabase/functions/havkar-ai-assistant/policy.mjs"), /gemini_http_status=/);
+assert.match(source, /providerFailureLog/);
+assert.match(source, /imageRequestBody\(validation, prompt\)/);
+assert.equal(imageRequestBody({ model: "gemini-3.1-flash-lite-image", aspect: "1:1" }, "یک مربع").input[0].type, "text");
+assert.equal(imageRequestBody({ model: "gemini-3.1-flash-lite-image", aspect: "1:1" }, "یک مربع").response_format.image_size, "1K");
+assert.equal(Object.hasOwn(imageRequestBody({ model: "gemini-3.1-flash-lite-image", aspect: "1:1" }, "یک مربع").response_format, "mime_type"), false);
+assert.match(providerFailureLog(400, { error: { code: 400, status: "INVALID_ARGUMENT", message: "Unknown name image_size" } }), /gemini_reason=image_size/);
+assert.match(providerFailureLog(429, { error: { code: "429", message: "Quota exceeded for this model" } }), /gemini_error_code=429/);
+assert.match(providerFailureLog(429, { error: { code: "429", message: "Quota exceeded for this model" } }), /gemini_reason=quota/);
+assert.match(providerFailureLog(400, null), /gemini_reason=empty/);
+assert.doesNotMatch(providerFailureLog(400, { error: { message: "bad key AIzaSySECRETVALUE1234567890" } }), /AIza/);
 assert.match(source, /thinkingBudget: 0/);
 assert.match(source, /validation\.maxOutputTokens/);
 assert.match(source, /validation\.task/);
@@ -145,6 +199,56 @@ assert.match(translate, /Google Cloud Translation API/);
 
 const apiFiles = fs.readdirSync(path.join(root, "api")).filter((name) => name.endsWith(".js"));
 assert.equal(apiFiles.length, 12);
+assert.equal(apiFiles.includes("ai-subscription-checkout.js"), false);
+assert.equal(apiFiles.includes("stripe-webhook.js"), true);
+const billing = read("supabase/functions/havkar-ai-billing/index.ts");
+assert.match(billing, /sk_test_/);
+assert.match(billing, /whsec_/);
+assert.match(billing, /https:\/\/staging\.havkar\.online/);
+assert.match(billing, /https:\/\/checkout\.stripe\.com\//);
+assert.match(billing, /https:\/\/billing\.stripe\.com\//);
+assert.match(billing, /record_ai_billing_event/);
+assert.match(billing, /havkar_product/);
+assert.doesNotMatch(billing, /sk_live_[A-Za-z0-9]/);
+assert.doesNotMatch(billing, /sk_test_[A-Za-z0-9]{8}/);
+assert.equal(subscriptionCheckoutStatus({}).ok, false);
+assert.equal(subscriptionCheckoutStatus({ STRIPE_SECRET_KEY: "sk_live_example" }).ok, false);
+assert.equal(subscriptionCheckoutStatus({
+  STRIPE_SECRET_KEY: "sk_test_example",
+  STRIPE_AI_PLUS_PRICE_ID: "price_plus",
+  STRIPE_AI_PRO_PRICE_ID: "price_pro"
+}).ok, true);
+assert.equal(activePlan({ plan_code: "pro", status: "active", current_period_end: "2099-01-01T00:00:00Z" }, Date.parse("2026-10-17T00:00:00Z")), "pro");
+assert.equal(activePlan({ plan_code: "pro", status: "canceled" }, Date.now()), "free");
+assert.equal(validateImageRequest({ language: "fa", task: "image", aspect: "16:9", prompt: "یک تصویر" }).ok, true);
+assert.equal(validateImageRequest({ language: "fa", task: "image", aspect: "2:1", prompt: "نه" }).ok, false);
+assert.equal(sanitizeSvg("<svg><script>alert(1)</script><circle/></svg>").includes("<script"), false);
+assert.equal(assistantBlocks("Hello <script>alert(1)</script>").some((block) => block.text.includes("<script>")), true);
+assert.equal(imageBytesFromProvider({ output_image: { data: "abc123456789012345", mime_type: "image/png" } }).mime, "image/png");
+const historyMigration = read("supabase/migrations/20261017223000_ai_history_images_plans.sql");
+assert.match(historyMigration, /ENABLE ROW LEVEL SECURITY/);
+assert.match(historyMigration, /scan_status = 'unscanned'/);
+assert.doesNotMatch(historyMigration, /scan_status = 'safe'/);
+assert.match(historyMigration, /client_id/);
+assert.match(historyMigration, /release_ai_image_budget/);
+assert.match(historyMigration, /split_part\(path, '\/', 1\)/);
+assert.match(source, /release_ai_image_budget/);
+assert.match(source, /text\.startsWith\(full\)/);
+assert.match(source, /assistantMessage\(payload, limit, false\)/);
+assert.match(source, /trimEdges \? text\.trim\(\) : text/);
+assert.match(source, /streamPayloads\(buffer, true\)/);
+const unterminated = 'data: {"candidates":[{"content":{"parts":[{"text":"READY"}]}}]}';
+assert.equal(ssePayloads(unterminated, false).payloads.length, 0);
+assert.equal(ssePayloads(unterminated, true).payloads[0].candidates[0].content.parts[0].text, "READY");
+const singleNewline = unterminated + "\n" + 'data: {"candidates":[{"content":{"parts":[{"text":"NEXT"}]}}]}\n';
+assert.equal(ssePayloads(singleNewline, false).payloads.map((item) => item.candidates[0].content.parts[0].text).join(","), "READY,NEXT");
+const splitEvents = 'data: {"candidates":[{"content":{"parts":[{"text":"AB"}]}}]}\n\ndata: {"candidates":[{"content":{"parts":[{"text":"ABC"}]}}]}';
+const firstEvents = ssePayloads(splitEvents, false);
+assert.equal(firstEvents.payloads.length, 1);
+assert.equal(ssePayloads(firstEvents.rest, true).payloads[0].candidates[0].content.parts[0].text, "ABC");
+assert.equal(streamPayloads('{"candidates":[{"content":{"parts":[{"text":"JSON"}]}}]}', true).payloads[0].candidates[0].content.parts[0].text, "JSON");
+assert.equal(clientSsePayloads('data: {"type":"delta","text":"سلام"}\n', true).payloads[0].text, "سلام");
+assert.match(source, /readProviderPayload\(response, 12000000\)/);
 
 const assistantPage = read("havkar-ai.html");
 assert.match(assistantPage, /havkar-i18n\.js/);
@@ -152,6 +256,27 @@ assert.match(assistantPage, /getDirection/);
 assert.match(assistantPage, /dir="auto"/);
 assert.match(assistantPage, /requestInFlight/);
 assert.match(assistantPage, /data-i18n-ignore/);
+assert.match(assistantPage, /data-tool-button="guidance"/);
+assert.match(assistantPage, /id="stopGeneration"/);
+assert.match(assistantPage, /stream: true/);
+assert.match(assistantPage, /mode: "image"/);
+assert.match(assistantPage, /has not been scanned for malware/);
+assert.match(assistantPage, /Generate an image/);
+assert.match(assistantPage, /id="manageBilling"/);
+assert.match(assistantPage, /\/functions\/v1\/havkar-ai-billing/);
+assert.doesNotMatch(assistantPage, /\/api\/ai-subscription/);
+assert.match(assistantPage, /https:\/\/billing\.stripe\.com\//);
+assert.match(assistantPage, /ignoreDuplicates: true/);
+assert.match(assistantPage, /icon\.png/);
+assert.match(assistantPage, /flowType: "pkce"/);
+assert.match(assistantPage, /<bdi dir="ltr">/);
+assert.match(assistantPage, /type="file"/);
+assert.match(assistantPage, /accept="image\/jpeg,image\/png,image\/webp"/);
+assert.doesNotMatch(assistantPage, /maxlength="1200"/);
+assert.match(assistantPage, /havkar-ui-dictionary\.js/);
+assert.match(assistantPage, /notifications\.html/);
+assert.match(assistantPage, /signOut/);
+assert.doesNotMatch(assistantPage, /havkarapp2026@gmail\.com/);
 assert.doesNotMatch(assistantPage, /HAVKAR_AI_API_KEY/);
 assert.match(read("havkar-i18n.js"), /code: "ckb"[\s\S]*?dir: "rtl"/);
 assert.match(read("havkar-i18n.js"), /code: "kmr"[\s\S]*?dir: "ltr"/);
