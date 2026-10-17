@@ -4,51 +4,555 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#2e7d32">
+<meta name="theme-color" content="#eef8f0">
 <title>HAVKAR AI</title>
 <link rel="icon" type="image/png" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <style>
-*{box-sizing:border-box}
-body{margin:0;min-height:100vh;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#18251c;background:linear-gradient(135deg,#c8e6c9,#a5d6a7)}
-main{width:100%;max-width:430px;margin:0 auto;background:rgba(255,255,255,.985);border:2px solid rgba(190,225,198,.72);border-radius:28px;padding:22px 16px 24px}
-h1{margin:0 0 8px;color:#17652a;font-size:1.6rem}
-p{margin:0 0 14px;line-height:1.45}
-label{display:block;font-weight:800;margin-bottom:6px}
-textarea{width:100%;min-height:120px;border:1px solid #cbe4d0;border-radius:14px;padding:12px;font:inherit;resize:vertical}
-button,a.button{display:inline-block;margin-top:12px;border:0;border-radius:14px;background:#16833c;color:#fff;font:inherit;font-weight:800;padding:12px 16px;text-decoration:none;cursor:pointer}
-button[disabled]{opacity:.65;cursor:wait}
-.reply{margin-top:16px;padding:14px;border-radius:14px;background:#f4fbf5;white-space:pre-wrap;overflow-wrap:anywhere}
-.back{display:inline-block;margin-bottom:12px;color:#21863f;font-weight:800;text-decoration:none}
-.brandbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;color:#2e7d32;text-decoration:none}
-.brandbar img{width:40px;height:40px;border-radius:10px}
-.brandbar strong{display:block}
-select{width:100%;border:1px solid #cbe4d0;border-radius:14px;padding:12px;font:inherit;background:#fff}
+:root {
+  --green: #0f7a34;
+  --deep: #102818;
+  --mid: #1a9a42;
+  --mint: #e7f8ec;
+  --line: #d7ebdd;
+  --muted: #5d7464;
+  --shadow: 0 12px 30px rgba(16, 84, 36, .08);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  overflow-x: clip;
+  font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--deep);
+  background: #f4fbf6;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.skip { position: absolute; inset-inline-start: 12px; top: -40px; background: #fff; padding: 8px 12px; border-radius: 10px; z-index: 9; }
+.skip:focus { top: 12px; }
+.app { min-height: 100dvh; }
+.topbar {
+  height: 72px; display: flex; align-items: center; gap: 14px;
+  padding: 0 18px; background: rgba(255,255,255,.78);
+  border-bottom: 1px solid rgba(231,243,234,.9); position: sticky; top: 0; z-index: 6;
+  backdrop-filter: blur(16px);
+}
+.menu-toggle { display: none; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--deep); }
+.brand { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--deep); flex: 0 0 auto; }
+.word { display: flex; flex-direction: column; line-height: 1; }
+.word strong { font-size: 1.55rem; letter-spacing: -.02em; font-weight: 800; }
+.word small { margin-top: 4px; color: #1f9a45; font-size: .58rem; letter-spacing: .16em; font-weight: 800; }
+.mark, .avatar, .hero-globe, .foot-mark { position: relative; overflow: hidden; flex: none; }
+.mark { width: 50px; height: 50px; }
+.topbar .mark {
+  width: 58px; height: 58px; overflow: hidden; border-radius: 12px;
+  background: #fff; border: 1px solid var(--line);
+}
+.mark img, .avatar img, .foot-mark img {
+  position: absolute; left: 50%; transform: translateX(-50%); max-width: none; object-fit: fill;
+}
+.mark img { width: 136px; height: 136px; top: -35px; }
+.topbar .mark img {
+  inset: 0; left: 0; top: 0; width: 100%; height: 100%;
+  transform: none; object-fit: contain; max-width: 100%;
+}
+.hero-globe img { position: absolute; max-width: none; width: 496px; height: 496px; left: -73px; top: -133px; object-fit: fill; }
+.search {
+  flex: 1; max-width: 520px; margin-inline: auto; height: 42px;
+  display: flex; align-items: center; gap: 8px; padding: 0 14px;
+  border: 1px solid #e5f0e8; border-radius: 999px; background: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.8);
+}
+.search input { flex: 1; border: 0; background: transparent; min-width: 0; outline: none; }
+.search kbd { color: var(--muted); font-size: .75rem; border: 1px solid var(--line); border-radius: 6px; padding: 1px 5px; }
+.top-actions { display: flex; align-items: center; gap: 8px; margin-inline-start: auto; }
+.icon-btn, .lang-btn, .account {
+  border: 1px solid transparent; background: transparent; min-height: 44px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  color: var(--deep); text-decoration: none;
+}
+.lang-btn { padding-inline: 8px; border-color: #b7e0c4; background: #f3fbf6; color: #0f7a34; }
+.icon-btn { width: 40px; }
+.icon-btn[disabled] { opacity: .45; cursor: not-allowed; }
+.account { padding: 4px 8px 4px 4px; font-weight: 700; max-width: 240px; }
+.avatar-fallback {
+  width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--mid); color: #fff; font-weight: 800;
+}
+.account span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.frame { display: grid; grid-template-columns: 214px minmax(0, 1fr); }
+.side {
+  display: flex; flex-direction: column; gap: 1px; padding: 12px;
+  border-inline-end: 1px solid #e7f3ea; background: #f7fcf8; min-height: calc(100dvh - 72px);
+}
+.side a, .side button {
+  display: flex; align-items: center; gap: 10px; min-height: 38px; padding: 0 12px;
+  border: 0; border-radius: 12px; background: transparent; color: #234833;
+  text-decoration: none; text-align: start; font-weight: 650; font-size: .95rem;
+}
+.side svg { width: 18px; height: 18px; flex: none; }
+.side a[aria-current="page"], .side a:hover, .side button:hover { background: #e5f6e9; }
+.stage { min-width: 0; padding: 16px 18px 10px; display: flex; flex-direction: column; gap: 12px; }
+.hero {
+  display: grid; grid-template-columns: minmax(0, 1.15fr) 300px 268px; gap: 8px; align-items: center;
+  min-height: 236px; padding: 22px 16px 18px 26px; border-radius: 28px;
+  background:
+    radial-gradient(circle at 58% 46%, rgba(255,255,255,.75), transparent 28%),
+    linear-gradient(102deg, #f7fff9 0%, #d7f8e2 46%, #b6f0c8 100%);
+  box-shadow: var(--shadow);
+}
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; margin: 0 0 10px; padding: 5px 12px;
+  border-radius: 999px; background: #16913d; color: #fff; font-size: .78rem; font-weight: 800;
+}
+h1 { margin: 0; max-width: 460px; font-size: clamp(1.85rem, 2.35vw, 2.45rem); line-height: 1.02; letter-spacing: -.035em; font-weight: 800; }
+.lede { max-width: 460px; margin: 12px 0 0; color: #3c5c47; line-height: 1.45; }
+.traits { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 14px 0 0; padding: 0; list-style: none; font-weight: 750; }
+.traits li { display: inline-flex; align-items: center; gap: 6px; }
+.traits li::before {
+  content: "✓"; width: 16px; height: 16px; border-radius: 50%; background: #1c9a43; color: #fff;
+  display: grid; place-items: center; font-size: 10px; line-height: 16px; text-align: center;
+}
+.hero-globe { width: 310px; height: 165px; justify-self: center; }
+.hero-globe img { filter: drop-shadow(0 12px 16px rgba(18,120,48,.18)); mix-blend-mode: darken; }
+.hero-actions { display: grid; gap: 8px; }
+.hero-actions button, .card, .example, .ghost {
+  border: 1px solid #e1f0e6; background: #fff; border-radius: 14px;
+}
+.hero-actions button {
+  display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 8px 12px;
+  text-align: start; font-weight: 750; color: var(--deep); box-shadow: 0 4px 12px rgba(18,90,40,.05);
+}
+.hero-actions button span:last-child, .card strong { overflow-wrap: anywhere; }
+.hero-actions button[aria-pressed="true"], .card[aria-pressed="true"] { border-color: var(--mid); box-shadow: 0 0 0 3px rgba(31,138,59,.12); }
+.below { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 12px; align-items: start; }
+.main-col { min-width: 0; display: grid; gap: 10px; }
+.lang-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip {
+  border: 1px solid #e3f0e7; background: #fff; border-radius: 999px; min-height: 44px; padding: 6px 12px; padding-inline-start: 8px;
+  font-weight: 700; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 1px 0 rgba(16,80,40,.03);
+}
+#openLanguages { border-color: #1c9a43; color: #0f7a34; background: #f3fbf6; }
+#openLanguages svg { flex: none; }
+.chip[aria-pressed="true"] { background: #e7f8ec; border-color: #8ed3a0; }
+.more-lang { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.chat { background: rgba(255,255,255,.88); border: 1px solid rgba(230,242,234,.95); border-radius: 24px; box-shadow: var(--shadow); padding: 14px 14px 12px; display: grid; gap: 10px; backdrop-filter: blur(14px); }
+.chat-head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.chat-head > div:nth-child(2) { min-width: 0; flex: 1 1 160px; }
+.chat-head h2 { margin: 0; font-size: 1.05rem; display: flex; align-items: center; gap: 6px; }
+.verified { width: 16px; height: 16px; flex: none; }
+.chat-head p, .status { margin: 2px 0 0; color: var(--muted); font-size: .9rem; }
+.clock { color: #7d9184; font-variant-numeric: tabular-nums; }
+.chat-head .mark { width: 42px; height: 42px; }
+.chat-head .mark img { width: 114px; height: 114px; top: -29px; }
+.empty { display: flex; align-items: flex-start; gap: 8px; margin: 0; }
+.bot {
+  width: 34px; height: 34px; border-radius: 50%; background: #1c9a43; color: #fff;
+  display: grid; place-items: center; flex: none;
+}
+.empty p {
+  margin: 0; padding: 10px 14px; border-radius: 16px; background: #f4fbf6; border: 1px solid #e3f3e7; color: #244433;
+}
+.transcript { max-height: 280px; overflow: auto; }
+.transcript:empty { display: none; }
+.turn { display: flex; gap: 8px; align-items: flex-end; margin: 8px 0; }
+.turn.user { justify-content: flex-end; }
+.avatar { width: 28px; height: 28px; border-radius: 50%; }
+.avatar img { width: 80px; height: 80px; top: -20px; }
+.bubble { max-width: min(78%, 520px); padding: 10px 12px; border-radius: 16px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.bubble.assistant { background: rgba(247,251,248,.92); border: 1px solid #e3f0e6; border-end-start-radius: 5px; }
+.bubble.user { background: linear-gradient(180deg, #2f9d4a, #17652a); color: #fff; border-end-end-radius: 5px; box-shadow: 0 8px 18px rgba(18,110,42,.16); }
+.turn { animation: rise .28s ease; }
+.bubble-actions { display: flex; gap: 6px; margin-top: 6px; }
+.mini { border: 0; background: transparent; color: var(--green); font-size: .75rem; font-weight: 750; padding: 0; }
+.chat-tools { margin-inline-start: auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
+.lang-menu, .history-menu { position: relative; }
+.lang-dialog {
+  position: fixed; inset: 0; z-index: 30; display: grid; place-items: end center; padding: 12px;
+  background: rgba(10, 28, 18, .38);
+}
+.lang-sheet {
+  width: min(440px, 100%); max-height: min(82vh, 680px); overflow: auto;
+  background: rgba(255,255,255,.97); border: 1px solid var(--line); border-radius: 22px;
+  box-shadow: var(--shadow); padding: 16px; display: grid; gap: 10px;
+}
+.lang-sheet h2 { margin: 0; font-size: 1.05rem; }
+.lang-search { width: 100%; min-height: 44px; border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; background: #fff; }
+.lang-choices { display: grid; gap: 6px; }
+.lang-choice {
+  min-height: 44px; border: 1px solid #e3f0e7; background: #fff; border-radius: 12px;
+  text-align: start; padding: 8px 12px; font-weight: 700;
+}
+.lang-choice[aria-current="true"] { border-color: #1c9a43; background: #e7f8ec; }
+.lang-choice span { display: block; unicode-bidi: plaintext; }
+.lang-choice small { display: block; color: var(--muted); font-weight: 650; }
+body.lang-open { overflow: hidden; }
+.round.listening { background: #128a3a; color: #fff; box-shadow: 0 0 0 4px rgba(18,138,58,.18); }
+.lang-pop, .history-list {
+  position: absolute; z-index: 5; top: calc(100% + 6px); inset-inline-start: 0; min-width: 220px;
+  display: grid; gap: 4px; padding: 8px; background: rgba(255,255,255,.96); border: 1px solid var(--line);
+  border-radius: 14px; box-shadow: var(--shadow);
+}
+.lang-pop button, .history-item { border: 0; background: #f6fbf7; border-radius: 10px; text-align: start; padding: 8px; font-weight: 700; }
+.history-list { max-height: 240px; overflow: auto; width: min(280px, 70vw); }
+.history-menu summary { list-style: none; }
+.history-menu summary::-webkit-details-marker { display: none; }
+.dots { display: inline-flex; gap: 4px; }
+.dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--mid); animation: blink 1s infinite; }
+.suggestions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.card { display: flex; gap: 8px; align-items: center; min-height: 68px; padding: 8px 10px; text-align: start; min-width: 0; }
+.card strong, .card small { display: block; }
+.card strong { font-size: .86rem; line-height: 1.2; }
+.card small { color: var(--muted); font-weight: 500; font-size: .74rem; line-height: 1.25; margin-top: 2px; }
+.ico { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; flex: none; background: #e7f8ec; color: #1a9a42; }
+.ico svg { width: 18px; height: 18px; }
+.ico.amber { background: #fff4d8; color: #e0a100; }
+.ico.orange { background: #fff0e6; color: #f08a24; }
+.ico.pink { background: #ffe8f1; color: #e24686; }
+.composer { display: grid; gap: 6px; }
+.tool-note { margin: 0; color: var(--muted); font-size: .86rem; }
+.composer-box {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; padding: 8px;
+  border: 1px solid #e3f0e7; border-radius: 20px; background: #fff;
+}
+.attachment-preview { display: flex; align-items: center; gap: 8px; width: 100%; }
+.attachment-preview img { width: 72px; height: 72px; object-fit: cover; border-radius: 12px; border: 1px solid var(--line); }
+.attachment-preview[hidden] { display: none !important; }
+textarea {
+  flex: 1 1 100%; min-width: 0; width: 100%; min-height: 96px; max-height: 320px;
+  border: 0; resize: vertical; background: transparent; padding: 10px 4px;
+  line-height: 1.45; white-space: pre-wrap;
+}
+textarea::placeholder { color: #93a89a; }
+textarea:focus { outline: none; }
+.composer-box:focus-within { border-color: #7dcca0; box-shadow: 0 0 0 4px rgba(31,138,59,.12); }
+.left-tools, .send-row { display: flex; align-items: center; gap: 6px; }
+.ghost, .round {
+  border: 1px solid #e1eee5; background: #f8fbf9; border-radius: 999px; min-height: 34px; padding: 6px 10px; font-weight: 700;
+}
+.round { width: 34px; padding: 0; }
+.ghost[disabled], .round[disabled], .send[disabled] { opacity: .55; cursor: not-allowed; }
+.send[disabled] { opacity: .85; }
+#sessionState:empty { display: none; }
+.send {
+  width: 44px; height: 44px; border: 0; border-radius: 14px; background: #128a3a; color: #fff;
+  display: grid; place-items: center; box-shadow: 0 6px 14px rgba(18,138,58,.22);
+}
+.tools-menu summary::after { content: "▾"; font-size: .72rem; margin-inline-start: 4px; color: #607568; }
+.tools-menu { position: relative; }
+.tools-menu summary { list-style: none; }
+.tools-menu summary::-webkit-details-marker { display: none; }
+.tool-list {
+  position: absolute; z-index: 4; inset-inline-start: 0; bottom: calc(100% + 6px);
+  width: min(260px, 70vw); max-height: 260px; overflow: auto; display: grid; gap: 4px;
+  padding: 8px; background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
+}
+.tool { border: 0; background: #f6fbf7; border-radius: 10px; text-align: start; padding: 8px; }
+.tool[aria-pressed="true"] { outline: 2px solid #8ed3a0; }
+.count { margin: 0; color: var(--muted); font-size: .78rem; }
+.count bdi { unicode-bidi: isolate; }
+.retry { justify-self: start; border: 1px solid var(--mid); background: #fff; color: var(--green); border-radius: 12px; padding: 8px 12px; font-weight: 800; }
+.rail { display: grid; gap: 12px; }
+.panel { background: rgba(255,255,255,.9); border: 1px solid #e5f2e8; border-radius: 20px; box-shadow: var(--shadow); padding: 12px; backdrop-filter: blur(12px); }
+.rail-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.rail h3 { margin: 0; font-size: .98rem; display: flex; align-items: center; gap: 6px; }
+#refreshExamples { border: 0; background: transparent; color: #1c9a43; padding-inline: 6px; }
+.foot .word strong { font-size: 1.2rem; }
+.foot .word small { font-size: .5rem; }
+.examples { display: grid; gap: 4px; margin-top: 6px; }
+.example { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; padding: 9px 4px; text-align: start; background: transparent; border: 0; border-bottom: 1px solid #f0f6f2; border-radius: 0; min-width: 0; }
+.example .prompt { min-width: 0; overflow-wrap: anywhere; }
+[dir="rtl"] .go { display: inline-block; transform: scaleX(-1); }
+.tips { background: #fff8ec; border-color: #f4e4c0; }
+.tips h3 { display: flex; align-items: center; gap: 8px; }
+.tips ul { list-style: none; margin: 10px 0; padding: 0; display: grid; gap: 7px; }
+.tips li { display: flex; align-items: flex-start; gap: 8px; color: #3e5646; }
+.tips li::before { content: "✓"; color: #1c9a43; font-weight: 800; }
+.unavailable { margin: 0; font-size: .82rem; color: #5c6f62; }
+.foot {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;
+  padding: 8px 22px 20px; color: var(--muted); font-size: .86rem;
+}
+.foot-brand { display: flex; align-items: center; gap: 8px; color: var(--deep); font-weight: 800; text-decoration: none; }
+.foot-mark { width: 42px; height: 42px; }
+.foot-mark img { width: 114px; height: 114px; top: -29px; }
+.foot-meta { justify-self: end; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+.foot-meta span { display: inline-flex; align-items: center; gap: 6px; }
+.side a[hidden], .example[hidden], .tool-note[hidden], .retry[hidden], #logout[hidden],
+#empty[hidden], #suggestions[hidden], #accountEmail[hidden], .lang-pop[hidden], .lang-dialog[hidden],
+.lang-choice[hidden], .mini[hidden] { display: none !important; }
+body.dark-mode { color: #e7f6ec; background: #0c1610; }
+body.dark-mode .topbar, body.dark-mode .chat, body.dark-mode .panel, body.dark-mode .lang-pop, body.dark-mode .history-list, body.dark-mode .tool-list {
+  background: rgba(16, 28, 20, .88); color: #e7f6ec; border-color: #1e3a28;
+}
+body.dark-mode .side { background: #101c14; border-color: #1e3a28; }
+body.dark-mode .side a, body.dark-mode .side button, body.dark-mode h1, body.dark-mode h2, body.dark-mode h3 { color: #e7f6ec; }
+body.dark-mode .side a[aria-current="page"] { background: #173222; }
+body.dark-mode .hero {
+  background: radial-gradient(circle at 58% 46%, rgba(40,90,55,.45), transparent 28%), linear-gradient(102deg, #102117 0%, #163524 55%, #1d4a30 100%);
+}
+body.dark-mode .lede, body.dark-mode .chat-head p, body.dark-mode .status, body.dark-mode .card small { color: #b7d0c0; }
+body.dark-mode .hero-actions button, body.dark-mode .card, body.dark-mode .chip, body.dark-mode .composer-box, body.dark-mode .ghost, body.dark-mode .round {
+  background: #13261b; color: #e7f6ec; border-color: #245236;
+}
+body.dark-mode .search, body.dark-mode textarea, body.dark-mode .lang-search { background: transparent; color: #e7f6ec; }
+body.dark-mode .topbar { background: rgba(12, 22, 16, .94); }
+body.dark-mode .brand,
+body.dark-mode .word,
+body.dark-mode .word strong,
+body.dark-mode .foot-brand { color: #e7f6ec; }
+body.dark-mode .menu-toggle,
+body.dark-mode .icon-btn,
+body.dark-mode .lang-btn,
+body.dark-mode .account { color: #e7f6ec; }
+body.dark-mode .menu-toggle { background: #173222; border-color: #3d8f58; }
+body.dark-mode .lang-btn, body.dark-mode #openLanguages { background: #173222; color: #d9f5e3; border-color: #3d8f58; }
+body.dark-mode .lang-sheet, body.dark-mode .lang-choice { background: #13261b; color: #e7f6ec; border-color: #245236; }
+body.chat-active:not(.intro-open) #intro,
+body.chat-active:not(.intro-open) #suggestions,
+body.chat-active:not(.intro-open) .examples,
+body.chat-active:not(.intro-open) .tips { display: none !important; }
+body.chat-active .transcript { max-height: min(62vh, 720px); }
+body.dark-mode .bubble.assistant, body.dark-mode .empty p { background: #173222; color: #e7f6ec; border-color: #245236; }
+body.dark-mode .tips { background: #241c10; border-color: #4a3a1c; }
+body.dark-mode .foot { color: #b7d0c0; }
+a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 3px solid rgba(22,131,60,.45); outline-offset: 2px;
+}
+@keyframes blink { 50% { opacity: .35; } }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .dots i, .turn { animation: none; } }
+@media (max-width: 1180px) {
+  .hero { grid-template-columns: minmax(0, 1fr) 220px; }
+  .hero-globe { display: none; }
+  .suggestions { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 980px) {
+  .menu-toggle { display: grid; place-items: center; }
+  .frame { grid-template-columns: 1fr; }
+  .side {
+    display: none; position: fixed; z-index: 7; inset: 72px auto 0 0; width: min(300px, 88vw);
+    background: #fff; box-shadow: var(--shadow); min-height: 0; overflow: auto;
+  }
+  [dir="rtl"] .side { inset: 72px 0 0 auto; }
+  .foot { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .foot-meta { justify-self: center; }
+  body.nav-open .side { display: flex; }
+  .below { grid-template-columns: 1fr; }
+  .search { display: none; }
+  .word small { display: none; }
+}
+@media (max-width: 720px) {
+  .topbar { padding-inline: 8px; gap: 6px; }
+  #voiceInput, #openLanguages, #focusLanguage { min-width: 44px; min-height: 44px; }
+  .lang-dialog { padding: 0; place-items: end stretch; }
+  .lang-sheet {
+    width: 100%; max-height: min(88vh, 680px); border-end-start-radius: 0; border-end-end-radius: 0;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+  .word strong { font-size: 1rem; }
+  .mark { width: 36px; height: 36px; }
+  .topbar .mark, .topbar .mark img { width: 44px; height: 44px; }
+  .account { max-width: none; padding-inline: 2px; }
+  #accountLabel, #accountEmail { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .icon-btn, .lang-btn { width: 32px; min-width: 32px; }
+  .stage, .hero, .below, .main-col, .chat, .rail, .panel { max-width: 100%; }
+  .stage { padding: 8px; }
+  .hero { grid-template-columns: 1fr; min-height: 0; padding: 14px; }
+  .hero-globe { display: none; }
+  .hero-actions { grid-template-columns: 1fr 1fr; }
+  .hero-actions button, .card, .chip, .example { min-width: 0; }
+  .suggestions { grid-template-columns: 1fr 1fr; }
+  .composer-box { flex-wrap: wrap; }
+  .hero-actions button { font-size: .86rem; }
+  textarea { flex: 1 1 100%; }
+  .bubble { max-width: 88%; }
+  .foot-meta { margin-inline-start: 0; }
+}
 </style>
 </head>
 <body>
-<main>
-<a class="brandbar" href="index.html"><img src="icon.png" alt="HAVKAR" width="40" height="40"><span><strong>HAVKAR</strong><span>AI assistant</span></span></a>
-<a class="back" href="index.html">Home</a>
-<h1>HAVKAR AI</h1>
-<p>Draft a logo brief, business-page text, or a numbered menu. HAVKAR AI does not publish a page, upload a file, or take a payment.</p>
-<p id="sessionState">Checking your HAVKAR session...</p>
-<form id="askForm">
-<label for="task">Help with</label>
-<select id="task" name="task">
-<option value="general">General question</option>
-<option value="logo">Logo brief</option>
-<option value="business_page">Business page text</option>
-<option value="menu">Numbered menu</option>
-</select>
-<label for="question">Question</label>
-<textarea id="question" name="question" maxlength="1200" required dir="auto" data-i18n-ignore translate="no"></textarea>
-<button id="ask" type="submit" disabled>Ask HAVKAR AI</button>
+<a class="skip" href="#question">Skip to message</a>
+<div class="app">
+<header class="topbar">
+<button id="menuToggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="sideNav" aria-label="Menu"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M4 7h16v2H4Zm0 4h16v2H4Zm0 4h16v2H4Z"/></svg></button>
+<a class="brand" href="index.html">
+<span class="mark"><img src="icon.png" alt="" width="1024" height="1024"></span>
+<span class="word" translate="no" data-i18n-ignore><strong>HAVKAR</strong><small>CONNECT · TRADE · WORK · HELP</small></span>
+</a>
+<label class="search"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="#7aa188" d="M10 4a6 6 0 1 0 3.7 10.7l4 4 1.4-1.4-4-4A6 6 0 0 0 10 4Z"/></svg><input id="navSearch" type="search" placeholder="Search anything in HAVKAR..." aria-label="Search HAVKAR pages"><kbd>⌘K</kbd></label>
+<div class="top-actions">
+<button id="focusLanguage" class="lang-btn" type="button" aria-haspopup="dialog" aria-controls="languageDialog" aria-expanded="false" aria-label="Choose language"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm-7 9h3.1a13 13 0 0 0 0 4H5a7 7 0 0 1 0-4Zm3.1-2H5a7 7 0 0 1 3.1-4 13 13 0 0 0 0 4ZM12 19c-.8-1-1.6-2.6-1.9-5h3.8c-.3 2.4-1.1 4-1.9 5Zm2.1-7h-4.2a11 11 0 0 1 0-4h4.2a11 11 0 0 1 0 4Zm.8 6a7 7 0 0 0 3.1-4h-3.1a13 13 0 0 1 0 4Zm0-6h3.1a7 7 0 0 0-3.1-4 13 13 0 0 1 0 4Z"/></svg><span id="langShort" data-i18n-ignore translate="no">EN</span><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M7 10l5 5 5-5H7Z"/></svg></button>
+<button id="themeToggle" class="icon-btn" type="button" aria-pressed="false" aria-label="Appearance"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M14 3a8 8 0 1 0 7 12 7 7 0 0 1-7-12Z"/></svg></button>
+<a class="icon-btn" href="notifications.html" aria-label="Notifications"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 22a2.2 2.2 0 0 0 2.1-2h-4.2A2.2 2.2 0 0 0 12 22Zm7-6.2V11a7 7 0 0 0-5-6.7V3.5a2 2 0 1 0-4 0v.8A7 7 0 0 0 5 11v4.8L3.4 17.4V19h17.2v-1.6L19 15.8Z"/></svg></a>
+<a id="accountLink" class="account" href="login.html"><span class="avatar-fallback" id="accountMark">H</span><span id="accountLabel">Log in</span><span id="accountEmail" hidden data-i18n-ignore translate="no"></span></a>
+</div>
+</header>
+<div class="frame">
+<nav id="sideNav" class="side" aria-label="HAVKAR">
+<a href="index.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 10.5 12 4l8 6.5V20h-6v-5H10v5H4Z"/></svg>Home</a>
+<a href="buy-sell.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M7 6h10l1 14H6Z"/></svg>Buy &amp; Sell</a>
+<a href="jobs.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 7h16v12H4Zm5-3h6v3H9Z"/></svg>Jobs</a>
+<a href="services.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="m14.5 6.2 1.6 1.6-8.7 8.7H5.8v-1.6Z"/></svg>Services</a>
+<a href="wallet.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 7h16a2 2 0 0 1 2 2v8H5a2 2 0 0 1-2-2Zm13 4h4v2h-4Z"/></svg>Wallet</a>
+<a href="tickets.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 8a2 2 0 0 1 2-2h12v4a2 2 0 0 0 0 4v4H6a2 2 0 0 1-2-2Z"/></svg>Tickets</a>
+<a href="accommodation.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="m4 11 8-6 8 6v8h-6v-5H10v5H4Z"/></svg>Accommodation</a>
+<a href="ads.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 10h3v7H4Zm4-1 9-4v14l-9-4Z"/></svg>Ads</a>
+<a href="delivery.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 7h11v8H3Zm11 2h4l3 3v3h-7ZM7 18.5a1.5 1.5 0 1 0 0 .1ZM17 18.5a1.5 1.5 0 1 0 0 .1Z"/></svg>Delivery</a>
+<a href="events.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M7 3h2v2h6V3h2v2h3v15H4V5h3Zm-1 6v9h12V9Z"/></svg>Events</a>
+<a href="chat.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 5h16v10H8l-4 3Z"/></svg>Chat</a>
+<a href="language.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3a9 9 0 1 0 .1 18.1A9 9 0 0 0 12 3Z"/></svg>Languages</a>
+<a href="reviews.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="m12 3 2.6 5.4 6 .9-4.3 4.2 1 5.9L12 16.8 6.7 19.4l1-5.9L3.4 9.3l6-.9Z"/></svg>Reviews</a>
+<a href="support.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3a8 8 0 0 0-8 8v6h5v-6a3 3 0 0 1 6 0v6h5v-6a8 8 0 0 0-8-8Z"/></svg>Support</a>
+<a href="about.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3a9 9 0 1 0 .1 18.1A9 9 0 0 0 12 3Zm-1 4h2v2h-2Zm0 4h2v7h-2Z"/></svg>About</a>
+<a href="havkar-ai.html" aria-current="page"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5a6.5 6.5 0 0 0-3.6 11.9V18h7.2v-3.6A6.5 6.5 0 0 0 12 2.5Z"/></svg>AI Assistant</a>
+<a href="profile.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm-7 8v-1c0-2.8 3-4.5 7-4.5s7 1.7 7 4.5v1Z"/></svg>Settings</a>
+<button id="logout" type="button" hidden><svg viewBox="0 0 24 24"><path fill="currentColor" d="M10 4H5v16h5v-2H7V6h3Zm3 3 5 5-5 5v-3H8v-4h5Z"/></svg>Log out</button>
+</nav>
+<div class="stage">
+<div id="intro">
+<section class="hero">
+<div>
+<p class="pill" translate="no" data-i18n-ignore>✦ HAVKAR AI</p>
+<h1>Your Smart Assistant for Business, Life and Growth</h1>
+<p class="lede">Get expert help in multiple languages. Create content, logos, menus, business pages and more.</p>
+<ul class="traits"><li>Fast</li><li>Multilingual</li><li>Creative</li><li>Professional</li></ul>
+</div>
+<div class="hero-globe"><img src="icon.png" alt="" width="1024" height="1024"></div>
+<div class="hero-actions">
+<button type="button" data-tool-button="business_page"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M6 3h8l5 5v13H6Zm8 1.6V9h4.4"/><path fill="currentColor" d="M8 12h8v1.6H8Zm0 3h8v1.6H8Z"/></svg></span><span>Create Content</span></button>
+<button type="button" data-tool-button="logo"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/></svg></span><span>Design Logo</span></button>
+<button type="button" data-tool-button="ideas"><span class="ico amber" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M9 18h6v1.5a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2Zm-1.2-3.2A6.5 6.5 0 1 1 16.2 9 6.4 6.4 0 0 1 13 14.2V16H11v-1.8a6.4 6.4 0 0 1-3.2-2.4Z"/></svg></span><span>Business Ideas</span></button>
+<button type="button" data-tool-button="translation"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 5h7v2h-2.2c.5 1.5 1.5 2.8 2.8 3.8l-1.1 1.7A9 9 0 0 1 7 9H4V7h2.2A9 9 0 0 1 4.7 5Zm9 6h7v2h-1.6l-2.2 6h-2l.6-1.7h-3.3L12.1 19h-2l2.3-6H13Z"/></svg></span><span>Translation</span></button>
+<button type="button" data-tool-button="guidance"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M8 6h11v2H8Zm0 5h11v2H8Zm0 5h11v2H8ZM5 6h2v2H5Zm0 5h2v2H5Zm0 5h2v2H5Z"/></svg></span><span>Step-by-Step Guidance</span></button>
+</div>
+</section>
+</div>
+<div class="below">
+<div class="main-col">
+<div class="lang-row">
+<button id="openLanguages" class="chip" type="button" aria-haspopup="dialog" aria-controls="languageDialog" aria-expanded="false" aria-label="Choose language"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm-7 9h3.1a13 13 0 0 0 0 4H5a7 7 0 0 1 0-4Zm3.1-2H5a7 7 0 0 1 3.1-4 13 13 0 0 0 0 4ZM12 19c-.8-1-1.6-2.6-1.9-5h3.8c-.3 2.4-1.1 4-1.9 5Zm2.1-7h-4.2a11 11 0 0 1 0-4h4.2a11 11 0 0 1 0 4Zm.8 6a7 7 0 0 0 3.1-4h-3.1a13 13 0 0 1 0 4Zm0-6h3.1a7 7 0 0 0-3.1-4 13 13 0 0 1 0 4Z"/></svg><span id="languageName" data-i18n-ignore translate="no">English</span><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M7 10l5 5 5-5H7Z"/></svg></button>
+<select id="language" class="more-lang" data-i18n-ignore translate="no" aria-label="More languages"></select>
+</div>
+<div id="languageDialog" class="lang-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="languageDialogTitle">
+<div class="lang-sheet">
+<h2 id="languageDialogTitle">Language</h2>
+<input id="languageSearch" class="lang-search" type="search" placeholder="Search languages" aria-label="Search languages" autocomplete="off" data-i18n-ignore translate="no">
+<div id="languageChoices" class="lang-choices"></div>
+<button id="closeLanguages" class="ghost" type="button">Close</button>
+</div>
+</div>
+<section class="chat" aria-labelledby="ai-title">
+<div class="chat-head">
+<span class="mark"><img src="icon.png" alt="" width="1024" height="1024"></span>
+<div><h2 id="ai-title" translate="no" data-i18n-ignore>HAVKAR AI <svg class="verified" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="8" fill="#1c9a43"/><path d="M4.2 8.2 6.7 10.6 11.8 5.4" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg></h2><p>Your multilingual business assistant</p></div>
+<div class="chat-tools">
+<button id="toggleIntro" class="ghost" type="button" hidden>Introduction</button>
+<button id="newConversation" class="ghost" type="button">New chat</button>
+<details class="history-menu">
+<summary class="ghost">History</summary>
+<div id="historyList" class="history-list"></div>
+</details>
+<time id="clock" class="clock" data-i18n-ignore translate="no"></time>
+</div>
+</div>
+<p id="sessionState" class="status">Checking your HAVKAR session...</p>
+<div id="empty" class="empty"><span class="bot" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M8 10h2v2H8Zm6 0h2v2h-2ZM12 3a8 8 0 0 0-8 8v6h4v-4h8v4h4v-6a8 8 0 0 0-8-8Z"/></svg></span><p>Hello, I am HAVKAR AI. How can I help you?</p></div>
+<div id="transcript" class="transcript" aria-live="polite" dir="auto" data-i18n-ignore translate="no"></div>
+<div id="suggestions" class="suggestions">
+<button class="card" type="button" data-tool-button="logo"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/></svg></span><span><strong>Create a Logo</strong><small>Design brief and one SVG</small></span></button>
+<button class="card" type="button" data-tool-button="business_page"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M6 3h8l5 5v13H6Zm8 1.6V9h4.4"/><path fill="currentColor" d="M8 12h8v1.6H8Zm0 3h6v1.6H8Z"/></svg></span><span><strong>Business Page Text</strong><small>Draft the page text</small></span></button>
+<button class="card" type="button" data-tool-button="menu" value="menu"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M8 3c1.2 4.2.4 8-.8 12.2-.4 1.4.4 2.8 1.8 2.8h.2c2.6 0 4-2.6 3.2-5.2C11.4 8.6 10.2 5 8 3Zm8.2 1.2c.6 2.4.2 4.6-.6 6.8 1.6.2 3.2 1.2 3.6 3.2.4 2.2-1.2 4-3.4 4h-.4c-.8 0-1.4-.6-1.2-1.4.6-3.4 1.4-6.6 2-12.6Z"/></svg></span><span><strong>Menu for Restaurant</strong><small>Draft a priced menu</small></span></button>
+<button class="card" type="button" data-tool-button="translation"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 5h7v2h-2.2c.5 1.5 1.5 2.8 2.8 3.8l-1.1 1.7A9 9 0 0 1 7 9H4V7h2.2A9 9 0 0 1 4.7 5Zm9 6h7v2h-1.6l-2.2 6h-2l.6-1.7h-3.3L12.1 19h-2l2.3-6H13Z"/></svg></span><span><strong>Translate Text</strong><small>Translate between languages</small></span></button>
+<button class="card" type="button" data-tool-button="ideas"><span class="ico amber" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M9 18h6v1.5a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2Zm-1.2-3.2A6.5 6.5 0 1 1 16.2 9 6.4 6.4 0 0 1 13 14.2V16H11v-1.8a6.4 6.4 0 0 1-3.2-2.4Z"/></svg></span><span><strong>Business Ideas</strong><small>Ideas and guidance</small></span></button>
+<button class="card" type="button" data-tool-button="advertising"><span class="ico orange" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 10h3v7H4Zm4-1 10-4v13l-10-4Z"/></svg></span><span><strong>Write an Ad</strong><small>Advertisement text</small></span></button>
+<button class="card" type="button" data-tool-button="social"><span class="ico pink" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16.6" cy="7.4" r="1" fill="currentColor"/></svg></span><span><strong>Social Media Content</strong><small>Draft post text only</small></span></button>
+<button class="card" type="button" data-tool-button="guidance"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M8 6h11v2H8Zm0 5h11v2H8Zm0 5h11v2H8ZM5 6h2v2H5Zm0 5h2v2H5Zm0 5h2v2H5Z"/></svg></span><span><strong>Step-by-Step Help</strong><small>Numbered instructions</small></span></button>
+<button class="card" type="button" data-tool-button="programming"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M8 8 4 12l4 4 1.4-1.4L6.8 12l2.6-2.6Zm8 0-1.4 1.4L17.2 12l-2.6 2.6L16 16l4-4ZM13 5l-2 14h2l2-14Z"/></svg></span><span><strong>Programming help</strong><small>Code and explanations</small></span></button>
+</div>
+<form id="askForm" class="composer">
+<p class="tool-note" data-tool-note="logo" hidden>This writes a design brief and one simple SVG. It does not create or upload an image file.</p>
+<p class="tool-note" data-tool-note="menu" hidden>This drafts menu text. It does not publish a menu or take a payment.</p>
+<p class="tool-note" data-tool-note="business_page" hidden>This drafts page text. It does not publish the page.</p>
+<label class="visually-hidden" for="question" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Message</label>
+<div class="composer-box">
+<div id="attachmentPreview" class="attachment-preview" hidden>
+<img id="attachmentThumb" alt="">
+<button id="removeAttachment" class="ghost" type="button">Remove image</button>
+<span id="uploadProgress" data-i18n-ignore translate="no"></span>
+</div>
+<div class="left-tools">
+<button id="openTools" class="round" type="button" aria-label="More tools">+</button>
+<details class="tools-menu">
+<summary class="ghost">Tools</summary>
+<div class="tool-list">
+<button class="tool" type="button" data-tool-button="general">General AI Assistant</button>
+<button class="tool" type="button" data-tool-button="business_page">Business Page Content</button>
+<button class="tool" type="button" data-tool-button="logo">Logo Design Assistance</button>
+<button class="tool" type="button" data-tool-button="menu" value="menu">Restaurant Menu Creation</button>
+<button class="tool" type="button" data-tool-button="translation">Translation</button>
+<button class="tool" type="button" data-tool-button="ideas">Business Ideas</button>
+<button class="tool" type="button" data-tool-button="advertising">Advertising Content</button>
+<button class="tool" type="button" data-tool-button="social">Social Media Content</button>
+<button class="tool" type="button" data-tool-button="guidance">Step-by-Step Guidance</button>
+<button class="tool" type="button" data-tool-button="programming">Programming help</button>
+</div>
+</details>
+<button id="showExamples" class="ghost" type="button"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="#e0a100" d="M9 18h6v1.4a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2Zm-1-3a6.2 6.2 0 1 1 8 0l-.4.6H8.4Z"/></svg> Examples</button>
+<button id="pickImage" class="ghost" type="button">Image</button>
+<input id="imageFile" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+</div>
+<textarea id="question" name="question" required dir="auto" rows="4" placeholder="Type your question here..." enterkeyhint="enter"></textarea>
+<div class="send-row">
+<button id="voiceInput" class="round" type="button" aria-pressed="false" aria-label="Start voice input"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Zm-6 9h2a4 4 0 0 0 8 0h2a6 6 0 0 1-5 5.9V20h3v2H8v-2h3v-2.1A6 6 0 0 1 6 12Z"/></svg></button>
+<button id="ask" class="send" type="submit" disabled aria-label="Send"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M3 11.5 21 3l-7.2 18-2.3-7.2Z"/></svg><span class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Send</span></button>
+</div>
+</div>
+<p id="count" class="count" data-i18n-ignore translate="no"><bdi dir="ltr">0</bdi></p>
+<button id="sendPart" class="ghost" type="button" hidden>Send first part</button>
+<button id="retry" class="retry" type="button" hidden>Try again</button>
+<p id="status" class="status" role="status"></p>
 </form>
-<p><a href="login.html">Log in</a></p>
-<div class="reply" aria-live="polite" id="reply" dir="auto" data-i18n-ignore translate="no">No answer yet.</div>
-</main>
+</section>
+</div>
+<aside class="rail">
+<section class="panel">
+<div class="rail-head"><h3><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="#1c9a43" d="M12 2.5 14.2 9H21l-5.4 4 2 6.5L12 15.8 6.4 19.5l2-6.5L3 9h6.8Z"/></svg> Quick Examples</h3><button id="refreshExamples" class="ghost" type="button">Refresh</button></div>
+<div class="examples" aria-label="Quick examples">
+<button class="example" type="button" data-tool="logo"><span class="prompt">Create a professional logo for my business</span><span class="go" aria-hidden="true">→</span></button>
+<button class="example" type="button" data-tool="menu"><span class="prompt">Write a restaurant menu with prices</span><span class="go" aria-hidden="true">→</span></button>
+<button class="example" type="button" data-tool="business_page"><span class="prompt">Generate a business page description</span><span class="go" aria-hidden="true">→</span></button>
+<button class="example" type="button" data-tool="translation"><span class="prompt">Translate this text to Kurdish</span><span class="go" aria-hidden="true">→</span></button>
+<button class="example" type="button" data-tool="ideas"><span class="prompt">Give me 10 business ideas</span><span class="go" aria-hidden="true">→</span></button>
+<button class="example" type="button" data-tool="social"><span class="prompt">Write a social media post</span><span class="go" aria-hidden="true">→</span></button>
+<button class="example" type="button" data-tool="guidance"><span class="prompt">Explain step by step how to start a business</span><span class="go" aria-hidden="true">→</span></button>
+<button class="example" type="button" data-tool="advertising"><span class="prompt">Write a short advertisement for a family restaurant</span><span class="go" aria-hidden="true">→</span></button>
+<button class="example" type="button" data-tool="general"><span class="prompt">How do I use HAVKAR Jobs?</span><span class="go" aria-hidden="true">→</span></button>
+</div>
+</section>
+<section class="panel tips">
+<h3><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="#e0a100" d="M9 18h6v1.4a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2Zm-1-3a6.2 6.2 0 1 1 8 0l-.4.6H8.4Z"/></svg> HAVKAR AI Pro Tips</h3>
+<ul>
+<li>Be specific in your questions.</li>
+<li>You can ask in any language.</li>
+<li>Request designs, text, menus and more.</li>
+<li>Get step-by-step guidance.</li>
+<li>Use examples for better results.</li>
+</ul>
+<p class="unavailable"><strong>Not available yet:</strong> Image generation stays off until a secure image service is tested. You can attach a JPEG, PNG, or WebP image for the assistant to read. Voice input uses this browser’s speech recognition and is not sent to HAVKAR as audio.</p>
+</section>
+</aside>
+</div>
+</div>
+</div>
+<footer class="foot">
+<a class="foot-brand" href="index.html"><span class="foot-mark"><img src="icon.png" alt="" width="1024" height="1024"></span><span class="word" translate="no" data-i18n-ignore><strong>HAVKAR</strong><small>CONNECT · TRADE · WORK · HELP</small></span></a>
+<span>© 2026 HAVKAR. All rights reserved.</span>
+<span class="foot-meta"><span><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="#1c9a43" d="M12 3 5 6v6c0 4.2 2.8 7.2 7 9 4.2-1.8 7-4.8 7-9V6Z"/></svg>Safe &amp; Secure</span><span><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="#1c9a43" d="M12 3a9 9 0 1 0 .1 18.1A9 9 0 0 0 12 3Z"/></svg>Multilingual</span><span><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="#1c9a43" d="M13 2 4 14h7l-1 8 9-12h-7Z"/></svg>Powered by AI</span></span>
+</footer>
+</div>
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-ui-dictionary.js"></script>
 <script src="/havkar-i18n.js"></script>
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -56,94 +560,822 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const sessionState = document.getElementById("sessionState");
 const askForm = document.getElementById("askForm");
 const question = document.getElementById("question");
-const task = document.getElementById("task");
 const ask = document.getElementById("ask");
-const reply = document.getElementById("reply");
+const retry = document.getElementById("retry");
+const status = document.getElementById("status");
+const transcript = document.getElementById("transcript");
+const count = document.getElementById("count");
+const language = document.getElementById("language");
+const empty = document.getElementById("empty");
+const suggestions = document.getElementById("suggestions");
+const accountLink = document.getElementById("accountLink");
+const accountLabel = document.getElementById("accountLabel");
+const accountEmail = document.getElementById("accountEmail");
+const accountMark = document.getElementById("accountMark");
+const logout = document.getElementById("logout");
+const menuToggle = document.getElementById("menuToggle");
+const clock = document.getElementById("clock");
+const langShort = document.getElementById("langShort");
 const config = window.HAVKAR_SUPABASE_CONFIG;
-const taskLimits = { general: 1200, logo: 1500, business_page: 2000, menu: 6000 };
-
-task.addEventListener("change", () => {
-  question.maxLength = taskLimits[task.value] || 1200;
-});
+const REQUEST_CHARACTERS = 6000;
+const limits = {
+  general: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS },
+  logo: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS },
+  business_page: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS },
+  menu: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS },
+  translation: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS },
+  ideas: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS },
+  advertising: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS },
+  social: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS },
+  guidance: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS },
+  programming: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS }
+};
+let attachmentPath = "";
+let attachmentUrl = "";
+let uploadBusy = false;
+const history = [];
+let currentTool = "general";
+let requestInFlight = false;
+let signedIn = false;
+let lastPayload = null;
+let supabase = null;
+let currentUserId = "";
+let activeThreadId = "";
+const THREAD_KEY = "havkar_ai_threads_v1";
+const PROFILE_SETTINGS = "havkar_profile_settings";
 
 function languageCode() {
   const i18n = window.HAVKAR_I18N;
-  if (i18n && typeof i18n.getLanguage === "function") {
-    return i18n.getLanguage();
-  }
-  const stored = localStorage.getItem("havkar_language") || localStorage.getItem("selectedLanguage") || "en";
-  return String(stored).trim().toLowerCase() || "en";
+  if (i18n && typeof i18n.getLanguage === "function") return i18n.getLanguage();
+  return String(localStorage.getItem("havkar_language") || localStorage.getItem("selectedLanguage") || "en").trim().toLowerCase() || "en";
 }
 
 function applyInterfaceDirection() {
   const i18n = window.HAVKAR_I18N;
   const code = languageCode();
-  const dir = i18n && typeof i18n.getDirection === "function"
-    ? i18n.getDirection(code)
-    : "ltr";
+  const dir = i18n && typeof i18n.getDirection === "function" ? i18n.getDirection(code) : "ltr";
   document.documentElement.lang = code || "en";
   document.documentElement.dir = dir === "rtl" ? "rtl" : "ltr";
 }
 
+const LANGUAGE_LABELS = {
+  ckb: "Kurdî (Soranî) — کوردی سۆرانی",
+  kmr: "Kurdî (Kurmancî) — Kurmancî"
+};
+const SPEECH_LOCALES = {
+  en: "en-US", it: "it-IT", de: "de-DE", fr: "fr-FR", es: "es-ES", pt: "pt-PT", nl: "nl-NL",
+  sv: "sv-SE", pl: "pl-PL", id: "id-ID", zh: "zh-CN", ja: "ja-JP", ko: "ko-KR", hi: "hi-IN",
+  ru: "ru-RU", tr: "tr-TR", ar: "ar-SA", fa: "fa-IR", ur: "ur-PK"
+};
+let recognition = null;
+let listening = false;
+let voicePending = false;
+let voiceBase = "";
+let voiceCancel = false;
+let languageOpener = null;
+
+function languageLabel(item) {
+  return LANGUAGE_LABELS[item.code] || item.name;
+}
+
+function fillLanguages() {
+  const i18n = window.HAVKAR_I18N;
+  const list = i18n && typeof i18n.getSelectableLanguages === "function" ? i18n.getSelectableLanguages() : [];
+  const current = languageCode();
+  const choices = document.getElementById("languageChoices");
+  language.replaceChildren();
+  choices.replaceChildren();
+  list.forEach((item) => {
+    const option = document.createElement("option");
+    option.value = item.code;
+    option.textContent = languageLabel(item);
+    option.selected = item.code === current;
+    language.appendChild(option);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "lang-choice";
+    button.dir = "auto";
+    button.dataset.lang = item.code;
+    button.setAttribute("aria-current", item.code === current ? "true" : "false");
+    const name = document.createElement("span");
+    name.textContent = languageLabel(item);
+    name.setAttribute("data-i18n-ignore", "");
+    name.translate = false;
+    const code = document.createElement("small");
+    code.textContent = item.code + " · " + (item.dir === "rtl" ? "RTL" : "LTR");
+    code.setAttribute("data-i18n-ignore", "");
+    button.append(name, code);
+    button.addEventListener("click", () => chooseLanguage(item.code));
+    choices.appendChild(button);
+  });
+  const currentItem = list.find((item) => item.code === current);
+  document.getElementById("languageName").textContent = currentItem ? languageLabel(currentItem) : (current || "en").toUpperCase();
+  langShort.textContent = (current || "en").toUpperCase();
+  filterLanguages();
+}
+
+function filterLanguages() {
+  const query = document.getElementById("languageSearch").value.trim().toLowerCase();
+  document.querySelectorAll(".lang-choice").forEach((button) => {
+    button.hidden = Boolean(query) && !button.textContent.toLowerCase().includes(query);
+  });
+}
+
+function setLanguageExpanded(open) {
+  document.getElementById("openLanguages").setAttribute("aria-expanded", open ? "true" : "false");
+  document.getElementById("focusLanguage").setAttribute("aria-expanded", open ? "true" : "false");
+}
+
+function openLanguageDialog(event) {
+  const dialog = document.getElementById("languageDialog");
+  languageOpener = event && event.currentTarget ? event.currentTarget : document.getElementById("openLanguages");
+  dialog.hidden = false;
+  document.body.classList.add("lang-open");
+  setLanguageExpanded(true);
+  document.getElementById("languageSearch").focus();
+}
+
+function closeLanguageDialog() {
+  const dialog = document.getElementById("languageDialog");
+  dialog.hidden = true;
+  document.body.classList.remove("lang-open");
+  setLanguageExpanded(false);
+  if (languageOpener && typeof languageOpener.focus === "function") languageOpener.focus();
+}
+
+function speechEngine() {
+  if (!window.isSecureContext) return null;
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+}
+
+function interfaceText(text) {
+  const code = document.documentElement.lang;
+  const table = window.HAVKAR_UI_DICTIONARY && window.HAVKAR_UI_DICTIONARY[code];
+  return table && table[text] ? table[text] : text;
+}
+
+function setVoiceUi(active) {
+  const button = document.getElementById("voiceInput");
+  listening = active;
+  button.classList.toggle("listening", active);
+  button.setAttribute("aria-pressed", active ? "true" : "false");
+  button.setAttribute("aria-label", interfaceText(active ? "Stop voice input" : "Start voice input"));
+}
+
+function stopVoice(cancel) {
+  voiceCancel = cancel;
+  voicePending = false;
+  const active = recognition;
+  if (!active) {
+    setVoiceUi(false);
+    return;
+  }
+  try {
+    if (cancel && typeof active.abort === "function") active.abort();
+    else active.stop();
+  } catch (error) {
+    setVoiceUi(false);
+    recognition = null;
+  }
+}
+
+function startVoice() {
+  if (!window.isSecureContext) {
+    setStatus("Voice input needs a secure HTTPS page.");
+    return;
+  }
+  const Engine = speechEngine();
+  if (!Engine) {
+    setStatus("This browser does not support speech recognition.");
+    return;
+  }
+  if (listening || voicePending) {
+    stopVoice(false);
+    return;
+  }
+  const speechLocale = SPEECH_LOCALES[languageCode()];
+  if (!speechLocale) {
+    setStatus("This browser cannot transcribe the selected language.");
+    return;
+  }
+  voiceBase = question.value;
+  voiceCancel = false;
+  voicePending = true;
+  recognition = new Engine();
+  recognition.lang = speechLocale;
+  recognition.interimResults = true;
+  recognition.continuous = false;
+  recognition.maxAlternatives = 1;
+  recognition.onstart = () => {
+    voicePending = false;
+    setVoiceUi(true);
+    setStatus("Listening. Select the microphone to keep the text, or press Escape to cancel.");
+  };
+  recognition.onresult = (event) => {
+    if (voiceCancel) return;
+    let spoken = "";
+    for (let index = 0; index < event.results.length; index += 1) {
+      spoken += event.results[index][0].transcript;
+    }
+    const text = spoken.trim();
+    question.value = text ? (voiceBase.trim() ? voiceBase.trim() + " " + text : text) : voiceBase;
+    updateCount();
+  };
+  recognition.onerror = (event) => {
+    const code = event && event.error ? event.error : "";
+    voicePending = false;
+    if (code === "not-allowed" || code === "service-not-allowed") setStatus("Microphone permission was denied.");
+    else if (code === "audio-capture") setStatus("No microphone was found.");
+    else if (code === "language-not-supported") setStatus("This browser cannot transcribe the selected language.");
+    else if (code === "no-speech") setStatus("No speech was heard.");
+    else if (code !== "aborted") setStatus("Speech recognition stopped.");
+  };
+  recognition.onend = () => {
+    voicePending = false;
+    if (voiceCancel) {
+      question.value = voiceBase;
+      updateCount();
+      setStatus("Voice input cancelled.");
+    }
+    setVoiceUi(false);
+    recognition = null;
+  };
+  try {
+    recognition.start();
+  } catch (error) {
+    voicePending = false;
+    recognition = null;
+    setVoiceUi(false);
+    setStatus("Speech recognition could not start.");
+  }
+}
+
+function setStatus(text) { status.textContent = text || ""; }
+
+function growQuestion() {
+  question.style.height = "auto";
+  question.style.height = Math.min(Math.max(question.scrollHeight, 96), 320) + "px";
+}
+
+function updateCount() {
+  const isolate = document.createElement("bdi");
+  isolate.dir = "ltr";
+  isolate.textContent = String(question.value.length);
+  count.replaceChildren(isolate);
+  document.getElementById("sendPart").hidden = question.value.length <= REQUEST_CHARACTERS;
+  growQuestion();
+}
+
+function hideIntro() {
+  empty.hidden = true;
+  suggestions.hidden = true;
+  document.body.classList.add("chat-active");
+  document.getElementById("toggleIntro").hidden = false;
+}
+
+function selectTool(name) {
+  if (!limits[name]) return;
+  currentTool = name;
+  document.querySelectorAll("[data-tool-button]").forEach((button) => {
+    button.setAttribute("aria-pressed", button.dataset.toolButton === name ? "true" : "false");
+  });
+  document.querySelectorAll("[data-tool-note]").forEach((note) => {
+    note.hidden = note.dataset.toolNote !== name;
+  });
+  updateCount();
+}
+
+function addBubble(role, text, pending) {
+  const turn = document.createElement("div");
+  turn.className = "turn " + role;
+  if (role === "assistant") {
+    const avatarWrap = document.createElement("span");
+    avatarWrap.className = "avatar";
+    const avatar = document.createElement("img");
+    avatar.src = "icon.png";
+    avatar.alt = "";
+    avatar.width = 1024;
+    avatar.height = 1024;
+    avatarWrap.appendChild(avatar);
+    turn.appendChild(avatarWrap);
+  }
+  const bubble = document.createElement("div");
+  bubble.className = "bubble " + role + (pending ? " pending" : "");
+  bubble.dir = "auto";
+  if (pending) {
+    bubble.setAttribute("aria-label", "Waiting for HAVKAR AI");
+    const dots = document.createElement("span");
+    dots.className = "dots";
+    dots.append(document.createElement("i"), document.createElement("i"), document.createElement("i"));
+    bubble.appendChild(dots);
+  } else bubble.textContent = text;
+  if (!pending && role === "assistant") {
+    const actions = document.createElement("div");
+    actions.className = "bubble-actions";
+    const copy = document.createElement("button");
+    copy.type = "button";
+    copy.className = "mini";
+    copy.textContent = "Copy";
+    copy.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(text);
+        copy.textContent = "Copied";
+      } catch (error) {
+        setStatus("Copy is not available in this browser.");
+      }
+    });
+    const regen = document.createElement("button");
+    regen.type = "button";
+    regen.className = "mini regen";
+    regen.textContent = "Regenerate";
+    regen.addEventListener("click", () => regenerate());
+    actions.append(copy, regen);
+    bubble.appendChild(actions);
+  }
+  turn.appendChild(bubble);
+  transcript.appendChild(turn);
+  transcript.scrollTop = transcript.scrollHeight;
+  hideIntro();
+  refreshRegen();
+  return bubble;
+}
+
+function refreshRegen() {
+  const buttons = [...document.querySelectorAll(".regen")];
+  buttons.forEach((button, index) => { button.hidden = index !== buttons.length - 1; });
+}
+
+function readThreads() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(THREAD_KEY) || "{}");
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function renderHistory() {
+  const list = document.getElementById("historyList");
+  const stored = currentUserId && Array.isArray(readThreads()[currentUserId]) ? readThreads()[currentUserId] : [];
+  list.replaceChildren();
+  if (!stored.length) {
+    const note = document.createElement("p");
+    note.className = "status";
+    note.textContent = "No saved conversations on this browser.";
+    list.appendChild(note);
+    return;
+  }
+  stored.forEach((thread) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "history-item";
+    button.textContent = thread.title || "Conversation";
+    button.addEventListener("click", () => openThread(thread.id));
+    list.appendChild(button);
+  });
+}
+
+function saveThread() {
+  if (!currentUserId || !history.length) return;
+  if (!activeThreadId) activeThreadId = crypto.randomUUID();
+  const firstUser = history.find((item) => item.role === "user");
+  const title = (firstUser ? firstUser.content : "Conversation").replace(/\s+/g, " ").slice(0, 64);
+  const all = readThreads();
+  const existing = Array.isArray(all[currentUserId]) ? all[currentUserId] : [];
+  const next = { id: activeThreadId, title, updatedAt: new Date().toISOString(), messages: history.slice(-12).map((item) => ({ role: item.role, content: item.content })) };
+  all[currentUserId] = [next, ...existing.filter((item) => item.id !== activeThreadId)].slice(0, 20);
+  localStorage.setItem(THREAD_KEY, JSON.stringify(all));
+  renderHistory();
+}
+
+function openThread(id) {
+  const stored = currentUserId && Array.isArray(readThreads()[currentUserId]) ? readThreads()[currentUserId] : [];
+  const thread = stored.find((item) => item.id === id);
+  if (!thread || !Array.isArray(thread.messages)) return;
+  activeThreadId = thread.id;
+  history.splice(0, history.length, ...thread.messages.filter((item) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string").map((item) => ({ role: item.role, content: item.content })));
+  transcript.replaceChildren();
+  history.forEach((item) => addBubble(item.role, item.content, false));
+  if (!history.length) {
+    empty.hidden = false;
+    suggestions.hidden = false;
+  }
+  document.querySelector(".history-menu").open = false;
+}
+
+function newConversation() {
+  saveThread();
+  activeThreadId = "";
+  history.splice(0, history.length);
+  transcript.replaceChildren();
+  empty.hidden = false;
+  suggestions.hidden = false;
+  document.body.classList.remove("chat-active", "intro-open");
+  document.getElementById("toggleIntro").hidden = true;
+  question.value = "";
+  updateCount();
+  setStatus("");
+}
+
+async function regenerate() {
+  if (requestInFlight || !signedIn) return;
+  if (history.length && history[history.length - 1].role === "assistant") history.pop();
+  const lastTurn = transcript.querySelector(".turn.assistant:last-of-type");
+  if (lastTurn) lastTurn.remove();
+  const payload = payloadFromHistory();
+  if (!payload.messages.length) {
+    setStatus("Enter a message first.");
+    return;
+  }
+  await askAssistant("", payload);
+}
+
+function readSettings() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PROFILE_SETTINGS) || "{}");
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function applyTheme() {
+  const dark = readSettings().darkMode === true;
+  document.body.classList.toggle("dark-mode", dark);
+  document.getElementById("themeToggle").setAttribute("aria-pressed", dark ? "true" : "false");
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = dark ? "#0c1610" : "#eef8f0";
+}
+
+async function chooseLanguage(code) {
+  if (supabase && signedIn) {
+    try {
+      await supabase.auth.updateUser({ data: { preferred_language: code } });
+    } catch (error) {
+      setStatus("The language was saved on this device. The profile update did not complete.");
+    }
+  }
+  const i18n = window.HAVKAR_I18N;
+  if (i18n && typeof i18n.setLanguage === "function") i18n.setLanguage(code);
+}
+
+function payloadFromHistory() {
+  const limit = limits[currentTool];
+  const selected = [];
+  let characters = 0;
+  for (let index = history.length - 1; index >= 0 && selected.length < limit.messages; index -= 1) {
+    const message = history[index];
+    if (characters + message.content.length > limit.total) break;
+    characters += message.content.length;
+    selected.unshift(message);
+  }
+  while (selected.length && selected[selected.length - 1].role !== "user") selected.pop();
+  return { language: languageCode(), task: currentTool, messages: selected };
+}
+
+async function sendPayload(payload) {
+  if (!supabase) throw new Error("HAVKAR configuration was not found on this page.");
+  const current = await supabase.auth.getSession();
+  const accessToken = current.data && current.data.session && current.data.session.access_token;
+  if (current.error || !accessToken) {
+    signedIn = false;
+    ask.disabled = true;
+    sessionState.textContent = "Sign in before using HAVKAR AI.";
+    throw new Error("Sign in before using HAVKAR AI.");
+  }
+  const response = await fetch(config.url + "/functions/v1/havkar-ai-assistant", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + accessToken,
+      "Content-Type": "application/json",
+      "apikey": config.publishableKey
+    },
+    body: JSON.stringify({
+      language: payload.language,
+      task: payload.task,
+      messages: Array.isArray(payload.messages) ? payload.messages.map((message) => ({
+        role: message.role === "assistant" ? "assistant" : "user",
+        content: String(message && message.content || "")
+      })) : [],
+      ...(payload.attachmentPath ? { attachment: { path: payload.attachmentPath } } : {})
+    })
+  });
+  const body = await response.json().catch(() => null);
+  if (!response.ok || !body || !body.message) {
+    const message = body && (body.error || body.message) ? (body.error || body.message) : "HAVKAR AI did not return an answer.";
+    throw new Error(message);
+  }
+  return body.message;
+}
+
+let preserveComposer = false;
+
+function clearAttachmentView() {
+  attachmentPath = "";
+  if (attachmentUrl) URL.revokeObjectURL(attachmentUrl);
+  attachmentUrl = "";
+  const preview = document.getElementById("attachmentPreview");
+  const thumb = document.getElementById("attachmentThumb");
+  const progress = document.getElementById("uploadProgress");
+  const input = document.getElementById("imageFile");
+  if (preview) preview.hidden = true;
+  if (thumb) thumb.removeAttribute("src");
+  if (progress) progress.textContent = "";
+  if (input) input.value = "";
+}
+
+function imageKind(bytes) {
+  if (bytes.length >= 3 && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255) return { ext: "jpg", mime: "image/jpeg" };
+  if (bytes.length >= 8 && bytes[0] === 137 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71) return { ext: "png", mime: "image/png" };
+  if (bytes.length >= 12 && bytes[0] === 82 && bytes[1] === 73 && bytes[2] === 70 && bytes[3] === 70 && bytes[8] === 87 && bytes[9] === 69 && bytes[10] === 66 && bytes[11] === 80) return { ext: "webp", mime: "image/webp" };
+  return null;
+}
+
+async function removeStoredAttachment() {
+  const path = attachmentPath;
+  clearAttachmentView();
+  if (!path || !supabase) return;
+  try { await supabase.storage.from("ai-attachments").remove([path]); } catch (error) {}
+}
+
+async function uploadImage(file) {
+  if (!file) return;
+  if (!signedIn || !currentUserId || !supabase) {
+    setStatus("Sign in before using HAVKAR AI.");
+    return;
+  }
+  if (file.size > 4 * 1024 * 1024) {
+    setStatus("The image is larger than 4 MB.");
+    return;
+  }
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const kind = imageKind(bytes);
+  if (!kind) {
+    setStatus("Only JPEG, PNG, and WebP images can be attached.");
+    return;
+  }
+  const session = await supabase.auth.getSession();
+  const token = session.data && session.data.session && session.data.session.access_token;
+  if (!token) {
+    setStatus("Sign in before using HAVKAR AI.");
+    return;
+  }
+  if (attachmentPath) await removeStoredAttachment();
+  const path = currentUserId + "/" + crypto.randomUUID() + "." + kind.ext;
+  uploadBusy = true;
+  document.getElementById("attachmentPreview").hidden = false;
+  attachmentUrl = URL.createObjectURL(new Blob([bytes], { type: kind.mime }));
+  document.getElementById("attachmentThumb").src = attachmentUrl;
+  document.getElementById("uploadProgress").textContent = "0%";
+  setStatus("Uploading image.");
+  try {
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", config.url + "/storage/v1/object/ai-attachments/" + path);
+      xhr.setRequestHeader("Authorization", "Bearer " + token);
+      xhr.setRequestHeader("apikey", config.publishableKey);
+      xhr.setRequestHeader("Content-Type", kind.mime);
+      xhr.setRequestHeader("x-upsert", "false");
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) document.getElementById("uploadProgress").textContent = Math.round(event.loaded / event.total * 100) + "%";
+      };
+      xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error("upload")));
+      xhr.onerror = () => reject(new Error("upload"));
+      xhr.send(new Blob([bytes], { type: kind.mime }));
+    });
+    attachmentPath = path;
+    document.getElementById("uploadProgress").textContent = "";
+    setStatus("");
+  } catch (error) {
+    clearAttachmentView();
+    setStatus("The image could not be uploaded.");
+  } finally {
+    uploadBusy = false;
+  }
+}
+
+function beginSend(sendPart) {
+  if (listening || voicePending) {
+    setStatus("Stop voice input before sending.");
+    return;
+  }
+  if (uploadBusy) {
+    setStatus("Uploading image.");
+    return;
+  }
+  let content = question.value.trim();
+  if (!content) {
+    setStatus("Enter a message first.");
+    return;
+  }
+  if (content.length > REQUEST_CHARACTERS) {
+    if (!sendPart) {
+      setStatus("This message is longer than one assistant request. Send the first 6000 characters, then send the rest.");
+      document.getElementById("sendPart").hidden = false;
+      return;
+    }
+    const remainder = content.slice(REQUEST_CHARACTERS).trimStart();
+    content = content.slice(0, REQUEST_CHARACTERS);
+    question.value = remainder;
+    preserveComposer = true;
+    updateCount();
+  }
+  addBubble("user", content, false);
+  askAssistant(content, null);
+}
+
+async function askAssistant(content, reuse) {
+  if (requestInFlight) return;
+  if (!reuse) history.push({ role: "user", content });
+  const payload = reuse || payloadFromHistory();
+  if (!reuse && attachmentPath) payload.attachmentPath = attachmentPath;
+  if (!payload.messages.length) {
+    setStatus("Enter a message first.");
+    return;
+  }
+  requestInFlight = true;
+  ask.disabled = true;
+  retry.hidden = true;
+  setStatus("");
+  const pending = addBubble("assistant", "", true);
+  try {
+    const message = await sendPayload(payload);
+    pending.parentElement.remove();
+    history.push({ role: "assistant", content: message });
+    addBubble("assistant", message, false);
+    if (!reuse && !preserveComposer) question.value = "";
+    preserveComposer = false;
+    clearAttachmentView();
+    updateCount();
+    lastPayload = null;
+    saveThread();
+  } catch (error) {
+    pending.parentElement.remove();
+    lastPayload = payload;
+    retry.hidden = false;
+    setStatus(error && error.message ? error.message : "HAVKAR AI could not be reached.");
+  } finally {
+    requestInFlight = false;
+    ask.disabled = !signedIn;
+  }
+}
+
+function useExample(button) {
+  if (button.dataset.tool) selectTool(button.dataset.tool);
+  const prompt = button.querySelector(".prompt");
+  question.value = (prompt ? prompt.textContent : button.textContent).trim();
+  updateCount();
+  question.focus();
+}
+
+function showAccount(email) {
+  accountLink.href = "profile.html";
+  accountLabel.hidden = true;
+  accountEmail.hidden = false;
+  accountEmail.textContent = email || "Account";
+  accountMark.textContent = (email || "H").trim().charAt(0).toUpperCase();
+  logout.hidden = false;
+}
+
 applyInterfaceDirection();
-let requestInFlight = false;
+applyTheme();
+fillLanguages();
+selectTool("general");
+renderHistory();
+clock.textContent = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+clock.dateTime = new Date().toISOString();
+language.addEventListener("change", () => chooseLanguage(language.value));
+document.getElementById("focusLanguage").addEventListener("click", openLanguageDialog);
+document.getElementById("openLanguages").addEventListener("click", openLanguageDialog);
+document.getElementById("closeLanguages").addEventListener("click", closeLanguageDialog);
+document.getElementById("languageDialog").addEventListener("click", (event) => {
+  if (event.target.id === "languageDialog") closeLanguageDialog();
+});
+document.getElementById("languageSearch").addEventListener("input", filterLanguages);
+document.getElementById("voiceInput").addEventListener("click", startVoice);
+document.getElementById("toggleIntro").addEventListener("click", () => {
+  document.body.classList.toggle("intro-open");
+});
+document.getElementById("pickImage").addEventListener("click", () => {
+  document.getElementById("imageFile").click();
+});
+document.getElementById("imageFile").addEventListener("change", (event) => {
+  const file = event.target.files && event.target.files[0];
+  uploadImage(file);
+});
+document.getElementById("removeAttachment").addEventListener("click", () => {
+  removeStoredAttachment();
+});
+document.getElementById("sendPart").addEventListener("click", () => beginSend(true));
+document.getElementById("themeToggle").addEventListener("click", () => {
+  const settings = readSettings();
+  settings.darkMode = settings.darkMode !== true;
+  localStorage.setItem(PROFILE_SETTINGS, JSON.stringify(settings));
+  applyTheme();
+});
+document.getElementById("newConversation").addEventListener("click", newConversation);
+document.querySelectorAll("[data-tool-button]").forEach((button) => {
+  button.addEventListener("click", () => {
+    selectTool(button.dataset.toolButton);
+    const menu = button.closest("details");
+    if (menu) menu.open = false;
+    question.focus();
+  });
+});
+document.querySelectorAll(".example").forEach((button) => button.addEventListener("click", () => useExample(button)));
+document.getElementById("refreshExamples").addEventListener("click", () => {
+  const list = document.querySelector(".examples");
+  if (list.firstElementChild) list.appendChild(list.firstElementChild);
+});
+document.getElementById("showExamples").addEventListener("click", () => {
+  document.querySelector(".examples").scrollIntoView({ block: "nearest" });
+});
+document.getElementById("openTools").addEventListener("click", () => {
+  const menu = document.querySelector(".tools-menu");
+  menu.open = !menu.open;
+});
+document.getElementById("navSearch").addEventListener("input", (event) => {
+  const query = event.target.value.trim().toLowerCase();
+  document.querySelectorAll(".side a").forEach((link) => {
+    link.hidden = Boolean(query) && !link.textContent.toLowerCase().includes(query);
+  });
+});
+document.addEventListener("keydown", (event) => {
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+    event.preventDefault();
+    document.getElementById("navSearch").focus();
+  }
+  const languageDialog = document.getElementById("languageDialog");
+  if (event.key === "Tab" && !languageDialog.hidden) {
+    const focusable = [...languageDialog.querySelectorAll("button, input")].filter((item) => !item.hidden && item.offsetParent !== null);
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (first && last && event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (first && last && !event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+  if (event.key === "Escape") {
+    if (listening || voicePending) {
+      stopVoice(true);
+      return;
+    }
+    if (!languageDialog.hidden) {
+      closeLanguageDialog();
+      return;
+    }
+    document.body.classList.remove("nav-open");
+    menuToggle.setAttribute("aria-expanded", "false");
+  }
+});
+question.addEventListener("input", updateCount);
+askForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  beginSend(false);
+});
+retry.addEventListener("click", () => { if (lastPayload) askAssistant("", lastPayload); });
+menuToggle.addEventListener("click", () => {
+  const open = document.body.classList.toggle("nav-open");
+  menuToggle.setAttribute("aria-expanded", open ? "true" : "false");
+});
+document.querySelectorAll(".side a").forEach((link) => {
+  link.addEventListener("click", () => {
+    document.body.classList.remove("nav-open");
+    menuToggle.setAttribute("aria-expanded", "false");
+  });
+});
 
 if (!config || !config.url || !config.publishableKey) {
   sessionState.textContent = "HAVKAR configuration was not found on this page.";
 } else {
-  const supabase = createClient(config.url, config.publishableKey, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+  supabase = createClient(config.url, config.publishableKey, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "pkce" }
   });
-
+  logout.addEventListener("click", async () => {
+    await supabase.auth.signOut();
+    location.href = "login.html";
+  });
   const sessionResult = await supabase.auth.getSession();
   const session = sessionResult.data && sessionResult.data.session;
-
   if (sessionResult.error || !session || !session.access_token) {
     sessionState.textContent = "Sign in before using HAVKAR AI.";
   } else {
-    sessionState.textContent = "Your HAVKAR session is ready.";
+    signedIn = true;
+    currentUserId = session.user && session.user.id ? session.user.id : "";
+    sessionState.textContent = "";
     ask.disabled = false;
-    askForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const content = question.value.trim();
-      if (!content || requestInFlight) {
-        if (!content) reply.textContent = "Enter a question first.";
-        return;
-      }
-      requestInFlight = true;
-      ask.disabled = true;
-      reply.textContent = "Waiting for HAVKAR AI...";
-      try {
-        const current = await supabase.auth.getSession();
-        const accessToken = current.data && current.data.session && current.data.session.access_token;
-        if (current.error || !accessToken) {
-          reply.textContent = "Sign in before using HAVKAR AI.";
-          return;
-        }
-        const response = await fetch(config.url + "/functions/v1/havkar-ai-assistant", {
-          method: "POST",
-          headers: {
-            "Authorization": "Bearer " + accessToken,
-            "Content-Type": "application/json",
-            "apikey": config.publishableKey
-          },
-          body: JSON.stringify({
-            language: languageCode(),
-            task: task.value,
-            messages: [{ role: "user", content }]
-          })
-        });
-        const payload = await response.json().catch(() => null);
-        reply.textContent = payload && payload.message
-          ? payload.message
-          : (payload && payload.error) || "HAVKAR AI did not return an answer.";
-      } catch (error) {
-        reply.textContent = "HAVKAR AI could not be reached.";
-      } finally {
-        requestInFlight = false;
-        ask.disabled = false;
-      }
-    });
+    showAccount(session.user && session.user.email);
+    renderHistory();
+    const preferred = session.user && session.user.user_metadata && session.user.user_metadata.preferred_language;
+    const i18n = window.HAVKAR_I18N;
+    if (i18n && typeof i18n.hasSavedLanguage === "function" && !i18n.hasSavedLanguage() && typeof i18n.isSupportedLanguage === "function" && i18n.isSupportedLanguage(preferred)) {
+      await i18n.setLanguage(preferred);
+    } else if (currentUserId && preferred !== languageCode()) {
+      try { await supabase.auth.updateUser({ data: { preferred_language: languageCode() } }); } catch (error) {}
+    }
   }
 }
 </script>

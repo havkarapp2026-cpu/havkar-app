@@ -5,7 +5,8 @@ import {
   providerFailureMessage,
   providerRetryDelayMs,
   providerStatusIsRetryable,
-  validateAssistantRequest
+  validateAssistantRequest,
+  validateAttachment
 } from "./policy.mjs";
 
 const ALLOWED_ORIGINS = new Set([
@@ -71,11 +72,55 @@ function modelName() {
     : DEFAULT_MODEL;
 }
 
-function providerContents(messages) {
-  return messages.map((message) => ({
-    role: message.role === "assistant" ? "model" : "user",
-    parts: [{ text: message.content }]
-  }));
+function providerContents(messages, image) {
+  return messages.map((message, index) => {
+    const parts: Array<Record<string, unknown>> = [{ text: message.content }];
+    const lastUser = index === messages.length - 1 && message.role === "user";
+
+    if (lastUser && image) {
+      parts.push({
+        inlineData: {
+          mimeType: image.mime,
+          data: image.data
+        }
+      });
+    }
+
+    return {
+      role: message.role === "assistant" ? "model" : "user",
+      parts
+    };
+  });
+}
+
+function imageMime(bytes: Uint8Array) {
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return "image/jpeg";
+  }
+
+  if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
+    return "image/png";
+  }
+
+  if (
+    bytes.length >= 12 &&
+    bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+    bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50
+  ) {
+    return "image/webp";
+  }
+
+  return "";
+}
+
+function bytesToBase64(bytes: Uint8Array) {
+  let binary = "";
+
+  for (let index = 0; index < bytes.length; index += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+  }
+
+  return btoa(binary);
 }
 
 function generationConfig(model, maxOutputTokens) {
@@ -151,13 +196,14 @@ async function readProviderPayload(response) {
 async function requestAssistantContent(
   model: string,
   validation: { languageName: string; task: string; messages: { role: string; content: string }[]; maxOutputTokens: number },
-  providerKey: string
+  providerKey: string,
+  image: { mime: string; data: string } | null
 ) {
   const body = JSON.stringify({
     systemInstruction: {
       parts: [{ text: assistantInstruction(validation.languageName, validation.task) }]
     },
-    contents: providerContents(validation.messages),
+    contents: providerContents(validation.messages, image),
     generationConfig: generationConfig(model, validation.maxOutputTokens)
   });
   let lastStatus = 0;
@@ -289,6 +335,40 @@ Deno.serve(async (request) => {
     });
   }
 
+  const attachment = validateAttachment(parsed.body.attachment, userResult.data.user.id);
+
+  if (!attachment.ok) {
+    releaseProviderSlot();
+    return json(400, { ok: false, error: attachment.error }, headers);
+  }
+
+  let image = null;
+
+  if (attachment.path) {
+    const downloaded = await admin.storage.from("ai-attachments").download(attachment.path);
+
+    if (downloaded.error || !downloaded.data) {
+      releaseProviderSlot();
+      return json(400, { ok: false, error: "The image could not be read." }, headers);
+    }
+
+    const bytes = new Uint8Array(await downloaded.data.arrayBuffer());
+
+    if (bytes.length < 16 || bytes.length > 4 * 1024 * 1024) {
+      releaseProviderSlot();
+      return json(400, { ok: false, error: "The image could not be read." }, headers);
+    }
+
+    const mime = imageMime(bytes);
+
+    if (!mime) {
+      releaseProviderSlot();
+      return json(400, { ok: false, error: "Only JPEG, PNG, and WebP images can be attached." }, headers);
+    }
+
+    image = { mime, data: bytesToBase64(bytes) };
+  }
+
   try {
     const budget = await admin.rpc("consume_ai_budget", {
       p_user_id: userResult.data.user.id,
@@ -327,7 +407,8 @@ Deno.serve(async (request) => {
     const providerResult = await requestAssistantContent(
       modelName(),
       validation,
-      providerKey
+      providerKey,
+      image
     );
 
     if (!providerResult.ok) {
