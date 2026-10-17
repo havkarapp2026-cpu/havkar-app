@@ -37,17 +37,25 @@ button { cursor: pointer; }
   border-bottom: 1px solid rgba(231,243,234,.9); position: sticky; top: 0; z-index: 6;
   backdrop-filter: blur(16px);
 }
-.menu-toggle { display: none; width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.menu-toggle { display: none; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--deep); }
 .brand { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--deep); flex: 0 0 auto; }
 .word { display: flex; flex-direction: column; line-height: 1; }
 .word strong { font-size: 1.55rem; letter-spacing: -.02em; font-weight: 800; }
 .word small { margin-top: 4px; color: #1f9a45; font-size: .58rem; letter-spacing: .16em; font-weight: 800; }
 .mark, .avatar, .hero-globe, .foot-mark { position: relative; overflow: hidden; flex: none; }
 .mark { width: 50px; height: 50px; }
+.topbar .mark {
+  width: 58px; height: 58px; overflow: hidden; border-radius: 12px;
+  background: #fff; border: 1px solid var(--line);
+}
 .mark img, .avatar img, .foot-mark img {
   position: absolute; left: 50%; transform: translateX(-50%); max-width: none; object-fit: fill;
 }
 .mark img { width: 136px; height: 136px; top: -35px; }
+.topbar .mark img {
+  inset: 0; left: 0; top: 0; width: 100%; height: 100%;
+  transform: none; object-fit: contain; max-width: 100%;
+}
 .hero-globe img { position: absolute; max-width: none; width: 496px; height: 496px; left: -73px; top: -133px; object-fit: fill; }
 .search {
   flex: 1; max-width: 520px; margin-inline: auto; height: 42px;
@@ -59,10 +67,11 @@ button { cursor: pointer; }
 .search kbd { color: var(--muted); font-size: .75rem; border: 1px solid var(--line); border-radius: 6px; padding: 1px 5px; }
 .top-actions { display: flex; align-items: center; gap: 8px; margin-inline-start: auto; }
 .icon-btn, .lang-btn, .account {
-  border: 0; background: transparent; min-height: 40px; border-radius: 999px;
+  border: 1px solid transparent; background: transparent; min-height: 44px; border-radius: 999px;
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   color: var(--deep); text-decoration: none;
 }
+.lang-btn { padding-inline: 8px; border-color: #b7e0c4; background: #f3fbf6; color: #0f7a34; }
 .icon-btn { width: 40px; }
 .icon-btn[disabled] { opacity: .45; cursor: not-allowed; }
 .account { padding: 4px 8px 4px 4px; font-weight: 700; max-width: 240px; }
@@ -120,13 +129,16 @@ h1 { margin: 0; max-width: 460px; font-size: clamp(1.85rem, 2.35vw, 2.45rem); li
 .main-col { min-width: 0; display: grid; gap: 10px; }
 .lang-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .chip {
-  border: 1px solid #e3f0e7; background: #fff; border-radius: 999px; min-height: 38px; padding: 6px 12px; padding-inline-start: 8px;
+  border: 1px solid #e3f0e7; background: #fff; border-radius: 999px; min-height: 44px; padding: 6px 12px; padding-inline-start: 8px;
   font-weight: 700; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 1px 0 rgba(16,80,40,.03);
 }
+#openLanguages { border-color: #1c9a43; color: #0f7a34; background: #f3fbf6; }
+#openLanguages svg { flex: none; }
 .chip[aria-pressed="true"] { background: #e7f8ec; border-color: #8ed3a0; }
 .more-lang { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .chat { background: rgba(255,255,255,.88); border: 1px solid rgba(230,242,234,.95); border-radius: 24px; box-shadow: var(--shadow); padding: 14px 14px 12px; display: grid; gap: 10px; backdrop-filter: blur(14px); }
-.chat-head { display: flex; align-items: center; gap: 10px; }
+.chat-head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.chat-head > div:nth-child(2) { min-width: 0; flex: 1 1 160px; }
 .chat-head h2 { margin: 0; font-size: 1.05rem; display: flex; align-items: center; gap: 6px; }
 .verified { width: 16px; height: 16px; flex: none; }
 .chat-head p, .status { margin: 2px 0 0; color: var(--muted); font-size: .9rem; }
@@ -153,7 +165,7 @@ h1 { margin: 0; max-width: 460px; font-size: clamp(1.85rem, 2.35vw, 2.45rem); li
 .turn { animation: rise .28s ease; }
 .bubble-actions { display: flex; gap: 6px; margin-top: 6px; }
 .mini { border: 0; background: transparent; color: var(--green); font-size: .75rem; font-weight: 750; padding: 0; }
-.chat-tools { margin-inline-start: auto; display: flex; align-items: center; gap: 6px; }
+.chat-tools { margin-inline-start: auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
 .lang-menu, .history-menu { position: relative; }
 .lang-dialog {
   position: fixed; inset: 0; z-index: 30; display: grid; place-items: end center; padding: 12px;
@@ -200,10 +212,17 @@ body.lang-open { overflow: hidden; }
 .composer { display: grid; gap: 6px; }
 .tool-note { margin: 0; color: var(--muted); font-size: .86rem; }
 .composer-box {
-  display: flex; align-items: center; gap: 8px; padding: 8px;
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; padding: 8px;
   border: 1px solid #e3f0e7; border-radius: 20px; background: #fff;
 }
-textarea { flex: 1; min-width: 0; min-height: 42px; max-height: 120px; border: 0; resize: vertical; background: transparent; padding: 10px 4px; }
+.attachment-preview { display: flex; align-items: center; gap: 8px; width: 100%; }
+.attachment-preview img { width: 72px; height: 72px; object-fit: cover; border-radius: 12px; border: 1px solid var(--line); }
+.attachment-preview[hidden] { display: none !important; }
+textarea {
+  flex: 1 1 100%; min-width: 0; width: 100%; min-height: 96px; max-height: 320px;
+  border: 0; resize: vertical; background: transparent; padding: 10px 4px;
+  line-height: 1.45; white-space: pre-wrap;
+}
 textarea::placeholder { color: #93a89a; }
 textarea:focus { outline: none; }
 .composer-box:focus-within { border-color: #7dcca0; box-shadow: 0 0 0 4px rgba(31,138,59,.12); }
@@ -277,7 +296,23 @@ body.dark-mode .hero-actions button, body.dark-mode .card, body.dark-mode .chip,
   background: #13261b; color: #e7f6ec; border-color: #245236;
 }
 body.dark-mode .search, body.dark-mode textarea, body.dark-mode .lang-search { background: transparent; color: #e7f6ec; }
+body.dark-mode .topbar { background: rgba(12, 22, 16, .94); }
+body.dark-mode .brand,
+body.dark-mode .word,
+body.dark-mode .word strong,
+body.dark-mode .foot-brand { color: #e7f6ec; }
+body.dark-mode .menu-toggle,
+body.dark-mode .icon-btn,
+body.dark-mode .lang-btn,
+body.dark-mode .account { color: #e7f6ec; }
+body.dark-mode .menu-toggle { background: #173222; border-color: #3d8f58; }
+body.dark-mode .lang-btn, body.dark-mode #openLanguages { background: #173222; color: #d9f5e3; border-color: #3d8f58; }
 body.dark-mode .lang-sheet, body.dark-mode .lang-choice { background: #13261b; color: #e7f6ec; border-color: #245236; }
+body.chat-active:not(.intro-open) #intro,
+body.chat-active:not(.intro-open) #suggestions,
+body.chat-active:not(.intro-open) .examples,
+body.chat-active:not(.intro-open) .tips { display: none !important; }
+body.chat-active .transcript { max-height: min(62vh, 720px); }
 body.dark-mode .bubble.assistant, body.dark-mode .empty p { background: #173222; color: #e7f6ec; border-color: #245236; }
 body.dark-mode .tips { background: #241c10; border-color: #4a3a1c; }
 body.dark-mode .foot { color: #b7d0c0; }
@@ -317,6 +352,7 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
   }
   .word strong { font-size: 1rem; }
   .mark { width: 36px; height: 36px; }
+  .topbar .mark, .topbar .mark img { width: 44px; height: 44px; }
   .account { max-width: none; padding-inline: 2px; }
   #accountLabel, #accountEmail { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .icon-btn, .lang-btn { width: 32px; min-width: 32px; }
@@ -346,7 +382,7 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 </a>
 <label class="search"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="#7aa188" d="M10 4a6 6 0 1 0 3.7 10.7l4 4 1.4-1.4-4-4A6 6 0 0 0 10 4Z"/></svg><input id="navSearch" type="search" placeholder="Search anything in HAVKAR..." aria-label="Search HAVKAR pages"><kbd>⌘K</kbd></label>
 <div class="top-actions">
-<button id="focusLanguage" class="lang-btn" type="button" aria-haspopup="dialog" aria-controls="languageDialog" aria-expanded="false" aria-label="Choose language"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm-7 9h3.1a13 13 0 0 0 0 4H5a7 7 0 0 1 0-4Zm3.1-2H5a7 7 0 0 1 3.1-4 13 13 0 0 0 0 4ZM12 19c-.8-1-1.6-2.6-1.9-5h3.8c-.3 2.4-1.1 4-1.9 5Zm2.1-7h-4.2a11 11 0 0 1 0-4h4.2a11 11 0 0 1 0 4Zm.8 6a7 7 0 0 0 3.1-4h-3.1a13 13 0 0 1 0 4Zm0-6h3.1a7 7 0 0 0-3.1-4 13 13 0 0 1 0 4Z"/></svg><span id="langShort" data-i18n-ignore translate="no">EN</span></button>
+<button id="focusLanguage" class="lang-btn" type="button" aria-haspopup="dialog" aria-controls="languageDialog" aria-expanded="false" aria-label="Choose language"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm-7 9h3.1a13 13 0 0 0 0 4H5a7 7 0 0 1 0-4Zm3.1-2H5a7 7 0 0 1 3.1-4 13 13 0 0 0 0 4ZM12 19c-.8-1-1.6-2.6-1.9-5h3.8c-.3 2.4-1.1 4-1.9 5Zm2.1-7h-4.2a11 11 0 0 1 0-4h4.2a11 11 0 0 1 0 4Zm.8 6a7 7 0 0 0 3.1-4h-3.1a13 13 0 0 1 0 4Zm0-6h3.1a7 7 0 0 0-3.1-4 13 13 0 0 1 0 4Z"/></svg><span id="langShort" data-i18n-ignore translate="no">EN</span><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M7 10l5 5 5-5H7Z"/></svg></button>
 <button id="themeToggle" class="icon-btn" type="button" aria-pressed="false" aria-label="Appearance"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M14 3a8 8 0 1 0 7 12 7 7 0 0 1-7-12Z"/></svg></button>
 <a class="icon-btn" href="notifications.html" aria-label="Notifications"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 22a2.2 2.2 0 0 0 2.1-2h-4.2A2.2 2.2 0 0 0 12 22Zm7-6.2V11a7 7 0 0 0-5-6.7V3.5a2 2 0 1 0-4 0v.8A7 7 0 0 0 5 11v4.8L3.4 17.4V19h17.2v-1.6L19 15.8Z"/></svg></a>
 <a id="accountLink" class="account" href="login.html"><span class="avatar-fallback" id="accountMark">H</span><span id="accountLabel">Log in</span><span id="accountEmail" hidden data-i18n-ignore translate="no"></span></a>
@@ -374,6 +410,7 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 <button id="logout" type="button" hidden><svg viewBox="0 0 24 24"><path fill="currentColor" d="M10 4H5v16h5v-2H7V6h3Zm3 3 5 5-5 5v-3H8v-4h5Z"/></svg>Log out</button>
 </nav>
 <div class="stage">
+<div id="intro">
 <section class="hero">
 <div>
 <p class="pill" translate="no" data-i18n-ignore>✦ HAVKAR AI</p>
@@ -390,10 +427,11 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 <button type="button" data-tool-button="guidance"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M8 6h11v2H8Zm0 5h11v2H8Zm0 5h11v2H8ZM5 6h2v2H5Zm0 5h2v2H5Zm0 5h2v2H5Z"/></svg></span><span>Step-by-Step Guidance</span></button>
 </div>
 </section>
+</div>
 <div class="below">
 <div class="main-col">
 <div class="lang-row">
-<button id="openLanguages" class="chip" type="button" aria-haspopup="dialog" aria-controls="languageDialog" aria-expanded="false" aria-label="Choose language"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm-7 9h3.1a13 13 0 0 0 0 4H5a7 7 0 0 1 0-4Zm3.1-2H5a7 7 0 0 1 3.1-4 13 13 0 0 0 0 4ZM12 19c-.8-1-1.6-2.6-1.9-5h3.8c-.3 2.4-1.1 4-1.9 5Zm2.1-7h-4.2a11 11 0 0 1 0-4h4.2a11 11 0 0 1 0 4Zm.8 6a7 7 0 0 0 3.1-4h-3.1a13 13 0 0 1 0 4Zm0-6h3.1a7 7 0 0 0-3.1-4 13 13 0 0 1 0 4Z"/></svg><span id="languageName" data-i18n-ignore translate="no">English</span></button>
+<button id="openLanguages" class="chip" type="button" aria-haspopup="dialog" aria-controls="languageDialog" aria-expanded="false" aria-label="Choose language"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm-7 9h3.1a13 13 0 0 0 0 4H5a7 7 0 0 1 0-4Zm3.1-2H5a7 7 0 0 1 3.1-4 13 13 0 0 0 0 4ZM12 19c-.8-1-1.6-2.6-1.9-5h3.8c-.3 2.4-1.1 4-1.9 5Zm2.1-7h-4.2a11 11 0 0 1 0-4h4.2a11 11 0 0 1 0 4Zm.8 6a7 7 0 0 0 3.1-4h-3.1a13 13 0 0 1 0 4Zm0-6h3.1a7 7 0 0 0-3.1-4 13 13 0 0 1 0 4Z"/></svg><span id="languageName" data-i18n-ignore translate="no">English</span><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M7 10l5 5 5-5H7Z"/></svg></button>
 <select id="language" class="more-lang" data-i18n-ignore translate="no" aria-label="More languages"></select>
 </div>
 <div id="languageDialog" class="lang-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="languageDialogTitle">
@@ -409,6 +447,7 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 <span class="mark"><img src="icon.png" alt="" width="1024" height="1024"></span>
 <div><h2 id="ai-title" translate="no" data-i18n-ignore>HAVKAR AI <svg class="verified" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="8" fill="#1c9a43"/><path d="M4.2 8.2 6.7 10.6 11.8 5.4" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg></h2><p>Your multilingual business assistant</p></div>
 <div class="chat-tools">
+<button id="toggleIntro" class="ghost" type="button" hidden>Introduction</button>
 <button id="newConversation" class="ghost" type="button">New chat</button>
 <details class="history-menu">
 <summary class="ghost">History</summary>
@@ -429,6 +468,7 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 <button class="card" type="button" data-tool-button="advertising"><span class="ico orange" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 10h3v7H4Zm4-1 10-4v13l-10-4Z"/></svg></span><span><strong>Write an Ad</strong><small>Advertisement text</small></span></button>
 <button class="card" type="button" data-tool-button="social"><span class="ico pink" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16.6" cy="7.4" r="1" fill="currentColor"/></svg></span><span><strong>Social Media Content</strong><small>Draft post text only</small></span></button>
 <button class="card" type="button" data-tool-button="guidance"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M8 6h11v2H8Zm0 5h11v2H8Zm0 5h11v2H8ZM5 6h2v2H5Zm0 5h2v2H5Zm0 5h2v2H5Z"/></svg></span><span><strong>Step-by-Step Help</strong><small>Numbered instructions</small></span></button>
+<button class="card" type="button" data-tool-button="programming"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M8 8 4 12l4 4 1.4-1.4L6.8 12l2.6-2.6Zm8 0-1.4 1.4L17.2 12l-2.6 2.6L16 16l4-4ZM13 5l-2 14h2l2-14Z"/></svg></span><span><strong>Programming help</strong><small>Code and explanations</small></span></button>
 </div>
 <form id="askForm" class="composer">
 <p class="tool-note" data-tool-note="logo" hidden>This writes a design brief and one simple SVG. It does not create or upload an image file.</p>
@@ -436,6 +476,11 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 <p class="tool-note" data-tool-note="business_page" hidden>This drafts page text. It does not publish the page.</p>
 <label class="visually-hidden" for="question" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Message</label>
 <div class="composer-box">
+<div id="attachmentPreview" class="attachment-preview" hidden>
+<img id="attachmentThumb" alt="">
+<button id="removeAttachment" class="ghost" type="button">Remove image</button>
+<span id="uploadProgress" data-i18n-ignore translate="no"></span>
+</div>
 <div class="left-tools">
 <button id="openTools" class="round" type="button" aria-label="More tools">+</button>
 <details class="tools-menu">
@@ -450,18 +495,21 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 <button class="tool" type="button" data-tool-button="advertising">Advertising Content</button>
 <button class="tool" type="button" data-tool-button="social">Social Media Content</button>
 <button class="tool" type="button" data-tool-button="guidance">Step-by-Step Guidance</button>
+<button class="tool" type="button" data-tool-button="programming">Programming help</button>
 </div>
 </details>
 <button id="showExamples" class="ghost" type="button"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="#e0a100" d="M9 18h6v1.4a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2Zm-1-3a6.2 6.2 0 1 1 8 0l-.4.6H8.4Z"/></svg> Examples</button>
-<button class="ghost" type="button" disabled aria-disabled="true" title="File upload is not available yet">Attach</button>
+<button id="pickImage" class="ghost" type="button">Image</button>
+<input id="imageFile" type="file" accept="image/jpeg,image/png,image/webp" hidden>
 </div>
-<textarea id="question" name="question" maxlength="1200" required dir="auto" placeholder="Type your question here..."></textarea>
+<textarea id="question" name="question" required dir="auto" rows="4" placeholder="Type your question here..." enterkeyhint="enter"></textarea>
 <div class="send-row">
 <button id="voiceInput" class="round" type="button" aria-pressed="false" aria-label="Start voice input"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Zm-6 9h2a4 4 0 0 0 8 0h2a6 6 0 0 1-5 5.9V20h3v2H8v-2h3v-2.1A6 6 0 0 1 6 12Z"/></svg></button>
 <button id="ask" class="send" type="submit" disabled aria-label="Send"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M3 11.5 21 3l-7.2 18-2.3-7.2Z"/></svg><span class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Send</span></button>
 </div>
 </div>
-<p id="count" class="count" data-i18n-ignore translate="no"><bdi dir="ltr">0 / 1200</bdi></p>
+<p id="count" class="count" data-i18n-ignore translate="no"><bdi dir="ltr">0</bdi></p>
+<button id="sendPart" class="ghost" type="button" hidden>Send first part</button>
 <button id="retry" class="retry" type="button" hidden>Try again</button>
 <p id="status" class="status" role="status"></p>
 </form>
@@ -491,7 +539,7 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 <li>Get step-by-step guidance.</li>
 <li>Use examples for better results.</li>
 </ul>
-<p class="unavailable"><strong>Not available yet:</strong> Image generation and File upload stay off until they are securely implemented and tested. Voice input uses this browser’s speech recognition and is not sent to HAVKAR as audio.</p>
+<p class="unavailable"><strong>Not available yet:</strong> Image generation stays off until a secure image service is tested. You can attach a JPEG, PNG, or WebP image for the assistant to read. Voice input uses this browser’s speech recognition and is not sent to HAVKAR as audio.</p>
 </section>
 </aside>
 </div>
@@ -504,6 +552,7 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 </footer>
 </div>
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-ui-dictionary.js"></script>
 <script src="/havkar-i18n.js"></script>
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -528,17 +577,22 @@ const menuToggle = document.getElementById("menuToggle");
 const clock = document.getElementById("clock");
 const langShort = document.getElementById("langShort");
 const config = window.HAVKAR_SUPABASE_CONFIG;
+const REQUEST_CHARACTERS = 6000;
 const limits = {
-  general: { messages: 4, characters: 1200, total: 2000 },
-  logo: { messages: 2, characters: 1500, total: 2000 },
-  business_page: { messages: 2, characters: 2000, total: 2000 },
-  menu: { messages: 2, characters: 6000, total: 6000 },
-  translation: { messages: 2, characters: 2000, total: 2000 },
-  ideas: { messages: 2, characters: 2000, total: 2000 },
-  advertising: { messages: 2, characters: 2000, total: 2000 },
-  social: { messages: 2, characters: 2000, total: 2000 },
-  guidance: { messages: 2, characters: 2000, total: 2000 }
+  general: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS },
+  logo: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS },
+  business_page: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS },
+  menu: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS },
+  translation: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS },
+  ideas: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS },
+  advertising: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS },
+  social: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS },
+  guidance: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS },
+  programming: { messages: 12, characters: REQUEST_CHARACTERS, total: REQUEST_CHARACTERS }
 };
+let attachmentPath = "";
+let attachmentUrl = "";
+let uploadBusy = false;
 const history = [];
 let currentTool = "general";
 let requestInFlight = false;
@@ -571,7 +625,7 @@ const LANGUAGE_LABELS = {
 const SPEECH_LOCALES = {
   en: "en-US", it: "it-IT", de: "de-DE", fr: "fr-FR", es: "es-ES", pt: "pt-PT", nl: "nl-NL",
   sv: "sv-SE", pl: "pl-PL", id: "id-ID", zh: "zh-CN", ja: "ja-JP", ko: "ko-KR", hi: "hi-IN",
-  ru: "ru-RU", ckb: "ckb-IQ", kmr: "kmr", tr: "tr-TR", ar: "ar-SA", fa: "fa-IR", ur: "ur-PK"
+  ru: "ru-RU", tr: "tr-TR", ar: "ar-SA", fa: "fa-IR", ur: "ur-PK"
 };
 let recognition = null;
 let listening = false;
@@ -654,12 +708,18 @@ function speechEngine() {
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
 
+function interfaceText(text) {
+  const code = document.documentElement.lang;
+  const table = window.HAVKAR_UI_DICTIONARY && window.HAVKAR_UI_DICTIONARY[code];
+  return table && table[text] ? table[text] : text;
+}
+
 function setVoiceUi(active) {
   const button = document.getElementById("voiceInput");
   listening = active;
   button.classList.toggle("listening", active);
   button.setAttribute("aria-pressed", active ? "true" : "false");
-  button.setAttribute("aria-label", active ? "Stop voice input" : "Start voice input");
+  button.setAttribute("aria-label", interfaceText(active ? "Stop voice input" : "Start voice input"));
 }
 
 function stopVoice(cancel) {
@@ -693,11 +753,16 @@ function startVoice() {
     stopVoice(false);
     return;
   }
+  const speechLocale = SPEECH_LOCALES[languageCode()];
+  if (!speechLocale) {
+    setStatus("This browser cannot transcribe the selected language.");
+    return;
+  }
   voiceBase = question.value;
   voiceCancel = false;
   voicePending = true;
   recognition = new Engine();
-  recognition.lang = SPEECH_LOCALES[languageCode()] || languageCode() || "en-US";
+  recognition.lang = speechLocale;
   recognition.interimResults = true;
   recognition.continuous = false;
   recognition.maxAlternatives = 1;
@@ -747,18 +812,25 @@ function startVoice() {
 
 function setStatus(text) { status.textContent = text || ""; }
 
+function growQuestion() {
+  question.style.height = "auto";
+  question.style.height = Math.min(Math.max(question.scrollHeight, 96), 320) + "px";
+}
+
 function updateCount() {
-  const limit = limits[currentTool].characters;
-  question.maxLength = limit;
   const isolate = document.createElement("bdi");
   isolate.dir = "ltr";
-  isolate.textContent = question.value.length + " / " + limit;
+  isolate.textContent = String(question.value.length);
   count.replaceChildren(isolate);
+  document.getElementById("sendPart").hidden = question.value.length <= REQUEST_CHARACTERS;
+  growQuestion();
 }
 
 function hideIntro() {
   empty.hidden = true;
   suggestions.hidden = true;
+  document.body.classList.add("chat-active");
+  document.getElementById("toggleIntro").hidden = false;
 }
 
 function selectTool(name) {
@@ -898,6 +970,8 @@ function newConversation() {
   transcript.replaceChildren();
   empty.hidden = false;
   suggestions.hidden = false;
+  document.body.classList.remove("chat-active", "intro-open");
+  document.getElementById("toggleIntro").hidden = true;
   question.value = "";
   updateCount();
   setStatus("");
@@ -960,14 +1034,14 @@ function payloadFromHistory() {
 }
 
 async function sendPayload(payload) {
+  if (!supabase) throw new Error("HAVKAR configuration was not found on this page.");
   const current = await supabase.auth.getSession();
   const accessToken = current.data && current.data.session && current.data.session.access_token;
   if (current.error || !accessToken) {
     signedIn = false;
     ask.disabled = true;
     sessionState.textContent = "Sign in before using HAVKAR AI.";
-    setStatus("Sign in before using HAVKAR AI.");
-    return;
+    throw new Error("Sign in before using HAVKAR AI.");
   }
   const response = await fetch(config.url + "/functions/v1/havkar-ai-assistant", {
     method: "POST",
@@ -982,7 +1056,8 @@ async function sendPayload(payload) {
       messages: Array.isArray(payload.messages) ? payload.messages.map((message) => ({
         role: message.role === "assistant" ? "assistant" : "user",
         content: String(message && message.content || "")
-      })) : []
+      })) : [],
+      ...(payload.attachmentPath ? { attachment: { path: payload.attachmentPath } } : {})
     })
   });
   const body = await response.json().catch(() => null);
@@ -993,10 +1068,127 @@ async function sendPayload(payload) {
   return body.message;
 }
 
+let preserveComposer = false;
+
+function clearAttachmentView() {
+  attachmentPath = "";
+  if (attachmentUrl) URL.revokeObjectURL(attachmentUrl);
+  attachmentUrl = "";
+  const preview = document.getElementById("attachmentPreview");
+  const thumb = document.getElementById("attachmentThumb");
+  const progress = document.getElementById("uploadProgress");
+  const input = document.getElementById("imageFile");
+  if (preview) preview.hidden = true;
+  if (thumb) thumb.removeAttribute("src");
+  if (progress) progress.textContent = "";
+  if (input) input.value = "";
+}
+
+function imageKind(bytes) {
+  if (bytes.length >= 3 && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255) return { ext: "jpg", mime: "image/jpeg" };
+  if (bytes.length >= 8 && bytes[0] === 137 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71) return { ext: "png", mime: "image/png" };
+  if (bytes.length >= 12 && bytes[0] === 82 && bytes[1] === 73 && bytes[2] === 70 && bytes[3] === 70 && bytes[8] === 87 && bytes[9] === 69 && bytes[10] === 66 && bytes[11] === 80) return { ext: "webp", mime: "image/webp" };
+  return null;
+}
+
+async function removeStoredAttachment() {
+  const path = attachmentPath;
+  clearAttachmentView();
+  if (!path || !supabase) return;
+  try { await supabase.storage.from("ai-attachments").remove([path]); } catch (error) {}
+}
+
+async function uploadImage(file) {
+  if (!file) return;
+  if (!signedIn || !currentUserId || !supabase) {
+    setStatus("Sign in before using HAVKAR AI.");
+    return;
+  }
+  if (file.size > 4 * 1024 * 1024) {
+    setStatus("The image is larger than 4 MB.");
+    return;
+  }
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const kind = imageKind(bytes);
+  if (!kind) {
+    setStatus("Only JPEG, PNG, and WebP images can be attached.");
+    return;
+  }
+  const session = await supabase.auth.getSession();
+  const token = session.data && session.data.session && session.data.session.access_token;
+  if (!token) {
+    setStatus("Sign in before using HAVKAR AI.");
+    return;
+  }
+  if (attachmentPath) await removeStoredAttachment();
+  const path = currentUserId + "/" + crypto.randomUUID() + "." + kind.ext;
+  uploadBusy = true;
+  document.getElementById("attachmentPreview").hidden = false;
+  attachmentUrl = URL.createObjectURL(new Blob([bytes], { type: kind.mime }));
+  document.getElementById("attachmentThumb").src = attachmentUrl;
+  document.getElementById("uploadProgress").textContent = "0%";
+  setStatus("Uploading image.");
+  try {
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", config.url + "/storage/v1/object/ai-attachments/" + path);
+      xhr.setRequestHeader("Authorization", "Bearer " + token);
+      xhr.setRequestHeader("apikey", config.publishableKey);
+      xhr.setRequestHeader("Content-Type", kind.mime);
+      xhr.setRequestHeader("x-upsert", "false");
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) document.getElementById("uploadProgress").textContent = Math.round(event.loaded / event.total * 100) + "%";
+      };
+      xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error("upload")));
+      xhr.onerror = () => reject(new Error("upload"));
+      xhr.send(new Blob([bytes], { type: kind.mime }));
+    });
+    attachmentPath = path;
+    document.getElementById("uploadProgress").textContent = "";
+    setStatus("");
+  } catch (error) {
+    clearAttachmentView();
+    setStatus("The image could not be uploaded.");
+  } finally {
+    uploadBusy = false;
+  }
+}
+
+function beginSend(sendPart) {
+  if (listening || voicePending) {
+    setStatus("Stop voice input before sending.");
+    return;
+  }
+  if (uploadBusy) {
+    setStatus("Uploading image.");
+    return;
+  }
+  let content = question.value.trim();
+  if (!content) {
+    setStatus("Enter a message first.");
+    return;
+  }
+  if (content.length > REQUEST_CHARACTERS) {
+    if (!sendPart) {
+      setStatus("This message is longer than one assistant request. Send the first 6000 characters, then send the rest.");
+      document.getElementById("sendPart").hidden = false;
+      return;
+    }
+    const remainder = content.slice(REQUEST_CHARACTERS).trimStart();
+    content = content.slice(0, REQUEST_CHARACTERS);
+    question.value = remainder;
+    preserveComposer = true;
+    updateCount();
+  }
+  addBubble("user", content, false);
+  askAssistant(content, null);
+}
+
 async function askAssistant(content, reuse) {
   if (requestInFlight) return;
   if (!reuse) history.push({ role: "user", content });
   const payload = reuse || payloadFromHistory();
+  if (!reuse && attachmentPath) payload.attachmentPath = attachmentPath;
   if (!payload.messages.length) {
     setStatus("Enter a message first.");
     return;
@@ -1011,7 +1203,9 @@ async function askAssistant(content, reuse) {
     pending.parentElement.remove();
     history.push({ role: "assistant", content: message });
     addBubble("assistant", message, false);
-    if (!reuse) question.value = "";
+    if (!reuse && !preserveComposer) question.value = "";
+    preserveComposer = false;
+    clearAttachmentView();
     updateCount();
     lastPayload = null;
     saveThread();
@@ -1059,6 +1253,20 @@ document.getElementById("languageDialog").addEventListener("click", (event) => {
 });
 document.getElementById("languageSearch").addEventListener("input", filterLanguages);
 document.getElementById("voiceInput").addEventListener("click", startVoice);
+document.getElementById("toggleIntro").addEventListener("click", () => {
+  document.body.classList.toggle("intro-open");
+});
+document.getElementById("pickImage").addEventListener("click", () => {
+  document.getElementById("imageFile").click();
+});
+document.getElementById("imageFile").addEventListener("change", (event) => {
+  const file = event.target.files && event.target.files[0];
+  uploadImage(file);
+});
+document.getElementById("removeAttachment").addEventListener("click", () => {
+  removeStoredAttachment();
+});
+document.getElementById("sendPart").addEventListener("click", () => beginSend(true));
 document.getElementById("themeToggle").addEventListener("click", () => {
   const settings = readSettings();
   settings.darkMode = settings.darkMode !== true;
@@ -1124,6 +1332,10 @@ document.addEventListener("keydown", (event) => {
   }
 });
 question.addEventListener("input", updateCount);
+askForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  beginSend(false);
+});
 retry.addEventListener("click", () => { if (lastPayload) askAssistant("", lastPayload); });
 menuToggle.addEventListener("click", () => {
   const open = document.body.classList.toggle("nav-open");
@@ -1161,20 +1373,8 @@ if (!config || !config.url || !config.publishableKey) {
     const i18n = window.HAVKAR_I18N;
     if (i18n && typeof i18n.hasSavedLanguage === "function" && !i18n.hasSavedLanguage() && typeof i18n.isSupportedLanguage === "function" && i18n.isSupportedLanguage(preferred)) {
       await i18n.setLanguage(preferred);
-    } else {
-    if (currentUserId && preferred !== languageCode()) {
+    } else if (currentUserId && preferred !== languageCode()) {
       try { await supabase.auth.updateUser({ data: { preferred_language: languageCode() } }); } catch (error) {}
-    }
-    askForm.addEventListener("submit", (event) => {
-      event.preventDefault();
-      const content = question.value.trim();
-      if (!content) {
-        setStatus("Enter a message first.");
-        return;
-      }
-      addBubble("user", content, false);
-      askAssistant(content, null);
-    });
     }
   }
 }

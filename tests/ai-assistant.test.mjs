@@ -9,7 +9,8 @@ import {
   providerFailureMessage,
   providerRetryDelayMs,
   providerStatusIsRetryable,
-  validateAssistantRequest
+  validateAssistantRequest,
+  validateAttachment
 } from "../supabase/functions/havkar-ai-assistant/policy.mjs";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -50,7 +51,25 @@ assert.equal(validateAssistantRequest({
 assert.equal(validateAssistantRequest({
   language: "en",
   messages: [{ role: "user", content: "x".repeat(1201) }]
+}).ok, true);
+assert.equal(validateAssistantRequest({
+  language: "en",
+  messages: [{ role: "user", content: "x".repeat(6001) }]
 }).ok, false);
+assert.equal(validateAssistantRequest({
+  language: "en",
+  task: "programming",
+  messages: [{ role: "user", content: "Show a small function." }]
+}).ok, true);
+assert.match(assistantInstruction("English", "programming"), /executed/);
+const owner = "514c9f0d-87c9-4393-80c8-197f0a0317a0";
+assert.equal(validateAttachment(null, owner).ok, true);
+assert.equal(validateAttachment({
+  path: owner + "/11111111-1111-4111-8111-111111111111.jpg"
+}, owner).path.endsWith(".jpg"), true);
+assert.equal(validateAttachment({
+  path: "00000000-0000-4000-8000-000000000000/11111111-1111-4111-8111-111111111111.jpg"
+}, owner).ok, false);
 
 assert.equal(validateAssistantRequest({
   language: "en",
@@ -174,8 +193,10 @@ assert.match(assistantPage, /Image generation/);
 assert.match(assistantPage, /icon\.png/);
 assert.match(assistantPage, /flowType: "pkce"/);
 assert.match(assistantPage, /<bdi dir="ltr">/);
-assert.doesNotMatch(assistantPage, /type="file"/);
-assert.match(assistantPage, /aria-disabled="true"/);
+assert.match(assistantPage, /type="file"/);
+assert.match(assistantPage, /accept="image\/jpeg,image\/png,image\/webp"/);
+assert.doesNotMatch(assistantPage, /maxlength="1200"/);
+assert.match(assistantPage, /havkar-ui-dictionary\.js/);
 assert.match(assistantPage, /notifications\.html/);
 assert.match(assistantPage, /signOut/);
 assert.doesNotMatch(assistantPage, /havkarapp2026@gmail\.com/);
