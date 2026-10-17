@@ -124,7 +124,6 @@ h1 { margin: 0; max-width: 460px; font-size: clamp(1.85rem, 2.35vw, 2.45rem); li
   font-weight: 700; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 1px 0 rgba(16,80,40,.03);
 }
 .chip[aria-pressed="true"] { background: #e7f8ec; border-color: #8ed3a0; }
-.flag { width: 18px; height: 18px; flex: none; }
 .more-lang { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .chat { background: rgba(255,255,255,.88); border: 1px solid rgba(230,242,234,.95); border-radius: 24px; box-shadow: var(--shadow); padding: 14px 14px 12px; display: grid; gap: 10px; backdrop-filter: blur(14px); }
 .chat-head { display: flex; align-items: center; gap: 10px; }
@@ -156,6 +155,27 @@ h1 { margin: 0; max-width: 460px; font-size: clamp(1.85rem, 2.35vw, 2.45rem); li
 .mini { border: 0; background: transparent; color: var(--green); font-size: .75rem; font-weight: 750; padding: 0; }
 .chat-tools { margin-inline-start: auto; display: flex; align-items: center; gap: 6px; }
 .lang-menu, .history-menu { position: relative; }
+.lang-dialog {
+  position: fixed; inset: 0; z-index: 30; display: grid; place-items: end center; padding: 12px;
+  background: rgba(10, 28, 18, .38);
+}
+.lang-sheet {
+  width: min(440px, 100%); max-height: min(82vh, 680px); overflow: auto;
+  background: rgba(255,255,255,.97); border: 1px solid var(--line); border-radius: 22px;
+  box-shadow: var(--shadow); padding: 16px; display: grid; gap: 10px;
+}
+.lang-sheet h2 { margin: 0; font-size: 1.05rem; }
+.lang-search { width: 100%; min-height: 44px; border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; background: #fff; }
+.lang-choices { display: grid; gap: 6px; }
+.lang-choice {
+  min-height: 44px; border: 1px solid #e3f0e7; background: #fff; border-radius: 12px;
+  text-align: start; padding: 8px 12px; font-weight: 700;
+}
+.lang-choice[aria-current="true"] { border-color: #1c9a43; background: #e7f8ec; }
+.lang-choice span { display: block; unicode-bidi: plaintext; }
+.lang-choice small { display: block; color: var(--muted); font-weight: 650; }
+body.lang-open { overflow: hidden; }
+.round.listening { background: #128a3a; color: #fff; box-shadow: 0 0 0 4px rgba(18,138,58,.18); }
 .lang-pop, .history-list {
   position: absolute; z-index: 5; top: calc(100% + 6px); inset-inline-start: 0; min-width: 220px;
   display: grid; gap: 4px; padding: 8px; background: rgba(255,255,255,.96); border: 1px solid var(--line);
@@ -240,7 +260,8 @@ textarea:focus { outline: none; }
 .foot-meta { justify-self: end; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
 .foot-meta span { display: inline-flex; align-items: center; gap: 6px; }
 .side a[hidden], .example[hidden], .tool-note[hidden], .retry[hidden], #logout[hidden],
-#empty[hidden], #suggestions[hidden], #accountEmail[hidden], .lang-pop[hidden], .mini[hidden] { display: none !important; }
+#empty[hidden], #suggestions[hidden], #accountEmail[hidden], .lang-pop[hidden], .lang-dialog[hidden],
+.lang-choice[hidden], .mini[hidden] { display: none !important; }
 body.dark-mode { color: #e7f6ec; background: #0c1610; }
 body.dark-mode .topbar, body.dark-mode .chat, body.dark-mode .panel, body.dark-mode .lang-pop, body.dark-mode .history-list, body.dark-mode .tool-list {
   background: rgba(16, 28, 20, .88); color: #e7f6ec; border-color: #1e3a28;
@@ -255,7 +276,8 @@ body.dark-mode .lede, body.dark-mode .chat-head p, body.dark-mode .status, body.
 body.dark-mode .hero-actions button, body.dark-mode .card, body.dark-mode .chip, body.dark-mode .composer-box, body.dark-mode .ghost, body.dark-mode .round {
   background: #13261b; color: #e7f6ec; border-color: #245236;
 }
-body.dark-mode .search, body.dark-mode textarea { background: transparent; color: #e7f6ec; }
+body.dark-mode .search, body.dark-mode textarea, body.dark-mode .lang-search { background: transparent; color: #e7f6ec; }
+body.dark-mode .lang-sheet, body.dark-mode .lang-choice { background: #13261b; color: #e7f6ec; border-color: #245236; }
 body.dark-mode .bubble.assistant, body.dark-mode .empty p { background: #173222; color: #e7f6ec; border-color: #245236; }
 body.dark-mode .tips { background: #241c10; border-color: #4a3a1c; }
 body.dark-mode .foot { color: #b7d0c0; }
@@ -287,6 +309,12 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 }
 @media (max-width: 720px) {
   .topbar { padding-inline: 8px; gap: 6px; }
+  #voiceInput, #openLanguages, #focusLanguage { min-width: 44px; min-height: 44px; }
+  .lang-dialog { padding: 0; place-items: end stretch; }
+  .lang-sheet {
+    width: 100%; max-height: min(88vh, 680px); border-end-start-radius: 0; border-end-end-radius: 0;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
   .word strong { font-size: 1rem; }
   .mark { width: 36px; height: 36px; }
   .account { max-width: none; padding-inline: 2px; }
@@ -318,7 +346,7 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 </a>
 <label class="search"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="#7aa188" d="M10 4a6 6 0 1 0 3.7 10.7l4 4 1.4-1.4-4-4A6 6 0 0 0 10 4Z"/></svg><input id="navSearch" type="search" placeholder="Search anything in HAVKAR..." aria-label="Search HAVKAR pages"><kbd>⌘K</kbd></label>
 <div class="top-actions">
-<button id="focusLanguage" class="lang-btn" type="button"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm-7 9h3.1a13 13 0 0 0 0 4H5a7 7 0 0 1 0-4Zm3.1-2H5a7 7 0 0 1 3.1-4 13 13 0 0 0 0 4ZM12 19c-.8-1-1.6-2.6-1.9-5h3.8c-.3 2.4-1.1 4-1.9 5Zm2.1-7h-4.2a11 11 0 0 1 0-4h4.2a11 11 0 0 1 0 4Zm.8 6a7 7 0 0 0 3.1-4h-3.1a13 13 0 0 1 0 4Zm0-6h3.1a7 7 0 0 0-3.1-4 13 13 0 0 1 0 4Z"/></svg><span id="langShort" data-i18n-ignore translate="no">EN</span></button>
+<button id="focusLanguage" class="lang-btn" type="button" aria-haspopup="dialog" aria-controls="languageDialog" aria-expanded="false" aria-label="Choose language"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm-7 9h3.1a13 13 0 0 0 0 4H5a7 7 0 0 1 0-4Zm3.1-2H5a7 7 0 0 1 3.1-4 13 13 0 0 0 0 4ZM12 19c-.8-1-1.6-2.6-1.9-5h3.8c-.3 2.4-1.1 4-1.9 5Zm2.1-7h-4.2a11 11 0 0 1 0-4h4.2a11 11 0 0 1 0 4Zm.8 6a7 7 0 0 0 3.1-4h-3.1a13 13 0 0 1 0 4Zm0-6h3.1a7 7 0 0 0-3.1-4 13 13 0 0 1 0 4Z"/></svg><span id="langShort" data-i18n-ignore translate="no">EN</span></button>
 <button id="themeToggle" class="icon-btn" type="button" aria-pressed="false" aria-label="Appearance"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M14 3a8 8 0 1 0 7 12 7 7 0 0 1-7-12Z"/></svg></button>
 <a class="icon-btn" href="notifications.html" aria-label="Notifications"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 22a2.2 2.2 0 0 0 2.1-2h-4.2A2.2 2.2 0 0 0 12 22Zm7-6.2V11a7 7 0 0 0-5-6.7V3.5a2 2 0 1 0-4 0v.8A7 7 0 0 0 5 11v4.8L3.4 17.4V19h17.2v-1.6L19 15.8Z"/></svg></a>
 <a id="accountLink" class="account" href="login.html"><span class="avatar-fallback" id="accountMark">H</span><span id="accountLabel">Log in</span><span id="accountEmail" hidden data-i18n-ignore translate="no"></span></a>
@@ -365,16 +393,16 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 <div class="below">
 <div class="main-col">
 <div class="lang-row">
-<button class="chip" type="button" data-lang="en" data-i18n-ignore translate="no"><svg class="flag" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="8" fill="#012169"/><path d="M0 8h16M8 0v16" stroke="#fff" stroke-width="4"/><path d="M0 8h16M8 0v16" stroke="#C8102E" stroke-width="2"/><path d="M0 0l16 16M16 0L0 16" stroke="#fff" stroke-width="1.6"/></svg>English</button>
-<div class="lang-menu">
-<button id="kurdishToggle" class="chip" type="button" aria-expanded="false" aria-controls="kurdishMenu" data-i18n-ignore translate="no"><svg class="flag" viewBox="0 0 16 16" aria-hidden="true"><clipPath id="flag-ku"><circle cx="8" cy="8" r="8"/></clipPath><g clip-path="url(#flag-ku)"><rect width="16" height="5.4" fill="#e31d1a"/><rect y="5.4" width="16" height="5.2" fill="#fff"/><rect y="10.6" width="16" height="5.4" fill="#278e3b"/><circle cx="8" cy="8" r="2" fill="#f2d000"/></g></svg>Kurdish</button>
-<div id="kurdishMenu" class="lang-pop" hidden>
-<button type="button" data-variant="ckb" data-i18n-ignore translate="no">کوردی — سۆرانی</button>
-<button type="button" data-variant="kmr" data-i18n-ignore translate="no">Kurdî — Kurmancî</button>
-</div>
-</div>
-<button id="moreLanguages" class="chip" type="button"><svg class="flag" viewBox="0 0 24 24" aria-hidden="true"><path fill="#1a9a42" d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm-7 9h3.1a13 13 0 0 0 0 4H5a7 7 0 0 1 0-4Zm3.1-2H5a7 7 0 0 1 3.1-4 13 13 0 0 0 0 4ZM12 19c-.8-1-1.6-2.6-1.9-5h3.8c-.3 2.4-1.1 4-1.9 5Zm2.1-7h-4.2a11 11 0 0 1 0-4h4.2a11 11 0 0 1 0 4Zm.8 6a7 7 0 0 0 3.1-4h-3.1a13 13 0 0 1 0 4Zm0-6h3.1a7 7 0 0 0-3.1-4 13 13 0 0 1 0 4Z"/></svg>More languages</button>
+<button id="openLanguages" class="chip" type="button" aria-haspopup="dialog" aria-controls="languageDialog" aria-expanded="false" aria-label="Choose language"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm-7 9h3.1a13 13 0 0 0 0 4H5a7 7 0 0 1 0-4Zm3.1-2H5a7 7 0 0 1 3.1-4 13 13 0 0 0 0 4ZM12 19c-.8-1-1.6-2.6-1.9-5h3.8c-.3 2.4-1.1 4-1.9 5Zm2.1-7h-4.2a11 11 0 0 1 0-4h4.2a11 11 0 0 1 0 4Zm.8 6a7 7 0 0 0 3.1-4h-3.1a13 13 0 0 1 0 4Zm0-6h3.1a7 7 0 0 0-3.1-4 13 13 0 0 1 0 4Z"/></svg><span id="languageName" data-i18n-ignore translate="no">English</span></button>
 <select id="language" class="more-lang" data-i18n-ignore translate="no" aria-label="More languages"></select>
+</div>
+<div id="languageDialog" class="lang-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="languageDialogTitle">
+<div class="lang-sheet">
+<h2 id="languageDialogTitle">Language</h2>
+<input id="languageSearch" class="lang-search" type="search" placeholder="Search languages" aria-label="Search languages" autocomplete="off" data-i18n-ignore translate="no">
+<div id="languageChoices" class="lang-choices"></div>
+<button id="closeLanguages" class="ghost" type="button">Close</button>
+</div>
 </div>
 <section class="chat" aria-labelledby="ai-title">
 <div class="chat-head">
@@ -429,7 +457,7 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 </div>
 <textarea id="question" name="question" maxlength="1200" required dir="auto" placeholder="Type your question here..."></textarea>
 <div class="send-row">
-<button class="round" type="button" disabled aria-disabled="true" title="Voice input is not available yet" aria-label="Voice"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Zm-6 9h2a4 4 0 0 0 8 0h2a6 6 0 0 1-5 5.9V20h3v2H8v-2h3v-2.1A6 6 0 0 1 6 12Z"/></svg></button>
+<button id="voiceInput" class="round" type="button" aria-pressed="false" aria-label="Start voice input"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Zm-6 9h2a4 4 0 0 0 8 0h2a6 6 0 0 1-5 5.9V20h3v2H8v-2h3v-2.1A6 6 0 0 1 6 12Z"/></svg></button>
 <button id="ask" class="send" type="submit" disabled aria-label="Send"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M3 11.5 21 3l-7.2 18-2.3-7.2Z"/></svg><span class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Send</span></button>
 </div>
 </div>
@@ -463,7 +491,7 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 <li>Get step-by-step guidance.</li>
 <li>Use examples for better results.</li>
 </ul>
-<p class="unavailable"><strong>Not available yet:</strong> Image generation, File upload, and Voice input stay off until they are securely implemented and tested.</p>
+<p class="unavailable"><strong>Not available yet:</strong> Image generation and File upload stay off until they are securely implemented and tested. Voice input uses this browser’s speech recognition and is not sent to HAVKAR as audio.</p>
 </section>
 </aside>
 </div>
@@ -536,27 +564,185 @@ function applyInterfaceDirection() {
   document.documentElement.dir = dir === "rtl" ? "rtl" : "ltr";
 }
 
+const LANGUAGE_LABELS = {
+  ckb: "Kurdî (Soranî) — کوردی سۆرانی",
+  kmr: "Kurdî (Kurmancî) — Kurmancî"
+};
+const SPEECH_LOCALES = {
+  en: "en-US", it: "it-IT", de: "de-DE", fr: "fr-FR", es: "es-ES", pt: "pt-PT", nl: "nl-NL",
+  sv: "sv-SE", pl: "pl-PL", id: "id-ID", zh: "zh-CN", ja: "ja-JP", ko: "ko-KR", hi: "hi-IN",
+  ru: "ru-RU", ckb: "ckb-IQ", kmr: "kmr", tr: "tr-TR", ar: "ar-SA", fa: "fa-IR", ur: "ur-PK"
+};
+let recognition = null;
+let listening = false;
+let voicePending = false;
+let voiceBase = "";
+let voiceCancel = false;
+let languageOpener = null;
+
+function languageLabel(item) {
+  return LANGUAGE_LABELS[item.code] || item.name;
+}
+
 function fillLanguages() {
   const i18n = window.HAVKAR_I18N;
   const list = i18n && typeof i18n.getSelectableLanguages === "function" ? i18n.getSelectableLanguages() : [];
   const current = languageCode();
+  const choices = document.getElementById("languageChoices");
   language.replaceChildren();
+  choices.replaceChildren();
   list.forEach((item) => {
     const option = document.createElement("option");
     option.value = item.code;
-    option.textContent = item.name;
+    option.textContent = languageLabel(item);
     option.selected = item.code === current;
     language.appendChild(option);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "lang-choice";
+    button.dir = "auto";
+    button.dataset.lang = item.code;
+    button.setAttribute("aria-current", item.code === current ? "true" : "false");
+    const name = document.createElement("span");
+    name.textContent = languageLabel(item);
+    name.setAttribute("data-i18n-ignore", "");
+    name.translate = false;
+    const code = document.createElement("small");
+    code.textContent = item.code + " · " + (item.dir === "rtl" ? "RTL" : "LTR");
+    code.setAttribute("data-i18n-ignore", "");
+    button.append(name, code);
+    button.addEventListener("click", () => chooseLanguage(item.code));
+    choices.appendChild(button);
   });
-  document.querySelectorAll("[data-lang]").forEach((button) => {
-    button.setAttribute("aria-pressed", button.dataset.lang === current ? "true" : "false");
-  });
-  const kurdish = document.getElementById("kurdishToggle");
-  if (kurdish) kurdish.setAttribute("aria-pressed", current === "ckb" || current === "kmr" ? "true" : "false");
-  document.querySelectorAll("[data-variant]").forEach((button) => {
-    button.setAttribute("aria-pressed", button.dataset.variant === current ? "true" : "false");
-  });
+  const currentItem = list.find((item) => item.code === current);
+  document.getElementById("languageName").textContent = currentItem ? languageLabel(currentItem) : (current || "en").toUpperCase();
   langShort.textContent = (current || "en").toUpperCase();
+  filterLanguages();
+}
+
+function filterLanguages() {
+  const query = document.getElementById("languageSearch").value.trim().toLowerCase();
+  document.querySelectorAll(".lang-choice").forEach((button) => {
+    button.hidden = Boolean(query) && !button.textContent.toLowerCase().includes(query);
+  });
+}
+
+function setLanguageExpanded(open) {
+  document.getElementById("openLanguages").setAttribute("aria-expanded", open ? "true" : "false");
+  document.getElementById("focusLanguage").setAttribute("aria-expanded", open ? "true" : "false");
+}
+
+function openLanguageDialog(event) {
+  const dialog = document.getElementById("languageDialog");
+  languageOpener = event && event.currentTarget ? event.currentTarget : document.getElementById("openLanguages");
+  dialog.hidden = false;
+  document.body.classList.add("lang-open");
+  setLanguageExpanded(true);
+  document.getElementById("languageSearch").focus();
+}
+
+function closeLanguageDialog() {
+  const dialog = document.getElementById("languageDialog");
+  dialog.hidden = true;
+  document.body.classList.remove("lang-open");
+  setLanguageExpanded(false);
+  if (languageOpener && typeof languageOpener.focus === "function") languageOpener.focus();
+}
+
+function speechEngine() {
+  if (!window.isSecureContext) return null;
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+}
+
+function setVoiceUi(active) {
+  const button = document.getElementById("voiceInput");
+  listening = active;
+  button.classList.toggle("listening", active);
+  button.setAttribute("aria-pressed", active ? "true" : "false");
+  button.setAttribute("aria-label", active ? "Stop voice input" : "Start voice input");
+}
+
+function stopVoice(cancel) {
+  voiceCancel = cancel;
+  voicePending = false;
+  const active = recognition;
+  if (!active) {
+    setVoiceUi(false);
+    return;
+  }
+  try {
+    if (cancel && typeof active.abort === "function") active.abort();
+    else active.stop();
+  } catch (error) {
+    setVoiceUi(false);
+    recognition = null;
+  }
+}
+
+function startVoice() {
+  if (!window.isSecureContext) {
+    setStatus("Voice input needs a secure HTTPS page.");
+    return;
+  }
+  const Engine = speechEngine();
+  if (!Engine) {
+    setStatus("This browser does not support speech recognition.");
+    return;
+  }
+  if (listening || voicePending) {
+    stopVoice(false);
+    return;
+  }
+  voiceBase = question.value;
+  voiceCancel = false;
+  voicePending = true;
+  recognition = new Engine();
+  recognition.lang = SPEECH_LOCALES[languageCode()] || languageCode() || "en-US";
+  recognition.interimResults = true;
+  recognition.continuous = false;
+  recognition.maxAlternatives = 1;
+  recognition.onstart = () => {
+    voicePending = false;
+    setVoiceUi(true);
+    setStatus("Listening. Select the microphone to keep the text, or press Escape to cancel.");
+  };
+  recognition.onresult = (event) => {
+    if (voiceCancel) return;
+    let spoken = "";
+    for (let index = 0; index < event.results.length; index += 1) {
+      spoken += event.results[index][0].transcript;
+    }
+    const text = spoken.trim();
+    question.value = text ? (voiceBase.trim() ? voiceBase.trim() + " " + text : text) : voiceBase;
+    updateCount();
+  };
+  recognition.onerror = (event) => {
+    const code = event && event.error ? event.error : "";
+    voicePending = false;
+    if (code === "not-allowed" || code === "service-not-allowed") setStatus("Microphone permission was denied.");
+    else if (code === "audio-capture") setStatus("No microphone was found.");
+    else if (code === "language-not-supported") setStatus("This browser cannot transcribe the selected language.");
+    else if (code === "no-speech") setStatus("No speech was heard.");
+    else if (code !== "aborted") setStatus("Speech recognition stopped.");
+  };
+  recognition.onend = () => {
+    voicePending = false;
+    if (voiceCancel) {
+      question.value = voiceBase;
+      updateCount();
+      setStatus("Voice input cancelled.");
+    }
+    setVoiceUi(false);
+    recognition = null;
+  };
+  try {
+    recognition.start();
+  } catch (error) {
+    voicePending = false;
+    recognition = null;
+    setVoiceUi(false);
+    setStatus("Speech recognition could not start.");
+  }
 }
 
 function setStatus(text) { status.textContent = text || ""; }
@@ -790,7 +976,14 @@ async function sendPayload(payload) {
       "Content-Type": "application/json",
       "apikey": config.publishableKey
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify({
+      language: payload.language,
+      task: payload.task,
+      messages: Array.isArray(payload.messages) ? payload.messages.map((message) => ({
+        role: message.role === "assistant" ? "assistant" : "user",
+        content: String(message && message.content || "")
+      })) : []
+    })
   });
   const body = await response.json().catch(() => null);
   if (!response.ok || !body || !body.message) {
@@ -858,23 +1051,14 @@ renderHistory();
 clock.textContent = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 clock.dateTime = new Date().toISOString();
 language.addEventListener("change", () => chooseLanguage(language.value));
-function openLanguageList() {
-  if (typeof language.showPicker === "function") language.showPicker();
-  else language.focus();
-}
-document.getElementById("focusLanguage").addEventListener("click", openLanguageList);
-document.getElementById("moreLanguages").addEventListener("click", openLanguageList);
-document.getElementById("kurdishToggle").addEventListener("click", () => {
-  const menu = document.getElementById("kurdishMenu");
-  menu.hidden = !menu.hidden;
-  document.getElementById("kurdishToggle").setAttribute("aria-expanded", menu.hidden ? "false" : "true");
+document.getElementById("focusLanguage").addEventListener("click", openLanguageDialog);
+document.getElementById("openLanguages").addEventListener("click", openLanguageDialog);
+document.getElementById("closeLanguages").addEventListener("click", closeLanguageDialog);
+document.getElementById("languageDialog").addEventListener("click", (event) => {
+  if (event.target.id === "languageDialog") closeLanguageDialog();
 });
-document.querySelectorAll("[data-variant]").forEach((button) => {
-  button.addEventListener("click", () => chooseLanguage(button.dataset.variant));
-});
-document.querySelectorAll("[data-lang]").forEach((button) => {
-  button.addEventListener("click", () => chooseLanguage(button.dataset.lang));
-});
+document.getElementById("languageSearch").addEventListener("input", filterLanguages);
+document.getElementById("voiceInput").addEventListener("click", startVoice);
 document.getElementById("themeToggle").addEventListener("click", () => {
   const settings = readSettings();
   settings.darkMode = settings.darkMode !== true;
@@ -913,7 +1097,28 @@ document.addEventListener("keydown", (event) => {
     event.preventDefault();
     document.getElementById("navSearch").focus();
   }
+  const languageDialog = document.getElementById("languageDialog");
+  if (event.key === "Tab" && !languageDialog.hidden) {
+    const focusable = [...languageDialog.querySelectorAll("button, input")].filter((item) => !item.hidden && item.offsetParent !== null);
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (first && last && event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (first && last && !event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
   if (event.key === "Escape") {
+    if (listening || voicePending) {
+      stopVoice(true);
+      return;
+    }
+    if (!languageDialog.hidden) {
+      closeLanguageDialog();
+      return;
+    }
     document.body.classList.remove("nav-open");
     menuToggle.setAttribute("aria-expanded", "false");
   }
