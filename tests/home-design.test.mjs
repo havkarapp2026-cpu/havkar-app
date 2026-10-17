@@ -105,6 +105,6 @@ assert.doesNotMatch(assistant, /HAVKAR_AI_API_KEY/);
 assert.doesNotMatch(assistant, /service_role/);
 
 const apiFiles = fs.readdirSync(path.join(root, "api")).filter((name) => name.endsWith(".js"));
-assert.equal(apiFiles.length, 15);
+assert.equal(apiFiles.length, 12);
 
 console.log("HOME_DESIGN_TEST_OK");

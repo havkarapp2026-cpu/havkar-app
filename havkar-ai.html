@@ -1666,13 +1666,14 @@ document.getElementById("stopGeneration").addEventListener("click", () => {
 async function reviewPlan(plan) {
   try {
     const accessToken = await accessTokenOrThrow();
-    const response = await fetch("/api/ai-subscription-checkout", {
+    const response = await fetch(config.url + "/functions/v1/havkar-ai-billing", {
       method: "POST",
       headers: {
         "Authorization": "Bearer " + accessToken,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "apikey": config.publishableKey
       },
-      body: JSON.stringify({ plan })
+      body: JSON.stringify({ action: "checkout", plan })
     });
     const body = await response.json().catch(() => null);
     if (body && body.url && body.url.startsWith("https://checkout.stripe.com/")) {
@@ -1689,12 +1690,14 @@ document.getElementById("reviewPro").addEventListener("click", () => reviewPlan(
 document.getElementById("manageBilling").addEventListener("click", async () => {
   try {
     const accessToken = await accessTokenOrThrow();
-    const response = await fetch("/api/ai-subscription-portal", {
+    const response = await fetch(config.url + "/functions/v1/havkar-ai-billing", {
       method: "POST",
       headers: {
         "Authorization": "Bearer " + accessToken,
-        "Content-Type": "application/json"
-      }
+        "Content-Type": "application/json",
+        "apikey": config.publishableKey
+      },
+      body: JSON.stringify({ action: "portal" })
     });
     const body = await response.json().catch(() => null);
     if (body && body.url && body.url.startsWith("https://billing.stripe.com/")) {

@@ -211,8 +211,8 @@ async function main() {
     assert.strictEqual(apiFiles.includes("pi-complete.js"), false);
     assert.strictEqual(apiFiles.includes("delete-account.js"), false);
     assert.strictEqual(apiFiles.includes("pi-approve.js"), true);
-    assert.ok(apiFiles.length <= 15, `expected at most 15 functions, found ${apiFiles.length}`);
-    assert.strictEqual(apiFiles.length, 15);
+    assert.ok(apiFiles.length <= 12, `expected at most 12 functions, found ${apiFiles.length}`);
+    assert.strictEqual(apiFiles.length, 12);
 
     const preserved = [
         "accommodation-review.js",
