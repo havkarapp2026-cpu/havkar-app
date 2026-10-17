@@ -48,6 +48,36 @@ const TASK_LIMITS = Object.freeze({
     maxMessageCharacters: 6000,
     maxCharacters: 6000,
     maxOutputTokens: 2048
+  }),
+  translation: Object.freeze({
+    maxMessages: 2,
+    maxMessageCharacters: 2000,
+    maxCharacters: 2000,
+    maxOutputTokens: 1200
+  }),
+  ideas: Object.freeze({
+    maxMessages: 2,
+    maxMessageCharacters: 2000,
+    maxCharacters: 2000,
+    maxOutputTokens: 1200
+  }),
+  advertising: Object.freeze({
+    maxMessages: 2,
+    maxMessageCharacters: 2000,
+    maxCharacters: 2000,
+    maxOutputTokens: 1200
+  }),
+  social: Object.freeze({
+    maxMessages: 2,
+    maxMessageCharacters: 2000,
+    maxCharacters: 2000,
+    maxOutputTokens: 1200
+  }),
+  guidance: Object.freeze({
+    maxMessages: 2,
+    maxMessageCharacters: 2000,
+    maxCharacters: 2000,
+    maxOutputTokens: 1200
   })
 });
 
@@ -198,6 +228,26 @@ function assistantInstruction(languageName, task) {
 
   if (task === "menu") {
     return base + " Draft a numbered menu. Keep every item the user supplied, in the same order, with the same numbers, including numbers such as 101. Do not drop, merge, or reorder items. Leave a price blank when the user did not provide one. Do not turn a price into a charge or a payment. Do not claim that the menu was published.";
+  }
+
+  if (task === "translation") {
+    return base + " Translate the user's text. Preserve names, numbers, and meaning. When the user names a target language, write the translation in that language. Otherwise write it in the interface language. Do not claim that a document was uploaded or published.";
+  }
+
+  if (task === "ideas") {
+    return base + " Suggest practical business ideas as text only. Do not claim that a business, page, or payment was created.";
+  }
+
+  if (task === "advertising") {
+    return base + " Draft advertising copy as text only. Do not claim that an advertisement was published, boosted, or paid.";
+  }
+
+  if (task === "social") {
+    return base + " Draft social-media post text only. Do not claim that a post was published or that an image was generated.";
+  }
+
+  if (task === "guidance") {
+    return base + " Give clear numbered steps. Do not claim that a step was already completed for the user.";
   }
 
   return base;

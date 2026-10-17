@@ -4,50 +4,395 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#2e7d32">
+<meta name="theme-color" content="#e7f6ea">
 <title>HAVKAR AI</title>
 <link rel="icon" type="image/png" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <style>
-*{box-sizing:border-box}
-body{margin:0;min-height:100vh;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#18251c;background:linear-gradient(135deg,#c8e6c9,#a5d6a7)}
-main{width:100%;max-width:430px;margin:0 auto;background:rgba(255,255,255,.985);border:2px solid rgba(190,225,198,.72);border-radius:28px;padding:22px 16px 24px}
-h1{margin:0 0 8px;color:#17652a;font-size:1.6rem}
-p{margin:0 0 14px;line-height:1.45}
-label{display:block;font-weight:800;margin-bottom:6px}
-textarea{width:100%;min-height:120px;border:1px solid #cbe4d0;border-radius:14px;padding:12px;font:inherit;resize:vertical}
-button,a.button{display:inline-block;margin-top:12px;border:0;border-radius:14px;background:#16833c;color:#fff;font:inherit;font-weight:800;padding:12px 16px;text-decoration:none;cursor:pointer}
-button[disabled]{opacity:.65;cursor:wait}
-.reply{margin-top:16px;padding:14px;border-radius:14px;background:#f4fbf5;white-space:pre-wrap;overflow-wrap:anywhere}
-.back{display:inline-block;margin-bottom:12px;color:#21863f;font-weight:800;text-decoration:none}
-.brandbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;color:#2e7d32;text-decoration:none}
-.brandbar img{width:40px;height:40px;border-radius:10px}
-.brandbar strong{display:block}
-select{width:100%;border:1px solid #cbe4d0;border-radius:14px;padding:12px;font:inherit;background:#fff}
+:root {
+  --green: #17652a;
+  --green-deep: #0f4d22;
+  --green-mid: #2e7d32;
+  --green-bright: #16833c;
+  --mint: #e7f6ea;
+  --card: rgba(255,255,255,.96);
+  --line: rgba(46,125,50,.16);
+  --shadow: 0 18px 40px rgba(23,101,42,.12);
+  --text: #17301d;
+  --muted: #4d6554;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 50% -8%, rgba(255,255,255,.95), transparent 34%),
+    radial-gradient(circle at 50% 0, rgba(129,199,132,.45), transparent 42%),
+    linear-gradient(180deg, #f4fbf5 0%, #d9f0dd 48%, #c8e6c9 100%);
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: -10vh 20vw auto;
+  height: 52vh;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255,255,255,.28), transparent 58%),
+    repeating-radial-gradient(circle at 50% 50%, rgba(46,125,50,.08) 0 1px, transparent 1px 28px);
+  pointer-events: none;
+}
+.skip {
+  position: absolute;
+  left: 12px;
+  top: -40px;
+  background: #fff;
+  color: var(--green);
+  padding: 8px 12px;
+  border-radius: 10px;
+  z-index: 5;
+}
+.skip:focus { top: 12px; }
+.shell {
+  width: min(1120px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: max(18px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+  position: relative;
+}
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--green);
+  text-decoration: none;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+.brand img { width: 42px; height: 42px; object-fit: contain; }
+.nav-links { display: flex; gap: 8px; margin-inline-start: auto; }
+.nav a, .lang {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--green-deep);
+  border-radius: 999px;
+  padding: 8px 12px;
+  text-decoration: none;
+  font-weight: 750;
+  font: inherit;
+}
+.lang { max-width: 210px; }
+.hero { text-align: center; padding: 28px 12px 8px; }
+.globe {
+  width: 148px;
+  height: 148px;
+  margin: 0 auto 4px;
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+.globe::before {
+  content: "";
+  position: absolute;
+  width: 118%;
+  height: 42%;
+  border: 3px solid rgba(46,125,50,.45);
+  border-radius: 50%;
+  transform: rotate(-16deg);
+  box-shadow: 0 0 0 6px rgba(255,255,255,.25);
+}
+.globe img {
+  width: 124px;
+  height: 124px;
+  object-fit: contain;
+  position: relative;
+  filter: drop-shadow(0 14px 18px rgba(46,125,50,.2));
+}
+.hero h1 {
+  margin: 0;
+  color: var(--green);
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  letter-spacing: .16em;
+  line-height: 1;
+}
+.tagline {
+  margin: 8px 0 0;
+  color: var(--green-mid);
+  font-weight: 800;
+  letter-spacing: .14em;
+  font-size: .78rem;
+}
+.hero h2 { margin: 18px 0 6px; color: var(--green-deep); font-size: 1.55rem; }
+.lede { margin: 0 auto; max-width: 640px; color: var(--muted); line-height: 1.5; }
+.workspace {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  box-shadow: var(--shadow);
+}
+.tools { padding: 16px; }
+.tools h3, .examples h3 { margin: 0 0 10px; color: var(--green-deep); font-size: .95rem; }
+.tool-list, .examples { display: grid; gap: 8px; }
+.tool, .example {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: start;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, #fff, #f5fbf6);
+  color: var(--text);
+  border-radius: 18px;
+  padding: 11px 12px;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.tool[aria-pressed="true"] {
+  border-color: var(--green-bright);
+  box-shadow: 0 8px 18px rgba(22,131,60,.16);
+  background: #f1fbf3;
+}
+.tool:hover, .example:hover { transform: translateY(-1px); }
+.example[hidden], .tool-note[hidden], .retry[hidden] { display: none !important; }
+.mark {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: #e8f6ea;
+  color: var(--green-mid);
+}
+.mark svg { width: 16px; height: 16px; }
+.unavailable {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 18px;
+  background: #f7faf7;
+  color: var(--muted);
+}
+.unavailable h3 { margin: 0 0 6px; font-size: .92rem; }
+.unavailable ul { margin: 0; padding-inline-start: 18px; }
+.unavailable p { margin: 8px 0 0; }
+.chat { min-height: 640px; display: flex; flex-direction: column; overflow: hidden; }
+.status {
+  margin: 0;
+  padding: 14px 16px 0;
+  color: var(--green-deep);
+  font-weight: 750;
+}
+.transcript {
+  flex: 1;
+  margin: 0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 280px;
+  max-height: 520px;
+  overflow: auto;
+}
+.bubble {
+  max-width: min(78%, 640px);
+  padding: 12px 14px;
+  border-radius: 18px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  animation: rise .28s ease;
+}
+.bubble.user {
+  margin-inline-start: auto;
+  background: linear-gradient(180deg, #1f8a45, #16833c);
+  color: #fff;
+  border-bottom-right-radius: 6px;
+}
+[dir="rtl"] .bubble.user { border-bottom-right-radius: 18px; border-bottom-left-radius: 6px; }
+.bubble.assistant {
+  background: #fff;
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-bottom-left-radius: 6px;
+}
+[dir="rtl"] .bubble.assistant { border-bottom-left-radius: 18px; border-bottom-right-radius: 6px; }
+.bubble.pending { color: var(--muted); }
+.dots { display: inline-flex; gap: 4px; }
+.dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green-mid);
+  animation: blink 1s infinite;
+}
+.dots i:nth-child(2) { animation-delay: .15s; }
+.dots i:nth-child(3) { animation-delay: .3s; }
+.composer { padding: 0 16px 16px; }
+.examples { margin-bottom: 12px; }
+.example { font-weight: 650; }
+.tool-note { margin: 0 0 10px; color: var(--muted); font-size: .92rem; }
+.composer-box {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+  padding: 8px;
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  background: #fff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+}
+textarea {
+  width: 100%;
+  min-height: 64px;
+  max-height: 180px;
+  resize: vertical;
+  border: 0;
+  padding: 10px;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+}
+textarea:focus { outline: none; }
+.composer-box:focus-within { border-color: var(--green-bright); box-shadow: 0 0 0 4px rgba(22,131,60,.12); }
+.send, .retry {
+  border: 0;
+  border-radius: 16px;
+  background: var(--green-bright);
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  padding: 12px 16px;
+  cursor: pointer;
+}
+.send[disabled], .retry[disabled] { opacity: .62; cursor: not-allowed; }
+.retry { margin-top: 8px; background: #fff; color: var(--green-deep); border: 1px solid var(--green-bright); }
+.count { margin: 6px 2px 0; color: var(--muted); font-size: .82rem; }
+.count bdi { unicode-bidi: isolate; }
+a:focus-visible, button:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid rgba(22,131,60,.45);
+  outline-offset: 2px;
+}
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes blink { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) {
+  .tool, .example, .bubble, .dots i { animation: none; transition: none; }
+}
+@media (max-width: 980px) {
+  .workspace { grid-template-columns: 220px minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .shell { width: min(100% - 16px, 720px); }
+  .nav { flex-wrap: wrap; }
+  .nav-links { width: 100%; margin-inline-start: 0; }
+  .lang { flex: 1; max-width: none; }
+  .hero { padding-top: 18px; }
+  .globe, .globe img { width: 104px; height: 104px; }
+  .workspace { display: block; }
+  .tools { margin-bottom: 12px; }
+  .tool-list { display: grid; grid-template-columns: 1fr 1fr; }
+  .tool { min-width: 0; min-height: 64px; }
+  .chat { min-height: 0; }
+  .transcript { max-height: none; min-height: 220px; }
+  .composer { position: sticky; bottom: 0; background: linear-gradient(180deg, rgba(255,255,255,0), #fff 18%); }
+  .bubble { max-width: 92%; }
+}
 </style>
 </head>
 <body>
-<main>
-<a class="brandbar" href="index.html"><img src="icon.png" alt="HAVKAR" width="40" height="40"><span><strong>HAVKAR</strong><span>AI assistant</span></span></a>
-<a class="back" href="index.html">Home</a>
-<h1>HAVKAR AI</h1>
-<p>Draft a logo brief, business-page text, or a numbered menu. HAVKAR AI does not publish a page, upload a file, or take a payment.</p>
-<p id="sessionState">Checking your HAVKAR session...</p>
-<form id="askForm">
-<label for="task">Help with</label>
-<select id="task" name="task">
-<option value="general">General question</option>
-<option value="logo">Logo brief</option>
-<option value="business_page">Business page text</option>
-<option value="menu">Numbered menu</option>
-</select>
-<label for="question">Question</label>
-<textarea id="question" name="question" maxlength="1200" required dir="auto" data-i18n-ignore translate="no"></textarea>
-<button id="ask" type="submit" disabled>Ask HAVKAR AI</button>
+<a class="skip" href="#question">Skip to message</a>
+<div class="shell">
+<header class="nav">
+<a class="brand" href="index.html"><img src="icon.png" alt="HAVKAR" width="42" height="42"><span>HAVKAR</span></a>
+<nav class="nav-links" aria-label="HAVKAR">
+<a href="index.html">Home</a>
+<a href="login.html">Log in</a>
+<label class="visually-hidden" for="language" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Language</label>
+<select id="language" class="lang" data-i18n-ignore translate="no"></select>
+</nav>
+</header>
+<section class="hero">
+<div class="globe"><img src="icon.png" alt="" width="124" height="124"></div>
+<h1>HAVKAR</h1>
+<p class="tagline">CONNECT · TRADE · WORK · HELP</p>
+<h2>HAVKAR AI</h2>
+<p class="lede">Draft text, translations, and step-by-step help. HAVKAR AI does not publish a page, upload a file, generate an image, or take a payment.</p>
+</section>
+<div class="workspace">
+<aside class="tools panel">
+<h3>AI tools</h3>
+<div class="tool-list" role="listbox" aria-label="AI tools">
+<button class="tool" type="button" data-tool-button="general" aria-pressed="true"><span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M8 1.2 9.4 5H13.4L10.2 7.3 11.4 11.2 8 8.9 4.6 11.2 5.8 7.3 2.6 5H6.6Z"/></svg></span>General AI Assistant</button>
+<button class="tool" type="button" data-tool-button="business_page"><span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M2 13.5h12v1.2H2Zm1-1.2V6.2h2.2v6.1Zm3.4 0V3.2h2.2v9.1Zm3.4 0V7.4H12v4.9Z"/></svg></span>Business Page Content</button>
+<button class="tool" type="button" data-tool-button="logo"><span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.2" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="8" r="1.6" fill="currentColor"/></svg></span>Logo Design Assistance</button>
+<button class="tool" type="button" data-tool-button="menu" value="menu"><span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M2 3.2h12v1.4H2Zm0 4h12v1.4H2Zm0 4h8v1.4H2Z"/></svg></span>Restaurant Menu Creation</button>
+<button class="tool" type="button" data-tool-button="translation"><span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M2 3h7v1.4H6.2c.3 1.3 1 2.4 2 3.2-.7.4-1.5.7-2.4.8V9.8c1.5-.2 2.8-.8 4-1.7.5.4 1.2.7 1.9.8V7.5c-.4-.1-.8-.3-1.1-.5.8-.9 1.3-2 1.5-3.1H14V2.6h-3.2V1.4H9.4v1.2H2Zm2.2 1.4c.3.9.8 1.7 1.4 2.3-.6-.6-1.1-1.4-1.4-2.3Z"/></svg></span>Translation</button>
+<button class="tool" type="button" data-tool-button="ideas"><span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M8 1.4a4.2 4.2 0 0 0-2.2 7.8v1.6h4.4V9.2A4.2 4.2 0 0 0 8 1.4ZM6.4 12.2h3.2v1.1H6.4Zm.4 1.8h2.4v1H6.8Z"/></svg></span>Business Ideas</button>
+<button class="tool" type="button" data-tool-button="advertising"><span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M2 6.2h2.2v5.2H2Zm3 .4 6.2-2.6v9.2L5 10.6Z"/></svg></span>Advertising Content</button>
+<button class="tool" type="button" data-tool-button="social"><span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M2 3.2h8.2v5.2H5.2L2 10.4Zm4.2 6.2h7.6V14l-2.6-1.6H6.2Z"/></svg></span>Social Media Content</button>
+<button class="tool" type="button" data-tool-button="guidance"><span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M3 2.2h7.2l2.6 2.6V14H3Zm6.6 1.2v2h2"/></svg></span>Step-by-Step Guidance</button>
+</div>
+<section class="unavailable">
+<h3>Not available yet</h3>
+<ul>
+<li>Image generation</li>
+<li>File upload</li>
+<li>Voice input</li>
+</ul>
+<p>These stay off until they are securely implemented and tested.</p>
+</section>
+</aside>
+<section class="chat panel" aria-labelledby="ai-title">
+<h2 id="ai-title" class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Conversation</h2>
+<p id="sessionState" class="status">Checking your HAVKAR session...</p>
+<div id="transcript" class="transcript" aria-live="polite" dir="auto" data-i18n-ignore translate="no"></div>
+<form id="askForm" class="composer">
+<div class="examples" aria-label="Quick examples">
+<h3>Quick examples</h3>
+<button class="example" type="button" data-tool="general">How do I use HAVKAR Jobs?</button>
+<button class="example" type="button" data-tool="business_page" hidden>Draft a short page for a neighborhood bakery.</button>
+<button class="example" type="button" data-tool="logo" hidden>Describe a simple green HAVKAR-style mark.</button>
+<button class="example" type="button" data-tool="menu" hidden>1. Lentil soup&#10;2. Grilled chicken</button>
+<button class="example" type="button" data-tool="translation" hidden>Translate “Welcome to HAVKAR” into Persian.</button>
+<button class="example" type="button" data-tool="ideas" hidden>Suggest three small service businesses.</button>
+<button class="example" type="button" data-tool="advertising" hidden>Write a short advertisement for a family restaurant.</button>
+<button class="example" type="button" data-tool="social" hidden>Write a short social post about a new menu.</button>
+<button class="example" type="button" data-tool="guidance" hidden>Show the steps to request a delivery.</button>
+</div>
+<p class="tool-note" data-tool-note="logo" hidden>This writes a design brief and one simple SVG. It does not create or upload an image file.</p>
+<p class="tool-note" data-tool-note="menu" hidden>This drafts menu text. It does not publish a menu or take a payment.</p>
+<p class="tool-note" data-tool-note="business_page" hidden>This drafts page text. It does not publish the page.</p>
+<label for="question">Message</label>
+<div class="composer-box">
+<textarea id="question" name="question" maxlength="1200" required dir="auto" placeholder="Write your message"></textarea>
+<button id="ask" class="send" type="submit" disabled>Send</button>
+</div>
+<p id="count" class="count" data-i18n-ignore translate="no"><bdi dir="ltr">0 / 1200</bdi></p>
+<button id="retry" class="retry" type="button" hidden>Try again</button>
+<p id="status" class="status" role="status"></p>
 </form>
-<p><a href="login.html">Log in</a></p>
-<div class="reply" aria-live="polite" id="reply" dir="auto" data-i18n-ignore translate="no">No answer yet.</div>
-</main>
+</section>
+</div>
+</div>
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-i18n.js"></script>
 <script type="module">
@@ -56,93 +401,228 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const sessionState = document.getElementById("sessionState");
 const askForm = document.getElementById("askForm");
 const question = document.getElementById("question");
-const task = document.getElementById("task");
 const ask = document.getElementById("ask");
-const reply = document.getElementById("reply");
+const retry = document.getElementById("retry");
+const status = document.getElementById("status");
+const transcript = document.getElementById("transcript");
+const count = document.getElementById("count");
+const language = document.getElementById("language");
 const config = window.HAVKAR_SUPABASE_CONFIG;
-const taskLimits = { general: 1200, logo: 1500, business_page: 2000, menu: 6000 };
-
-task.addEventListener("change", () => {
-  question.maxLength = taskLimits[task.value] || 1200;
-});
+const limits = {
+  general: { messages: 4, characters: 1200, total: 2000 },
+  logo: { messages: 2, characters: 1500, total: 2000 },
+  business_page: { messages: 2, characters: 2000, total: 2000 },
+  menu: { messages: 2, characters: 6000, total: 6000 },
+  translation: { messages: 2, characters: 2000, total: 2000 },
+  ideas: { messages: 2, characters: 2000, total: 2000 },
+  advertising: { messages: 2, characters: 2000, total: 2000 },
+  social: { messages: 2, characters: 2000, total: 2000 },
+  guidance: { messages: 2, characters: 2000, total: 2000 }
+};
+const history = [];
+let currentTool = "general";
+let requestInFlight = false;
+let signedIn = false;
+let lastPayload = null;
 
 function languageCode() {
   const i18n = window.HAVKAR_I18N;
-  if (i18n && typeof i18n.getLanguage === "function") {
-    return i18n.getLanguage();
-  }
-  const stored = localStorage.getItem("havkar_language") || localStorage.getItem("selectedLanguage") || "en";
-  return String(stored).trim().toLowerCase() || "en";
+  if (i18n && typeof i18n.getLanguage === "function") return i18n.getLanguage();
+  return String(localStorage.getItem("havkar_language") || localStorage.getItem("selectedLanguage") || "en").trim().toLowerCase() || "en";
 }
 
 function applyInterfaceDirection() {
   const i18n = window.HAVKAR_I18N;
   const code = languageCode();
-  const dir = i18n && typeof i18n.getDirection === "function"
-    ? i18n.getDirection(code)
-    : "ltr";
+  const dir = i18n && typeof i18n.getDirection === "function" ? i18n.getDirection(code) : "ltr";
   document.documentElement.lang = code || "en";
   document.documentElement.dir = dir === "rtl" ? "rtl" : "ltr";
 }
 
-applyInterfaceDirection();
-let requestInFlight = false;
+function fillLanguages() {
+  const i18n = window.HAVKAR_I18N;
+  const list = i18n && typeof i18n.getSelectableLanguages === "function" ? i18n.getSelectableLanguages() : [];
+  const current = languageCode();
+  language.replaceChildren();
+  list.forEach((item) => {
+    const option = document.createElement("option");
+    option.value = item.code;
+    option.textContent = item.name;
+    option.selected = item.code === current;
+    language.appendChild(option);
+  });
+}
 
+function setStatus(text) {
+  status.textContent = text || "";
+}
+
+function updateCount() {
+  const limit = limits[currentTool].characters;
+  question.maxLength = limit;
+  const isolate = document.createElement("bdi");
+  isolate.dir = "ltr";
+  isolate.textContent = question.value.length + " / " + limit;
+  count.replaceChildren(isolate);
+}
+
+function selectTool(name) {
+  if (!limits[name]) return;
+  currentTool = name;
+  document.querySelectorAll("[data-tool-button]").forEach((button) => {
+    button.setAttribute("aria-pressed", button.dataset.toolButton === name ? "true" : "false");
+  });
+  document.querySelectorAll("[data-tool]").forEach((example) => {
+    example.hidden = example.dataset.tool !== name;
+  });
+  document.querySelectorAll("[data-tool-note]").forEach((note) => {
+    note.hidden = note.dataset.toolNote !== name;
+  });
+  updateCount();
+}
+
+function addBubble(role, text, pending) {
+  const bubble = document.createElement("div");
+  bubble.className = "bubble " + role + (pending ? " pending" : "");
+  bubble.dir = "auto";
+  if (pending) {
+    bubble.setAttribute("aria-label", "Waiting for HAVKAR AI");
+    const dots = document.createElement("span");
+    dots.className = "dots";
+    dots.append(document.createElement("i"), document.createElement("i"), document.createElement("i"));
+    bubble.appendChild(dots);
+  } else {
+    bubble.textContent = text;
+  }
+  transcript.appendChild(bubble);
+  transcript.scrollTop = transcript.scrollHeight;
+  return bubble;
+}
+
+function payloadFromHistory() {
+  const limit = limits[currentTool];
+  const selected = [];
+  let characters = 0;
+  for (let index = history.length - 1; index >= 0 && selected.length < limit.messages; index -= 1) {
+    const message = history[index];
+    if (characters + message.content.length > limit.total) break;
+    characters += message.content.length;
+    selected.unshift(message);
+  }
+  while (selected.length && selected[selected.length - 1].role !== "user") selected.pop();
+  return {
+    language: languageCode(),
+    task: currentTool,
+    messages: selected
+  };
+}
+
+async function sendPayload(payload) {
+  const current = await supabase.auth.getSession();
+  const accessToken = current.data && current.data.session && current.data.session.access_token;
+  if (current.error || !accessToken) {
+    signedIn = false;
+    ask.disabled = true;
+    sessionState.textContent = "Sign in before using HAVKAR AI.";
+    setStatus("Sign in before using HAVKAR AI.");
+    return;
+  }
+  const response = await fetch(config.url + "/functions/v1/havkar-ai-assistant", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + accessToken,
+      "Content-Type": "application/json",
+      "apikey": config.publishableKey
+    },
+    body: JSON.stringify(payload)
+  });
+  const body = await response.json().catch(() => null);
+  if (!response.ok || !body || !body.message) {
+    const message = body && (body.error || body.message) ? (body.error || body.message) : "HAVKAR AI did not return an answer.";
+    throw new Error(message);
+  }
+  return body.message;
+}
+
+async function askAssistant(content, reuse) {
+  if (requestInFlight) return;
+  if (!reuse) history.push({ role: "user", content });
+  const payload = reuse || payloadFromHistory();
+  if (!payload.messages.length) {
+    setStatus("Enter a message first.");
+    return;
+  }
+  requestInFlight = true;
+  ask.disabled = true;
+  retry.hidden = true;
+  setStatus("");
+  const pending = addBubble("assistant", "", true);
+  try {
+    const message = await sendPayload(payload);
+    pending.remove();
+    history.push({ role: "assistant", content: message });
+    addBubble("assistant", message, false);
+    if (!reuse) question.value = "";
+    updateCount();
+    lastPayload = null;
+  } catch (error) {
+    pending.remove();
+    lastPayload = payload;
+    retry.hidden = false;
+    setStatus(error && error.message ? error.message : "HAVKAR AI could not be reached.");
+  } finally {
+    requestInFlight = false;
+    ask.disabled = !signedIn;
+  }
+}
+
+applyInterfaceDirection();
+fillLanguages();
+selectTool("general");
+language.addEventListener("change", () => {
+  const i18n = window.HAVKAR_I18N;
+  if (i18n && typeof i18n.setLanguage === "function") i18n.setLanguage(language.value);
+});
+document.querySelectorAll("[data-tool-button]").forEach((button) => {
+  button.addEventListener("click", () => selectTool(button.dataset.toolButton));
+});
+document.querySelectorAll(".example").forEach((button) => {
+  button.addEventListener("click", () => {
+    if (!signedIn || requestInFlight) return;
+    question.value = button.textContent.trim();
+    updateCount();
+    question.focus();
+  });
+});
+question.addEventListener("input", updateCount);
+retry.addEventListener("click", () => {
+  if (lastPayload) askAssistant("", lastPayload);
+});
+
+let supabase = null;
 if (!config || !config.url || !config.publishableKey) {
   sessionState.textContent = "HAVKAR configuration was not found on this page.";
 } else {
-  const supabase = createClient(config.url, config.publishableKey, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+  supabase = createClient(config.url, config.publishableKey, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "pkce" }
   });
-
   const sessionResult = await supabase.auth.getSession();
   const session = sessionResult.data && sessionResult.data.session;
-
   if (sessionResult.error || !session || !session.access_token) {
     sessionState.textContent = "Sign in before using HAVKAR AI.";
   } else {
+    signedIn = true;
     sessionState.textContent = "Your HAVKAR session is ready.";
     ask.disabled = false;
-    askForm.addEventListener("submit", async (event) => {
+    askForm.addEventListener("submit", (event) => {
       event.preventDefault();
       const content = question.value.trim();
-      if (!content || requestInFlight) {
-        if (!content) reply.textContent = "Enter a question first.";
+      if (!content) {
+        setStatus("Enter a message first.");
         return;
       }
-      requestInFlight = true;
-      ask.disabled = true;
-      reply.textContent = "Waiting for HAVKAR AI...";
-      try {
-        const current = await supabase.auth.getSession();
-        const accessToken = current.data && current.data.session && current.data.session.access_token;
-        if (current.error || !accessToken) {
-          reply.textContent = "Sign in before using HAVKAR AI.";
-          return;
-        }
-        const response = await fetch(config.url + "/functions/v1/havkar-ai-assistant", {
-          method: "POST",
-          headers: {
-            "Authorization": "Bearer " + accessToken,
-            "Content-Type": "application/json",
-            "apikey": config.publishableKey
-          },
-          body: JSON.stringify({
-            language: languageCode(),
-            task: task.value,
-            messages: [{ role: "user", content }]
-          })
-        });
-        const payload = await response.json().catch(() => null);
-        reply.textContent = payload && payload.message
-          ? payload.message
-          : (payload && payload.error) || "HAVKAR AI did not return an answer.";
-      } catch (error) {
-        reply.textContent = "HAVKAR AI could not be reached.";
-      } finally {
-        requestInFlight = false;
-        ask.disabled = false;
-      }
+      addBubble("user", content, false);
+      askAssistant(content, null);
     });
   }
 }
