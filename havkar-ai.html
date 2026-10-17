@@ -11,346 +11,374 @@
 <style>
 :root {
   --green: #17652a;
-  --green-deep: #0f4d22;
+  --green-deep: #0e4a1f;
   --green-mid: #2e7d32;
   --green-bright: #16833c;
-  --mint: #e7f6ea;
-  --card: rgba(255,255,255,.96);
-  --line: rgba(46,125,50,.16);
-  --shadow: 0 18px 40px rgba(23,101,42,.12);
+  --mint: #eef8f0;
+  --card: #fff;
+  --line: rgba(23, 101, 42, .14);
   --text: #17301d;
-  --muted: #4d6554;
+  --muted: #4e6656;
+  --shadow: 0 12px 28px rgba(23, 101, 42, .08);
   color-scheme: light;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; min-height: 100%; }
+body { overflow-x: clip; }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
   color: var(--text);
-  background:
-    radial-gradient(circle at 50% -8%, rgba(255,255,255,.95), transparent 34%),
-    radial-gradient(circle at 50% 0, rgba(129,199,132,.45), transparent 42%),
-    linear-gradient(180deg, #f4fbf5 0%, #d9f0dd 48%, #c8e6c9 100%);
+  background: linear-gradient(180deg, #f7fdf8 0%, #e7f6ea 100%);
 }
-body::before {
-  content: "";
-  position: fixed;
-  inset: -10vh 20vw auto;
-  height: 52vh;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(255,255,255,.28), transparent 58%),
-    repeating-radial-gradient(circle at 50% 50%, rgba(46,125,50,.08) 0 1px, transparent 1px 28px);
-  pointer-events: none;
-}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
 .skip {
-  position: absolute;
-  left: 12px;
-  top: -40px;
-  background: #fff;
-  color: var(--green);
-  padding: 8px 12px;
-  border-radius: 10px;
-  z-index: 5;
+  position: absolute; inset-inline-start: 12px; top: -40px;
+  background: #fff; color: var(--green); padding: 8px 12px; border-radius: 10px; z-index: 8;
 }
 .skip:focus { top: 12px; }
-.shell {
-  width: min(1120px, calc(100% - 28px));
-  margin: 0 auto;
-  padding: max(18px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
-  position: relative;
+.app { min-height: 100dvh; display: flex; flex-direction: column; }
+.topbar {
+  display: flex; align-items: center; gap: 12px;
+  min-height: 64px; padding: 8px 14px;
+  background: rgba(255,255,255,.92);
+  border-bottom: 1px solid var(--line);
+  position: sticky; top: 0; z-index: 6;
+  backdrop-filter: blur(10px);
 }
-.nav {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 10px 14px;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 22px;
+.menu-toggle, .icon-btn, .send, .ghost, .chip, .tool, .card, .example, .retry {
+  border: 1px solid var(--line); background: #fff; border-radius: 14px;
+}
+.menu-toggle, .icon-btn {
+  width: 40px; height: 40px; display: none; place-items: center; padding: 0; color: var(--green-deep);
+}
+.icon-btn { display: grid; text-decoration: none; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--green-deep); min-width: 0; }
+.word { display: flex; flex-direction: column; line-height: 1.05; }
+.word strong { font-size: 1.15rem; letter-spacing: .04em; }
+.word small { color: var(--green-mid); letter-spacing: .12em; font-size: .62rem; font-weight: 700; }
+.mark, .avatar, .hero-globe { position: relative; overflow: hidden; flex: none; }
+.mark { width: 44px; height: 44px; border-radius: 50%; background: #f4fff6; box-shadow: 0 0 0 1px rgba(46,125,50,.16); }
+.mark img, .avatar img, .hero-globe img {
+  position: absolute; left: 50%; transform: translateX(-50%); max-width: none; object-fit: fill;
+}
+.mark img { width: 125px; height: 125px; top: -32px; }
+.top-actions { display: flex; align-items: center; gap: 8px; margin-inline-start: auto; }
+.lang, .account {
+  border: 1px solid var(--line); background: #fff; border-radius: 999px;
+  min-height: 40px; padding: 6px 12px; color: var(--green-deep); text-decoration: none;
+  max-width: 220px;
+}
+.account { display: inline-flex; align-items: center; font-weight: 700; }
+.account span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.frame { flex: 1; display: grid; grid-template-columns: 228px minmax(0, 1fr); min-height: 0; }
+.side {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 12px; border-inline-end: 1px solid var(--line);
+  background: rgba(255,255,255,.72); overflow: auto;
+}
+.side a, .side button {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 40px; padding: 7px 10px; border-radius: 12px;
+  color: var(--green-deep); text-decoration: none; background: transparent; border: 0;
+  text-align: start; font-weight: 650;
+}
+.side a[aria-current="page"], .side a:hover, .side button:hover { background: #e5f6e8; }
+.side svg { width: 18px; height: 18px; flex: none; }
+.stage { min-width: 0; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.hero, .workspace, .stage, .chat, .hero-actions, .suggestions, .card, .example { min-width: 0; }
+.hero {
+  display: grid; grid-template-columns: minmax(0, 1.35fr) 168px minmax(0, 230px);
+  gap: 12px; align-items: center;
+  padding: 14px 16px; border-radius: 22px;
+  background:
+    radial-gradient(circle at 72% 45%, rgba(255,255,255,.55), transparent 28%),
+    linear-gradient(100deg, #f7fff8 0%, #d9f5df 58%, #b7e6c0 100%);
+  border: 1px solid rgba(255,255,255,.7);
   box-shadow: var(--shadow);
 }
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--green);
-  text-decoration: none;
-  font-weight: 900;
-  letter-spacing: .08em;
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin: 0 0 6px; padding: 4px 10px; border-radius: 999px;
+  background: var(--green-mid); color: #fff; font-size: .78rem; font-weight: 800;
 }
-.brand img { width: 42px; height: 42px; object-fit: contain; }
-.nav-links { display: flex; gap: 8px; margin-inline-start: auto; }
-.nav a, .lang {
-  border: 1px solid var(--line);
-  background: #fff;
-  color: var(--green-deep);
-  border-radius: 999px;
-  padding: 8px 12px;
-  text-decoration: none;
-  font-weight: 750;
-  font: inherit;
+h1 { margin: 0; font-size: clamp(1.35rem, 2vw, 1.9rem); line-height: 1.15; letter-spacing: -.02em; }
+.lede, .traits { margin: 8px 0 0; color: var(--muted); }
+.traits { display: flex; flex-wrap: wrap; gap: 8px 12px; padding: 0; list-style: none; color: var(--green-deep); font-weight: 700; font-size: .92rem; }
+.traits li::before { content: "✓ "; color: var(--green-bright); }
+.hero-globe { width: 168px; height: 118px; justify-self: center; }
+.hero-globe img { width: 364px; height: 364px; top: -99px; filter: drop-shadow(0 8px 12px rgba(22,101,42,.18)); }
+.hero-actions, .stack { display: grid; gap: 8px; }
+.hero-actions button, .card, .example {
+  display: flex; align-items: center; gap: 8px; text-align: start;
+  padding: 8px 10px; border-radius: 14px; background: rgba(255,255,255,.88);
+  transition: transform .16s ease, box-shadow .16s ease;
 }
-.lang { max-width: 210px; }
-.hero { text-align: center; padding: 28px 12px 8px; }
-.globe {
-  width: 148px;
-  height: 148px;
-  margin: 0 auto 4px;
-  display: grid;
-  place-items: center;
-  position: relative;
+.hero-actions button { width: 100%; font-weight: 750; color: var(--green-deep); white-space: normal; }
+.hero-actions button[aria-pressed="true"], .card[aria-pressed="true"], .tool[aria-pressed="true"] {
+  border-color: var(--green-bright); box-shadow: 0 0 0 3px rgba(22,131,60,.12);
 }
-.globe::before {
-  content: "";
-  position: absolute;
-  width: 118%;
-  height: 42%;
-  border: 3px solid rgba(46,125,50,.45);
-  border-radius: 50%;
-  transform: rotate(-16deg);
-  box-shadow: 0 0 0 6px rgba(255,255,255,.25);
-}
-.globe img {
-  width: 124px;
-  height: 124px;
-  object-fit: contain;
-  position: relative;
-  filter: drop-shadow(0 14px 18px rgba(46,125,50,.2));
-}
-.hero h1 {
-  margin: 0;
-  color: var(--green);
-  font-size: clamp(2rem, 5vw, 3.1rem);
-  letter-spacing: .16em;
-  line-height: 1;
-}
-.tagline {
-  margin: 8px 0 0;
-  color: var(--green-mid);
-  font-weight: 800;
-  letter-spacing: .14em;
-  font-size: .78rem;
-}
-.hero h2 { margin: 18px 0 6px; color: var(--green-deep); font-size: 1.55rem; }
-.lede { margin: 0 auto; max-width: 640px; color: var(--muted); line-height: 1.5; }
-.workspace {
-  margin-top: 22px;
-  display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
-}
-.panel {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 28px;
-  box-shadow: var(--shadow);
-}
-.tools { padding: 16px; }
-.tools h3, .examples h3 { margin: 0 0 10px; color: var(--green-deep); font-size: .95rem; }
-.tool-list, .examples { display: grid; gap: 8px; }
-.tool, .example {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  text-align: start;
-  border: 1px solid var(--line);
-  background: linear-gradient(180deg, #fff, #f5fbf6);
-  color: var(--text);
-  border-radius: 18px;
-  padding: 11px 12px;
-  font: inherit;
-  font-weight: 750;
-  cursor: pointer;
-  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
-}
-.tool[aria-pressed="true"] {
-  border-color: var(--green-bright);
-  box-shadow: 0 8px 18px rgba(22,131,60,.16);
-  background: #f1fbf3;
-}
-.tool:hover, .example:hover { transform: translateY(-1px); }
-.example[hidden], .tool-note[hidden], .retry[hidden] { display: none !important; }
-.mark {
-  width: 28px;
-  height: 28px;
-  flex: 0 0 28px;
-  border-radius: 9px;
-  display: grid;
-  place-items: center;
-  background: #e8f6ea;
-  color: var(--green-mid);
-}
-.mark svg { width: 16px; height: 16px; }
-.unavailable {
-  margin-top: 14px;
-  padding: 12px;
-  border-radius: 18px;
-  background: #f7faf7;
-  color: var(--muted);
-}
-.unavailable h3 { margin: 0 0 6px; font-size: .92rem; }
-.unavailable ul { margin: 0; padding-inline-start: 18px; }
-.unavailable p { margin: 8px 0 0; }
-.chat { min-height: 640px; display: flex; flex-direction: column; overflow: hidden; }
-.status {
-  margin: 0;
-  padding: 14px 16px 0;
-  color: var(--green-deep);
-  font-weight: 750;
-}
+.lang-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { padding: 7px 12px; border-radius: 999px; background: #fff; font-weight: 700; }
+.chip[aria-pressed="true"] { background: #e7f6ea; border-color: var(--green-bright); }
+.workspace { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 12px; align-items: start; }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow); }
+.chat { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.chat-head, .rail-head { display: flex; align-items: center; gap: 10px; }
+.chat-head .mark { width: 36px; height: 36px; }
+.chat-head .mark img { width: 102px; height: 102px; top: -26px; }
+.chat-head h2, .rail h3 { margin: 0; font-size: 1rem; }
+.chat-head p, .status, .tool-note, .tips li, .unavailable p { margin: 2px 0 0; color: var(--muted); }
+.clock { margin-inline-start: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
 .transcript {
-  flex: 1;
-  margin: 0;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-height: 280px;
-  max-height: 520px;
-  overflow: auto;
+  flex: 1 1 auto; min-height: 0; max-height: 340px; overflow: auto;
+  padding: 4px; border-radius: 16px; background: #f7fbf8;
 }
+.transcript:empty { display: none; }
+.empty { margin: 8px; padding: 10px 12px; border-radius: 16px; background: #fff; border: 1px solid var(--line); }
+.turn { display: flex; gap: 8px; align-items: flex-end; margin: 8px; animation: rise .2s ease; }
+.turn.user { justify-content: flex-end; }
+.avatar { width: 28px; height: 28px; border-radius: 50%; }
+.avatar img { width: 80px; height: 80px; top: -20px; }
 .bubble {
-  max-width: min(78%, 640px);
-  padding: 12px 14px;
-  border-radius: 18px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  animation: rise .28s ease;
+  max-width: min(78%, 540px); padding: 10px 12px; border-radius: 16px;
+  line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere;
 }
-.bubble.user {
-  margin-inline-start: auto;
-  background: linear-gradient(180deg, #1f8a45, #16833c);
-  color: #fff;
-  border-bottom-right-radius: 6px;
-}
-[dir="rtl"] .bubble.user { border-bottom-right-radius: 18px; border-bottom-left-radius: 6px; }
-.bubble.assistant {
-  background: #fff;
-  border: 1px solid var(--line);
-  color: var(--text);
-  border-bottom-left-radius: 6px;
-}
-[dir="rtl"] .bubble.assistant { border-bottom-left-radius: 18px; border-bottom-right-radius: 6px; }
-.bubble.pending { color: var(--muted); }
+.bubble.assistant { background: #fff; border: 1px solid var(--line); border-end-start-radius: 5px; }
+.bubble.user { background: linear-gradient(180deg, #2f9d4a, #17652a); color: #fff; border-end-end-radius: 5px; }
 .dots { display: inline-flex; gap: 4px; }
-.dots i {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--green-mid);
-  animation: blink 1s infinite;
-}
+.dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--green-mid); animation: blink 1s infinite; }
 .dots i:nth-child(2) { animation-delay: .15s; }
 .dots i:nth-child(3) { animation-delay: .3s; }
-.composer { padding: 0 16px 16px; }
-.examples { margin-bottom: 12px; }
-.example { font-weight: 650; }
-.tool-note { margin: 0 0 10px; color: var(--muted); font-size: .92rem; }
+.suggestions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.card { min-height: 64px; }
+.card strong, .card small { display: block; }
+.card small { color: var(--muted); font-weight: 500; }
+.composer { display: grid; gap: 8px; margin-top: auto; }
 .composer-box {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: end;
-  padding: 8px;
-  border-radius: 22px;
-  border: 1px solid var(--line);
-  background: #fff;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: end;
+  padding: 8px; border: 1px solid var(--line); border-radius: 18px; background: #fff;
 }
+.composer-box:focus-within { border-color: var(--green-bright); box-shadow: 0 0 0 4px rgba(22,131,60,.12); }
 textarea {
-  width: 100%;
-  min-height: 64px;
-  max-height: 180px;
-  resize: vertical;
-  border: 0;
-  padding: 10px;
-  font: inherit;
-  color: inherit;
-  background: transparent;
+  width: 100%; min-height: 52px; max-height: 140px; resize: vertical;
+  border: 0; padding: 8px; background: transparent;
 }
 textarea:focus { outline: none; }
-.composer-box:focus-within { border-color: var(--green-bright); box-shadow: 0 0 0 4px rgba(22,131,60,.12); }
-.send, .retry {
-  border: 0;
-  border-radius: 16px;
-  background: var(--green-bright);
-  color: #fff;
-  font: inherit;
-  font-weight: 800;
-  padding: 12px 16px;
-  cursor: pointer;
+.composer-actions, .send-row { display: flex; gap: 6px; align-items: center; }
+.ghost, .tool { padding: 8px 10px; border-radius: 12px; background: #f7fbf8; }
+.ghost[disabled], .send[disabled] { opacity: .55; cursor: not-allowed; }
+.send, .retry { background: var(--green-bright); color: #fff; border: 0; font-weight: 800; padding: 10px 14px; }
+.retry { justify-self: start; }
+.tools-menu { position: relative; }
+.tools-menu summary { list-style: none; }
+.tools-menu summary::-webkit-details-marker { display: none; }
+.tool-list {
+  position: absolute; inset-inline-start: 0; bottom: calc(100% + 6px); z-index: 3;
+  width: min(280px, 70vw); max-height: 280px; overflow: auto;
+  display: grid; gap: 6px; padding: 8px; background: #fff;
+  border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow);
 }
-.send[disabled], .retry[disabled] { opacity: .62; cursor: not-allowed; }
-.retry { margin-top: 8px; background: #fff; color: var(--green-deep); border: 1px solid var(--green-bright); }
-.count { margin: 6px 2px 0; color: var(--muted); font-size: .82rem; }
+.count { margin: 0; color: var(--muted); font-size: .82rem; }
 .count bdi { unicode-bidi: isolate; }
+.rail { padding: 12px; display: grid; gap: 12px; }
+.example { width: 100%; justify-content: space-between; }
+.tips, .unavailable ul { margin: 6px 0 0; padding-inline-start: 18px; }
+.unavailable { padding: 10px; border-radius: 16px; background: #f6fbf7; }
+.example[hidden], .tool-note[hidden], .retry[hidden], #logout[hidden],
+#empty[hidden], #suggestions[hidden], #accountEmail[hidden] { display: none !important; }
 a:focus-visible, button:focus-visible, select:focus-visible, textarea:focus-visible {
-  outline: 3px solid rgba(22,131,60,.45);
-  outline-offset: 2px;
+  outline: 3px solid rgba(22,131,60,.45); outline-offset: 2px;
 }
 @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes blink { 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) {
-  .tool, .example, .bubble, .dots i { animation: none; transition: none; }
+  .turn, .hero-actions button, .card, .example, .dots i { animation: none; transition: none; }
 }
-@media (max-width: 980px) {
-  .workspace { grid-template-columns: 220px minmax(0, 1fr); }
+@media (max-width: 1180px) {
+  .hero { grid-template-columns: minmax(0, 1fr) minmax(180px, 230px); }
+  .hero-globe { display: none; }
+}
+@media (max-width: 1080px) {
+  .menu-toggle { display: grid; }
+  .frame { grid-template-columns: 1fr; }
+  .side {
+    display: none; position: fixed; z-index: 7; inset: 64px auto 0 0;
+    width: min(300px, 88vw); box-shadow: var(--shadow); background: #fff;
+  }
+  [dir="rtl"] .side { inset: 64px 0 0 auto; }
+  body.nav-open .side { display: flex; }
+  .workspace { grid-template-columns: 1fr; }
+  .chat { min-height: 0; }
 }
 @media (max-width: 760px) {
-  .shell { width: min(100% - 16px, 720px); }
-  .nav { flex-wrap: wrap; }
-  .nav-links { width: 100%; margin-inline-start: 0; }
-  .lang { flex: 1; max-width: none; }
-  .hero { padding-top: 18px; }
-  .globe, .globe img { width: 104px; height: 104px; }
-  .workspace { display: block; }
-  .tools { margin-bottom: 12px; }
-  .tool-list { display: grid; grid-template-columns: 1fr 1fr; }
-  .tool { min-width: 0; min-height: 64px; }
-  .chat { min-height: 0; }
-  .transcript { max-height: none; min-height: 220px; }
+  .topbar { padding-inline: 8px; }
+  .brand { flex: 0 0 auto; }
+  .word small { display: none; }
+  .word strong { font-size: .95rem; }
+  .lang { max-width: 112px; }
+  .account { max-width: 76px; padding-inline: 8px; }
+  .top-actions { gap: 4px; min-width: 0; }
+  .stage { padding: 8px; }
+  .hero { grid-template-columns: 1fr; padding: 12px; }
+  .suggestions { grid-template-columns: 1fr; }
+  .composer-box { grid-template-columns: 1fr auto; }
+  .composer-actions { grid-column: 1 / -1; }
+  .transcript { max-height: none; min-height: 180px; }
   .composer { position: sticky; bottom: 0; background: linear-gradient(180deg, rgba(255,255,255,0), #fff 18%); }
-  .bubble { max-width: 92%; }
+  .bubble { max-width: 88%; }
 }
 </style>
 </head>
 <body>
 <a class="skip" href="#question">Skip to message</a>
-<div class="shell">
-<header class="nav">
-<a class="brand" href="index.html"><img src="icon.png" alt="HAVKAR" width="42" height="42"><span>HAVKAR</span></a>
-<nav class="nav-links" aria-label="HAVKAR">
-<a href="index.html">Home</a>
-<a href="login.html">Log in</a>
+<div class="app">
+<header class="topbar">
+<button id="menuToggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="sideNav" aria-label="Menu"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M4 7h16v2H4Zm0 4h16v2H4Zm0 4h16v2H4Z"/></svg></button>
+<a class="brand" href="index.html">
+<span class="mark"><img class="logo-crop" src="icon.png" alt="" width="1024" height="1024"></span>
+<span class="word" translate="no" data-i18n-ignore><strong>HAVKAR</strong><small>CONNECT · TRADE · WORK · HELP</small></span>
+</a>
+<div class="top-actions">
 <label class="visually-hidden" for="language" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Language</label>
 <select id="language" class="lang" data-i18n-ignore translate="no"></select>
-</nav>
-</header>
-<section class="hero">
-<div class="globe"><img src="icon.png" alt="" width="124" height="124"></div>
-<h1>HAVKAR</h1>
-<p class="tagline">CONNECT · TRADE · WORK · HELP</p>
-<h2>HAVKAR AI</h2>
-<p class="lede">Draft text, translations, and step-by-step help. HAVKAR AI does not publish a page, upload a file, generate an image, or take a payment.</p>
-</section>
-<div class="workspace">
-<aside class="tools panel">
-<h3>AI tools</h3>
-<div class="tool-list" role="listbox" aria-label="AI tools">
-<button class="tool" type="button" data-tool-button="general" aria-pressed="true"><span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M8 1.2 9.4 5H13.4L10.2 7.3 11.4 11.2 8 8.9 4.6 11.2 5.8 7.3 2.6 5H6.6Z"/></svg></span>General AI Assistant</button>
-<button class="tool" type="button" data-tool-button="business_page"><span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M2 13.5h12v1.2H2Zm1-1.2V6.2h2.2v6.1Zm3.4 0V3.2h2.2v9.1Zm3.4 0V7.4H12v4.9Z"/></svg></span>Business Page Content</button>
-<button class="tool" type="button" data-tool-button="logo"><span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.2" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="8" r="1.6" fill="currentColor"/></svg></span>Logo Design Assistance</button>
-<button class="tool" type="button" data-tool-button="menu" value="menu"><span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M2 3.2h12v1.4H2Zm0 4h12v1.4H2Zm0 4h8v1.4H2Z"/></svg></span>Restaurant Menu Creation</button>
-<button class="tool" type="button" data-tool-button="translation"><span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M2 3h7v1.4H6.2c.3 1.3 1 2.4 2 3.2-.7.4-1.5.7-2.4.8V9.8c1.5-.2 2.8-.8 4-1.7.5.4 1.2.7 1.9.8V7.5c-.4-.1-.8-.3-1.1-.5.8-.9 1.3-2 1.5-3.1H14V2.6h-3.2V1.4H9.4v1.2H2Zm2.2 1.4c.3.9.8 1.7 1.4 2.3-.6-.6-1.1-1.4-1.4-2.3Z"/></svg></span>Translation</button>
-<button class="tool" type="button" data-tool-button="ideas"><span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M8 1.4a4.2 4.2 0 0 0-2.2 7.8v1.6h4.4V9.2A4.2 4.2 0 0 0 8 1.4ZM6.4 12.2h3.2v1.1H6.4Zm.4 1.8h2.4v1H6.8Z"/></svg></span>Business Ideas</button>
-<button class="tool" type="button" data-tool-button="advertising"><span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M2 6.2h2.2v5.2H2Zm3 .4 6.2-2.6v9.2L5 10.6Z"/></svg></span>Advertising Content</button>
-<button class="tool" type="button" data-tool-button="social"><span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M2 3.2h8.2v5.2H5.2L2 10.4Zm4.2 6.2h7.6V14l-2.6-1.6H6.2Z"/></svg></span>Social Media Content</button>
-<button class="tool" type="button" data-tool-button="guidance"><span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M3 2.2h7.2l2.6 2.6V14H3Zm6.6 1.2v2h2"/></svg></span>Step-by-Step Guidance</button>
+<a class="icon-btn" href="notifications.html" aria-label="Notifications"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 22a2.2 2.2 0 0 0 2.2-2.2h-4.4A2.2 2.2 0 0 0 12 22Zm7-6.2V11a7 7 0 0 0-5.2-6.8V3.2a1.8 1.8 0 1 0-3.6 0v1A7 7 0 0 0 5 11v4.8L3.2 17.6v1.2h17.6v-1.2L19 15.8Z"/></svg></a>
+<a id="accountLink" class="account" href="login.html"><span id="accountLabel">Log in</span><span id="accountEmail" hidden data-i18n-ignore translate="no"></span></a>
 </div>
+</header>
+<div class="frame">
+<nav id="sideNav" class="side" aria-label="HAVKAR">
+<a href="index.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 10.5 12 4l8 6.5V20h-6v-5H10v5H4Z"/></svg>Home</a>
+<a href="buy-sell.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M7 7h10l1 13H6Zm2-3h6l1 3H8Z"/></svg>Buy &amp; Sell</a>
+<a href="jobs.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 7h16v12H4Zm5-3h6v3H9Z"/></svg>Jobs</a>
+<a href="services.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6-8.8 8.8H5v-2.5l8.8-8.8 1.6 1.6a1 1 0 0 0 1.4-1.4L15.1 5a1 1 0 0 0-1.4 0Z"/></svg>Services</a>
+<a href="wallet.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 7h16a2 2 0 0 1 2 2v8H5a2 2 0 0 1-2-2Zm13 4h4v2h-4Z"/></svg>Wallet</a>
+<a href="tickets.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 8a2 2 0 0 1 2-2h12v4a2 2 0 0 0 0 4v4H6a2 2 0 0 1-2-2Z"/></svg>Tickets</a>
+<a href="accommodation.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 10 12 4l8 6v9h-6v-5H10v5H4Z"/></svg>Accommodation</a>
+<a href="ads.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 10h3v7H4Zm4-1 9-4v14l-9-4Z"/></svg>Ads</a>
+<a href="delivery.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 7h11v8H3Zm11 2h4l3 3v3h-7ZM7 18a2 2 0 1 0 0 .1ZM17 18a2 2 0 1 0 0 .1Z"/></svg>Delivery</a>
+<a href="events.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M7 3h2v2h6V3h2v2h3v16H4V5h3Zm-1 6v10h12V9Z"/></svg>Events</a>
+<a href="chat.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 5h16v10H7l-3 3Z"/></svg>Chat</a>
+<a href="language.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm-7 9c0-1.4.4-2.7 1.1-3.8A14 14 0 0 0 11 12a14 14 0 0 0-4.9 3.8A6.9 6.9 0 0 1 5 12Z"/></svg>Languages</a>
+<a href="reviews.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="m12 3 2.7 5.5L21 9.2l-4.5 4.4L17.6 20 12 17.2 6.4 20l1.1-6.4L3 9.2l6.3-.7Z"/></svg>Reviews</a>
+<a href="havkar-ai.html" aria-current="page"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3a7 7 0 0 0-4 12.7V19h8v-3.3A7 7 0 0 0 12 3Z"/></svg>AI Assistant</a>
+<a href="support.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3a8 8 0 0 0-8 8v5h4v-5a4 4 0 0 1 8 0v5h4v-5a8 8 0 0 0-8-8Z"/></svg>Support</a>
+<a href="about.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm-1 4h2v2h-2Zm0 4h2v7h-2Z"/></svg>About HAVKAR</a>
+<a href="profile.html"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-7 12v-1.2C5 15.2 8.1 13 12 13s7 2.2 7 5.8V20Z"/></svg>Settings</a>
+<button id="logout" type="button" hidden><svg viewBox="0 0 24 24"><path fill="currentColor" d="M10 4H5v16h5v-2H7V6h3Zm2 3 5 5-5 5v-3H9v-4h3Z"/></svg>Log out</button>
+</nav>
+<div class="stage">
+<section class="hero" aria-labelledby="hero-title">
+<div>
+<p class="pill" translate="no" data-i18n-ignore>HAVKAR AI</p>
+<h1 id="hero-title">Your Smart Assistant for Business, Life and Growth</h1>
+<p class="lede">Draft text, translations, and step-by-step help. HAVKAR AI does not publish a page, upload a file, generate an image, or take a payment.</p>
+<ul class="traits"><li>Fast</li><li>Multilingual</li><li>Creative</li><li>Professional</li></ul>
+</div>
+<div class="hero-globe"><img class="logo-crop" src="icon.png" alt="" width="1024" height="1024"></div>
+<div class="hero-actions">
+<button type="button" data-tool-button="business_page">Create Content</button>
+<button type="button" data-tool-button="logo">Design Logo</button>
+<button type="button" data-tool-button="ideas">Business Ideas</button>
+<button type="button" data-tool-button="translation">Translation</button>
+<button type="button" data-tool-button="guidance">Step-by-Step Guidance</button>
+</div>
+</section>
+<div class="lang-row" aria-label="Interface language">
+<button class="chip" type="button" data-lang="en" data-i18n-ignore translate="no">English</button>
+<button class="chip" type="button" data-lang="fa" data-i18n-ignore translate="no">فارسی</button>
+<button class="chip" type="button" data-lang="ckb" data-i18n-ignore translate="no">کوردی — سۆرانی</button>
+<button class="chip" type="button" data-lang="kmr" data-i18n-ignore translate="no">Kurmancî</button>
+</div>
+<div class="workspace">
+<section class="chat panel" aria-labelledby="ai-title">
+<div class="chat-head">
+<span class="mark"><img class="logo-crop" src="icon.png" alt="" width="1024" height="1024"></span>
+<div><h2 id="ai-title" translate="no" data-i18n-ignore>HAVKAR AI</h2><p>Your multilingual business assistant</p></div>
+<time id="clock" class="clock" data-i18n-ignore translate="no"></time>
+</div>
+<p id="sessionState" class="status">Checking your HAVKAR session...</p>
+<div id="empty" class="empty">How can HAVKAR AI help you today?</div>
+<div id="transcript" class="transcript" aria-live="polite" dir="auto" data-i18n-ignore translate="no"></div>
+<div id="suggestions" class="suggestions">
+<button class="card" type="button" data-tool-button="general" aria-pressed="true"><span><strong>General AI Assistant</strong><small>Ask a practical HAVKAR question</small></span></button>
+<button class="card" type="button" data-tool-button="logo"><span><strong>Create a Logo</strong><small>Get a design brief and one simple SVG</small></span></button>
+<button class="card" type="button" data-tool-button="business_page"><span><strong>Business Page Text</strong><small>Generate page text only</small></span></button>
+<button class="card" type="button" data-tool-button="menu" value="menu"><span><strong>Menu for Restaurant</strong><small>Draft menu text with your prices</small></span></button>
+<button class="card" type="button" data-tool-button="translation"><span><strong>Translate Text</strong><small>Translate between languages</small></span></button>
+<button class="card" type="button" data-tool-button="ideas"><span><strong>Business Ideas</strong><small>Get ideas as text</small></span></button>
+<button class="card" type="button" data-tool-button="advertising"><span><strong>Write an Ad</strong><small>Draft advertisement text</small></span></button>
+<button class="card" type="button" data-tool-button="social"><span><strong>Social Media Content</strong><small>Draft post text only</small></span></button>
+<button class="card" type="button" data-tool-button="guidance"><span><strong>Step-by-Step Help</strong><small>Get numbered instructions</small></span></button>
+</div>
+<form id="askForm" class="composer">
+<p class="tool-note" data-tool-note="logo" hidden>This writes a design brief and one simple SVG. It does not create or upload an image file.</p>
+<p class="tool-note" data-tool-note="menu" hidden>This drafts menu text. It does not publish a menu or take a payment.</p>
+<p class="tool-note" data-tool-note="business_page" hidden>This drafts page text. It does not publish the page.</p>
+<label class="visually-hidden" for="question" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Message</label>
+<div class="composer-box">
+<div class="composer-actions">
+<details class="tools-menu">
+<summary class="ghost">Tools</summary>
+<div class="tool-list">
+<button class="tool" type="button" data-tool-button="general">General AI Assistant</button>
+<button class="tool" type="button" data-tool-button="business_page">Business Page Content</button>
+<button class="tool" type="button" data-tool-button="logo">Logo Design Assistance</button>
+<button class="tool" type="button" data-tool-button="menu" value="menu">Restaurant Menu Creation</button>
+<button class="tool" type="button" data-tool-button="translation">Translation</button>
+<button class="tool" type="button" data-tool-button="ideas">Business Ideas</button>
+<button class="tool" type="button" data-tool-button="advertising">Advertising Content</button>
+<button class="tool" type="button" data-tool-button="social">Social Media Content</button>
+<button class="tool" type="button" data-tool-button="guidance">Step-by-Step Guidance</button>
+</div>
+</details>
+<button class="ghost" type="button" id="showExamples">Examples</button>
+<button class="ghost" type="button" disabled aria-disabled="true" title="File upload is not available yet">Attach</button>
+</div>
+<textarea id="question" name="question" maxlength="1200" required dir="auto" placeholder="Type your question here..."></textarea>
+<div class="send-row">
+<button class="ghost" type="button" disabled aria-disabled="true" title="Voice input is not available yet">Voice</button>
+<button id="ask" class="send" type="submit" disabled>Send</button>
+</div>
+</div>
+<p id="count" class="count" data-i18n-ignore translate="no"><bdi dir="ltr">0 / 1200</bdi></p>
+<button id="retry" class="retry" type="button" hidden>Try again</button>
+<p id="status" class="status" role="status"></p>
+</form>
+</section>
+<aside class="rail panel">
+<div>
+<div class="rail-head"><h3>Quick examples</h3><button id="refreshExamples" class="ghost" type="button">Refresh</button></div>
+<div class="examples" aria-label="Quick examples">
+<button class="example" type="button" data-tool="general">How do I use HAVKAR Jobs?</button>
+<button class="example" type="button" data-tool="general" hidden>What can HAVKAR AI help me write?</button>
+<button class="example" type="button" data-tool="business_page" hidden>Draft a short page for a neighborhood bakery.</button>
+<button class="example" type="button" data-tool="business_page" hidden>Write a description for a family clinic.</button>
+<button class="example" type="button" data-tool="logo" hidden>Describe a simple green HAVKAR-style mark.</button>
+<button class="example" type="button" data-tool="logo" hidden>Suggest a bakery logo using green and cream.</button>
+<button class="example" type="button" data-tool="menu" hidden>1. Lentil soup&#10;2. Grilled chicken</button>
+<button class="example" type="button" data-tool="menu" hidden>1. Tea&#10;2. Rice with herbs</button>
+<button class="example" type="button" data-tool="translation" hidden>Translate “Welcome to HAVKAR” into Persian.</button>
+<button class="example" type="button" data-tool="translation" hidden>Translate “Good morning” into Kurdish Sorani.</button>
+<button class="example" type="button" data-tool="ideas" hidden>Suggest three small service businesses.</button>
+<button class="example" type="button" data-tool="ideas" hidden>Give five ideas for a neighborhood shop.</button>
+<button class="example" type="button" data-tool="advertising" hidden>Write a short advertisement for a family restaurant.</button>
+<button class="example" type="button" data-tool="advertising" hidden>Draft a brief promotion for a weekend market.</button>
+<button class="example" type="button" data-tool="social" hidden>Write a short social post about a new menu.</button>
+<button class="example" type="button" data-tool="social" hidden>Draft a short post thanking customers.</button>
+<button class="example" type="button" data-tool="guidance" hidden>Show the steps to request a delivery.</button>
+<button class="example" type="button" data-tool="guidance" hidden>Show the steps to publish a job.</button>
+</div>
+</div>
+<section class="tips">
+<h3>HAVKAR AI Pro Tips</h3>
+<ul>
+<li>Be specific in your questions.</li>
+<li>You can ask in any language.</li>
+<li>Request text for designs, menus and pages.</li>
+<li>Use an example, then edit it before sending.</li>
+</ul>
+</section>
 <section class="unavailable">
 <h3>Not available yet</h3>
 <ul>
@@ -361,36 +389,8 @@ a:focus-visible, button:focus-visible, select:focus-visible, textarea:focus-visi
 <p>These stay off until they are securely implemented and tested.</p>
 </section>
 </aside>
-<section class="chat panel" aria-labelledby="ai-title">
-<h2 id="ai-title" class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Conversation</h2>
-<p id="sessionState" class="status">Checking your HAVKAR session...</p>
-<div id="transcript" class="transcript" aria-live="polite" dir="auto" data-i18n-ignore translate="no"></div>
-<form id="askForm" class="composer">
-<div class="examples" aria-label="Quick examples">
-<h3>Quick examples</h3>
-<button class="example" type="button" data-tool="general">How do I use HAVKAR Jobs?</button>
-<button class="example" type="button" data-tool="business_page" hidden>Draft a short page for a neighborhood bakery.</button>
-<button class="example" type="button" data-tool="logo" hidden>Describe a simple green HAVKAR-style mark.</button>
-<button class="example" type="button" data-tool="menu" hidden>1. Lentil soup&#10;2. Grilled chicken</button>
-<button class="example" type="button" data-tool="translation" hidden>Translate “Welcome to HAVKAR” into Persian.</button>
-<button class="example" type="button" data-tool="ideas" hidden>Suggest three small service businesses.</button>
-<button class="example" type="button" data-tool="advertising" hidden>Write a short advertisement for a family restaurant.</button>
-<button class="example" type="button" data-tool="social" hidden>Write a short social post about a new menu.</button>
-<button class="example" type="button" data-tool="guidance" hidden>Show the steps to request a delivery.</button>
 </div>
-<p class="tool-note" data-tool-note="logo" hidden>This writes a design brief and one simple SVG. It does not create or upload an image file.</p>
-<p class="tool-note" data-tool-note="menu" hidden>This drafts menu text. It does not publish a menu or take a payment.</p>
-<p class="tool-note" data-tool-note="business_page" hidden>This drafts page text. It does not publish the page.</p>
-<label for="question">Message</label>
-<div class="composer-box">
-<textarea id="question" name="question" maxlength="1200" required dir="auto" placeholder="Write your message"></textarea>
-<button id="ask" class="send" type="submit" disabled>Send</button>
 </div>
-<p id="count" class="count" data-i18n-ignore translate="no"><bdi dir="ltr">0 / 1200</bdi></p>
-<button id="retry" class="retry" type="button" hidden>Try again</button>
-<p id="status" class="status" role="status"></p>
-</form>
-</section>
 </div>
 </div>
 <script src="/havkar-supabase-config.js"></script>
@@ -407,6 +407,14 @@ const status = document.getElementById("status");
 const transcript = document.getElementById("transcript");
 const count = document.getElementById("count");
 const language = document.getElementById("language");
+const empty = document.getElementById("empty");
+const suggestions = document.getElementById("suggestions");
+const accountLink = document.getElementById("accountLink");
+const accountLabel = document.getElementById("accountLabel");
+const accountEmail = document.getElementById("accountEmail");
+const logout = document.getElementById("logout");
+const menuToggle = document.getElementById("menuToggle");
+const clock = document.getElementById("clock");
 const config = window.HAVKAR_SUPABASE_CONFIG;
 const limits = {
   general: { messages: 4, characters: 1200, total: 2000 },
@@ -424,6 +432,7 @@ let currentTool = "general";
 let requestInFlight = false;
 let signedIn = false;
 let lastPayload = null;
+let supabase = null;
 
 function languageCode() {
   const i18n = window.HAVKAR_I18N;
@@ -451,6 +460,9 @@ function fillLanguages() {
     option.selected = item.code === current;
     language.appendChild(option);
   });
+  document.querySelectorAll("[data-lang]").forEach((button) => {
+    button.setAttribute("aria-pressed", button.dataset.lang === current ? "true" : "false");
+  });
 }
 
 function setStatus(text) {
@@ -464,6 +476,11 @@ function updateCount() {
   isolate.dir = "ltr";
   isolate.textContent = question.value.length + " / " + limit;
   count.replaceChildren(isolate);
+}
+
+function hideIntro() {
+  empty.hidden = true;
+  suggestions.hidden = true;
 }
 
 function selectTool(name) {
@@ -482,6 +499,17 @@ function selectTool(name) {
 }
 
 function addBubble(role, text, pending) {
+  const turn = document.createElement("div");
+  turn.className = "turn " + role;
+  if (role === "assistant") {
+    const avatar = document.createElement("img");
+    avatar.className = "avatar logo-crop";
+    avatar.src = "icon.png";
+    avatar.alt = "";
+    avatar.width = 1024;
+    avatar.height = 1024;
+    turn.appendChild(avatar);
+  }
   const bubble = document.createElement("div");
   bubble.className = "bubble " + role + (pending ? " pending" : "");
   bubble.dir = "auto";
@@ -494,8 +522,10 @@ function addBubble(role, text, pending) {
   } else {
     bubble.textContent = text;
   }
-  transcript.appendChild(bubble);
+  turn.appendChild(bubble);
+  transcript.appendChild(turn);
   transcript.scrollTop = transcript.scrollHeight;
+  hideIntro();
   return bubble;
 }
 
@@ -510,11 +540,7 @@ function payloadFromHistory() {
     selected.unshift(message);
   }
   while (selected.length && selected[selected.length - 1].role !== "user") selected.pop();
-  return {
-    language: languageCode(),
-    task: currentTool,
-    messages: selected
-  };
+  return { language: languageCode(), task: currentTool, messages: selected };
 }
 
 async function sendPayload(payload) {
@@ -559,14 +585,14 @@ async function askAssistant(content, reuse) {
   const pending = addBubble("assistant", "", true);
   try {
     const message = await sendPayload(payload);
-    pending.remove();
+    pending.parentElement.remove();
     history.push({ role: "assistant", content: message });
     addBubble("assistant", message, false);
     if (!reuse) question.value = "";
     updateCount();
     lastPayload = null;
   } catch (error) {
-    pending.remove();
+    pending.parentElement.remove();
     lastPayload = payload;
     retry.hidden = false;
     setStatus(error && error.message ? error.message : "HAVKAR AI could not be reached.");
@@ -576,35 +602,83 @@ async function askAssistant(content, reuse) {
   }
 }
 
+function useExample(button) {
+  question.value = button.textContent.trim();
+  updateCount();
+  question.focus();
+}
+
+function showAccount(email) {
+  accountLink.href = "profile.html";
+  accountLabel.hidden = true;
+  accountEmail.hidden = false;
+  accountEmail.textContent = email || "Account";
+  logout.hidden = false;
+}
+
 applyInterfaceDirection();
 fillLanguages();
 selectTool("general");
+clock.textContent = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+clock.dateTime = new Date().toISOString();
 language.addEventListener("change", () => {
   const i18n = window.HAVKAR_I18N;
   if (i18n && typeof i18n.setLanguage === "function") i18n.setLanguage(language.value);
 });
-document.querySelectorAll("[data-tool-button]").forEach((button) => {
-  button.addEventListener("click", () => selectTool(button.dataset.toolButton));
-});
-document.querySelectorAll(".example").forEach((button) => {
+document.querySelectorAll("[data-lang]").forEach((button) => {
   button.addEventListener("click", () => {
-    if (!signedIn || requestInFlight) return;
-    question.value = button.textContent.trim();
-    updateCount();
+    const i18n = window.HAVKAR_I18N;
+    if (i18n && typeof i18n.setLanguage === "function") i18n.setLanguage(button.dataset.lang);
+  });
+});
+document.querySelectorAll("[data-tool-button]").forEach((button) => {
+  button.addEventListener("click", () => {
+    selectTool(button.dataset.toolButton);
+    const menu = button.closest("details");
+    if (menu) menu.open = false;
     question.focus();
   });
+});
+document.querySelectorAll(".example").forEach((button) => {
+  button.addEventListener("click", () => useExample(button));
+});
+document.getElementById("refreshExamples").addEventListener("click", () => {
+  const visible = [...document.querySelectorAll(".example")].filter((button) => button.dataset.tool === currentTool);
+  if (visible.length > 1) visible[0].parentElement.appendChild(visible[0]);
+});
+document.getElementById("showExamples").addEventListener("click", () => {
+  document.querySelector(".examples").scrollIntoView({ block: "nearest" });
 });
 question.addEventListener("input", updateCount);
 retry.addEventListener("click", () => {
   if (lastPayload) askAssistant("", lastPayload);
 });
+menuToggle.addEventListener("click", () => {
+  const open = document.body.classList.toggle("nav-open");
+  menuToggle.setAttribute("aria-expanded", open ? "true" : "false");
+});
+document.querySelectorAll(".side a").forEach((link) => {
+  link.addEventListener("click", () => {
+    document.body.classList.remove("nav-open");
+    menuToggle.setAttribute("aria-expanded", "false");
+  });
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    document.body.classList.remove("nav-open");
+    menuToggle.setAttribute("aria-expanded", "false");
+  }
+});
 
-let supabase = null;
 if (!config || !config.url || !config.publishableKey) {
   sessionState.textContent = "HAVKAR configuration was not found on this page.";
 } else {
   supabase = createClient(config.url, config.publishableKey, {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "pkce" }
+  });
+  logout.addEventListener("click", async () => {
+    await supabase.auth.signOut();
+    location.href = "login.html";
   });
   const sessionResult = await supabase.auth.getSession();
   const session = sessionResult.data && sessionResult.data.session;
@@ -614,6 +688,7 @@ if (!config || !config.url || !config.publishableKey) {
     signedIn = true;
     sessionState.textContent = "Your HAVKAR session is ready.";
     ask.disabled = false;
+    showAccount(session.user && session.user.email);
     askForm.addEventListener("submit", (event) => {
       event.preventDefault();
       const content = question.value.trim();
