@@ -461,19 +461,55 @@ function subscriptionCheckoutStatus(env) {
   if (!key.startsWith("sk_test_")) {
     return { ok: false, status: 503, error: "Stripe test mode is not configured for HAVKAR AI subscriptions." };
   }
-  if (!source.STRIPE_AI_PLUS_PRICE_ID || !source.STRIPE_AI_PRO_PRICE_ID) {
+  const plus = String(source.STRIPE_AI_PLUS_PRICE_ID || "");
+  const pro = String(source.STRIPE_AI_PRO_PRICE_ID || "");
+  const business = String(source.STRIPE_AI_BUSINESS_PRICE_ID || "");
+  if (!plus.startsWith("price_") || !pro.startsWith("price_") || !business.startsWith("price_")) {
     return { ok: false, status: 503, error: "Stripe price is not configured for HAVKAR AI subscriptions." };
   }
   return { ok: true, status: 200, error: "" };
 }
 
+function paidPlan(value) {
+  return value === "plus" || value === "pro" || value === "business" ? value : "";
+}
+
+function planForPrice(priceId, prices) {
+  const id = String(priceId || "");
+  const list = prices && typeof prices === "object" ? prices : {};
+  if (!id.startsWith("price_")) return "";
+  if (id === list.plus) return "plus";
+  if (id === list.pro) return "pro";
+  if (id === list.business) return "business";
+  return "";
+}
+
 function activePlan(row, now) {
-  const plan = row && (row.plan_code === "plus" || row.plan_code === "pro") ? row.plan_code : "free";
+  const plan = paidPlan(row && row.plan_code);
   const period = row && row.current_period_end ? Date.parse(row.current_period_end) : NaN;
   const current = Number.isFinite(now) ? now : Date.now();
   const periodOpen = !Number.isFinite(period) || period > current;
-  if (row && row.status === "active" && plan !== "free" && periodOpen) return plan;
+  if (row && row.status === "active" && plan && periodOpen) return plan;
   return "free";
+}
+
+function subscriptionChange(input) {
+  const event = input && typeof input === "object" ? input : {};
+  const eventType = String(event.eventType || "");
+  const stripeStatus = String(event.stripeStatus || "");
+  const plan = planForPrice(event.priceId, event.prices) || paidPlan(event.metadataPlan);
+  const known = ["active", "past_due", "canceled", "unpaid", "incomplete"];
+  let status = "incomplete";
+  if (eventType === "checkout.session.completed" && stripeStatus === "complete") status = "active";
+  if (eventType === "invoice.paid") status = "active";
+  if (eventType === "customer.subscription.deleted") status = "canceled";
+  if (eventType === "invoice.payment_failed") status = "past_due";
+  if (eventType === "customer.subscription.updated") status = known.includes(stripeStatus) ? stripeStatus : "incomplete";
+  return {
+    status,
+    plan_code: status === "active" && plan ? plan : "free",
+    cancel_at_period_end: event.cancelAtPeriodEnd === true
+  };
 }
 
 export {
@@ -484,6 +520,9 @@ export {
   LIMITS,
   TASK_LIMITS,
   activePlan,
+  paidPlan,
+  planForPrice,
+  subscriptionChange,
   assistantBlocks,
   assistantInstruction,
   imageBytesFromProvider,

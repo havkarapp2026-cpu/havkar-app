@@ -38,13 +38,34 @@ function testStripeKey() {
   return key.startsWith("sk_test_") ? key : "";
 }
 
-function priceId(plan) {
-  const value = plan === "plus"
-    ? Deno.env.get("STRIPE_AI_PLUS_PRICE_ID")
-    : plan === "pro"
-      ? Deno.env.get("STRIPE_AI_PRO_PRICE_ID")
-      : "";
-  return typeof value === "string" && value.startsWith("price_") ? value : "";
+function priceEnv() {
+  return {
+    plus: String(Deno.env.get("STRIPE_AI_PLUS_PRICE_ID") || ""),
+    pro: String(Deno.env.get("STRIPE_AI_PRO_PRICE_ID") || ""),
+    business: String(Deno.env.get("STRIPE_AI_BUSINESS_PRICE_ID") || "")
+  };
+}
+
+function pricesConfigured(prices) {
+  return prices.plus.startsWith("price_") && prices.pro.startsWith("price_") && prices.business.startsWith("price_");
+}
+
+function priceId(plan, prices) {
+  const value = plan === "plus" ? prices.plus : plan === "pro" ? prices.pro : plan === "business" ? prices.business : "";
+  return value.startsWith("price_") ? value : "";
+}
+
+function paidPlan(value) {
+  return value === "plus" || value === "pro" || value === "business" ? value : "";
+}
+
+function planForPrice(priceIdValue, prices) {
+  const id = String(priceIdValue || "");
+  if (!id.startsWith("price_")) return "";
+  if (id === prices.plus) return "plus";
+  if (id === prices.pro) return "pro";
+  if (id === prices.business) return "business";
+  return "";
 }
 
 function unavailable(headers) {
@@ -96,16 +117,25 @@ async function checkout(request, headers, admin, body) {
     return json(403, { ok: false, error: "Live HAVKAR AI payments are not approved." }, headers);
   }
   const key = testStripeKey();
-  const plan = body && (body.plan === "plus" || body.plan === "pro") ? body.plan : "";
-  const price = priceId(plan);
-  if (!key || !Deno.env.get("STRIPE_AI_PLUS_PRICE_ID") || !Deno.env.get("STRIPE_AI_PRO_PRICE_ID")) {
-    return unavailable(headers);
-  }
+  const prices = priceEnv();
+  const plan = body && paidPlan(body.plan);
+  const price = priceId(plan, prices);
+  if (!key || !pricesConfigured(prices)) return unavailable(headers);
   if (!plan || !price) {
     return json(400, { ok: false, error: "Choose a supported assistant plan." }, headers);
   }
   const user = await signedInUser(admin, request);
   if (!user) return json(401, { ok: false, error: "Sign in before using the assistant." }, headers);
+  const current = await admin
+    .from("ai_subscriptions")
+    .select("status, current_period_end")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const period = current.data && current.data.current_period_end ? Date.parse(current.data.current_period_end) : NaN;
+  const periodOpen = !Number.isFinite(period) || period > Date.now();
+  if (!current.error && current.data && current.data.status === "active" && periodOpen) {
+    return json(409, { ok: false, error: "Use Manage billing to change an active plan." }, headers);
+  }
   const day = new Date().toISOString().slice(0, 10);
   const session = await stripeForm("checkout/sessions", key, {
     mode: "subscription",
@@ -133,9 +163,7 @@ async function portal(request, headers, admin) {
     return json(403, { ok: false, error: "Live HAVKAR AI payments are not approved." }, headers);
   }
   const key = testStripeKey();
-  if (!key || !Deno.env.get("STRIPE_AI_PLUS_PRICE_ID") || !Deno.env.get("STRIPE_AI_PRO_PRICE_ID")) {
-    return unavailable(headers);
-  }
+  if (!key || !pricesConfigured(priceEnv())) return unavailable(headers);
   const user = await signedInUser(admin, request);
   if (!user) return json(401, { ok: false, error: "Sign in before using the assistant." }, headers);
   const subscription = await admin
@@ -198,9 +226,15 @@ async function stripeSignatureValid(payload, header, secret) {
   return signatures.some((signature) => sameHex(signature, expected));
 }
 
-function planFromMetadata(metadata) {
-  const plan = metadata && metadata.plan;
-  return plan === "plus" || plan === "pro" ? plan : "";
+function priceFromObject(object) {
+  const items = object && object.items && Array.isArray(object.items.data) ? object.items.data : [];
+  const first = items[0] && items[0].price && items[0].price.id;
+  if (typeof first === "string") return first;
+  const lines = object && object.lines && Array.isArray(object.lines.data) ? object.lines.data : [];
+  const linePrice = lines[0] && lines[0].price && lines[0].price.id;
+  if (typeof linePrice === "string") return linePrice;
+  const legacy = object && object.plan && object.plan.id;
+  return typeof legacy === "string" ? legacy : "";
 }
 
 async function webhook(request, headers, admin) {
@@ -234,19 +268,20 @@ async function webhook(request, headers, admin) {
   if (seen.error) return json(503, { ok: false, error: "The assistant is temporarily unavailable." }, headers);
   if (seen.data !== true) return json(200, { ok: true, duplicate: true }, headers);
   const userId = metadata.user_id || object.client_reference_id || "";
-  const plan = planFromMetadata(metadata);
+  const prices = priceEnv();
+  const plan = planForPrice(priceFromObject(object), prices) || paidPlan(metadata.plan);
   if (!/^[0-9a-f-]{36}$/i.test(userId) || !plan) {
     return json(200, { ok: true, ignored: true }, headers);
   }
+  const known = ["active", "past_due", "canceled", "unpaid", "incomplete"];
   let status = "incomplete";
   if (event.type === "checkout.session.completed" && object.status === "complete") status = "active";
+  if (event.type === "invoice.paid") status = "active";
   if (event.type === "customer.subscription.deleted") status = "canceled";
-  if (event.type === "customer.subscription.updated") {
-    status = ["active", "past_due", "canceled", "unpaid", "incomplete"].includes(object.status)
-      ? object.status
-      : "incomplete";
-  }
   if (event.type === "invoice.payment_failed") status = "past_due";
+  if (event.type === "customer.subscription.updated") {
+    status = known.includes(object.status) ? object.status : "incomplete";
+  }
   const periodEnd = Number.isInteger(object.current_period_end)
     ? new Date(object.current_period_end * 1000).toISOString()
     : null;
@@ -255,7 +290,7 @@ async function webhook(request, headers, admin) {
     plan_code: status === "active" ? plan : "free",
     status,
     stripe_customer_id: typeof object.customer === "string" ? object.customer : null,
-    stripe_subscription_id: typeof object.subscription === "string" ? object.subscription : (typeof object.id === "string" ? object.id : null),
+    stripe_subscription_id: typeof object.subscription === "string" ? object.subscription : (typeof object.id === "string" && object.id.startsWith("sub_") ? object.id : null),
     current_period_end: periodEnd,
     cancel_at_period_end: object.cancel_at_period_end === true,
     updated_at: new Date().toISOString()
