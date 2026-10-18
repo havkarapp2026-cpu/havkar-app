@@ -294,7 +294,117 @@ const IMAGE_ASPECTS = Object.freeze([
   "1:1", "3:2", "2:3", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"
 ]);
 const IMAGE_MODEL = "gemini-3.1-flash-lite-image";
+const IMAGE_1K_OUTPUT_TOKENS = 1120;
+// Published standard paid-tier equivalent for the 1K size this request sends:
+// 1120 image tokens * $30 / 1,000,000 = $0.0336. A call's ledger cost uses
+// provider usage metadata, not this list price.
 const IMAGE_LIST_PRICE_USD_MICROS = 33600;
+
+const STANDARD_PAID_PRICES = Object.freeze({
+  "gemini-3.5-flash-lite": Object.freeze({
+    inputUsdMicrosPerMillion: 300000,
+    outputTextUsdMicrosPerMillion: 2500000,
+    outputImageUsdMicrosPerMillion: null
+  }),
+  "gemini-3.1-flash-lite-image": Object.freeze({
+    inputUsdMicrosPerMillion: 250000,
+    outputTextUsdMicrosPerMillion: 1500000,
+    outputImageUsdMicrosPerMillion: 30000000
+  })
+});
+
+function boundedTokenCount(value) {
+  const number = Number(value);
+  if (!Number.isInteger(number) || number < 0 || number > 10000000) return null;
+  return number;
+}
+
+function modalityTokenCount(list, modality) {
+  if (!Array.isArray(list)) return null;
+  let sum = 0;
+  let found = false;
+  for (const item of list) {
+    const name = item && typeof item === "object" ? String(item.modality || "").toLowerCase() : "";
+    if (name !== modality) continue;
+    const tokens = boundedTokenCount(item.tokens ?? item.tokenCount);
+    if (tokens == null) return null;
+    sum += tokens;
+    found = true;
+  }
+  return found ? sum : null;
+}
+
+function textOutputTokens(prompt, candidates, thoughts, total) {
+  const thoughtCount = thoughts == null ? 0 : thoughts;
+  if (candidates == null) {
+    if (total == null || total < prompt) return null;
+    return total - prompt;
+  }
+  const combined = candidates + thoughtCount;
+  if (total != null && prompt + combined > total) return Math.max(0, total - prompt);
+  return combined;
+}
+
+function geminiTextUsage(payload) {
+  const usage = payload && payload.usageMetadata;
+  if (!usage || typeof usage !== "object" || Array.isArray(usage)) return null;
+  const prompt = boundedTokenCount(usage.promptTokenCount);
+  if (prompt == null) return null;
+  const candidates = usage.candidatesTokenCount == null ? null : boundedTokenCount(usage.candidatesTokenCount);
+  const thoughts = usage.thoughtsTokenCount == null ? null : boundedTokenCount(usage.thoughtsTokenCount);
+  const total = usage.totalTokenCount == null ? null : boundedTokenCount(usage.totalTokenCount);
+  if ((usage.candidatesTokenCount != null && candidates == null) || (usage.thoughtsTokenCount != null && thoughts == null)) return null;
+  const output = textOutputTokens(prompt, candidates, thoughts, total);
+  if (output == null) return null;
+  return {
+    promptTokens: prompt,
+    outputTextTokens: output,
+    thoughtTokens: thoughts == null ? 0 : thoughts,
+    imageOutputTokens: 0,
+    totalTokens: total
+  };
+}
+
+function geminiImageUsage(payload) {
+  const usage = payload && (payload.usage || payload.usageMetadata);
+  if (!usage || typeof usage !== "object" || Array.isArray(usage)) return null;
+  if (usage.total_input_tokens == null && usage.output_tokens_by_modality == null) return null;
+  const prompt = boundedTokenCount(usage.total_input_tokens);
+  const imageTokens = modalityTokenCount(usage.output_tokens_by_modality, "image");
+  if (prompt == null || imageTokens == null) return null;
+  const textTokens = modalityTokenCount(usage.output_tokens_by_modality, "text") ?? 0;
+  const thoughts = usage.total_thought_tokens == null ? 0 : boundedTokenCount(usage.total_thought_tokens);
+  if (thoughts == null) return null;
+  const total = usage.total_tokens == null ? null : boundedTokenCount(usage.total_tokens);
+  return {
+    promptTokens: prompt,
+    outputTextTokens: textTokens + thoughts,
+    thoughtTokens: thoughts,
+    imageOutputTokens: imageTokens,
+    totalTokens: total
+  };
+}
+
+function estimateStandardUsdMicros(model, usage) {
+  const price = STANDARD_PAID_PRICES[model];
+  if (!price || !usage) return null;
+  if (usage.imageOutputTokens > 0 && price.outputImageUsdMicrosPerMillion == null) return null;
+  const imageRate = price.outputImageUsdMicrosPerMillion || 0;
+  const raw = (
+    usage.promptTokens * price.inputUsdMicrosPerMillion
+    + usage.outputTextTokens * price.outputTextUsdMicrosPerMillion
+    + usage.imageOutputTokens * imageRate
+  ) / 1000000;
+  if (!Number.isFinite(raw) || raw < 0) return null;
+  return Math.round(raw);
+}
+
+function spendLimitMicros(value) {
+  if (value == null) return null;
+  const text = String(value).trim();
+  if (!text || !/^[0-9]{1,12}$/.test(text)) return null;
+  return Number(text);
+}
 
 function cleanField(value, limit) {
   return cleanContent(value).slice(0, limit);
@@ -513,9 +623,14 @@ function subscriptionChange(input) {
 }
 
 export {
+  IMAGE_1K_OUTPUT_TOKENS,
   IMAGE_ASPECTS,
   IMAGE_LIST_PRICE_USD_MICROS,
   IMAGE_MODEL,
+  estimateStandardUsdMicros,
+  geminiImageUsage,
+  geminiTextUsage,
+  spendLimitMicros,
   LANGUAGE_NAMES,
   LIMITS,
   TASK_LIMITS,
