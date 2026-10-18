@@ -17,6 +17,7 @@ import {
   ssePayloads,
   streamPayloads,
   subscriptionCheckoutStatus,
+  attachmentReadyForModel,
   validateAssistantRequest,
   validateAttachment,
   validateImageRequest
@@ -229,6 +230,14 @@ const historyMigration = read("supabase/migrations/20261017223000_ai_history_ima
 assert.match(historyMigration, /ENABLE ROW LEVEL SECURITY/);
 assert.match(historyMigration, /scan_status = 'unscanned'/);
 assert.doesNotMatch(historyMigration, /scan_status = 'safe'/);
+assert.equal(attachmentReadyForModel("unscanned"), false);
+assert.equal(attachmentReadyForModel("safe"), false);
+assert.equal(attachmentReadyForModel(""), false);
+assert.equal(attachmentReadyForModel("clean"), true);
+const scanGate = source.indexOf("attachmentReadyForModel");
+const attachmentDownload = source.indexOf('from("ai-attachments").download');
+assert.ok(scanGate > 0 && attachmentDownload > scanGate);
+assert.match(source, /This file has not been scanned for malware\./);
 assert.match(historyMigration, /client_id/);
 assert.match(historyMigration, /release_ai_image_budget/);
 assert.match(historyMigration, /split_part\(path, '\/', 1\)/);
@@ -261,6 +270,9 @@ assert.match(assistantPage, /id="stopGeneration"/);
 assert.match(assistantPage, /stream: true/);
 assert.match(assistantPage, /mode: "image"/);
 assert.match(assistantPage, /has not been scanned for malware/);
+assert.match(assistantPage, /if \(attachmentPath\)/);
+assert.match(assistantPage, /kurdishSpeechBlock/);
+assert.doesNotMatch(assistantPage, /ckb-IQ/);
 assert.match(assistantPage, /Generate an image/);
 assert.match(assistantPage, /id="manageBilling"/);
 assert.match(assistantPage, /\/functions\/v1\/havkar-ai-billing/);

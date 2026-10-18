@@ -10,6 +10,7 @@ import {
   providerRetryDelayMs,
   providerStatusIsRetryable,
   streamPayloads,
+  attachmentReadyForModel,
   validateAssistantRequest,
   validateAttachment,
   validateImageRequest
@@ -642,6 +643,19 @@ Deno.serve(async (request) => {
   let image = null;
 
   if (attachment.path) {
+    const review = await admin.from("ai_file_reviews")
+      .select("scan_status, bucket_id")
+      .eq("path", attachment.path)
+      .eq("user_id", userId)
+      .maybeSingle();
+    const reviewStatus = review.data && review.data.scan_status;
+    const reviewBucket = review.data && review.data.bucket_id;
+
+    if (review.error || reviewBucket !== "ai-attachments" || !attachmentReadyForModel(reviewStatus)) {
+      releaseProviderSlot();
+      return json(400, { ok: false, error: "This file has not been scanned for malware." }, headers);
+    }
+
     const downloaded = await admin.storage.from("ai-attachments").download(attachment.path);
 
     if (downloaded.error || !downloaded.data) {

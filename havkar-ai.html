@@ -804,7 +804,28 @@ function stopVoice(cancel) {
   }
 }
 
+function kurdishSpeechBlock(code) {
+  const selected = code || languageCode();
+  if (selected === "ckb") return "Google Speech-to-Text lists Central Kurdish, but HAVKAR staging has no speech credential. Audio is not uploaded.";
+  if (selected === "kmr") return "Kurdish Kurmanji is not in the Google Speech-to-Text language list. Audio is not uploaded.";
+  return "";
+}
+
+function syncVoiceAvailability(code) {
+  const button = document.getElementById("voiceInput");
+  const blocked = kurdishSpeechBlock(code);
+  button.disabled = Boolean(blocked);
+  button.setAttribute("aria-disabled", blocked ? "true" : "false");
+  if (blocked) button.title = blocked;
+  else button.removeAttribute("title");
+}
+
 function startVoice() {
+  const blocked = kurdishSpeechBlock();
+  if (blocked) {
+    setStatus(blocked);
+    return;
+  }
   if (!window.isSecureContext) {
     setStatus("Voice input needs a secure HTTPS page.");
     return;
@@ -820,10 +841,7 @@ function startVoice() {
   }
   const speechLocale = SPEECH_LOCALES[languageCode()];
   if (!speechLocale) {
-    const code = languageCode();
-    if (code === "ckb") setStatus("Google Speech-to-Text lists Central Kurdish, but HAVKAR staging has no speech credential. Audio is not uploaded.");
-    else if (code === "kmr") setStatus("Kurdish Kurmanji is not in the Google Speech-to-Text language list. Audio is not uploaded.");
-    else setStatus("This browser cannot transcribe the selected language.");
+    setStatus("This browser cannot transcribe the selected language.");
     return;
   }
   voiceBase = question.value;
@@ -1262,6 +1280,9 @@ async function chooseLanguage(code) {
   }
   const i18n = window.HAVKAR_I18N;
   if (i18n && typeof i18n.setLanguage === "function") i18n.setLanguage(code);
+  syncVoiceAvailability(code);
+  const blocked = kurdishSpeechBlock(code);
+  if (blocked) setStatus(blocked);
 }
 
 function payloadFromHistory() {
@@ -1430,6 +1451,10 @@ function beginSend(sendPart) {
   }
   if (uploadBusy) {
     setStatus("Uploading image.");
+    return;
+  }
+  if (attachmentPath) {
+    setStatus("This file has not been scanned for malware.");
     return;
   }
   let content = question.value.trim();
@@ -1633,6 +1658,9 @@ function showAccount(email) {
 applyInterfaceDirection();
 applyTheme();
 fillLanguages();
+syncVoiceAvailability();
+const initialSpeechBlock = kurdishSpeechBlock();
+if (initialSpeechBlock) setStatus(initialSpeechBlock);
 selectTool("general");
 renderHistory();
 clock.textContent = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });

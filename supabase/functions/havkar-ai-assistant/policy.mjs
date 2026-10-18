@@ -286,6 +286,10 @@ function validateAttachment(attachment, userId) {
   return { ok: true, path };
 }
 
+function attachmentReadyForModel(status) {
+  return status === "clean";
+}
+
 const IMAGE_ASPECTS = Object.freeze([
   "1:1", "3:2", "2:3", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"
 ]);
@@ -497,6 +501,7 @@ export {
   streamPayloads,
   subscriptionCheckoutStatus,
   validateAssistantRequest,
+  attachmentReadyForModel,
   validateAttachment,
   validateImageRequest
 };
