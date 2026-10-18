@@ -1,6 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
+  IMAGE_1K_OUTPUT_TOKENS,
   assistantInstruction,
+  geminiImageUsage,
+  geminiTextUsage,
   imageBytesFromProvider,
   imagePrompt,
   imageRequestBody,
@@ -9,6 +12,7 @@ import {
   providerFailureMessage,
   providerRetryDelayMs,
   providerStatusIsRetryable,
+  spendLimitMicros,
   streamPayloads,
   attachmentReadyForModel,
   validateAssistantRequest,
@@ -159,6 +163,86 @@ function releaseProviderSlot() {
   }
 }
 
+function spendOverrideArgs() {
+  return {
+    p_user_day_micros: spendLimitMicros(Deno.env.get("HAVKAR_AI_SPEND_USER_DAY_USD_MICROS")),
+    p_user_month_micros: spendLimitMicros(Deno.env.get("HAVKAR_AI_SPEND_USER_MONTH_USD_MICROS")),
+    p_plan_day_micros: spendLimitMicros(Deno.env.get("HAVKAR_AI_SPEND_PLAN_DAY_USD_MICROS")),
+    p_plan_month_micros: spendLimitMicros(Deno.env.get("HAVKAR_AI_SPEND_PLAN_MONTH_USD_MICROS")),
+    p_global_day_micros: spendLimitMicros(Deno.env.get("HAVKAR_AI_SPEND_GLOBAL_DAY_USD_MICROS")),
+    p_global_month_micros: spendLimitMicros(Deno.env.get("HAVKAR_AI_SPEND_GLOBAL_MONTH_USD_MICROS"))
+  };
+}
+
+function spendRow(result) {
+  return Array.isArray(result.data) ? result.data[0] : result.data;
+}
+
+async function reserveProviderLease(admin, userId) {
+  const result = await admin.rpc("reserve_ai_provider_lease", { p_user_id: userId });
+  if (result.error) return { ok: false, leaseId: "" };
+  return { ok: true, leaseId: result.data ? String(result.data) : "" };
+}
+
+async function releaseProviderLease(admin, leaseId) {
+  if (!leaseId) return;
+  await admin.rpc("release_ai_provider_lease", { p_lease_id: leaseId });
+}
+
+async function reserveSpend(admin, userId, kind, model, outputCap) {
+  const result = await admin.rpc("reserve_ai_spend", {
+    p_user_id: userId,
+    p_kind: kind,
+    p_model: model,
+    p_output_cap_tokens: outputCap,
+    p_image_cap_tokens: kind === "image" ? IMAGE_1K_OUTPUT_TOKENS : 0,
+    ...spendOverrideArgs()
+  });
+  const row = spendRow(result);
+  if (result.error || !row || typeof row.allowed !== "boolean") {
+    return { ok: false, allowed: false, holdId: "", reason: "unavailable" };
+  }
+  return {
+    ok: true,
+    allowed: row.allowed === true,
+    holdId: row.hold_id ? String(row.hold_id) : "",
+    reason: String(row.reason || "")
+  };
+}
+
+async function releaseSpendHold(admin, holdId) {
+  if (!holdId) return;
+  await admin.rpc("release_ai_spend_hold", { p_hold_id: holdId });
+}
+
+async function recordProviderUsage(admin, userId, holdId, kind, model, called, httpStatus, usage) {
+  const priced = called && usage ? usage : null;
+  await admin.rpc("record_ai_provider_usage", {
+    p_user_id: userId,
+    p_hold_id: holdId || null,
+    p_kind: kind,
+    p_model: model,
+    p_provider_called: called === true,
+    p_http_status: httpStatus > 0 ? httpStatus : null,
+    p_prompt_tokens: priced ? priced.promptTokens : null,
+    p_output_text_tokens: priced ? priced.outputTextTokens : null,
+    p_thought_tokens: priced ? priced.thoughtTokens : null,
+    p_image_output_tokens: priced ? priced.imageOutputTokens : null,
+    p_total_tokens: priced && priced.totalTokens != null ? priced.totalTokens : null,
+    p_usage_source: priced ? "provider" : "missing"
+  });
+}
+
+function spendDenied(headers) {
+  return json(429, {
+    ok: false,
+    error: "The assistant spending limit has been reached. Please wait and try again."
+  }, {
+    ...headers,
+    "Retry-After": "3600"
+  });
+}
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -297,10 +381,6 @@ async function storeGeneratedImage(admin, userId, bytes, mime, validation) {
   return { ok: true, path, mime, transparent: pngHasAlpha(bytes) };
 }
 
-async function releaseImageCredit(admin, userId) {
-  await admin.rpc("release_ai_image_budget", { p_user_id: userId, p_images: 1 });
-}
-
 async function cleanupExpiredFiles(admin, userId) {
   const listed = await admin.rpc("list_expired_ai_files", { p_user_id: userId });
   const rows = Array.isArray(listed.data) ? listed.data : [];
@@ -382,7 +462,7 @@ async function textBudgetGate(admin, userId, characters, headers) {
   return null;
 }
 
-function eventResponse(request, headers, admin, userId, validation, providerKey, image, run) {
+function eventResponse(request, headers, release, run) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -395,7 +475,7 @@ function eventResponse(request, headers, admin, userId, validation, providerKey,
           ...(request.signal.aborted ? {} : { error: providerFailureMessage(0) })
         });
       } finally {
-        releaseProviderSlot();
+        try { await release(); } catch { /* Lease release is best-effort after the response. */ }
         try { controller.close(); } catch { /* The client may already have closed the stream. */ }
       }
     }
@@ -410,8 +490,8 @@ function eventResponse(request, headers, admin, userId, validation, providerKey,
   });
 }
 
-function imageStreamResponse(request, headers, admin, userId, validation, providerKey) {
-  return eventResponse(request, headers, admin, userId, validation, providerKey, null, async (send, signal) => {
+function imageStreamResponse(request, headers, admin, userId, validation, providerKey, release) {
+  return eventResponse(request, headers, release, async (send, signal) => {
     send({ type: "status", status: "accepted" });
     await cleanupExpiredFiles(admin, userId);
     const produced = [];
@@ -420,12 +500,23 @@ function imageStreamResponse(request, headers, admin, userId, validation, provid
         send({ type: "interrupted" });
         return;
       }
+      const spend = await reserveSpend(admin, userId, "image", validation.model, 0);
+      if (!spend.ok) {
+        send({ type: "error", error: "The assistant is temporarily unavailable." });
+        return;
+      }
+      if (!spend.allowed) {
+        console.error("ai_spend_denied=" + spend.reason);
+        send({ type: "error", error: "The assistant spending limit has been reached. Please wait and try again." });
+        return;
+      }
       const budget = await admin.rpc("consume_ai_image_budget", {
         p_user_id: userId,
         p_images: 1
       });
       const budgetRow = Array.isArray(budget.data) ? budget.data[0] : budget.data;
       if (budget.error || !budgetRow || budgetRow.allowed !== true) {
+        await releaseSpendHold(admin, spend.holdId);
         send({
           type: "error",
           error: budgetRow && budgetRow.allowed === false
@@ -434,46 +525,61 @@ function imageStreamResponse(request, headers, admin, userId, validation, provid
         });
         return;
       }
-      send({ type: "status", status: "provider" });
-      const providerResult = await requestGeneratedImage(
-        validation,
-        providerKey,
-        AbortSignal.any([signal, AbortSignal.timeout(50000)])
-      );
-      if (!providerResult.ok) {
-        await releaseImageCredit(admin, userId);
-        send({ type: "error", error: providerFailureMessage(providerResult.status) });
-        return;
+      let called = false;
+      let httpStatus = 0;
+      let usage = null;
+      try {
+        send({ type: "status", status: "provider" });
+        const providerResult = await requestGeneratedImage(
+          validation,
+          providerKey,
+          AbortSignal.any([signal, AbortSignal.timeout(50000)])
+        );
+        called = providerResult.status > 0;
+        httpStatus = providerResult.status;
+        if (!providerResult.ok) {
+          send({ type: "error", error: providerFailureMessage(providerResult.status) });
+          return;
+        }
+        usage = geminiImageUsage(providerResult.payload);
+        if (providerResult.payload && providerResult.payload.promptFeedback && providerResult.payload.promptFeedback.blockReason) {
+          send({ type: "error", error: "This request cannot be answered." });
+          return;
+        }
+        const extracted = imageBytesFromProvider(providerResult.payload);
+        const bytes = extracted ? decodeBase64(extracted.data) : new Uint8Array();
+        const mime = imageMime(bytes);
+        if (!mime || bytes.length > 8 * 1024 * 1024) {
+          const responseKeys = Object.keys(providerResult.payload || {}).join(",");
+          console.error("image_response_keys=" + responseKeys);
+          send({ type: "error", error: "The image could not be generated." });
+          return;
+        }
+        const stored = await storeGeneratedImage(admin, userId, bytes, mime, validation);
+        if (!stored.ok) {
+          send({ type: "error", error: stored.error });
+          return;
+        }
+        produced.push(stored);
+        send({
+          type: "image",
+          path: stored.path,
+          mime: stored.mime,
+          transparent: stored.transparent,
+          aspect: validation.aspect
+        });
+      } finally {
+        await recordProviderUsage(
+          admin,
+          userId,
+          spend.holdId,
+          "image",
+          validation.model,
+          called,
+          httpStatus,
+          usage
+        );
       }
-      if (providerResult.payload && providerResult.payload.promptFeedback && providerResult.payload.promptFeedback.blockReason) {
-        await releaseImageCredit(admin, userId);
-        send({ type: "error", error: "This request cannot be answered." });
-        return;
-      }
-      const extracted = imageBytesFromProvider(providerResult.payload);
-      const bytes = extracted ? decodeBase64(extracted.data) : new Uint8Array();
-      const mime = imageMime(bytes);
-      if (!mime || bytes.length > 8 * 1024 * 1024) {
-        await releaseImageCredit(admin, userId);
-        const responseKeys = Object.keys(providerResult.payload || {}).join(",");
-        console.error("image_response_keys=" + responseKeys);
-        send({ type: "error", error: "The image could not be generated." });
-        return;
-      }
-      const stored = await storeGeneratedImage(admin, userId, bytes, mime, validation);
-      if (!stored.ok) {
-        await releaseImageCredit(admin, userId);
-        send({ type: "error", error: stored.error });
-        return;
-      }
-      produced.push(stored);
-      send({
-        type: "image",
-        path: stored.path,
-        mime: stored.mime,
-        transparent: stored.transparent,
-        aspect: validation.aspect
-      });
     }
     if (validation.transparentRequested && produced.some((item) => item.transparent !== true)) {
       send({ type: "notice", message: "This file does not have a transparent background." });
@@ -482,81 +588,94 @@ function imageStreamResponse(request, headers, admin, userId, validation, provid
   });
 }
 
-async function streamTextResponse(request, headers, validation, providerKey, image) {
-  return eventResponse(request, headers, null, "", validation, providerKey, image, async (send, signal) => {
+async function streamTextResponse(request, headers, admin, userId, validation, providerKey, image, holdId, release) {
+  return eventResponse(request, headers, release, async (send, signal) => {
     const model = modelName();
-    const providerResponse = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/" +
-        encodeURIComponent(model) +
-        ":streamGenerateContent?alt=sse",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": providerKey
-        },
-        signal: AbortSignal.any([signal, AbortSignal.timeout(25000)]),
-        body: JSON.stringify({
-          systemInstruction: {
-            parts: [{ text: assistantInstruction(validation.languageName, validation.task) }]
+    let called = false;
+    let httpStatus = 0;
+    let usage = null;
+    const record = () => recordProviderUsage(admin, userId, holdId, "text", model, called, httpStatus, usage);
+    let providerResponse;
+    try {
+      providerResponse = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/" +
+          encodeURIComponent(model) +
+          ":streamGenerateContent?alt=sse",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": providerKey
           },
-          contents: providerContents(validation.messages, image),
-          generationConfig: generationConfig(model, validation.maxOutputTokens)
-        })
-      }
-    );
-    if (!providerResponse.ok || !providerResponse.body) {
-      logProviderFailure(providerResponse.status, await readProviderPayload(providerResponse));
-      send({ type: "error", error: providerFailureMessage(providerResponse.status) });
-      return;
-    }
-    const reader = providerResponse.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    let full = "";
-    let eventCount = 0;
-    const limit = validation.task === "menu" ? 12000 : MAX_ASSISTANT_MESSAGE_CHARACTERS;
-    const applyPayloads = (items) => {
-      for (const payload of items) {
-        eventCount += 1;
-        if (payload && payload.promptFeedback && payload.promptFeedback.blockReason) {
-          send({ type: "error", error: "This request cannot be answered." });
-          return false;
+          signal: AbortSignal.any([signal, AbortSignal.timeout(25000)]),
+          body: JSON.stringify({
+            systemInstruction: {
+              parts: [{ text: assistantInstruction(validation.languageName, validation.task) }]
+            },
+            contents: providerContents(validation.messages, image),
+            generationConfig: generationConfig(model, validation.maxOutputTokens)
+          })
         }
-        const text = assistantMessage(payload, limit, false);
-        if (!text) continue;
-        const incoming = full && text.startsWith(full) ? text.slice(full.length) : text;
-        if (!incoming) continue;
-        const next = (full + incoming).slice(0, limit);
-        const delta = next.slice(full.length);
-        full = next;
-        if (delta) send({ type: "delta", text: delta });
+      );
+      called = providerResponse.status > 0;
+      httpStatus = providerResponse.status;
+      if (!providerResponse.ok || !providerResponse.body) {
+        logProviderFailure(providerResponse.status, await readProviderPayload(providerResponse));
+        send({ type: "error", error: providerFailureMessage(providerResponse.status) });
+        return;
       }
-      return true;
-    };
-    while (!signal.aborted) {
-      const chunk = await reader.read();
-      if (chunk.done) break;
-      buffer += decoder.decode(chunk.value, { stream: true });
-      const parsed = streamPayloads(buffer, false);
-      buffer = parsed.rest;
-      if (!applyPayloads(parsed.payloads)) return;
+      const reader = providerResponse.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let full = "";
+      let eventCount = 0;
+      const limit = validation.task === "menu" ? 12000 : MAX_ASSISTANT_MESSAGE_CHARACTERS;
+      const applyPayloads = (items) => {
+        for (const payload of items) {
+          eventCount += 1;
+          const measured = geminiTextUsage(payload);
+          if (measured) usage = measured;
+          if (payload && payload.promptFeedback && payload.promptFeedback.blockReason) {
+            send({ type: "error", error: "This request cannot be answered." });
+            return false;
+          }
+          const text = assistantMessage(payload, limit, false);
+          if (!text) continue;
+          const incoming = full && text.startsWith(full) ? text.slice(full.length) : text;
+          if (!incoming) continue;
+          const next = (full + incoming).slice(0, limit);
+          const delta = next.slice(full.length);
+          full = next;
+          if (delta) send({ type: "delta", text: delta });
+        }
+        return true;
+      };
+      while (!signal.aborted) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        buffer += decoder.decode(chunk.value, { stream: true });
+        const parsed = streamPayloads(buffer, false);
+        buffer = parsed.rest;
+        if (!applyPayloads(parsed.payloads)) return;
+      }
+      if (!signal.aborted) {
+        buffer += decoder.decode();
+        const flushed = streamPayloads(buffer, true);
+        if (!applyPayloads(flushed.payloads)) return;
+      }
+      if (!full) {
+        const streamType = String(providerResponse.headers.get("content-type") || "none").split(";")[0].trim().slice(0, 80);
+        console.error("stream_events=" + String(eventCount) + " stream_chars=0 stream_type=" + streamType);
+      }
+      if (signal.aborted) {
+        send({ type: "interrupted", message: full });
+        return;
+      }
+      if (!full) send({ type: "error", error: providerFailureMessage(0) });
+      else send({ type: "done", message: full });
+    } finally {
+      await record();
     }
-    if (!signal.aborted) {
-      buffer += decoder.decode();
-      const flushed = streamPayloads(buffer, true);
-      if (!applyPayloads(flushed.payloads)) return;
-    }
-    if (!full) {
-      const streamType = String(providerResponse.headers.get("content-type") || "none").split(";")[0].trim().slice(0, 80);
-      console.error("stream_events=" + String(eventCount) + " stream_chars=0 stream_type=" + streamType);
-    }
-    if (signal.aborted) {
-      send({ type: "interrupted", message: full });
-      return;
-    }
-    if (!full) send({ type: "error", error: providerFailureMessage(0) });
-    else send({ type: "done", message: full });
   });
 }
 
@@ -628,15 +747,34 @@ Deno.serve(async (request) => {
   }
 
   const userId = userResult.data.user.id;
+  const lease = await reserveProviderLease(admin, userId);
+  const releaseAll = async () => {
+    releaseProviderSlot();
+    await releaseProviderLease(admin, lease.leaseId);
+  };
+
+  if (!lease.ok || !lease.leaseId) {
+    await releaseAll();
+    if (!lease.ok) {
+      return json(503, { ok: false, error: "The assistant is temporarily unavailable." }, headers);
+    }
+    return json(429, {
+      ok: false,
+      error: providerFailureMessage(429)
+    }, {
+      ...headers,
+      "Retry-After": "2"
+    });
+  }
 
   if (imageMode) {
-    return imageStreamResponse(request, headers, admin, userId, validation, providerKey);
+    return imageStreamResponse(request, headers, admin, userId, validation, providerKey, releaseAll);
   }
 
   const attachment = validateAttachment(parsed.body && parsed.body.attachment, userId);
 
   if (!attachment.ok) {
-    releaseProviderSlot();
+    await releaseAll();
     return json(400, { ok: false, error: attachment.error }, headers);
   }
 
@@ -652,53 +790,75 @@ Deno.serve(async (request) => {
     const reviewBucket = review.data && review.data.bucket_id;
 
     if (review.error || reviewBucket !== "ai-attachments" || !attachmentReadyForModel(reviewStatus)) {
-      releaseProviderSlot();
+      await releaseAll();
       return json(400, { ok: false, error: "This file has not been scanned for malware." }, headers);
     }
 
     const downloaded = await admin.storage.from("ai-attachments").download(attachment.path);
 
     if (downloaded.error || !downloaded.data) {
-      releaseProviderSlot();
+      await releaseAll();
       return json(400, { ok: false, error: "The image could not be read." }, headers);
     }
 
     const bytes = new Uint8Array(await downloaded.data.arrayBuffer());
 
     if (bytes.length < 16 || bytes.length > 4 * 1024 * 1024) {
-      releaseProviderSlot();
+      await releaseAll();
       return json(400, { ok: false, error: "The image could not be read." }, headers);
     }
 
     const mime = imageMime(bytes);
 
     if (!mime) {
-      releaseProviderSlot();
+      await releaseAll();
       return json(400, { ok: false, error: "Only JPEG, PNG, and WebP images can be attached." }, headers);
     }
 
     image = { mime, data: bytesToBase64(bytes) };
   }
 
+  const model = modelName();
+  const spend = await reserveSpend(admin, userId, "text", model, validation.maxOutputTokens);
+  if (!spend.ok) {
+    await releaseAll();
+    return json(503, { ok: false, error: "The assistant is temporarily unavailable." }, headers);
+  }
+  if (!spend.allowed) {
+    console.error("ai_spend_denied=" + spend.reason);
+    await releaseAll();
+    return spendDenied(headers);
+  }
+
   if (parsed.body && parsed.body.stream === true) {
     const denied = await textBudgetGate(admin, userId, validation.characters, headers);
     if (denied) {
-      releaseProviderSlot();
+      await releaseSpendHold(admin, spend.holdId);
+      await releaseAll();
       return denied;
     }
-    return streamTextResponse(request, headers, validation, providerKey, image);
+    return streamTextResponse(request, headers, admin, userId, validation, providerKey, image, spend.holdId, releaseAll);
   }
 
+  let called = false;
+  let httpStatus = 0;
+  let usage = null;
   try {
     const denied = await textBudgetGate(admin, userId, validation.characters, headers);
-    if (denied) return denied;
+    if (denied) {
+      await releaseSpendHold(admin, spend.holdId);
+      return denied;
+    }
 
     const providerResult = await requestAssistantContent(
-      modelName(),
+      model,
       validation,
       providerKey,
       image
     );
+    called = providerResult.status > 0;
+    httpStatus = providerResult.status;
+    usage = providerResult.ok ? geminiTextUsage(providerResult.payload) : null;
 
     if (!providerResult.ok) {
       const status = providerResult.status === 429 || providerResult.status === 503
@@ -737,6 +897,13 @@ Deno.serve(async (request) => {
       message
     }, headers);
   } finally {
-    releaseProviderSlot();
+    if (called || spend.holdId) {
+      try {
+        await recordProviderUsage(admin, userId, spend.holdId, "text", model, called, httpStatus, usage);
+      } catch {
+        await releaseSpendHold(admin, spend.holdId);
+      }
+    }
+    await releaseAll();
   }
 });

@@ -15,6 +15,12 @@ import {
   paidPlan,
   planForPrice,
   subscriptionChange,
+  IMAGE_1K_OUTPUT_TOKENS,
+  IMAGE_LIST_PRICE_USD_MICROS,
+  estimateStandardUsdMicros,
+  geminiImageUsage,
+  geminiTextUsage,
+  spendLimitMicros,
   imageBytesFromProvider,
   sanitizeSvg,
   ssePayloads,
@@ -195,6 +201,8 @@ assert.equal(providerRetryDelayMs(0, "30", () => 0), 4000);
 assert.match(providerFailureMessage(429), /busy/);
 assert.match(providerFailureMessage(503), /temporarily unavailable/);
 assert.match(providerFailureMessage(0), /could not answer/);
+assert.equal(source.indexOf("reserve_ai_provider_lease") < source.indexOf("consume_ai_budget"), true);
+assert.equal(source.indexOf("reserve_ai_spend") < source.indexOf("consume_ai_budget"), true);
 assert.equal(source.indexOf("reserveProviderSlot") < source.indexOf("consume_ai_budget"), true);
 assert.match(source, /MAX_PROVIDER_ATTEMPTS = 3/);
 assert.match(source, /MAX_SIMULTANEOUS_PROVIDER_CALLS = 8/);
@@ -371,7 +379,90 @@ assert.doesNotMatch(maintainMigration, /havkar_private/);
 assert.match(historyMigration, /client_id/);
 assert.match(historyMigration, /release_ai_image_budget/);
 assert.match(historyMigration, /split_part\(path, '\/', 1\)/);
-assert.match(source, /release_ai_image_budget/);
+assert.doesNotMatch(source, /release_ai_image_budget/);
+const imageFn = source.slice(source.indexOf("function imageStreamResponse"), source.indexOf("async function streamTextResponse"));
+assert.equal(imageFn.includes("requestGeneratedImage"), true);
+assert.equal(imageFn.includes("recordProviderUsage"), true);
+assert.match(source, /record_ai_provider_usage/);
+assert.equal(imageFn.indexOf("reserve_ai_spend") < imageFn.indexOf("consume_ai_image_budget"), true);
+assert.equal(imageFn.indexOf("consume_ai_image_budget") < imageFn.indexOf("requestGeneratedImage"), true);
+const costMigration = read("supabase/migrations/20261018180000_ai_gemini_cost_protection.sql");
+assert.match(costMigration, /gemini-3\.5-flash-lite/);
+assert.match(costMigration, /300000/);
+assert.match(costMigration, /2500000/);
+assert.match(costMigration, /gemini-3\.1-flash-lite-image/);
+assert.match(costMigration, /30000000/);
+assert.match(costMigration, /1120/);
+assert.match(costMigration, /simultaneous_provider_calls', 8/);
+assert.doesNotMatch(costMigration, /INSERT INTO havkar_private\.ai_spend_limits/);
+assert.match(costMigration, /REVOKE ALL ON FUNCTION public\.reserve_ai_spend/);
+assert.doesNotMatch(costMigration, /GRANT EXECUTE ON FUNCTION public\.consume_ai_budget/);
+assert.equal(IMAGE_1K_OUTPUT_TOKENS, 1120);
+assert.equal(IMAGE_LIST_PRICE_USD_MICROS, 33600);
+assert.equal(estimateStandardUsdMicros("gemini-3.1-flash-lite-image", {
+  promptTokens: 0,
+  outputTextTokens: 0,
+  imageOutputTokens: 1120
+}), 33600);
+assert.equal(estimateStandardUsdMicros("gemini-3.5-flash-lite", {
+  promptTokens: 1000000,
+  outputTextTokens: 0,
+  imageOutputTokens: 0
+}), 300000);
+assert.equal(estimateStandardUsdMicros("gemini-3.5-flash-lite", {
+  promptTokens: 100,
+  outputTextTokens: 50,
+  imageOutputTokens: 0
+}), 155);
+assert.equal(estimateStandardUsdMicros("gemini-3.1-flash-lite-image", {
+  promptTokens: 10,
+  outputTextTokens: 0,
+  imageOutputTokens: 1120
+}), 33603);
+assert.equal(estimateStandardUsdMicros("unknown-model", {
+  promptTokens: 1,
+  outputTextTokens: 1,
+  imageOutputTokens: 0
+}), null);
+assert.equal(geminiTextUsage({}), null);
+assert.deepEqual(geminiTextUsage({
+  usageMetadata: { promptTokenCount: 11, candidatesTokenCount: 7, thoughtsTokenCount: 3, totalTokenCount: 21 }
+}), {
+  promptTokens: 11,
+  outputTextTokens: 10,
+  thoughtTokens: 3,
+  imageOutputTokens: 0,
+  totalTokens: 21
+});
+assert.deepEqual(geminiImageUsage({
+  usage: {
+    total_input_tokens: 10,
+    total_output_tokens: 1124,
+    total_thought_tokens: 4,
+    total_tokens: 1138,
+    output_tokens_by_modality: [
+      { modality: "image", tokens: 1120 },
+      { modality: "text", tokens: 0 }
+    ]
+  }
+}).imageOutputTokens, 1120);
+assert.equal(geminiImageUsage({ usage: { total_input_tokens: 10, total_output_tokens: 1120 } }), null);
+assert.equal(geminiImageUsage({
+  usage: {
+    total_input_tokens: 10,
+    output_tokens_by_modality: [{ modality: "text", tokens: 4 }]
+  }
+}), null);
+assert.equal(spendLimitMicros(""), null);
+assert.equal(spendLimitMicros("0"), 0);
+assert.equal(spendLimitMicros("33600"), 33600);
+assert.equal(spendLimitMicros("-1"), null);
+assert.match(read("supabase/functions/havkar-ai-assistant/policy.mjs"), /usageMetadata/);
+assert.match(source, /geminiTextUsage/);
+assert.match(source, /geminiImageUsage/);
+assert.match(source, /HAVKAR_AI_SPEND_GLOBAL_DAY_USD_MICROS/);
+assert.match(source, /HAVKAR_AI_SPEND_USER_DAY_USD_MICROS/);
+assert.match(source, /HAVKAR_AI_SPEND_PLAN_DAY_USD_MICROS/);
 assert.match(source, /text\.startsWith\(full\)/);
 assert.match(source, /assistantMessage\(payload, limit, false\)/);
 assert.match(source, /trimEdges \? text\.trim\(\) : text/);
