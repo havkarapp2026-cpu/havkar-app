@@ -281,7 +281,18 @@ body.dark-mode .extra-fields input, body.dark-mode .extra-fields select { backgr
 #stopGeneration { min-width: 44px; min-height: 44px; }
 .history-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 4px; align-items: center; }
 .generated-image { display: block; max-width: 100%; height: auto; border-radius: 12px; }
-.plan-list { margin: 0; padding-inline-start: 18px; }
+.plan-grid { display: grid; gap: 8px; }
+.plan-card {
+  border: 1px solid #b7e4c7; border-radius: 14px; padding: 10px 12px;
+  background: linear-gradient(180deg, #f3fbf6, #fff);
+}
+.plan-card h4 { margin: 0 0 4px; color: #1c9a43; font-size: .78rem; letter-spacing: .06em; }
+.plan-card p, #plans > p { margin: 0; font-size: .82rem; line-height: 1.45; overflow-wrap: anywhere; }
+.plan-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.plan-actions .ghost { min-height: 44px; border-color: #b7e4c7; color: #146b32; }
+body.dark-mode .plan-card { background: #12261a; border-color: #2e7d32; }
+body.dark-mode .plan-card p { color: #e7f6ec; }
+body.dark-mode .plan-actions .ghost { color: #d9f5e3; border-color: #2e7d32; }
 @media (max-width: 720px) { .extra-fields { grid-template-columns: 1fr; } }
 .foot {
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;
@@ -585,14 +596,19 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 <section class="panel" id="plans">
 <h3>HAVKAR AI plans</h3>
 <p>Payment is not active. These prices are a proposal.</p>
-<ul class="plan-list">
-<li>Free: €0. The server allows 30 requests a day and 4 images a month.</li>
-<li>Plus proposal: €12 a month. 90 requests a day and 30 images a month. Payment is not active.</li>
-<li>Pro proposal: €29 a month. 200 requests a day and 80 images a month. Priority processing is not available. Payment is not active.</li>
-</ul>
+<div class="plan-grid">
+<article class="plan-card"><h4 translate="no">FREE</h4><p><bdi dir="ltr">Free: €0 a month. 8 requests a day, 40 a month, and 2 images a month.</bdi></p></article>
+<article class="plan-card"><h4 translate="no">PLUS</h4><p><bdi dir="ltr">Plus: €7.99 a month. 20 requests a day, 240 a month, and 20 images a month. Payment is not active.</bdi></p></article>
+<article class="plan-card"><h4 translate="no">PRO</h4><p><bdi dir="ltr">Pro: €14.99 a month. 32 requests a day, 480 a month, and 40 images a month. Payment is not active.</bdi></p></article>
+<article class="plan-card"><h4 translate="no">BUSINESS</h4><p><bdi dir="ltr">Business: €29.99 a month. 60 requests a day, 900 a month, and 80 images a month. Payment is not active.</bdi></p></article>
+</div>
+<p>Use Manage billing to change an active plan.</p>
+<div class="plan-actions">
 <button id="reviewPlus" class="ghost" type="button">Review Plus</button>
 <button id="reviewPro" class="ghost" type="button">Review Pro</button>
+<button id="reviewBusiness" class="ghost" type="button">Review Business</button>
 <button id="manageBilling" class="ghost" type="button">Manage billing</button>
+</div>
 </section>
 <p class="unavailable">This file has not been scanned for malware.</p>
 <p class="unavailable">Kurdish Kurmanji is not in the Google Speech-to-Text language list. Audio is not uploaded.</p>
@@ -1715,6 +1731,7 @@ async function reviewPlan(plan) {
 }
 document.getElementById("reviewPlus").addEventListener("click", () => reviewPlan("plus"));
 document.getElementById("reviewPro").addEventListener("click", () => reviewPlan("pro"));
+document.getElementById("reviewBusiness").addEventListener("click", () => reviewPlan("business"));
 document.getElementById("manageBilling").addEventListener("click", async () => {
   try {
     const accessToken = await accessTokenOrThrow();

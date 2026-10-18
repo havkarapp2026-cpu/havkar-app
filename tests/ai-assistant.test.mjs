@@ -12,6 +12,9 @@ import {
   providerRetryDelayMs,
   providerStatusIsRetryable,
   activePlan,
+  paidPlan,
+  planForPrice,
+  subscriptionChange,
   imageBytesFromProvider,
   sanitizeSvg,
   ssePayloads,
@@ -218,9 +221,61 @@ assert.equal(subscriptionCheckoutStatus({
   STRIPE_SECRET_KEY: "sk_test_example",
   STRIPE_AI_PLUS_PRICE_ID: "price_plus",
   STRIPE_AI_PRO_PRICE_ID: "price_pro"
+}).ok, false);
+const prices = { plus: "price_plus", pro: "price_pro", business: "price_business" };
+assert.equal(subscriptionCheckoutStatus({
+  STRIPE_SECRET_KEY: "sk_test_example",
+  STRIPE_AI_PLUS_PRICE_ID: prices.plus,
+  STRIPE_AI_PRO_PRICE_ID: prices.pro,
+  STRIPE_AI_BUSINESS_PRICE_ID: prices.business
 }).ok, true);
+assert.equal(paidPlan("business"), "business");
+assert.equal(paidPlan("free"), "");
+assert.equal(planForPrice("price_business", prices), "business");
+assert.equal(activePlan({ plan_code: "business", status: "active", current_period_end: "2099-01-01T00:00:00Z" }, Date.parse("2026-10-17T00:00:00Z")), "business");
 assert.equal(activePlan({ plan_code: "pro", status: "active", current_period_end: "2099-01-01T00:00:00Z" }, Date.parse("2026-10-17T00:00:00Z")), "pro");
 assert.equal(activePlan({ plan_code: "pro", status: "canceled" }, Date.now()), "free");
+assert.equal(activePlan({ plan_code: "plus", status: "past_due", current_period_end: "2099-01-01T00:00:00Z" }, Date.now()), "free");
+assert.deepEqual(subscriptionChange({
+  eventType: "customer.subscription.updated",
+  stripeStatus: "active",
+  priceId: "price_business",
+  prices,
+  metadataPlan: "plus",
+  cancelAtPeriodEnd: false
+}), { status: "active", plan_code: "business", cancel_at_period_end: false });
+assert.deepEqual(subscriptionChange({
+  eventType: "customer.subscription.updated",
+  stripeStatus: "active",
+  priceId: "price_plus",
+  prices,
+  metadataPlan: "pro",
+  cancelAtPeriodEnd: true
+}), { status: "active", plan_code: "plus", cancel_at_period_end: true });
+assert.deepEqual(subscriptionChange({
+  eventType: "customer.subscription.deleted",
+  stripeStatus: "canceled",
+  priceId: "price_pro",
+  prices
+}), { status: "canceled", plan_code: "free", cancel_at_period_end: false });
+assert.deepEqual(subscriptionChange({
+  eventType: "invoice.payment_failed",
+  priceId: "price_pro",
+  prices
+}), { status: "past_due", plan_code: "free", cancel_at_period_end: false });
+assert.deepEqual(subscriptionChange({
+  eventType: "invoice.paid",
+  priceId: "price_pro",
+  prices,
+  metadataPlan: "pro"
+}), { status: "active", plan_code: "pro", cancel_at_period_end: false });
+assert.match(billing, /STRIPE_AI_BUSINESS_PRICE_ID/);
+assert.match(billing, /invoice\.paid/);
+assert.match(billing, /Use Manage billing to change an active plan\./);
+const quotaMigration = read("supabase/migrations/20261018034000_ai_business_plan_quotas.sql");
+assert.match(quotaMigration, /'business'/);
+assert.match(quotaMigration, /u:m:/);
+assert.match(quotaMigration, /bucket_key NOT LIKE 'u:m:%'/);
 assert.equal(validateImageRequest({ language: "fa", task: "image", aspect: "16:9", prompt: "یک تصویر" }).ok, true);
 assert.equal(validateImageRequest({ language: "fa", task: "image", aspect: "2:1", prompt: "نه" }).ok, false);
 assert.equal(sanitizeSvg("<svg><script>alert(1)</script><circle/></svg>").includes("<script"), false);
@@ -275,6 +330,13 @@ assert.match(assistantPage, /kurdishSpeechBlock/);
 assert.doesNotMatch(assistantPage, /ckb-IQ/);
 assert.match(assistantPage, /Generate an image/);
 assert.match(assistantPage, /id="manageBilling"/);
+assert.match(assistantPage, /id="reviewBusiness"/);
+assert.match(assistantPage, /€7\.99/);
+assert.match(assistantPage, /€14\.99/);
+assert.match(assistantPage, /€29\.99/);
+assert.match(assistantPage, /Use Manage billing to change an active plan\./);
+assert.doesNotMatch(assistantPage, /€12 a month/);
+assert.doesNotMatch(assistantPage, /€29 a month/);
 assert.match(assistantPage, /\/functions\/v1\/havkar-ai-billing/);
 assert.doesNotMatch(assistantPage, /\/api\/ai-subscription/);
 assert.match(assistantPage, /https:\/\/billing\.stripe\.com\//);
