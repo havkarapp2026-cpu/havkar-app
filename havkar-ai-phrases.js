@@ -180,7 +180,7 @@
   });
   const base = window.HAVKAR_UI_DICTIONARY || {};
   Object.keys(extra).forEach((code) => {
-    base[code] = Object.assign({}, base[code, "Business: ماہانہ €29.99۔ روزانہ 60 درخواستیں، ماہانہ 900 درخواستیں اور ماہانہ 80 تصاویر۔ ادائیگی فعال نہیں۔", "Business دیکھیں", "فعال منصوبہ بدلنے کے لیے بلنگ کا انتظام استعمال کریں۔"], extra[code]);
+    base[code] = Object.assign({}, base[code], extra[code]);
   });
   window.HAVKAR_UI_DICTIONARY = base;
 })();
