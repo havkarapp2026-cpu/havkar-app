@@ -189,14 +189,116 @@ async function releaseProviderLease(admin, leaseId) {
   await admin.rpc("release_ai_provider_lease", { p_lease_id: leaseId });
 }
 
-async function reserveSpend(admin, userId, kind, model, outputCap) {
+function spendGateConfigured() {
+  return Object.values(spendOverrideArgs()).some((value) => value != null);
+}
+
+async function spendGateMayApply(admin) {
+  if (spendGateConfigured()) return true;
+  const result = await admin.rpc("ai_spend_limit_active");
+  if (result.error) return true;
+  return result.data === true;
+}
+
+async function spendLimitReached(admin, userId) {
+  const result = await admin.rpc("ai_spend_limit_reached", {
+    p_user_id: userId,
+    ...spendOverrideArgs()
+  });
+  return Boolean(result.error) || result.data !== false;
+}
+
+function countedTokens(value) {
+  const number = Number(value);
+  if (!Number.isInteger(number) || number < 0 || number > 10000000) return null;
+  return number;
+}
+
+async function countProviderInputTokens(model, body, providerKey) {
+  let requestBody = "";
+  try {
+    const parsed = JSON.parse(body);
+    const request: Record<string, unknown> = {
+      model: "models/" + model
+    };
+    if (parsed && parsed.systemInstruction) request.systemInstruction = parsed.systemInstruction;
+    if (parsed && parsed.contents) request.contents = parsed.contents;
+    // generationConfig does not change the input count. CountTokens accepts
+    // this request only inside generateContentRequest.
+    requestBody = JSON.stringify({ generateContentRequest: request });
+  } catch {
+    console.error("ai_count_tokens_http=0");
+    return null;
+  }
+  try {
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/" +
+        encodeURIComponent(model) +
+        ":countTokens",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": providerKey
+        },
+        signal: AbortSignal.timeout(8000),
+        body: requestBody
+      }
+    );
+    if (!response.ok) {
+      logProviderFailure(response.status, await readProviderPayload(response));
+      console.error("ai_count_tokens_http=" + String(response.status));
+      return null;
+    }
+    const payload = await response.json();
+    const tokens = countedTokens(payload && payload.totalTokens);
+    if (tokens == null) console.error("ai_count_tokens_http=" + String(response.status));
+    return tokens;
+  } catch {
+    console.error("ai_count_tokens_http=0");
+    return null;
+  }
+}
+
+function textProviderBody(model, validation, image) {
+  return JSON.stringify({
+    systemInstruction: {
+      parts: [{ text: assistantInstruction(validation.languageName, validation.task) }]
+    },
+    contents: providerContents(validation.messages, image),
+    generationConfig: generationConfig(model, validation.maxOutputTokens)
+  });
+}
+
+function usageLog(prefix, usage) {
+  if (!usage) return;
+  console.log(
+    prefix +
+    " prompt=" + String(usage.promptTokens) +
+    " output_text=" + String(usage.outputTextTokens) +
+    " thoughts=" + String(usage.thoughtTokens) +
+    " image=" + String(usage.imageOutputTokens) +
+    " total=" + String(usage.totalTokens) +
+    " cached=" + String(usage.cachedTokens) +
+    " tool=" + String(usage.toolTokens) +
+    " fully_priced=" + String(usage.fullyPriced)
+  );
+}
+
+async function reserveSpend(admin, userId, kind, model, outputCap, inputTokens) {
+  const overrides = spendOverrideArgs();
+  console.log(
+    "ai_global_spend_limits=day:" + String(overrides.p_global_day_micros) +
+    ",month:" + String(overrides.p_global_month_micros)
+  );
   const result = await admin.rpc("reserve_ai_spend", {
     p_user_id: userId,
     p_kind: kind,
     p_model: model,
     p_output_cap_tokens: outputCap,
     p_image_cap_tokens: kind === "image" ? IMAGE_1K_OUTPUT_TOKENS : 0,
-    ...spendOverrideArgs()
+    p_input_tokens: countedTokens(inputTokens),
+    ...overrides
   });
   const row = spendRow(result);
   if (result.error || !row || typeof row.allowed !== "boolean") {
@@ -215,6 +317,15 @@ async function releaseSpendHold(admin, holdId) {
   await admin.rpc("release_ai_spend_hold", { p_hold_id: holdId });
 }
 
+async function markSpendHoldStarted(admin, userId, holdId) {
+  if (!holdId) return false;
+  const result = await admin.rpc("mark_ai_spend_hold_started", {
+    p_hold_id: holdId,
+    p_user_id: userId
+  });
+  return !result.error && result.data === true;
+}
+
 async function recordProviderUsage(admin, userId, holdId, kind, model, called, httpStatus, usage) {
   const priced = called && usage ? usage : null;
   await admin.rpc("record_ai_provider_usage", {
@@ -229,7 +340,8 @@ async function recordProviderUsage(admin, userId, holdId, kind, model, called, h
     p_thought_tokens: priced ? priced.thoughtTokens : null,
     p_image_output_tokens: priced ? priced.imageOutputTokens : null,
     p_total_tokens: priced && priced.totalTokens != null ? priced.totalTokens : null,
-    p_usage_source: priced ? "provider" : "missing"
+    p_usage_source: priced ? "provider" : "missing",
+    p_force_unpriced: priced ? priced.fullyPriced !== true : called === true
   });
 }
 
@@ -283,20 +395,14 @@ async function readProviderPayload(response, maxCharacters = MAX_PROVIDER_RESPON
 
 async function requestAssistantContent(
   model: string,
-  validation: { languageName: string; task: string; messages: { role: string; content: string }[]; maxOutputTokens: number },
+  body: string,
   providerKey: string,
-  image: { mime: string; data: string } | null
+  singleAttempt: boolean
 ) {
-  const body = JSON.stringify({
-    systemInstruction: {
-      parts: [{ text: assistantInstruction(validation.languageName, validation.task) }]
-    },
-    contents: providerContents(validation.messages, image),
-    generationConfig: generationConfig(model, validation.maxOutputTokens)
-  });
   let lastStatus = 0;
+  const maxAttempts = singleAttempt ? 1 : MAX_PROVIDER_ATTEMPTS;
 
-  for (let attempt = 0; attempt < MAX_PROVIDER_ATTEMPTS; attempt += 1) {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     try {
       const providerResponse = await fetch(
         "https://generativelanguage.googleapis.com/v1beta/models/" +
@@ -325,7 +431,7 @@ async function requestAssistantContent(
       const retryAfter = providerResponse.headers.get("retry-after") || "";
       logProviderFailure(lastStatus, await readProviderPayload(providerResponse));
 
-      if (!providerStatusIsRetryable(lastStatus) || attempt === MAX_PROVIDER_ATTEMPTS - 1) {
+      if (!providerStatusIsRetryable(lastStatus) || attempt === maxAttempts - 1) {
         return { ok: false, status: lastStatus, payload: null };
       }
 
@@ -334,7 +440,7 @@ async function requestAssistantContent(
       logProviderFailure(0, null);
       lastStatus = 0;
 
-      if (attempt === MAX_PROVIDER_ATTEMPTS - 1) {
+      if (attempt === maxAttempts - 1) {
         return { ok: false, status: 0, payload: null };
       }
 
@@ -500,7 +606,27 @@ function imageStreamResponse(request, headers, admin, userId, validation, provid
         send({ type: "interrupted" });
         return;
       }
-      const spend = await reserveSpend(admin, userId, "image", validation.model, 0);
+      let inputTokens = null;
+      if (await spendGateMayApply(admin)) {
+        if (await spendLimitReached(admin, userId)) {
+          console.error("ai_spend_denied=already_reached");
+          send({ type: "error", error: "The assistant spending limit has been reached. Please wait and try again." });
+          return;
+        }
+        inputTokens = await countProviderInputTokens(
+          validation.model,
+          JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: imagePrompt(validation) }] }]
+          }),
+          providerKey
+        );
+        if (inputTokens == null) {
+          console.error("ai_input_tokens=unpriced");
+          send({ type: "error", error: "The assistant spending limit has been reached. Please wait and try again." });
+          return;
+        }
+      }
+      const spend = await reserveSpend(admin, userId, "image", validation.model, 0, inputTokens);
       if (!spend.ok) {
         send({ type: "error", error: "The assistant is temporarily unavailable." });
         return;
@@ -529,6 +655,14 @@ function imageStreamResponse(request, headers, admin, userId, validation, provid
       let httpStatus = 0;
       let usage = null;
       try {
+        if (spend.holdId) {
+          const started = await markSpendHoldStarted(admin, userId, spend.holdId);
+          if (!started) {
+            await releaseSpendHold(admin, spend.holdId);
+            send({ type: "error", error: "The assistant is temporarily unavailable." });
+            return;
+          }
+        }
         send({ type: "status", status: "provider" });
         const providerResult = await requestGeneratedImage(
           validation,
@@ -542,6 +676,7 @@ function imageStreamResponse(request, headers, admin, userId, validation, provid
           return;
         }
         usage = geminiImageUsage(providerResult.payload);
+        usageLog("ai_image_usage", usage);
         if (providerResult.payload && providerResult.payload.promptFeedback && providerResult.payload.promptFeedback.blockReason) {
           send({ type: "error", error: "This request cannot be answered." });
           return;
@@ -588,7 +723,7 @@ function imageStreamResponse(request, headers, admin, userId, validation, provid
   });
 }
 
-async function streamTextResponse(request, headers, admin, userId, validation, providerKey, image, holdId, release) {
+async function streamTextResponse(request, headers, admin, userId, validation, providerKey, holdId, release, providerBody) {
   return eventResponse(request, headers, release, async (send, signal) => {
     const model = modelName();
     let called = false;
@@ -597,6 +732,14 @@ async function streamTextResponse(request, headers, admin, userId, validation, p
     const record = () => recordProviderUsage(admin, userId, holdId, "text", model, called, httpStatus, usage);
     let providerResponse;
     try {
+      if (holdId) {
+        const started = await markSpendHoldStarted(admin, userId, holdId);
+        if (!started) {
+          await releaseSpendHold(admin, holdId);
+          send({ type: "error", error: "The assistant is temporarily unavailable." });
+          return;
+        }
+      }
       providerResponse = await fetch(
         "https://generativelanguage.googleapis.com/v1beta/models/" +
           encodeURIComponent(model) +
@@ -608,13 +751,7 @@ async function streamTextResponse(request, headers, admin, userId, validation, p
             "x-goog-api-key": providerKey
           },
           signal: AbortSignal.any([signal, AbortSignal.timeout(25000)]),
-          body: JSON.stringify({
-            systemInstruction: {
-              parts: [{ text: assistantInstruction(validation.languageName, validation.task) }]
-            },
-            contents: providerContents(validation.messages, image),
-            generationConfig: generationConfig(model, validation.maxOutputTokens)
-          })
+          body: providerBody
         }
       );
       called = providerResponse.status > 0;
@@ -634,7 +771,10 @@ async function streamTextResponse(request, headers, admin, userId, validation, p
         for (const payload of items) {
           eventCount += 1;
           const measured = geminiTextUsage(payload);
-          if (measured) usage = measured;
+          if (measured) {
+            usage = measured;
+            usageLog("ai_text_usage", usage);
+          }
           if (payload && payload.promptFeedback && payload.promptFeedback.blockReason) {
             send({ type: "error", error: "This request cannot be answered." });
             return false;
@@ -819,7 +959,22 @@ Deno.serve(async (request) => {
   }
 
   const model = modelName();
-  const spend = await reserveSpend(admin, userId, "text", model, validation.maxOutputTokens);
+  const providerBody = textProviderBody(model, validation, image);
+  let inputTokens = null;
+  if (await spendGateMayApply(admin)) {
+    if (await spendLimitReached(admin, userId)) {
+      console.error("ai_spend_denied=already_reached");
+      await releaseAll();
+      return spendDenied(headers);
+    }
+    inputTokens = await countProviderInputTokens(model, providerBody, providerKey);
+    if (inputTokens == null) {
+      console.error("ai_input_tokens=unpriced");
+      await releaseAll();
+      return spendDenied(headers);
+    }
+  }
+  const spend = await reserveSpend(admin, userId, "text", model, validation.maxOutputTokens, inputTokens);
   if (!spend.ok) {
     await releaseAll();
     return json(503, { ok: false, error: "The assistant is temporarily unavailable." }, headers);
@@ -837,7 +992,7 @@ Deno.serve(async (request) => {
       await releaseAll();
       return denied;
     }
-    return streamTextResponse(request, headers, admin, userId, validation, providerKey, image, spend.holdId, releaseAll);
+    return streamTextResponse(request, headers, admin, userId, validation, providerKey, spend.holdId, releaseAll, providerBody);
   }
 
   let called = false;
@@ -850,15 +1005,24 @@ Deno.serve(async (request) => {
       return denied;
     }
 
+    if (spend.holdId) {
+      const started = await markSpendHoldStarted(admin, userId, spend.holdId);
+      if (!started) {
+        await releaseSpendHold(admin, spend.holdId);
+        return json(503, { ok: false, error: "The assistant is temporarily unavailable." }, headers);
+      }
+    }
+
     const providerResult = await requestAssistantContent(
       model,
-      validation,
+      providerBody,
       providerKey,
-      image
+      spend.holdId !== ""
     );
     called = providerResult.status > 0;
     httpStatus = providerResult.status;
     usage = providerResult.ok ? geminiTextUsage(providerResult.payload) : null;
+    usageLog("ai_text_usage", usage);
 
     if (!providerResult.ok) {
       const status = providerResult.status === 429 || providerResult.status === 503
@@ -901,7 +1065,7 @@ Deno.serve(async (request) => {
       try {
         await recordProviderUsage(admin, userId, spend.holdId, "text", model, called, httpStatus, usage);
       } catch {
-        await releaseSpendHold(admin, spend.holdId);
+        console.error("ai_usage_record=failed");
       }
     }
     await releaseAll();
