@@ -15,6 +15,7 @@ import {
   spendLimitMicros,
   streamPayloads,
   attachmentReadyForModel,
+  inspectImageBytes,
   validateAssistantRequest,
   validateAttachment,
   validateImageRequest
@@ -122,6 +123,47 @@ function imageMime(bytes: Uint8Array) {
   }
 
   return "";
+}
+
+async function loadInspectedAttachment(admin, userId, path) {
+  const review = await admin.from("ai_file_reviews")
+    .select("scan_status, bucket_id, user_id")
+    .eq("path", path)
+    .eq("user_id", userId)
+    .maybeSingle();
+  const reviewBucket = review.data && review.data.bucket_id;
+  const reviewOwner = review.data && review.data.user_id;
+
+  if (review.error || !review.data || reviewBucket !== "ai-attachments" || String(reviewOwner).toLowerCase() !== String(userId).toLowerCase()) {
+    return { ok: false, error: "This file has not been scanned for malware." };
+  }
+
+  const downloaded = await admin.storage.from("ai-attachments").download(path);
+
+  if (downloaded.error || !downloaded.data) {
+    return { ok: false, error: "The image could not be read." };
+  }
+
+  const bytes = new Uint8Array(await downloaded.data.arrayBuffer());
+  const inspection = inspectImageBytes(bytes, path);
+  const status = inspection.ok && attachmentReadyForModel("clean") ? "clean" : "rejected";
+  const marked = await admin.rpc("record_ai_attachment_inspection", {
+    p_user_id: userId,
+    p_path: path,
+    p_status: status,
+    p_byte_count: bytes.length
+  });
+
+  if (!inspection.ok || marked.error || marked.data !== true || !attachmentReadyForModel(status)) {
+    return {
+      ok: false,
+      error: inspection.ok
+        ? "This file has not been scanned for malware."
+        : "Only JPEG, PNG, and WebP images can be attached."
+    };
+  }
+
+  return { ok: true, image: { mime: inspection.mime, data: bytesToBase64(bytes) } };
 }
 
 function bytesToBase64(bytes: Uint8Array) {
@@ -925,41 +967,14 @@ Deno.serve(async (request) => {
   let image = null;
 
   if (attachment.path) {
-    const review = await admin.from("ai_file_reviews")
-      .select("scan_status, bucket_id")
-      .eq("path", attachment.path)
-      .eq("user_id", userId)
-      .maybeSingle();
-    const reviewStatus = review.data && review.data.scan_status;
-    const reviewBucket = review.data && review.data.bucket_id;
+    const inspected = await loadInspectedAttachment(admin, userId, attachment.path);
 
-    if (review.error || reviewBucket !== "ai-attachments" || !attachmentReadyForModel(reviewStatus)) {
+    if (!inspected.ok) {
       await releaseAll();
-      return json(400, { ok: false, error: "This file has not been scanned for malware." }, headers);
+      return json(400, { ok: false, error: inspected.error }, headers);
     }
 
-    const downloaded = await admin.storage.from("ai-attachments").download(attachment.path);
-
-    if (downloaded.error || !downloaded.data) {
-      await releaseAll();
-      return json(400, { ok: false, error: "The image could not be read." }, headers);
-    }
-
-    const bytes = new Uint8Array(await downloaded.data.arrayBuffer());
-
-    if (bytes.length < 16 || bytes.length > 4 * 1024 * 1024) {
-      await releaseAll();
-      return json(400, { ok: false, error: "The image could not be read." }, headers);
-    }
-
-    const mime = imageMime(bytes);
-
-    if (!mime) {
-      await releaseAll();
-      return json(400, { ok: false, error: "Only JPEG, PNG, and WebP images can be attached." }, headers);
-    }
-
-    image = { mime, data: bytesToBase64(bytes) };
+    image = inspected.image;
   }
 
   const model = modelName();
