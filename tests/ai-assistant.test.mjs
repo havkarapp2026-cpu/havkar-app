@@ -412,6 +412,14 @@ assert.match(holdMigration, /v_input_tokens::numeric \* v_input_rate/);
 assert.doesNotMatch(holdMigration, /INSERT INTO havkar_private\.ai_spend_limits/);
 assert.doesNotMatch(holdMigration, /consume_ai_budget/);
 assert.doesNotMatch(holdMigration, /consume_ai_image_budget/);
+const ceilingMigration = read("supabase/migrations/20261018233000_ai_image_unitemized_ceiling.sql");
+assert.match(ceilingMigration, /unitemized_tokens/);
+assert.match(ceilingMigration, /p_unitemized_tokens integer/);
+assert.match(ceilingMigration, /v_unitemized_cap/);
+assert.match(ceilingMigration, /v_unitemized BETWEEN 0 AND v_published_image/);
+assert.match(ceilingMigration, /p_kind = 'text' AND v_unitemized = 0/);
+assert.doesNotMatch(ceilingMigration, /INSERT INTO havkar_private\.ai_spend_limits/);
+assert.match(source, /p_unitemized_tokens/);
 const textGate = source.slice(source.lastIndexOf("const model = modelName()"));
 assert.equal(textGate.indexOf("spendLimitReached") < textGate.indexOf("countProviderInputTokens"), true);
 assert.equal(textGate.indexOf("countProviderInputTokens") < textGate.indexOf("reserveSpend"), true);
@@ -460,6 +468,7 @@ assert.deepEqual(geminiTextUsage({
   totalTokens: 21,
   cachedTokens: 0,
   toolTokens: 0,
+  unitemizedTokens: 0,
   fullyPriced: true
 });
 assert.equal(geminiTextUsage({
@@ -506,7 +515,7 @@ assert.equal(geminiImageUsage({
     output_tokens_by_modality: [{ modality: "image", tokens: 1120 }]
   }
 }).fullyPriced, true);
-assert.equal(geminiImageUsage({
+const imageGap = geminiImageUsage({
   usage: {
     total_input_tokens: 27,
     total_output_tokens: 1120,
@@ -514,7 +523,38 @@ assert.equal(geminiImageUsage({
     total_tokens: 1477,
     output_tokens_by_modality: [{ modality: "image", tokens: 1120 }]
   }
+});
+assert.equal(imageGap.unitemizedTokens, 330);
+assert.equal(imageGap.fullyPriced, true);
+const liveImageGap = geminiImageUsage({
+  usage: {
+    total_input_tokens: 23,
+    total_output_tokens: 1120,
+    total_thought_tokens: 0,
+    total_cached_tokens: 0,
+    total_tool_use_tokens: 0,
+    total_tokens: 1419,
+    output_tokens_by_modality: [{ modality: "image", tokens: 1120 }]
+  }
+});
+assert.equal(liveImageGap.unitemizedTokens, 276);
+assert.equal(liveImageGap.fullyPriced, true);
+assert.equal(estimateStandardUsdMicros("gemini-3.1-flash-lite-image", liveImageGap), 41886);
+assert.equal(geminiImageUsage({
+  usage: {
+    total_input_tokens: 23,
+    total_output_tokens: 1120,
+    total_thought_tokens: 0,
+    total_tokens: 2264,
+    output_tokens_by_modality: [{ modality: "image", tokens: 1120 }]
+  }
 }).fullyPriced, false);
+assert.equal(estimateStandardUsdMicros("gemini-3.5-flash-lite", {
+  promptTokens: 10,
+  outputTextTokens: 1,
+  imageOutputTokens: 0,
+  unitemizedTokens: 1
+}), null);
 assert.equal(geminiImageUsage({
   usage: {
     total_input_tokens: 10,

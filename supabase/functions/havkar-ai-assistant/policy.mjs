@@ -409,6 +409,8 @@ function geminiTextUsage(payload) {
     totalTokens: total,
     cachedTokens: cached,
     toolTokens: tool,
+    // Text responses have no priced remainder. A gap stays unpriced.
+    unitemizedTokens: 0,
     fullyPriced
   };
 }
@@ -432,9 +434,17 @@ function geminiImageUsage(payload) {
   if (usage.total_output_tokens != null && outputTotal == null) return null;
   const inputMap = modalityMap(usage.input_tokens_by_modality);
   const outputMap = modalityMap(usage.output_tokens_by_modality);
+  const cachedMap = modalityMap(usage.cached_tokens_by_modality);
+  const toolMap = modalityMap(usage.tool_use_tokens_by_modality);
   if ((usage.input_tokens_by_modality != null && !inputMap.counts) || !outputMap.counts) return null;
+  if (usage.cached_tokens_by_modality != null && !cachedMap.counts) return null;
+  if (usage.tool_use_tokens_by_modality != null && !toolMap.counts) return null;
   const components = prompt + textTokens + thoughts + imageTokens;
-  let fullyPriced = cached === 0 && tool === 0 && total != null && total === components;
+  // Interactions total_tokens is prompt + responses + other internal tokens.
+  // Google publishes no field and no price for that remainder. It is not a modality.
+  const unitemizedTokens = total != null && total >= components ? total - components : null;
+  const remainderCovered = unitemizedTokens != null && unitemizedTokens <= IMAGE_1K_OUTPUT_TOKENS;
+  let fullyPriced = cached === 0 && tool === 0 && remainderCovered;
   if (outputTotal != null && outputTotal !== textTokens + imageTokens) fullyPriced = false;
   if (inputMap.counts) {
     let pricedInput = 0;
@@ -450,6 +460,7 @@ function geminiImageUsage(payload) {
       if (tokens > 0 && !IMAGE_OUTPUT_MODALITIES.has(name)) fullyPriced = false;
     }
   }
+  if (modalityTokenSum(cachedMap) > 0 || modalityTokenSum(toolMap) > 0) fullyPriced = false;
   return {
     promptTokens: prompt,
     outputTextTokens: textTokens + thoughts,
@@ -458,19 +469,32 @@ function geminiImageUsage(payload) {
     totalTokens: total,
     cachedTokens: cached,
     toolTokens: tool,
+    unitemizedTokens,
     fullyPriced
   };
+}
+
+function modalityTokenSum(map) {
+  if (!map || !map.counts) return 0;
+  let sum = 0;
+  for (const tokens of map.counts.values()) sum += tokens;
+  return sum;
 }
 
 function estimateStandardUsdMicros(model, usage) {
   const price = STANDARD_PAID_PRICES[model];
   if (!price || !usage) return null;
-  if (usage.imageOutputTokens > 0 && price.outputImageUsdMicrosPerMillion == null) return null;
+  const unitemized = usage.unitemizedTokens == null ? 0 : usage.unitemizedTokens;
+  if (!Number.isInteger(unitemized) || unitemized < 0 || unitemized > IMAGE_1K_OUTPUT_TOKENS) return null;
+  if ((usage.imageOutputTokens > 0 || unitemized > 0) && price.outputImageUsdMicrosPerMillion == null) return null;
   const imageRate = price.outputImageUsdMicrosPerMillion || 0;
+  // A non-zero unitemized count is the official total minus itemized tokens.
+  // It is charged at this model's verified image-output rate, and only up to
+  // the published 1K image-token block. That is a HAVKAR ceiling, not a Google SKU.
   const raw = (
     usage.promptTokens * price.inputUsdMicrosPerMillion
     + usage.outputTextTokens * price.outputTextUsdMicrosPerMillion
-    + usage.imageOutputTokens * imageRate
+    + (usage.imageOutputTokens + unitemized) * imageRate
   ) / 1000000;
   if (!Number.isFinite(raw) || raw < 0) return null;
   return Math.round(raw);

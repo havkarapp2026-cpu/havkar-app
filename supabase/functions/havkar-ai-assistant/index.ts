@@ -281,6 +281,7 @@ function usageLog(prefix, usage) {
     " total=" + String(usage.totalTokens) +
     " cached=" + String(usage.cachedTokens) +
     " tool=" + String(usage.toolTokens) +
+    " unitemized=" + String(usage.unitemizedTokens) +
     " fully_priced=" + String(usage.fullyPriced)
   );
 }
@@ -296,6 +297,8 @@ async function reserveSpend(admin, userId, kind, model, outputCap, inputTokens) 
     p_kind: kind,
     p_model: model,
     p_output_cap_tokens: outputCap,
+    // The image token cap is the published 1K block. The database adds one
+    // more block at the same image-output rate for unitemized internal tokens.
     p_image_cap_tokens: kind === "image" ? IMAGE_1K_OUTPUT_TOKENS : 0,
     p_input_tokens: countedTokens(inputTokens),
     ...overrides
@@ -341,7 +344,8 @@ async function recordProviderUsage(admin, userId, holdId, kind, model, called, h
     p_image_output_tokens: priced ? priced.imageOutputTokens : null,
     p_total_tokens: priced && priced.totalTokens != null ? priced.totalTokens : null,
     p_usage_source: priced ? "provider" : "missing",
-    p_force_unpriced: priced ? priced.fullyPriced !== true : called === true
+    p_force_unpriced: priced ? priced.fullyPriced !== true : called === true,
+    p_unitemized_tokens: priced && Number.isInteger(priced.unitemizedTokens) ? priced.unitemizedTokens : null
   });
 }
 
