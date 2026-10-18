@@ -1,4 +1,14 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  catalogMatch,
+  customerIdFrom,
+  entitlementStatus,
+  expectedPrice,
+  priceIdFrom,
+  storedCancelFlag,
+  storedPeriodEnd,
+  subscriptionIdFrom
+} from "./state.mjs";
 
 const STAGING_ORIGIN = "https://staging.havkar.online";
 const STAGING_SUPABASE_URL = "https://keglioewbkgdabsizvys.supabase.co";
@@ -68,6 +78,18 @@ function planForPrice(priceIdValue, prices) {
   return "";
 }
 
+async function resolvePrice(key, plan, configured) {
+  const expected = expectedPrice(plan);
+  if (!expected) return "";
+  if (configured.startsWith("price_")) {
+    const direct = await stripeGet("prices/" + encodeURIComponent(configured) + "?expand[]=product", key);
+    if (direct.ok && catalogMatch([direct.payload], expected) === configured) return configured;
+  }
+  const listed = await stripeGet("prices?limit=100&expand[]=data.product", key);
+  const data = listed.ok && listed.payload && Array.isArray(listed.payload.data) ? listed.payload.data : [];
+  return catalogMatch(data, expected);
+}
+
 function unavailable(headers) {
   return json(503, {
     ok: false,
@@ -119,9 +141,8 @@ async function checkout(request, headers, admin, body) {
   const key = testStripeKey();
   const prices = priceEnv();
   const plan = body && paidPlan(body.plan);
-  const price = priceId(plan, prices);
   if (!key || !pricesConfigured(prices)) return unavailable(headers);
-  if (!plan || !price) {
+  if (!plan) {
     return json(400, { ok: false, error: "Choose a supported assistant plan." }, headers);
   }
   const user = await signedInUser(admin, request);
@@ -136,6 +157,8 @@ async function checkout(request, headers, admin, body) {
   if (!current.error && current.data && current.data.status === "active" && periodOpen) {
     return json(409, { ok: false, error: "Use Manage billing to change an active plan." }, headers);
   }
+  const price = await resolvePrice(key, plan, priceId(plan, prices));
+  if (!price) return json(502, { ok: false, error: "The assistant is temporarily unavailable." }, headers);
   const day = new Date().toISOString().slice(0, 10);
   const session = await stripeForm("checkout/sessions", key, {
     mode: "subscription",
@@ -226,15 +249,33 @@ async function stripeSignatureValid(payload, header, secret) {
   return signatures.some((signature) => sameHex(signature, expected));
 }
 
-function priceFromObject(object) {
-  const items = object && object.items && Array.isArray(object.items.data) ? object.items.data : [];
-  const first = items[0] && items[0].price && items[0].price.id;
-  if (typeof first === "string") return first;
-  const lines = object && object.lines && Array.isArray(object.lines.data) ? object.lines.data : [];
-  const linePrice = lines[0] && lines[0].price && lines[0].price.id;
-  if (typeof linePrice === "string") return linePrice;
-  const legacy = object && object.plan && object.plan.id;
-  return typeof legacy === "string" ? legacy : "";
+function metadataFrom(object) {
+  let metadata = object && object.metadata ? object.metadata : {};
+  const nested = object && (object.subscription_details || (object.parent && object.parent.subscription_details)) || null;
+  if (nested && nested.metadata && nested.metadata.havkar_product) metadata = nested.metadata;
+  return metadata;
+}
+
+async function loadSubscription(key, object) {
+  const subId = subscriptionIdFrom(object);
+  if (!subId) return null;
+  const retrieved = await stripeGet("subscriptions/" + encodeURIComponent(subId), key);
+  return retrieved.ok ? retrieved.payload : null;
+}
+
+async function planFromStripe(key, source, prices, metadataPlan) {
+  const id = priceIdFrom(source);
+  const byId = planForPrice(id, prices);
+  if (byId) return byId;
+  if (id.startsWith("price_")) {
+    const direct = await stripeGet("prices/" + encodeURIComponent(id) + "?expand[]=product", key);
+    if (direct.ok) {
+      for (const plan of ["plus", "pro", "business"]) {
+        if (catalogMatch([direct.payload], expectedPrice(plan)) === id) return plan;
+      }
+    }
+  }
+  return paidPlan(metadataPlan);
 }
 
 async function webhook(request, headers, admin) {
@@ -251,14 +292,16 @@ async function webhook(request, headers, admin) {
     return json(400, { ok: false, error: "Invalid webhook signature." }, headers);
   }
   const object = event && event.data && event.data.object ? event.data.object : {};
-  let metadata = object.metadata || {};
-  const nested = object.subscription_details || (object.parent && object.parent.subscription_details) || null;
-  if (nested && nested.metadata && nested.metadata.havkar_product) metadata = nested.metadata;
-  if (metadata.havkar_product !== "ai_subscription" && event.type === "invoice.payment_failed" && typeof object.subscription === "string" && object.subscription.startsWith("sub_")) {
-    const retrieved = await stripeGet("subscriptions/" + encodeURIComponent(object.subscription), key);
-    metadata = retrieved.ok && retrieved.payload && retrieved.payload.metadata ? retrieved.payload.metadata : {};
-    if (metadata.havkar_product !== "ai_subscription") {
-      return json(200, { ok: true, ignored: true }, headers);
+  let metadata = metadataFrom(object);
+  const subId = subscriptionIdFrom(object);
+  if (metadata.havkar_product !== "ai_subscription" && subId) {
+    const linked = await admin.from("ai_subscriptions").select("user_id").eq("stripe_subscription_id", subId).maybeSingle();
+    if (!linked.error && linked.data && linked.data.user_id) {
+      metadata = { havkar_product: "ai_subscription", user_id: linked.data.user_id };
+    } else {
+      const retrieved = await stripeGet("subscriptions/" + encodeURIComponent(subId), key);
+      const remote = retrieved.ok && retrieved.payload && retrieved.payload.metadata ? retrieved.payload.metadata : {};
+      if (remote.havkar_product === "ai_subscription") metadata = remote;
     }
   }
   if (!event || metadata.havkar_product !== "ai_subscription") {
@@ -267,32 +310,28 @@ async function webhook(request, headers, admin) {
   const seen = await admin.rpc("record_ai_billing_event", { p_event_id: event.id });
   if (seen.error) return json(503, { ok: false, error: "The assistant is temporarily unavailable." }, headers);
   if (seen.data !== true) return json(200, { ok: true, duplicate: true }, headers);
+  const subscription = await loadSubscription(key, object);
+  const source = subscription || object;
   const userId = metadata.user_id || object.client_reference_id || "";
   const prices = priceEnv();
-  const plan = planForPrice(priceFromObject(object), prices) || paidPlan(metadata.plan);
+  const plan = await planFromStripe(key, source, prices, metadata.plan) || await planFromStripe(key, object, prices, metadata.plan);
   if (!/^[0-9a-f-]{36}$/i.test(userId) || !plan) {
     return json(200, { ok: true, ignored: true }, headers);
   }
-  const known = ["active", "past_due", "canceled", "unpaid", "incomplete"];
-  let status = "incomplete";
-  if (event.type === "checkout.session.completed" && object.status === "complete") status = "active";
-  if (event.type === "invoice.paid") status = "active";
-  if (event.type === "customer.subscription.deleted") status = "canceled";
-  if (event.type === "invoice.payment_failed") status = "past_due";
-  if (event.type === "customer.subscription.updated") {
-    status = known.includes(object.status) ? object.status : "incomplete";
-  }
-  const periodEnd = Number.isInteger(object.current_period_end)
-    ? new Date(object.current_period_end * 1000).toISOString()
-    : null;
+  const stripeStatus = subscription && subscription.status ? subscription.status : object.status;
+  const status = entitlementStatus(event.type, stripeStatus, object.status === "complete");
+  const existing = await admin.from("ai_subscriptions").select("current_period_end, stripe_customer_id, stripe_subscription_id, cancel_at_period_end").eq("user_id", userId).maybeSingle();
+  const periodEnd = storedPeriodEnd(subscription, object, existing.data && existing.data.current_period_end);
+  const customerId = customerIdFrom(subscription) || customerIdFrom(object) || (existing.data && existing.data.stripe_customer_id) || null;
+  const subscriptionId = subscriptionIdFrom(subscription) || subId || (existing.data && existing.data.stripe_subscription_id) || null;
   const saved = await admin.from("ai_subscriptions").upsert({
     user_id: userId,
     plan_code: status === "active" ? plan : "free",
     status,
-    stripe_customer_id: typeof object.customer === "string" ? object.customer : null,
-    stripe_subscription_id: typeof object.subscription === "string" ? object.subscription : (typeof object.id === "string" && object.id.startsWith("sub_") ? object.id : null),
+    stripe_customer_id: customerId,
+    stripe_subscription_id: subscriptionId,
     current_period_end: periodEnd,
-    cancel_at_period_end: object.cancel_at_period_end === true,
+    cancel_at_period_end: storedCancelFlag(subscription, object, existing.data && existing.data.cancel_at_period_end),
     updated_at: new Date().toISOString()
   });
   if (saved.error) return json(503, { ok: false, error: "The assistant is temporarily unavailable." }, headers);

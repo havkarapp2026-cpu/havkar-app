@@ -26,6 +26,16 @@ import {
   validateImageRequest
 } from "../supabase/functions/havkar-ai-assistant/policy.mjs";
 import { assistantBlocks, ssePayloads as clientSsePayloads } from "../havkar-ai-render.mjs";
+import {
+  catalogMatch,
+  entitlementStatus,
+  expectedPrice,
+  periodEndSeconds,
+  priceIdFrom,
+  storedCancelFlag,
+  storedPeriodEnd,
+  subscriptionIdFrom
+} from "../supabase/functions/havkar-ai-billing/state.mjs";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -270,8 +280,52 @@ assert.deepEqual(subscriptionChange({
   metadataPlan: "pro"
 }), { status: "active", plan_code: "pro", cancel_at_period_end: false });
 assert.match(billing, /STRIPE_AI_BUSINESS_PRICE_ID/);
-assert.match(billing, /invoice\.paid/);
+const billingState = read("supabase/functions/havkar-ai-billing/state.mjs");
+assert.match(billingState, /invoice\.paid/);
+assert.match(billingState, /customer\.subscription\.deleted/);
 assert.match(billing, /Use Manage billing to change an active plan\./);
+assert.match(billing, /catalogMatch/);
+assert.match(billing, /storedPeriodEnd/);
+assert.match(billing, /storedCancelFlag/);
+assert.doesNotMatch(billing, /stripe_code/);
+const catalogPro = {
+  id: "price_catalog_pro",
+  active: true,
+  livemode: false,
+  currency: "eur",
+  unit_amount: 1499,
+  type: "recurring",
+  recurring: { interval: "month", interval_count: 1 },
+  product: { active: true, name: "HAVKAR AI PRO" }
+};
+assert.equal(catalogMatch([catalogPro], expectedPrice("pro")), "price_catalog_pro");
+assert.equal(catalogMatch([catalogPro, { ...catalogPro, id: "price_catalog_pro_copy" }], expectedPrice("pro")), "");
+assert.equal(catalogMatch([{ ...catalogPro, livemode: true }], expectedPrice("pro")), "");
+assert.equal(catalogMatch([{ ...catalogPro, unit_amount: 1500 }], expectedPrice("pro")), "");
+assert.equal(catalogMatch([{ ...catalogPro, currency: "usd" }], expectedPrice("pro")), "");
+assert.equal(catalogMatch([{ ...catalogPro, product: { active: true, name: "HAVKAR AI PLUS" } }], expectedPrice("pro")), "");
+assert.equal(periodEndSeconds({ current_period_end: 111, items: { data: [{ current_period_end: 222 }] } }), 111);
+assert.equal(periodEndSeconds({ items: { data: [{ current_period_end: 1794996314 }] } }), 1794996314);
+assert.equal(periodEndSeconds({ id: "sub_missing_period" }), null);
+assert.equal(storedPeriodEnd(null, { id: "cs_test_session" }, "2026-11-18T00:00:00.000Z"), "2026-11-18T00:00:00.000Z");
+assert.equal(storedPeriodEnd({ items: { data: [{ current_period_end: 1794996314 }] } }, {}, null), "2026-11-18T10:05:14.000Z");
+assert.equal(storedCancelFlag(
+  { status: "active", cancel_at_period_end: false, cancel_at: 1794996314 },
+  {},
+  false
+), true);
+assert.equal(storedCancelFlag(
+  { status: "active", cancel_at_period_end: false, cancel_at: null },
+  {},
+  true
+), false);
+assert.equal(storedCancelFlag(null, { id: "cs_test_session" }, true), true);
+assert.equal(storedCancelFlag({ status: "canceled", cancel_at_period_end: false, cancel_at: 1794996314 }, {}, true), false);
+assert.equal(entitlementStatus("customer.subscription.updated", "active", false), "active");
+assert.equal(entitlementStatus("customer.subscription.deleted", "canceled", false), "canceled");
+assert.equal(entitlementStatus("invoice.paid", "active", false), "active");
+assert.equal(subscriptionIdFrom({ id: "in_123", parent: { subscription_details: { subscription: "sub_from_invoice" } } }), "sub_from_invoice");
+assert.equal(priceIdFrom({ lines: { data: [{ pricing: { price_details: { price: "price_from_invoice" } } }] } }), "price_from_invoice");
 const quotaMigration = read("supabase/migrations/20261018034000_ai_business_plan_quotas.sql");
 assert.match(quotaMigration, /'business'/);
 assert.match(quotaMigration, /u:m:/);
