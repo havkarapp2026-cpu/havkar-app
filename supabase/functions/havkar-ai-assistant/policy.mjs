@@ -345,6 +345,31 @@ function textOutputTokens(prompt, candidates, thoughts, total) {
   return combined;
 }
 
+function optionalTokenCount(usage, key) {
+  if (usage[key] == null) return 0;
+  return boundedTokenCount(usage[key]);
+}
+
+function modalityMap(list) {
+  if (list == null) return { present: false, counts: null };
+  if (!Array.isArray(list)) return { present: true, counts: null };
+  const counts = new Map();
+  for (const item of list) {
+    if (!item || typeof item !== "object") return { present: true, counts: null };
+    const name = String(item.modality || "").toLowerCase();
+    const tokens = boundedTokenCount(item.tokens ?? item.tokenCount);
+    if (!name || tokens == null) return { present: true, counts: null };
+    counts.set(name, (counts.get(name) || 0) + tokens);
+  }
+  return { present: true, counts };
+}
+
+// Verified standard input rate for gemini-3.1-flash-lite-image covers text,
+// image, and video only. Audio, document, cached, and tool-use tokens have
+// no rate in that table.
+const IMAGE_INPUT_MODALITIES = new Set(["text", "image", "video"]);
+const IMAGE_OUTPUT_MODALITIES = new Set(["text", "image"]);
+
 function geminiTextUsage(payload) {
   const usage = payload && payload.usageMetadata;
   if (!usage || typeof usage !== "object" || Array.isArray(usage)) return null;
@@ -354,14 +379,37 @@ function geminiTextUsage(payload) {
   const thoughts = usage.thoughtsTokenCount == null ? null : boundedTokenCount(usage.thoughtsTokenCount);
   const total = usage.totalTokenCount == null ? null : boundedTokenCount(usage.totalTokenCount);
   if ((usage.candidatesTokenCount != null && candidates == null) || (usage.thoughtsTokenCount != null && thoughts == null)) return null;
+  if (usage.totalTokenCount != null && total == null) return null;
+  const cached = optionalTokenCount(usage, "cachedContentTokenCount");
+  const tool = optionalTokenCount(usage, "toolUsePromptTokenCount");
+  if (cached == null || tool == null) return null;
   const output = textOutputTokens(prompt, candidates, thoughts, total);
   if (output == null) return null;
+  const promptDetails = modalityMap(usage.promptTokensDetails);
+  const candidateDetails = modalityMap(usage.candidatesTokensDetails);
+  if ((usage.promptTokensDetails != null && !promptDetails.counts) || (usage.candidatesTokensDetails != null && !candidateDetails.counts)) {
+    return null;
+  }
+  let fullyPriced = cached === 0 && tool === 0 && total != null && total === prompt + output;
+  if (promptDetails.counts) {
+    for (const [name, tokens] of promptDetails.counts) {
+      if (tokens > 0 && name !== "text") fullyPriced = false;
+    }
+  }
+  if (candidateDetails.counts) {
+    for (const [name, tokens] of candidateDetails.counts) {
+      if (tokens > 0 && name !== "text") fullyPriced = false;
+    }
+  }
   return {
     promptTokens: prompt,
     outputTextTokens: output,
     thoughtTokens: thoughts == null ? 0 : thoughts,
     imageOutputTokens: 0,
-    totalTokens: total
+    totalTokens: total,
+    cachedTokens: cached,
+    toolTokens: tool,
+    fullyPriced
   };
 }
 
@@ -376,12 +424,41 @@ function geminiImageUsage(payload) {
   const thoughts = usage.total_thought_tokens == null ? 0 : boundedTokenCount(usage.total_thought_tokens);
   if (thoughts == null) return null;
   const total = usage.total_tokens == null ? null : boundedTokenCount(usage.total_tokens);
+  if (usage.total_tokens != null && total == null) return null;
+  const cached = optionalTokenCount(usage, "total_cached_tokens");
+  const tool = optionalTokenCount(usage, "total_tool_use_tokens");
+  if (cached == null || tool == null) return null;
+  const outputTotal = usage.total_output_tokens == null ? null : boundedTokenCount(usage.total_output_tokens);
+  if (usage.total_output_tokens != null && outputTotal == null) return null;
+  const inputMap = modalityMap(usage.input_tokens_by_modality);
+  const outputMap = modalityMap(usage.output_tokens_by_modality);
+  if ((usage.input_tokens_by_modality != null && !inputMap.counts) || !outputMap.counts) return null;
+  const components = prompt + textTokens + thoughts + imageTokens;
+  let fullyPriced = cached === 0 && tool === 0 && total != null && total === components;
+  if (outputTotal != null && outputTotal !== textTokens + imageTokens) fullyPriced = false;
+  if (inputMap.counts) {
+    let pricedInput = 0;
+    for (const [name, tokens] of inputMap.counts) {
+      if (tokens <= 0) continue;
+      if (!IMAGE_INPUT_MODALITIES.has(name)) fullyPriced = false;
+      else pricedInput += tokens;
+    }
+    if (pricedInput !== prompt) fullyPriced = false;
+  }
+  if (outputMap.counts) {
+    for (const [name, tokens] of outputMap.counts) {
+      if (tokens > 0 && !IMAGE_OUTPUT_MODALITIES.has(name)) fullyPriced = false;
+    }
+  }
   return {
     promptTokens: prompt,
     outputTextTokens: textTokens + thoughts,
     thoughtTokens: thoughts,
     imageOutputTokens: imageTokens,
-    totalTokens: total
+    totalTokens: total,
+    cachedTokens: cached,
+    toolTokens: tool,
+    fullyPriced
   };
 }
 
