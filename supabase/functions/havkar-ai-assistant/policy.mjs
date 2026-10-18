@@ -290,6 +290,203 @@ function attachmentReadyForModel(status) {
   return status === "clean";
 }
 
+const MAX_ATTACHMENT_BYTES = 4 * 1024 * 1024;
+const MAX_IMAGE_DIMENSION = 16384;
+let pngCrcTable = null;
+
+function pngCrc32(bytes, start, length) {
+  if (!pngCrcTable) {
+    pngCrcTable = new Uint32Array(256);
+    for (let index = 0; index < 256; index += 1) {
+      let value = index;
+      for (let bit = 0; bit < 8; bit += 1) {
+        value = (value & 1) ? (0xedb88320 ^ (value >>> 1)) : (value >>> 1);
+      }
+      pngCrcTable[index] = value >>> 0;
+    }
+  }
+  let crc = 0xffffffff;
+  for (let index = 0; index < length; index += 1) {
+    crc = pngCrcTable[(crc ^ bytes[start + index]) & 255] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function readUint32BE(bytes, offset) {
+  return ((bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3]) >>> 0;
+}
+
+function readUint32LE(bytes, offset) {
+  return (bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16) | (bytes[offset + 3] << 24)) >>> 0;
+}
+
+function fourcc(bytes, offset) {
+  return String.fromCharCode(bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]);
+}
+
+function dimensionsAllowed(width, height) {
+  return width >= 1 && height >= 1 && width <= MAX_IMAGE_DIMENSION && height <= MAX_IMAGE_DIMENSION;
+}
+
+function inspectJpeg(bytes) {
+  if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return false;
+  let offset = 2;
+  let sawFrame = false;
+  while (offset + 1 < bytes.length) {
+    if (bytes[offset] !== 0xff) return false;
+    while (offset < bytes.length && bytes[offset] === 0xff) offset += 1;
+    if (offset >= bytes.length) return false;
+    const marker = bytes[offset];
+    offset += 1;
+    if (marker === 0xd9) return sawFrame && offset === bytes.length;
+    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) continue;
+    if (offset + 1 >= bytes.length) return false;
+    const length = (bytes[offset] << 8) | bytes[offset + 1];
+    if (length < 2 || offset + length > bytes.length) return false;
+    const isFrame = marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc;
+    if (isFrame) {
+      if (length < 8) return false;
+      const height = (bytes[offset + 3] << 8) | bytes[offset + 4];
+      const width = (bytes[offset + 5] << 8) | bytes[offset + 6];
+      const components = bytes[offset + 7];
+      if (!dimensionsAllowed(width, height) || components < 1 || components > 4) return false;
+      sawFrame = true;
+    }
+    if (marker === 0xda) {
+      offset += length;
+      while (offset < bytes.length) {
+        if (bytes[offset] !== 0xff) {
+          offset += 1;
+          continue;
+        }
+        let markerAt = offset;
+        while (markerAt < bytes.length && bytes[markerAt] === 0xff) markerAt += 1;
+        if (markerAt >= bytes.length) return false;
+        const next = bytes[markerAt];
+        if (next === 0x00 || (next >= 0xd0 && next <= 0xd7)) {
+          offset = markerAt + 1;
+          continue;
+        }
+        offset = markerAt - 1;
+        break;
+      }
+      continue;
+    }
+    offset += length;
+  }
+  return false;
+}
+
+function inspectPng(bytes) {
+  const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+  if (bytes.length < signature.length + 12) return false;
+  for (let index = 0; index < signature.length; index += 1) {
+    if (bytes[index] !== signature[index]) return false;
+  }
+  let offset = signature.length;
+  let first = true;
+  let sawImageData = false;
+  let sawPalette = false;
+  let colorType = -1;
+  while (offset + 12 <= bytes.length) {
+    const length = readUint32BE(bytes, offset);
+    const type = fourcc(bytes, offset + 4);
+    if (!/^[A-Za-z]{4}$/.test(type)) return false;
+    if (length > bytes.length || offset + 12 + length > bytes.length) return false;
+    const expected = pngCrc32(bytes, offset + 4, 4 + length);
+    const actual = readUint32BE(bytes, offset + 8 + length);
+    if (expected !== actual) return false;
+    if (first) {
+      if (type !== "IHDR" || length !== 13) return false;
+      const width = readUint32BE(bytes, offset + 8);
+      const height = readUint32BE(bytes, offset + 12);
+      const depth = bytes[offset + 16];
+      colorType = bytes[offset + 17];
+      const compression = bytes[offset + 18];
+      const filter = bytes[offset + 19];
+      const interlace = bytes[offset + 20];
+      const depths = { 0: [1, 2, 4, 8, 16], 2: [8, 16], 3: [1, 2, 4, 8], 4: [8, 16], 6: [8, 16] };
+      if (!dimensionsAllowed(width, height) || !depths[colorType] || !depths[colorType].includes(depth)) return false;
+      if (compression !== 0 || filter !== 0 || (interlace !== 0 && interlace !== 1)) return false;
+      first = false;
+    } else if (type === "IHDR") {
+      return false;
+    }
+    if (type === "PLTE") {
+      if (sawImageData || length % 3 !== 0 || length < 3 || length > 768) return false;
+      sawPalette = true;
+    }
+    if (type === "IDAT") {
+      if (colorType === 3 && !sawPalette) return false;
+      sawImageData = true;
+    }
+    offset += 12 + length;
+    if (type === "IEND") {
+      return length === 0 && sawImageData && offset === bytes.length;
+    }
+  }
+  return false;
+}
+
+function webpDimensions(type, bytes, offset, size) {
+  if (type === "VP8X") {
+    if (size !== 10) return null;
+    const width = 1 + (bytes[offset + 4] | (bytes[offset + 5] << 8) | (bytes[offset + 6] << 16));
+    const height = 1 + (bytes[offset + 7] | (bytes[offset + 8] << 8) | (bytes[offset + 9] << 16));
+    return dimensionsAllowed(width, height) ? { width, height } : null;
+  }
+  if (type === "VP8 ") {
+    if (size < 10 || (bytes[offset] & 1) !== 0) return null;
+    if (bytes[offset + 3] !== 0x9d || bytes[offset + 4] !== 0x01 || bytes[offset + 5] !== 0x2a) return null;
+    const width = (bytes[offset + 6] | (bytes[offset + 7] << 8)) & 0x3fff;
+    const height = (bytes[offset + 8] | (bytes[offset + 9] << 8)) & 0x3fff;
+    return dimensionsAllowed(width, height) ? { width, height } : null;
+  }
+  if (type === "VP8L") {
+    if (size < 5 || bytes[offset] !== 0x2f) return null;
+    const bits = readUint32LE(bytes, offset + 1);
+    const width = (bits & 0x3fff) + 1;
+    const height = ((bits >>> 14) & 0x3fff) + 1;
+    const version = (bits >>> 29) & 0x7;
+    return version === 0 && dimensionsAllowed(width, height) ? { width, height } : null;
+  }
+  return null;
+}
+
+function inspectWebp(bytes) {
+  if (bytes.length < 20 || fourcc(bytes, 0) !== "RIFF" || fourcc(bytes, 8) !== "WEBP") return false;
+  if (readUint32LE(bytes, 4) !== bytes.length - 8) return false;
+  const allowed = new Set(["VP8 ", "VP8L", "VP8X", "ALPH", "ANIM", "ANMF", "ICCP", "EXIF", "XMP "]);
+  let offset = 12;
+  let first = true;
+  while (offset + 8 <= bytes.length) {
+    const type = fourcc(bytes, offset);
+    if (!allowed.has(type)) return false;
+    const size = readUint32LE(bytes, offset + 4);
+    const data = offset + 8;
+    if (size > bytes.length || data + size > bytes.length) return false;
+    if (first) {
+      if (!webpDimensions(type, bytes, data, size)) return false;
+      first = false;
+    }
+    offset = data + size + (size % 2 === 1 && data + size < bytes.length ? 1 : 0);
+  }
+  return !first && offset === bytes.length;
+}
+
+function inspectImageBytes(bytes, path) {
+  const source = bytes instanceof Uint8Array ? bytes : null;
+  if (!source || source.length < 16 || source.length > MAX_ATTACHMENT_BYTES) {
+    return { ok: false, mime: "" };
+  }
+  const extension = String(path || "").toLowerCase().match(/\.([a-z0-9]+)$/);
+  const kind = extension ? extension[1] : "";
+  if ((kind === "jpg" || kind === "jpeg") && inspectJpeg(source)) return { ok: true, mime: "image/jpeg" };
+  if (kind === "png" && inspectPng(source)) return { ok: true, mime: "image/png" };
+  if (kind === "webp" && inspectWebp(source)) return { ok: true, mime: "image/webp" };
+  return { ok: false, mime: "" };
+}
+
 const IMAGE_ASPECTS = Object.freeze([
   "1:1", "3:2", "2:3", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"
 ]);
@@ -391,9 +588,11 @@ function geminiTextUsage(payload) {
     return null;
   }
   let fullyPriced = cached === 0 && tool === 0 && total != null && total === prompt + output;
+  // The stored input rate is the single text/image/video input rate. Audio and
+  // document tokens are not covered by that rate.
   if (promptDetails.counts) {
     for (const [name, tokens] of promptDetails.counts) {
-      if (tokens > 0 && name !== "text") fullyPriced = false;
+      if (tokens > 0 && name !== "text" && name !== "image" && name !== "video") fullyPriced = false;
     }
   }
   if (candidateDetails.counts) {
@@ -409,6 +608,8 @@ function geminiTextUsage(payload) {
     totalTokens: total,
     cachedTokens: cached,
     toolTokens: tool,
+    // Text responses have no priced remainder. A gap stays unpriced.
+    unitemizedTokens: 0,
     fullyPriced
   };
 }
@@ -432,24 +633,39 @@ function geminiImageUsage(payload) {
   if (usage.total_output_tokens != null && outputTotal == null) return null;
   const inputMap = modalityMap(usage.input_tokens_by_modality);
   const outputMap = modalityMap(usage.output_tokens_by_modality);
+  const cachedMap = modalityMap(usage.cached_tokens_by_modality);
+  const toolMap = modalityMap(usage.tool_use_tokens_by_modality);
   if ((usage.input_tokens_by_modality != null && !inputMap.counts) || !outputMap.counts) return null;
+  if (usage.cached_tokens_by_modality != null && !cachedMap.counts) return null;
+  if (usage.tool_use_tokens_by_modality != null && !toolMap.counts) return null;
   const components = prompt + textTokens + thoughts + imageTokens;
-  let fullyPriced = cached === 0 && tool === 0 && total != null && total === components;
-  if (outputTotal != null && outputTotal !== textTokens + imageTokens) fullyPriced = false;
+  // Interactions total_tokens is prompt + responses + other internal tokens.
+  // Google publishes no field and no price for that remainder. It is not a modality.
+  const unitemizedTokens = total != null && total >= components ? total - components : null;
+  const remainderCovered = unitemizedTokens != null && unitemizedTokens <= IMAGE_1K_OUTPUT_TOKENS;
+  let fullyPriced = cached === 0 && tool === 0 && remainderCovered;
+  // Tokens omitted from modality metadata can sit inside total_output_tokens,
+  // inside total_tokens, or in both. Their sum is the remainder above.
+  if (outputTotal != null && total != null) {
+    const outputGap = outputTotal - (textTokens + imageTokens);
+    const outsideOutput = total - (prompt + outputTotal + thoughts);
+    if (outputGap < 0 || outsideOutput < 0 || outputGap + outsideOutput !== unitemizedTokens) fullyPriced = false;
+  }
   if (inputMap.counts) {
-    let pricedInput = 0;
+    let allInput = 0;
     for (const [name, tokens] of inputMap.counts) {
       if (tokens <= 0) continue;
+      allInput += tokens;
       if (!IMAGE_INPUT_MODALITIES.has(name)) fullyPriced = false;
-      else pricedInput += tokens;
     }
-    if (pricedInput !== prompt) fullyPriced = false;
+    if (allInput > prompt) fullyPriced = false;
   }
   if (outputMap.counts) {
     for (const [name, tokens] of outputMap.counts) {
       if (tokens > 0 && !IMAGE_OUTPUT_MODALITIES.has(name)) fullyPriced = false;
     }
   }
+  if (modalityTokenSum(cachedMap) > 0 || modalityTokenSum(toolMap) > 0) fullyPriced = false;
   return {
     promptTokens: prompt,
     outputTextTokens: textTokens + thoughts,
@@ -458,19 +674,32 @@ function geminiImageUsage(payload) {
     totalTokens: total,
     cachedTokens: cached,
     toolTokens: tool,
+    unitemizedTokens,
     fullyPriced
   };
+}
+
+function modalityTokenSum(map) {
+  if (!map || !map.counts) return 0;
+  let sum = 0;
+  for (const tokens of map.counts.values()) sum += tokens;
+  return sum;
 }
 
 function estimateStandardUsdMicros(model, usage) {
   const price = STANDARD_PAID_PRICES[model];
   if (!price || !usage) return null;
-  if (usage.imageOutputTokens > 0 && price.outputImageUsdMicrosPerMillion == null) return null;
+  const unitemized = usage.unitemizedTokens == null ? 0 : usage.unitemizedTokens;
+  if (!Number.isInteger(unitemized) || unitemized < 0 || unitemized > IMAGE_1K_OUTPUT_TOKENS) return null;
+  if ((usage.imageOutputTokens > 0 || unitemized > 0) && price.outputImageUsdMicrosPerMillion == null) return null;
   const imageRate = price.outputImageUsdMicrosPerMillion || 0;
+  // A non-zero unitemized count is the official total minus itemized tokens.
+  // It is charged at this model's verified image-output rate, and only up to
+  // the published 1K image-token block. That is a HAVKAR ceiling, not a Google SKU.
   const raw = (
     usage.promptTokens * price.inputUsdMicrosPerMillion
     + usage.outputTextTokens * price.outputTextUsdMicrosPerMillion
-    + usage.imageOutputTokens * imageRate
+    + (usage.imageOutputTokens + unitemized) * imageRate
   ) / 1000000;
   if (!Number.isFinite(raw) || raw < 0) return null;
   return Math.round(raw);
@@ -733,6 +962,7 @@ export {
   subscriptionCheckoutStatus,
   validateAssistantRequest,
   attachmentReadyForModel,
+  inspectImageBytes,
   validateAttachment,
   validateImageRequest
 };

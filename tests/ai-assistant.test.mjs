@@ -27,6 +27,7 @@ import {
   streamPayloads,
   subscriptionCheckoutStatus,
   attachmentReadyForModel,
+  inspectImageBytes,
   validateAssistantRequest,
   validateAttachment,
   validateImageRequest
@@ -349,12 +350,93 @@ assert.match(historyMigration, /scan_status = 'unscanned'/);
 assert.doesNotMatch(historyMigration, /scan_status = 'safe'/);
 assert.equal(attachmentReadyForModel("unscanned"), false);
 assert.equal(attachmentReadyForModel("safe"), false);
+assert.equal(attachmentReadyForModel("rejected"), false);
 assert.equal(attachmentReadyForModel(""), false);
 assert.equal(attachmentReadyForModel("clean"), true);
-const scanGate = source.indexOf("attachmentReadyForModel");
-const attachmentDownload = source.indexOf('from("ai-attachments").download');
-assert.ok(scanGate > 0 && attachmentDownload > scanGate);
+const inspectionFn = source.slice(source.indexOf("async function loadInspectedAttachment"), source.indexOf("function bytesToBase64"));
+assert.ok(inspectionFn.indexOf('from("ai-attachments").download') < inspectionFn.indexOf("inspectImageBytes"));
+assert.ok(inspectionFn.indexOf("inspectImageBytes") < inspectionFn.indexOf("record_ai_attachment_inspection"));
+assert.ok(inspectionFn.indexOf("record_ai_attachment_inspection") < inspectionFn.lastIndexOf("attachmentReadyForModel("));
+assert.ok(inspectionFn.lastIndexOf("attachmentReadyForModel(") < inspectionFn.indexOf("bytesToBase64"));
+assert.match(inspectionFn, /"clean" : "rejected"/);
 assert.match(source, /This file has not been scanned for malware\./);
+assert.equal(inspectImageBytes(Uint8Array.from([0x3c, 0x73, 0x76, 0x67]), owner + "/11111111-1111-4111-8111-111111111111.svg").ok, false);
+assert.equal(inspectImageBytes(new Uint8Array(15), owner + "/11111111-1111-4111-8111-111111111111.jpg").ok, false);
+function fixtureCrc(bytes) {
+  let table = fixtureCrc.table;
+  if (!table) {
+    table = new Uint32Array(256);
+    for (let index = 0; index < 256; index += 1) {
+      let value = index;
+      for (let bit = 0; bit < 8; bit += 1) value = (value & 1) ? (0xedb88320 ^ (value >>> 1)) : (value >>> 1);
+      table[index] = value >>> 0;
+    }
+    fixtureCrc.table = table;
+  }
+  let crc = 0xffffffff;
+  for (const byte of bytes) crc = table[(crc ^ byte) & 255] ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
+}
+function pngChunk(type, data) {
+  const body = Buffer.concat([Buffer.from(type), Buffer.from(data)]);
+  const crc = fixtureCrc(body);
+  const out = Buffer.alloc(12 + data.length);
+  out.writeUInt32BE(data.length, 0);
+  body.copy(out, 4);
+  out.writeUInt32BE(crc, 8 + data.length);
+  return out;
+}
+const samplePng = Buffer.concat([
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  pngChunk("IHDR", Buffer.from([0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 0, 0, 0])),
+  pngChunk("IDAT", Buffer.from([0x78, 0x01, 0x00])),
+  pngChunk("IEND", Buffer.alloc(0))
+]);
+const jpegSegment = (marker, data) => Buffer.concat([
+  Buffer.from([0xff, marker, (data.length + 2) >> 8, (data.length + 2) & 255]),
+  Buffer.from(data)
+]);
+const sampleJpeg = Buffer.concat([
+  Buffer.from([0xff, 0xd8]),
+  jpegSegment(0xe0, [0x4a, 0x46, 0x49, 0x46, 0x00, 1, 1, 0, 0, 1, 0, 1, 0, 0]),
+  jpegSegment(0xc0, [8, 0, 1, 0, 1, 1, 1, 0x11, 0]),
+  jpegSegment(0xda, [1, 1, 0, 0, 63, 0]),
+  Buffer.from([0x00, 0xff, 0xd9])
+]);
+const vp8l = Buffer.from([0x2f, 0x00, 0x00, 0x00, 0x00]);
+const webpBody = Buffer.concat([
+  Buffer.from("VP8L"),
+  Buffer.from([vp8l.length, 0, 0, 0]),
+  vp8l,
+  Buffer.from([0])
+]);
+const sampleWebp = Buffer.concat([
+  Buffer.from("RIFF"),
+  Buffer.from([webpBody.length + 4, 0, 0, 0]),
+  Buffer.from("WEBP"),
+  webpBody
+]);
+const imagePath = owner + "/11111111-1111-4111-8111-111111111111";
+assert.equal(inspectImageBytes(sampleJpeg, imagePath + ".jpg").mime, "image/jpeg");
+assert.equal(inspectImageBytes(sampleJpeg, imagePath + ".png").ok, false);
+assert.equal(inspectImageBytes(Buffer.concat([sampleJpeg, Buffer.from("<script>")]), imagePath + ".jpg").ok, false);
+assert.equal(inspectImageBytes(samplePng, imagePath + ".png").mime, "image/png");
+assert.equal(inspectImageBytes(Buffer.concat([samplePng, Buffer.from("trailing")]), imagePath + ".png").ok, false);
+assert.equal(inspectImageBytes(sampleWebp, imagePath + ".webp").mime, "image/webp");
+assert.equal(inspectImageBytes(Buffer.from("<svg xmlns='http://www.w3.org/2000/svg'></svg>"), imagePath + ".svg").ok, false);
+assert.equal(inspectImageBytes(Buffer.from("<html><script>alert(1)</script></html>"), imagePath + ".jpg").ok, false);
+const aiPage = read("havkar-ai.html");
+const beginSend = aiPage.slice(aiPage.indexOf("function beginSend"), aiPage.indexOf("function addAssistantActions"));
+assert.doesNotMatch(beginSend, /has not been scanned/);
+assert.match(aiPage, /scan_status: "unscanned"/);
+const inspectionMigration = read("supabase/migrations/20261018234000_ai_attachment_inspection.sql");
+assert.match(inspectionMigration, /scan_status IN \('unscanned', 'clean', 'rejected'\)/);
+assert.match(inspectionMigration, /record_ai_attachment_inspection/);
+assert.match(inspectionMigration, /REVOKE UPDATE ON TABLE public\.ai_file_reviews FROM PUBLIC, anon, authenticated, service_role/);
+assert.match(inspectionMigration, /TO service_role/);
+assert.doesNotMatch(inspectionMigration, /GRANT UPDATE/);
+assert.doesNotMatch(inspectionMigration, /CREATE POLICY/);
+assert.doesNotMatch(inspectionMigration, /ai_generated_files/);
 const privilegeMigration = read("supabase/migrations/20261018120000_ai_privilege_hardening.sql");
 assert.match(privilegeMigration, /REVOKE TRUNCATE, TRIGGER, REFERENCES ON TABLE/);
 assert.match(privilegeMigration, /public\.ai_conversations/);
@@ -412,6 +494,14 @@ assert.match(holdMigration, /v_input_tokens::numeric \* v_input_rate/);
 assert.doesNotMatch(holdMigration, /INSERT INTO havkar_private\.ai_spend_limits/);
 assert.doesNotMatch(holdMigration, /consume_ai_budget/);
 assert.doesNotMatch(holdMigration, /consume_ai_image_budget/);
+const ceilingMigration = read("supabase/migrations/20261018233000_ai_image_unitemized_ceiling.sql");
+assert.match(ceilingMigration, /unitemized_tokens/);
+assert.match(ceilingMigration, /p_unitemized_tokens integer/);
+assert.match(ceilingMigration, /v_unitemized_cap/);
+assert.match(ceilingMigration, /v_unitemized BETWEEN 0 AND v_published_image/);
+assert.match(ceilingMigration, /p_kind = 'text' AND v_unitemized = 0/);
+assert.doesNotMatch(ceilingMigration, /INSERT INTO havkar_private\.ai_spend_limits/);
+assert.match(source, /p_unitemized_tokens/);
 const textGate = source.slice(source.lastIndexOf("const model = modelName()"));
 assert.equal(textGate.indexOf("spendLimitReached") < textGate.indexOf("countProviderInputTokens"), true);
 assert.equal(textGate.indexOf("countProviderInputTokens") < textGate.indexOf("reserveSpend"), true);
@@ -460,6 +550,7 @@ assert.deepEqual(geminiTextUsage({
   totalTokens: 21,
   cachedTokens: 0,
   toolTokens: 0,
+  unitemizedTokens: 0,
   fullyPriced: true
 });
 assert.equal(geminiTextUsage({
@@ -474,6 +565,14 @@ assert.equal(geminiTextUsage({
     candidatesTokenCount: 7,
     totalTokenCount: 18,
     promptTokensDetails: [{ modality: "IMAGE", tokenCount: 4 }]
+  }
+}).fullyPriced, true);
+assert.equal(geminiTextUsage({
+  usageMetadata: {
+    promptTokenCount: 11,
+    candidatesTokenCount: 7,
+    totalTokenCount: 18,
+    promptTokensDetails: [{ modality: "AUDIO", tokenCount: 4 }]
   }
 }).fullyPriced, false);
 assert.deepEqual(geminiImageUsage({
@@ -506,7 +605,7 @@ assert.equal(geminiImageUsage({
     output_tokens_by_modality: [{ modality: "image", tokens: 1120 }]
   }
 }).fullyPriced, true);
-assert.equal(geminiImageUsage({
+const imageGap = geminiImageUsage({
   usage: {
     total_input_tokens: 27,
     total_output_tokens: 1120,
@@ -514,7 +613,52 @@ assert.equal(geminiImageUsage({
     total_tokens: 1477,
     output_tokens_by_modality: [{ modality: "image", tokens: 1120 }]
   }
+});
+assert.equal(imageGap.unitemizedTokens, 330);
+assert.equal(imageGap.fullyPriced, true);
+const liveImageGap = geminiImageUsage({
+  usage: {
+    total_input_tokens: 23,
+    total_output_tokens: 1120,
+    total_thought_tokens: 0,
+    total_cached_tokens: 0,
+    total_tool_use_tokens: 0,
+    total_tokens: 1419,
+    output_tokens_by_modality: [{ modality: "image", tokens: 1120 }]
+  }
+});
+assert.equal(liveImageGap.unitemizedTokens, 276);
+assert.equal(liveImageGap.fullyPriced, true);
+assert.equal(estimateStandardUsdMicros("gemini-3.1-flash-lite-image", liveImageGap), 41886);
+const omittedOutput = geminiImageUsage({
+  usage: {
+    total_input_tokens: 22,
+    total_output_tokens: 1420,
+    total_thought_tokens: 0,
+    total_cached_tokens: 0,
+    total_tool_use_tokens: 0,
+    total_tokens: 1442,
+    output_tokens_by_modality: [{ modality: "image", tokens: 1120 }]
+  }
+});
+assert.equal(omittedOutput.unitemizedTokens, 300);
+assert.equal(omittedOutput.fullyPriced, true);
+assert.equal(estimateStandardUsdMicros("gemini-3.1-flash-lite-image", omittedOutput), 42606);
+assert.equal(geminiImageUsage({
+  usage: {
+    total_input_tokens: 23,
+    total_output_tokens: 1120,
+    total_thought_tokens: 0,
+    total_tokens: 2264,
+    output_tokens_by_modality: [{ modality: "image", tokens: 1120 }]
+  }
 }).fullyPriced, false);
+assert.equal(estimateStandardUsdMicros("gemini-3.5-flash-lite", {
+  promptTokens: 10,
+  outputTextTokens: 1,
+  imageOutputTokens: 0,
+  unitemizedTokens: 1
+}), null);
 assert.equal(geminiImageUsage({
   usage: {
     total_input_tokens: 10,
