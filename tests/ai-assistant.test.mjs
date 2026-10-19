@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -632,6 +633,20 @@ assert.match(source, /model: "models\/" \+ model/);
 assert.match(source, /singleAttempt \? 1 : MAX_PROVIDER_ATTEMPTS/);
 assert.match(source, /p_input_tokens/);
 assert.match(source, /HAVKAR_AI_SPEND_GLOBAL_MONTH_USD_MICROS/);
+assert.match(source, /globalSpendProtectionReady/);
+assert.match(source, /ai_spend_denied=unconfigured/);
+assert.equal(source.indexOf("globalSpendProtectionReady") < source.indexOf("countProviderInputTokens"), true);
+const spendLimitMigration = read("supabase/migrations/20261019201000_ai_global_spend_limit_required.sql");
+assert.match(spendLimitMigration, /reason := 'unconfigured'/);
+assert.match(spendLimitMigration, /1000000/);
+assert.match(spendLimitMigration, /10000000/);
+assert.match(spendLimitMigration, /WHERE NOT EXISTS/);
+assert.match(spendLimitMigration, /pg_advisory_xact_lock\(87421019\)/);
+assert.doesNotMatch(spendLimitMigration, /DO UPDATE/);
+assert.match(
+  read("scripts/havkar-ai-production-migration.sh"),
+  new RegExp(createHash("sha256").update(spendLimitMigration).digest("hex"))
+);
 assert.equal(IMAGE_1K_OUTPUT_TOKENS, 1120);
 assert.equal(IMAGE_LIST_PRICE_USD_MICROS, 33600);
 assert.equal(estimateStandardUsdMicros("gemini-3.1-flash-lite-image", {
