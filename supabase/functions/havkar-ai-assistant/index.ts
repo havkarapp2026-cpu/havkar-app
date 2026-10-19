@@ -16,6 +16,8 @@ import {
   streamPayloads,
   attachmentReadyForModel,
   inspectImageBytes,
+  logoEntitlementDecision,
+  logoGenerationRequested,
   validateAssistantRequest,
   validateAttachment,
   validateImageRequest
@@ -576,6 +578,25 @@ async function readJson(request) {
   }
 }
 
+async function verifiedLogoEntitlement(admin, userId, requestBody) {
+  if (!logoGenerationRequested(requestBody)) {
+    return { required: false, allowed: true, status: 200 };
+  }
+
+  try {
+    const result = await admin
+      .from("ai_subscriptions")
+      .select("plan_code, status, current_period_end")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!result || result.error) return logoEntitlementDecision({ ok: false }, requestBody);
+    return logoEntitlementDecision({ ok: true, row: result.data }, requestBody, Date.now());
+  } catch {
+    return logoEntitlementDecision({ ok: false }, requestBody);
+  }
+}
+
 async function textBudgetGate(admin, userId, characters, headers) {
   const budget = await admin.rpc("consume_ai_budget", {
     p_user_id: userId,
@@ -920,6 +941,16 @@ Deno.serve(async (request) => {
 
   if (userResult.error || !userResult.data?.user?.id) {
     return json(401, { ok: false, error: "Sign in before using the assistant." }, headers);
+  }
+
+  if (imageMode) {
+    const entitlement = await verifiedLogoEntitlement(admin, userResult.data.user.id, parsed.body);
+    if (!entitlement.allowed) {
+      const error = entitlement.status === 503
+        ? "The assistant is temporarily unavailable."
+        : "Logo generation requires an active paid HAVKAR AI plan.";
+      return json(entitlement.status, { ok: false, error }, headers);
+    }
   }
 
   if (!reserveProviderSlot()) {

@@ -890,6 +890,37 @@ function paidPlan(value) {
   return value === "plus" || value === "pro" || value === "business" ? value : "";
 }
 
+function normalizeLogoTask(value) {
+  return String(value || "").replace(/[\u200b-\u200d\ufeff]/g, "").trim().toLowerCase();
+}
+
+function logoWording(value) {
+  const text = String(value || "");
+  if (/(?:^|[^\p{L}\p{N}])logos?(?:type|mark)?(?=$|[^\p{L}\p{N}])/iu.test(text)) return true;
+  return /لوگو|لوغو|لوگۆ|ロゴ|로고|लोगो|лого/u.test(text);
+}
+
+function logoGenerationRequested(input) {
+  const body = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+  const task = normalizeLogoTask(body.task);
+  const logo = body.logo && typeof body.logo === "object" && !Array.isArray(body.logo) ? body.logo : {};
+  const identity = [logo.name, logo.industry, logo.colors, logo.style].some((value) => cleanField(value, 80));
+  if (identity) return true;
+  if (task && task !== "image") return true;
+  return logoWording([body.prompt, logo.description].join("\n"));
+}
+
+function logoEntitlementDecision(verification, requestBody, now) {
+  const required = logoGenerationRequested(requestBody);
+  if (!required) return { required: false, allowed: true, status: 200 };
+  if (!verification || verification.ok !== true) {
+    return { required: true, allowed: false, status: 503 };
+  }
+  const plan = activePlan(verification.row, now);
+  if (plan === "free") return { required: true, allowed: false, status: 403 };
+  return { required: true, allowed: true, status: 200 };
+}
+
 function planForPrice(priceId, prices) {
   const id = String(priceId || "");
   const list = prices && typeof prices === "object" ? prices : {};
@@ -941,6 +972,8 @@ export {
   LIMITS,
   TASK_LIMITS,
   activePlan,
+  logoEntitlementDecision,
+  logoGenerationRequested,
   paidPlan,
   planForPrice,
   subscriptionChange,

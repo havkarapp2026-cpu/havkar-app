@@ -28,6 +28,8 @@ import {
   subscriptionCheckoutStatus,
   attachmentReadyForModel,
   inspectImageBytes,
+  logoEntitlementDecision,
+  logoGenerationRequested,
   validateAssistantRequest,
   validateAttachment,
   validateImageRequest
@@ -341,6 +343,81 @@ assert.match(quotaMigration, /u:m:/);
 assert.match(quotaMigration, /bucket_key NOT LIKE 'u:m:%'/);
 assert.equal(validateImageRequest({ language: "fa", task: "image", aspect: "16:9", prompt: "یک تصویر" }).ok, true);
 assert.equal(validateImageRequest({ language: "fa", task: "image", aspect: "2:1", prompt: "نه" }).ok, false);
+const now = Date.parse("2026-10-19T19:30:00.000Z");
+const future = "2026-12-19T00:00:00.000Z";
+const past = "2026-09-19T00:00:00.000Z";
+const paidRow = (plan) => ({ plan_code: plan, status: "active", current_period_end: future });
+const ordinaryImage = { mode: "image", task: "image", prompt: "یک تصویر از دریا", logo: { description: "یک تصویر از دریا" } };
+const explicitLogo = { mode: "image", task: "logo", prompt: "Acme", logo: { name: "Acme" } };
+assert.equal(logoGenerationRequested(ordinaryImage), false);
+assert.equal(logoEntitlementDecision({ ok: true, row: null }, ordinaryImage, now).allowed, true);
+assert.equal(validateAssistantRequest({ language: "fa", messages: [{ role: "user", content: "سلام" }] }).ok, true);
+for (const request of [
+  explicitLogo,
+  { mode: "image", task: " Logo ", prompt: "mark" },
+  { mode: "image", task: "brand", prompt: "a picture" },
+  { mode: "image", task: "image", prompt: "Create a professional logo", logo: { name: "", description: "Create a professional logo" } },
+  { mode: "image", task: "image", prompt: "یک لوگو برای فروشگاه", logo: {} },
+  { mode: "image", task: "image", prompt: "sea", logo: { name: "", industry: "cafe", colors: "", style: "" } },
+  { mode: "image", task: "image", plan_code: "plus", status: "active", subscription: paidRow("business"), prompt: "logo" }
+]) {
+  assert.equal(logoGenerationRequested(request), true, JSON.stringify(request.task || request.prompt));
+  assert.equal(logoEntitlementDecision({ ok: true, row: null }, request, now).status, 403);
+  assert.equal(logoEntitlementDecision({ ok: false }, request, now).status, 503);
+  assert.equal(logoEntitlementDecision({ ok: false }, request, now).allowed, false);
+}
+for (const plan of ["plus", "pro", "business"]) {
+  const decision = logoEntitlementDecision({ ok: true, row: paidRow(plan) }, explicitLogo, now);
+  assert.equal(decision.allowed, true);
+  assert.equal(decision.status, 200);
+}
+assert.equal(logoEntitlementDecision({
+  ok: true,
+  row: { plan_code: "plus", status: "active", current_period_end: past }
+}, explicitLogo, now).status, 403);
+assert.equal(logoEntitlementDecision({
+  ok: true,
+  row: { plan_code: "pro", status: "past_due", current_period_end: future }
+}, explicitLogo, now).status, 403);
+assert.equal(logoEntitlementDecision({
+  ok: true,
+  row: { plan_code: "business", status: "canceled", current_period_end: future }
+}, explicitLogo, now).status, 403);
+const forged = {
+  mode: "image",
+  task: "image",
+  plan_code: "plus",
+  status: "active",
+  current_period_end: future,
+  subscription: paidRow("plus"),
+  prompt: "Create a logo",
+  logo: { name: "Forged" }
+};
+assert.equal(logoEntitlementDecision({ ok: true, row: null }, forged, now).allowed, false);
+assert.equal(logoEntitlementDecision({ ok: true, row: { plan_code: "free", status: "free" } }, forged, now).status, 403);
+assert.equal(logoEntitlementDecision(null, explicitLogo, now).status, 503);
+assert.equal(logoEntitlementDecision(undefined, explicitLogo, now).allowed, false);
+assert.equal(logoGenerationRequested({ mode: "image", task: "logo\u200b", prompt: "x" }), true);
+assert.equal(logoGenerationRequested({ mode: "image", task: "image", prompt: "logical layout of a harbor" }), false);
+assert.equal(logoGenerationRequested({ language: "fa", messages: [{ role: "user", content: "یک متن معمولی" }] }), false);
+assert.match(quotaMigration, /v_limit integer := 2;/);
+assert.match(quotaMigration, /v_day_limit integer := 1;/);
+assert.match(quotaMigration, /v_plan = 'plus' THEN\n      v_limit := 20;\n      v_day_limit := 3;/);
+assert.match(quotaMigration, /v_plan = 'pro' THEN\n      v_limit := 40;\n      v_day_limit := 6;/);
+assert.match(quotaMigration, /v_plan = 'business' THEN\n      v_limit := 80;\n      v_day_limit := 10;/);
+const logoFn = source.slice(source.indexOf("async function verifiedLogoEntitlement"), source.indexOf("async function textBudgetGate"));
+assert.match(logoFn, /logoGenerationRequested\(requestBody\)/);
+assert.match(logoFn, /\.from\("ai_subscriptions"\)/);
+assert.match(logoFn, /\.eq\("user_id", userId\)/);
+assert.match(logoFn, /select\("plan_code, status, current_period_end"\)/);
+assert.doesNotMatch(logoFn, /requestBody\.plan_code|parsed\.body\.plan|body\.subscription/);
+const handler = source.slice(source.indexOf("Deno.serve"));
+const logoCall = handler.slice(handler.indexOf("const imageMode"), handler.indexOf("if (!reserveProviderSlot())"));
+assert.match(logoCall, /verifiedLogoEntitlement\(admin, userResult\.data\.user\.id, parsed\.body\)/);
+assert.equal(logoCall.includes("requestGeneratedImage"), false);
+assert.equal(handler.indexOf("verifiedLogoEntitlement") < handler.indexOf("if (!reserveProviderSlot())"), true);
+assert.equal(handler.indexOf("if (!reserveProviderSlot())") < handler.indexOf("imageStreamResponse("), true);
+assert.equal(handler.includes("requestGeneratedImage"), false);
 assert.equal(sanitizeSvg("<svg><script>alert(1)</script><circle/></svg>").includes("<script"), false);
 assert.equal(assistantBlocks("Hello <script>alert(1)</script>").some((block) => block.text.includes("<script>")), true);
 assert.equal(imageBytesFromProvider({ output_image: { data: "abc123456789012345", mime_type: "image/png" } }).mime, "image/png");
