@@ -16,6 +16,11 @@ import {
   streamPayloads,
   attachmentReadyForModel,
   inspectImageBytes,
+  imageGenerationRequested,
+  logoEntitlementDecision,
+  presentAssistantText,
+  textArtworkRequested,
+  visibleArtworkText,
   validateAssistantRequest,
   validateAttachment,
   validateImageRequest
@@ -576,6 +581,25 @@ async function readJson(request) {
   }
 }
 
+async function verifiedLogoEntitlement(admin, userId, requestBody) {
+  if (!imageGenerationRequested(requestBody)) {
+    return { required: false, allowed: true, status: 200 };
+  }
+
+  try {
+    const result = await admin
+      .from("ai_subscriptions")
+      .select("plan_code, status, current_period_end")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!result || result.error) return logoEntitlementDecision({ ok: false }, requestBody);
+    return logoEntitlementDecision({ ok: true, row: result.data }, requestBody, Date.now());
+  } catch {
+    return logoEntitlementDecision({ ok: false }, requestBody);
+  }
+}
+
 async function textBudgetGate(admin, userId, characters, headers) {
   const budget = await admin.rpc("consume_ai_budget", {
     p_user_id: userId,
@@ -811,6 +835,7 @@ async function streamTextResponse(request, headers, admin, userId, validation, p
       const decoder = new TextDecoder();
       let buffer = "";
       let full = "";
+      let sentSafe = "";
       let eventCount = 0;
       const limit = validation.task === "menu" ? 12000 : MAX_ASSISTANT_MESSAGE_CHARACTERS;
       const applyPayloads = (items) => {
@@ -829,9 +854,11 @@ async function streamTextResponse(request, headers, admin, userId, validation, p
           if (!text) continue;
           const incoming = full && text.startsWith(full) ? text.slice(full.length) : text;
           if (!incoming) continue;
-          const next = (full + incoming).slice(0, limit);
-          const delta = next.slice(full.length);
-          full = next;
+          full = (full + incoming).slice(0, limit);
+          const safe = visibleArtworkText(full, false);
+          if (!safe.startsWith(sentSafe)) continue;
+          const delta = safe.slice(sentSafe.length);
+          sentSafe = safe;
           if (delta) send({ type: "delta", text: delta });
         }
         return true;
@@ -853,12 +880,18 @@ async function streamTextResponse(request, headers, admin, userId, validation, p
         const streamType = String(providerResponse.headers.get("content-type") || "none").split(";")[0].trim().slice(0, 80);
         console.error("stream_events=" + String(eventCount) + " stream_chars=0 stream_type=" + streamType);
       }
+      const safeMessage = presentAssistantText(full);
       if (signal.aborted) {
-        send({ type: "interrupted", message: full });
+        send({ type: "interrupted", message: safeMessage });
         return;
       }
       if (!full) send({ type: "error", error: providerFailureMessage(0) });
-      else send({ type: "done", message: full });
+      else {
+        if (safeMessage.startsWith(sentSafe) && safeMessage.length > sentSafe.length) {
+          send({ type: "delta", text: safeMessage.slice(sentSafe.length) });
+        }
+        send({ type: "done", message: safeMessage });
+      }
     } finally {
       await record();
     }
@@ -887,7 +920,7 @@ Deno.serve(async (request) => {
     return json(400, { ok: false, error: parsed.error }, headers);
   }
 
-  const imageMode = Boolean(parsed.body && parsed.body.mode === "image");
+  const imageMode = imageGenerationRequested(parsed.body);
   const validation = imageMode
     ? validateImageRequest(parsed.body)
     : validateAssistantRequest(parsed.body);
@@ -920,6 +953,23 @@ Deno.serve(async (request) => {
 
   if (userResult.error || !userResult.data?.user?.id) {
     return json(401, { ok: false, error: "Sign in before using the assistant." }, headers);
+  }
+
+  if (imageMode) {
+    const entitlement = await verifiedLogoEntitlement(admin, userResult.data.user.id, parsed.body);
+    if (!entitlement.allowed) {
+      const error = entitlement.status === 503
+        ? "The assistant is temporarily unavailable."
+        : "Image generation requires an active paid HAVKAR AI plan.";
+      return json(entitlement.status, { ok: false, error }, headers);
+    }
+  }
+
+  if (textArtworkRequested(parsed.body)) {
+    return json(403, {
+      ok: false,
+      error: "Generated logos, SVG, and image files are available only through paid image generation."
+    }, headers);
   }
 
   if (!reserveProviderSlot()) {
@@ -1064,10 +1114,10 @@ Deno.serve(async (request) => {
       return json(400, { ok: false, error: "This request cannot be answered." }, headers);
     }
 
-    const message = assistantMessage(
+    const message = presentAssistantText(assistantMessage(
       payload,
       validation.task === "menu" ? 12000 : MAX_ASSISTANT_MESSAGE_CHARACTERS
-    );
+    ));
 
     if (!message) {
       logProviderFailure(providerResult.status, payload);

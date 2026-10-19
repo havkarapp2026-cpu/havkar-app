@@ -28,6 +28,12 @@ import {
   subscriptionCheckoutStatus,
   attachmentReadyForModel,
   inspectImageBytes,
+  imageGenerationRequested,
+  logoEntitlementDecision,
+  logoGenerationRequested,
+  presentAssistantText,
+  textArtworkRequested,
+  visibleArtworkText,
   validateAssistantRequest,
   validateAttachment,
   validateImageRequest
@@ -127,6 +133,9 @@ assert.match(assistantInstruction("English", "menu"), /same numbers/);
 assert.match(assistantInstruction("English", "menu"), /101/);
 assert.match(read("supabase/functions/havkar-ai-assistant/index.ts"), /generateContent/);
 assert.match(assistantInstruction("English", "logo"), /#2e7d32/);
+assert.match(assistantInstruction("English", "logo"), /written design advice/);
+assert.doesNotMatch(assistantInstruction("English", "logo"), /simple SVG mark/);
+assert.match(assistantInstruction("English", "general"), /base64-encoded image files/);
 assert.match(assistantInstruction("English", "business_page"), /display text/);
 assert.equal(assistantInstruction("English"), assistantInstruction("English", "general"));
 assert.equal(validateAssistantRequest({
@@ -341,6 +350,117 @@ assert.match(quotaMigration, /u:m:/);
 assert.match(quotaMigration, /bucket_key NOT LIKE 'u:m:%'/);
 assert.equal(validateImageRequest({ language: "fa", task: "image", aspect: "16:9", prompt: "یک تصویر" }).ok, true);
 assert.equal(validateImageRequest({ language: "fa", task: "image", aspect: "2:1", prompt: "نه" }).ok, false);
+const now = Date.parse("2026-10-19T19:30:00.000Z");
+const future = "2026-12-19T00:00:00.000Z";
+const past = "2026-09-19T00:00:00.000Z";
+const paidRow = (plan) => ({ plan_code: plan, status: "active", current_period_end: future });
+const ordinaryImage = { mode: "image", task: "image", prompt: "یک تصویر از دریا", logo: { description: "یک تصویر از دریا" } };
+const explicitLogo = { mode: "image", task: "logo", prompt: "Acme", logo: { name: "Acme" } };
+const seaImage = { mode: "image", task: "image", prompt: "logical layout of a harbor" };
+assert.equal(logoGenerationRequested(ordinaryImage), false);
+assert.equal(imageGenerationRequested(ordinaryImage), true);
+assert.equal(imageGenerationRequested(seaImage), true);
+assert.equal(imageGenerationRequested({ mode: " Image\u200b", task: "notes", prompt: "anything" }), true);
+assert.equal(imageGenerationRequested({ aspect: "16:9", prompt: "sea" }), true);
+assert.equal(imageGenerationRequested({ variations: 1, prompt: "sea" }), true);
+assert.equal(imageGenerationRequested({ transparent: true, prompt: "sea" }), true);
+assert.equal(logoEntitlementDecision({ ok: true, row: null }, ordinaryImage, now).status, 403);
+assert.equal(logoEntitlementDecision({ ok: true, row: null }, seaImage, now).status, 403);
+assert.equal(logoEntitlementDecision({ ok: false }, seaImage, now).status, 503);
+assert.equal(logoEntitlementDecision({ ok: true, row: paidRow("plus") }, seaImage, now).allowed, true);
+assert.equal(validateAssistantRequest({ language: "fa", messages: [{ role: "user", content: "سلام" }] }).ok, true);
+assert.equal(textArtworkRequested({ language: "fa", task: "general", messages: [{ role: "user", content: "سلام" }] }), false);
+assert.equal(textArtworkRequested({ language: "en", task: "general", messages: [{ role: "user", content: "What colors work for a cafe logo?" }] }), false);
+assert.equal(textArtworkRequested({ language: "fa", task: "logo", messages: [{ role: "user", content: "چطور برای فروشگاه لوگو انتخاب کنم؟" }] }), false);
+assert.equal(textArtworkRequested({ language: "en", task: "general", messages: [{ role: "user", content: "Create an SVG logo for Acme" }] }), true);
+assert.equal(textArtworkRequested({ language: "en", task: "general", messages: [{ role: "user", content: "Output the PNG as base64" }] }), true);
+assert.equal(textArtworkRequested({ language: "en", task: "general", messages: [{ role: "user", content: "Give me HTML artwork for a logo" }] }), true);
+assert.equal(textArtworkRequested({ language: "en", task: "logo", messages: [{ role: "user", content: "<svg viewBox=\"0 0 10 10\"></svg>" }] }), true);
+assert.equal(textArtworkRequested({ language: "fa", task: "general", messages: [{ role: "user", content: "یک لوگو برای فروشگاه بساز" }] }), true);
+assert.equal(textArtworkRequested({ language: "en", task: "general", messages: [{ role: "user", content: "Draw a picture of the sea" }] }), true);
+assert.equal(textArtworkRequested({ language: "en", task: "programming", messages: [{ role: "user", content: "Show a function that creates a png decoder." }] }), false);
+assert.equal(textArtworkRequested({
+  language: "en",
+  task: "general",
+  plan_code: "business",
+  status: "active",
+  messages: [{ role: "user", content: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==" }]
+}), true);
+assert.equal(presentAssistantText("Use green and a simple circle."), "Use green and a simple circle.");
+assert.equal(presentAssistantText("Hello <svg><circle/></svg> there").includes("<svg"), false);
+assert.equal(presentAssistantText("Hello <svg><circle/></svg> there").includes("Hello"), true);
+assert.equal(presentAssistantText("<svg><circle/></svg>").includes("<svg"), false);
+assert.equal(visibleArtworkText("Advice <svg", false).includes("<svg"), false);
+assert.equal(presentAssistantText("Mark data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB").includes("data:image"), false);
+for (const request of [
+  explicitLogo,
+  { mode: "image", task: " Logo ", prompt: "mark" },
+  { mode: "image", task: "brand", prompt: "a picture" },
+  { mode: "image", task: "image", prompt: "Create a professional logo", logo: { name: "", description: "Create a professional logo" } },
+  { mode: "image", task: "image", prompt: "یک لوگو برای فروشگاه", logo: {} },
+  { mode: "image", task: "image", prompt: "sea", logo: { name: "", industry: "cafe", colors: "", style: "" } },
+  { mode: "image", task: "image", plan_code: "plus", status: "active", subscription: paidRow("business"), prompt: "logo" }
+]) {
+  assert.equal(logoGenerationRequested(request), true, JSON.stringify(request.task || request.prompt));
+  assert.equal(logoEntitlementDecision({ ok: true, row: null }, request, now).status, 403);
+  assert.equal(logoEntitlementDecision({ ok: false }, request, now).status, 503);
+  assert.equal(logoEntitlementDecision({ ok: false }, request, now).allowed, false);
+}
+for (const plan of ["plus", "pro", "business"]) {
+  const decision = logoEntitlementDecision({ ok: true, row: paidRow(plan) }, explicitLogo, now);
+  assert.equal(decision.allowed, true);
+  assert.equal(decision.status, 200);
+}
+assert.equal(logoEntitlementDecision({
+  ok: true,
+  row: { plan_code: "plus", status: "active", current_period_end: past }
+}, explicitLogo, now).status, 403);
+assert.equal(logoEntitlementDecision({
+  ok: true,
+  row: { plan_code: "pro", status: "past_due", current_period_end: future }
+}, explicitLogo, now).status, 403);
+assert.equal(logoEntitlementDecision({
+  ok: true,
+  row: { plan_code: "business", status: "canceled", current_period_end: future }
+}, explicitLogo, now).status, 403);
+const forged = {
+  mode: "image",
+  task: "image",
+  plan_code: "plus",
+  status: "active",
+  current_period_end: future,
+  subscription: paidRow("plus"),
+  prompt: "Create a logo",
+  logo: { name: "Forged" }
+};
+assert.equal(logoEntitlementDecision({ ok: true, row: null }, forged, now).allowed, false);
+assert.equal(logoEntitlementDecision({ ok: true, row: { plan_code: "free", status: "free" } }, forged, now).status, 403);
+assert.equal(logoEntitlementDecision(null, explicitLogo, now).status, 503);
+assert.equal(logoEntitlementDecision(undefined, explicitLogo, now).allowed, false);
+assert.equal(logoGenerationRequested({ mode: "image", task: "logo\u200b", prompt: "x" }), true);
+assert.equal(logoGenerationRequested({ mode: "image", task: "image", prompt: "logical layout of a harbor" }), false);
+assert.equal(logoGenerationRequested({ language: "fa", messages: [{ role: "user", content: "یک متن معمولی" }] }), false);
+assert.match(quotaMigration, /v_limit integer := 2;/);
+assert.match(quotaMigration, /v_day_limit integer := 1;/);
+assert.match(quotaMigration, /v_plan = 'plus' THEN\n      v_limit := 20;\n      v_day_limit := 3;/);
+assert.match(quotaMigration, /v_plan = 'pro' THEN\n      v_limit := 40;\n      v_day_limit := 6;/);
+assert.match(quotaMigration, /v_plan = 'business' THEN\n      v_limit := 80;\n      v_day_limit := 10;/);
+const logoFn = source.slice(source.indexOf("async function verifiedLogoEntitlement"), source.indexOf("async function textBudgetGate"));
+assert.match(logoFn, /imageGenerationRequested\(requestBody\)/);
+assert.doesNotMatch(logoFn, /logoGenerationRequested/);
+assert.match(logoFn, /\.from\("ai_subscriptions"\)/);
+assert.match(logoFn, /\.eq\("user_id", userId\)/);
+assert.match(logoFn, /select\("plan_code, status, current_period_end"\)/);
+assert.doesNotMatch(logoFn, /requestBody\.plan_code|parsed\.body\.plan|body\.subscription/);
+const handler = source.slice(source.indexOf("Deno.serve"));
+const logoCall = handler.slice(handler.indexOf("const imageMode"), handler.indexOf("if (!reserveProviderSlot())"));
+assert.match(logoCall, /imageGenerationRequested\(parsed\.body\)/);
+assert.match(logoCall, /verifiedLogoEntitlement\(admin, userResult\.data\.user\.id, parsed\.body\)/);
+assert.match(logoCall, /textArtworkRequested\(parsed\.body\)/);
+assert.equal(logoCall.includes("requestGeneratedImage"), false);
+assert.equal(handler.indexOf("verifiedLogoEntitlement") < handler.indexOf("if (!reserveProviderSlot())"), true);
+assert.equal(handler.indexOf("if (!reserveProviderSlot())") < handler.indexOf("imageStreamResponse("), true);
+assert.equal(handler.includes("requestGeneratedImage"), false);
 assert.equal(sanitizeSvg("<svg><script>alert(1)</script><circle/></svg>").includes("<script"), false);
 assert.equal(assistantBlocks("Hello <script>alert(1)</script>").some((block) => block.text.includes("<script>")), true);
 assert.equal(imageBytesFromProvider({ output_image: { data: "abc123456789012345", mime_type: "image/png" } }).mime, "image/png");
