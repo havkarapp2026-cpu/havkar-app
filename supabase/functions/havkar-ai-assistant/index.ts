@@ -236,15 +236,13 @@ async function releaseProviderLease(admin, leaseId) {
   await admin.rpc("release_ai_provider_lease", { p_lease_id: leaseId });
 }
 
-function spendGateConfigured() {
-  return Object.values(spendOverrideArgs()).some((value) => value != null);
-}
-
-async function spendGateMayApply(admin) {
-  if (spendGateConfigured()) return true;
+async function globalSpendProtectionReady(admin) {
+  const overrides = spendOverrideArgs();
+  if (overrides.p_global_day_micros != null && overrides.p_global_month_micros != null) {
+    return true;
+  }
   const result = await admin.rpc("ai_spend_limit_active");
-  if (result.error) return true;
-  return result.data === true;
+  return !result.error && result.data === true;
 }
 
 async function spendLimitReached(admin, userId) {
@@ -677,24 +675,27 @@ function imageStreamResponse(request, headers, admin, userId, validation, provid
         return;
       }
       let inputTokens = null;
-      if (await spendGateMayApply(admin)) {
-        if (await spendLimitReached(admin, userId)) {
-          console.error("ai_spend_denied=already_reached");
-          send({ type: "error", error: "The assistant spending limit has been reached. Please wait and try again." });
-          return;
-        }
-        inputTokens = await countProviderInputTokens(
-          validation.model,
-          JSON.stringify({
-            contents: [{ role: "user", parts: [{ text: imagePrompt(validation) }] }]
-          }),
-          providerKey
-        );
-        if (inputTokens == null) {
-          console.error("ai_input_tokens=unpriced");
-          send({ type: "error", error: "The assistant spending limit has been reached. Please wait and try again." });
-          return;
-        }
+      if (!(await globalSpendProtectionReady(admin))) {
+        console.error("ai_spend_denied=unconfigured");
+        send({ type: "error", error: "The assistant spending limit has been reached. Please wait and try again." });
+        return;
+      }
+      if (await spendLimitReached(admin, userId)) {
+        console.error("ai_spend_denied=already_reached");
+        send({ type: "error", error: "The assistant spending limit has been reached. Please wait and try again." });
+        return;
+      }
+      inputTokens = await countProviderInputTokens(
+        validation.model,
+        JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: imagePrompt(validation) }] }]
+        }),
+        providerKey
+      );
+      if (inputTokens == null) {
+        console.error("ai_input_tokens=unpriced");
+        send({ type: "error", error: "The assistant spending limit has been reached. Please wait and try again." });
+        return;
       }
       const spend = await reserveSpend(admin, userId, "image", validation.model, 0, inputTokens);
       if (!spend.ok) {
@@ -1030,18 +1031,21 @@ Deno.serve(async (request) => {
   const model = modelName();
   const providerBody = textProviderBody(model, validation, image);
   let inputTokens = null;
-  if (await spendGateMayApply(admin)) {
-    if (await spendLimitReached(admin, userId)) {
-      console.error("ai_spend_denied=already_reached");
-      await releaseAll();
-      return spendDenied(headers);
-    }
-    inputTokens = await countProviderInputTokens(model, providerBody, providerKey);
-    if (inputTokens == null) {
-      console.error("ai_input_tokens=unpriced");
-      await releaseAll();
-      return spendDenied(headers);
-    }
+  if (!(await globalSpendProtectionReady(admin))) {
+    console.error("ai_spend_denied=unconfigured");
+    await releaseAll();
+    return spendDenied(headers);
+  }
+  if (await spendLimitReached(admin, userId)) {
+    console.error("ai_spend_denied=already_reached");
+    await releaseAll();
+    return spendDenied(headers);
+  }
+  inputTokens = await countProviderInputTokens(model, providerBody, providerKey);
+  if (inputTokens == null) {
+    console.error("ai_input_tokens=unpriced");
+    await releaseAll();
+    return spendDenied(headers);
   }
   const spend = await reserveSpend(admin, userId, "text", model, validation.maxOutputTokens, inputTokens);
   if (!spend.ok) {

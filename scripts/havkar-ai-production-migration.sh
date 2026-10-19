@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Controlled HAVKAR AI production migration.
-# Applies the 9 approved SQL files and the 10th privilege revoke.
+# Applies the 9 approved SQL files, the 10th privilege revoke,
+# and the 11th global spend-limit requirement.
 # Each step runs in its own transaction and records migration history
 # in that same transaction. The first error stops the script.
 #
@@ -38,6 +39,7 @@ STEPS=(
   "20261018233000|ai_image_unitemized_ceiling|supabase/migrations/20261018233000_ai_image_unitemized_ceiling.sql|a5d131a832551695341da1d34eaba5ce0023c9ccc065a7a72e229bb13a9bbb35"
   "20261018234000|ai_attachment_inspection|supabase/migrations/20261018234000_ai_attachment_inspection.sql|849bdfc932591ac6c23421d2e51e4a66d43986c7d9c1c78e33da6f18247968b6"
   "20261019190000|ai_client_privilege_revoke|supabase/migrations/20261019190000_ai_client_privilege_revoke.sql|175cfe8906a8165e391d601001b6f15deef634185a2014249b68aaac2f51e06a"
+  "20261019201000|ai_global_spend_limit_required|supabase/migrations/20261019201000_ai_global_spend_limit_required.sql|254ebd3acaaaf5204b7d296b71506f970bf16f72f8fd7bacbde770e6b62563e4"
 )
 
 die() {
@@ -106,7 +108,7 @@ check_hashes() {
       die "history delimiter found in $file"
     fi
   done
-  echo "HASHES_OK 10"
+  echo "HASHES_OK 11"
 }
 
 check_backup() {
@@ -152,7 +154,8 @@ SELECT 'pending|' || count(*)
 FROM supabase_migrations.schema_migrations
 WHERE version IN (
   '20261017160000','20261017223000','20261018034000','20261018114000','20261018120000',
-  '20261018180000','20261018220000','20261018233000','20261018234000','20261019190000'
+  '20261018180000','20261018220000','20261018233000','20261018234000','20261019190000',
+  '20261019201000'
 );
 ROLLBACK;
 SQL
@@ -205,7 +208,8 @@ SELECT 'recorded|' || count(*)
 FROM supabase_migrations.schema_migrations
 WHERE version IN (
   '20261017160000','20261017223000','20261018034000','20261018114000','20261018120000',
-  '20261018180000','20261018220000','20261018233000','20261018234000','20261019190000'
+  '20261018180000','20261018220000','20261018233000','20261018234000','20261019190000',
+  '20261019201000'
 ) AND statements IS NOT NULL AND name IS NOT NULL;
 SELECT 'users|' || count(*) FROM auth.users;
 SELECT 'profiles|' || count(*) FROM public.profiles;
@@ -273,13 +277,23 @@ ORDER BY id;
 SELECT 'plan|' || pg_get_constraintdef(oid)
 FROM pg_constraint
 WHERE conname = 'ai_subscriptions_plan';
+SELECT 'spend_day|' || limit_usd_micros::text
+FROM havkar_private.ai_spend_limits
+WHERE scope = 'global' AND period = 'day' AND enabled = TRUE
+  AND user_id IS NULL AND plan_code IS NULL;
+SELECT 'spend_month|' || limit_usd_micros::text
+FROM havkar_private.ai_spend_limits
+WHERE scope = 'global' AND period = 'month' AND enabled = TRUE
+  AND user_id IS NULL AND plan_code IS NULL;
 ROLLBACK;
 SQL
 )"
   printf '%s\n' "$result"
-  grep -qx 'migrations|35' <<<"$result" || die "history count is not 35"
-  grep -qx 'latest|20261019190000|ai_client_privilege_revoke' <<<"$result" || die "latest history row mismatch"
-  grep -qx 'recorded|10' <<<"$result" || die "ten history rows were not recorded"
+  grep -qx 'migrations|36' <<<"$result" || die "history count is not 36"
+  grep -qx 'latest|20261019201000|ai_global_spend_limit_required' <<<"$result" || die "latest history row mismatch"
+  grep -qx 'recorded|11' <<<"$result" || die "eleven history rows were not recorded"
+  grep -qx 'spend_day|1000000' <<<"$result" || die "global daily spend limit is not 1000000 micros"
+  grep -qx 'spend_month|10000000' <<<"$result" || die "global monthly spend limit is not 10000000 micros"
   grep -qx 'users|3' <<<"$result" || die "user count changed"
   grep -qx 'profiles|3' <<<"$result" || die "profile count changed"
   grep -qx 'ads|8' <<<"$result" || die "ad count changed"
@@ -331,7 +345,7 @@ SQL
   printf '%s\n' "$left"
   grep -qx 'probe_table|true' <<<"$left" || die "failed probe left a table"
   grep -qx 'probe_history|0' <<<"$left" || die "failed probe left history"
-  grep -qx 'migrations|35' <<<"$left" || die "failed probe changed history count"
+  grep -qx 'migrations|36' <<<"$left" || die "failed probe changed history count"
   echo "ROLLBACK_OK"
 }
 
