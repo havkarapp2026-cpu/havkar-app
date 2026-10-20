@@ -62,16 +62,14 @@ function createMemoryStore() {
         .filter((row) => row.event_id === eventId && row.payment_status === "paid" && row.ticket_status === "valid")
         .reduce((sum, row) => sum + Number(row.quantity || 0), 0);
     },
-    async findOpenPayment(userId, eventId, nowIso) {
-      return (
-        payments.find(
-          (row) =>
-            row.user_id === userId &&
-            row.event_id === eventId &&
-            ["pending", "prepared", "submitted"].includes(row.status) &&
-            row.expires_at > nowIso
-        ) || null
+    async findOpenPayment(userId, eventId) {
+      const row = payments.find(
+        (item) =>
+          item.user_id === userId &&
+          item.event_id === eventId &&
+          ["pending", "prepared", "submitted"].includes(item.status)
       );
+      return row ? { ...row } : null;
     },
     async insertTicket(row) {
       const saved = { ...row, id: ticketSeq++ };
@@ -96,7 +94,11 @@ function createMemoryStore() {
             ["pending", "prepared", "submitted"].includes(item.status)
         )
       ) {
-        throw new Error("open payment");
+        const error = new Error(
+          'duplicate key value violates unique constraint "stellar_ticket_payments_one_open_event"'
+        );
+        error.code = "23505";
+        throw error;
       }
       const saved = { id: crypto.randomUUID(), created_at: new Date().toISOString(), ...row };
       payments.push(saved);
@@ -124,9 +126,10 @@ function createMemoryStore() {
     },
     async markExpired(id, userId) {
       const row = payments.find((item) => item.id === id && item.user_id === userId);
-      if (row && ["pending", "prepared", "submitted", "failed"].includes(row.status)) {
-        row.status = "expired";
-      }
+      if (!row || row.tx_hash || row.confirmed_at || row.status === "confirmed") return null;
+      if (!["pending", "prepared", "submitted", "failed"].includes(row.status)) return null;
+      row.status = "expired";
+      return { id: row.id };
     },
     async updateTicketIfPending(id, userId, patch) {
       const row = tickets.find(
@@ -820,8 +823,165 @@ async function liveTestnet() {
   console.log(`TESTNET_TICKET_HASH ${settled.hash}`);
 }
 
+async function expiredCheckoutChecks() {
+  const store = createMemoryStore();
+  store.events.set(9, {
+    id: 9,
+    price: "10.00",
+    is_public: true,
+    status: "active",
+    max_attendees: null,
+  });
+  const server = fakeTestnetServer();
+  store.tickets.push({
+    id: 90,
+    user_id: USER,
+    event_id: 9,
+    quantity: 1,
+    payment_status: "pending",
+    ticket_status: "pending",
+  });
+  store.payments.push({
+    id: "expired-payment",
+    user_id: USER,
+    event_id: 9,
+    event_ticket_id: 90,
+    status: "pending",
+    tx_hash: null,
+    confirmed_at: null,
+    expires_at: "2020-01-01T00:00:00.000Z",
+    payment_reference: "OLDREF1",
+    amount_stroops: 400000000,
+    destination_public_key: MERCHANT,
+    network_passphrase: "Test SDF Network ; September 2015",
+  });
+
+  const replaced = await callHandler("intent", {
+    store,
+    server,
+    token: "user-token",
+    body: { event_id: 9, quantity: 1 },
+  });
+  assert.equal(replaced.statusCode, 200, "expired payment allows a new intent");
+  assert.equal(replaced.body.resumed, false, "expired payment is not resumed");
+  assert.ok(replaced.body.payment_id !== "expired-payment", "fresh payment id");
+  assert.equal(store.payments[0].status, "expired", "old payment is expired");
+  assert.equal(store.tickets[0].payment_status, "pending", "old ticket stays unpaid");
+  assert.equal(
+    store.payments.filter((row) => ["pending", "prepared", "submitted"].includes(row.status)).length,
+    1,
+    "one open payment after expiry"
+  );
+
+  const resumed = await callHandler("intent", {
+    store,
+    server,
+    token: "user-token",
+    body: { event_id: 9, quantity: 1 },
+  });
+  assert.equal(resumed.statusCode, 200, "valid payment resumes");
+  assert.equal(resumed.body.resumed, true, "resume flag");
+  assert.equal(resumed.body.payment_id, replaced.body.payment_id, "same valid payment");
+  assert.equal(store.payments.length, 2, "resume does not create another payment");
+
+  const protectedStore = createMemoryStore();
+  protectedStore.events.set(9, store.events.get(9));
+  protectedStore.tickets.push({
+    id: 91,
+    user_id: USER,
+    event_id: 9,
+    quantity: 1,
+    payment_status: "pending",
+    ticket_status: "pending",
+  });
+  protectedStore.payments.push({
+    id: "submitted-payment",
+    user_id: USER,
+    event_id: 9,
+    event_ticket_id: 91,
+    status: "submitted",
+    tx_hash: "a".repeat(64),
+    confirmed_at: null,
+    expires_at: "2020-01-01T00:00:00.000Z",
+    payment_reference: "OLDREF2",
+    amount_stroops: 400000000,
+    destination_public_key: MERCHANT,
+    network_passphrase: "Test SDF Network ; September 2015",
+  });
+  const protectedPayment = await callHandler("intent", {
+    store: protectedStore,
+    server,
+    token: "user-token",
+    body: { event_id: 9, quantity: 1 },
+  });
+  assert.equal(protectedPayment.statusCode, 409, "submitted transaction is not replaced");
+  assert.equal(protectedStore.payments[0].status, "submitted", "submitted payment stays");
+  assert.equal(protectedStore.payments[0].tx_hash.length, 64, "transaction hash remains");
+  assert.equal(protectedStore.tickets[0].payment_status, "pending", "unverified ticket stays unpaid");
+  assert.equal(protectedStore.payments.length, 1, "no second payment is created");
+
+  const raceStore = createMemoryStore();
+  raceStore.events.set(9, store.events.get(9));
+  raceStore.tickets.push({
+    id: 92,
+    user_id: USER,
+    event_id: 9,
+    quantity: 1,
+    payment_status: "pending",
+    ticket_status: "pending",
+  });
+  raceStore.payments.push({
+    id: "race-payment",
+    user_id: USER,
+    event_id: 9,
+    event_ticket_id: 92,
+    status: "pending",
+    tx_hash: null,
+    confirmed_at: null,
+    expires_at: "2020-01-01T00:00:00.000Z",
+    payment_reference: "OLDREF3",
+    amount_stroops: 400000000,
+    destination_public_key: MERCHANT,
+    network_passphrase: "Test SDF Network ; September 2015",
+  });
+  const originalInsert = raceStore.insertPayment.bind(raceStore);
+  let releaseFirst;
+  const firstWaiting = new Promise((resolve) => {
+    releaseFirst = resolve;
+  });
+  let inserts = 0;
+  raceStore.insertPayment = async (row) => {
+    inserts += 1;
+    if (inserts === 1) {
+      await Promise.race([
+        firstWaiting,
+        new Promise((resolve) => setTimeout(resolve, 50)),
+      ]);
+      return originalInsert(row);
+    }
+    const saved = await originalInsert(row);
+    releaseFirst();
+    return saved;
+  };
+  const [first, second] = await Promise.all([
+    callHandler("intent", { store: raceStore, server, token: "user-token", body: { event_id: 9, quantity: 1 } }),
+    callHandler("intent", { store: raceStore, server, token: "user-token", body: { event_id: 9, quantity: 1 } }),
+  ]);
+  assert.equal(first.statusCode, 200, "first concurrent intent");
+  assert.equal(second.statusCode, 200, "second concurrent intent");
+  const open = raceStore.payments.filter((row) => ["pending", "prepared", "submitted"].includes(row.status));
+  assert.equal(open.length, 1, "concurrent requests keep one open payment");
+  assert.equal(raceStore.payments.find((row) => row.id === "race-payment").status, "expired", "raced payment expired");
+  assert.ok(
+    raceStore.tickets.every((row) => row.payment_status !== "paid"),
+    "concurrency does not mark a ticket paid"
+  );
+  assert.equal(first.body.payment_id, second.body.payment_id, "concurrent requests share the fresh payment");
+}
+
 repositoryChecks();
 await localChecks();
 await handlerChecks();
+await expiredCheckoutChecks();
 await liveTestnet();
 console.log("STELLAR_TICKET_PAYMENT_TEST_OK");
