@@ -59,6 +59,29 @@ assert.equal(
     }),
     "project-ref"
 );
+assert.equal(
+    stellarRoute({
+        url: "/api/stellar-ticket",
+        query: {},
+        headers: { "x-matched-path": "/api/supabase-project-ref" },
+    }),
+    "project-ref"
+);
+assert.equal(
+    stellarRoute({
+        url: "/api/stellar-ticket?stellarAction=project-ref",
+        query: {},
+    }),
+    "project-ref"
+);
+assert.equal(
+    stellarRoute({
+        url: "/api/stellar-ticket-submit",
+        query: {},
+        headers: { "x-matched-path": "/api/supabase-project-ref" },
+    }),
+    "submit"
+);
 
 const anonymous = response();
 await handler({ auth: { async getUser() { throw new Error("should not run"); } } })(
@@ -66,8 +89,37 @@ await handler({ auth: { async getUser() { throw new Error("should not run"); } }
     anonymous
 );
 assert.equal(anonymous.statusCode, 401);
+assert.equal(anonymous.headers["Cache-Control"], "private, no-store");
 assert.deepEqual(anonymous.body, { ok: false, error: "Authentication required" });
 assert.equal("project_ref" in anonymous.body, false);
+
+const infrastructureHeader = response();
+await handler({ auth: { async getUser() { throw new Error("should not run"); } } })(
+    {
+        method: "GET",
+        headers: {
+            "x-vercel-sc-headers": JSON.stringify({ Authorization: "Bearer staging-user" }),
+        },
+    },
+    infrastructureHeader
+);
+assert.equal(infrastructureHeader.statusCode, 401);
+assert.equal(infrastructureHeader.body.error, "Authentication required");
+
+const customHeader = response();
+await handler({
+    auth: {
+        async getUser(token) {
+            assert.equal(token, "staging-user");
+            return { data: { user: { id: "user-1" } }, error: null };
+        },
+    },
+})(
+    { method: "GET", headers: { "x-havkar-session": "staging-user", authorization: "Bearer infrastructure-token" } },
+    customHeader
+);
+assert.equal(customHeader.statusCode, 200);
+assert.deepEqual(customHeader.body, { ok: true, project_ref: "keglioewbkgdabsizvys" });
 
 const leaked = `invalid ${serviceRole} for ${staging}`;
 const rejected = response();

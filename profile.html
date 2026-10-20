@@ -3258,6 +3258,8 @@ const supabase =
 
 let currentUser = null;
 
+let previewAccessToken = "";
+
 const PREVIEW_PROJECT_HOST =
     "havkar-app-git-cursor-stell-609741-havkarapp2026-4055s-projects.vercel.app";
 
@@ -3304,23 +3306,54 @@ async function(){
     output.textContent = "";
     button.disabled = true;
 
+    const previewErrors = {
+        "Authentication required":
+            "Authentication required",
+        "Server configuration error":
+            "Server configuration error",
+        "Not found":
+            "Verification route was not found",
+        "Method not allowed":
+            "Method not allowed"
+    };
+
     try{
 
-        const {
-            data,
-            error
-        } =
-        await supabase.auth.getSession();
+        let token =
+            previewAccessToken;
 
-        const token =
-            data &&
-            data.session &&
-            data.session.access_token;
+        try{
 
-        if(error || !token){
+            const {
+                data,
+                error
+            } =
+            await supabase.auth.getSession();
+
+            const sessionToken =
+                data &&
+                data.session &&
+                data.session.access_token;
+
+            if(!error && sessionToken){
+
+                token =
+                    sessionToken;
+
+            }
+
+        }
+        catch{
+
+            token =
+                previewAccessToken;
+
+        }
+
+        if(!token){
 
             output.textContent =
-                "Not verified";
+                "Sign in is required";
 
             return;
 
@@ -3331,32 +3364,65 @@ async function(){
                 "/api/supabase-project-ref",
                 {
                     method: "GET",
+                    credentials: "same-origin",
+                    cache: "no-store",
                     headers: {
-                        Authorization:
-                            "Bearer " + token
+                        "x-havkar-session":
+                            token
                     }
                 }
             );
 
-        const body =
-            await response.json();
+        let body =
+            null;
+
+        try{
+
+            body =
+                await response.json();
+
+        }
+        catch{
+
+            body =
+                null;
+
+        }
 
         const ref =
             body &&
             body.project_ref;
 
-        output.textContent =
+        if(
             response.ok &&
             typeof ref === "string" &&
             /^[a-z0-9]{20}$/.test(ref)
-                ? ref
-                : "Not verified";
+        ){
+
+            output.textContent =
+                ref;
+
+            return;
+
+        }
+
+        const safeError =
+            body &&
+            previewErrors[body.error];
+
+        output.textContent =
+            safeError ||
+            (
+                "Verification failed (HTTP " +
+                response.status +
+                ")"
+            );
 
     }
     catch{
 
         output.textContent =
-            "Not verified";
+            "Verification request failed";
 
     }
     finally{
@@ -7163,6 +7229,12 @@ supabase.auth.onAuthStateChange(
             session.user
             :
             null;
+
+        previewAccessToken =
+            session &&
+            typeof session.access_token === "string"
+                ? session.access_token
+                : "";
 
     }
 );

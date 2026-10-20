@@ -12,20 +12,43 @@ const handlers = {
     status: createStellarTicketRequestHandler("status"),
 };
 
-export function stellarRoute(req) {
-    const path = typeof req.url === "string"
-        ? req.url.split("?")[0]
-        : "";
+function requestPath(value) {
+    const text = Array.isArray(value) ? value[0] : value;
+    if (typeof text !== "string") return "";
+    return text.split("?")[0];
+}
 
-    if (path.endsWith("/api/supabase-project-ref")) return PROJECT_REF_ACTION;
-    if (path.endsWith("/api/stellar-ticket-intent")) return "intent";
-    if (path.endsWith("/api/stellar-ticket-prepare")) return "prepare";
-    if (path.endsWith("/api/stellar-ticket-submit")) return "submit";
-    if (path.endsWith("/api/stellar-ticket-status")) return "status";
-
+function stellarQueryAction(req) {
     const queryAction = req.query?.stellarAction;
-    const action = Array.isArray(queryAction) ? queryAction[0] : queryAction;
+    const fromQuery = Array.isArray(queryAction) ? queryAction[0] : queryAction;
+    if (typeof fromQuery === "string" && fromQuery) return fromQuery;
 
+    const url = typeof req.url === "string" ? req.url : "";
+    const queryIndex = url.indexOf("?");
+    if (queryIndex === -1) return "";
+
+    return new URLSearchParams(url.slice(queryIndex + 1)).get("stellarAction") || "";
+}
+
+export function stellarRoute(req) {
+    const urlPath = requestPath(req.url);
+
+    if (urlPath.endsWith("/api/stellar-ticket-intent")) return "intent";
+    if (urlPath.endsWith("/api/stellar-ticket-prepare")) return "prepare";
+    if (urlPath.endsWith("/api/stellar-ticket-submit")) return "submit";
+    if (urlPath.endsWith("/api/stellar-ticket-status")) return "status";
+
+    const matchedPath = requestPath(req.headers?.["x-matched-path"]);
+    const invokePath = requestPath(req.headers?.["x-invoke-path"]);
+    if (
+        urlPath.endsWith("/api/supabase-project-ref") ||
+        matchedPath.endsWith("/api/supabase-project-ref") ||
+        invokePath.endsWith("/api/supabase-project-ref")
+    ) {
+        return PROJECT_REF_ACTION;
+    }
+
+    const action = stellarQueryAction(req);
     if (action === PROJECT_REF_ACTION) return PROJECT_REF_ACTION;
     if (ACTIONS.includes(action)) return action;
     return "";

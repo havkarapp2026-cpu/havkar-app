@@ -73,6 +73,16 @@ async function main() {
     assert.strictEqual(stellarRoute({ url: "/api/stellar-ticket-submit?stellarAction=intent", query: { stellarAction: "intent" } }), "submit");
     assert.strictEqual(stellarRoute({ url: "/api/stellar-ticket?stellarAction=prepare", query: { stellarAction: "prepare" } }), "prepare");
     assert.strictEqual(stellarRoute({ url: "/api/stellar-ticket", query: {}, body: { stellarAction: "submit" } }), "");
+    assert.strictEqual(stellarRoute({
+        url: "/api/stellar-ticket",
+        query: {},
+        headers: { "x-matched-path": "/api/supabase-project-ref" }
+    }), "project-ref");
+    assert.strictEqual(stellarRoute({
+        url: "/api/stellar-ticket-submit",
+        query: {},
+        headers: { "x-invoke-path": "/api/supabase-project-ref" }
+    }), "submit");
 
     const missing = response();
     await stellar({ method: "POST", url: "/api/stellar-ticket", query: {}, headers: {} }, missing);
@@ -88,6 +98,31 @@ async function main() {
 
     delete process.env.SUPABASE_URL;
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    const rewrittenProjectRef = response();
+    await stellar({
+        method: "GET",
+        url: "/api/stellar-ticket",
+        query: {},
+        headers: { "x-matched-path": "/api/supabase-project-ref" }
+    }, rewrittenProjectRef);
+    assert.strictEqual(rewrittenProjectRef.statusCode, 401);
+    assert.strictEqual(rewrittenProjectRef.body.error, "Authentication required");
+
+    const rewrittenProjectConfig = response();
+    await stellar({
+        method: "GET",
+        url: "/api/stellar-ticket",
+        query: {},
+        headers: {
+            "x-matched-path": "/api/supabase-project-ref",
+            "x-havkar-session": "preview-user"
+        }
+    }, rewrittenProjectConfig);
+    assert.strictEqual(rewrittenProjectConfig.statusCode, 500);
+    assert.strictEqual(rewrittenProjectConfig.body.error, "Server configuration error");
+    assert.strictEqual(JSON.stringify(rewrittenProjectConfig.body).includes("preview-user"), false);
+
     const statusRead = response();
     await stellar({ method: "GET", url: "/api/stellar-ticket-status", query: {}, headers: {} }, statusRead);
     assert.strictEqual(statusRead.statusCode, 500);
