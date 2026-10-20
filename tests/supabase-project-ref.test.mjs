@@ -168,6 +168,49 @@ assert.equal(accepted.statusCode, 200);
 assert.deepEqual(Object.keys(accepted.body).sort(), ["ok", "project_ref"]);
 assert.deepEqual(accepted.body, { ok: true, project_ref: "keglioewbkgdabsizvys" });
 
+const fetched = response();
+await createSupabaseProjectRefHandler({
+    env: {
+        SUPABASE_URL: staging,
+        SUPABASE_SERVICE_ROLE_KEY: serviceRole,
+    },
+    async fetch(url, init) {
+        assert.equal(String(url), `${staging}/auth/v1/user`);
+        assert.equal(init.redirect, "manual");
+        assert.equal(init.headers.authorization, "Bearer staging-user");
+        assert.equal(init.headers.apikey, serviceRole);
+        return {
+            status: 200,
+            async json() {
+                return { id: "user-1", email: "hidden@example.com" };
+            },
+        };
+    },
+})(
+    { method: "GET", headers: { "x-havkar-session": "staging-user" } },
+    fetched
+);
+assert.equal(fetched.statusCode, 200);
+assert.deepEqual(fetched.body, { ok: true, project_ref: "keglioewbkgdabsizvys" });
+assert.equal(JSON.stringify(fetched.body).includes("hidden@example.com"), false);
+assert.equal(JSON.stringify(fetched.body).includes(serviceRole), false);
+
+const redirected = response();
+await createSupabaseProjectRefHandler({
+    env: {
+        SUPABASE_URL: staging,
+        SUPABASE_SERVICE_ROLE_KEY: serviceRole,
+    },
+    async fetch() {
+        return { status: 302, async json() { return { id: "user-1" }; } };
+    },
+})(
+    { method: "GET", headers: { authorization: "Bearer staging-user" } },
+    redirected
+);
+assert.equal(redirected.statusCode, 401);
+assert.equal("project_ref" in redirected.body, false);
+
 const otherProject = response();
 await handler(
     {
@@ -201,5 +244,16 @@ const source = fs.readFileSync(
 );
 assert.equal(/\.(insert|update|delete|upsert)\s*\(/.test(source), false);
 assert.equal(source.includes("console."), false);
+assert.equal(source.includes("@supabase/supabase-js"), false);
+assert.equal(source.includes("createClient"), false);
+assert.equal(
+    stellarRoute({
+        url: "/api/stellar-ticket",
+        get query() {
+            throw new Error("query parser failed");
+        },
+    }),
+    ""
+);
 
 console.log("SUPABASE_PROJECT_REF_TEST_OK");

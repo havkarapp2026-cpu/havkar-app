@@ -69,6 +69,9 @@ async function main() {
 
     const { default: flights, } = await import("../api/flights.js");
     const { default: stellar, stellarRoute } = await import("../api/stellar-ticket.js");
+    const stellarSource = fs.readFileSync(path.join(root, "api/stellar-ticket.js"), "utf8");
+    assert.equal(stellarSource.includes('from "../lib/stellar-ticket-payment.mjs"'), false);
+    assert.equal(stellarSource.includes('import("../lib/stellar-ticket-payment.mjs")'), true);
 
     assert.strictEqual(stellarRoute({ url: "/api/stellar-ticket-submit?stellarAction=intent", query: { stellarAction: "intent" } }), "submit");
     assert.strictEqual(stellarRoute({ url: "/api/stellar-ticket?stellarAction=prepare", query: { stellarAction: "prepare" } }), "prepare");

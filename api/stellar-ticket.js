@@ -1,16 +1,9 @@
-import { createStellarTicketRequestHandler } from "../lib/stellar-ticket-payment.mjs";
 import { createSupabaseProjectRefHandler } from "../lib/supabase-project-ref.mjs";
 
 const ACTIONS = ["intent", "prepare", "submit", "status"];
 const PROJECT_REF_ACTION = "project-ref";
 const projectRefHandler = createSupabaseProjectRefHandler();
-
-const handlers = {
-    intent: createStellarTicketRequestHandler("intent"),
-    prepare: createStellarTicketRequestHandler("prepare"),
-    submit: createStellarTicketRequestHandler("submit"),
-    status: createStellarTicketRequestHandler("status"),
-};
+let paymentHandlers;
 
 function requestPath(value) {
     const text = Array.isArray(value) ? value[0] : value;
@@ -19,15 +12,32 @@ function requestPath(value) {
 }
 
 function stellarQueryAction(req) {
-    const queryAction = req.query?.stellarAction;
-    const fromQuery = Array.isArray(queryAction) ? queryAction[0] : queryAction;
-    if (typeof fromQuery === "string" && fromQuery) return fromQuery;
+    try {
+        const queryAction = req.query?.stellarAction;
+        const fromQuery = Array.isArray(queryAction) ? queryAction[0] : queryAction;
+        if (typeof fromQuery === "string" && fromQuery) return fromQuery;
 
-    const url = typeof req.url === "string" ? req.url : "";
-    const queryIndex = url.indexOf("?");
-    if (queryIndex === -1) return "";
+        const url = typeof req.url === "string" ? req.url : "";
+        const queryIndex = url.indexOf("?");
+        if (queryIndex === -1) return "";
 
-    return new URLSearchParams(url.slice(queryIndex + 1)).get("stellarAction") || "";
+        return new URLSearchParams(url.slice(queryIndex + 1)).get("stellarAction") || "";
+    } catch {
+        return "";
+    }
+}
+
+async function paymentHandler(action) {
+    if (!paymentHandlers) {
+        const { createStellarTicketRequestHandler } = await import("../lib/stellar-ticket-payment.mjs");
+        paymentHandlers = {
+            intent: createStellarTicketRequestHandler("intent"),
+            prepare: createStellarTicketRequestHandler("prepare"),
+            submit: createStellarTicketRequestHandler("submit"),
+            status: createStellarTicketRequestHandler("status"),
+        };
+    }
+    return paymentHandlers[action];
 }
 
 export function stellarRoute(req) {
@@ -55,20 +65,27 @@ export function stellarRoute(req) {
 }
 
 export default async function handler(req, res) {
-    const action = stellarRoute(req);
+    try {
+        const action = stellarRoute(req);
 
-    if (action === PROJECT_REF_ACTION) {
-        return projectRefHandler(req, res);
-    }
+        if (action === PROJECT_REF_ACTION) {
+            return projectRefHandler(req, res);
+        }
 
-    const selected = handlers[action];
+        const selected = action ? await paymentHandler(action) : null;
 
-    if (!selected) {
-        return res.status(404).json({
+        if (!selected) {
+            return res.status(404).json({
+                ok: false,
+                error: "Not found",
+            });
+        }
+
+        return selected(req, res);
+    } catch {
+        return res.status(500).json({
             ok: false,
-            error: "Not found",
+            error: "Server configuration error",
         });
     }
-
-    return selected(req, res);
 }
