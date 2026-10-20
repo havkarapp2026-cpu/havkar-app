@@ -68,10 +68,18 @@ async function main() {
     assert.equal(checkout.includes("flightOfferHandler"), false);
 
     const { default: flights, } = await import("../api/flights.js");
-    const { default: stellar, stellarRoute } = await import("../api/stellar-ticket.js");
+    const stellar = require("../api/stellar-ticket.js");
+    const stellarRoute = stellar.stellarRoute;
     const stellarSource = fs.readFileSync(path.join(root, "api/stellar-ticket.js"), "utf8");
     assert.equal(stellarSource.includes('from "../lib/stellar-ticket-payment.mjs"'), false);
     assert.equal(stellarSource.includes('import("../lib/stellar-ticket-payment.mjs")'), true);
+    assert.equal(stellarSource.includes('require("../lib/supabase-project-ref.js")'), true);
+    assert.equal(stellarSource.includes("supabase-project-ref.mjs"), false);
+    require("../lib/supabase-project-ref.js");
+    assert.equal(
+        Object.keys(require.cache).some((item) => item.endsWith("supabase-project-ref.mjs")),
+        false
+    );
 
     assert.strictEqual(stellarRoute({ url: "/api/stellar-ticket-submit?stellarAction=intent", query: { stellarAction: "intent" } }), "submit");
     assert.strictEqual(stellarRoute({ url: "/api/stellar-ticket?stellarAction=prepare", query: { stellarAction: "prepare" } }), "prepare");

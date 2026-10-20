@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createSupabaseProjectRefHandler, supabaseProjectRef } from "../lib/supabase-project-ref.mjs";
-import { stellarRoute } from "../api/stellar-ticket.js";
+import { createSupabaseProjectRefHandler, supabaseProjectRef } from "../lib/supabase-project-ref.js";
+import stellarTicket from "../api/stellar-ticket.js";
+
+const stellarRoute = stellarTicket.stellarRoute;
 
 const staging = "https://keglioewbkgdabsizvys.supabase.co";
 const production = "https://gispovnciifgikvgpzck.supabase.co";
@@ -239,7 +241,7 @@ assert.equal(missingConfig.statusCode, 500);
 assert.deepEqual(missingConfig.body, { ok: false, error: "Server configuration error" });
 
 const source = fs.readFileSync(
-    path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "lib", "supabase-project-ref.mjs"),
+    path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "lib", "supabase-project-ref.js"),
     "utf8"
 );
 assert.equal(/\.(insert|update|delete|upsert)\s*\(/.test(source), false);

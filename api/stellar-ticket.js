@@ -1,4 +1,4 @@
-import { createSupabaseProjectRefHandler } from "../lib/supabase-project-ref.mjs";
+const { createSupabaseProjectRefHandler } = require("../lib/supabase-project-ref.js");
 
 const ACTIONS = ["intent", "prepare", "submit", "status"];
 const PROJECT_REF_ACTION = "project-ref";
@@ -40,7 +40,7 @@ async function paymentHandler(action) {
     return paymentHandlers[action];
 }
 
-export function stellarRoute(req) {
+function stellarRoute(req) {
     const urlPath = requestPath(req.url);
 
     if (urlPath.endsWith("/api/stellar-ticket-intent")) return "intent";
@@ -64,7 +64,7 @@ export function stellarRoute(req) {
     return "";
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
     try {
         const action = stellarRoute(req);
 
@@ -89,3 +89,6 @@ export default async function handler(req, res) {
         });
     }
 }
+
+module.exports = handler;
+module.exports.stellarRoute = stellarRoute;
