@@ -757,8 +757,65 @@
        NAVIGATION
     ===================================================== */
 
+    function languageEntryGate(){
+
+        return new URLSearchParams(
+            window.location.search
+        ).get(
+            "entry"
+        ) === "1";
+
+    }
+
+
+    function allowHomePastLanguageEntry(){
+
+        const api =
+            window.HAVKAR_PAGE_BACK;
+
+
+        if(
+            api &&
+            typeof api.armLanguageEntryHomeOnce ===
+                "function"
+        ){
+
+            api.armLanguageEntryHomeOnce(
+                window.sessionStorage
+            );
+
+            return;
+
+        }
+
+
+        try{
+
+            sessionStorage.setItem(
+                "havkar_language_entry_home_once",
+                "1"
+            );
+
+        }
+        catch(error){
+
+        }
+
+    }
+
+
     window.goTo =
     function(page){
+
+        if(
+            page === "index.html" &&
+            languageEntryGate()
+        ){
+
+            allowHomePastLanguageEntry();
+
+        }
+
 
         window.location.href =
             page;
@@ -772,6 +829,18 @@
         if (window.havkarNavigateBack) {
             window.havkarNavigateBack();
             return;
+        }
+
+        if(languageEntryGate()){
+
+            allowHomePastLanguageEntry();
+
+            window.location.assign(
+                "index.html"
+            );
+
+            return;
+
         }
 
         if(
