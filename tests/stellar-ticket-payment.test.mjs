@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import {
   Account,
   Asset,
@@ -645,7 +645,24 @@ function repositoryChecks() {
   assert.ok(signer.includes("Networks.TESTNET"), "service signer is testnet");
   assert.ok(source.includes("async function havkarSignAndSubmitStellarPayment"), "wallet submit remains");
   assert.ok(events.includes("/api/create-event-checkout"), "card checkout remains");
+  assert.ok(events.includes("/api/stellar-ticket-intent"), "intent url remains");
+  assert.ok(events.includes("/api/stellar-ticket-prepare"), "prepare url remains");
+  assert.ok(events.includes("/api/stellar-ticket-submit"), "submit url remains");
   assert.ok(events.includes("payTicketWithXlm"), "xlm checkout added");
+  const apiNames = readdirSync(new URL("../api/", import.meta.url)).filter((name) => name.endsWith(".js"));
+  assert.equal(apiNames.length, 12, "twelve functions");
+  assert.equal(apiNames.includes("stellar-ticket.js"), true, "one stellar function");
+  assert.equal(apiNames.includes("stellar-ticket-intent.js"), false, "intent file merged");
+  assert.equal(apiNames.includes("stellar-ticket-prepare.js"), false, "prepare file merged");
+  assert.equal(apiNames.includes("stellar-ticket-submit.js"), false, "submit file merged");
+  assert.equal(apiNames.includes("stellar-ticket-status.js"), false, "status file merged");
+  assert.equal(apiNames.includes("flight-offer.js"), false, "offer file merged");
+  const vercel = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8"));
+  assert.equal(
+    vercel.rewrites.some((rule) => rule.source === "/api/stellar-ticket-submit" && rule.destination === "/api/stellar-ticket?stellarAction=submit"),
+    true,
+    "submit rewrite"
+  );
   assert.equal(events.includes("havkarSignAndSubmitStellarPayment"), false, "events do not use wallet submit");
   assert.equal(delivery.includes("havkarSignAndSubmitStellarPayment"), false, "delivery unchanged");
   assert.equal(market.includes("havkarSignAndSubmitStellarPayment"), false, "market unchanged");
