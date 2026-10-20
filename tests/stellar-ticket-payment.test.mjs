@@ -979,9 +979,212 @@ async function expiredCheckoutChecks() {
   assert.equal(first.body.payment_id, second.body.payment_id, "concurrent requests share the fresh payment");
 }
 
+async function selfPaymentChecks() {
+  const store = createMemoryStore();
+  store.events.set(11, {
+    id: 11,
+    price: "10.00",
+    is_public: true,
+    status: "active",
+    max_attendees: null,
+  });
+  const server = fakeTestnetServer();
+  server.submitTransaction = async () => {
+    throw new Error("self-payment must not be submitted");
+  };
+  store.tickets.push({
+    id: 110,
+    user_id: USER,
+    event_id: 11,
+    quantity: 1,
+    payment_status: "pending",
+    ticket_status: "pending",
+  });
+  store.payments.push({
+    id: "33333333-3333-4333-8333-333333333333",
+    user_id: USER,
+    event_id: 11,
+    event_ticket_id: 110,
+    status: "prepared",
+    source_public_key: MERCHANT,
+    destination_public_key: MERCHANT,
+    tx_hash: null,
+    confirmed_at: null,
+    expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    payment_reference: "hkselfpayment000000000001",
+    amount_stroops: 400000000,
+    amount_xlm: "40.0000000",
+    memo: "hkselfpayment000000000001",
+    network_passphrase: "Test SDF Network ; September 2015",
+  });
+
+  const replaced = await callHandler("intent", {
+    store,
+    server,
+    token: "user-token",
+    body: { event_id: 11, quantity: 1 },
+  });
+  assert.equal(replaced.statusCode, 200, "self-payment no longer blocks a new intent");
+  assert.equal(replaced.body.resumed, false, "self-payment is not resumed");
+  assert.equal(store.payments[0].status, "failed", "self-payment is failed");
+  assert.equal(store.tickets[0].payment_status, "pending", "self-payment ticket stays unpaid");
+
+  const rejected = await callHandler("prepare", {
+    store,
+    server,
+    token: "user-token",
+    body: {
+      payment_id: replaced.body.payment_id,
+      source_public_key: MERCHANT,
+    },
+  });
+  assert.equal(rejected.statusCode, 409, "payer and merchant cannot match");
+  assert.equal(
+    rejected.body.error,
+    "The paying account must be different from the merchant account",
+    "self-payment error"
+  );
+  assert.equal(
+    store.payments.find((row) => row.id === replaced.body.payment_id).status,
+    "failed",
+    "rejected prepare does not stay open"
+  );
+  assert.ok(
+    store.tickets.every((row) => row.payment_status !== "paid"),
+    "self-payment does not confirm a ticket"
+  );
+
+  const blocked = await callHandler("submit", {
+    store,
+    server,
+    token: "user-token",
+    body: {
+      payment_id: "33333333-3333-4333-8333-333333333333",
+      signed_xdr: "self-payment",
+    },
+  });
+  assert.equal(blocked.statusCode, 409, "prepared self-payment cannot be submitted");
+  assert.equal(store.payments[0].tx_hash, null, "self-payment has no transaction");
+
+  let networkCalled = false;
+  try {
+    await buildTestnetPayment({
+      server: {
+        serverURL: new URL(TESTNET_HORIZON),
+        async loadAccount() {
+          networkCalled = true;
+          throw new Error("network");
+        },
+      },
+      source: MERCHANT,
+      destination: MERCHANT,
+      stroops: 1000000n,
+      memo: "hkselfpayment000000000002",
+    });
+  } catch (error) {
+    assert.equal(error.code, "self-payment", "builder rejects the same account");
+  }
+  assert.equal(networkCalled, false, "self-payment does not reach Testnet");
+}
+
+async function fundTestnetAccount(keypair) {
+  const response = await fetch(
+    `https://friendbot.stellar.org?addr=${encodeURIComponent(keypair.publicKey())}`
+  );
+  assert.equal(response.status, 200, "friendbot funded a disposable account");
+  const server = createTestnetServer();
+  let account = null;
+  for (let attempt = 0; attempt < 8 && !account; attempt += 1) {
+    try {
+      account = await server.loadAccount(keypair.publicKey());
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+  assert.ok(account, "disposable Testnet account is visible");
+  return server;
+}
+
+async function distinctAccountCheckout() {
+  const payer = Keypair.random();
+  const merchant = Keypair.random();
+  assert.ok(payer.publicKey() !== merchant.publicKey(), "payer and merchant differ");
+  await fundTestnetAccount(payer);
+  const server = await fundTestnetAccount(merchant);
+  const store = createMemoryStore();
+  store.events.set(12, {
+    id: 12,
+    price: "1.00",
+    is_public: true,
+    status: "active",
+    max_attendees: null,
+  });
+
+  const created = await callHandler("intent", {
+    store,
+    server,
+    token: "user-token",
+    body: { event_id: 12, quantity: 1 },
+    env: { HAVKAR_STELLAR_TICKET_MERCHANT_PUBLIC_KEY: merchant.publicKey() },
+  });
+  assert.equal(created.statusCode, 200, "distinct-account intent");
+  assert.equal(created.body.destination, merchant.publicKey(), "merchant destination");
+  assert.ok(created.body.destination !== payer.publicKey(), "intent destination is not the payer");
+
+  const prepared = await callHandler("prepare", {
+    store,
+    server,
+    token: "user-token",
+    body: {
+      payment_id: created.body.payment_id,
+      source_public_key: payer.publicKey(),
+    },
+    env: { HAVKAR_STELLAR_TICKET_MERCHANT_PUBLIC_KEY: merchant.publicKey() },
+  });
+  assert.equal(prepared.statusCode, 200, "distinct-account prepare");
+  const signed = TransactionBuilder.fromXDR(prepared.body.xdr, Networks.TESTNET);
+  signed.sign(payer);
+  const submitted = await callHandler("submit", {
+    store,
+    server,
+    token: "user-token",
+    body: {
+      payment_id: created.body.payment_id,
+      signed_xdr: signed.toXDR(),
+    },
+    env: { HAVKAR_STELLAR_TICKET_MERCHANT_PUBLIC_KEY: merchant.publicKey() },
+  });
+  assert.equal(submitted.statusCode, 200, "distinct-account submit");
+  assert.equal(submitted.body.confirmed, true, "distinct-account ticket confirmed");
+  assert.equal(/^[a-f0-9]{64}$/.test(submitted.body.tx_hash), true, "transaction hash");
+  const payment = store.payments.find((row) => row.id === created.body.payment_id);
+  assert.equal(payment.status, "confirmed", "payment confirmed");
+  assert.equal(payment.source_public_key, payer.publicKey(), "payer recorded");
+  assert.equal(payment.destination_public_key, merchant.publicKey(), "merchant recorded");
+  const ticket = store.tickets.find((row) => row.id === payment.event_ticket_id);
+  assert.equal(ticket.payment_status, "paid", "ticket paid");
+  assert.equal(ticket.ticket_status, "valid", "ticket valid");
+  assert.equal(ticket.payment_reference, submitted.body.tx_hash, "ticket receipt");
+
+  const seen = await fetch(`${TESTNET_HORIZON}/transactions/${submitted.body.tx_hash}`);
+  assert.equal(seen.status, 200, "horizon transaction");
+  const body = await seen.json();
+  assert.equal(body.successful, true, "horizon success");
+  assert.equal(body.source_account, payer.publicKey(), "horizon payer");
+  assert.equal(body.memo, created.body.payment_reference, "horizon memo");
+  const operations = await fetch(`${TESTNET_HORIZON}/transactions/${submitted.body.tx_hash}/operations`);
+  const operationBody = await operations.json();
+  assert.equal(operationBody._embedded.records[0].from, payer.publicKey(), "horizon operation payer");
+  assert.equal(operationBody._embedded.records[0].to, merchant.publicKey(), "horizon operation merchant");
+  assert.equal(operationBody._embedded.records[0].amount, submitted.body.amount_xlm, "horizon amount");
+  console.log(`DISTINCT_TESTNET_TICKET_HASH ${submitted.body.tx_hash}`);
+}
+
 repositoryChecks();
 await localChecks();
 await handlerChecks();
 await expiredCheckoutChecks();
+await selfPaymentChecks();
+await distinctAccountCheckout();
 await liveTestnet();
 console.log("STELLAR_TICKET_PAYMENT_TEST_OK");
