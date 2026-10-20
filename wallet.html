@@ -1145,6 +1145,7 @@ select:focus{
 .stellar-balance{display:none;margin:12px 0;padding:12px;border-radius:10px;background:#f7f9f4;color:#1b5e20;font-size:14px;font-weight:800;word-break:break-word;}  
 .stellar-send{display:none;margin-top:14px;}  
 .stellar-send-button{width:100%;margin-top:14px;border:0;border-radius:11px;padding:14px;background:#2e7d32;color:#fff;font-size:16px;font-weight:800;}  
+.stellar-send-button:disabled{background:#8aa08c;color:#f4f7f4;}  
   
   
 /* =========================================================  
@@ -5640,13 +5641,15 @@ function renderStellarNetwork(){
     const sendButton=document.getElementById("stellarSendButton");  
     if(select && document.activeElement!==select)select.value=network.id;  
     if(subtitle)subtitle.textContent="XLM Wallet • "+network.label;  
+    const mainnetBlocked=network.id==="PUBLIC" && network.paymentsEnabled!==true;  
     if(note){  
-        note.textContent=network.id==="PUBLIC"  
+        note.textContent=mainnetBlocked  
             ? "Mainnet is protected. HAVKAR will not create or send a Mainnet payment."  
             : "Testnet uses test XLM. Nothing on this network is Mainnet money.";  
     }  
     if(sendButton){  
-        sendButton.textContent=network.id==="PUBLIC"  
+        sendButton.disabled=mainnetBlocked;  
+        sendButton.textContent=mainnetBlocked  
             ? "Mainnet payments are protected"  
             : "Sign and send on Testnet";  
     }  
@@ -5753,8 +5756,8 @@ async function sendHAVKARStellarPayment(){
         setStellarStatus("Stellar payments are not available.","error");  
         return;  
     }  
-    const network=window.havkarGetStellarNetwork?.()||{id:"TESTNET",label:"Testnet"};  
-    if(network.id==="PUBLIC"){  
+    const network=window.havkarGetStellarNetwork?.()||{id:"TESTNET",label:"Testnet",paymentsEnabled:true};  
+    if(network.paymentsEnabled===false){  
         setStellarStatus("Mainnet is protected. Switch to Testnet before sending.","error");  
         return;  
     }  
@@ -5767,6 +5770,8 @@ async function sendHAVKARStellarPayment(){
             memo:memo  
         });  
         setStellarStatus("Confirmed on "+result.label+". Transaction "+result.hash,"success");  
+        const amountInput=document.getElementById("stellarAmount");  
+        if(amountInput)amountInput.value="";  
         await refreshHAVKARStellarBalance();  
     }catch(error){  
         setStellarStatus(error?.message||"Stellar payment failed.","error");  

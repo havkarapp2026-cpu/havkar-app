@@ -3658,7 +3658,7 @@
     }
   });
 
-  // node_modules/unstorage/dist/shared/unstorage.zVDD2mZo.mjs
+  // node_modules/unstorage/dist/shared/unstorage.lWbgcyKt.mjs
   function wrapToPromise(value) {
     if (!value || typeof value.then !== "function") {
       return Promise.resolve(value);
@@ -3728,6 +3728,9 @@
     }
     return key.split("?")[0]?.replace(/[/\\]/g, ":").replace(/:+/g, ":").replace(/^:|:$/g, "") || "";
   }
+  function hasDotSegment(key) {
+    return key.split(":").some((segment) => segment === "." || segment === "..");
+  }
   function joinKeys(...keys2) {
     return normalizeKey(keys2.join(":"));
   }
@@ -3754,8 +3757,8 @@
     return key[key.length - 1] !== "$";
   }
   var BASE64_PREFIX;
-  var init_unstorage_zVDD2mZo = __esm({
-    "node_modules/unstorage/dist/shared/unstorage.zVDD2mZo.mjs"() {
+  var init_unstorage_lWbgcyKt = __esm({
+    "node_modules/unstorage/dist/shared/unstorage.lWbgcyKt.mjs"() {
       BASE64_PREFIX = "base64:";
     }
   });
@@ -3771,6 +3774,20 @@
       watching: false,
       watchListeners: [],
       unwatch: {}
+    };
+    const normalizeItemKey = (key) => {
+      const normalizedKey = normalizeKey(key);
+      if (!normalizedKey || hasDotSegment(normalizedKey)) {
+        throw new Error(`[unstorage] Invalid key: ${JSON.stringify(key)}`);
+      }
+      return normalizedKey;
+    };
+    const normalizeBase = (base3) => {
+      const normalizedBase = normalizeBaseKey(base3);
+      if (hasDotSegment(normalizedBase)) {
+        throw new Error(`[unstorage] Invalid base: ${JSON.stringify(base3)}`);
+      }
+      return normalizedBase;
     };
     const getMount = (key) => {
       for (const base3 of context2.mountpoints) {
@@ -3845,7 +3862,7 @@
       };
       for (const item of items) {
         const isStringItem = typeof item === "string";
-        const key = normalizeKey(isStringItem ? item : item.key);
+        const key = normalizeItemKey(isStringItem ? item : item.key);
         const value = isStringItem ? void 0 : item.value;
         const options2 = isStringItem || !item.options ? commonOptions : { ...commonOptions, ...item.options };
         const mount = getMount(key);
@@ -3862,19 +3879,19 @@
     };
     const storage = {
       // Item
-      hasItem(key, opts = {}) {
-        key = normalizeKey(key);
+      async hasItem(key, opts = {}) {
+        key = normalizeItemKey(key);
         const { relativeKey, driver } = getMount(key);
         return asyncCall(driver.hasItem, relativeKey, opts);
       },
-      getItem(key, opts = {}) {
-        key = normalizeKey(key);
+      async getItem(key, opts = {}) {
+        key = normalizeItemKey(key);
         const { relativeKey, driver } = getMount(key);
         return asyncCall(driver.getItem, relativeKey, opts).then(
           (value) => destr(value)
         );
       },
-      getItems(items, commonOptions = {}) {
+      async getItems(items, commonOptions = {}) {
         return runBatch(items, commonOptions, (batch) => {
           if (batch.driver.getItems) {
             return asyncCall(
@@ -3905,8 +3922,8 @@
           );
         });
       },
-      getItemRaw(key, opts = {}) {
-        key = normalizeKey(key);
+      async getItemRaw(key, opts = {}) {
+        key = normalizeItemKey(key);
         const { relativeKey, driver } = getMount(key);
         if (driver.getItemRaw) {
           return asyncCall(driver.getItemRaw, relativeKey, opts);
@@ -3919,7 +3936,7 @@
         if (value === void 0) {
           return storage.removeItem(key);
         }
-        key = normalizeKey(key);
+        key = normalizeItemKey(key);
         const { relativeKey, driver } = getMount(key);
         if (!driver.setItem) {
           return;
@@ -3961,7 +3978,7 @@
         if (value === void 0) {
           return storage.removeItem(key, opts);
         }
-        key = normalizeKey(key);
+        key = normalizeItemKey(key);
         const { relativeKey, driver } = getMount(key);
         if (driver.setItemRaw) {
           await asyncCall(driver.setItemRaw, relativeKey, value, opts);
@@ -3978,7 +3995,7 @@
         if (typeof opts === "boolean") {
           opts = { removeMeta: opts };
         }
-        key = normalizeKey(key);
+        key = normalizeItemKey(key);
         const { relativeKey, driver } = getMount(key);
         if (!driver.removeItem) {
           return;
@@ -3996,7 +4013,7 @@
         if (typeof opts === "boolean") {
           opts = { nativeOnly: opts };
         }
-        key = normalizeKey(key);
+        key = normalizeItemKey(key);
         const { relativeKey, driver } = getMount(key);
         const meta = /* @__PURE__ */ Object.create(null);
         if (driver.getMeta) {
@@ -4020,15 +4037,15 @@
         }
         return meta;
       },
-      setMeta(key, value, opts = {}) {
-        return this.setItem(key + "$", value, opts);
+      async setMeta(key, value, opts = {}) {
+        return this.setItem(normalizeItemKey(key) + "$", value, opts);
       },
-      removeMeta(key, opts = {}) {
-        return this.removeItem(key + "$", opts);
+      async removeMeta(key, opts = {}) {
+        return this.removeItem(normalizeItemKey(key) + "$", opts);
       },
       // Keys
       async getKeys(base3, opts = {}) {
-        base3 = normalizeBaseKey(base3);
+        base3 = normalizeBase(base3);
         const mounts = getMounts(base3, true);
         let maskedMounts = [];
         const allKeys = [];
@@ -4060,7 +4077,7 @@
       },
       // Utils
       async clear(base3, opts = {}) {
-        base3 = normalizeBaseKey(base3);
+        base3 = normalizeBase(base3);
         await Promise.all(
           getMounts(base3, false).map(async (m14) => {
             if (m14.driver.clear) {
@@ -4098,7 +4115,7 @@
       },
       // Mount
       mount(base3, driver) {
-        base3 = normalizeBaseKey(base3);
+        base3 = normalizeBase(base3);
         if (base3 && context2.mounts[base3]) {
           throw new Error(`already mounted at ${base3}`);
         }
@@ -4168,7 +4185,7 @@
   var init_dist2 = __esm({
     "node_modules/unstorage/dist/index.mjs"() {
       init_dist();
-      init_unstorage_zVDD2mZo();
+      init_unstorage_lWbgcyKt();
       DRIVER_NAME = "memory";
       memory = defineDriver(() => {
         const data = /* @__PURE__ */ new Map();
@@ -14942,7 +14959,7 @@ if (cid) {
   var version4;
   var init_version2 = __esm({
     "node_modules/viem/_esm/errors/version.js"() {
-      version4 = "2.57.3";
+      version4 = "2.57.7";
     }
   });
 
@@ -16149,7 +16166,7 @@ if (cid) {
         continue;
       }
       if (char === " ") {
-        if (signature[i19 - 1] !== "," && current !== "," && current !== ",(") {
+        if (!current.endsWith(",") && !current.endsWith("(")) {
           current = "";
           active2 = false;
         }
@@ -23002,6 +23019,9 @@ ${prettyStateOverride(stateOverride)}`;
         ...typeof maxFeePerGas !== "undefined" && request2.type !== "legacy" && request2.type !== "eip2930" ? { maxFeePerGas } : {},
         ...typeof maxPriorityFeePerGas !== "undefined" && request2.type !== "legacy" && request2.type !== "eip2930" ? { maxPriorityFeePerGas } : {},
         ..."nonceKey" in rest && typeof rest.nonceKey !== "undefined" ? { nonceKey: rest.nonceKey } : {},
+        // Validity bounds are part of the fee-payer signing payload.
+        ..."validBefore" in rest && rest.validBefore !== null && typeof rest.validBefore !== "undefined" ? { validBefore: rest.validBefore } : {},
+        ..."validAfter" in rest && rest.validAfter !== null && typeof rest.validAfter !== "undefined" ? { validAfter: rest.validAfter } : {},
         ..."keyAuthorization" in rest && typeof rest.keyAuthorization !== "undefined" && rest.keyAuthorization !== null && !("keyAuthorization" in request2) ? { keyAuthorization: rest.keyAuthorization } : {},
         ..."feePayerSignature" in rest && typeof rest.feePayerSignature !== "undefined" && rest.feePayerSignature !== null ? { feePayerSignature: rest.feePayerSignature } : {},
         ...shouldUseFilledFeeToken ? { feeToken } : {},
@@ -28470,6 +28490,14 @@ ${prettyStateOverride(stateOverride)}`;
   });
 
   // node_modules/viem/_esm/actions/wallet/waitForCallsStatus.js
+  function getFunctionId(fn5) {
+    let fnId = functionIds.get(fn5);
+    if (fnId === void 0) {
+      fnId = ++functionCount;
+      functionIds.set(fn5, fnId);
+    }
+    return fnId;
+  }
   async function waitForCallsStatus(client, parameters) {
     const {
       id,
@@ -28481,7 +28509,28 @@ ${prettyStateOverride(stateOverride)}`;
       timeout = 6e4,
       throwOnFailure = false
     } = parameters;
-    const observerId = stringify4(["waitForCallsStatus", client.uid, id]);
+    const observerId = stringify4([
+      "waitForCallsStatus",
+      client.uid,
+      id,
+      // Concurrent calls with different behavior-defining options must not
+      // share an observer: the first call's polling closure decides the
+      // status check, failure handling and retry behavior for everyone.
+      // `timeout` is enforced per caller below, so it is not included.
+      {
+        pollingInterval,
+        retryCount,
+        // Caller-provided functions are keyed by identity, not source text:
+        // two predicates built by the same factory have identical source
+        // but capture different values, so they must not share an observer.
+        // Keying on `parameters.*` (not the destructured defaults) keeps
+        // calls that use the defaults on one shared observer, since the
+        // default functions are recreated on every call.
+        retryDelay: typeof parameters.retryDelay === "function" ? ["function", getFunctionId(parameters.retryDelay)] : parameters.retryDelay,
+        status: parameters.status ? getFunctionId(parameters.status) : void 0,
+        throwOnFailure
+      }
+    ]);
     const { promise, resolve, reject } = withResolvers();
     let timer2;
     const unobserve = observe(observerId, { resolve, reject }, (emit) => {
@@ -28519,9 +28568,9 @@ ${prettyStateOverride(stateOverride)}`;
       clearTimeout(timer2);
       reject(new WaitForCallsStatusTimeoutError({ id }));
     }, timeout) : void 0;
-    return await promise;
+    return await promise.finally(() => unobserve());
   }
-  var WaitForCallsStatusTimeoutError;
+  var functionIds, functionCount, WaitForCallsStatusTimeoutError;
   var init_waitForCallsStatus = __esm({
     "node_modules/viem/_esm/actions/wallet/waitForCallsStatus.js"() {
       init_base3();
@@ -28533,6 +28582,8 @@ ${prettyStateOverride(stateOverride)}`;
       init_withRetry();
       init_stringify();
       init_getCallsStatus();
+      functionIds = /* @__PURE__ */ new WeakMap();
+      functionCount = 0;
       WaitForCallsStatusTimeoutError = class extends BaseError3 {
         constructor({ id }) {
           super(`Timed out while waiting for call bundle with id "${id}" to be confirmed.`, { name: "WaitForCallsStatusTimeoutError" });
@@ -31003,41 +31054,52 @@ ${prettyStateOverride(stateOverride)}`;
         };
         const { headers, method, signal: signal_ } = fetchOptions;
         try {
-          const response = await withTimeout(async ({ signal }) => {
-            const init = {
-              ...fetchOptions,
-              body: Array.isArray(body) ? stringify4(body.map((body2) => ({
-                jsonrpc: "2.0",
-                id: body2.id ?? idCache.take(),
-                ...body2
-              }))) : stringify4({
-                jsonrpc: "2.0",
-                id: body.id ?? idCache.take(),
-                ...body
-              }),
-              headers: {
-                ...headers_url,
-                "Content-Type": "application/json",
-                ...headers
-              },
-              method: method || "POST",
-              signal: signal_ || (timeout > 0 ? signal : null)
-            };
-            const request2 = new Request(url, init);
-            const args = await onRequest?.(request2, init) ?? { ...init, url };
-            const response2 = await fetchFn(args.url ?? url, args);
-            return response2;
+          const { response, responseBody } = await withTimeout(async ({ signal: timeoutSignal }) => {
+            const { signal, cleanup } = anySignal([
+              signal_,
+              timeout > 0 ? timeoutSignal : null
+            ]);
+            try {
+              const init = {
+                ...fetchOptions,
+                body: Array.isArray(body) ? stringify4(body.map((body2) => ({
+                  jsonrpc: "2.0",
+                  id: body2.id ?? idCache.take(),
+                  ...body2
+                }))) : stringify4({
+                  jsonrpc: "2.0",
+                  id: body.id ?? idCache.take(),
+                  ...body
+                }),
+                headers: {
+                  ...headers_url,
+                  "Content-Type": "application/json",
+                  ...headers
+                },
+                method: method || "POST",
+                signal
+              };
+              const request2 = new Request(url, init);
+              const args = await onRequest?.(request2, init) ?? {
+                ...init,
+                url
+              };
+              const response2 = await fetchFn(args.url ?? url, args);
+              if (onResponse)
+                await onResponse(response2);
+              const responseBody2 = await readResponseBody(response2, {
+                maxResponseBodySize
+              });
+              return { response: response2, responseBody: responseBody2 };
+            } finally {
+              cleanup();
+            }
           }, {
             errorInstance: new TimeoutError({ body, url }),
             timeout,
             signal: true
           });
-          if (onResponse)
-            await onResponse(response);
           let data;
-          const responseBody = await readResponseBody(response, {
-            maxResponseBodySize
-          });
           if (response.headers.get("Content-Type")?.startsWith("application/json"))
             data = JSON.parse(responseBody);
           else {
@@ -31081,6 +31143,30 @@ ${prettyStateOverride(stateOverride)}`;
         }
       }
     };
+  }
+  function anySignal(signals) {
+    const signals_ = signals.filter((signal) => !!signal);
+    if (signals_.length < 2)
+      return { signal: signals_[0] ?? null, cleanup: () => {
+      } };
+    const controller16 = new AbortController();
+    const onAbort = () => {
+      cleanup();
+      controller16.abort(signals_.find((signal) => signal.aborted)?.reason);
+    };
+    const cleanup = () => {
+      for (const signal of signals_)
+        signal.removeEventListener("abort", onAbort);
+    };
+    for (const signal of signals_) {
+      if (signal.aborted) {
+        cleanup();
+        controller16.abort(signal.reason);
+        break;
+      }
+      signal.addEventListener("abort", onAbort);
+    }
+    return { signal: controller16.signal, cleanup };
   }
   async function readResponseBody(response, { maxResponseBodySize }) {
     if (maxResponseBodySize === false)
@@ -31282,7 +31368,7 @@ ${prettyStateOverride(stateOverride)}`;
                 return;
               if (body.method === "eth_subscribe" && typeof response.result === "string")
                 subscriptions.set(response.result, {
-                  onResponse: callback,
+                  onResponse,
                   onError,
                   body
                 });
@@ -35830,7 +35916,7 @@ ${prettyStateOverride(stateOverride)}`;
                   shouldRetry: ({ error }) => error instanceof BlockNotFoundError
                 });
                 retrying = false;
-                const replacementTransaction = block.transactions.find(({ from: from29, hash: hash6, nonce }) => from29 === replacedTransaction.from && hash6 !== replacedTransaction.hash && nonce === replacedTransaction.nonce);
+                const replacementTransaction = block.transactions.find(({ from: from29, hash: hash6, nonce }) => isAddressEqual(from29, replacedTransaction.from) && hash6 !== replacedTransaction.hash && nonce === replacedTransaction.nonce);
                 if (!replacementTransaction)
                   return;
                 receipt = await getAction(client, getTransactionReceipt, "getTransactionReceipt")({
@@ -35839,7 +35925,7 @@ ${prettyStateOverride(stateOverride)}`;
                 if (confirmations > 1 && (!receipt.blockNumber || blockNumber - receipt.blockNumber + 1n < confirmations))
                   return;
                 let reason = "replaced";
-                if (replacementTransaction.to === replacedTransaction.to && replacementTransaction.value === replacedTransaction.value && replacementTransaction.input === replacedTransaction.input) {
+                if ((replacementTransaction.to && replacedTransaction.to ? isAddressEqual(replacementTransaction.to, replacedTransaction.to) : replacementTransaction.to === replacedTransaction.to) && replacementTransaction.value === replacedTransaction.value && replacementTransaction.input === replacedTransaction.input) {
                   reason = "repriced";
                 } else if (replacementTransaction.from === replacementTransaction.to && replacementTransaction.value === 0n) {
                   reason = "cancelled";
@@ -35869,6 +35955,7 @@ ${prettyStateOverride(stateOverride)}`;
     "node_modules/viem/_esm/actions/public/waitForTransactionReceipt.js"() {
       init_block();
       init_transaction();
+      init_isAddressEqual();
       init_getAction();
       init_observe();
       init_withResolvers();
@@ -38620,7 +38707,19 @@ ${prettyStateOverride(stateOverride)}`;
         },
         async subscribe({ params, onData, onError }) {
           const rpcClient = await getWebSocketRpcClient(url_, wsRpcClientOpts);
-          const { result: subscriptionId } = await new Promise((resolve, reject) => rpcClient.request({
+          let subscriptionId;
+          let unsubscribed = false;
+          function unsubscribe() {
+            unsubscribed = true;
+            return new Promise((resolve) => rpcClient.request({
+              body: {
+                method: "eth_unsubscribe",
+                params: [subscriptionId]
+              },
+              onResponse: resolve
+            }));
+          }
+          await new Promise((resolve, reject) => rpcClient.request({
             body: {
               method: "eth_subscribe",
               params
@@ -38637,6 +38736,9 @@ ${prettyStateOverride(stateOverride)}`;
                 return;
               }
               if (typeof response.id === "number") {
+                subscriptionId = response.result;
+                if (unsubscribed)
+                  unsubscribe();
                 resolve(response);
                 return;
               }
@@ -38646,16 +38748,10 @@ ${prettyStateOverride(stateOverride)}`;
             }
           }));
           return {
-            subscriptionId,
-            async unsubscribe() {
-              return new Promise((resolve) => rpcClient.request({
-                body: {
-                  method: "eth_unsubscribe",
-                  params: [subscriptionId]
-                },
-                onResponse: resolve
-              }));
-            }
+            get subscriptionId() {
+              return subscriptionId;
+            },
+            unsubscribe
           };
         }
       });
@@ -147586,6 +147682,7 @@ ${value}`, dataLines++;
   };
 
   // node_modules/@stellar/stellar-sdk/lib/esm/index.js
+  init_keypair();
   init_transaction_builder();
   init_asset2();
   init_operation2();
@@ -147621,6 +147718,9 @@ ${value}`, dataLines++;
     }
   };
   var NETWORK_STORAGE_KEY = "havkar_stellar_network";
+  var PENDING_PAYMENT_KEY = "havkar_stellar_pending_payment";
+  var STELLAR_MAINNET_PAYMENTS_ENABLED = false;
+  var paymentInFlight = false;
   var HAVKAR_STELLAR = {
     network: readStoredNetwork(),
     connected: false,
@@ -147685,7 +147785,8 @@ ${value}`, dataLines++;
     return {
       id: network.id,
       label: network.label,
-      horizon: network.horizon
+      horizon: network.horizon,
+      paymentsEnabled: network.id !== "PUBLIC" || STELLAR_MAINNET_PAYMENTS_ENABLED === true
     };
   }
   function havkarSetStellarNetwork(networkId) {
@@ -147712,7 +147813,7 @@ ${value}`, dataLines++;
       String(value || "").trim()
     );
   }
-  function parseXlm(value) {
+  function parseXlmAmount(value, allowZero) {
     const text = String(value ?? "").trim();
     if (!/^\d+(\.\d{1,7})?$/.test(
       text
@@ -147727,7 +147828,7 @@ ${value}`, dataLines++;
     const stroops = BigInt(whole) * 10000000n + BigInt(
       fraction.padEnd(7, "0")
     );
-    if (stroops <= 0n) {
+    if (stroops < 0n || stroops === 0n && allowZero !== true) {
       throw new Error(
         "Enter an XLM amount greater than zero."
       );
@@ -147736,6 +147837,12 @@ ${value}`, dataLines++;
       text: formatStroops(stroops),
       stroops
     };
+  }
+  function parseXlm(value) {
+    return parseXlmAmount(
+      value,
+      false
+    );
   }
   function formatStroops(stroops) {
     const negative = stroops < 0n;
@@ -147869,7 +147976,7 @@ ${value}`, dataLines++;
       baseFee
     };
   }
-  function nativeBalance(account) {
+  function nativeBalanceRow(account) {
     const row = (account.balances || []).find(
       function(item) {
         return item.asset_type === "native";
@@ -147880,9 +147987,29 @@ ${value}`, dataLines++;
         "The account has no native XLM balance."
       );
     }
-    return parseXlm(
-      row.balance
+    return row;
+  }
+  function nativeBalance(account) {
+    return parseXlmAmount(
+      nativeBalanceRow(account).balance,
+      true
     );
+  }
+  function availableNative(account) {
+    const row = nativeBalanceRow(account);
+    const gross = parseXlmAmount(
+      row.balance,
+      true
+    );
+    const selling = parseXlmAmount(
+      row.selling_liabilities || "0",
+      true
+    );
+    const stroops = gross.stroops > selling.stroops ? gross.stroops - selling.stroops : 0n;
+    return {
+      text: formatStroops(stroops),
+      stroops
+    };
   }
   function minimumBalance(account, baseReserve) {
     const subentries = BigInt(
@@ -147921,11 +148048,14 @@ ${value}`, dataLines++;
       const balance = nativeBalance(
         account
       );
+      const available = availableNative(
+        account
+      );
       const minimum = minimumBalance(
         account,
         limits.baseReserve
       );
-      const spendable = balance.stroops - minimum - limits.baseFee;
+      const spendable = available.stroops - minimum - limits.baseFee;
       return {
         network: network.id,
         label: network.label,
@@ -148015,14 +148145,14 @@ ${value}`, dataLines++;
     const limits = await ledgerLimits(
       server
     );
-    const balance = nativeBalance(
+    const available = availableNative(
       sourceAccount
     );
     const minimum = minimumBalance(
       sourceAccount,
       limits.baseReserve
     );
-    const spendable = balance.stroops - minimum - limits.baseFee;
+    const spendable = available.stroops - minimum - limits.baseFee;
     if (amount.stroops > spendable) {
       throw new Error(
         "The available XLM is not enough for this payment and the account reserve."
@@ -148079,13 +148209,34 @@ ${value}`, dataLines++;
       xdr: transaction.toXDR(),
       network: network.id,
       label: network.label,
+      passphrase: network.passphrase,
       source,
       destination,
       amount: amount.text,
       kind,
       memo,
-      fee: limits.baseFee.toString()
+      fee: String(transaction.fee),
+      sequence: String(transaction.sequence),
+      timeBounds: {
+        minTime: String(
+          transaction.timeBounds?.minTime || "0"
+        ),
+        maxTime: String(
+          transaction.timeBounds?.maxTime || "0"
+        )
+      },
+      hash: bytesToHex6(
+        transaction.hash()
+      )
     };
+  }
+  function bytesToHex6(bytes) {
+    return Array.from(
+      bytes,
+      function(value) {
+        return value.toString(16).padStart(2, "0");
+      }
+    ).join("");
   }
   function memoText(memo) {
     if (!memo || memo.type !== "text") {
@@ -148102,14 +148253,14 @@ ${value}`, dataLines++;
     return "";
   }
   function assertSignedPayment(signedXdr, prepared) {
-    const network = currentNetwork();
     const signed = TransactionBuilder.fromXDR(
       signedXdr,
-      network.passphrase
+      prepared.passphrase
     );
-    if (signed.source !== prepared.source) {
+    const mismatch = "The signed transaction does not match the payment you reviewed.";
+    if (signed.source !== prepared.source || String(signed.sequence) !== String(prepared.sequence) || String(signed.fee) !== String(prepared.fee) || String(signed.timeBounds?.minTime || "0") !== String(prepared.timeBounds.minTime) || String(signed.timeBounds?.maxTime || "0") !== String(prepared.timeBounds.maxTime) || bytesToHex6(signed.hash()) !== prepared.hash) {
       throw new Error(
-        "The signed transaction is not from the connected wallet."
+        mismatch
       );
     }
     if (!signed.signatures || signed.signatures.length < 1) {
@@ -148120,14 +148271,14 @@ ${value}`, dataLines++;
     const operations = signed.operations || [];
     if (operations.length !== 1) {
       throw new Error(
-        "The signed transaction does not match the payment you reviewed."
+        mismatch
       );
     }
     const operation = operations[0];
     const amount = operation.type === "createAccount" ? operation.startingBalance : operation.amount;
     if (operation.type !== prepared.kind || operation.destination !== prepared.destination || parseXlm(amount).text !== prepared.amount || operation.asset && !operation.asset.isNative()) {
       throw new Error(
-        "The signed transaction does not match the payment you reviewed."
+        mismatch
       );
     }
     const signedMemo = memoText(
@@ -148136,6 +148287,28 @@ ${value}`, dataLines++;
     if (signedMemo !== prepared.memo) {
       throw new Error(
         "The signed memo does not match the memo you entered."
+      );
+    }
+    const signer = Keypair.fromPublicKey(
+      prepared.source
+    );
+    const hash5 = signed.hash();
+    const valid = signed.signatures.some(
+      function(signature) {
+        const raw = signature && signature.signature;
+        const bytes = typeof raw === "function" ? raw.call(signature) : raw;
+        if (!bytes) {
+          return false;
+        }
+        return signer.verify(
+          hash5,
+          bytes
+        );
+      }
+    );
+    if (!valid) {
+      throw new Error(
+        "The signature does not match the connected wallet on this network."
       );
     }
     return signed;
@@ -148333,7 +148506,18 @@ ${value}`, dataLines++;
     }
     let signPromise;
     try {
-      signPromise = StellarWalletsKit.signTransaction(
+      const testSigner = globalThis.HAVKAR_STELLAR_TEST_SIGN;
+      const testHost = String(
+        window.location?.hostname || ""
+      );
+      if (typeof testSigner === "function" && (testHost === "localhost" || testHost === "127.0.0.1")) {
+        signPromise = Promise.resolve(
+          testSigner(
+            prepared,
+            network
+          )
+        );
+      } else signPromise = StellarWalletsKit.signTransaction(
         prepared.xdr,
         {
           networkPassphrase: network.passphrase,
@@ -148350,28 +148534,208 @@ ${value}`, dataLines++;
       albedoPopup
     );
   }
+  function readPendingPayment() {
+    try {
+      const raw = sessionStorage.getItem(
+        PENDING_PAYMENT_KEY
+      );
+      if (!raw) {
+        return null;
+      }
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed.hash !== "string" || typeof parsed.signedXdr !== "string") {
+        return null;
+      }
+      return parsed;
+    } catch (error) {
+      return null;
+    }
+  }
+  function writePendingPayment(pending) {
+    try {
+      sessionStorage.setItem(
+        PENDING_PAYMENT_KEY,
+        JSON.stringify(pending)
+      );
+    } catch (error) {
+    }
+  }
+  function clearPendingPayment() {
+    try {
+      sessionStorage.removeItem(
+        PENDING_PAYMENT_KEY
+      );
+    } catch (error) {
+    }
+  }
+  function samePayment(pending, prepared) {
+    return Boolean(
+      pending && pending.network === prepared.network && pending.source === prepared.source && pending.destination === prepared.destination && pending.amount === prepared.amount && pending.memo === prepared.memo && pending.kind === prepared.kind
+    );
+  }
+  function pendingStillOpen(pending) {
+    const maxTime = Number(
+      pending?.maxTime || 0
+    );
+    return Number.isFinite(maxTime) && maxTime > Math.floor(Date.now() / 1e3);
+  }
+  async function readHorizonTransaction(server, hash5) {
+    try {
+      return await server.transactions().transaction(hash5).call();
+    } catch (error) {
+      if (error instanceof NotFoundError2 || error?.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
+  }
+  async function horizonOperationMatches(server, hash5, prepared) {
+    const page = await server.operations().forTransaction(hash5).limit(5).call();
+    const records = page.records || [];
+    if (records.length !== 1) {
+      return false;
+    }
+    const operation = records[0];
+    const source = operation.source_account || operation.funder || prepared.source;
+    if (source !== prepared.source) {
+      return false;
+    }
+    if (prepared.kind === "payment") {
+      return operation.type === "payment" && (operation.to || operation.destination) === prepared.destination && operation.asset_type === "native" && parseXlm(operation.amount).text === prepared.amount;
+    }
+    return operation.type === "create_account" && operation.account === prepared.destination && parseXlm(operation.starting_balance).text === prepared.amount;
+  }
+  async function confirmedPayment(server, hash5, prepared, network) {
+    const record = await readHorizonTransaction(
+      server,
+      hash5
+    );
+    if (!record) {
+      return null;
+    }
+    if (record.successful !== true || record.hash !== hash5 || record.source_account !== prepared.source) {
+      throw new Error(
+        "The Stellar network rejected the transaction."
+      );
+    }
+    const matched = await horizonOperationMatches(
+      server,
+      hash5,
+      prepared
+    );
+    if (!matched) {
+      throw new Error(
+        "The transaction hash could not be confirmed on Horizon."
+      );
+    }
+    return {
+      hash: record.hash,
+      ledger: record.ledger,
+      network: network.id,
+      label: network.label,
+      source: prepared.source,
+      destination: prepared.destination,
+      amount: prepared.amount,
+      successful: true
+    };
+  }
   async function havkarSignAndSubmitStellarPayment(options) {
     const network = currentNetwork();
-    if (network.id === "PUBLIC") {
+    if (network.id === "PUBLIC" && STELLAR_MAINNET_PAYMENTS_ENABLED !== true) {
       throw new Error(
         "Mainnet payments are protected. Use Testnet."
       );
     }
+    if (paymentInFlight) {
+      throw new Error(
+        "A Stellar payment is already in progress."
+      );
+    }
+    paymentInFlight = true;
     let albedoPopup = null;
     try {
-      readUnsignedPaymentRequest(
+      const request2 = readUnsignedPaymentRequest(
         options
       );
-      albedoPopup = reserveAlbedoSigningWindow();
-      const prepared = await havkarPrepareStellarPayment(
-        options
-      );
-      const signedResult = await requestWalletSignature(
-        prepared,
-        network,
-        albedoPopup
-      );
-      const signedXdr = signedResult?.signedTxXdr || "";
+      const server = horizonServer(network);
+      const pending = readPendingPayment();
+      let prepared = null;
+      let signedXdr = "";
+      if (pending && pending.network === network.id && pending.source === request2.source && pendingStillOpen(pending)) {
+        const replay = {
+          network: network.id,
+          source: request2.source,
+          destination: request2.destination,
+          amount: request2.amount.text,
+          memo: request2.memo,
+          kind: pending.kind
+        };
+        if (samePayment(
+          pending,
+          replay
+        )) {
+          let existing = null;
+          try {
+            existing = await confirmedPayment(
+              server,
+              pending.hash,
+              replay,
+              network
+            );
+          } catch (error) {
+            clearPendingPayment();
+            throw error;
+          }
+          if (existing) {
+            clearPendingPayment();
+            return existing;
+          }
+          if (!pending.fee || !pending.sequence || !pending.timeBounds) {
+            throw new Error(
+              "An earlier Stellar payment is still unresolved. Wait for it to expire before sending another."
+            );
+          }
+          prepared = {
+            network: pending.network,
+            passphrase: network.passphrase,
+            source: pending.source,
+            destination: pending.destination,
+            amount: pending.amount,
+            kind: pending.kind,
+            memo: pending.memo,
+            fee: pending.fee,
+            sequence: pending.sequence,
+            timeBounds: pending.timeBounds,
+            hash: pending.hash
+          };
+          signedXdr = pending.signedXdr;
+        } else {
+          const earlier = await readHorizonTransaction(
+            server,
+            pending.hash
+          );
+          if (!earlier) {
+            throw new Error(
+              "An earlier Stellar payment is still unresolved. Wait for it to expire before sending a different one."
+            );
+          }
+          clearPendingPayment();
+        }
+      } else if (pending) {
+        clearPendingPayment();
+      }
+      if (!prepared) {
+        albedoPopup = reserveAlbedoSigningWindow();
+        prepared = await havkarPrepareStellarPayment(
+          options
+        );
+        const signedResult = await requestWalletSignature(
+          prepared,
+          network,
+          albedoPopup
+        );
+        signedXdr = signedResult?.signedTxXdr || "";
+      }
       if (!signedXdr) {
         throw new Error(
           "The wallet did not return a signed transaction."
@@ -148381,33 +148745,52 @@ ${value}`, dataLines++;
         signedXdr,
         prepared
       );
-      const server = horizonServer(network);
-      const submitted = await server.submitTransaction(
-        signed
-      );
-      if (!submitted?.hash || submitted.successful !== true) {
-        throw new Error(
-          "The Stellar network did not confirm this transaction."
-        );
-      }
-      const record = await server.transactions().transaction(
-        submitted.hash
-      ).call();
-      if (!record || record.successful !== true || record.hash !== submitted.hash || record.source_account !== prepared.source) {
-        throw new Error(
-          "The transaction hash could not be confirmed on Horizon."
-        );
-      }
-      return {
-        hash: record.hash,
-        ledger: record.ledger,
-        network: network.id,
-        label: network.label,
+      writePendingPayment({
+        network: prepared.network,
         source: prepared.source,
         destination: prepared.destination,
         amount: prepared.amount,
-        successful: true
-      };
+        memo: prepared.memo,
+        kind: prepared.kind,
+        hash: prepared.hash,
+        signedXdr,
+        fee: prepared.fee,
+        sequence: prepared.sequence,
+        timeBounds: prepared.timeBounds,
+        maxTime: prepared.timeBounds.maxTime
+      });
+      let submitError = null;
+      try {
+        const submitted = await server.submitTransaction(
+          signed
+        );
+        if (!submitted?.hash || submitted.successful !== true) {
+          throw new Error(
+            "The Stellar network did not confirm this transaction."
+          );
+        }
+      } catch (error) {
+        submitError = error;
+      }
+      let confirmed = null;
+      try {
+        confirmed = await confirmedPayment(
+          server,
+          prepared.hash,
+          prepared,
+          network
+        );
+      } catch (error) {
+        clearPendingPayment();
+        throw error;
+      }
+      if (confirmed) {
+        clearPendingPayment();
+        return confirmed;
+      }
+      throw submitError || new Error(
+        "The transaction hash could not be confirmed on Horizon."
+      );
     } catch (error) {
       closeSigningPopup(
         albedoPopup
@@ -148415,6 +148798,8 @@ ${value}`, dataLines++;
       throw new Error(
         safeErrorMessage(error)
       );
+    } finally {
+      paymentInFlight = false;
     }
   }
   async function havkarConnectStellarWallet() {
