@@ -147719,7 +147719,7 @@ ${value}`, dataLines++;
   };
   var NETWORK_STORAGE_KEY = "havkar_stellar_network";
   var PENDING_PAYMENT_KEY = "havkar_stellar_pending_payment";
-  var STELLAR_MAINNET_PAYMENTS_ENABLED = false;
+  var STELLAR_MAINNET_PAYMENTS_ENABLED = true;
   var paymentInFlight = false;
   var HAVKAR_STELLAR = {
     network: readStoredNetwork(),

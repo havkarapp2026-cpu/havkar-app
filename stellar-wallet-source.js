@@ -55,9 +55,10 @@ const NETWORK_STORAGE_KEY =
 const PENDING_PAYMENT_KEY =
     "havkar_stellar_pending_payment";
 
-/* Owner approval is required before this becomes true. */
+/* Owner authorized Mainnet payments on 2026-10-20.
+   Set this back to false and redeploy to stop them. */
 const STELLAR_MAINNET_PAYMENTS_ENABLED =
-    false;
+    true;
 
 let paymentInFlight =
     false;

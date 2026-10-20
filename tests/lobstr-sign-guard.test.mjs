@@ -173,9 +173,24 @@ const extensionText = readFileSync(
 const walletHtml = readFileSync(new URL("../wallet.html", import.meta.url), "utf8");
 
 assert.equal(
-    /STELLAR_MAINNET_PAYMENTS_ENABLED\s*=\s*false/.test(sourceText),
+    /STELLAR_MAINNET_PAYMENTS_ENABLED\s*=\s*true/.test(sourceText),
     true,
     "mainnet flag"
+);
+assert.equal(
+    sourceText.includes("Public Global Stellar Network ; September 2015"),
+    true,
+    "mainnet passphrase"
+);
+assert.equal(
+    sourceText.includes('horizon:"https://horizon.stellar.org"'),
+    true,
+    "mainnet horizon"
+);
+assert.equal(
+    sourceText.includes('horizon:"https://horizon-testnet.stellar.org"'),
+    true,
+    "testnet horizon"
 );
 assert.equal(sourceText.includes("signAndSubmitTransaction"), false, "HAVKAR does not ask a wallet to submit");
 assert.equal(lobstrText.includes("signAndSubmitTransaction"), false, "LOBSTR extension module has no submit method");
@@ -225,17 +240,20 @@ function useAccount(keypair) {
 useAccount(signer);
 window.havkarSetStellarNetwork("PUBLIC");
 const mainnet = window.havkarGetStellarNetwork();
-assert.equal(mainnet.paymentsEnabled, false, "mainnet payments stay off");
+assert.equal(mainnet.id, "PUBLIC", "mainnet id");
+assert.equal(mainnet.paymentsEnabled, true, "mainnet payments enabled");
+assert.equal(mainnet.horizon, "https://horizon.stellar.org", "mainnet horizon");
+signMode = "selected-network";
 await assert.rejects(
     () => window.havkarSignAndSubmitStellarPayment({
         destination: destination.publicKey(),
         amount: "1",
-        memo: "blocked"
+        memo: "mainnet-checked"
     }),
-    /Mainnet payments are protected/
+    /mock submit blocked/
 );
-assert.equal(signCalls, 0, "mainnet made no signature request");
-assert.equal(calls.submit, 0, "mainnet made no submit");
+assert.equal(signCalls, 1, "mainnet requested one signature");
+assert.equal(calls.submit, 1, "mainnet reached the blocked submit after validation");
 
 window.havkarSetStellarNetwork("TESTNET");
 const missing = Keypair.random();
@@ -249,8 +267,8 @@ await assert.rejects(
     }),
     /No Stellar account was found on Testnet/
 );
-assert.equal(signCalls, 0, "missing account made no signature request");
-assert.equal(calls.submit, 0, "missing account made no submit");
+assert.equal(signCalls, 1, "missing account made no signature request");
+assert.equal(calls.submit, 1, "missing account made no submit");
 
 useAccount(signer);
 signMode = "lobstr-own-network";
@@ -262,8 +280,8 @@ await assert.rejects(
     }),
     /signature does not match/
 );
-assert.equal(signCalls, 1, "wrong network reached the signer once");
-assert.equal(calls.submit, 0, "wrong network was not submitted");
+assert.equal(signCalls, 2, "wrong network reached the signer once");
+assert.equal(calls.submit, 1, "wrong network was not submitted");
 
 signMode = "testnet";
 await assert.rejects(
@@ -274,7 +292,7 @@ await assert.rejects(
     }),
     /mock submit blocked/
 );
-assert.equal(signCalls, 2, "matching signature was accepted");
-assert.equal(calls.submit, 1, "matching signature reached the blocked submit");
+assert.equal(signCalls, 3, "matching signature was accepted");
+assert.equal(calls.submit, 2, "matching signature reached the blocked submit");
 
 console.log("LOBSTR_SIGN_GUARD_OK");

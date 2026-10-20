@@ -5645,9 +5645,13 @@ function renderStellarNetwork(){
     if(subtitle)subtitle.textContent="XLM Wallet • "+network.label;  
     const mainnetBlocked=network.id==="PUBLIC" && network.paymentsEnabled!==true;  
     if(note){  
-        note.textContent=mainnetBlocked  
-            ? "Mainnet is protected. HAVKAR will not create or send a Mainnet payment."  
-            : "Testnet uses test XLM. Nothing on this network is Mainnet money.";  
+        if(mainnetBlocked){  
+            note.textContent="Mainnet is protected. HAVKAR will not create or send a Mainnet payment.";  
+        }else if(network.id==="PUBLIC"){  
+            note.textContent="Mainnet uses real XLM. Your wallet must approve every payment.";  
+        }else{  
+            note.textContent="Testnet uses test XLM. Nothing on this network is Mainnet money.";  
+        }  
     }  
     if(sendButton){  
         if(mainnetBlocked){  
@@ -5658,7 +5662,7 @@ function renderStellarNetwork(){
             sendButton.textContent="No "+network.label+" account to sign";  
         }else if(stellarAccountOnNetwork===true){  
             sendButton.disabled=false;  
-            sendButton.textContent="Sign and send on Testnet";  
+            sendButton.textContent="Sign and send on "+network.label;  
         }else{  
             sendButton.disabled=true;  
             sendButton.textContent="Checking the Stellar account...";  
