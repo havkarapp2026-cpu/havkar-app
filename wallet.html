@@ -5633,6 +5633,8 @@ function setStellarStatus(message,type){
     element.className="stellar-status "+type;  
 }  
   
+let stellarAccountOnNetwork=null;  
+  
 function renderStellarNetwork(){  
     const network=window.havkarGetStellarNetwork?.()||{id:"TESTNET",label:"Testnet"};  
     const select=document.getElementById("stellarNetwork");  
@@ -5648,10 +5650,19 @@ function renderStellarNetwork(){
             : "Testnet uses test XLM. Nothing on this network is Mainnet money.";  
     }  
     if(sendButton){  
-        sendButton.disabled=mainnetBlocked;  
-        sendButton.textContent=mainnetBlocked  
-            ? "Mainnet payments are protected"  
-            : "Sign and send on Testnet";  
+        if(mainnetBlocked){  
+            sendButton.disabled=true;  
+            sendButton.textContent="Mainnet payments are protected";  
+        }else if(stellarAccountOnNetwork===false){  
+            sendButton.disabled=true;  
+            sendButton.textContent="No "+network.label+" account to sign";  
+        }else if(stellarAccountOnNetwork===true){  
+            sendButton.disabled=false;  
+            sendButton.textContent="Sign and send on Testnet";  
+        }else{  
+            sendButton.disabled=true;  
+            sendButton.textContent="Checking the Stellar account...";  
+        }  
     }  
 }  
   
@@ -5660,7 +5671,12 @@ function changeHAVKARStellarNetwork(){
     if(typeof window.havkarSetStellarNetwork==="function" && select){  
         window.havkarSetStellarNetwork(select.value);  
     }  
+    stellarAccountOnNetwork=null;  
     renderStellarNetwork();  
+    const selected=window.havkarGetStellarNetwork?.();  
+    if(selected?.id==="PUBLIC" && selected.paymentsEnabled!==true){  
+        setStellarStatus("Mainnet is protected. HAVKAR will not create or send a Mainnet payment.","error");  
+    }  
     if(window.havkarIsStellarConnected?.())refreshHAVKARStellarBalance();  
 }  
   
@@ -5677,10 +5693,12 @@ function renderStellarConnection(address,options){
         connectButton.style.display="none";  
         disconnectButton.style.display="block";  
         if(send)send.style.display="block";  
+        stellarAccountOnNetwork=null;  
+        renderStellarNetwork();  
         if(options?.restored){  
             setStellarStatus("Public address restored in this browser. A payment still needs your wallet to sign it.","info");  
         }else{  
-            setStellarStatus("Stellar wallet connected. The balance below is read from the Stellar network.","success");  
+            setStellarStatus("Stellar wallet connected. Checking whether this public key exists on the selected network.","info");  
         }  
         refreshHAVKARStellarBalance();  
     }else{  
@@ -5690,6 +5708,7 @@ function renderStellarConnection(address,options){
         disconnectButton.style.display="none";  
         if(send)send.style.display="none";  
         if(balance){balance.textContent="";balance.style.display="none";}  
+        stellarAccountOnNetwork=null;  
     }  
 }  
   
@@ -5700,11 +5719,25 @@ async function refreshHAVKARStellarBalance(){
     balance.textContent="Reading the Stellar balance...";  
     try{  
         const result=await window.havkarFetchStellarBalance();  
+        stellarAccountOnNetwork=result.exists===true;  
+        renderStellarNetwork();  
+        const currentStatus=document.getElementById("stellarStatus")?.textContent||"";  
         if(!result.exists){  
             balance.textContent="No "+result.label+" account for this public key yet.";  
+            if(!/Confirmed on/.test(currentStatus)){  
+                setStellarStatus("This public key has no account on "+result.label+". HAVKAR will not ask the wallet to sign.","error");  
+            }  
             return;  
         }  
         balance.textContent=result.balance+" XLM on "+result.label;  
+        if(/no account on|will not ask the wallet to sign|did not ask the wallet to sign|Mainnet is protected/.test(currentStatus)){  
+            const selected=window.havkarGetStellarNetwork?.()||{};  
+            if(selected.paymentsEnabled===false){  
+                setStellarStatus("Mainnet is protected. HAVKAR will not create or send a Mainnet payment.","error");  
+            }else{  
+                setStellarStatus("This public key has an account on "+result.label+". A payment still needs your wallet to sign.","success");  
+            }  
+        }  
     }catch(error){  
         balance.textContent=error?.message||"Could not read the Stellar balance.";  
     }  
@@ -5760,6 +5793,15 @@ async function sendHAVKARStellarPayment(){
     if(network.paymentsEnabled===false){  
         setStellarStatus("Mainnet is protected. Switch to Testnet before sending.","error");  
         return;  
+    }  
+    if(typeof window.havkarFetchStellarBalance==="function"){  
+        const account=await window.havkarFetchStellarBalance();  
+        stellarAccountOnNetwork=account?.exists===true;  
+        renderStellarNetwork();  
+        if(!account?.exists){  
+            setStellarStatus("This public key has no account on "+(account?.label||network.label)+". HAVKAR did not ask the wallet to sign.","error");  
+            return;  
+        }  
     }  
     button.disabled=true;  
     setStellarStatus("Waiting for your wallet to approve the signature...","info");  
