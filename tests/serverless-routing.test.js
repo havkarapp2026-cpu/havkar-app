@@ -47,7 +47,8 @@ async function main() {
         "/api/stellar-ticket-intent",
         "/api/stellar-ticket-prepare",
         "/api/stellar-ticket-submit",
-        "/api/stellar-ticket-status"
+        "/api/stellar-ticket-status",
+        "/api/supabase-project-ref"
     ]);
     assert.strictEqual(JSON.stringify(vercel).includes("/api/:path*"), false);
 

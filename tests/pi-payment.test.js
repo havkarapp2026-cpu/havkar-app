@@ -218,6 +218,10 @@ async function main() {
         {
             source: "/api/stellar-ticket-status",
             destination: "/api/stellar-ticket?stellarAction=status"
+        },
+        {
+            source: "/api/supabase-project-ref",
+            destination: "/api/stellar-ticket?stellarAction=project-ref"
         }
     ]);
     assert.strictEqual(JSON.stringify(vercel).includes("/api/:path*"), false);
