@@ -20,13 +20,17 @@ https://havkar-app.vercel.app
 
 Implemented today: public pages for wallet, delivery, market, jobs, events, accommodation, translation, and an AI assistant; Supabase-backed accounts and euro ledger records; a non-custodial Stellar wallet on the wallet page.
 
-Planned, and not built: using Stellar to settle a HAVKAR service order. Delivery, market, and jobs do not create or submit Stellar payments.
+Implemented in this repository, and not deployed: an optional Stellar Testnet checkout for an existing paid event ticket. The buyer can still use the existing card checkout. Delivery, market, and jobs do not create or submit Stellar payments.
+
+Not done: the database migration has not been applied, the merchant account is not configured in production, and this checkout cannot submit to Mainnet.
 
 ## Problem and solution
 
 Implemented: a person can connect an external Stellar wallet, review an XLM payment, sign it in that wallet, and have HAVKAR submit the signed transaction only after it matches the payment that was reviewed.
 
-Planned: connect that same check to a real HAVKAR order so a delivery or marketplace payment can be confirmed on Horizon without HAVKAR holding a secret key.
+Implemented in this repository for event tickets on Testnet: the server calculates the XLM amount from the event's euro price and a public EUR quote, builds an unsigned native payment to the configured merchant account, and marks the ticket valid only after a fresh Horizon read. The wallet signs. HAVKAR still does not hold a secret key.
+
+Planned: the same confirmation for delivery or marketplace orders, and any Mainnet service checkout. Mainnet service checkout needs a separate owner approval.
 
 ## Stellar integration
 
@@ -54,7 +58,22 @@ Verified Mainnet payment, read from Horizon on 2026-10-20 and not created by thi
 - Fee charged: 100 stroops
 - Operations: 1 payment
 
-This confirms a LOBSTR-held account signed a Mainnet payment and HAVKAR recorded the successful Horizon result. It does not prove a count of users.
+This confirms a LOBSTR-held account signed a Mainnet payment and HAVKAR recorded the successful Horizon result. It does not prove a count of users. It is not an event-ticket purchase.
+
+Verified Testnet service payment from the new ticket checkout tests, read from `https://horizon-testnet.stellar.org` on 2026-10-20:
+
+- Hash: `a72066cae5ac3dc3f58a20dcc5b25aa2d7abd0dc241ac8052f260cb83602c958`
+- Successful: yes
+- Ledger: 5293395
+- Created: 2026-10-20T10:02:42Z
+- Source: `GCZTBCLWODND3KFLIWVW6MAE2FEHJKTUUP364BHNGQQ5T35X7TFPWMPW`
+- Destination: `GDFQRPV5QGXEY2WAGA3LXMCNNCI2RNIEY4HAHDY7LAXLTABLR32DLX3N`
+- Amount: 0.1000000 native XLM
+- Memo: `hk1c690f5c2741a12e6c12a7fa`
+- Fee charged: 100 stroops
+- Operations: 1 payment
+
+The test used a new Friendbot-funded account. It did not spend the Mainnet account above. The payment is not linked to a production ticket because the new table has not been applied to production.
 
 Planned: no Soroban contracts are in the repository. No open-source contract plan is required until a contract is proposed. If a later design adds contracts, the submission must include an open-source plan before it is sent.
 
@@ -62,7 +81,9 @@ Planned: no Soroban contracts are in the repository. No open-source contract pla
 
 Implemented: HAVKAR is a working non-custodial path from a consumer service app to LOBSTR and Horizon, with the checks above.
 
-Planned impact, only if the funded work ships: a person can pay for an existing HAVKAR service in XLM while the service record and the Horizon payment refer to the same order. That is the Stellar use that is not a standalone wallet.
+Implemented in code, still not in production: a paid event ticket can carry the same reference in the Stellar memo and, after the migration is applied, in the ticket row. The Testnet transaction above shows the memo a reviewer can match.
+
+Planned: delivery and marketplace orders are not on this path yet. Production ticket rows are not created by the Testnet test.
 
 No user, volume, or revenue number is stated here because the repository does not contain a verifiable traction report.
 
@@ -80,8 +101,8 @@ Not claimed:
 
 - This draft is not a third-party audit
 - The Stellar public key is not bound to the Supabase user
-- There is no Stellar payment table. Horizon is the payment record
-- Duplicate protection for an in-flight XLM payment is in browser session storage
+- A Stellar payment table for event tickets is prepared in `supabase/migrations/20261020095735_stellar_ticket_payments.sql`. It has not been applied to production. Authenticated users would be able to read only their own rows. The migration grants them no insert, update, or delete
+- Duplicate protection for a wallet-page payment remains in browser session storage. Ticket checkout adds a unique transaction hash in the prepared table so the same hash cannot confirm a second ticket
 - Production database policies were not re-queried for this draft
 
 Planned in tranche 2: a written threat model and a monitoring plan, which the submission criteria require for tranche 2.
@@ -94,9 +115,11 @@ Duration assumption: 16 weeks, inside the handbook limit of 6 months.
 
 ### Tranche 1 — order payment MVP
 
-Deliverable: on Testnet, a delivery or marketplace order can prepare an unsigned native XLM payment, the existing wallet signs it, and the order shows the Horizon transaction hash only after the current confirmation checks pass.
+Repository work already present: event-ticket Testnet checkout in `lib/stellar-ticket-payment.mjs`, `events.html`, and the four `/api/stellar-ticket-*` routes. `node tests/stellar-ticket-payment.test.mjs` submitted the Testnet payment listed above and rejected a bad signature, a wrong destination, a wrong amount, a Mainnet envelope, an expired time bound, an insufficient balance, a duplicate hash, and a network failure. The ticket stayed unpaid in those failure cases.
 
-Verification: an automated test using a Testnet account, plus a recorded Testnet flow. No Mainnet payment is part of this tranche.
+Still required before this tranche can be called delivered: owner approval to apply the migration, a Testnet merchant public key in the server environment, and a human signature from the events page. No Mainnet service payment is part of this tranche.
+
+The original delivery and marketplace wording is now planned work, not the first integration. Event tickets were selected because they already had a server-side price, a pending order, and a server-only confirmation path.
 
 Cost: $10,800, which is 144 engineering hours.
 

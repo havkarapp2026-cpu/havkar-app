@@ -18,6 +18,11 @@ const delivery = readFileSync(new URL("../delivery.html", import.meta.url), "utf
 const market = readFileSync(new URL("../market.html", import.meta.url), "utf8");
 
 const hash = "31b7592078ec91730b417c920d8f63cf77613f49be1e5d60baf2dec7f2e9ce76";
+const testnetHash = "a72066cae5ac3dc3f58a20dcc5b25aa2d7abd0dc241ac8052f260cb83602c958";
+assert.ok(notes.includes(testnetHash), "notes cite the testnet ticket hash");
+assert.ok(draft.includes(testnetHash), "draft cites the testnet ticket hash");
+assert.ok(draft.includes("has not been applied"), "migration is not claimed as applied");
+assert.ok(notes.includes("not been applied"), "readiness does not claim the migration was applied");
 assert.ok(draft.includes(hash), "draft cites the verified hash");
 assert.ok(notes.includes(hash), "notes cite the verified hash");
 assert.ok(draft.includes("NOT READY"), "draft stays not ready");

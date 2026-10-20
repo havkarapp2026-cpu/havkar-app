@@ -148937,6 +148937,50 @@ ${value}`, dataLines++;
       return null;
     }
   }
+  async function havkarSignPreparedStellarXdr(options) {
+    const passphrase = String(
+      options?.networkPassphrase || ""
+    );
+    const source = String(
+      options?.sourcePublicKey || ""
+    ).trim();
+    const xdr = String(
+      options?.xdr || ""
+    ).trim();
+    if (passphrase !== Networks2.TESTNET) {
+      throw new Error(
+        "Service checkout signing is limited to Stellar Testnet."
+      );
+    }
+    if (!isPublicKey(source)) {
+      throw new Error(
+        "The wallet did not return a valid Stellar public key."
+      );
+    }
+    if (!xdr) {
+      throw new Error(
+        "Missing transaction."
+      );
+    }
+    const albedoPopup = reserveAlbedoSigningWindow();
+    const signedResult = await requestWalletSignature(
+      {
+        xdr,
+        source
+      },
+      STELLAR_NETWORKS.TESTNET,
+      albedoPopup
+    );
+    const signedTxXdr = signedResult?.signedTxXdr || "";
+    if (!signedTxXdr) {
+      throw new Error(
+        "The wallet did not return a signed transaction."
+      );
+    }
+    return {
+      signedTxXdr
+    };
+  }
   window.havkarConnectStellarWallet = havkarConnectStellarWallet;
   window.havkarDisconnectStellarWallet = havkarDisconnectStellarWallet;
   window.havkarGetStellarAddress = havkarGetStellarAddress;
@@ -148946,6 +148990,7 @@ ${value}`, dataLines++;
   window.havkarFetchStellarBalance = havkarFetchStellarBalance;
   window.havkarPrepareStellarPayment = havkarPrepareStellarPayment;
   window.havkarSignAndSubmitStellarPayment = havkarSignAndSubmitStellarPayment;
+  window.havkarSignPreparedStellarXdr = havkarSignPreparedStellarXdr;
   window.havkarRestoreStellarAddress = havkarRestoreStellarAddress;
   window.dispatchEvent(
     new CustomEvent(
