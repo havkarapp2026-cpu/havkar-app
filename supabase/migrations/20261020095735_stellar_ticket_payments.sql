@@ -1,12 +1,15 @@
 -- Testnet XLM payment records for HAVKAR event tickets.
 -- This file is prepared only. Do not apply it to production until the owner approves.
 -- It does not alter existing tables, functions, policies, or the Stellar wallet.
+-- Foreign keys use ON DELETE RESTRICT so deleting an event, ticket, or auth user
+-- cannot remove a payment audit row. Production events already cascade to
+-- event_tickets; this table must not continue that chain.
 
 CREATE TABLE public.stellar_ticket_payments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
-  event_ticket_id bigint NOT NULL REFERENCES public.event_tickets (id) ON DELETE CASCADE,
-  event_id bigint NOT NULL REFERENCES public.events (id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users (id) ON DELETE RESTRICT,
+  event_ticket_id bigint NOT NULL REFERENCES public.event_tickets (id) ON DELETE RESTRICT,
+  event_id bigint NOT NULL REFERENCES public.events (id) ON DELETE RESTRICT,
   network text NOT NULL DEFAULT 'TESTNET',
   status text NOT NULL DEFAULT 'pending',
   source_public_key text,
@@ -79,7 +82,7 @@ REVOKE ALL ON TABLE public.stellar_ticket_payments
   FROM PUBLIC, anon, authenticated, service_role;
 
 GRANT SELECT ON TABLE public.stellar_ticket_payments TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.stellar_ticket_payments TO service_role;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.stellar_ticket_payments TO service_role;
 
 COMMENT ON TABLE public.stellar_ticket_payments IS
   'Testnet XLM intents for event tickets. Buyers can read their own rows and cannot insert or confirm them.';

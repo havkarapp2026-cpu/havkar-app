@@ -41,9 +41,36 @@ Delivery has a price column and no checkout API. Marketplace orders have an amou
 
 `supabase/migrations/20261020095735_stellar_ticket_payments.sql` is prepared and has not been applied.
 
-The table allows only `network = 'TESTNET'`. Row level security lets an authenticated user select their own rows. There is no insert, update, or delete policy. Anonymous users have no privileges. The service role used by the API can write. Buyers cannot mark themselves confirmed.
+The table allows only `network = 'TESTNET'`. Row level security lets an authenticated user select their own rows. There is no insert, update, or delete policy. Anonymous users have no privileges. The service role used by the API can select, insert, and update. It is not granted delete. Buyers cannot mark themselves confirmed.
+
+The foreign keys use `ON DELETE RESTRICT`. A read-only check of production project `gispovnciifgikvgpzck` on 2026-10-20 found that `events` already deletes `event_tickets` with `ON DELETE CASCADE`, and an event owner can delete their own event. Linking this payment table with `CASCADE` would delete confirmed payment rows through that existing path. `RESTRICT` keeps the payment row and makes that delete fail instead.
 
 Do not run this migration on production until the owner approves it.
+
+## Backup
+
+No backup was created or verified for this check. Supabase project details returned no backup id, file path, or checksum. Row counts below are a read-only inventory, not a backup.
+
+Before the migration is applied, the owner needs a backup whose file location and checksum are recorded:
+
+1. In the Supabase dashboard for project `gispovnciifgikvgpzck`, open Database → Backups and record the backup time. This repository check did not confirm that a backup is listed there.
+2. Or create a logical dump with the database password the owner already holds. Do not commit the dump or the password. Keep the file outside this repository.
+3. Record the SHA-256 of that file and confirm the dump lists `public.events`, `public.event_tickets`, `public.wallets`, and `public.wallet_transactions`.
+4. Compare the dump's table counts with a fresh read-only count. On 2026-10-20 the production counts were: events 1, event_tickets 1, paid event_tickets 1, wallets 3, wallet_transactions 0.
+
+Until step 3 has a real checksum, do not treat a backup as verified.
+
+## Rollback
+
+The migration is not in `supabase_migrations.schema_migrations`, and `public.stellar_ticket_payments` does not exist. The current rollback is to leave the file unapplied.
+
+If it is later applied and `select count(*) from public.stellar_ticket_payments` is 0, the owner can remove only that new table:
+
+```sql
+DROP TABLE IF EXISTS public.stellar_ticket_payments;
+```
+
+If that count is greater than 0, do not drop the table. Stop using the ticket XLM routes and leave the rows in place. Dropping the table would delete the payment history this restriction is meant to keep. Do not drop `events`, `event_tickets`, `wallets`, or `wallet_transactions` as a rollback.
 
 ## Production configuration that is still missing
 

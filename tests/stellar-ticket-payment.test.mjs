@@ -655,6 +655,17 @@ function repositoryChecks() {
   assert.equal(migration.includes("FOR UPDATE"), false, "no update policy");
   assert.equal(migration.includes("FOR DELETE"), false, "no delete policy");
   assert.ok(migration.includes("network = 'TESTNET'"), "table is testnet");
+  assert.equal(migration.includes("ON DELETE CASCADE"), false, "payment history is not cascaded");
+  assert.equal(
+    (migration.match(/REFERENCES .+ ON DELETE RESTRICT/g) || []).length,
+    3,
+    "three restrict keys"
+  );
+  assert.equal(
+    migration.includes("GRANT SELECT, INSERT, UPDATE, DELETE"),
+    false,
+    "service role is not granted delete"
+  );
   assert.ok(readFileSync(new URL("../havkar-i18n.js", import.meta.url), "utf8").includes('code: "ckb"'), "sorani remains");
   assert.ok(readFileSync(new URL("../havkar-i18n.js", import.meta.url), "utf8").includes('code: "kmr"'), "kurmanji remains");
 
