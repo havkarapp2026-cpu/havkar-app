@@ -2969,6 +2969,96 @@ async function havkarRestoreStellarAddress(){
 
 
 /* =========================================================
+   SIGN A PREPARED SERVICE PAYMENT
+   Event-ticket checkout calls this. It returns a signed
+   XDR and does not submit. The passphrase must be Testnet.
+   Wallet sends still use havkarSignAndSubmitStellarPayment.
+   ========================================================= */
+
+async function havkarSignPreparedStellarXdr(
+    options
+){
+
+    const passphrase =
+        String(
+            options?.networkPassphrase || ""
+        );
+
+    const source =
+        String(
+            options?.sourcePublicKey || ""
+        ).trim();
+
+    const xdr =
+        String(
+            options?.xdr || ""
+        ).trim();
+
+
+    if(passphrase !== Networks.TESTNET){
+
+        throw new Error(
+            "Service checkout signing is limited to Stellar Testnet."
+        );
+
+    }
+
+
+    if(!isPublicKey(source)){
+
+        throw new Error(
+            "The wallet did not return a valid Stellar public key."
+        );
+
+    }
+
+
+    if(!xdr){
+
+        throw new Error(
+            "Missing transaction."
+        );
+
+    }
+
+
+    const albedoPopup =
+        reserveAlbedoSigningWindow();
+
+    const signedResult =
+        await requestWalletSignature(
+
+            {
+                xdr:xdr,
+                source:source
+            },
+
+            STELLAR_NETWORKS.TESTNET,
+            albedoPopup
+
+        );
+
+    const signedTxXdr =
+        signedResult?.signedTxXdr || "";
+
+
+    if(!signedTxXdr){
+
+        throw new Error(
+            "The wallet did not return a signed transaction."
+        );
+
+    }
+
+
+    return {
+        signedTxXdr:signedTxXdr
+    };
+
+}
+
+
+/* =========================================================
    EXPOSE HAVKAR FUNCTIONS
    ========================================================= */
 
@@ -2998,6 +3088,9 @@ window.havkarPrepareStellarPayment =
 
 window.havkarSignAndSubmitStellarPayment =
     havkarSignAndSubmitStellarPayment;
+
+window.havkarSignPreparedStellarXdr =
+    havkarSignPreparedStellarXdr;
 
 window.havkarRestoreStellarAddress =
     havkarRestoreStellarAddress;

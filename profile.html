@@ -868,6 +868,36 @@ button{
     display:none !important;
 }
 
+.preview-project-check{
+    margin:14px 18px 0;
+}
+
+.preview-project-button{
+    width:100%;
+    min-height:52px;
+    padding:14px 16px;
+    border:0;
+    border-radius:16px;
+    background:#2e7d32;
+    color:#fff;
+    font:700 16px Arial, Helvetica, sans-serif;
+    cursor:pointer;
+}
+
+.preview-project-button:disabled{
+    opacity:.6;
+    cursor:wait;
+}
+
+.preview-project-ref{
+    margin:10px 0 0;
+    min-height:24px;
+    color:#1b5e20;
+    font:600 16px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    overflow-wrap:anywhere;
+    user-select:text;
+}
+
 .setting-row:last-child{
     border-bottom:0;
 }
@@ -1637,6 +1667,11 @@ body.dark-mode .settings-panel{
 body.dark-mode .action,
 body.dark-mode .setting-row{
     background:#1b211c;
+}
+
+body.dark-mode .preview-project-ref{
+    color:#b9f6ca;
+}
 
     color:#eeeeee;
 
@@ -2165,6 +2200,26 @@ input:focus-visible{
             </div>
 
         </button>
+
+
+        <div
+            id="previewProjectCheck"
+            class="preview-project-check"
+            hidden>
+
+            <button
+                id="previewProjectButton"
+                class="preview-project-button"
+                type="button">
+                Verify backend project
+            </button>
+
+            <p
+                id="previewProjectRef"
+                class="preview-project-ref"
+                translate="no"></p>
+
+        </div>
 
 
         <!-- LOGOUT -->
@@ -3202,6 +3257,195 @@ const supabase =
 ========================================================= */
 
 let currentUser = null;
+
+let previewAccessToken = "";
+
+const PREVIEW_PROJECT_HOST =
+    "havkar-app-git-cursor-stell-609741-havkarapp2026-4055s-projects.vercel.app";
+
+function revealPreviewProjectCheck(){
+
+    const box =
+        document.getElementById(
+            "previewProjectCheck"
+        );
+
+    if(!box){
+
+        return;
+
+    }
+
+    box.hidden =
+        location.hostname.toLowerCase() !==
+        PREVIEW_PROJECT_HOST;
+
+}
+
+revealPreviewProjectCheck();
+
+window.verifyPreviewProject =
+async function(){
+
+    const output =
+        document.getElementById(
+            "previewProjectRef"
+        );
+
+    const button =
+        document.getElementById(
+            "previewProjectButton"
+        );
+
+    if(!output || !button){
+
+        return;
+
+    }
+
+    output.textContent = "";
+    button.disabled = true;
+
+    const previewErrors = {
+        "Authentication required":
+            "Authentication required",
+        "Server configuration error":
+            "Server configuration error",
+        "Not found":
+            "Verification route was not found",
+        "Method not allowed":
+            "Method not allowed"
+    };
+
+    try{
+
+        let token =
+            previewAccessToken;
+
+        try{
+
+            const {
+                data,
+                error
+            } =
+            await supabase.auth.getSession();
+
+            const sessionToken =
+                data &&
+                data.session &&
+                data.session.access_token;
+
+            if(!error && sessionToken){
+
+                token =
+                    sessionToken;
+
+            }
+
+        }
+        catch{
+
+            token =
+                previewAccessToken;
+
+        }
+
+        if(!token){
+
+            output.textContent =
+                "Sign in is required";
+
+            return;
+
+        }
+
+        const response =
+            await fetch(
+                "/api/supabase-project-ref",
+                {
+                    method: "GET",
+                    credentials: "same-origin",
+                    cache: "no-store",
+                    headers: {
+                        "x-havkar-session":
+                            token
+                    }
+                }
+            );
+
+        let body =
+            null;
+
+        try{
+
+            body =
+                await response.json();
+
+        }
+        catch{
+
+            body =
+                null;
+
+        }
+
+        const ref =
+            body &&
+            body.project_ref;
+
+        if(
+            response.ok &&
+            typeof ref === "string" &&
+            /^[a-z0-9]{20}$/.test(ref)
+        ){
+
+            output.textContent =
+                ref;
+
+            return;
+
+        }
+
+        const safeError =
+            body &&
+            previewErrors[body.error];
+
+        output.textContent =
+            safeError ||
+            (
+                "Verification failed (HTTP " +
+                response.status +
+                ")"
+            );
+
+    }
+    catch{
+
+        output.textContent =
+            "Verification request failed";
+
+    }
+    finally{
+
+        button.disabled = false;
+
+    }
+
+};
+
+const previewProjectButton =
+    document.getElementById(
+        "previewProjectButton"
+    );
+
+if(previewProjectButton){
+
+    previewProjectButton.addEventListener(
+        "click",
+        window.verifyPreviewProject
+    );
+
+}
 
 let isLoading = false;
 
@@ -6985,6 +7229,12 @@ supabase.auth.onAuthStateChange(
             session.user
             :
             null;
+
+        previewAccessToken =
+            session &&
+            typeof session.access_token === "string"
+                ? session.access_token
+                : "";
 
     }
 );

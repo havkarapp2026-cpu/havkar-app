@@ -425,6 +425,46 @@
     }
 
 
+    function takeLanguageEntryHomeOnce() {
+
+        if (
+            typeof sessionStorage === "undefined" ||
+            !sessionStorage ||
+            typeof sessionStorage.getItem !== "function"
+        ) {
+
+            return false;
+        }
+
+
+        try {
+
+            const armed =
+                sessionStorage.getItem(
+                    "havkar_language_entry_home_once"
+                ) === "1";
+
+
+            if (
+                armed &&
+                typeof sessionStorage.removeItem === "function"
+            ) {
+
+                sessionStorage.removeItem(
+                    "havkar_language_entry_home_once"
+                );
+            }
+
+
+            return armed;
+
+        } catch (error) {
+
+            return false;
+        }
+    }
+
+
     function redirectForEntry() {
 
         const homeEntry =
@@ -436,6 +476,10 @@
             homeEntry &&
             !hasSavedLanguage()
         ) {
+
+            if (takeLanguageEntryHomeOnce()) {
+                return false;
+            }
 
             window.location.replace(
                 "language.html?entry=1"

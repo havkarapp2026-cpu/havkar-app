@@ -67,4 +67,20 @@ const blockedParent = back.havkarBackDestination(
 );
 assert.strictEqual(blockedParent.href, "index.html");
 
+const entryBack = back.havkarBackDestination(
+    origin + "/language.html?entry=1",
+    origin + "/index.html",
+    "profile.html"
+);
+assert.strictEqual(entryBack.action, "assign");
+assert.strictEqual(entryBack.href, "index.html");
+
+const entryFromVercel = back.havkarBackDestination(
+    origin + "/language.html?entry=1",
+    "https://vercel.com/sso-api?url=preview",
+    "profile.html"
+);
+assert.strictEqual(entryFromVercel.action, "assign");
+assert.strictEqual(entryFromVercel.href, "index.html");
+
 console.log("PAGE_BACK_TEST_OK");

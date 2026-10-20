@@ -36,7 +36,9 @@ assert.match(page, /function billingUnavailable\(\)/);
 assert.match(page, /Payment is not active\. These prices are a proposal\./);
 assert.match(page, /Paid plans cannot be purchased in this release\./);
 assert.match(config, /https:\/\/gispovnciifgikvgpzck\.supabase\.co/);
-assert.doesNotMatch(config, /keglioewbkgdabsizvys/);
+assert.match(config, /return production;/);
+assert.doesNotMatch(config, /service_role/);
+assert.doesNotMatch(config, /sb_secret_/);
 assert.match(home, /href="havkar-ai\.html"/);
 for (const href of [
   "buy-sell.html",

@@ -1,3 +1,4 @@
+import { register } from "node:module";
 import { Keypair, Networks, TransactionBuilder } from "@stellar/stellar-sdk";
 
 const assert = {
@@ -43,7 +44,8 @@ globalThis.localStorage = new MemoryStorage();
 globalThis.sessionStorage = new MemoryStorage();
 globalThis.location = {
     hostname: "127.0.0.1",
-    href: "http://127.0.0.1/wallet.html"
+    href: "http://127.0.0.1/wallet.html",
+    origin: "http://127.0.0.1"
 };
 globalThis.window = globalThis;
 globalThis.open = () => null;
@@ -53,17 +55,35 @@ if (typeof globalThis.addEventListener !== "function") {
     globalThis.dispatchEvent = () => true;
 }
 
-function element() {
-    return {
+function element(tag = "") {
+    const node = {
         style: { setProperty() {} },
         dataset: {},
         textContent: "",
+        tagName: String(tag).toUpperCase(),
+        childNodes: [],
+        firstChild: null,
+        nextSibling: null,
+        parentNode: null,
+        data: "",
+        content: null,
+        innerHTML: "",
         setAttribute() {},
+        getAttribute() { return ""; },
+        getAttributeNames() { return []; },
+        hasAttributes() { return false; },
+        removeAttribute() {},
         appendChild() {},
+        append() {},
         prepend() {},
+        replaceWith() {},
+        remove() {},
+        insertBefore(child) { return child; },
         addEventListener() {},
         removeEventListener() {}
     };
+    node.content = node;
+    return node;
 }
 
 globalThis.document = {
@@ -74,6 +94,21 @@ globalThis.document = {
     addEventListener() {},
     removeEventListener() {},
     createElement: element,
+    createComment: element,
+    createTextNode(text) {
+        const node = element();
+        node.data = String(text);
+        node.textContent = node.data;
+        return node;
+    },
+    createTreeWalker() {
+        return {
+            currentNode: null,
+            nextNode() { return null; }
+        };
+    },
+    importNode(node) { return node; },
+    getElementsByTagName() { return []; },
     querySelector() { return null; },
     querySelectorAll() { return []; }
 };
@@ -87,6 +122,7 @@ if (typeof globalThis.CustomEvent !== "function") {
     };
 }
 
+register("./freighter-esm-hook.mjs", import.meta.url);
 await import("../stellar-wallet-source.js");
 
 function canonical(value) {
@@ -269,7 +305,7 @@ await assert.rejects(
         amount: "1.1",
         memo: "host-gate"
     }),
-    /not available|did not return|did not approve/
+    /not available|did not return|did not approve|set the wallet first/
 );
 assert.equal(signCalls, signsBeforeHostGate, "production host ignored the test signer");
 assert.equal(
@@ -402,3 +438,4 @@ console.log(`CREATE_HASH ${created.hash}`);
 console.log(`SOURCE ${source.publicKey()}`);
 console.log(`DESTINATION ${destination.publicKey()}`);
 console.log(`FRESH ${fresh.publicKey()}`);
+process.exit(0);

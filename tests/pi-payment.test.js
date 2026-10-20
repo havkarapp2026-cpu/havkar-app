@@ -198,6 +198,30 @@ async function main() {
         {
             source: "/api/pi-complete",
             destination: "/api/pi-approve?piAction=complete"
+        },
+        {
+            source: "/api/flight-offer",
+            destination: "/api/flights?flightAction=offer"
+        },
+        {
+            source: "/api/stellar-ticket-intent",
+            destination: "/api/stellar-ticket?stellarAction=intent"
+        },
+        {
+            source: "/api/stellar-ticket-prepare",
+            destination: "/api/stellar-ticket?stellarAction=prepare"
+        },
+        {
+            source: "/api/stellar-ticket-submit",
+            destination: "/api/stellar-ticket?stellarAction=submit"
+        },
+        {
+            source: "/api/stellar-ticket-status",
+            destination: "/api/stellar-ticket?stellarAction=status"
+        },
+        {
+            source: "/api/supabase-project-ref",
+            destination: "/api/stellar-ticket?stellarAction=project-ref"
         }
     ]);
     assert.strictEqual(JSON.stringify(vercel).includes("/api/:path*"), false);
@@ -218,10 +242,15 @@ async function main() {
         "business-application-notify.js",
         "eur-usd-quote.js",
         "flights.js",
-        "flight-offer.js",
         "flight-order.js",
-        "pi-a2u-testnet.js"
+        "pi-a2u-testnet.js",
+        "stellar-ticket.js"
     ];
+    assert.strictEqual(apiFiles.includes("flight-offer.js"), false);
+    assert.strictEqual(apiFiles.includes("stellar-ticket-intent.js"), false);
+    assert.strictEqual(apiFiles.includes("stellar-ticket-prepare.js"), false);
+    assert.strictEqual(apiFiles.includes("stellar-ticket-submit.js"), false);
+    assert.strictEqual(apiFiles.includes("stellar-ticket-status.js"), false);
     for (const name of preserved) {
         assert.strictEqual(apiFiles.includes(name), true, name);
     }

@@ -24,6 +24,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
 
     const FALLBACK = "index.html";
+    const LANGUAGE_ENTRY_HOME_ONCE = "havkar_language_entry_home_once";
 
     function pageUrl(value, base) {
 
@@ -100,6 +101,51 @@
         return parent;
     }
 
+    function isLanguageEntryHref(href) {
+
+        const url = pageUrl(href, "https://havkar.invalid");
+
+        if (!url) {
+            return false;
+        }
+
+        return /\/language\.html$/i.test(url.pathname || "") &&
+            url.searchParams.get("entry") === "1";
+    }
+
+    function armLanguageEntryHomeOnce(storage) {
+
+        if (!storage || typeof storage.setItem !== "function") {
+            return false;
+        }
+
+        try {
+            storage.setItem(LANGUAGE_ENTRY_HOME_ONCE, "1");
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    function takeLanguageEntryHomeOnce(storage) {
+
+        if (!storage || typeof storage.getItem !== "function") {
+            return false;
+        }
+
+        try {
+            const armed = storage.getItem(LANGUAGE_ENTRY_HOME_ONCE) === "1";
+
+            if (armed && typeof storage.removeItem === "function") {
+                storage.removeItem(LANGUAGE_ENTRY_HOME_ONCE);
+            }
+
+            return armed;
+        } catch (error) {
+            return false;
+        }
+    }
+
     function havkarBackDestination(currentHref, referrer, parentHref) {
 
         const current = pageUrl(currentHref, "https://havkar.invalid");
@@ -109,6 +155,18 @@
             return {
                 action: "assign",
                 href: fallback
+            };
+        }
+
+        /*
+         * The first-visit gate replaces Home, so history behind
+         * language.html?entry=1 is the external page that opened
+         * the preview. Leave that page by assigning Home.
+         */
+        if (isLanguageEntryHref(current.href)) {
+            return {
+                action: "assign",
+                href: FALLBACK
             };
         }
 
@@ -159,6 +217,14 @@
             parentFromDocument()
         );
 
+        if (
+            decision.action === "assign" &&
+            decision.href === FALLBACK &&
+            isLanguageEntryHref(window.location.href)
+        ) {
+            armLanguageEntryHomeOnce(window.sessionStorage);
+        }
+
         if (decision.action === "history") {
             window.history.back();
             return;
@@ -200,6 +266,14 @@
         function replaceOnSystemBack() {
             window.addEventListener("popstate", function onPop() {
                 window.removeEventListener("popstate", onPop);
+
+                if (
+                    decision.href === FALLBACK &&
+                    isLanguageEntryHref(window.location.href)
+                ) {
+                    armLanguageEntryHomeOnce(window.sessionStorage);
+                }
+
                 window.location.replace(decision.href);
             });
         }
@@ -229,6 +303,10 @@
     }
 
     return {
+        LANGUAGE_ENTRY_HOME_ONCE: LANGUAGE_ENTRY_HOME_ONCE,
+        isLanguageEntryHref: isLanguageEntryHref,
+        armLanguageEntryHomeOnce: armLanguageEntryHomeOnce,
+        takeLanguageEntryHomeOnce: takeLanguageEntryHomeOnce,
         havkarBackDestination: havkarBackDestination,
         navigateBack: navigateBack,
         install: install

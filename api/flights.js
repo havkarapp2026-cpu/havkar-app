@@ -1,4 +1,28 @@
 import { createClient } from "@supabase/supabase-js";
+import { flightOfferHandler } from "../lib/flight-offer-handler.mjs";
+
+function flightRoute(req) {
+    const path = typeof req.url === "string"
+        ? req.url.split("?")[0]
+        : "";
+
+    if (path.endsWith("/api/flight-offer")) {
+        return "offer";
+    }
+
+    const queryAction = req.query?.flightAction;
+    const action = Array.isArray(queryAction) ? queryAction[0] : queryAction;
+
+    if (action === undefined || action === null || action === "") {
+        return "search";
+    }
+
+    if (action === "offer") {
+        return "offer";
+    }
+
+    return "unknown";
+}
 
 function bearerToken(req) {
     const header = req.headers?.authorization;
@@ -67,7 +91,7 @@ async function requireHavkarUser(req) {
     };
 }
 
-export default async function handler(req, res) {
+async function searchFlights(req, res) {
     // =========================================================
     // HAVKAR GLOBAL FLIGHT SEARCH API
     // Provider: Duffel
@@ -870,4 +894,21 @@ export default async function handler(req, res) {
                 "Unable to complete the flight search."
         });
     }
-                  }
+}
+
+export default async function handler(req, res) {
+    const route = flightRoute(req);
+
+    if (route === "unknown") {
+        return res.status(404).json({
+            ok: false,
+            error: "Not found"
+        });
+    }
+
+    if (route === "offer") {
+        return flightOfferHandler(req, res);
+    }
+
+    return searchFlights(req, res);
+}
