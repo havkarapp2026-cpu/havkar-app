@@ -147922,6 +147922,9 @@ ${value}`, dataLines++;
     const message = typeof error === "string" ? error : String(
       error?.message || ""
     );
+    if (/the user closed the modal/i.test(message)) {
+      return "Albedo did not finish connecting. The window closed before it returned a public address.";
+    }
     if (/reject|denied|cancel|closed|dismiss/i.test(message)) {
       return "The wallet did not approve this request.";
     }
@@ -148316,6 +148319,52 @@ ${value}`, dataLines++;
   var ALBEDO_WALLET_ID = "albedo";
   var ALBEDO_WINDOW_NAME = "auth.albedo.link";
   var ALBEDO_CONFIRM_URL = "https://albedo.link/confirm";
+  function openAlbedoConfirmWindow(nativeOpen, features) {
+    const popup = nativeOpen(
+      "about:blank",
+      ALBEDO_WINDOW_NAME,
+      features
+    );
+    if (!popup) {
+      return null;
+    }
+    try {
+      popup.location.href = ALBEDO_CONFIRM_URL;
+    } catch (error) {
+      try {
+        popup.close();
+      } catch (closeError) {
+      }
+      return null;
+    }
+    return popup;
+  }
+  function installAlbedoConfirmBridge() {
+    if (window.__havkarAlbedoOpenBridge === true || typeof window.open !== "function") {
+      return;
+    }
+    const nativeOpen = window.open.bind(
+      window
+    );
+    window.open = function(url, target, features) {
+      const next = String(
+        url || ""
+      );
+      if (target === ALBEDO_WINDOW_NAME && next.indexOf(ALBEDO_CONFIRM_URL) === 0) {
+        return openAlbedoConfirmWindow(
+          nativeOpen,
+          features
+        );
+      }
+      return nativeOpen(
+        url,
+        target,
+        features
+      );
+    };
+    window.__havkarAlbedoOpenBridge = true;
+  }
+  installAlbedoConfirmBridge();
   var ALBEDO_MODULE_STORAGE_KEY = "@StellarWalletsKit/selectedModuleId";
   var ALBEDO_HANDSHAKE_MS = 2e4;
   var WALLET_SIGNATURE_MS = 15e4;

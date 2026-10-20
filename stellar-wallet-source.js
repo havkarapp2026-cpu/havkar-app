@@ -569,6 +569,16 @@ function safeErrorMessage(
 
 
     if(
+        /the user closed the modal/i
+            .test(message)
+    ){
+
+        return "Albedo did not finish connecting. The window closed before it returned a public address.";
+
+    }
+
+
+    if(
         /reject|denied|cancel|closed|dismiss/i
             .test(message)
     ){
@@ -1528,6 +1538,125 @@ const ALBEDO_WINDOW_NAME =
 
 const ALBEDO_CONFIRM_URL =
     "https://albedo.link/confirm";
+
+/* Albedo's confirm page posts {albedo:{protocol:3}} to window.opener.
+   On Android Chrome a direct cross-origin window.open leaves opener null,
+   so that message never reaches HAVKAR. The page then stays on its logo,
+   and the logo is a link to the Albedo dashboard. Opening about:blank in
+   this browsing context keeps the opener, then the same window navigates
+   to the confirm URL. Other wallets are not intercepted. */
+function openAlbedoConfirmWindow(
+    nativeOpen,
+    features
+){
+
+    const popup =
+        nativeOpen(
+
+            "about:blank",
+
+            ALBEDO_WINDOW_NAME,
+
+            features
+
+        );
+
+
+    if(!popup){
+
+        return null;
+
+    }
+
+
+    try{
+
+        popup.location.href =
+            ALBEDO_CONFIRM_URL;
+
+    }
+    catch(error){
+
+        try{
+
+            popup.close();
+
+        }
+        catch(closeError){
+
+        }
+
+
+        return null;
+
+    }
+
+
+    return popup;
+
+}
+
+
+function installAlbedoConfirmBridge(){
+
+    if(
+        window.__havkarAlbedoOpenBridge === true ||
+        typeof window.open !== "function"
+    ){
+
+        return;
+
+    }
+
+
+    const nativeOpen =
+        window.open.bind(
+            window
+        );
+
+
+    window.open =
+        function(
+            url,
+            target,
+            features
+        ){
+
+            const next =
+                String(
+                    url || ""
+                );
+
+
+            if(
+                target === ALBEDO_WINDOW_NAME &&
+                next.indexOf(ALBEDO_CONFIRM_URL) === 0
+            ){
+
+                return openAlbedoConfirmWindow(
+                    nativeOpen,
+                    features
+                );
+
+            }
+
+
+            return nativeOpen(
+                url,
+                target,
+                features
+            );
+
+        };
+
+
+    window.__havkarAlbedoOpenBridge =
+        true;
+
+}
+
+
+installAlbedoConfirmBridge();
 
 const ALBEDO_MODULE_STORAGE_KEY =
     "@StellarWalletsKit/selectedModuleId";
