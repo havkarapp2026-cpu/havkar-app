@@ -32,4 +32,10 @@ assert.ok(!translate.includes('value="ku"'));
 assert.ok(i18n.includes('code: "ckb"'));
 assert.ok(i18n.includes('code: "kmr"'));
 
+const delivery = read("delivery.html");
+assert.ok(!delivery.includes('ckb:"fa"'));
+assert.ok(!delivery.includes('ku:"fa"'));
+assert.ok(!delivery.includes('kmr:"fa"'));
+assert.ok(delivery.includes('["fa","ar","ckb"]'));
+
 console.log("KURDISH_LANGUAGE_TEST_OK");
