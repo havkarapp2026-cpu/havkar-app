@@ -2295,13 +2295,29 @@
             interestedIds = new Set();
             interestedCounts = new Map();
 
+            const counts = await supabase.rpc("event_interest_counts");
+
+            if (!counts.error && Array.isArray(counts.data)) {
+                counts.data.forEach(row => {
+                    interestedCounts.set(
+                        String(row.event_id),
+                        Number(row.interested_count) || 0
+                    );
+                });
+            }
+
+            if (!currentUser) {
+                return;
+            }
+
             const {
                 data,
                 error
             } = await supabase
                 .from("event_user_actions")
-                .select("event_id,user_id")
-                .eq("action", "interested");
+                .select("event_id")
+                .eq("action", "interested")
+                .eq("user_id", currentUser.id);
 
             if (error) {
                 console.error(
@@ -2311,26 +2327,8 @@
                 return;
             }
 
-
-            const rows = data || [];
-
-            rows.forEach(row => {
-                const eventId = String(row.event_id);
-
-                interestedCounts.set(
-                    eventId,
-                    Number(
-                        interestedCounts.get(eventId) || 0
-                    ) + 1
-                );
-
-                if (
-                    currentUser &&
-                    row.user_id === currentUser.id
-                ) {
-                    interestedIds.add(eventId);
-                }
-
+            (data || []).forEach(row => {
+                interestedIds.add(String(row.event_id));
             });
         }
 
