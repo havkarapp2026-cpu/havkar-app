@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <style>
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f4f7f2;color:#263238;padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
-header{background:linear-gradient(135deg,#689f38,#7cb342);color:#fff;padding:16px}
+header{background:linear-gradient(135deg,#689f38,#7cb342);color:#fff;padding:calc(16px + env(safe-area-inset-top, 0px)) 16px 16px}
 main{padding:16px}
 a{color:#2e7d32}
 .card{background:#fff;border-radius:16px;padding:16px;margin:0 0 12px;box-shadow:0 3px 15px rgba(0,0,0,.06)}
@@ -71,10 +71,24 @@ async function start() {
     return;
   }
 
-  const admin = await db.rpc("havkar_session_is_admin");
+  let admin;
+  let owner;
 
-  if (admin.error) {
+  try {
+    admin = await db.rpc("havkar_session_is_admin");
+    owner = await db.rpc("havkar_session_is_owner");
+  } catch (error) {
+    message.textContent = "Administration is not available.";
+    return;
+  }
+
+  if (admin.error && owner.error) {
     message.textContent = "Administration is not available until the database migration is applied.";
+    return;
+  }
+
+  if (owner.data === true && admin.data !== true) {
+    message.textContent = "Owner access is active. Administrator records stay separate.";
     return;
   }
 
