@@ -1049,6 +1049,7 @@ aria-label="Post a new ad"
 
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-countries.js"></script>
+<script src="/havkar-ad-publish.js"></script>
 <script>
 "use strict";
 
@@ -2332,6 +2333,16 @@ function normalizePhotos(
 function isPublicListingStatus(
     status
 ){
+
+    const shared =
+        window.HAVKAR_AD_PUBLISH &&
+        window.HAVKAR_AD_PUBLISH.isPublicListingStatus;
+
+    if (typeof shared === "function") {
+
+        return shared(status);
+
+    }
 
     if(
         status === null ||
