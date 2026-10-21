@@ -55,10 +55,11 @@ const NETWORK_STORAGE_KEY =
 const PENDING_PAYMENT_KEY =
     "havkar_stellar_pending_payment";
 
-/* Owner authorized Mainnet payments on 2026-10-20.
-   Set this back to false and redeploy to stop them. */
+/* Mainnet submission stays off.
+   The submit function refuses a PUBLIC network and
+   horizon.stellar.org even if this constant changes. */
 const STELLAR_MAINNET_PAYMENTS_ENABLED =
-    true;
+    false;
 
 let paymentInFlight =
     false;
@@ -220,8 +221,8 @@ function havkarGetStellarNetwork(){
         horizon:network.horizon,
 
         paymentsEnabled:
-            network.id !== "PUBLIC" ||
-            STELLAR_MAINNET_PAYMENTS_ENABLED === true
+            network.id === "TESTNET" &&
+            STELLAR_MAINNET_PAYMENTS_ENABLED === false
 
     };
 
@@ -2418,6 +2419,46 @@ async function confirmedPayment(
 }
 
 
+function assertStellarSubmissionAllowed(
+    network
+){
+
+    let host =
+        "";
+
+
+    try{
+
+        host =
+            new URL(
+                String(network?.horizon || "")
+            ).hostname;
+
+    }
+    catch(error){
+
+        host =
+            "";
+
+    }
+
+
+    if(
+        !network ||
+        network.id !== "TESTNET" ||
+        network.passphrase !== Networks.TESTNET ||
+        host !== "horizon-testnet.stellar.org"
+    ){
+
+        throw new Error(
+            "Mainnet payments are protected. Use Testnet."
+        );
+
+    }
+
+}
+
+
 async function havkarSignAndSubmitStellarPayment(
     options
 ){
@@ -2426,16 +2467,9 @@ async function havkarSignAndSubmitStellarPayment(
         currentNetwork();
 
 
-    if(
-        network.id === "PUBLIC" &&
-        STELLAR_MAINNET_PAYMENTS_ENABLED !== true
-    ){
-
-        throw new Error(
-            "Mainnet payments are protected. Use Testnet."
-        );
-
-    }
+    assertStellarSubmissionAllowed(
+        network
+    );
 
 
     if(paymentInFlight){
@@ -2682,6 +2716,11 @@ async function havkarSignAndSubmitStellarPayment(
 
 
         try{
+
+            assertStellarSubmissionAllowed(
+                network
+            );
+
 
             const submitted =
                 await server.submitTransaction(

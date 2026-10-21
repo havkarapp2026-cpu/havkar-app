@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { register } from "node:module";
 import {
     Account,
     Horizon,
@@ -51,7 +52,8 @@ globalThis.localStorage = new MemoryStorage();
 globalThis.sessionStorage = new MemoryStorage();
 globalThis.location = {
     hostname: "127.0.0.1",
-    href: "http://127.0.0.1/wallet.html"
+    href: "http://127.0.0.1/wallet.html",
+    origin: "http://127.0.0.1"
 };
 globalThis.window = globalThis;
 globalThis.open = () => null;
@@ -61,17 +63,35 @@ if (typeof globalThis.addEventListener !== "function") {
     globalThis.dispatchEvent = () => true;
 }
 
-function element() {
-    return {
+function element(tag = "") {
+    const node = {
         style: { setProperty() {} },
         dataset: {},
         textContent: "",
+        tagName: String(tag).toUpperCase(),
+        childNodes: [],
+        firstChild: null,
+        nextSibling: null,
+        parentNode: null,
+        data: "",
+        content: null,
+        innerHTML: "",
         setAttribute() {},
+        getAttribute() { return ""; },
+        getAttributeNames() { return []; },
+        hasAttributes() { return false; },
+        removeAttribute() {},
         appendChild() {},
+        append() {},
         prepend() {},
+        replaceWith() {},
+        remove() {},
+        insertBefore(child) { return child; },
         addEventListener() {},
         removeEventListener() {}
     };
+    node.content = node;
+    return node;
 }
 
 globalThis.document = {
@@ -82,6 +102,21 @@ globalThis.document = {
     addEventListener() {},
     removeEventListener() {},
     createElement: element,
+    createComment: element,
+    createTextNode(text) {
+        const node = element();
+        node.data = String(text);
+        node.textContent = node.data;
+        return node;
+    },
+    createTreeWalker() {
+        return {
+            currentNode: null,
+            nextNode() { return null; }
+        };
+    },
+    importNode(node) { return node; },
+    getElementsByTagName() { return []; },
     querySelector() { return null; },
     querySelectorAll() { return []; }
 };
@@ -108,6 +143,7 @@ globalThis.fetch = async (url) => {
     return originalFetch(url);
 };
 
+register("./freighter-esm-hook.mjs", import.meta.url);
 await import("../stellar-wallet-source.js");
 
 const calls = { submit: 0 };
@@ -158,6 +194,7 @@ Horizon.Server.prototype.transactions = function() {
 };
 
 const sourceText = readFileSync(new URL("../stellar-wallet-source.js", import.meta.url), "utf8");
+const bundleText = readFileSync(new URL("../stellar-wallet-bundle.js", import.meta.url), "utf8");
 const lobstrText = readFileSync(
     new URL("../node_modules/@creit.tech/stellar-wallets-kit/esm/sdk/modules/lobstr.module.js", import.meta.url),
     "utf8"
@@ -173,10 +210,20 @@ const extensionText = readFileSync(
 const walletHtml = readFileSync(new URL("../wallet.html", import.meta.url), "utf8");
 
 assert.equal(
-    /STELLAR_MAINNET_PAYMENTS_ENABLED\s*=\s*true/.test(sourceText),
+    /STELLAR_MAINNET_PAYMENTS_ENABLED\s*=\s*false/.test(sourceText),
     true,
     "mainnet flag"
 );
+assert.equal(
+    sourceText.includes("function assertStellarSubmissionAllowed"),
+    true,
+    "submission guard"
+);
+assert.equal(bundleText.includes("STELLAR_MAINNET_PAYMENTS_ENABLED = false"), true, "bundle flag");
+assert.equal(bundleText.includes("function assertStellarSubmissionAllowed"), true, "bundle guard");
+const submitAt = sourceText.lastIndexOf("await server.submitTransaction");
+const guardAt = sourceText.lastIndexOf("assertStellarSubmissionAllowed", submitAt);
+assert.equal(guardAt > sourceText.indexOf("async function havkarSignAndSubmitStellarPayment") && guardAt < submitAt, true, "guard runs before submit");
 assert.equal(
     sourceText.includes("Public Global Stellar Network ; September 2015"),
     true,
@@ -241,7 +288,7 @@ useAccount(signer);
 window.havkarSetStellarNetwork("PUBLIC");
 const mainnet = window.havkarGetStellarNetwork();
 assert.equal(mainnet.id, "PUBLIC", "mainnet id");
-assert.equal(mainnet.paymentsEnabled, true, "mainnet payments enabled");
+assert.equal(mainnet.paymentsEnabled, false, "mainnet payments disabled");
 assert.equal(mainnet.horizon, "https://horizon.stellar.org", "mainnet horizon");
 signMode = "selected-network";
 await assert.rejects(
@@ -250,10 +297,10 @@ await assert.rejects(
         amount: "1",
         memo: "mainnet-checked"
     }),
-    /mock submit blocked/
+    /Mainnet payments are protected/
 );
-assert.equal(signCalls, 1, "mainnet requested one signature");
-assert.equal(calls.submit, 1, "mainnet reached the blocked submit after validation");
+assert.equal(signCalls, 0, "mainnet made no signature request");
+assert.equal(calls.submit, 0, "mainnet made no submit");
 
 window.havkarSetStellarNetwork("TESTNET");
 const missing = Keypair.random();
@@ -267,8 +314,8 @@ await assert.rejects(
     }),
     /No Stellar account was found on Testnet/
 );
-assert.equal(signCalls, 1, "missing account made no signature request");
-assert.equal(calls.submit, 1, "missing account made no submit");
+assert.equal(signCalls, 0, "missing account made no signature request");
+assert.equal(calls.submit, 0, "missing account made no submit");
 
 useAccount(signer);
 signMode = "lobstr-own-network";
@@ -280,8 +327,8 @@ await assert.rejects(
     }),
     /signature does not match/
 );
-assert.equal(signCalls, 2, "wrong network reached the signer once");
-assert.equal(calls.submit, 1, "wrong network was not submitted");
+assert.equal(signCalls, 1, "wrong network reached the signer once");
+assert.equal(calls.submit, 0, "wrong network was not submitted");
 
 signMode = "testnet";
 await assert.rejects(
@@ -292,7 +339,8 @@ await assert.rejects(
     }),
     /mock submit blocked/
 );
-assert.equal(signCalls, 3, "matching signature was accepted");
-assert.equal(calls.submit, 2, "matching signature reached the blocked submit");
+assert.equal(signCalls, 2, "matching signature was accepted");
+assert.equal(calls.submit, 1, "matching signature reached the blocked submit");
 
 console.log("LOBSTR_SIGN_GUARD_OK");
+process.exit(0);

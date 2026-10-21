@@ -183,7 +183,7 @@ window.havkarSetStellarNetwork("PUBLIC");
 const mainnet = window.havkarGetStellarNetwork();
 assert.equal(mainnet.id, "PUBLIC");
 assert.equal(mainnet.horizon, "https://horizon.stellar.org");
-assert.equal(mainnet.paymentsEnabled, true);
+assert.equal(mainnet.paymentsEnabled, false);
 assert.equal(signCalls, 0, "switching to mainnet made no signature request");
 window.havkarSetStellarNetwork("TESTNET");
 
