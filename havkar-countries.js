@@ -284,6 +284,118 @@
         return [city, country].filter(Boolean).join(", ");
     }
 
+    const FREE_TEXT_ALIASES = Object.freeze([
+        ["italia", "IT"],
+        ["italy", "IT"],
+        ["deutschland", "DE"],
+        ["germany", "DE"],
+        ["sverige", "SE"],
+        ["sweden", "SE"],
+        ["españa", "ES"],
+        ["espana", "ES"],
+        ["spain", "ES"],
+        ["france", "FR"],
+        ["netherlands", "NL"],
+        ["nederland", "NL"],
+        ["holland", "NL"],
+        ["united kingdom", "GB"],
+        ["great britain", "GB"],
+        ["united states of america", "US"],
+        ["united states", "US"],
+        ["iran", "IR"],
+        ["türkiye", "TR"],
+        ["turkiye", "TR"],
+        ["turkey", "TR"]
+    ]);
+
+    const SHORT_TEXT_CODES = Object.freeze({
+        it: "IT",
+        de: "DE",
+        se: "SE",
+        fr: "FR",
+        es: "ES",
+        nl: "NL",
+        gb: "GB",
+        uk: "GB",
+        us: "US",
+        tr: "TR",
+        ir: "IR"
+    });
+
+    function escapePhrase(value) {
+        return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function containsPhrase(haystack, phrase) {
+        return new RegExp(
+            "(^|[^a-z\\u00c0-\\u024f])" +
+            escapePhrase(phrase) +
+            "([^a-z\\u00c0-\\u024f]|$)",
+            "i"
+        ).test(haystack);
+    }
+
+    function countryCodeFromFreeText(value) {
+        const haystack = String(value || "")
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, " ");
+
+        if (!haystack) {
+            return "";
+        }
+
+        if (Object.prototype.hasOwnProperty.call(SHORT_TEXT_CODES, haystack)) {
+            return SHORT_TEXT_CODES[haystack];
+        }
+
+        const candidates = COUNTRIES
+            .map(function (country) {
+                return { phrase: country.name.toLowerCase(), code: country.code };
+            })
+            .concat(FREE_TEXT_ALIASES.map(function (entry) {
+                return { phrase: entry[0], code: entry[1] };
+            }))
+            .filter(function (candidate) {
+                return candidate.phrase.length >= 4;
+            })
+            .sort(function (left, right) {
+                return right.phrase.length - left.phrase.length;
+            });
+
+        for (let index = 0; index < candidates.length; index += 1) {
+            if (containsPhrase(haystack, candidates[index].phrase)) {
+                return candidates[index].code;
+            }
+        }
+
+        const tokens = haystack.split(/[^a-z]+/);
+
+        for (let index = 0; index < tokens.length; index += 1) {
+            if (Object.prototype.hasOwnProperty.call(SHORT_TEXT_CODES, tokens[index])) {
+                return SHORT_TEXT_CODES[tokens[index]];
+            }
+        }
+
+        return "";
+    }
+
+    function listingCountryCode(record) {
+        const source = record || {};
+        const explicit = normalizeCode(source.country_code);
+
+        if (isCountryCode(explicit)) {
+            return explicit;
+        }
+
+        return countryCodeFromFreeText([
+            source.country,
+            source.location,
+            source.city,
+            source.country_code
+        ].filter(Boolean).join(" "));
+    }
+
     function fillCountrySelect(select, placeholder) {
         if (!select) {
             return;
@@ -314,6 +426,7 @@
         isCountryCode: isCountryCode,
         countryName: countryName,
         placeLabel: placeLabel,
+        listingCountryCode: listingCountryCode,
         fillCountrySelect: fillCountrySelect
     });
 }());
