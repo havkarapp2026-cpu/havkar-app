@@ -39,7 +39,12 @@ assert.ok(tickets.includes("City-to-City Transfer"));
 assert.ok(tickets.includes("Scheduled Transfer"));
 assert.ok(!tickets.includes("Duffel"));
 assert.ok(!tickets.includes("createTestOrder"));
-assert.ok(tickets.indexOf("havkar-transfer-widget.js") < tickets.indexOf("welcomepickups.com/widget/bundle.js"));
+assert.ok(!tickets.includes("welcomepickups.com/widget/bundle.js"));
+assert.ok(tickets.includes("Welcome Pickups does not allow this site to load its city list."));
+assert.ok(!tickets.includes("Open transfer booking"));
+const taxi = fs.readFileSync(path.join(__dirname, "../taxi.html"), "utf8");
+assert.ok(!taxi.includes("welcomepickups.com/widget/bundle.js"));
+assert.ok(taxi.includes("Welcome Pickups does not allow HAVKAR to load its city list."));
 
 const events = fs.readFileSync(path.join(__dirname, "../events.html"), "utf8");
 assert.ok(events.includes(".favorite-btn:not(.active) i"));
