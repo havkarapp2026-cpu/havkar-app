@@ -4,6 +4,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   assistantInstruction,
+  imageGenerationRequested,
+  logoEntitlementDecision,
   normalizeLanguage,
   providerErrorStatus,
   validateAssistantRequest
@@ -45,7 +47,7 @@ assert.equal(validateAssistantRequest({
 
 assert.equal(validateAssistantRequest({
   language: "en",
-  messages: [{ role: "user", content: "x".repeat(1201) }]
+  messages: [{ role: "user", content: "x".repeat(6001) }]
 }).ok, false);
 
 assert.equal(validateAssistantRequest({
@@ -65,8 +67,8 @@ assert.match(source, /admin\.auth\.getUser\(accessToken\)/);
 assert.match(source, /HAVKAR_AI_API_KEY/);
 assert.match(source, /x-goog-api-key/);
 assert.match(source, /const DEFAULT_MODEL = "gemini-3\.5-flash-lite"/);
-assert.match(source, /gemini_http_status=/);
-assert.match(source, /gemini_error_status=/);
+assert.match(read("supabase/functions/havkar-ai-assistant/policy.mjs"), /gemini_http_status=/);
+assert.match(read("supabase/functions/havkar-ai-assistant/policy.mjs"), /gemini_error_status=/);
 assert.match(source, /thinkingBudget: 0/);
 assert.match(source, /model\.startsWith\("gemini-2\.5-flash"\)/);
 assert.equal(providerErrorStatus({ error: { status: "NOT_FOUND" } }), "NOT_FOUND");
@@ -96,5 +98,40 @@ const publicAiPage = read("havkar-ai.html");
 assert.match(publicAiPage, /\/functions\/v1\/havkar-ai-assistant/);
 assert.doesNotMatch(publicAiPage, /HAVKAR_AI_API_KEY/);
 assert.doesNotMatch(publicAiPage, /service_role/);
+
+const imageRequest = { mode: "image", task: "logo", logo: { name: "North Market" } };
+assert.equal(imageGenerationRequested(imageRequest), true);
+assert.deepEqual(
+  logoEntitlementDecision({ ok: true, row: null }, imageRequest, Date.now()),
+  { required: true, allowed: false, status: 403 }
+);
+assert.equal(
+  logoEntitlementDecision({ ok: false }, imageRequest).status,
+  503
+);
+assert.equal(
+  logoEntitlementDecision(
+    { ok: true, row: { plan_code: "plus", status: "active", current_period_end: "2000-01-01T00:00:00.000Z" } },
+    imageRequest,
+    Date.parse("2026-10-21T00:00:00.000Z")
+  ).allowed,
+  false
+);
+assert.equal(
+  logoEntitlementDecision(
+    { ok: true, row: { plan_code: "pro", status: "active", current_period_end: "2099-01-01T00:00:00.000Z" } },
+    imageRequest,
+    Date.parse("2026-10-21T00:00:00.000Z")
+  ).allowed,
+  true
+);
+assert.equal(logoEntitlementDecision({ ok: true, row: null }, { messages: [{ role: "user", content: "Hello" }] }).allowed, true);
+assert.match(source, /verifiedLogoEntitlement/);
+assert.match(source, /Image generation requires an active paid HAVKAR AI plan/);
+assert.match(source, /consume_ai_budget|consume_ai_image_budget/);
+assert.equal(
+  fs.readdirSync(path.join(root, "api")).filter((name) => /logo|image-gen/i.test(name)).length,
+  0
+);
 
 console.log("AI_ASSISTANT_TEST_OK");
