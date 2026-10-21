@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>HAVKAR - Privacy requests</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f5f5f5;color:#303030}
+header{background:#689f38;color:#fff;padding:16px 18px;display:flex;gap:12px;align-items:center}
+header a{color:#fff;text-decoration:none;font-size:1.3rem}
+main{max-width:720px;margin:0 auto;padding:18px}
+.card{background:#fff;border-radius:16px;padding:18px;margin-bottom:14px}
+button{background:#689f38;color:#fff;border:0;border-radius:12px;padding:12px 14px;font:inherit;cursor:pointer}
+button+button{margin-left:8px}
+.status{margin-top:12px}
+.error{color:#b71c1c}
+</style>
+</head>
+<body>
+<header>
+<a href="support.html" aria-label="Back to support"><i class="fas fa-arrow-left"></i></a>
+<h1>Privacy requests</h1>
+</header>
+<main>
+<section class="card">
+<p>Submit a request to export your HAVKAR personal data or to ask for account deletion. Sending this form does not delete the account.</p>
+<p>Wallet, payment, and other records that must be kept for legal or accounting reasons stay stored until a separate approved process handles them. This page does not certify GDPR compliance.</p>
+<p>Sign in with the account that owns the request.</p>
+<button type="button" id="exportRequest">Request data export</button>
+<button type="button" id="deletionRequest">Request account deletion</button>
+<p id="status" class="status" role="status"></p>
+</section>
+</main>
+<script src="/havkar-supabase-config.js"></script>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const config = window.HAVKAR_SUPABASE_CONFIG;
+const supabase = createClient(config.url, config.publishableKey, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+});
+const status = document.getElementById("status");
+
+function show(message, failed) {
+  status.textContent = message;
+  status.className = failed ? "status error" : "status";
+}
+
+async function submit(requestType) {
+  show("Checking your session.", false);
+  const { data, error } = await supabase.auth.getUser();
+  const user = data && data.user;
+  if (error || !user) {
+    show("Sign in before submitting a privacy request. Nothing was deleted.", true);
+    return;
+  }
+  const inserted = await supabase.from("privacy_requests").insert({
+    user_id: user.id,
+    request_type: requestType,
+    status: "requested"
+  });
+  if (inserted.error) {
+    const text = String(inserted.error.message || "");
+    const unavailable = text.includes("privacy_requests") || inserted.error.code === "42P01" || inserted.error.code === "PGRST205";
+    show(unavailable
+      ? "Privacy requests cannot be saved until the approved database migration is applied. Nothing was deleted."
+      : "The request was not saved. Nothing was deleted.", true);
+    return;
+  }
+  show(requestType === "deletion"
+    ? "Deletion request saved. Your account is still active."
+    : "Export request saved. Your account was not changed.", false);
+}
+
+document.getElementById("exportRequest").addEventListener("click", () => submit("export"));
+document.getElementById("deletionRequest").addEventListener("click", () => submit("deletion"));
+</script>
+</body>
+</html>
