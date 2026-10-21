@@ -760,6 +760,10 @@ button{
     color:#d32f2f;
 }
 
+#profileAdministration[hidden]{
+    display:none !important;
+}
+
 
 /* =========================================================
    SETTINGS
@@ -2156,6 +2160,40 @@ input:focus-visible{
 
                 <div class="action-subtitle">
                     Get help from HAVKAR
+                </div>
+
+            </div>
+
+            <div class="action-arrow">
+                <i class="fas fa-chevron-right"></i>
+            </div>
+
+        </button>
+
+
+        <!-- ADMINISTRATION: hidden until the server confirms an administrator or the owner. -->
+
+        <button
+            id="profileAdministration"
+            class="action"
+            type="button"
+            hidden
+            onclick="goTo('admin.html')">
+
+            <div class="action-icon">
+
+                <i class="fas fa-user-shield"></i>
+
+            </div>
+
+            <div class="action-content">
+
+                <div class="action-title">
+                    Administration
+                </div>
+
+                <div class="action-subtitle">
+                    Server-confirmed administrators only
                 </div>
 
             </div>
@@ -4055,6 +4093,97 @@ function renderAvatar(
    LOAD PROFILE
 ========================================================= */
 
+/* =========================================================
+   ADMINISTRATION ENTRY
+   Shown only when havkar_session_is_admin or
+   havkar_session_is_owner returns true.
+   Staff permissions do not reveal this button.
+========================================================= */
+
+async function revealAdministration(
+    user
+){
+
+    const button =
+        document.getElementById(
+            "profileAdministration"
+        );
+
+    const settingsEmail =
+        document.getElementById(
+            "settingsAccountEmail"
+        );
+
+
+    if(settingsEmail){
+
+        settingsEmail.textContent =
+            user && user.email
+            ? user.email
+            : "";
+
+    }
+
+
+    if(!button){
+
+        return;
+
+    }
+
+
+    button.hidden = true;
+
+
+    if(!user){
+
+        return;
+
+    }
+
+
+    try{
+
+        const admin =
+            await supabase.rpc(
+                "havkar_session_is_admin"
+            );
+
+        const owner =
+            await supabase.rpc(
+                "havkar_session_is_owner"
+            );
+
+        const adminAllowed =
+            admin &&
+            admin.error == null &&
+            admin.data === true;
+
+        const ownerAllowed =
+            owner &&
+            owner.error == null &&
+            owner.data === true;
+
+        button.hidden = !(
+            adminAllowed ||
+            ownerAllowed
+        );
+
+    }
+    catch(error){
+
+        console.error(
+            "Administration check failed:",
+            error
+        );
+
+        button.hidden = true;
+
+    }
+
+}
+
+
 window.loadProfile =
 async function(){
 
@@ -4202,6 +4331,9 @@ async function(){
             }
 
 
+            revealAdministration(null);
+
+
             return;
 
         }
@@ -4213,6 +4345,9 @@ async function(){
 
         const user =
             currentUser;
+
+
+        revealAdministration(user);
 
 
         const metadata =
@@ -4466,6 +4601,8 @@ async function(){
             ),
             "error"
         );
+
+        revealAdministration(null);
 
     }
     finally{

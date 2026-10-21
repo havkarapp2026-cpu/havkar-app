@@ -38,7 +38,8 @@ assert.match(page, /Paid plans cannot be purchased in this release\./);
 assert.match(config, /https:\/\/gispovnciifgikvgpzck\.supabase\.co/);
 assert.doesNotMatch(config, /keglioewbkgdabsizvys/);
 assert.match(home, /href="havkar-ai\.html"/);
-for (const href of [
+assert.match(home, /assets\/home\/header\.png/);
+const publicMenu = [
   "buy-sell.html",
   "jobs.html",
   "services.html",
@@ -52,11 +53,17 @@ for (const href of [
   "language.html",
   "reviews.html",
   "support.html",
-  "admin.html",
+  "havkar-ai.html",
   "about.html"
-]) {
-  assert.match(home, new RegExp("href=\"" + href.replace(".", "\\.") + "\""));
-}
+];
+const tiles = [...home.matchAll(/<a class="menu-item" href="([^"]+)"/g)].map((match) => match[1]);
+assert.deepEqual(tiles, publicMenu);
+assert.equal(tiles.length, 15);
+assert.equal(tiles[13], "havkar-ai.html");
+assert.equal(tiles[14], "about.html");
+assert.match(home, /About HAVKAR/);
+assert.doesNotMatch(home, /href="admin\.html"/);
+assert.doesNotMatch(home, /Administration/);
 assert.doesNotMatch(phrases, /havkar-ai-billing/);
 assert.doesNotMatch(phrases, /stripe/i);
 assert.equal(ssePayloads('data: {"type":"delta","text":"سلام"}\n', true).payloads[0].text, "سلام");
