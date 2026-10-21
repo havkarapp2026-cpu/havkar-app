@@ -1058,6 +1058,157 @@
     }
 
 
+    /*
+     * Homepage labels for Italian and German are fixed here.
+     * The live page stayed in English when the translation
+     * request had not returned, and "Services" was being
+     * translated as "Fibre". These strings are applied
+     * before that request and are not sent to it.
+     */
+    const HOMEPAGE_GLOSSARY = Object.freeze({
+        it: Object.freeze({
+            "Connect • Trade • Work • Help": "Connetti • Scambia • Lavora • Aiuta",
+            "Buy & Sell": "Compra e vendi",
+            "Jobs": "Lavori",
+            "Services": "Servizi",
+            "Wallet": "Portafoglio",
+            "Tickets": "Biglietti",
+            "Accommodation": "Alloggi",
+            "Ads": "Annunci",
+            "Delivery": "Consegne",
+            "Events": "Eventi",
+            "Chat": "Chat",
+            "Languages": "Lingue",
+            "Reviews": "Recensioni",
+            "Support": "Supporto",
+            "HAVKAR AI": "HAVKAR AI",
+            "About HAVKAR": "Informazioni su HAVKAR",
+            "Create New Account": "Crea un nuovo account",
+            "Already have an account?": "Hai già un account?",
+            "Log In": "Accedi",
+            "Safe • Secure • Trusted": "Sicuro • Protetto • Affidabile"
+        }),
+        de: Object.freeze({
+            "Connect • Trade • Work • Help": "Verbinden • Handeln • Arbeiten • Helfen",
+            "Buy & Sell": "Kaufen & Verkaufen",
+            "Jobs": "Jobs",
+            "Services": "Dienste",
+            "Wallet": "Geldbörse",
+            "Tickets": "Tickets",
+            "Accommodation": "Unterkunft",
+            "Ads": "Anzeigen",
+            "Delivery": "Lieferung",
+            "Events": "Veranstaltungen",
+            "Chat": "Chat",
+            "Languages": "Sprachen",
+            "Reviews": "Bewertungen",
+            "Support": "Support",
+            "HAVKAR AI": "HAVKAR AI",
+            "About HAVKAR": "Über HAVKAR",
+            "Create New Account": "Neues Konto erstellen",
+            "Already have an account?": "Schon ein Konto?",
+            "Log In": "Anmelden",
+            "Safe • Secure • Trusted": "Sicher • Geschützt • Vertrauenswürdig"
+        })
+    });
+
+
+    function homepageGlossary(
+        language
+    ) {
+
+        return HOMEPAGE_GLOSSARY[
+            language
+        ] || null;
+    }
+
+
+    function applyHomepageGlossary(
+        root
+    ) {
+
+        const pack =
+            homepageGlossary(
+                getLanguage()
+            );
+
+
+        if (
+            !pack ||
+            !root ||
+            typeof document === "undefined"
+        ) {
+
+            return;
+        }
+
+
+        const walker =
+            document.createTreeWalker(
+                root,
+                NodeFilter.SHOW_TEXT,
+                {
+                    acceptNode: function (node) {
+
+                        return isIgnoredTextNode(node)
+                            ? NodeFilter.FILTER_REJECT
+                            : NodeFilter.FILTER_ACCEPT;
+                    }
+                }
+            );
+
+        const nodes = [];
+
+        while (walker.nextNode()) {
+            nodes.push(walker.currentNode);
+        }
+
+
+        nodes.forEach(function (node) {
+
+            const original =
+                rememberOriginalText(node);
+
+            const normalized =
+                normalizeText(original);
+
+            if (
+                !Object.prototype.hasOwnProperty.call(
+                    pack,
+                    normalized
+                )
+            ) {
+
+                return;
+            }
+
+
+            const translation =
+                pack[normalized];
+
+            setCached(
+                normalized,
+                getLanguage(),
+                translation
+            );
+
+            const current =
+                node.nodeValue || "";
+
+            const leading =
+                current.match(/^\s*/)?.[0] || "";
+
+            const trailing =
+                current.match(/\s*$/)?.[0] || "";
+
+            node.nodeValue =
+                leading +
+                translation +
+                trailing;
+        });
+    }
+
+
     /* =====================================================
        TRANSLATION API
     ===================================================== */
@@ -1203,6 +1354,37 @@
 
         uniqueTexts.forEach(
             text => {
+
+                const glossary =
+                    homepageGlossary(
+                        targetLanguage
+                    );
+
+                if (
+                    glossary &&
+                    Object.prototype.hasOwnProperty.call(
+                        glossary,
+                        text
+                    )
+                ) {
+
+                    const translation =
+                        glossary[text];
+
+                    resultMap.set(
+                        text,
+                        translation
+                    );
+
+                    setCached(
+                        text,
+                        targetLanguage,
+                        translation
+                    );
+
+                    return;
+                }
+
 
                 const cached =
                     getCached(
@@ -1396,6 +1578,11 @@
 
             return;
         }
+
+
+        applyHomepageGlossary(
+            root
+        );
 
 
         const textNodes =
@@ -1836,6 +2023,11 @@
 
         applyDocumentLanguage(
             language
+        );
+
+
+        applyHomepageGlossary(
+            document.body
         );
 
 
