@@ -5095,13 +5095,88 @@ async function markMessagesRead(
    MESSAGE REALTIME
 ========================================================= */
 
+async function prepareChatRealtimeAuth(){
+
+    const session =
+        await supabaseClient.auth.getSession();
+
+    const token =
+        session &&
+        session.data &&
+        session.data.session &&
+        session.data.session.access_token;
+
+    if(!token){
+        return false;
+    }
+
+    await supabaseClient.realtime.setAuth(
+        token
+    );
+
+    return true;
+
+}
+
+
+let chatRealtimeRequest =
+    0;
+
+
 function subscribeToConversation(
     conversationId
 ){
 
+    const request =
+        ++chatRealtimeRequest;
+
     removeRealtimeSubscription();
 
     if(!supabaseClient){
+        return;
+    }
+
+    prepareChatRealtimeAuth()
+        .then(ready => {
+
+            if(
+                !ready ||
+                request !==
+                chatRealtimeRequest
+            ){
+                return;
+            }
+
+            attachConversationRealtime(
+                conversationId
+            );
+
+        })
+        .catch(error => {
+
+            console.error(
+                "[HAVKAR] Chat realtime auth failed:",
+                error
+            );
+
+        });
+
+}
+
+
+function attachConversationRealtime(
+    conversationId
+){
+
+    if(
+        !supabaseClient ||
+        String(
+            state.currentConversationId
+        ) !==
+        String(
+            conversationId
+        )
+    ){
         return;
     }
 
