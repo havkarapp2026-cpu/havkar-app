@@ -960,14 +960,21 @@ select:focus-visible{
     flex:1 1 auto;
     min-width:0;
     width:100%;
-    height:49px;
-    padding:0 17px;
+    min-height:49px;
+    max-height:120px;
+    height:auto;
+    field-sizing:content;
+    padding:12px 17px;
     border:1px solid #d7ddd7;
     border-radius:26px;
     outline:none;
     background:#fff;
     color:#333;
+    font-family:inherit;
     font-size:16px;
+    line-height:1.4;
+    resize:none;
+    overflow-y:auto;
 }
 
 .message-input:focus{
@@ -1139,14 +1146,14 @@ select:focus-visible{
         padding-bottom:calc(7px + env(safe-area-inset-bottom));
     }
 
-    .message-input,
-    .send-btn,
-    .translate-btn{
-        height:46px;
+    .message-input{
+        min-height:46px;
+        max-height:120px;
     }
 
     .send-btn,
     .translate-btn{
+        height:46px;
         width:46px;
         min-width:46px;
     }
@@ -1439,16 +1446,16 @@ select:focus-visible{
 
         </button>
 
-        <input
+        <textarea
             id="messageInput"
             class="message-input"
-            type="text"
+            rows="1"
             inputmode="text"
-            enterkeyhint="send"
+            enterkeyhint="enter"
             placeholder="Write a message..."
             autocomplete="off"
             autocapitalize="sentences"
-            maxlength="4000">
+            maxlength="4000"></textarea>
 
         <button
             id="sendButton"
@@ -5479,22 +5486,15 @@ function searchMessages(
 
 
 /* =========================================================
-   ENTER TO SEND
+   ENTER INSERTS A NEW LINE
 ========================================================= */
 
 function handleMessageKeydown(
     event
 ){
 
-    if(
-        event.key === "Enter" &&
-        !event.shiftKey
-    ){
-
-        event.preventDefault();
-
-        sendMessage();
-
+    if(event.key === "Enter"){
+        return;
     }
 
 }
