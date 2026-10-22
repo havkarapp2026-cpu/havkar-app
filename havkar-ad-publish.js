@@ -29,6 +29,38 @@
     "The server has not confirmed this advertisement yet. It may still be published. Do not submit it again. Check your existing advertisements before posting again.";
 
 
+  /*
+   * Public Buy & Sell rows stay visible when status is missing.
+   * Production listings created before status was required are NULL.
+   * The database trigger now stores new rows as active, and the
+   * public read policy already treats NULL, blank, and active as
+   * public. Hiding NULL here would remove those live listings.
+   * An explicit status other than active is not public.
+   */
+  function isPublicListingStatus(
+    status
+  ) {
+
+    if (
+      status === null ||
+      status === undefined
+    ) {
+
+      return true;
+
+    }
+
+    const value =
+      String(status)
+        .trim()
+        .toLowerCase();
+
+    return value === "" ||
+      value === "active";
+
+  }
+
+
   function classifyInsertResult(
     result
   ) {
@@ -269,6 +301,7 @@
 
   return {
     UNCERTAIN_PUBLISH_MESSAGE: UNCERTAIN_PUBLISH_MESSAGE,
+    isPublicListingStatus: isPublicListingStatus,
     classifyInsertResult: classifyInsertResult,
     createPostingGuard: createPostingGuard
   };
