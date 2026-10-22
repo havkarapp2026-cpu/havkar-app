@@ -20,13 +20,14 @@ function pngSize(bytes) {
 
 const expected = [16, 32, 48, 180, 192, 512, 1024];
 for (const size of expected) {
-  const file = `assets/icons/havkar-icon-${size}-20261022-final.png`;
+  const file = `assets/icons/havkar-icon-${size}-20261022-v3.png`;
   const sizeInfo = pngSize(read(file));
   assert.deepEqual(sizeInfo, { width: size, height: size }, file);
 }
 
-const icon1024 = read("assets/icons/havkar-icon-1024-20261022-final.png");
+const icon1024 = read("assets/icons/havkar-icon-1024-20261022-v3.png");
 assert.deepEqual(read("icon.png"), icon1024);
+assert.equal(read("assets/icons/havkar-icon-512-20261022-v3.png")[25], 6);
 
 const ico = read("favicon.ico");
 assert.equal(ico.readUInt16LE(0), 0);
@@ -42,9 +43,9 @@ assert.equal(manifest.icons.length, 3);
 assert.deepEqual(
   manifest.icons.map((icon) => [icon.src, icon.sizes, icon.type, icon.purpose]),
   [
-    ["/assets/icons/havkar-icon-192-20261022-final.png", "192x192", "image/png", "any"],
-    ["/assets/icons/havkar-icon-512-20261022-final.png", "512x512", "image/png", "any"],
-    ["/assets/icons/havkar-icon-1024-20261022-final.png", "1024x1024", "image/png", "any"]
+    ["/assets/icons/havkar-icon-192-20261022-v3.png", "192x192", "image/png", "any"],
+    ["/assets/icons/havkar-icon-512-20261022-v3.png", "512x512", "image/png", "any"],
+    ["/assets/icons/havkar-icon-1024-20261022-v3.png", "1024x1024", "image/png", "any"]
   ]
 );
 assert.equal(JSON.stringify(manifest).includes("icon.png"), false);
