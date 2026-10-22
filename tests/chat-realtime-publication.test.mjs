@@ -18,4 +18,15 @@ assert.doesNotMatch(sql, /INSERT INTO/i);
 assert.doesNotMatch(sql, /UPDATE public\.messages/i);
 assert.doesNotMatch(sql, /wallet|stellar|pi_network/i);
 
+const chat = fs.readFileSync("chat.html", "utf8");
+const subscription = chat.slice(
+  chat.indexOf("async function prepareChatRealtimeAuth"),
+  chat.indexOf("function attachConversationRealtime")
+);
+assert.match(subscription, /supabaseClient\.realtime\.setAuth/);
+assert.match(subscription, /access_token/);
+assert.match(chat, /table:\s*"messages"/);
+assert.match(chat, /event:"INSERT"/);
+assert.match(chat, /event:"UPDATE"/);
+
 console.log("CHAT_REALTIME_PUBLICATION_TEST_OK");
