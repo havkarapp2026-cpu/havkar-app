@@ -15,6 +15,11 @@ const BROWSER_CONFIG_UNAVAILABLE = {
   })
 };
 
+/*
+ * /api/translate is not in this list. The language engine calls it
+ * for the selected interface language. The handler itself refuses
+ * the production database while this preview is active.
+ */
 const BLOCKED_PAYMENT_PREVIEW_API_PATHS = [
   "/api/pi-approve",
   "/api/pi-complete",
@@ -22,7 +27,6 @@ const BLOCKED_PAYMENT_PREVIEW_API_PATHS = [
   "/api/stripe-webhook",
   "/api/create-event-checkout",
   "/api/trade-crypto",
-  "/api/translate",
   "/api/flights",
   "/api/flight-offer",
   "/api/flight-order",

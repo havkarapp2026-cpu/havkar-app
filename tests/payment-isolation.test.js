@@ -73,6 +73,10 @@ assert.match(
 const blocked = isolatedPaymentPreviewApiBlock("/api/stripe-webhook", paymentEnv);
 assert.strictEqual(blocked.status, 503);
 assert.strictEqual(
+  isolatedPaymentPreviewApiBlock("/api/translate", paymentEnv),
+  null
+);
+assert.strictEqual(
   isolatedPaymentPreviewApiBlock("/api/stellar-payment", paymentEnv),
   null
 );
