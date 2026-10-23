@@ -152,18 +152,18 @@ for (const route of ["offer", "order", "search"]) {
 const { default: middleware } = await import("../middleware.js");
 useEnv("preview", "cursor/stellar-xlm-payments-6a44");
 for (const pathname of ["/api/flights", "/api/flight-offer", "/api/flight-order"]) {
-  const response = middleware(new Request(`https://preview.example${pathname}`));
+  const response = await middleware(new Request(`https://preview.example${pathname}`));
   assert.equal(response.status, 503, pathname);
   const body = await response.json();
   assert.equal(body.ok, false);
 }
 assert.equal(
-  middleware(new Request("https://preview.example/api/stellar-payment")),
+  await middleware(new Request("https://preview.example/api/stellar-payment")),
   undefined
 );
 useEnv("production", "main");
 assert.equal(
-  middleware(new Request("https://preview.example/api/flight-offer")),
+  await middleware(new Request("https://preview.example/api/flight-offer")),
   undefined
 );
 

@@ -339,11 +339,11 @@ const middlewareOutput = execFileSync(
   process.execPath,
   ["--input-type=module", "-e", `
 import middleware from "./middleware.js";
-const blocked = middleware(new Request("https://preview.example/api/pi-approve"));
+const blocked = await middleware(new Request("https://preview.example/api/pi-approve"));
 if (!blocked || blocked.status !== 503) process.exit(2);
 const text = await blocked.text();
 if (text.includes("service_role") || text.includes("gispovnciifgikvgpzck")) process.exit(3);
-if (middleware(new Request("https://preview.example/api/eur-usd-quote"))) process.exit(4);
+if (await middleware(new Request("https://preview.example/api/eur-usd-quote"))) process.exit(4);
 console.log("MIDDLEWARE_ISOLATION_OK");
 `],
   {
@@ -363,7 +363,7 @@ const productionMiddleware = execFileSync(
   process.execPath,
   ["--input-type=module", "-e", `
 import middleware from "./middleware.js";
-if (middleware(new Request("https://havkar.example/api/stripe-webhook"))) process.exit(2);
+if (await middleware(new Request("https://havkar.example/api/stripe-webhook"))) process.exit(2);
 console.log("MIDDLEWARE_PRODUCTION_PASSTHROUGH_OK");
 `],
   {

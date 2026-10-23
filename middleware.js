@@ -1,8 +1,23 @@
 import { isolatedPreviewApiBlock } from "./api/preview-isolation.cjs";
-import { isolatedPaymentPreviewApiBlock } from "./api/payment-isolation.cjs";
+import {
+  isolatedPaymentPreviewApiBlock,
+  isolatedPaymentPreviewBrowserConfig
+} from "./api/payment-isolation.cjs";
 
-export default function middleware(request) {
+export default async function middleware(request) {
   const pathname = new URL(request.url).pathname;
+  const browserConfig = await isolatedPaymentPreviewBrowserConfig(pathname);
+
+  if (browserConfig) {
+    return new Response(browserConfig.body, {
+      status: browserConfig.status,
+      headers: {
+        "content-type": browserConfig.contentType,
+        "cache-control": "no-store"
+      }
+    });
+  }
+
   const decision = isolatedPreviewApiBlock(pathname)
     || isolatedPaymentPreviewApiBlock(pathname);
 
@@ -32,6 +47,7 @@ export const config = {
     "/api/flight-offer",
     "/api/flight-order",
     "/api/accommodation-review",
-    "/api/business-application-notify"
+    "/api/business-application-notify",
+    "/havkar-supabase-config.js"
   ]
 };
