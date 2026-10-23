@@ -1,4 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
+import {
+    assertServerCredentialsAllowed,
+    rejectIsolatedPreview
+} from "./preview-isolation.cjs";
 
 function bearerToken(req) {
     const header = req.headers?.authorization;
@@ -13,6 +17,8 @@ function bearerToken(req) {
 }
 
 async function requireHavkarUser(req) {
+    assertServerCredentialsAllowed();
+
     const accessToken = bearerToken(req);
 
     if (!accessToken) {
@@ -68,6 +74,10 @@ async function requireHavkarUser(req) {
 }
 
 export default async function handler(req, res) {
+    if (rejectIsolatedPreview(res)) {
+        return;
+    }
+
     // =========================================================
     // HAVKAR GLOBAL FLIGHT SEARCH API
     // Provider: Duffel

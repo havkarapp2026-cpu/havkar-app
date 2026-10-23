@@ -22,6 +22,10 @@
 const crypto = require("crypto");
 const net = require("net");
 const { createClient } = require("@supabase/supabase-js");
+const {
+  assertServerCredentialsAllowed,
+  rejectIsolatedPreview
+} = require("./preview-isolation.cjs");
 
 /* =========================================================
    CONFIG
@@ -307,6 +311,8 @@ function trustedClientIp(req) {
 }
 
 function getSupabaseAdmin() {
+  assertServerCredentialsAllowed();
+
   const url = process.env.SUPABASE_URL || "";
   const serviceRoleKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -863,6 +869,10 @@ function healthResponse() {
 ========================================================= */
 
 async function handler(req, res) {
+  if (rejectIsolatedPreview(res)) {
+    return;
+  }
+
   const cors = applyCors(req, res);
 
   if (!cors.allowed) {

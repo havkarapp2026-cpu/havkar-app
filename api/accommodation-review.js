@@ -1,4 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
+import {
+    assertServerCredentialsAllowed,
+    rejectIsolatedPreview
+} from "./preview-isolation.cjs";
 
 const REVIEW_DECISIONS = new Set([
     "needs_more_info",
@@ -37,6 +41,8 @@ function bearerToken(req) {
 }
 
 function serviceClient() {
+    assertServerCredentialsAllowed();
+
     if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
         return null;
     }
@@ -54,6 +60,10 @@ function serviceClient() {
 }
 
 export default async function handler(req, res) {
+    if (rejectIsolatedPreview(res)) {
+        return;
+    }
+
     if (req.method !== "POST") {
         res.setHeader("Allow", "POST");
         return res.status(405).json({ error: "Method not allowed" });

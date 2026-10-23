@@ -1,4 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
+import {
+    assertServerCredentialsAllowed,
+    rejectIsolatedPreview
+} from "./preview-isolation.cjs";
 
 const FIELD_LIMITS = {
     business_name: 160,
@@ -19,6 +23,8 @@ const FIELD_LIMITS = {
 };
 
 function createDefaultSupabase() {
+    assertServerCredentialsAllowed();
+
     const url = process.env.SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -128,6 +134,10 @@ export function createBusinessNotificationHandler({
     createSupabase = createDefaultSupabase
 } = {}) {
     return async function handler(req, res) {
+        if (rejectIsolatedPreview(res)) {
+            return;
+        }
+
         if (req.method !== "POST") {
             res.setHeader("Allow", ["POST"]);
 
