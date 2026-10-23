@@ -15,6 +15,10 @@ import {
   canonicalXlm,
   isAcceptedStagingServiceRoleKey,
   normalizeEurAmount,
+  KRAKEN_XLMEUR_URL,
+  RATE_PROVIDER_KRAKEN_XLMEUR,
+  fetchApprovedEurPerXlm,
+  normalizeProviderRate,
   quoteXlmFromEur,
   readApprovedRateProvider,
   readReceivingAccount,
@@ -36,6 +40,9 @@ assert.equal(quoteXlmFromEur("10.00", "0.2500000").amountXlm, "40.0000000");
 assert.equal(quoteXlmFromEur("1.00", "0.3000000").amountXlm, "3.3333333");
 assert.equal(quoteXlmFromEur("10.00", "0.2500000").amountStroops, "400000000");
 assert.throws(() => quoteXlmFromEur("0.01", "1000000"), /too small/);
+assert.throws(() => quoteXlmFromEur("1.00", "0.0000001"), /too large/);
+assert.equal(normalizeProviderRate("0.15687000"), "0.1568700");
+assert.equal(normalizeProviderRate("0.2000000"), "0.2000000");
 
 assert.throws(
   () => assertStagingPaymentDatabase({
@@ -95,11 +102,48 @@ const configured = assertStagingPaymentDatabase({
 });
 assert.equal(configured.url, STAGING_SUPABASE_URL);
 assert.equal(APPROVED_RATE_PROVIDERS.size, 0);
+assert.equal(APPROVED_RATE_PROVIDERS.has(RATE_PROVIDER_KRAKEN_XLMEUR), false);
 assert.throws(
-  () => readApprovedRateProvider({ HAVKAR_XLM_RATE_PROVIDER: "example-rate-provider" }),
+  () => readApprovedRateProvider({ HAVKAR_XLM_RATE_PROVIDER: RATE_PROVIDER_KRAKEN_XLMEUR }),
   /not approved/
 );
 assert.throws(() => readReceivingAccount({}), /not approved/);
+
+let rateFetches = 0;
+await assert.rejects(
+  () => fetchApprovedEurPerXlm(RATE_PROVIDER_KRAKEN_XLMEUR, () => {
+    rateFetches += 1;
+    throw new Error("unapproved provider was called");
+  }),
+  /not approved/
+);
+assert.equal(rateFetches, 0);
+
+APPROVED_RATE_PROVIDERS.add(RATE_PROVIDER_KRAKEN_XLMEUR);
+try {
+  const quoted = await fetchApprovedEurPerXlm(RATE_PROVIDER_KRAKEN_XLMEUR, async (url) => {
+    assert.equal(url, KRAKEN_XLMEUR_URL);
+    return {
+      ok: true,
+      async json() {
+        return { error: [], result: { XXLMZEUR: { c: ["0.33000000", "1"] } } };
+      }
+    };
+  });
+  assert.equal(quoted, "0.3300000");
+  await assert.rejects(
+    () => fetchApprovedEurPerXlm(RATE_PROVIDER_KRAKEN_XLMEUR, async () => ({
+      ok: true,
+      async json() {
+        return { error: [], result: { OTHER: { c: ["0.33000000", "1"] } } };
+      }
+    })),
+    /did not return a rate/
+  );
+} finally {
+  APPROVED_RATE_PROVIDERS.delete(RATE_PROVIDER_KRAKEN_XLMEUR);
+}
+assert.equal(APPROVED_RATE_PROVIDERS.size, 0);
 
 const source = Keypair.random();
 const destination = Keypair.random();
@@ -161,6 +205,9 @@ const core = fs.readFileSync(new URL("../lib/stellar-payment-core.js", import.me
 assert.equal(api.includes("process.env.SUPABASE_URL"), false);
 assert.equal(api.includes("SUPABASE_SERVICE_ROLE_KEY"), false);
 assert.equal(core.includes("horizon.stellar.org"), false);
+assert.match(api, /fetchApprovedEurPerXlm/);
+assert.match(api, /prepared_hash\.eq\./);
+assert.equal(api.includes("eurPerXlm: null"), false);
 assert.equal(/G[A-Z2-7]{55}/.test(api), false);
 assert.equal(/G[A-Z2-7]{55}/.test(core), false);
 assert.equal(canonicalXlm("1.5"), "1.5000000");

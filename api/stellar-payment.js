@@ -18,6 +18,7 @@ import {
   normalizeEurAmount,
   paymentError,
   publicPaymentView,
+  fetchApprovedEurPerXlm,
   quoteXlmFromEur,
   readApprovedRateProvider,
   readReceivingAccount,
@@ -224,11 +225,17 @@ class SupabasePaymentRepo {
   }
 
   async findPaymentByHash(hash) {
+    const value = String(hash || "");
+
+    if (!/^[a-f0-9]{64}$/.test(value)) {
+      return null;
+    }
+
     return unwrap(
       await this.admin
         .from("stellar_ticket_payments")
         .select("*")
-        .eq("tx_hash", hash)
+        .or(`tx_hash.eq.${value},prepared_hash.eq.${value}`)
         .maybeSingle(),
       "The transaction could not be checked."
     );
@@ -257,7 +264,7 @@ async function authenticate(admin, req) {
   return data.user;
 }
 
-function quoteContext(env, deps) {
+async function quoteContext(env, deps) {
   if (
     env.HAVKAR_STELLAR_LOCAL_TEST === "1"
     && env.VERCEL_ENV !== "production"
@@ -280,12 +287,14 @@ function quoteContext(env, deps) {
     };
   }
 
-  readApprovedRateProvider(env);
+  const destination = readReceivingAccount(env);
+  const quoteSource = readApprovedRateProvider(env);
+  const eurPerXlm = await fetchApprovedEurPerXlm(quoteSource, deps.fetch || fetch);
 
   return {
-    destination: readReceivingAccount(env),
-    eurPerXlm: null,
-    quoteSource: readApprovedRateProvider(env)
+    destination,
+    eurPerXlm,
+    quoteSource
   };
 }
 
@@ -353,14 +362,14 @@ export async function handleStellarPayment(req, res, deps = {}) {
 
     if (!local) {
       const database = assertStagingPaymentDatabase(env);
-      const admin = createClient(database.url, database.serviceRoleKey, {
+      const admin = deps.admin || createClient(database.url, database.serviceRoleKey, {
         auth: {
           persistSession: false,
           autoRefreshToken: false
         }
       });
       user = await authenticate(admin, req);
-      repo = new SupabasePaymentRepo(admin);
+      repo = deps.repo || new SupabasePaymentRepo(admin);
     }
 
     const body = req.method === "GET" ? {} : (req.body || {});
@@ -374,7 +383,7 @@ export async function handleStellarPayment(req, res, deps = {}) {
         throw paymentError(409, "This service is not payable with XLM.");
       }
 
-      const quote = quoteContext(env, deps);
+      const quote = await quoteContext(env, deps);
 
       if (!quote.eurPerXlm) {
         throw configurationError("The EUR/XLM rate provider is not approved yet.");

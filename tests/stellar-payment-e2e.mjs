@@ -9,6 +9,12 @@ import {
   TransactionBuilder
 } from "@stellar/stellar-sdk";
 import { handleStellarPayment } from "../api/stellar-payment.js";
+import {
+  APPROVED_RATE_PROVIDERS,
+  KRAKEN_XLMEUR_URL,
+  RATE_PROVIDER_KRAKEN_XLMEUR,
+  STAGING_SUPABASE_URL
+} from "../lib/stellar-payment-core.js";
 
 const USER = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const OTHER = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -362,3 +368,196 @@ assert.ok(Number(merchantAfterBalance) < Number(merchantBeforeBalance));
 console.log(`PAYMENT_HASH ${submitted.body.payment.transaction_hash}`);
 console.log(`REFUND_HASH ${refundHash}`);
 console.log("STELLAR_PAYMENT_E2E_OK");
+
+function stagingEnv(destination) {
+  return {
+    VERCEL_ENV: "preview",
+    HAVKAR_STAGING_SUPABASE_URL: STAGING_SUPABASE_URL,
+    HAVKAR_STAGING_SERVICE_ROLE_KEY: "sb_secret_local_test_only",
+    HAVKAR_STELLAR_TESTNET_DESTINATION: destination,
+    HAVKAR_XLM_RATE_PROVIDER: RATE_PROVIDER_KRAKEN_XLMEUR
+  };
+}
+
+function mockAdmin(userId) {
+  return {
+    auth: {
+      async getUser(token) {
+        if (token === "session-ok") {
+          return { data: { user: { id: userId } }, error: null };
+        }
+
+        return { data: { user: null }, error: { message: "bad session" } };
+      }
+    }
+  };
+}
+
+async function routedFetch(url, options) {
+  if (String(url) === KRAKEN_XLMEUR_URL) {
+    return {
+      ok: true,
+      status: 200,
+      async json() {
+        return { error: [], result: { XXLMZEUR: { c: ["0.20000000", "1"] } } };
+      }
+    };
+  }
+
+  return fetch(url, options);
+}
+
+async function authCall(repo, body) {
+  const res = response();
+  await handleStellarPayment({
+    method: "POST",
+    headers: { authorization: "Bearer session-ok" },
+    body
+  }, res, {
+    env: stagingEnv(merchant.publicKey()),
+    admin: mockAdmin(USER),
+    repo,
+    fetch: routedFetch
+  });
+  return res;
+}
+
+APPROVED_RATE_PROVIDERS.add(RATE_PROVIDER_KRAKEN_XLMEUR);
+try {
+  const production = response();
+  await handleStellarPayment({
+    method: "POST",
+    headers: { authorization: "Bearer session-ok" },
+    body: { action: "create", service_type: "event_ticket", event_id: 1 }
+  }, production, {
+    env: {
+      ...stagingEnv(merchant.publicKey()),
+      VERCEL_ENV: "production"
+    },
+    admin: {
+      auth: {
+        async getUser() {
+          throw new Error("production auth reached");
+        }
+      }
+    },
+    fetch: () => {
+      throw new Error("production rate reached");
+    }
+  });
+  assert.equal(production.statusCode, 503);
+  assert.match(production.body.error, /disabled on production/);
+
+  const anonymous = response();
+  let anonymousFetches = 0;
+  await handleStellarPayment({
+    method: "POST",
+    headers: {},
+    body: { action: "create", service_type: "event_ticket", event_id: 1, quantity: 1 }
+  }, anonymous, {
+    env: stagingEnv(merchant.publicKey()),
+    admin: mockAdmin(USER),
+    repo: createRepo(),
+    fetch: () => {
+      anonymousFetches += 1;
+      throw new Error("anonymous rate reached");
+    }
+  });
+  assert.equal(anonymous.statusCode, 401);
+  assert.match(anonymous.body.error, /Authentication required/);
+  assert.equal(anonymousFetches, 0);
+
+  const rejected = response();
+  await handleStellarPayment({
+    method: "POST",
+    headers: { authorization: "Bearer nope" },
+    body: { action: "create", service_type: "event_ticket", event_id: 1 }
+  }, rejected, {
+    env: stagingEnv(merchant.publicKey()),
+    admin: mockAdmin(USER),
+    repo: createRepo(),
+    fetch: routedFetch
+  });
+  assert.equal(rejected.statusCode, 401);
+  assert.match(rejected.body.error, /Invalid or expired session/);
+
+  const authRepo = createRepo();
+  const authCreated = await authCall(authRepo, {
+    action: "create",
+    service_type: "event_ticket",
+    event_id: 1,
+    quantity: 1
+  });
+  assert.equal(authCreated.statusCode, 200, JSON.stringify(authCreated.body));
+  assert.equal(authCreated.body.payment.xlm_amount, "5.0000000");
+  assert.equal(authCreated.body.payment.quote_source, RATE_PROVIDER_KRAKEN_XLMEUR);
+  assert.equal(authCreated.body.payment.destination, merchant.publicKey());
+  const authCancelled = await authCall(authRepo, {
+    action: "cancel",
+    payment_id: authCreated.body.payment.id
+  });
+  assert.equal(authCancelled.statusCode, 200, JSON.stringify(authCancelled.body));
+  assert.equal(authCancelled.body.payment.status, "CANCELLED");
+
+  const authLive = await authCall(authRepo, {
+    action: "create",
+    service_type: "event_ticket",
+    event_id: 1,
+    quantity: 1
+  });
+  assert.equal(authLive.statusCode, 200, JSON.stringify(authLive.body));
+  const authPrepared = await authCall(authRepo, {
+    action: "prepare",
+    payment_id: authLive.body.payment.id,
+    source_public_key: payer.publicKey()
+  });
+  assert.equal(authPrepared.statusCode, 200, JSON.stringify(authPrepared.body));
+  const authSigned = TransactionBuilder.fromXDR(authPrepared.body.xdr, Networks.TESTNET);
+  authSigned.sign(payer);
+  const authSubmitted = await authCall(authRepo, {
+    action: "submit",
+    payment_id: authLive.body.payment.id,
+    signed_xdr: authSigned.toXDR()
+  });
+  assert.equal(authSubmitted.statusCode, 200, JSON.stringify(authSubmitted.body));
+  assert.equal(authSubmitted.body.payment.status, "CONFIRMED");
+  const authRefundRequest = await authCall(authRepo, {
+    action: "refund",
+    payment_id: authLive.body.payment.id
+  });
+  assert.equal(authRefundRequest.body.refund.status, "REFUND_PENDING");
+  const authServer = new Horizon.Server("https://horizon-testnet.stellar.org");
+  const authMerchant = await authServer.loadAccount(merchant.publicKey());
+  const authRefundTransaction = new TransactionBuilder(authMerchant, {
+    fee: "100",
+    networkPassphrase: Networks.TESTNET
+  })
+    .addOperation(Operation.payment({
+      destination: payer.publicKey(),
+      asset: Asset.native(),
+      amount: authRefundRequest.body.refund.amount_xlm
+    }))
+    .addMemo(Memo.text(authRefundRequest.body.refund.memo))
+    .setTimeout(180)
+    .build();
+  authRefundTransaction.sign(merchant);
+  await authServer.submitTransaction(authRefundTransaction);
+  const authRefundHash = Array.from(
+    authRefundTransaction.hash(),
+    (value) => value.toString(16).padStart(2, "0")
+  ).join("");
+  const authRefunded = await authCall(authRepo, {
+    action: "refund",
+    payment_id: authLive.body.payment.id,
+    tx_hash: authRefundHash
+  });
+  assert.equal(authRefunded.statusCode, 200, JSON.stringify(authRefunded.body));
+  assert.equal(authRefunded.body.payment.status, "REFUNDED");
+  console.log(`AUTH_PAYMENT_HASH ${authSubmitted.body.payment.transaction_hash}`);
+  console.log(`AUTH_REFUND_HASH ${authRefundHash}`);
+  console.log("STELLAR_PAYMENT_AUTH_OK");
+} finally {
+  APPROVED_RATE_PROVIDERS.delete(RATE_PROVIDER_KRAKEN_XLMEUR);
+}
+
+assert.equal(APPROVED_RATE_PROVIDERS.size, 0);
