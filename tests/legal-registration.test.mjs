@@ -61,6 +61,9 @@ const certificateNames = fs.readdirSync(root).filter((name) =>
 );
 assert.deepEqual(certificateNames, []);
 
+const vercelIgnore = fs.readFileSync(path.join(root, ".vercelignore"), "utf8");
+assert.match(vercelIgnore, /^tests$/m);
+
 const events = fs.readFileSync(path.join(root, "events.html"), "utf8");
 assert.match(events, /\/api\/create-event-checkout/);
 assert.match(events, /havkarOpenStellarCheckout/);
