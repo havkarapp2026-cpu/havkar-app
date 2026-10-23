@@ -1,7 +1,10 @@
 import { isolatedPreviewApiBlock } from "./api/preview-isolation.cjs";
+import { isolatedPaymentPreviewApiBlock } from "./api/payment-isolation.cjs";
 
 export default function middleware(request) {
-  const decision = isolatedPreviewApiBlock(new URL(request.url).pathname);
+  const pathname = new URL(request.url).pathname;
+  const decision = isolatedPreviewApiBlock(pathname)
+    || isolatedPaymentPreviewApiBlock(pathname);
 
   if (!decision) {
     return;
