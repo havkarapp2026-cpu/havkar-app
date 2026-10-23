@@ -1,8 +1,4 @@
 import { createClient } from "@supabase/supabase-js";
-import {
-  assertServerCredentialsAllowed,
-  rejectIsolatedPreview
-} from "./preview-isolation.cjs";
 
 const SYMBOL_IDS = {
   BTC: "bitcoin",
@@ -44,8 +40,6 @@ function sendError(res, status, message) {
 }
 
 function getSupabaseAdmin() {
-  assertServerCredentialsAllowed();
-
   return createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -330,10 +324,6 @@ async function authenticateUser(req) {
 }
 
 export default async function handler(req, res) {
-  if (rejectIsolatedPreview(res)) {
-    return;
-  }
-
   if (process.env.HAVKAR_TRADE_ENABLED !== "true") {
     return sendError(res, 403, "Trade is currently unavailable.");
   }

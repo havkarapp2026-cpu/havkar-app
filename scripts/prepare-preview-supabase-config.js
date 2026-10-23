@@ -7,6 +7,14 @@ const {
   isIsolatedReceiptsPreview
 } = require("../api/preview-isolation.cjs");
 
+const PROTECTED_PREVIEW_API_FILES = [
+  "api/pi-approve.js",
+  "api/pi-a2u-testnet.js",
+  "api/stripe-webhook.js",
+  "api/create-event-checkout.js",
+  "api/trade-crypto.js"
+];
+
 const STAGING_SUPABASE_URL = "https://keglioewbkgdabsizvys.supabase.co";
 const PRODUCTION_PROJECT_REF = "gispovnciifgikvgpzck";
 const STAGING_PUBLISHABLE_SHA256 =
@@ -142,6 +150,68 @@ function verifyWrittenBrowserConfig(source) {
   }
 }
 
+function previewApiStubSource() {
+  return [
+    "\"use strict\";",
+    "",
+    "module.exports = async function handler(req, res) {",
+    "  res.status(503).json({",
+    "    ok: false,",
+    "    error: \"This API is disabled on the isolated message-receipts preview.\"",
+    "  });",
+    "};",
+    ""
+  ].join("\n");
+}
+
+function installPreviewApiStubs(rootDir, env) {
+  if (!isIsolatedReceiptsPreview(env)) {
+    throw safeError(
+      "Refusing to disable APIs outside the isolated receipts preview."
+    );
+  }
+
+  const stub = previewApiStubSource();
+
+  if (
+    stub.includes("service_role")
+    || stub.includes(PRODUCTION_PROJECT_REF)
+    || stub.includes("eyJ")
+    || stub.includes("SUPABASE_")
+  ) {
+    throw safeError("Preview API stub failed the isolation check.");
+  }
+
+  const originals = PROTECTED_PREVIEW_API_FILES.map((relativePath) => {
+    const fullPath = path.join(rootDir, relativePath);
+    return {
+      fullPath,
+      source: fs.readFileSync(fullPath, "utf8")
+    };
+  });
+
+  try {
+    for (const item of originals) {
+      const temporaryPath = `${item.fullPath}.${process.pid}.preview-tmp`;
+      fs.writeFileSync(temporaryPath, stub, { encoding: "utf8", flag: "w" });
+      if (fs.readFileSync(temporaryPath, "utf8") !== stub) {
+        throw safeError("Preview API stub failed the isolation check.");
+      }
+      fs.renameSync(temporaryPath, item.fullPath);
+    }
+  } catch (error) {
+    for (const item of originals) {
+      fs.writeFileSync(item.fullPath, item.source, { encoding: "utf8", flag: "w" });
+      const temporaryPath = `${item.fullPath}.${process.pid}.preview-tmp`;
+      if (fs.existsSync(temporaryPath)) {
+        fs.unlinkSync(temporaryPath);
+      }
+    }
+
+    throw error;
+  }
+}
+
 function writeIsolatedBrowserConfig(env, outputPath) {
   if (typeof outputPath !== "string" || outputPath.length === 0) {
     throw safeError("Receipts preview configuration was rejected.");
@@ -183,7 +253,9 @@ function main() {
       return;
     }
 
+    installPreviewApiStubs(path.join(__dirname, ".."), process.env);
     console.log("Receipts preview browser config written for havkar-staging.");
+    console.log("Wallet, Pi, and payment APIs disabled for this preview build.");
   } catch (error) {
     console.error(
       error && error.publicMessage
@@ -198,7 +270,10 @@ module.exports = {
   STAGING_SUPABASE_URL,
   PRODUCTION_PROJECT_REF,
   STAGING_PUBLISHABLE_SHA256,
+  PROTECTED_PREVIEW_API_FILES,
   preparePreviewSupabaseConfig,
+  previewApiStubSource,
+  installPreviewApiStubs,
   renderBrowserConfig,
   sha256,
   verifyWrittenBrowserConfig,

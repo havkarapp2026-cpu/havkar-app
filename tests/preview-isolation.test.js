@@ -1,18 +1,23 @@
 const assert = require("assert");
 const { execFileSync } = require("child_process");
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const {
   STAGING_SUPABASE_URL,
   PRODUCTION_PROJECT_REF,
   STAGING_PUBLISHABLE_SHA256,
+  PROTECTED_PREVIEW_API_FILES,
   preparePreviewSupabaseConfig,
+  installPreviewApiStubs,
   sha256
 } = require("../scripts/prepare-preview-supabase-config.js");
 const {
+  BLOCKED_PREVIEW_API_PATHS,
   isIsolatedReceiptsPreview,
   rejectIsolatedPreview,
-  assertServerCredentialsAllowed
+  assertServerCredentialsAllowed,
+  isolatedPreviewApiBlock
 } = require("../api/preview-isolation.cjs");
 
 const root = path.join(__dirname, "..");
@@ -200,31 +205,77 @@ assert.strictEqual(fs.readFileSync(configPath, "utf8"), committedBefore);
 const guardedRoutes = [
   "business-application-notify.js",
   "translate.js",
-  "stripe-webhook.js",
-  "trade-crypto.js",
   "accommodation-review.js",
-  "create-event-checkout.js",
   "flight-offer.js",
   "flight-order.js",
-  "flights.js",
-  "pi-a2u-testnet.js",
-  "pi-approve.js"
+  "flights.js"
 ];
 
 for (const name of guardedRoutes) {
   const source = fs.readFileSync(path.join(root, "api", name), "utf8");
   assert.strictEqual(source.includes("rejectIsolatedPreview"), true, name);
+  assert.strictEqual(source.includes("assertServerCredentialsAllowed"), true, name);
 }
+
+for (const relativePath of PROTECTED_PREVIEW_API_FILES) {
+  const source = fs.readFileSync(path.join(root, relativePath), "utf8");
+  assert.strictEqual(source.includes("preview-isolation"), false, relativePath);
+  assert.strictEqual(source.includes("rejectIsolatedPreview"), false, relativePath);
+}
+
+const stripeSource = fs.readFileSync(path.join(root, "api/stripe-webhook.js"), "utf8");
+const checkoutSource = fs.readFileSync(path.join(root, "api/create-event-checkout.js"), "utf8");
+assert.match(stripeSource, /const stripe = new Stripe\(process\.env\.STRIPE_SECRET_KEY\);/);
+assert.match(checkoutSource, /const stripe = new Stripe\(process\.env\.STRIPE_SECRET_KEY\);/);
+assert.match(fs.readFileSync(path.join(root, "api/pi-approve.js"), "utf8"), /HAVKAR_PI_PAYMENTS_ENABLED/);
+assert.strictEqual(fs.readFileSync(path.join(root, "wallet.html"), "utf8").includes("preview-isolation"), false);
+assert.strictEqual(fs.readFileSync(path.join(root, "stellar-wallet-source.js"), "utf8").includes("preview-isolation"), false);
 
 const quote = fs.readFileSync(path.join(root, "api/eur-usd-quote.js"), "utf8");
 assert.strictEqual(quote.includes("SUPABASE"), false);
 assert.strictEqual(quote.includes("SECRET"), false);
 assert.strictEqual(quote.includes("service_role"), false);
 
-for (const name of ["stripe-webhook.js", "create-event-checkout.js"]) {
-  const source = fs.readFileSync(path.join(root, "api", name), "utf8");
-  assert.match(source, /isolatedReceiptsPreview\s*\?\s*null\s*:\s*new Stripe/);
-  assert.match(source, /isolatedReceiptsPreview\s*\?\s*null\s*:\s*createClient/);
+const stubRoot = fs.mkdtempSync(path.join(os.tmpdir(), "havkar-preview-apis-"));
+fs.mkdirSync(path.join(stubRoot, "api"));
+for (const relativePath of PROTECTED_PREVIEW_API_FILES) {
+  fs.copyFileSync(path.join(root, relativePath), path.join(stubRoot, relativePath));
+}
+assert.throws(
+  () => installPreviewApiStubs(stubRoot, { VERCEL_ENV: "production" }),
+  (caught) => caught.publicMessage === "Refusing to disable APIs outside the isolated receipts preview."
+);
+assert.match(
+  fs.readFileSync(path.join(stubRoot, "api/stripe-webhook.js"), "utf8"),
+  /new Stripe\(process\.env\.STRIPE_SECRET_KEY\)/
+);
+installPreviewApiStubs(stubRoot, previewEnv);
+for (const relativePath of PROTECTED_PREVIEW_API_FILES) {
+  const stub = fs.readFileSync(path.join(stubRoot, relativePath), "utf8");
+  assert.strictEqual(stub.includes("service_role"), false, relativePath);
+  assert.strictEqual(stub.includes(PRODUCTION_PROJECT_REF), false, relativePath);
+  assert.strictEqual(stub.includes("SUPABASE_"), false, relativePath);
+  assert.strictEqual(stub.includes("STRIPE_"), false, relativePath);
+  assert.strictEqual(stub.includes("PI_"), false, relativePath);
+}
+const stubHandler = require(path.join(stubRoot, "api/trade-crypto.js"));
+const stubBody = [];
+stubHandler({}, {
+  status(code) {
+    this.code = code;
+    return this;
+  },
+  json(body) {
+    stubBody.push(body);
+  }
+});
+assert.strictEqual(stubBody[0].ok, false);
+for (const relativePath of PROTECTED_PREVIEW_API_FILES) {
+  assert.strictEqual(
+    fs.readFileSync(path.join(root, relativePath), "utf8").includes("isolated message-receipts preview"),
+    false,
+    relativePath
+  );
 }
 
 const responses = [];
@@ -263,6 +314,16 @@ assert.strictEqual(
   false
 );
 assert.strictEqual(fs.readFileSync(configPath, "utf8"), committedBefore);
+assert.strictEqual(isolatedPreviewApiBlock("/api/pi-approve", { VERCEL_ENV: "production" }), null);
+assert.strictEqual(isolatedPreviewApiBlock("/api/eur-usd-quote", previewEnv), null);
+assert.strictEqual(isolatedPreviewApiBlock("/chat.html", previewEnv), null);
+const blockedApi = isolatedPreviewApiBlock("/api/stripe-webhook", previewEnv);
+assert.strictEqual(blockedApi.status, 503);
+assert.strictEqual(JSON.stringify(blockedApi.body).includes("service_role"), false);
+assert.deepStrictEqual(
+  BLOCKED_PREVIEW_API_PATHS.includes("/api/eur-usd-quote"),
+  false
+);
 
 error = rejection(() => {
   const { writeIsolatedBrowserConfig } = require("../scripts/prepare-preview-supabase-config.js");
@@ -273,5 +334,49 @@ assert.strictEqual(
   "Receipts preview configuration was rejected."
 );
 assert.strictEqual(fs.existsSync(path.join(root, "undefined")), false);
+
+const middlewareOutput = execFileSync(
+  process.execPath,
+  ["--input-type=module", "-e", `
+import middleware from "./middleware.js";
+const blocked = middleware(new Request("https://preview.example/api/pi-approve"));
+if (!blocked || blocked.status !== 503) process.exit(2);
+const text = await blocked.text();
+if (text.includes("service_role") || text.includes("gispovnciifgikvgpzck")) process.exit(3);
+if (middleware(new Request("https://preview.example/api/eur-usd-quote"))) process.exit(4);
+console.log("MIDDLEWARE_ISOLATION_OK");
+`],
+  {
+    cwd: root,
+    env: {
+      ...process.env,
+      VERCEL_ENV: "preview",
+      VERCEL_GIT_COMMIT_REF: "cursor/message-receipts-6a44"
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  }
+);
+assert.match(middlewareOutput, /MIDDLEWARE_ISOLATION_OK/);
+
+const productionMiddleware = execFileSync(
+  process.execPath,
+  ["--input-type=module", "-e", `
+import middleware from "./middleware.js";
+if (middleware(new Request("https://havkar.example/api/stripe-webhook"))) process.exit(2);
+console.log("MIDDLEWARE_PRODUCTION_PASSTHROUGH_OK");
+`],
+  {
+    cwd: root,
+    env: {
+      ...process.env,
+      VERCEL_ENV: "production",
+      VERCEL_GIT_COMMIT_REF: "cursor/message-receipts-6a44"
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  }
+);
+assert.match(productionMiddleware, /MIDDLEWARE_PRODUCTION_PASSTHROUGH_OK/);
 
 console.log("PREVIEW_ISOLATION_TEST_OK");
