@@ -202,6 +202,56 @@ function headerValue(req, name) {
   return typeof selected === "string" ? selected.trim() : "";
 }
 
+/*
+ * A browser POST to this deployment sends its own Origin.
+ * The payment preview host is not one of the two fixed
+ * production origins, so that request was rejected before
+ * Google Translation ran. Only this preview's own HTTPS
+ * host is added. Another site's origin still does not match.
+ */
+function paymentPreviewOwnOrigin(req, origin, env = process.env) {
+  if (!isIsolatedPaymentPreview(env) || env.VERCEL !== "1") {
+    return false;
+  }
+
+  if (!origin.startsWith("https://") || origin.includes("*")) {
+    return false;
+  }
+
+  let parsed;
+
+  try {
+    parsed = new URL(origin);
+  } catch {
+    return false;
+  }
+
+  if (
+    parsed.origin !== origin ||
+    parsed.username ||
+    parsed.password
+  ) {
+    return false;
+  }
+
+  const forwarded = headerValue(req, "x-forwarded-host");
+  const host = headerValue(req, "host");
+  const candidate = (forwarded || host)
+    .split(",")[0]
+    .trim()
+    .toLowerCase();
+
+  if (
+    !candidate ||
+    candidate.includes("*") ||
+    candidate.includes("/")
+  ) {
+    return false;
+  }
+
+  return parsed.host.toLowerCase() === candidate;
+}
+
 function applyCors(req, res) {
   const origin = headerValue(req, "origin");
 
@@ -215,7 +265,10 @@ function applyCors(req, res) {
     "Content-Type, Authorization"
   );
 
-  if (origin && ALLOWED_ORIGINS.has(origin)) {
+  if (
+    (origin && ALLOWED_ORIGINS.has(origin)) ||
+    (origin && paymentPreviewOwnOrigin(req, origin))
+  ) {
     res.setHeader("Access-Control-Allow-Origin", origin);
 
     return {

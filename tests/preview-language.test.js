@@ -1,5 +1,7 @@
 const assert = require("assert");
 const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
 const {
   PAYMENT_PREVIEW_BRANCH
 } = require("../api/payment-isolation.cjs");
@@ -195,6 +197,83 @@ async function post(targetLanguage, texts) {
     assert.strictEqual(sorani.targetLanguage, "ckb");
 
     assert.ok(seen.some((url) => url.includes(":translateText")));
+
+    const previewOrigin = "https://havkar-app-git-cursor-stell-ba85aa-havkarapp2026-4055s-projects.vercel.app";
+    const previewHost = "havkar-app-git-cursor-stell-ba85aa-havkarapp2026-4055s-projects.vercel.app";
+    const callsBeforeRejection = seen.length;
+    const foreign = response();
+
+    await handler({
+      method: "POST",
+      headers: {
+        origin: "https://evil.example",
+        host: previewHost,
+        "x-forwarded-proto": "https",
+        "x-vercel-forwarded-for": "203.0.113.44"
+      },
+      body: {
+        texts: ["Home"],
+        sourceLanguage: "en",
+        targetLanguage: "sv"
+      }
+    }, foreign);
+
+    assert.strictEqual(foreign.statusCode, 403);
+    assert.strictEqual(JSON.parse(foreign.body).error, "Origin is not allowed.");
+    assert.strictEqual(seen.length, callsBeforeRejection);
+
+    const ownOrigin = response();
+
+    await handler({
+      method: "POST",
+      headers: {
+        origin: previewOrigin,
+        "x-forwarded-host": previewHost,
+        "x-forwarded-proto": "https",
+        "x-vercel-forwarded-for": "203.0.113.78"
+      },
+      body: {
+        texts: ["Home"],
+        sourceLanguage: "en",
+        targetLanguage: "sv"
+      }
+    }, ownOrigin);
+
+    const ownBody = JSON.parse(ownOrigin.body);
+    assert.strictEqual(ownOrigin.statusCode, 200);
+    assert.strictEqual(ownBody.translations[0].translatedText, "Hem");
+    assert.strictEqual(ownOrigin.headers["access-control-allow-origin"], previewOrigin);
+    assert.strictEqual(ownOrigin.body.includes("PRIVATE"), false);
+    assert.strictEqual(ownOrigin.body.includes("service_role"), false);
+    assert.strictEqual(ownOrigin.body.includes("supabase.co"), false);
+
+    const savedEnvironment = process.env.VERCEL_ENV;
+    process.env.VERCEL_ENV = "production";
+    const productionPreviewOrigin = response();
+
+    await handler({
+      method: "POST",
+      headers: {
+        origin: previewOrigin,
+        host: previewHost,
+        "x-vercel-forwarded-for": "203.0.113.44"
+      },
+      body: {
+        texts: ["Home"],
+        sourceLanguage: "en",
+        targetLanguage: "sv"
+      }
+    }, productionPreviewOrigin);
+
+    process.env.VERCEL_ENV = savedEnvironment;
+    assert.strictEqual(productionPreviewOrigin.statusCode, 403);
+
+    const i18n = fs.readFileSync(path.join(__dirname, "../havkar-i18n.js"), "utf8");
+    const languagePage = fs.readFileSync(path.join(__dirname, "../language.html"), "utf8");
+    assert.ok(i18n.includes("lastTranslationError"));
+    assert.ok(i18n.includes('const STORAGE_KEY = "havkar_language"'));
+    assert.ok(!i18n.includes('removeItem(\n                "havkar_language"'));
+    assert.ok(languagePage.includes("event.detail.error"));
     console.log("PREVIEW_LANGUAGE_TEST_OK");
   } finally {
     restore();
