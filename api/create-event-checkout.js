@@ -1,18 +1,28 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import {
+  isIsolatedReceiptsPreview,
+  rejectIsolatedPreview
+} from "./preview-isolation.cjs";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const isolatedReceiptsPreview = isIsolatedReceiptsPreview();
 
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  }
-);
+const stripe = isolatedReceiptsPreview
+  ? null
+  : new Stripe(process.env.STRIPE_SECRET_KEY);
+
+const supabaseAdmin = isolatedReceiptsPreview
+  ? null
+  : createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      }
+    );
 
 function sendError(res, status, message) {
   return res.status(status).json({
@@ -159,6 +169,10 @@ async function countReservedTickets(eventId) {
 }
 
 export default async function handler(req, res) {
+  if (rejectIsolatedPreview(res)) {
+    return;
+  }
+
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
 

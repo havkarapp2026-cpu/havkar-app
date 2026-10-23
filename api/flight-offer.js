@@ -11,6 +11,10 @@
 // A verified HAVKAR user is required before Duffel is called.
 
 import { createClient } from "@supabase/supabase-js";
+import {
+  assertServerCredentialsAllowed,
+  rejectIsolatedPreview
+} from "./preview-isolation.cjs";
 
 const DUFFEL_API_BASE = "https://api.duffel.com";
 
@@ -27,6 +31,8 @@ function bearerToken(req) {
 }
 
 async function requireHavkarUser(req) {
+  assertServerCredentialsAllowed();
+
   const accessToken = bearerToken(req);
 
   if (!accessToken) {
@@ -426,6 +432,10 @@ async function fetchDuffelOffer(accessToken, offerId) {
 }
 
 export default async function handler(req, res) {
+  if (rejectIsolatedPreview(res)) {
+    return;
+  }
+
   if (req.method !== "GET" && req.method !== "POST") {
     res.setHeader("Allow", "GET, POST");
 

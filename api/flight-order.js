@@ -11,6 +11,10 @@
 */
 
 const { createClient } = require("@supabase/supabase-js");
+const {
+  assertServerCredentialsAllowed,
+  rejectIsolatedPreview
+} = require("./preview-isolation.cjs");
 
 const DUFFEL_API = "https://api.duffel.com";
 const DUFFEL_VERSION = "v2";
@@ -28,6 +32,8 @@ function bearerToken(req) {
 }
 
 async function requireHavkarUser(req) {
+  assertServerCredentialsAllowed();
+
   const accessToken = bearerToken(req);
 
   if (!accessToken) {
@@ -431,6 +437,10 @@ function safeOrderSummary(order) {
 }
 
 module.exports = async function handler(req, res) {
+  if (rejectIsolatedPreview(res)) {
+    return;
+  }
+
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
 

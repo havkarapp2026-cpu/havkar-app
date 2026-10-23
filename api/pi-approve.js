@@ -1,3 +1,5 @@
+import { rejectIsolatedPreview } from "./preview-isolation.cjs";
+
 function piAction(req) {
     const queryAction = req.query?.piAction;
     const action = Array.isArray(queryAction) ? queryAction[0] : queryAction;
@@ -27,6 +29,10 @@ function readPiResponse(text) {
 }
 
 export default async function handler(req, res) {
+    if (rejectIsolatedPreview(res)) {
+        return;
+    }
+
     if (process.env.HAVKAR_PI_PAYMENTS_ENABLED !== "true") {
         return res.status(404).json({
             error: "Not found"
