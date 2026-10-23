@@ -638,6 +638,25 @@ try {
     await senderPage.screenshot({
         path: "/opt/cursor/artifacts/message-receipts-delivered.png"
     });
+    const pendingPaint = await senderPage.evaluate(() =>
+        Array.from(document.querySelectorAll(".message-checks")).map(node => {
+            const style = getComputedStyle(node);
+            const meta = getComputedStyle(node.parentElement);
+            return {
+                title: node.title,
+                opacity: style.opacity,
+                background: style.backgroundColor,
+                metaOpacity: meta.opacity
+            };
+        })
+    );
+    assert.deepEqual(
+        pendingPaint.map(item => item.title),
+        ["Sent", "Delivered"]
+    );
+    assert.ok(pendingPaint.every(item => item.opacity === "0.72"));
+    assert.ok(pendingPaint.every(item => item.background === "rgba(0, 0, 0, 0)"));
+    assert.ok(pendingPaint.every(item => item.metaOpacity === "1"));
 
     visibilityMode = "hidden";
     await new Promise(resolve => setTimeout(resolve, 250));
@@ -693,15 +712,48 @@ try {
     const paint = await readerPage.evaluate(() => {
         const node = document.querySelector(".message-checks.read");
         const style = getComputedStyle(node);
+        const bubble = getComputedStyle(node.closest(".message"));
         return {
             color: style.color,
+            background: style.backgroundColor,
+            opacity: style.opacity,
+            metaOpacity: getComputedStyle(node.parentElement).opacity,
             shadow: style.textShadow,
-            transition: style.transition
+            transition: style.transition,
+            bubble: bubble.backgroundColor
         };
     });
     assert.equal(paint.color, "rgb(234, 255, 74)");
+    assert.equal(paint.background, "rgb(27, 94, 32)");
+    assert.equal(paint.opacity, "1");
+    assert.equal(paint.metaOpacity, "1");
+    assert.equal(paint.bubble, "rgb(124, 179, 66)");
     assert.match(paint.shadow, /255,\s*215,\s*0/);
     assert.match(paint.transition, /none|0s/);
+    await readerPage.screenshot({
+        path: "/opt/cursor/artifacts/message-receipts-read-mobile.png"
+    });
+    await readerPage.setViewport({ width: 1280, height: 800 });
+    const desktopPaint = await readerPage.evaluate(() => {
+        const node = document.querySelector(".message-checks.read");
+        const style = getComputedStyle(node);
+        return {
+            color: style.color,
+            background: style.backgroundColor,
+            opacity: style.opacity,
+            bubble: getComputedStyle(node.closest(".message")).backgroundColor
+        };
+    });
+    assert.deepEqual(desktopPaint, {
+        color: paint.color,
+        background: paint.background,
+        opacity: "1",
+        bubble: paint.bubble
+    });
+    await readerPage.screenshot({
+        path: "/opt/cursor/artifacts/message-receipts-read-desktop.png"
+    });
+    await readerPage.setViewport({ width: 420, height: 900 });
     await readerPage.screenshot({
         path: "/opt/cursor/artifacts/message-receipts-read.png"
     });
