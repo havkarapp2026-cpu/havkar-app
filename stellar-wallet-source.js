@@ -571,6 +571,16 @@ function safeErrorMessage(
 
 
     if(
+        /set the wallet first/i
+            .test(message)
+    ){
+
+        return "Connect a Stellar wallet before signing.";
+
+    }
+
+
+    if(
         /the user closed the modal/i
             .test(message)
     ){

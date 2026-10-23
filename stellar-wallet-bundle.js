@@ -147922,6 +147922,9 @@ ${value}`, dataLines++;
     const message = typeof error === "string" ? error : String(
       error?.message || ""
     );
+    if (/set the wallet first/i.test(message)) {
+      return "Connect a Stellar wallet before signing.";
+    }
     if (/the user closed the modal/i.test(message)) {
       return "Albedo did not finish connecting. The window closed before it returned a public address.";
     }
