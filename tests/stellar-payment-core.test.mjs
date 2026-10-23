@@ -19,7 +19,7 @@ import {
   readApprovedRateProvider,
   readReceivingAccount,
   verifyHorizonPayment
-} from "../api/stellar-payment-core.js";
+} from "../lib/stellar-payment-core.js";
 
 function unsignedJwt(payload) {
   const header = Buffer.from(JSON.stringify({ alg: "none", typ: "JWT" })).toString("base64url");
@@ -157,7 +157,7 @@ assert.throws(
 );
 
 const api = fs.readFileSync(new URL("../api/stellar-payment.js", import.meta.url), "utf8");
-const core = fs.readFileSync(new URL("../api/stellar-payment-core.js", import.meta.url), "utf8");
+const core = fs.readFileSync(new URL("../lib/stellar-payment-core.js", import.meta.url), "utf8");
 assert.equal(api.includes("process.env.SUPABASE_URL"), false);
 assert.equal(api.includes("SUPABASE_SERVICE_ROLE_KEY"), false);
 assert.equal(core.includes("horizon.stellar.org"), false);

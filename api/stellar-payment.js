@@ -22,7 +22,7 @@ import {
   readApprovedRateProvider,
   readReceivingAccount,
   verifyHorizonPayment
-} from "./stellar-payment-core.js";
+} from "../lib/stellar-payment-core.js";
 
 const RATE_WINDOW_MS = 10 * 60 * 1000;
 const RATE_LIMIT = 5;

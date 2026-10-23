@@ -203,16 +203,16 @@ assert.strictEqual(failedClosed, true);
 assert.strictEqual(fs.readFileSync(configPath, "utf8"), committedBefore);
 
 const guardedRoutes = [
-  "business-application-notify.js",
-  "translate.js",
-  "accommodation-review.js",
-  "flight-offer.js",
-  "flight-order.js",
-  "flights.js"
+  "api/business-application-notify.js",
+  "api/translate.js",
+  "api/accommodation-review.js",
+  "lib/flight-offer.js",
+  "lib/flight-order.js",
+  "api/flights.js"
 ];
 
 for (const name of guardedRoutes) {
-  const source = fs.readFileSync(path.join(root, "api", name), "utf8");
+  const source = fs.readFileSync(path.join(root, name), "utf8");
   assert.strictEqual(source.includes("rejectIsolatedPreview"), true, name);
   assert.strictEqual(source.includes("assertServerCredentialsAllowed"), true, name);
 }

@@ -88,7 +88,8 @@ assert.doesNotMatch(migration, /translation_rate_buckets/);
 assert.match(translate, /Google Cloud Translation API/);
 
 const apiFiles = fs.readdirSync(path.join(root, "api")).filter((name) => name.endsWith(".js"));
-assert.equal(apiFiles.length, 12);
+assert.equal(apiFiles.length, 11);
+assert.ok(apiFiles.length <= 12);
 
 assert.equal(
   fs.existsSync(path.join(root, "ai-assistant-test.html")),
