@@ -764,10 +764,17 @@ select:focus-visible{
 .message-checks{
     font-size:11px;
     letter-spacing:-2px;
+    text-shadow:none;
+    transition:color .18s ease,text-shadow .18s ease;
+}
+
+.message-checks.delivered{
+    color:inherit;
 }
 
 .message-checks.read{
-    color:#dff7d5;
+    color:#eaff4a;
+    text-shadow:0 0 7px rgba(255,215,0,.75);
 }
 
 /* =========================================================
@@ -1477,6 +1484,7 @@ select:focus-visible{
 
 
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-message-receipts.js"></script>
 <script>
 "use strict";
 
@@ -1624,7 +1632,13 @@ const state = {
 
     translationTarget:"en",
 
-    translating:false
+    translating:false,
+
+    receipts:{},
+
+    loadedMessages:[],
+
+    receiptsAvailable:true
 
 };
 
@@ -2768,6 +2782,10 @@ async function enrichConversations(){
                         conversation.lastMessage =
                             messageResult.data[0];
 
+                        await acknowledgePreviewReceipt(
+                            conversation.lastMessage
+                        );
+
                     }
 
                 }catch(error){
@@ -2781,40 +2799,15 @@ async function enrichConversations(){
 
                 try{
 
-                    const unreadResult =
-                        await withTimeout(
-                            supabaseClient
-                                .from("messages")
-                                .select(
-                                    "id",
-                                    {
-                                        count:"exact",
-                                        head:true
-                                    }
-                                )
-                                .eq(
-                                    "conversation_id",
-                                    conversation.id
-                                )
-                                .eq(
-                                    "is_read",
-                                    false
-                                )
-                                .neq(
-                                    "sender_id",
-                                    state.currentUser.id
-                                )
+                    const counted =
+                        await countConversationUnread(
+                            conversation
                         );
 
-                    if(
-                        !unreadResult.error &&
-                        Number.isFinite(
-                            unreadResult.count
-                        )
-                    ){
+                    if(counted !== null){
 
                         conversation.unreadCount =
-                            unreadResult.count;
+                            counted;
 
                     }
 
@@ -3575,8 +3568,37 @@ async function loadMessages(
             throw result.error;
         }
 
+        if(
+            String(
+                state.currentConversationId
+            ) !==
+            String(
+                conversationId
+            )
+        ){
+            return;
+        }
+
+        state.loadedMessages =
+            result.data || [];
+
+        await loadConversationReceipts(
+            conversationId
+        );
+
+        if(
+            String(
+                state.currentConversationId
+            ) !==
+            String(
+                conversationId
+            )
+        ){
+            return;
+        }
+
         renderMessages(
-            result.data || []
+            state.loadedMessages
         );
 
     }catch(error){
@@ -3703,6 +3725,10 @@ function appendMessage(
     if(!box){
         return;
     }
+
+    rememberLoadedMessage(
+        message
+    );
 
     const messageId =
         String(
@@ -3834,26 +3860,13 @@ function appendMessage(
                 "span"
             );
 
-        checks.className =
-            "message-checks" +
-            (
-                message.is_read
-                    ? " read"
-                    : ""
-            );
-
         checks.dataset.messageId =
             messageId;
 
-        checks.textContent =
-            message.is_read
-                ? "✓✓"
-                : "✓";
-
-        checks.title =
-            message.is_read
-                ? "Read"
-                : "Sent";
+        paintMessageChecks(
+            checks,
+            message
+        );
 
         meta.appendChild(
             checks
@@ -5030,59 +5043,867 @@ async function updateConversationTimestamp(){
 
 
 /* =========================================================
-   MARK READ
+   MESSAGE RECEIPTS
+   SENT is a confirmed insert with no receipt row.
+   DELIVERED and READ are server receipts. is_read is ignored.
 ========================================================= */
 
-async function markMessagesRead(
-    conversationId
+const receiptWriteChain =
+    new Map();
+
+let receiptLoadToken =
+    0;
+
+
+function receiptApi(){
+
+    return window.HAVKAR_MESSAGE_RECEIPTS ||
+        null;
+
+}
+
+
+function receiptTableMissing(
+    error
+){
+
+    const code =
+        String(
+            error &&
+            error.code ||
+            ""
+        );
+
+    const message =
+        String(
+            error &&
+            error.message ||
+            ""
+        );
+
+    return code === "42P01" ||
+        code === "PGRST205" ||
+        /schema cache/i.test(message) ||
+        /could not find the table/i.test(message);
+
+}
+
+
+function firstReceiptRow(
+    data
+){
+
+    if(Array.isArray(data)){
+
+        return data[0] || null;
+
+    }
+
+    return data || null;
+
+}
+
+
+function rememberLoadedMessage(
+    message
 ){
 
     if(
-        !state.currentUser ||
-        !conversationId
+        !message ||
+        !message.id
     ){
         return;
     }
+
+    const key =
+        String(
+            message.id
+        );
+
+    const index =
+        state.loadedMessages.findIndex(
+            item =>
+                String(item.id) ===
+                key
+        );
+
+    if(index === -1){
+
+        state.loadedMessages.push(
+            message
+        );
+
+        return;
+
+    }
+
+    state.loadedMessages[index] =
+        Object.assign(
+            {},
+            state.loadedMessages[index],
+            message
+        );
+
+}
+
+
+function messageIsRendered(
+    messageId
+){
+
+    const box =
+        $("chatMessages");
+
+    if(
+        !box ||
+        !messageId
+    ){
+        return false;
+    }
+
+    return !!box.querySelector(
+        '[data-message-id="' +
+        cssEscape(
+            String(messageId)
+        ) +
+        '"] .message-text'
+    );
+
+}
+
+
+function messageCheckMark(
+    message
+){
+
+    const api =
+        receiptApi();
+
+    if(!api){
+
+        return {
+            marks:"✓",
+            className:"message-checks",
+            title:"Sent"
+        };
+
+    }
+
+    return api.checkmarkForStatus(
+        api.receiptStatus(
+            state.receipts[
+                String(message.id)
+            ] || null
+        )
+    );
+
+}
+
+
+function paintMessageChecks(
+    element,
+    message
+){
+
+    const mark =
+        messageCheckMark(
+            message
+        );
+
+    element.className =
+        mark.className;
+
+    element.textContent =
+        mark.marks;
+
+    element.title =
+        mark.title;
+
+    element.setAttribute(
+        "data-i18n-ignore",
+        ""
+    );
+
+    element.setAttribute(
+        "translate",
+        "no"
+    );
+
+}
+
+
+function refreshMessageChecks(
+    messageId
+){
+
+    if(
+        !messageId ||
+        !state.currentUser
+    ){
+        return;
+    }
+
+    const message =
+        state.loadedMessages.find(
+            item =>
+                String(item.id) ===
+                String(messageId)
+        );
+
+    if(
+        !message ||
+        String(message.sender_id) !==
+        String(state.currentUser.id)
+    ){
+        return;
+    }
+
+    const element =
+        document.querySelector(
+            '[data-message-id="' +
+            cssEscape(
+                String(messageId)
+            ) +
+            '"] .message-checks'
+        );
+
+    if(!element){
+        return;
+    }
+
+    paintMessageChecks(
+        element,
+        message
+    );
+
+}
+
+
+function storeReceipt(
+    receipt,
+    refresh
+){
+
+    const api =
+        receiptApi();
+
+    if(
+        !api ||
+        !receipt ||
+        !receipt.message_id
+    ){
+        return;
+    }
+
+    const key =
+        String(
+            receipt.message_id
+        );
+
+    state.receipts[key] =
+        api.mergeReceipt(
+            state.receipts[key] || null,
+            receipt
+        );
+
+    if(refresh !== false){
+
+        refreshMessageChecks(
+            key
+        );
+
+    }
+
+}
+
+
+function applyRemoteReceipt(
+    receipt
+){
+
+    if(
+        !receipt ||
+        String(
+            receipt.conversation_id
+        ) !==
+        String(
+            state.currentConversationId
+        )
+    ){
+        return;
+    }
+
+    storeReceipt(
+        receipt
+    );
+
+    syncConversationUnread(
+        receipt.conversation_id
+    );
+
+}
+
+
+async function loadConversationReceipts(
+    conversationId
+){
+
+    const api =
+        receiptApi();
+
+    if(
+        !api ||
+        !supabaseClient ||
+        !state.currentUser
+    ){
+        return;
+    }
+
+    const token =
+        ++receiptLoadToken;
 
     try{
 
         const result =
             await withTimeout(
                 supabaseClient
-                    .from("messages")
-                    .update({
-                        is_read:true
-                    })
+                    .from(
+                        "message_receipts"
+                    )
+                    .select(
+                        "message_id,conversation_id,recipient_id,delivered_at,read_at"
+                    )
                     .eq(
                         "conversation_id",
                         conversationId
                     )
-                    .neq(
-                        "sender_id",
-                        state.currentUser.id
+            );
+
+        if(
+            token !== receiptLoadToken ||
+            String(
+                state.currentConversationId
+            ) !==
+            String(
+                conversationId
+            )
+        ){
+            return;
+        }
+
+        if(result.error){
+
+            if(
+                receiptTableMissing(
+                    result.error
+                )
+            ){
+
+                state.receiptsAvailable =
+                    false;
+
+            }
+
+            console.warn(
+                "[HAVKAR] Receipt load error:",
+                result.error
+            );
+
+            return;
+
+        }
+
+        state.receiptsAvailable =
+            true;
+
+        const next = {};
+
+        (
+            result.data || []
+        ).forEach(
+            receipt => {
+
+                if(
+                    !receipt ||
+                    !receipt.message_id
+                ){
+                    return;
+                }
+
+                const key =
+                    String(
+                        receipt.message_id
+                    );
+
+                next[key] =
+                    api.mergeReceipt(
+                        state.receipts[key] ||
+                        null,
+                        receipt
+                    );
+
+            }
+        );
+
+        Object.keys(
+            state.receipts
+        ).forEach(
+            key => {
+
+                const existing =
+                    state.receipts[key];
+
+                if(
+                    !next[key] &&
+                    existing &&
+                    String(
+                        existing.conversation_id
+                    ) ===
+                    String(
+                        conversationId
+                    )
+                ){
+
+                    next[key] =
+                        existing;
+
+                }
+
+            }
+        );
+
+        state.receipts =
+            next;
+
+    }catch(error){
+
+        console.warn(
+            "[HAVKAR] Receipt load failed:",
+            error
+        );
+
+    }
+
+}
+
+
+async function fetchOwnReceipt(
+    message
+){
+
+    try{
+
+        const result =
+            await withTimeout(
+                supabaseClient
+                    .from(
+                        "message_receipts"
+                    )
+                    .select(
+                        "message_id,conversation_id,recipient_id,delivered_at,read_at"
                     )
                     .eq(
-                        "is_read",
-                        false
+                        "message_id",
+                        message.id
+                    )
+                    .eq(
+                        "recipient_id",
+                        state.currentUser.id
+                    )
+                    .maybeSingle()
+            );
+
+        if(result.error){
+
+            if(
+                receiptTableMissing(
+                    result.error
+                )
+            ){
+
+                state.receiptsAvailable =
+                    false;
+
+            }
+
+            return false;
+
+        }
+
+        if(!result.data){
+            return false;
+        }
+
+        storeReceipt(
+            result.data
+        );
+
+        return true;
+
+    }catch(error){
+
+        console.warn(
+            "[HAVKAR] Receipt lookup failed:",
+            error
+        );
+
+        return false;
+
+    }
+
+}
+
+
+async function insertDeliveryReceipt(
+    message
+){
+
+    try{
+
+        const result =
+            await withTimeout(
+                supabaseClient
+                    .from(
+                        "message_receipts"
+                    )
+                    .upsert(
+                        {
+                            message_id:
+                                message.id,
+
+                            conversation_id:
+                                message.conversation_id,
+
+                            recipient_id:
+                                state.currentUser.id,
+
+                            delivered_at:
+                                new Date()
+                                    .toISOString()
+                        },
+                        {
+                            onConflict:
+                                "message_id,recipient_id",
+
+                            ignoreDuplicates:true
+                        }
+                    )
+                    .select(
+                        "message_id,conversation_id,recipient_id,delivered_at,read_at"
                     )
             );
 
         if(result.error){
 
-            console.warn(
-                "[HAVKAR] Mark read error:",
-                result.error
+            if(
+                receiptTableMissing(
+                    result.error
+                )
+            ){
+
+                state.receiptsAvailable =
+                    false;
+
+                return false;
+
+            }
+
+            return fetchOwnReceipt(
+                message
             );
 
         }
 
+        const row =
+            firstReceiptRow(
+                result.data
+            );
+
+        if(row){
+
+            storeReceipt(
+                row
+            );
+
+            return true;
+
+        }
+
+        return fetchOwnReceipt(
+            message
+        );
+
     }catch(error){
 
         console.warn(
-            "[HAVKAR] Mark read failed:",
+            "[HAVKAR] Delivery receipt failed:",
             error
         );
 
+        return false;
+
+    }
+
+}
+
+
+async function updateReadReceipt(
+    message
+){
+
+    try{
+
+        const result =
+            await withTimeout(
+                supabaseClient
+                    .from(
+                        "message_receipts"
+                    )
+                    .update({
+                        read_at:
+                            new Date()
+                                .toISOString()
+                    })
+                    .eq(
+                        "message_id",
+                        message.id
+                    )
+                    .eq(
+                        "recipient_id",
+                        state.currentUser.id
+                    )
+                    .select(
+                        "message_id,conversation_id,recipient_id,delivered_at,read_at"
+                    )
+            );
+
+        if(result.error){
+
+            if(
+                receiptTableMissing(
+                    result.error
+                )
+            ){
+
+                state.receiptsAvailable =
+                    false;
+
+            }
+
+            return false;
+
+        }
+
+        const row =
+            firstReceiptRow(
+                result.data
+            );
+
+        if(row){
+
+            storeReceipt(
+                row
+            );
+
+            return true;
+
+        }
+
+        return fetchOwnReceipt(
+            message
+        );
+
+    }catch(error){
+
+        console.warn(
+            "[HAVKAR] Read receipt failed:",
+            error
+        );
+
+        return false;
+
+    }
+
+}
+
+
+async function acknowledgeReceiptNow(
+    message,
+    options
+){
+
+    const api =
+        receiptApi();
+
+    if(
+        !api ||
+        !supabaseClient ||
+        !state.currentUser ||
+        !state.receiptsAvailable ||
+        navigator.onLine === false ||
+        !message ||
+        !message.id
+    ){
+        return;
+    }
+
+    const plan =
+        api.planReceiptActions({
+            message:message,
+            userId:state.currentUser.id,
+            receipt:
+                state.receipts[
+                    String(message.id)
+                ] || null,
+            conversationOpen:
+                !!(
+                    options &&
+                    options.conversationOpen
+                ),
+            pageVisible:
+                !!(
+                    options &&
+                    options.pageVisible
+                ),
+            rendered:
+                !!(
+                    options &&
+                    options.rendered
+                ),
+            openConversationId:
+                state.currentConversationId
+        });
+
+    if(plan.deliver){
+
+        const delivered =
+            await insertDeliveryReceipt(
+                message
+            );
+
+        if(!delivered){
+            return;
+        }
+
+    }
+
+    const current =
+        state.receipts[
+            String(message.id)
+        ];
+
+    if(
+        !plan.read ||
+        (
+            current &&
+            current.read_at
+        )
+    ){
+        return;
+    }
+
+    await updateReadReceipt(
+        message
+    );
+
+}
+
+
+function acknowledgeReceipt(
+    message,
+    options
+){
+
+    if(
+        !message ||
+        !message.id
+    ){
+
+        return Promise.resolve();
+
+    }
+
+    const key =
+        String(
+            message.id
+        );
+
+    const previous =
+        receiptWriteChain.get(key) ||
+        Promise.resolve();
+
+    const next =
+        previous
+            .catch(
+                () => {}
+            )
+            .then(
+                () =>
+                    acknowledgeReceiptNow(
+                        message,
+                        options
+                    )
+            );
+
+    receiptWriteChain.set(
+        key,
+        next
+    );
+
+    return next;
+
+}
+
+
+async function acknowledgePreviewReceipt(
+    message
+){
+
+    if(
+        !message ||
+        !state.currentUser ||
+        navigator.onLine === false ||
+        String(
+            message.sender_id
+        ) ===
+        String(
+            state.currentUser.id
+        )
+    ){
+        return;
+    }
+
+    await acknowledgeReceipt(
+        message,
+        {
+            conversationOpen:false,
+            pageVisible:false,
+            rendered:false
+        }
+    );
+
+}
+
+
+function syncConversationUnread(
+    conversationId
+){
+
+    const api =
+        receiptApi();
+
+    if(
+        !api ||
+        !state.receiptsAvailable ||
+        !state.currentUser ||
+        String(
+            state.currentConversationId
+        ) !==
+        String(
+            conversationId
+        )
+    ){
+        return;
     }
 
     const conversation =
@@ -5092,12 +5913,241 @@ async function markMessagesRead(
                 String(conversationId)
         );
 
-    if(conversation){
+    if(!conversation){
+        return;
+    }
 
-        conversation.unreadCount =
-            0;
+    const incoming =
+        state.loadedMessages.filter(
+            message =>
+                String(
+                    message.conversation_id
+                ) ===
+                String(
+                    conversationId
+                ) &&
+                String(
+                    message.sender_id
+                ) !==
+                String(
+                    state.currentUser.id
+                )
+        );
+
+    const read =
+        incoming.filter(
+            message => {
+
+                const receipt =
+                    state.receipts[
+                        String(message.id)
+                    ];
+
+                return !!(
+                    receipt &&
+                    receipt.read_at
+                );
+
+            }
+        ).length;
+
+    conversation.unreadCount =
+        api.countUnread(
+            incoming.length,
+            read
+        );
+
+}
+
+
+async function countConversationUnread(
+    conversation
+){
+
+    const api =
+        receiptApi();
+
+    if(
+        api &&
+        state.receiptsAvailable &&
+        supabaseClient
+    ){
+
+        const incomingResult =
+            await withTimeout(
+                supabaseClient
+                    .from("messages")
+                    .select(
+                        "id",
+                        {
+                            count:"exact",
+                            head:true
+                        }
+                    )
+                    .eq(
+                        "conversation_id",
+                        conversation.id
+                    )
+                    .neq(
+                        "sender_id",
+                        state.currentUser.id
+                    )
+            );
+
+        const readResult =
+            await withTimeout(
+                supabaseClient
+                    .from(
+                        "message_receipts"
+                    )
+                    .select(
+                        "message_id",
+                        {
+                            count:"exact",
+                            head:true
+                        }
+                    )
+                    .eq(
+                        "conversation_id",
+                        conversation.id
+                    )
+                    .eq(
+                        "recipient_id",
+                        state.currentUser.id
+                    )
+                    .not(
+                        "read_at",
+                        "is",
+                        null
+                    )
+            );
+
+        if(
+            !incomingResult.error &&
+            !readResult.error &&
+            Number.isFinite(
+                incomingResult.count
+            ) &&
+            Number.isFinite(
+                readResult.count
+            )
+        ){
+
+            return api.countUnread(
+                incomingResult.count,
+                readResult.count
+            );
+
+        }
+
+        if(
+            readResult.error &&
+            receiptTableMissing(
+                readResult.error
+            )
+        ){
+
+            state.receiptsAvailable =
+                false;
+
+        }
 
     }
+
+    const unreadResult =
+        await withTimeout(
+            supabaseClient
+                .from("messages")
+                .select(
+                    "id",
+                    {
+                        count:"exact",
+                        head:true
+                    }
+                )
+                .eq(
+                    "conversation_id",
+                    conversation.id
+                )
+                .eq(
+                    "is_read",
+                    false
+                )
+                .neq(
+                    "sender_id",
+                    state.currentUser.id
+                )
+        );
+
+    if(
+        !unreadResult.error &&
+        Number.isFinite(
+            unreadResult.count
+        )
+    ){
+
+        return unreadResult.count;
+
+    }
+
+    return null;
+
+}
+
+
+async function markMessagesRead(
+    conversationId
+){
+
+    if(
+        !state.currentUser ||
+        !conversationId ||
+        String(
+            state.currentConversationId
+        ) !==
+        String(
+            conversationId
+        )
+    ){
+        return;
+    }
+
+    const visible =
+        document.visibilityState ===
+        "visible";
+
+    for(
+        const message of
+        state.loadedMessages.slice()
+    ){
+
+        if(
+            String(
+                message.conversation_id
+            ) !==
+            String(
+                conversationId
+            )
+        ){
+            continue;
+        }
+
+        await acknowledgeReceipt(
+            message,
+            {
+                conversationOpen:true,
+                pageVisible:visible,
+                rendered:messageIsRendered(
+                    message.id
+                )
+            }
+        );
+
+    }
+
+    syncConversationUnread(
+        conversationId
+    );
 
 }
 
@@ -5270,6 +6320,42 @@ function attachConversationRealtime(
 
                     }
                 )
+                .on(
+                    "postgres_changes",
+                    {
+                        event:"INSERT",
+                        schema:"public",
+                        table:"message_receipts",
+                        filter:
+                            "conversation_id=eq." +
+                            conversationId
+                    },
+                    payload => {
+
+                        applyRemoteReceipt(
+                            payload?.new
+                        );
+
+                    }
+                )
+                .on(
+                    "postgres_changes",
+                    {
+                        event:"UPDATE",
+                        schema:"public",
+                        table:"message_receipts",
+                        filter:
+                            "conversation_id=eq." +
+                            conversationId
+                    },
+                    payload => {
+
+                        applyRemoteReceipt(
+                            payload?.new
+                        );
+
+                    }
+                )
                 .subscribe(
                     status => {
 
@@ -5277,6 +6363,37 @@ function attachConversationRealtime(
                             "[HAVKAR] Chat realtime:",
                             status
                         );
+
+                        if(
+                            status === "SUBSCRIBED" &&
+                            String(
+                                state.currentConversationId
+                            ) ===
+                            String(
+                                conversationId
+                            )
+                        ){
+
+                            loadConversationReceipts(
+                                conversationId
+                            ).then(
+                                () => {
+
+                                    state.loadedMessages
+                                        .forEach(
+                                            message => {
+
+                                                refreshMessageChecks(
+                                                    message.id
+                                                );
+
+                                            }
+                                        );
+
+                                }
+                            );
+
+                        }
 
                     }
                 );
@@ -5367,20 +6484,10 @@ function updateRenderedMessage(
         )
     ){
 
-        element.textContent =
-            message.is_read
-                ? "✓✓"
-                : "✓";
-
-        element.classList.toggle(
-            "read",
-            !!message.is_read
+        paintMessageChecks(
+            element,
+            message
         );
-
-        element.title =
-            message.is_read
-                ? "Read"
-                : "Sent";
 
     }
 
@@ -5404,6 +6511,10 @@ function closeChat(){
 
     state.currentConversationId =
         null;
+
+    state.loadedMessages = [];
+
+    state.receipts = {};
 
     state.reactions = {};
 
@@ -5974,6 +7085,46 @@ function setupEvents(){
 
             }
         );
+
+    document.addEventListener(
+        "visibilitychange",
+        () => {
+
+            if(
+                document.visibilityState ===
+                    "visible" &&
+                state.currentConversationId
+            ){
+
+                markMessagesRead(
+                    state.currentConversationId
+                );
+
+            }
+
+        }
+    );
+
+    window.addEventListener(
+        "online",
+        () => {
+
+            if(
+                state.currentConversationId
+            ){
+
+                markMessagesRead(
+                    state.currentConversationId
+                );
+
+                return;
+
+            }
+
+            loadConversations();
+
+        }
+    );
 
 }
 
