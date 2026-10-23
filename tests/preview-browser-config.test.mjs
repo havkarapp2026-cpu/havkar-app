@@ -195,7 +195,7 @@ assert.match(middlewareSource, /\/havkar-supabase-config\.js/);
 assert.match(middlewareSource, /cache-control": "no-store"/);
 
 const apiFunctions = fs.readdirSync(path.join(root, "api"))
-  .filter((name) => name.endsWith(".js"));
+  .filter((name) => name.endsWith(".js") || name.endsWith(".mjs"));
 assert.ok(apiFunctions.length <= 12);
 assert.equal(apiFunctions.includes("havkar-supabase-config.js"), false);
 

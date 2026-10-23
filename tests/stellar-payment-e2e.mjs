@@ -8,13 +8,13 @@ import {
   Operation,
   TransactionBuilder
 } from "@stellar/stellar-sdk";
-import { handleStellarPayment } from "../api/stellar-payment.js";
+import { handleStellarPayment } from "../api/stellar-payment.mjs";
 import {
   APPROVED_RATE_PROVIDERS,
   KRAKEN_XLMEUR_URL,
   RATE_PROVIDER_KRAKEN_XLMEUR,
   STAGING_SUPABASE_URL
-} from "../lib/stellar-payment-core.js";
+} from "../lib/stellar-payment-core.mjs";
 
 const USER = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const OTHER = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";

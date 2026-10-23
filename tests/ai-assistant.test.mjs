@@ -87,7 +87,7 @@ assert.doesNotMatch(migration, /ALTER TABLE public\./);
 assert.doesNotMatch(migration, /translation_rate_buckets/);
 assert.match(translate, /Google Cloud Translation API/);
 
-const apiFiles = fs.readdirSync(path.join(root, "api")).filter((name) => name.endsWith(".js"));
+const apiFiles = fs.readdirSync(path.join(root, "api")).filter((name) => name.endsWith(".js") || name.endsWith(".mjs"));
 assert.equal(apiFiles.length, 11);
 assert.ok(apiFiles.length <= 12);
 

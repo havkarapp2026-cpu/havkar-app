@@ -1,3 +1,7 @@
+/* This file is .mjs on purpose. Vercel compiles import syntax in .js
+   files to CommonJS, and its Node runtime disables require() of ES
+   modules. @stellar/stellar-sdk's CommonJS build then crashes while
+   loading uint8array-extras. Native ESM loads the SDK's ESM build. */
 import { createClient } from "@supabase/supabase-js";
 import { Horizon } from "@stellar/stellar-sdk";
 import {
@@ -23,7 +27,7 @@ import {
   readApprovedRateProvider,
   readReceivingAccount,
   verifyHorizonPayment
-} from "../lib/stellar-payment-core.js";
+} from "../lib/stellar-payment-core.mjs";
 
 const RATE_WINDOW_MS = 10 * 60 * 1000;
 const RATE_LIMIT = 5;

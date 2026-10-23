@@ -34,7 +34,7 @@ assert.deepEqual(functions.sort(), [
   "api/flights.js",
   "api/pi-a2u-testnet.js",
   "api/pi-approve.js",
-  "api/stellar-payment.js",
+  "api/stellar-payment.mjs",
   "api/stripe-webhook.js",
   "api/trade-crypto.js",
   "api/translate.js"
