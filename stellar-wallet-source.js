@@ -571,6 +571,16 @@ function safeErrorMessage(
 
 
     if(
+        /set the wallet first/i
+            .test(message)
+    ){
+
+        return "Connect a Stellar wallet before signing.";
+
+    }
+
+
+    if(
         /the user closed the modal/i
             .test(message)
     ){
@@ -3040,6 +3050,90 @@ window.havkarSignAndSubmitStellarPayment =
 
 window.havkarRestoreStellarAddress =
     havkarRestoreStellarAddress;
+
+
+/* Signs a server-built Testnet XDR. It does not choose the
+   amount, destination, or memo, and it does not submit. */
+async function havkarSignPreparedCheckoutXdr(
+    xdr,
+    address
+){
+
+    if(currentNetwork().id !== "TESTNET"){
+
+        havkarSetStellarNetwork("TESTNET");
+
+    }
+
+
+    const source =
+        String(
+            address ||
+            HAVKAR_STELLAR.address ||
+            ""
+        ).trim();
+
+
+    if(!isPublicKey(source)){
+
+        throw new Error(
+            "Connect a Stellar wallet before signing."
+        );
+
+    }
+
+
+    const unsigned =
+        String(xdr || "").trim();
+
+
+    if(!unsigned){
+
+        throw new Error(
+            "The payment transaction is missing."
+        );
+
+    }
+
+
+    const result =
+        await StellarWalletsKit.signTransaction(
+
+            unsigned,
+
+            {
+
+                networkPassphrase:
+                    STELLAR_NETWORKS.TESTNET.passphrase,
+
+                address:source
+
+            }
+
+        );
+
+    const signed =
+        String(
+            result?.signedTxXdr || ""
+        ).trim();
+
+
+    if(!signed){
+
+        throw new Error(
+            "The wallet did not return a signed transaction."
+        );
+
+    }
+
+
+    return signed;
+
+}
+
+
+window.havkarSignPreparedCheckoutXdr =
+    havkarSignPreparedCheckoutXdr;
 
 
 /* =========================================================

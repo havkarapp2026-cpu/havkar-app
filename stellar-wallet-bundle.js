@@ -147922,6 +147922,9 @@ ${value}`, dataLines++;
     const message = typeof error === "string" ? error : String(
       error?.message || ""
     );
+    if (/set the wallet first/i.test(message)) {
+      return "Connect a Stellar wallet before signing.";
+    }
     if (/the user closed the modal/i.test(message)) {
       return "Albedo did not finish connecting. The window closed before it returned a public address.";
     }
@@ -148963,6 +148966,42 @@ ${value}`, dataLines++;
   window.havkarPrepareStellarPayment = havkarPrepareStellarPayment;
   window.havkarSignAndSubmitStellarPayment = havkarSignAndSubmitStellarPayment;
   window.havkarRestoreStellarAddress = havkarRestoreStellarAddress;
+  async function havkarSignPreparedCheckoutXdr(xdr, address) {
+    if (currentNetwork().id !== "TESTNET") {
+      havkarSetStellarNetwork("TESTNET");
+    }
+    const source = String(
+      address || HAVKAR_STELLAR.address || ""
+    ).trim();
+    if (!isPublicKey(source)) {
+      throw new Error(
+        "Connect a Stellar wallet before signing."
+      );
+    }
+    const unsigned = String(xdr || "").trim();
+    if (!unsigned) {
+      throw new Error(
+        "The payment transaction is missing."
+      );
+    }
+    const result = await StellarWalletsKit.signTransaction(
+      unsigned,
+      {
+        networkPassphrase: STELLAR_NETWORKS.TESTNET.passphrase,
+        address: source
+      }
+    );
+    const signed = String(
+      result?.signedTxXdr || ""
+    ).trim();
+    if (!signed) {
+      throw new Error(
+        "The wallet did not return a signed transaction."
+      );
+    }
+    return signed;
+  }
+  window.havkarSignPreparedCheckoutXdr = havkarSignPreparedCheckoutXdr;
   window.dispatchEvent(
     new CustomEvent(
       "havkar-stellar-ready"

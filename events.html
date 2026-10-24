@@ -2008,6 +2008,11 @@
             SUPABASE_ANON_KEY
         );
 
+        window.havkarAccessToken = async function havkarAccessToken() {
+            const { data } = await supabase.auth.getSession();
+            return data?.session?.access_token || "";
+        };
+
         // Swedish translations for Events-owned UI, including dynamic Supabase cards.
         // Other selected languages remain delegated to havkar-i18n.js.
         const eventLanguage = (localStorage.getItem("havkar_language") || localStorage.getItem("selectedLanguage") || localStorage.getItem("language") || "en").toLowerCase();
@@ -3008,6 +3013,27 @@
                             }
 
                         </button>
+
+                        ${
+                            ["free", "", "0", "0.00", "0,00"].includes(
+                                String(event.price || "Free")
+                                    .trim()
+                                    .toLowerCase()
+                                    .replace(/[€$£\s]/g, "")
+                            )
+                                ? ""
+                                : `
+                                    <button
+                                        class="btn btn-primary"
+                                        type="button"
+                                        data-havkar-xlm-checkout="event_ticket"
+                                        onclick="havkarOpenStellarCheckout('${escapeHtml(String(event.id))}')"
+                                    >
+                                        <i class="fas fa-coins"></i>
+                                        Pay with XLM
+                                    </button>
+                                `
+                        }
 
                     </div>
 
@@ -4076,6 +4102,8 @@
 
         initializeEventsPage();
     </script>
+<script src="/stellar-wallet-bundle.js"></script>
+<script src="/havkar-stellar-checkout.js"></script>
 <script src="/havkar-page-back.js"></script>
 </body>
 </html>

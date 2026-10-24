@@ -198,16 +198,31 @@ async function main() {
         {
             source: "/api/pi-complete",
             destination: "/api/pi-approve?piAction=complete"
+        },
+        {
+            source: "/api/flight-offer",
+            destination: "/api/flights?havkarFlightRoute=offer"
+        },
+        {
+            source: "/api/flight-order",
+            destination: "/api/flights?havkarFlightRoute=order"
         }
     ]);
     assert.strictEqual(JSON.stringify(vercel).includes("/api/:path*"), false);
 
     const apiFiles = fs.readdirSync(path.join(root, "api"))
-        .filter((name) => name.endsWith(".js"));
+        .filter((name) => name.endsWith(".js") || name.endsWith(".mjs"));
     assert.strictEqual(apiFiles.includes("pi-complete.js"), false);
     assert.strictEqual(apiFiles.includes("pi-approve.js"), true);
     assert.ok(apiFiles.length <= 12, `expected at most 12 functions, found ${apiFiles.length}`);
-    assert.strictEqual(apiFiles.length, 12);
+    assert.strictEqual(apiFiles.length, 11);
+    assert.strictEqual(apiFiles.includes("flight-offer.js"), false);
+    assert.strictEqual(apiFiles.includes("flight-order.js"), false);
+    assert.strictEqual(apiFiles.includes("stellar-payment-core.js"), false);
+    assert.strictEqual(apiFiles.includes("stellar-payment-core.mjs"), false);
+    assert.strictEqual(fs.existsSync(path.join(root, "lib/flight-offer.js")), true);
+    assert.strictEqual(fs.existsSync(path.join(root, "lib/flight-order.js")), true);
+    assert.strictEqual(fs.existsSync(path.join(root, "lib/stellar-payment-core.mjs")), true);
 
     const preserved = [
         "accommodation-review.js",
@@ -218,9 +233,8 @@ async function main() {
         "business-application-notify.js",
         "eur-usd-quote.js",
         "flights.js",
-        "flight-offer.js",
-        "flight-order.js",
-        "pi-a2u-testnet.js"
+        "pi-a2u-testnet.js",
+        "stellar-payment.mjs"
     ];
     for (const name of preserved) {
         assert.strictEqual(apiFiles.includes(name), true, name);
