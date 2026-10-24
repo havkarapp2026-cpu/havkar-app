@@ -173,7 +173,7 @@
                 #havkarStellarCheckout {
                     position: fixed;
                     inset: 0;
-                    z-index: 80;
+                    z-index: 1100;
                     background: rgba(27, 94, 32, .35);
                     display: flex;
                     align-items: flex-end;
