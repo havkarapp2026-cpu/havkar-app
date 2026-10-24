@@ -180,6 +180,7 @@
                     justify-content: center;
                 }
                 #havkarStellarCheckout[hidden] { display: none; }
+                .stellar-wallets-kit { z-index: 1200 !important; }
                 #havkarStellarCheckout .sheet {
                     width: min(520px, 100%);
                     max-height: 92vh;
