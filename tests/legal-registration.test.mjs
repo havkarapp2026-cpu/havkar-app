@@ -74,8 +74,9 @@ assert.match(events, /\/havkar-stellar-checkout\.js/);
 const jobs = fs.readFileSync(path.join(root, "jobs.html"), "utf8");
 assert.match(jobs, /The payment gateway is not connected yet/);
 assert.match(jobs, /has NOT been activated/);
-assert.equal(jobs.includes("/api/stellar-payment"), false);
-assert.equal(jobs.includes("havkarOpenStellarCheckout"), false);
+assert.match(jobs, /data-havkar-xlm-checkout="job_listing"/);
+assert.match(jobs, /havkarOpenStellarServiceCheckout/);
+assert.match(jobs, /\/havkar-stellar-checkout\.js/);
 assert.equal(jobs.includes("/api/create-event-checkout"), false);
 
 const wallet = fs.readFileSync(path.join(root, "wallet.html"), "utf8");
@@ -84,7 +85,8 @@ assert.equal(wallet.includes("/api/stellar-payment"), false);
 
 const paymentApi = fs.readFileSync(path.join(root, "api/stellar-payment.mjs"), "utf8");
 assert.match(paymentApi, /This service is not payable with XLM/);
-assert.match(paymentApi, /body\.service_type !== SERVICE_EVENT_TICKET/);
+assert.match(paymentApi, /PAYABLE_SERVICE_TYPES/);
+assert.match(paymentApi, /SERVICE_JOB_LISTING/);
 
 console.log("LEGAL_REGISTRATION_GUARD_OK");
 console.log(`PUBLIC_FILES_SCANNED ${publicFiles.length}`);

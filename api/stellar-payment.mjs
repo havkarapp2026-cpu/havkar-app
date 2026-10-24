@@ -5,7 +5,10 @@
 import { createClient } from "@supabase/supabase-js";
 import { Horizon } from "@stellar/stellar-sdk";
 import {
+  JOB_PLAN_EUR,
+  PAYABLE_SERVICE_TYPES,
   SERVICE_EVENT_TICKET,
+  SERVICE_JOB_LISTING,
   TESTNET_HORIZON,
   assertSignedXdr,
   assertStagingPaymentDatabase,
@@ -82,6 +85,17 @@ class SupabasePaymentRepo {
     );
   }
 
+  async getJob(id) {
+    return unwrap(
+      await this.admin
+        .from("jobs")
+        .select("id,user_id,title,company,status,plan,monthly_fee")
+        .eq("id", id)
+        .maybeSingle(),
+      "The job could not be loaded."
+    );
+  }
+
   async countPaidTickets(eventId) {
     const rows = unwrap(
       await this.admin
@@ -102,7 +116,25 @@ class SupabasePaymentRepo {
         .from("stellar_ticket_payments")
         .select("*")
         .eq("user_id", userId)
+        .eq("service_type", SERVICE_EVENT_TICKET)
         .eq("event_id", eventId)
+        .in("status", ["PENDING", "AWAITING_SIGNATURE", "SUBMITTED"])
+        .gt("expires_at", nowIso)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      "The open payment could not be loaded."
+    );
+  }
+
+  async findOpenServiceIntent(userId, serviceType, serviceId, nowIso) {
+    return unwrap(
+      await this.admin
+        .from("stellar_ticket_payments")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("service_type", serviceType)
+        .eq("service_id", String(serviceId))
         .in("status", ["PENDING", "AWAITING_SIGNATURE", "SUBMITTED"])
         .gt("expires_at", nowIso)
         .order("created_at", { ascending: false })
@@ -332,6 +364,41 @@ async function loadPayableEvent(repo, eventId, quantity) {
   return { event, total };
 }
 
+async function loadPayableJob(repo, jobId, userId) {
+  const id = Number(jobId);
+
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    throw paymentError(400, "Invalid job.");
+  }
+
+  const job = await repo.getJob(id);
+
+  if (!job || String(job.user_id) !== String(userId) || job.status !== "pending_payment") {
+    throw paymentError(409, "This job is not available for payment.");
+  }
+
+  const fee = normalizeEurAmount(job.monthly_fee);
+  const expected = JOB_PLAN_EUR[job.plan];
+
+  if (!fee || fee !== expected) {
+    throw paymentError(409, "This job does not have a payable price.");
+  }
+
+  return { job, total: fee };
+}
+
+async function paymentSubject(repo, payment) {
+  if (payment?.service_type === SERVICE_JOB_LISTING) {
+    return repo.getJob(Number(payment.service_id));
+  }
+
+  if (payment?.event_id) {
+    return repo.getEvent(payment.event_id);
+  }
+
+  return null;
+}
+
 async function submitSignedTransaction(signed) {
   assertTestnetHorizonUrl(TESTNET_HORIZON);
   const server = new Horizon.Server(TESTNET_HORIZON, { allowHttp: false });
@@ -383,7 +450,79 @@ export async function handleStellarPayment(req, res, deps = {}) {
     const now = deps.now ? deps.now() : new Date();
 
     if (action === "create") {
-      if (body.service_type !== SERVICE_EVENT_TICKET) {
+      const serviceType = String(body.service_type || "");
+
+      if (!PAYABLE_SERVICE_TYPES.has(serviceType)) {
+        throw paymentError(409, "This service is not payable with XLM.");
+      }
+
+      if (serviceType === SERVICE_JOB_LISTING) {
+        const quote = await quoteContext(env, deps);
+
+        if (!quote.eurPerXlm) {
+          throw configurationError("The EUR/XLM rate provider is not approved yet.");
+        }
+
+        const recentJobs = await repo.countRecentIntents(
+          user.id,
+          new Date(now.getTime() - RATE_WINDOW_MS).toISOString()
+        );
+
+        if (recentJobs >= RATE_LIMIT) {
+          throw paymentError(429, "Too many payment requests. Wait before trying again.");
+        }
+
+        const openJob = await repo.findOpenServiceIntent(
+          user.id,
+          SERVICE_JOB_LISTING,
+          body.service_id,
+          now.toISOString()
+        );
+
+        if (openJob && !isExpired(openJob, now)) {
+          const openSubject = await repo.getJob(Number(openJob.service_id));
+          return send(res, 200, { ok: true, payment: publicPaymentView(openJob, openSubject) });
+        }
+
+        const payableJob = await loadPayableJob(repo, body.service_id, user.id);
+        const jobQuoted = quoteXlmFromEur(payableJob.total, quote.eurPerXlm);
+        const jobReference = deps.reference || createPaymentReference();
+        const jobQuotedAt = now.toISOString();
+        const jobExpiresAt = new Date(now.getTime() + 10 * 60 * 1000).toISOString();
+        const jobPayment = await repo.insertPayment({
+          user_id: user.id,
+          event_ticket_id: null,
+          event_id: null,
+          service_type: SERVICE_JOB_LISTING,
+          service_id: String(payableJob.job.id),
+          network: "TESTNET",
+          status: "PENDING",
+          destination_public_key: quote.destination,
+          eur_amount: payableJob.total,
+          eur_per_xlm: quote.eurPerXlm,
+          quote_source: quote.quoteSource,
+          quoted_at: jobQuotedAt,
+          amount_stroops: jobQuoted.amountStroops,
+          amount_xlm: jobQuoted.amountXlm,
+          payment_reference: jobReference,
+          memo: jobReference,
+          expires_at: jobExpiresAt
+        });
+
+        await repo.insertAudit({
+          payment_id: jobPayment.id,
+          actor_user_id: user.id,
+          action: "intent_created",
+          detail: { service_type: SERVICE_JOB_LISTING, service_id: String(payableJob.job.id) }
+        });
+
+        return send(res, 200, {
+          ok: true,
+          payment: publicPaymentView(jobPayment, payableJob.job)
+        });
+      }
+
+      if (serviceType !== SERVICE_EVENT_TICKET) {
         throw paymentError(409, "This service is not payable with XLM.");
       }
 
@@ -440,6 +579,8 @@ export async function handleStellarPayment(req, res, deps = {}) {
           user_id: user.id,
           event_ticket_id: ticket.id,
           event_id: eventId,
+          service_type: SERVICE_EVENT_TICKET,
+          service_id: String(eventId),
           network: "TESTNET",
           status: "PENDING",
           destination_public_key: quote.destination,
@@ -478,7 +619,7 @@ export async function handleStellarPayment(req, res, deps = {}) {
       throw paymentError(404, "Payment not found.");
     }
 
-    const event = await repo.getEvent(payment.event_id);
+    const event = await paymentSubject(repo, payment);
 
     if (isExpired(payment, now) && (canPrepare(payment) || payment.status === "SUBMITTED")) {
       const expired = await repo.updatePayment(payment.id, {

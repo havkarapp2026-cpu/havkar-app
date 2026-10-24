@@ -301,8 +301,16 @@
     }
 
     async function accessToken() {
+        if (typeof window.havkarAccessToken === "function") {
+            return String(await window.havkarAccessToken() || "");
+        }
+
         const client = window.supabase;
-        const session = await client?.auth?.getSession();
+        if (typeof client?.auth?.getSession !== "function") {
+            return "";
+        }
+
+        const session = await client.auth.getSession();
         return session?.data?.session?.access_token || "";
     }
 
@@ -410,12 +418,19 @@
         render(null, text("working"), []);
 
         try {
-            const created = await post({
+            const payload = {
                 action: "create",
                 service_type: serviceType,
-                event_id: Number(serviceId),
                 quantity: quantity || 1
-            });
+            };
+
+            if (serviceType === "event_ticket") {
+                payload.event_id = Number(serviceId);
+            } else {
+                payload.service_id = String(serviceId);
+            }
+
+            const created = await post(payload);
             render(created.payment, "", actionsFor(created.payment));
         } catch (error) {
             const unavailable = /not approved yet|not configured|disabled on production/i.test(error.message);

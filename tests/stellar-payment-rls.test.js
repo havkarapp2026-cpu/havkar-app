@@ -47,10 +47,13 @@ try {
     "-v", "ON_ERROR_STOP=1",
     "-f", "tests/stellar-payment-prelude.sql",
     "-f", "supabase/migrations/20261023150000_stellar_payment_controls.sql",
+    "-f", "supabase/migrations/20261024120000_stellar_checkout_services.sql",
     "-f", "tests/stellar-payment-rls.sql"
   ]);
   assert.match(applied, /other_user_rows\s*\n[-+]+\n\s*0/);
   assert.match(applied, /owner_rows\s*\n[-+]+\n\s*1/);
+  assert.match(applied, /job_after_confirm\s*\n[-+]+\n\s*active/);
+  assert.match(applied, /job_after_refund\s*\n[-+]+\n\s*pending_payment/);
   assert.match(applied, /STELLAR_PAYMENT_RLS_OK/);
   assert.doesNotMatch(applied, /ERROR:/);
   console.log("STELLAR_PAYMENT_RLS_OK");

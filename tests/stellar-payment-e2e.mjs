@@ -55,6 +55,7 @@ function createRepo() {
       organizer: "HAVKAR"
     }],
     tickets: [],
+    jobs: [],
     payments: [],
     refunds: [],
     audits: [],
@@ -66,6 +67,9 @@ function createRepo() {
     async getEvent(id) {
       return state.events.find((event) => event.id === id) || null;
     },
+    async getJob(id) {
+      return state.jobs.find((job) => String(job.id) === String(id)) || null;
+    },
     async countPaidTickets(eventId) {
       return state.tickets
         .filter((ticket) => ticket.event_id === eventId && ticket.payment_status === "paid")
@@ -75,6 +79,16 @@ function createRepo() {
       return state.payments.find((payment) => (
         payment.user_id === userId
         && payment.event_id === eventId
+        && (payment.service_type || "event_ticket") === "event_ticket"
+        && ["PENDING", "AWAITING_SIGNATURE", "SUBMITTED"].includes(payment.status)
+        && payment.expires_at > nowIso
+      )) || null;
+    },
+    async findOpenServiceIntent(userId, serviceType, serviceId, nowIso) {
+      return state.payments.find((payment) => (
+        payment.user_id === userId
+        && payment.service_type === serviceType
+        && String(payment.service_id) === String(serviceId)
         && ["PENDING", "AWAITING_SIGNATURE", "SUBMITTED"].includes(payment.status)
         && payment.expires_at > nowIso
       )) || null;
@@ -121,6 +135,20 @@ function createRepo() {
       if (!payment || !["AWAITING_SIGNATURE", "SUBMITTED"].includes(payment.status) || payment.tx_hash) {
         throw new Error("payment not confirmable");
       }
+      if (payment.service_type === "job_listing") {
+        const job = state.jobs.find((item) => String(item.id) === String(payment.service_id));
+        if (!job || job.user_id !== payment.user_id || job.status !== "pending_payment") {
+          throw new Error("job not pending");
+        }
+        payment.status = "CONFIRMED";
+        payment.tx_hash = input.txHash;
+        payment.horizon_ledger = input.ledger;
+        payment.source_public_key = input.source;
+        payment.reconciliation_state = "matched";
+        job.status = "active";
+        state.audits.push({ action: "confirmed", tx_hash: input.txHash });
+        return payment;
+      }
       const ticket = state.tickets.find((item) => item.id === payment.event_ticket_id);
       if (!ticket || ticket.payment_status !== "pending") {
         throw new Error("ticket not pending");
@@ -158,6 +186,14 @@ function createRepo() {
       refund.horizon_ledger = input.ledger;
       const payment = state.payments.find((item) => item.id === refund.payment_id);
       payment.status = "REFUNDED";
+      if (payment.service_type === "job_listing") {
+        const job = state.jobs.find((item) => String(item.id) === String(payment.service_id));
+        if (!job || job.status !== "active") {
+          throw new Error("job not active");
+        }
+        job.status = "pending_payment";
+        return refund;
+      }
       const ticket = state.tickets.find((item) => item.id === payment.event_ticket_id);
       ticket.payment_status = "refunded";
       ticket.ticket_status = "cancelled";
@@ -250,12 +286,78 @@ const free = await call(repo, USER, {
 assert.equal(free.statusCode, 409);
 assert.match(free.body.error, /payable price/);
 
-const jobs = await call(repo, USER, {
+const unknownService = await call(repo, USER, {
+  action: "create",
+  service_type: "wallet_deposit",
+  service_id: "1"
+}, { destination: destination.publicKey() });
+assert.equal(unknownService.statusCode, 409);
+assert.match(unknownService.body.error, /not payable with XLM/);
+
+const missingJob = await call(repo, USER, {
   action: "create",
   service_type: "job_listing",
-  event_id: 1
+  service_id: "77"
 }, { destination: destination.publicKey() });
-assert.equal(jobs.statusCode, 409);
+assert.equal(missingJob.statusCode, 409);
+
+repo.state.jobs.push({
+  id: 78,
+  user_id: OTHER,
+  title: "Other role",
+  company: "Other",
+  status: "pending_payment",
+  plan: "Basic",
+  monthly_fee: "9.99"
+});
+const foreignJob = await call(repo, USER, {
+  action: "create",
+  service_type: "job_listing",
+  service_id: "78"
+}, { destination: destination.publicKey() });
+assert.equal(foreignJob.statusCode, 409);
+
+repo.state.jobs.push({
+  id: 79,
+  user_id: USER,
+  title: "Tampered role",
+  company: "HAVKAR",
+  status: "pending_payment",
+  plan: "Basic",
+  monthly_fee: "1.00"
+});
+const tamperedJob = await call(repo, USER, {
+  action: "create",
+  service_type: "job_listing",
+  service_id: "79"
+}, { destination: destination.publicKey() });
+assert.equal(tamperedJob.statusCode, 409);
+
+repo.state.jobs.push({
+  id: 77,
+  user_id: USER,
+  title: "Kitchen role",
+  company: "HAVKAR",
+  status: "pending_payment",
+  plan: "Basic",
+  monthly_fee: "9.99"
+});
+const jobCreated = await call(repo, USER, {
+  action: "create",
+  service_type: "job_listing",
+  service_id: "77"
+}, { destination: destination.publicKey() });
+assert.equal(jobCreated.statusCode, 200, JSON.stringify(jobCreated.body));
+assert.equal(jobCreated.body.payment.service_type, "job_listing");
+assert.equal(jobCreated.body.payment.eur_amount, "9.99");
+assert.equal(jobCreated.body.payment.service_name, "Kitchen role");
+assert.equal(repo.state.jobs.find((job) => job.id === 77).status, "pending_payment");
+const jobAgain = await call(repo, USER, {
+  action: "create",
+  service_type: "job_listing",
+  service_id: "77"
+}, { destination: destination.publicKey() });
+assert.equal(jobAgain.body.payment.id, jobCreated.body.payment.id);
 
 const hidden = await call(repo, OTHER, {
   action: "receipt",
@@ -367,6 +469,47 @@ assert.ok(Number(merchantAfterBalance) < Number(merchantBeforeBalance));
 
 console.log(`PAYMENT_HASH ${submitted.body.payment.transaction_hash}`);
 console.log(`REFUND_HASH ${refundHash}`);
+
+liveRepo.state.jobs.push({
+  id: 77,
+  user_id: USER,
+  title: "Kitchen role",
+  company: "HAVKAR",
+  status: "pending_payment",
+  plan: "Basic",
+  monthly_fee: "9.99"
+});
+const jobLive = await call(liveRepo, USER, {
+  action: "create",
+  service_type: "job_listing",
+  service_id: "77"
+}, {
+  destination: merchant.publicKey(),
+  reference: `hk${crypto.randomUUID().replace(/-/g, "").slice(0, 24)}`
+});
+assert.equal(jobLive.statusCode, 200, JSON.stringify(jobLive.body));
+assert.equal(liveRepo.state.jobs[0].status, "pending_payment");
+const jobPrepared = await call(liveRepo, USER, {
+  action: "prepare",
+  payment_id: jobLive.body.payment.id,
+  source_public_key: payer.publicKey()
+}, { destination: merchant.publicKey() });
+assert.equal(jobPrepared.statusCode, 200, JSON.stringify(jobPrepared.body));
+const jobSigned = TransactionBuilder.fromXDR(jobPrepared.body.xdr, Networks.TESTNET);
+jobSigned.sign(payer);
+const jobSubmitted = await call(liveRepo, USER, {
+  action: "submit",
+  payment_id: jobLive.body.payment.id,
+  signed_xdr: jobSigned.toXDR()
+}, { destination: merchant.publicKey() });
+assert.equal(jobSubmitted.statusCode, 200, JSON.stringify(jobSubmitted.body));
+assert.equal(jobSubmitted.body.payment.status, "CONFIRMED");
+assert.equal(liveRepo.state.jobs[0].status, "active");
+const jobHorizon = await fetch(`https://horizon-testnet.stellar.org/transactions/${jobSubmitted.body.payment.transaction_hash}`);
+const jobRecord = await jobHorizon.json();
+assert.equal(jobRecord.successful, true);
+assert.equal(jobRecord.memo, jobSubmitted.body.payment.memo);
+console.log(`JOB_PAYMENT_HASH ${jobSubmitted.body.payment.transaction_hash}`);
 console.log("STELLAR_PAYMENT_E2E_OK");
 
 function stagingEnv(destination) {
@@ -557,7 +700,7 @@ try {
   console.log(`AUTH_REFUND_HASH ${authRefundHash}`);
   console.log("STELLAR_PAYMENT_AUTH_OK");
 } finally {
-  APPROVED_RATE_PROVIDERS.delete(RATE_PROVIDER_KRAKEN_XLMEUR);
+  APPROVED_RATE_PROVIDERS.add(RATE_PROVIDER_KRAKEN_XLMEUR);
 }
 
-assert.equal(APPROVED_RATE_PROVIDERS.size, 0);
+assert.equal(APPROVED_RATE_PROVIDERS.has(RATE_PROVIDER_KRAKEN_XLMEUR), true);
