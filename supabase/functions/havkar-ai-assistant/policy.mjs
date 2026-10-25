@@ -872,8 +872,16 @@ function assistantBlocks(text) {
   return blocks;
 }
 
+function paidAiServicesEnabled(env) {
+  const source = env && typeof env === "object" ? env : {};
+  return source.HAVKAR_REAL_PAYMENTS_ENABLED === "true";
+}
+
 function subscriptionCheckoutStatus(env) {
   const source = env && typeof env === "object" ? env : {};
+  if (!paidAiServicesEnabled(source)) {
+    return { ok: false, status: 403, error: "Paid AI subscriptions are paused." };
+  }
   const key = String(source.STRIPE_SECRET_KEY || "");
   if (!key.startsWith("sk_test_")) {
     return { ok: false, status: 503, error: "Stripe test mode is not configured for HAVKAR AI subscriptions." };
@@ -1081,6 +1089,7 @@ export {
   presentAssistantText,
   textArtworkRequested,
   visibleArtworkText,
+  paidAiServicesEnabled,
   paidPlan,
   planForPrice,
   subscriptionChange,

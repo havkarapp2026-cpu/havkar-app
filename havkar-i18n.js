@@ -276,6 +276,8 @@
 
     let translating = false;
 
+    let lastTranslationError = "";
+
     let observer = null;
 
     let observerTimer = null;
@@ -1768,9 +1770,17 @@
                 document.body
             );
 
+            lastTranslationError = "";
+
         } catch (
             error
         ) {
+
+            lastTranslationError =
+                error &&
+                error.message
+                    ? String(error.message)
+                    : "HAVKAR translation failed.";
 
             console.error(
                 "[HAVKAR i18n]",
@@ -2057,7 +2067,10 @@
                         languageInfo:
                             getLanguageInfo(
                                 language
-                            )
+                            ),
+
+                        error:
+                            lastTranslationError
                     }
                 }
             )

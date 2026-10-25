@@ -147922,6 +147922,9 @@ ${value}`, dataLines++;
     const message = typeof error === "string" ? error : String(
       error?.message || ""
     );
+    if (/set the wallet first/i.test(message)) {
+      return "Connect a Stellar wallet before signing.";
+    }
     if (/the user closed the modal/i.test(message)) {
       return "Albedo did not finish connecting. The window closed before it returned a public address.";
     }
@@ -148963,6 +148966,64 @@ ${value}`, dataLines++;
   window.havkarPrepareStellarPayment = havkarPrepareStellarPayment;
   window.havkarSignAndSubmitStellarPayment = havkarSignAndSubmitStellarPayment;
   window.havkarRestoreStellarAddress = havkarRestoreStellarAddress;
+  async function havkarSignPreparedCheckoutXdr(xdr, address, reservedPopup) {
+    if (currentNetwork().id !== "TESTNET") {
+      havkarSetStellarNetwork("TESTNET");
+    }
+    const source = String(
+      address || HAVKAR_STELLAR.address || ""
+    ).trim();
+    if (!isPublicKey(source)) {
+      throw new Error(
+        "Connect a Stellar wallet before signing."
+      );
+    }
+    const unsigned = String(xdr || "").trim();
+    if (!unsigned) {
+      throw new Error(
+        "The payment transaction is missing."
+      );
+    }
+    const popup = reservedPopup || null;
+    try {
+      const result = await requestWalletSignature(
+        {
+          xdr: unsigned,
+          source
+        },
+        currentNetwork(),
+        popup
+      );
+      const signed = String(
+        result?.signedTxXdr || ""
+      ).trim();
+      if (!signed) {
+        throw new Error(
+          "The wallet did not return a signed transaction."
+        );
+      }
+      return signed;
+    } catch (error) {
+      throw new Error(
+        safeErrorMessage(error)
+      );
+    } finally {
+      closeSigningPopup(
+        popup
+      );
+    }
+  }
+  function havkarReserveStellarSigningWindow() {
+    return reserveAlbedoSigningWindow();
+  }
+  function havkarCloseStellarSigningWindow(popup) {
+    closeSigningPopup(
+      popup
+    );
+  }
+  window.havkarSignPreparedCheckoutXdr = havkarSignPreparedCheckoutXdr;
+  window.havkarReserveStellarSigningWindow = havkarReserveStellarSigningWindow;
+  window.havkarCloseStellarSigningWindow = havkarCloseStellarSigningWindow;
   window.dispatchEvent(
     new CustomEvent(
       "havkar-stellar-ready"
