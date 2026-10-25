@@ -83,6 +83,8 @@ const apiFiles = fs.readdirSync(path.join(root, "api"))
 assert.equal(apiFiles.length, 12);
 const piSource = read("api/pi-a2u-testnet.js");
 assert.match(piSource, /function loadPiNetwork\(/);
+assert.match(piSource, /pi-stellar-compat\.cjs/);
+assert.doesNotMatch(piSource, /pi-stellar-compat\.mjs/);
 assert.doesNotMatch(piSource, /import PiNetwork from "pi-backend"/);
 assert.match(read("package.json"), /@stellar\/stellar-sdk@17\.4\.0/);
 

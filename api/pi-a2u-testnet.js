@@ -1,4 +1,4 @@
-import { installPiStellarServerCompat, piNetworkFromModule } from "../lib/pi-stellar-compat.mjs";
+import { installPiStellarServerCompat, piNetworkFromModule } from "../lib/pi-stellar-compat.cjs";
 
 const PI_ME_URL = "https://api.minepi.com/v2/me";
 
