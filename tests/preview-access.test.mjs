@@ -51,6 +51,7 @@ assert.equal(loginUrl.pathname, "/login.html");
 assert.equal(loginUrl.searchParams.get("return"), "events.html");
 assert.equal(loginUrl.searchParams.get("havkar_share"), token);
 assert.equal(loginUrl.searchParams.get("_vercel_share"), token);
+assert.equal(loginUrl.searchParams.get("x-vercel-set-bypass-cookie"), "samesitenone");
 assert.equal(preview.store.get("havkar_preview_share"), token);
 
 const external = new URL(preview.context.havkarWithPreviewAccess("https://accounts.google.com/o/oauth2/auth"));

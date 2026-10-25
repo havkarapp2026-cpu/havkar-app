@@ -44,6 +44,7 @@
         }
         url.searchParams.set("havkar_share", token);
         url.searchParams.set("_vercel_share", token);
+        url.searchParams.set("x-vercel-set-bypass-cookie", "samesitenone");
         return url.href;
     }
 
