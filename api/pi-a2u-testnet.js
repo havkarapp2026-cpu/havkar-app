@@ -1,6 +1,16 @@
-import PiNetwork from "pi-backend";
+import { installPiStellarServerCompat, piNetworkFromModule } from "../lib/pi-stellar-compat.mjs";
 
 const PI_ME_URL = "https://api.minepi.com/v2/me";
+
+let piNetworkPromise;
+
+function loadPiNetwork() {
+  if (!piNetworkPromise) {
+    installPiStellarServerCompat();
+    piNetworkPromise = import("pi-backend").then((mod) => piNetworkFromModule(mod));
+  }
+  return piNetworkPromise;
+}
 
 function safePiError(error, stage) {
   return {
@@ -225,6 +235,7 @@ export default async function handler(req, res) {
      * Initialize Pi backend SDK.
      */
 
+    const PiNetwork = await loadPiNetwork();
     const pi = new PiNetwork(
       apiKey,
       walletPrivateSeed

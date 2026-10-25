@@ -81,6 +81,10 @@ assert.match(read("havkar-wallet.js"), /FIAT_TRANSFERS_ENABLED = false/);
 const apiFiles = fs.readdirSync(path.join(root, "api"))
   .filter((name) => name.endsWith(".js"));
 assert.equal(apiFiles.length, 12);
+const piSource = read("api/pi-a2u-testnet.js");
+assert.match(piSource, /function loadPiNetwork\(/);
+assert.doesNotMatch(piSource, /import PiNetwork from "pi-backend"/);
+assert.match(read("package.json"), /@stellar\/stellar-sdk@17\.4\.0/);
 
 const previous = {
   real: process.env.HAVKAR_REAL_PAYMENTS_ENABLED,
