@@ -31,10 +31,12 @@ button+button{margin-left:8px}
 <section class="card">
 <p>Submit a request to export your HAVKAR personal data or to ask for account deletion. Sending this form does not delete the account.</p>
 <p>Wallet, payment, and other records that must be kept for legal or accounting reasons stay stored until a separate approved process handles them. This page does not certify GDPR compliance.</p>
-<p>Sign in with the account that owns the request.</p>
+<p>Sign in with the account that owns the request. The form stores a request for that signed-in account. It does not show another person’s request, and it does not delete the account.</p>
+<p class="fa" lang="fa" dir="rtl">ارسال این فرم حساب را حذف نمی‌کند. درخواست فقط برای همین حساب واردشده ذخیره می‌شود.</p>
 <button type="button" id="exportRequest">Request data export</button>
 <button type="button" id="deletionRequest">Request account deletion</button>
 <p id="status" class="status" role="status"></p>
+<ul id="ownRequests"></ul>
 </section>
 </main>
 <script src="/havkar-supabase-config.js"></script>
@@ -46,6 +48,25 @@ const supabase = createClient(config.url, config.publishableKey, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
 });
 const status = document.getElementById("status");
+const ownRequests = document.getElementById("ownRequests");
+
+async function loadOwnRequests() {
+  ownRequests.replaceChildren();
+  const { data, error } = await supabase.auth.getUser();
+  const user = data && data.user;
+  if (error || !user) return;
+  const rows = await supabase
+    .from("privacy_requests")
+    .select("id,request_type,status,created_at")
+    .order("created_at", { ascending: false })
+    .limit(20);
+  if (rows.error || !rows.data) return;
+  rows.data.forEach((row) => {
+    const item = document.createElement("li");
+    item.textContent = row.request_type + " · " + row.status + " · " + row.created_at + ". The account was not deleted.";
+    ownRequests.appendChild(item);
+  });
+}
 
 function show(message, failed) {
   status.textContent = message;
@@ -76,10 +97,12 @@ async function submit(requestType) {
   show(requestType === "deletion"
     ? "Deletion request saved. Your account is still active."
     : "Export request saved. Your account was not changed.", false);
+  await loadOwnRequests();
 }
 
 document.getElementById("exportRequest").addEventListener("click", () => submit("export"));
 document.getElementById("deletionRequest").addEventListener("click", () => submit("deletion"));
+loadOwnRequests();
 </script>
 </body>
 </html>

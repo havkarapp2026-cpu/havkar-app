@@ -30,6 +30,7 @@ nav a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px;font-w
 <main>
   <p id="message" role="status">Checking authorization...</p>
   <div id="ledger"></div>
+  <div id="privacyRequests"></div>
   <div id="availability"></div>
 </main>
 <nav>
@@ -124,6 +125,45 @@ async function start() {
       card.className = "card";
       card.textContent = "Booking " + entry.booking_id + " · " + line(entry);
       ledgerRoot.appendChild(card);
+    });
+  }
+
+  const privacyRoot = document.getElementById("privacyRequests");
+  const privacy = await db
+    .from("privacy_requests")
+    .select("id,request_type,status,created_at")
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (privacy.error) {
+    privacyRoot.textContent = "Privacy requests are not available to this administrator yet. Nothing was deleted.";
+  } else if (!privacy.data || !privacy.data.length) {
+    privacyRoot.textContent = "No privacy requests are visible to this session. Nothing was deleted.";
+  } else {
+    const note = document.createElement("p");
+    note.textContent = "These are the requests this session is allowed to read. Marking one in review does not delete the account.";
+    privacyRoot.appendChild(note);
+    privacy.data.forEach(function(row) {
+      const card = document.createElement("article");
+      card.className = "card";
+      card.textContent = "Privacy request " + row.id + " · " + row.request_type + " · " + row.status + ". This does not delete the account.";
+      if (row.status === "requested") {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = "Mark in review";
+        button.addEventListener("click", async function() {
+          const updated = await db
+            .from("privacy_requests")
+            .update({ status: "in_review" })
+            .eq("id", row.id)
+            .eq("status", "requested");
+          button.disabled = true;
+          button.textContent = updated.error
+            ? "Could not mark in review. Nothing was deleted."
+            : "Marked in review. The account was not deleted.";
+        });
+        card.appendChild(button);
+      }
+      privacyRoot.appendChild(card);
     });
   }
 

@@ -1,3 +1,4 @@
+import { register } from "node:module";
 import { StellarWalletsKit } from "@creit.tech/stellar-wallets-kit/sdk";
 
 function assertEqual(actual, expected, label) {
@@ -44,17 +45,35 @@ if (typeof globalThis.addEventListener !== "function") {
     globalThis.removeEventListener = () => {};
     globalThis.dispatchEvent = () => true;
 }
-function element() {
-    return {
+function element(tag = "") {
+    const node = {
         style: { setProperty() {} },
         dataset: {},
         textContent: "",
+        tagName: String(tag).toUpperCase(),
+        childNodes: [],
+        firstChild: null,
+        nextSibling: null,
+        parentNode: null,
+        data: "",
+        content: null,
+        innerHTML: "",
         setAttribute() {},
+        getAttribute() { return ""; },
+        getAttributeNames() { return []; },
+        hasAttributes() { return false; },
+        removeAttribute() {},
         appendChild() {},
+        append() {},
         prepend() {},
+        replaceWith() {},
+        remove() {},
+        insertBefore(child) { return child; },
         addEventListener() {},
         removeEventListener() {}
     };
+    node.content = node;
+    return node;
 }
 globalThis.document = {
     title: "",
@@ -64,6 +83,18 @@ globalThis.document = {
     addEventListener() {},
     removeEventListener() {},
     createElement: element,
+    createComment: element,
+    createTextNode(text) {
+        const node = element();
+        node.data = String(text);
+        node.textContent = node.data;
+        return node;
+    },
+    createTreeWalker() {
+        return { currentNode: null, nextNode() { return null; } };
+    },
+    importNode(node) { return node; },
+    getElementsByTagName() { return []; },
     querySelector() { return null; },
     querySelectorAll() { return []; }
 };
@@ -76,6 +107,7 @@ if (typeof globalThis.CustomEvent !== "function") {
     };
 }
 
+register("./freighter-esm-hook.mjs", import.meta.url);
 await import("../stellar-wallet-source.js");
 
 const confirm = window.open(
@@ -126,3 +158,4 @@ assertEqual(
 );
 
 console.log("ALBEDO_CONNECT_TEST_OK");
+process.exit(0);

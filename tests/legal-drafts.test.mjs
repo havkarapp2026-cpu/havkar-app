@@ -26,7 +26,12 @@ assert.match(read("support.html"), /href="privacy\.html"/);
 assert.match(read("support.html"), /href="terms\.html"/);
 assert.match(read("about.html"), /href="privacy\.html"/);
 assert.match(read("privacy-request.html"), /does not delete the account/);
-assert.doesNotMatch(read("privacy.html"), /Partita|sk_live_|service_role/);
+assert.match(read("privacy.html"), /Processors observed in the current system/);
+assert.match(read("privacy.html"), /eu-west-1/);
+assert.match(read("privacy.html"), /generativelanguage\.googleapis\.com/);
+assert.match(read("privacy.html"), /Items still blank for the owner and counsel/);
+assert.match(read("privacy.html"), /persistSession/);
+assert.doesNotMatch(read("privacy.html"), /Partita|sk_live_|service_role|standard contractual clauses are in place|adequacy decision is confirmed/);
 assert.doesNotMatch(read("terms.html"), /Partita|sk_live_|service_role/);
 
 console.log("LEGAL_DRAFTS_TEST_OK");

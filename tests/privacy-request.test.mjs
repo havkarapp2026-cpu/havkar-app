@@ -17,7 +17,17 @@ assert.doesNotMatch(sql, /FOR UPDATE/);
 assert.match(page, /supabase\.auth\.getUser\(\)/);
 assert.match(page, /privacy_requests/);
 assert.match(page, /Nothing was deleted/);
+assert.match(page, /ownRequests/);
+assert.match(page, /The account was not deleted/);
 assert.doesNotMatch(page, /auth\.admin\.deleteUser/);
 assert.match(support, /privacy-request\.html/);
+
+const review = fs.readFileSync("supabase/migrations/20261025162743_privacy_request_admin_review.sql", "utf8");
+assert.match(review, /status IN \('requested', 'in_review'\)/);
+assert.match(review, /havkar_private\.caller_is_admin\(\)/);
+assert.match(review, /privacy request identity cannot change/);
+assert.doesNotMatch(review, /DELETE FROM/);
+assert.doesNotMatch(review, /user_metadata/);
+assert.doesNotMatch(review, /auth\.users/);
 
 console.log("PRIVACY_REQUEST_TEST_OK");
