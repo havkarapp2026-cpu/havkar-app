@@ -21,6 +21,8 @@
             explorer: "View on the Testnet explorer",
             unavailable: "XLM checkout is not available until the receiving address and EUR/XLM rate are approved.",
             working: "Contacting the Stellar network...",
+            approve: "Approve the Testnet transaction in Albedo. If the wallet does not respond, you can try again.",
+            readyToSign: "Wallet connected. Tap Approve in wallet again to open Albedo and sign this Testnet payment.",
             signInRequired: "Sign in to HAVKAR on this page before paying. A session from another HAVKAR address is not used here.",
             signIn: "Sign in on this page"
         },
@@ -43,6 +45,8 @@
             explorer: "مشاهده در مرورگر Testnet",
             unavailable: "پرداخت XLM تا تأیید آدرس دریافت و نرخ یورو به XLM آماده نیست.",
             working: "در حال ارتباط با شبکه استلار...",
+            approve: "تراکنش Testnet را در Albedo تأیید کنید. اگر کیف‌پول پاسخ نداد، دوباره تلاش کنید.",
+            readyToSign: "کیف‌پول متصل شد. برای باز شدن Albedo و امضای این پرداخت Testnet، دوباره تأیید در کیف‌پول را بزنید.",
             signInRequired: "پیش از پرداخت، در همین صفحه وارد HAVKAR شوید. نشست یک نشانی دیگر اینجا استفاده نمی‌شود.",
             signIn: "ورود در همین صفحه"
         },
@@ -65,6 +69,8 @@
             explorer: "عرض على مستكشف Testnet",
             unavailable: "دفع XLM غير متاح قبل اعتماد عنوان الاستلام وسعر اليورو إلى XLM.",
             working: "جارٍ الاتصال بشبكة ستيلار...",
+            approve: "وافق على معاملة Testnet في Albedo. إذا لم تستجب المحفظة، يمكنك المحاولة مرة أخرى.",
+            readyToSign: "تم توصيل المحفظة. اضغط الموافقة في المحفظة مرة أخرى لفتح Albedo وتوقيع دفعة Testnet.",
             signInRequired: "سجّل الدخول إلى HAVKAR في هذه الصفحة قبل الدفع. جلسة عنوان آخر لا تُستخدم هنا.",
             signIn: "تسجيل الدخول في هذه الصفحة"
         },
@@ -87,6 +93,8 @@
             explorer: "Apri l'explorer Testnet",
             unavailable: "Il pagamento XLM resta non disponibile finché l'indirizzo di incasso e il tasso EUR/XLM non sono approvati.",
             working: "Connessione alla rete Stellar...",
+            approve: "Approva la transazione Testnet in Albedo. Se il wallet non risponde, puoi riprovare.",
+            readyToSign: "Wallet collegato. Tocca di nuovo Approva nel wallet per aprire Albedo e firmare questo pagamento Testnet.",
             signInRequired: "Accedi a HAVKAR in questa pagina prima di pagare. Una sessione di un altro indirizzo non viene usata qui.",
             signIn: "Accedi in questa pagina"
         },
@@ -109,6 +117,8 @@
             explorer: "Visa i Testnet-utforskaren",
             unavailable: "XLM-betalning är inte tillgänglig förrän mottagaradress och EUR/XLM-kurs har godkänts.",
             working: "Kontaktar Stellar-nätverket...",
+            approve: "Godkänn Testnet-transaktionen i Albedo. Om plånboken inte svarar kan du försöka igen.",
+            readyToSign: "Plånboken är ansluten. Tryck på Godkänn i plånboken igen för att öppna Albedo och signera denna Testnet-betalning.",
             signInRequired: "Logga in på HAVKAR på den här sidan innan du betalar. En session från en annan adress används inte här.",
             signIn: "Logga in på den här sidan"
         },
@@ -131,6 +141,8 @@
             explorer: "بینین لە گەڕۆکی Testnet",
             unavailable: "پارەدانی XLM ئامادە نییە تا ناونیشانی وەرگرتن و نرخی یۆرۆ بۆ XLM پەسەند بکرێن.",
             working: "پەیوەندی بە تۆڕی ستێلارەوە...",
+            approve: "مامەڵەی Testnet لە Albedo پەسەند بکە. ئەگەر جزدان وەڵامی نەدا، دووبارە هەوڵ بدە.",
+            readyToSign: "جزدان بەسترا. بۆ کردنەوەی Albedo و واژۆکردنی ئەم پارەدانە، دووبارە پەسەندکردن لە جزدان دابگرە.",
             signInRequired: "پێش پارەدان لێرە بچۆرە ناو HAVKAR. دانیشتنی ناونیشانێکی تر لێرە بەکارناهێنرێت.",
             signIn: "چوونەژوورەوە لێرە"
         },
@@ -153,6 +165,8 @@
             explorer: "Li lêgerîna Testnet bibîne",
             unavailable: "Dayîna XLM heta pejirandina navnîşan û rêjeya EUR/XLM ne amade ye.",
             working: "Têkilî bi tora Stellar re...",
+            approve: "Danûstendina Testnet di Albedo de pesend bike. Heke berîk bersiv nede, dîsa biceribîne.",
+            readyToSign: "Berîk hate girêdan. Ji bo vekirina Albedo û îmzekirina vê dayînê, dîsa Di berîkê de pesend bike bitikîne.",
             signInRequired: "Berî dayînê li vê rûpelê têkeve HAVKAR. Danişîna navnîşaneke din li vir nayê bikaranîn.",
             signIn: "Li vê rûpelê têkeve"
         }
@@ -345,6 +359,10 @@
         return session?.data?.session?.access_token || "";
     }
 
+    function stellarPublicKey(value) {
+        return /^G[A-Z2-7]{55}$/.test(String(value || "")) ? String(value) : "";
+    }
+
     async function post(body) {
         const token = await accessToken();
 
@@ -352,15 +370,36 @@
             throw new Error("Authentication required.");
         }
 
-        const response = await fetch("/api/stellar-payment", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify(body)
-        });
-        const payload = await response.json();
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 45000);
+        let response;
+
+        try {
+            response = await fetch("/api/stellar-payment", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify(body),
+                signal: controller.signal
+            });
+        } catch (error) {
+            if (error && error.name === "AbortError") {
+                throw new Error("The Stellar network did not respond in time. You can try again.");
+            }
+            throw new Error("The Stellar payment could not be completed.");
+        } finally {
+            clearTimeout(timer);
+        }
+
+        let payload = null;
+
+        try {
+            payload = await response.json();
+        } catch (error) {
+            throw new Error("The Stellar payment could not be completed.");
+        }
 
         if (!response.ok || payload.ok !== true) {
             const error = new Error(payload.error || "The Stellar payment could not be completed.");
@@ -406,38 +445,66 @@
     }
 
     async function sign(payment) {
-        render(payment, text("working"), []);
+        const known = stellarPublicKey(payment?.source)
+            || stellarPublicKey(typeof window.havkarGetStellarAddress === "function"
+                ? window.havkarGetStellarAddress()
+                : "");
+        let popup = null;
 
-        if (typeof window.havkarSetStellarNetwork === "function") {
-            window.havkarSetStellarNetwork("TESTNET");
+        if (known && typeof window.havkarReserveStellarSigningWindow === "function") {
+            popup = window.havkarReserveStellarSigningWindow();
         }
 
-        if (typeof window.havkarConnectStellarWallet !== "function"
-            || typeof window.havkarSignPreparedCheckoutXdr !== "function") {
-            throw new Error("Stellar wallet signing is not available.");
+        render(known ? Object.assign({}, payment, { source: known }) : payment, text("working"), []);
+
+        try {
+            if (typeof window.havkarSetStellarNetwork === "function") {
+                window.havkarSetStellarNetwork("TESTNET");
+            }
+
+            if (typeof window.havkarConnectStellarWallet !== "function"
+                || typeof window.havkarSignPreparedCheckoutXdr !== "function") {
+                throw new Error("Stellar wallet signing is not available.");
+            }
+
+            if (!known) {
+                const source = await window.havkarConnectStellarWallet();
+                const connected = Object.assign({}, payment, { source });
+                render(connected, text("readyToSign"), actionsFor(connected));
+                return;
+            }
+
+            const prepared = await post({
+                action: "prepare",
+                payment_id: payment.id,
+                source_public_key: known
+            });
+            const signingPayment = prepared.payment || Object.assign({}, payment, { source: known });
+            render(signingPayment, text("approve"), []);
+            const signedXdr = await window.havkarSignPreparedCheckoutXdr(
+                prepared.xdr,
+                signingPayment.source || known,
+                popup
+            );
+            popup = null;
+            render(signingPayment, text("working"), []);
+            const submitted = await post({
+                action: "submit",
+                payment_id: payment.id,
+                signed_xdr: signedXdr
+            });
+
+            if (submitted.payment?.status !== "CONFIRMED" || !submitted.payment.transaction_hash) {
+                throw new Error("The Stellar network did not confirm this transaction.");
+            }
+
+            render(submitted.payment, "", actionsFor(submitted.payment));
+        } catch (error) {
+            if (popup && typeof window.havkarCloseStellarSigningWindow === "function") {
+                window.havkarCloseStellarSigningWindow(popup);
+            }
+            throw error;
         }
-
-        const source = payment.source || await window.havkarConnectStellarWallet();
-        const prepared = await post({
-            action: "prepare",
-            payment_id: payment.id,
-            source_public_key: source
-        });
-        const signedXdr = await window.havkarSignPreparedCheckoutXdr(
-            prepared.xdr,
-            prepared.payment.source || source
-        );
-        const submitted = await post({
-            action: "submit",
-            payment_id: payment.id,
-            signed_xdr: signedXdr
-        });
-
-        if (submitted.payment?.status !== "CONFIRMED" || !submitted.payment.transaction_hash) {
-            throw new Error("The Stellar network did not confirm this transaction.");
-        }
-
-        render(submitted.payment, "", actionsFor(submitted.payment));
     }
 
     async function cancel(payment) {

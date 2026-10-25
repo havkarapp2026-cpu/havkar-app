@@ -69,6 +69,13 @@ assert.doesNotMatch(signup, /location\.href='index\.html'/);
 
 assert.match(checkout, /throw new Error\("Authentication required\."\)/);
 assert.match(checkout, /Authorization: `Bearer \$\{token\}`/);
+assert.match(checkout, /havkarReserveStellarSigningWindow\(\)/);
+assert.match(checkout, /action: "prepare"/);
+const reserveAt = checkout.indexOf("havkarReserveStellarSigningWindow()");
+const prepareAt = checkout.indexOf('action: "prepare"');
+assert.equal(reserveAt > 0 && reserveAt < prepareAt, true);
+assert.match(checkout, /AbortController/);
+assert.match(checkout, /readyToSign/);
 for (const language of ["en", "fa", "ar", "it", "sv", "ckb", "kmr"]) {
   assert.match(checkout, new RegExp(`${language}:\\s*\\{[\\s\\S]*?signInRequired:`));
   assert.match(checkout, new RegExp(`${language}:\\s*\\{[\\s\\S]*?signIn:`));

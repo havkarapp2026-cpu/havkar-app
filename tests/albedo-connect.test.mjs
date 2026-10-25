@@ -162,5 +162,43 @@ assertEqual(
     "real rejection"
 );
 
+const { Keypair } = await import("@stellar/stellar-sdk");
+const signer = Keypair.random().publicKey();
+localStorage.setItem("@StellarWalletsKit/selectedModuleId", "albedo");
+const reserved = window.havkarReserveStellarSigningWindow();
+if (!reserved || reserved.closed) {
+    throw new Error("Albedo signing window was not reserved in the click turn");
+}
+let reused = false;
+StellarWalletsKit.signTransaction = async () => {
+    const popup = window.open(
+        "https://albedo.link/confirm",
+        "auth.albedo.link",
+        "height=600,width=480"
+    );
+    reused = popup === reserved;
+    return { signedTxXdr: "SIGNEDXDR" };
+};
+const signed = await window.havkarSignPreparedCheckoutXdr("UNSIGNED", signer, reserved);
+assertEqual(signed, "SIGNEDXDR", "checkout returns the wallet xdr");
+assertEqual(reused, true, "checkout reuses the reserved Albedo window");
+assertEqual(reserved.location.href, "https://albedo.link/confirm", "confirm page");
+
+StellarWalletsKit.signTransaction = () => new Promise(() => {});
+const hanging = window.havkarReserveStellarSigningWindow();
+const pending = window.havkarSignPreparedCheckoutXdr("UNSIGNED", signer, hanging);
+setTimeout(() => {
+    hanging.closed = true;
+}, 50);
+let signingClosedMessage = "";
+try {
+    await pending;
+} catch (error) {
+    signingClosedMessage = error.message;
+}
+if (!/went away before the transaction was signed/.test(signingClosedMessage)) {
+    throw new Error(`closed signing window message: ${signingClosedMessage}`);
+}
+
 console.log("ALBEDO_CONNECT_TEST_OK");
 process.exit(0);

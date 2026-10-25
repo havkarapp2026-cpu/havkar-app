@@ -148966,7 +148966,7 @@ ${value}`, dataLines++;
   window.havkarPrepareStellarPayment = havkarPrepareStellarPayment;
   window.havkarSignAndSubmitStellarPayment = havkarSignAndSubmitStellarPayment;
   window.havkarRestoreStellarAddress = havkarRestoreStellarAddress;
-  async function havkarSignPreparedCheckoutXdr(xdr, address) {
+  async function havkarSignPreparedCheckoutXdr(xdr, address, reservedPopup) {
     if (currentNetwork().id !== "TESTNET") {
       havkarSetStellarNetwork("TESTNET");
     }
@@ -148984,24 +148984,46 @@ ${value}`, dataLines++;
         "The payment transaction is missing."
       );
     }
-    const result = await StellarWalletsKit.signTransaction(
-      unsigned,
-      {
-        networkPassphrase: STELLAR_NETWORKS.TESTNET.passphrase,
-        address: source
+    const popup = reservedPopup || null;
+    try {
+      const result = await requestWalletSignature(
+        {
+          xdr: unsigned,
+          source
+        },
+        currentNetwork(),
+        popup
+      );
+      const signed = String(
+        result?.signedTxXdr || ""
+      ).trim();
+      if (!signed) {
+        throw new Error(
+          "The wallet did not return a signed transaction."
+        );
       }
-    );
-    const signed = String(
-      result?.signedTxXdr || ""
-    ).trim();
-    if (!signed) {
+      return signed;
+    } catch (error) {
       throw new Error(
-        "The wallet did not return a signed transaction."
+        safeErrorMessage(error)
+      );
+    } finally {
+      closeSigningPopup(
+        popup
       );
     }
-    return signed;
+  }
+  function havkarReserveStellarSigningWindow() {
+    return reserveAlbedoSigningWindow();
+  }
+  function havkarCloseStellarSigningWindow(popup) {
+    closeSigningPopup(
+      popup
+    );
   }
   window.havkarSignPreparedCheckoutXdr = havkarSignPreparedCheckoutXdr;
+  window.havkarReserveStellarSigningWindow = havkarReserveStellarSigningWindow;
+  window.havkarCloseStellarSigningWindow = havkarCloseStellarSigningWindow;
   window.dispatchEvent(
     new CustomEvent(
       "havkar-stellar-ready"

@@ -3053,10 +3053,15 @@ window.havkarRestoreStellarAddress =
 
 
 /* Signs a server-built Testnet XDR. It does not choose the
-   amount, destination, or memo, and it does not submit. */
+   amount, destination, or memo, and it does not submit.
+   The checkout page reserves the Albedo window during the
+   click, before Horizon is contacted. Signing after that
+   await otherwise leaves Android Chrome without an opener,
+   and Albedo's promise never settles. */
 async function havkarSignPreparedCheckoutXdr(
     xdr,
-    address
+    address,
+    reservedPopup
 ){
 
     if(currentNetwork().id !== "TESTNET"){
@@ -3096,44 +3101,89 @@ async function havkarSignPreparedCheckoutXdr(
     }
 
 
-    const result =
-        await StellarWalletsKit.signTransaction(
-
-            unsigned,
-
-            {
-
-                networkPassphrase:
-                    STELLAR_NETWORKS.TESTNET.passphrase,
-
-                address:source
-
-            }
-
-        );
-
-    const signed =
-        String(
-            result?.signedTxXdr || ""
-        ).trim();
+    const popup =
+        reservedPopup ||
+        null;
 
 
-    if(!signed){
+    try{
+
+        const result =
+            await requestWalletSignature(
+
+                {
+                    xdr:unsigned,
+                    source:source
+                },
+
+                currentNetwork(),
+
+                popup
+
+            );
+
+        const signed =
+            String(
+                result?.signedTxXdr || ""
+            ).trim();
+
+
+        if(!signed){
+
+            throw new Error(
+                "The wallet did not return a signed transaction."
+            );
+
+        }
+
+
+        return signed;
+
+    }
+    catch(error){
 
         throw new Error(
-            "The wallet did not return a signed transaction."
+            safeErrorMessage(error)
+        );
+
+    }
+    finally{
+
+        closeSigningPopup(
+            popup
         );
 
     }
 
+}
 
-    return signed;
+
+function havkarReserveStellarSigningWindow(){
+
+    return reserveAlbedoSigningWindow();
+
+}
+
+
+function havkarCloseStellarSigningWindow(
+    popup
+){
+
+    closeSigningPopup(
+        popup
+    );
 
 }
 
 
 window.havkarSignPreparedCheckoutXdr =
     havkarSignPreparedCheckoutXdr;
+
+window.havkarReserveStellarSigningWindow =
+    havkarReserveStellarSigningWindow;
+
+window.havkarCloseStellarSigningWindow =
+    havkarCloseStellarSigningWindow;
 
 
 /* =========================================================
