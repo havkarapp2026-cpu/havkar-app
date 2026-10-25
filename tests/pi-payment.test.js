@@ -210,6 +210,17 @@ async function main() {
         }
     }
 
+    const { Keypair } = await import("@stellar/stellar-sdk");
+    const { installPiStellarServerCompat, piNetworkFromModule } = await import("../lib/pi-stellar-compat.mjs");
+    installPiStellarServerCompat();
+    const PiNetwork = piNetworkFromModule(await import("pi-backend"));
+    const pi = new PiNetwork("paused-compat", Keypair.random().secret());
+    const horizon = pi.getHorizonClient("Test SDF Network ; September 2015");
+    assert.strictEqual(typeof horizon.loadAccount, "function");
+    assert.strictEqual(typeof horizon.fetchBaseFee, "function");
+    assert.strictEqual(typeof horizon.fetchTimebounds, "function");
+    assert.strictEqual(typeof horizon.submitTransaction, "function");
+
     const vercel = JSON.parse(fs.readFileSync(path.join(root, "vercel.json"), "utf8"));
     assert.deepStrictEqual(vercel.rewrites, [
         {
