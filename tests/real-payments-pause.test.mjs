@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import {
   cardPaymentsAllowed,
   realPaymentsEnabled
-} from "../lib/real-payments.mjs";
+} from "../lib/real-payments.cjs";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 

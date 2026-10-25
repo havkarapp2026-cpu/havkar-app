@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import { cardPaymentsAllowed } from "../lib/real-payments.mjs";
+import { cardPaymentsAllowed } from "../lib/real-payments.cjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
