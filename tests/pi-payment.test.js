@@ -27,6 +27,7 @@ async function callPi(handler, { url, query, method = "POST", body = {} }) {
 
 async function main() {
     const previousFlag = process.env.HAVKAR_PI_PAYMENTS_ENABLED;
+    const previousRealPayments = process.env.HAVKAR_REAL_PAYMENTS_ENABLED;
     const previousKey = process.env.PI_API_KEY;
     const previousFetch = global.fetch;
     const calls = [];
@@ -46,6 +47,7 @@ async function main() {
         const fakeKey = "test-pi-key-not-a-secret";
 
         delete process.env.HAVKAR_PI_PAYMENTS_ENABLED;
+        delete process.env.HAVKAR_REAL_PAYMENTS_ENABLED;
         delete process.env.PI_API_KEY;
 
         for (const route of [
@@ -62,6 +64,16 @@ async function main() {
         assert.strictEqual(calls.length, 0);
 
         process.env.HAVKAR_PI_PAYMENTS_ENABLED = "true";
+        const piWithoutRealPayments = await callPi(handler, {
+            url: "/api/pi-approve",
+            query: {},
+            body: { paymentId: "pay_1" }
+        });
+        assert.strictEqual(piWithoutRealPayments.statusCode, 404);
+        assert.deepStrictEqual(piWithoutRealPayments.body, { error: "Not found" });
+        assert.strictEqual(calls.length, 0);
+
+        process.env.HAVKAR_REAL_PAYMENTS_ENABLED = "true";
 
         const wrongMethod = await callPi(handler, {
             url: "/api/pi-approve",
@@ -185,6 +197,11 @@ async function main() {
             delete process.env.HAVKAR_PI_PAYMENTS_ENABLED;
         } else {
             process.env.HAVKAR_PI_PAYMENTS_ENABLED = previousFlag;
+        }
+        if (previousRealPayments === undefined) {
+            delete process.env.HAVKAR_REAL_PAYMENTS_ENABLED;
+        } else {
+            process.env.HAVKAR_REAL_PAYMENTS_ENABLED = previousRealPayments;
         }
         if (previousKey === undefined) {
             delete process.env.PI_API_KEY;

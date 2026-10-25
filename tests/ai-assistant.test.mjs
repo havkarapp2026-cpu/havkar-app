@@ -6,6 +6,7 @@ import {
   assistantInstruction,
   imageGenerationRequested,
   logoEntitlementDecision,
+  paidAiServicesEnabled,
   normalizeLanguage,
   providerErrorStatus,
   validateAssistantRequest
@@ -128,6 +129,9 @@ assert.equal(
 );
 assert.equal(logoEntitlementDecision({ ok: true, row: null }, { messages: [{ role: "user", content: "Hello" }] }).allowed, true);
 assert.match(source, /verifiedLogoEntitlement/);
+assert.equal(paidAiServicesEnabled({}), false);
+assert.equal(paidAiServicesEnabled({ HAVKAR_REAL_PAYMENTS_ENABLED: "true" }), true);
+assert.match(source, /Paid image generation is paused/);
 assert.match(source, /Image generation requires an active paid HAVKAR AI plan/);
 assert.match(source, /consume_ai_budget|consume_ai_image_budget/);
 assert.equal(
