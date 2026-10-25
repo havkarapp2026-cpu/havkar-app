@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><link rel="manifest" href="/manifest.json">
+<head><script src="/havkar-preview-access.js"></script><link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/havkar-icon-32-20261022-v3.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/havkar-icon-16-20261022-v3.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/havkar-icon-180-20261022-v3.png">
@@ -34,15 +34,18 @@ function safeReturnTarget(){
   const allowed={'events.html':true,'index.html':true,'jobs.html':true,'wallet.html':true,'tickets.html':true};
   return allowed[requested]?requested:'';
 }
-function continueHref(){return safeReturnTarget()||'index.html';}
+function continueHref(){
+  const target=safeReturnTarget()||'index.html';
+  return typeof window.havkarWithPreviewAccess==='function'?window.havkarWithPreviewAccess(target):target;
+}
 function loginReturnHref(){
   const url=new URL('login.html',location.href);
   const target=safeReturnTarget();
   if(target) url.searchParams.set('return',target);
-  return url.href;
+  return typeof window.havkarWithPreviewAccess==='function'?window.havkarWithPreviewAccess(url.href):url.href;
 }
 const backLink=document.querySelector('a.back');
-if(backLink) backLink.href=safeReturnTarget()?('login.html?return='+encodeURIComponent(safeReturnTarget())):'login.html';
+if(backLink) backLink.href=loginReturnHref();
 const $=id=>document.getElementById(id), form=$('signupForm'),message=$('message'),createBtn=$('createBtn'),googleBtn=$('googleBtn');
 const language=$('language');
 const i18n=window.HAVKAR_I18N;

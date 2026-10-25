@@ -177,7 +177,10 @@
             "tickets.html": true
         };
         const target = allowed[page] ? page : "events.html";
-        return "login.html?return=" + encodeURIComponent(target);
+        const href = "login.html?return=" + encodeURIComponent(target);
+        return typeof window.havkarWithPreviewAccess === "function"
+            ? window.havkarWithPreviewAccess(href)
+            : href;
     }
 
     function direction() {

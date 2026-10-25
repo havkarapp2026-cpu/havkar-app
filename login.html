@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><link rel="manifest" href="/manifest.json">
+<head><script src="/havkar-preview-access.js"></script><link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/havkar-icon-32-20261022-v3.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/havkar-icon-16-20261022-v3.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/havkar-icon-180-20261022-v3.png">
@@ -626,7 +626,10 @@ function safeReturnTarget() {
 }
 
 function continueHref() {
-    return safeReturnTarget() || "index.html";
+    const target = safeReturnTarget() || "index.html";
+    return typeof window.havkarWithPreviewAccess === "function"
+        ? window.havkarWithPreviewAccess(target)
+        : target;
 }
 
 
@@ -926,7 +929,9 @@ googleBtn.addEventListener("click", async () => {
         if (returnTarget) {
             redirectToUrl.searchParams.set("return", returnTarget);
         }
-        const redirectTo = redirectToUrl.href;
+        const redirectTo = typeof window.havkarWithPreviewAccess === "function"
+            ? window.havkarWithPreviewAccess(redirectToUrl.href)
+            : redirectToUrl.href;
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: "google",
             options: { redirectTo }
@@ -1189,8 +1194,9 @@ async function sendPasswordReset() {
          */
 
         const redirectTo =
-            window.location.origin +
-            window.location.pathname;
+            typeof window.havkarWithPreviewAccess === "function"
+                ? window.havkarWithPreviewAccess(window.location.pathname + window.location.search)
+                : window.location.origin + window.location.pathname;
 
 
         const {
@@ -1593,9 +1599,12 @@ signupBtn.addEventListener(
     function(){
 
         const returnTarget = safeReturnTarget();
-        window.location.href = returnTarget
+        const signupHref = returnTarget
             ? "signup.html?return=" + encodeURIComponent(returnTarget)
             : "signup.html";
+        window.location.href = typeof window.havkarWithPreviewAccess === "function"
+            ? window.havkarWithPreviewAccess(signupHref)
+            : signupHref;
 
     }
 );
@@ -1745,10 +1754,13 @@ function authCallbackMessage(){
                 readAuthParam("error_code") || "unspecified"
             );
 
+            const cleared = typeof window.havkarWithPreviewAccess === "function"
+                ? new URL(window.havkarWithPreviewAccess(window.location.pathname))
+                : new URL(window.location.pathname, window.location.href);
             window.history.replaceState(
                 {},
                 document.title,
-                window.location.pathname
+                cleared.pathname + cleared.search
             );
 
             return;
