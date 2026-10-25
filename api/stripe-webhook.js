@@ -4,7 +4,7 @@ import {
   cardPaymentsAllowed,
   REAL_PAYMENTS_PAUSED_CODE,
   REAL_PAYMENTS_PAUSED_MESSAGE
-} from "../lib/real-payments.mjs";
+} from "../lib/real-payments.cjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 

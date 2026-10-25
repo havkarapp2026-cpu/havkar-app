@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import {
   cardPaymentsAllowed,
   realPaymentsEnabled
-} from "../lib/real-payments.mjs";
+} from "../lib/real-payments.cjs";
 import {
   paidAiServicesEnabled,
   subscriptionCheckoutStatus
