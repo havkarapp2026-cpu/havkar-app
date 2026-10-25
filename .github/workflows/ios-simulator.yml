@@ -1,0 +1,38 @@
+name: iOS Simulator build
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios-simulator.yml"
+
+jobs:
+  simulator:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - name: Check out HAVKAR
+        uses: actions/checkout@v4
+
+      - name: Build unsigned iOS Simulator app
+        run: >
+          xcodebuild
+          -project ios/HAVKAR.xcodeproj
+          -scheme HAVKAR
+          -sdk iphonesimulator
+          -destination "generic/platform=iOS Simulator"
+          -configuration Debug
+          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGNING_REQUIRED=NO
+          build
+
+      - name: Test the host allowlist
+        run: >
+          xcodebuild
+          test
+          -project ios/HAVKAR.xcodeproj
+          -scheme HAVKAR
+          -destination "platform=iOS Simulator,name=iPhone 16"
+          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGNING_REQUIRED=NO

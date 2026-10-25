@@ -1,5 +1,10 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import {
+  cardPaymentsAllowed,
+  REAL_PAYMENTS_PAUSED_CODE,
+  REAL_PAYMENTS_PAUSED_MESSAGE
+} from "../lib/real-payments.cjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -35,6 +40,14 @@ async function getRawBody(req) {
 }
 
 export default async function handler(req, res) {
+  if (!cardPaymentsAllowed()) {
+    return res.status(403).json({
+      ok: false,
+      error: REAL_PAYMENTS_PAUSED_MESSAGE,
+      code: REAL_PAYMENTS_PAUSED_CODE
+    });
+  }
+
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({

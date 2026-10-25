@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { cardPaymentsAllowed } from "../lib/real-payments.cjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -95,6 +96,27 @@ function getOrigin(req) {
       : "https";
 
   return `${protocol}://${host}`;
+}
+
+function allowedCheckoutOrigin(req) {
+  const origin = getOrigin(req);
+
+  try {
+    const url = new URL(origin);
+    const host = url.hostname;
+    const havkarHost = host === "havkar.online"
+      || host.endsWith(".havkar.online")
+      || host === "havkar-app.vercel.app"
+      || (host.endsWith(".vercel.app") && host.includes("havkar"));
+
+    if (url.protocol === "https:" && havkarHost) {
+      return origin;
+    }
+  } catch {
+    /* Use the public site when the request host is not a HAVKAR host. */
+  }
+
+  return "https://havkar-app.vercel.app";
 }
 
 async function authenticateUser(req) {
@@ -324,7 +346,7 @@ export default async function handler(req, res) {
         (unitPrice * quantity).toFixed(2)
       );
 
-    const origin = getOrigin(req);
+    const origin = allowedCheckoutOrigin(req);
 
     if (unitPrice === 0) {
       const {
@@ -356,6 +378,14 @@ export default async function handler(req, res) {
         ok: true,
         free: true,
         ticket_id: freeTicket.id,
+      });
+    }
+
+    if (!cardPaymentsAllowed()) {
+      return res.status(403).json({
+        ok: false,
+        error: "Card payments are paused until the owner enables them.",
+        code: "REAL_PAYMENTS_PAUSED",
       });
     }
 
