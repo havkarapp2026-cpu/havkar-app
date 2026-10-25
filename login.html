@@ -453,7 +453,7 @@ button:disabled {
     <div id="accountMode" class="hidden">
       <p class="session-notice" id="accountEmail" translate="no" data-i18n-ignore></p>
       <div class="account-actions">
-        <a href="index.html">Go to HAVKAR</a>
+        <a id="accountContinue" href="index.html">Continue</a>
         <button type="button" id="accountLogout">Log Out</button>
       </div>
     </div>
@@ -612,6 +612,22 @@ const supabase =
             }
         }
     );
+
+function safeReturnTarget() {
+    const requested = new URLSearchParams(window.location.search).get("return") || "";
+    const allowed = {
+        "events.html": true,
+        "index.html": true,
+        "jobs.html": true,
+        "wallet.html": true,
+        "tickets.html": true
+    };
+    return allowed[requested] ? requested : "";
+}
+
+function continueHref() {
+    return safeReturnTarget() || "index.html";
+}
 
 
 /* =========================================================
@@ -905,7 +921,12 @@ googleBtn.addEventListener("click", async () => {
     googleBtn.textContent = "Connecting to Google...";
     showMessage("");
     try {
-        const redirectTo = new URL("login.html", window.location.href).href;
+        const redirectToUrl = new URL("login.html", window.location.href);
+        const returnTarget = safeReturnTarget();
+        if (returnTarget) {
+            redirectToUrl.searchParams.set("return", returnTarget);
+        }
+        const redirectTo = redirectToUrl.href;
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: "google",
             options: { redirectTo }
@@ -1072,7 +1093,7 @@ async function login() {
             function(){
 
                 window.location.replace(
-                    "index.html"
+                    continueHref()
                 );
 
             },
@@ -1571,8 +1592,10 @@ signupBtn.addEventListener(
     "click",
     function(){
 
-        window.location.href =
-            "signup.html";
+        const returnTarget = safeReturnTarget();
+        window.location.href = returnTarget
+            ? "signup.html?return=" + encodeURIComponent(returnTarget)
+            : "signup.html";
 
     }
 );
@@ -1779,15 +1802,17 @@ function authCallbackMessage(){
 
 
         /*
-         * IMPORTANT:
-         *
-         * If a normal session already exists,
-         * DO NOT redirect automatically.
-         *
-         * The user must remain on this page so
-         * Forgot Password remains immediately
-         * accessible.
+         * Without a checkout return target, stay on
+         * this page so Forgot Password stays available.
+         * A safe same-origin return, such as events.html,
+         * continues there because the payment session
+         * must be created on that exact address.
          */
+
+        const continueLink = document.getElementById("accountContinue");
+        if (continueLink) {
+            continueLink.href = continueHref();
+        }
 
         if(
             data &&
@@ -1796,6 +1821,9 @@ function authCallbackMessage(){
         ){
 
             showAccountMode(data.session.user);
+            if (safeReturnTarget()) {
+                window.location.replace(continueHref());
+            }
 
         }
 

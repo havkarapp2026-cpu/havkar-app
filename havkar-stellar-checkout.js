@@ -20,7 +20,9 @@
             receipt: "Payment receipt",
             explorer: "View on the Testnet explorer",
             unavailable: "XLM checkout is not available until the receiving address and EUR/XLM rate are approved.",
-            working: "Contacting the Stellar network..."
+            working: "Contacting the Stellar network...",
+            signInRequired: "Sign in to HAVKAR on this page before paying. A session from another HAVKAR address is not used here.",
+            signIn: "Sign in on this page"
         },
         fa: {
             title: "پرداخت با XLM",
@@ -40,7 +42,9 @@
             receipt: "رسید پرداخت",
             explorer: "مشاهده در مرورگر Testnet",
             unavailable: "پرداخت XLM تا تأیید آدرس دریافت و نرخ یورو به XLM آماده نیست.",
-            working: "در حال ارتباط با شبکه استلار..."
+            working: "در حال ارتباط با شبکه استلار...",
+            signInRequired: "پیش از پرداخت، در همین صفحه وارد HAVKAR شوید. نشست یک نشانی دیگر اینجا استفاده نمی‌شود.",
+            signIn: "ورود در همین صفحه"
         },
         ar: {
             title: "الدفع بـ XLM",
@@ -60,7 +64,9 @@
             receipt: "إيصال الدفع",
             explorer: "عرض على مستكشف Testnet",
             unavailable: "دفع XLM غير متاح قبل اعتماد عنوان الاستلام وسعر اليورو إلى XLM.",
-            working: "جارٍ الاتصال بشبكة ستيلار..."
+            working: "جارٍ الاتصال بشبكة ستيلار...",
+            signInRequired: "سجّل الدخول إلى HAVKAR في هذه الصفحة قبل الدفع. جلسة عنوان آخر لا تُستخدم هنا.",
+            signIn: "تسجيل الدخول في هذه الصفحة"
         },
         it: {
             title: "Paga con XLM",
@@ -80,7 +86,9 @@
             receipt: "Ricevuta di pagamento",
             explorer: "Apri l'explorer Testnet",
             unavailable: "Il pagamento XLM resta non disponibile finché l'indirizzo di incasso e il tasso EUR/XLM non sono approvati.",
-            working: "Connessione alla rete Stellar..."
+            working: "Connessione alla rete Stellar...",
+            signInRequired: "Accedi a HAVKAR in questa pagina prima di pagare. Una sessione di un altro indirizzo non viene usata qui.",
+            signIn: "Accedi in questa pagina"
         },
         sv: {
             title: "Betala med XLM",
@@ -100,7 +108,9 @@
             receipt: "Betalningskvitto",
             explorer: "Visa i Testnet-utforskaren",
             unavailable: "XLM-betalning är inte tillgänglig förrän mottagaradress och EUR/XLM-kurs har godkänts.",
-            working: "Kontaktar Stellar-nätverket..."
+            working: "Kontaktar Stellar-nätverket...",
+            signInRequired: "Logga in på HAVKAR på den här sidan innan du betalar. En session från en annan adress används inte här.",
+            signIn: "Logga in på den här sidan"
         },
         ckb: {
             title: "پارەدان بە XLM",
@@ -120,7 +130,9 @@
             receipt: "پسووڵەی پارەدان",
             explorer: "بینین لە گەڕۆکی Testnet",
             unavailable: "پارەدانی XLM ئامادە نییە تا ناونیشانی وەرگرتن و نرخی یۆرۆ بۆ XLM پەسەند بکرێن.",
-            working: "پەیوەندی بە تۆڕی ستێلارەوە..."
+            working: "پەیوەندی بە تۆڕی ستێلارەوە...",
+            signInRequired: "پێش پارەدان لێرە بچۆرە ناو HAVKAR. دانیشتنی ناونیشانێکی تر لێرە بەکارناهێنرێت.",
+            signIn: "چوونەژوورەوە لێرە"
         },
         kmr: {
             title: "Bi XLM bidin",
@@ -140,7 +152,9 @@
             receipt: "Makbûza dayînê",
             explorer: "Li lêgerîna Testnet bibîne",
             unavailable: "Dayîna XLM heta pejirandina navnîşan û rêjeya EUR/XLM ne amade ye.",
-            working: "Têkilî bi tora Stellar re..."
+            working: "Têkilî bi tora Stellar re...",
+            signInRequired: "Berî dayînê li vê rûpelê têkeve HAVKAR. Danişîna navnîşaneke din li vir nayê bikaranîn.",
+            signIn: "Li vê rûpelê têkeve"
         }
     };
 
@@ -151,6 +165,19 @@
 
     function text(key) {
         return COPY[language()][key] || COPY.en[key] || "";
+    }
+
+    function sameOriginLoginHref() {
+        const page = String(window.location.pathname || "").split("/").pop() || "events.html";
+        const allowed = {
+            "events.html": true,
+            "index.html": true,
+            "jobs.html": true,
+            "wallet.html": true,
+            "tickets.html": true
+        };
+        const target = allowed[page] ? page : "events.html";
+        return "login.html?return=" + encodeURIComponent(target);
     }
 
     function direction() {
@@ -435,9 +462,22 @@
             render(created.payment, "", actionsFor(created.payment));
         } catch (error) {
             const unavailable = /not approved yet|not configured|disabled on production/i.test(error.message);
-            render(error.payment, unavailable ? text("unavailable") : error.message, [
-                { label: text("close"), onClick: closePanel }
-            ]);
+            const needsSignIn = /Authentication required/i.test(error.message || "");
+            const actions = [{ label: text("close"), onClick: closePanel }];
+            if (needsSignIn) {
+                actions.unshift({
+                    label: text("signIn"),
+                    primary: true,
+                    onClick: () => {
+                        window.location.href = sameOriginLoginHref();
+                    }
+                });
+            }
+            render(
+                error.payment,
+                unavailable ? text("unavailable") : (needsSignIn ? text("signInRequired") : error.message),
+                actions
+            );
         }
     }
 

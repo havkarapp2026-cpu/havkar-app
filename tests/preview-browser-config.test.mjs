@@ -187,8 +187,9 @@ restoreEnv();
 const login = fs.readFileSync(path.join(root, "login.html"), "utf8");
 assert.equal(login.includes(PRODUCTION_PROJECT_REF), false);
 assert.equal(login.includes("havkar-app.vercel.app"), false);
-assert.match(login, /window\.location\.replace\(\s*"index\.html"\s*\)/);
-assert.match(login, /new URL\("login\.html", window\.location\.href\)\.href/);
+assert.match(login, /function safeReturnTarget\(\)/);
+assert.match(login, /new URL\("login\.html", window\.location\.href\)/);
+assert.doesNotMatch(login, /window\.location\.replace\(\s*"index\.html"\s*\)/);
 
 const middlewareSource = fs.readFileSync(path.join(root, "middleware.js"), "utf8");
 assert.match(middlewareSource, /\/havkar-supabase-config\.js/);

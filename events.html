@@ -2037,7 +2037,7 @@
             "expected attendees":"förväntade deltagare", "About this event":"Om evenemanget",
             "No description available.":"Ingen beskrivning tillgänglig.", "Share":"Dela", "Join Event":"Delta",
             "Get Ticket":"Skaffa biljett", "Delete My Event":"Ta bort mitt evenemang",
-            "Sign in required":"Inloggning krävs", "Please sign in to view your event tickets.":"Logga in för att se dina evenemangsbiljetter.",
+            "Sign in required":"Inloggning krävs", "Please sign in to view your event tickets.":"Logga in för att se dina evenemangsbiljetter.", "Sign in":"Logga in",
             "Could not load tickets":"Kunde inte ladda biljetter", "Please try again.":"Försök igen.",
             "No event tickets yet":"Inga evenemangsbiljetter ännu",
             "Your HAVKAR event tickets will appear here after they are issued.":"Dina HAVKAR-evenemangsbiljetter visas här när de har utfärdats.",
@@ -3074,10 +3074,7 @@
                     event.preventDefault();
 
                     if (!currentUser) {
-                        showToast(
-                            "Please sign in before creating an event.",
-                            "error"
-                        );
+                        window.location.href = "login.html?return=" + encodeURIComponent("events.html");
                         return;
                     }
 
@@ -3582,6 +3579,7 @@
                         <i class="fas fa-lock"></i>
                         <h3>${et("Sign in required")}</h3>
                         <p>${et("Please sign in to view your event tickets.")}</p>
+                        <p><a href="login.html?return=events.html">${et("Sign in")}</a></p>
                     </div>
                 `;
                 return;
@@ -3897,10 +3895,7 @@
 
         window.openCreateEventModal = function() {
             if (!currentUser) {
-                showToast(
-                    "Please sign in before creating an event.",
-                    "error"
-                );
+                window.location.href = "login.html?return=" + encodeURIComponent("events.html");
                 return;
             }
 
@@ -4014,6 +4009,11 @@
 
 
         window.openProfile = function() {
+            if (!currentUser) {
+                window.location.href = "login.html?return=" + encodeURIComponent("events.html");
+                return;
+            }
+
             window.location.href =
                 "profile.html";
         };
