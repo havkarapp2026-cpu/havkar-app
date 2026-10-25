@@ -7197,22 +7197,22 @@
             throw Error("Can only multibase decode strings");
           }
         }
-        or(decoder2) {
-          return or2(this, decoder2);
+        or(decoder3) {
+          return or2(this, decoder3);
         }
       };
       ComposedDecoder = class {
         constructor(decoders) {
           this.decoders = decoders;
         }
-        or(decoder2) {
-          return or2(this, decoder2);
+        or(decoder3) {
+          return or2(this, decoder3);
         }
         decode(input) {
           const prefix = input[0];
-          const decoder2 = this.decoders[prefix];
-          if (decoder2) {
-            return decoder2.decode(input);
+          const decoder3 = this.decoders[prefix];
+          if (decoder3) {
+            return decoder3.decode(input);
           } else {
             throw RangeError(`Unable to decode multibase string ${JSON.stringify(input)}, only inputs prefixed with ${Object.keys(this.decoders)} are supported`);
           }
@@ -8045,24 +8045,24 @@
       parseCIDtoBytes = (source, base3) => {
         switch (source[0]) {
           case "Q": {
-            const decoder2 = base3 || base58btc;
+            const decoder3 = base3 || base58btc;
             return [
               base58btc.prefix,
-              decoder2.decode(`${base58btc.prefix}${source}`)
+              decoder3.decode(`${base58btc.prefix}${source}`)
             ];
           }
           case base58btc.prefix: {
-            const decoder2 = base3 || base58btc;
+            const decoder3 = base3 || base58btc;
             return [
               base58btc.prefix,
-              decoder2.decode(source)
+              decoder3.decode(source)
             ];
           }
           case base322.prefix: {
-            const decoder2 = base3 || base322;
+            const decoder3 = base3 || base322;
             return [
               base322.prefix,
-              decoder2.decode(source)
+              decoder3.decode(source)
             ];
           }
           default: {
@@ -8217,11 +8217,11 @@ if (cid) {
       init_basics();
       init_alloc();
       string = createCodec("utf8", "u", (buf) => {
-        const decoder2 = new TextDecoder("utf8");
-        return "u" + decoder2.decode(buf);
+        const decoder3 = new TextDecoder("utf8");
+        return "u" + decoder3.decode(buf);
       }, (str) => {
-        const encoder9 = new TextEncoder();
-        return encoder9.encode(str.substring(1));
+        const encoder10 = new TextEncoder();
+        return encoder10.encode(str.substring(1));
       });
       ascii = createCodec("ascii", "a", (buf) => {
         let string2 = "a";
@@ -8322,8 +8322,8 @@ if (cid) {
         if (input instanceof Uint8Array) {
           ret = input;
         } else if (typeof input === "string") {
-          const encoder9 = new TextEncoder();
-          ret = encoder9.encode(input);
+          const encoder10 = new TextEncoder();
+          ret = encoder10.encode(input);
         } else {
           throw new Error(ERROR_MSG_INPUT);
         }
@@ -14959,7 +14959,7 @@ if (cid) {
   var version4;
   var init_version2 = __esm({
     "node_modules/viem/_esm/errors/version.js"() {
-      version4 = "2.57.7";
+      version4 = "2.57.11";
     }
   });
 
@@ -16835,7 +16835,9 @@ if (cid) {
     return [signature, ...topics];
   }
   function encodeArg({ param, value }) {
-    if (param.type === "string" || param.type === "bytes")
+    if (param.type === "string")
+      return keccak2562(stringToBytes(value));
+    if (param.type === "bytes")
       return keccak2562(toBytes4(value));
     if (param.type === "tuple" || param.type.match(/^(.*)\[(\d+)?\]$/))
       throw new FilterTypeNotSupportedError(param.type);
@@ -20000,11 +20002,11 @@ ${prettyStateOverride(stateOverride)}`;
     const CURVE = validatePointOpts2(opts);
     const { Fp } = CURVE;
     const Fn6 = Field2(CURVE.n, CURVE.nBitLength);
-    const toBytes11 = CURVE.toBytes || ((_c3, point, _isCompressed) => {
+    const toBytes12 = CURVE.toBytes || ((_c3, point, _isCompressed) => {
       const a28 = point.toAffine();
       return concatBytes5(Uint8Array.from([4]), Fp.toBytes(a28.x), Fp.toBytes(a28.y));
     });
-    const fromBytes11 = CURVE.fromBytes || ((bytes) => {
+    const fromBytes12 = CURVE.fromBytes || ((bytes) => {
       const tail = bytes.subarray(1);
       const x14 = Fp.fromBytes(tail.subarray(0, Fp.BYTES));
       const y17 = Fp.fromBytes(tail.subarray(Fp.BYTES, 2 * Fp.BYTES));
@@ -20132,7 +20134,7 @@ ${prettyStateOverride(stateOverride)}`;
        * @param hex short/long ECDSA hex
        */
       static fromHex(hex) {
-        const P17 = Point3.fromAffine(fromBytes11(ensureBytes2("pointHex", hex)));
+        const P17 = Point3.fromAffine(fromBytes12(ensureBytes2("pointHex", hex)));
         P17.assertValidity();
         return P17;
       }
@@ -20380,7 +20382,7 @@ ${prettyStateOverride(stateOverride)}`;
       toRawBytes(isCompressed = true) {
         abool2("isCompressed", isCompressed);
         this.assertValidity();
-        return toBytes11(Point3, this, isCompressed);
+        return toBytes12(Point3, this, isCompressed);
       }
       toHex(isCompressed = true) {
         abool2("isCompressed", isCompressed);
@@ -23513,7 +23515,9 @@ ${prettyStateOverride(stateOverride)}`;
       try {
         if (input.type === "address")
           return isAddressEqual(value, arg);
-        if (input.type === "string" || input.type === "bytes")
+        if (input.type === "string")
+          return keccak2562(stringToBytes(value)) === arg;
+        if (input.type === "bytes")
           return keccak2562(toBytes4(value)) === arg;
         return value === arg;
       } catch {
@@ -28206,6 +28210,8 @@ ${prettyStateOverride(stateOverride)}`;
   // node_modules/viem/_esm/utils/promise/withRetry.js
   function withRetry(fn5, { delay: delay_ = 100, retryCount = 2, shouldRetry: shouldRetry2 = () => true, signal } = {}) {
     return new Promise((resolve, reject) => {
+      const onAbort = () => reject(getAbortError(signal));
+      signal?.addEventListener("abort", onAbort, { once: true });
       const attemptRetry = async ({ count = 0 } = {}) => {
         if (signal?.aborted) {
           reject(getAbortError(signal));
@@ -28240,7 +28246,7 @@ ${prettyStateOverride(stateOverride)}`;
           reject(err);
         }
       };
-      void attemptRetry().catch(reject);
+      void attemptRetry().catch(reject).finally(() => signal?.removeEventListener("abort", onAbort));
     });
   }
   var init_withRetry = __esm({
@@ -28618,7 +28624,7 @@ ${prettyStateOverride(stateOverride)}`;
     const blockTime = chain2?.blockTime ?? 12e3;
     const defaultPollingInterval = Math.min(Math.max(Math.floor(blockTime / 2), 500), 4e3);
     const pollingInterval = parameters.pollingInterval ?? defaultPollingInterval;
-    const cacheTime = parameters.cacheTime ?? pollingInterval;
+    const cacheTime = parameters.cacheTime ?? Math.min(pollingInterval, Math.floor(blockTime / 2));
     const account = parameters.account ? parseAccount(parameters.account) : void 0;
     const { config: config4, request: request2, value } = parameters.transport({
       account,
@@ -28643,22 +28649,63 @@ ${prettyStateOverride(stateOverride)}`;
       uid: uid(),
       ...experimental_blockTag ? { experimental_blockTag } : {}
     };
-    function extend(base3) {
+    return decorate(client);
+  }
+  function decorate(client) {
+    function extend(base3, extensions) {
       return (extendFn) => {
         const extended = extendFn(base3);
-        for (const key2 in client)
-          delete extended[key2];
+        for (const key in client)
+          if (key !== "scope")
+            delete extended[key];
         const combined = { ...base3, ...extended };
-        for (const key2 in extended) {
-          const a28 = base3[key2];
-          const b16 = extended[key2];
+        for (const key in extended) {
+          const a28 = base3[key];
+          const b16 = extended[key];
           if (isPlainObject(a28) && isPlainObject(b16))
-            combined[key2] = { ...a28, ...b16 };
+            combined[key] = { ...a28, ...b16 };
         }
-        return Object.assign(combined, { extend: extend(combined) });
+        const next = [...extensions, extendFn];
+        const { scope: scope_combined } = combined;
+        return Object.assign(combined, {
+          extend: extend(combined, next),
+          scope: typeof scope_combined === "function" && scopes_builtin.has(scope_combined) ? scope(next) : scope_combined
+        });
       };
     }
-    return Object.assign(client, { extend: extend(client) });
+    function scope(extensions) {
+      const scopes = /* @__PURE__ */ new WeakMap();
+      const fn5 = (options = {}) => {
+        const cached = options.signal && scopes.get(options.signal);
+        if (cached)
+          return cached;
+        const id = `scope.${scopeId++}`;
+        const controller16 = new AbortController();
+        const { signal } = options;
+        if (signal?.aborted)
+          controller16.abort(signal.reason);
+        else
+          signal?.addEventListener("abort", () => controller16.abort(signal.reason), {
+            once: true
+          });
+        const request2 = (args, options_request) => client.request(args, {
+          ...options_request,
+          signal: options_request?.signal ?? controller16.signal,
+          // The request `uid` keys in-flight request deduplication.
+          uid: options_request?.uid ?? id
+        });
+        const scoped = extensions.reduce((base3, extendFn) => base3.extend(extendFn), decorate({ ...client, request: request2, uid: id }));
+        if (signal)
+          scopes.set(signal, scoped);
+        return scoped;
+      };
+      scopes_builtin.add(fn5);
+      return fn5;
+    }
+    return Object.assign(client, {
+      extend: extend(client, []),
+      scope: scope([])
+    });
   }
   function isPlainObject(value) {
     if (typeof value !== "object" || value === null)
@@ -28694,10 +28741,13 @@ ${prettyStateOverride(stateOverride)}`;
   function rpcSchema() {
     return null;
   }
+  var scopes_builtin, scopeId;
   var init_createClient = __esm({
     "node_modules/viem/_esm/clients/createClient.js"() {
       init_parseAccount();
       init_uid();
+      scopes_builtin = /* @__PURE__ */ new WeakSet();
+      scopeId = 0;
     }
   });
 
@@ -28962,6 +29012,64 @@ ${prettyStateOverride(stateOverride)}`;
     }
   });
 
+  // node_modules/viem/node_modules/ox/_esm/core/Base64.js
+  function fromBytes6(value, options = {}) {
+    const { pad: pad8 = true, url = false } = options;
+    const encoded = new Uint8Array(Math.ceil(value.length / 3) * 4);
+    for (let i19 = 0, j16 = 0; j16 < value.length; i19 += 4, j16 += 3) {
+      const y17 = (value[j16] << 16) + (value[j16 + 1] << 8) + (value[j16 + 2] | 0);
+      encoded[i19] = integerToCharacter[y17 >> 18];
+      encoded[i19 + 1] = integerToCharacter[y17 >> 12 & 63];
+      encoded[i19 + 2] = integerToCharacter[y17 >> 6 & 63];
+      encoded[i19 + 3] = integerToCharacter[y17 & 63];
+    }
+    const k12 = value.length % 3;
+    const end = Math.floor(value.length / 3) * 4 + (k12 && k12 + 1);
+    let base642 = decoder2.decode(new Uint8Array(encoded.buffer, 0, end));
+    if (pad8 && k12 === 1)
+      base642 += "==";
+    if (pad8 && k12 === 2)
+      base642 += "=";
+    if (url)
+      base642 = base642.replaceAll("+", "-").replaceAll("/", "_");
+    return base642;
+  }
+  function fromString6(value, options = {}) {
+    return fromBytes6(fromString4(value), options);
+  }
+  function toBytes6(value) {
+    const base642 = value.replace(/=+$/, "");
+    const size9 = base642.length;
+    const decoded = new Uint8Array(size9 + 3);
+    encoder7.encodeInto(base642 + "===", decoded);
+    for (let i19 = 0, j16 = 0; i19 < base642.length; i19 += 4, j16 += 3) {
+      const x14 = (characterToInteger[decoded[i19]] << 18) + (characterToInteger[decoded[i19 + 1]] << 12) + (characterToInteger[decoded[i19 + 2]] << 6) + characterToInteger[decoded[i19 + 3]];
+      decoded[j16] = x14 >> 16;
+      decoded[j16 + 1] = x14 >> 8 & 255;
+      decoded[j16 + 2] = x14 & 255;
+    }
+    const decodedSize = (size9 >> 2) * 3 + (size9 % 4 && size9 % 4 - 1);
+    return new Uint8Array(decoded.buffer, 0, decodedSize);
+  }
+  function toString5(value) {
+    return toString4(toBytes6(value));
+  }
+  var encoder7, decoder2, integerToCharacter, characterToInteger;
+  var init_Base64 = __esm({
+    "node_modules/viem/node_modules/ox/_esm/core/Base64.js"() {
+      init_Bytes();
+      encoder7 = /* @__PURE__ */ new TextEncoder();
+      decoder2 = /* @__PURE__ */ new TextDecoder();
+      integerToCharacter = /* @__PURE__ */ Object.fromEntries(Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/").map((a28, i19) => [i19, a28.charCodeAt(0)]));
+      characterToInteger = {
+        ...Object.fromEntries(Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/").map((a28, i19) => [a28.charCodeAt(0), i19])),
+        ["=".charCodeAt(0)]: 0,
+        ["-".charCodeAt(0)]: 62,
+        ["_".charCodeAt(0)]: 63
+      };
+    }
+  });
+
   // node_modules/viem/_esm/errors/ens.js
   var EnsAvatarInvalidMetadataError, EnsAvatarInvalidNftUriError, EnsAvatarUriResolutionError, EnsAvatarUnsupportedNamespaceError, EnsInvalidChainIdError;
   var init_ens = __esm({
@@ -29072,7 +29180,7 @@ ${prettyStateOverride(stateOverride)}`;
     }
     let parsedUri = uri.replace(dataURIRegex, "");
     if (parsedUri.startsWith("<svg")) {
-      parsedUri = `data:image/svg+xml;base64,${btoa(parsedUri)}`;
+      parsedUri = `data:image/svg+xml;base64,${fromString6(parsedUri)}`;
     }
     if (parsedUri.startsWith("data:") || parsedUri.startsWith("{")) {
       return {
@@ -29172,11 +29280,17 @@ ${prettyStateOverride(stateOverride)}`;
     }
     throw new EnsAvatarUnsupportedNamespaceError({ namespace: nft.namespace });
   }
+  function getNftMetadataUri({ nft, uri }) {
+    const tokenId = nft.namespace === "erc1155" ? numberToHex(BigInt(nft.tokenID), { size: 32 }).slice(2) : nft.tokenID;
+    return uri.replace(/(?:0x)?{id}/, tokenId);
+  }
   var networkRegex, ipfsHashRegex, base64Regex, dataURIRegex;
   var init_utils6 = __esm({
     "node_modules/viem/_esm/utils/ens/avatar/utils.js"() {
+      init_Base64();
       init_readContract();
       init_ens();
+      init_toHex();
       networkRegex = /(?<protocol>https?:\/\/[^/]*|ipfs:\/|ipns:\/|ar:\/)?(?<root>\/)?(?<subpath>ipfs\/|ipns\/)?(?<target>[\w\-.]+)(?<subtarget>\/.*)?/;
       ipfsHashRegex = /^(Qm[1-9A-HJ-NP-Za-km-z]{44,}|b[A-Za-z2-7]{58,}|B[A-Z2-7]{58,}|z[1-9A-HJ-NP-Za-km-z]{48,}|F[0-9A-F]{50,})(\/(?<target>[\w\-.]+))?(?<subtarget>\/.*)?$/;
       base64Regex = /^data:([a-zA-Z\-/+]*);base64,([^"].*)/;
@@ -29197,7 +29311,7 @@ ${prettyStateOverride(stateOverride)}`;
     if (isOnChain && (resolvedNftUri.includes("data:application/json;base64,") || resolvedNftUri.startsWith("{"))) {
       const encodedJson = isEncoded ? (
         // if it is encoded, decode it
-        atob(resolvedNftUri.replace("data:application/json;base64,", ""))
+        toString5(resolvedNftUri.replace("data:application/json;base64,", "").replace(/\s/g, ""))
       ) : (
         // if it isn't encoded assume it is a JSON string, but it could be anything (it will error if it is)
         resolvedNftUri
@@ -29205,16 +29319,14 @@ ${prettyStateOverride(stateOverride)}`;
       const decoded = JSON.parse(encodedJson);
       return parseAvatarUri({ uri: getJsonImage(decoded), gatewayUrls });
     }
-    let uriTokenId = nft.tokenID;
-    if (nft.namespace === "erc1155")
-      uriTokenId = uriTokenId.replace("0x", "").padStart(64, "0");
     return getMetadataAvatarUri({
       gatewayUrls,
-      uri: resolvedNftUri.replace(/(?:0x)?{id}/, uriTokenId)
+      uri: getNftMetadataUri({ nft, uri: resolvedNftUri })
     });
   }
   var init_parseAvatarRecord = __esm({
     "node_modules/viem/_esm/utils/ens/avatar/parseAvatarRecord.js"() {
+      init_Base64();
       init_utils6();
     }
   });
@@ -30942,8 +31054,8 @@ ${prettyStateOverride(stateOverride)}`;
           promise = (async () => {
             try {
               const nonce = await source.get({ address, chainId, client });
-              const previousNonce = nonceMap.get(key) ?? 0;
-              if (previousNonce > 0 && nonce <= previousNonce)
+              const previousNonce = nonceMap.get(key);
+              if (previousNonce !== void 0 && nonce <= previousNonce)
                 return previousNonce + 1;
               nonceMap.delete(key);
               return nonce;
@@ -31191,7 +31303,7 @@ ${prettyStateOverride(stateOverride)}`;
       return body2;
     }
     const reader = response.body.getReader();
-    const decoder2 = new TextDecoder();
+    const decoder3 = new TextDecoder();
     let body = "";
     let size9 = 0;
     try {
@@ -31207,9 +31319,9 @@ ${prettyStateOverride(stateOverride)}`;
             size: size9
           });
         }
-        body += decoder2.decode(value, { stream: true });
+        body += decoder3.decode(value, { stream: true });
       }
-      body += decoder2.decode();
+      body += decoder3.decode();
       return body;
     } finally {
       reader.releaseLock();
@@ -31706,7 +31818,7 @@ ${prettyStateOverride(stateOverride)}`;
   function getTypesForEIP712Domain({ domain }) {
     return [
       typeof domain?.name === "string" && { name: "name", type: "string" },
-      domain?.version && { name: "version", type: "string" },
+      typeof domain?.version === "string" && { name: "version", type: "string" },
       (typeof domain?.chainId === "number" || typeof domain?.chainId === "bigint") && {
         name: "chainId",
         type: "uint256"
@@ -31974,7 +32086,7 @@ ${prettyStateOverride(stateOverride)}`;
       if (validate5(value))
         return fromHex6(value);
       if (validate4(value))
-        return fromBytes6(value);
+        return fromBytes7(value);
       const { prefix, x: x14, y: y17 } = value;
       if (typeof x14 === "bigint" && typeof y17 === "bigint")
         return { prefix: prefix ?? 4, x: x14, y: y17 };
@@ -31983,7 +32095,7 @@ ${prettyStateOverride(stateOverride)}`;
     assert8(publicKey);
     return publicKey;
   }
-  function fromBytes6(publicKey) {
+  function fromBytes7(publicKey) {
     return fromHex6(fromBytes5(publicKey));
   }
   function fromHex6(publicKey) {
@@ -33265,7 +33377,7 @@ ${prettyStateOverride(stateOverride)}`;
     if (typeof signature.yParity === "number" && signature.yParity !== 0 && signature.yParity !== 1)
       throw new InvalidYParityError3({ value: signature.yParity });
   }
-  function fromBytes7(signature) {
+  function fromBytes8(signature) {
     return fromHex8(fromBytes5(signature));
   }
   function fromHex8(signature) {
@@ -33306,7 +33418,7 @@ ${prettyStateOverride(stateOverride)}`;
       if (typeof signature === "string")
         return fromHex8(signature);
       if (signature instanceof Uint8Array)
-        return fromBytes7(signature);
+        return fromBytes8(signature);
       if (typeof signature.r === "string")
         return fromRpc3(signature);
       if (signature.v)
@@ -34339,7 +34451,10 @@ ${prettyStateOverride(stateOverride)}`;
     const transactionBlockNumber = transactionReceipt?.blockNumber || transaction?.blockNumber;
     if (!transactionBlockNumber)
       return 0n;
-    return blockNumber - transactionBlockNumber + 1n;
+    const headBlockNumber = blockNumber < transactionBlockNumber ? await getAction(client, getBlockNumber, "getBlockNumber")({ cacheTime: 0 }) : blockNumber;
+    if (headBlockNumber < transactionBlockNumber)
+      return 1n;
+    return headBlockNumber - transactionBlockNumber + 1n;
   }
   var init_getTransactionConfirmations = __esm({
     "node_modules/viem/_esm/actions/public/getTransactionConfirmations.js"() {
@@ -35818,6 +35933,7 @@ ${prettyStateOverride(stateOverride)}`;
       // exponential backoff
       timeout = 18e4
     } = parameters;
+    const getReplacementKey = (transaction2) => client.chain?.transactionReplacement?.getKey?.(transaction2) ?? String(transaction2.nonce);
     const pollingInterval = (() => {
       if (parameters.pollingInterval)
         return parameters.pollingInterval;
@@ -35904,6 +36020,10 @@ ${prettyStateOverride(stateOverride)}`;
                 retrying = false;
                 return;
               }
+              if (transaction.blockNumber) {
+                retrying = false;
+                return;
+              }
               try {
                 replacedTransaction = transaction;
                 retrying = true;
@@ -35916,7 +36036,8 @@ ${prettyStateOverride(stateOverride)}`;
                   shouldRetry: ({ error }) => error instanceof BlockNotFoundError
                 });
                 retrying = false;
-                const replacementTransaction = block.transactions.find(({ from: from29, hash: hash6, nonce }) => isAddressEqual(from29, replacedTransaction.from) && hash6 !== replacedTransaction.hash && nonce === replacedTransaction.nonce);
+                const replacedKey = getReplacementKey(replacedTransaction);
+                const replacementTransaction = block.transactions.find((candidate) => isAddressEqual(candidate.from, replacedTransaction.from) && candidate.hash !== replacedTransaction.hash && getReplacementKey(candidate) === replacedKey);
                 if (!replacementTransaction)
                   return;
                 receipt = await getAction(client, getTransactionReceipt, "getTransactionReceipt")({
@@ -35924,12 +36045,10 @@ ${prettyStateOverride(stateOverride)}`;
                 });
                 if (confirmations > 1 && (!receipt.blockNumber || blockNumber - receipt.blockNumber + 1n < confirmations))
                   return;
-                let reason = "replaced";
-                if ((replacementTransaction.to && replacedTransaction.to ? isAddressEqual(replacementTransaction.to, replacedTransaction.to) : replacementTransaction.to === replacedTransaction.to) && replacementTransaction.value === replacedTransaction.value && replacementTransaction.input === replacedTransaction.input) {
-                  reason = "repriced";
-                } else if (replacementTransaction.from === replacementTransaction.to && replacementTransaction.value === 0n) {
-                  reason = "cancelled";
-                }
+                const reason = client.chain?.transactionReplacement?.getReason?.({
+                  replaced: replacedTransaction,
+                  replacement: replacementTransaction
+                }) ?? getReplacementReason(replacedTransaction, replacementTransaction);
                 done(() => {
                   emit.onReplaced?.({
                     reason,
@@ -35949,7 +36068,17 @@ ${prettyStateOverride(stateOverride)}`;
         }
       });
     });
-    return promise;
+    return promise.finally(() => {
+      clearTimeout(timer2);
+      _unobserve?.();
+    });
+  }
+  function getReplacementReason(replaced, replacement) {
+    if ((replacement.to && replaced.to ? isAddressEqual(replacement.to, replaced.to) : replacement.to === replaced.to) && replacement.value === replaced.value && replacement.input === replaced.input)
+      return "repriced";
+    if (replacement.from === replacement.to && replacement.value === 0n)
+      return "cancelled";
+    return "replaced";
   }
   var init_waitForTransactionReceipt = __esm({
     "node_modules/viem/_esm/actions/public/waitForTransactionReceipt.js"() {
@@ -36182,7 +36311,9 @@ ${prettyStateOverride(stateOverride)}`;
         batch,
         client.uid,
         event,
+        events,
         pollingInterval,
+        strict,
         fromBlock
       ]);
       return observe(observerId, { onLogs, onError }, (emit) => {
@@ -38431,7 +38562,7 @@ ${prettyStateOverride(stateOverride)}`;
       const transport = createTransport({
         key,
         name: name2,
-        async request({ method, params }) {
+        async request({ method, params }, options) {
           let includes;
           const fetch2 = async (i19 = 0) => {
             const transport2 = transports[i19]({
@@ -38444,7 +38575,7 @@ ${prettyStateOverride(stateOverride)}`;
               const response = await transport2.request({
                 method,
                 params
-              });
+              }, options);
               onResponse({
                 method,
                 params,
@@ -45595,7 +45726,7 @@ ${originalFrames}`;
       throw new Error("string expected");
     return new Uint8Array(new TextEncoder().encode(str));
   }
-  function toBytes7(data) {
+  function toBytes8(data) {
     if (typeof data === "string")
       data = utf8ToBytes4(data);
     abytes5(data);
@@ -45617,7 +45748,7 @@ ${originalFrames}`;
     return res;
   }
   function createHasher4(hashCons) {
-    const hashC = (msg) => hashCons().update(toBytes7(msg)).digest();
+    const hashC = (msg) => hashCons().update(toBytes8(msg)).digest();
     const tmp = hashCons();
     hashC.outputLen = tmp.outputLen;
     hashC.blockLen = tmp.blockLen;
@@ -45683,7 +45814,7 @@ ${originalFrames}`;
         }
         update(data) {
           aexists3(this);
-          data = toBytes7(data);
+          data = toBytes8(data);
           abytes5(data);
           const { view, buffer: buffer2, blockLen } = this;
           const len = data.length;
@@ -45902,7 +46033,7 @@ ${originalFrames}`;
         }
         update(data) {
           aexists3(this);
-          data = toBytes7(data);
+          data = toBytes8(data);
           abytes5(data);
           const { blockLen, state: state26 } = this;
           const len = data.length;
@@ -46503,9 +46634,9 @@ ${originalFrames}`;
   }
   function from24(value) {
     if (value instanceof Uint8Array)
-      return fromBytes8(value);
+      return fromBytes9(value);
     if (Array.isArray(value))
-      return fromBytes8(new Uint8Array(value));
+      return fromBytes9(new Uint8Array(value));
     return value;
   }
   function fromBoolean2(value, options = {}) {
@@ -46516,7 +46647,7 @@ ${originalFrames}`;
     }
     return hex;
   }
-  function fromBytes8(value, options = {}) {
+  function fromBytes9(value, options = {}) {
     let string2 = "";
     for (let i19 = 0; i19 < value.length; i19++)
       string2 += hexes7[value[i19]];
@@ -46556,8 +46687,8 @@ ${originalFrames}`;
       return padLeft3(hex, size9);
     return hex;
   }
-  function fromString6(value, options = {}) {
-    return fromBytes8(encoder7.encode(value), options);
+  function fromString7(value, options = {}) {
+    return fromBytes9(encoder8.encode(value), options);
   }
   function padLeft3(value, size9) {
     return pad7(value, { dir: "left", size: size9 });
@@ -46588,13 +46719,13 @@ ${originalFrames}`;
       return false;
     }
   }
-  var encoder7, hexes7, IntegerOutOfRangeError4, InvalidHexTypeError3, InvalidHexValueError4, SizeOverflowError7, SliceOffsetOutOfBoundsError7, SizeExceedsPaddingSizeError7;
+  var encoder8, hexes7, IntegerOutOfRangeError4, InvalidHexTypeError3, InvalidHexValueError4, SizeOverflowError7, SliceOffsetOutOfBoundsError7, SizeExceedsPaddingSizeError7;
   var init_Hex2 = __esm({
     "node_modules/@walletconnect/universal-provider/node_modules/ox/_esm/core/Hex.js"() {
       init_Errors2();
       init_hex2();
       init_Json2();
-      encoder7 = /* @__PURE__ */ new TextEncoder();
+      encoder8 = /* @__PURE__ */ new TextEncoder();
       hexes7 = /* @__PURE__ */ Array.from({ length: 256 }, (_v, i19) => i19.toString(16).padStart(2, "0"));
       IntegerOutOfRangeError4 = class extends BaseError5 {
         constructor({ max, min, signed, size: size9, value }) {
@@ -46716,9 +46847,9 @@ ${originalFrames}`;
     }
     return bytes;
   }
-  function fromString7(value, options = {}) {
+  function fromString8(value, options = {}) {
     const { size: size9 } = options;
-    const bytes = encoder8.encode(value);
+    const bytes = encoder9.encode(value);
     if (typeof size9 === "number") {
       assertSize6(bytes, size9);
       return padRight6(bytes, size9);
@@ -46739,7 +46870,7 @@ ${originalFrames}`;
       return false;
     }
   }
-  var encoder8, InvalidBytesTypeError3, SizeOverflowError6, SizeExceedsPaddingSizeError6;
+  var encoder9, InvalidBytesTypeError3, SizeOverflowError6, SizeExceedsPaddingSizeError6;
   var init_Bytes2 = __esm({
     "node_modules/@walletconnect/universal-provider/node_modules/ox/_esm/core/Bytes.js"() {
       init_Errors2();
@@ -46747,7 +46878,7 @@ ${originalFrames}`;
       init_bytes4();
       init_hex2();
       init_Json2();
-      encoder8 = /* @__PURE__ */ new TextEncoder();
+      encoder9 = /* @__PURE__ */ new TextEncoder();
       InvalidBytesTypeError3 = class extends BaseError5 {
         constructor(value) {
           super(`Value \`${typeof value === "object" ? stringify6(value) : value}\` of type \`${typeof value}\` is an invalid Bytes value.`, {
@@ -46792,7 +46923,7 @@ ${originalFrames}`;
     const bytes = keccak_2563(from25(value));
     if (as4 === "Bytes")
       return bytes;
-    return fromBytes8(bytes);
+    return fromBytes9(bytes);
   }
   var init_Hash2 = __esm({
     "node_modules/@walletconnect/universal-provider/node_modules/ox/_esm/core/Hash.js"() {
@@ -46877,7 +47008,7 @@ ${originalFrames}`;
       if (validate9(value))
         return fromHex10(value);
       if (validate10(value))
-        return fromBytes9(value);
+        return fromBytes10(value);
       const { prefix, x: x14, y: y17 } = value;
       if (typeof x14 === "bigint" && typeof y17 === "bigint")
         return { prefix: prefix ?? 4, x: x14, y: y17 };
@@ -46886,8 +47017,8 @@ ${originalFrames}`;
     assert15(publicKey);
     return publicKey;
   }
-  function fromBytes9(publicKey) {
-    return fromHex10(fromBytes8(publicKey));
+  function fromBytes10(publicKey) {
+    return fromHex10(fromBytes9(publicKey));
   }
   function fromHex10(publicKey) {
     if (publicKey.length !== 132 && publicKey.length !== 130 && publicKey.length !== 68)
@@ -46918,7 +47049,7 @@ ${originalFrames}`;
       x: x14
     };
   }
-  function toBytes8(publicKey, options = {}) {
+  function toBytes9(publicKey, options = {}) {
     return fromHex9(toHex5(publicKey, options));
   }
   function toHex5(publicKey, options = {}) {
@@ -47034,7 +47165,7 @@ ${originalFrames}`;
       return checksum5.get(address);
     assert16(address, { strict: false });
     const hexAddress = address.substring(2).toLowerCase();
-    const hash5 = keccak2564(fromString7(hexAddress), { as: "Bytes" });
+    const hash5 = keccak2564(fromString8(hexAddress), { as: "Bytes" });
     const characters = hexAddress.split("");
     for (let i19 = 0; i19 < 40; i19 += 2) {
       if (hash5[i19 >> 1] >> 4 >= 8 && characters[i19]) {
@@ -47253,7 +47384,7 @@ ${originalFrames}`;
             return padLeft3(address.toLowerCase(), isArray2 ? 32 : 0);
           }
           if (type === "string")
-            return fromString6(value);
+            return fromString7(value);
           if (type === "bytes")
             return value;
           if (type === "bool")
@@ -47391,7 +47522,7 @@ ${originalFrames}`;
           this.finished = false;
           this.destroyed = false;
           ahash3(hash5);
-          const key = toBytes7(_key);
+          const key = toBytes8(_key);
           this.iHash = hash5.create();
           if (typeof this.iHash.update !== "function")
             throw new Error("Expected instance of class which extends utils.Hash");
@@ -48015,11 +48146,11 @@ ${originalFrames}`;
     const CURVE = validatePointOpts3(opts);
     const { Fp } = CURVE;
     const Fn6 = Field3(CURVE.n, CURVE.nBitLength);
-    const toBytes11 = CURVE.toBytes || ((_c3, point, _isCompressed) => {
+    const toBytes12 = CURVE.toBytes || ((_c3, point, _isCompressed) => {
       const a28 = point.toAffine();
       return concatBytes7(Uint8Array.from([4]), Fp.toBytes(a28.x), Fp.toBytes(a28.y));
     });
-    const fromBytes11 = CURVE.fromBytes || ((bytes) => {
+    const fromBytes12 = CURVE.fromBytes || ((bytes) => {
       const tail = bytes.subarray(1);
       const x14 = Fp.fromBytes(tail.subarray(0, Fp.BYTES));
       const y17 = Fp.fromBytes(tail.subarray(Fp.BYTES, 2 * Fp.BYTES));
@@ -48147,7 +48278,7 @@ ${originalFrames}`;
        * @param hex short/long ECDSA hex
        */
       static fromHex(hex) {
-        const P17 = Point3.fromAffine(fromBytes11(ensureBytes3("pointHex", hex)));
+        const P17 = Point3.fromAffine(fromBytes12(ensureBytes3("pointHex", hex)));
         P17.assertValidity();
         return P17;
       }
@@ -48395,7 +48526,7 @@ ${originalFrames}`;
       toRawBytes(isCompressed = true) {
         abool3("isCompressed", isCompressed);
         this.assertValidity();
-        return toBytes11(Point3, this, isCompressed);
+        return toBytes12(Point3, this, isCompressed);
       }
       toHex(isCompressed = true) {
         abool3("isCompressed", isCompressed);
@@ -48978,14 +49109,14 @@ ${originalFrames}`;
     assert: () => assert17,
     extract: () => extract4,
     from: () => from28,
-    fromBytes: () => fromBytes10,
+    fromBytes: () => fromBytes11,
     fromDerBytes: () => fromDerBytes2,
     fromDerHex: () => fromDerHex2,
     fromHex: () => fromHex11,
     fromLegacy: () => fromLegacy3,
     fromRpc: () => fromRpc5,
     fromTuple: () => fromTuple3,
-    toBytes: () => toBytes9,
+    toBytes: () => toBytes10,
     toDerBytes: () => toDerBytes2,
     toDerHex: () => toDerHex2,
     toHex: () => toHex6,
@@ -49011,8 +49142,8 @@ ${originalFrames}`;
     if (typeof signature.yParity === "number" && signature.yParity !== 0 && signature.yParity !== 1)
       throw new InvalidYParityError4({ value: signature.yParity });
   }
-  function fromBytes10(signature) {
-    return fromHex11(fromBytes8(signature));
+  function fromBytes11(signature) {
+    return fromHex11(fromBytes9(signature));
   }
   function fromHex11(signature) {
     if (signature.length !== 130 && signature.length !== 132)
@@ -49052,7 +49183,7 @@ ${originalFrames}`;
       if (typeof signature === "string")
         return fromHex11(signature);
       if (signature instanceof Uint8Array)
-        return fromBytes10(signature);
+        return fromBytes11(signature);
       if (typeof signature.r === "string")
         return fromRpc5(signature);
       if (signature.v)
@@ -49067,7 +49198,7 @@ ${originalFrames}`;
     return signature_;
   }
   function fromDerBytes2(signature) {
-    return fromDerHex2(fromBytes8(signature));
+    return fromDerHex2(fromBytes9(signature));
   }
   function fromDerHex2(signature) {
     const { r: r18, s: s29 } = secp256k13.Signature.fromDER(from24(signature).slice(2));
@@ -49104,7 +49235,7 @@ ${originalFrames}`;
       yParity: yParity === "0x" ? 0 : Number(yParity)
     });
   }
-  function toBytes9(signature) {
+  function toBytes10(signature) {
     return fromHex9(toHex6(signature));
   }
   function toHex6(signature) {
@@ -49270,11 +49401,11 @@ ${originalFrames}`;
   });
 
   // node_modules/@walletconnect/universal-provider/node_modules/ox/_esm/core/Base64.js
-  var integerToCharacter, characterToInteger;
-  var init_Base64 = __esm({
+  var integerToCharacter2, characterToInteger2;
+  var init_Base642 = __esm({
     "node_modules/@walletconnect/universal-provider/node_modules/ox/_esm/core/Base64.js"() {
-      integerToCharacter = /* @__PURE__ */ Object.fromEntries(Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/").map((a28, i19) => [i19, a28.charCodeAt(0)]));
-      characterToInteger = {
+      integerToCharacter2 = /* @__PURE__ */ Object.fromEntries(Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/").map((a28, i19) => [i19, a28.charCodeAt(0)]));
+      characterToInteger2 = {
         ...Object.fromEntries(Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/").map((a28, i19) => [a28.charCodeAt(0), i19])),
         ["=".charCodeAt(0)]: 0,
         ["-".charCodeAt(0)]: 62,
@@ -49423,14 +49554,14 @@ ${originalFrames}`;
     const sharedPoint = point.multiply(secp256k13.utils.normPrivateKeyToScalar(from24(privateKey).slice(2)));
     const sharedSecret = sharedPoint.toRawBytes(true);
     if (as4 === "Hex")
-      return fromBytes8(sharedSecret);
+      return fromBytes9(sharedSecret);
     return sharedSecret;
   }
   function randomPrivateKey2(options = {}) {
     const { as: as4 = "Hex" } = options;
     const bytes = secp256k13.utils.randomPrivateKey();
     if (as4 === "Hex")
-      return fromBytes8(bytes);
+      return fromBytes9(bytes);
     return bytes;
   }
   function recoverAddress4(options) {
@@ -49460,7 +49591,7 @@ ${originalFrames}`;
     const { address, hash: hash5, payload, publicKey, signature } = options;
     if (address)
       return isEqual3(address, recoverAddress4({ payload, signature }));
-    return secp256k13.verify(signature, from25(payload), toBytes8(publicKey), ...hash5 ? [{ prehash: true, lowS: true }] : []);
+    return secp256k13.verify(signature, from25(payload), toBytes9(publicKey), ...hash5 ? [{ prehash: true, lowS: true }] : []);
   }
   var noble2;
   var init_Secp256k12 = __esm({
@@ -50366,7 +50497,7 @@ ${originalFrames}`;
       init_AesGcm();
       init_Authorization2();
       init_Base58();
-      init_Base64();
+      init_Base642();
       init_BinaryStateTree();
       init_Blobs();
       init_Block();
@@ -51213,8 +51344,8 @@ ${originalFrames}`;
 
   // node_modules/@walletconnect/universal-provider/node_modules/@msgpack/msgpack/dist.esm/encode.mjs
   function encode13(value, options) {
-    const encoder9 = new Encoder3(options);
-    return encoder9.encodeSharedRef(value);
+    const encoder10 = new Encoder3(options);
+    return encoder10.encodeSharedRef(value);
   }
   var init_encode = __esm({
     "node_modules/@walletconnect/universal-provider/node_modules/@msgpack/msgpack/dist.esm/encode.mjs"() {
@@ -51935,8 +52066,8 @@ ${originalFrames}`;
 
   // node_modules/@walletconnect/universal-provider/node_modules/@msgpack/msgpack/dist.esm/decode.mjs
   function decode11(buffer2, options) {
-    const decoder2 = new Decoder3(options);
-    return decoder2.decode(buffer2);
+    const decoder3 = new Decoder3(options);
+    return decoder3.decode(buffer2);
   }
   var init_decode = __esm({
     "node_modules/@walletconnect/universal-provider/node_modules/@msgpack/msgpack/dist.esm/decode.mjs"() {
@@ -75164,7 +75295,7 @@ ${params.statement}
       exports.M = { bit: 0 };
       exports.Q = { bit: 3 };
       exports.H = { bit: 2 };
-      function fromString8(string2) {
+      function fromString9(string2) {
         if (typeof string2 !== "string") {
           throw new Error("Param is not a string");
         }
@@ -75194,7 +75325,7 @@ ${params.statement}
           return value;
         }
         try {
-          return fromString8(value);
+          return fromString9(value);
         } catch (e15) {
           return defaultValue;
         }
@@ -76004,14 +76135,14 @@ ${params.statement}
         else if (Regex.testKanji(dataStr)) return exports.KANJI;
         else return exports.BYTE;
       };
-      exports.toString = function toString5(mode2) {
+      exports.toString = function toString6(mode2) {
         if (mode2 && mode2.id) return mode2.id;
         throw new Error("Invalid mode");
       };
       exports.isValid = function isValid2(mode2) {
         return mode2 && mode2.bit && mode2.ccBits;
       };
-      function fromString8(string2) {
+      function fromString9(string2) {
         if (typeof string2 !== "string") {
           throw new Error("Param is not a string");
         }
@@ -76034,7 +76165,7 @@ ${params.statement}
           return value;
         }
         try {
-          return fromString8(value);
+          return fromString9(value);
         } catch (e15) {
           return defaultValue;
         }
@@ -76651,7 +76782,7 @@ ${params.statement}
           return acc;
         }, []);
       };
-      exports.fromString = function fromString8(data, version8) {
+      exports.fromString = function fromString9(data, version8) {
         const segs = getSegmentsFromString(data, Utils.isKanjiModeEnabled());
         const nodes = buildNodes(segs);
         const graph = buildGraph(nodes, version8);
@@ -111001,7 +111132,7 @@ ${params.statement}
     if (ctor?.schema?.name !== Signature.schema.name) return false;
     return typeof value.toBytes === "function";
   }
-  function toBytes10(input) {
+  function toBytes11(input) {
     return typeof input === "string" ? stringToUint8Array(input) : Uint8Array.from(input);
   }
   var MESSAGE_PREFIX, Keypair;
@@ -111038,18 +111169,18 @@ ${params.statement}
           }
           this.type = keys2.type;
           if ("secretKey" in keys2) {
-            const secretKey = toBytes10(keys2.secretKey);
+            const secretKey = toBytes11(keys2.secretKey);
             if (secretKey.length !== 32) {
               throw new Error("secretKey length is invalid");
             }
             this._secretSeed = secretKey;
             this._publicKey = generate(secretKey);
             this._secretKey = secretKey;
-            if (keys2.publicKey && !areUint8ArraysEqual(this._publicKey, toBytes10(keys2.publicKey))) {
+            if (keys2.publicKey && !areUint8ArraysEqual(this._publicKey, toBytes11(keys2.publicKey))) {
               throw new Error("secretKey does not match publicKey");
             }
           } else if ("publicKey" in keys2) {
-            this._publicKey = toBytes10(keys2.publicKey);
+            this._publicKey = toBytes11(keys2.publicKey);
             if (this._publicKey.length !== 32) {
               throw new Error("publicKey length is invalid");
             }
@@ -132589,11 +132720,11 @@ ${params.statement}
     const CURVE = validatePointOpts(opts);
     const { Fp } = CURVE;
     const Fn6 = Field(CURVE.n, CURVE.nBitLength);
-    const toBytes11 = CURVE.toBytes || ((_c3, point, _isCompressed) => {
+    const toBytes12 = CURVE.toBytes || ((_c3, point, _isCompressed) => {
       const a28 = point.toAffine();
       return concatBytes2(Uint8Array.from([4]), Fp.toBytes(a28.x), Fp.toBytes(a28.y));
     });
-    const fromBytes11 = CURVE.fromBytes || ((bytes) => {
+    const fromBytes12 = CURVE.fromBytes || ((bytes) => {
       const tail = bytes.subarray(1);
       const x14 = Fp.fromBytes(tail.subarray(0, Fp.BYTES));
       const y17 = Fp.fromBytes(tail.subarray(Fp.BYTES, 2 * Fp.BYTES));
@@ -132721,7 +132852,7 @@ ${params.statement}
        * @param hex short/long ECDSA hex
        */
       static fromHex(hex) {
-        const P17 = Point3.fromAffine(fromBytes11(ensureBytes("pointHex", hex)));
+        const P17 = Point3.fromAffine(fromBytes12(ensureBytes("pointHex", hex)));
         P17.assertValidity();
         return P17;
       }
@@ -132969,7 +133100,7 @@ ${params.statement}
       toRawBytes(isCompressed = true) {
         abool("isCompressed", isCompressed);
         this.assertValidity();
-        return toBytes11(Point3, this, isCompressed);
+        return toBytes12(Point3, this, isCompressed);
       }
       toHex(isCompressed = true) {
         abool("isCompressed", isCompressed);
@@ -134595,8 +134726,8 @@ ${params.statement}
 
   // node_modules/@msgpack/msgpack/dist.esm/encode.mjs
   function encode4(value, options) {
-    const encoder9 = new Encoder(options);
-    return encoder9.encodeSharedRef(value);
+    const encoder10 = new Encoder(options);
+    return encoder10.encodeSharedRef(value);
   }
 
   // node_modules/@msgpack/msgpack/dist.esm/utils/prettyByte.mjs
@@ -135278,8 +135409,8 @@ ${params.statement}
 
   // node_modules/@msgpack/msgpack/dist.esm/decode.mjs
   function decode4(buffer2, options) {
-    const decoder2 = new Decoder(options);
-    return decoder2.decode(buffer2);
+    const decoder3 = new Decoder(options);
+    return decoder3.decode(buffer2);
   }
 
   // node_modules/@walletconnect/utils/dist/index.js
@@ -145562,11 +145693,11 @@ ${value}`, dataLines++;
           __privateMethod(this, _EventSource_instances, failConnection_fn).call(this, "Invalid response body, expected a web ReadableStream", status), this.close();
           return;
         }
-        const decoder2 = new TextDecoder(), reader = body.getReader();
+        const decoder3 = new TextDecoder(), reader = body.getReader();
         let open = true;
         do {
           const { done, value } = await reader.read();
-          value && __privateGet(this, _parser).feed(decoder2.decode(value, { stream: !done })), done && (open = false, __privateGet(this, _parser).reset(), __privateMethod(this, _EventSource_instances, scheduleReconnect_fn).call(this));
+          value && __privateGet(this, _parser).feed(decoder3.decode(value, { stream: !done })), done && (open = false, __privateGet(this, _parser).reset(), __privateMethod(this, _EventSource_instances, scheduleReconnect_fn).call(this));
         } while (open);
       }), __privateAdd(this, _onFetchError, (err) => {
         __privateSet(this, _controller, void 0), !(err.name === "AbortError" || err.type === "aborted") && __privateMethod(this, _EventSource_instances, scheduleReconnect_fn).call(this, flattenError(err));
@@ -147922,6 +148053,9 @@ ${value}`, dataLines++;
     const message = typeof error === "string" ? error : String(
       error?.message || ""
     );
+    if (/set the wallet first/i.test(message)) {
+      return "Connect a Stellar wallet before signing.";
+    }
     if (/the user closed the modal/i.test(message)) {
       return "Albedo did not finish connecting. The window closed before it returned a public address.";
     }

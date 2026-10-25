@@ -39,6 +39,33 @@ The Xcode project builds for the iOS Simulator with code signing turned off. A M
 
 Data the account flow can handle: name, email, password, language, content the person submits, and the session. The app does not request tracking permission. The privacy and terms pages are drafts for counsel, not a certification.
 
+## Google Play Data safety draft
+
+This is a preparation checklist. It is not a Play Console submission and it is not a completed declaration.
+
+- Data collected through the account: email address, name the person enters, password handled by Supabase Auth, language, and content the person submits.
+- Session: stored by the Supabase client in browser storage. The Android app does not add its own analytics SDK.
+- Payments: card, Pi, Stellar mainnet, and paid AI are off. Do not declare an active payment processor while those switches stay off.
+- Data sharing: Supabase (eu-west-1), Vercel (observed function region iad1), Google sign-in only if the person chooses it, and Google Gemini for signed-in AI text.
+- Account deletion: the public page https://havkar-app.vercel.app/privacy-request.html stores a request. It does not delete the account immediately. Play’s account-deletion URL can point at that page only after the owner accepts that wording.
+- Encryption in transit: the site is HTTPS. Android cleartext traffic is not permitted.
+- Tracking: the Android manifest does not request the advertising id. Do not answer the tracking question as a completed declaration until counsel reviews it.
+
+## Content rating and declarations
+
+Do not submit an IARC questionnaire from this file. The owner must answer it in Play Console and App Store Connect. Observed facts for that answer:
+
+- The native app is a WebView of the HAVKAR site.
+- Users can create accounts and send messages or listings where those pages are enabled.
+- Real-money payments are switched off.
+- There is no advertising SDK in the Android manifest.
+- User-generated content exists in the web app. The owner must decide the store answers for user interaction and moderation.
+
+## Release signing
+
+- Android upload key: not present in this environment. Do not generate one here. The release bundle built in this environment is unsigned.
+- Apple distribution certificate and provisioning profile: not present. The iOS project has code signing turned off.
+
 ## Screenshots
 
-Do not invent store screenshots. Capture them from a signed build or from the public site after the draft pages are deployed.
+Do not invent store screenshots. Capture them from a signed build or from the public site after the draft pages are deployed. A phone-sized capture of the live privacy draft is not a Play screenshot set.

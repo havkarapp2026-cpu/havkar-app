@@ -1,0 +1,30 @@
+name: Dependency audit
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out HAVKAR
+        uses: actions/checkout@v4
+
+      - name: Use the locked Node toolchain
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install the committed lockfile
+        run: npm ci
+
+      - name: Audit every installed package
+        run: npm audit
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev
