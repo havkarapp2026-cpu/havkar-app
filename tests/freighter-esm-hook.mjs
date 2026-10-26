@@ -15,6 +15,15 @@ function identifier(name) {
 }
 
 export async function resolve(specifier, context, nextResolve) {
+    if (specifier === "@walletconnect/universal-provider") {
+        return {
+            shortCircuit: true,
+            url: new URL(
+                "../node_modules/@walletconnect/universal-provider/dist/index.js",
+                import.meta.url
+            ).href
+        };
+    }
     if (COMMONJS_NAMED_EXPORTS.has(specifier)) {
         return {
             shortCircuit: true,
