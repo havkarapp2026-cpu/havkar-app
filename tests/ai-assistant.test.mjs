@@ -6,6 +6,8 @@ import {
   assistantInstruction,
   imageGenerationRequested,
   logoEntitlementDecision,
+  paidAiServicesEnabled,
+  subscriptionCheckoutStatus,
   normalizeLanguage,
   providerErrorStatus,
   validateAssistantRequest
@@ -64,6 +66,12 @@ const config = read("supabase/config.toml");
 const translate = read("api/translate.js");
 
 assert.match(source, /admin\.auth\.getUser\(accessToken\)/);
+assert.match(source, /Paid image generation is paused\./);
+assert.equal(paidAiServicesEnabled({}), false);
+assert.equal(paidAiServicesEnabled({ HAVKAR_REAL_PAYMENTS_ENABLED: "true" }), true);
+assert.equal(paidAiServicesEnabled({ HAVKAR_REAL_PAYMENTS_ENABLED: "TRUE" }), false);
+assert.equal(subscriptionCheckoutStatus({}).status, 403);
+assert.equal(subscriptionCheckoutStatus({}).error, "Paid AI subscriptions are paused.");
 assert.match(source, /HAVKAR_AI_API_KEY/);
 assert.match(source, /x-goog-api-key/);
 assert.match(source, /const DEFAULT_MODEL = "gemini-3\.5-flash-lite"/);
