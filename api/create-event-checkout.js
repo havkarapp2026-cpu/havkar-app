@@ -7,6 +7,10 @@ import {
   verifyStellarSettlement,
   saveUnpaidIntent
 } from "../lib/stellar-checkout.cjs";
+import {
+  handleWalletOwnership,
+  isOwnershipRequest
+} from "../lib/stellar-ownership.cjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -195,6 +199,29 @@ export default async function handler(req, res) {
       405,
       "Method not allowed"
     );
+  }
+
+  if (isOwnershipRequest(req)) {
+    try {
+      const result = await handleWalletOwnership(req.body, {
+        supabaseUrl:
+          process.env.HAVKAR_OWNERSHIP_SUPABASE_URL ||
+          process.env.SUPABASE_URL,
+        serviceRoleKey:
+          process.env.HAVKAR_OWNERSHIP_SUPABASE_SERVICE_ROLE_KEY ||
+          process.env.SUPABASE_SERVICE_ROLE_KEY
+      });
+
+      return res.status(result.status).json(result);
+    } catch (error) {
+      console.error("Wallet ownership verification failed");
+
+      return sendError(
+        res,
+        500,
+        "Wallet ownership verification failed"
+      );
+    }
   }
 
   if (
