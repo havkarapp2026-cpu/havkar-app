@@ -7,11 +7,6 @@ import {
   verifyStellarSettlement,
   saveUnpaidIntent
 } from "../lib/stellar-checkout.cjs";
-import {
-  handleWalletOwnership,
-  isOwnershipRequest
-} from "../lib/stellar-ownership.cjs";
-
 let stripeClient = null;
 let supabaseAdminClient = null;
 
@@ -38,6 +33,19 @@ function getSupabaseAdmin() {
   }
 
   return supabaseAdminClient;
+}
+
+function isOwnershipRequest(req) {
+  const action = String(req && req.body && req.body.action || "");
+  const url = String(req && req.url || "");
+
+  return Boolean(
+    req && req.query && req.query.havkarAction === "ownership"
+    || url.indexOf("stellar-ownership") !== -1
+    || action === "ownership_challenge"
+    || action === "ownership_verify"
+    || action === "ownership_status"
+  );
 }
 
 function sendError(res, status, message) {
@@ -218,6 +226,7 @@ export default async function handler(req, res) {
 
   if (isOwnershipRequest(req)) {
     try {
+      const { handleWalletOwnership } = await import("../lib/stellar-ownership.cjs");
       const result = await handleWalletOwnership(req.body, {
         supabaseUrl:
           process.env.HAVKAR_OWNERSHIP_SUPABASE_URL ||
@@ -231,7 +240,10 @@ export default async function handler(req, res) {
 
       return res.status(result.status).json(result);
     } catch (error) {
-      console.error("Wallet ownership verification failed");
+      console.error(
+        "Wallet ownership verification failed",
+        error && error.message
+      );
 
       return sendError(
         res,

@@ -261,6 +261,7 @@ test("production is refused and the route stays inside the existing function", a
   assert.equal(missing.verified, false);
 
   const checkout = fs.readFileSync("api/create-event-checkout.js", "utf8");
+  const ownership = fs.readFileSync("lib/stellar-ownership.cjs", "utf8");
   const handler = checkout.slice(checkout.indexOf("export default async function handler"));
   const files = fs.readdirSync("api").filter((name) => name.endsWith(".js"));
   const page = fs.readFileSync("wallet-ownership.html", "utf8");
@@ -274,6 +275,7 @@ test("production is refused and the route stays inside the existing function", a
   assert.equal(files.length, 12);
   assert.match(checkout, /function getStripe\(\)/);
   assert.equal(checkout.includes("const stripe = new Stripe"), false);
+  assert.equal(ownership.includes("@stellar/stellar-sdk"), false);
   assert.ok(handler.indexOf("isOwnershipRequest") < handler.indexOf("STRIPE_SECRET_KEY"));
   assert.ok(handler.indexOf("isOwnershipRequest") < handler.indexOf("authenticateUser"));
   assert.equal(handler.includes("allowTestPubkey"), false);
