@@ -272,6 +272,8 @@ test("production is refused and the route stays inside the existing function", a
   const vercel = fs.readFileSync("vercel.json", "utf8");
 
   assert.equal(files.length, 12);
+  assert.match(checkout, /function getStripe\(\)/);
+  assert.equal(checkout.includes("const stripe = new Stripe"), false);
   assert.ok(handler.indexOf("isOwnershipRequest") < handler.indexOf("STRIPE_SECRET_KEY"));
   assert.ok(handler.indexOf("isOwnershipRequest") < handler.indexOf("authenticateUser"));
   assert.equal(handler.includes("allowTestPubkey"), false);
@@ -293,7 +295,7 @@ test("production is refused and the route stays inside the existing function", a
 });
 
 test("the API handler refuses production before opening a challenge", async () => {
-  process.env.STRIPE_SECRET_KEY = "sk_test_ownership_unused";
+  delete process.env.STRIPE_SECRET_KEY;
   process.env.SUPABASE_URL = "https://gispovnciifgikvgpzck.supabase.co";
   process.env.SUPABASE_SERVICE_ROLE_KEY = "ownership-test-not-a-secret";
   delete process.env.HAVKAR_OWNERSHIP_SUPABASE_URL;

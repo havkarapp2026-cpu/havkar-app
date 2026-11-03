@@ -12,18 +12,33 @@ import {
   isOwnershipRequest
 } from "../lib/stellar-ownership.cjs";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+let stripeClient = null;
+let supabaseAdminClient = null;
 
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
+function getStripe() {
+  if (!stripeClient) {
+    stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY);
   }
-);
+
+  return stripeClient;
+}
+
+function getSupabaseAdmin() {
+  if (!supabaseAdminClient) {
+    supabaseAdminClient = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      }
+    );
+  }
+
+  return supabaseAdminClient;
+}
 
 function sendError(res, status, message) {
   return res.status(status).json({
@@ -153,7 +168,7 @@ async function authenticateUser(req) {
   const {
     data,
     error,
-  } = await supabaseAdmin.auth.getUser(accessToken);
+  } = await getSupabaseAdmin().auth.getUser(accessToken);
 
   if (error || !data?.user) {
     return {
@@ -172,7 +187,7 @@ async function countReservedTickets(eventId) {
   const {
     data,
     error,
-  } = await supabaseAdmin
+  } = await getSupabaseAdmin()
     .from("event_tickets")
     .select("quantity")
     .eq("event_id", eventId)
@@ -206,9 +221,11 @@ export default async function handler(req, res) {
       const result = await handleWalletOwnership(req.body, {
         supabaseUrl:
           process.env.HAVKAR_OWNERSHIP_SUPABASE_URL ||
+          process.env.HAVKAR_STAGING_SUPABASE_URL ||
           process.env.SUPABASE_URL,
         serviceRoleKey:
           process.env.HAVKAR_OWNERSHIP_SUPABASE_SERVICE_ROLE_KEY ||
+          process.env.HAVKAR_STAGING_SERVICE_ROLE_KEY ||
           process.env.SUPABASE_SERVICE_ROLE_KEY
       });
 
@@ -257,7 +274,7 @@ export default async function handler(req, res) {
     if (req.body?.payment_method === "xlm") {
       if (req.body?.action === "verify" || req.body?.action === "refund") {
         const settled = await verifyStellarSettlement(
-          supabaseAdmin,
+          getSupabaseAdmin(),
           user.id,
           req.body
         );
@@ -278,7 +295,7 @@ export default async function handler(req, res) {
       }
 
       const saved = await saveUnpaidIntent(
-        supabaseAdmin,
+        getSupabaseAdmin(),
         user.id,
         quoted
       );
@@ -328,7 +345,7 @@ export default async function handler(req, res) {
     const {
       data: event,
       error: eventError,
-    } = await supabaseAdmin
+    } = await getSupabaseAdmin()
       .from("events")
       .select(
         "id,title,price,max_attendees,is_public,status,event_date,event_time,location"
@@ -431,7 +448,7 @@ export default async function handler(req, res) {
       const {
         data: freeTicket,
         error: freeTicketError,
-      } = await supabaseAdmin
+      } = await getSupabaseAdmin()
         .from("event_tickets")
         .insert({
           user_id: user.id,
@@ -471,7 +488,7 @@ export default async function handler(req, res) {
     const {
       data: pendingTicket,
       error: ticketError,
-    } = await supabaseAdmin
+    } = await getSupabaseAdmin()
       .from("event_tickets")
       .insert({
         user_id: user.id,
@@ -497,7 +514,7 @@ export default async function handler(req, res) {
 
     try {
       session =
-        await stripe.checkout.sessions.create({
+        await getStripe().checkout.sessions.create({
           mode: "payment",
 
           payment_method_types: [
@@ -569,7 +586,7 @@ export default async function handler(req, res) {
     } catch (stripeError) {
       const {
         error: cleanupError,
-      } = await supabaseAdmin
+      } = await getSupabaseAdmin()
         .from("event_tickets")
         .delete()
         .eq("id", pendingTicket.id)
@@ -589,7 +606,7 @@ export default async function handler(req, res) {
 
     const {
       error: referenceError,
-    } = await supabaseAdmin
+    } = await getSupabaseAdmin()
       .from("event_tickets")
       .update({
         payment_reference: session.id,
