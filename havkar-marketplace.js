@@ -1,0 +1,235 @@
+/*
+ * Marketplace fees and listing rules.
+ * Publication is free. Buyer fee is 2 percent and seller fee is 3 percent.
+ * Tax, shipping, card processing, and the Stellar network fee are separate.
+ * Video bytes go to the private marketplace-media bucket. There is no transcoding.
+ * This file does not mark a payment paid.
+ */
+(function (root, factory) {
+  const api = factory();
+
+  if (typeof module === "object" && module.exports) {
+    module.exports = api;
+  }
+
+  root.HAVKAR_MARKETPLACE = api;
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  const BUYER_FEE_RATE = 0.02;
+  const SELLER_FEE_RATE = 0.03;
+  const LISTING_PUBLICATION_FEE = 0;
+  const MAX_VIDEO_BYTES = 15 * 1024 * 1024;
+  const MAX_VIDEO_SECONDS = 30;
+  const VIDEO_TYPES = ["video/mp4", "video/webm"];
+
+  function money(value) {
+    return Math.round(value * 100) / 100;
+  }
+
+  function quoteListingFees(price) {
+    const amount = Number(price);
+
+    if (!Number.isFinite(amount) || amount < 0) {
+      return { ok: false, error: "Price must be a non-negative number." };
+    }
+
+    return {
+      ok: true,
+      currency: "EUR",
+      price: money(amount),
+      listingPublicationFee: LISTING_PUBLICATION_FEE,
+      buyerFee: money(amount * BUYER_FEE_RATE),
+      sellerFee: money(amount * SELLER_FEE_RATE),
+      buyerPays: money(amount * (1 + BUYER_FEE_RATE)),
+      sellerReceives: money(amount * (1 - SELLER_FEE_RATE)),
+      tax: null,
+      shipping: null,
+      paymentProcessing: null
+    };
+  }
+
+  function isMarketplaceRow(row) {
+    const surface = row && row.listing_surface;
+    return surface == null || surface === "" || surface === "marketplace";
+  }
+
+  function isAdvertisingRow(row) {
+    return Boolean(row) && row.listing_surface === "advertising";
+  }
+
+  function validateListingVideo(file, durationSeconds) {
+    if (!file) {
+      return { ok: true, empty: true };
+    }
+
+    const type = String(file.type || "").toLowerCase();
+
+    if (!VIDEO_TYPES.includes(type)) {
+      return { ok: false, error: "Short videos must be MP4 or WebM." };
+    }
+
+    if (!Number.isFinite(file.size) || file.size <= 0 || file.size > MAX_VIDEO_BYTES) {
+      return { ok: false, error: "Short videos must be 15 MB or smaller." };
+    }
+
+    const duration = Number(durationSeconds);
+
+    if (!Number.isFinite(duration) || duration <= 0 || duration > MAX_VIDEO_SECONDS) {
+      return {
+        ok: false,
+        error: "Short videos must be 30 seconds or shorter. HAVKAR does not transcode video."
+      };
+    }
+
+    return { ok: true, empty: false, contentType: type, bytes: file.size, durationSeconds: duration };
+  }
+
+  function listingVideoObjectPath(userId, contentType, objectId) {
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const owner = String(userId || "").trim();
+    const id = String(objectId || "").trim();
+
+    if (!uuid.test(owner) || !uuid.test(id)) {
+      return { ok: false, error: "A signed-in owner is required before a video can be stored." };
+    }
+
+    if (contentType !== "video/mp4" && contentType !== "video/webm") {
+      return { ok: false, error: "Short videos must be MP4 or WebM." };
+    }
+
+    const path = owner + "/" + id + (contentType === "video/webm" ? ".webm" : ".mp4");
+
+    if (path.indexOf("..") !== -1) {
+      return { ok: false, error: "The video path is not safe." };
+    }
+
+    return { ok: true, path: path };
+  }
+
+  function uploadListingVideo(options) {
+    const input = options || {};
+    const check = validateListingVideo(input.file, input.durationSeconds);
+
+    if (!check.ok) {
+      return Promise.resolve(check);
+    }
+
+    if (check.empty) {
+      return Promise.resolve({ ok: true, empty: true, path: null });
+    }
+
+    const located = listingVideoObjectPath(input.userId, check.contentType, input.objectId);
+
+    if (!located.ok) {
+      return Promise.resolve(located);
+    }
+
+    const supabaseUrl = String(input.supabaseUrl || "").replace(/\/$/, "");
+    const accessToken = String(input.accessToken || "");
+    const apikey = String(input.apikey || "");
+
+    if (!/^https:\/\//.test(supabaseUrl) || accessToken.length < 20 || apikey.length < 20) {
+      return Promise.resolve({ ok: false, error: "Video storage is unavailable." });
+    }
+
+    if (typeof XMLHttpRequest !== "function") {
+      return Promise.resolve({ ok: false, error: "This browser cannot upload a short video." });
+    }
+
+    return new Promise(function (resolve) {
+      const request = new XMLHttpRequest();
+      const endpoint = supabaseUrl + "/storage/v1/object/marketplace-media/" +
+        located.path.split("/").map(encodeURIComponent).join("/");
+
+      request.open("POST", endpoint);
+      request.setRequestHeader("Authorization", "Bearer " + accessToken);
+      request.setRequestHeader("apikey", apikey);
+      request.setRequestHeader("Content-Type", check.contentType);
+      request.setRequestHeader("x-upsert", "false");
+      request.upload.onprogress = function (event) {
+        if (typeof input.onProgress === "function" && event.lengthComputable && event.total > 0) {
+          input.onProgress(Math.round((event.loaded / event.total) * 100));
+        }
+      };
+      request.onload = function () {
+        if (request.status >= 200 && request.status < 300) {
+          resolve({
+            ok: true,
+            empty: false,
+            path: located.path,
+            contentType: check.contentType,
+            bytes: check.bytes,
+            durationSeconds: check.durationSeconds
+          });
+          return;
+        }
+
+        resolve({ ok: false, error: "The short video could not be stored." });
+      };
+      request.onerror = function () {
+        resolve({ ok: false, error: "The short video could not be stored." });
+      };
+      request.send(input.file);
+    });
+  }
+
+  async function deleteListingVideo(client, objectPath) {
+    const path = String(objectPath || "");
+
+    if (!path) {
+      return { ok: true };
+    }
+
+    if (path.indexOf("..") !== -1 || path.indexOf("/") < 1) {
+      return { ok: false, error: "The video path is not safe." };
+    }
+
+    if (!client || !client.storage || typeof client.storage.from !== "function") {
+      return { ok: false, error: "Video storage is unavailable." };
+    }
+
+    const removed = await client.storage.from("marketplace-media").remove([path]);
+
+    if (removed.error) {
+      return { ok: false, error: "The short video could not be removed." };
+    }
+
+    return { ok: true };
+  }
+
+  async function signedListingVideoUrl(client, objectPath) {
+    const path = String(objectPath || "");
+
+    if (!path || path.indexOf("..") !== -1) {
+      return { ok: false, url: "" };
+    }
+
+    if (!client || !client.storage || typeof client.storage.from !== "function") {
+      return { ok: false, url: "" };
+    }
+
+    const result = await client.storage.from("marketplace-media").createSignedUrl(path, 600);
+    const url = result && result.data && result.data.signedUrl;
+
+    if (result.error || typeof url !== "string" || url.indexOf("https://") !== 0) {
+      return { ok: false, url: "" };
+    }
+
+    return { ok: true, url: url };
+  }
+
+  return {
+    BUYER_FEE_RATE,
+    SELLER_FEE_RATE,
+    LISTING_PUBLICATION_FEE,
+    MAX_VIDEO_BYTES,
+    MAX_VIDEO_SECONDS,
+    quoteListingFees,
+    isMarketplaceRow,
+    isAdvertisingRow,
+    validateListingVideo,
+    listingVideoObjectPath,
+    uploadListingVideo,
+    deleteListingVideo,
+    signedListingVideoUrl
+  };
+});

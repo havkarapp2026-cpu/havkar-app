@@ -1,6 +1,10 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { cardPaymentsAllowed } from "../lib/real-payments.cjs";
+import {
+  evaluateStellarCheckout,
+  saveUnpaidIntent
+} from "../lib/stellar-checkout.cjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -219,6 +223,34 @@ export default async function handler(req, res) {
         401,
         authError || "Authentication required"
       );
+    }
+
+    if (req.body?.payment_method === "xlm") {
+      const decision = evaluateStellarCheckout(req.body);
+
+      if (!decision.ok) {
+        return res.status(decision.status).json(decision);
+      }
+
+      const saved = await saveUnpaidIntent(
+        supabaseAdmin,
+        user.id,
+        decision
+      );
+
+      if (!saved.ok) {
+        return res.status(503).json({
+          ok: false,
+          paid: false,
+          order_paid: false,
+          error: saved.error
+        });
+      }
+
+      return res.status(200).json({
+        ...decision,
+        intent_id: saved.id
+      });
     }
 
     const eventId =

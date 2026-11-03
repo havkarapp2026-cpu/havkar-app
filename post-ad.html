@@ -444,6 +444,24 @@ textarea {
         required
       >
 
+      <label for="currency">
+        Currency
+      </label>
+
+      <select id="currency" required>
+        <option value="EUR">EUR</option>
+        <option value="USD">USD</option>
+      </select>
+
+      <label for="expiresAt">
+        Listing end (optional)
+      </label>
+
+      <input
+        type="datetime-local"
+        id="expiresAt"
+      >
+
 
       <!-- COUNTRY -->
 
@@ -515,6 +533,29 @@ textarea {
         multiple
       >
 
+      <label for="listingVideo">
+        Short video (optional, MP4 or WebM, up to 30 seconds and 15 MB)
+      </label>
+
+      <input
+        type="file"
+        id="listingVideo"
+        accept="video/mp4,video/webm"
+      >
+
+      <video
+        id="listingVideoPreview"
+        controls
+        playsinline
+        style="display:none;width:100%;max-height:240px"
+      ></video>
+
+      <p id="listingVideoProgress" class="photo-info"></p>
+
+      <p class="photo-info">
+        HAVKAR stores the original file in private storage. It does not transcode or compress video.
+      </p>
+
       <div class="photo-info">
         You can select up to 20 JPEG, PNG, or WebP photos. Large photos are resized before upload. Each uploaded image must be 5 MB or smaller.
       </div>
@@ -530,10 +571,19 @@ textarea {
 
       <button
         class="publish-btn"
+        id="draftBtn"
+        type="submit">
+
+        Save draft
+
+      </button>
+
+      <button
+        class="publish-btn"
         id="publishBtn"
         type="submit">
 
-        Publish Ad
+        Publish listing
 
       </button>
 
@@ -554,6 +604,7 @@ textarea {
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-ad-images.js"></script>
 <script src="/havkar-ad-publish.js"></script>
+<script src="/havkar-marketplace.js"></script>
 <script>
 
 /* =========================================================
@@ -1546,6 +1597,9 @@ adForm.addEventListener(
     let publishTimer =
       0;
 
+    let uploadedVideoPath =
+      null;
+
 
     try {
 
@@ -1688,6 +1742,101 @@ adForm.addEventListener(
          CREATE AD OBJECT
          --------------------------------------------- */
 
+      const listingVideo =
+        document.getElementById("listingVideo");
+      const videoFile =
+        listingVideo &&
+        listingVideo.files &&
+        listingVideo.files[0];
+      const videoCheck =
+        window.HAVKAR_MARKETPLACE.validateListingVideo(
+          videoFile || null,
+          videoFile ? Number(listingVideo.dataset.durationSeconds) : 0
+        );
+
+      if (!videoCheck.ok) {
+        throw window.HAVKAR_AD_IMAGES.incompleteSaveError(
+          new Error(videoCheck.error),
+          photos
+        );
+      }
+
+      const currencyInput =
+        document.getElementById("currency");
+      const currency =
+        currencyInput && currencyInput.value === "USD"
+          ? "USD"
+          : "EUR";
+      const expiresInput =
+        document.getElementById("expiresAt");
+      const expiresRaw =
+        expiresInput ? expiresInput.value : "";
+      let expiresAt =
+        null;
+
+      if (expiresRaw) {
+        const parsedExpires =
+          new Date(expiresRaw);
+
+        if (
+          !Number.isFinite(parsedExpires.getTime()) ||
+          parsedExpires.getTime() <= Date.now()
+        ) {
+          throw window.HAVKAR_AD_IMAGES.incompleteSaveError(
+            new Error("The listing end must be a future date."),
+            photos
+          );
+        }
+
+        expiresAt =
+          parsedExpires.toISOString();
+      }
+
+      const listingStatus =
+        event.submitter && event.submitter.id === "draftBtn"
+          ? "draft"
+          : "active";
+
+      if (!videoCheck.empty) {
+        showStatus("Uploading the short video...", "success");
+        const sessionResult =
+          await supabaseClient.auth.getSession();
+        const accessToken =
+          sessionResult &&
+          sessionResult.data &&
+          sessionResult.data.session &&
+          sessionResult.data.session.access_token;
+        const uploadedVideo =
+          await window.HAVKAR_MARKETPLACE.uploadListingVideo({
+            file: videoFile,
+            durationSeconds: videoCheck.durationSeconds,
+            userId: currentUser.id,
+            objectId: crypto.randomUUID(),
+            supabaseUrl: SUPABASE_URL,
+            accessToken: accessToken,
+            apikey: SUPABASE_PUBLISHABLE_KEY,
+            onProgress: function (percent) {
+              const progress =
+                document.getElementById("listingVideoProgress");
+
+              if (progress) {
+                progress.textContent =
+                  "Uploading short video: " + percent + "%";
+              }
+            }
+          });
+
+        if (!uploadedVideo.ok) {
+          throw window.HAVKAR_AD_IMAGES.incompleteSaveError(
+            new Error(uploadedVideo.error || "The short video could not be stored."),
+            photos
+          );
+        }
+
+        uploadedVideoPath =
+          uploadedVideo.path;
+      }
+
       const ad = {
 
         title:
@@ -1698,6 +1847,9 @@ adForm.addEventListener(
 
         price:
           formData.price,
+
+        currency:
+          currency,
 
         location:
           formData.location,
@@ -1718,7 +1870,25 @@ adForm.addEventListener(
           currentUser.id,
 
         status:
-          "active"
+          listingStatus,
+
+        expires_at:
+          expiresAt,
+
+        listing_surface:
+          "marketplace",
+
+        video_path:
+          uploadedVideoPath,
+
+        video_content_type:
+          videoCheck.empty ? null : videoCheck.contentType,
+
+        video_bytes:
+          videoCheck.empty ? null : videoCheck.bytes,
+
+        video_duration_seconds:
+          videoCheck.empty ? null : videoCheck.durationSeconds
 
       };
 
@@ -1844,6 +2014,13 @@ adForm.addEventListener(
           result.error
         );
 
+        if (uploadedVideoPath) {
+          await window.HAVKAR_MARKETPLACE.deleteListingVideo(
+            supabaseClient,
+            uploadedVideoPath
+          );
+        }
+
         throw window.HAVKAR_AD_IMAGES.incompleteSaveError(
           new Error(
             outcome.message
@@ -1861,7 +2038,9 @@ adForm.addEventListener(
       postingGuard.markSaved();
 
       showStatus(
-        "Your ad has been published successfully!",
+        listingStatus === "draft"
+          ? "Your draft was saved. It is not public."
+          : "Your listing has been published. Publication is free.",
         "success"
       );
 
@@ -1919,6 +2098,18 @@ adForm.addEventListener(
 
 
       postingGuard.markFailed();
+
+      if (
+        uploadedVideoPath &&
+        window.HAVKAR_MARKETPLACE
+      ) {
+
+        await window.HAVKAR_MARKETPLACE.deleteListingVideo(
+          supabaseClient,
+          uploadedVideoPath
+        );
+
+      }
 
 
       console.error(
@@ -2029,6 +2220,39 @@ supabaseClient.auth.onAuthStateChange(
 
   }
 );
+
+const listingVideoInput = document.getElementById("listingVideo");
+
+if (listingVideoInput) {
+  listingVideoInput.addEventListener("change", function () {
+    const file = listingVideoInput.files && listingVideoInput.files[0];
+    listingVideoInput.dataset.durationSeconds = "";
+
+    if (!file) {
+      return;
+    }
+
+    const preview = document.getElementById("listingVideoPreview");
+    const progress = document.getElementById("listingVideoProgress");
+
+    if (!preview) {
+      return;
+    }
+
+    preview.preload = "metadata";
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = "block";
+    if (progress) {
+      progress.textContent = "Reading the video length...";
+    }
+    preview.addEventListener("loadedmetadata", function () {
+      listingVideoInput.dataset.durationSeconds = String(preview.duration);
+      if (progress) {
+        progress.textContent = "Video ready to upload. HAVKAR will not transcode it.";
+      }
+    }, { once: true });
+  });
+}
 
 </script>
 <script src="/havkar-i18n.js"></script>

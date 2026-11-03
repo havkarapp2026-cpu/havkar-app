@@ -981,6 +981,13 @@ button:focus-visible{
                 style="display:none;"
             ></div>
 
+            <video
+                id="listingVideo"
+                controls
+                playsinline
+                style="display:none;width:100%;max-height:320px;margin-top:12px"
+            ></video>
+
         </div>
 
         <section class="detail-card">
@@ -1379,6 +1386,7 @@ button:focus-visible{
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-ad-publish.js"></script>
+<script src="/havkar-marketplace.js"></script>
 <script>
 "use strict";
 
@@ -1625,7 +1633,7 @@ function normalizePhotos(value){
    PRICE
    ========================================================= */
 
-function formatPrice(value){
+function formatPrice(value, currencyCode){
 
     if(
         value === null ||
@@ -1642,13 +1650,20 @@ function formatPrice(value){
 
     if(Number.isFinite(numeric)){
 
+        const currency =
+            currencyCode === "USD"
+                ? "USD"
+                : "EUR";
+
         return new Intl.NumberFormat(
             "en-US",
             {
+                style: "currency",
+                currency: currency,
                 minimumFractionDigits:0,
                 maximumFractionDigits:2
             }
-        ).format(numeric) + " €";
+        ).format(numeric);
 
     }
 
@@ -2477,6 +2492,7 @@ async function fetchListing(id){
     initializeSupabase();
 
     const columns = [
+        "id,title,category,price,currency,location,country_code,city,description,user_id,created_at,photos,status,listing_surface,expires_at,video_path",
         "id,title,category,price,location,country_code,city,description,user_id,created_at,photos,status",
         "id,title,category,price,location,description,user_id,created_at,photos,status"
     ];
@@ -2505,6 +2521,27 @@ async function fetchListing(id){
                 .from("ads")
                 .select(
                     columns[1]
+                )
+                .eq(
+                    "id",
+                    id
+                )
+                .maybeSingle();
+
+    }
+
+    if(
+        result.error &&
+        /listing_surface|expires_at|video_path|currency/i.test(
+            String(result.error.message || result.error.details || "")
+        )
+    ){
+
+        result =
+            await supabaseClient
+                .from("ads")
+                .select(
+                    columns[2]
                 )
                 .eq(
                     "id",
@@ -2609,6 +2646,58 @@ function isPublicListingStatus(
 }
 
 
+async function attachListingVideo(){
+
+    const player =
+        $("listingVideo");
+
+    if(!player){
+
+        return;
+
+    }
+
+    player.removeAttribute("src");
+    player.style.display =
+        "none";
+
+    const ad =
+        state.ad;
+
+    if(
+        !ad ||
+        !ad.video_path ||
+        (
+            window.HAVKAR_MARKETPLACE &&
+            window.HAVKAR_MARKETPLACE.isAdvertisingRow(ad)
+        )
+    ){
+
+        return;
+
+    }
+
+    const signed =
+        await window.HAVKAR_MARKETPLACE.signedListingVideoUrl(
+            supabaseClient,
+            ad.video_path
+        );
+
+    if(!signed.ok || !signed.url){
+
+        return;
+
+    }
+
+    player.src =
+        signed.url;
+
+    player.style.display =
+        "block";
+
+}
+
+
 /* =========================================================
    LISTING RENDER
    ========================================================= */
@@ -2637,9 +2726,28 @@ function renderListing(){
         );
 
     if(
+        window.HAVKAR_MARKETPLACE &&
+        window.HAVKAR_MARKETPLACE.isAdvertisingRow(
+            ad
+        )
+    ){
+
+        throw new Error(
+            "This record is an advertising campaign and is not shown in Buy & Sell."
+        );
+
+    }
+
+    if(
         !viewerOwnsListing &&
-        !isPublicListingStatus(
-            ad.status
+        (
+            !isPublicListingStatus(
+                ad.status
+            ) ||
+            (
+                ad.expires_at &&
+                Date.parse(ad.expires_at) <= Date.now()
+            )
         )
     ){
 
@@ -2655,8 +2763,11 @@ function renderListing(){
 
     $("price").textContent =
         formatPrice(
-            ad.price
+            ad.price,
+            ad.currency
         );
+
+    attachListingVideo();
 
     const place =
         window.HAVKAR_COUNTRIES
@@ -3966,6 +4077,18 @@ async function confirmOwnerDelete(){
             );
 
             return;
+
+        }
+
+        if(
+            state.ad.video_path &&
+            window.HAVKAR_MARKETPLACE
+        ){
+
+            await window.HAVKAR_MARKETPLACE.deleteListingVideo(
+                supabaseClient,
+                state.ad.video_path
+            );
 
         }
 

@@ -587,6 +587,31 @@ async function loadProduct() {
         currentAd =
             result.data;
 
+        if (currentAd.listing_surface === "advertising") {
+            showError(
+                "This record is an advertising campaign and is not shown in Buy & Sell."
+            );
+            return;
+        }
+
+        const listingStatus =
+            String(currentAd.status || "")
+                .trim()
+                .toLowerCase();
+
+        if (
+            (listingStatus && listingStatus !== "active") ||
+            (
+                currentAd.expires_at &&
+                Date.parse(currentAd.expires_at) <= Date.now()
+            )
+        ) {
+            showError(
+                "Product not found."
+            );
+            return;
+        }
+
 
         productTitle.textContent =
             currentAd.title ||
