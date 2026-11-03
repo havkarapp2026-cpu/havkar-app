@@ -1940,6 +1940,7 @@ a.primary{
 
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-jobs.js"></script>
+<script src="/havkar-xlm-checkout.js"></script>
 <script>
 
 /* =========================================================
@@ -3608,6 +3609,20 @@ function showPaymentScreen(job){
       class="secondary"
       type="button"
       onclick="
+        quoteJobXlm(
+          '${escapeJS(job.id)}',
+          '${escapeJS(String(job.monthly_fee))}'
+        )
+      ">
+
+      XLM cannot start this monthly plan
+
+    </button>
+
+    <button
+      class="secondary"
+      type="button"
+      onclick="
         closeModal('paymentModal')
       ">
 
@@ -3649,6 +3664,32 @@ function startRealPayment(jobId){
     "The payment gateway is not connected yet. " +
     "Your advertisement has NOT been activated."
   );
+}
+
+async function quoteJobXlm(jobId, fee){
+
+  const session =
+    await supabaseClient.auth.getSession();
+  const accessToken =
+    session &&
+    session.data &&
+    session.data.session &&
+    session.data.session.access_token;
+
+  if(!accessToken || !window.HAVKAR_XLM){
+    alert("Sign in before checking XLM. The job was not activated.");
+    return;
+  }
+
+  const quoted =
+    await window.HAVKAR_XLM.quote({
+      flow: "subscription",
+      price: fee,
+      subjectId: String(jobId),
+      accessToken: accessToken
+    });
+
+  alert(window.HAVKAR_XLM.describe(quoted.result) + " The job was not activated.");
 }
 
 /* =========================================================

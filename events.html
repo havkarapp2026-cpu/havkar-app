@@ -1997,6 +1997,7 @@
     <script src="havkar-i18n.js"></script>
 
     <script src="/havkar-supabase-config.js"></script>
+    <script src="/havkar-xlm-checkout.js"></script>
 <script type="module">
         import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
@@ -2994,6 +2995,14 @@
 
 
                         <button
+                            class="btn btn-secondary"
+                            type="button"
+                            onclick="payEventWithXlm('${escapeHtml(String(event.id))}', '${escapeHtml(String(event.price || ""))}')"
+                        >
+                            XLM Testnet
+                        </button>
+
+                        <button
                             class="btn btn-primary"
                             type="button"
                             onclick="getTicket('${escapeHtml(String(event.id))}')"
@@ -3467,6 +3476,32 @@
             }
         };
 
+
+        async function payEventWithXlm(id, price) {
+            const amount = Number(price);
+
+            if (!Number.isFinite(amount) || amount <= 0) {
+                showToast("This event has no one-time price for XLM.", "error");
+                return;
+            }
+
+            const { data: sessionData } = await supabase.auth.getSession();
+            const accessToken = sessionData?.session?.access_token || "";
+
+            if (!accessToken || !window.HAVKAR_XLM) {
+                showToast("Sign in before requesting an XLM quote.", "error");
+                return;
+            }
+
+            const quoted = await window.HAVKAR_XLM.quote({
+                flow: "events",
+                price: amount,
+                subjectId: String(id),
+                accessToken: accessToken
+            });
+
+            showToast(window.HAVKAR_XLM.describe(quoted.result), quoted.result && quoted.result.payable ? "success" : "error");
+        }
 
         function ticketStatusClass(status) {
             const value =

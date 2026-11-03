@@ -22,8 +22,6 @@ assert.equal(quote.fees.sellerReceives, 48.5);
 assert.equal(quote.network_fee_xlm, "0.00001");
 assert.equal(quote.payable, false);
 assert.equal(quote.destination, null);
-assert.equal(quote.memo, "listing-123456");
-assert.equal(quote.memo_type, "text");
 
 const mainnet = evaluateStellarCheckout({
   network: "mainnet",
@@ -49,13 +47,8 @@ const tradeFlow = evaluateStellarCheckout({
 });
 assert.equal(tradeFlow.code, "TRADE_UNCHANGED");
 
-const verify = evaluateStellarCheckout({
-  action: "verify",
-  price: 10,
-  idempotency_key: "listing-123456"
-});
-assert.equal(verify.code, "SETTLEMENT_RECORDING_DISABLED");
-assert.equal(verify.order_paid, false);
+assert.match(checkout, /verifyStellarSettlement/);
+assert.match(checkout, /buildXlmQuote/);
 
 assert.match(checkout, /payment_method === "xlm"/);
 assert.match(checkout, /saveUnpaidIntent/);

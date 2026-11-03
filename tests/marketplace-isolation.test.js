@@ -60,6 +60,8 @@ assert.ok(ads.includes('"advertising"'));
 assert.ok(ads.includes('.eq(\n                        "listing_surface",\n                        "advertising"\n                    )'));
 
 assert.ok(migration.includes("listing_surface = 'marketplace'"));
+assert.ok(migration.includes("listing_surface = 'advertising'"));
+assert.ok(migration.includes("'restaurant', 'shop', 'service', 'other'"));
 assert.ok(migration.includes("marketplace-media"));
 assert.ok(migration.includes("CREATE TRIGGER enforce_ad_listing_status"));
 assert.ok(migration.includes("status = 'unpaid'"));

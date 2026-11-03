@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { cardPaymentsAllowed } from "../lib/real-payments.cjs";
 import {
   evaluateStellarCheckout,
+  buildXlmQuote,
+  verifyStellarSettlement,
   saveUnpaidIntent
 } from "../lib/stellar-checkout.cjs";
 
@@ -226,16 +228,32 @@ export default async function handler(req, res) {
     }
 
     if (req.body?.payment_method === "xlm") {
+      if (req.body?.action === "verify" || req.body?.action === "refund") {
+        const settled = await verifyStellarSettlement(
+          supabaseAdmin,
+          user.id,
+          req.body
+        );
+
+        return res.status(settled.status).json(settled);
+      }
+
       const decision = evaluateStellarCheckout(req.body);
 
       if (!decision.ok) {
         return res.status(decision.status).json(decision);
       }
 
+      const quoted = await buildXlmQuote(decision);
+
+      if (!quoted.ok) {
+        return res.status(quoted.status).json(quoted);
+      }
+
       const saved = await saveUnpaidIntent(
         supabaseAdmin,
         user.id,
-        decision
+        quoted
       );
 
       if (!saved.ok) {
@@ -248,8 +266,10 @@ export default async function handler(req, res) {
       }
 
       return res.status(200).json({
-        ...decision,
-        intent_id: saved.id
+        ...quoted,
+        intent_id: saved.id,
+        paid: false,
+        order_paid: false
       });
     }
 

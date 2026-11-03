@@ -1002,6 +1002,10 @@ button:focus-visible{
 
             </div>
 
+            <button id="xlmQuoteButton" type="button" hidden>
+                XLM Testnet quote
+            </button>
+
             <h2 id="title" class="title">
                 Loading...
             </h2>
@@ -1387,6 +1391,7 @@ button:focus-visible{
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-ad-publish.js"></script>
 <script src="/havkar-marketplace.js"></script>
+<script src="/havkar-xlm-checkout.js"></script>
 <script>
 "use strict";
 
@@ -2766,6 +2771,22 @@ function renderListing(){
             ad.price,
             ad.currency
         );
+
+    const xlmButton =
+        $("xlmQuoteButton");
+
+    if(xlmButton){
+
+        xlmButton.hidden =
+            !(
+                Number(ad.price) > 0 &&
+                (
+                    !window.HAVKAR_MARKETPLACE ||
+                    window.HAVKAR_MARKETPLACE.isMarketplaceRow(ad)
+                )
+            );
+
+    }
 
     attachListingVideo();
 
@@ -4182,6 +4203,66 @@ function setupOwnerActions(){
    NAVIGATION SETUP
    ========================================================= */
 
+async function quoteListingXlm(){
+
+    const ad =
+        state.ad;
+    const amount =
+        Number(ad && ad.price);
+
+    if(
+        !ad ||
+        !Number.isFinite(amount) ||
+        amount <= 0 ||
+        (
+            window.HAVKAR_MARKETPLACE &&
+            !window.HAVKAR_MARKETPLACE.isMarketplaceRow(ad)
+        )
+    ){
+
+        showToast(
+            "This record has no marketplace price for XLM."
+        );
+
+        return;
+
+    }
+
+    const session =
+        await supabaseClient.auth.getSession();
+    const accessToken =
+        session &&
+        session.data &&
+        session.data.session &&
+        session.data.session.access_token;
+
+    if(!accessToken || !window.HAVKAR_XLM){
+
+        showToast(
+            "Sign in before requesting an XLM quote."
+        );
+
+        return;
+
+    }
+
+    const quoted =
+        await window.HAVKAR_XLM.quote({
+            flow: "marketplace",
+            price: amount,
+            subjectId: String(ad.id),
+            accessToken: accessToken
+        });
+
+    showToast(
+        window.HAVKAR_XLM.describe(
+            quoted.result
+        )
+    );
+
+}
+
+
 function setupNavigation(){
 
     $("backButton")
@@ -4207,6 +4288,18 @@ function setupNavigation(){
             "click",
             toggleSaved
         );
+
+    const xlmButton =
+        $("xlmQuoteButton");
+
+    if(xlmButton){
+
+        xlmButton.addEventListener(
+            "click",
+            quoteListingXlm
+        );
+
+    }
 
     $("saveButton")
         .addEventListener(

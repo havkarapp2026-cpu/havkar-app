@@ -13,6 +13,14 @@ ALTER TABLE public.ads
   ADD COLUMN IF NOT EXISTS video_bytes integer,
   ADD COLUMN IF NOT EXISTS video_duration_seconds numeric;
 
+-- Ads page categories are restaurant, shop, service, and other.
+-- Read-only production check on 3 Nov 2026 found 10 ads and 0 of those categories.
+-- Product categories stay marketplace. Nothing is deleted.
+UPDATE public.ads
+SET listing_surface = 'advertising'
+WHERE listing_surface IS NULL
+  AND lower(btrim(coalesce(category, ''))) IN ('restaurant', 'shop', 'service', 'other');
+
 UPDATE public.ads
 SET listing_surface = 'marketplace'
 WHERE listing_surface IS NULL;
