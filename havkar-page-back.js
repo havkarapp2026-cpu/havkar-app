@@ -136,6 +136,21 @@
             };
         }
 
+        /*
+         * Home opens the first language visit with location.replace,
+         * so Home is no longer the previous history entry. A later
+         * history.back() would leave HAVKAR. Assign the referrer.
+         */
+        if (
+            /\/language\.html$/i.test(current.pathname) &&
+            current.searchParams.get("entry") === "1"
+        ) {
+            return {
+                action: "assign",
+                href: relative
+            };
+        }
+
         return {
             action: "history",
             href: relative

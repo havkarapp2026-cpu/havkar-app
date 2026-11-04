@@ -38,6 +38,22 @@ const fromLanguageSettings = back.havkarBackDestination(
 );
 assert.strictEqual(fromLanguageSettings.action, "history");
 
+const languageEntryBack = back.havkarBackDestination(
+    origin + "/language.html?entry=1",
+    origin + "/index.html",
+    "profile.html"
+);
+assert.strictEqual(languageEntryBack.action, "assign");
+assert.strictEqual(languageEntryBack.href, "index.html");
+
+const languageEntryDirect = back.havkarBackDestination(
+    origin + "/language.html?entry=1",
+    "",
+    "profile.html"
+);
+assert.strictEqual(languageEntryDirect.action, "assign");
+assert.strictEqual(languageEntryDirect.href, "profile.html");
+
 const samePage = back.havkarBackDestination(
     origin + "/tickets.html?lang=fa",
     origin + "/tickets.html"
@@ -96,7 +112,7 @@ function withNavigation(options) {
         referrer: options.referrer,
         body: {
             getAttribute: function () {
-                return "";
+                return options.parent || "";
             }
         }
     };
@@ -134,5 +150,14 @@ const emptyHistory = withNavigation({
 });
 assert.strictEqual(emptyHistory.back, 0);
 assert.deepStrictEqual(emptyHistory.assign, ["index.html"]);
+
+const entryWithOldHistory = withNavigation({
+    href: origin + "/language.html?entry=1",
+    referrer: origin + "/index.html",
+    length: 2,
+    parent: "profile.html"
+});
+assert.strictEqual(entryWithOldHistory.back, 0);
+assert.deepStrictEqual(entryWithOldHistory.assign, ["index.html"]);
 
 console.log("PAGE_BACK_TEST_OK");
