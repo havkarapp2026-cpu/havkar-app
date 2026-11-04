@@ -18,6 +18,7 @@ import {
   inspectImageBytes,
   imageGenerationRequested,
   logoEntitlementDecision,
+  paidAiServicesEnabled,
   presentAssistantText,
   textArtworkRequested,
   visibleArtworkText,
@@ -954,6 +955,12 @@ Deno.serve(async (request) => {
 
   if (userResult.error || !userResult.data?.user?.id) {
     return json(401, { ok: false, error: "Sign in before using the assistant." }, headers);
+  }
+
+  if (imageMode && !paidAiServicesEnabled({
+    HAVKAR_REAL_PAYMENTS_ENABLED: Deno.env.get("HAVKAR_REAL_PAYMENTS_ENABLED") || ""
+  })) {
+    return json(403, { ok: false, error: "Paid image generation is paused." }, headers);
   }
 
   if (imageMode) {

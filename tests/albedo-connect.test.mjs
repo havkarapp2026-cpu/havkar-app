@@ -1,4 +1,8 @@
-import { StellarWalletsKit } from "@creit.tech/stellar-wallets-kit/sdk";
+import { register } from "node:module";
+
+register("./freighter-esm-hook.mjs", import.meta.url);
+
+const { StellarWalletsKit } = await import("@creit.tech/stellar-wallets-kit/sdk");
 
 function assertEqual(actual, expected, label) {
     if (actual !== expected) {
@@ -44,17 +48,35 @@ if (typeof globalThis.addEventListener !== "function") {
     globalThis.removeEventListener = () => {};
     globalThis.dispatchEvent = () => true;
 }
-function element() {
-    return {
+function element(tag = "") {
+    const node = {
         style: { setProperty() {} },
         dataset: {},
         textContent: "",
+        tagName: String(tag).toUpperCase(),
+        childNodes: [],
+        firstChild: null,
+        nextSibling: null,
+        parentNode: null,
+        data: "",
+        content: null,
+        innerHTML: "",
         setAttribute() {},
+        getAttribute() { return ""; },
+        getAttributeNames() { return []; },
+        hasAttributes() { return false; },
+        removeAttribute() {},
         appendChild() {},
+        append() {},
         prepend() {},
+        replaceWith() {},
+        remove() {},
+        insertBefore(child) { return child; },
         addEventListener() {},
         removeEventListener() {}
     };
+    node.content = node;
+    return node;
 }
 globalThis.document = {
     title: "",
@@ -64,6 +86,21 @@ globalThis.document = {
     addEventListener() {},
     removeEventListener() {},
     createElement: element,
+    createComment: element,
+    createTextNode(text) {
+        const node = element();
+        node.data = String(text);
+        node.textContent = node.data;
+        return node;
+    },
+    createTreeWalker() {
+        return {
+            currentNode: null,
+            nextNode() { return null; }
+        };
+    },
+    importNode(node) { return node; },
+    getElementsByTagName() { return []; },
     querySelector() { return null; },
     querySelectorAll() { return []; }
 };
@@ -125,4 +162,43 @@ assertEqual(
     "real rejection"
 );
 
+const { Keypair } = await import("@stellar/stellar-sdk");
+const signer = Keypair.random().publicKey();
+localStorage.setItem("@StellarWalletsKit/selectedModuleId", "albedo");
+const reserved = window.havkarReserveStellarSigningWindow();
+if (!reserved || reserved.closed) {
+    throw new Error("Albedo signing window was not reserved in the click turn");
+}
+let reused = false;
+StellarWalletsKit.signTransaction = async () => {
+    const popup = window.open(
+        "https://albedo.link/confirm",
+        "auth.albedo.link",
+        "height=600,width=480"
+    );
+    reused = popup === reserved;
+    return { signedTxXdr: "SIGNEDXDR" };
+};
+const signed = await window.havkarSignPreparedCheckoutXdr("UNSIGNED", signer, reserved);
+assertEqual(signed, "SIGNEDXDR", "checkout returns the wallet xdr");
+assertEqual(reused, true, "checkout reuses the reserved Albedo window");
+assertEqual(reserved.location.href, "https://albedo.link/confirm", "confirm page");
+
+StellarWalletsKit.signTransaction = () => new Promise(() => {});
+const hanging = window.havkarReserveStellarSigningWindow();
+const pending = window.havkarSignPreparedCheckoutXdr("UNSIGNED", signer, hanging);
+setTimeout(() => {
+    hanging.closed = true;
+}, 50);
+let signingClosedMessage = "";
+try {
+    await pending;
+} catch (error) {
+    signingClosedMessage = error.message;
+}
+if (!/went away before the transaction was signed/.test(signingClosedMessage)) {
+    throw new Error(`closed signing window message: ${signingClosedMessage}`);
+}
+
 console.log("ALBEDO_CONNECT_TEST_OK");
+process.exit(0);

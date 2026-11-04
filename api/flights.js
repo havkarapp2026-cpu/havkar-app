@@ -3,6 +3,28 @@ import {
     assertServerCredentialsAllowed,
     rejectIsolatedPreview
 } from "./preview-isolation.cjs";
+import offerHandler from "../lib/flight-offer.js";
+import orderHandler from "../lib/flight-order.js";
+
+function duffelRoute(req) {
+    const route = String(req.query?.havkarFlightRoute || "").trim();
+
+    if (route === "offer" || route === "order") {
+        return route;
+    }
+
+    const path = String(req.url || "").split("?")[0];
+
+    if (path === "/api/flight-offer") {
+        return "offer";
+    }
+
+    if (path === "/api/flight-order") {
+        return "order";
+    }
+
+    return "search";
+}
 
 function bearerToken(req) {
     const header = req.headers?.authorization;
@@ -73,7 +95,7 @@ async function requireHavkarUser(req) {
     };
 }
 
-export default async function handler(req, res) {
+async function searchHandler(req, res) {
     if (rejectIsolatedPreview(res)) {
         return;
     }
@@ -880,4 +902,18 @@ export default async function handler(req, res) {
                 "Unable to complete the flight search."
         });
     }
-                  }
+}
+
+export default async function handler(req, res) {
+    const route = duffelRoute(req);
+
+    if (route === "offer") {
+        return offerHandler(req, res);
+    }
+
+    if (route === "order") {
+        return orderHandler(req, res);
+    }
+
+    return searchHandler(req, res);
+}

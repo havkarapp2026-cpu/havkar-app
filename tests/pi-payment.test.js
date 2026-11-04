@@ -27,6 +27,7 @@ async function callPi(handler, { url, query, method = "POST", body = {} }) {
 
 async function main() {
     const previousFlag = process.env.HAVKAR_PI_PAYMENTS_ENABLED;
+    const previousRealPayments = process.env.HAVKAR_REAL_PAYMENTS_ENABLED;
     const previousKey = process.env.PI_API_KEY;
     const previousFetch = global.fetch;
     const calls = [];
@@ -46,6 +47,7 @@ async function main() {
         const fakeKey = "test-pi-key-not-a-secret";
 
         delete process.env.HAVKAR_PI_PAYMENTS_ENABLED;
+        delete process.env.HAVKAR_REAL_PAYMENTS_ENABLED;
         delete process.env.PI_API_KEY;
 
         for (const route of [
@@ -62,6 +64,16 @@ async function main() {
         assert.strictEqual(calls.length, 0);
 
         process.env.HAVKAR_PI_PAYMENTS_ENABLED = "true";
+        const piWithoutRealPayments = await callPi(handler, {
+            url: "/api/pi-approve",
+            query: {},
+            body: { paymentId: "pay_1" }
+        });
+        assert.strictEqual(piWithoutRealPayments.statusCode, 404);
+        assert.deepStrictEqual(piWithoutRealPayments.body, { error: "Not found" });
+        assert.strictEqual(calls.length, 0);
+
+        process.env.HAVKAR_REAL_PAYMENTS_ENABLED = "true";
 
         const wrongMethod = await callPi(handler, {
             url: "/api/pi-approve",
@@ -186,6 +198,11 @@ async function main() {
         } else {
             process.env.HAVKAR_PI_PAYMENTS_ENABLED = previousFlag;
         }
+        if (previousRealPayments === undefined) {
+            delete process.env.HAVKAR_REAL_PAYMENTS_ENABLED;
+        } else {
+            process.env.HAVKAR_REAL_PAYMENTS_ENABLED = previousRealPayments;
+        }
         if (previousKey === undefined) {
             delete process.env.PI_API_KEY;
         } else {
@@ -193,21 +210,47 @@ async function main() {
         }
     }
 
+    const { Keypair } = await import("@stellar/stellar-sdk");
+    const { installPiStellarServerCompat, piNetworkFromModule } = await import("../lib/pi-stellar-compat.mjs");
+    installPiStellarServerCompat();
+    const PiNetwork = piNetworkFromModule(await import("pi-backend"));
+    const pi = new PiNetwork("paused-compat", Keypair.random().secret());
+    const horizon = pi.getHorizonClient("Test SDF Network ; September 2015");
+    assert.strictEqual(typeof horizon.loadAccount, "function");
+    assert.strictEqual(typeof horizon.fetchBaseFee, "function");
+    assert.strictEqual(typeof horizon.fetchTimebounds, "function");
+    assert.strictEqual(typeof horizon.submitTransaction, "function");
+
     const vercel = JSON.parse(fs.readFileSync(path.join(root, "vercel.json"), "utf8"));
     assert.deepStrictEqual(vercel.rewrites, [
         {
             source: "/api/pi-complete",
             destination: "/api/pi-approve?piAction=complete"
+        },
+        {
+            source: "/api/flight-offer",
+            destination: "/api/flights?havkarFlightRoute=offer"
+        },
+        {
+            source: "/api/flight-order",
+            destination: "/api/flights?havkarFlightRoute=order"
         }
     ]);
     assert.strictEqual(JSON.stringify(vercel).includes("/api/:path*"), false);
 
     const apiFiles = fs.readdirSync(path.join(root, "api"))
-        .filter((name) => name.endsWith(".js"));
+        .filter((name) => name.endsWith(".js") || name.endsWith(".mjs"));
     assert.strictEqual(apiFiles.includes("pi-complete.js"), false);
     assert.strictEqual(apiFiles.includes("pi-approve.js"), true);
     assert.ok(apiFiles.length <= 12, `expected at most 12 functions, found ${apiFiles.length}`);
-    assert.strictEqual(apiFiles.length, 12);
+    assert.strictEqual(apiFiles.length, 11);
+    assert.strictEqual(apiFiles.includes("flight-offer.js"), false);
+    assert.strictEqual(apiFiles.includes("flight-order.js"), false);
+    assert.strictEqual(apiFiles.includes("stellar-payment-core.js"), false);
+    assert.strictEqual(apiFiles.includes("stellar-payment-core.mjs"), false);
+    assert.strictEqual(fs.existsSync(path.join(root, "lib/flight-offer.js")), true);
+    assert.strictEqual(fs.existsSync(path.join(root, "lib/flight-order.js")), true);
+    assert.strictEqual(fs.existsSync(path.join(root, "lib/stellar-payment-core.mjs")), true);
 
     const preserved = [
         "accommodation-review.js",
@@ -218,9 +261,8 @@ async function main() {
         "business-application-notify.js",
         "eur-usd-quote.js",
         "flights.js",
-        "flight-offer.js",
-        "flight-order.js",
-        "pi-a2u-testnet.js"
+        "pi-a2u-testnet.js",
+        "stellar-payment.mjs"
     ];
     for (const name of preserved) {
         assert.strictEqual(apiFiles.includes(name), true, name);

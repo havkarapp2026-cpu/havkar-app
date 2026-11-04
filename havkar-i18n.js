@@ -276,6 +276,8 @@
 
     let translating = false;
 
+    let lastTranslationError = "";
+
     let observer = null;
 
     let observerTimer = null;
@@ -425,7 +427,56 @@
     }
 
 
+    function languageEntryShown() {
+
+        try {
+
+            return sessionStorage.getItem(
+                "havkar_language_entry"
+            ) === "shown";
+
+        } catch (error) {
+
+            return false;
+        }
+    }
+
+
+    function rememberLanguageEntry() {
+
+        try {
+
+            sessionStorage.setItem(
+                "havkar_language_entry",
+                "shown"
+            );
+
+        } catch (error) {}
+    }
+
+
     function redirectForEntry() {
+
+        const onLanguagePage =
+            /(?:^|\/)language\.html$/i.test(
+                window.location.pathname ||
+                ""
+            );
+
+
+        /*
+         * Choosing a language reloads this page.
+         * Remember that the visitor already reached it
+         * before any Home redirect can run again.
+         * Do not send the reload to Home.
+         */
+        if (onLanguagePage) {
+
+            rememberLanguageEntry();
+
+            return false;
+        }
+
 
         const homeEntry =
             document.documentElement?.dataset?.havkarEntry ===
@@ -434,39 +485,12 @@
 
         if (
             homeEntry &&
-            !hasSavedLanguage()
+            !hasSavedLanguage() &&
+            !languageEntryShown()
         ) {
 
             window.location.replace(
                 "language.html?entry=1"
-            );
-
-            return true;
-        }
-
-
-        const onLanguagePage =
-            /(?:^|\/)language\.html$/i.test(
-                window.location.pathname ||
-                ""
-            );
-
-        const fromFirstEntry =
-            new URLSearchParams(
-                window.location.search
-            ).get(
-                "entry"
-            ) === "1";
-
-
-        if (
-            onLanguagePage &&
-            fromFirstEntry &&
-            hasSavedLanguage()
-        ) {
-
-            window.location.replace(
-                "index.html"
             );
 
             return true;
@@ -1768,9 +1792,17 @@
                 document.body
             );
 
+            lastTranslationError = "";
+
         } catch (
             error
         ) {
+
+            lastTranslationError =
+                error &&
+                error.message
+                    ? String(error.message)
+                    : "HAVKAR translation failed.";
 
             console.error(
                 "[HAVKAR i18n]",
@@ -2057,7 +2089,10 @@
                         languageInfo:
                             getLanguageInfo(
                                 language
-                            )
+                            ),
+
+                        error:
+                            lastTranslationError
                     }
                 }
             )

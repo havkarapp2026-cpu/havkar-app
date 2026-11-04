@@ -1,6 +1,16 @@
-import PiNetwork from "pi-backend";
+import { installPiStellarServerCompat, piNetworkFromModule } from "../lib/pi-stellar-compat.mjs";
 
 const PI_ME_URL = "https://api.minepi.com/v2/me";
+
+let piNetworkPromise;
+
+function loadPiNetwork() {
+  if (!piNetworkPromise) {
+    installPiStellarServerCompat();
+    piNetworkPromise = import("pi-backend").then((mod) => piNetworkFromModule(mod));
+  }
+  return piNetworkPromise;
+}
 
 function safePiError(error, stage) {
   return {
@@ -67,6 +77,12 @@ async function resolveExistingPayment(pi, payment) {
 }
 
 export default async function handler(req, res) {
+  if (process.env.HAVKAR_REAL_PAYMENTS_ENABLED !== "true") {
+    return res.status(404).json({
+      error: "Not found"
+    });
+  }
+
   if (process.env.HAVKAR_PI_PAYMENTS_ENABLED !== "true") {
     return res.status(404).json({
       error: "Not found"
@@ -219,6 +235,7 @@ export default async function handler(req, res) {
      * Initialize Pi backend SDK.
      */
 
+    const PiNetwork = await loadPiNetwork();
     const pi = new PiNetwork(
       apiKey,
       walletPrivateSeed

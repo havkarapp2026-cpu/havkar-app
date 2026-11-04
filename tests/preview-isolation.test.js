@@ -203,16 +203,16 @@ assert.strictEqual(failedClosed, true);
 assert.strictEqual(fs.readFileSync(configPath, "utf8"), committedBefore);
 
 const guardedRoutes = [
-  "business-application-notify.js",
-  "translate.js",
-  "accommodation-review.js",
-  "flight-offer.js",
-  "flight-order.js",
-  "flights.js"
+  "api/business-application-notify.js",
+  "api/translate.js",
+  "api/accommodation-review.js",
+  "lib/flight-offer.js",
+  "lib/flight-order.js",
+  "api/flights.js"
 ];
 
 for (const name of guardedRoutes) {
-  const source = fs.readFileSync(path.join(root, "api", name), "utf8");
+  const source = fs.readFileSync(path.join(root, name), "utf8");
   assert.strictEqual(source.includes("rejectIsolatedPreview"), true, name);
   assert.strictEqual(source.includes("assertServerCredentialsAllowed"), true, name);
 }
@@ -339,11 +339,11 @@ const middlewareOutput = execFileSync(
   process.execPath,
   ["--input-type=module", "-e", `
 import middleware from "./middleware.js";
-const blocked = middleware(new Request("https://preview.example/api/pi-approve"));
+const blocked = await middleware(new Request("https://preview.example/api/pi-approve"));
 if (!blocked || blocked.status !== 503) process.exit(2);
 const text = await blocked.text();
 if (text.includes("service_role") || text.includes("gispovnciifgikvgpzck")) process.exit(3);
-if (middleware(new Request("https://preview.example/api/eur-usd-quote"))) process.exit(4);
+if (await middleware(new Request("https://preview.example/api/eur-usd-quote"))) process.exit(4);
 console.log("MIDDLEWARE_ISOLATION_OK");
 `],
   {
@@ -363,7 +363,7 @@ const productionMiddleware = execFileSync(
   process.execPath,
   ["--input-type=module", "-e", `
 import middleware from "./middleware.js";
-if (middleware(new Request("https://havkar.example/api/stripe-webhook"))) process.exit(2);
+if (await middleware(new Request("https://havkar.example/api/stripe-webhook"))) process.exit(2);
 console.log("MIDDLEWARE_PRODUCTION_PASSTHROUGH_OK");
 `],
   {

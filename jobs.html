@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><link rel="manifest" href="/manifest.json">
+<head><script src="/havkar-preview-access.js"></script><link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/havkar-icon-32-20261022-v3.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/havkar-icon-16-20261022-v3.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/havkar-icon-180-20261022-v3.png">
@@ -1969,6 +1969,11 @@ const supabaseClient =
     }
   );
 
+window.havkarAccessToken = async function havkarAccessToken() {
+  const { data } = await supabaseClient.auth.getSession();
+  return data?.session?.access_token || "";
+};
+
 let jobs = [];
 let currentUser = null;
 let selectedFilter = "All";
@@ -3605,6 +3610,18 @@ function showPaymentScreen(job){
     </button>
 
     <button
+      class="primary"
+      type="button"
+      data-havkar-xlm-checkout="job_listing"
+      onclick="havkarOpenStellarServiceCheckout({serviceType:'job_listing',serviceId:'${escapeJS(String(job.id))}'})">
+
+      <i class="fas fa-coins"></i>
+
+      Pay with XLM
+
+    </button>
+
+    <button
       class="secondary"
       type="button"
       onclick="
@@ -3788,6 +3805,23 @@ async function openMyJobs(){
                 </span>
 
               </div>
+
+              ${
+                job.status === "pending_payment"
+                  ? `
+                    <button
+                      class="primary"
+                      type="button"
+                      data-havkar-xlm-checkout="job_listing"
+                      onclick="
+                        event.stopPropagation();
+                        havkarOpenStellarServiceCheckout({serviceType:'job_listing',serviceId:'${escapeJS(String(job.id))}'})
+                      ">
+                      Pay with XLM
+                    </button>
+                  `
+                  : ""
+              }
 
               <button
                 class="secondary"
@@ -4370,6 +4404,10 @@ loadSupabaseJobs();
 </script>
 
 <script src="/havkar-i18n.js"></script>
+
+<script src="/stellar-wallet-bundle.js?v=20261025-sign"></script>
+
+<script src="/havkar-stellar-checkout.js?v=20261025-sign"></script>
 
 <script src="/havkar-page-back.js"></script>
 </body>

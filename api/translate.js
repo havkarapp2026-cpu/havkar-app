@@ -26,6 +26,9 @@ const {
   assertServerCredentialsAllowed,
   rejectIsolatedPreview
 } = require("./preview-isolation.cjs");
+const {
+  isIsolatedPaymentPreview
+} = require("./payment-isolation.cjs");
 
 /* =========================================================
    CONFIG
@@ -199,6 +202,56 @@ function headerValue(req, name) {
   return typeof selected === "string" ? selected.trim() : "";
 }
 
+/*
+ * A browser POST to this deployment sends its own Origin.
+ * The payment preview host is not one of the two fixed
+ * production origins, so that request was rejected before
+ * Google Translation ran. Only this preview's own HTTPS
+ * host is added. Another site's origin still does not match.
+ */
+function paymentPreviewOwnOrigin(req, origin, env = process.env) {
+  if (!isIsolatedPaymentPreview(env) || env.VERCEL !== "1") {
+    return false;
+  }
+
+  if (!origin.startsWith("https://") || origin.includes("*")) {
+    return false;
+  }
+
+  let parsed;
+
+  try {
+    parsed = new URL(origin);
+  } catch {
+    return false;
+  }
+
+  if (
+    parsed.origin !== origin ||
+    parsed.username ||
+    parsed.password
+  ) {
+    return false;
+  }
+
+  const forwarded = headerValue(req, "x-forwarded-host");
+  const host = headerValue(req, "host");
+  const candidate = (forwarded || host)
+    .split(",")[0]
+    .trim()
+    .toLowerCase();
+
+  if (
+    !candidate ||
+    candidate.includes("*") ||
+    candidate.includes("/")
+  ) {
+    return false;
+  }
+
+  return parsed.host.toLowerCase() === candidate;
+}
+
 function applyCors(req, res) {
   const origin = headerValue(req, "origin");
 
@@ -212,7 +265,10 @@ function applyCors(req, res) {
     "Content-Type, Authorization"
   );
 
-  if (origin && ALLOWED_ORIGINS.has(origin)) {
+  if (
+    (origin && ALLOWED_ORIGINS.has(origin)) ||
+    (origin && paymentPreviewOwnOrigin(req, origin))
+  ) {
     res.setHeader("Access-Control-Allow-Origin", origin);
 
     return {
@@ -310,12 +366,20 @@ function trustedClientIp(req) {
   return normalizeClientIp(raw.split(",")[0]);
 }
 
-function getSupabaseAdmin() {
-  assertServerCredentialsAllowed();
+function getSupabaseAdmin(env = process.env) {
+  /*
+   * This payment preview must not open a client with the
+   * shared SUPABASE_URL. That variable points at production.
+   */
+  if (isIsolatedPaymentPreview(env)) {
+    return null;
+  }
 
-  const url = process.env.SUPABASE_URL || "";
+  assertServerCredentialsAllowed(env);
+
+  const url = env.SUPABASE_URL || "";
   const serviceRoleKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+    env.SUPABASE_SERVICE_ROLE_KEY || "";
 
   if (!url || !serviceRoleKey) {
     return null;
@@ -351,7 +415,19 @@ function sendLimiterFailure(res) {
   });
 }
 
-async function consumeSharedBudget(kind, clientIp, characters) {
+const previewTranslationBuckets = new Map();
+
+/*
+ * Same per-minute ceilings as consume_translation_budget.
+ * The payment preview keeps those ceilings in this process
+ * and does not write a production or staging budget row.
+ */
+function isolatedPreviewTranslationBudget(
+  kind,
+  clientIp,
+  characters,
+  now = Date.now()
+) {
   if (!clientIp) {
     return {
       ok: false,
@@ -359,7 +435,111 @@ async function consumeSharedBudget(kind, clientIp, characters) {
     };
   }
 
-  const supabase = getSupabaseAdmin();
+  if (kind !== "post" && kind !== "languages") {
+    return {
+      ok: false,
+      status: 503
+    };
+  }
+
+  const amount = Number(characters);
+
+  if (
+    kind === "post" &&
+    (!Number.isInteger(amount) || amount < 0 || amount > 30000)
+  ) {
+    return {
+      ok: false,
+      status: 503
+    };
+  }
+
+  if (kind === "languages" && amount !== 0) {
+    return {
+      ok: false,
+      status: 503
+    };
+  }
+
+  const epoch = Math.floor(now / 1000);
+  const window = Math.floor(epoch / 60);
+  const retryAfter = Math.max(1, ((window + 1) * 60) - epoch);
+  const limits = kind === "post"
+    ? {
+      ipRequests: 60,
+      ipCharacters: 60000,
+      globalRequests: 2147483647,
+      globalCharacters: 300000
+    }
+    : {
+      ipRequests: 20,
+      ipCharacters: 0,
+      globalRequests: 600,
+      globalCharacters: 0
+    };
+
+  for (const [key, bucket] of previewTranslationBuckets) {
+    if (bucket.window < window - 10) {
+      previewTranslationBuckets.delete(key);
+    }
+  }
+
+  const globalKey = `g:${kind}:${window}`;
+  const ipKey = `i:${kind}:${window}:${clientIp}`;
+  const globalBucket = previewTranslationBuckets.get(globalKey) || {
+    window,
+    requests: 0,
+    characters: 0
+  };
+  const ipBucket = previewTranslationBuckets.get(ipKey) || {
+    window,
+    requests: 0,
+    characters: 0
+  };
+  const nextGlobal = {
+    window,
+    requests: globalBucket.requests + 1,
+    characters: globalBucket.characters + amount
+  };
+  const nextIp = {
+    window,
+    requests: ipBucket.requests + 1,
+    characters: ipBucket.characters + amount
+  };
+  const allowed = nextGlobal.requests <= limits.globalRequests
+    && nextGlobal.characters <= limits.globalCharacters
+    && nextIp.requests <= limits.ipRequests
+    && nextIp.characters <= limits.ipCharacters;
+
+  if (!allowed) {
+    return {
+      ok: false,
+      status: 429,
+      retryAfter
+    };
+  }
+
+  previewTranslationBuckets.set(globalKey, nextGlobal);
+  previewTranslationBuckets.set(ipKey, nextIp);
+
+  return {
+    ok: true
+  };
+}
+
+async function consumeSharedBudget(kind, clientIp, characters, env = process.env) {
+  if (isIsolatedPaymentPreview(env)) {
+    return isolatedPreviewTranslationBudget(kind, clientIp, characters);
+  }
+
+  if (!clientIp) {
+    return {
+      ok: false,
+      status: 503
+    };
+  }
+
+  const supabase = getSupabaseAdmin(env);
 
   if (!supabase) {
     return {
@@ -1273,3 +1453,5 @@ async function handler(req, res) {
 module.exports = handler;
 module.exports.googleLanguageCode = googleLanguageCode;
 module.exports.havkarLanguageCode = havkarLanguageCode;
+module.exports.getSupabaseAdmin = getSupabaseAdmin;
+module.exports.isolatedPreviewTranslationBudget = isolatedPreviewTranslationBudget;

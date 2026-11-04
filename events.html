@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><link rel="manifest" href="/manifest.json">
+<head><script src="/havkar-preview-access.js"></script><link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/havkar-icon-32-20261022-v3.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/havkar-icon-16-20261022-v3.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/havkar-icon-180-20261022-v3.png">
@@ -2008,6 +2008,11 @@
             SUPABASE_ANON_KEY
         );
 
+        window.havkarAccessToken = async function havkarAccessToken() {
+            const { data } = await supabase.auth.getSession();
+            return data?.session?.access_token || "";
+        };
+
         // Swedish translations for Events-owned UI, including dynamic Supabase cards.
         // Other selected languages remain delegated to havkar-i18n.js.
         const eventLanguage = (localStorage.getItem("havkar_language") || localStorage.getItem("selectedLanguage") || localStorage.getItem("language") || "en").toLowerCase();
@@ -2032,7 +2037,8 @@
             "expected attendees":"förväntade deltagare", "About this event":"Om evenemanget",
             "No description available.":"Ingen beskrivning tillgänglig.", "Share":"Dela", "Join Event":"Delta",
             "Get Ticket":"Skaffa biljett", "Delete My Event":"Ta bort mitt evenemang",
-            "Sign in required":"Inloggning krävs", "Please sign in to view your event tickets.":"Logga in för att se dina evenemangsbiljetter.",
+            "Card payments are paused until the owner enables them.":"Kortbetalningar är pausade tills ägaren aktiverar dem.",
+            "Sign in required":"Inloggning krävs", "Please sign in to view your event tickets.":"Logga in för att se dina evenemangsbiljetter.", "Sign in":"Logga in",
             "Could not load tickets":"Kunde inte ladda biljetter", "Please try again.":"Försök igen.",
             "No event tickets yet":"Inga evenemangsbiljetter ännu",
             "Your HAVKAR event tickets will appear here after they are issued.":"Dina HAVKAR-evenemangsbiljetter visas här när de har utfärdats.",
@@ -3009,6 +3015,30 @@
 
                         </button>
 
+                        ${
+                            ["free", "", "0", "0.00", "0,00"].includes(
+                                String(event.price || "Free")
+                                    .trim()
+                                    .toLowerCase()
+                                    .replace(/[€$£\s]/g, "")
+                            )
+                                ? ""
+                                : `
+                                    <button
+                                        class="btn btn-primary"
+                                        type="button"
+                                        data-havkar-xlm-checkout="event_ticket"
+                                        onclick="havkarOpenStellarCheckout('${escapeHtml(String(event.id))}')"
+                                    >
+                                        <i class="fas fa-coins"></i>
+                                        Pay with XLM
+                                    </button>
+                                    <p style="width:100%;margin:8px 0 0;font-size:13px;line-height:1.4;">
+                                        ${et("Card payments are paused until the owner enables them.")}
+                                    </p>
+                                `
+                        }
+
                     </div>
 
 
@@ -3048,10 +3078,7 @@
                     event.preventDefault();
 
                     if (!currentUser) {
-                        showToast(
-                            "Please sign in before creating an event.",
-                            "error"
-                        );
+                        window.location.href = (window.havkarWithPreviewAccess || function (href) { return href; })("login.html?return=" + encodeURIComponent("events.html"));
                         return;
                     }
 
@@ -3556,6 +3583,7 @@
                         <i class="fas fa-lock"></i>
                         <h3>${et("Sign in required")}</h3>
                         <p>${et("Please sign in to view your event tickets.")}</p>
+                        <p><a href="login.html?return=events.html">${et("Sign in")}</a></p>
                     </div>
                 `;
                 return;
@@ -3871,10 +3899,7 @@
 
         window.openCreateEventModal = function() {
             if (!currentUser) {
-                showToast(
-                    "Please sign in before creating an event.",
-                    "error"
-                );
+                window.location.href = (window.havkarWithPreviewAccess || function (href) { return href; })("login.html?return=" + encodeURIComponent("events.html"));
                 return;
             }
 
@@ -3983,13 +4008,18 @@
 
         window.goHome = function() {
             window.location.href =
-                "index.html";
+                (window.havkarWithPreviewAccess || function (href) { return href; })("index.html");
         };
 
 
         window.openProfile = function() {
+            if (!currentUser) {
+                window.location.href = (window.havkarWithPreviewAccess || function (href) { return href; })("login.html?return=" + encodeURIComponent("events.html"));
+                return;
+            }
+
             window.location.href =
-                "profile.html";
+                (window.havkarWithPreviewAccess || function (href) { return href; })("profile.html");
         };
 
 
@@ -4076,6 +4106,8 @@
 
         initializeEventsPage();
     </script>
+<script src="/stellar-wallet-bundle.js?v=20261025-sign"></script>
+<script src="/havkar-stellar-checkout.js?v=20261025-sign"></script>
 <script src="/havkar-page-back.js"></script>
 </body>
 </html>

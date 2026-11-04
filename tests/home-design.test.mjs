@@ -103,7 +103,8 @@ assert.match(assistant, /supabase\.auth\.getSession/);
 assert.doesNotMatch(assistant, /HAVKAR_AI_API_KEY/);
 assert.doesNotMatch(assistant, /service_role/);
 
-const apiFiles = fs.readdirSync(path.join(root, "api")).filter((name) => name.endsWith(".js"));
-assert.equal(apiFiles.length, 12);
+const apiFiles = fs.readdirSync(path.join(root, "api")).filter((name) => name.endsWith(".js") || name.endsWith(".mjs"));
+assert.equal(apiFiles.length, 11);
+assert.ok(apiFiles.length <= 12);
 
 console.log("HOME_DESIGN_TEST_OK");

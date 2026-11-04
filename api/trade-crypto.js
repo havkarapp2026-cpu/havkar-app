@@ -324,6 +324,10 @@ async function authenticateUser(req) {
 }
 
 export default async function handler(req, res) {
+  if (process.env.HAVKAR_REAL_PAYMENTS_ENABLED !== "true") {
+    return sendError(res, 403, "Trade is currently unavailable.");
+  }
+
   if (process.env.HAVKAR_TRADE_ENABLED !== "true") {
     return sendError(res, 403, "Trade is currently unavailable.");
   }

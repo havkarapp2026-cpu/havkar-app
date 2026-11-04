@@ -6,6 +6,9 @@ const path = require("path");
 const {
   isIsolatedReceiptsPreview
 } = require("../api/preview-isolation.cjs");
+const {
+  isIsolatedPaymentPreview
+} = require("../api/payment-isolation.cjs");
 
 const PROTECTED_PREVIEW_API_FILES = [
   "api/pi-approve.js",
@@ -70,7 +73,7 @@ function preparePreviewSupabaseConfig(env, options = {}) {
   const expectedHash = options.expectedPublishableSha256
     || STAGING_PUBLISHABLE_SHA256;
 
-  if (!isIsolatedReceiptsPreview(env)) {
+  if (!isIsolatedReceiptsPreview(env) && !isIsolatedPaymentPreview(env)) {
     return { action: "skip" };
   }
 
@@ -164,14 +167,30 @@ function previewApiStubSource() {
   ].join("\n");
 }
 
+function paymentPreviewApiStubSource() {
+  return [
+    "\"use strict\";",
+    "",
+    "module.exports = async function handler(req, res) {",
+    "  res.status(503).json({",
+    "    ok: false,",
+    "    error: \"This API is disabled on the isolated Stellar payment preview.\"",
+    "  });",
+    "};",
+    ""
+  ].join("\n");
+}
+
 function installPreviewApiStubs(rootDir, env) {
-  if (!isIsolatedReceiptsPreview(env)) {
+  if (!isIsolatedReceiptsPreview(env) && !isIsolatedPaymentPreview(env)) {
     throw safeError(
       "Refusing to disable APIs outside the isolated receipts preview."
     );
   }
 
-  const stub = previewApiStubSource();
+  const stub = isIsolatedPaymentPreview(env)
+    ? paymentPreviewApiStubSource()
+    : previewApiStubSource();
 
   if (
     stub.includes("service_role")
@@ -254,6 +273,13 @@ function main() {
     }
 
     installPreviewApiStubs(path.join(__dirname, ".."), process.env);
+
+    if (isIsolatedPaymentPreview(process.env)) {
+      console.log("Payment preview browser config written for havkar-staging.");
+      console.log("Stripe, Pi, and unrelated server APIs are disabled for this preview build.");
+      return;
+    }
+
     console.log("Receipts preview browser config written for havkar-staging.");
     console.log("Wallet, Pi, and payment APIs disabled for this preview build.");
   } catch (error) {
@@ -273,6 +299,7 @@ module.exports = {
   PROTECTED_PREVIEW_API_FILES,
   preparePreviewSupabaseConfig,
   previewApiStubSource,
+  paymentPreviewApiStubSource,
   installPreviewApiStubs,
   renderBrowserConfig,
   sha256,

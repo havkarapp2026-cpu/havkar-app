@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><link rel="manifest" href="/manifest.json">
+<head><script src="/havkar-preview-access.js"></script><link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/havkar-icon-32-20261022-v3.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/havkar-icon-16-20261022-v3.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/havkar-icon-180-20261022-v3.png">
@@ -453,7 +453,7 @@ button:disabled {
     <div id="accountMode" class="hidden">
       <p class="session-notice" id="accountEmail" translate="no" data-i18n-ignore></p>
       <div class="account-actions">
-        <a href="index.html">Go to HAVKAR</a>
+        <a id="accountContinue" href="index.html">Continue</a>
         <button type="button" id="accountLogout">Log Out</button>
       </div>
     </div>
@@ -612,6 +612,25 @@ const supabase =
             }
         }
     );
+
+function safeReturnTarget() {
+    const requested = new URLSearchParams(window.location.search).get("return") || "";
+    const allowed = {
+        "events.html": true,
+        "index.html": true,
+        "jobs.html": true,
+        "wallet.html": true,
+        "tickets.html": true
+    };
+    return allowed[requested] ? requested : "";
+}
+
+function continueHref() {
+    const target = safeReturnTarget() || "index.html";
+    return typeof window.havkarWithPreviewAccess === "function"
+        ? window.havkarWithPreviewAccess(target)
+        : target;
+}
 
 
 /* =========================================================
@@ -905,7 +924,14 @@ googleBtn.addEventListener("click", async () => {
     googleBtn.textContent = "Connecting to Google...";
     showMessage("");
     try {
-        const redirectTo = new URL("login.html", window.location.href).href;
+        const redirectToUrl = new URL("login.html", window.location.href);
+        const returnTarget = safeReturnTarget();
+        if (returnTarget) {
+            redirectToUrl.searchParams.set("return", returnTarget);
+        }
+        const redirectTo = typeof window.havkarWithPreviewAccess === "function"
+            ? window.havkarWithPreviewAccess(redirectToUrl.href)
+            : redirectToUrl.href;
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: "google",
             options: { redirectTo }
@@ -1072,7 +1098,7 @@ async function login() {
             function(){
 
                 window.location.replace(
-                    "index.html"
+                    continueHref()
                 );
 
             },
@@ -1168,8 +1194,9 @@ async function sendPasswordReset() {
          */
 
         const redirectTo =
-            window.location.origin +
-            window.location.pathname;
+            typeof window.havkarWithPreviewAccess === "function"
+                ? window.havkarWithPreviewAccess(window.location.pathname + window.location.search)
+                : window.location.origin + window.location.pathname;
 
 
         const {
@@ -1571,8 +1598,13 @@ signupBtn.addEventListener(
     "click",
     function(){
 
-        window.location.href =
-            "signup.html";
+        const returnTarget = safeReturnTarget();
+        const signupHref = returnTarget
+            ? "signup.html?return=" + encodeURIComponent(returnTarget)
+            : "signup.html";
+        window.location.href = typeof window.havkarWithPreviewAccess === "function"
+            ? window.havkarWithPreviewAccess(signupHref)
+            : signupHref;
 
     }
 );
@@ -1722,10 +1754,13 @@ function authCallbackMessage(){
                 readAuthParam("error_code") || "unspecified"
             );
 
+            const cleared = typeof window.havkarWithPreviewAccess === "function"
+                ? new URL(window.havkarWithPreviewAccess(window.location.pathname))
+                : new URL(window.location.pathname, window.location.href);
             window.history.replaceState(
                 {},
                 document.title,
-                window.location.pathname
+                cleared.pathname + cleared.search
             );
 
             return;
@@ -1779,15 +1814,17 @@ function authCallbackMessage(){
 
 
         /*
-         * IMPORTANT:
-         *
-         * If a normal session already exists,
-         * DO NOT redirect automatically.
-         *
-         * The user must remain on this page so
-         * Forgot Password remains immediately
-         * accessible.
+         * Without a checkout return target, stay on
+         * this page so Forgot Password stays available.
+         * A safe same-origin return, such as events.html,
+         * continues there because the payment session
+         * must be created on that exact address.
          */
+
+        const continueLink = document.getElementById("accountContinue");
+        if (continueLink) {
+            continueLink.href = continueHref();
+        }
 
         if(
             data &&
@@ -1796,6 +1833,9 @@ function authCallbackMessage(){
         ){
 
             showAccountMode(data.session.user);
+            if (safeReturnTarget()) {
+                window.location.replace(continueHref());
+            }
 
         }
 
