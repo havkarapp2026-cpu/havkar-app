@@ -271,6 +271,23 @@ button:focus-visible{
     backdrop-filter:blur(8px);
 }
 
+.gallery-share{
+    position:absolute;
+    top:12px;
+    right:66px;
+    z-index:10;
+    width:46px;
+    height:46px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:50%;
+    background:rgba(255,255,255,.96);
+    color:#2e7d32;
+    box-shadow:0 4px 15px rgba(0,0,0,.18);
+    cursor:pointer;
+}
+
 .gallery-save{
     position:absolute;
     top:12px;
@@ -954,6 +971,15 @@ button:focus-visible{
                     alt="Listing image"
                     style="display:none;"
                 >
+
+                <button
+                    id="galleryShare"
+                    class="gallery-share"
+                    type="button"
+                    aria-label="Share listing"
+                >
+                    <i class="fas fa-share-nodes"></i>
+                </button>
 
                 <button
                     id="gallerySave"
@@ -3235,6 +3261,58 @@ function showError(message){
    NAVIGATION
    ========================================================= */
 
+async function shareCurrentListing(){
+
+    if(
+        !state.ad ||
+        !window.HAVKAR_MARKETPLACE
+    ){
+
+        showToast(
+            "This listing cannot be shared."
+        );
+
+        return;
+
+    }
+
+    const result =
+        await window.HAVKAR_MARKETPLACE.shareListing(
+            window.location.origin,
+            state.ad.id
+        );
+
+    if(result.method === "copy"){
+
+        showToast(
+            "Listing link copied."
+        );
+
+        return;
+
+    }
+
+    if(result.method === "unavailable" && result.url){
+
+        showToast(
+            result.url
+        );
+
+        return;
+
+    }
+
+    if(!result.ok){
+
+        showToast(
+            "This listing cannot be shared."
+        );
+
+    }
+
+}
+
+
 function goBuySell(){
 
     window.location.href =
@@ -4287,6 +4365,12 @@ function setupNavigation(){
         .addEventListener(
             "click",
             toggleSaved
+        );
+
+    $("galleryShare")
+        .addEventListener(
+            "click",
+            shareCurrentListing
         );
 
     const xlmButton =

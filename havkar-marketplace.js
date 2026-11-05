@@ -18,7 +18,7 @@
   const SELLER_FEE_RATE = 0.03;
   const LISTING_PUBLICATION_FEE = 0;
   const MAX_VIDEO_BYTES = 15 * 1024 * 1024;
-  const MAX_VIDEO_SECONDS = 30;
+  const MAX_VIDEO_SECONDS = 60;
   const VIDEO_TYPES = ["video/mp4", "video/webm"];
 
   function money(value) {
@@ -76,7 +76,7 @@
     if (!Number.isFinite(duration) || duration <= 0 || duration > MAX_VIDEO_SECONDS) {
       return {
         ok: false,
-        error: "Short videos must be 30 seconds or shorter. HAVKAR does not transcode video."
+        error: "Short videos must be 60 seconds or shorter. HAVKAR does not transcode video."
       };
     }
 
@@ -217,12 +217,136 @@
     return { ok: true, url: url };
   }
 
+  function listingCities(rows) {
+    const seen = new Set();
+    const cities = [];
+
+    (rows || []).forEach(function (row) {
+      const city = String(row && row.city || "").trim();
+      const key = city.toLowerCase();
+
+      if (!city || seen.has(key)) {
+        return;
+      }
+
+      seen.add(key);
+      cities.push(city);
+    });
+
+    cities.sort(function (left, right) {
+      return left.localeCompare(right);
+    });
+
+    return cities;
+  }
+
+  function priceBound(value) {
+    if (value == null || String(value).trim() === "") {
+      return null;
+    }
+
+    const amount = Number(value);
+
+    if (!Number.isFinite(amount) || amount < 0) {
+      return { ok: false };
+    }
+
+    return { ok: true, value: amount };
+  }
+
+  function listingMatchesPriceAndCity(row, filters) {
+    const input = filters || {};
+    const city = String(input.city || "").trim().toLowerCase();
+
+    if (city && String(row && row.city || "").trim().toLowerCase() !== city) {
+      return false;
+    }
+
+    const min = priceBound(input.minPrice);
+    const max = priceBound(input.maxPrice);
+
+    if ((min && min.ok === false) || (max && max.ok === false)) {
+      return false;
+    }
+
+    if (min && max && min.ok && max.ok && min.value > max.value) {
+      return false;
+    }
+
+    const price = Number(row && row.price);
+    const hasPrice = Number.isFinite(price);
+
+    if (min && min.ok && (!hasPrice || price < min.value)) {
+      return false;
+    }
+
+    if (max && max.ok && (!hasPrice || price > max.value)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  function listingShareUrl(origin, id) {
+    const listingId = String(id || "").trim();
+
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(listingId)) {
+      return "";
+    }
+
+    let base;
+
+    try {
+      base = new URL(String(origin || ""));
+    } catch (error) {
+      return "";
+    }
+
+    if (base.protocol !== "https:" && base.protocol !== "http:") {
+      return "";
+    }
+
+    return base.origin + "/ad-details.html?id=" + encodeURIComponent(listingId);
+  }
+
+  async function shareListing(origin, id, navigatorLike) {
+    const url = listingShareUrl(origin, id);
+
+    if (!url) {
+      return { ok: false, method: "rejected", url: "" };
+    }
+
+    const nav = navigatorLike || (typeof navigator === "undefined" ? null : navigator);
+
+    if (nav && typeof nav.share === "function") {
+      try {
+        await nav.share({ title: "HAVKAR listing", url: url });
+        return { ok: true, method: "share", url: url };
+      } catch (error) {
+        if (error && error.name === "AbortError") {
+          return { ok: true, method: "cancel", url: url };
+        }
+      }
+    }
+
+    if (nav && nav.clipboard && typeof nav.clipboard.writeText === "function") {
+      await nav.clipboard.writeText(url);
+      return { ok: true, method: "copy", url: url };
+    }
+
+    return { ok: false, method: "unavailable", url: url };
+  }
+
   return {
     BUYER_FEE_RATE,
     SELLER_FEE_RATE,
     LISTING_PUBLICATION_FEE,
     MAX_VIDEO_BYTES,
     MAX_VIDEO_SECONDS,
+    listingCities,
+    listingMatchesPriceAndCity,
+    listingShareUrl,
+    shareListing,
     quoteListingFees,
     isMarketplaceRow,
     isAdvertisingRow,

@@ -200,7 +200,9 @@ input:focus-visible{
     padding:0 20px 10px;
 }
 
-.country-filter select{
+.country-filter select,
+.detail-filters select,
+.detail-filters input{
     width:100%;
     min-height:44px;
     padding:0 12px;
@@ -209,6 +211,19 @@ input:focus-visible{
     background:#fff;
     color:var(--text);
     font-size:16px;
+}
+
+.detail-filters{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:8px;
+    padding:0 20px 12px;
+}
+
+@media(min-width:700px){
+    .detail-filters{
+        grid-template-columns:1.4fr .8fr .8fr;
+    }
 }
 
 .visually-hidden{
@@ -617,6 +632,28 @@ input:focus-visible{
     font-size:1.1rem;
 }
 
+.share-button{
+    position:absolute;
+    top:56px;
+    right:10px;
+    z-index:20;
+    width:40px;
+    height:40px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:50%;
+    background:rgba(255,255,255,.96);
+    color:#2e7d32;
+    box-shadow:0 4px 14px rgba(0,0,0,.16);
+    cursor:pointer;
+}
+
+.share-button i{
+    font-size:1rem;
+    pointer-events:none;
+}
+
 .save-button:focus-visible{
     outline:3px solid rgba(76,175,80,.35);
     outline-offset:2px;
@@ -884,6 +921,51 @@ input:focus-visible{
 
 </div>
 
+<div class="detail-filters">
+
+    <label class="visually-hidden" for="cityFilter">
+        City
+    </label>
+
+    <select
+        id="cityFilter"
+        aria-label="Filter by city"
+    >
+        <option value="">
+            All cities
+        </option>
+    </select>
+
+    <label class="visually-hidden" for="minPrice">
+        Minimum price
+    </label>
+
+    <input
+        id="minPrice"
+        type="number"
+        min="0"
+        step="0.01"
+        inputmode="decimal"
+        placeholder="Min price"
+        aria-label="Minimum price"
+    >
+
+    <label class="visually-hidden" for="maxPrice">
+        Maximum price
+    </label>
+
+    <input
+        id="maxPrice"
+        type="number"
+        min="0"
+        step="0.01"
+        inputmode="decimal"
+        placeholder="Max price"
+        aria-label="Maximum price"
+    >
+
+</div>
+
 <div class="filters-wrapper">
 
     <nav
@@ -1110,7 +1192,13 @@ const state = {
 
     savedOperation: false,
 
-    country: ""
+    country: "",
+
+    city: "",
+
+    minPrice: "",
+
+    maxPrice: ""
 
 };
 
@@ -1378,6 +1466,118 @@ function renderCountryFilter(){
             applyFilters();
 
         };
+
+}
+
+
+function renderCityFilter(){
+
+    const select =
+        $("cityFilter");
+
+    if(!select || !window.HAVKAR_MARKETPLACE){
+
+        return;
+
+    }
+
+    const cities =
+        window.HAVKAR_MARKETPLACE.listingCities(
+            state.ads
+        );
+
+    const current =
+        state.city ||
+        "";
+
+    select.innerHTML =
+        `<option value="">All cities</option>` +
+        cities.map(
+            city => `
+                <option value="${escapeHtml(city)}">
+                    ${escapeHtml(city)}
+                </option>
+            `
+        ).join("");
+
+    if(
+        current &&
+        cities.some(
+            city => city.toLowerCase() === current.toLowerCase()
+        )
+    ){
+
+        select.value =
+            cities.find(
+                city => city.toLowerCase() === current.toLowerCase()
+            );
+
+    }else{
+
+        state.city =
+            "";
+
+        select.value =
+            "";
+
+    }
+
+}
+
+
+async function shareCard(id, event){
+
+    if(event){
+
+        event.preventDefault();
+
+        event.stopPropagation();
+
+    }
+
+    if(!window.HAVKAR_MARKETPLACE){
+
+        showToast(
+            "Sharing is unavailable."
+        );
+
+        return;
+
+    }
+
+    const result =
+        await window.HAVKAR_MARKETPLACE.shareListing(
+            window.location.origin,
+            id
+        );
+
+    if(result.method === "copy"){
+
+        showToast(
+            "Listing link copied."
+        );
+
+        return;
+
+    }
+
+    if(result.method === "unavailable" && result.url){
+
+        showToast(
+            result.url
+        );
+
+        return;
+
+    }
+
+    if(!result.ok){
+
+        showToast(
+            "This listing cannot be shared."
+        );
+
+    }
 
 }
 
@@ -2792,6 +2992,15 @@ function cardHtml(
         >
 
             <button
+                class="share-button"
+                type="button"
+                aria-label="Share listing"
+                data-share-id="${escapeHtml(ad.id)}"
+            >
+                <i class="fas fa-share-nodes"></i>
+            </button>
+
+            <button
                 class="save-button ${saved ? "saved" : ""}"
                 type="button"
                 aria-label="${
@@ -3145,6 +3354,27 @@ function renderAds(
                         card.dataset.adId
                     );
 
+            const shareButton =
+                card.querySelector(
+                    ".share-button"
+                );
+
+            if(shareButton){
+
+                shareButton.addEventListener(
+                    "click",
+                    event => {
+
+                        shareCard(
+                            shareButton.dataset.shareId,
+                            event
+                        );
+
+                    }
+                );
+
+            }
+
             const saveButton =
                 card.querySelector(
                     ".save-button"
@@ -3266,6 +3496,22 @@ function applyFilters(){
 
                 }
 
+                if(
+                    window.HAVKAR_MARKETPLACE &&
+                    !window.HAVKAR_MARKETPLACE.listingMatchesPriceAndCity(
+                        ad,
+                        {
+                            city: state.city,
+                            minPrice: state.minPrice,
+                            maxPrice: state.maxPrice
+                        }
+                    )
+                ){
+
+                    return false;
+
+                }
+
                 const categoryMatch =
                     category === "All" ||
                     String(
@@ -3331,6 +3577,9 @@ function applyFilters(){
             ? "Saved listings"
             : (
                 search ||
+                state.city ||
+                state.minPrice !== "" ||
+                state.maxPrice !== "" ||
                 category !== "All"
                     ? "Search results"
                     : "Latest listings"
@@ -3386,6 +3635,8 @@ async function loadListings(){
             ads;
 
         state.imageCache.clear();
+
+        renderCityFilter();
 
         /*
          * Saved IDs are loaded from the database before
@@ -3550,14 +3801,13 @@ function setupNavigation(){
             goProfile
         );
 
-    $("notificationButton")
+                $("notificationButton")
         .addEventListener(
             "click",
             () => {
 
-                showToast(
-                    "Notifications will appear here."
-                );
+                window.location.href =
+                    "notifications.html";
 
             }
         );
@@ -3696,6 +3946,67 @@ function setupSearch(){
 
         }
     );
+
+    function bindPrice(id, key){
+
+        const field =
+            $(id);
+
+        if(!field){
+
+            return;
+
+        }
+
+        field.addEventListener(
+            "input",
+            () => {
+
+                state[key] =
+                    field.value;
+
+                state.savedOnly =
+                    false;
+
+                applyFilters();
+
+            }
+        );
+
+    }
+
+    bindPrice(
+        "minPrice",
+        "minPrice"
+    );
+
+    bindPrice(
+        "maxPrice",
+        "maxPrice"
+    );
+
+    const cityFilter =
+        $("cityFilter");
+
+    if(cityFilter){
+
+        cityFilter.addEventListener(
+            "change",
+            () => {
+
+                state.city =
+                    cityFilter.value ||
+                    "";
+
+                state.savedOnly =
+                    false;
+
+                applyFilters();
+
+            }
+        );
+
+    }
 
 }
 

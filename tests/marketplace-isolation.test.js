@@ -40,6 +40,46 @@ assert.strictEqual(
 );
 assert.strictEqual(
   market.validateListingVideo({ type: "video/mp4", size: 1000 }, 45).ok,
+  true
+);
+assert.strictEqual(
+  market.validateListingVideo({ type: "video/mp4", size: 1000 }, 60).ok,
+  true
+);
+assert.strictEqual(
+  market.validateListingVideo({ type: "video/mp4", size: 1000 }, 61).ok,
+  false
+);
+assert.strictEqual(market.MAX_VIDEO_SECONDS, 60);
+
+const listingId = "33333333-3333-4333-8333-333333333333";
+assert.strictEqual(
+  market.listingShareUrl("https://havkar-app.vercel.app/buy-sell.html", listingId),
+  "https://havkar-app.vercel.app/ad-details.html?id=" + listingId
+);
+assert.strictEqual(market.listingShareUrl("https://havkar-app.vercel.app", "not an id"), "");
+assert.strictEqual(market.listingShareUrl("javascript:alert(1)", listingId), "");
+
+const rows = [
+  { city: "Rome", price: 20 },
+  { city: " rome ", price: 40 },
+  { city: "Milan", price: 80 }
+];
+assert.deepStrictEqual(market.listingCities(rows), ["Milan", "Rome"]);
+assert.strictEqual(
+  market.listingMatchesPriceAndCity(rows[0], { city: "Rome", minPrice: "10", maxPrice: "30" }),
+  true
+);
+assert.strictEqual(
+  market.listingMatchesPriceAndCity(rows[2], { city: "Rome", minPrice: "", maxPrice: "" }),
+  false
+);
+assert.strictEqual(
+  market.listingMatchesPriceAndCity(rows[2], { city: "", minPrice: "90", maxPrice: "" }),
+  false
+);
+assert.strictEqual(
+  market.listingMatchesPriceAndCity(rows[0], { city: "", minPrice: "40", maxPrice: "10" }),
   false
 );
 
@@ -82,8 +122,62 @@ assert.ok(details.includes("isAdvertisingRow"));
 assert.ok(details.includes("signedListingVideoUrl"));
 assert.ok(!details.includes("getPublicUrl"));
 assert.ok(buySell.includes("isAdvertisingRow"));
+assert.ok(buySell.includes('id="cityFilter"'));
+assert.ok(buySell.includes('id="minPrice"'));
+assert.ok(buySell.includes('id="maxPrice"'));
+assert.ok(buySell.includes("listingMatchesPriceAndCity"));
+assert.ok(buySell.includes('data-share-id='));
+assert.ok(buySell.includes('window.location.href =\n                    "notifications.html"'));
+assert.ok(!buySell.includes("Notifications will appear here."));
+
+const sixty = fs.readFileSync(
+  path.join(root, "supabase/migrations/20261106010000_marketplace_video_sixty_seconds.sql"),
+  "utf8"
+);
+assert.ok(sixty.includes("video_duration_seconds <= 60"));
+assert.ok(!sixty.includes("DELETE FROM"));
+assert.ok(postAd.includes("up to 60 seconds and 15 MB"));
+assert.ok(details.includes('id="galleryShare"'));
+assert.ok(details.includes("shareCurrentListing"));
 
 const product = fs.readFileSync(path.join(root, "product.html"), "utf8");
 assert.ok(product.includes('listing_surface === "advertising"'));
 
-console.log("MARKETPLACE_ISOLATION_TEST_OK");
+(async function () {
+  const copied = [];
+  const shared = await market.shareListing(
+    "https://havkar-app.vercel.app",
+    listingId,
+    {
+      clipboard: {
+        writeText: async function (value) {
+          copied.push(value);
+        }
+      }
+    }
+  );
+  assert.strictEqual(shared.method, "copy");
+  assert.deepStrictEqual(copied, [
+    "https://havkar-app.vercel.app/ad-details.html?id=" + listingId
+  ]);
+
+  let cancelled = false;
+  const cancel = await market.shareListing(
+    "https://havkar-app.vercel.app",
+    listingId,
+    {
+      share: async function () {
+        const error = new Error("closed");
+        error.name = "AbortError";
+        throw error;
+      }
+    }
+  );
+  assert.strictEqual(cancel.method, "cancel");
+  cancelled = true;
+  assert.strictEqual(cancelled, true);
+  console.log("MARKETPLACE_ISOLATION_TEST_OK");
+})().catch(function (error) {
+  console.error(error);
+  process.exit(1);
+});
