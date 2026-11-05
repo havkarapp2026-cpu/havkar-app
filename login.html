@@ -149,12 +149,55 @@ h1 {
     background:
         linear-gradient(
             135deg,
-            #22a447,
-            #35b858
+            #1b5e20,
+            #2e7d32
         );
     color: white;
     box-shadow:
-        0 7px 18px rgba(34,164,71,0.18);
+        0 7px 18px rgba(27,94,32,0.22);
+}
+
+.google-btn {
+    width: 100%;
+    min-height: 56px;
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    border: 2px solid #1b5e20;
+    border-radius: 13px;
+    background: #fff;
+    color: #1b5e20;
+    font-size: 18px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.google-btn:focus-visible {
+    outline: 3px solid rgba(27,94,32,.35);
+    outline-offset: 2px;
+}
+
+.google-mark {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #fff;
+    border: 1px solid #dadce0;
+    color: #1a73e8;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.google-help {
+    margin: 8px 0 0;
+    color: #3d4a40;
+    font-size: 14px;
+    line-height: 1.45;
+    text-align: center;
 }
 
 .reset-btn {
@@ -425,7 +468,11 @@ button:disabled {
         </button>
 
 
-        <button id="googleBtn" class="google-btn" type="button"><span class="google-mark" aria-hidden="true">G</span> Continue with Google</button>
+        <button id="googleBtn" class="google-btn" type="button">
+            <span class="google-mark" aria-hidden="true">G</span>
+            <span class="google-label">Continue with Google</span>
+        </button>
+        <p class="google-help">A new Gmail address is not a HAVKAR password. Use Google here, or create an account.</p>
 
         <button
             id="forgotBtn"
@@ -585,6 +632,7 @@ button:disabled {
 
 
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-auth-ui.js"></script>
 <script type="module">
 
 import {
@@ -909,23 +957,28 @@ function showResetMode() {
    GOOGLE OAUTH — SUPABASE
 ========================================================= */
 googleBtn.addEventListener("click", async () => {
+    const label = googleBtn.querySelector(".google-label");
     googleBtn.disabled = true;
-    googleBtn.textContent = "Connecting to Google...";
+    googleBtn.setAttribute("aria-busy", "true");
+    if (label) label.textContent = "Connecting to Google...";
     showMessage("");
     try {
         const redirectTo = new URL("login.html", window.location.href).href;
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: "google",
-            options: { redirectTo }
+            options: {
+                redirectTo: redirectTo,
+                queryParams: { prompt: "select_account" }
+            }
         });
         if (error) throw error;
         if (!data?.url) throw new Error("Google authorization URL was not returned.");
-        // Supabase redirects the browser to Google; the return is handled below.
     } catch (error) {
         console.error("HAVKAR Google OAuth Error:", error);
         showMessage("Google sign-in could not be started. Please try again.", "error");
         googleBtn.disabled = false;
-        googleBtn.innerHTML = '<span class="google-mark" aria-hidden="true">G</span> Continue with Google';
+        googleBtn.removeAttribute("aria-busy");
+        if (label) label.textContent = "Continue with Google";
     }
 });
 
@@ -993,22 +1046,12 @@ async function login() {
                 error
             );
 
-            const invalidCredentials = /invalid login credentials|invalid credentials|invalid password/i.test(error.message || "");
-            const emailNotConfirmed =
-                String(error.code || error.error_code || "").toLowerCase() === "email_not_confirmed" ||
-                /email not confirmed/i.test(error.message || "");
-            showMessage(
-                emailNotConfirmed
-                    ? "Your email address is not confirmed. Please confirm your email before logging in."
-                    : invalidCredentials
-                    ? "Email or password is incorrect. You can try again or reset your password below."
-                    : "Sign-in could not be completed. Please try again.",
-                "error"
-            );
-            if (invalidCredentials && !emailNotConfirmed) {
-                forgotBtn.textContent = "Reset your password →";
-                forgotBtn.classList.add("recovery-highlight");
-            }
+            const failure = window.HAVKAR_AUTH_UI
+                ? window.HAVKAR_AUTH_UI.passwordSignInFailure(error)
+                : { code: "unavailable", text: "Sign-in could not be completed. Please try again." };
+            showMessage(failure.text, "error");
+            forgotBtn.textContent = "Forgot password?";
+            forgotBtn.classList.remove("recovery-highlight");
 
             return;
         }
