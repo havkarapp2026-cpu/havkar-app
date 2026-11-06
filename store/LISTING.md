@@ -66,6 +66,16 @@ Do not submit an IARC questionnaire from this file. The owner must answer it in 
 - Android upload key: not present in this environment. Do not generate one here. The release bundle built in this environment is unsigned.
 - Apple distribution certificate and provisioning profile: not present. The iOS project has code signing turned off.
 
+## Google Play app access
+
+The review account is an existing confirmed email account. It has no admin role. Its password is not stored in this repository. Enter that existing password in Play Console.
+
+```
+amirjalilnia01@gmail.com
+```
+
+After this change is deployed, the server recognizes only that confirmed account and grants a test entitlement for HAVKAR AI text limits and 1K logo and image generation. The entitlement does not turn on card payments, Pi payments, Stellar mainnet, subscription checkout, or admin tools. Until the deploy is approved, paid image generation on the live site stays paused for every account.
+
 ## Screenshots
 
 Do not invent store screenshots. Capture them from a signed build or from the public site after the draft pages are deployed. A phone-sized capture of the live privacy draft is not a Play screenshot set.
