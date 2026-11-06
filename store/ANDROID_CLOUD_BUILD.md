@@ -24,6 +24,8 @@ New workflow:
 | `unsigned_smoke` | Prove SDK + Gradle produce an AAB | No — not for Play |
 | `signed` | Produce a Play upload-signed AAB | Artifact only — owner uploads later |
 
+Pull requests that touch `android/**` or this workflow run **`unsigned_smoke` only**. Signed builds are manual (`workflow_dispatch`) after secrets exist on the default branch.
+
 ## Required repository secrets (signed mode)
 
 Add these under GitHub → Settings → Secrets and variables → Actions. Never commit them. Never paste them into chat or issues.
