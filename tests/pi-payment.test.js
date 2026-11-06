@@ -215,6 +215,14 @@ async function main() {
         {
             source: "/api/pi-complete",
             destination: "/api/pi-approve?piAction=complete"
+        },
+        {
+            source: "/api/stellar-ownership",
+            destination: "/api/create-event-checkout?havkarAction=ownership"
+        },
+        {
+            source: "/api/support-request",
+            destination: "/api/business-application-notify?havkarAction=support"
         }
     ]);
     assert.strictEqual(JSON.stringify(vercel).includes("/api/:path*"), false);

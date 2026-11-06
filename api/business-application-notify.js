@@ -1,4 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
+import {
+    createSupportRequestHandler,
+    isSupportRequest
+} from "../lib/support-request.cjs";
 
 const FIELD_LIMITS = {
     business_name: 160,
@@ -128,6 +132,13 @@ export function createBusinessNotificationHandler({
     createSupabase = createDefaultSupabase
 } = {}) {
     return async function handler(req, res) {
+        if (isSupportRequest(req)) {
+            return createSupportRequestHandler({
+                fetchImpl,
+                createSupabase
+            })(req, res);
+        }
+
         if (req.method !== "POST") {
             res.setHeader("Allow", ["POST"]);
 
