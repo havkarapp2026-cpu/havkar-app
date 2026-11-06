@@ -70,19 +70,17 @@ function mockSupabase(options) {
           };
         },
         select() {
-          return {
-            eq() {
-              return {
-                eq() {
-                  return {
-                    maybeSingle() {
-                      return Promise.resolve(options.status || { data: null, error: null });
-                    }
-                  };
-                }
-              };
+          const chain = {
+            eq() { return chain; },
+            gte() { return chain; },
+            limit() {
+              return Promise.resolve(options.recent || { data: [], error: null });
+            },
+            maybeSingle() {
+              return Promise.resolve(options.status || { data: null, error: null });
             }
           };
+          return chain;
         }
       };
     }
@@ -107,7 +105,7 @@ function mockSupabase(options) {
   assert.strictEqual(created.body.stored, true);
   assert.strictEqual(created.body.notified, false);
   assert.strictEqual(created.body.reference, support.createReference(Buffer.from([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])));
-  assert.strictEqual(stored.calls[0].rpc, "consume_support_budget");
+  assert.ok(stored.calls.some(function (call) { return call.rpc === "consume_support_budget"; }));
 
   const limited = mockRes();
   await handler({
@@ -132,11 +130,11 @@ function mockSupabase(options) {
   assert.strictEqual(tooMany.body.stored, false);
 
   process.env.RESEND_API_KEY = "re_test_not_a_real_key";
-  let sent = null;
+  const sent = [];
   const mailing = support.createSupportRequestHandler({
     createSupabase: function () { return mockSupabase({}); },
     fetchImpl: async function (url, init) {
-      sent = { url, body: JSON.parse(init.body) };
+      sent.push({ url, body: JSON.parse(init.body) });
       return { ok: true };
     }
   });
@@ -147,8 +145,40 @@ function mockSupabase(options) {
     body: requestBody()
   }, notified);
   assert.strictEqual(notified.body.notified, true);
-  assert.strictEqual(sent.body.to[0], "info@havkar.online");
-  assert.ok(!sent.body.html.includes(process.env.RESEND_API_KEY));
+  assert.strictEqual(notified.body.requester_notified, true);
+  assert.strictEqual(sent.length, 2);
+  assert.strictEqual(sent[0].body.to[0], "info@havkar.online");
+  assert.strictEqual(sent[1].body.to[0], "mina@example.com");
+  assert.ok(sent[1].body.html.includes(notified.body.reference));
+  assert.ok(!sent[1].body.html.includes("could not sign in"));
+  assert.ok(!sent[0].body.html.includes(process.env.RESEND_API_KEY));
+
+  const duplicateCalls = [];
+  const duplicateHandler = support.createSupportRequestHandler({
+    createSupabase: function () {
+      return mockSupabase({
+        recent: {
+          data: [{ reference: "KEEPME1234", message: requestBody().message }],
+          error: null
+        }
+      });
+    },
+    fetchImpl: async function () {
+      duplicateCalls.push(true);
+      return { ok: true };
+    }
+  });
+  const duplicate = mockRes();
+  await duplicateHandler({
+    method: "POST",
+    headers: { "x-forwarded-for": "203.0.113.14" },
+    body: requestBody()
+  }, duplicate);
+  assert.strictEqual(duplicate.statusCode, 200);
+  assert.strictEqual(duplicate.body.duplicate, true);
+  assert.strictEqual(duplicate.body.reference, "KEEPME1234");
+  assert.strictEqual(duplicate.body.notified, false);
+  assert.strictEqual(duplicateCalls.length, 0);
 
   const lookup = support.createSupportRequestHandler({
     createSupabase: function () {
@@ -180,6 +210,8 @@ function mockSupabase(options) {
   const vercel = JSON.parse(fs.readFileSync(path.join(root, "vercel.json"), "utf8"));
   const migration = fs.readFileSync(path.join(root, "supabase/migrations/20261106030000_support_requests.sql"), "utf8");
   const route = fs.readFileSync(path.join(root, "api/business-application-notify.js"), "utf8");
+  assert.ok(page.includes("Password recovery"));
+  assert.ok(page.includes("General support"));
   assert.ok(page.includes('id="supportForm"'));
   assert.ok(page.includes("/api/support-request"));
   assert.ok(page.includes("info@havkar.online"));
