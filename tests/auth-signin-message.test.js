@@ -42,6 +42,15 @@ const signedIn = auth.signupResult({
 });
 assert.strictEqual(signedIn.code, "signed_in");
 
+const limitedMail = auth.authDeliveryFailure({
+  code: "over_request_rate_limit",
+  message: "email rate limit exceeded"
+});
+assert.strictEqual(limitedMail.code, "rate_limited");
+const accepted = auth.confirmationResendResult(null);
+assert.strictEqual(accepted.code, "accepted");
+assert.ok(accepted.text.includes("Create Account"));
+
 const login = fs.readFileSync(path.join(__dirname, "../login.html"), "utf8");
 const signup = fs.readFileSync(path.join(__dirname, "../signup.html"), "utf8");
 assert.ok(login.includes("havkar-auth-ui.js"));
@@ -50,6 +59,8 @@ assert.ok(!login.includes("Email or password is incorrect"));
 assert.ok(login.includes('class="google-btn"'));
 assert.ok(login.includes("min-height: 56px"));
 assert.ok(login.includes('prompt: "select_account"'));
+assert.ok(login.includes('id="resendConfirmBtn"'));
+assert.ok(login.includes('type: "signup"'));
 assert.ok(signup.includes("havkar-auth-ui.js"));
 assert.ok(signup.includes("signupResult"));
 assert.ok(signup.includes("min-height:56px"));

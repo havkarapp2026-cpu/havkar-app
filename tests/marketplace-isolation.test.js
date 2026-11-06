@@ -25,6 +25,50 @@ assert.strictEqual(market.isMarketplaceRow({ listing_surface: "marketplace" }), 
 assert.strictEqual(market.isMarketplaceRow({}), true);
 assert.strictEqual(market.isAdvertisingRow({ listing_surface: "marketplace" }), false);
 assert.strictEqual(market.isAdvertisingRow({ listing_surface: "advertising" }), true);
+assert.strictEqual(market.isAdvertisingRow({ category: "shop" }), true);
+assert.strictEqual(market.isAdvertisingRow({ category: "shop", listing_surface: "marketplace" }), false);
+assert.strictEqual(market.isMarketplaceRow({ category: "phone" }), true);
+assert.strictEqual(
+  market.listingSurfaceMissing({ message: "column ads.listing_surface does not exist" }),
+  true
+);
+assert.strictEqual(
+  market.schemaColumnMissing({
+    message: "Could not find the 'video_path' column of 'ads' in the schema cache"
+  }),
+  "video_path"
+);
+assert.deepStrictEqual(
+  market.omitMissingColumn(
+    { title: "Lamp", listing_surface: "marketplace", user_id: "owner" },
+    { message: "Could not find the 'listing_surface' column of 'ads' in the schema cache" }
+  ),
+  { title: "Lamp", user_id: "owner" }
+);
+assert.strictEqual(
+  market.omitMissingColumn(
+    { title: "Lamp", user_id: "owner" },
+    { message: "Could not find the 'user_id' column of 'ads' in the schema cache" }
+  ),
+  null
+);
+assert.deepStrictEqual(market.listingPageRange(1, 24), { from: 24, to: 47 });
+assert.strictEqual(market.listingPageRange(-1, 24), null);
+assert.strictEqual(market.LISTING_PAGE_SIZE, 24);
+const retried = market.nextListingQuery(
+  ["id", "currency", "listing_surface"],
+  true,
+  { message: "column ads.currency does not exist" }
+);
+assert.deepStrictEqual(retried.columns, ["id", "listing_surface"]);
+assert.strictEqual(retried.surfaceFilter, true);
+const withoutSurface = market.nextListingQuery(
+  retried.columns,
+  retried.surfaceFilter,
+  { message: "column ads.listing_surface does not exist" }
+);
+assert.deepStrictEqual(withoutSurface.columns, ["id"]);
+assert.strictEqual(withoutSurface.surfaceFilter, false);
 
 assert.strictEqual(
   market.validateListingVideo({ type: "video/mp4", size: 1000 }, 12).ok,
@@ -128,6 +172,12 @@ assert.ok(buySell.includes('id="maxPrice"'));
 assert.ok(buySell.includes("listingMatchesPriceAndCity"));
 assert.ok(buySell.includes('data-share-id='));
 assert.ok(buySell.includes('window.location.href =\n                    "notifications.html"'));
+assert.ok(buySell.includes('id="loadMoreListings"'));
+assert.ok(buySell.includes("nextListingQuery"));
+assert.ok(buySell.includes("repeat(3,minmax(0,1fr))"));
+assert.ok(!buySell.includes("repeat(4,minmax(0,1fr))"));
+assert.ok(postAd.includes("omitMissingColumn"));
+assert.ok(ads.includes("listingSurfaceMissing"));
 assert.ok(!buySell.includes("Notifications will appear here."));
 
 const sixty = fs.readFileSync(

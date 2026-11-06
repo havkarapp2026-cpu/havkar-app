@@ -19,7 +19,20 @@
   const LISTING_PUBLICATION_FEE = 0;
   const MAX_VIDEO_BYTES = 15 * 1024 * 1024;
   const MAX_VIDEO_SECONDS = 60;
+  const LISTING_PAGE_SIZE = 24;
   const VIDEO_TYPES = ["video/mp4", "video/webm"];
+  const ADVERTISING_CATEGORIES = ["restaurant", "shop", "service", "other"];
+  const OPTIONAL_LISTING_COLUMNS = {
+    listing_surface: true,
+    currency: true,
+    expires_at: true,
+    video_path: true,
+    video_content_type: true,
+    video_bytes: true,
+    video_duration_seconds: true,
+    country_code: true,
+    city: true
+  };
 
   function money(value) {
     return Math.round(value * 100) / 100;
@@ -47,13 +60,120 @@
     };
   }
 
-  function isMarketplaceRow(row) {
-    const surface = row && row.listing_surface;
-    return surface == null || surface === "" || surface === "marketplace";
+  function normalizedCategory(row) {
+    return String(row && row.category || "").trim().toLowerCase();
   }
 
   function isAdvertisingRow(row) {
-    return Boolean(row) && row.listing_surface === "advertising";
+    if (!row) {
+      return false;
+    }
+
+    if (row.listing_surface === "advertising") {
+      return true;
+    }
+
+    if (row.listing_surface === "marketplace") {
+      return false;
+    }
+
+    return ADVERTISING_CATEGORIES.indexOf(normalizedCategory(row)) !== -1;
+  }
+
+  function isMarketplaceRow(row) {
+    if (!row) {
+      return false;
+    }
+
+    if (row.listing_surface === "marketplace") {
+      return true;
+    }
+
+    if (row.listing_surface === "advertising") {
+      return false;
+    }
+
+    return !isAdvertisingRow(row);
+  }
+
+  function schemaColumnMissing(error) {
+    const message = String(
+      (error && (error.message || error.details || error.hint)) || ""
+    ).toLowerCase();
+
+    if (!/does not exist|schema cache|could not find/.test(message)) {
+      return "";
+    }
+
+    const quoted = message.match(/['"]([a-z_][a-z0-9_]*)['"]/);
+
+    if (quoted) {
+      return quoted[1];
+    }
+
+    const dotted = message.match(/column\s+[a-z0-9_]+\.([a-z0-9_]+)\s+does not exist/);
+    return dotted ? dotted[1] : "";
+  }
+
+  function listingSurfaceMissing(error) {
+    if (schemaColumnMissing(error) === "listing_surface") {
+      return true;
+    }
+
+    const message = String(
+      (error && (error.message || error.details || error.hint)) || ""
+    ).toLowerCase();
+
+    return message.includes("listing_surface") &&
+      /does not exist|schema cache|could not find/.test(message);
+  }
+
+  function omitMissingColumn(payload, error) {
+    const column = schemaColumnMissing(error);
+
+    if (!column || !OPTIONAL_LISTING_COLUMNS[column] || !payload || !Object.prototype.hasOwnProperty.call(payload, column)) {
+      return null;
+    }
+
+    const next = {};
+
+    Object.keys(payload).forEach(function (key) {
+      if (key !== column) {
+        next[key] = payload[key];
+      }
+    });
+
+    return next;
+  }
+
+  function nextListingQuery(columns, surfaceFilter, error) {
+    const missing = schemaColumnMissing(error);
+    const list = Array.isArray(columns) ? columns : [];
+
+    if (!missing || !OPTIONAL_LISTING_COLUMNS[missing] || list.indexOf(missing) === -1) {
+      return null;
+    }
+
+    return {
+      columns: list.filter(function (column) {
+        return column !== missing;
+      }),
+      surfaceFilter: missing === "listing_surface" ? false : Boolean(surfaceFilter)
+    };
+  }
+
+  function listingPageRange(page, pageSize) {
+    const size = pageSize === undefined ? LISTING_PAGE_SIZE : pageSize;
+    const index = Number(page);
+
+    if (!Number.isInteger(index) || index < 0 || !Number.isInteger(size) || size < 1 || size > 100) {
+      return null;
+    }
+
+    return {
+      from: index * size,
+      to: index * size + size - 1
+    };
   }
 
   function validateListingVideo(file, durationSeconds) {
@@ -343,6 +463,12 @@
     LISTING_PUBLICATION_FEE,
     MAX_VIDEO_BYTES,
     MAX_VIDEO_SECONDS,
+    LISTING_PAGE_SIZE,
+    schemaColumnMissing,
+    listingSurfaceMissing,
+    omitMissingColumn,
+    nextListingQuery,
+    listingPageRange,
     listingCities,
     listingMatchesPriceAndCity,
     listingShareUrl,

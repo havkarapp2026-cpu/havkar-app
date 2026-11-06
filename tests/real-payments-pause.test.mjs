@@ -58,7 +58,7 @@ const sessionAt = checkout.indexOf("checkout.sessions.create");
 assert.ok(pauseAt > 0);
 assert.ok(pauseAt < stripeInsertAt);
 assert.ok(pauseAt < sessionAt);
-assert.match(checkout, /const stripe = new Stripe\(process\.env\.STRIPE_SECRET_KEY\);/);
+assert.match(checkout, /new Stripe\(process\.env\.STRIPE_SECRET_KEY\)/);
 assert.match(checkout, /allowedCheckoutOrigin/);
 assert.doesNotMatch(checkout, /sk_live_/);
 

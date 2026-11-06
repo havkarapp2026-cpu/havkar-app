@@ -54,6 +54,39 @@
     };
   }
 
+  function authDeliveryFailure(error) {
+    const code = String(
+      (error && (error.code || error.error_code)) || ""
+    ).toLowerCase();
+    const message = String((error && error.message) || "");
+
+    if (
+      code === "over_request_rate_limit" ||
+      /too many requests|rate limit/i.test(message)
+    ) {
+      return {
+        code: "rate_limited",
+        text: "Too many email requests. Wait a moment and try again."
+      };
+    }
+
+    return {
+      code: "unavailable",
+      text: "The email could not be sent. Please try again."
+    };
+  }
+
+  function confirmationResendResult(error) {
+    if (error) {
+      return authDeliveryFailure(error);
+    }
+
+    return {
+      code: "accepted",
+      text: "If this address is waiting for HAVKAR confirmation, another message was requested. Creating a Gmail account does not register it until you use Create Account or Continue with Google."
+    };
+  }
+
   function signupResult(data) {
     const user = data && data.user;
 
@@ -86,6 +119,8 @@
 
   return {
     passwordSignInFailure: passwordSignInFailure,
+    authDeliveryFailure: authDeliveryFailure,
+    confirmationResendResult: confirmationResendResult,
     signupResult: signupResult
   };
 });

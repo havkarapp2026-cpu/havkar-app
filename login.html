@@ -200,6 +200,19 @@ h1 {
     text-align: center;
 }
 
+.resend-btn {
+    width: 100%;
+    min-height: 48px;
+    margin-top: 12px;
+    border: 2px solid #1b5e20;
+    border-radius: 13px;
+    background: #e8f5e9;
+    color: #1b5e20;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
 .reset-btn {
     margin-top: 8px;
     border: none;
@@ -473,6 +486,7 @@ button:disabled {
             <span class="google-label">Continue with Google</span>
         </button>
         <p class="google-help">A new Gmail address is not a HAVKAR password. Use Google here, or create an account.</p>
+        <button id="resendConfirmBtn" class="resend-btn hidden" type="button">Resend confirmation email</button>
 
         <button
             id="forgotBtn"
@@ -675,6 +689,7 @@ const supabase =
 ========================================================= */
 
 const googleBtn = document.getElementById("googleBtn");
+const resendConfirmBtn = document.getElementById("resendConfirmBtn");
 const accountMode = document.getElementById("accountMode");
 const accountEmail = document.getElementById("accountEmail");
 const accountLogout = document.getElementById("accountLogout");
@@ -982,6 +997,38 @@ googleBtn.addEventListener("click", async () => {
     }
 });
 
+resendConfirmBtn.addEventListener("click", async () => {
+    const email = emailInput.value.trim();
+    if (!email) {
+        showMessage("Enter the email address that is waiting for confirmation.", "error");
+        emailInput.focus();
+        return;
+    }
+    resendConfirmBtn.disabled = true;
+    resendConfirmBtn.textContent = "Sending confirmation...";
+    try {
+        const redirectTo = new URL("login.html", window.location.href).href;
+        const { error } = await supabase.auth.resend({
+            type: "signup",
+            email: email,
+            options: { emailRedirectTo: redirectTo }
+        });
+        const result = window.HAVKAR_AUTH_UI
+            ? window.HAVKAR_AUTH_UI.confirmationResendResult(error)
+            : { text: error ? "The email could not be sent. Please try again." : "Confirmation requested." };
+        showMessage(result.text, error ? "error" : "success");
+    } catch (error) {
+        console.error("HAVKAR confirmation resend error:", error);
+        const result = window.HAVKAR_AUTH_UI
+            ? window.HAVKAR_AUTH_UI.confirmationResendResult(error)
+            : { text: "The email could not be sent. Please try again." };
+        showMessage(result.text, "error");
+    } finally {
+        resendConfirmBtn.disabled = false;
+        resendConfirmBtn.textContent = "Resend confirmation email";
+    }
+});
+
 /* =========================================================
    LOGIN
 ========================================================= */
@@ -1021,6 +1068,7 @@ async function login() {
     showMessage("");
     forgotBtn.textContent = "Forgot password?";
     forgotBtn.classList.remove("recovery-highlight");
+    resendConfirmBtn.classList.add("hidden");
 
     try {
 
@@ -1052,6 +1100,7 @@ async function login() {
             showMessage(failure.text, "error");
             forgotBtn.textContent = "Forgot password?";
             forgotBtn.classList.remove("recovery-highlight");
+            resendConfirmBtn.classList.toggle("hidden", failure.code !== "email_not_confirmed");
 
             return;
         }
@@ -1242,8 +1291,11 @@ async function sendPasswordReset() {
                 error
             );
 
+            const delivery = window.HAVKAR_AUTH_UI
+                ? window.HAVKAR_AUTH_UI.authDeliveryFailure(error)
+                : { text: "Password reset could not be started. Please try again." };
             showMessage(
-                "Password reset could not be started. Please try again.",
+                delivery.text,
                 "error"
             );
 

@@ -307,6 +307,24 @@ input:focus-visible{
     white-space:nowrap;
 }
 
+.load-more{
+    display:block;
+    width:min(100%,420px);
+    min-height:48px;
+    margin:18px auto 0;
+    border:2px solid #1b5e20;
+    border-radius:13px;
+    background:#fff;
+    color:#1b5e20;
+    font-size:16px;
+    font-weight:800;
+    cursor:pointer;
+}
+
+.load-more[hidden]{
+    display:none;
+}
+
 .ads-grid{
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
@@ -739,12 +757,6 @@ input:focus-visible{
 
 @media(min-width:950px){
 
-    .ads-grid,
-    .skeleton-grid{
-        grid-template-columns:repeat(4,minmax(0,1fr));
-        gap:20px;
-    }
-
     .main{
         padding-left:28px;
         padding-right:28px;
@@ -1059,6 +1071,10 @@ input:focus-visible{
     aria-live="polite"
 ></section>
 
+<button id="loadMoreListings" class="load-more" type="button" hidden>
+    Load more listings
+</button>
+
 </main>
 
 <button
@@ -1198,7 +1214,11 @@ const state = {
 
     minPrice: "",
 
-    maxPrice: ""
+    maxPrice: "",
+
+    listingPage: 0,
+
+    hasMoreListings: false
 
 };
 
@@ -2598,27 +2618,41 @@ function missingPlaceColumns(
 
 
 async function queryListings(
-    columns
+    options
 ){
 
-    return Promise.race([
+    const page =
+        options.page ||
+        { from: 0, to: 23 };
 
+    let request =
         supabaseClient
             .from("ads")
             .select(
-                columns
-            )
-            .or(
+                options.columns
+            );
+
+    if(options.surfaceFilter){
+
+        request =
+            request.or(
                 "listing_surface.is.null,listing_surface.eq.marketplace"
-            )
+            );
+
+    }
+
+    return Promise.race([
+
+        request
             .order(
                 "created_at",
                 {
                     ascending:false
                 }
             )
-            .limit(
-                50
+            .range(
+                page.from,
+                page.to
             ),
 
         new Promise(
@@ -2645,26 +2679,121 @@ async function queryListings(
 }
 
 
-async function fetchListings(){
+function listingQueryPage(
+    page
+){
+
+    if(
+        window.HAVKAR_MARKETPLACE &&
+        typeof window.HAVKAR_MARKETPLACE.listingPageRange === "function"
+    ){
+
+        return window.HAVKAR_MARKETPLACE.listingPageRange(
+            page,
+            window.HAVKAR_MARKETPLACE.LISTING_PAGE_SIZE
+        );
+
+    }
+
+    return {
+        from: 0,
+        to: 23
+    };
+
+}
+
+
+function syncLoadMore(){
+
+    const button =
+        $("loadMoreListings");
+
+    if(!button){
+
+        return;
+
+    }
+
+    button.hidden =
+        !state.hasMoreListings;
+
+}
+
+
+async function fetchListings(
+    page
+){
 
     initializeSupabase();
 
-    let result =
-        await queryListings(
-            "id,title,category,price,currency,location,country_code,city,description,user_id,created_at,status,listing_surface,expires_at"
+    const range =
+        listingQueryPage(
+            page
         );
 
-    if(
-        result?.error &&
-        missingPlaceColumns(
-            result.error
-        )
+    let columns = [
+        "id",
+        "title",
+        "category",
+        "price",
+        "currency",
+        "location",
+        "country_code",
+        "city",
+        "description",
+        "user_id",
+        "created_at",
+        "status",
+        "listing_surface",
+        "expires_at"
+    ];
+
+    let surfaceFilter =
+        true;
+
+    let result =
+        null;
+
+    for(
+        let attempt = 0;
+        attempt < 8;
+        attempt += 1
     ){
 
         result =
-            await queryListings(
-                "id,title,category,price,location,description,user_id,created_at,status"
+            await queryListings({
+                columns: columns.join(","),
+                surfaceFilter: surfaceFilter,
+                page: range
+            });
+
+        if(
+            !result?.error ||
+            !window.HAVKAR_MARKETPLACE
+        ){
+
+            break;
+
+        }
+
+        const next =
+            window.HAVKAR_MARKETPLACE.nextListingQuery(
+                columns,
+                surfaceFilter,
+                result.error
             );
+
+        if(!next){
+
+            break;
+
+        }
+
+        columns =
+            next.columns;
+
+        surfaceFilter =
+            next.surfaceFilter;
 
     }
 
@@ -3620,7 +3749,9 @@ async function loadListings(){
     try{
 
         const ads =
-            await fetchListings();
+            await fetchListings(
+                0
+            );
 
         if(
             requestId !==
@@ -3630,6 +3761,17 @@ async function loadListings(){
             return;
 
         }
+
+        state.listingPage =
+            0;
+
+        state.hasMoreListings =
+            ads.length ===
+            (
+                window.HAVKAR_MARKETPLACE
+                    ? window.HAVKAR_MARKETPLACE.LISTING_PAGE_SIZE
+                    : 24
+            );
 
         state.ads =
             ads;
@@ -3658,6 +3800,8 @@ async function loadListings(){
 
         applyFilters();
 
+        syncLoadMore();
+
     }catch(error){
 
         if(
@@ -3679,6 +3823,11 @@ async function loadListings(){
 
         state.filteredAds =
             [];
+
+        state.hasMoreListings =
+            false;
+
+        syncLoadMore();
 
         $("adsGrid")
             .innerHTML =
@@ -4015,12 +4164,136 @@ function setupSearch(){
    RETRY
    ========================================================= */
 
+async function loadMoreListings(){
+
+    if(
+        state.loading ||
+        !state.hasMoreListings
+    ){
+
+        return;
+
+    }
+
+    const requestId =
+        state.requestId;
+
+    const nextPage =
+        state.listingPage + 1;
+
+    setLoading(
+        true
+    );
+
+    try{
+
+        const ads =
+            await fetchListings(
+                nextPage
+            );
+
+        if(
+            requestId !==
+            state.requestId
+        ){
+
+            return;
+
+        }
+
+        const seen =
+            new Set(
+                state.ads.map(
+                    function(ad){
+
+                        return String(
+                            ad && ad.id || ""
+                        );
+
+                    }
+                )
+            );
+
+        ads.forEach(
+            function(ad){
+
+                const id =
+                    String(
+                        ad && ad.id || ""
+                    );
+
+                if(
+                    id &&
+                    !seen.has(id)
+                ){
+
+                    seen.add(id);
+                    state.ads.push(ad);
+
+                }
+
+            }
+        );
+
+        state.listingPage =
+            nextPage;
+
+        state.hasMoreListings =
+            ads.length ===
+            (
+                window.HAVKAR_MARKETPLACE
+                    ? window.HAVKAR_MARKETPLACE.LISTING_PAGE_SIZE
+                    : 24
+            );
+
+        applyFilters();
+
+        syncLoadMore();
+
+    }catch(error){
+
+        console.error(
+            "[HAVKAR] More listings failed:",
+            error
+        );
+
+        showStatus(
+            "error",
+            getErrorMessage(
+                error
+            )
+        );
+
+    }finally{
+
+        if(
+            requestId ===
+            state.requestId
+        ){
+
+            setLoading(
+                false
+            );
+
+        }
+
+    }
+
+}
+
+
 function setupRetry(){
 
     $("retryButton")
         .addEventListener(
             "click",
             loadListings
+        );
+
+    $("loadMoreListings")
+        .addEventListener(
+            "click",
+            loadMoreListings
         );
 
 }
