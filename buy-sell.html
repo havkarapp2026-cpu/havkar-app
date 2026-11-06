@@ -325,10 +325,31 @@ input:focus-visible{
     display:none;
 }
 
-.ads-grid{
+.ads-grid,
+.skeleton-grid{
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
     gap:13px;
+}
+
+.ads-grid.is-explore,
+.skeleton-grid.is-explore{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:8px;
+}
+
+.ads-grid.is-explore .ad-card,
+.skeleton-grid.is-explore .skeleton-card{
+    border-radius:10px;
+}
+
+.ads-grid.is-explore .ad-meta,
+.ads-grid.is-explore .ad-actions{
+    display:none;
+}
+
+.ads-grid.is-explore .ad-image{
+    aspect-ratio:1 / 1;
 }
 
 /* CARD */
@@ -743,16 +764,6 @@ input:focus-visible{
 .toast.show{
     opacity:1;
     transform:translate(-50%,0);
-}
-
-@media(min-width:650px){
-
-    .ads-grid,
-    .skeleton-grid{
-        grid-template-columns:repeat(3,minmax(0,1fr));
-        gap:18px;
-    }
-
 }
 
 @media(min-width:950px){
@@ -1198,6 +1209,8 @@ const state = {
 
     savedOnly: false,
 
+    exploreMode: false,
+
     savedIds: new Set(),
 
     currentUserId: null,
@@ -1623,6 +1636,8 @@ function renderCategories(){
                 `
             )
             .join("");
+
+    refreshTranslatedLabels();
 
     $("filters")
         .querySelectorAll(
@@ -2185,6 +2200,9 @@ async function showSavedListings(){
     state.savedOnly =
         true;
 
+    state.exploreMode =
+        true;
+
     state.category =
         "All";
 
@@ -2199,6 +2217,10 @@ async function showSavedListings(){
         .classList.remove(
             "visible"
         );
+
+    setActiveNav(
+        "navSaved"
+    );
 
     renderCategories();
 
@@ -3709,14 +3731,19 @@ function applyFilters(){
                 state.city ||
                 state.minPrice !== "" ||
                 state.maxPrice !== "" ||
-                category !== "All"
+                category !== "All" ||
+                state.exploreMode
                     ? "Search results"
                     : "Latest listings"
             );
 
+    updateListingLayout();
+
     renderAds(
         state.filteredAds
     );
+
+    refreshTranslatedLabels();
 
 }
 
@@ -3893,10 +3920,188 @@ function openAd(
 }
 
 
-function goHome(){
+function goAppHome(){
 
     window.location.href =
         "index.html";
+
+}
+
+
+function setActiveNav(id){
+
+    document
+        .querySelectorAll(
+            ".nav-item"
+        )
+        .forEach(
+            item => {
+
+                item.classList.toggle(
+                    "active",
+                    item.id === id
+                );
+
+            }
+        );
+
+}
+
+
+function updateListingLayout(){
+
+    const explore =
+        state.exploreMode === true ||
+        state.savedOnly === true ||
+        Boolean(
+            state.search
+        ) ||
+        (
+            state.category &&
+            state.category !== "All"
+        ) ||
+        Boolean(
+            state.city
+        ) ||
+        state.minPrice !== "" ||
+        state.maxPrice !== "";
+
+    [
+        "adsGrid",
+        "skeletonGrid"
+    ]
+        .forEach(
+            id => {
+
+                const node =
+                    $(
+                        id
+                    );
+
+                if(
+                    node
+                ){
+
+                    node.classList.toggle(
+                        "is-explore",
+                        explore
+                    );
+
+                }
+
+            }
+        );
+
+}
+
+
+function refreshTranslatedLabels(){
+
+    if(
+        !window.HAVKAR_I18N
+    ){
+
+        return;
+
+    }
+
+    if(
+        typeof window.HAVKAR_I18N.refresh ===
+            "function"
+    ){
+
+        window.HAVKAR_I18N.refresh();
+
+        return;
+
+    }
+
+    if(
+        typeof window.HAVKAR_I18N.translatePage ===
+            "function"
+    ){
+
+        window.HAVKAR_I18N.translatePage();
+
+    }
+
+}
+
+
+function goMarketplaceHome(){
+
+    state.savedOnly =
+        false;
+
+    state.exploreMode =
+        false;
+
+    state.category =
+        "All";
+
+    state.search =
+        "";
+
+    state.city =
+        "";
+
+    state.minPrice =
+        "";
+
+    state.maxPrice =
+        "";
+
+    $("searchInput")
+        .value =
+        "";
+
+    $("clearSearch")
+        .classList.remove(
+            "visible"
+        );
+
+    if(
+        $("cityFilter")
+    ){
+
+        $("cityFilter")
+            .value =
+            "";
+
+    }
+
+    if(
+        $("minPrice")
+    ){
+
+        $("minPrice")
+            .value =
+            "";
+
+    }
+
+    if(
+        $("maxPrice")
+    ){
+
+        $("maxPrice")
+            .value =
+            "";
+
+    }
+
+    setActiveNav(
+        "navHome"
+    );
+
+    applyFilters();
+
+}
+
+
+function goHome(){
+
+    goAppHome();
 
 }
 
@@ -3921,6 +4126,33 @@ function goMessages(){
    NAVIGATION SETUP
    ========================================================= */
 
+function applyShotModeFromQuery(){
+
+    const params =
+        new URLSearchParams(
+            window.location.search
+        );
+
+    if(
+        params.get(
+            "explore"
+        ) === "1"
+    ){
+
+        state.exploreMode =
+            true;
+
+        setActiveNav(
+            "navSearch"
+        );
+
+        updateListingLayout();
+
+    }
+
+}
+
+
 function setupNavigation(){
 
     $("backButton")
@@ -3928,7 +4160,17 @@ function setupNavigation(){
             "click",
             () => {
 
-                goHome();
+                if(
+                    window.havkarNavigateBack
+                ){
+
+                    window.havkarNavigateBack();
+
+                    return;
+
+                }
+
+                goAppHome();
 
             }
         );
@@ -3966,7 +4208,7 @@ function setupNavigation(){
             "click",
             () => {
 
-                goHome();
+                goMarketplaceHome();
 
             }
         );
@@ -3978,6 +4220,17 @@ function setupNavigation(){
 
                 state.savedOnly =
                     false;
+
+                state.exploreMode =
+                    true;
+
+                setActiveNav(
+                    "navSearch"
+                );
+
+                updateListingLayout();
+
+                applyFilters();
 
                 $("searchInput")
                     .focus();
@@ -4366,6 +4619,8 @@ async function boot(){
         renderCountryFilter();
 
         setupNavigation();
+
+applyShotModeFromQuery();
 
         setupSearch();
 

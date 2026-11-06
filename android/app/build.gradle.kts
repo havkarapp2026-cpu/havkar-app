@@ -15,10 +15,38 @@ android {
         versionName = "1.0.0-beta"
     }
 
+    signingConfigs {
+        create("release") {
+            val storeFilePath = System.getenv("HAVKAR_UPLOAD_STORE_FILE")
+            val storePasswordValue = System.getenv("HAVKAR_UPLOAD_STORE_PASSWORD")
+            val keyAliasValue = System.getenv("HAVKAR_UPLOAD_KEY_ALIAS")
+            val keyPasswordValue = System.getenv("HAVKAR_UPLOAD_KEY_PASSWORD")
+
+            if (
+                !storeFilePath.isNullOrBlank() &&
+                !storePasswordValue.isNullOrBlank() &&
+                !keyAliasValue.isNullOrBlank() &&
+                !keyPasswordValue.isNullOrBlank()
+            ) {
+                storeFile = file(storeFilePath)
+                storePassword = storePasswordValue
+                keyAlias = keyAliasValue
+                keyPassword = keyPasswordValue
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
             isShrinkResources = false
+            val releaseSigning = signingConfigs.findByName("release")
+            if (
+                releaseSigning != null &&
+                releaseSigning.storeFile != null
+            ) {
+                signingConfig = releaseSigning
+            }
         }
     }
 
