@@ -75,13 +75,15 @@ Do not submit an IARC questionnaire from this file. The owner must answer it in 
 
 ## Google Play app access
 
+Full instructions: `store/PLAY_APP_ACCESS.md`.
+
 The review account is an existing confirmed email account. It has no admin role. Its password is not stored in this repository. Enter that existing password in Play Console.
 
 ```
 amirjalilnia01@gmail.com
 ```
 
-After this change is deployed, the server recognizes only that confirmed account and grants a test entitlement for HAVKAR AI text limits and 1K logo and image generation. The entitlement does not turn on card payments, Pi payments, Stellar mainnet, subscription checkout, or admin tools. Until the deploy is approved, paid image generation on the live site stays paused for every account.
+Production status (verified): email confirmed; provider email only; `havkar_private.play_review_business` returns true; migration `play_review_entitlement` applied; Edge Function `havkar-ai-assistant` version 15 serves main commit `6df8897` with Play review policy. The entitlement grants a test business AI budget (including image monthly limit 80) and does not turn on card payments, Pi payments, Stellar mainnet, subscription checkout, or admin tools.
 
 ## Screenshots
 
@@ -93,4 +95,6 @@ Do not invent store screenshots. Capture them from a signed build or from the pu
 2. Create the Apple Developer team, distribution certificate, and App Store provisioning profile; turn signing back on in Xcode.
 3. Upload AAB to Play Console closed testing and IPA/TestFlight to App Store Connect.
 4. Complete Data safety, content rating, and store listing forms in each console.
-5. Paste the review account password for `amirjalilnia01@gmail.com` into Play App Access after PR #118 is approved, deployed, and its migration is applied.
+5. Paste the review account password for `amirjalilnia01@gmail.com` into Play App Access (backend entitlement already live; see `store/PLAY_APP_ACCESS.md`).
+6. Confirm Apple Developer team + signing on a Mac before TestFlight.
+7. Decide and submit SCF application only after updating PR #84 for Mainnet-off wording (`docs/scf/SCF-FUNDING-READINESS-20261106.md`).
