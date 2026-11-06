@@ -271,6 +271,23 @@ button:focus-visible{
     backdrop-filter:blur(8px);
 }
 
+.gallery-share{
+    position:absolute;
+    top:12px;
+    right:66px;
+    z-index:10;
+    width:46px;
+    height:46px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:50%;
+    background:rgba(255,255,255,.96);
+    color:#2e7d32;
+    box-shadow:0 4px 15px rgba(0,0,0,.18);
+    cursor:pointer;
+}
+
 .gallery-save{
     position:absolute;
     top:12px;
@@ -956,6 +973,15 @@ button:focus-visible{
                 >
 
                 <button
+                    id="galleryShare"
+                    class="gallery-share"
+                    type="button"
+                    aria-label="Share listing"
+                >
+                    <i class="fas fa-share-nodes"></i>
+                </button>
+
+                <button
                     id="gallerySave"
                     class="gallery-save"
                     type="button"
@@ -981,6 +1007,13 @@ button:focus-visible{
                 style="display:none;"
             ></div>
 
+            <video
+                id="listingVideo"
+                controls
+                playsinline
+                style="display:none;width:100%;max-height:320px;margin-top:12px"
+            ></video>
+
         </div>
 
         <section class="detail-card">
@@ -994,6 +1027,10 @@ button:focus-visible{
                 </span>
 
             </div>
+
+            <button id="xlmQuoteButton" type="button" hidden>
+                XLM Testnet quote
+            </button>
 
             <h2 id="title" class="title">
                 Loading...
@@ -1379,6 +1416,8 @@ button:focus-visible{
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-ad-publish.js"></script>
+<script src="/havkar-marketplace.js"></script>
+<script src="/havkar-xlm-checkout.js"></script>
 <script>
 "use strict";
 
@@ -1625,7 +1664,7 @@ function normalizePhotos(value){
    PRICE
    ========================================================= */
 
-function formatPrice(value){
+function formatPrice(value, currencyCode){
 
     if(
         value === null ||
@@ -1642,13 +1681,20 @@ function formatPrice(value){
 
     if(Number.isFinite(numeric)){
 
+        const currency =
+            currencyCode === "USD"
+                ? "USD"
+                : "EUR";
+
         return new Intl.NumberFormat(
             "en-US",
             {
+                style: "currency",
+                currency: currency,
                 minimumFractionDigits:0,
                 maximumFractionDigits:2
             }
-        ).format(numeric) + " €";
+        ).format(numeric);
 
     }
 
@@ -2477,6 +2523,7 @@ async function fetchListing(id){
     initializeSupabase();
 
     const columns = [
+        "id,title,category,price,currency,location,country_code,city,description,user_id,created_at,photos,status,listing_surface,expires_at,video_path",
         "id,title,category,price,location,country_code,city,description,user_id,created_at,photos,status",
         "id,title,category,price,location,description,user_id,created_at,photos,status"
     ];
@@ -2505,6 +2552,27 @@ async function fetchListing(id){
                 .from("ads")
                 .select(
                     columns[1]
+                )
+                .eq(
+                    "id",
+                    id
+                )
+                .maybeSingle();
+
+    }
+
+    if(
+        result.error &&
+        /listing_surface|expires_at|video_path|currency/i.test(
+            String(result.error.message || result.error.details || "")
+        )
+    ){
+
+        result =
+            await supabaseClient
+                .from("ads")
+                .select(
+                    columns[2]
                 )
                 .eq(
                     "id",
@@ -2609,6 +2677,58 @@ function isPublicListingStatus(
 }
 
 
+async function attachListingVideo(){
+
+    const player =
+        $("listingVideo");
+
+    if(!player){
+
+        return;
+
+    }
+
+    player.removeAttribute("src");
+    player.style.display =
+        "none";
+
+    const ad =
+        state.ad;
+
+    if(
+        !ad ||
+        !ad.video_path ||
+        (
+            window.HAVKAR_MARKETPLACE &&
+            window.HAVKAR_MARKETPLACE.isAdvertisingRow(ad)
+        )
+    ){
+
+        return;
+
+    }
+
+    const signed =
+        await window.HAVKAR_MARKETPLACE.signedListingVideoUrl(
+            supabaseClient,
+            ad.video_path
+        );
+
+    if(!signed.ok || !signed.url){
+
+        return;
+
+    }
+
+    player.src =
+        signed.url;
+
+    player.style.display =
+        "block";
+
+}
+
+
 /* =========================================================
    LISTING RENDER
    ========================================================= */
@@ -2637,9 +2757,28 @@ function renderListing(){
         );
 
     if(
+        window.HAVKAR_MARKETPLACE &&
+        window.HAVKAR_MARKETPLACE.isAdvertisingRow(
+            ad
+        )
+    ){
+
+        throw new Error(
+            "This record is an advertising campaign and is not shown in Buy & Sell."
+        );
+
+    }
+
+    if(
         !viewerOwnsListing &&
-        !isPublicListingStatus(
-            ad.status
+        (
+            !isPublicListingStatus(
+                ad.status
+            ) ||
+            (
+                ad.expires_at &&
+                Date.parse(ad.expires_at) <= Date.now()
+            )
         )
     ){
 
@@ -2655,8 +2794,27 @@ function renderListing(){
 
     $("price").textContent =
         formatPrice(
-            ad.price
+            ad.price,
+            ad.currency
         );
+
+    const xlmButton =
+        $("xlmQuoteButton");
+
+    if(xlmButton){
+
+        xlmButton.hidden =
+            !(
+                Number(ad.price) > 0 &&
+                (
+                    !window.HAVKAR_MARKETPLACE ||
+                    window.HAVKAR_MARKETPLACE.isMarketplaceRow(ad)
+                )
+            );
+
+    }
+
+    attachListingVideo();
 
     const place =
         window.HAVKAR_COUNTRIES
@@ -3102,6 +3260,58 @@ function showError(message){
 /* =========================================================
    NAVIGATION
    ========================================================= */
+
+async function shareCurrentListing(){
+
+    if(
+        !state.ad ||
+        !window.HAVKAR_MARKETPLACE
+    ){
+
+        showToast(
+            "This listing cannot be shared."
+        );
+
+        return;
+
+    }
+
+    const result =
+        await window.HAVKAR_MARKETPLACE.shareListing(
+            window.location.origin,
+            state.ad.id
+        );
+
+    if(result.method === "copy"){
+
+        showToast(
+            "Listing link copied."
+        );
+
+        return;
+
+    }
+
+    if(result.method === "unavailable" && result.url){
+
+        showToast(
+            result.url
+        );
+
+        return;
+
+    }
+
+    if(!result.ok){
+
+        showToast(
+            "This listing cannot be shared."
+        );
+
+    }
+
+}
+
 
 function goBuySell(){
 
@@ -3969,6 +4179,18 @@ async function confirmOwnerDelete(){
 
         }
 
+        if(
+            state.ad.video_path &&
+            window.HAVKAR_MARKETPLACE
+        ){
+
+            await window.HAVKAR_MARKETPLACE.deleteListingVideo(
+                supabaseClient,
+                state.ad.video_path
+            );
+
+        }
+
         window.location.href =
             "buy-sell.html";
 
@@ -4059,6 +4281,66 @@ function setupOwnerActions(){
    NAVIGATION SETUP
    ========================================================= */
 
+async function quoteListingXlm(){
+
+    const ad =
+        state.ad;
+    const amount =
+        Number(ad && ad.price);
+
+    if(
+        !ad ||
+        !Number.isFinite(amount) ||
+        amount <= 0 ||
+        (
+            window.HAVKAR_MARKETPLACE &&
+            !window.HAVKAR_MARKETPLACE.isMarketplaceRow(ad)
+        )
+    ){
+
+        showToast(
+            "This record has no marketplace price for XLM."
+        );
+
+        return;
+
+    }
+
+    const session =
+        await supabaseClient.auth.getSession();
+    const accessToken =
+        session &&
+        session.data &&
+        session.data.session &&
+        session.data.session.access_token;
+
+    if(!accessToken || !window.HAVKAR_XLM){
+
+        showToast(
+            "Sign in before requesting an XLM quote."
+        );
+
+        return;
+
+    }
+
+    const quoted =
+        await window.HAVKAR_XLM.quote({
+            flow: "marketplace",
+            price: amount,
+            subjectId: String(ad.id),
+            accessToken: accessToken
+        });
+
+    showToast(
+        window.HAVKAR_XLM.describe(
+            quoted.result
+        )
+    );
+
+}
+
+
 function setupNavigation(){
 
     $("backButton")
@@ -4084,6 +4366,24 @@ function setupNavigation(){
             "click",
             toggleSaved
         );
+
+    $("galleryShare")
+        .addEventListener(
+            "click",
+            shareCurrentListing
+        );
+
+    const xlmButton =
+        $("xlmQuoteButton");
+
+    if(xlmButton){
+
+        xlmButton.addEventListener(
+            "click",
+            quoteListingXlm
+        );
+
+    }
 
     $("saveButton")
         .addEventListener(

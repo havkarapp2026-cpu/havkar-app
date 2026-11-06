@@ -1720,6 +1720,10 @@ textarea.form-control {
                         Cash / manual
                     </option>
 
+                    <option value="xlm">
+                        XLM Testnet, one-time
+                    </option>
+
                 </select>
 
             </div>
@@ -2294,6 +2298,7 @@ textarea.form-control {
 
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-services.js"></script>
+<script src="/havkar-xlm-checkout.js"></script>
 <script>
 
 /* =========================================================
@@ -3033,6 +3038,38 @@ async function submitBooking(event) {
 
     if (payment === "cash") {
         payload.payment_method = "cash";
+    }
+
+    if (payment === "xlm") {
+        const servicePrice = Number(selectedBookingService.price);
+        const priceType = String(selectedBookingService.price_type || "").toLowerCase();
+        const recurring = ["hour", "day", "week", "month"].indexOf(priceType) !== -1;
+        const session = await db.auth.getSession();
+        const accessToken = session && session.data && session.data.session
+            ? session.data.session.access_token
+            : "";
+
+        if (!accessToken || !window.HAVKAR_XLM || !Number.isFinite(servicePrice) || servicePrice <= 0) {
+            setButtonBusy(submitButton, false, "Confirm Booking");
+            showToast("XLM needs a signed-in customer and a positive listed price. Nothing was collected.");
+            return;
+        }
+
+        const quoted = await window.HAVKAR_XLM.quote({
+            flow: recurring ? "subscription" : "services",
+            price: servicePrice,
+            subjectId: String(selectedBookingService.id),
+            accessToken: accessToken
+        });
+
+        if (!quoted.result || quoted.result.order_paid === true || quoted.result.payable !== true) {
+            setButtonBusy(submitButton, false, "Confirm Booking");
+            showToast(window.HAVKAR_XLM.describe(quoted.result));
+            return;
+        }
+
+        payload.payment_method = "online";
+        payload.status = "pending";
     }
 
     const inserted = await db

@@ -1505,6 +1505,7 @@
     <script src="/havkar-supabase-config.js"></script>
     <script src="/havkar-ad-images.js"></script>
     <script src="/havkar-ad-publish.js"></script>
+    <script src="/havkar-marketplace.js"></script>
 <script>
 
         const SUPABASE_URL =
@@ -1762,7 +1763,11 @@
                 await supabaseClient
                     .from(ADS_TABLE)
                     .select(
-                        "id,created_at,title,category,price,location,description,user_id,photos,status"
+                        "id,created_at,title,category,price,location,description,user_id,photos,status,listing_surface"
+                    )
+                    .eq(
+                        "listing_surface",
+                        "advertising"
                     )
                     .order(
                         "created_at",
@@ -1770,6 +1775,43 @@
                             ascending: false
                         }
                     );
+
+            if (
+                error &&
+                window.HAVKAR_MARKETPLACE &&
+                window.HAVKAR_MARKETPLACE.listingSurfaceMissing(
+                    error
+                )
+            ) {
+
+                const legacy =
+                    await supabaseClient
+                        .from(ADS_TABLE)
+                        .select(
+                            "id,created_at,title,category,price,location,description,user_id,photos,status"
+                        )
+                        .order(
+                            "created_at",
+                            {
+                                ascending: false
+                            }
+                        );
+
+                if (legacy.error) {
+
+                    throw legacy.error;
+
+                }
+
+                adsData =
+                    (Array.isArray(legacy.data) ? legacy.data : [])
+                        .filter(function (row) {
+                            return window.HAVKAR_MARKETPLACE.isAdvertisingRow(row);
+                        });
+
+                return adsData;
+
+            }
 
             if (error) {
 
@@ -3483,7 +3525,10 @@
                         photos,
 
                     status:
-                        "active"
+                        "active",
+
+                    listing_surface:
+                        "advertising"
 
                 };
 

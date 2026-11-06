@@ -1654,6 +1654,7 @@
 </script>
 
     <script src="/havkar-supabase-config.js"></script>
+    <script src="/havkar-xlm-checkout.js"></script>
 <script>
 /* =========================
    APPROVED DRIVER JOBS
@@ -1710,6 +1711,7 @@
                         <div class="meta-item"><i class="fas fa-box"></i>${escapeHtml(item.package_details)}</div>
                         <div class="meta-item"><i class="fas fa-calendar"></i>${escapeHtml(formatDateTime(item.created_at))}</div>
                         <div class="meta-item"><i class="fas fa-euro-sign"></i>${escapeHtml(formatMoney(item.price, item.currency))}</div>
+                        ${mine && Number(item.price) > 0 ? `<button type="button" onclick="quoteDeliveryXlm(${Number(item.id)}, ${Number(item.price)})">XLM Testnet quote</button>` : ""}
                     </div>
                     ${actionHtml}
                 </article>`;
@@ -1862,6 +1864,27 @@
             );
         }
 
+
+        async function quoteDeliveryXlm(id, price) {
+            const session = await havkarSupabase.auth.getSession();
+            const accessToken = session && session.data && session.data.session
+                ? session.data.session.access_token
+                : "";
+
+            if (!accessToken || !window.HAVKAR_XLM || !(Number(price) > 0)) {
+                showToast("XLM needs a signed-in customer and a delivery price. The delivery status was not changed.", "error");
+                return;
+            }
+
+            const quoted = await window.HAVKAR_XLM.quote({
+                flow: "delivery",
+                price: Number(price),
+                subjectId: String(id),
+                accessToken: accessToken
+            });
+
+            showToast(window.HAVKAR_XLM.describe(quoted.result), quoted.result && quoted.result.payable ? "success" : "error");
+        }
 
         function formatMoney(price, currency = "EUR") {
 
