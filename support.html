@@ -1207,13 +1207,13 @@ textarea:focus-visible{
         <label for="supportTopic">Topic</label>
         <select id="supportTopic" name="topic" required>
             <option value="login_registration">Login and registration</option>
-            <option value="account_recovery">Account recovery</option>
+            <option value="account_recovery">Password recovery</option>
             <option value="technical">Technical problem</option>
             <option value="payment">Payment issue</option>
             <option value="marketplace_dispute">Marketplace dispute</option>
-            <option value="privacy">Privacy request</option>
+            <option value="privacy">Privacy and personal data</option>
             <option value="account_deletion">Account deletion assistance</option>
-            <option value="other">Other</option>
+            <option value="other">General support</option>
         </select>
         <label for="supportName">Name</label>
         <input id="supportName" name="name" type="text" maxlength="80" autocomplete="name" required>
@@ -2460,9 +2460,11 @@ document.getElementById("supportForm").addEventListener("submit", async function
             throw new Error(payload.error || "The support request could not be sent.");
         }
         result.className = "support-result success";
-        result.textContent = payload.notified
-            ? "Request stored. Reference " + payload.reference + ". HAVKAR was notified at info@havkar.online."
-            : "Request stored. Reference " + payload.reference + ". Email notification is not confirmed yet.";
+        result.textContent = payload.duplicate
+            ? "This request is already stored. Reference " + payload.reference + "."
+            : payload.requester_notified
+            ? "Request stored. Reference " + payload.reference + ". A confirmation was sent to your email."
+            : "Request stored. Reference " + payload.reference + ". Email confirmation is not confirmed yet.";
         document.getElementById("trackReference").value = payload.reference;
     } catch (error) {
         result.className = "support-result error";
