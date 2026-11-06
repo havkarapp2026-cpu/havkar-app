@@ -29,11 +29,13 @@ The native screens load the real web app. They are not a separate rewrite of eve
 ## Android artifacts
 
 - Debug APK: signed only with the local Android debug key. It is not a Play upload key.
-- Release AAB: `android/app/build.gradle.kts` reads signing from environment variables when all four are set:
+- Cloud release AAB: GitHub Actions workflow `Android release AAB` (`.github/workflows/android-release-aab.yml`). Owner steps and secret names: `store/ANDROID_CLOUD_BUILD.md`. The workflow does not publish to Play.
+- Release AAB signing: `android/app/build.gradle.kts` reads signing from environment variables when all four are set:
   - `HAVKAR_UPLOAD_STORE_FILE`
   - `HAVKAR_UPLOAD_STORE_PASSWORD`
   - `HAVKAR_UPLOAD_KEY_ALIAS`
   - `HAVKAR_UPLOAD_KEY_PASSWORD`
+- Repository secret `HAVKAR_UPLOAD_KEYSTORE_BASE64` supplies the keystore bytes to Actions; the runner writes a temp file for `HAVKAR_UPLOAD_STORE_FILE`.
 - Without those values the release build stays unsigned. Do not invent an upload keystore in the repository.
 
 ## iOS
