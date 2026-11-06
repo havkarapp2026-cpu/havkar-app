@@ -55,31 +55,20 @@ https://github.com/havkarapp2026-cpu/havkar-app/actions/workflows/android-releas
 5. When green, open the run → Artifacts → download `havkar-app-release-signed-<run_id>`.
 6. Upload that AAB in Play Console Closed testing only when the owner approves publish.
 
-## Create an upload keystore on a Samsung tablet (Termux)
+## Create an upload keystore
 
-Only if you do **not** already have a Play upload key. Keep the file and passwords offline (password manager). Do not email them.
+If Play Console / GitHub already has a usable upload key for `online.havkar.app`, use that key. Do not generate a second one.
 
-1. Install **Termux** from a trusted source (F-Droid recommended).
-2. In Termux:
+Preferred path when Termux `keytool` is unavailable (for example OpenJDK crashes on Android 16):
 
-```
-pkg update
-pkg install openjdk-17
-keytool -genkeypair -v -keystore havkar-upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias havkar-upload
-```
+1. Read and approve `store/ANDROID_KEYSTORE_SECURITY.md`.
+2. Create an **age** identity on the tablet (no Java).
+3. Set secret `HAVKAR_UPLOAD_BACKUP_AGE_RECIPIENT` to the public `age1...` line only.
+4. After explicit owner approval, run workflow **Android upload keystore** with confirmation `CREATE_NEW_UPLOAD_KEY`.
+5. Download the `.age` artifact, decrypt on the tablet, set the four `HAVKAR_UPLOAD_*` secrets.
+6. Build with **Android release AAB** → `signed`.
 
-3. Answer the prompts. Remember store password, key password, and alias `havkar-upload` (or the alias you typed).
-4. Encode for the GitHub secret (still in Termux):
-
-```
-base64 -w 0 havkar-upload.jks > havkar-upload.b64
-```
-
-5. Copy the `.b64` text into GitHub secret `HAVKAR_UPLOAD_KEYSTORE_BASE64` using the tablet browser.
-6. Store the three password/alias secrets the same way.
-7. Keep `havkar-upload.jks` backed up offline. Losing it blocks updates unless Play App Signing recovery applies.
-
-If Play Console already issued an upload key for `online.havkar.app`, use that key instead of generating a new one.
+The generator refuses to run if any upload secret already exists. It never uploads a plaintext keystore.
 
 ## Agent / CI limitations
 
