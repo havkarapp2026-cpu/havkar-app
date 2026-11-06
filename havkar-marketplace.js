@@ -18,8 +18,21 @@
   const SELLER_FEE_RATE = 0.03;
   const LISTING_PUBLICATION_FEE = 0;
   const MAX_VIDEO_BYTES = 15 * 1024 * 1024;
-  const MAX_VIDEO_SECONDS = 30;
+  const MAX_VIDEO_SECONDS = 60;
+  const LISTING_PAGE_SIZE = 24;
   const VIDEO_TYPES = ["video/mp4", "video/webm"];
+  const ADVERTISING_CATEGORIES = ["restaurant", "shop", "service", "other"];
+  const OPTIONAL_LISTING_COLUMNS = {
+    listing_surface: true,
+    currency: true,
+    expires_at: true,
+    video_path: true,
+    video_content_type: true,
+    video_bytes: true,
+    video_duration_seconds: true,
+    country_code: true,
+    city: true
+  };
 
   function money(value) {
     return Math.round(value * 100) / 100;
@@ -47,13 +60,120 @@
     };
   }
 
-  function isMarketplaceRow(row) {
-    const surface = row && row.listing_surface;
-    return surface == null || surface === "" || surface === "marketplace";
+  function normalizedCategory(row) {
+    return String(row && row.category || "").trim().toLowerCase();
   }
 
   function isAdvertisingRow(row) {
-    return Boolean(row) && row.listing_surface === "advertising";
+    if (!row) {
+      return false;
+    }
+
+    if (row.listing_surface === "advertising") {
+      return true;
+    }
+
+    if (row.listing_surface === "marketplace") {
+      return false;
+    }
+
+    return ADVERTISING_CATEGORIES.indexOf(normalizedCategory(row)) !== -1;
+  }
+
+  function isMarketplaceRow(row) {
+    if (!row) {
+      return false;
+    }
+
+    if (row.listing_surface === "marketplace") {
+      return true;
+    }
+
+    if (row.listing_surface === "advertising") {
+      return false;
+    }
+
+    return !isAdvertisingRow(row);
+  }
+
+  function schemaColumnMissing(error) {
+    const message = String(
+      (error && (error.message || error.details || error.hint)) || ""
+    ).toLowerCase();
+
+    if (!/does not exist|schema cache|could not find/.test(message)) {
+      return "";
+    }
+
+    const quoted = message.match(/['"]([a-z_][a-z0-9_]*)['"]/);
+
+    if (quoted) {
+      return quoted[1];
+    }
+
+    const dotted = message.match(/column\s+[a-z0-9_]+\.([a-z0-9_]+)\s+does not exist/);
+    return dotted ? dotted[1] : "";
+  }
+
+  function listingSurfaceMissing(error) {
+    if (schemaColumnMissing(error) === "listing_surface") {
+      return true;
+    }
+
+    const message = String(
+      (error && (error.message || error.details || error.hint)) || ""
+    ).toLowerCase();
+
+    return message.includes("listing_surface") &&
+      /does not exist|schema cache|could not find/.test(message);
+  }
+
+  function omitMissingColumn(payload, error) {
+    const column = schemaColumnMissing(error);
+
+    if (!column || !OPTIONAL_LISTING_COLUMNS[column] || !payload || !Object.prototype.hasOwnProperty.call(payload, column)) {
+      return null;
+    }
+
+    const next = {};
+
+    Object.keys(payload).forEach(function (key) {
+      if (key !== column) {
+        next[key] = payload[key];
+      }
+    });
+
+    return next;
+  }
+
+  function nextListingQuery(columns, surfaceFilter, error) {
+    const missing = schemaColumnMissing(error);
+    const list = Array.isArray(columns) ? columns : [];
+
+    if (!missing || !OPTIONAL_LISTING_COLUMNS[missing] || list.indexOf(missing) === -1) {
+      return null;
+    }
+
+    return {
+      columns: list.filter(function (column) {
+        return column !== missing;
+      }),
+      surfaceFilter: missing === "listing_surface" ? false : Boolean(surfaceFilter)
+    };
+  }
+
+  function listingPageRange(page, pageSize) {
+    const size = pageSize === undefined ? LISTING_PAGE_SIZE : pageSize;
+    const index = Number(page);
+
+    if (!Number.isInteger(index) || index < 0 || !Number.isInteger(size) || size < 1 || size > 100) {
+      return null;
+    }
+
+    return {
+      from: index * size,
+      to: index * size + size - 1
+    };
   }
 
   function validateListingVideo(file, durationSeconds) {
@@ -76,7 +196,7 @@
     if (!Number.isFinite(duration) || duration <= 0 || duration > MAX_VIDEO_SECONDS) {
       return {
         ok: false,
-        error: "Short videos must be 30 seconds or shorter. HAVKAR does not transcode video."
+        error: "Short videos must be 60 seconds or shorter. HAVKAR does not transcode video."
       };
     }
 
@@ -217,12 +337,142 @@
     return { ok: true, url: url };
   }
 
+  function listingCities(rows) {
+    const seen = new Set();
+    const cities = [];
+
+    (rows || []).forEach(function (row) {
+      const city = String(row && row.city || "").trim();
+      const key = city.toLowerCase();
+
+      if (!city || seen.has(key)) {
+        return;
+      }
+
+      seen.add(key);
+      cities.push(city);
+    });
+
+    cities.sort(function (left, right) {
+      return left.localeCompare(right);
+    });
+
+    return cities;
+  }
+
+  function priceBound(value) {
+    if (value == null || String(value).trim() === "") {
+      return null;
+    }
+
+    const amount = Number(value);
+
+    if (!Number.isFinite(amount) || amount < 0) {
+      return { ok: false };
+    }
+
+    return { ok: true, value: amount };
+  }
+
+  function listingMatchesPriceAndCity(row, filters) {
+    const input = filters || {};
+    const city = String(input.city || "").trim().toLowerCase();
+
+    if (city && String(row && row.city || "").trim().toLowerCase() !== city) {
+      return false;
+    }
+
+    const min = priceBound(input.minPrice);
+    const max = priceBound(input.maxPrice);
+
+    if ((min && min.ok === false) || (max && max.ok === false)) {
+      return false;
+    }
+
+    if (min && max && min.ok && max.ok && min.value > max.value) {
+      return false;
+    }
+
+    const price = Number(row && row.price);
+    const hasPrice = Number.isFinite(price);
+
+    if (min && min.ok && (!hasPrice || price < min.value)) {
+      return false;
+    }
+
+    if (max && max.ok && (!hasPrice || price > max.value)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  function listingShareUrl(origin, id) {
+    const listingId = String(id || "").trim();
+
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(listingId)) {
+      return "";
+    }
+
+    let base;
+
+    try {
+      base = new URL(String(origin || ""));
+    } catch (error) {
+      return "";
+    }
+
+    if (base.protocol !== "https:" && base.protocol !== "http:") {
+      return "";
+    }
+
+    return base.origin + "/ad-details.html?id=" + encodeURIComponent(listingId);
+  }
+
+  async function shareListing(origin, id, navigatorLike) {
+    const url = listingShareUrl(origin, id);
+
+    if (!url) {
+      return { ok: false, method: "rejected", url: "" };
+    }
+
+    const nav = navigatorLike || (typeof navigator === "undefined" ? null : navigator);
+
+    if (nav && typeof nav.share === "function") {
+      try {
+        await nav.share({ title: "HAVKAR listing", url: url });
+        return { ok: true, method: "share", url: url };
+      } catch (error) {
+        if (error && error.name === "AbortError") {
+          return { ok: true, method: "cancel", url: url };
+        }
+      }
+    }
+
+    if (nav && nav.clipboard && typeof nav.clipboard.writeText === "function") {
+      await nav.clipboard.writeText(url);
+      return { ok: true, method: "copy", url: url };
+    }
+
+    return { ok: false, method: "unavailable", url: url };
+  }
+
   return {
     BUYER_FEE_RATE,
     SELLER_FEE_RATE,
     LISTING_PUBLICATION_FEE,
     MAX_VIDEO_BYTES,
     MAX_VIDEO_SECONDS,
+    LISTING_PAGE_SIZE,
+    schemaColumnMissing,
+    listingSurfaceMissing,
+    omitMissingColumn,
+    nextListingQuery,
+    listingPageRange,
+    listingCities,
+    listingMatchesPriceAndCity,
+    listingShareUrl,
+    shareListing,
     quoteListingFees,
     isMarketplaceRow,
     isAdvertisingRow,

@@ -534,7 +534,7 @@ textarea {
       >
 
       <label for="listingVideo">
-        Short video (optional, MP4 or WebM, up to 30 seconds and 15 MB)
+        Short video (optional, MP4 or WebM, up to 60 seconds and 15 MB)
       </label>
 
       <input
@@ -1913,14 +1913,6 @@ adForm.addEventListener(
        * SELECT permission/policy.
        */
 
-      const insertPromise =
-        supabaseClient
-          .from("ads")
-          .insert([
-            ad
-          ]);
-
-
       /*
        * A slow response stays in progress.
        * This timer does not cancel the INSERT and
@@ -1958,16 +1950,74 @@ adForm.addEventListener(
 
       let outcome;
 
+      let payload =
+        ad;
+
+      let droppedVideo =
+        false;
+
 
       try {
 
-        result =
-          await insertPromise;
+        for (
+          let attempt = 0;
+          attempt < 8;
+          attempt += 1
+        ) {
 
-        outcome =
-          window.HAVKAR_AD_PUBLISH.classifyInsertResult(
-            result
-          );
+          result =
+            await supabaseClient
+              .from("ads")
+              .insert([
+                payload
+              ]);
+
+          outcome =
+            window.HAVKAR_AD_PUBLISH.classifyInsertResult(
+              result
+            );
+
+          if (
+            !outcome ||
+            outcome.outcome !== "rejected"
+          ) {
+
+            break;
+
+          }
+
+          const next =
+            window.HAVKAR_MARKETPLACE.omitMissingColumn(
+              payload,
+              result && result.error
+            );
+
+          if (!next) {
+
+            break;
+
+          }
+
+          if (
+            Object.prototype.hasOwnProperty.call(
+              payload,
+              "video_path"
+            ) &&
+            !Object.prototype.hasOwnProperty.call(
+              next,
+              "video_path"
+            )
+          ) {
+
+            droppedVideo =
+              true;
+
+          }
+
+          payload =
+            next;
+
+        }
 
       } catch (insertError) {
 
@@ -2037,10 +2087,24 @@ adForm.addEventListener(
 
       postingGuard.markSaved();
 
+      if (
+        droppedVideo &&
+        uploadedVideoPath
+      ) {
+
+        await window.HAVKAR_MARKETPLACE.deleteListingVideo(
+          supabaseClient,
+          uploadedVideoPath
+        );
+
+      }
+
       showStatus(
-        listingStatus === "draft"
-          ? "Your draft was saved. It is not public."
-          : "Your listing has been published. Publication is free.",
+        droppedVideo
+          ? "Your listing was saved without the video because this database cannot store listing video yet."
+          : listingStatus === "draft"
+            ? "Your draft was saved. It is not public."
+            : "Your listing has been published. Publication is free.",
         "success"
       );
 

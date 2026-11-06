@@ -991,6 +991,82 @@ textarea:focus-visible{
         display:none;
     }
 }
+.support-form,
+.support-track{
+    margin-top:16px;
+    padding:18px;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:18px;
+}
+
+.support-form h2,
+.support-track h2{
+    margin-bottom:8px;
+    font-size:20px;
+}
+
+.support-form p,
+.support-track p{
+    color:var(--muted);
+    line-height:1.5;
+    margin-bottom:12px;
+}
+
+.support-form label,
+.support-track label{
+    display:block;
+    margin:12px 0 6px;
+    font-weight:700;
+}
+
+.support-form input,
+.support-form select,
+.support-form textarea,
+.support-track input{
+    width:100%;
+    min-height:48px;
+    padding:12px;
+    border:1.5px solid #cdd8ce;
+    border-radius:12px;
+    background:#fff;
+    color:var(--text);
+}
+
+.support-form textarea{
+    min-height:140px;
+    resize:vertical;
+}
+
+.support-submit{
+    width:100%;
+    min-height:52px;
+    margin-top:14px;
+    border:0;
+    border-radius:13px;
+    background:#1b5e20;
+    color:#fff;
+    font-size:17px;
+    font-weight:800;
+}
+
+.support-result{
+    min-height:24px;
+    margin-top:12px;
+    font-weight:700;
+    line-height:1.45;
+}
+
+.support-result.error{color:var(--danger)}
+.support-result.success{color:#1b5e20}
+
+.support-honeypot{
+    position:absolute;
+    left:-10000px;
+    width:1px;
+    height:1px;
+    overflow:hidden;
+}
 </style>
 </head>
 
@@ -1105,6 +1181,12 @@ textarea:focus-visible{
                 </a>
 
                 <p class="official-contact-text">
+                    Business phone:
+                    <a href="tel:+393342632863">+39 334 263 2863</a>.
+                    Stored support requests are sent to info@havkar.online.
+                </p>
+
+                <p class="official-contact-text">
                     <a href="privacy.html">Privacy draft</a>,
                     <a href="terms.html">Terms draft</a>,
                     and
@@ -1118,6 +1200,55 @@ textarea:focus-visible{
         </div>
 
     </section>
+
+    <form id="supportForm" class="support-form" novalidate>
+        <h2>Contact support</h2>
+        <p>You can send this without signing in. It does not delete an account or move money. For a data export or deletion request, you can also use the privacy request page.</p>
+        <label for="supportTopic">Topic</label>
+        <select id="supportTopic" name="topic" required>
+            <option value="login_registration">Login and registration</option>
+            <option value="account_recovery">Account recovery</option>
+            <option value="technical">Technical problem</option>
+            <option value="payment">Payment issue</option>
+            <option value="marketplace_dispute">Marketplace dispute</option>
+            <option value="privacy">Privacy request</option>
+            <option value="account_deletion">Account deletion assistance</option>
+            <option value="other">Other</option>
+        </select>
+        <label for="supportName">Name</label>
+        <input id="supportName" name="name" type="text" maxlength="80" autocomplete="name" required>
+        <label for="supportEmail">Email</label>
+        <input id="supportEmail" name="email" type="email" maxlength="180" autocomplete="email" required>
+        <label for="supportLanguage">Language</label>
+        <select id="supportLanguage" name="language">
+            <option value="en">English</option>
+            <option value="fa">Persian</option>
+            <option value="it">Italian</option>
+            <option value="sv">Swedish</option>
+            <option value="ckb">Kurdish Sorani</option>
+            <option value="kmr">Kurdish Kurmanji</option>
+            <option value="ar">Arabic</option>
+        </select>
+        <label for="supportMessage">Message</label>
+        <textarea id="supportMessage" name="message" maxlength="4000" required></textarea>
+        <div class="support-honeypot" aria-hidden="true">
+            <label for="company_website">Company website</label>
+            <input id="company_website" name="company_website" type="text" tabindex="-1" autocomplete="off">
+        </div>
+        <button id="supportSubmit" class="support-submit" type="submit">Send support request</button>
+        <p id="supportResult" class="support-result" role="status"></p>
+    </form>
+
+    <form id="supportTrack" class="support-track" novalidate>
+        <h2>Track a request</h2>
+        <p>Use the reference from the confirmation and the same email address. This shows the status only.</p>
+        <label for="trackReference">Reference</label>
+        <input id="trackReference" name="reference" type="text" maxlength="10" autocapitalize="characters" required>
+        <label for="trackEmail">Email</label>
+        <input id="trackEmail" name="email" type="email" maxlength="180" autocomplete="email" required>
+        <button id="trackSubmit" class="support-submit" type="submit">Check status</button>
+        <p id="trackResult" class="support-result" role="status"></p>
+    </form>
 
 
     <!-- =========================
@@ -1155,7 +1286,7 @@ textarea:focus-visible{
 
 
         <button
-            class="contact-method pending"
+            class="contact-method"
             type="button"
             onclick="contactPhone()">
 
@@ -1168,7 +1299,7 @@ textarea:focus-visible{
             </div>
 
             <div class="method-description">
-                Coming soon
+                +39 334 263 2863
             </div>
 
         </button>
@@ -1695,13 +1826,12 @@ Only verified HAVKAR contact information is stored here.
 support@havkar.online:
 Official customer support address.
 
-Phone, WhatsApp and Telegram:
-Not published until official HAVKAR contact details
-are activated.
+Business phone:
++39 334 263 2863
 
 info@havkar.online:
-Reserved for general/business communication and is
-not used as the customer-support address on this page.
+Receives stored support-request notifications.
+The public support mailbox remains support@havkar.online.
 
 soran@havkar.online:
 Not published on the public Support page.
@@ -1714,7 +1844,7 @@ const HAVKAR_CONFIG = {
         "support@havkar.online",
 
     phone:
-        "",
+        "+39 334 263 2863",
 
     whatsapp:
         "",
@@ -2303,6 +2433,75 @@ document.addEventListener(
 /* ======================================================
    INITIALIZATION
 ====================================================== */
+
+document.getElementById("supportForm").addEventListener("submit", async function (event) {
+    event.preventDefault();
+    const result = document.getElementById("supportResult");
+    const button = document.getElementById("supportSubmit");
+    button.disabled = true;
+    result.className = "support-result";
+    result.textContent = "Sending the support request...";
+    try {
+        const response = await fetch("/api/support-request", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                action: "create",
+                topic: document.getElementById("supportTopic").value,
+                name: document.getElementById("supportName").value,
+                email: document.getElementById("supportEmail").value,
+                language: document.getElementById("supportLanguage").value,
+                message: document.getElementById("supportMessage").value,
+                company_website: document.getElementById("company_website").value
+            })
+        });
+        const payload = await response.json();
+        if (!response.ok || !payload.stored) {
+            throw new Error(payload.error || "The support request could not be sent.");
+        }
+        result.className = "support-result success";
+        result.textContent = payload.notified
+            ? "Request stored. Reference " + payload.reference + ". HAVKAR was notified at info@havkar.online."
+            : "Request stored. Reference " + payload.reference + ". Email notification is not confirmed yet.";
+        document.getElementById("trackReference").value = payload.reference;
+    } catch (error) {
+        result.className = "support-result error";
+        result.textContent = error.message || "The support request could not be sent.";
+    } finally {
+        button.disabled = false;
+    }
+});
+
+document.getElementById("supportTrack").addEventListener("submit", async function (event) {
+    event.preventDefault();
+    const result = document.getElementById("trackResult");
+    const button = document.getElementById("trackSubmit");
+    button.disabled = true;
+    result.className = "support-result";
+    result.textContent = "Checking the request...";
+    try {
+        const response = await fetch("/api/support-request", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                action: "status",
+                reference: document.getElementById("trackReference").value,
+                email: document.getElementById("trackEmail").value
+            })
+        });
+        const payload = await response.json();
+        if (!response.ok || !payload.ok) {
+            throw new Error(payload.error || "No matching support request was found.");
+        }
+        result.className = "support-result success";
+        result.textContent = "Reference " + payload.reference + " is " + payload.status + ".";
+    } catch (error) {
+        result.className = "support-result error";
+        result.textContent = error.message || "No matching support request was found.";
+    } finally {
+        button.disabled = false;
+    }
+});
 
 document.addEventListener(
     "DOMContentLoaded",
