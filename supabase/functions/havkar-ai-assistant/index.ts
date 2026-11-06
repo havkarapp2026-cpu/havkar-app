@@ -19,6 +19,7 @@ import {
   imageGenerationRequested,
   logoEntitlementDecision,
   paidAiServicesEnabled,
+  playReviewEntitlement,
   presentAssistantText,
   textArtworkRequested,
   visibleArtworkText,
@@ -957,13 +958,24 @@ Deno.serve(async (request) => {
     return json(401, { ok: false, error: "Sign in before using the assistant." }, headers);
   }
 
-  if (imageMode && !paidAiServicesEnabled({
+  const reviewAccount = playReviewEntitlement(userResult.data.user);
+  const paidImagesOpen = paidAiServicesEnabled({
     HAVKAR_REAL_PAYMENTS_ENABLED: Deno.env.get("HAVKAR_REAL_PAYMENTS_ENABLED") || ""
-  })) {
+  });
+
+  if (imageMode && !paidImagesOpen && reviewAccount.allowed !== true) {
     return json(403, { ok: false, error: "Paid image generation is paused." }, headers);
   }
 
-  if (imageMode) {
+  if (imageMode && reviewAccount.allowed === true) {
+    const reviewDecision = logoEntitlementDecision({ review: true }, parsed.body);
+    if (!reviewDecision.allowed) {
+      return json(reviewDecision.status, {
+        ok: false,
+        error: "Image generation requires an active paid HAVKAR AI plan."
+      }, headers);
+    }
+  } else if (imageMode) {
     const entitlement = await verifiedLogoEntitlement(admin, userResult.data.user.id, parsed.body);
     if (!entitlement.allowed) {
       const error = entitlement.status === 503

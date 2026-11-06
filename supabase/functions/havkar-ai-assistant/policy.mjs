@@ -872,9 +872,21 @@ function assistantBlocks(text) {
   return blocks;
 }
 
+const PLAY_REVIEW_EMAIL = "amirjalilnia01@gmail.com";
+
 function paidAiServicesEnabled(env) {
   const source = env && typeof env === "object" ? env : {};
   return source.HAVKAR_REAL_PAYMENTS_ENABLED === "true";
+}
+
+function playReviewEntitlement(user) {
+  const denied = { allowed: false, plan: "", admin: false, payments: false, source: "" };
+  if (!user || typeof user !== "object") return denied;
+  const email = String(user.email || "").trim().toLowerCase();
+  if (email !== PLAY_REVIEW_EMAIL || !user.email_confirmed_at) return denied;
+  const metadata = user.app_metadata && typeof user.app_metadata === "object" ? user.app_metadata : {};
+  if (String(metadata.role || "") === "admin") return denied;
+  return { allowed: true, plan: "business", admin: false, payments: false, source: "play_review" };
 }
 
 function subscriptionCheckoutStatus(env) {
@@ -973,6 +985,9 @@ function textArtworkRequested(input) {
 function logoEntitlementDecision(verification, requestBodyInput, now) {
   if (!imageGenerationRequested(requestBodyInput)) {
     return { required: false, allowed: true, status: 200 };
+  }
+  if (verification && verification.review === true) {
+    return { required: true, allowed: true, status: 200 };
   }
   if (!verification || verification.ok !== true) {
     return { required: true, allowed: false, status: 503 };
@@ -1086,6 +1101,7 @@ export {
   imageGenerationRequested,
   logoEntitlementDecision,
   paidAiServicesEnabled,
+  playReviewEntitlement,
   logoGenerationRequested,
   presentAssistantText,
   textArtworkRequested,
