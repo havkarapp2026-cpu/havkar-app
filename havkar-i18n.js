@@ -539,6 +539,50 @@
             "dir",
             dir
         );
+
+        ensureBackArrowStyles();
+    }
+
+
+    function ensureBackArrowStyles() {
+
+        const styleId =
+            "havkar-back-arrow-direction";
+
+        if (
+            document.getElementById(
+                styleId
+            )
+        ) {
+
+            return;
+        }
+
+
+        const style =
+            document.createElement(
+                "style"
+            );
+
+        style.id =
+            styleId;
+
+        style.textContent =
+            "html[dir=\"rtl\"] i.fa-arrow-left," +
+            "html[dir=\"rtl\"] i.fa-solid.fa-arrow-left{" +
+            "display:inline-block;" +
+            "transform:scaleX(-1);" +
+            "}" +
+            "html[dir=\"ltr\"] i.fa-arrow-left," +
+            "html[dir=\"ltr\"] i.fa-solid.fa-arrow-left{" +
+            "transform:none;" +
+            "}" +
+            "html[dir=\"ltr\"] .havkar-back-glyph::before{content:\"\\2039\";}" +
+            "html[dir=\"rtl\"] .havkar-back-glyph::before{content:\"\\203A\";}";
+
+        document.head.appendChild(
+            style
+        );
     }
 
 
@@ -1113,6 +1157,125 @@
     });
 
 
+    const MARKETPLACE_GLOSSARY = Object.freeze({
+        fa: Object.freeze({
+            "Buy & Sell": "خرید و فروش",
+            "Search products, services...": "جستجوی کالا و خدمات...",
+            "All countries": "همه کشورها",
+            "All cities": "همه شهرها",
+            "Min price": "حداقل قیمت",
+            "Max price": "حداکثر قیمت",
+            "Latest listings": "تازه‌ترین آگهی‌ها",
+            "Search results": "نتایج جستجو",
+            "Saved listings": "آگهی‌های ذخیره‌شده",
+            "Home": "خانه",
+            "Search": "جستجو",
+            "Saved": "ذخیره‌شده",
+            "Messages": "پیام‌ها",
+            "Profile": "پروفایل",
+            "Loading...": "در حال بارگذاری...",
+            "All": "همه",
+            "Electronics": "الکترونیک",
+            "Mobile Phones": "موبایل",
+            "Phones & Tablets": "تلفن و تبلت",
+            "Computers": "رایانه",
+            "Furniture": "مبلمان",
+            "Clothing": "پوشاک",
+            "Beauty & Personal Care": "زیبایی و مراقبت شخصی"
+        }),
+        ar: Object.freeze({
+            "Buy & Sell": "بيع وشراء",
+            "Search products, services...": "ابحث عن منتجات وخدمات...",
+            "All countries": "كل البلدان",
+            "All cities": "كل المدن",
+            "Min price": "أقل سعر",
+            "Max price": "أعلى سعر",
+            "Latest listings": "أحدث الإعلانات",
+            "Search results": "نتائج البحث",
+            "Saved listings": "الإعلانات المحفوظة",
+            "Home": "الرئيسية",
+            "Search": "بحث",
+            "Saved": "المحفوظ",
+            "Messages": "الرسائل",
+            "Profile": "الملف",
+            "Loading...": "جارٍ التحميل...",
+            "All": "الكل"
+        }),
+        ckb: Object.freeze({
+            "Buy & Sell": "کڕین و فرۆشتن",
+            "Search products, services...": "گەڕان بۆ کاڵا و خزمەتگوزاری...",
+            "All countries": "هەموو وڵاتەکان",
+            "All cities": "هەموو شارەکان",
+            "Min price": "کەمترین نرخ",
+            "Max price": "زۆرترین نرخ",
+            "Latest listings": "نوێترین ئاگاهییەکان",
+            "Search results": "ئەنجامی گەڕان",
+            "Saved listings": "ئاگاهییە پاشەکەوتکراوەکان",
+            "Home": "ماڵەوە",
+            "Search": "گەڕان",
+            "Saved": "پاشەکەوت",
+            "Messages": "نامەکان",
+            "Profile": "پرۆفایل",
+            "Loading...": "بارکردن...",
+            "All": "هەموو"
+        }),
+        kmr: Object.freeze({
+            "Buy & Sell": "Kirîn û firotin",
+            "Search products, services...": "Li berhem û xizmetan bigere...",
+            "All countries": "Hemû welat",
+            "All cities": "Hemû bajar",
+            "Min price": "Biha herî kêm",
+            "Max price": "Biha herî zêde",
+            "Latest listings": "Ragihandinên nû",
+            "Search results": "Encama lêgerînê",
+            "Saved listings": "Ragihandinên tomarkirî",
+            "Home": "Mal",
+            "Search": "Lêgerîn",
+            "Saved": "Tomarkirî",
+            "Messages": "Peyam",
+            "Profile": "Profîl",
+            "Loading...": "Tê barkirin...",
+            "All": "Hemû"
+        }),
+        it: Object.freeze({
+            "Buy & Sell": "Compra e vendi",
+            "Search products, services...": "Cerca prodotti, servizi...",
+            "All countries": "Tutti i paesi",
+            "All cities": "Tutte le città",
+            "Min price": "Prezzo min",
+            "Max price": "Prezzo max",
+            "Latest listings": "Annunci recenti",
+            "Search results": "Risultati di ricerca",
+            "Saved listings": "Annunci salvati",
+            "Home": "Home",
+            "Search": "Cerca",
+            "Saved": "Salvati",
+            "Messages": "Messaggi",
+            "Profile": "Profilo",
+            "Loading...": "Caricamento...",
+            "All": "Tutti"
+        }),
+        sv: Object.freeze({
+            "Buy & Sell": "Köp & sälj",
+            "Search products, services...": "Sök produkter, tjänster...",
+            "All countries": "Alla länder",
+            "All cities": "Alla städer",
+            "Min price": "Lägsta pris",
+            "Max price": "Högsta pris",
+            "Latest listings": "Senaste annonser",
+            "Search results": "Sökresultat",
+            "Saved listings": "Sparade annonser",
+            "Home": "Hem",
+            "Search": "Sök",
+            "Saved": "Sparat",
+            "Messages": "Meddelanden",
+            "Profile": "Profil",
+            "Loading...": "Laddar...",
+            "All": "Alla"
+        })
+    });
+
+
     function homepageGlossary(
         language
     ) {
@@ -1123,18 +1286,39 @@
     }
 
 
+    function marketplaceGlossary(
+        language
+    ) {
+
+        return MARKETPLACE_GLOSSARY[
+            language
+        ] || null;
+    }
+
+
     function applyHomepageGlossary(
         root
     ) {
 
+        const language =
+            getLanguage();
+
         const pack =
-            homepageGlossary(
-                getLanguage()
+            Object.assign(
+                {},
+                homepageGlossary(
+                    language
+                ) || {},
+                marketplaceGlossary(
+                    language
+                ) || {}
             );
 
 
         if (
-            !pack ||
+            !Object.keys(
+                pack
+            ).length ||
             !root ||
             typeof document === "undefined"
         ) {
@@ -1206,6 +1390,58 @@
                 translation +
                 trailing;
         });
+
+
+        root
+            .querySelectorAll(
+                "[placeholder], [aria-label]"
+            )
+            .forEach(
+                function (element) {
+
+                    [
+                        "placeholder",
+                        "aria-label"
+                    ]
+                        .forEach(
+                            function (attributeName) {
+
+                                if (
+                                    !element.hasAttribute(
+                                        attributeName
+                                    )
+                                ) {
+
+                                    return;
+                                }
+
+
+                                const value =
+                                    normalizeText(
+                                        element.getAttribute(
+                                            attributeName
+                                        )
+                                    );
+
+                                if (
+                                    !Object.prototype.hasOwnProperty.call(
+                                        pack,
+                                        value
+                                    )
+                                ) {
+
+                                    return;
+                                }
+
+
+                                element.setAttribute(
+                                    attributeName,
+                                    pack[value]
+                                );
+                            }
+                        );
+                }
+            );
     }
 
 

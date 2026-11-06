@@ -29,7 +29,12 @@ The native screens load the real web app. They are not a separate rewrite of eve
 ## Android artifacts
 
 - Debug APK: signed only with the local Android debug key. It is not a Play upload key.
-- Release AAB: build it unsigned. Do not invent an upload keystore.
+- Release AAB: `android/app/build.gradle.kts` reads signing from environment variables when all four are set:
+  - `HAVKAR_UPLOAD_STORE_FILE`
+  - `HAVKAR_UPLOAD_STORE_PASSWORD`
+  - `HAVKAR_UPLOAD_KEY_ALIAS`
+  - `HAVKAR_UPLOAD_KEY_PASSWORD`
+- Without those values the release build stays unsigned. Do not invent an upload keystore in the repository.
 
 ## iOS
 
@@ -68,4 +73,12 @@ Do not submit an IARC questionnaire from this file. The owner must answer it in 
 
 ## Screenshots
 
-Do not invent store screenshots. Capture them from a signed build or from the public site after the draft pages are deployed. A phone-sized capture of the live privacy draft is not a Play screenshot set.
+Do not invent store screenshots. Capture them from a signed build or from the public site after the draft pages are deployed. Required Play phone set should include Home, Buy & Sell home (2 columns), Buy & Sell Search/Explore (3 columns), Support, and login. A phone-sized capture of the live privacy draft alone is not a Play screenshot set.
+
+## Owner-only remaining actions
+
+1. Provide the Android upload keystore and the four `HAVKAR_UPLOAD_*` values, then build `./gradlew :app:bundleRelease` on a machine with Android SDK.
+2. Create the Apple Developer team, distribution certificate, and App Store provisioning profile; turn signing back on in Xcode.
+3. Upload AAB to Play Console closed testing and IPA/TestFlight to App Store Connect.
+4. Complete Data safety, content rating, and store listing forms in each console.
+5. Paste the review account password for `amirjalilnia01@gmail.com` into Play App Access after PR #118 is approved, deployed, and its migration is applied.

@@ -128,7 +128,8 @@ assert.strictEqual(
 );
 
 assert.ok(buySell.includes('data-havkar-parent="index.html"'));
-assert.ok(buySell.includes("goHome();"));
+assert.ok(buySell.includes("goAppHome();") || buySell.includes("goMarketplaceHome();"));
+assert.ok(buySell.includes("havkarNavigateBack"));
 assert.ok(buySell.includes("listing_surface.eq.marketplace"));
 assert.ok(!buySell.includes("listing_surface.eq.advertising"));
 
@@ -174,7 +175,12 @@ assert.ok(buySell.includes('data-share-id='));
 assert.ok(buySell.includes('window.location.href =\n                    "notifications.html"'));
 assert.ok(buySell.includes('id="loadMoreListings"'));
 assert.ok(buySell.includes("nextListingQuery"));
+assert.ok(buySell.includes("updateListingLayout"));
+assert.ok(buySell.includes("goMarketplaceHome"));
+assert.ok(buySell.includes(".ads-grid.is-explore"));
+assert.ok(buySell.includes("repeat(2,minmax(0,1fr))"));
 assert.ok(buySell.includes("repeat(3,minmax(0,1fr))"));
+assert.ok(!buySell.includes("@media(min-width:650px)"));
 assert.ok(!buySell.includes("repeat(4,minmax(0,1fr))"));
 assert.ok(postAd.includes("omitMissingColumn"));
 assert.ok(ads.includes("listingSurfaceMissing"));
