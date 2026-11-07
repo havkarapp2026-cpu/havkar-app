@@ -1,6 +1,8 @@
 # Android upload keystore — security and recovery (tablet)
 
-Status: procedure ready. **No upload key is generated until the owner explicitly approves this procedure and runs the workflow with the confirmation phrase.**
+Status: **owner approved** this procedure on 7 November 2026 (Europe/Rome) for package `online.havkar.app`.
+
+Generation still waits for a durable owner-controlled **age public recipient** (`age1...`) so the encrypted backup can be decrypted only on the tablet. This agent will not invent secrets, will not put private keys in chat, and will not disable fail-closed checks.
 
 This does **not** publish to Google Play. Live payments stay off. This does **not** use a debug keystore.
 
@@ -27,13 +29,15 @@ Workflow file: `.github/workflows/android-upload-keystore.yml`
 
 ## Owner approval checklist (read before running)
 
-- [ ] I understand losing both the age private key and the decrypted keystore backup can permanently block Play updates for this upload key.
-- [ ] I will keep the age private identity offline and never paste it into chat, Issues, or the repository.
-- [ ] I will not run the generator if Play / GitHub already has a usable upload key for `online.havkar.app`.
-- [ ] I accept that GitHub Actions artifacts expire (default 7 days) and I must back up the encrypted file myself.
-- [ ] I will not ask an agent to generate the key until I reply with explicit approval of this procedure.
+- [x] I understand losing both the age private key and the decrypted keystore backup can permanently block Play updates for this upload key.
+- [x] I will keep the age private identity offline and never paste it into chat, Issues, or the repository.
+- [x] I will not run the generator if Play / GitHub already has a usable upload key for `online.havkar.app`.
+- [x] I accept that GitHub Actions artifacts expire (default 7 days) and I must back up the encrypted file myself.
+- [x] Explicit approval received (7 November 2026) to create the official upload signing key and prepare a signed release AAB.
 
-After approval, run the workflow once. Do not re-run if secrets were already filled.
+**Current blocker:** repository secret `HAVKAR_UPLOAD_BACKUP_AGE_RECIPIENT` is still missing (verified by Actions run `42307300847`, fail-closed). After you set the public `age1...` secret (or paste only the public `age1...` line into Cursor), generation can proceed once.
+
+After the recipient exists, run the workflow once with `CREATE_NEW_UPLOAD_KEY`. Do not re-run if upload secrets were already filled.
 
 ## Tablet steps — create age identity (Termux, no OpenJDK)
 
