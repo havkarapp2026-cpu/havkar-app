@@ -120,6 +120,22 @@ a{color:inherit}
 }
 .flight-card strong{display:block;margin-bottom:4px}
 .flight-card p{margin:0;color:var(--muted);font-size:14px;line-height:1.45}
+.flight-card .partner-link{margin-top:12px}
+.flight-book-panel{
+    margin-top:18px;
+    padding:16px;
+    border:1px solid var(--border);
+    border-radius:16px;
+    background:#f8fbf9;
+}
+.flight-book-panel[hidden]{display:none !important}
+.flight-book-panel h3{margin:0 0 10px;font-size:18px}
+.flight-book-grid{
+    display:grid;
+    gap:10px;
+    grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+}
+.more-transfers[hidden]{display:none !important}
 .page{
     width:min(1040px, calc(100% - 28px));
     margin:22px auto 28px;
@@ -470,6 +486,46 @@ h2{
         </form>
         <p id="flightSearchStatus" class="pending-note" role="status" aria-live="polite">Sign in, then search with real airport codes. No sample fares are invented here.</p>
         <div id="flightResults" class="flight-results" hidden></div>
+        <div id="flightBookPanel" class="flight-book-panel" hidden>
+            <h3>Duffel test booking</h3>
+            <p class="lead">Creates a Duffel TEST MODE order only. Live offers and real payments stay blocked.</p>
+            <p id="flightBookOffer" class="pending-note"></p>
+            <form id="flightBookForm" class="flight-form" novalidate>
+                <div class="flight-book-grid">
+                    <label>Title
+                        <select id="paxTitle" required>
+                            <option value="mr">Mr</option>
+                            <option value="ms">Ms</option>
+                            <option value="mrs">Mrs</option>
+                            <option value="miss">Miss</option>
+                        </select>
+                    </label>
+                    <label>Given name
+                        <input id="paxGiven" required autocomplete="given-name">
+                    </label>
+                    <label>Family name
+                        <input id="paxFamily" required autocomplete="family-name">
+                    </label>
+                    <label>Date of birth
+                        <input id="paxBorn" type="date" required>
+                    </label>
+                    <label>Gender
+                        <select id="paxGender" required>
+                            <option value="m">Male</option>
+                            <option value="f">Female</option>
+                        </select>
+                    </label>
+                    <label>Email
+                        <input id="paxEmail" type="email" required autocomplete="email">
+                    </label>
+                    <label>Phone (+international)
+                        <input id="paxPhone" type="tel" placeholder="+393331234567" autocomplete="tel">
+                    </label>
+                </div>
+                <button class="partner-link" type="submit" id="flightBookButton">Create Duffel test order</button>
+            </form>
+            <p id="flightBookStatus" class="pending-note" role="status" aria-live="polite"></p>
+        </div>
     </section>
 
     <section id="ticket-train" class="panel omio-panel" data-ticket-panel="train" hidden aria-labelledby="trainTitle">
@@ -518,44 +574,44 @@ h2{
     <section id="ticket-hotel" class="panel" data-ticket-panel="hotel" hidden aria-labelledby="hotelTitle">
         <div class="kicker"><i class="fas fa-hotel" aria-hidden="true"></i> Hotels</div>
         <h2 id="hotelTitle">Hotels</h2>
-        <p class="lead">HAVKAR does not book hotel rooms yet, and it does not list sample hotels or sample prices. A hotel transfer is also unavailable inside HAVKAR because the partner city list cannot be loaded.</p>
-        <div class="booking-actions">
-            <button class="partner-link" type="button" data-open-transfer="hotel">Hotel transfer is unavailable</button>
-        </div>
+        <p class="lead">HAVKAR does not book hotel rooms yet, and it does not list sample hotels or sample prices. Hotel transfer is also unavailable inside HAVKAR.</p>
+        <div class="pending-note">Hotel booking stays unavailable until a hotel partner is connected. No sample rooms or fares are shown.</div>
     </section>
 
-    <h2 class="more-title">More transfer types</h2>
-    <div class="service-grid">
-        <button class="service-card" type="button" data-open-transfer="airport">
-            <span class="service-icon" aria-hidden="true"><i class="fas fa-plane-arrival"></i></span>
-            <strong>Airport Transfer</strong>
-            <p>Airport pickup or drop-off is not available inside HAVKAR.</p>
-            <span>Not available in HAVKAR</span>
-        </button>
-        <button class="service-card" type="button" data-open-transfer="station">
-            <span class="service-icon" aria-hidden="true"><i class="fas fa-train"></i></span>
-            <strong>Train Station Transfer</strong>
-            <p>A ride to or from a railway station is not available inside HAVKAR.</p>
-            <span>Not available in HAVKAR</span>
-        </button>
-        <button class="service-card" type="button" data-open-transfer="hotel">
-            <span class="service-icon" aria-hidden="true"><i class="fas fa-hotel"></i></span>
-            <strong>Hotel Transfer</strong>
-            <p>A hotel pickup or drop-off is not available inside HAVKAR.</p>
-            <span>Not available in HAVKAR</span>
-        </button>
-        <button class="service-card" type="button" data-open-transfer="city">
-            <span class="service-icon" aria-hidden="true"><i class="fas fa-road"></i></span>
-            <strong>City-to-City Transfer</strong>
-            <p>A private transfer between cities is not available inside HAVKAR.</p>
-            <span>Not available in HAVKAR</span>
-        </button>
-        <button class="service-card" type="button" data-open-transfer="scheduled">
-            <span class="service-icon" aria-hidden="true"><i class="fas fa-calendar-check"></i></span>
-            <strong>Scheduled Transfer</strong>
-            <p>A transfer for a chosen date and time is not available inside HAVKAR.</p>
-            <span>Not available in HAVKAR</span>
-        </button>
+    <div id="moreTransfers" class="more-transfers" hidden>
+        <h2 class="more-title">More transfer types</h2>
+        <div class="service-grid">
+            <button class="service-card" type="button" data-open-transfer="airport">
+                <span class="service-icon" aria-hidden="true"><i class="fas fa-plane-arrival"></i></span>
+                <strong>Airport Transfer</strong>
+                <p>Airport pickup or drop-off is not available inside HAVKAR.</p>
+                <span>Not available in HAVKAR</span>
+            </button>
+            <button class="service-card" type="button" data-open-transfer="station">
+                <span class="service-icon" aria-hidden="true"><i class="fas fa-train"></i></span>
+                <strong>Train Station Transfer</strong>
+                <p>A ride to or from a railway station is not available inside HAVKAR.</p>
+                <span>Not available in HAVKAR</span>
+            </button>
+            <button class="service-card" type="button" data-open-transfer="hotel">
+                <span class="service-icon" aria-hidden="true"><i class="fas fa-hotel"></i></span>
+                <strong>Hotel Transfer</strong>
+                <p>A hotel pickup or drop-off is not available inside HAVKAR.</p>
+                <span>Not available in HAVKAR</span>
+            </button>
+            <button class="service-card" type="button" data-open-transfer="city">
+                <span class="service-icon" aria-hidden="true"><i class="fas fa-road"></i></span>
+                <strong>City-to-City Transfer</strong>
+                <p>A private transfer between cities is not available inside HAVKAR.</p>
+                <span>Not available in HAVKAR</span>
+            </button>
+            <button class="service-card" type="button" data-open-transfer="scheduled">
+                <span class="service-icon" aria-hidden="true"><i class="fas fa-calendar-check"></i></span>
+                <strong>Scheduled Transfer</strong>
+                <p>A transfer for a chosen date and time is not available inside HAVKAR.</p>
+                <span>Not available in HAVKAR</span>
+            </button>
+        </div>
     </div>
 </main>
 
@@ -564,7 +620,7 @@ h2{
         <i class="fas fa-home" aria-hidden="true"></i>
         <span>Home</span>
     </a>
-    <a class="nav-item" href="#transfer-booking">
+    <a class="nav-item" href="#transfer-booking" id="navTransfer">
         <i class="fas fa-taxi" aria-hidden="true"></i>
         <span>Transfer</span>
     </a>
@@ -593,12 +649,26 @@ h2{
     var flightForm = document.getElementById("flightSearchForm");
     var flightStatus = document.getElementById("flightSearchStatus");
     var flightResults = document.getElementById("flightResults");
+    var flightBookPanel = document.getElementById("flightBookPanel");
+    var flightBookForm = document.getElementById("flightBookForm");
+    var flightBookOffer = document.getElementById("flightBookOffer");
+    var flightBookStatus = document.getElementById("flightBookStatus");
+    var moreTransfers = document.getElementById("moreTransfers");
+    var selectedOfferId = "";
     var supabaseClient = window.supabase && window.HAVKAR_SUPABASE_CONFIG
         ? window.supabase.createClient(
             window.HAVKAR_SUPABASE_CONFIG.url,
             window.HAVKAR_SUPABASE_CONFIG.publishableKey
         )
         : null;
+
+    async function accessToken() {
+        if (!supabaseClient) return "";
+        var session = await supabaseClient.auth.getSession();
+        return session && session.data && session.data.session
+            ? session.data.session.access_token
+            : "";
+    }
 
     function show(type) {
         var panelName = type === "taxi" || type === "transfer" ? "ride" : type;
@@ -610,10 +680,17 @@ h2{
         panels.forEach(function (panel) {
             panel.hidden = panel.getAttribute("data-ticket-panel") !== panelName;
         });
+        if (moreTransfers) moreTransfers.hidden = panelName !== "ride";
         if (rideTitle && rideKicker && panelName === "ride") {
             var label = type === "taxi" ? "Taxi" : "Transfers";
             rideTitle.textContent = label;
             rideKicker.textContent = label;
+        }
+        if (panelName === "ride") {
+            var booking = document.getElementById("transfer-booking");
+            if (booking && type === "transfer") {
+                booking.scrollIntoView({ block: "start" });
+            }
         }
     }
 
@@ -621,8 +698,35 @@ h2{
         if (flightStatus) flightStatus.textContent = message;
     }
 
+    function setBookStatus(message) {
+        if (flightBookStatus) flightBookStatus.textContent = message;
+    }
+
+    function hideBookPanel() {
+        selectedOfferId = "";
+        if (flightBookPanel) flightBookPanel.hidden = true;
+        setBookStatus("");
+    }
+
+    function openBookPanel(offer) {
+        selectedOfferId = String(offer && offer.id || "");
+        if (!selectedOfferId || !flightBookPanel) return;
+        flightBookPanel.hidden = false;
+        if (flightBookOffer) {
+            var total = offer.total_amount || offer.total_currency
+                ? String(offer.total_amount || "") + " " + String(offer.total_currency || "")
+                : "";
+            flightBookOffer.textContent = "Selected offer " + selectedOfferId +
+                (total ? " · " + total.trim() : "") +
+                ". Duffel test_mode only; live_mode offers are rejected by the server.";
+        }
+        setBookStatus("Enter passenger details for a Duffel TEST MODE order. No HAVKAR card/Pi/Mainnet payment is taken here.");
+        flightBookPanel.scrollIntoView({ block: "start" });
+    }
+
     function renderFlightOffers(payload) {
         if (!flightResults) return;
+        hideBookPanel();
         flightResults.hidden = false;
         flightResults.innerHTML = "";
         var offers = Array.isArray(payload && payload.data && payload.data.offers)
@@ -640,12 +744,26 @@ h2{
                 : (offer.price ? String(offer.price) : "Price on request");
             var owner = offer.owner && offer.owner.name ? offer.owner.name : "Airline offer";
             var id = offer.id || "";
-            card.innerHTML = "<strong>" + owner + "</strong><p>" + total.trim() +
-                (id ? " · offer " + id : "") +
-                "</p><p>Live Duffel offer. Production booking stays gated; use Duffel test mode only until real payments are enabled by the owner.</p>";
+            var live = offer.live_mode === true;
+            card.innerHTML = "<strong></strong><p></p><p></p><button class=\"partner-link\" type=\"button\"></button>";
+            card.querySelector("strong").textContent = owner;
+            card.querySelectorAll("p")[0].textContent = total.trim() + (id ? " · offer " + id : "");
+            card.querySelectorAll("p")[1].textContent = live
+                ? "Live Duffel offer. Production booking stays blocked until the owner enables real payments."
+                : "Duffel test offer. You can create a TEST MODE order below; no real traveller payment is collected by HAVKAR.";
+            var bookBtn = card.querySelector("button");
+            bookBtn.textContent = live ? "Live booking blocked" : "Book test order";
+            bookBtn.disabled = live || !id;
+            bookBtn.addEventListener("click", function () {
+                if (live) {
+                    setFlightStatus("Live Duffel offers cannot be booked from HAVKAR yet.");
+                    return;
+                }
+                openBookPanel(offer);
+            });
             flightResults.appendChild(card);
         });
-        setFlightStatus("Showing " + Math.min(offers.length, 20) + " live offer(s). No payment was taken.");
+        setFlightStatus("Showing " + Math.min(offers.length, 20) + " offer(s). Test booking uses Duffel balance only.");
     }
 
     if (flightForm) {
@@ -655,11 +773,8 @@ h2{
                 setFlightStatus("Supabase is not configured in this browser session.");
                 return;
             }
-            var session = await supabaseClient.auth.getSession();
-            var accessToken = session && session.data && session.data.session
-                ? session.data.session.access_token
-                : "";
-            if (!accessToken) {
+            var token = await accessToken();
+            if (!token) {
                 setFlightStatus("Sign in to search live flights. HAVKAR does not invent sample fares.");
                 return;
             }
@@ -670,6 +785,7 @@ h2{
             var adults = Number(document.getElementById("flightAdults").value || 1);
             var cabin = String(document.getElementById("flightCabin").value || "economy");
             setFlightStatus("Searching live flights…");
+            hideBookPanel();
             if (flightResults) {
                 flightResults.hidden = true;
                 flightResults.innerHTML = "";
@@ -679,7 +795,7 @@ h2{
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        Authorization: "Bearer " + accessToken
+                        Authorization: "Bearer " + token
                     },
                     body: JSON.stringify({
                         origin: origin,
@@ -702,6 +818,58 @@ h2{
         });
     }
 
+    if (flightBookForm) {
+        flightBookForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+            if (!selectedOfferId) {
+                setBookStatus("Select a test offer first.");
+                return;
+            }
+            var token = await accessToken();
+            if (!token) {
+                setBookStatus("Sign in before creating a Duffel test order.");
+                return;
+            }
+            var passengers = [{
+                title: String(document.getElementById("paxTitle").value || ""),
+                given_name: String(document.getElementById("paxGiven").value || "").trim(),
+                family_name: String(document.getElementById("paxFamily").value || "").trim(),
+                born_on: String(document.getElementById("paxBorn").value || "").trim(),
+                gender: String(document.getElementById("paxGender").value || ""),
+                email: String(document.getElementById("paxEmail").value || "").trim(),
+                phone_number: String(document.getElementById("paxPhone").value || "").trim()
+            }];
+            setBookStatus("Creating Duffel TEST MODE order…");
+            try {
+                var response = await fetch("/api/flight-order", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: "Bearer " + token
+                    },
+                    body: JSON.stringify({
+                        offer_id: selectedOfferId,
+                        test_mode: true,
+                        passengers: passengers
+                    })
+                });
+                var body = await response.json().catch(function () { return null; });
+                if (!response.ok || !body || body.ok === false) {
+                    setBookStatus((body && body.error) || "Duffel test order failed. Nothing was charged by HAVKAR.");
+                    return;
+                }
+                var orderId = body.order && body.order.id ? body.order.id : (body.data && body.data.id ? body.data.id : "");
+                setBookStatus(
+                    "Duffel TEST MODE order created" +
+                    (orderId ? " (" + orderId + ")" : "") +
+                    ". No HAVKAR real payment was taken."
+                );
+            } catch (error) {
+                setBookStatus("Could not reach /api/flight-order. Nothing was booked.");
+            }
+        });
+    }
+
     buttons.forEach(function (button) {
         button.addEventListener("click", function () {
             show(button.getAttribute("data-ticket-type"));
@@ -711,10 +879,28 @@ h2{
     document.querySelectorAll("[data-open-transfer]").forEach(function (button) {
         button.addEventListener("click", function () {
             show("transfer");
-            var booking = document.getElementById("transfer-booking");
-            if (booking) booking.scrollIntoView({ block: "start" });
         });
     });
+
+    var navTransfer = document.getElementById("navTransfer");
+    if (navTransfer) {
+        navTransfer.addEventListener("click", function (event) {
+            event.preventDefault();
+            show("transfer");
+            if (history.replaceState) {
+                history.replaceState(null, "", "#transfer-booking");
+            } else {
+                location.hash = "transfer-booking";
+            }
+        });
+    }
+
+    function applyHashRoute() {
+        if (String(location.hash || "") === "#transfer-booking") {
+            show("transfer");
+        }
+    }
+    window.addEventListener("hashchange", applyHashRoute);
 
     document.getElementById("backButton").addEventListener("click", function () {
         if (window.havkarNavigateBack) {
@@ -724,7 +910,11 @@ h2{
         window.location.href = "index.html";
     });
 
-    show("flight");
+    if (String(location.hash || "") === "#transfer-booking") {
+        show("transfer");
+    } else {
+        show("flight");
+    }
 })();
 </script>
 <script src="/havkar-i18n.js"></script>

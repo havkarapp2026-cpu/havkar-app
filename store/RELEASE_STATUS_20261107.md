@@ -11,13 +11,13 @@ Evidence-based. Items not verified are marked BLOCKED / NOT VERIFIED. Mainnet an
 | Jobs | PASS (code+unit) | `jobs.html` + management tests |
 | Services | PASS (code) | Bookings + one-time XLM payAndVerify (Testnet only) |
 | Events | PASS (code) | Free tickets; Stripe gated; XLM verify + ticket fulfillment |
-| Tickets / Flights | PARTIAL | Live Duffel search wired in `tickets.html`; paid booking still Duffel test-mode / owner-gated |
+| Tickets / Flights | PASS (test booking) | Live Duffel search + TEST MODE order UI (`/api/flight-order`); live booking blocked |
 | Tickets / Train·Bus·Ferry | BLOCKED | Omio partner API not available |
 | Tickets / Hotels | BLOCKED | No hotel partner |
-| Taxi / Transfer | PASS (intentionally disabled) | Hidden from purchasing; no fake fares |
+| Taxi / Transfer | PASS (intentionally disabled) | Unavailable panel; transfer grid only on ride tab |
 | Delivery | PASS (protected) | Lifecycle preserved; XLM Testnet settle path wired |
 | AI | PASS (gated) | Requires real-payments flag for paid AI |
-| Auth / Profiles | PASS / PARTIAL | Auth OK; avatar upload still bucket-gated |
+| Auth / Profiles | PASS | Auth OK; `avatars` storage bucket + Change Photo restored |
 | Messaging | PASS + hardened | Conversation party rewrite blocked in production |
 | Notifications | PASS | Realtime notifications page |
 | Search / Media / i18n | PASS | Existing tests; video ≤60s constraint applied |
@@ -43,8 +43,9 @@ Owner must set `HAVKAR_STELLAR_TESTNET_DESTINATION` (or valid public `HAVKAR_STE
 | targetSdk / compileSdk 36 | DONE in this branch |
 | versionCode / versionName | `2` / `1.0.0` |
 | AGP | `8.9.1` |
-| Signed AAB | Prior run `42399945850` PASS on main; re-run after merge |
-| Data safety / screenshots / closed testing upload | BLOCKED — owner Console |
+| Signed AAB API36/vc2 | BLOCKED — agent cannot `workflow_dispatch` (403); owner must run Actions → Android release AAB → signed on `main` |
+| Data safety draft | DONE in repo (`store/PLAY_DATA_SAFETY.md`); Console paste BLOCKED — owner |
+| Screenshots / closed testing upload | BLOCKED — owner Console |
 | Reviewer App Access password paste | BLOCKED — owner-held |
 
 ## Apple App Store

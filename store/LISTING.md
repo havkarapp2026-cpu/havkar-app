@@ -16,13 +16,15 @@ This file prepares store text. It does not submit HAVKAR to Google Play or the A
 
 ## Short description
 
-HAVKAR is a multi-service app for account, language, support, and the free features that are switched on. Real payments are off.
+HAVKAR is a multi-service marketplace app (buy & sell, ads, jobs, services, events, delivery, tickets). Real card/Pi/Mainnet payments stay off.
 
 ## Full description
 
-HAVKAR opens the live HAVKAR website inside a native Android and iOS project. Sign-up, sign-in, language, and the free pages use the real HAVKAR backend. The Android package is online.havkar.app and uses the HAVKAR icon.
+HAVKAR opens the live HAVKAR website inside a native Android and iOS project. Sign-up, sign-in, language, and enabled modules use the real HAVKAR backend. The Android package is online.havkar.app (targetSdk 36, versionCode 2) and uses the HAVKAR icon.
 
-Real card payments, Pi payments, Stellar mainnet, money transfer, currency trade, paid tickets, paid subscriptions, and paid AI stay off. Sending a privacy request does not delete the account by itself.
+Flights: signed-in Duffel search and Duffel TEST MODE orders only. Train/bus/ferry await Omio. Taxi/transfer stay unavailable. Hotels have no partner yet. Stellar Testnet quote+verify can settle enabled one-time flows; Stellar Mainnet stays disabled. Card, Pi, currency trade, paid subscriptions, and paid AI stay off until the owner flips explicit flags.
+
+Sending a privacy request does not delete the account by itself. Data safety draft: `store/PLAY_DATA_SAFETY.md`.
 
 The native screens load the real web app. They are not a separate rewrite of every HAVKAR page. Google sign-in inside an embedded view can be rejected by Google. Email and password remain the path that the app keeps inside the view.
 
