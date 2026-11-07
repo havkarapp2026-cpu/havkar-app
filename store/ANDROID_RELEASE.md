@@ -1,6 +1,6 @@
 # Android release readiness (HAVKAR)
 
-Checked on Linux Cloud Agent host (no macOS). Package id and Gradle signing are in-repo. A signed AAB was **not** built in this environment.
+Checked on Linux Cloud Agent host (no macOS). Package id and Gradle signing are in-repo. A signed AAB was **not** produced for Play upload in this environment.
 
 ## Verified in repository
 
@@ -12,15 +12,17 @@ Checked on Linux Cloud Agent host (no macOS). Package id and Gradle signing are 
 | Upload signing config | PASS (code) | Reads `HAVKAR_UPLOAD_STORE_FILE`, `HAVKAR_UPLOAD_STORE_PASSWORD`, `HAVKAR_UPLOAD_KEY_ALIAS`, `HAVKAR_UPLOAD_KEY_PASSWORD` |
 | Launcher icons | PASS | `mipmap-*/ic_launcher.png` present |
 | Capacitor / WebView shell | PASS | Android project present under `android/` |
+| Cloud unsigned AAB workflow | PASS (CI) | `.github/workflows/android-release-aab.yml` — successful run `42292911126` |
+| Cloud signed AAB | BLOCKED | Requires repository secrets `HAVKAR_UPLOAD_*` |
+| Age-encrypted keystore generator | READY (gated) | `store/ANDROID_KEYSTORE_SECURITY.md` + workflow; run `42307300847` stopped because `HAVKAR_UPLOAD_BACKUP_AGE_RECIPIENT` was missing — correct fail-closed behavior |
 
-## Blocked in this environment
+## Blocked without owner secrets
 
 | Item | Status | Missing |
 | --- | --- | --- |
-| Android SDK / `ANDROID_HOME` | BLOCKED | No SDK installed on this host |
-| Upload keystore | BLOCKED | No `HAVKAR_UPLOAD_*` secrets in the agent environment |
-| Signed release AAB | BLOCKED | Cannot claim an AAB exists |
-| Unsigned local assemble | NOT TESTED | SDK missing; not started |
+| Upload keystore material | BLOCKED | Owner must supply or approve generation via age recipient secret |
+| Signed release AAB for Play | BLOCKED | Cannot invent signing credentials |
+| Play Console closed testing upload | BLOCKED | Needs signed AAB + owner Console access |
 
 ## Build command (owner machine)
 

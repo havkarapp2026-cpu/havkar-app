@@ -7,7 +7,7 @@ Checked on Linux Cloud Agent host. Xcode and Apple signing materials are not ava
 | Item | Status | Evidence |
 | --- | --- | --- |
 | iOS project | PASS | `ios/HAVKAR.xcodeproj` |
-| Bundle id target | PASS (intended) | Store docs and Android id use `online.havkar.app`; confirm in Xcode before archive |
+| Bundle id target | PASS | `PRODUCT_BUNDLE_IDENTIFIER = online.havkar.app` in `ios/HAVKAR.xcodeproj/project.pbxproj` |
 | App icon asset | PASS | `ios/HAVKAR/Assets.xcassets/AppIcon.appiconset` includes `AppIcon-1024.png` |
 | Simulator / unsigned local path | PASS (documented) | Project historically builds for Simulator with signing off |
 

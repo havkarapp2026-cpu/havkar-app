@@ -1,6 +1,10 @@
 -- Account-specific Play review entitlement.
 -- This does not enable card payments, Pi, Stellar mainnet, or admin access.
 -- It does not write a Stripe customer or subscription id.
+--
+-- Production note (gispovnciifgikvgpzck): applied objects exist.
+-- schema_migrations records version 20261106204613 / name play_review_entitlement
+-- (not this file stamp). Do not re-run or manually insert 20261106143000.
 
 CREATE OR REPLACE FUNCTION havkar_private.play_review_business(p_user_id uuid)
 RETURNS boolean

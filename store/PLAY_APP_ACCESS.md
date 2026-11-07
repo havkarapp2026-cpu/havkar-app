@@ -1,6 +1,6 @@
 # Google Play — App Access instructions (HAVKAR)
 
-Status checked on production Supabase project `gispovnciifgikvgpzck` and site `https://havkar-app.vercel.app` (Europe/Rome reference: 6 November 2026 evening).
+Status re-checked on production Supabase project `gispovnciifgikvgpzck` and site `https://havkar-app.vercel.app` (Europe/Rome reference: 7 November 2026 midday).
 
 This file is for Play Console **App access**. It does not contain a password. Do not put the Gmail password in the repository.
 
@@ -21,8 +21,8 @@ Verified server-side:
 | Admin role | PASS — none |
 | Play review entitlement (`havkar_private.play_review_business`) | PASS — true |
 | Image budget under entitlement | PASS — business monthly limit 80 |
-| Migration `play_review_entitlement` recorded | PASS |
-| Edge Function `havkar-ai-assistant` | PASS — production version 15, JWT required, source pin `6df8897` (includes Play review policy) |
+| Migration `play_review_entitlement` recorded | PASS — `schema_migrations` version `20261106204613` (repo file stamp `20261106143000`; do not re-run) |
+| Edge Function `havkar-ai-assistant` | PASS — production version **21**, JWT required, **bundled** deploy (no runtime GitHub import); Play review policy present |
 
 ## How Google Play reviewers sign in
 
