@@ -1417,6 +1417,7 @@ button:focus-visible{
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-ad-publish.js"></script>
 <script src="/havkar-marketplace.js"></script>
+<script src="/stellar-wallet-bundle.js"></script>
 <script src="/havkar-xlm-checkout.js"></script>
 <script>
 "use strict";
@@ -4324,8 +4325,20 @@ async function quoteListingXlm(){
 
     }
 
-    const quoted =
-        await window.HAVKAR_XLM.quote({
+    if (typeof window.havkarConnectStellarWallet === "function") {
+        try {
+            await window.havkarConnectStellarWallet();
+        } catch (connectError) {
+            showToast(
+                (connectError && connectError.message) ||
+                    "Connect a Stellar Testnet wallet first."
+            );
+            return;
+        }
+    }
+
+    const settled =
+        await window.HAVKAR_XLM.payAndVerify({
             flow: "marketplace",
             price: amount,
             subjectId: String(ad.id),
@@ -4334,7 +4347,7 @@ async function quoteListingXlm(){
 
     showToast(
         window.HAVKAR_XLM.describe(
-            quoted.result
+            settled && settled.result
         )
     );
 

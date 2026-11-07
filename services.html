@@ -2298,6 +2298,7 @@ textarea.form-control {
 
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-services.js"></script>
+<script src="/stellar-wallet-bundle.js"></script>
 <script src="/havkar-xlm-checkout.js"></script>
 <script>
 
@@ -3055,21 +3056,45 @@ async function submitBooking(event) {
             return;
         }
 
-        const quoted = await window.HAVKAR_XLM.quote({
-            flow: recurring ? "subscription" : "services",
+        if (recurring) {
+            setButtonBusy(submitButton, false, "Confirm Booking");
+            showToast("Recurring XLM subscriptions are not supported. Nothing was collected.");
+            return;
+        }
+
+        if (typeof window.havkarConnectStellarWallet === "function") {
+            try {
+                await window.havkarConnectStellarWallet();
+            } catch (connectError) {
+                setButtonBusy(submitButton, false, "Confirm Booking");
+                showToast(
+                    (connectError && connectError.message) ||
+                        "Connect a Stellar Testnet wallet first. Nothing was collected."
+                );
+                return;
+            }
+        }
+
+        const settled = await window.HAVKAR_XLM.payAndVerify({
+            flow: "services",
             price: servicePrice,
             subjectId: String(selectedBookingService.id),
             accessToken: accessToken
         });
 
-        if (!quoted.result || quoted.result.order_paid === true || quoted.result.payable !== true) {
+        if (!settled.result || settled.result.order_paid !== true) {
             setButtonBusy(submitButton, false, "Confirm Booking");
-            showToast(window.HAVKAR_XLM.describe(quoted.result));
+            showToast(window.HAVKAR_XLM.describe(settled.result));
             return;
         }
 
         payload.payment_method = "online";
         payload.status = "pending";
+        if (settled.result.tx_hash) {
+            payload.message = String(payload.message || "")
+                + (payload.message ? "\n" : "")
+                + "XLM Testnet settled tx " + settled.result.tx_hash;
+        }
     }
 
     const inserted = await db
