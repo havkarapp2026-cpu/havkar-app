@@ -11,7 +11,7 @@ Independent verification only. Items not re-tested are marked unverified.
 | Play review DB function | PASS | `havkar_private.play_review_business` exists; reviewer returns `true` |
 | Migration registration | PASS (aliased) | Recorded as `20261106204613` / `play_review_entitlement` |
 | Re-run migration | NOT DONE | Correct — objects already present |
-| Security advisors | WARN (open) | 5 WARN + 1 INFO (GraphQL exposure, leaked-password protection off, etc.) — owner review |
+| Security advisors | PARTIAL | GraphQL WARNs cleared (pg_graphql dropped); DEFINER WARNs left for intentional RPCs; **HIBP BLOCKED** on Free plan |
 
 ## Google Play review access
 

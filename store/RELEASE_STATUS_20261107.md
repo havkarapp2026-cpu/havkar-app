@@ -60,8 +60,17 @@ Owner must set `HAVKAR_STELLAR_TESTNET_DESTINATION` (or valid public `HAVKAR_STE
 - Conversation party-change trigger
 - `wallet_exchanges` client write revoke + FORCE RLS
 - `product.html` publishable key aligned to `havkar-supabase-config.js`
+- Anon write revoke + private-table anon SELECT revoke + DEFINER EXECUTE tighten (`20261107233000_…`)
+- Dropped unused `pg_graphql`; revoked sensitive anon SELECT + client TRUNCATE (`20261107234500_…`)
+- GraphQL advisor WARNs cleared (verified via advisors + `/graphql/v1` smoke)
 
-Still owner-review: Supabase leaked-password protection, GraphQL advisor WARNs, Pi auth hardening before enabling Pi.
+### Security remaining blockers
+
+| Item | Status |
+| --- | --- |
+| Leaked Password Protection (HIBP) | **BLOCKED** — org Free plan; requires Pro + Auth enable |
+| Intentional DEFINER RPCs (`event_interest_counts`, delivery accept/update, `ad_has_blocking_dependencies`) | WARN remains by design |
+| Pi auth hardening | Still required before enabling Pi |
 
 ## Do not claim
 
