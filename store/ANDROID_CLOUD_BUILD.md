@@ -37,7 +37,7 @@ Add these under GitHub → Settings → Secrets and variables → Actions. Never
 | `HAVKAR_UPLOAD_KEY_ALIAS` | Key alias |
 | `HAVKAR_UPLOAD_KEY_PASSWORD` | Key password |
 
-Gradle already reads the path/password/alias/password env vars from `android/app/build.gradle.kts`. The workflow decodes the base64 secret into a temp file with mode `600`, sets `HAVKAR_UPLOAD_STORE_FILE`, builds `:app:bundleRelease`, verifies with `jarsigner`, uploads the AAB artifact, then deletes the temp keystore.
+Gradle already reads the path/password/alias/password env vars from `android/app/build.gradle.kts`. The workflow decodes the base64 secret into a temp file with mode `600`, sets `HAVKAR_UPLOAD_STORE_FILE`, builds `:app:bundleRelease`, verifies signing with `scripts/verify-android-aab-signing.sh` (`jarsigner -verify -strict` against the upload keystore plus SHA-256 cert fingerprint match — plain `-strict` without the keystore falsely fails on expected self-signed Play upload certs), uploads the AAB artifact, then deletes the temp keystore.
 
 Do **not** create a debug keystore for Play. Do **not** commit any keystore.
 

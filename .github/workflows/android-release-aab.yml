@@ -157,18 +157,11 @@ jobs:
       - name: Verify release signing when secrets were used
         if: env.BUILD_MODE == 'signed'
         run: |
-          AAB="${{ steps.aab.outputs.path }}"
-          # bundletool is not required; jarsigner works on the AAB zip.
-          if ! jarsigner -verify -strict "$AAB" >/tmp/aab-verify.txt 2>&1; then
-            echo "Signed AAB verification failed."
-            # Do not dump certificate details that could leak key identity beyond necessity.
-            exit 1
-          fi
-          if grep -qi "jar is unsigned\|no manifest\|not signed" /tmp/aab-verify.txt; then
-            echo "AAB is not signed with the upload key."
-            exit 1
-          fi
-          echo "jarsigner verification passed for the release AAB."
+          # Plain `jarsigner -verify -strict` fails on legitimate self-signed Play
+          # upload certs (PKIX / self-signed). The script passes the upload
+          # keystore into -strict and also checks SHA-256 fingerprint match.
+          chmod +x ./scripts/verify-android-aab-signing.sh
+          ./scripts/verify-android-aab-signing.sh "${{ steps.aab.outputs.path }}"
 
       - name: Record unsigned smoke result
         if: env.BUILD_MODE == 'unsigned_smoke'
