@@ -213,6 +213,126 @@ async function countReservedTickets(eventId) {
   );
 }
 
+/**
+ * After Horizon verifies a Testnet XLM settlement, create the domain object
+ * for supported one-time flows. Never invents a ticket for unpaid quotes.
+ */
+async function fulfillSettledXlmIntent(admin, userId, intentId) {
+  const loaded = await admin
+    .from("marketplace_payment_intents")
+    .select("id,user_id,flow,status,subject_id,amount,currency,tx_hash")
+    .eq("id", intentId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const intent = loaded && loaded.data;
+
+  if (!intent || intent.status !== "settled") {
+    return { ticket_id: null, fulfillment: null, error: null };
+  }
+
+  if (String(intent.flow || "") !== "events") {
+    return {
+      ticket_id: null,
+      fulfillment: "intent_only",
+      error: null
+    };
+  }
+
+  const eventId = Number(intent.subject_id);
+
+  if (!Number.isSafeInteger(eventId) || eventId <= 0) {
+    return {
+      ticket_id: null,
+      fulfillment: null,
+      error: "Event subject is missing on the settled quote."
+    };
+  }
+
+  const existing = await admin
+    .from("event_tickets")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("event_id", eventId)
+    .eq("payment_provider", "stellar_testnet")
+    .eq("payment_reference", intent.tx_hash)
+    .maybeSingle();
+
+  if (existing && existing.data && existing.data.id) {
+    return {
+      ticket_id: existing.data.id,
+      fulfillment: "event_ticket",
+      error: null
+    };
+  }
+
+  const eventLoaded = await admin
+    .from("events")
+    .select("id,price,max_attendees,status")
+    .eq("id", eventId)
+    .maybeSingle();
+
+  const event = eventLoaded && eventLoaded.data;
+
+  if (!event) {
+    return {
+      ticket_id: null,
+      fulfillment: null,
+      error: "Settled quote refers to a missing event."
+    };
+  }
+
+  const maxAttendees =
+    event.max_attendees == null
+      ? null
+      : Number(event.max_attendees);
+
+  if (maxAttendees !== null) {
+    const reserved = await countReservedTickets(eventId);
+
+    if (reserved + 1 > maxAttendees) {
+      return {
+        ticket_id: null,
+        fulfillment: null,
+        error: "Event capacity was reached after settlement. Contact support with the Testnet tx hash."
+      };
+    }
+  }
+
+  const unitPrice = Number(event.price || intent.amount || 0);
+  const inserted = await admin
+    .from("event_tickets")
+    .insert({
+      user_id: userId,
+      event_id: eventId,
+      quantity: 1,
+      unit_price: unitPrice,
+      currency: String(intent.currency || "EUR").toUpperCase(),
+      total_amount: Number(intent.amount || unitPrice),
+      payment_status: "paid",
+      ticket_status: "valid",
+      payment_provider: "stellar_testnet",
+      payment_reference: intent.tx_hash,
+      paid_at: new Date().toISOString()
+    })
+    .select("id")
+    .single();
+
+  if (inserted.error || !inserted.data) {
+    return {
+      ticket_id: null,
+      fulfillment: null,
+      error: "Settlement was verified but the event ticket could not be stored."
+    };
+  }
+
+  return {
+    ticket_id: inserted.data.id,
+    fulfillment: "event_ticket",
+    error: null
+  };
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -291,7 +411,32 @@ export default async function handler(req, res) {
           req.body
         );
 
-        return res.status(settled.status).json(settled);
+        if (
+          req.body?.action === "verify" &&
+          settled.ok === true &&
+          settled.order_paid === true
+        ) {
+          const fulfilled = await fulfillSettledXlmIntent(
+            getSupabaseAdmin(),
+            user.id,
+            req.body?.intent_id
+          );
+
+          return res.status(settled.status).json({
+            ...settled,
+            intent_id: req.body?.intent_id || null,
+            tx_hash: req.body?.tx_hash || null,
+            ticket_id: fulfilled.ticket_id || null,
+            fulfillment: fulfilled.fulfillment || null,
+            fulfillment_error: fulfilled.error || null
+          });
+        }
+
+        return res.status(settled.status).json({
+          ...settled,
+          intent_id: req.body?.intent_id || null,
+          tx_hash: req.body?.tx_hash || null
+        });
       }
 
       const decision = evaluateStellarCheckout(req.body);

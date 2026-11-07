@@ -1997,6 +1997,7 @@
     <script src="havkar-i18n.js"></script>
 
     <script src="/havkar-supabase-config.js"></script>
+    <script src="/stellar-wallet-bundle.js"></script>
     <script src="/havkar-xlm-checkout.js"></script>
 <script type="module">
         import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
@@ -3489,18 +3490,46 @@
             const accessToken = sessionData?.session?.access_token || "";
 
             if (!accessToken || !window.HAVKAR_XLM) {
-                showToast("Sign in before requesting an XLM quote.", "error");
+                showToast("Sign in before paying with XLM.", "error");
                 return;
             }
 
-            const quoted = await window.HAVKAR_XLM.quote({
+            if (typeof window.havkarConnectStellarWallet === "function") {
+                try {
+                    await window.havkarConnectStellarWallet();
+                } catch (connectError) {
+                    showToast(
+                        (connectError && connectError.message) ||
+                            "Connect a Stellar Testnet wallet first.",
+                        "error"
+                    );
+                    return;
+                }
+            }
+
+            const settled = await window.HAVKAR_XLM.payAndVerify({
                 flow: "events",
                 price: amount,
                 subjectId: String(id),
                 accessToken: accessToken
             });
 
-            showToast(window.HAVKAR_XLM.describe(quoted.result), quoted.result && quoted.result.payable ? "success" : "error");
+            const result = settled && settled.result;
+            showToast(
+                window.HAVKAR_XLM.describe(result) +
+                    (result && result.ticket_id
+                        ? " Ticket " + result.ticket_id + " is ready."
+                        : ""),
+                result && result.order_paid ? "success" : "error"
+            );
+
+            if (result && result.order_paid && typeof loadMyEventTickets === "function") {
+                try {
+                    await loadMyEventTickets();
+                } catch (reloadError) {
+                    console.warn("[HAVKAR] Could not reload event tickets after XLM settlement");
+                }
+            }
         }
 
         function ticketStatusClass(status) {

@@ -1654,6 +1654,7 @@
 </script>
 
     <script src="/havkar-supabase-config.js"></script>
+    <script src="/stellar-wallet-bundle.js"></script>
     <script src="/havkar-xlm-checkout.js"></script>
 <script>
 /* =========================
@@ -1876,14 +1877,30 @@
                 return;
             }
 
-            const quoted = await window.HAVKAR_XLM.quote({
+            if (typeof window.havkarConnectStellarWallet === "function") {
+                try {
+                    await window.havkarConnectStellarWallet();
+                } catch (connectError) {
+                    showToast(
+                        (connectError && connectError.message) ||
+                            "Connect a Stellar Testnet wallet first. Delivery status was not changed.",
+                        "error"
+                    );
+                    return;
+                }
+            }
+
+            const settled = await window.HAVKAR_XLM.payAndVerify({
                 flow: "delivery",
                 price: Number(price),
                 subjectId: String(id),
                 accessToken: accessToken
             });
 
-            showToast(window.HAVKAR_XLM.describe(quoted.result), quoted.result && quoted.result.payable ? "success" : "error");
+            showToast(
+                window.HAVKAR_XLM.describe(settled && settled.result),
+                settled && settled.result && settled.result.order_paid ? "success" : "error"
+            );
         }
 
         function formatMoney(price, currency = "EUR") {

@@ -8,7 +8,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#7cb342">
-<meta name="description" content="HAVKAR Tickets: taxi and transfer booking is not available inside HAVKAR. Train, bus, flight, and ferry booking waits for Omio partner approval.">
+<meta name="description" content="HAVKAR Tickets: search real flights when signed in. Train, bus, and ferry wait for Omio. Taxi and transfer stay unavailable inside HAVKAR.">
 <title>HAVKAR - Tickets</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <style>
@@ -78,10 +78,48 @@ a{color:inherit}
 .service-card:focus-visible,
 .partner-link:focus-visible,
 .text-link:focus-visible,
-.nav-item:focus-visible{
+.nav-item:focus-visible,
+.flight-form input:focus-visible,
+.flight-form select:focus-visible,
+.flight-form button:focus-visible{
     outline:3px solid rgba(255,255,255,.85);
     outline-offset:2px;
 }
+.flight-form{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+    gap:12px;
+    margin:18px 0 12px;
+}
+.flight-form label{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    font-size:13px;
+    color:var(--muted);
+}
+.flight-form input,
+.flight-form select{
+    min-height:42px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:8px 10px;
+    background:#fff;
+    color:var(--text);
+}
+.flight-results{
+    display:grid;
+    gap:12px;
+    margin-top:14px;
+}
+.flight-card{
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:14px 16px;
+    background:#fbfdf9;
+}
+.flight-card strong{display:block;margin-bottom:4px}
+.flight-card p{margin:0;color:var(--muted);font-size:14px;line-height:1.45}
 .page{
     width:min(1040px, calc(100% - 28px));
     margin:22px auto 28px;
@@ -381,9 +419,10 @@ h2{
 
 <main class="page">
     <p class="intro">
-        Choose a ticket type. Flight, train, bus, and ferry search stays on this page until Omio access is approved.
+        Choose a ticket type. Flights use the signed-in Duffel search when the server token is configured.
+        Train, bus, and ferry stay reserved for Omio until partner API access is approved.
         Taxi and transfer booking is not available inside HAVKAR.
-        HAVKAR does not show sample bookings or sample payments as real reservations.
+        HAVKAR does not show sample inventory or sample payments as real reservations.
     </p>
 
     <div class="ticket-types" role="group" aria-label="Ticket types">
@@ -396,14 +435,41 @@ h2{
         <button class="ticket-type" type="button" data-ticket-type="hotel" aria-pressed="false"><i class="fas fa-hotel" aria-hidden="true"></i><span>Hotels</span></button>
     </div>
 
-    <section id="ticket-flight" class="panel omio-panel" data-ticket-panel="flight" aria-labelledby="flightTitle">
+    <section id="ticket-flight" class="panel" data-ticket-panel="flight" aria-labelledby="flightTitle">
         <div class="kicker"><i class="fas fa-plane" aria-hidden="true"></i> Flights</div>
         <h2 id="flightTitle">Flights</h2>
         <div class="status-row">
-            <span class="status-badge"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Awaiting partner access</span>
+            <span class="status-badge"><i class="fas fa-plane-departure" aria-hidden="true"></i> Live partner search</span>
         </div>
-        <p class="lead">Reserved for Omio flight search after access is approved. This section does not list journeys, seats, or fares, and it cannot complete a booking.</p>
-        <div class="pending-note">The Omio integration is being prepared. Search will be added here only after Omio grants cooperation and API access. No booking is offered from HAVKAR in the meantime.</div>
+        <p class="lead">Search real flight offers after signing in. Results come from the server-side Duffel API. Paid production booking stays off until the owner enables real payments; test orders are labeled as Duffel test mode only.</p>
+        <form id="flightSearchForm" class="flight-form" novalidate>
+            <label>Origin IATA
+                <input id="flightOrigin" name="origin" maxlength="3" placeholder="MXP" autocomplete="off" required>
+            </label>
+            <label>Destination IATA
+                <input id="flightDestination" name="destination" maxlength="3" placeholder="FCO" autocomplete="off" required>
+            </label>
+            <label>Departure date
+                <input id="flightDepart" name="departure_date" type="date" required>
+            </label>
+            <label>Return date (optional)
+                <input id="flightReturn" name="return_date" type="date">
+            </label>
+            <label>Adults
+                <input id="flightAdults" name="adults" type="number" min="1" max="9" value="1" required>
+            </label>
+            <label>Cabin
+                <select id="flightCabin" name="cabin_class">
+                    <option value="economy">Economy</option>
+                    <option value="premium_economy">Premium economy</option>
+                    <option value="business">Business</option>
+                    <option value="first">First</option>
+                </select>
+            </label>
+            <button class="partner-link" type="submit" id="flightSearchButton">Search flights</button>
+        </form>
+        <p id="flightSearchStatus" class="pending-note" role="status" aria-live="polite">Sign in, then search with real airport codes. No sample fares are invented here.</p>
+        <div id="flightResults" class="flight-results" hidden></div>
     </section>
 
     <section id="ticket-train" class="panel omio-panel" data-ticket-panel="train" hidden aria-labelledby="trainTitle">
@@ -515,6 +581,8 @@ h2{
         <span>Profile</span>
     </a>
 </nav>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-page-back.js"></script>
 <script>
 (function () {
@@ -522,6 +590,15 @@ h2{
     var panels = document.querySelectorAll("[data-ticket-panel]");
     var rideTitle = document.getElementById("taxiTitle");
     var rideKicker = document.getElementById("rideKicker");
+    var flightForm = document.getElementById("flightSearchForm");
+    var flightStatus = document.getElementById("flightSearchStatus");
+    var flightResults = document.getElementById("flightResults");
+    var supabaseClient = window.supabase && window.HAVKAR_SUPABASE_CONFIG
+        ? window.supabase.createClient(
+            window.HAVKAR_SUPABASE_CONFIG.url,
+            window.HAVKAR_SUPABASE_CONFIG.publishableKey
+        )
+        : null;
 
     function show(type) {
         var panelName = type === "taxi" || type === "transfer" ? "ride" : type;
@@ -538,6 +615,91 @@ h2{
             rideTitle.textContent = label;
             rideKicker.textContent = label;
         }
+    }
+
+    function setFlightStatus(message) {
+        if (flightStatus) flightStatus.textContent = message;
+    }
+
+    function renderFlightOffers(payload) {
+        if (!flightResults) return;
+        flightResults.hidden = false;
+        flightResults.innerHTML = "";
+        var offers = Array.isArray(payload && payload.data && payload.data.offers)
+            ? payload.data.offers
+            : (Array.isArray(payload && payload.offers) ? payload.offers : []);
+        if (!offers.length) {
+            setFlightStatus("No offers returned for that search. Nothing was booked.");
+            return;
+        }
+        offers.slice(0, 20).forEach(function (offer) {
+            var card = document.createElement("article");
+            card.className = "flight-card";
+            var total = offer.total_amount || offer.total_currency
+                ? String(offer.total_amount || "") + " " + String(offer.total_currency || "")
+                : (offer.price ? String(offer.price) : "Price on request");
+            var owner = offer.owner && offer.owner.name ? offer.owner.name : "Airline offer";
+            var id = offer.id || "";
+            card.innerHTML = "<strong>" + owner + "</strong><p>" + total.trim() +
+                (id ? " · offer " + id : "") +
+                "</p><p>Live Duffel offer. Production booking stays gated; use Duffel test mode only until real payments are enabled by the owner.</p>";
+            flightResults.appendChild(card);
+        });
+        setFlightStatus("Showing " + Math.min(offers.length, 20) + " live offer(s). No payment was taken.");
+    }
+
+    if (flightForm) {
+        flightForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+            if (!supabaseClient) {
+                setFlightStatus("Supabase is not configured in this browser session.");
+                return;
+            }
+            var session = await supabaseClient.auth.getSession();
+            var accessToken = session && session.data && session.data.session
+                ? session.data.session.access_token
+                : "";
+            if (!accessToken) {
+                setFlightStatus("Sign in to search live flights. HAVKAR does not invent sample fares.");
+                return;
+            }
+            var origin = String(document.getElementById("flightOrigin").value || "").trim().toUpperCase();
+            var destination = String(document.getElementById("flightDestination").value || "").trim().toUpperCase();
+            var departure = String(document.getElementById("flightDepart").value || "").trim();
+            var ret = String(document.getElementById("flightReturn").value || "").trim();
+            var adults = Number(document.getElementById("flightAdults").value || 1);
+            var cabin = String(document.getElementById("flightCabin").value || "economy");
+            setFlightStatus("Searching live flights…");
+            if (flightResults) {
+                flightResults.hidden = true;
+                flightResults.innerHTML = "";
+            }
+            try {
+                var response = await fetch("/api/flights", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: "Bearer " + accessToken
+                    },
+                    body: JSON.stringify({
+                        origin: origin,
+                        destination: destination,
+                        departure_date: departure,
+                        return_date: ret || null,
+                        adults: adults,
+                        cabin_class: cabin
+                    })
+                });
+                var body = await response.json().catch(function () { return null; });
+                if (!response.ok || !body || body.ok === false) {
+                    setFlightStatus((body && body.error) || "Flight search failed. Nothing was booked.");
+                    return;
+                }
+                renderFlightOffers(body);
+            } catch (error) {
+                setFlightStatus("Flight search could not reach the server. Nothing was booked.");
+            }
+        });
     }
 
     buttons.forEach(function (button) {

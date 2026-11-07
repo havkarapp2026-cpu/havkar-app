@@ -1,6 +1,7 @@
 /*
  * Shared browser caller for the server-side Testnet XLM checkout.
  * Fiat buttons stay in place. This file never marks an order paid locally.
+ * Mainnet stays disabled in the wallet kit and on the server.
  */
 (function (root) {
   function describe(result) {
@@ -76,9 +77,101 @@
     }, input.accessToken);
   }
 
+  /**
+   * Quote → wallet sign/submit on Testnet → server Horizon verify.
+   * Never treats a local wallet success as paid without verify().
+   */
+  async function payAndVerify(options) {
+    const input = options || {};
+    const accessToken = String(input.accessToken || "");
+
+    if (!accessToken) {
+      return {
+        ok: false,
+        result: {
+          ok: false,
+          paid: false,
+          order_paid: false,
+          error: "Sign in before paying with XLM."
+        }
+      };
+    }
+
+    if (typeof root.havkarSignAndSubmitStellarPayment !== "function") {
+      return {
+        ok: false,
+        result: {
+          ok: false,
+          paid: false,
+          order_paid: false,
+          error: "Stellar wallet kit is not loaded."
+        }
+      };
+    }
+
+    const network = typeof root.havkarGetStellarNetwork === "function"
+      ? root.havkarGetStellarNetwork()
+      : null;
+
+    if (
+      !network ||
+      network.id !== "TESTNET" ||
+      String(network.passphrase || "").indexOf("Test") === -1
+    ) {
+      return {
+        ok: false,
+        result: {
+          ok: false,
+          paid: false,
+          order_paid: false,
+          error: "Switch the Stellar wallet to Testnet. Mainnet payments stay disabled."
+        }
+      };
+    }
+
+    const quoted = await quote(input);
+
+    if (!quoted.ok || !quoted.result || quoted.result.payable !== true) {
+      return quoted;
+    }
+
+    const payment = await root.havkarSignAndSubmitStellarPayment({
+      destination: quoted.result.destination,
+      amount: quoted.result.amount_xlm,
+      memo: quoted.result.memo
+    });
+
+    const txHash = String(
+      (payment && (payment.hash || payment.txHash || payment.id)) || ""
+    ).trim().toLowerCase();
+
+    if (!/^[a-f0-9]{64}$/.test(txHash)) {
+      return {
+        ok: false,
+        result: {
+          ok: false,
+          paid: false,
+          order_paid: false,
+          intent_id: quoted.result.intent_id,
+          error: (payment && payment.error) ||
+            "Wallet did not return a Testnet transaction hash. Nothing was marked paid."
+        }
+      };
+    }
+
+    const settled = await verify({
+      intentId: quoted.result.intent_id,
+      txHash: txHash,
+      accessToken: accessToken
+    });
+
+    return settled;
+  }
+
   root.HAVKAR_XLM = {
     quote: quote,
     verify: verify,
+    payAndVerify: payAndVerify,
     describe: describe
   };
 })(typeof globalThis !== "undefined" ? globalThis : window);

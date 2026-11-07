@@ -41,7 +41,8 @@ Independent verification only. Items not re-tested are marked unverified.
 | `HAVKAR_REAL_PAYMENTS_ENABLED` must be `"true"` for paid AI | PASS (code+test) |
 | Stripe pause path | PASS (unit) `REAL_PAYMENTS_PAUSE_OK` |
 | Stellar Mainnet payments | OFF in source (`STELLAR_MAINNET_PAYMENTS_ENABLED = false`) |
-| Production payment enablement | NOT DONE — requires explicit owner approval |
+| Stellar Testnet pay+verify UI | PARTIAL — `payAndVerify` wired; destination env required on production |
+| Production payment enablement | NOT DONE — requires explicit owner approval after security/legal checklist |
 
 ## Android
 
@@ -49,8 +50,8 @@ Independent verification only. Items not re-tested are marked unverified.
 | --- | --- |
 | Package `online.havkar.app` | PASS |
 | Unsigned cloud AAB CI | PASS (run 42292911126) |
-| Signed AAB | BLOCKED — upload key secrets / age recipient |
-| Keystore generator | FAIL-CLOSED without `HAVKAR_UPLOAD_BACKUP_AGE_RECIPIENT` |
+| Signed AAB | PASS (run 42399945850); API 36 bump needs re-run |
+| Keystore generator | PASS — existing upload key; do not regenerate without necessity |
 
 ## iOS
 
