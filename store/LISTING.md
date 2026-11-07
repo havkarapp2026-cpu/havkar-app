@@ -7,7 +7,7 @@ This file prepares store text. It does not submit HAVKAR to Google Play or the A
 - App name: HAVKAR
 - Android application id: online.havkar.app
 - iOS bundle id: online.havkar.app
-- Version: 1.0.0-beta (version code 1)
+- Version: 1.0.0 (version code 2)
 - Icon: assets/icons/havkar-icon-1024-20261022-v3.png
 - Website: https://havkar-app.vercel.app
 - Support: support@havkar.online
