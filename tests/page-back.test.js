@@ -67,4 +67,72 @@ const blockedParent = back.havkarBackDestination(
 );
 assert.strictEqual(blockedParent.href, "index.html");
 
+function withNavigation(options) {
+
+    const previousWindow = global.window;
+    const previousDocument = global.document;
+    const calls = {
+        back: 0,
+        assign: []
+    };
+
+    global.window = {
+        location: {
+            href: options.href,
+            assign: function (href) {
+                calls.assign.push(href);
+            }
+        },
+        history: {
+            length: options.length,
+            state: null,
+            back: function () {
+                calls.back += 1;
+            }
+        }
+    };
+
+    global.document = {
+        referrer: options.referrer,
+        body: {
+            getAttribute: function () {
+                return "";
+            }
+        }
+    };
+
+    try {
+        back.navigateBack();
+    } finally {
+        global.window = previousWindow;
+        global.document = previousDocument;
+    }
+
+    return calls;
+}
+
+const homeEntry = withNavigation({
+    href: origin + "/buy-sell.html",
+    referrer: origin + "/",
+    length: 2
+});
+assert.strictEqual(homeEntry.back, 1);
+assert.deepStrictEqual(homeEntry.assign, []);
+
+const openedWithoutHistory = withNavigation({
+    href: origin + "/buy-sell.html",
+    referrer: origin + "/",
+    length: 1
+});
+assert.strictEqual(openedWithoutHistory.back, 0);
+assert.deepStrictEqual(openedWithoutHistory.assign, ["index.html"]);
+
+const emptyHistory = withNavigation({
+    href: origin + "/buy-sell.html",
+    referrer: origin + "/index.html",
+    length: 0
+});
+assert.strictEqual(emptyHistory.back, 0);
+assert.deepStrictEqual(emptyHistory.assign, ["index.html"]);
+
 console.log("PAGE_BACK_TEST_OK");
