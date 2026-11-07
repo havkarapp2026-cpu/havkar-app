@@ -1897,9 +1897,13 @@
                 accessToken: accessToken
             });
 
+            const paid = settled && settled.result && settled.result.order_paid;
+            const base = window.HAVKAR_XLM.describe(settled && settled.result);
             showToast(
-                window.HAVKAR_XLM.describe(settled && settled.result),
-                settled && settled.result && settled.result.order_paid ? "success" : "error"
+                paid
+                    ? base + " Delivery lifecycle status was not changed; Testnet settlement is recorded on the payment intent only."
+                    : base,
+                paid ? "success" : "error"
             );
         }
 
