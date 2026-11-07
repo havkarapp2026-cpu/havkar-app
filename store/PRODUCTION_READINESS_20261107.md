@@ -69,7 +69,7 @@ Independent verification only. Items not re-tested are marked unverified.
 ## Owner approvals still required
 
 1. Paste reviewer password into Play Console App Access (owner-held only).
-2. Set `HAVKAR_UPLOAD_BACKUP_AGE_RECIPIENT` (and related upload secrets) before signed AAB.
+2. Set `HAVKAR_UPLOAD_BACKUP_AGE_RECIPIENT` to a public `age1...` or `ssh-ed25519 AAAA...` line (then related upload secrets) before signed AAB.
 3. Complete Play / App Store Console metadata, screenshots, Data safety, content rating, closed testing / TestFlight.
 4. Review Supabase security advisor WARNs.
 5. Approve any production payment / Mainnet enablement (currently must stay off).

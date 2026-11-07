@@ -1,24 +1,32 @@
 #!/usr/bin/env bash
 # One-shot local generator for HAVKAR Play upload keystore.
-# Requires: AGE_RECIPIENT (public age1... only). Never prints passwords or private keys.
-# Does not publish to Play. Does not enable payments.
+# Requires: AGE_RECIPIENT = public age1... OR public ssh-ed25519 AAAA...
+# Never prints passwords or private keys. Does not publish to Play. Does not enable payments.
 set -euo pipefail
 
 if [[ "${1:-}" != "CREATE_NEW_UPLOAD_KEY" ]]; then
-  echo "Usage: AGE_RECIPIENT=age1... $0 CREATE_NEW_UPLOAD_KEY"
+  echo "Usage: AGE_RECIPIENT='age1...' $0 CREATE_NEW_UPLOAD_KEY"
+  echo "   or: AGE_RECIPIENT='ssh-ed25519 AAAA...' $0 CREATE_NEW_UPLOAD_KEY"
   echo "Refusing without confirmation phrase."
   exit 1
 fi
 
 if [[ -z "${AGE_RECIPIENT:-}" ]]; then
-  echo "Missing AGE_RECIPIENT (public age1... line only)."
+  echo "Missing AGE_RECIPIENT (public age1... or ssh-ed25519 AAAA... only)."
   exit 1
 fi
 
 case "$AGE_RECIPIENT" in
-  age1*) ;;
+  AGE-SECRET-KEY-1*|-----BEGIN*|*PRIVATE*KEY*|*OPENSSH*PRIVATE*)
+    echo "Refusing: AGE_RECIPIENT looks like private-key material."
+    exit 1
+    ;;
+esac
+
+case "$AGE_RECIPIENT" in
+  age1*|ssh-ed25519\ *) ;;
   *)
-    echo "AGE_RECIPIENT must start with age1"
+    echo "AGE_RECIPIENT must be age1... or ssh-ed25519 AAAA..."
     exit 1
     ;;
 esac

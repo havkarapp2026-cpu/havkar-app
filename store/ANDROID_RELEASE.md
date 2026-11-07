@@ -14,7 +14,7 @@ Checked on Linux Cloud Agent host (no macOS). Package id and Gradle signing are 
 | Capacitor / WebView shell | PASS | Android project present under `android/` |
 | Cloud unsigned AAB workflow | PASS (CI) | `.github/workflows/android-release-aab.yml` — successful run `42292911126` |
 | Cloud signed AAB | BLOCKED | Requires repository secrets `HAVKAR_UPLOAD_*` |
-| Age-encrypted keystore generator | READY (gated) | `store/ANDROID_KEYSTORE_SECURITY.md` + workflow; run `42307300847` stopped because `HAVKAR_UPLOAD_BACKUP_AGE_RECIPIENT` was missing — correct fail-closed behavior |
+| Age-encrypted keystore generator | READY (gated) | Accepts public `age1...` or `ssh-ed25519 AAAA...`; run `42307300847` stopped because `HAVKAR_UPLOAD_BACKUP_AGE_RECIPIENT` was missing — correct fail-closed behavior |
 
 ## Blocked without owner secrets
 

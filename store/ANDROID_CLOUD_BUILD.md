@@ -62,13 +62,13 @@ If Play Console / GitHub already has a usable upload key for `online.havkar.app`
 Preferred path when Termux `keytool` is unavailable (for example OpenJDK crashes on Android 16):
 
 1. Read and approve `store/ANDROID_KEYSTORE_SECURITY.md`.
-2. Create an **age** identity on the tablet (no Java).
-3. Set secret `HAVKAR_UPLOAD_BACKUP_AGE_RECIPIENT` to the public `age1...` line only.
+2. Create a backup identity on the tablet: native **age** (`age1...`) **or** passphrase-protected **SSH Ed25519** public key (`ssh-ed25519 AAAA...`).
+3. Set secret `HAVKAR_UPLOAD_BACKUP_AGE_RECIPIENT` to that **public** line only (never the private key or passphrase).
 4. After explicit owner approval, run workflow **Android upload keystore** with confirmation `CREATE_NEW_UPLOAD_KEY`.
-5. Download the `.age` artifact, decrypt on the tablet, set the four `HAVKAR_UPLOAD_*` secrets.
+5. Download the `.age` artifact, decrypt on the tablet with the matching private identity, set the four `HAVKAR_UPLOAD_*` secrets.
 6. Build with **Android release AAB** → `signed`.
 
-The generator refuses to run if any upload secret already exists. It never uploads a plaintext keystore.
+The generator refuses to run if any upload secret already exists, refuses private-key-shaped recipient values, and never uploads a plaintext keystore.
 
 ## Agent / CI limitations
 
