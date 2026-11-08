@@ -1,6 +1,12 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import { cardPaymentsAllowed } from "../lib/real-payments.cjs";
+import {
+  cardPaymentsAllowed,
+  piPaymentsAllowed,
+  realPaymentsEnabled,
+  stripeSecretMode,
+  tradePaymentsAllowed
+} from "../lib/real-payments.cjs";
 import {
   allowedStripeFiatCurrencies,
   normalizeStripeFiatCurrency
@@ -75,17 +81,33 @@ function isPaymentStatusRequest(req) {
 }
 
 function buildPaymentActivationStatus() {
-  const stripeKey = String(process.env.STRIPE_SECRET_KEY || "");
-  const stripeMode = /^sk_live(?:_|\b)/.test(stripeKey)
-    ? "live"
-    : /^sk_test(?:_|\b)/.test(stripeKey)
-      ? "test"
-      : stripeKey
-        ? "unknown"
-        : "missing";
-
-  const realEnabled = process.env.HAVKAR_REAL_PAYMENTS_ENABLED === "true";
+  const stripeMode = stripeSecretMode();
+  const realEnabled = realPaymentsEnabled();
   const cardsAllowed = cardPaymentsAllowed();
+  const piAllowed = piPaymentsAllowed();
+  const tradeAllowed = tradePaymentsAllowed();
+
+  const blockers = [];
+  if (!realEnabled) {
+    blockers.push(
+      "Master flag HAVKAR_REAL_PAYMENTS_ENABLED is not true. Stripe live account eligibility must be verified first."
+    );
+  }
+  if (realEnabled && stripeMode === "live" && process.env.HAVKAR_STRIPE_LIVE_ENABLED !== "true") {
+    blockers.push("HAVKAR_STRIPE_LIVE_ENABLED must be true for Stripe live-mode secrets.");
+  }
+  if (!piAllowed) {
+    blockers.push("Pi remains individually disabled (HAVKAR_PI_PAYMENTS_ENABLED != true).");
+  }
+  if (!tradeAllowed) {
+    blockers.push("Trade remains individually disabled (HAVKAR_TRADE_ENABLED != true).");
+  }
+  blockers.push(
+    "Stellar Mainnet remains off in stellar-wallet-source.js until separate Mainnet checklist passes."
+  );
+  blockers.push(
+    "No irreversible live charge may run without a separate owner confirmation of exact amount and action."
+  );
 
   return {
     ok: true,
@@ -93,37 +115,38 @@ function buildPaymentActivationStatus() {
     customer_facing_collection: cardsAllowed ? "armed" : "paused",
     flags: {
       HAVKAR_REAL_PAYMENTS_ENABLED: realEnabled,
+      HAVKAR_STRIPE_PAYMENTS_ENABLED:
+        process.env.HAVKAR_STRIPE_PAYMENTS_ENABLED === undefined
+          ? null
+          : process.env.HAVKAR_STRIPE_PAYMENTS_ENABLED === "true",
       HAVKAR_STRIPE_LIVE_ENABLED:
         process.env.HAVKAR_STRIPE_LIVE_ENABLED === "true",
+      HAVKAR_PI_PAYMENTS_ENABLED: piAllowed,
+      HAVKAR_TRADE_ENABLED: tradeAllowed,
       STELLAR_MAINNET_PAYMENTS_ENABLED_SOURCE: false
     },
-    stripe: {
-      secret_key_mode: stripeMode,
-      webhook_secret_configured: Boolean(process.env.STRIPE_WEBHOOK_SECRET),
-      allowed_fiat: allowedStripeFiatCurrencies().map((c) => c.toUpperCase()),
-      live_collection_allowed: cardsAllowed
-    },
-    stellar: {
-      testnet_destination_configured: Boolean(
-        String(
-          process.env.HAVKAR_STELLAR_TESTNET_DESTINATION ||
-            process.env.HAVKAR_STELLAR_TICKET_MERCHANT_PUBLIC_KEY ||
-            ""
-        ).trim()
-      ),
-      mainnet_payments_enabled_in_source: false
+    providers: {
+      stripe: {
+        allowed: cardsAllowed,
+        secret_key_mode: stripeMode,
+        webhook_secret_configured: Boolean(process.env.STRIPE_WEBHOOK_SECRET),
+        allowed_fiat: allowedStripeFiatCurrencies().map((c) => c.toUpperCase())
+      },
+      pi: { allowed: piAllowed },
+      trade: { allowed: tradeAllowed },
+      stellar_testnet: {
+        destination_configured: Boolean(
+          String(
+            process.env.HAVKAR_STELLAR_TESTNET_DESTINATION ||
+              process.env.HAVKAR_STELLAR_TICKET_MERCHANT_PUBLIC_KEY ||
+              ""
+          ).trim()
+        )
+      },
+      stellar_mainnet: { allowed: false }
     },
     owner_activation_required: !cardsAllowed,
-    blockers: cardsAllowed
-      ? []
-      : [
-          "Set HAVKAR_REAL_PAYMENTS_ENABLED=true only after legal/security checklist.",
-          stripeMode === "live"
-            ? "Also set HAVKAR_STRIPE_LIVE_ENABLED=true for Stripe live-mode secrets."
-            : "Confirm Stripe key mode (test vs live) before charging customers.",
-          "Keep STELLAR_MAINNET_PAYMENTS_ENABLED=false until Mainnet checklist passes.",
-          "Do not execute Mainnet or unrestricted live charges without owner approval."
-        ]
+    blockers
   };
 }
 

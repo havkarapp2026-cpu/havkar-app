@@ -35,7 +35,8 @@ async function main() {
   assert.equal(statusBody.ok, true);
   assert.equal(statusBody.customer_facing_collection, "paused");
   assert.equal(statusBody.flags.HAVKAR_REAL_PAYMENTS_ENABLED, false);
-  assert.equal(statusBody.stellar.mainnet_payments_enabled_in_source, false);
+  assert.equal(statusBody.flags.STELLAR_MAINNET_PAYMENTS_ENABLED_SOURCE, false);
+  assert.equal(statusBody.providers.stellar_mainnet.allowed, false);
   assert.ok(Array.isArray(statusBody.blockers));
   assert.ok(statusBody.blockers.length > 0);
 
@@ -54,7 +55,13 @@ async function main() {
         base,
         stripe_webhook: webhookBody.code,
         activation_status: statusBody.customer_facing_collection,
-        stripe_key_mode: statusBody.stripe.secret_key_mode,
+        stripe_key_mode: statusBody.providers.stripe.secret_key_mode,
+        providers: {
+          stripe: statusBody.providers.stripe.allowed,
+          pi: statusBody.providers.pi.allowed,
+          trade: statusBody.providers.trade.allowed,
+          stellar_mainnet: statusBody.providers.stellar_mainnet.allowed
+        },
         blockers: statusBody.blockers
       },
       null,
