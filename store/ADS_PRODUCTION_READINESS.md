@@ -24,7 +24,7 @@ Branch: `cursor/havkar-ads-production-d4b2`
 | Reporting | Owner impression/click/save counters via `ad_metric_events` |
 | Moderation / abuse | `ad_reports`, `create_ad_report`, `moderate_advertisement` (admin JWT), audit events, rate-limited metrics |
 | Security | Migration tightens `ad_saves` SELECT to owner; ad-image DELETE for own folder; pending_review default |
-| Stripe | `api/create-ad-boost-checkout.js` + `api/ad-boost-webhook.js` — **test mode only** (`HAVKAR_ADS_BOOST_TEST_ENABLED` + `sk_test_`) |
+| Stripe | Test-only boost via `lib/ad-boost-*.cjs`, rewritten onto existing `/api/create-event-checkout` + `/api/stripe-webhook` (Hobby 12-function limit) |
 | Separation | No Ads insert from AI; Buy & Sell still rejects advertising in `ad-details` by redirect |
 | i18n / a11y / mobile | `data-i18n` hooks on ad-view; responsive layout; reduced-motion; aria labels |
 

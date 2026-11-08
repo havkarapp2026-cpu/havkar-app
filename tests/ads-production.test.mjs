@@ -49,10 +49,14 @@ test("ads production files keep Buy & Sell / AI separation and Stripe test gates
     path.join(root, "supabase/migrations/20261108010000_ads_production_lifecycle.sql"),
     "utf8"
   );
-  const boostApi = fs.readFileSync(path.join(root, "api/create-ad-boost-checkout.js"), "utf8");
-  const boostHook = fs.readFileSync(path.join(root, "api/ad-boost-webhook.js"), "utf8");
+  const boostApi = fs.readFileSync(path.join(root, "lib/ad-boost-checkout.cjs"), "utf8");
+  const boostHook = fs.readFileSync(path.join(root, "lib/ad-boost-webhook.cjs"), "utf8");
+  const checkoutRouter = fs.readFileSync(path.join(root, "api/create-event-checkout.js"), "utf8");
+  const stripeWebhook = fs.readFileSync(path.join(root, "api/stripe-webhook.js"), "utf8");
+  const vercel = JSON.parse(fs.readFileSync(path.join(root, "vercel.json"), "utf8"));
   const ai = fs.readFileSync(path.join(root, "havkar-ai.html"), "utf8");
   const admin = fs.readFileSync(path.join(root, "admin.html"), "utf8");
+  const apiCount = fs.readdirSync(path.join(root, "api")).filter((name) => name.endsWith(".js")).length;
 
   assert.match(adsHtml, /listing_surface:\s*"advertising"|listing_surface:\s*\n\s*"advertising"|listing_surface:\s*"advertising"/);
   assert.match(adsHtml, /business_applications/);
@@ -82,9 +86,31 @@ test("ads production files keep Buy & Sell / AI separation and Stripe test gates
   assert.match(boostApi, /sk_test_/);
   assert.match(boostApi, /test_mode !== true/);
   assert.doesNotMatch(boostApi, /HAVKAR_REAL_PAYMENTS_ENABLED === "true"/);
+  assert.match(checkoutRouter, /havkarAction === "adBoost"/);
+  assert.match(checkoutRouter, /handleAdBoostCheckout/);
 
   assert.match(boostHook, /HAVKAR_ADS_BOOST_TEST_ENABLED/);
-  assert.match(boostHook, /havkar_flow !== "ad_boost"/);
+  assert.match(boostHook, /havkar_flow === "ad_boost"/);
+  assert.match(stripeWebhook, /tryConstructAdsBoostEvent/);
+  assert.match(stripeWebhook, /processAdsBoostEvent/);
+
+  assert.ok(
+    vercel.rewrites.some(
+      (rule) =>
+        rule.source === "/api/create-ad-boost-checkout" &&
+        rule.destination === "/api/create-event-checkout?havkarAction=adBoost"
+    )
+  );
+  assert.ok(
+    vercel.rewrites.some(
+      (rule) =>
+        rule.source === "/api/ad-boost-webhook" &&
+        rule.destination === "/api/stripe-webhook"
+    )
+  );
+  assert.equal(apiCount, 12);
+  assert.equal(fs.existsSync(path.join(root, "api/create-ad-boost-checkout.js")), false);
+  assert.equal(fs.existsSync(path.join(root, "api/ad-boost-webhook.js")), false);
 
   assert.doesNotMatch(ai, /\.from\(["']ads["']\)\.insert/);
   assert.match(admin, /adsModeration/);

@@ -5,6 +5,10 @@ import {
   REAL_PAYMENTS_PAUSED_CODE,
   REAL_PAYMENTS_PAUSED_MESSAGE
 } from "../lib/real-payments.cjs";
+import {
+  tryConstructAdsBoostEvent,
+  processAdsBoostEvent
+} from "../lib/ad-boost-webhook.cjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -40,14 +44,6 @@ async function getRawBody(req) {
 }
 
 export default async function handler(req, res) {
-  if (!cardPaymentsAllowed()) {
-    return res.status(403).json({
-      ok: false,
-      error: REAL_PAYMENTS_PAUSED_MESSAGE,
-      code: REAL_PAYMENTS_PAUSED_CODE
-    });
-  }
-
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({
@@ -58,8 +54,63 @@ export default async function handler(req, res) {
   const stripeSignature = req.headers["stripe-signature"];
 
   if (!stripeSignature) {
+    if (!cardPaymentsAllowed()) {
+      return res.status(403).json({
+        ok: false,
+        error: REAL_PAYMENTS_PAUSED_MESSAGE,
+        code: REAL_PAYMENTS_PAUSED_CODE
+      });
+    }
+
     return res.status(400).json({
       error: "Missing Stripe signature",
+    });
+  }
+
+  let rawBody;
+
+  try {
+    rawBody = await getRawBody(req);
+  } catch (error) {
+    return res.status(400).json({
+      error: "Could not read webhook body",
+    });
+  }
+
+  /*
+   * Ads boost TEST MODE is prepared on this same function so Hobby
+   * stays within the 12-function limit. It must run even while real
+   * card payments remain paused.
+   */
+  const adsBoost = await tryConstructAdsBoostEvent(
+    rawBody,
+    stripeSignature,
+    process.env
+  );
+
+  if (adsBoost.handled && adsBoost.event) {
+    try {
+      const result = await processAdsBoostEvent(
+        adsBoost.event,
+        process.env
+      );
+      return res.status(200).json(result);
+    } catch (error) {
+      console.error(
+        "HAVKAR Ads boost webhook processing error:",
+        error
+      );
+      return res.status(500).json({
+        error: "Ads boost webhook processing failed",
+      });
+    }
+  }
+
+  if (!cardPaymentsAllowed()) {
+    return res.status(403).json({
+      ok: false,
+      error: REAL_PAYMENTS_PAUSED_MESSAGE,
+      code: REAL_PAYMENTS_PAUSED_CODE
     });
   }
 
@@ -74,8 +125,6 @@ export default async function handler(req, res) {
   let event;
 
   try {
-    const rawBody = await getRawBody(req);
-
     event = stripe.webhooks.constructEvent(
       rawBody,
       stripeSignature,
@@ -95,6 +144,14 @@ export default async function handler(req, res) {
   try {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
+
+      if (
+        session.metadata?.havkar_flow === "ad_boost" &&
+        session.metadata?.test_mode === "true"
+      ) {
+        const result = await processAdsBoostEvent(event, process.env);
+        return res.status(200).json(result);
+      }
 
       const ticketId = session.metadata?.event_ticket_id;
 
