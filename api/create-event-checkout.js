@@ -2,6 +2,10 @@ import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { cardPaymentsAllowed } from "../lib/real-payments.cjs";
 import {
+  allowedStripeFiatCurrencies,
+  normalizeStripeFiatCurrency
+} from "../lib/stripe-fiat-currency.cjs";
+import {
   evaluateStellarCheckout,
   buildXlmQuote,
   verifyStellarSettlement,
@@ -57,6 +61,70 @@ function isAdBoostCheckoutRequest(req) {
     || url.indexOf("create-ad-boost-checkout") !== -1
     || action === "ad_boost_checkout"
   );
+}
+
+function isPaymentStatusRequest(req) {
+  const action = String(req && req.body && req.body.action || "");
+  const url = String(req && req.url || "");
+
+  return Boolean(
+    req && req.query && req.query.havkarAction === "paymentStatus"
+    || url.indexOf("payment-activation-status") !== -1
+    || action === "payment_activation_status"
+  );
+}
+
+function buildPaymentActivationStatus() {
+  const stripeKey = String(process.env.STRIPE_SECRET_KEY || "");
+  const stripeMode = /^sk_live(?:_|\b)/.test(stripeKey)
+    ? "live"
+    : /^sk_test(?:_|\b)/.test(stripeKey)
+      ? "test"
+      : stripeKey
+        ? "unknown"
+        : "missing";
+
+  const realEnabled = process.env.HAVKAR_REAL_PAYMENTS_ENABLED === "true";
+  const cardsAllowed = cardPaymentsAllowed();
+
+  return {
+    ok: true,
+    generated_at: new Date().toISOString(),
+    customer_facing_collection: cardsAllowed ? "armed" : "paused",
+    flags: {
+      HAVKAR_REAL_PAYMENTS_ENABLED: realEnabled,
+      HAVKAR_STRIPE_LIVE_ENABLED:
+        process.env.HAVKAR_STRIPE_LIVE_ENABLED === "true",
+      STELLAR_MAINNET_PAYMENTS_ENABLED_SOURCE: false
+    },
+    stripe: {
+      secret_key_mode: stripeMode,
+      webhook_secret_configured: Boolean(process.env.STRIPE_WEBHOOK_SECRET),
+      allowed_fiat: allowedStripeFiatCurrencies().map((c) => c.toUpperCase()),
+      live_collection_allowed: cardsAllowed
+    },
+    stellar: {
+      testnet_destination_configured: Boolean(
+        String(
+          process.env.HAVKAR_STELLAR_TESTNET_DESTINATION ||
+            process.env.HAVKAR_STELLAR_TICKET_MERCHANT_PUBLIC_KEY ||
+            ""
+        ).trim()
+      ),
+      mainnet_payments_enabled_in_source: false
+    },
+    owner_activation_required: !cardsAllowed,
+    blockers: cardsAllowed
+      ? []
+      : [
+          "Set HAVKAR_REAL_PAYMENTS_ENABLED=true only after legal/security checklist.",
+          stripeMode === "live"
+            ? "Also set HAVKAR_STRIPE_LIVE_ENABLED=true for Stripe live-mode secrets."
+            : "Confirm Stripe key mode (test vs live) before charging customers.",
+          "Keep STELLAR_MAINNET_PAYMENTS_ENABLED=false until Mainnet checklist passes.",
+          "Do not execute Mainnet or unrestricted live charges without owner approval."
+        ]
+  };
 }
 
 function sendError(res, status, message) {
@@ -345,6 +413,15 @@ async function fulfillSettledXlmIntent(admin, userId, intentId) {
 }
 
 export default async function handler(req, res) {
+  if (isPaymentStatusRequest(req)) {
+    if (req.method !== "GET" && req.method !== "POST") {
+      res.setHeader("Allow", "GET, POST");
+      return sendError(res, 405, "Method not allowed");
+    }
+
+    return res.status(200).json(buildPaymentActivationStatus());
+  }
+
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
 
@@ -630,6 +707,24 @@ export default async function handler(req, res) {
 
     const origin = allowedCheckoutOrigin(req);
 
+    // Event ticket prices are EUR-denominated today. USD/other fiat is accepted
+    // only when explicitly requested and allow-listed; no silent FX conversion.
+    const fiat = normalizeStripeFiatCurrency(
+      req.body?.currency || "eur"
+    );
+
+    if (!fiat.ok) {
+      return sendError(res, 400, fiat.error);
+    }
+
+    if (fiat.currency !== "eur") {
+      return sendError(
+        res,
+        409,
+        "Event tickets are priced in EUR. USD checkout requires an owner-approved FX policy and is not enabled."
+      );
+    }
+
     if (unitPrice === 0) {
       const {
         data: freeTicket,
@@ -641,7 +736,7 @@ export default async function handler(req, res) {
           event_id: eventId,
           quantity,
           unit_price: 0,
-          currency: "EUR",
+          currency: fiat.currencyUpper,
           total_amount: 0,
           payment_status: "paid",
           ticket_status: "valid",
@@ -681,7 +776,7 @@ export default async function handler(req, res) {
         event_id: eventId,
         quantity,
         unit_price: unitPrice,
-        currency: "EUR",
+        currency: fiat.currencyUpper,
         total_amount: totalAmount,
         payment_status: "pending",
         ticket_status: "pending",
@@ -699,54 +794,41 @@ export default async function handler(req, res) {
     let session;
 
     try {
+      // Omit payment_method_types so Stripe Dashboard dynamic PMs apply.
+      // Idempotency protects against double-charge on retries.
       session =
-        await getStripe().checkout.sessions.create({
-          mode: "payment",
+        await getStripe().checkout.sessions.create(
+          {
+            mode: "payment",
 
-          payment_method_types: [
-            "card",
-          ],
+            customer_email:
+              user.email || undefined,
 
-          customer_email:
-            user.email || undefined,
+            line_items: [
+              {
+                quantity,
 
-          line_items: [
-            {
-              quantity,
+                price_data: {
+                  currency: fiat.currency,
 
-              price_data: {
-                currency: "eur",
+                  unit_amount: Math.round(
+                    unitPrice * 100
+                  ),
 
-                unit_amount: Math.round(
-                  unitPrice * 100
-                ),
+                  product_data: {
+                    name:
+                      event.title ||
+                      "HAVKAR Event Ticket",
 
-                product_data: {
-                  name:
-                    event.title ||
-                    "HAVKAR Event Ticket",
-
-                  description:
-                    event.location
-                      ? `HAVKAR event ticket — ${event.location}`
-                      : "HAVKAR event ticket",
+                    description:
+                      event.location
+                        ? `HAVKAR event ticket — ${event.location}`
+                        : "HAVKAR event ticket",
+                  },
                 },
               },
-            },
-          ],
+            ],
 
-          metadata: {
-            event_ticket_id:
-              String(pendingTicket.id),
-
-            event_id:
-              String(eventId),
-
-            havkar_user_id:
-              String(user.id),
-          },
-
-          payment_intent_data: {
             metadata: {
               event_ticket_id:
                 String(pendingTicket.id),
@@ -756,19 +838,43 @@ export default async function handler(req, res) {
 
               havkar_user_id:
                 String(user.id),
+
+              havkar_currency:
+                fiat.currencyUpper,
             },
+
+            payment_intent_data: {
+              metadata: {
+                event_ticket_id:
+                  String(pendingTicket.id),
+
+                event_id:
+                  String(eventId),
+
+                havkar_user_id:
+                  String(user.id),
+
+                havkar_currency:
+                  fiat.currencyUpper,
+              },
+            },
+
+            success_url:
+              `${origin}/events.html?payment=success&ticket_id=${encodeURIComponent(
+                pendingTicket.id
+              )}&open=my-event-tickets&session_id={CHECKOUT_SESSION_ID}`,
+
+            cancel_url:
+              `${origin}/events.html?payment=cancelled&ticket_id=${encodeURIComponent(
+                pendingTicket.id
+              )}`,
           },
-
-          success_url:
-            `${origin}/events.html?payment=success&ticket_id=${encodeURIComponent(
-              pendingTicket.id
-            )}&open=my-event-tickets&session_id={CHECKOUT_SESSION_ID}`,
-
-          cancel_url:
-            `${origin}/events.html?payment=cancelled&ticket_id=${encodeURIComponent(
-              pendingTicket.id
-            )}`,
-        });
+          {
+            idempotencyKey:
+              "havkar-event-ticket-" +
+              String(pendingTicket.id)
+          }
+        );
     } catch (stripeError) {
       const {
         error: cleanupError,
