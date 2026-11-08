@@ -109,7 +109,9 @@
   async function uploadEvidence(supabaseClient, userId, applicationId, docType, file, options) {
     var check = validateFile(file);
     if (!check.ok) throw new Error(check.error);
-    var replace = !(options && options.replace === false);
+    // Never auto-delete prior evidence from storage. Replacing by deleting caused
+    // real owner uploads to disappear when a later upload succeeded. Keep history;
+    // UI shows the latest file per type.
     var path = storagePath(userId, docType, file.name);
     var up = await supabaseClient.storage.from("business-evidence").upload(path, file, {
       contentType: file.type,
@@ -135,29 +137,6 @@
       var regErr = new Error(storageErrorMessage(reg.error));
       regErr.cause = reg.error;
       throw regErr;
-    }
-
-    if (replace) {
-      try {
-        var prior = await supabaseClient
-          .from("business_application_documents")
-          .select("id,storage_path")
-          .eq("application_id", Number(applicationId))
-          .eq("doc_type", docType)
-          .neq("storage_path", path);
-        if (!prior.error && prior.data && prior.data.length) {
-          var oldPaths = prior.data.map(function (row) { return row.storage_path; }).filter(Boolean);
-          if (oldPaths.length) {
-            await supabaseClient.storage.from("business-evidence").remove(oldPaths);
-          }
-          await supabaseClient
-            .from("business_application_documents")
-            .delete()
-            .in("id", prior.data.map(function (row) { return row.id; }));
-        }
-      } catch (cleanupError) {
-        console.warn("Prior evidence cleanup after replace failed:", cleanupError);
-      }
     }
 
     return reg.data;

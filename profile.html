@@ -5824,6 +5824,99 @@ function bindBusinessDraftPersistence(){
     form.dataset.draftBound = "1";
     form.addEventListener("input", () => saveBusinessDraft());
     form.addEventListener("change", () => saveBusinessDraft());
+
+    const uploadButton = document.getElementById("businessEvidenceUploadButton");
+    if(uploadButton && uploadButton.dataset.bound !== "1"){
+        uploadButton.dataset.bound = "1";
+        uploadButton.addEventListener("click", function(event){
+            event.preventDefault();
+            uploadBusinessEvidence();
+        });
+    }
+
+    const fileEl = document.getElementById("businessEvidenceFile");
+    const selected = document.getElementById("businessEvidenceSelected");
+    if(fileEl && fileEl.dataset.bound !== "1"){
+        fileEl.dataset.bound = "1";
+        fileEl.addEventListener("change", function(){
+            const file = fileEl.files && fileEl.files[0] ? fileEl.files[0] : null;
+            if(selected){
+                selected.textContent = file
+                    ? ("Selected: " + file.name + " (" + Math.max(1, Math.round(file.size / 1024)) + " KiB)")
+                    : "No file selected yet.";
+            }
+            if(file){
+                setBusinessEvidenceUploadState("", "File ready. Tap “Save document privately” to upload.");
+            }
+        });
+    }
+}
+
+async function persistBusinessApplicationFields(options){
+    if(!currentUser || !currentBusinessApplication || !currentBusinessApplication.id){
+        return { ok: false, error: "No application to update." };
+    }
+
+    const locked = String(currentBusinessApplication.status || "").toLowerCase() === "approved";
+    if(locked){
+        return { ok: false, error: "Approved business data is locked." };
+    }
+
+    const businessType = readBusinessField("businessType") || currentBusinessApplication.business_type || "business";
+    const businessName = readBusinessField("businessName") || currentBusinessApplication.business_name || "";
+    const legalName = readBusinessField("businessLegalName");
+    const vatNumber = readBusinessField("businessVat");
+    const country = readBusinessField("businessCountry") || currentBusinessApplication.country || "";
+    const city = readBusinessField("businessCity") || currentBusinessApplication.city || "";
+    const address = readBusinessField("businessAddress");
+    const phone = readBusinessField("businessPhone");
+    const email = readBusinessField("businessEmail") || currentBusinessApplication.email || (currentUser.email || "");
+    const website = readBusinessField("businessWebsite");
+    const description = readBusinessField("businessDescription");
+
+    if(!businessName || !country || !city || !email){
+        return { ok: false, error: "Complete business name, country, city, and email before saving." };
+    }
+
+    if(website && !validBusinessWebsite(website)){
+        return { ok: false, error: "Website must start with http:// or https://" };
+    }
+
+    const now = new Date().toISOString();
+    const payload = {
+        business_type: businessType,
+        business_name: businessName,
+        legal_name: legalName || null,
+        vat_number: vatNumber || null,
+        country,
+        city,
+        address: address || null,
+        phone: phone || null,
+        email,
+        website: website || null,
+        description: description || null,
+        status: "pending",
+        updated_at: now
+    };
+
+    const result = await supabase
+        .from("business_applications")
+        .update(payload)
+        .eq("id", currentBusinessApplication.id)
+        .eq("user_id", currentUser.id)
+        .select("id,created_at,user_id,business_type,business_name,legal_name,vat_number,country,city,address,phone,email,website,description,status,updated_at,documents,submitted_at,rejection_reason,reviewed_by,reviewed_at,review_notes")
+        .single();
+
+    if(result.error){
+        return { ok: false, error: result.error.message || "Could not save application fields." };
+    }
+
+    currentBusinessApplication = result.data;
+    saveBusinessDraft();
+    if(!(options && options.silentStatus)){
+        await refreshBusinessEvidenceStatus(currentBusinessApplication);
+    }
+    return { ok: true, data: result.data };
 }
 
 function businessValue(value){
@@ -6038,13 +6131,14 @@ function renderBusinessApplication(application, options){
                 </div>
                 <div class="business-field full">
                     <label for="businessEvidenceFile">Upload verification document (PDF/JPEG/PNG/WebP, max 10 MiB)</label>
-                    <input id="businessEvidenceFile" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" ${application ? "" : "disabled"}>
+                    <input id="businessEvidenceFile" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp" ${application ? "" : "disabled"}>
+                    <div class="business-help" id="businessEvidenceSelected">No file selected yet.</div>
                 </div>
                 <div class="business-form-actions">
                     <button id="businessEvidenceUploadButton" class="panel-button secondary" type="button"
-                        onclick="uploadBusinessEvidence()" ${application ? "" : "disabled"}>
+                        ${application ? "" : "disabled"}>
                         <i class="fas fa-file-upload"></i>
-                        Store document privately
+                        Save document privately
                     </button>
                     <button id="businessSubmitButton" class="panel-button" type="submit">
                         <i class="fas fa-paper-plane"></i>
@@ -6161,7 +6255,7 @@ function setBusinessEvidenceUploadState(kind, text){
         button.innerHTML = `<i class="fas fa-triangle-exclamation"></i> Retry upload`;
         return;
     }
-    button.innerHTML = `<i class="fas fa-file-upload"></i> Store document privately`;
+    button.innerHTML = `<i class="fas fa-file-upload"></i> Save document privately`;
 }
 
 async function uploadBusinessEvidence(){
@@ -6194,23 +6288,31 @@ async function uploadBusinessEvidence(){
     }
 
     businessEvidenceBusy = true;
-    setBusinessEvidenceUploadState("loading", "Uploading private verification document...");
+    setBusinessEvidenceUploadState("loading", "Saving form fields, then uploading private document...");
 
     try{
+        // Persist VAT/address/etc. with the document save so values are not lost on refresh.
+        const fieldSave = await persistBusinessApplicationFields({ silentStatus: true });
+        if(!fieldSave.ok){
+            throw new Error(fieldSave.error || "Could not save application fields.");
+        }
+
         await window.HAVKAR_BUSINESS_VERIFICATION.uploadEvidence(
             supabase,
             currentUser.id,
             currentBusinessApplication.id,
             docType,
-            file,
-            { replace: true }
+            file
         );
         if(fileEl) fileEl.value = "";
+        const selected = document.getElementById("businessEvidenceSelected");
+        if(selected) selected.textContent = "No file selected yet.";
         saveBusinessDraft();
-        showMessage("Document stored privately for verification review.", "success");
+        showMessage("Document and application fields saved privately for verification review.", "success");
         setBusinessEvidenceUploadState(
             "success",
-            "Upload succeeded. Form fields were kept. You can upload the remaining required documents."
+            "Saved. Document is stored privately and your form fields (VAT, address, etc.) were written to application #" +
+            currentBusinessApplication.id + "."
         );
         await refreshBusinessEvidenceStatus(currentBusinessApplication);
     }catch(error){
@@ -6221,6 +6323,10 @@ async function uploadBusinessEvidence(){
         saveBusinessDraft();
     }finally{
         businessEvidenceBusy = false;
+        const button = document.getElementById("businessEvidenceUploadButton");
+        if(button && !button.disabled && !/Uploading|Stored|Retry/i.test(button.textContent || "")){
+            button.innerHTML = `<i class="fas fa-file-upload"></i> Save document privately`;
+        }
     }
 }
 

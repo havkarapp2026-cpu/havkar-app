@@ -48,7 +48,15 @@ test("profile business form keeps draft helpers and upload states", () => {
   assert.match(html, /saveBusinessDraft/);
   assert.match(html, /setBusinessEvidenceUploadState/);
   assert.match(html, /refreshBusinessAccountPreserveDraft/);
+  assert.match(html, /persistBusinessApplicationFields/);
+  assert.match(html, /Save document privately/);
   assert.match(html, /VAT \/ Partita IVA number/);
   assert.match(html, /Registered business address/);
   assert.match(html, /business_applications_one_per_user|already have a business application/);
+});
+
+test("upload helper does not auto-delete prior evidence", () => {
+  const source = fs.readFileSync(path.join(root, "havkar-business-verification.js"), "utf8");
+  assert.match(source, /Never auto-delete prior evidence/);
+  assert.doesNotMatch(source, /replace === false/);
 });
