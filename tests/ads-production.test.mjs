@@ -81,6 +81,20 @@ test("ads production files keep Buy & Sell / AI separation and Stripe test gates
   assert.match(migration, /ad_boost_intents/);
   assert.match(migration, /ad_saves_select_own/);
   assert.match(migration, /moderate_advertisement/);
+  assert.match(migration, /listing_surface cannot be changed by owners/);
+  assert.match(migration, /pending_review -> paused -> active bypass/);
+  assert.match(migration, /moderation_notes is not owner-writable/);
+  assert.match(migration, /reported_count is not owner-writable/);
+  assert.match(migration, /ads_insert_authenticated/);
+  assert.match(migration, /ads_public_select_advertising_scheduled/);
+  assert.match(migration, /ads_public_select_marketplace_active/);
+  assert.match(migration, /ON CONFLICT \(ad_id, reporter_id\) DO NOTHING/);
+  assert.doesNotMatch(
+    migration,
+    /GRANT EXECUTE ON FUNCTION public\.record_ad_audit_event\(bigint, text, jsonb\) TO authenticated/
+  );
+  assert.match(migration, /Allow public read ads/);
+  assert.match(migration, /Enable read access for all users/);
 
   assert.match(boostApi, /HAVKAR_ADS_BOOST_TEST_ENABLED/);
   assert.match(boostApi, /sk_test_/);

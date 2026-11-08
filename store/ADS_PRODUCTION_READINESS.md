@@ -23,15 +23,24 @@ Branch: `cursor/havkar-ads-production-d4b2`
 | Campaign management | `ad_campaigns` + pause/end/resubmit status controls |
 | Reporting | Owner impression/click/save counters via `ad_metric_events` |
 | Moderation / abuse | `ad_reports`, `create_ad_report`, `moderate_advertisement` (admin JWT), audit events, rate-limited metrics |
-| Security | Migration tightens `ad_saves` SELECT to owner; ad-image DELETE for own folder; pending_review default |
+| Security | DB-enforced: no pending_review→paused→active bypass; listing_surface locked for owners; INSERT accepts pending_review; legacy public SELECTs replaced with schedule-aware policies; reported_count/audit/moderation_notes protected |
 | Stripe | Test-only boost via `lib/ad-boost-*.cjs`, rewritten onto existing `/api/create-event-checkout` + `/api/stripe-webhook` (Hobby 12-function limit) |
 | Separation | No Ads insert from AI; Buy & Sell still rejects advertising in `ad-details` by redirect |
 | i18n / a11y / mobile | `data-i18n` hooks on ad-view; responsive layout; reduced-motion; aria labels |
 
 ## Automated tests
 
-- `tests/ads-production.test.mjs` (new)
-- Existing: `tests/marketplace-isolation.test.js`, `tests/ad-image-upload.test.js`, `tests/ad-public-status.test.js`, `tests/ad-insert-uncertain.test.js`
+- `tests/ads-lifecycle-security.test.js` — live local Postgres RLS/trigger regression for every PR #126 blocker
+- `tests/ads-production.test.mjs`
+- Existing: `tests/marketplace-isolation.test.js`, `tests/ad-image-upload.test.js`, `tests/ad-public-status.test.js`, `tests/ad-insert-uncertain.test.js`, `tests/real-payments-pause.test.mjs`, `tests/pi-payment.test.js`
+
+## Migration compatibility / rollback notes
+
+- Additive columns (`campaign_id`, `starts_at`, `target_audience`, `moderation_notes`, `reported_count`) preserve existing rows.
+- Replaces `enforce_ad_listing_status()` in place (`CREATE OR REPLACE`); restore prior function from `20261103223000_marketplace_surface_and_media.sql` to roll back trigger behavior.
+- Drops legacy ads SELECT/INSERT policies and recreates narrow ones — rollback requires re-applying those legacy policy definitions from the marketplace migration.
+- New tables (`ad_campaigns`, `ad_reports`, `ad_audit_events`, `ad_metric_events`, `ad_rate_buckets`, `ad_boost_intents`) can be dropped if unused; do not drop if production already wrote rows.
+- **Not applied to production by the agent.** Apply to staging first.
 
 ## Visible in current Android release?
 

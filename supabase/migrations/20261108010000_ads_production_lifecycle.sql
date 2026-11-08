@@ -37,52 +37,101 @@ AS $$
 DECLARE
   normalized text;
   surface text;
+  old_surface text;
+  is_client boolean := (current_user = 'authenticated');
+  is_admin boolean := false;
   allowed_ad_status text[] := ARRAY[
     'active', 'paused', 'ended', 'pending_review', 'rejected'
   ];
+  owner_transition_ok boolean := false;
 BEGIN
+  -- Admin check is best-effort; missing helper must not break marketplace writes.
+  BEGIN
+    is_admin := COALESCE(havkar_private.caller_is_admin(), false);
+  EXCEPTION
+    WHEN undefined_function THEN
+      is_admin := false;
+  END;
+
   surface := pg_catalog.lower(pg_catalog.btrim(COALESCE(NEW.listing_surface, '')));
   IF surface NOT IN ('marketplace', 'advertising') THEN
     RAISE EXCEPTION 'invalid listing surface' USING ERRCODE = '23514';
   END IF;
   NEW.listing_surface := surface;
 
+  IF TG_OP = 'UPDATE' THEN
+    old_surface := pg_catalog.lower(pg_catalog.btrim(COALESCE(OLD.listing_surface, '')));
+
+    -- Owners cannot flip Buy & Sell <-> Ads to bypass advertiser gates or moderation.
+    IF surface IS DISTINCT FROM old_surface THEN
+      IF is_client AND NOT is_admin THEN
+        RAISE EXCEPTION 'listing_surface cannot be changed by owners'
+          USING ERRCODE = '42501';
+      END IF;
+    END IF;
+
+    -- Moderation fields are admin/service_role only (create_ad_report is SECURITY DEFINER).
+    IF is_client AND NOT is_admin THEN
+      IF NEW.moderation_notes IS DISTINCT FROM OLD.moderation_notes THEN
+        RAISE EXCEPTION 'moderation_notes is not owner-writable'
+          USING ERRCODE = '42501';
+      END IF;
+      IF NEW.reported_count IS DISTINCT FROM OLD.reported_count THEN
+        RAISE EXCEPTION 'reported_count is not owner-writable'
+          USING ERRCODE = '42501';
+      END IF;
+      IF NEW.user_id IS DISTINCT FROM OLD.user_id THEN
+        RAISE EXCEPTION 'ad ownership cannot be transferred by owners'
+          USING ERRCODE = '42501';
+      END IF;
+    END IF;
+  END IF;
+
   normalized := pg_catalog.lower(pg_catalog.btrim(COALESCE(NEW.status, '')));
 
   IF surface = 'advertising' THEN
     IF TG_OP = 'INSERT' THEN
-      IF NOT havkar_private.caller_is_approved_advertiser()
-         AND current_user = 'authenticated' THEN
+      IF is_client
+         AND NOT havkar_private.caller_is_approved_advertiser()
+         AND NOT is_admin THEN
         RAISE EXCEPTION 'only approved business advertisers can publish ads'
           USING ERRCODE = '42501';
       END IF;
-      -- New ads enter pending_review; service_role/admin may set active later.
+      -- Client inserts always land in pending_review; only service_role may seed active.
       IF normalized IN ('', 'pending_review', 'active') THEN
         NEW.status := CASE
           WHEN current_user = 'service_role' AND normalized = 'active' THEN 'active'
           ELSE 'pending_review'
         END;
       ELSIF normalized = ANY (allowed_ad_status) THEN
+        IF is_client AND NOT is_admin THEN
+          RAISE EXCEPTION 'new advertisements must enter pending_review'
+            USING ERRCODE = '42501';
+        END IF;
         NEW.status := normalized;
       ELSE
         RAISE EXCEPTION 'invalid advertisement status' USING ERRCODE = '23514';
       END IF;
     ELSIF TG_OP = 'UPDATE' THEN
       IF NEW.status IS DISTINCT FROM OLD.status THEN
-        IF current_user = 'authenticated' THEN
-          -- Owners may pause/end/reactivate their own ads; cannot self-approve.
+        IF is_client AND NOT is_admin THEN
           IF NEW.user_id IS DISTINCT FROM (SELECT auth.uid()) THEN
             RAISE EXCEPTION 'cannot change another advertiser ad' USING ERRCODE = '42501';
           END IF;
-          IF NOT (
-            (OLD.status IN ('active', 'paused', 'pending_review') AND NEW.status IN ('paused', 'ended', 'active', 'pending_review'))
-            AND NEW.status IS DISTINCT FROM 'rejected'
-            AND NOT (OLD.status = 'pending_review' AND NEW.status = 'active')
-          ) THEN
+
+          -- Explicit owner allow-list. Blocks pending_review -> paused -> active bypass.
+          owner_transition_ok := (
+            (OLD.status = 'pending_review' AND normalized = 'ended')
+            OR (OLD.status = 'active' AND normalized IN ('paused', 'ended'))
+            OR (OLD.status = 'paused' AND normalized IN ('active', 'ended'))
+          );
+
+          IF NOT owner_transition_ok THEN
             RAISE EXCEPTION 'advertisement status transition not allowed'
               USING ERRCODE = '42501';
           END IF;
         END IF;
+
         IF normalized <> ALL (allowed_ad_status) THEN
           RAISE EXCEPTION 'invalid advertisement status' USING ERRCODE = '23514';
         END IF;
@@ -182,15 +231,8 @@ CREATE TABLE IF NOT EXISTS public.ad_reports (
 
 ALTER TABLE public.ad_reports ENABLE ROW LEVEL SECURITY;
 
+-- No client INSERT policy: reports go through create_ad_report() only.
 DROP POLICY IF EXISTS ad_reports_insert_own ON public.ad_reports;
-CREATE POLICY ad_reports_insert_own
-ON public.ad_reports
-FOR INSERT
-TO authenticated
-WITH CHECK (
-  reporter_id = (SELECT auth.uid())
-  AND status = 'open'
-);
 
 DROP POLICY IF EXISTS ad_reports_select_own ON public.ad_reports;
 CREATE POLICY ad_reports_select_own
@@ -199,8 +241,8 @@ FOR SELECT
 TO authenticated
 USING (reporter_id = (SELECT auth.uid()));
 
-REVOKE ALL ON TABLE public.ad_reports FROM PUBLIC, anon;
-GRANT SELECT, INSERT ON TABLE public.ad_reports TO authenticated;
+REVOKE ALL ON TABLE public.ad_reports FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON TABLE public.ad_reports TO authenticated;
 GRANT ALL ON TABLE public.ad_reports TO service_role;
 
 -- 5) Audit log (append-only for clients; service_role reads all)
@@ -257,8 +299,10 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.record_ad_audit_event(bigint, text, jsonb) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.record_ad_audit_event(bigint, text, jsonb) TO authenticated;
+-- Clients must not forge audit rows. Only SECURITY DEFINER helpers / service_role.
+REVOKE ALL ON FUNCTION public.record_ad_audit_event(bigint, text, jsonb)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.record_ad_audit_event(bigint, text, jsonb) TO service_role;
 
 -- 6) Lightweight analytics (abuse-resistant via rate bucket)
 CREATE TABLE IF NOT EXISTS public.ad_metric_events (
@@ -390,22 +434,31 @@ BEGIN
 
   INSERT INTO public.ad_reports (ad_id, reporter_id, reason, details)
   VALUES (p_ad_id, uid, btrim(p_reason), NULLIF(btrim(COALESCE(p_details, '')), ''))
-  ON CONFLICT (ad_id, reporter_id) DO UPDATE
-    SET reason = EXCLUDED.reason,
-        details = EXCLUDED.details,
-        status = 'open',
-        created_at = now()
+  ON CONFLICT (ad_id, reporter_id) DO NOTHING
   RETURNING id INTO new_id;
 
-  UPDATE public.ads
-  SET reported_count = COALESCE(reported_count, 0) + 1
-  WHERE id = p_ad_id;
+  IF new_id IS NULL THEN
+    -- Re-submit refreshes text only; never inflate reported_count.
+    UPDATE public.ad_reports
+    SET reason = btrim(p_reason),
+        details = NULLIF(btrim(COALESCE(p_details, '')), ''),
+        status = 'open'
+    WHERE ad_id = p_ad_id
+      AND reporter_id = uid
+    RETURNING id INTO new_id;
+  ELSE
+    UPDATE public.ads
+    SET reported_count = COALESCE(reported_count, 0) + 1
+    WHERE id = p_ad_id;
 
-  PERFORM public.record_ad_audit_event(
-    p_ad_id,
-    'report_created',
-    jsonb_build_object('report_id', new_id)
-  );
+    INSERT INTO public.ad_audit_events (ad_id, actor_id, action, meta)
+    VALUES (
+      p_ad_id,
+      uid,
+      'report_created',
+      jsonb_build_object('report_id', new_id)
+    );
+  END IF;
 
   RETURN new_id;
 END;
@@ -440,15 +493,22 @@ FOR SELECT
 TO authenticated
 USING (user_id = (SELECT auth.uid()));
 
--- 8) Public advertising visibility: active + schedule window.
-DROP POLICY IF EXISTS "Public can view active advertisements" ON public.ads;
-DROP POLICY IF EXISTS ads_public_select_advertising ON public.ads;
-
--- Keep existing marketplace public policies; add explicit advertising schedule-aware policy.
+-- 8) Replace legacy public SELECT policies that ignored starts_at / pending_review.
+-- Production currently has "Allow public read ads" and "Enable read access for all users"
+-- which OR-bypass schedule and moderation. Drop all SELECT policies, then recreate narrowly.
 DO $$
+DECLARE
+  r record;
 BEGIN
-  -- Replace duplicate advertising-capable public selects carefully via new named policy.
-  NULL;
+  FOR r IN
+    SELECT policyname
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'ads'
+      AND cmd = 'SELECT'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.ads', r.policyname);
+  END LOOP;
 END $$;
 
 CREATE POLICY ads_public_select_advertising_scheduled
@@ -462,13 +522,46 @@ USING (
   AND (expires_at IS NULL OR expires_at > timezone('utc', now()))
 );
 
--- Owners can always read their advertising rows (any status).
-DROP POLICY IF EXISTS ads_owner_select_own ON public.ads;
+CREATE POLICY ads_public_select_marketplace_active
+ON public.ads
+FOR SELECT
+TO anon, authenticated
+USING (
+  listing_surface = 'marketplace'
+  AND lower(COALESCE(status, '')) = 'active'
+  AND (expires_at IS NULL OR expires_at > timezone('utc', now()))
+);
+
+-- Owners can always read their own rows (any surface/status), including pending_review.
 CREATE POLICY ads_owner_select_own
 ON public.ads
 FOR SELECT
 TO authenticated
 USING (user_id = (SELECT auth.uid()));
+
+-- 8b) INSERT must accept advertising pending_review (legacy policy required status=active).
+DROP POLICY IF EXISTS "Enable insert for authenticated users only" ON public.ads;
+DROP POLICY IF EXISTS ads_insert_authenticated ON public.ads;
+
+CREATE POLICY ads_insert_authenticated
+ON public.ads
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  (SELECT auth.uid()) = user_id
+  AND listing_surface IN ('marketplace', 'advertising')
+  AND (
+    (
+      listing_surface = 'advertising'
+      AND status = 'pending_review'
+      AND havkar_private.caller_is_approved_advertiser()
+    )
+    OR (
+      listing_surface = 'marketplace'
+      AND status IN ('draft', 'active')
+    )
+  )
+);
 
 -- 9) Stripe test-mode boost intents (no live charges from this table alone).
 CREATE TABLE IF NOT EXISTS public.ad_boost_intents (
@@ -499,16 +592,26 @@ GRANT SELECT ON TABLE public.ad_boost_intents TO authenticated;
 GRANT ALL ON TABLE public.ad_boost_intents TO service_role;
 
 -- 10) Storage: allow authenticated owners to delete own ad-images (cleanup).
-DROP POLICY IF EXISTS ad_images_delete_own_directory ON storage.objects;
-CREATE POLICY ad_images_delete_own_directory
-ON storage.objects
-FOR DELETE
-TO authenticated
-USING (
-  bucket_id = 'ad-images'
-  AND (SELECT auth.uid()) IS NOT NULL
-  AND lower((storage.foldername(name))[1]) = lower((SELECT auth.uid())::text)
-);
+DO $$
+BEGIN
+  IF to_regclass('storage.objects') IS NULL THEN
+    RAISE NOTICE 'storage.objects missing; skip ad-images delete policy';
+    RETURN;
+  END IF;
+
+  EXECUTE 'DROP POLICY IF EXISTS ad_images_delete_own_directory ON storage.objects';
+  EXECUTE $policy$
+    CREATE POLICY ad_images_delete_own_directory
+    ON storage.objects
+    FOR DELETE
+    TO authenticated
+    USING (
+      bucket_id = 'ad-images'
+      AND (SELECT auth.uid()) IS NOT NULL
+      AND lower((storage.foldername(name))[1]) = lower((SELECT auth.uid())::text)
+    )
+  $policy$;
+END $$;
 
 -- 11) Admin moderation RPC (JWT app_metadata.role = admin).
 CREATE OR REPLACE FUNCTION public.moderate_advertisement(
@@ -562,3 +665,10 @@ $$;
 
 REVOKE ALL ON FUNCTION public.moderate_advertisement(bigint, text, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.moderate_advertisement(bigint, text, text) TO authenticated;
+
+-- Rollback notes (manual; no automated down migration):
+-- 1) Restore enforce_ad_listing_status() from 20261103223000_marketplace_surface_and_media.sql
+-- 2) Recreate legacy SELECT/INSERT policies from that same migration
+-- 3) DROP new tables only if empty: ad_campaigns, ad_reports, ad_audit_events,
+--    ad_metric_events, ad_rate_buckets, ad_boost_intents
+-- 4) New ads columns are nullable/defaulted and may remain without data loss
