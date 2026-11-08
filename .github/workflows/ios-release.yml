@@ -1,0 +1,243 @@
+# Signed iOS Release / optional TestFlight upload via GitHub-hosted macOS.
+# Manual only — does not run on push. Does not enable production payments.
+#
+# Default: archive + export IPA artifact when Apple secrets are present.
+# TestFlight upload runs only if workflow input upload_to_testflight=true.
+# Do not dispatch a signed upload without explicit owner approval.
+name: iOS Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload_to_testflight:
+        description: "Upload the exported IPA to TestFlight (requires ASC API key secrets)"
+        type: boolean
+        default: false
+      skip_if_secrets_missing:
+        description: "Exit successfully without building when Apple secrets are absent"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 90
+    env:
+      PRODUCT_BUNDLE_IDENTIFIER: online.havkar.app
+      SCHEME: HAVKAR
+      PROJECT: ios/HAVKAR.xcodeproj
+      DERIVED: ${{ github.workspace }}/build
+      ARCHIVE_PATH: ${{ github.workspace }}/build/HAVKAR.xcarchive
+      EXPORT_PATH: ${{ github.workspace }}/build/export
+      IPA_PATH: ${{ github.workspace }}/build/export/HAVKAR.ipa
+      ASC_KEY_PATH: ${{ github.workspace }}/build/AuthKey.p8
+
+    steps:
+      - name: Check out HAVKAR
+        uses: actions/checkout@v4
+
+      - name: Verify App Icon has no alpha
+        run: |
+          python3 - <<'PY'
+          path = "ios/HAVKAR/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png"
+          data = open(path, "rb").read()
+          assert data[:8] == b"\x89PNG\r\n\x1a\n", "not a PNG"
+          # PNG IHDR color type is byte at offset 25
+          color = data[25]
+          if color in (4, 6):
+              raise SystemExit(
+                  "AppIcon-1024.png still has an alpha channel (color_type=%s)" % color
+              )
+          print("AppIcon OK color_type=%s" % color)
+          PY
+
+      - name: Require Apple signing secrets
+        id: secrets
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+        run: |
+          missing=0
+          for name in \
+            APPLE_TEAM_ID \
+            APPLE_DISTRIBUTION_CERTIFICATE_BASE64 \
+            APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD \
+            APP_STORE_CONNECT_API_KEY_ID \
+            APP_STORE_CONNECT_ISSUER_ID \
+            APP_STORE_CONNECT_API_KEY
+          do
+            eval "val=\${$name}"
+            if [ -z "$val" ]; then
+              echo "Missing secret: $name"
+              missing=1
+            fi
+          done
+          if [ "$missing" -eq 1 ]; then
+            if [ "${{ inputs.skip_if_secrets_missing }}" = "true" ]; then
+              echo "secrets_ready=false" >> "$GITHUB_OUTPUT"
+              echo "Apple secrets are not configured. Skipping signed build (by design)."
+              exit 0
+            fi
+            echo "Apple secrets are required for a signed release build."
+            exit 1
+          fi
+          echo "secrets_ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Import Apple Distribution certificate
+        if: steps.secrets.outputs.secrets_ready == 'true'
+        uses: apple-actions/import-codesigning-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          p12-password: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+
+      - name: Install App Store Connect API key
+        if: steps.secrets.outputs.secrets_ready == 'true'
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$DERIVED" \
+            "$HOME/.appstoreconnect/private_keys" \
+            "$HOME/private_keys" \
+            "$HOME/.app-store/private_keys"
+          KEY_FILE="AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+          # Accept raw .p8 PEM text or base64-encoded PEM.
+          if printf '%s' "$APP_STORE_CONNECT_API_KEY" | grep -q "BEGIN PRIVATE KEY"; then
+            printf '%s\n' "$APP_STORE_CONNECT_API_KEY" > "$ASC_KEY_PATH"
+          else
+            printf '%s' "$APP_STORE_CONNECT_API_KEY" | base64 --decode > "$ASC_KEY_PATH"
+          fi
+          chmod 600 "$ASC_KEY_PATH"
+          cp "$ASC_KEY_PATH" "$HOME/.appstoreconnect/private_keys/$KEY_FILE"
+          cp "$ASC_KEY_PATH" "$HOME/private_keys/$KEY_FILE"
+          cp "$ASC_KEY_PATH" "$HOME/.app-store/private_keys/$KEY_FILE"
+
+      - name: Select Xcode
+        if: steps.secrets.outputs.secrets_ready == 'true'
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+
+      - name: Resolve package dependencies
+        if: steps.secrets.outputs.secrets_ready == 'true'
+        run: |
+          xcodebuild -resolvePackageDependencies -project "$PROJECT" -scheme "$SCHEME"
+
+      - name: Archive Release (automatic signing overrides)
+        if: steps.secrets.outputs.secrets_ready == 'true'
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$DERIVED"
+          # Project keeps CODE_SIGNING_ALLOWED=NO for Simulator CI.
+          # This job overrides signing for App Store distribution only.
+          xcodebuild \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath "$ARCHIVE_PATH" \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$APP_STORE_CONNECT_API_KEY_ID" \
+            -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CODE_SIGN_STYLE=Automatic \
+            CODE_SIGNING_ALLOWED=YES \
+            CODE_SIGNING_REQUIRED=YES \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PRODUCT_BUNDLE_IDENTIFIER="$PRODUCT_BUNDLE_IDENTIFIER" \
+            -allowProvisioningUpdates \
+            -allowProvisioningDeviceRegistration \
+            archive
+
+      - name: Write ExportOptions.plist
+        if: steps.secrets.outputs.secrets_ready == 'true'
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          team = os.environ["APPLE_TEAM_ID"]
+          derived = Path(os.environ["DERIVED"])
+          lines = [
+              '<?xml version="1.0" encoding="UTF-8"?>',
+              '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
+              '<plist version="1.0">',
+              '<dict>',
+              '\t<key>method</key>',
+              '\t<string>app-store-connect</string>',
+              '\t<key>destination</key>',
+              '\t<string>export</string>',
+              '\t<key>signingStyle</key>',
+              '\t<string>automatic</string>',
+              '\t<key>teamID</key>',
+              f'\t<string>{team}</string>',
+              '\t<key>uploadSymbols</key>',
+              '\t<true/>',
+              '\t<key>manageAppVersionAndBuildNumber</key>',
+              '\t<false/>',
+              '</dict>',
+              '</plist>',
+              '',
+          ]
+          out = derived / "ExportOptions.plist"
+          out.write_text("\n".join(lines))
+          print(f"Wrote {out}")
+          PY
+          plutil -lint "$DERIVED/ExportOptions.plist"
+
+      - name: Export IPA
+        if: steps.secrets.outputs.secrets_ready == 'true'
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportPath "$EXPORT_PATH" \
+            -exportOptionsPlist "$DERIVED/ExportOptions.plist" \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$APP_STORE_CONNECT_API_KEY_ID" \
+            -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID" \
+            -allowProvisioningUpdates
+          test -f "$IPA_PATH"
+          ls -lh "$EXPORT_PATH"
+
+      - name: Upload IPA artifact
+        if: steps.secrets.outputs.secrets_ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: havkar-ios-ipa
+          path: ${{ env.EXPORT_PATH }}/*.ipa
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload to TestFlight
+        if: steps.secrets.outputs.secrets_ready == 'true' && inputs.upload_to_testflight
+        uses: apple-actions/upload-testflight-build@v1
+        with:
+          app-path: ${{ env.IPA_PATH }}
+          issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          api-key-id: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          api-private-key: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
