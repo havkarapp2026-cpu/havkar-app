@@ -27,9 +27,17 @@ assert.ok(draft.includes("Planned"), "planned work is labeled");
 assert.ok(notes.includes("9 November 2026"), "deadline recorded");
 assert.ok(notes.includes("Not published"), "timezone gap recorded");
 assert.ok(ready.includes("9 November 2026"), "submission package has deadline");
+assert.ok(ready.includes("URGENT"), "deadline urgency present");
 assert.ok(ready.includes("has **not** submitted"), "submission package not claimed submitted");
 assert.ok(ready.includes("HAVKAR DI JALILNIA AMIR"), "business name present");
 assert.ok(ready.includes("$54,000"), "budget present");
+const liveVerify = readFileSync(
+  new URL("../store/STRIPE_LIVE_VERIFICATION_20261108.md", import.meta.url),
+  "utf8"
+);
+assert.ok(liveVerify.includes("acct_1UJwZZECWiUpELSP"), "live account documented");
+assert.ok(liveVerify.includes("NOT ACTIVATED"), "live verify does not claim activation");
+assert.ok(liveVerify.includes("checkout.session.completed"), "live webhook documented");
 assert.ok(!/10,000 users|10000 users|verified users/i.test(draft), "no invented user count");
 assert.ok(!/10,000 users|10000 users|verified users/i.test(ready), "no invented user count in ready pack");
 assert.equal(draft.includes("$150,000 cap is not requested"), true, "cap is not the request");

@@ -90,10 +90,19 @@ function buildPaymentActivationStatus() {
   const blockers = [];
   if (!realEnabled) {
     blockers.push(
-      "Master flag HAVKAR_REAL_PAYMENTS_ENABLED is not true. Stripe live account eligibility must be verified first."
+      "Master flag HAVKAR_REAL_PAYMENTS_ENABLED is not true."
     );
   }
-  if (realEnabled && stripeMode === "live" && process.env.HAVKAR_STRIPE_LIVE_ENABLED !== "true") {
+  if (stripeMode === "missing") {
+    blockers.push("STRIPE_SECRET_KEY is missing.");
+  } else if (stripeMode === "unknown" || stripeMode === "publishable_misconfigured") {
+    blockers.push(
+      "STRIPE_SECRET_KEY mode is " +
+        stripeMode +
+        "; replace with a live or test Stripe secret key from the intended account."
+    );
+  }
+  if (stripeMode === "live" && process.env.HAVKAR_STRIPE_LIVE_ENABLED !== "true") {
     blockers.push("HAVKAR_STRIPE_LIVE_ENABLED must be true for Stripe live-mode secrets.");
   }
   if (!piAllowed) {

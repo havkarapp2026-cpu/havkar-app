@@ -3,6 +3,13 @@
 Status: **prepared for owner paste into the official invitation form**.  
 This agent has **not** submitted the application. Do not treat this file as an official SCF receipt.
 
+## URGENT — deadline
+
+- Official deadline date: **9 November 2026** (https://communityfund.stellar.org/awards)
+- Official timezone: **not published**
+- Safe action: open the SCF invitation email **now** and submit before end of **8 November 2026 UTC** if possible
+- Stripe Live activation is **not** required for SCF Build submission
+
 ## Official facts (re-verified 8 November 2026)
 
 | Item | Verified value | Source |
