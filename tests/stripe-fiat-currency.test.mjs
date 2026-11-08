@@ -11,6 +11,7 @@ const {
   cardPaymentsAllowed,
   piPaymentsAllowed,
   realPaymentsEnabled,
+  stripeSecretMode,
   tradePaymentsAllowed
 } = require("../lib/real-payments.cjs");
 
@@ -48,6 +49,17 @@ test("live card collection stays paused without exact owner flags", () => {
     }),
     false
   );
+});
+
+test("stripeSecretMode trims quotes and rejects publishable secrets", () => {
+  assert.equal(stripeSecretMode({ STRIPE_SECRET_KEY: '  "sk_live_x"  ' }), "live");
+  assert.equal(stripeSecretMode({ STRIPE_SECRET_KEY: "sk_test_x" }), "test");
+  assert.equal(
+    stripeSecretMode({ STRIPE_SECRET_KEY: "pk_live_should_not_be_secret" }),
+    "publishable_misconfigured"
+  );
+  assert.equal(stripeSecretMode({ STRIPE_SECRET_KEY: "not-a-stripe-key" }), "unknown");
+  assert.equal(stripeSecretMode({}), "missing");
 });
 
 test("Pi and trade stay individually off by default", () => {

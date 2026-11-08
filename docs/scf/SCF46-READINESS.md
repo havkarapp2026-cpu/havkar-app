@@ -1,16 +1,22 @@
-# SCF #46 readiness (updated 8 November 2026)
+# SCF #46 readiness (updated 8 November 2026 — final execution)
 
-Preparation only. **Not submitted.** No funding approval is claimed.
+Preparation complete for owner paste. **Not submitted.** No funding approval is claimed.
 
-## Deadline and eligibility (verified)
+## Deadline and eligibility (re-verified)
 
 | Item | Evidence |
 | --- | --- |
 | Round | SCF #46 Build Award |
-| Official deadline | **9 November 2026** — https://communityfund.stellar.org/awards |
-| Interest form | Owner-reported submitted **6 October 2026** (agent cannot invent confirmation) |
+| Official deadline date | **9 November 2026** — https://communityfund.stellar.org/awards |
+| Official timezone | **Not published** on the awards page |
+| Safe submit-by | Before end of **8 November 2026 UTC** (timezone ambiguity hedge) |
+| Round page | https://communityfund.stellar.org/awards/recxrSMYwAl8vcglg |
+| Panel review | 11–18 November 2026 |
+| Community vote | 23 November – 3 December 2026 |
+| Interest form | Owner-reported submitted **6 October 2026** |
 | Full proposal access | Requires SCF invitation after interest-form review |
 | Handbook | https://stellar.gitbook.io/scf-handbook/scf-awards/build-award |
+| Submission-ready text | `docs/scf/SCF46-SUBMISSION-READY.md` |
 | Agent external submit | **NOT DONE** — owner must submit |
 
 ## Verified Mainnet evidence (Horizon)
@@ -33,9 +39,9 @@ Re-read 8 Nov 2026 from `https://horizon.stellar.org`:
 | Stripe customer collection | paused (`REAL_PAYMENTS_PAUSED`) |
 | Stripe MCP connected account | sandbox only (`HAVKAR-sandlåda`, livemode=false) |
 
-## Owner actions before external submit
+## Owner actions before external submit (urgency order)
 
-1. Confirm SCF invitation email for #46 exists.
-2. Paste budget figures the owner accepts into `SCF46-APPLICATION-DRAFT.md`.
-3. Submit via the official SCF invitation link before **9 November 2026**.
+1. Open the SCF #46 invitation email and use only that submission URL.
+2. Paste from `SCF46-SUBMISSION-READY.md`; confirm or edit the $54,000 budget.
+3. Submit before the official deadline (prefer before end of 8 Nov 2026 UTC).
 4. Do not claim Mainnet customer payments are live.

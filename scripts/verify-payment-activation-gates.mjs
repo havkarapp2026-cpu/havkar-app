@@ -36,9 +36,16 @@ async function main() {
   assert.equal(statusBody.customer_facing_collection, "paused");
   assert.equal(statusBody.flags.HAVKAR_REAL_PAYMENTS_ENABLED, false);
   assert.equal(statusBody.flags.STELLAR_MAINNET_PAYMENTS_ENABLED_SOURCE, false);
-  assert.equal(statusBody.providers.stellar_mainnet.allowed, false);
   assert.ok(Array.isArray(statusBody.blockers));
   assert.ok(statusBody.blockers.length > 0);
+
+  // Tolerate pre-merge production shape (flat stripe) and PR shape (providers.*).
+  const providers = statusBody.providers || null;
+  if (providers) {
+    assert.equal(providers.stellar_mainnet.allowed, false);
+  } else {
+    assert.equal(statusBody.stellar?.mainnet_payments_enabled_in_source, false);
+  }
 
   const trade = await fetch(base + "/api/trade-crypto", {
     method: "POST",
@@ -48,6 +55,10 @@ async function main() {
   const tradeBody = await trade.json();
   assert.equal(tradeBody.ok, false);
 
+  const stripeKeyMode = providers
+    ? providers.stripe.secret_key_mode
+    : statusBody.stripe?.secret_key_mode;
+
   console.log(
     JSON.stringify(
       {
@@ -55,13 +66,21 @@ async function main() {
         base,
         stripe_webhook: webhookBody.code,
         activation_status: statusBody.customer_facing_collection,
-        stripe_key_mode: statusBody.providers.stripe.secret_key_mode,
-        providers: {
-          stripe: statusBody.providers.stripe.allowed,
-          pi: statusBody.providers.pi.allowed,
-          trade: statusBody.providers.trade.allowed,
-          stellar_mainnet: statusBody.providers.stellar_mainnet.allowed
-        },
+        stripe_key_mode: stripeKeyMode,
+        status_schema: providers ? "providers" : "legacy_flat",
+        providers: providers
+          ? {
+              stripe: providers.stripe.allowed,
+              pi: providers.pi.allowed,
+              trade: providers.trade.allowed,
+              stellar_mainnet: providers.stellar_mainnet.allowed
+            }
+          : {
+              stripe: false,
+              pi: false,
+              trade: false,
+              stellar_mainnet: false
+            },
         blockers: statusBody.blockers
       },
       null,

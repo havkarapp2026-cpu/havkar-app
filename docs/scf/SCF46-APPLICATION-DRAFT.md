@@ -2,9 +2,9 @@
 
 Status: draft for the owner. This file has not been submitted to the Stellar Community Fund.
 
-Official SCF #46 deadline (verified 8 Nov 2026 from communityfund.stellar.org/awards): **9 November 2026**.
+Official SCF #46 deadline (re-verified 8 Nov 2026 from communityfund.stellar.org/awards): **9 November 2026** (calendar date only; official page does **not** publish a timezone — submit before end of **8 November 2026 UTC** to avoid ambiguity).
 
-Interest form was owner-reported submitted 6 October 2026. Full Build submission requires an SCF invitation email. This agent does **not** submit externally.
+Interest form was owner-reported submitted 6 October 2026. Full Build submission requires an SCF invitation email. This agent does **not** submit externally. Submission-ready paste text: `docs/scf/SCF46-SUBMISSION-READY.md`.
 
 
 Official sources used for the rules in this draft:
@@ -152,17 +152,22 @@ Integration Track only: if the owner later chooses that track, the submission mu
 
 ## Team and eligibility
 
-Not in the repository, and required before an application can be honest:
+Business (owner-stated, not invented by this agent):
+
+- Legal name: HAVKAR DI JALILNIA AMIR
+- Italian Chamber of Commerce registration: 3 November 2026
+
+Still required from the owner before an honest Submit:
 
 - One authorized representative
 - At least two eligible individuals for preparation webinars, bootcamp, and a finalist demo
 - Ages, residence, and sanctions status under Official Rules section 1.3
 - KYC or KYB only after selection, at https://stellar.org/bd-kyc
 - A statement that the team is not in another SCF submission and is not drawing overlapping SDF grant funds
-- Verifiable traction or a named Stellar-experienced person who can validate the need
-- The interest form on https://communityfund.stellar.org/awards
+- Confirmation that the SCF #46 invitation email exists (interest form alone is not a full submission)
+- The interest form on https://communityfund.stellar.org/awards (owner-reported already submitted 6 October 2026)
 
-SCF #46 interest deadline published on that page: November 8, 2026. An interest form does not guarantee an invitation or funding.
+Official full-proposal deadline for SCF #46: **9 November 2026**. An interest form does not guarantee an invitation or funding.
 
 ## Demo and repository
 
@@ -173,4 +178,6 @@ SCF #46 interest deadline published on that page: November 8, 2026. An interest 
 
 ## Recommendation
 
-NOT READY to submit. The Mainnet payment is real. The application is not yet eligible on the facts available in the repository.
+YELLOW — package is submission-ready for paste, but **NOT SUBMITTED**.  
+Blockers that only the owner can clear: invitation email access, final budget acceptance, and pressing Submit on the official portal.  
+The Mainnet evidence payment is real. Customer Mainnet payments remain off in source.
