@@ -223,6 +223,14 @@ async function main() {
         {
             source: "/api/support-request",
             destination: "/api/business-application-notify?havkarAction=support"
+        },
+        {
+            source: "/api/create-ad-boost-checkout",
+            destination: "/api/create-event-checkout?havkarAction=adBoost"
+        },
+        {
+            source: "/api/ad-boost-webhook",
+            destination: "/api/stripe-webhook"
         }
     ]);
     assert.strictEqual(JSON.stringify(vercel).includes("/api/:path*"), false);
@@ -231,6 +239,8 @@ async function main() {
         .filter((name) => name.endsWith(".js"));
     assert.strictEqual(apiFiles.includes("pi-complete.js"), false);
     assert.strictEqual(apiFiles.includes("pi-approve.js"), true);
+    assert.strictEqual(apiFiles.includes("create-ad-boost-checkout.js"), false);
+    assert.strictEqual(apiFiles.includes("ad-boost-webhook.js"), false);
     assert.ok(apiFiles.length <= 12, `expected at most 12 functions, found ${apiFiles.length}`);
     assert.strictEqual(apiFiles.length, 12);
 

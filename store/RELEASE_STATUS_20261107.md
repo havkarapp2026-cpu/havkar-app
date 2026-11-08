@@ -7,7 +7,7 @@ Evidence-based. Items not verified are marked BLOCKED / NOT VERIFIED. Mainnet an
 | Module | Verdict | Evidence / blocker |
 | --- | --- | --- |
 | Buy & Sell | PASS (code + prod schema catch-up) | `listing_surface` applied on production; marketplace isolation tests; `marketplace.html` redirects to `buy-sell.html` |
-| Ads | PASS | Separated via `listing_surface=advertising` |
+| Ads | PARTIAL (branch ready) | Isolation PASS; lifecycle/moderation/boost-test in `cursor/havkar-ads-production-d4b2` — migration not applied to prod; see `store/ADS_PRODUCTION_READINESS.md` |
 | Jobs | PASS (code+unit) | `jobs.html` + management tests |
 | Services | PASS (code) | Bookings + one-time XLM payAndVerify (Testnet only) |
 | Events | PASS (code) | Free tickets; Stripe gated; XLM verify + ticket fulfillment |

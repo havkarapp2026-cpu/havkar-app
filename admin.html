@@ -29,6 +29,7 @@ nav a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px;font-w
 </header>
 <main>
   <p id="message" role="status">Checking authorization...</p>
+  <div id="adsModeration"></div>
   <div id="ledger"></div>
   <div id="privacyRequests"></div>
   <div id="availability"></div>
@@ -103,6 +104,52 @@ async function start() {
   }
 
   message.textContent = "Administrator access is active. No commission is marked collected.";
+
+  const adsRoot = document.getElementById("adsModeration");
+  const pendingAds = await db
+    .from("ads")
+    .select("id,title,status,created_at,listing_surface")
+    .eq("listing_surface", "advertising")
+    .eq("status", "pending_review")
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (pendingAds.error) {
+    adsRoot.textContent = "Ads moderation queue unavailable until the Ads lifecycle migration is applied.";
+  } else if (!pendingAds.data || !pendingAds.data.length) {
+    adsRoot.textContent = "No advertisements pending review.";
+  } else {
+    const heading = document.createElement("h2");
+    heading.textContent = "Ads pending review";
+    adsRoot.appendChild(heading);
+    pendingAds.data.forEach(function(row) {
+      const card = document.createElement("article");
+      card.className = "card";
+      const link = document.createElement("a");
+      link.href = "ad-view.html?id=" + encodeURIComponent(String(row.id));
+      link.textContent = "Ad #" + row.id + " · " + (row.title || "Untitled");
+      card.appendChild(link);
+      const approve = document.createElement("button");
+      approve.type = "button";
+      approve.textContent = "Approve";
+      approve.style.marginLeft = "8px";
+      approve.addEventListener("click", async function() {
+        const result = await db.rpc("moderate_advertisement", {
+          p_ad_id: Number(row.id),
+          p_decision: "approve",
+          p_notes: "Approved from admin queue"
+        });
+        message.textContent = result.error
+          ? result.error.message
+          : ("Advertisement #" + row.id + " approved.");
+        if (!result.error) {
+          card.remove();
+        }
+      });
+      card.appendChild(approve);
+      adsRoot.appendChild(card);
+    });
+  }
 
   const ledger = await db
     .from("service_commission_entries")

@@ -48,6 +48,17 @@ function isOwnershipRequest(req) {
   );
 }
 
+function isAdBoostCheckoutRequest(req) {
+  const action = String(req && req.body && req.body.action || "");
+  const url = String(req && req.url || "");
+
+  return Boolean(
+    req && req.query && req.query.havkarAction === "adBoost"
+    || url.indexOf("create-ad-boost-checkout") !== -1
+    || action === "ad_boost_checkout"
+  );
+}
+
 function sendError(res, status, message) {
   return res.status(status).json({
     ok: false,
@@ -369,6 +380,24 @@ export default async function handler(req, res) {
         res,
         500,
         "Wallet ownership verification failed"
+      );
+    }
+  }
+
+  if (isAdBoostCheckoutRequest(req)) {
+    try {
+      const { handleAdBoostCheckout } = await import("../lib/ad-boost-checkout.cjs");
+      return await handleAdBoostCheckout(req, res);
+    } catch (error) {
+      console.error(
+        "Ads boost checkout failed",
+        error && error.message
+      );
+
+      return sendError(
+        res,
+        500,
+        "Ads boost checkout failed"
       );
     }
   }

@@ -1390,7 +1390,107 @@
 
                         </div>
 
+                        <div class="form-group">
+
+                            <label class="form-label" for="adCountry">
+                                Country code
+                            </label>
+
+                            <input
+                                class="form-control"
+                                id="adCountry"
+                                type="text"
+                                maxlength="2"
+                                placeholder="IT"
+                                autocomplete="country"
+                            >
+
+                        </div>
+
+                        <div class="form-group">
+
+                            <label class="form-label" for="adCity">
+                                City
+                            </label>
+
+                            <input
+                                class="form-control"
+                                id="adCity"
+                                type="text"
+                                maxlength="120"
+                                placeholder="Milan"
+                            >
+
+                        </div>
+
+                        <div class="form-group">
+
+                            <label class="form-label" for="adStarts">
+                                Starts at
+                            </label>
+
+                            <input
+                                class="form-control"
+                                id="adStarts"
+                                type="datetime-local"
+                            >
+
+                        </div>
+
+                        <div class="form-group">
+
+                            <label class="form-label" for="adExpires">
+                                Expires at
+                            </label>
+
+                            <input
+                                class="form-control"
+                                id="adExpires"
+                                type="datetime-local"
+                            >
+
+                        </div>
+
                     </div>
+
+                    <div class="form-group">
+
+                        <label class="form-label" for="adAudience">
+                            Target audience
+                        </label>
+
+                        <input
+                            class="form-control"
+                            id="adAudience"
+                            type="text"
+                            maxlength="500"
+                            placeholder="e.g. nearby lunch customers"
+                        >
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label class="form-label" for="adCampaignName">
+                            Campaign name (optional)
+                        </label>
+
+                        <input
+                            class="form-control"
+                            id="adCampaignName"
+                            type="text"
+                            maxlength="120"
+                            placeholder="Spring lunch campaign"
+                        >
+
+                    </div>
+
+                    <div
+                        id="adPreviewBox"
+                        class="pending-note"
+                        hidden
+                        aria-live="polite"
+                    ></div>
 
                     <div class="form-group">
 
@@ -1504,6 +1604,7 @@
 
     <script src="/havkar-supabase-config.js"></script>
     <script src="/havkar-ad-images.js"></script>
+    <script src="/havkar-ads.js"></script>
     <script src="/havkar-ad-publish.js"></script>
     <script src="/havkar-marketplace.js"></script>
 <script>
@@ -2838,6 +2939,30 @@
 
             }
 
+            if (
+                window.HAVKAR_ADS &&
+                typeof window.HAVKAR_ADS.detailUrl === "function"
+            ) {
+
+                window.location.href =
+                    window.HAVKAR_ADS.detailUrl(
+                        id
+                    );
+
+                return;
+
+            }
+
+            window.location.href =
+                "ad-view.html?id=" +
+                encodeURIComponent(
+                    String(id)
+                );
+
+            return;
+
+            /* legacy toast preview kept unreachable below for reference */
+
             const textParts = [
 
                 ad.title
@@ -3312,50 +3437,136 @@
                     .value
                     .trim();
 
-            if (
-                !title ||
-                !category ||
-                !location ||
-                !description
-            ) {
+            const countryCode =
+                document
+                    .getElementById(
+                        "adCountry"
+                    )
+                    .value
+                    .trim()
+                    .toUpperCase();
+
+            const city =
+                document
+                    .getElementById(
+                        "adCity"
+                    )
+                    .value
+                    .trim();
+
+            const audience =
+                document
+                    .getElementById(
+                        "adAudience"
+                    )
+                    .value
+                    .trim();
+
+            const campaignName =
+                document
+                    .getElementById(
+                        "adCampaignName"
+                    )
+                    .value
+                    .trim();
+
+            const startsRaw =
+                document
+                    .getElementById(
+                        "adStarts"
+                    )
+                    .value;
+
+            const expiresRaw =
+                document
+                    .getElementById(
+                        "adExpires"
+                    )
+                    .value;
+
+            const startsAt =
+                startsRaw
+                    ? new Date(
+                        startsRaw
+                    ).toISOString()
+                    : null;
+
+            const expiresAt =
+                expiresRaw
+                    ? new Date(
+                        expiresRaw
+                    ).toISOString()
+                    : null;
+
+            const validated =
+                window.HAVKAR_ADS
+                    ? window.HAVKAR_ADS.validateCreatePayload({
+                        title: title,
+                        category: category,
+                        price: priceInput,
+                        location: location,
+                        description: description,
+                        country_code: countryCode,
+                        city: city,
+                        target_audience: audience,
+                        starts_at: startsAt,
+                        expires_at: expiresAt
+                    })
+                    : {
+                        ok: Boolean(
+                            title &&
+                            category &&
+                            location &&
+                            description
+                        ),
+                        errors: [],
+                        payload: null
+                    };
+
+            if (!validated.ok) {
 
                 showToast(
-                    "Please complete all required fields."
+                    "Please complete all required fields" +
+                    (
+                        validated.errors &&
+                        validated.errors.length
+                            ? (": " + validated.errors.join(", "))
+                            : "."
+                    )
                 );
 
                 return;
 
             }
 
-            let price =
-                null;
+            const price =
+                validated.payload
+                    ? validated.payload.price
+                    : null;
 
-            if (
-                priceInput !== ""
-            ) {
+            const preview =
+                document.getElementById(
+                    "adPreviewBox"
+                );
 
-                const parsedPrice =
-                    Number(
-                        priceInput
-                    );
+            if (preview) {
 
-                if (
-                    !Number.isFinite(
-                        parsedPrice
-                    ) ||
-                    parsedPrice < 0
-                ) {
+                preview.hidden =
+                    false;
 
-                    showToast(
-                        "Please enter a valid price."
-                    );
-
-                    return;
-
-                }
-
-                price =
-                    parsedPrice;
+                preview.textContent =
+                    "Preview: " +
+                    title +
+                    " · " +
+                    category +
+                    " · " +
+                    location +
+                    (
+                        audience
+                            ? (" · audience " + audience)
+                            : ""
+                    ) +
+                    ". New ads enter pending review after publish.";
 
             }
 
@@ -3501,47 +3712,114 @@
                         )
                         : "[]";
 
-                const newAd = {
+                let campaignId =
+                    null;
 
-                    title:
-                        title,
+                if (campaignName) {
 
-                    category:
-                        category,
+                    const campaignInsert =
+                        await supabaseClient
+                            .from(
+                                "ad_campaigns"
+                            )
+                            .insert({
+                                user_id: currentUserId,
+                                name: campaignName,
+                                status: "active",
+                                starts_at: startsAt,
+                                ends_at: expiresAt
+                            })
+                            .select(
+                                "id"
+                            )
+                            .maybeSingle();
 
-                    price:
-                        price,
+                    if (
+                        !campaignInsert.error &&
+                        campaignInsert.data &&
+                        campaignInsert.data.id
+                    ) {
 
-                    location:
-                        location,
+                        campaignId =
+                            campaignInsert.data.id;
 
-                    description:
-                        description,
+                    }
 
-                    user_id:
-                        currentUserId,
+                }
 
-                    photos:
-                        photos,
+                const newAd = Object.assign(
+                    {},
+                    validated.payload || {
+                        title: title,
+                        category: category,
+                        price: price,
+                        location: location,
+                        description: description,
+                        listing_surface: "advertising",
+                        status: "pending_review"
+                    },
+                    {
+                        user_id: currentUserId,
+                        photos: photos,
+                        campaign_id: campaignId
+                    }
+                );
 
-                    status:
-                        "active",
-
-                    listing_surface:
-                        "advertising"
-
-                };
-
-                const insertPromise =
+                let insertPromise =
                     supabaseClient
                         .from(ADS_TABLE)
                         .insert(
                             newAd
                         )
                         .select(
-                            "id,created_at,title,category,price,location,description,user_id,photos,status"
+                            "id,created_at,title,category,price,location,description,user_id,photos,status,listing_surface"
                         )
                         .single();
+
+                let insertedProbe =
+                    await insertPromise;
+
+                if (
+                    insertedProbe.error &&
+                    /campaign_id|target_audience|starts_at|pending_review|approved business/i.test(
+                        String(
+                            insertedProbe.error.message ||
+                            ""
+                        )
+                    )
+                ) {
+
+                    const legacyAd = {
+                        title: title,
+                        category: category,
+                        price: price,
+                        location: location,
+                        description: description,
+                        user_id: currentUserId,
+                        photos: photos,
+                        status: "active",
+                        listing_surface: "advertising"
+                    };
+
+                    insertPromise =
+                        supabaseClient
+                            .from(ADS_TABLE)
+                            .insert(
+                                legacyAd
+                            )
+                            .select(
+                                "id,created_at,title,category,price,location,description,user_id,photos,status"
+                            )
+                            .single();
+
+                } else {
+
+                    insertPromise =
+                        Promise.resolve(
+                            insertedProbe
+                        );
+
+                }
 
                 /*
                  * A slow response stays in progress.
@@ -4228,7 +4506,7 @@
 
         }
 
-        function openCreateAd() {
+        async function openCreateAd() {
 
             const modal =
                 document.getElementById(
@@ -4253,6 +4531,60 @@
 
                     },
                     700
+                );
+
+                return;
+
+            }
+
+            try {
+
+                const application =
+                    await supabaseClient
+                        .from(
+                            "business_applications"
+                        )
+                        .select(
+                            "id,status"
+                        )
+                        .eq(
+                            "user_id",
+                            currentUserId
+                        )
+                        .order(
+                            "created_at",
+                            {
+                                ascending: false
+                            }
+                        )
+                        .limit(
+                            1
+                        )
+                        .maybeSingle();
+
+                const status =
+                    application &&
+                    application.data
+                        ? String(
+                            application.data.status ||
+                            ""
+                        ).toLowerCase()
+                        : "";
+
+                if (status !== "approved") {
+
+                    showToast(
+                        "Approved business advertiser account required. Apply from Profile before publishing Ads."
+                    );
+
+                    return;
+
+                }
+
+            } catch (error) {
+
+                showToast(
+                    "Could not verify advertiser account. Try again."
                 );
 
                 return;

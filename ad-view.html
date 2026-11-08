@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HAVKAR Advertisement</title>
+<meta name="description" content="HAVKAR advertising detail, management, reporting and moderation actions.">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root{
+  --bg:#f4f7f5;--card:#fff;--text:#142018;--muted:#5f7266;--line:#d7e2da;
+  --green:#1f7a4c;--green-deep:#145c38;--danger:#b42318;--shadow:0 10px 30px rgba(20,40,28,.08);
+}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text)}
+.wrap{width:min(920px,calc(100% - 28px));margin:20px auto 96px}
+.top{display:flex;gap:10px;align-items:center;margin-bottom:16px}
+.back,.btn{appearance:none;border:1px solid var(--line);background:#fff;border-radius:999px;padding:10px 14px;font-weight:650;cursor:pointer}
+.btn.primary{background:var(--green);border-color:var(--green);color:#fff}
+.btn.danger{background:#fff5f4;border-color:#f0c2bd;color:var(--danger)}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);overflow:hidden}
+.hero{width:100%;aspect-ratio:16/10;object-fit:cover;background:#e8efea;display:block}
+.body{padding:22px}
+.kicker{display:inline-flex;gap:8px;align-items:center;padding:5px 10px;border-radius:999px;background:#e8f6ee;color:var(--green-deep);font-size:12px;font-weight:750;text-transform:uppercase}
+h1{margin:12px 0 8px;font-size:clamp(1.5rem,4vw,2rem);line-height:1.15}
+.meta,.desc{color:var(--muted);line-height:1.55}
+.price{font-size:1.25rem;font-weight:780;margin:10px 0}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.panel{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+.panel h2{margin:0 0 10px;font-size:1.05rem}
+label{display:block;font-size:13px;font-weight:650;margin:0 0 6px}
+input,select,textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:12px;font:inherit}
+textarea{min-height:90px;resize:vertical}
+.grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.status{margin:12px 0;padding:10px 12px;border-radius:12px;background:#eef6f1}
+.status.error{background:#fff1f0;color:var(--danger)}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stat{background:#f7faf8;border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center}
+.stat strong{display:block;font-size:1.2rem}
+.bottom-nav{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:space-around;padding:10px 8px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--line)}
+.bottom-nav a{color:var(--muted);text-decoration:none;font-size:12px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.bottom-nav a.active{color:var(--green-deep);font-weight:700}
+@media (max-width:520px){.stats{grid-template-columns:1fr 1fr 1fr}.body{padding:16px}}
+@media (prefers-reduced-motion:reduce)*{scroll-behavior:auto !important}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="top">
+    <button class="back" type="button" id="backBtn" aria-label="Back"><i class="fas fa-arrow-left"></i></button>
+    <span class="kicker" data-i18n="ads.badge">Advertisement</span>
+  </div>
+  <div id="pageStatus" class="status" hidden role="status"></div>
+  <article class="card" id="adCard" hidden>
+    <img class="hero" id="adImage" alt="">
+    <div class="body">
+      <div class="kicker" id="adStatus"></div>
+      <h1 id="adTitle"></h1>
+      <p class="price" id="adPrice"></p>
+      <p class="meta" id="adMeta"></p>
+      <p class="desc" id="adDescription"></p>
+      <p class="meta" id="adTarget"></p>
+      <div class="actions" id="publicActions"></div>
+      <section class="panel" id="ownerPanel" hidden>
+        <h2 data-i18n="ads.manage">Manage campaign</h2>
+        <div class="stats" aria-label="Ad metrics">
+          <div class="stat"><strong id="statImpressions">0</strong><span>Impressions</span></div>
+          <div class="stat"><strong id="statClicks">0</strong><span>Clicks</span></div>
+          <div class="stat"><strong id="statSaves">0</strong><span>Saves</span></div>
+        </div>
+        <div class="actions" style="margin-top:12px">
+          <button class="btn" type="button" id="btnPause">Pause</button>
+          <button class="btn primary" type="button" id="btnActivate">Set active / resubmit</button>
+          <button class="btn" type="button" id="btnEnd">End</button>
+          <button class="btn" type="button" id="btnBoost">Boost (Stripe test)</button>
+        </div>
+        <div class="panel">
+          <h2 data-i18n="ads.edit">Edit advertisement</h2>
+          <form id="editForm">
+            <div class="grid">
+              <div>
+                <label for="editTitle">Title</label>
+                <input id="editTitle" maxlength="150" required>
+              </div>
+              <div>
+                <label for="editCategory">Category</label>
+                <select id="editCategory" required>
+                  <option value="restaurant">Restaurant</option>
+                  <option value="shop">Shop</option>
+                  <option value="service">Service</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label for="editPrice">Price / offer</label>
+                <input id="editPrice" type="number" min="0" step="0.01">
+              </div>
+              <div>
+                <label for="editLocation">Location</label>
+                <input id="editLocation" maxlength="150" required>
+              </div>
+              <div>
+                <label for="editCountry">Country code</label>
+                <input id="editCountry" maxlength="2" placeholder="IT">
+              </div>
+              <div>
+                <label for="editCity">City</label>
+                <input id="editCity" maxlength="120">
+              </div>
+              <div>
+                <label for="editStarts">Starts at</label>
+                <input id="editStarts" type="datetime-local">
+              </div>
+              <div>
+                <label for="editExpires">Expires at</label>
+                <input id="editExpires" type="datetime-local">
+              </div>
+            </div>
+            <label for="editAudience" style="margin-top:10px">Target audience</label>
+            <input id="editAudience" maxlength="500" placeholder="e.g. local lunch customers">
+            <label for="editDescription" style="margin-top:10px">Description</label>
+            <textarea id="editDescription" maxlength="1000" required></textarea>
+            <div class="actions">
+              <button class="btn primary" type="submit">Save changes</button>
+              <button class="btn danger" type="button" id="btnDelete">Delete if unused</button>
+            </div>
+          </form>
+        </div>
+      </section>
+      <section class="panel" id="reportPanel">
+        <h2 data-i18n="ads.report">Report this ad</h2>
+        <form id="reportForm">
+          <label for="reportReason">Reason</label>
+          <input id="reportReason" maxlength="500" required placeholder="Spam, scam, offensive, misleading…">
+          <label for="reportDetails" style="margin-top:10px">Details</label>
+          <textarea id="reportDetails" maxlength="2000"></textarea>
+          <div class="actions"><button class="btn danger" type="submit">Submit report</button></div>
+        </form>
+      </section>
+      <section class="panel" id="adminPanel" hidden>
+        <h2>Moderation</h2>
+        <div class="actions">
+          <button class="btn primary" type="button" data-moderate="approve">Approve</button>
+          <button class="btn" type="button" data-moderate="pause">Pause</button>
+          <button class="btn danger" type="button" data-moderate="reject">Reject</button>
+        </div>
+        <label for="modNotes" style="margin-top:10px">Notes</label>
+        <textarea id="modNotes" maxlength="1000"></textarea>
+      </section>
+    </div>
+  </article>
+</main>
+<nav class="bottom-nav" aria-label="HAVKAR">
+  <a href="index.html"><i class="fas fa-home"></i><span>Home</span></a>
+  <a class="active" href="ads.html" aria-current="page"><i class="fas fa-bullhorn"></i><span>Ads</span></a>
+  <a href="buy-sell.html"><i class="fas fa-store"></i><span>Buy & Sell</span></a>
+  <a href="saved.html"><i class="fas fa-bookmark"></i><span>Saved</span></a>
+  <a href="profile.html"><i class="fas fa-user"></i><span>Profile</span></a>
+</nav>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-marketplace.js"></script>
+<script src="/havkar-ads.js"></script>
+<script src="/havkar-page-back.js"></script>
+<script src="/havkar-i18n.js"></script>
+<script>
+(function () {
+  const params = new URLSearchParams(location.search);
+  const adId = params.get("id");
+  const statusEl = document.getElementById("pageStatus");
+  const card = document.getElementById("adCard");
+  let supabase = null;
+  let currentUser = null;
+  let ad = null;
+  let isAdmin = false;
+
+  function setStatus(message, isError) {
+    statusEl.hidden = !message;
+    statusEl.textContent = message || "";
+    statusEl.className = "status" + (isError ? " error" : "");
+  }
+
+  function toLocalInput(value) {
+    if (!value) return "";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "";
+    const pad = (n) => String(n).padStart(2, "0");
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) +
+      "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+
+  function fromLocalInput(value) {
+    if (!value) return null;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+
+  async function initClient() {
+    if (!window.supabase || !window.HAVKAR_SUPABASE_CONFIG) {
+      throw new Error("Supabase is not configured.");
+    }
+    supabase = window.supabase.createClient(
+      window.HAVKAR_SUPABASE_CONFIG.url,
+      window.HAVKAR_SUPABASE_CONFIG.publishableKey
+    );
+    const session = await supabase.auth.getSession();
+    currentUser = session && session.data && session.data.session
+      ? session.data.session.user
+      : null;
+    if (currentUser) {
+      const admin = await supabase.rpc("havkar_session_is_admin");
+      isAdmin = admin && admin.data === true;
+    }
+  }
+
+  async function loadAd() {
+    if (!adId) throw new Error("Missing advertisement id.");
+    let query = supabase
+      .from("ads")
+      .select("id,title,category,price,currency,location,country_code,city,description,user_id,photos,status,listing_surface,starts_at,expires_at,target_audience,campaign_id,created_at,reported_count,moderation_notes")
+      .eq("id", adId)
+      .eq("listing_surface", "advertising")
+      .maybeSingle();
+    let { data, error } = await query;
+    if (error && /target_audience|starts_at|campaign_id|reported_count|moderation_notes/i.test(error.message || "")) {
+      ({ data, error } = await supabase
+        .from("ads")
+        .select("id,title,category,price,currency,location,country_code,city,description,user_id,photos,status,listing_surface,expires_at,created_at")
+        .eq("id", adId)
+        .eq("listing_surface", "advertising")
+        .maybeSingle());
+    }
+    if (error) throw error;
+    if (!data) throw new Error("Advertisement not found.");
+    if (!window.HAVKAR_ADS.isAdvertisingSurface(data)) {
+      throw new Error("This record is not an advertisement.");
+    }
+    ad = data;
+  }
+
+  function render() {
+    const owns = currentUser && ad.user_id && String(currentUser.id) === String(ad.user_id);
+    const visible = owns || isAdmin || window.HAVKAR_ADS.isPubliclyVisible(ad);
+    if (!visible) throw new Error("This advertisement is not available.");
+
+    card.hidden = false;
+    document.getElementById("adStatus").textContent = window.HAVKAR_ADS.statusLabel(ad.status);
+    document.getElementById("adTitle").textContent = ad.title || "Untitled advertisement";
+    document.getElementById("adPrice").textContent =
+      ad.price === null || ad.price === undefined || ad.price === ""
+        ? "Offer on request"
+        : (String(ad.price) + " " + String(ad.currency || "EUR"));
+    document.getElementById("adMeta").textContent = [
+      ad.category, ad.location, ad.city, ad.country_code
+    ].filter(Boolean).join(" · ");
+    document.getElementById("adDescription").textContent = ad.description || "";
+    document.getElementById("adTarget").textContent = ad.target_audience
+      ? ("Audience: " + ad.target_audience)
+      : "";
+    const img = document.getElementById("adImage");
+    const photo = Array.isArray(ad.photos) && ad.photos[0] ? ad.photos[0] : "";
+    img.src = photo || "";
+    img.alt = ad.title || "Advertisement image";
+    img.style.display = photo ? "block" : "none";
+
+    const publicActions = document.getElementById("publicActions");
+    publicActions.innerHTML = "";
+    if (!owns) {
+      const saveBtn = document.createElement("button");
+      saveBtn.className = "btn";
+      saveBtn.type = "button";
+      saveBtn.textContent = "Save";
+      saveBtn.addEventListener("click", saveAd);
+      publicActions.appendChild(saveBtn);
+      const clickBtn = document.createElement("button");
+      clickBtn.className = "btn primary";
+      clickBtn.type = "button";
+      clickBtn.textContent = "Visit / interest";
+      clickBtn.addEventListener("click", recordClick);
+      publicActions.appendChild(clickBtn);
+    }
+
+    document.getElementById("ownerPanel").hidden = !owns;
+    document.getElementById("adminPanel").hidden = !isAdmin;
+    if (owns) fillEditForm();
+    if (owns) loadMetrics();
+    if (currentUser && !owns) recordImpression();
+  }
+
+  function fillEditForm() {
+    document.getElementById("editTitle").value = ad.title || "";
+    document.getElementById("editCategory").value = ad.category || "other";
+    document.getElementById("editPrice").value = ad.price == null ? "" : ad.price;
+    document.getElementById("editLocation").value = ad.location || "";
+    document.getElementById("editCountry").value = ad.country_code || "";
+    document.getElementById("editCity").value = ad.city || "";
+    document.getElementById("editAudience").value = ad.target_audience || "";
+    document.getElementById("editDescription").value = ad.description || "";
+    document.getElementById("editStarts").value = toLocalInput(ad.starts_at);
+    document.getElementById("editExpires").value = toLocalInput(ad.expires_at);
+  }
+
+  async function loadMetrics() {
+    const metrics = await supabase
+      .from("ad_metric_events")
+      .select("event_type")
+      .eq("ad_id", ad.id);
+    let impressions = 0;
+    let clicks = 0;
+    (metrics.data || []).forEach(function (row) {
+      if (row.event_type === "impression") impressions += 1;
+      if (row.event_type === "click") clicks += 1;
+    });
+    document.getElementById("statImpressions").textContent = String(impressions);
+    document.getElementById("statClicks").textContent = String(clicks);
+    const saves = await supabase.from("ad_saves").select("id", { count: "exact", head: true }).eq("ad_id", ad.id);
+    document.getElementById("statSaves").textContent = String(saves.count || 0);
+  }
+
+  async function recordImpression() {
+    try { await supabase.rpc("record_ad_metric_event", { p_ad_id: Number(ad.id), p_event_type: "impression" }); }
+    catch (e) { /* migration may be pending */ }
+  }
+
+  async function recordClick() {
+    try { await supabase.rpc("record_ad_metric_event", { p_ad_id: Number(ad.id), p_event_type: "click" }); }
+    catch (e) {}
+    setStatus("Interest recorded. Contact stays inside HAVKAR unless the advertiser shares details.", false);
+  }
+
+  async function saveAd() {
+    if (!currentUser) {
+      location.href = "login.html";
+      return;
+    }
+    const existing = await supabase.from("ad_saves").select("id").eq("ad_id", ad.id).eq("user_id", currentUser.id).maybeSingle();
+    if (existing.data) {
+      setStatus("Already saved.", false);
+      return;
+    }
+    const inserted = await supabase.from("ad_saves").insert({ ad_id: ad.id, user_id: currentUser.id });
+    if (inserted.error) setStatus(inserted.error.message, true);
+    else setStatus("Saved.", false);
+  }
+
+  async function setStatusValue(next) {
+    const updated = await supabase.from("ads").update({ status: next }).eq("id", ad.id).eq("user_id", currentUser.id).select("*").maybeSingle();
+    if (updated.error) {
+      setStatus(updated.error.message, true);
+      return;
+    }
+    ad = updated.data || ad;
+    try { await supabase.rpc("record_ad_audit_event", { p_ad_id: Number(ad.id), p_action: "status_" + next, p_meta: {} }); } catch (e) {}
+    render();
+    setStatus("Status updated to " + window.HAVKAR_ADS.statusLabel(ad.status), false);
+  }
+
+  document.getElementById("btnPause").addEventListener("click", function () { setStatusValue("paused"); });
+  document.getElementById("btnEnd").addEventListener("click", function () { setStatusValue("ended"); });
+  document.getElementById("btnActivate").addEventListener("click", function () {
+    // Owners cannot self-approve pending_review -> active; resubmit keeps pending_review or resumes paused.
+    if (String(ad.status).toLowerCase() === "pending_review") {
+      setStatus("Still pending moderation. An admin must approve before it is public.", false);
+      return;
+    }
+    setStatusValue(String(ad.status).toLowerCase() === "paused" ? "active" : "pending_review");
+  });
+
+  document.getElementById("editForm").addEventListener("submit", async function (event) {
+    event.preventDefault();
+    const validated = window.HAVKAR_ADS.validateCreatePayload({
+      title: document.getElementById("editTitle").value,
+      category: document.getElementById("editCategory").value,
+      price: document.getElementById("editPrice").value,
+      location: document.getElementById("editLocation").value,
+      description: document.getElementById("editDescription").value,
+      country_code: document.getElementById("editCountry").value,
+      city: document.getElementById("editCity").value,
+      target_audience: document.getElementById("editAudience").value,
+      starts_at: fromLocalInput(document.getElementById("editStarts").value),
+      expires_at: fromLocalInput(document.getElementById("editExpires").value)
+    });
+    if (!validated.ok) {
+      setStatus("Please fix: " + validated.errors.join(", "), true);
+      return;
+    }
+    const patch = Object.assign({}, validated.payload);
+    delete patch.status;
+    delete patch.listing_surface;
+    const updated = await supabase.from("ads").update(patch).eq("id", ad.id).eq("user_id", currentUser.id).select("*").maybeSingle();
+    if (updated.error) {
+      setStatus(updated.error.message + " (Apply Ads lifecycle migration if columns are missing.)", true);
+      return;
+    }
+    ad = updated.data || ad;
+    try { await supabase.rpc("record_ad_audit_event", { p_ad_id: Number(ad.id), p_action: "edited", p_meta: {} }); } catch (e) {}
+    render();
+    setStatus("Changes saved.", false);
+  });
+
+  document.getElementById("btnDelete").addEventListener("click", async function () {
+    const deleted = await supabase.from("ads").delete().eq("id", ad.id).eq("user_id", currentUser.id);
+    if (deleted.error) {
+      setStatus(deleted.error.message || "Delete blocked while saves/comments/chats exist.", true);
+      return;
+    }
+    location.href = "ads.html";
+  });
+
+  document.getElementById("reportForm").addEventListener("submit", async function (event) {
+    event.preventDefault();
+    if (!currentUser) {
+      location.href = "login.html";
+      return;
+    }
+    const reason = document.getElementById("reportReason").value.trim();
+    const details = document.getElementById("reportDetails").value.trim();
+    const reported = await supabase.rpc("create_ad_report", {
+      p_ad_id: Number(ad.id),
+      p_reason: reason,
+      p_details: details || null
+    });
+    if (reported.error) {
+      setStatus(reported.error.message + " (Ads moderation migration required.)", true);
+      return;
+    }
+    setStatus("Report submitted. Thank you.", false);
+    event.target.reset();
+  });
+
+  document.querySelectorAll("[data-moderate]").forEach(function (button) {
+    button.addEventListener("click", async function () {
+      const decision = button.getAttribute("data-moderate");
+      const notes = document.getElementById("modNotes").value.trim();
+      const moderated = await supabase.rpc("moderate_advertisement", {
+        p_ad_id: Number(ad.id),
+        p_decision: decision,
+        p_notes: notes || null
+      });
+      if (moderated.error) {
+        setStatus(moderated.error.message, true);
+        return;
+      }
+      ad = moderated.data || ad;
+      render();
+      setStatus("Moderation decision applied: " + decision, false);
+    });
+  });
+
+  document.getElementById("btnBoost").addEventListener("click", async function () {
+    if (!currentUser) {
+      location.href = "login.html";
+      return;
+    }
+    const session = await supabase.auth.getSession();
+    const token = session && session.data && session.data.session
+      ? session.data.session.access_token
+      : "";
+    const response = await fetch("/api/create-ad-boost-checkout", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + token
+      },
+      body: JSON.stringify({ ad_id: Number(ad.id), test_mode: true })
+    });
+    const body = await response.json().catch(function () { return null; });
+    if (!response.ok || !body || body.ok === false) {
+      setStatus((body && body.error) || "Boost checkout unavailable. Test-mode Stripe prep only; real charges stay off.", true);
+      return;
+    }
+    if (body.url) location.href = body.url;
+    else setStatus("Boost intent created in test mode. No live charge.", false);
+  });
+
+  document.getElementById("backBtn").addEventListener("click", function () {
+    if (window.havkarNavigateBack) window.havkarNavigateBack();
+    else location.href = "ads.html";
+  });
+
+  (async function () {
+    try {
+      await initClient();
+      await loadAd();
+      render();
+    } catch (error) {
+      setStatus((error && error.message) || "Could not load advertisement.", true);
+    }
+  })();
+})();
+</script>
+</body>
+</html>
