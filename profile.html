@@ -3207,6 +3207,7 @@ input:focus-visible{
 
 <script src="/havkar-i18n.js"></script>
 <script src="/havkar-verification.js"></script>
+<script src="/havkar-business-verification.js"></script>
 
 
 <!-- =========================================================
@@ -5908,7 +5909,25 @@ function renderBusinessApplication(application){
                     This business application is approved. Approved application data is locked from self-service editing to protect verification integrity.
                 </div>
             ` : `
+                <div class="business-field full">
+                    <label for="businessEvidenceType">Verification document type</label>
+                    <select id="businessEvidenceType" ${application ? "" : "disabled"}>
+                        <option value="vat_registration">VAT / Partita IVA registration certificate</option>
+                        <option value="company_registration">Company or business registration extract</option>
+                        <option value="proof_of_registered_address">Proof of registered business address</option>
+                        <option value="other_supporting">Other supporting document</option>
+                    </select>
+                </div>
+                <div class="business-field full">
+                    <label for="businessEvidenceFile">Upload verification document (PDF/JPEG/PNG/WebP, max 10 MiB)</label>
+                    <input id="businessEvidenceFile" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" ${application ? "" : "disabled"}>
+                </div>
                 <div class="business-form-actions">
+                    <button id="businessEvidenceUploadButton" class="panel-button secondary" type="button"
+                        onclick="uploadBusinessEvidence()" ${application ? "" : "disabled"}>
+                        <i class="fas fa-file-upload"></i>
+                        Store document privately
+                    </button>
                     <button id="businessSubmitButton" class="panel-button" type="submit">
                         <i class="fas fa-paper-plane"></i>
                         ${application ? "Update & submit for review" : "Submit application"}
@@ -5920,15 +5939,97 @@ function renderBusinessApplication(application){
                     </button>
                 </div>
 
-                <div class="business-help">
-                    Required fields are marked with *. HAVKAR stores this application in your authenticated account. Review fields and approval status are controlled separately from this form.
+                <div class="business-help" id="businessEvidenceHelp">
+                    Required fields are marked with *. Before approval, HAVKAR needs VAT number, registered address, and private uploads of: VAT registration, company/business registration, and proof of registered address. Identity documents (passport/ID/selfie) are refused. An independent administrator must review the application; self-approval is blocked.
                 </div>
+                <div class="business-help" id="businessEvidenceStatus"></div>
             `}
 
         </form>
         `,
         []
     );
+}
+
+async function refreshBusinessEvidenceStatus(application){
+    const box = document.getElementById("businessEvidenceStatus");
+    if(!box || !application || !application.id){
+        return;
+    }
+
+    const docs = await supabase
+        .from("business_application_documents")
+        .select("id,doc_type,created_at,original_filename")
+        .eq("application_id", application.id)
+        .order("created_at", { ascending: false });
+
+    if(docs.error){
+        box.textContent = "Verification documents could not be loaded yet.";
+        return;
+    }
+
+    const types = (docs.data || []).map((row) => row.doc_type);
+    const missing = window.HAVKAR_BUSINESS_VERIFICATION
+        ? window.HAVKAR_BUSINESS_VERIFICATION.missingRequired(types)
+        : [];
+    const labels = window.HAVKAR_BUSINESS_VERIFICATION
+        ? missing.map(window.HAVKAR_BUSINESS_VERIFICATION.labelFor)
+        : missing;
+    const uploaded = (docs.data || [])
+        .map((row) => (window.HAVKAR_BUSINESS_VERIFICATION
+            ? window.HAVKAR_BUSINESS_VERIFICATION.labelFor(row.doc_type)
+            : row.doc_type) + (row.original_filename ? (" (" + row.original_filename + ")") : ""))
+        .join("; ");
+
+    const blankFields = [
+        application.vat_number ? null : "VAT / registration number",
+        application.address ? null : "registered business address"
+    ].filter(Boolean);
+
+    box.innerHTML =
+        "<strong>Uploaded:</strong> " + (uploaded || "none") +
+        "<br><strong>Still required:</strong> " + (labels.length ? labels.join("; ") : "none") +
+        "<br><strong>Fields still blank:</strong> " +
+        (blankFields.length ? blankFields.join("; ") : "none");
+}
+
+async function uploadBusinessEvidence(){
+    if(!currentUser || !currentBusinessApplication || !currentBusinessApplication.id){
+        showMessage("Submit the business application first, then upload documents.", "error");
+        return;
+    }
+
+    const typeEl = document.getElementById("businessEvidenceType");
+    const fileEl = document.getElementById("businessEvidenceFile");
+    const docType = typeEl ? typeEl.value : "";
+    const file = fileEl && fileEl.files && fileEl.files[0] ? fileEl.files[0] : null;
+
+    if(!window.HAVKAR_BUSINESS_VERIFICATION){
+        showMessage("Document upload is unavailable.", "error");
+        return;
+    }
+
+    const check = window.HAVKAR_BUSINESS_VERIFICATION.validateFile(file);
+    if(!check.ok){
+        showMessage(check.error, "error");
+        return;
+    }
+
+    try{
+        await window.HAVKAR_BUSINESS_VERIFICATION.uploadEvidence(
+            supabase,
+            currentUser.id,
+            currentBusinessApplication.id,
+            docType,
+            file
+        );
+        if(fileEl) fileEl.value = "";
+        showMessage("Document stored privately for verification review.", "success");
+        await refreshBusinessEvidenceStatus(currentBusinessApplication);
+    }catch(error){
+        console.error("Business evidence upload error:", error);
+        showMessage((error && error.message) || "Document could not be uploaded.", "error");
+    }
 }
 
 async function loadBusinessApplication(){
@@ -5964,13 +6065,17 @@ async function loadBusinessApplication(){
         return;
     }
 
-    renderBusinessApplication(Array.isArray(data) && data.length ? data[0] : null);
+    const application = Array.isArray(data) && data.length ? data[0] : null;
+    renderBusinessApplication(application);
+    await refreshBusinessEvidenceStatus(application);
 }
 
 window.openBusinessAccount =
 async function(){
     await loadBusinessApplication();
 };
+
+window.uploadBusinessEvidence = uploadBusinessEvidence;
 
 function readBusinessField(id){
     const element = document.getElementById(id);

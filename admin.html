@@ -29,6 +29,7 @@ nav a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px;font-w
 </header>
 <main>
   <p id="message" role="status">Checking authorization...</p>
+  <div id="businessReview"></div>
   <div id="adsModeration"></div>
   <div id="ledger"></div>
   <div id="privacyRequests"></div>
@@ -41,6 +42,7 @@ nav a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px;font-w
 </nav>
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-services.js"></script>
+<script src="/havkar-business-verification.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const message = document.getElementById("message");
@@ -104,6 +106,70 @@ async function start() {
   }
 
   message.textContent = "Administrator access is active. No commission is marked collected.";
+
+  const businessRoot = document.getElementById("businessReview");
+  const pendingBusiness = await db
+    .from("business_applications")
+    .select("id,business_name,legal_name,vat_number,address,country,city,status,email,user_id,submitted_at")
+    .in("status", ["pending", "under_review", "needs_more_info"])
+    .order("submitted_at", { ascending: false })
+    .limit(50);
+
+  if (pendingBusiness.error) {
+    businessRoot.textContent = "Business verification queue unavailable until the verification migration is applied.";
+  } else if (!pendingBusiness.data || !pendingBusiness.data.length) {
+    businessRoot.textContent = "No business applications awaiting review.";
+  } else {
+    const heading = document.createElement("h2");
+    heading.textContent = "Business applications";
+    businessRoot.appendChild(heading);
+    for (const row of pendingBusiness.data) {
+      const card = document.createElement("article");
+      card.className = "card";
+      const missingRpc = await db.rpc("business_application_missing_documents", {
+        p_application_id: Number(row.id)
+      });
+      const missing = missingRpc.error
+        ? ["(could not load missing list)"]
+        : (missingRpc.data || []);
+      const labels = window.HAVKAR_BUSINESS_VERIFICATION
+        ? missing.map(window.HAVKAR_BUSINESS_VERIFICATION.labelFor)
+        : missing;
+      card.innerHTML =
+        "<p><strong>#" + row.id + " · " + (row.business_name || "Untitled") + "</strong></p>" +
+        "<p>Status: " + (row.status || "") + "</p>" +
+        "<p>Legal name: " + (row.legal_name || "(missing)") + "</p>" +
+        "<p>VAT: " + (row.vat_number || "(missing)") + "</p>" +
+        "<p>Address: " + (row.address || "(missing)") + " · " + (row.city || "") + ", " + (row.country || "") + "</p>" +
+        "<p>Missing required documents: " + (labels.length ? labels.join("; ") : "none") + "</p>";
+      if (row.user_id === user.id) {
+        const note = document.createElement("p");
+        note.textContent = "Self-review is blocked. An independent administrator must decide this application.";
+        card.appendChild(note);
+      } else {
+        ["mark_under_review", "request_more_info", "approve", "reject"].forEach(function(decision) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = decision.replace(/_/g, " ");
+          button.style.marginRight = "8px";
+          button.addEventListener("click", async function() {
+            const notes = window.prompt("Review notes (required for reject / request more info):", "") || "";
+            const result = await db.rpc("review_business_application", {
+              p_application_id: Number(row.id),
+              p_decision: decision,
+              p_notes: notes
+            });
+            message.textContent = result.error
+              ? result.error.message
+              : ("Business application #" + row.id + " → " + (result.data && result.data.status));
+            if (!result.error) card.remove();
+          });
+          card.appendChild(button);
+        });
+      }
+      businessRoot.appendChild(card);
+    }
+  }
 
   const adsRoot = document.getElementById("adsModeration");
   const pendingAds = await db
