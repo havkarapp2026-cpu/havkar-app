@@ -135,12 +135,30 @@ async function start() {
       const labels = window.HAVKAR_BUSINESS_VERIFICATION
         ? missing.map(window.HAVKAR_BUSINESS_VERIFICATION.labelFor)
         : missing;
+      const docs = await db
+        .from("business_application_documents")
+        .select("doc_type,original_filename,mime_type,created_at")
+        .eq("application_id", Number(row.id))
+        .order("created_at", { ascending: false });
+      const latest = {};
+      (docs.data || []).forEach(function(doc) {
+        if (!latest[doc.doc_type]) latest[doc.doc_type] = doc;
+      });
+      const uploaded = Object.keys(latest).map(function(type) {
+        const doc = latest[type];
+        const label = window.HAVKAR_BUSINESS_VERIFICATION
+          ? window.HAVKAR_BUSINESS_VERIFICATION.labelFor(type)
+          : type;
+        return label + " — " + (doc.original_filename || "stored") +
+          (doc.mime_type ? (" [" + doc.mime_type + "]") : "");
+      });
       card.innerHTML =
         "<p><strong>#" + row.id + " · " + (row.business_name || "Untitled") + "</strong></p>" +
         "<p>Status: " + (row.status || "") + "</p>" +
         "<p>Legal name: " + (row.legal_name || "(missing)") + "</p>" +
         "<p>VAT: " + (row.vat_number || "(missing)") + "</p>" +
         "<p>Address: " + (row.address || "(missing)") + " · " + (row.city || "") + ", " + (row.country || "") + "</p>" +
+        "<p>Uploaded documents: " + (uploaded.length ? uploaded.join("; ") : "none") + "</p>" +
         "<p>Missing required documents: " + (labels.length ? labels.join("; ") : "none") + "</p>";
       if (row.user_id === user.id) {
         const note = document.createElement("p");

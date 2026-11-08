@@ -63,15 +63,63 @@
     return String(userId) + "/" + docType + "/" + Date.now() + "-" + safe;
   }
 
-  async function uploadEvidence(supabaseClient, userId, applicationId, docType, file) {
+  function storageErrorMessage(error) {
+    if (!error) return "Document could not be uploaded.";
+    var msg = String(error.message || error.error || error.statusText || "");
+    if (/row-level security|violates|policy|unauthorized|403/i.test(msg)) {
+      return "Upload blocked by storage permissions. Sign in again and retry, or contact HAVKAR support if this continues.";
+    }
+    if (/mime|type|not supported/i.test(msg)) {
+      return "Only PDF, JPEG, PNG, or WebP files are accepted.";
+    }
+    if (/size|too large|payload/i.test(msg)) {
+      return "Each file must be between 1 byte and 10 MiB.";
+    }
+    return msg || "Document could not be uploaded.";
+  }
+
+  async function removePriorDocuments(supabaseClient, applicationId, docType) {
+    var prior = await supabaseClient
+      .from("business_application_documents")
+      .select("id,storage_path")
+      .eq("application_id", Number(applicationId))
+      .eq("doc_type", docType);
+
+    if (prior.error) throw prior.error;
+    var rows = prior.data || [];
+    if (!rows.length) return;
+
+    var paths = rows.map(function (row) { return row.storage_path; }).filter(Boolean);
+    if (paths.length) {
+      var delStorage = await supabaseClient.storage.from("business-evidence").remove(paths);
+      if (delStorage.error) {
+        // Continue: new file is already registered; old object cleanup is best-effort.
+        console.warn("Prior evidence storage cleanup failed:", delStorage.error);
+      }
+    }
+
+    var ids = rows.map(function (row) { return row.id; });
+    var delRows = await supabaseClient
+      .from("business_application_documents")
+      .delete()
+      .in("id", ids);
+    if (delRows.error) throw delRows.error;
+  }
+
+  async function uploadEvidence(supabaseClient, userId, applicationId, docType, file, options) {
     var check = validateFile(file);
     if (!check.ok) throw new Error(check.error);
+    var replace = !(options && options.replace === false);
     var path = storagePath(userId, docType, file.name);
     var up = await supabaseClient.storage.from("business-evidence").upload(path, file, {
       contentType: file.type,
       upsert: false
     });
-    if (up.error) throw up.error;
+    if (up.error) {
+      var err = new Error(storageErrorMessage(up.error));
+      err.cause = up.error;
+      throw err;
+    }
     var reg = await supabaseClient.rpc("register_business_application_document", {
       p_application_id: Number(applicationId),
       p_doc_type: docType,
@@ -80,7 +128,38 @@
       p_byte_size: file.size,
       p_original_filename: file.name || null
     });
-    if (reg.error) throw reg.error;
+    if (reg.error) {
+      try {
+        await supabaseClient.storage.from("business-evidence").remove([path]);
+      } catch (_cleanup) { /* ignore */ }
+      var regErr = new Error(storageErrorMessage(reg.error));
+      regErr.cause = reg.error;
+      throw regErr;
+    }
+
+    if (replace) {
+      try {
+        var prior = await supabaseClient
+          .from("business_application_documents")
+          .select("id,storage_path")
+          .eq("application_id", Number(applicationId))
+          .eq("doc_type", docType)
+          .neq("storage_path", path);
+        if (!prior.error && prior.data && prior.data.length) {
+          var oldPaths = prior.data.map(function (row) { return row.storage_path; }).filter(Boolean);
+          if (oldPaths.length) {
+            await supabaseClient.storage.from("business-evidence").remove(oldPaths);
+          }
+          await supabaseClient
+            .from("business_application_documents")
+            .delete()
+            .in("id", prior.data.map(function (row) { return row.id; }));
+        }
+      } catch (cleanupError) {
+        console.warn("Prior evidence cleanup after replace failed:", cleanupError);
+      }
+    }
+
     return reg.data;
   }
 
@@ -91,6 +170,8 @@
     missingRequired: missingRequired,
     validateFile: validateFile,
     storagePath: storagePath,
+    storageErrorMessage: storageErrorMessage,
+    removePriorDocuments: removePriorDocuments,
     uploadEvidence: uploadEvidence
   };
 });
