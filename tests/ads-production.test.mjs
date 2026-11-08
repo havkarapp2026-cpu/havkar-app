@@ -63,6 +63,17 @@ test("ads production files keep Buy & Sell / AI separation and Stripe test gates
   assert.match(adsHtml, /HAVKAR_ADS/);
   assert.match(adsHtml, /ad-view\.html/);
   assert.match(adsHtml, /pending_review|adPreviewBox/);
+  assert.match(adsHtml, /status:\s*"pending_review"/);
+  assert.doesNotMatch(
+    adsHtml,
+    /status:\s*"active",\s*\n\s*listing_surface:\s*"advertising"/
+  );
+  const cityParity = fs.readFileSync(
+    path.join(root, "supabase/migrations/20261108020000_ads_city_country_parity.sql"),
+    "utf8"
+  );
+  assert.match(cityParity, /ADD COLUMN IF NOT EXISTS country_code text/);
+  assert.match(cityParity, /ADD COLUMN IF NOT EXISTS city text/);
 
   assert.match(adView, /create_ad_report/);
   assert.match(adView, /moderate_advertisement/);

@@ -3779,9 +3779,14 @@
                 let insertedProbe =
                     await insertPromise;
 
+                /*
+                 * Compatibility fallback for older schemas that lack
+                 * schedule/campaign columns. Never downgrade moderation:
+                 * advertising inserts stay pending_review (not active).
+                 */
                 if (
                     insertedProbe.error &&
-                    /campaign_id|target_audience|starts_at|pending_review|approved business/i.test(
+                    /campaign_id|target_audience|starts_at|country_code|city/i.test(
                         String(
                             insertedProbe.error.message ||
                             ""
@@ -3789,7 +3794,7 @@
                     )
                 ) {
 
-                    const legacyAd = {
+                    const compatAd = {
                         title: title,
                         category: category,
                         price: price,
@@ -3797,7 +3802,7 @@
                         description: description,
                         user_id: currentUserId,
                         photos: photos,
-                        status: "active",
+                        status: "pending_review",
                         listing_surface: "advertising"
                     };
 
@@ -3805,10 +3810,10 @@
                         supabaseClient
                             .from(ADS_TABLE)
                             .insert(
-                                legacyAd
+                                compatAd
                             )
                             .select(
-                                "id,created_at,title,category,price,location,description,user_id,photos,status"
+                                "id,created_at,title,category,price,location,description,user_id,photos,status,listing_surface"
                             )
                             .single();
 
