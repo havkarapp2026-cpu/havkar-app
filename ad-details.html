@@ -1042,6 +1042,14 @@ button:focus-visible{
 
             <div class="meta-list">
 
+                <div id="marketplaceFees" class="meta-row" hidden>
+
+                    <i class="fas fa-percent"></i>
+
+                    <span id="marketplaceFeesText"></span>
+
+                </div>
+
                 <div class="meta-row" id="placeRow" hidden>
 
                     <i class="fas fa-earth-americas"></i>
@@ -2805,6 +2813,73 @@ function renderListing(){
             ad.price,
             ad.currency
         );
+
+    const feesRow =
+        $("marketplaceFees");
+
+    const feesText =
+        $("marketplaceFeesText");
+
+    if(
+        feesRow &&
+        feesText &&
+        window.HAVKAR_MARKETPLACE &&
+        window.HAVKAR_MARKETPLACE.isMarketplaceRow(ad) &&
+        Number(ad.price) >= 0 &&
+        Number.isFinite(Number(ad.price))
+    ){
+
+        const quote =
+            window.HAVKAR_MARKETPLACE.quoteListingFees(
+                ad.price,
+                ad.currency
+            );
+
+        if(
+            quote &&
+            quote.ok
+        ){
+
+            feesText.textContent =
+                "Buyer fee 2%: " +
+                formatPrice(
+                    quote.buyerFee,
+                    quote.currency
+                ) +
+                " · Seller fee 3%: " +
+                formatPrice(
+                    quote.sellerFee,
+                    quote.currency
+                ) +
+                " · Buyer pays " +
+                formatPrice(
+                    quote.buyerPays,
+                    quote.currency
+                ) +
+                " · Seller receives " +
+                formatPrice(
+                    quote.sellerReceives,
+                    quote.currency
+                );
+
+            feesRow.hidden =
+                false;
+
+        }else{
+
+            feesRow.hidden =
+                true;
+
+        }
+
+    }else if(
+        feesRow
+    ){
+
+        feesRow.hidden =
+            true;
+
+    }
 
     const xlmButton =
         $("xlmQuoteButton");

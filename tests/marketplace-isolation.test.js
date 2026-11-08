@@ -20,6 +20,49 @@ assert.strictEqual(market.quoteListingFees(100).buyerPays, 102);
 assert.strictEqual(market.quoteListingFees(100).sellerReceives, 97);
 assert.strictEqual(market.quoteListingFees(100).listingPublicationFee, 0);
 assert.strictEqual(market.quoteListingFees(100).tax, null);
+assert.strictEqual(market.quoteListingFees(100, "usd").currency, "USD");
+assert.strictEqual(market.escapeListingSearch("phone%_,test"), "phone test");
+
+const chainCalls = [];
+const fakeRequest = {
+  eq(field, value) {
+    chainCalls.push(["eq", field, value]);
+    return this;
+  },
+  or(expr) {
+    chainCalls.push(["or", expr]);
+    return this;
+  },
+  ilike(field, value) {
+    chainCalls.push(["ilike", field, value]);
+    return this;
+  },
+  gte(field, value) {
+    chainCalls.push(["gte", field, value]);
+    return this;
+  },
+  lte(field, value) {
+    chainCalls.push(["lte", field, value]);
+    return this;
+  }
+};
+market.applyServerListingFilters(fakeRequest, {
+  search: "lamp",
+  category: "Furniture",
+  country: "IT",
+  city: "Rome",
+  minPrice: "10",
+  maxPrice: "90"
+});
+assert.ok(chainCalls.some((call) => call[0] === "eq" && call[1] === "status"));
+assert.ok(chainCalls.some((call) => call[0] === "eq" && call[1] === "country_code" && call[2] === "IT"));
+assert.ok(chainCalls.some((call) => call[0] === "ilike" && call[1] === "city" && call[2] === "Rome"));
+assert.ok(chainCalls.some((call) => call[0] === "ilike" && call[1] === "category"));
+assert.ok(chainCalls.some((call) => call[0] === "gte" && call[2] === 10));
+assert.ok(chainCalls.some((call) => call[0] === "lte" && call[2] === 90));
+assert.ok(chainCalls.some((call) => call[0] === "or" && String(call[1]).includes("title.ilike.%lamp%")));
+assert.match(buySell, /applyServerListingFilters/);
+assert.match(buySell, /loadListings\(\)/);
 
 assert.strictEqual(market.isMarketplaceRow({ listing_surface: "marketplace" }), true);
 assert.strictEqual(market.isMarketplaceRow({}), true);
@@ -165,7 +208,10 @@ assert.strictEqual(market.listingVideoObjectPath(owner, "video/quicktime", objec
 const details = fs.readFileSync(path.join(root, "ad-details.html"), "utf8");
 assert.ok(details.includes("isAdvertisingRow"));
 assert.ok(details.includes("signedListingVideoUrl"));
+assert.ok(details.includes('id="marketplaceFees"'));
+assert.ok(details.includes("quoteListingFees"));
 assert.ok(!details.includes("getPublicUrl"));
+assert.ok(fs.readFileSync(path.join(root, "index.html"), "utf8").includes('data-i18n="havkarAi"'));
 assert.ok(buySell.includes("isAdvertisingRow"));
 assert.ok(buySell.includes('id="cityFilter"'));
 assert.ok(buySell.includes('id="minPrice"'));

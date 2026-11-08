@@ -1496,7 +1496,10 @@ function renderCountryFilter(){
                 select.value ||
                 "";
 
-            applyFilters();
+            state.savedOnly =
+                false;
+
+            loadListings();
 
         };
 
@@ -1659,7 +1662,7 @@ function renderCategories(){
 
                         renderCategories();
 
-                        applyFilters();
+                        loadListings();
 
                     }
                 );
@@ -2278,7 +2281,7 @@ function showAllListings(){
 
     renderCategories();
 
-    applyFilters();
+    loadListings();
 
 }
 
@@ -2639,6 +2642,21 @@ function missingPlaceColumns(
 }
 
 
+function currentListingFilters(){
+
+    return {
+        search: state.search,
+        category: state.category,
+        country: state.country,
+        city: state.city,
+        minPrice: state.minPrice,
+        maxPrice: state.maxPrice,
+        userId: state.currentUserId || ""
+    };
+
+}
+
+
 async function queryListings(
     options
 ){
@@ -2659,6 +2677,19 @@ async function queryListings(
         request =
             request.or(
                 "listing_surface.is.null,listing_surface.eq.marketplace"
+            );
+
+    }
+
+    if(
+        window.HAVKAR_MARKETPLACE &&
+        typeof window.HAVKAR_MARKETPLACE.applyServerListingFilters === "function"
+    ){
+
+        request =
+            window.HAVKAR_MARKETPLACE.applyServerListingFilters(
+                request,
+                options.filters || currentListingFilters()
             );
 
     }
@@ -4094,7 +4125,7 @@ function goMarketplaceHome(){
         "navHome"
     );
 
-    applyFilters();
+    loadListings();
 
 }
 
@@ -4306,6 +4337,9 @@ function setupSearch(){
     const clear =
         $("clearSearch");
 
+    let searchTimer =
+        0;
+
     input.addEventListener(
         "input",
         () => {
@@ -4323,7 +4357,19 @@ function setupSearch(){
                 )
             );
 
-            applyFilters();
+            window.clearTimeout(
+                searchTimer
+            );
+
+            searchTimer =
+                window.setTimeout(
+                    () => {
+
+                        loadListings();
+
+                    },
+                    350
+                );
 
         }
     );
@@ -4342,7 +4388,11 @@ function setupSearch(){
                 "visible"
             );
 
-            applyFilters();
+            window.clearTimeout(
+                searchTimer
+            );
+
+            loadListings();
 
             input.focus();
 
@@ -4360,6 +4410,9 @@ function setupSearch(){
 
         }
 
+        let priceTimer =
+            0;
+
         field.addEventListener(
             "input",
             () => {
@@ -4370,7 +4423,19 @@ function setupSearch(){
                 state.savedOnly =
                     false;
 
-                applyFilters();
+                window.clearTimeout(
+                    priceTimer
+                );
+
+                priceTimer =
+                    window.setTimeout(
+                        () => {
+
+                            loadListings();
+
+                        },
+                        350
+                    );
 
             }
         );
@@ -4403,7 +4468,7 @@ function setupSearch(){
                 state.savedOnly =
                     false;
 
-                applyFilters();
+                loadListings();
 
             }
         );
