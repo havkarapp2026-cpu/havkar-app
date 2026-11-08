@@ -1,10 +1,12 @@
 # HAVKAR — SCF #46 Build Award draft
 
-Status: draft for the owner. This file has not been submitted to the Stellar Community Fund.
+Status: technical draft only. **Not submitted.** Interest Form from ~6 October 2026 was **rejected** (SCF email 16 October 2026). There is **no verified invitation**.
 
-Official SCF #46 deadline (re-verified 8 Nov 2026 from communityfund.stellar.org/awards): **9 November 2026** (calendar date only; official page does **not** publish a timezone — submit before end of **8 November 2026 UTC** to avoid ambiguity).
+Corrected Interest Form: `SCF-CORRECTED-INTEREST-FORM-20261108.md`  
+Eligibility matrix: `SCF-ELIGIBILITY-MATRIX-20261108.md`  
+Full proposal skeleton (invite-only): `SCF46-FULL-APPLICATION-DRAFT.md`
 
-Interest form was owner-reported submitted 6 October 2026. Full Build submission requires an SCF invitation email. This agent does **not** submit externally. Submission-ready paste text: `docs/scf/SCF46-SUBMISSION-READY.md`.
+Official SCF #46 deadline date: **9 November 2026** (timezone unpublished on communityfund.stellar.org/awards).
 
 
 Official sources used for the rules in this draft:
