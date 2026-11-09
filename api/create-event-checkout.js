@@ -120,16 +120,23 @@ function buildPaymentActivationStatus() {
     }
   }
 
+  const mainnetDestinationConfigured = Boolean(
+    String(process.env.HAVKAR_STELLAR_MAINNET_DESTINATION || "").trim()
+  );
+
   if (!stellarMainnetReady) {
+    if (!mainnetDestinationConfigured) {
+      blockers.push(
+        "Owner must provide the approved Stellar Mainnet receiving public key and set " +
+          MAINNET_DESTINATION_ENV +
+          " on Vercel Production (G... only; never a secret seed)."
+      );
+    }
     if (!stellarMainnetFlag) {
       blockers.push(
-        "Set " + MAINNET_FLAG + "=true on Vercel Production to arm Stellar Mainnet quotes."
-      );
-    } else {
-      blockers.push(
-        "Set " +
-          MAINNET_DESTINATION_ENV +
-          " to the HAVKAR Mainnet receiving public key (G...). Never store a secret seed in env for this."
+        "After the destination is configured and Horizon-verified, set " +
+          MAINNET_FLAG +
+          "=true on Vercel Production, then redeploy."
       );
     }
   }
@@ -138,10 +145,7 @@ function buildPaymentActivationStatus() {
     "XLM recurring/AI subscriptions remain unsupported — do not sell recurring access via one-time XLM."
   );
   blockers.push(
-    "Apply migration 20261109033000_stellar_mainnet_payment_intents before Mainnet intents can be stored."
-  );
-  blockers.push(
-    "Refunds require an Owner-signed return payment from the merchant account; server only verifies Horizon."
+    "Refunds require an Owner-signed return payment from the merchant Mainnet account; server only verifies Horizon."
   );
 
   return {
@@ -166,10 +170,9 @@ function buildPaymentActivationStatus() {
       testnet_destination_configured: testnetDestinationConfigured,
       mainnet_payments_enabled_in_source: true,
       mainnet_flag: stellarMainnetFlag,
-      mainnet_destination_configured: Boolean(
-        String(process.env.HAVKAR_STELLAR_MAINNET_DESTINATION || "").trim()
-      ),
+      mainnet_destination_configured: mainnetDestinationConfigured,
       mainnet_ready: stellarMainnetReady,
+      migration_20261109033000: "applied_or_reconciled",
       commissions: {
         marketplace_buyer_bps: 200,
         marketplace_seller_bps: 300,
@@ -178,6 +181,34 @@ function buildPaymentActivationStatus() {
       unsupported_flows: ["subscription", "recurring", "trade"]
     },
     owner_activation_required: !cardsAllowed || !stellarMainnetReady,
+    owner_actions: stellarMainnetReady
+      ? []
+      : [
+          {
+            id: "provide_mainnet_destination",
+            required: true,
+            detail:
+              "Reply with the approved HAVKAR Stellar Mainnet merchant receiving public key (G...). Do not send a secret seed. Do not reuse a Testnet-only key unless you explicitly approve that same account for Mainnet collection."
+          },
+          {
+            id: "set_vercel_destination",
+            required: true,
+            detail:
+              "Set Vercel Production env HAVKAR_STELLAR_MAINNET_DESTINATION to that G... key, then confirm Horizon Public shows the account."
+          },
+          {
+            id: "arm_mainnet_flag",
+            required: true,
+            detail:
+              "Only after destination is set and Horizon-verified, set HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED=true (exact) on Vercel Production and redeploy."
+          },
+          {
+            id: "smoke_settle",
+            required: true,
+            detail:
+              "After stellar.mainnet_ready=true, run one tiny real Mainnet payment and confirm the intent settles with the Horizon tx hash."
+          }
+        ],
     blockers: blockers
   };
 }
