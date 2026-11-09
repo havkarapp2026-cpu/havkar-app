@@ -1,6 +1,6 @@
 # HAVKAR — Production activation status
 
-Updated: **9 November 2026** (reconciled to live `/api/payment-activation-status`)
+Updated: **9 November 2026** (live Production reconciled)
 
 ## Stellar Mainnet
 
@@ -10,52 +10,31 @@ Updated: **9 November 2026** (reconciled to live `/api/payment-activation-status
 | --- | --- |
 | Destination | `HAVKAR_STELLAR_MAINNET_DESTINATION=GBORWHZDJRQQQIWHS7YZ5GQDSGV6KKKTVCHNZGULACUK7SCAAHEAUTGM` |
 | Ownership | Verified `outbound_memo_payment` at `2026-11-09T13:48:08Z` |
-| Testnet vs Mainnet | Fully separated in code; Testnet is never labeled Mainnet |
-| Stripe / Pi | Unchanged; webhook still `REAL_PAYMENTS_PAUSED` |
+| Flag | `HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED=true` (Owner-authorized 9 Nov 2026) |
+| Smoke settle | Intent `39f59f21-ddd3-45ee-927a-87e6efc56641` → `settled` |
+| Horizon tx | `92781d576093b96e2a92295bc731f555dede8838b0624f61ed20522fdf4c8811` |
+| Match proof | memo `7b1aebdb718a12b807ce`, native `7.7528218` XLM, destination match, payer `GAPCPQKBQ2VKSSRXUFOCGNUYEJLT3FRPYBCJCN2SJZ2TPLGEMMCUJV4L` |
+| Testnet vs Mainnet | Fully separated; Testnet never labeled Mainnet |
 | Fees in source | Buyer 2% / seller 3% / services 10% |
-| Settlement guards | Unit/integration: success, memo/amount/destination match, replay refused |
-| Invoice verify path | `/xlm-invoice.html` + `/api/xlm-invoice` owner Bearer verify (on `main`) |
+| Settlement guards | memo/amount/destination/replay/expiry enforced in `lib/stellar-checkout.cjs` |
+| Invoice verify path | `/xlm-invoice.html` + `/api/xlm-invoice` |
 
-### YELLOW (ready path; collection still paused)
-
-| Item | Live Production |
-| --- | --- |
-| Flag | `HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED=false` (not armed) |
-| Status | `stellar.mainnet_ready=false`, `stellar_mainnet_collection=paused` |
-| Owner action required | Explicitly set flag `true` on Vercel Production and redeploy **only after Owner authorizes live collection** |
-| Smoke settle | Only after `mainnet_ready=true`: one tiny Owner-confirmed Mainnet payment, then verify Horizon hash |
-
-Do not claim `armed` / `paid` / `settled` until the live API says so.
-
-## Stripe Live (from SCF/payment audit branch)
+### YELLOW
 
 | Item | Status |
 | --- | --- |
-| Account eligibility | GREEN — charges/payouts enabled, requirements clear (audit docs) |
-| Connect marketplace | RED — zero connected accounts; no application_fee paths |
-| Collection armed | RED — paused; flags unset |
-| Money-flow evidence | `store/STRIPE_MONEY_FLOW_20261108.md` |
-| Live verify | `store/STRIPE_LIVE_VERIFICATION_20261108.md` |
+| Stripe / Pi live collection | Still paused (`HAVKAR_REAL_PAYMENTS_ENABLED` not true; secret mode unknown in status API) |
+| Partita IVA / REA / ATECO | Not published — verified Visura not present in repo/env |
+| Mailbox SMTP send/receive | Official addresses published; inbox AUTH not proven in this environment |
 
-## SCF
+## Stripe Live
 
 | Item | Status |
 | --- | --- |
-| Oct Interest Form | RED — rejected 16 Oct 2026 |
-| Invitation | RED — none verified |
-| Corrected Interest Form draft | GREEN — `docs/scf/SCF-CORRECTED-INTEREST-FORM-20261108.md` |
-| #46 deadline date | 9 November 2026 (timezone unpublished) |
-
-## Android
-
-| Item | Status |
-| --- | --- |
-| Repo AAB/signing prep | GREEN docs |
-| Play closed testing 12+14 | RED — Console evidence not available here |
-| Production worldwide claim | RED — not claimed |
+| Collection armed | RED — paused |
+| Evidence | `store/STRIPE_LIVE_VERIFICATION_20261108.md` |
 
 ## Actually activated
 
-None of: Stripe live collection, Pi, Trade, Stellar Mainnet customer payments, Play production, SCF invitation/submit.
-
-Live customer collection remains intentionally paused without new Owner permission.
+- Stellar Mainnet **one-time** XLM quotes/settlement path (Owner-armed after smoke).
+- Not activated: Stripe live, Pi, Trade, recurring XLM, Play/App Store public release, invented chamber numbers.
