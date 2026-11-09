@@ -39,3 +39,21 @@ Never enable the Mainnet flag before ownership proof.
 ## Smoke test (Owner)
 
 Only after `mainnet_ready=true` and compliance sign-off: one tiny Mainnet payment through Buy & Sell or Events, then confirm intent `settled` and Horizon hash.
+
+## Owner-only Verify Payment (invoice page)
+
+Use when Horizon already shows a matching Mainnet payment but the intent is still `unpaid`.
+
+1. Deploy the branch that includes `xlm-invoice.html` owner Verify UI and `can_verify` on `/api/xlm-invoice`.
+2. Open Production invoice while signed in as the **intent owner** (same Supabase user that created the quote):
+
+```
+https://havkar-app.vercel.app/xlm-invoice.html?intent=<INTENT_ID>&tx=<TX_HASH>
+```
+
+3. Confirm the page shows **Verify Payment** (only when session user matches intent `user_id` and status is `unpaid`). Guests and other accounts never see an enabled owner verify action.
+4. Click **Verify Payment**. The browser sends the existing session Bearer token to `POST /api/create-event-checkout` with `payment_method=xlm`, `action=verify`, `intent_id`, `tx_hash`, `network=mainnet`. Tokens and service-role keys are never printed.
+5. Server re-checks Horizon Public (success, memo, native amount, destination, unique hash) and only then updates the intent to `settled`.
+6. Refresh or re-open the invoice until Production returns `status=settled` (and `paid`/`order_paid` true). Do **not** claim paid before that response.
+
+Do not submit a second/duplicate on-chain payment hash for a different settlement, do not call refund for this flow, and do not enable unrelated payment methods.

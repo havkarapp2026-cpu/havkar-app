@@ -15,18 +15,17 @@ Updated: **9 November 2026**
 | Fees in source | Buyer 2% / seller 3% / services 10% |
 | Settlement guards | Unit/integration: success, memo/amount/destination match, replay refused |
 
-## YELLOW (Owner confirmation before smoke transfer)
+## YELLOW (on-chain smoke paid; HAVKAR intent still unpaid)
 
-Proposed minimal Mainnet marketplace smoke payment (not sent yet):
+Smoke marketplace intent:
 
-- Listing price: **1.00 EUR**
-- Buyer pays: **1.02 EUR** (2% fee)
-- Seller fee reference: **0.03 EUR** (3%)
-- Approximate XLM at current rate: see live quote at confirmation time
+- Intent: `39f59f21-ddd3-45ee-927a-87e6efc56641`
+- Buyer amount: **1.02 EUR** → **7.7528218 XLM** memo `7b1aebdb718a12b807ce`
 - Destination: `GBORWHZDJRQQQIWHS7YZ5GQDSGV6KKKTVCHNZGULACUK7SCAAHEAUTGM`
-- Network: Stellar Public / Mainnet
+- Candidate Horizon tx (do not claim settled until Production says so): `92781d576093b96e2a92295bc731f555dede8838b0624f61ed20522fdf4c8811`
+- Duplicate on-chain tx (leave untouched): `a5e7928c…` (not used for settle)
 
-No customer smoke settlement is claimed until Owner confirms amount + destination and a matching Horizon hash settles an unpaid intent.
+Production invoice still reports `status=unpaid` until the **intent owner** signs in and clicks **Verify Payment** on `/xlm-invoice.html` (Bearer session → existing verify endpoint). Do not claim `paid`/`settled` until that response.
 
 ## RED
 

@@ -121,7 +121,7 @@ async function readXlmInvoice(req) {
   const loaded = await getSupabaseAdmin()
     .from("marketplace_payment_intents")
     .select(
-      "id,flow,amount,currency,network,status,expires_at,amount_xlm,eur_per_xlm,destination,memo,subject_id,created_at"
+      "id,user_id,flow,amount,currency,network,status,expires_at,amount_xlm,eur_per_xlm,destination,memo,subject_id,created_at,tx_hash,settled_at,payer_account"
     )
     .eq("id", intentId)
     .maybeSingle();
@@ -141,12 +141,30 @@ async function readXlmInvoice(req) {
     };
   }
 
+  let canVerify = false;
+  let signedIn = false;
+
+  try {
+    const auth = await authenticateUser(req);
+
+    if (auth && auth.user && auth.user.id) {
+      signedIn = true;
+      canVerify =
+        intent.status === "unpaid" &&
+        String(auth.user.id) === String(intent.user_id);
+    }
+  } catch (error) {
+    canVerify = false;
+  }
+
   return {
     ok: true,
     httpStatus: 200,
     paid: intent.status === "settled",
     order_paid: intent.status === "settled",
     payable: intent.status === "unpaid",
+    can_verify: canVerify,
+    signed_in: signedIn,
     id: intent.id,
     flow: intent.flow,
     amount: intent.amount,
@@ -160,6 +178,9 @@ async function readXlmInvoice(req) {
     memo: intent.memo,
     subject_id: intent.subject_id,
     created_at: intent.created_at,
+    tx_hash: intent.tx_hash || null,
+    settled_at: intent.settled_at || null,
+    payer_account: intent.status === "settled" ? intent.payer_account || null : null,
     horizon:
       intent.network === "mainnet"
         ? "https://horizon.stellar.org"
