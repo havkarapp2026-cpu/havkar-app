@@ -2,9 +2,8 @@
 # Manual release modes only — does not run on push.
 # Does not enable production payments. Does not submit App Store review.
 #
-# IMPORTANT: GitHub Actions UI lists workflow_dispatch workflows from the
-# default branch (main). Until this file is merged to main, the Actions tab
-# will only show "iOS Simulator build".
+# Signing materials are imported with Apple's `security` CLI via
+# scripts/ios-import-signing-materials.sh (no third-party cert-import action).
 name: iOS Release
 
 on:
@@ -24,6 +23,7 @@ on:
       - "ios/**"
       - ".github/workflows/ios-release.yml"
       - "scripts/ios-release-preflight.sh"
+      - "scripts/ios-import-signing-materials.sh"
       - "scripts/ios-encode-signing-secrets.sh"
       - "store/IOS_RELEASE.md"
 
@@ -153,27 +153,15 @@ jobs:
           print("AppIcon OK color_type=%s" % color)
           PY
 
-      - name: Import Apple Distribution certificate
-        uses: apple-actions/import-codesigning-certs@v3
-        with:
-          p12-file-base64: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_BASE64 }}
-          p12-password: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD }}
-
-      - name: Install optional provisioning profile
+      - name: Import Apple Distribution certificate and optional profile
         env:
-          PROFILE_B64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
+          APPLE_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          APPLE_PROVISIONING_PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
         run: |
           set -euo pipefail
-          # Secrets cannot be used in if: conditionals; skip when unset.
-          if [ -z "${PROFILE_B64}" ]; then
-            echo "No APPLE_PROVISIONING_PROFILE_BASE64 set; using automatic provisioning."
-            exit 0
-          fi
-          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          PROFILE_PATH="$HOME/Library/MobileDevice/Provisioning Profiles/havkar.mobileprovision"
-          printf '%s' "$PROFILE_B64" | base64 --decode > "$PROFILE_PATH"
-          # Presence only — never print profile contents.
-          echo "Installed provisioning profile bytes=$(wc -c < "$PROFILE_PATH")"
+          chmod +x scripts/ios-import-signing-materials.sh
+          scripts/ios-import-signing-materials.sh import
 
       - name: Install App Store Connect API key
         env:
@@ -298,6 +286,14 @@ jobs:
           path: ${{ env.EXPORT_PATH }}/*.ipa
           if-no-files-found: error
           retention-days: 7
+
+      - name: Cleanup temporary signing keychain
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -x scripts/ios-import-signing-materials.sh ]; then
+            scripts/ios-import-signing-materials.sh cleanup || true
+          fi
 
   testflight:
     name: Upload TestFlight

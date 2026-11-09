@@ -5,7 +5,16 @@ Environment: Linux Cloud Agent (no local Xcode).
 No production payments enabled. No App Store public submission.  
 **No signed IPA produced. No TestFlight upload dispatched.**
 
-## Why Actions UI only shows “iOS Simulator build”
+## Fix note — iOS Release run #4 (main)
+
+Failed run: [Actions run 42549487260](https://github.com/havkarapp2026-cpu/havkar-app/actions/runs/42549487260)  
+Error: `Unable to resolve action apple-actions/import-codesigning-certs, repository not found`
+
+Root cause: wrong action slug. The real maintained repo is `apple-actions/import-codesign-certs` (no “ing”). The misspelled name 404s at job setup.
+
+**Remediation in repo:** removed the third-party cert-import action entirely. Signed IPA now imports the Distribution `.p12` (and optional `.mobileprovision`) with Apple’s `security` CLI via `scripts/ios-import-signing-materials.sh`, then deletes the temporary keychain in an `if: always()` cleanup step. Secret values are never echoed.
+
+## Why Actions UI only showed “iOS Simulator build” (historical)
 
 Verified with `gh workflow list` against the default branch (`main`):
 
