@@ -1,174 +1,132 @@
-# iOS / App Store readiness — GitHub Actions macOS path
+# iOS Release audit — GitHub Actions signed IPA path
 
-Updated: **8 November 2026**  
-Environment of this check: **Linux Cloud Agent** (no local Xcode).  
-No production payments enabled. No live services modified.  
-**No signed IPA or TestFlight upload was dispatched from this agent.**
+Updated: **9 November 2026**  
+Environment: Linux Cloud Agent (no local Xcode).  
+No production payments enabled. No App Store public submission.  
+**No signed IPA produced. No TestFlight upload dispatched.**
 
-## Goal
+## Why Actions UI only shows “iOS Simulator build”
 
-Build and (optionally later) upload HAVKAR iOS using **GitHub-hosted `macos-15` runners**, without requiring the owner to buy a Mac. Reuses:
+Verified with `gh workflow list` against the default branch (`main`):
 
-| Item | Value |
+| Workflow on `main` | Status |
 | --- | --- |
-| Project | `ios/HAVKAR.xcodeproj` |
-| Scheme | `HAVKAR` |
-| Bundle ID | `online.havkar.app` |
-| Marketing version / build | `1.0.0` / `1` |
-| Deployment target | iOS 16.0 |
+| Android release AAB | active |
+| Android upload keystore | active |
+| Dependency audit | active |
+| **iOS Simulator build** | active |
+| pages-build-deployment | active |
+| **iOS Release** | **absent on `main`** |
 
-## What was fixed / prepared in-repo
+`ios-release.yml` exists on branch `cursor/ios-release-audit-d4b2` (PR #135) but **not** on `main`.
 
-| Change | Status |
-| --- | --- |
-| App Store icon alpha | **Fixed** — `AppIcon-1024.png` is opaque **RGB** (`PIL mode=RGB`, PNG color type 2). Workflow also re-checks before archive. |
-| Signed release workflow | **Prepared** — `.github/workflows/ios-release.yml` (`workflow_dispatch` only). |
-| Export options example | `ios/ExportOptions.plist.example` (Team ID filled at CI runtime). |
-| Secret encoder helper | `scripts/ios-encode-signing-secrets.sh` (run locally; never commit output). |
-| Simulator CI | Unchanged — `.github/workflows/ios-simulator.yml` stays unsigned. |
-| Project signing defaults | Still `CODE_SIGNING_ALLOWED=NO` in `project.pbxproj` for Simulator CI. Release job **overrides** signing via `xcodebuild` flags only. |
-| Certificates / keys / profiles in git | **Absent** (correct). |
+GitHub only registers `workflow_dispatch` workflows from the **default branch**. Dispatch proof:
 
-## Workflows
+```text
+HTTP 404: workflow ios-release.yml not found on the default branch
+```
 
-| Workflow | Runner | Trigger | Purpose |
-| --- | --- | --- | --- |
-| `iOS Simulator build` | `macos-15` | push to `ios/**` + manual | Unsigned Debug simulator build/test |
-| `iOS Release` | `macos-15` | **manual only** | Signed Archive → IPA artifact; optional TestFlight if input enabled |
+**Exact blocker for visibility / manual Run workflow:** merge (or otherwise land) `.github/workflows/ios-release.yml` onto `main`. This agent does not merge without owner approval.
 
-`iOS Release` inputs:
+## Workflow implemented (this branch)
 
-- `upload_to_testflight` — default **`false`**
-- `skip_if_secrets_missing` — default **`true`** (exits green without building when secrets absent)
+File: `.github/workflows/ios-release.yml`  
+Name: **iOS Release**
 
-## Exact GitHub Actions secrets required
-
-Add these under **Repo → Settings → Secrets and variables → Actions**. Never commit them.
-
-| Secret name | What it is | How the owner creates it |
+| Mode | When | What it does |
 | --- | --- | --- |
-| `APPLE_TEAM_ID` | 10-character Apple Team ID | Apple Developer → Membership details, or Xcode Team |
-| `APPLE_DISTRIBUTION_CERTIFICATE_BASE64` | Base64 of Apple **Distribution** `.p12` | Create/export Distribution cert (see below), then `scripts/ios-encode-signing-secrets.sh certificate ./dist.p12` |
-| `APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD` | Password used when exporting that `.p12` | Chosen at export time |
-| `APP_STORE_CONNECT_API_KEY_ID` | Key ID (e.g. `AB12CD34EF`) | App Store Connect → Users and Access → Integrations → Team Keys |
-| `APP_STORE_CONNECT_ISSUER_ID` | Issuer UUID | Same Integrations page (Issuer ID) |
-| `APP_STORE_CONNECT_API_KEY` | Contents of `AuthKey_<KEY_ID>.p8` (raw PEM **or** base64 of the file) | Download once when creating the API key; store offline |
+| `preflight` | default / also on PRs touching iOS paths | Repo checks + secret **presence** (true/false only). No signing. |
+| `signed_ipa` | manual | macOS archive + export → IPA artifact |
+| `testflight` | manual | signed IPA + TestFlight upload (not App Store review) |
 
-Optional (not required for automatic signing path):
+Project reuse:
 
-| Secret | When needed |
-| --- | --- |
-| `APPLE_PROVISIONING_PROFILE_BASE64` | Only if switching the workflow to **manual** signing / pinned profile |
+- `ios/HAVKAR.xcodeproj`
+- Scheme `HAVKAR`
+- Bundle ID `online.havkar.app`
 
-## Exact Apple credentials, certificates, and permissions
+Simulator CI (`.github/workflows/ios-simulator.yml`) stays unsigned.
 
-### 1. Apple Developer Program
+## Apple signing configuration (verified in repo)
 
-- Active **Apple Developer Program** membership (paid organization or individual) for HAVKAR.
-- Access to [developer.apple.com](https://developer.apple.com) and [appstoreconnect.apple.com](https://appstoreconnect.apple.com).
-
-### 2. App ID / Bundle ID
-
-- Register (or confirm) App ID **`online.havkar.app`** under Certificates, Identifiers & Profiles → Identifiers.
-- Capabilities: keep minimal for current WKWebView shell (no Push / Associated Domains required by current entitlements file — none is checked in).
-
-### 3. App Store Connect app record
-
-- Create or confirm an iOS app with Bundle ID `online.havkar.app`.
-- Fill required metadata before a public App Store release (screenshots, privacy nutrition labels, support URL, privacy URL). Suggested URLs already used elsewhere:
-  - `https://havkar-app.vercel.app/privacy.html`
-  - `https://havkar-app.vercel.app/support.html`
-- TestFlight upload does **not** require full public listing metadata, but the app record must exist.
-
-### 4. Apple Distribution certificate (`.p12`)
-
-Needed because GitHub macOS runners do not share your local Keychain.
-
-Owner actions (on any Mac you can borrow once, or via Developer portal + openssl tooling you trust):
-
-1. In Certificates, Identifiers & Profiles → Certificates → create **Apple Distribution** (or reuse an existing valid one for the team).
-2. Export the cert + private key as a `.p12` with a strong password.
-3. Encode and store only in GitHub secrets (never in git):
-   - `APPLE_DISTRIBUTION_CERTIFICATE_BASE64`
-   - `APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD`
-
-If you do not have a Mac for CSR/export: use Apple’s portal with a CSR generated on a trusted machine (including CI bootstrap machines you control). Do not paste private keys into chat.
-
-### 5. App Store Connect API key (for automatic provisioning + optional upload)
-
-Create under **App Store Connect → Users and Access → Integrations → Team Keys**:
-
-| Field | Requirement |
-| --- | --- |
-| Access | Prefer **Admin** or **App Manager** |
-| Certificates, Identifiers & Profiles | Must be allowed for the key/role so `xcodebuild -allowProvisioningUpdates` can create/update App Store profiles |
-| Apps access | Include the HAVKAR app (or All Apps) |
-| Download | `.p8` is shown **once** — save offline |
-
-Map to secrets:
-
-- Key ID → `APP_STORE_CONNECT_API_KEY_ID`
-- Issuer ID → `APP_STORE_CONNECT_ISSUER_ID`
-- `.p8` body → `APP_STORE_CONNECT_API_KEY`
-
-### 6. Automatic signing behavior in CI
-
-The Release workflow does **not** rewrite `project.pbxproj`. It overrides at archive time:
-
-- `CODE_SIGN_STYLE=Automatic`
-- `CODE_SIGNING_ALLOWED=YES` / `CODE_SIGNING_REQUIRED=YES`
-- `CODE_SIGN_IDENTITY=Apple Distribution`
-- `DEVELOPMENT_TEAM=$APPLE_TEAM_ID`
-- `-allowProvisioningUpdates` + ASC API key auth flags
-
-So Simulator CI remains unsigned; Release CI signs only when secrets exist.
-
-## Owner action checklist (ordered)
-
-1. Confirm Apple Developer membership + Team ID → set `APPLE_TEAM_ID`.
-2. Confirm App ID `online.havkar.app` + App Store Connect app record.
-3. Create/export Apple Distribution `.p12` → set certificate secrets.
-4. Create ASC API key with App Manager/Admin + CIP access → set API key secrets.
-5. (Optional) Run Actions → **iOS Release** with `upload_to_testflight=false` to produce an IPA artifact only.
-6. Only after reviewing the IPA: re-run with `upload_to_testflight=true` for TestFlight.
-7. Complete App Store Connect compliance (privacy labels, age rating, screenshots) before App Store submission.
-
-**This agent has not performed steps 5–6.**
-
-## GitHub Actions macOS costs (verified from GitHub docs)
-
-Source: [Actions runner pricing](https://docs.github.com/en/billing/reference/actions-runner-pricing)
-
-| Runner | Label used | Per-minute rate (USD, private repos) |
+| Item | Current value | Notes |
 | --- | --- | --- |
-| macOS 3-core (M1) / 4-core Intel | `macos-15` / `actions_macos` SKU | **$0.062 / minute** |
-| Larger macOS 12-core | `macos_l` | $0.077 / minute (Team/Enterprise larger runners) |
+| `CODE_SIGNING_ALLOWED` | `NO` (Debug+Release in pbxproj) | Intentional for Simulator CI; Release job overrides to YES |
+| `CODE_SIGNING_REQUIRED` | `NO` | Same |
+| `CODE_SIGN_IDENTITY` | empty | CI sets `Apple Distribution` |
+| `DEVELOPMENT_TEAM` | empty | CI sets from `APPLE_TEAM_ID` |
+| `ProvisioningStyle` | **Automatic** | Updated for CI automatic signing |
+| Entitlements file | absent | OK for current WKWebView shell |
+| `.p12` / `.p8` / `.mobileprovision` / `.ipa` in git | **absent** (correct) | Never commit these |
+| App icon | opaque RGB, PNG color_type **2** | App Store alpha issue fixed |
+| ExportOptions | generated in CI; example at `ios/ExportOptions.plist.example` | Team ID from secret |
 
-Notes:
+## Certificates / provisioning / ASC secrets
 
-- Minutes are rounded up per job.
-- Public repos: standard GitHub-hosted runners remain free for public repositories per GitHub’s public-repo policy; private repos draw from included Actions minutes then bill overage.
-- Rough estimate for one signed archive+export on `macos-15`: often **~15–45 minutes** wall time → about **$0.93–$2.80** per run at $0.062/min (machine-dependent; first cold run can be longer).
-- Simulator CI on every `ios/**` push also consumes macOS minutes at the same rate.
-- Owner should watch **Billing → Actions** after the first manual Release run.
+### Readable by this agent
 
-Buying a Mac is **not** required for CI archive/upload if secrets + ASC access are configured. A one-time Mac (or trusted CSR machine) is still typically needed to create/export the Distribution certificate private key unless the team already has a `.p12`.
-
-## Remaining App Store risks (not fixed by CI alone)
-
-| Risk | Detail |
+| Check | Result |
 | --- | --- |
-| Privacy manifest empty | `PrivacyInfo.xcprivacy` arrays are empty; align Nutrition Labels / Required Reason APIs with real WKWebView behavior. |
-| ASC metadata | Screenshots, age rating, review notes still owner-owned. |
-| Payments | Production payment flags remain off; do not enable for store review unless intentionally ready. |
+| List repository Actions secrets via `gh` | **HTTP 403** — integration cannot read secret inventory |
+| Cursor app secrets for this workspace | none bound |
+| Invent / fabricate Apple credentials | **forbidden / not done** |
+| Certificate or profile files in workspace | **none found** |
 
-## Status summary
+### Required GitHub Actions secrets (owner must set)
 
-| Claim | Status |
+| Secret | Required for signed IPA | Purpose |
+| --- | --- | --- |
+| `APPLE_TEAM_ID` | yes | 10-char Team ID |
+| `APPLE_DISTRIBUTION_CERTIFICATE_BASE64` | yes | Base64 Apple Distribution `.p12` |
+| `APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD` | yes | `.p12` password |
+| `APP_STORE_CONNECT_API_KEY_ID` | yes | ASC API Key ID |
+| `APP_STORE_CONNECT_ISSUER_ID` | yes | ASC Issuer UUID |
+| `APP_STORE_CONNECT_API_KEY` | yes | `.p8` PEM text or base64 |
+| `APPLE_PROVISIONING_PROFILE_BASE64` | optional | Only if pinning a profile; automatic signing normally creates/updates profiles |
+
+Encode helpers (run on a trusted machine; never commit output):
+
+```bash
+scripts/ios-encode-signing-secrets.sh certificate ./Distribution.p12
+scripts/ios-encode-signing-secrets.sh api-key ./AuthKey_XXXXXX.p8
+```
+
+### ASC API key permissions required
+
+- Role: **Admin** or **App Manager**
+- Access to **Certificates, Identifiers & Profiles**
+- Access to the HAVKAR app (Bundle ID `online.havkar.app`)
+
+## Checks run (this audit)
+
+| Check | Result |
 | --- | --- |
-| Icon alpha fixed in repo | **Yes** |
-| Secure Release workflow prepared | **Yes** (`workflow_dispatch`, secrets-only signing) |
-| Certs/keys/profiles committed | **No** |
-| Signed build / TestFlight triggered by this agent | **No** |
-| Production payments / live services changed | **No** |
-| TestFlight uploaded | **NOT UPLOADED** |
+| `scripts/ios-release-preflight.sh` | **PASS** |
+| AppIcon alpha | **PASS** (color_type=2 / RGB) |
+| Workflow YAML parse | **PASS** |
+| `gh workflow list` (default branch) | iOS Release **missing** |
+| `gh workflow run ios-release.yml` | **404** (not on default branch) |
+| List Actions secrets | **403** (cannot verify presence) |
+| Signed archive on macOS | **NOT RUN** (no Apple secrets available to agent; no Mac here) |
+| TestFlight upload | **NOT RUN** (by design) |
+| Production payments / live services | **unchanged** |
+
+## Exact blockers (ordered)
+
+1. **`ios-release.yml` not on `main`** → Actions UI cannot show / dispatch **iOS Release**.
+2. **Apple signing secrets not verifiable / not available to this agent** → cannot produce a real signed IPA here.
+3. **No Distribution certificate / ASC API key materials in environment** → owner must create and store them as repo secrets.
+4. **App Store Connect app record / App ID** for `online.havkar.app` not verifiable from this environment.
+5. (Non-blocking for IPA) Privacy Nutrition Labels / screenshots still owner-owned before public App Store release.
+
+## Exact next actions for the owner
+
+1. Review and **merge PR #135** (or land `.github/workflows/ios-release.yml` on `main`) so **iOS Release** appears under Actions.
+2. Create Apple Distribution `.p12` + ASC API key; add the six required secrets (names above). Never paste values into chat/git.
+3. In Actions → **iOS Release** → Run workflow → mode **`preflight`** (confirms secret presence true/false).
+4. Re-run with mode **`signed_ipa`** to produce the IPA artifact.
+5. Only after IPA review: mode **`testflight`** (uploads to TestFlight; does **not** submit for public App Store review).
+
+## Cost reminder
+
+GitHub-hosted macOS (`macos-15`) ≈ **$0.062/minute** for private repos ([Actions runner pricing](https://docs.github.com/en/billing/reference/actions-runner-pricing)).
