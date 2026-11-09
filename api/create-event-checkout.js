@@ -87,6 +87,82 @@ function isPaymentStatusRequest(req) {
   );
 }
 
+function isXlmInvoiceRequest(req) {
+  const action = String(req && req.body && req.body.action || "");
+  const url = String(req && req.url || "");
+
+  return Boolean(
+    (req && req.query && req.query.havkarAction === "xlmInvoice") ||
+      url.indexOf("xlm-invoice") !== -1 ||
+      action === "xlm_invoice"
+  );
+}
+
+async function readXlmInvoice(req) {
+  const intentId = String(
+    (req.query && (req.query.intent || req.query.id)) ||
+      (req.body && (req.body.intent || req.body.intent_id || req.body.id)) ||
+      ""
+  ).trim();
+
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      intentId
+    )
+  ) {
+    return {
+      ok: false,
+      status: 400,
+      code: "INTENT_ID_INVALID",
+      error: "A valid invoice id is required."
+    };
+  }
+
+  const loaded = await getSupabaseAdmin()
+    .from("marketplace_payment_intents")
+    .select(
+      "id,flow,amount,currency,network,status,expires_at,amount_xlm,eur_per_xlm,destination,memo,subject_id,created_at"
+    )
+    .eq("id", intentId)
+    .maybeSingle();
+
+  const intent = loaded && loaded.data;
+
+  if (!intent) {
+    return {
+      ok: false,
+      status: 404,
+      code: "INVOICE_NOT_FOUND",
+      error: "Invoice not found."
+    };
+  }
+
+  return {
+    ok: true,
+    status: 200,
+    paid: intent.status === "settled",
+    order_paid: intent.status === "settled",
+    payable: intent.status === "unpaid",
+    id: intent.id,
+    flow: intent.flow,
+    amount: intent.amount,
+    currency: intent.currency,
+    network: intent.network,
+    status: intent.status,
+    expires_at: intent.expires_at,
+    amount_xlm: intent.amount_xlm,
+    eur_per_xlm: intent.eur_per_xlm,
+    destination: intent.destination,
+    memo: intent.memo,
+    subject_id: intent.subject_id,
+    created_at: intent.created_at,
+    horizon:
+      intent.network === "mainnet"
+        ? "https://horizon.stellar.org"
+        : "https://horizon-testnet.stellar.org"
+  };
+}
+
 async function buildPaymentActivationStatus() {
   const {
     stellarMainnetPaymentsEnabled,
@@ -574,6 +650,21 @@ export default async function handler(req, res) {
     }
 
     return res.status(200).json(await buildPaymentActivationStatus());
+  }
+
+  if (isXlmInvoiceRequest(req)) {
+    if (req.method !== "GET" && req.method !== "POST") {
+      res.setHeader("Allow", "GET, POST");
+      return sendError(res, 405, "Method not allowed");
+    }
+
+    try {
+      const invoice = await readXlmInvoice(req);
+      return res.status(invoice.status || 500).json(invoice);
+    } catch (error) {
+      console.error("XLM invoice read failed", error && error.message);
+      return sendError(res, 500, "XLM invoice could not be loaded");
+    }
   }
 
   if (isMainnetOwnershipRequest(req)) {
