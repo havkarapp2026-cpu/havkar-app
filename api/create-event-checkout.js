@@ -112,7 +112,7 @@ async function readXlmInvoice(req) {
   ) {
     return {
       ok: false,
-      status: 400,
+      httpStatus: 400,
       code: "INTENT_ID_INVALID",
       error: "A valid invoice id is required."
     };
@@ -126,12 +126,16 @@ async function readXlmInvoice(req) {
     .eq("id", intentId)
     .maybeSingle();
 
+  if (loaded && loaded.error) {
+    throw loaded.error;
+  }
+
   const intent = loaded && loaded.data;
 
   if (!intent) {
     return {
       ok: false,
-      status: 404,
+      httpStatus: 404,
       code: "INVOICE_NOT_FOUND",
       error: "Invoice not found."
     };
@@ -139,7 +143,7 @@ async function readXlmInvoice(req) {
 
   return {
     ok: true,
-    status: 200,
+    httpStatus: 200,
     paid: intent.status === "settled",
     order_paid: intent.status === "settled",
     payable: intent.status === "unpaid",
@@ -660,7 +664,7 @@ export default async function handler(req, res) {
 
     try {
       const invoice = await readXlmInvoice(req);
-      return res.status(invoice.status || 500).json(invoice);
+      return res.status(invoice.httpStatus || 500).json(invoice);
     } catch (error) {
       console.error("XLM invoice read failed", error && error.message);
       return sendError(res, 500, "XLM invoice could not be loaded");
