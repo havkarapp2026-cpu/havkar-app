@@ -1029,8 +1029,11 @@ button:focus-visible{
             </div>
 
             <button id="xlmQuoteButton" type="button" hidden>
-                XLM Testnet quote
+                Pay with XLM (Stellar Testnet)
             </button>
+            <p id="xlmNetworkNote" class="meta-row" hidden>
+                Stellar Mainnet collection is disabled. Quotes and settlement use Testnet only.
+            </p>
 
             <h2 id="title" class="title">
                 Loading...
@@ -2800,18 +2803,21 @@ function renderListing(){
 
     const xlmButton =
         $("xlmQuoteButton");
+    const xlmNote =
+        $("xlmNetworkNote");
+    const xlmVisible =
+        Number(ad.price) > 0 &&
+        (
+            !window.HAVKAR_MARKETPLACE ||
+            window.HAVKAR_MARKETPLACE.isMarketplaceRow(ad)
+        );
 
     if(xlmButton){
+        xlmButton.hidden = !xlmVisible;
+    }
 
-        xlmButton.hidden =
-            !(
-                Number(ad.price) > 0 &&
-                (
-                    !window.HAVKAR_MARKETPLACE ||
-                    window.HAVKAR_MARKETPLACE.isMarketplaceRow(ad)
-                )
-            );
-
+    if(xlmNote){
+        xlmNote.hidden = !xlmVisible;
     }
 
     attachListingVideo();
@@ -4331,6 +4337,16 @@ async function quoteListingXlm(){
             subjectId: String(ad.id),
             accessToken: accessToken
         });
+
+    if(
+        quoted &&
+        quoted.result &&
+        quoted.result.payable === true
+    ){
+        window.HAVKAR_XLM.stageWalletPayment(
+            quoted.result
+        );
+    }
 
     showToast(
         window.HAVKAR_XLM.describe(

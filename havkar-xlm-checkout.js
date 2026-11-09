@@ -1,11 +1,22 @@
 /*
  * Shared browser caller for the server-side Testnet XLM checkout.
  * Fiat buttons stay in place. This file never marks an order paid locally.
+ * Mainnet collection stays disabled until a separate owner authorization.
  */
 (function (root) {
+  var MAINNET_STATUS = {
+    network: "public",
+    paymentsEnabled: false,
+    label: "Stellar Mainnet payments are disabled. Testnet quotes only."
+  };
+
   function describe(result) {
     if (!result) {
       return "XLM checkout returned no result. Nothing was marked paid.";
+    }
+
+    if (result.code === "STELLAR_MAINNET_DISABLED") {
+      return MAINNET_STATUS.label;
     }
 
     if (result.settlement === "refunded") {
@@ -22,14 +33,14 @@
       return "Unpaid Testnet quote. Send " + result.amount_xlm +
         " native XLM to " + result.destination +
         " with text memo " + result.memo +
-        ". The network fee is separate. The order stays unpaid until Horizon verification.";
+        ". Network: Stellar Testnet. Asset: native XLM. The network fee is separate. The order stays unpaid until Horizon verification. Mainnet is not accepting payments.";
     }
 
     return result.error || "XLM payment was not settled.";
   }
 
   async function post(body, accessToken) {
-    const response = await fetch("/api/create-event-checkout", {
+    var response = await fetch("/api/create-event-checkout", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -37,7 +48,7 @@
       },
       body: JSON.stringify(body)
     });
-    let result = null;
+    var result = null;
 
     try {
       result = await response.json();
@@ -49,8 +60,23 @@
   }
 
   async function quote(options) {
-    const input = options || {};
-    const key = String(input.idempotencyKey || ("hv" + Date.now().toString(36) + "quote"));
+    var input = options || {};
+    var key = String(input.idempotencyKey || ("hv" + Date.now().toString(36) + "quote"));
+    var network = String(input.network || "testnet").toLowerCase();
+
+    if (network === "mainnet" || network === "public") {
+      return {
+        ok: false,
+        response: null,
+        result: {
+          ok: false,
+          code: "STELLAR_MAINNET_DISABLED",
+          paid: false,
+          order_paid: false,
+          error: MAINNET_STATUS.label
+        }
+      };
+    }
 
     return post({
       payment_method: "xlm",
@@ -64,7 +90,7 @@
   }
 
   async function verify(options) {
-    const input = options || {};
+    var input = options || {};
 
     return post({
       payment_method: "xlm",
@@ -76,9 +102,32 @@
     }, input.accessToken);
   }
 
+  function stageWalletPayment(quoteResult) {
+    if (!quoteResult || quoteResult.payable !== true || !quoteResult.destination) {
+      return false;
+    }
+
+    try {
+      sessionStorage.setItem("havkar_stellar_pending_payment", JSON.stringify({
+        network: "TESTNET",
+        intentId: quoteResult.intent_id || null,
+        destination: quoteResult.destination,
+        amount: quoteResult.amount_xlm,
+        memo: quoteResult.memo,
+        asset: "native",
+        createdAt: Date.now()
+      }));
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   root.HAVKAR_XLM = {
     quote: quote,
     verify: verify,
-    describe: describe
+    describe: describe,
+    stageWalletPayment: stageWalletPayment,
+    mainnetStatus: MAINNET_STATUS
   };
-})(typeof globalThis !== "undefined" ? globalThis : window);
+})(window);

@@ -27,11 +27,14 @@ assert.match(sql, /payments_live', false/);
 assert.doesNotMatch(sql, /INSERT INTO havkar_private\.owner_identity/);
 assert.doesNotMatch(sql, /bootstrap_primary_owner/);
 
+assert.match(operator, /legalEntityName:\s*"HAVKAR DI JALILNIA AMIR"/);
 assert.match(operator, /soranEmail:\s*"soran@havkar\.online"/);
 assert.match(operator, /infoEmail:\s*"info@havkar\.online"/);
 assert.match(operator, /supportEmail:\s*"support@havkar\.online"/);
+assert.match(operator, /chamberRegistrationStatus:\s*"awaiting_verified_visura"/);
 assert.match(operator, /hidePersonalEmails:\s*\["amirjalilnia@gmail\.com"\]/);
 assert.match(operator, /havkarapp2026@gmail\.com/);
+assert.doesNotMatch(operator, /partitaIva:\s*"[0-9]/);
 
 assert.match(admin, /havkar_owner_dashboard_overview/);
 assert.match(admin, /havkar_owner_assign_role/);
