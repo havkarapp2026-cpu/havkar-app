@@ -1,329 +1,391 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><link rel="manifest" href="/manifest.json">
+<head>
+<link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/havkar-icon-32-20261022-v3.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/havkar-icon-16-20261022-v3.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/havkar-icon-180-20261022-v3.png">
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#689f38">
-<title>HAVKAR | Administration</title>
+<meta name="theme-color" content="#1b4332">
+<title>HAVKAR | Owner & Admin Dashboard</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <style>
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f4f7f2;color:#263238;padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
-header{background:linear-gradient(135deg,#689f38,#7cb342);color:#fff;padding:calc(16px + env(safe-area-inset-top, 0px)) 16px 16px}
-main{padding:16px}
-a{color:#2e7d32}
-.card{background:#fff;border-radius:16px;padding:16px;margin:0 0 12px;box-shadow:0 3px 15px rgba(0,0,0,.06)}
-.card p{margin:6px 0}
-button{background:#689f38;color:#fff;border:0;border-radius:11px;padding:12px 16px;font-weight:700}
-nav{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:space-around;background:#fff;height:calc(64px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -3px 14px rgba(0,0,0,.1)}
-nav a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px;font-weight:700}
+:root{
+  --bg:#eef3ef;--card:#fff;--ink:#14231a;--muted:#5f6f66;--line:#d7e0da;
+  --brand:#1b4332;--brand2:#2d6a4f;--warn:#8a3b00;--err:#8a1010;--ok:#0b6b2f;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Georgia,"Times New Roman",serif;background:radial-gradient(circle at top left,#d8e7dc,transparent 40%),linear-gradient(180deg,#eef3ef,#e7eee9);color:var(--ink);padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+header{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#f5fff8;padding:calc(18px + env(safe-area-inset-top,0px)) 16px 18px}
+header h1{margin:0 0 6px;font-size:1.55rem;letter-spacing:.02em}
+header p{margin:0;opacity:.92;font-size:.95rem}
+main{padding:16px;max-width:1100px;margin:0 auto}
+.banner{background:#fff8e8;border:1px solid #efd7a8;color:var(--warn);border-radius:14px;padding:12px 14px;margin:0 0 14px}
+.status{margin:0 0 14px;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 16px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+.stat .label{color:var(--muted);font-size:.82rem;margin-bottom:6px}
+.stat .value{font-size:1.45rem;font-weight:700;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin:0 0 14px}
+.panel h2{margin:0 0 8px;font-size:1.12rem}
+.panel p.note{margin:0 0 12px;color:var(--muted);font-size:.92rem}
+.nav-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+.nav-chips a{text-decoration:none;color:var(--brand);background:#e7f1eb;border-radius:999px;padding:8px 12px;font-size:.85rem;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+table{width:100%;border-collapse:collapse;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:.9rem}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all}
+.form-row{display:grid;gap:8px;margin:0 0 10px}
+input,select,button{font:inherit}
+input,select{width:100%;min-height:44px;border:1px solid #b7c6bc;border-radius:12px;padding:10px 12px;background:#fff}
+button{min-height:44px;border:0;border-radius:12px;background:var(--brand);color:#fff;font-weight:700;padding:10px 14px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button.secondary{background:#415a4b}
+button:disabled{opacity:.55}
+.hidden{display:none !important}
+.ok{color:var(--ok)} .err{color:var(--err)} .warn{color:var(--warn)}
+.list{margin:0;padding-left:18px}
+.list li{margin:4px 0}
+nav.bottom{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:space-around;background:#fff;height:calc(64px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -3px 14px rgba(0,0,0,.08);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+nav.bottom a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px;font-weight:700}
+@media (max-width:640px){th:nth-child(3),td:nth-child(3){display:none}}
 </style>
 </head>
 <body>
 <header>
-  <h1>Administration</h1>
-  <p>Server-side administrator role only. Commission rows stay uncollected.</p>
+  <h1>HAVKAR Control</h1>
+  <p>Owner / Admin dashboard · Profile entry only · Server-authorized roles</p>
 </header>
 <main>
-  <p id="message" role="status">Checking authorization...</p>
-  <div id="businessReview"></div>
-  <div id="adsModeration"></div>
-  <div id="ledger"></div>
-  <div id="privacyRequests"></div>
-  <div id="availability"></div>
+  <p id="message" class="status warn" role="status">Checking authorization…</p>
+  <div id="reauthBanner" class="banner hidden">For role changes, sign in again first so the session is fresh (≤ 15 minutes). Password is never requested by this page text — use the normal login screen.</div>
+  <div class="nav-chips" id="sectionNav"></div>
+
+  <section class="panel" id="overviewPanel">
+    <h2>Business overview</h2>
+    <p class="note">Live counts from Production. Payments remain gated.</p>
+    <div class="grid" id="overviewGrid"></div>
+  </section>
+
+  <section class="panel" id="modulesPanel">
+    <h2>Platform modules</h2>
+    <div class="grid" id="modulesGrid"></div>
+  </section>
+
+  <section class="panel" id="moderationPanel">
+    <h2>Reports & complaints</h2>
+    <div class="grid" id="moderationGrid"></div>
+  </section>
+
+  <section class="panel hidden" id="financePanel">
+    <h2>Revenue & transactions</h2>
+    <p class="note">Owner-only financial counts. Live Stripe / XLM / Pi collection is not enabled from this panel.</p>
+    <div class="grid" id="financeGrid"></div>
+  </section>
+
+  <section class="panel hidden" id="staffPanel">
+    <h2>Staff, managers & permissions</h2>
+    <p class="note">Only the Owner can grant or revoke ADMIN / STAFF / SUPPORT. Admin cannot demote or replace Owner.</p>
+    <div id="staffTableWrap"></div>
+    <div id="staffForm" class="hidden">
+      <h3>Assign role</h3>
+      <div class="form-row">
+        <label for="roleUserId">User UUID</label>
+        <input id="roleUserId" class="mono" autocomplete="off" spellcheck="false" placeholder="uuid">
+      </div>
+      <div class="form-row">
+        <label for="roleName">Role</label>
+        <select id="roleName">
+          <option value="admin">ADMIN</option>
+          <option value="staff">STAFF</option>
+          <option value="support">SUPPORT</option>
+        </select>
+      </div>
+      <button id="assignRole" type="button">Assign role</button>
+      <p id="staffActionResult" class="note"></p>
+    </div>
+  </section>
+
+  <section class="panel" id="supportPanel">
+    <h2>Support requests</h2>
+    <p class="note">Stored support tickets. Public mailbox remains support@havkar.online · notifications to info@havkar.online.</p>
+    <div id="supportList"></div>
+  </section>
+
+  <section class="panel" id="emailPanel">
+    <h2>Official HAVKAR emails</h2>
+    <ul class="list" id="emailList"></ul>
+  </section>
+
+  <section class="panel hidden" id="securityPanel">
+    <h2>Security & management audit</h2>
+    <div id="securityList"></div>
+  </section>
 </main>
-<nav>
+<nav class="bottom">
+  <a href="profile.html">Profile</a>
   <a href="index.html">Home</a>
-  <a href="services.html">Services</a>
-  <a href="accommodation.html">Accommodation</a>
+  <a href="support.html">Support</a>
 </nav>
 <script src="/havkar-supabase-config.js"></script>
-<script src="/havkar-services.js"></script>
-<script src="/havkar-business-verification.js"></script>
+<script src="/havkar-operator-config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const message = document.getElementById("message");
-const config = window.HAVKAR_SUPABASE_CONFIG;
+(function () {
+  var message = document.getElementById("message");
+  var config = window.HAVKAR_SUPABASE_CONFIG || {};
+  var operator = window.HAVKAR_OPERATOR || {};
+  var db = null;
+  var overview = null;
 
-function money(cents) {
-  return Number.isInteger(Number(cents)) ? (Number(cents) / 100).toFixed(2) : "";
-}
-
-function line(entry) {
-  return [
-    entry.currency || "",
-    "customer " + money(entry.customer_charge_cents),
-    "provider commission " + money(entry.commission_cents),
-    "fee " + money(entry.processing_fee_cents),
-    "tax " + money(entry.tax_cents),
-    entry.settlement_channel || "",
-    window.HAVKAR_SERVICES.liabilityText(entry.liability_state)
-  ].filter(Boolean).join(" · ");
-}
-
-async function start() {
-  if (!config || !window.supabase) {
-    message.textContent = "Administration is not available.";
-    return;
+  function el(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+    return node;
   }
 
-  const db = window.supabase.createClient(config.url, config.publishableKey);
-  const session = await db.auth.getSession();
-  const user = session.data.session && session.data.session.user;
-
-  if (!user) {
-    message.textContent = "Sign in before opening administration.";
-    return;
+  function fillGrid(targetId, entries) {
+    var root = document.getElementById(targetId);
+    root.innerHTML = "";
+    entries.forEach(function (item) {
+      var card = el("div", "stat");
+      card.appendChild(el("div", "label", item.label));
+      card.appendChild(el("div", "value", String(item.value)));
+      root.appendChild(card);
+    });
   }
 
-  let admin;
-  let owner;
-
-  try {
-    admin = await db.rpc("havkar_session_is_admin");
-    owner = await db.rpc("havkar_session_is_owner");
-  } catch (error) {
-    message.textContent = "Administration is not available.";
-    return;
+  function setHidden(id, hidden) {
+    document.getElementById(id).classList.toggle("hidden", !!hidden);
   }
 
-  if (admin.error && owner.error) {
-    message.textContent = "Administration is not available until the database migration is applied.";
-    return;
+  async function loadOverview() {
+    var result = await db.rpc("havkar_owner_dashboard_overview");
+    if (result.error) {
+      throw new Error(result.error.message || "Dashboard RPC failed");
+    }
+    overview = result.data;
+    return overview;
   }
 
-  if (owner.data === true && admin.data !== true) {
-    message.textContent = "Owner access is active. Administrator records stay separate.";
-    return;
-  }
+  function render(data) {
+    var role = data.role;
+    message.className = "status ok";
+    message.textContent = "Authorized as " + String(role).toUpperCase() + ". Live Production data loaded.";
 
-  if (admin.data !== true) {
-    message.textContent = "This account is not an administrator.";
-    return;
-  }
+    var nav = document.getElementById("sectionNav");
+    nav.innerHTML = "";
+    [
+      ["#overviewPanel", "Overview"],
+      ["#modulesPanel", "Modules"],
+      ["#moderationPanel", "Moderation"],
+      ["#supportPanel", "Support"],
+      ["#emailPanel", "Emails"],
+      role === "owner" || role === "admin" ? ["#staffPanel", "Staff"] : null,
+      role === "owner" ? ["#financePanel", "Finance"] : null,
+      role === "owner" ? ["#securityPanel", "Security"] : null
+    ].filter(Boolean).forEach(function (item) {
+      var a = el("a", null, item[1]);
+      a.href = item[0];
+      nav.appendChild(a);
+    });
 
-  message.textContent = "Administrator access is active. No commission is marked collected.";
+    var o = data.overview || {};
+    fillGrid("overviewGrid", [
+      { label: "Users", value: o.users_total || 0 },
+      { label: "Confirmed users", value: o.users_confirmed || 0 },
+      { label: "Support tickets", value: o.support_requests || 0 },
+      { label: "Business apps", value: o.business_applications || 0 }
+    ]);
+    fillGrid("modulesGrid", [
+      { label: "Buy & Sell ads", value: o.ads || 0 },
+      { label: "Jobs", value: o.jobs || 0 },
+      { label: "Services", value: o.services || 0 },
+      { label: "Events", value: o.events || 0 },
+      { label: "Tickets", value: o.tickets || 0 },
+      { label: "AI chats", value: o.ai_conversations || 0 },
+      { label: "Deliveries", value: o.delivery_requests || 0 },
+      { label: "Driver apps", value: o.driver_applications || 0 }
+    ]);
+    var m = data.moderation || {};
+    fillGrid("moderationGrid", [
+      { label: "Ad reports", value: m.ad_reports || 0 },
+      { label: "Service complaints", value: m.service_complaints || 0 },
+      { label: "Privacy requests", value: m.privacy_requests || 0 },
+      { label: "Accommodation reports", value: m.accommodation_reports || 0 }
+    ]);
 
-  const businessRoot = document.getElementById("businessReview");
-  const pendingBusiness = await db
-    .from("business_applications")
-    .select("id,business_name,legal_name,vat_number,address,country,city,status,email,user_id,submitted_at")
-    .in("status", ["pending", "under_review", "needs_more_info"])
-    .order("submitted_at", { ascending: false })
-    .limit(50);
+    var emailList = document.getElementById("emailList");
+    emailList.innerHTML = "";
+    emailList.appendChild(el("li", null, "INFO — " + (operator.infoEmail || "info@havkar.online") + " (general / business)"));
+    emailList.appendChild(el("li", null, "SUPPORT — " + (operator.supportEmail || "support@havkar.online") + " (customer support)"));
+    if (role === "owner") {
+      emailList.appendChild(el("li", null, "SORAN — " + (operator.soranEmail || "soran@havkar.online") + " (owner-only confidential / investment)"));
+      emailList.appendChild(el("li", null, "Mailbox credentials are not stored in HAVKAR app UI. SMTP/IMAP inbox access is outside this dashboard."));
+    } else {
+      emailList.appendChild(el("li", null, "SORAN mailbox content is not available to Admin / Staff / Support."));
+    }
+    emailList.appendChild(el("li", null, "Personal Gmail addresses are not shown on public HAVKAR pages."));
 
-  if (pendingBusiness.error) {
-    businessRoot.textContent = "Business verification queue unavailable until the verification migration is applied.";
-  } else if (!pendingBusiness.data || !pendingBusiness.data.length) {
-    businessRoot.textContent = "No business applications awaiting review.";
-  } else {
-    const heading = document.createElement("h2");
-    heading.textContent = "Business applications";
-    businessRoot.appendChild(heading);
-    for (const row of pendingBusiness.data) {
-      const card = document.createElement("article");
-      card.className = "card";
-      const missingRpc = await db.rpc("business_application_missing_documents", {
-        p_application_id: Number(row.id)
+    setHidden("financePanel", role !== "owner");
+    setHidden("securityPanel", role !== "owner");
+    setHidden("staffPanel", !(role === "owner" || role === "admin"));
+    setHidden("staffForm", role !== "owner");
+    setHidden("reauthBanner", role !== "owner");
+
+    if (role === "owner" && data.finance) {
+      var f = data.finance;
+      fillGrid("financeGrid", [
+        { label: "Payment intents", value: f.payment_intents_total || 0 },
+        { label: "Settled", value: f.payment_intents_settled || 0 },
+        { label: "Unpaid", value: f.payment_intents_unpaid || 0 },
+        { label: "Wallet tx rows", value: f.wallet_transactions || 0 },
+        { label: "AI subscriptions", value: f.ai_subscriptions || 0 },
+        { label: "Job subscriptions", value: f.job_subscriptions || 0 },
+        { label: "Uncollected commissions", value: data.commissions_uncollected || 0 }
+      ]);
+    }
+
+    if ((role === "owner" || role === "admin") && data.staff_roles) {
+      renderStaff(data.staff_roles || [], role === "owner");
+    }
+
+    var supportRoot = document.getElementById("supportList");
+    supportRoot.innerHTML = "";
+    if (data.support_queue && data.support_queue.length) {
+      var table = el("table");
+      table.innerHTML = "<thead><tr><th>ID</th><th>Topic</th><th>Status</th><th>Created</th></tr></thead>";
+      var body = el("tbody");
+      data.support_queue.forEach(function (row) {
+        var tr = el("tr");
+        tr.appendChild(el("td", "mono", row.id));
+        tr.appendChild(el("td", null, row.topic || ""));
+        tr.appendChild(el("td", null, row.status || ""));
+        tr.appendChild(el("td", null, row.created_at || ""));
+        body.appendChild(tr);
       });
-      const missing = missingRpc.error
-        ? ["(could not load missing list)"]
-        : (missingRpc.data || []);
-      const labels = window.HAVKAR_BUSINESS_VERIFICATION
-        ? missing.map(window.HAVKAR_BUSINESS_VERIFICATION.labelFor)
-        : missing;
-      const docs = await db
-        .from("business_application_documents")
-        .select("doc_type,original_filename,mime_type,created_at")
-        .eq("application_id", Number(row.id))
-        .order("created_at", { ascending: false });
-      const latest = {};
-      (docs.data || []).forEach(function(doc) {
-        if (!latest[doc.doc_type]) latest[doc.doc_type] = doc;
-      });
-      const uploaded = Object.keys(latest).map(function(type) {
-        const doc = latest[type];
-        const label = window.HAVKAR_BUSINESS_VERIFICATION
-          ? window.HAVKAR_BUSINESS_VERIFICATION.labelFor(type)
-          : type;
-        return label + " — " + (doc.original_filename || "stored") +
-          (doc.mime_type ? (" [" + doc.mime_type + "]") : "");
-      });
-      card.innerHTML =
-        "<p><strong>#" + row.id + " · " + (row.business_name || "Untitled") + "</strong></p>" +
-        "<p>Status: " + (row.status || "") + "</p>" +
-        "<p>Legal name: " + (row.legal_name || "(missing)") + "</p>" +
-        "<p>VAT: " + (row.vat_number || "(missing)") + "</p>" +
-        "<p>Address: " + (row.address || "(missing)") + " · " + (row.city || "") + ", " + (row.country || "") + "</p>" +
-        "<p>Uploaded documents: " + (uploaded.length ? uploaded.join("; ") : "none") + "</p>" +
-        "<p>Missing required documents: " + (labels.length ? labels.join("; ") : "none") + "</p>";
-      if (row.user_id === user.id) {
-        const note = document.createElement("p");
-        note.textContent = "Self-review is blocked. An independent administrator must decide this application.";
-        card.appendChild(note);
+      table.appendChild(body);
+      supportRoot.appendChild(table);
+    } else {
+      supportRoot.appendChild(el("p", "note", "Support count: " + ((data.overview && data.overview.support_requests) || 0) + ". Detailed queue is shown for Support/Staff roles when available."));
+    }
+
+    if (role === "owner" && data.security) {
+      var sec = document.getElementById("securityList");
+      sec.innerHTML = "";
+      sec.appendChild(el("p", "note", "Owner id: " + (data.security.owner_user_id || "")));
+      var events = data.security.management_events || [];
+      if (!events.length) {
+        sec.appendChild(el("p", "note", "No management events yet."));
       } else {
-        ["mark_under_review", "request_more_info", "approve", "reject"].forEach(function(decision) {
-          const button = document.createElement("button");
-          button.type = "button";
-          button.textContent = decision.replace(/_/g, " ");
-          button.style.marginRight = "8px";
-          button.addEventListener("click", async function() {
-            const notes = window.prompt("Review notes (required for reject / request more info):", "") || "";
-            const result = await db.rpc("review_business_application", {
-              p_application_id: Number(row.id),
-              p_decision: decision,
-              p_notes: notes
-            });
-            message.textContent = result.error
-              ? result.error.message
-              : ("Business application #" + row.id + " → " + (result.data && result.data.status));
-            if (!result.error) card.remove();
-          });
-          card.appendChild(button);
+        var st = el("table");
+        st.innerHTML = "<thead><tr><th>Type</th><th>Subject</th><th>When</th></tr></thead>";
+        var sb = el("tbody");
+        events.forEach(function (ev) {
+          var tr = el("tr");
+          tr.appendChild(el("td", null, ev.event_type || ""));
+          tr.appendChild(el("td", "mono", ev.subject_user_id || ""));
+          tr.appendChild(el("td", null, ev.created_at || ""));
+          sb.appendChild(tr);
         });
+        st.appendChild(sb);
+        sec.appendChild(st);
       }
-      businessRoot.appendChild(card);
     }
   }
 
-  const adsRoot = document.getElementById("adsModeration");
-  const pendingAds = await db
-    .from("ads")
-    .select("id,title,status,created_at,listing_surface")
-    .eq("listing_surface", "advertising")
-    .eq("status", "pending_review")
-    .order("created_at", { ascending: false })
-    .limit(50);
-
-  if (pendingAds.error) {
-    adsRoot.textContent = "Ads moderation queue unavailable until the Ads lifecycle migration is applied.";
-  } else if (!pendingAds.data || !pendingAds.data.length) {
-    adsRoot.textContent = "No advertisements pending review.";
-  } else {
-    const heading = document.createElement("h2");
-    heading.textContent = "Ads pending review";
-    adsRoot.appendChild(heading);
-    pendingAds.data.forEach(function(row) {
-      const card = document.createElement("article");
-      card.className = "card";
-      const link = document.createElement("a");
-      link.href = "ad-view.html?id=" + encodeURIComponent(String(row.id));
-      link.textContent = "Ad #" + row.id + " · " + (row.title || "Untitled");
-      card.appendChild(link);
-      const approve = document.createElement("button");
-      approve.type = "button";
-      approve.textContent = "Approve";
-      approve.style.marginLeft = "8px";
-      approve.addEventListener("click", async function() {
-        const result = await db.rpc("moderate_advertisement", {
-          p_ad_id: Number(row.id),
-          p_decision: "approve",
-          p_notes: "Approved from admin queue"
+  function renderStaff(rows, canRevoke) {
+    var wrap = document.getElementById("staffTableWrap");
+    wrap.innerHTML = "";
+    if (!rows.length) {
+      wrap.appendChild(el("p", "note", "No ADMIN / STAFF / SUPPORT assignments."));
+      return;
+    }
+    var table = el("table");
+    table.innerHTML = "<thead><tr><th>Email</th><th>Role</th><th>Generation</th><th></th></tr></thead>";
+    var body = el("tbody");
+    rows.forEach(function (row) {
+      var tr = el("tr");
+      tr.appendChild(el("td", null, row.email || ""));
+      tr.appendChild(el("td", null, String(row.role || "").toUpperCase()));
+      tr.appendChild(el("td", "mono", String(row.role_generation || "")));
+      var action = el("td");
+      if (canRevoke) {
+        var btn = el("button", "secondary", "Revoke");
+        btn.type = "button";
+        btn.addEventListener("click", async function () {
+          if (!window.confirm("Revoke role for " + (row.email || row.user_id) + "?")) return;
+          btn.disabled = true;
+          var res = await db.rpc("havkar_owner_revoke_role", { p_user_id: row.user_id });
+          if (res.error || res.data !== true) {
+            document.getElementById("staffActionResult").textContent =
+              (res.error && res.error.message) ||
+              "Revoke denied. Owner re-login may be required (fresh session ≤ 15 minutes).";
+            document.getElementById("staffActionResult").className = "err";
+            btn.disabled = false;
+            return;
+          }
+          var fresh = await loadOverview();
+          render(fresh);
         });
-        message.textContent = result.error
-          ? result.error.message
-          : ("Advertisement #" + row.id + " approved.");
-        if (!result.error) {
-          card.remove();
-        }
-      });
-      card.appendChild(approve);
-      adsRoot.appendChild(card);
-    });
-  }
-
-  const ledger = await db
-    .from("service_commission_entries")
-    .select("booking_id,currency,customer_charge_cents,commission_cents,processing_fee_cents,tax_cents,settlement_channel,liability_state,collection_state")
-    .order("created_at", { ascending: false })
-    .limit(100);
-
-  const ledgerRoot = document.getElementById("ledger");
-
-  if (ledger.error) {
-    ledgerRoot.textContent = "The commission ledger could not be read.";
-  } else if (!ledger.data || !ledger.data.length) {
-    ledgerRoot.textContent = "No commission entries.";
-  } else {
-    ledger.data.forEach(function(entry) {
-      if (entry.collection_state !== "uncollected") {
-        return;
+        action.appendChild(btn);
       }
-      const card = document.createElement("article");
-      card.className = "card";
-      card.textContent = "Booking " + entry.booking_id + " · " + line(entry);
-      ledgerRoot.appendChild(card);
+      tr.appendChild(action);
+      body.appendChild(tr);
     });
+    table.appendChild(body);
+    wrap.appendChild(table);
   }
 
-  const privacyRoot = document.getElementById("privacyRequests");
-  const privacy = await db
-    .from("privacy_requests")
-    .select("id,request_type,status,created_at")
-    .order("created_at", { ascending: false })
-    .limit(50);
-  if (privacy.error) {
-    privacyRoot.textContent = "Privacy requests are not available to this administrator yet. Nothing was deleted.";
-  } else if (!privacy.data || !privacy.data.length) {
-    privacyRoot.textContent = "No privacy requests are visible to this session. Nothing was deleted.";
-  } else {
-    const note = document.createElement("p");
-    note.textContent = "These are the requests this session is allowed to read. Marking one in review does not delete the account.";
-    privacyRoot.appendChild(note);
-    privacy.data.forEach(function(row) {
-      const card = document.createElement("article");
-      card.className = "card";
-      card.textContent = "Privacy request " + row.id + " · " + row.request_type + " · " + row.status + ". This does not delete the account.";
-      if (row.status === "requested") {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.textContent = "Mark in review";
-        button.addEventListener("click", async function() {
-          const updated = await db
-            .from("privacy_requests")
-            .update({ status: "in_review" })
-            .eq("id", row.id)
-            .eq("status", "requested");
-          button.disabled = true;
-          button.textContent = updated.error
-            ? "Could not mark in review. Nothing was deleted."
-            : "Marked in review. The account was not deleted.";
-        });
-        card.appendChild(button);
-      }
-      privacyRoot.appendChild(card);
+  async function start() {
+    if (!config.url || !config.publishableKey || !window.supabase) {
+      message.className = "status err";
+      message.textContent = "Administration is not available.";
+      return;
+    }
+    db = window.supabase.createClient(config.url, config.publishableKey);
+    var session = await db.auth.getSession();
+    var user = session.data.session && session.data.session.user;
+    if (!user) {
+      message.className = "status warn";
+      message.textContent = "Sign in on Profile with the Owner or staff account, then reopen Administration.";
+      return;
+    }
+    try {
+      var data = await loadOverview();
+      render(data);
+    } catch (error) {
+      message.className = "status err";
+      message.textContent = (error && error.message) || "Not authorized for the dashboard.";
+    }
+  }
+
+  document.getElementById("assignRole").addEventListener("click", async function () {
+    var result = document.getElementById("staffActionResult");
+    var userId = String(document.getElementById("roleUserId").value || "").trim();
+    var role = document.getElementById("roleName").value;
+    result.className = "note";
+    result.textContent = "Submitting…";
+    var res = await db.rpc("havkar_owner_assign_role", {
+      p_user_id: userId,
+      p_role: role,
+      p_role_generation: 1
     });
-  }
-
-  const days = await db
-    .from("accommodation_availability")
-    .select("stay_date,state")
-    .order("stay_date", { ascending: true })
-    .limit(100);
-  const daysRoot = document.getElementById("availability");
-
-  if (days.error) {
-    daysRoot.textContent = "Accommodation availability is not available yet.";
-    return;
-  }
-
-  if (!days.data || !days.data.length) {
-    daysRoot.textContent = "No accommodation availability rows.";
-    return;
-  }
-
-  days.data.forEach(function(day) {
-    const card = document.createElement("article");
-    card.className = "card";
-    card.textContent = day.stay_date + " · " + day.state + ". Stays are not accepted.";
-    daysRoot.appendChild(card);
+    if (res.error || res.data !== true) {
+      result.className = "err";
+      result.textContent =
+        (res.error && res.error.message) ||
+        "Assign denied. Only Owner with a fresh login (≤ 15 minutes) can change roles.";
+      return;
+    }
+    result.className = "ok";
+    result.textContent = "Role assigned. Target user must refresh session.";
+    var fresh = await loadOverview();
+    render(fresh);
   });
-}
 
-start();
+  start();
+})();
 </script>
 <script src="/havkar-page-back.js"></script>
 </body>

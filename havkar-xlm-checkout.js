@@ -9,6 +9,10 @@
       return "XLM checkout returned no result. Nothing was marked paid.";
     }
 
+    if (result.code === "STELLAR_MAINNET_DISABLED") {
+      return "Stellar Mainnet payments are disabled until owner authorization gates are live. Testnet remains available.";
+    }
+
     const networkLabel =
       result.network === "mainnet" ? "Mainnet" : "Testnet";
 
@@ -28,7 +32,7 @@
       return "Unpaid " + networkLabel + " quote. Send " + result.amount_xlm +
         " native XLM to " + result.destination +
         " with text memo " + result.memo +
-        ". The network fee is separate. The order stays unpaid until Horizon verification.";
+        ". Asset: native XLM. The network fee is separate. The order stays unpaid until Horizon verification.";
     }
 
     return result.error || "XLM payment was not settled.";
@@ -201,6 +205,8 @@
       return quoted;
     }
 
+    stageWalletPayment(quoted.result);
+
     const payment = await root.havkarSignAndSubmitStellarPayment({
       destination: quoted.result.destination,
       amount: quoted.result.amount_xlm,
@@ -237,10 +243,32 @@
     });
   }
 
+  function stageWalletPayment(quoteResult) {
+    if (!quoteResult || quoteResult.payable !== true || !quoteResult.destination) {
+      return false;
+    }
+
+    try {
+      sessionStorage.setItem("havkar_stellar_pending_payment", JSON.stringify({
+        network: quoteResult.network === "mainnet" ? "PUBLIC" : "TESTNET",
+        intentId: quoteResult.intent_id || null,
+        destination: quoteResult.destination,
+        amount: quoteResult.amount_xlm,
+        memo: quoteResult.memo,
+        asset: "native",
+        createdAt: Date.now()
+      }));
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   root.HAVKAR_XLM = {
     quote: quote,
     verify: verify,
     payAndVerify: payAndVerify,
-    describe: describe
+    describe: describe,
+    stageWalletPayment: stageWalletPayment
   };
 })(typeof globalThis !== "undefined" ? globalThis : window);
