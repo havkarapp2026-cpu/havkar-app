@@ -6,26 +6,28 @@ Updated: **9 November 2026**
 
 | Item | Evidence |
 | --- | --- |
-| Mainnet destination configured | `HAVKAR_STELLAR_MAINNET_DESTINATION=GBORWHZDJRQQQIWHS7YZ5GQDSGV6KKKTVCHNZGULACUK7SCAAHEAUTGM` |
-| Horizon Public account | Exists; funded; sole signer |
-| Schema / migration / fees / pause gates | Verified earlier; Stripe/Pi unchanged |
-| Mainnet ownership proof API | `/api/stellar-mainnet-ownership` + `/mainnet-wallet-ownership.html` (LOBSTR `signMessage`) |
-| Ownership proofs table | `stellar_mainnet_ownership_proofs` on Production |
+| PR #138 / #139 | Merged into `main` |
+| Destination | `HAVKAR_STELLAR_MAINNET_DESTINATION=GBORWHZDJRQQQIWHS7YZ5GQDSGV6KKKTVCHNZGULACUK7SCAAHEAUTGM` |
+| Ownership | Verified `outbound_memo_payment` at `2026-11-09T13:48:08Z`, tx `faaf2b7e9599c58a9cd7194cca2745c786b87706fa2c800b117a0650903aded3` |
+| Flag | `HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED=true` |
+| Production status | `stellar.mainnet_ready=true`, `stellar_mainnet_collection=armed` |
+| Stripe / Pi | Unchanged; webhook still `REAL_PAYMENTS_PAUSED` |
+| Fees in source | Buyer 2% / seller 3% / services 10% |
+| Settlement guards | Unit/integration: success, memo/amount/destination match, replay refused |
 
-## YELLOW (genuine Owner blockers before arming)
+## YELLOW (Owner confirmation before smoke transfer)
 
-| Blocker | Exact action |
-| --- | --- |
-| Cryptographic ownership not yet proven | Open `https://havkar-app.vercel.app/mainnet-wallet-ownership.html`, connect LOBSTR with `GBORWHZD…`, sign the challenge (no XLM). |
-| Mainnet payments flag still `false` | After ownership verifies in that page, agent/Owner sets `HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED=true` and redeploys |
-| Smoke settlement | After `mainnet_ready=true`, one tiny inbound payment |
+Proposed minimal Mainnet marketplace smoke payment (not sent yet):
 
-### Fallback only if LOBSTR cannot signMessage
+- Listing price: **1.00 EUR**
+- Buyer pays: **1.02 EUR** (2% fee)
+- Seller fee reference: **0.03 EUR** (3%)
+- Approximate XLM at current rate: see live quote at confirmation time
+- Destination: `GBORWHZDJRQQQIWHS7YZ5GQDSGV6KKKTVCHNZGULACUK7SCAAHEAUTGM`
+- Network: Stellar Public / Mainnet
 
-1. Open the ownership page and request a challenge (shows exact memo).
-2. From LOBSTR, send a tiny native XLM payment **from** `GBORWHZD…` with that exact text memo.
-3. Paste the successful Horizon tx hash into the page and verify.
+No customer smoke settlement is claimed until Owner confirms amount + destination and a matching Horizon hash settles an unpaid intent.
 
 ## RED
 
-None for implementation. Collection remains paused until ownership + flag.
+None for Mainnet one-time XLM arming.
