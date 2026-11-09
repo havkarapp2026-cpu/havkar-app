@@ -1,5 +1,5 @@
 /* HAVKAR service worker — safe no-cache pass-through with versioned install. */
-var HAVKAR_SW_VERSION = "havkar-sw-20261109-tickets-v1";
+var HAVKAR_SW_VERSION = "havkar-sw-20261109-final-prod-v2";
 
 self.addEventListener("install", function (event) {
   self.skipWaiting();

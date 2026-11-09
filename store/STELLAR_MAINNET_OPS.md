@@ -13,7 +13,7 @@
 5. `HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED=true` on Vercel Production **only after explicit Owner authorization**, then redeploy.
 6. Confirm `GET /api/payment-activation-status` → `stellar.mainnet_ready=true` and `stellar_mainnet_collection=armed` before any customer Mainnet quote.
 
-Live status as of 9 Nov 2026 Production probe: ownership verified, destination configured, **flag still false**, collection **paused**. Do not treat docs as armed when the live API says paused.
+Live status as of 9 Nov 2026 after Owner authorization: ownership verified, destination configured, flag **true**, smoke intent **settled** on Horizon Public. Re-check `/api/payment-activation-status` after every redeploy.
 
 Never invent a destination. Never paste a secret seed into Vercel for this variable.
 Never enable the Mainnet flag before ownership proof and explicit Owner permission.
