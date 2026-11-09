@@ -6,33 +6,26 @@ Updated: **9 November 2026**
 
 | Item | Evidence |
 | --- | --- |
-| Mainnet code on `main` (PR #138) | Merged + deployed |
-| Schema allows `network=mainnet` | Prod constraint verified |
-| Unique `tx_hash` / refund hash | Partial unique indexes present |
-| RLS | Users read own intents only |
-| Migration `20261109033000` | Reconciled in `schema_migrations` |
-| Fees | Buyer 2% / seller 3% / services 10% |
-| Horizon destination live-check | Quotes refuse missing accounts |
-| Stripe/Pi | Unchanged / paused |
-| `HAVKAR_STELLAR_MAINNET_DESTINATION` | Set on Vercel Production to Owner-designated LOBSTR public key `GBORWHZDJRQQQIWHS7YZ5GQDSGV6KKKTVCHNZGULACUK7SCAAHEAUTGM` |
-| Horizon Public account | Exists; native balance funded (~24 XLM); sole ed25519 signer |
+| Mainnet destination configured | `HAVKAR_STELLAR_MAINNET_DESTINATION=GBORWHZDJRQQQIWHS7YZ5GQDSGV6KKKTVCHNZGULACUK7SCAAHEAUTGM` |
+| Horizon Public account | Exists; funded; sole signer |
+| Schema / migration / fees / pause gates | Verified earlier; Stripe/Pi unchanged |
+| Mainnet ownership proof API | `/api/stellar-mainnet-ownership` + `/mainnet-wallet-ownership.html` (LOBSTR `signMessage`) |
+| Ownership proofs table | `stellar_mainnet_ownership_proofs` on Production |
 
 ## YELLOW (genuine Owner blockers before arming)
 
 | Blocker | Exact action |
 | --- | --- |
-| Cryptographic control of receiving wallet not yet proven in-app | From LOBSTR, prove control of `GBORWHZDJRQQQIWHS7YZ5GQDSGV6KKKTVCHNZGULACUK7SCAAHEAUTGM` (sign the HAVKAR Mainnet ownership challenge, or confirm after a controlled tiny outbound Mainnet payment from that account with a memo we specify) |
-| `HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED` remains `false` by design | After ownership proof + readiness, Owner authorizes setting exact `true` and Production redeploy |
-| Real-money smoke settlement | After `mainnet_ready=true`, one tiny inbound payment + verified settlement |
+| Cryptographic ownership not yet proven | Open `https://havkar-app.vercel.app/mainnet-wallet-ownership.html`, connect LOBSTR with `GBORWHZD…`, sign the challenge (no XLM). |
+| Mainnet payments flag still `false` | After ownership verifies in that page, agent/Owner sets `HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED=true` and redeploys |
+| Smoke settlement | After `mainnet_ready=true`, one tiny inbound payment |
+
+### Fallback only if LOBSTR cannot signMessage
+
+1. Open the ownership page and request a challenge (shows exact memo).
+2. From LOBSTR, send a tiny native XLM payment **from** `GBORWHZD…` with that exact text memo.
+3. Paste the successful Horizon tx hash into the page and verify.
 
 ## RED
 
-None for destination configuration. Customer Mainnet collection remains **paused**.
-
-## Success criteria (not yet met)
-
-```text
-GET /api/payment-activation-status
-stellar.mainnet_ready = true
-stellar_mainnet_collection = armed
-```
+None for implementation. Collection remains paused until ownership + flag.

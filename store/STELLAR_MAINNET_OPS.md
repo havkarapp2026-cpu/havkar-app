@@ -6,8 +6,10 @@
 2. Migration history includes `20261109033000` (reconciled).
 3. Owner-designated Mainnet receiving public key configured:
    - `HAVKAR_STELLAR_MAINNET_DESTINATION=GBORWHZDJRQQQIWHS7YZ5GQDSGV6KKKTVCHNZGULACUK7SCAAHEAUTGM`
-   - Horizon Public: account exists and is funded (verified 2026-11-09).
-4. Prove Owner control of that LOBSTR account (fresh signature / controlled outbound memo payment) before arming.
+   - Horizon Public: account exists and is funded (verified).
+4. Prove Owner control of that LOBSTR account:
+   - Preferred: open `/mainnet-wallet-ownership.html`, connect LOBSTR extension with that account, sign the server challenge (`signMessage`, no XLM).
+   - Fallback only if LOBSTR cannot signMessage: tiny outbound native payment FROM that account with the exact text memo shown on the page, then paste the Horizon tx hash.
 5. Only then set `HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED=true` (exact) on Vercel Production and redeploy.
 6. `GET /api/payment-activation-status` → `stellar.mainnet_ready=true`.
 

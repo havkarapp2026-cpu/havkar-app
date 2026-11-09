@@ -52,6 +52,19 @@ function isOwnershipRequest(req) {
   );
 }
 
+function isMainnetOwnershipRequest(req) {
+  const action = String(req && req.body && req.body.action || "");
+  const url = String(req && req.url || "");
+
+  return Boolean(
+    (req && req.query && req.query.havkarAction === "mainnetOwnership") ||
+      url.indexOf("stellar-mainnet-ownership") !== -1 ||
+      action === "mainnet_ownership_challenge" ||
+      action === "mainnet_ownership_verify" ||
+      action === "mainnet_ownership_status"
+  );
+}
+
 function isAdBoostCheckoutRequest(req) {
   const action = String(req && req.body && req.body.action || "");
   const url = String(req && req.url || "");
@@ -74,13 +87,16 @@ function isPaymentStatusRequest(req) {
   );
 }
 
-function buildPaymentActivationStatus() {
+async function buildPaymentActivationStatus() {
   const {
     stellarMainnetPaymentsEnabled,
     mainnetReady,
     MAINNET_FLAG,
     MAINNET_DESTINATION_ENV
   } = require("../lib/stellar-mainnet.cjs");
+  const {
+    handleMainnetWalletOwnership
+  } = require("../lib/stellar-mainnet-ownership.cjs");
 
   const stripeKey = String(process.env.STRIPE_SECRET_KEY || "");
   const stripeMode = /^sk_live(?:_|\b)/.test(stripeKey)
@@ -124,6 +140,38 @@ function buildPaymentActivationStatus() {
     String(process.env.HAVKAR_STELLAR_MAINNET_DESTINATION || "").trim()
   );
 
+  let mainnetOwnership = {
+    verified: false,
+    verified_at: null,
+    method: null
+  };
+
+  try {
+    const ownership = await handleMainnetWalletOwnership(
+      { action: "mainnet_ownership_status" },
+      {
+        supabaseUrl: process.env.SUPABASE_URL,
+        serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY
+      }
+    );
+
+    if (ownership && ownership.ok) {
+      mainnetOwnership = {
+        verified: ownership.verified === true,
+        verified_at: ownership.verified_at || null,
+        method: ownership.method || null,
+        pubkey: ownership.pubkey || null
+      };
+    }
+  } catch (error) {
+    mainnetOwnership = {
+      verified: false,
+      verified_at: null,
+      method: null,
+      error: "ownership_status_unavailable"
+    };
+  }
+
   if (!stellarMainnetReady) {
     if (!mainnetDestinationConfigured) {
       blockers.push(
@@ -131,9 +179,9 @@ function buildPaymentActivationStatus() {
           MAINNET_DESTINATION_ENV +
           " on Vercel Production (G... only; never a secret seed)."
       );
-    } else {
+    } else if (!mainnetOwnership.verified) {
       blockers.push(
-        "Prove LOBSTR control of the configured Mainnet destination before arming collection (challenge signature or memo-tagged outbound payment)."
+        "Prove LOBSTR control of the configured Mainnet destination at /mainnet-wallet-ownership.html (signMessage; no XLM required)."
       );
     }
     if (!stellarMainnetFlag) {
@@ -175,6 +223,9 @@ function buildPaymentActivationStatus() {
       mainnet_payments_enabled_in_source: true,
       mainnet_flag: stellarMainnetFlag,
       mainnet_destination_configured: mainnetDestinationConfigured,
+      mainnet_ownership_verified: mainnetOwnership.verified === true,
+      mainnet_ownership_verified_at: mainnetOwnership.verified_at,
+      mainnet_ownership_method: mainnetOwnership.method,
       mainnet_ready: stellarMainnetReady,
       migration_20261109033000: "applied_or_reconciled",
       commissions: {
@@ -198,15 +249,19 @@ function buildPaymentActivationStatus() {
                     "Provide the approved HAVKAR Stellar Mainnet merchant receiving public key (G...). Do not send a secret seed."
                 }
               ]),
-          {
-            id: "prove_mainnet_wallet_control",
-            required: true,
-            detail:
-              "Prove control of the configured Mainnet destination from LOBSTR (fresh challenge signature, or a tiny outbound Mainnet payment with the memo HAVKAR supplies). Destination alone does not arm collection."
-          },
+          ...(mainnetOwnership.verified
+            ? []
+            : [
+                {
+                  id: "prove_mainnet_wallet_control",
+                  required: true,
+                  detail:
+                    "Open /mainnet-wallet-ownership.html, connect LOBSTR with the configured destination account, and sign the server challenge (no XLM). Fallback: tiny outbound native payment with the exact memo shown on that page, then paste the Horizon tx hash."
+                }
+              ]),
           {
             id: "arm_mainnet_flag",
-            required: true,
+            required: !stellarMainnetFlag,
             detail:
               "After ownership proof, set HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED=true (exact) on Vercel Production and redeploy."
           },
@@ -518,7 +573,37 @@ export default async function handler(req, res) {
       return sendError(res, 405, "Method not allowed");
     }
 
-    return res.status(200).json(buildPaymentActivationStatus());
+    return res.status(200).json(await buildPaymentActivationStatus());
+  }
+
+  if (isMainnetOwnershipRequest(req)) {
+    if (req.method !== "POST") {
+      res.setHeader("Allow", "POST");
+      return sendError(res, 405, "Method not allowed");
+    }
+
+    try {
+      const {
+        handleMainnetWalletOwnership
+      } = await import("../lib/stellar-mainnet-ownership.cjs");
+      const result = await handleMainnetWalletOwnership(req.body, {
+        supabaseUrl: process.env.SUPABASE_URL,
+        serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY
+      });
+
+      return res.status(result.status || 500).json(result);
+    } catch (error) {
+      console.error(
+        "Mainnet wallet ownership verification failed",
+        error && error.message
+      );
+
+      return sendError(
+        res,
+        500,
+        "Mainnet wallet ownership verification failed"
+      );
+    }
   }
 
   if (req.method !== "POST") {
