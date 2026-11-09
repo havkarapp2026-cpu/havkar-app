@@ -1,39 +1,145 @@
-# iOS / App Store readiness (HAVKAR)
+# iOS Release audit — GitHub Actions signed IPA path
 
-Checked on Linux Cloud Agent host. Xcode and Apple signing materials are not available here.
+Updated: **9 November 2026**  
+Environment: Linux Cloud Agent (no local Xcode).  
+No production payments enabled. No App Store public submission.  
+**No signed IPA produced. No TestFlight upload dispatched.**
 
-## Verified in repository
+## Why Actions UI only shows “iOS Simulator build”
 
-| Item | Status | Evidence |
+Verified with `gh workflow list` against the default branch (`main`):
+
+| Workflow on `main` | Status |
+| --- | --- |
+| Android release AAB | active |
+| Android upload keystore | active |
+| Dependency audit | active |
+| **iOS Simulator build** | active |
+| pages-build-deployment | active |
+| **iOS Release** | **absent on `main`** |
+
+`ios-release.yml` exists on branch `cursor/ios-release-audit-d4b2` (PR #135) but **not** on `main`.
+
+GitHub only registers `workflow_dispatch` workflows from the **default branch**. Dispatch proof:
+
+```text
+HTTP 404: workflow ios-release.yml not found on the default branch
+```
+
+**Exact blocker for visibility / manual Run workflow:** merge (or otherwise land) `.github/workflows/ios-release.yml` onto `main`. This agent does not merge without owner approval.
+
+## Workflow implemented (this branch)
+
+File: `.github/workflows/ios-release.yml`  
+Name: **iOS Release**
+
+| Mode | When | What it does |
 | --- | --- | --- |
-| iOS project | PASS | `ios/HAVKAR.xcodeproj` |
-| Bundle id target | PASS | `PRODUCT_BUNDLE_IDENTIFIER = online.havkar.app` in `ios/HAVKAR.xcodeproj/project.pbxproj` |
-| App icon asset | PASS | `ios/HAVKAR/Assets.xcassets/AppIcon.appiconset` includes `AppIcon-1024.png` |
-| Simulator / unsigned local path | PASS (documented) | Project historically builds for Simulator with signing off |
+| `preflight` | default / also on PRs touching iOS paths | Repo checks + secret **presence** (true/false only). No signing. |
+| `signed_ipa` | manual | macOS archive + export → IPA artifact |
+| `testflight` | manual | signed IPA + TestFlight upload (not App Store review) |
 
-## Blocked in this environment
+Project reuse:
 
-| Item | Status | Missing |
+- `ios/HAVKAR.xcodeproj`
+- Scheme `HAVKAR`
+- Bundle ID `online.havkar.app`
+
+Simulator CI (`.github/workflows/ios-simulator.yml`) stays unsigned.
+
+## Apple signing configuration (verified in repo)
+
+| Item | Current value | Notes |
 | --- | --- | --- |
-| macOS | BLOCKED | Host is Linux |
-| Xcode | BLOCKED | Not installed |
-| Apple Developer team | BLOCKED | Not available to this agent |
-| Distribution certificate / provisioning | BLOCKED | Not present |
-| Signed IPA / TestFlight upload | BLOCKED | Cannot claim an IPA exists |
+| `CODE_SIGNING_ALLOWED` | `NO` (Debug+Release in pbxproj) | Intentional for Simulator CI; Release job overrides to YES |
+| `CODE_SIGNING_REQUIRED` | `NO` | Same |
+| `CODE_SIGN_IDENTITY` | empty | CI sets `Apple Distribution` |
+| `DEVELOPMENT_TEAM` | empty | CI sets from `APPLE_TEAM_ID` |
+| `ProvisioningStyle` | **Automatic** | Updated for CI automatic signing |
+| Entitlements file | absent | OK for current WKWebView shell |
+| `.p12` / `.p8` / `.mobileprovision` / `.ipa` in git | **absent** (correct) | Never commit these |
+| App icon | opaque RGB, PNG color_type **2** | App Store alpha issue fixed |
+| ExportOptions | generated in CI; example at `ios/ExportOptions.plist.example` | Team ID from secret |
 
-## Owner machine requirements
+## Certificates / provisioning / ASC secrets
 
-1. Mac with current Xcode.
-2. Apple Developer Program membership for bundle id `online.havkar.app`.
-3. App Store distribution certificate and App Store Connect provisioning profile.
-4. Turn code signing on in Xcode, archive, upload to TestFlight.
+### Readable by this agent
 
-## App Store Connect checklist (owner)
+| Check | Result |
+| --- | --- |
+| List repository Actions secrets via `gh` | **HTTP 403** — integration cannot enumerate secret inventory |
+| Cursor app secrets for this workspace | none bound |
+| Invent / fabricate Apple credentials | **forbidden / not done** |
+| Certificate or profile files in workspace | **none found** |
 
-- App metadata / subtitle / keywords (from `store/LISTING.md`)
-- Privacy Policy: `https://havkar-app.vercel.app/privacy.html`
-- Support URL: `https://havkar-app.vercel.app/support.html`
-- Privacy Nutrition Labels (aligned with Data safety draft)
-- Real iPhone screenshots
-- TestFlight internal/external testing
-- Review notes can reuse `store/PLAY_APP_ACCESS.md` credentials instructions
+### Secret presence from CI preflight (true/false only — values never logged)
+
+From Actions run on this branch (`iOS Release` / Preflight job):
+
+| Secret | Present |
+| --- | --- |
+| `APPLE_TEAM_ID` | **true** |
+| `APPLE_DISTRIBUTION_CERTIFICATE_BASE64` | **true** |
+| `APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD` | **false** ← required blocker for signed IPA |
+| `APP_STORE_CONNECT_API_KEY_ID` | **true** |
+| `APP_STORE_CONNECT_ISSUER_ID` | **true** |
+| `APP_STORE_CONNECT_API_KEY` | **true** |
+| `APPLE_PROVISIONING_PROFILE_BASE64` | false (optional) |
+
+### Required GitHub Actions secrets (owner must set)
+
+| Secret | Required for signed IPA | Purpose |
+| --- | --- | --- |
+| `APPLE_TEAM_ID` | yes | 10-char Team ID |
+| `APPLE_DISTRIBUTION_CERTIFICATE_BASE64` | yes | Base64 Apple Distribution `.p12` |
+| `APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD` | yes | `.p12` password |
+| `APP_STORE_CONNECT_API_KEY_ID` | yes | ASC API Key ID |
+| `APP_STORE_CONNECT_ISSUER_ID` | yes | ASC Issuer UUID |
+| `APP_STORE_CONNECT_API_KEY` | yes | `.p8` PEM text or base64 |
+| `APPLE_PROVISIONING_PROFILE_BASE64` | optional | Only if pinning a profile; automatic signing normally creates/updates profiles |
+
+Encode helpers (run on a trusted machine; never commit output):
+
+```bash
+scripts/ios-encode-signing-secrets.sh certificate ./Distribution.p12
+scripts/ios-encode-signing-secrets.sh api-key ./AuthKey_XXXXXX.p8
+```
+
+### ASC API key permissions required
+
+- Role: **Admin** or **App Manager**
+- Access to **Certificates, Identifiers & Profiles**
+- Access to the HAVKAR app (Bundle ID `online.havkar.app`)
+
+## Checks run (this audit)
+
+| Check | Result |
+| --- | --- |
+| `scripts/ios-release-preflight.sh` | **PASS** |
+| AppIcon alpha | **PASS** (color_type=2 / RGB) |
+| Workflow YAML parse | **PASS** |
+| `gh workflow list` (default branch) | iOS Release **missing** |
+| `gh workflow run ios-release.yml` | **404** (not on default branch) |
+| List Actions secrets | **403** (cannot verify presence) |
+| Signed archive on macOS | **NOT RUN** (no Apple secrets available to agent; no Mac here) |
+| TestFlight upload | **NOT RUN** (by design) |
+| Production payments / live services | **unchanged** |
+
+## Exact blockers (ordered)
+
+1. **`ios-release.yml` not on `main`** → Actions UI cannot show / dispatch **iOS Release** from the default branch list.
+2. **`APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD` missing** (CI presence=`false`) → signed IPA / TestFlight modes will fail until set.
+3. **App Store Connect app record / App ID** for `online.havkar.app` not verifiable from this environment.
+4. (Non-blocking for IPA) Privacy Nutrition Labels / screenshots still owner-owned before public App Store release.
+
+## Exact next actions for the owner
+
+1. Review and **merge PR #135** (or land `.github/workflows/ios-release.yml` on `main`) so **iOS Release** appears under Actions.
+2. Add repository secret **`APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD`** (password used when exporting the Distribution `.p12`). Do not paste it into chat/git.
+3. In Actions → **iOS Release** → Run workflow → mode **`preflight`** (confirm all six required secrets = true).
+4. Re-run with mode **`signed_ipa`** to produce the IPA artifact.
+5. Only after IPA review: mode **`testflight`** (uploads to TestFlight; does **not** submit for public App Store review).
+
+## Cost reminder
+
+GitHub-hosted macOS (`macos-15`) ≈ **$0.062/minute** for private repos ([Actions runner pricing](https://docs.github.com/en/billing/reference/actions-runner-pricing)).
