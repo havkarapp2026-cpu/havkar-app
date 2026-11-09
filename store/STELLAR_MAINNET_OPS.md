@@ -10,11 +10,13 @@
 4. Prove Owner control of that LOBSTR account:
    - Preferred: open `/mainnet-wallet-ownership.html`, connect LOBSTR extension with that account, sign the server challenge (`signMessage`, no XLM).
    - Fallback only if LOBSTR cannot signMessage: tiny outbound native payment FROM that account with the exact text memo shown on the page, then paste the Horizon tx hash.
-5. `HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED=true` set on Vercel Production and redeployed (2026-11-09).
-6. `GET /api/payment-activation-status` → `stellar.mainnet_ready=true` (verified).
+5. `HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED=true` on Vercel Production **only after explicit Owner authorization**, then redeploy.
+6. Confirm `GET /api/payment-activation-status` → `stellar.mainnet_ready=true` and `stellar_mainnet_collection=armed` before any customer Mainnet quote.
+
+Live status as of 9 Nov 2026 Production probe: ownership verified, destination configured, **flag still false**, collection **paused**. Do not treat docs as armed when the live API says paused.
 
 Never invent a destination. Never paste a secret seed into Vercel for this variable.
-Never enable the Mainnet flag before ownership proof.
+Never enable the Mainnet flag before ownership proof and explicit Owner permission.
 
 ## Settlement rules (enforced in code)
 
