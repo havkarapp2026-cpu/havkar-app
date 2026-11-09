@@ -5,6 +5,24 @@ Environment: Linux Cloud Agent (no local Xcode).
 No production payments enabled. No App Store public submission.  
 **No signed IPA produced. No TestFlight upload dispatched.**
 
+## Fix note — iOS Release run #6 (main)
+
+Failed run: [Actions run 42552463533](https://github.com/havkarapp2026-cpu/havkar-app/actions/runs/42552463533) (exit code **65**)
+
+```text
+HAVKAR has conflicting provisioning settings.
+HAVKAR is automatically signed for development, but a conflicting code signing
+identity Apple Distribution has been manually specified.
+```
+
+Root cause: archive used `CODE_SIGN_STYLE=Automatic` together with
+`CODE_SIGN_IDENTITY=Apple Distribution`.
+
+**Remediation:** keep automatic signing + `DEVELOPMENT_TEAM` + ASC API auth;
+clear `CODE_SIGN_IDENTITY` so Xcode chooses the Distribution identity during
+archive/export. ExportOptions stays `signingStyle=automatic` with the same Team ID.
+Temporary keychain import/cleanup unchanged. Secrets never printed.
+
 ## Fix note — iOS Release run #4 (main)
 
 Failed run: [Actions run 42549487260](https://github.com/havkarapp2026-cpu/havkar-app/actions/runs/42549487260)  
