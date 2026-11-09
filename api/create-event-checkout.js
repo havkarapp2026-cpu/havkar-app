@@ -131,10 +131,14 @@ function buildPaymentActivationStatus() {
           MAINNET_DESTINATION_ENV +
           " on Vercel Production (G... only; never a secret seed)."
       );
+    } else {
+      blockers.push(
+        "Prove LOBSTR control of the configured Mainnet destination before arming collection (challenge signature or memo-tagged outbound payment)."
+      );
     }
     if (!stellarMainnetFlag) {
       blockers.push(
-        "After the destination is configured and Horizon-verified, set " +
+        "After ownership proof, set " +
           MAINNET_FLAG +
           "=true on Vercel Production, then redeploy."
       );
@@ -184,23 +188,27 @@ function buildPaymentActivationStatus() {
     owner_actions: stellarMainnetReady
       ? []
       : [
+          ...(mainnetDestinationConfigured
+            ? []
+            : [
+                {
+                  id: "provide_mainnet_destination",
+                  required: true,
+                  detail:
+                    "Provide the approved HAVKAR Stellar Mainnet merchant receiving public key (G...). Do not send a secret seed."
+                }
+              ]),
           {
-            id: "provide_mainnet_destination",
+            id: "prove_mainnet_wallet_control",
             required: true,
             detail:
-              "Reply with the approved HAVKAR Stellar Mainnet merchant receiving public key (G...). Do not send a secret seed. Do not reuse a Testnet-only key unless you explicitly approve that same account for Mainnet collection."
-          },
-          {
-            id: "set_vercel_destination",
-            required: true,
-            detail:
-              "Set Vercel Production env HAVKAR_STELLAR_MAINNET_DESTINATION to that G... key, then confirm Horizon Public shows the account."
+              "Prove control of the configured Mainnet destination from LOBSTR (fresh challenge signature, or a tiny outbound Mainnet payment with the memo HAVKAR supplies). Destination alone does not arm collection."
           },
           {
             id: "arm_mainnet_flag",
             required: true,
             detail:
-              "Only after destination is set and Horizon-verified, set HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED=true (exact) on Vercel Production and redeploy."
+              "After ownership proof, set HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED=true (exact) on Vercel Production and redeploy."
           },
           {
             id: "smoke_settle",

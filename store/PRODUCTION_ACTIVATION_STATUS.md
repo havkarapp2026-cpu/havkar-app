@@ -7,32 +7,29 @@ Updated: **9 November 2026**
 | Item | Evidence |
 | --- | --- |
 | Mainnet code on `main` (PR #138) | Merged + deployed |
-| Schema allows `network=mainnet` | Prod `marketplace_payment_intents_network_check` → `testnet\|mainnet` |
-| Unique `tx_hash` / refund hash | `marketplace_payment_intents_tx_hash_uidx`, `marketplace_payment_intents_refund_tx_uidx` |
-| RLS (users read own intents only) | Policy `Users read their unpaid marketplace intents` |
-| Migration history reconciled | `supabase_migrations.schema_migrations` has `20261109033000` / `stellar_mainnet_payment_intents` |
-| Fees preserved | Buyer 2% / seller 3% / services provider 10% |
-| Horizon destination live-check | Mainnet quotes refuse missing Horizon Public accounts |
-| Recurring XLM refused | `XLM_RECURRING_UNSUPPORTED` |
-| Stripe/Pi live unchanged / paused | Prod webhook `REAL_PAYMENTS_PAUSED`; flag left alone |
-| Ops docs + probe | `store/STELLAR_MAINNET_OPS.md`, `scripts/verify-stellar-mainnet-ops.mjs` |
+| Schema allows `network=mainnet` | Prod constraint verified |
+| Unique `tx_hash` / refund hash | Partial unique indexes present |
+| RLS | Users read own intents only |
+| Migration `20261109033000` | Reconciled in `schema_migrations` |
+| Fees | Buyer 2% / seller 3% / services 10% |
+| Horizon destination live-check | Quotes refuse missing accounts |
+| Stripe/Pi | Unchanged / paused |
+| `HAVKAR_STELLAR_MAINNET_DESTINATION` | Set on Vercel Production to Owner-designated LOBSTR public key `GBORWHZDJRQQQIWHS7YZ5GQDSGV6KKKTVCHNZGULACUK7SCAAHEAUTGM` |
+| Horizon Public account | Exists; native balance funded (~24 XLM); sole ed25519 signer |
 
-## YELLOW (Owner action required — blocks `mainnet_ready`)
+## YELLOW (genuine Owner blockers before arming)
 
 | Blocker | Exact action |
 | --- | --- |
-| No approved Mainnet **receiving** public key provided | Reply with the HAVKAR-approved Mainnet merchant public key `G...` (not a seed; not a guessed/testnet substitute unless you explicitly approve that same account for Mainnet collection) |
-| `HAVKAR_STELLAR_MAINNET_DESTINATION` missing on Vercel Production | After the key is provided, set Production env to that `G...` value |
-| `HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED` is `false` | After destination is set + Horizon-verified, set exact `true` and redeploy |
-| Real-money smoke test | After `mainnet_ready=true`, Owner runs one tiny Mainnet payment and confirms settlement |
-
-Note: `GAPCPQKBQ2VKSSRXUFOCGNUYEJLT3FRPYBCJCN2SJZ2TPLGEMMCUJV4L` is the documented **Testnet ownership / Testnet destination** key. It is **not** auto-configured as Mainnet merchant destination.
+| Cryptographic control of receiving wallet not yet proven in-app | From LOBSTR, prove control of `GBORWHZDJRQQQIWHS7YZ5GQDSGV6KKKTVCHNZGULACUK7SCAAHEAUTGM` (sign the HAVKAR Mainnet ownership challenge, or confirm after a controlled tiny outbound Mainnet payment from that account with a memo we specify) |
+| `HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED` remains `false` by design | After ownership proof + readiness, Owner authorizes setting exact `true` and Production redeploy |
+| Real-money smoke settlement | After `mainnet_ready=true`, one tiny inbound payment + verified settlement |
 
 ## RED
 
-None in code/schema for this path. Activation remains **not operational** until YELLOW destination + flag are completed.
+None for destination configuration. Customer Mainnet collection remains **paused**.
 
-## Success criteria
+## Success criteria (not yet met)
 
 ```text
 GET /api/payment-activation-status
