@@ -66,6 +66,16 @@ if [[ -f "$WF" ]]; then
   else
     ok "Release workflow does not trigger on push"
   fi
+  if grep -q 'apple-actions/import-codesigning-certs' "$WF"; then
+    fail "workflow still references invalid action apple-actions/import-codesigning-certs (repo does not exist)"
+  else
+    ok "workflow does not reference invalid import-codesigning-certs action"
+  fi
+  if grep -q 'scripts/ios-import-signing-materials.sh' "$WF"; then
+    ok "workflow imports signing materials via security CLI script"
+  else
+    fail "workflow missing scripts/ios-import-signing-materials.sh import step"
+  fi
   for s in \
     APPLE_TEAM_ID \
     APPLE_DISTRIBUTION_CERTIFICATE_BASE64 \
@@ -76,6 +86,11 @@ if [[ -f "$WF" ]]; then
   do
     grep -q "$s" "$WF" && ok "workflow references secret $s" || fail "workflow missing secret $s"
   done
+fi
+
+[[ -f "scripts/ios-import-signing-materials.sh" ]] && ok "ios-import-signing-materials.sh present" || fail "missing import script"
+if [[ -f "scripts/ios-import-signing-materials.sh" ]]; then
+  bash -n scripts/ios-import-signing-materials.sh && ok "import script bash syntax OK" || fail "import script bash syntax error"
 fi
 
 # Detect committed signing materials (should never exist).
