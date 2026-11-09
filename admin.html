@@ -111,6 +111,12 @@ nav.bottom a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px
     <div id="supportList"></div>
   </section>
 
+  <section class="panel" id="ticketsPanel">
+    <h2>Event tickets</h2>
+    <p class="note">Recent issued / held event tickets from Production. Organizer check-in and buyer cancel run through secured RPCs.</p>
+    <div id="ticketsList"></div>
+  </section>
+
   <section class="panel" id="emailPanel">
     <h2>Official HAVKAR emails</h2>
     <ul class="list" id="emailList"></ul>
@@ -168,6 +174,38 @@ nav.bottom a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px
     return overview;
   }
 
+  async function loadRecentTickets() {
+    var root = document.getElementById("ticketsList");
+    if (!root || !db) return;
+    root.innerHTML = "";
+    root.appendChild(el("p", "note", "Loading recent tickets…"));
+    var result = await db.rpc("havkar_owner_list_recent_event_tickets", { p_limit: 40 });
+    root.innerHTML = "";
+    if (result.error) {
+      root.appendChild(el("p", "err", result.error.message || "Could not load event tickets."));
+      return;
+    }
+    var rows = result.data || [];
+    if (!rows.length) {
+      root.appendChild(el("p", "note", "No event tickets yet."));
+      return;
+    }
+    var table = el("table");
+    table.innerHTML = "<thead><tr><th>Code</th><th>Event</th><th>Status</th><th>Payment</th><th>Check-in</th></tr></thead>";
+    var body = el("tbody");
+    rows.forEach(function (row) {
+      var tr = el("tr");
+      tr.appendChild(el("td", "mono", row.ticket_code || String(row.id)));
+      tr.appendChild(el("td", null, row.event_title || ("#" + row.event_id)));
+      tr.appendChild(el("td", null, row.ticket_status || ""));
+      tr.appendChild(el("td", null, row.payment_status || ""));
+      tr.appendChild(el("td", null, row.checked_in_at ? "Yes" : (row.cancelled_at ? "Cancelled" : "—")));
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    root.appendChild(table);
+  }
+
   function render(data) {
     var role = data.role;
     message.className = "status ok";
@@ -180,6 +218,7 @@ nav.bottom a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px
       ["#modulesPanel", "Modules"],
       ["#moderationPanel", "Moderation"],
       ["#supportPanel", "Support"],
+      ["#ticketsPanel", "Tickets"],
       ["#emailPanel", "Emails"],
       role === "owner" || role === "admin" ? ["#staffPanel", "Staff"] : null,
       role === "owner" ? ["#financePanel", "Finance"] : null,
@@ -269,6 +308,8 @@ nav.bottom a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px
     } else {
       supportRoot.appendChild(el("p", "note", "Support count: " + ((data.overview && data.overview.support_requests) || 0) + ". Detailed queue is shown for Support/Staff roles when available."));
     }
+
+    loadRecentTickets();
 
     if (role === "owner" && data.security) {
       var sec = document.getElementById("securityList");
@@ -388,5 +429,6 @@ nav.bottom a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px
 })();
 </script>
 <script src="/havkar-page-back.js"></script>
+<script src="/havkar-sw-register.js"></script>
 </body>
 </html>
