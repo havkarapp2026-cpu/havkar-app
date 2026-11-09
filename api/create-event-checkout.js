@@ -75,6 +75,13 @@ function isPaymentStatusRequest(req) {
 }
 
 function buildPaymentActivationStatus() {
+  const {
+    stellarMainnetPaymentsEnabled,
+    mainnetReady,
+    MAINNET_FLAG,
+    MAINNET_DESTINATION_ENV
+  } = require("../lib/stellar-mainnet.cjs");
+
   const stripeKey = String(process.env.STRIPE_SECRET_KEY || "");
   const stripeMode = /^sk_live(?:_|\b)/.test(stripeKey)
     ? "live"
@@ -86,16 +93,68 @@ function buildPaymentActivationStatus() {
 
   const realEnabled = process.env.HAVKAR_REAL_PAYMENTS_ENABLED === "true";
   const cardsAllowed = cardPaymentsAllowed();
+  const stellarMainnetFlag = stellarMainnetPaymentsEnabled();
+  const stellarMainnetReady = mainnetReady();
+  const testnetDestinationConfigured = Boolean(
+    String(
+      process.env.HAVKAR_STELLAR_TESTNET_DESTINATION ||
+        process.env.HAVKAR_STELLAR_TICKET_MERCHANT_PUBLIC_KEY ||
+        ""
+    ).trim()
+  );
+
+  const blockers = [];
+
+  if (!cardsAllowed) {
+    blockers.push(
+      "Set HAVKAR_REAL_PAYMENTS_ENABLED=true only after legal/security checklist for card/Pi collection."
+    );
+    if (stripeMode === "live") {
+      blockers.push(
+        "Also set HAVKAR_STRIPE_LIVE_ENABLED=true for Stripe live-mode secrets."
+      );
+    } else {
+      blockers.push(
+        "Confirm Stripe key mode (test vs live) before charging customers."
+      );
+    }
+  }
+
+  if (!stellarMainnetReady) {
+    if (!stellarMainnetFlag) {
+      blockers.push(
+        "Set " + MAINNET_FLAG + "=true on Vercel Production to arm Stellar Mainnet quotes."
+      );
+    } else {
+      blockers.push(
+        "Set " +
+          MAINNET_DESTINATION_ENV +
+          " to the HAVKAR Mainnet receiving public key (G...). Never store a secret seed in env for this."
+      );
+    }
+  }
+
+  blockers.push(
+    "XLM recurring/AI subscriptions remain unsupported — do not sell recurring access via one-time XLM."
+  );
+  blockers.push(
+    "Apply migration 20261109033000_stellar_mainnet_payment_intents before Mainnet intents can be stored."
+  );
+  blockers.push(
+    "Refunds require an Owner-signed return payment from the merchant account; server only verifies Horizon."
+  );
 
   return {
     ok: true,
     generated_at: new Date().toISOString(),
     customer_facing_collection: cardsAllowed ? "armed" : "paused",
+    stellar_mainnet_collection: stellarMainnetReady ? "armed" : "paused",
     flags: {
       HAVKAR_REAL_PAYMENTS_ENABLED: realEnabled,
       HAVKAR_STRIPE_LIVE_ENABLED:
         process.env.HAVKAR_STRIPE_LIVE_ENABLED === "true",
-      STELLAR_MAINNET_PAYMENTS_ENABLED_SOURCE: false
+      HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED: stellarMainnetFlag,
+      STELLAR_MAINNET_PAYMENTS_ENABLED_SOURCE: true
     },
     stripe: {
       secret_key_mode: stripeMode,
@@ -104,26 +163,22 @@ function buildPaymentActivationStatus() {
       live_collection_allowed: cardsAllowed
     },
     stellar: {
-      testnet_destination_configured: Boolean(
-        String(
-          process.env.HAVKAR_STELLAR_TESTNET_DESTINATION ||
-            process.env.HAVKAR_STELLAR_TICKET_MERCHANT_PUBLIC_KEY ||
-            ""
-        ).trim()
+      testnet_destination_configured: testnetDestinationConfigured,
+      mainnet_payments_enabled_in_source: true,
+      mainnet_flag: stellarMainnetFlag,
+      mainnet_destination_configured: Boolean(
+        String(process.env.HAVKAR_STELLAR_MAINNET_DESTINATION || "").trim()
       ),
-      mainnet_payments_enabled_in_source: false
+      mainnet_ready: stellarMainnetReady,
+      commissions: {
+        marketplace_buyer_bps: 200,
+        marketplace_seller_bps: 300,
+        services_provider_bps: 1000
+      },
+      unsupported_flows: ["subscription", "recurring", "trade"]
     },
-    owner_activation_required: !cardsAllowed,
-    blockers: cardsAllowed
-      ? []
-      : [
-          "Set HAVKAR_REAL_PAYMENTS_ENABLED=true only after legal/security checklist.",
-          stripeMode === "live"
-            ? "Also set HAVKAR_STRIPE_LIVE_ENABLED=true for Stripe live-mode secrets."
-            : "Confirm Stripe key mode (test vs live) before charging customers.",
-          "Keep STELLAR_MAINNET_PAYMENTS_ENABLED=false until Mainnet checklist passes.",
-          "Do not execute Mainnet or unrestricted live charges without owner approval."
-        ]
+    owner_activation_required: !cardsAllowed || !stellarMainnetReady,
+    blockers: blockers
   };
 }
 
@@ -299,7 +354,7 @@ async function countReservedTickets(eventId) {
 async function fulfillSettledXlmIntent(admin, userId, intentId) {
   const loaded = await admin
     .from("marketplace_payment_intents")
-    .select("id,user_id,flow,status,subject_id,amount,currency,tx_hash")
+    .select("id,user_id,flow,status,subject_id,amount,currency,tx_hash,network")
     .eq("id", intentId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -319,6 +374,10 @@ async function fulfillSettledXlmIntent(admin, userId, intentId) {
   }
 
   const eventId = Number(intent.subject_id);
+  const paymentProvider =
+    String(intent.network || "") === "mainnet"
+      ? "stellar_mainnet"
+      : "stellar_testnet";
 
   if (!Number.isSafeInteger(eventId) || eventId <= 0) {
     return {
@@ -333,7 +392,7 @@ async function fulfillSettledXlmIntent(admin, userId, intentId) {
     .select("id")
     .eq("user_id", userId)
     .eq("event_id", eventId)
-    .eq("payment_provider", "stellar_testnet")
+    .eq("payment_provider", paymentProvider)
     .eq("payment_reference", intent.tx_hash)
     .maybeSingle();
 
@@ -373,7 +432,8 @@ async function fulfillSettledXlmIntent(admin, userId, intentId) {
       return {
         ticket_id: null,
         fulfillment: null,
-        error: "Event capacity was reached after settlement. Contact support with the Testnet tx hash."
+        error:
+          "Event capacity was reached after settlement. Contact support with the Stellar tx hash."
       };
     }
   }
@@ -390,7 +450,7 @@ async function fulfillSettledXlmIntent(admin, userId, intentId) {
       total_amount: Number(intent.amount || unitPrice),
       payment_status: "paid",
       ticket_status: "valid",
-      payment_provider: "stellar_testnet",
+      payment_provider: paymentProvider,
       payment_reference: intent.tx_hash,
       paid_at: new Date().toISOString()
     })

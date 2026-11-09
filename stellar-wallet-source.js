@@ -55,11 +55,12 @@ const NETWORK_STORAGE_KEY =
 const PENDING_PAYMENT_KEY =
     "havkar_stellar_pending_payment";
 
-/* Mainnet submission stays off.
-   The submit function refuses a PUBLIC network and
-   horizon.stellar.org even if this constant changes. */
+/* Owner-authorized Mainnet client capability.
+   Server still requires HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED=true
+   and HAVKAR_STELLAR_MAINNET_DESTINATION before any quote is payable.
+   Submission remains restricted to the matching Horizon + passphrase. */
 const STELLAR_MAINNET_PAYMENTS_ENABLED =
-    false;
+    true;
 
 let paymentInFlight =
     false;
@@ -221,8 +222,11 @@ function havkarGetStellarNetwork(){
         horizon:network.horizon,
 
         paymentsEnabled:
-            network.id === "TESTNET" &&
-            STELLAR_MAINNET_PAYMENTS_ENABLED === false
+            network.id === "TESTNET" ||
+            (
+                network.id === "PUBLIC" &&
+                STELLAR_MAINNET_PAYMENTS_ENABLED === true
+            )
 
     };
 
@@ -2453,18 +2457,32 @@ function assertStellarSubmissionAllowed(
     }
 
 
-    if(
-        !network ||
-        network.id !== "TESTNET" ||
-        network.passphrase !== Networks.TESTNET ||
-        host !== "horizon-testnet.stellar.org"
-    ){
-
+    if(!network){
         throw new Error(
-            "Mainnet payments are protected. Use Testnet."
+            "Stellar network is not selected."
         );
-
     }
+
+    if(
+        network.id === "TESTNET" &&
+        network.passphrase === Networks.TESTNET &&
+        host === "horizon-testnet.stellar.org"
+    ){
+        return;
+    }
+
+    if(
+        STELLAR_MAINNET_PAYMENTS_ENABLED === true &&
+        network.id === "PUBLIC" &&
+        network.passphrase === Networks.PUBLIC &&
+        host === "horizon.stellar.org"
+    ){
+        return;
+    }
+
+    throw new Error(
+        "This Stellar network is not allowed for HAVKAR payments."
+    );
 
 }
 

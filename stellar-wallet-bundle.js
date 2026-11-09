@@ -147850,7 +147850,7 @@ ${value}`, dataLines++;
   };
   var NETWORK_STORAGE_KEY = "havkar_stellar_network";
   var PENDING_PAYMENT_KEY = "havkar_stellar_pending_payment";
-  var STELLAR_MAINNET_PAYMENTS_ENABLED = false;
+  var STELLAR_MAINNET_PAYMENTS_ENABLED = true;
   var paymentInFlight = false;
   var HAVKAR_STELLAR = {
     network: readStoredNetwork(),
@@ -147917,7 +147917,7 @@ ${value}`, dataLines++;
       id: network.id,
       label: network.label,
       horizon: network.horizon,
-      paymentsEnabled: network.id === "TESTNET" && STELLAR_MAINNET_PAYMENTS_ENABLED === false
+      paymentsEnabled: network.id === "TESTNET" || network.id === "PUBLIC" && STELLAR_MAINNET_PAYMENTS_ENABLED === true
     };
   }
   function havkarSetStellarNetwork(networkId) {
@@ -148831,11 +148831,20 @@ ${value}`, dataLines++;
     } catch (error) {
       host = "";
     }
-    if (!network || network.id !== "TESTNET" || network.passphrase !== Networks2.TESTNET || host !== "horizon-testnet.stellar.org") {
+    if (!network) {
       throw new Error(
-        "Mainnet payments are protected. Use Testnet."
+        "Stellar network is not selected."
       );
     }
+    if (network.id === "TESTNET" && network.passphrase === Networks2.TESTNET && host === "horizon-testnet.stellar.org") {
+      return;
+    }
+    if (STELLAR_MAINNET_PAYMENTS_ENABLED === true && network.id === "PUBLIC" && network.passphrase === Networks2.PUBLIC && host === "horizon.stellar.org") {
+      return;
+    }
+    throw new Error(
+      "This Stellar network is not allowed for HAVKAR payments."
+    );
   }
   async function havkarSignAndSubmitStellarPayment(options) {
     const network = currentNetwork();
