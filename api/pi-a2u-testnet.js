@@ -1,4 +1,5 @@
 import { installPiStellarServerCompat, piNetworkFromModule } from "../lib/pi-stellar-compat.cjs";
+import { piPaymentsAllowed } from "../lib/real-payments.cjs";
 
 const PI_ME_URL = "https://api.minepi.com/v2/me";
 
@@ -77,13 +78,7 @@ async function resolveExistingPayment(pi, payment) {
 }
 
 export default async function handler(req, res) {
-  if (process.env.HAVKAR_REAL_PAYMENTS_ENABLED !== "true") {
-    return res.status(404).json({
-      error: "Not found"
-    });
-  }
-
-  if (process.env.HAVKAR_PI_PAYMENTS_ENABLED !== "true") {
+  if (!piPaymentsAllowed()) {
     return res.status(404).json({
       error: "Not found"
     });

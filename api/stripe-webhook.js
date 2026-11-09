@@ -250,6 +250,29 @@ export default async function handler(req, res) {
       );
     }
 
+    /*
+     * Optional settlement events. Live endpoint currently subscribes only to
+     * checkout.session.completed (read-only MCP cannot expand it). These
+     * handlers acknowledge future Dashboard event additions without inventing
+     * Connect transfers or marking commissions collected.
+     */
+    if (
+      event.type === "charge.refunded" ||
+      event.type === "charge.dispute.created" ||
+      event.type === "payout.paid" ||
+      event.type === "payout.failed"
+    ) {
+      console.log(
+        "HAVKAR Stripe settlement event acknowledged:",
+        event.type,
+        event.id
+      );
+      return res.status(200).json({
+        received: true,
+        settlement_event: event.type
+      });
+    }
+
     return res.status(200).json({
       received: true,
     });
