@@ -419,26 +419,91 @@ async function authenticateUser(req) {
   };
 }
 
+function generateTicketCode() {
+  const raw = String(
+    globalThis.crypto?.randomUUID?.() ||
+      `${Date.now()}${Math.random()}`
+  ).replace(/-/g, "");
+
+  return raw.slice(0, 12).toUpperCase();
+}
+
+function normalizeTicketType(value, unitPrice) {
+  const raw = String(value || "")
+    .trim()
+    .toLowerCase();
+
+  if (
+    raw === "vip" ||
+    raw === "early" ||
+    raw === "general" ||
+    raw === "free"
+  ) {
+    return raw;
+  }
+
+  return Number(unitPrice) === 0 ? "free" : "general";
+}
+
+function holdExpiresAtIso(minutes = 30) {
+  return new Date(
+    Date.now() + Math.max(5, Number(minutes) || 30) * 60 * 1000
+  ).toISOString();
+}
+
 async function countReservedTickets(eventId) {
+  const admin = getSupabaseAdmin();
+  const rpc = await admin.rpc("havkar_event_occupied_seats", {
+    p_event_id: eventId
+  });
+
+  if (!rpc.error && rpc.data != null) {
+    return Number(rpc.data) || 0;
+  }
+
+  // Fallback if RPC is unavailable: paid seats + active pending holds.
   const {
     data,
     error,
-  } = await getSupabaseAdmin()
+  } = await admin
     .from("event_tickets")
-    .select("quantity")
-    .eq("event_id", eventId)
-    .eq("ticket_status", "valid")
-    .eq("payment_status", "paid");
+    .select("quantity,ticket_status,payment_status,hold_expires_at,cancelled_at")
+    .eq("event_id", eventId);
 
   if (error) {
     throw error;
   }
 
-  return (data || []).reduce(
-    (sum, row) =>
-      sum + Number(row.quantity || 0),
-    0
-  );
+  const now = Date.now();
+
+  return (data || []).reduce((sum, row) => {
+    if (row.cancelled_at) {
+      return sum;
+    }
+
+    const qty = Number(row.quantity || 0);
+
+    if (
+      row.ticket_status === "valid" &&
+      row.payment_status === "paid"
+    ) {
+      return sum + qty;
+    }
+
+    if (
+      row.ticket_status === "pending" &&
+      row.payment_status === "pending"
+    ) {
+      if (
+        !row.hold_expires_at ||
+        new Date(row.hold_expires_at).getTime() > now
+      ) {
+        return sum + qty;
+      }
+    }
+
+    return sum;
+  }, 0);
 }
 
 /**
@@ -483,7 +548,7 @@ async function fulfillSettledXlmIntent(admin, userId, intentId) {
 
   const existing = await admin
     .from("event_tickets")
-    .select("id")
+    .select("id,ticket_code")
     .eq("user_id", userId)
     .eq("event_id", eventId)
     .eq("payment_provider", paymentProvider)
@@ -493,6 +558,7 @@ async function fulfillSettledXlmIntent(admin, userId, intentId) {
   if (existing && existing.data && existing.data.id) {
     return {
       ticket_id: existing.data.id,
+      ticket_code: existing.data.ticket_code || null,
       fulfillment: "event_ticket",
       error: null
     };
@@ -533,6 +599,7 @@ async function fulfillSettledXlmIntent(admin, userId, intentId) {
   }
 
   const unitPrice = Number(event.price || intent.amount || 0);
+  const ticketCode = generateTicketCode();
   const inserted = await admin
     .from("event_tickets")
     .insert({
@@ -546,9 +613,12 @@ async function fulfillSettledXlmIntent(admin, userId, intentId) {
       ticket_status: "valid",
       payment_provider: paymentProvider,
       payment_reference: intent.tx_hash,
-      paid_at: new Date().toISOString()
+      paid_at: new Date().toISOString(),
+      ticket_code: ticketCode,
+      ticket_type: normalizeTicketType(null, unitPrice),
+      hold_expires_at: null
     })
-    .select("id")
+    .select("id,ticket_code")
     .single();
 
   if (inserted.error || !inserted.data) {
@@ -559,8 +629,21 @@ async function fulfillSettledXlmIntent(admin, userId, intentId) {
     };
   }
 
+  await admin.from("event_ticket_events").insert({
+    ticket_id: inserted.data.id,
+    event_id: eventId,
+    actor_user_id: userId,
+    action: "issue_xlm",
+    detail: {
+      ticket_code: inserted.data.ticket_code,
+      payment_provider: paymentProvider,
+      tx_hash: intent.tx_hash
+    }
+  });
+
   return {
     ticket_id: inserted.data.id,
+    ticket_code: inserted.data.ticket_code || ticketCode,
     fulfillment: "event_ticket",
     error: null
   };
@@ -717,6 +800,7 @@ export default async function handler(req, res) {
             intent_id: req.body?.intent_id || null,
             tx_hash: req.body?.tx_hash || null,
             ticket_id: fulfilled.ticket_id || null,
+            ticket_code: fulfilled.ticket_code || null,
             fulfillment: fulfilled.fulfillment || null,
             fulfillment_error: fulfilled.error || null
           });
@@ -909,7 +993,13 @@ export default async function handler(req, res) {
       );
     }
 
+    const requestedTicketType = normalizeTicketType(
+      req.body?.ticket_type,
+      unitPrice
+    );
+
     if (unitPrice === 0) {
+      const ticketCode = generateTicketCode();
       const {
         data: freeTicket,
         error: freeTicketError,
@@ -927,18 +1017,33 @@ export default async function handler(req, res) {
           payment_provider: "free",
           payment_reference: null,
           paid_at: new Date().toISOString(),
+          ticket_code: ticketCode,
+          ticket_type: requestedTicketType === "vip" ? "vip" : "free",
+          hold_expires_at: null,
         })
-        .select("id")
+        .select("id,ticket_code")
         .single();
 
       if (freeTicketError) {
         throw freeTicketError;
       }
 
+      await getSupabaseAdmin().from("event_ticket_events").insert({
+        ticket_id: freeTicket.id,
+        event_id: eventId,
+        actor_user_id: user.id,
+        action: "issue_free",
+        detail: {
+          ticket_code: freeTicket.ticket_code || ticketCode,
+          quantity
+        }
+      });
+
       return res.status(200).json({
         ok: true,
         free: true,
         ticket_id: freeTicket.id,
+        ticket_code: freeTicket.ticket_code || ticketCode,
       });
     }
 
@@ -950,6 +1055,7 @@ export default async function handler(req, res) {
       });
     }
 
+    const ticketCode = generateTicketCode();
     const {
       data: pendingTicket,
       error: ticketError,
@@ -967,8 +1073,11 @@ export default async function handler(req, res) {
         payment_provider: "stripe",
         payment_reference: null,
         paid_at: null,
+        ticket_code: ticketCode,
+        ticket_type: requestedTicketType,
+        hold_expires_at: holdExpiresAtIso(30),
       })
-      .select("id")
+      .select("id,ticket_code")
       .single();
 
     if (ticketError) {
@@ -1103,10 +1212,23 @@ export default async function handler(req, res) {
       );
     }
 
+    await getSupabaseAdmin().from("event_ticket_events").insert({
+      ticket_id: pendingTicket.id,
+      event_id: eventId,
+      actor_user_id: user.id,
+      action: "hold_created",
+      detail: {
+        ticket_code: pendingTicket.ticket_code || ticketCode,
+        hold_expires_at: holdExpiresAtIso(30),
+        quantity
+      }
+    });
+
     return res.status(200).json({
       ok: true,
       free: false,
       ticket_id: pendingTicket.id,
+      ticket_code: pendingTicket.ticket_code || ticketCode,
       checkout_url: session.url,
     });
   } catch (error) {

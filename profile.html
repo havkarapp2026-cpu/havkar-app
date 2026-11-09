@@ -2197,7 +2197,7 @@ input:focus-visible{
                 </div>
 
                 <div class="action-subtitle">
-                    Server-confirmed administrators only
+                    Owner or server-confirmed administrator only
                 </div>
 
             </div>
@@ -4149,30 +4149,60 @@ async function revealAdministration(
 
     try{
 
-        const admin =
+        const roleResult =
             await supabase.rpc(
-                "havkar_session_is_admin"
+                "havkar_session_role"
             );
 
-        const owner =
-            await supabase.rpc(
-                "havkar_session_is_owner"
+        const roleName =
+            roleResult &&
+            roleResult.error == null
+            ? String(roleResult.data || "")
+            : "";
+
+        const privileged =
+            roleName === "owner" ||
+            roleName === "admin" ||
+            roleName === "staff" ||
+            roleName === "support";
+
+        // Fallback for environments before havkar_session_role exists.
+        if(
+            !privileged &&
+            (
+                !roleResult ||
+                roleResult.error
+            )
+        ){
+
+            const admin =
+                await supabase.rpc(
+                    "havkar_session_is_admin"
+                );
+
+            const owner =
+                await supabase.rpc(
+                    "havkar_session_is_owner"
+                );
+
+            button.hidden = !(
+                (
+                    admin &&
+                    admin.error == null &&
+                    admin.data === true
+                ) ||
+                (
+                    owner &&
+                    owner.error == null &&
+                    owner.data === true
+                )
             );
 
-        const adminAllowed =
-            admin &&
-            admin.error == null &&
-            admin.data === true;
+            return;
 
-        const ownerAllowed =
-            owner &&
-            owner.error == null &&
-            owner.data === true;
+        }
 
-        button.hidden = !(
-            adminAllowed ||
-            ownerAllowed
-        );
+        button.hidden = !privileged;
 
     }
     catch(error){
