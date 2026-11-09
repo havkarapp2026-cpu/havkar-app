@@ -19,6 +19,7 @@ assert.doesNotMatch(sql, /UPDATE auth\.users/);
 assert.match(profile, /havkar_session_is_owner/);
 assert.match(profile, /Staff permissions do not reveal this button/);
 assert.match(admin, /havkar_session_is_owner/);
-assert.match(admin, /admin\.data !== true/);
+assert.match(admin, /ownerAllowed/);
+assert.match(admin, /adminAllowed/);
 
 console.log("OWNER_SESSION_TEST_OK");

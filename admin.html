@@ -92,17 +92,17 @@ async function start() {
     return;
   }
 
-  if (owner.data === true && admin.data !== true) {
-    message.textContent = "Owner access is active. Administrator records stay separate.";
+  const ownerAllowed = owner && owner.error == null && owner.data === true;
+  const adminAllowed = admin && admin.error == null && admin.data === true;
+
+  if (!ownerAllowed && !adminAllowed) {
+    message.textContent = "This account is not an administrator or owner.";
     return;
   }
 
-  if (admin.data !== true) {
-    message.textContent = "This account is not an administrator.";
-    return;
-  }
-
-  message.textContent = "Administrator access is active. No commission is marked collected.";
+  message.textContent = ownerAllowed
+    ? "Owner access is active. Administrative records are visible; commission stays uncollected."
+    : "Administrator access is active. No commission is marked collected.";
 
   const ledger = await db
     .from("service_commission_entries")
