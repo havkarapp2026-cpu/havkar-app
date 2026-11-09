@@ -194,7 +194,7 @@ jobs:
         run: |
           xcodebuild -resolvePackageDependencies -project "$PROJECT" -scheme "$SCHEME"
 
-      - name: Archive Release (automatic signing overrides)
+      - name: Archive Release (automatic signing)
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
@@ -203,7 +203,11 @@ jobs:
           set -euo pipefail
           mkdir -p "$DERIVED"
           # project.pbxproj keeps CODE_SIGNING_ALLOWED=NO for Simulator CI.
-          # This job overrides signing for App Store distribution only.
+          # Release job enables automatic signing with Team ID only.
+          # Do NOT set CODE_SIGN_IDENTITY=Apple Distribution with Automatic —
+          # that causes Xcode exit 65 conflicting provisioning settings
+          # ("automatically signed for development" vs manual Distribution identity).
+          # Xcode selects the Distribution cert/profile during archive/export.
           xcodebuild \
             -project "$PROJECT" \
             -scheme "$SCHEME" \
@@ -217,7 +221,7 @@ jobs:
             CODE_SIGN_STYLE=Automatic \
             CODE_SIGNING_ALLOWED=YES \
             CODE_SIGNING_REQUIRED=YES \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
+            CODE_SIGN_IDENTITY= \
             PRODUCT_BUNDLE_IDENTIFIER="$PRODUCT_BUNDLE_IDENTIFIER" \
             -allowProvisioningUpdates \
             -allowProvisioningDeviceRegistration \
@@ -228,11 +232,15 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
+          # Keep export signingStyle=automatic and teamID in sync with archive.
+          # Do not embed provisioningProfiles (manual-only) when using automatic.
           python3 - <<'PY'
           import os
           from pathlib import Path
 
           team = os.environ["APPLE_TEAM_ID"]
+          if not team or team == "YOUR_APPLE_TEAM_ID":
+              raise SystemExit("APPLE_TEAM_ID is missing/invalid")
           derived = Path(os.environ["DERIVED"])
           lines = [
               '<?xml version="1.0" encoding="UTF-8"?>',
@@ -251,13 +259,16 @@ jobs:
               '\t<true/>',
               '\t<key>manageAppVersionAndBuildNumber</key>',
               '\t<false/>',
+              '\t<key>stripSwiftSymbols</key>',
+              '\t<true/>',
               '</dict>',
               '</plist>',
               '',
           ]
           out = derived / "ExportOptions.plist"
           out.write_text("\n".join(lines))
-          print(f"Wrote {out}")
+          # Presence/consistency only — never print Team ID.
+          print(f"Wrote ExportOptions.plist signingStyle=automatic method=app-store-connect")
           PY
           plutil -lint "$DERIVED/ExportOptions.plist"
 

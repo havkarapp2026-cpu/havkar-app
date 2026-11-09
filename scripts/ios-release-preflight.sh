@@ -76,6 +76,22 @@ if [[ -f "$WF" ]]; then
   else
     fail "workflow missing scripts/ios-import-signing-materials.sh import step"
   fi
+  # Catch the run #6 failure mode: Automatic style + forced Distribution identity.
+  if grep -q 'CODE_SIGN_STYLE=Automatic' "$WF" && grep -q 'CODE_SIGN_IDENTITY="Apple Distribution"' "$WF"; then
+    fail "conflicting signing: CODE_SIGN_STYLE=Automatic with CODE_SIGN_IDENTITY=Apple Distribution"
+  else
+    ok "no Automatic + Apple Distribution identity conflict in workflow"
+  fi
+  if grep -q 'CODE_SIGN_STYLE=Automatic' "$WF" && grep -q "signingStyle</key>" -n "$ROOT/ios/ExportOptions.plist.example" 2>/dev/null; then
+    if grep -A1 'signingStyle' "$ROOT/ios/ExportOptions.plist.example" | grep -q 'automatic'; then
+      ok "ExportOptions example uses automatic signingStyle (matches archive)"
+    fi
+  fi
+  if grep -q 'ios-import-signing-materials.sh cleanup' "$WF"; then
+    ok "temporary keychain cleanup step present"
+  else
+    fail "missing temporary keychain cleanup"
+  fi
   for s in \
     APPLE_TEAM_ID \
     APPLE_DISTRIBUTION_CERTIFICATE_BASE64 \
