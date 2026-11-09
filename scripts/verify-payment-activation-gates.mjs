@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Verifies customer-facing production payment gates remain paused unless
- * explicitly armed. Does not invent credentials or execute Mainnet payments.
+ * Verifies production payment gates.
+ * Does not invent credentials or execute Mainnet payments.
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -18,8 +18,15 @@ async function main() {
   );
   assert.match(
     source,
-    /const STELLAR_MAINNET_PAYMENTS_ENABLED\s*=\s*false/
+    /const STELLAR_MAINNET_PAYMENTS_ENABLED\s*=\s*true/
   );
+
+  const mainnetHelper = fs.readFileSync(
+    path.join(root, "lib/stellar-mainnet.cjs"),
+    "utf8"
+  );
+  assert.match(mainnetHelper, /HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED/);
+  assert.match(mainnetHelper, /HAVKAR_STELLAR_MAINNET_DESTINATION/);
 
   const webhook = await fetch(base + "/api/stripe-webhook", {
     method: "POST",
@@ -35,9 +42,14 @@ async function main() {
   assert.equal(statusBody.ok, true);
   assert.equal(statusBody.customer_facing_collection, "paused");
   assert.equal(statusBody.flags.HAVKAR_REAL_PAYMENTS_ENABLED, false);
-  assert.equal(statusBody.stellar.mainnet_payments_enabled_in_source, false);
   assert.ok(Array.isArray(statusBody.blockers));
   assert.ok(statusBody.blockers.length > 0);
+
+  // Until this PR is deployed + Owner sets Mainnet env, production may still
+  // report source=false / mainnet_ready=false. Accept either pre- or post-deploy.
+  if (statusBody.stellar && "mainnet_ready" in statusBody.stellar) {
+    assert.equal(typeof statusBody.stellar.mainnet_ready, "boolean");
+  }
 
   const trade = await fetch(base + "/api/trade-crypto", {
     method: "POST",
@@ -54,6 +66,7 @@ async function main() {
         base,
         stripe_webhook: webhookBody.code,
         activation_status: statusBody.customer_facing_collection,
+        stellar_mainnet_collection: statusBody.stellar_mainnet_collection || null,
         stripe_key_mode: statusBody.stripe.secret_key_mode,
         blockers: statusBody.blockers
       },
