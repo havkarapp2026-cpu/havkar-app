@@ -45,17 +45,43 @@ assert.equal(decision.network, "mainnet");
 const now = Math.floor(Date.now() / 1000);
 const quoted = await buildXlmQuote(decision, {
   env: readyEnv,
-  fetchImpl: () =>
-    Promise.resolve({
+  fetchImpl: async (url) => {
+    const href = String(url);
+    if (href.includes("/accounts/")) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ id: destination, balances: [{ asset_type: "native", balance: "1" }] })
+      };
+    }
+    return {
       ok: true,
       json: async () => ({ stellar: { eur: 0.1, last_updated_at: now } })
-    }),
+    };
+  },
   nowMs: Date.now(),
   memoBytes: Buffer.from("mainnetmemo01")
 });
 assert.equal(quoted.payable, true);
 assert.equal(quoted.destination, destination);
 assert.equal(quoted.horizon, "https://horizon.stellar.org");
+
+const missingAccount = await buildXlmQuote(decision, {
+  env: readyEnv,
+  fetchImpl: async (url) => {
+    if (String(url).includes("/accounts/")) {
+      return { ok: false, status: 404, json: async () => ({}) };
+    }
+    return {
+      ok: true,
+      json: async () => ({ stellar: { eur: 0.1, last_updated_at: now } })
+    };
+  },
+  nowMs: Date.now(),
+  memoBytes: Buffer.from("mainnetmemo02")
+});
+assert.equal(missingAccount.code, "MAINNET_DESTINATION_NOT_FOUND");
+assert.equal(missingAccount.payable, false);
 
 function fakeAdmin(seed) {
   const row = { ...seed };
