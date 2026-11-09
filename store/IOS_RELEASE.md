@@ -67,10 +67,24 @@ Simulator CI (`.github/workflows/ios-simulator.yml`) stays unsigned.
 
 | Check | Result |
 | --- | --- |
-| List repository Actions secrets via `gh` | **HTTP 403** — integration cannot read secret inventory |
+| List repository Actions secrets via `gh` | **HTTP 403** — integration cannot enumerate secret inventory |
 | Cursor app secrets for this workspace | none bound |
 | Invent / fabricate Apple credentials | **forbidden / not done** |
 | Certificate or profile files in workspace | **none found** |
+
+### Secret presence from CI preflight (true/false only — values never logged)
+
+From Actions run on this branch (`iOS Release` / Preflight job):
+
+| Secret | Present |
+| --- | --- |
+| `APPLE_TEAM_ID` | **true** |
+| `APPLE_DISTRIBUTION_CERTIFICATE_BASE64` | **true** |
+| `APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD` | **false** ← required blocker for signed IPA |
+| `APP_STORE_CONNECT_API_KEY_ID` | **true** |
+| `APP_STORE_CONNECT_ISSUER_ID` | **true** |
+| `APP_STORE_CONNECT_API_KEY` | **true** |
+| `APPLE_PROVISIONING_PROFILE_BASE64` | false (optional) |
 
 ### Required GitHub Actions secrets (owner must set)
 
@@ -113,17 +127,16 @@ scripts/ios-encode-signing-secrets.sh api-key ./AuthKey_XXXXXX.p8
 
 ## Exact blockers (ordered)
 
-1. **`ios-release.yml` not on `main`** → Actions UI cannot show / dispatch **iOS Release**.
-2. **Apple signing secrets not verifiable / not available to this agent** → cannot produce a real signed IPA here.
-3. **No Distribution certificate / ASC API key materials in environment** → owner must create and store them as repo secrets.
-4. **App Store Connect app record / App ID** for `online.havkar.app` not verifiable from this environment.
-5. (Non-blocking for IPA) Privacy Nutrition Labels / screenshots still owner-owned before public App Store release.
+1. **`ios-release.yml` not on `main`** → Actions UI cannot show / dispatch **iOS Release** from the default branch list.
+2. **`APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD` missing** (CI presence=`false`) → signed IPA / TestFlight modes will fail until set.
+3. **App Store Connect app record / App ID** for `online.havkar.app` not verifiable from this environment.
+4. (Non-blocking for IPA) Privacy Nutrition Labels / screenshots still owner-owned before public App Store release.
 
 ## Exact next actions for the owner
 
 1. Review and **merge PR #135** (or land `.github/workflows/ios-release.yml` on `main`) so **iOS Release** appears under Actions.
-2. Create Apple Distribution `.p12` + ASC API key; add the six required secrets (names above). Never paste values into chat/git.
-3. In Actions → **iOS Release** → Run workflow → mode **`preflight`** (confirms secret presence true/false).
+2. Add repository secret **`APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD`** (password used when exporting the Distribution `.p12`). Do not paste it into chat/git.
+3. In Actions → **iOS Release** → Run workflow → mode **`preflight`** (confirm all six required secrets = true).
 4. Re-run with mode **`signed_ipa`** to produce the IPA artifact.
 5. Only after IPA review: mode **`testflight`** (uploads to TestFlight; does **not** submit for public App Store review).
 
