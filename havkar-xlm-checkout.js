@@ -13,6 +13,18 @@
       return "Stellar Mainnet payments are disabled until owner authorization gates are live. Testnet remains available.";
     }
 
+    if (result.code === "STELLAR_MAINNET_LIVE_COLLECTION_OFF") {
+      return "Stellar Mainnet customer collection is armed but not live until Owner final approval. Use Testnet or wait for live collection.";
+    }
+
+    if (result.settlement === "pending") {
+      return "Horizon has not confirmed this transaction yet. The order stays unpaid. Retry verify after the ledger includes it.";
+    }
+
+    if (result.settlement === "failed") {
+      return "The Stellar transaction was not successful. Nothing was marked paid.";
+    }
+
     const networkLabel =
       result.network === "mainnet" ? "Mainnet" : "Testnet";
 
@@ -29,10 +41,26 @@
     }
 
     if (result.payable === true && result.order_paid === false) {
-      return "Unpaid " + networkLabel + " quote. Send " + result.amount_xlm +
-        " native XLM to " + result.destination +
-        " with text memo " + result.memo +
-        ". Asset: native XLM. The network fee is separate. The order stays unpaid until Horizon verification.";
+      const fees = result.fees || {};
+      const buyerPaysEur =
+        fees.buyerPays != null ? String(fees.buyerPays) + " EUR" : "listed EUR";
+      return (
+        "Unpaid " +
+        networkLabel +
+        " quote. Buyer pays " +
+        buyerPaysEur +
+        " ≈ " +
+        result.amount_xlm +
+        " native XLM (rate " +
+        result.eur_per_xlm +
+        " EUR/XLM) to " +
+        result.destination +
+        " with text memo " +
+        result.memo +
+        ". Network fee " +
+        (result.network_fee_xlm || "0.00001") +
+        " XLM is separate. The order stays unpaid until Horizon verification."
+      );
     }
 
     return result.error || "XLM payment was not settled.";
@@ -73,7 +101,7 @@
         body &&
         body.ok === true &&
         body.stellar &&
-        body.stellar.mainnet_ready === true
+        body.stellar.mainnet_customer_live === true
       ) {
         return "mainnet";
       }
@@ -82,6 +110,53 @@
     }
 
     return "testnet";
+  }
+
+  async function describeNetworkAvailability() {
+    try {
+      const response = await fetch("/api/payment-activation-status", {
+        method: "GET",
+        headers: { Accept: "application/json" }
+      });
+      const body = await response.json();
+      if (!body || body.ok !== true || !body.stellar) {
+        return {
+          preferred: "testnet",
+          buttonLabel: "Pay with XLM (Stellar Testnet)",
+          note: "Stellar quotes use Testnet until Mainnet live collection is Owner-approved."
+        };
+      }
+
+      if (body.stellar.mainnet_customer_live === true) {
+        return {
+          preferred: "mainnet",
+          buttonLabel: "Pay with XLM (Stellar Mainnet)",
+          note:
+            "Mainnet customer collection is live. Confirm amount, destination, memo, and fees before signing in your wallet. HAVKAR never asks for a recovery phrase."
+        };
+      }
+
+      if (body.stellar.mainnet_ready === true) {
+        return {
+          preferred: "testnet",
+          buttonLabel: "Pay with XLM (Stellar Testnet)",
+          note:
+            "Mainnet infrastructure is armed, but customer live collection stays off until Owner final approval. Current quotes use Testnet only."
+        };
+      }
+
+      return {
+        preferred: "testnet",
+        buttonLabel: "Pay with XLM (Stellar Testnet)",
+        note: "Stellar Mainnet collection is not live. Quotes and settlement use Testnet only."
+      };
+    } catch (error) {
+      return {
+        preferred: "testnet",
+        buttonLabel: "Pay with XLM (Stellar Testnet)",
+        note: "Network status unavailable. Defaulting to Stellar Testnet."
+      };
+    }
   }
 
   function walletNetworkMatches(preferred) {
@@ -269,6 +344,8 @@
     verify: verify,
     payAndVerify: payAndVerify,
     describe: describe,
-    stageWalletPayment: stageWalletPayment
+    stageWalletPayment: stageWalletPayment,
+    resolvePreferredNetwork: resolvePreferredNetwork,
+    describeNetworkAvailability: describeNetworkAvailability
   };
 })(typeof globalThis !== "undefined" ? globalThis : window);

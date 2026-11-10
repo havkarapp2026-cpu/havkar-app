@@ -3090,10 +3090,21 @@ async function submitBooking(event) {
 
         payload.payment_method = "online";
         payload.status = "pending";
-        if (settled.result.tx_hash) {
+        const settledNetwork =
+            settled.result.network === "mainnet" ? "Mainnet" : "Testnet";
+        const settledTx =
+            settled.result.tx_hash ||
+            (settled.result.payment_reference || "");
+        if (settledTx) {
             payload.message = String(payload.message || "")
                 + (payload.message ? "\n" : "")
-                + "XLM Testnet settled tx " + settled.result.tx_hash;
+                + "XLM " + settledNetwork + " settled tx " + settledTx;
+            payload.agreed_price = servicePrice;
+            if (settled.result.fulfillment === "services_intent") {
+                payload.commission_bps = 1000;
+                payload.commission_amount =
+                    Math.round(servicePrice * 0.1 * 100) / 100;
+            }
         }
     }
 
