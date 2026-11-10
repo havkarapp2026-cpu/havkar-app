@@ -30,7 +30,8 @@
 ### Recommended architecture (selected)
 
 **Primary: `direct_split` when merchant registered a Stellar receive public key.**  
-**Fallback: `platform_collect` for events / merchants without keys / Owner-gated legacy (`HAVKAR_XLM_ALLOW_PLATFORM_COLLECT`, default true).**  
+**Fallback `platform_collect` is disabled by default for all customer-facing flows.**  
+Legacy code is preserved and reachable only with exact `HAVKAR_XLM_ALLOW_PLATFORM_COLLECT=true` after Owner + legal review. Failed `direct_split` does not fall back.  
 Fee economics unchanged: buyer still pays 102% marketplace (or 100% services); seller receives 97% (or 90%); platform fee is the residual paid **directly** in the same user-signed transaction.
 
 ## Can HAVKAR use XLM without its own CASP?

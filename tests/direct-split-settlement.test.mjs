@@ -56,14 +56,24 @@ assert.equal(quoted.merchant_destination, merchant);
 assert.equal(quoted.platform_destination, platform);
 assert.equal(quoted.payments.length, 2);
 
-const legacy = await buildXlmQuote(decision, {
+const legacyBlocked = await buildXlmQuote(decision, {
   env,
   fetchImpl: rateFetch,
   nowMs: Date.now(),
   memoBytes: Buffer.from("1234567890")
 });
-assert.equal(legacy.settlement_model, MODEL_PLATFORM_COLLECT);
-assert.equal(legacy.destination, platform);
+assert.equal(legacyBlocked.payable, false);
+assert.equal(legacyBlocked.code, "MERCHANT_RECEIVE_KEY_REQUIRED");
+assert.notEqual(legacyBlocked.settlement_model, MODEL_PLATFORM_COLLECT);
+
+const legacyOptIn = await buildXlmQuote(decision, {
+  env: { ...env, HAVKAR_XLM_ALLOW_PLATFORM_COLLECT: "true" },
+  fetchImpl: rateFetch,
+  nowMs: Date.now(),
+  memoBytes: Buffer.from("1234567890")
+});
+assert.equal(legacyOptIn.settlement_model, MODEL_PLATFORM_COLLECT);
+assert.equal(legacyOptIn.destination, platform);
 
 function fakeAdmin(seed) {
   const row = { ...seed };

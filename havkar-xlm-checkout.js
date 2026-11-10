@@ -352,7 +352,7 @@
       sessionStorage.setItem("havkar_stellar_pending_payment", JSON.stringify({
         network: quoteResult.network === "mainnet" ? "PUBLIC" : "TESTNET",
         intentId: quoteResult.intent_id || null,
-        settlement_model: quoteResult.settlement_model || "platform_collect",
+        settlement_model: quoteResult.settlement_model || "direct_split",
         destination: quoteResult.destination,
         amount: quoteResult.amount_xlm,
         memo: quoteResult.memo,

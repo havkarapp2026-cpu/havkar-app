@@ -47,6 +47,7 @@ const pendingIntent = {
   destination: "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF",
   memo: "pendingmemo01",
   amount_xlm: "1.0000000",
+  settlement_model: "platform_collect",
   tx_hash: null,
   network: "testnet"
 };
@@ -92,7 +93,8 @@ const pending = await verifyStellarSettlement(
   {
     env: {
       HAVKAR_STELLAR_TESTNET_DESTINATION:
-        "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF"
+        "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF",
+      HAVKAR_XLM_ALLOW_PLATFORM_COLLECT: "true"
     },
     fetchImpl: async () => ({ ok: false, status: 404, json: async () => ({}) })
   }
@@ -117,10 +119,13 @@ const xlm = fs.readFileSync("havkar-xlm-checkout.js", "utf8");
 assert.match(xlm, /mainnet_customer_live/);
 assert.match(xlm, /describeNetworkAvailability/);
 assert.match(xlm, /direct_split/);
+assert.doesNotMatch(xlm, /settlement_model: quoteResult\.settlement_model \|\| "platform_collect"/);
 
-const models = fs.readFileSync("lib/stellar-settlement-models.cjs", "utf8");
-assert.match(models, /MODEL_DIRECT_SPLIT/);
-assert.match(models, /buyerPays/);
+const settlementModels = fs.readFileSync("lib/stellar-settlement-models.cjs", "utf8");
+assert.match(settlementModels, /HAVKAR_XLM_ALLOW_PLATFORM_COLLECT === "true"/);
+assert.match(settlementModels, /disabled_by_default|Disabled by default/);
+assert.match(settlementModels, /MODEL_DIRECT_SPLIT/);
+assert.match(settlementModels, /buyerPays/);
 
 const walletSource = fs.readFileSync("stellar-wallet-source.js", "utf8");
 assert.match(walletSource, /expectedPayments/);

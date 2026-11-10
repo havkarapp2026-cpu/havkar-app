@@ -11,7 +11,11 @@ import {
 const destination = "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF";
 const otherDest = "GBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBWHF";
 const payerAccount = "GCCC CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCWHF".replace(/\s/g, "");
-const env = { HAVKAR_STELLAR_TESTNET_DESTINATION: destination };
+const env = {
+  HAVKAR_STELLAR_TESTNET_DESTINATION: destination,
+  // Attack-vector cases exercise the preserved platform_collect verifier path.
+  HAVKAR_XLM_ALLOW_PLATFORM_COLLECT: "true"
+};
 
 function fakeAdmin(seed, extras) {
   const row = { ...seed };
@@ -109,6 +113,7 @@ const baseIntent = {
   destination,
   memo: "attackmemo01",
   amount_xlm: "10.0000000",
+  settlement_model: "platform_collect",
   tx_hash: null,
   payer_account: null,
   network: "testnet"
