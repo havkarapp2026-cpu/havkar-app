@@ -122,4 +122,8 @@ const models = fs.readFileSync("lib/stellar-settlement-models.cjs", "utf8");
 assert.match(models, /MODEL_DIRECT_SPLIT/);
 assert.match(models, /buyerPays/);
 
+const walletSource = fs.readFileSync("stellar-wallet-source.js", "utf8");
+assert.match(walletSource, /expectedPayments/);
+assert.match(walletSource, /operations\.length !== expectedPayments\.length/);
+
 console.log("XLM_FLOW_GUARDS_TEST_OK");

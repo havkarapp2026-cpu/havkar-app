@@ -5593,16 +5593,43 @@ document.addEventListener(
    ========================================================= */  
   
 supabaseClient.auth.onAuthStateChange(  
-    function(  
+    async function(  
         event,  
         session  
     ){  
   
         currentUser =  
-            session?.user || null;  
+            session?.user || null;
+
+        if(currentUser?.id){
+            await loadHAVKARStellarReceiveKey();
+        }
   
     }  
-);  
+);
+
+async function loadHAVKARStellarReceiveKey(){
+    const input=document.getElementById("stellarReceivePublicKey");
+    if(!input || !supabaseClient || !currentUser?.id){
+        return;
+    }
+    try{
+        const loaded=await supabaseClient
+            .from("stellar_receive_accounts")
+            .select("public_key")
+            .eq("user_id", currentUser.id)
+            .maybeSingle();
+        if(loaded.error){
+            return;
+        }
+        const key=String(loaded.data?.public_key||"").trim();
+        if(/^G[A-Z2-7]{55}$/.test(key)){
+            input.value=key;
+        }
+    }catch(_error){
+        // Migration may not be applied yet.
+    }
+}  
   
   
 /* =========================================================  

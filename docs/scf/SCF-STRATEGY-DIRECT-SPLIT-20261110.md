@@ -33,6 +33,11 @@ https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/integration-track
 3. Replay/memo/amount/geo/LIVE_COLLECTION gates (tests)
 4. Verified Horizon Mainnet hash already cited in SCF package
 5. Honest Mainnet customer collection OFF
+6. **Real Testnet dual-payment evidence (2026-11-10):** hash `31d6fda3d4735d93a26886a08af90fcef35db90e45dade4480c6ab6c1cb4925a` — buyer paid merchant `3.0000000` XLM and platform fee `0.1500000` XLM in one tx; server `verifyStellarSettlement` marked settled. Artifact: `/opt/cursor/artifacts/direct-split-testnet-e2e.json`
+
+```
+https://horizon-testnet.stellar.org/transactions/31d6fda3d4735d93a26886a08af90fcef35db90e45dade4480c6ab6c1cb4925a
+```
 
 ## Credible budget sketch (Owner-editable)
 

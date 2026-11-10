@@ -148489,17 +148489,36 @@ ${value}`, dataLines++;
       );
     }
     const operations = signed.operations || [];
-    if (operations.length !== 1) {
-      throw new Error(
-        mismatch
+    const expectedPayments = Array.isArray(prepared.payments) && prepared.payments.length > 0 ? prepared.payments : null;
+    if (expectedPayments) {
+      if (operations.length !== expectedPayments.length) {
+        throw new Error(
+          mismatch
+        );
+      }
+      expectedPayments.forEach(
+        function(expected, index2) {
+          const operation = operations[index2];
+          if (!operation || operation.type !== "payment" || operation.destination !== expected.destination || parseXlm(operation.amount).text !== expected.amount || operation.asset && !operation.asset.isNative()) {
+            throw new Error(
+              mismatch
+            );
+          }
+        }
       );
-    }
-    const operation = operations[0];
-    const amount = operation.type === "createAccount" ? operation.startingBalance : operation.amount;
-    if (operation.type !== prepared.kind || operation.destination !== prepared.destination || parseXlm(amount).text !== prepared.amount || operation.asset && !operation.asset.isNative()) {
-      throw new Error(
-        mismatch
-      );
+    } else {
+      if (operations.length !== 1) {
+        throw new Error(
+          mismatch
+        );
+      }
+      const operation = operations[0];
+      const amount = operation.type === "createAccount" ? operation.startingBalance : operation.amount;
+      if (operation.type !== prepared.kind || operation.destination !== prepared.destination || parseXlm(amount).text !== prepared.amount || operation.asset && !operation.asset.isNative()) {
+        throw new Error(
+          mismatch
+        );
+      }
     }
     const signedMemo = memoText(
       signed.memo
@@ -148835,8 +148854,22 @@ ${value}`, dataLines++;
     }
   }
   function samePayment(pending, prepared) {
-    return Boolean(
-      pending && pending.network === prepared.network && pending.source === prepared.source && pending.destination === prepared.destination && pending.amount === prepared.amount && pending.memo === prepared.memo && pending.kind === prepared.kind
+    if (!pending || pending.network !== prepared.network || pending.source !== prepared.source || pending.destination !== prepared.destination || pending.amount !== prepared.amount || pending.memo !== prepared.memo || pending.kind !== prepared.kind) {
+      return false;
+    }
+    const pendingPayments = Array.isArray(pending.payments) ? pending.payments : null;
+    const preparedPayments = Array.isArray(prepared.payments) ? prepared.payments : null;
+    if (!pendingPayments && !preparedPayments) {
+      return true;
+    }
+    if (!pendingPayments || !preparedPayments || pendingPayments.length !== preparedPayments.length) {
+      return false;
+    }
+    return pendingPayments.every(
+      function(entry, index2) {
+        const expected = preparedPayments[index2];
+        return entry && expected && entry.destination === expected.destination && entry.amount === expected.amount;
+      }
     );
   }
   function pendingStillOpen(pending) {
@@ -148972,7 +149005,15 @@ ${value}`, dataLines++;
           destination: request2.destination,
           amount: request2.amount.text,
           memo: request2.memo,
-          kind: pending.kind
+          kind: pending.kind,
+          payments: Array.isArray(request2.payments) ? request2.payments.map(
+            function(entry) {
+              return {
+                destination: entry.destination,
+                amount: entry.amount.text
+              };
+            }
+          ) : null
         };
         if (samePayment(
           pending,
@@ -149061,7 +149102,8 @@ ${value}`, dataLines++;
         fee: prepared.fee,
         sequence: prepared.sequence,
         timeBounds: prepared.timeBounds,
-        maxTime: prepared.timeBounds.maxTime
+        maxTime: prepared.timeBounds.maxTime,
+        payments: prepared.payments || null
       });
       let submitError = null;
       try {

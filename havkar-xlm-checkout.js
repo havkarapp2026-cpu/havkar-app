@@ -352,10 +352,16 @@
       sessionStorage.setItem("havkar_stellar_pending_payment", JSON.stringify({
         network: quoteResult.network === "mainnet" ? "PUBLIC" : "TESTNET",
         intentId: quoteResult.intent_id || null,
+        settlement_model: quoteResult.settlement_model || "platform_collect",
         destination: quoteResult.destination,
         amount: quoteResult.amount_xlm,
         memo: quoteResult.memo,
         asset: "native",
+        payments: Array.isArray(quoteResult.payments) ? quoteResult.payments : null,
+        merchant_destination: quoteResult.merchant_destination || null,
+        platform_destination: quoteResult.platform_destination || null,
+        merchant_amount_xlm: quoteResult.merchant_amount_xlm || null,
+        platform_fee_xlm: quoteResult.platform_fee_xlm || null,
         createdAt: Date.now()
       }));
       return true;

@@ -1614,40 +1614,89 @@ function assertSignedPayment(
     const operations =
         signed.operations || [];
 
+    const expectedPayments =
+        Array.isArray(prepared.payments) &&
+        prepared.payments.length > 0
+        ? prepared.payments
+        : null;
 
-    if(operations.length !== 1){
 
-        throw new Error(
-            mismatch
+    if(expectedPayments){
+
+        if(operations.length !== expectedPayments.length){
+
+            throw new Error(
+                mismatch
+            );
+
+        }
+
+        expectedPayments.forEach(
+            function(expected, index){
+
+                const operation =
+                    operations[index];
+
+                if(
+                    !operation ||
+                    operation.type !== "payment" ||
+                    operation.destination !==
+                        expected.destination ||
+                    parseXlm(operation.amount).text !==
+                        expected.amount ||
+                    (
+                        operation.asset &&
+                        !operation.asset.isNative()
+                    )
+                ){
+
+                    throw new Error(
+                        mismatch
+                    );
+
+                }
+
+            }
         );
 
     }
+    else{
+
+        if(operations.length !== 1){
+
+            throw new Error(
+                mismatch
+            );
+
+        }
 
 
-    const operation =
-        operations[0];
+        const operation =
+            operations[0];
 
-    const amount =
-        operation.type === "createAccount"
-        ? operation.startingBalance
-        : operation.amount;
+        const amount =
+            operation.type === "createAccount"
+            ? operation.startingBalance
+            : operation.amount;
 
 
-    if(
-        operation.type !== prepared.kind ||
-        operation.destination !==
-            prepared.destination ||
-        parseXlm(amount).text !==
-            prepared.amount ||
-        (
-            operation.asset &&
-            !operation.asset.isNative()
-        )
-    ){
+        if(
+            operation.type !== prepared.kind ||
+            operation.destination !==
+                prepared.destination ||
+            parseXlm(amount).text !==
+                prepared.amount ||
+            (
+                operation.asset &&
+                !operation.asset.isNative()
+            )
+        ){
 
-        throw new Error(
-            mismatch
-        );
+            throw new Error(
+                mismatch
+            );
+
+        }
 
     }
 
@@ -2415,14 +2464,60 @@ function samePayment(
     prepared
 ){
 
-    return Boolean(
-        pending &&
-        pending.network === prepared.network &&
-        pending.source === prepared.source &&
-        pending.destination === prepared.destination &&
-        pending.amount === prepared.amount &&
-        pending.memo === prepared.memo &&
-        pending.kind === prepared.kind
+    if(
+        !pending ||
+        pending.network !== prepared.network ||
+        pending.source !== prepared.source ||
+        pending.destination !== prepared.destination ||
+        pending.amount !== prepared.amount ||
+        pending.memo !== prepared.memo ||
+        pending.kind !== prepared.kind
+    ){
+
+        return false;
+
+    }
+
+    const pendingPayments =
+        Array.isArray(pending.payments)
+        ? pending.payments
+        : null;
+
+    const preparedPayments =
+        Array.isArray(prepared.payments)
+        ? prepared.payments
+        : null;
+
+    if(!pendingPayments && !preparedPayments){
+
+        return true;
+
+    }
+
+    if(
+        !pendingPayments ||
+        !preparedPayments ||
+        pendingPayments.length !== preparedPayments.length
+    ){
+
+        return false;
+
+    }
+
+    return pendingPayments.every(
+        function(entry, index){
+
+            const expected =
+                preparedPayments[index];
+
+            return (
+                entry &&
+                expected &&
+                entry.destination === expected.destination &&
+                entry.amount === expected.amount
+            );
+
+        }
     );
 
 }
@@ -2777,7 +2872,22 @@ async function havkarSignAndSubmitStellarPayment(
                     destination:request.destination,
                     amount:request.amount.text,
                     memo:request.memo,
-                    kind:pending.kind
+                    kind:pending.kind,
+                    payments:Array.isArray(request.payments)
+                        ? request.payments.map(
+                            function(entry){
+
+                                return {
+
+                                    destination:entry.destination,
+
+                                    amount:entry.amount.text
+
+                                };
+
+                            }
+                        )
+                        : null
                 };
 
 
@@ -2961,7 +3071,9 @@ async function havkarSignAndSubmitStellarPayment(
 
             timeBounds:prepared.timeBounds,
 
-            maxTime:prepared.timeBounds.maxTime
+            maxTime:prepared.timeBounds.maxTime,
+
+            payments:prepared.payments || null
 
         });
 
