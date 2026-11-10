@@ -30,11 +30,14 @@ https://www.bancaditalia.it/compiti/vigilanza/accesso-mercato/soggetti-mercato-c
 | --- | --- |
 | End-user private keys / seeds stored by HAVKAR | No |
 | User signs with external wallet | Yes |
-| HAVKAR receives XLM to a merchant destination for checkout | Yes (platform settlement address) |
+| Preferred settlement | `direct_split`: buyer pays merchant + platform fee in one signed tx |
+| Legacy settlement | `platform_collect` fallback to HAVKAR network destination |
 | Marketplace / services / events one-time XLM | Yes |
 | Custodial exchange / order book | No |
 | MiCA CASP license held by HAVKAR | **No — never claim** |
 | LIVE_COLLECTION Mainnet customer | OFF by default |
+
+Architecture detail: `store/XLM_LICENSE_MINIMIZING_ARCHITECTURE_20261110.md`.
 
 ## Play Additional Options (mapped to Owner request A/B/C)
 
