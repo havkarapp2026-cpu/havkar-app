@@ -64,7 +64,10 @@ assert.doesNotMatch(checkout, /sk_live_/);
 
 const webhookSource = read("api/stripe-webhook.js");
 assert.match(webhookSource, /const stripe = new Stripe\(process\.env\.STRIPE_SECRET_KEY\);/);
-assert.ok(webhookSource.indexOf("cardPaymentsAllowed()") < webhookSource.indexOf("checkout.session.completed"));
+assert.match(webhookSource, /Signed webhook delivery must still verify and settle/);
+assert.match(webhookSource, /constructEvent/);
+// Unsigned requests remain paused; signed delivery is no longer blocked by the public gate.
+assert.ok(webhookSource.indexOf("Missing Stripe signature") > 0);
 
 const wallet = read("wallet.html");
 const sendFn = wallet.slice(wallet.indexOf("async function sendMoney"));
@@ -92,6 +95,7 @@ const previous = {
   real: process.env.HAVKAR_REAL_PAYMENTS_ENABLED,
   live: process.env.HAVKAR_STRIPE_LIVE_ENABLED,
   stripe: process.env.STRIPE_SECRET_KEY,
+  webhook: process.env.STRIPE_WEBHOOK_SECRET,
   supabase: process.env.SUPABASE_URL,
   role: process.env.SUPABASE_SERVICE_ROLE_KEY,
   trade: process.env.HAVKAR_TRADE_ENABLED,
@@ -112,6 +116,23 @@ try {
   await webhook({ method: "POST", headers: {} }, paused);
   assert.equal(paused.statusCode, 403);
   assert.equal(paused.body.code, "REAL_PAYMENTS_PAUSED");
+
+  // Even while public Checkout stays paused, a signed request must reach
+  // constructEvent (invalid test signature → 400), not the pause 403.
+  process.env.STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "whsec_pause_test_not_real";
+  const signedWhilePaused = mockRes();
+  await webhook(
+    {
+      method: "POST",
+      headers: { "stripe-signature": "t=1,v1=deadbeef" },
+      async *[Symbol.asyncIterator]() {
+        yield Buffer.from("{}");
+      }
+    },
+    signedWhilePaused
+  );
+  assert.equal(signedWhilePaused.statusCode, 400);
+  assert.equal(signedWhilePaused.body.error, "Invalid webhook signature");
 
   process.env.HAVKAR_REAL_PAYMENTS_ENABLED = "true";
   process.env.STRIPE_SECRET_KEY = "sk_live_pause_not_a_real_key";
@@ -145,6 +166,7 @@ try {
     ["HAVKAR_REAL_PAYMENTS_ENABLED", previous.real],
     ["HAVKAR_STRIPE_LIVE_ENABLED", previous.live],
     ["STRIPE_SECRET_KEY", previous.stripe],
+    ["STRIPE_WEBHOOK_SECRET", previous.webhook],
     ["SUPABASE_URL", previous.supabase],
     ["SUPABASE_SERVICE_ROLE_KEY", previous.role],
     ["HAVKAR_TRADE_ENABLED", previous.trade],

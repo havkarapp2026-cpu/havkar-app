@@ -112,14 +112,12 @@ export default async function handler(req, res) {
     }
   }
 
-  if (!cardPaymentsAllowed()) {
-    return res.status(403).json({
-      ok: false,
-      error: REAL_PAYMENTS_PAUSED_MESSAGE,
-      code: REAL_PAYMENTS_PAUSED_CODE
-    });
-  }
-
+  /*
+   * Public Checkout creation stays gated by cardPaymentsAllowed().
+   * Signed webhook delivery must still verify and settle even while that
+   * gate is paused, otherwise Stripe retries forever after Owner micro-tests
+   * or any accidental live Checkout and ticket rows never reconcile.
+   */
   if (!process.env.STRIPE_WEBHOOK_SECRET) {
     console.error("STRIPE_WEBHOOK_SECRET is not configured");
 
@@ -162,6 +160,19 @@ export default async function handler(req, res) {
       const ticketId = session.metadata?.event_ticket_id;
 
       if (!ticketId) {
+        if (String(session.metadata?.havkar_owner_micro_test || "") === "true") {
+          console.log(
+            "HAVKAR Owner EUR micro-test Checkout acknowledged:",
+            session.id,
+            session.payment_status
+          );
+          return res.status(200).json({
+            received: true,
+            owner_micro_test: true,
+            payment_status: session.payment_status || null
+          });
+        }
+
         console.error(
           "checkout.session.completed has no event_ticket_id metadata",
           session.id
