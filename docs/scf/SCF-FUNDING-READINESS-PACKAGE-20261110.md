@@ -36,8 +36,11 @@ HAVKAR is a multilingual marketplace and services platform (web + Android/iOS We
 - LIVE_COLLECTION hard gate (customer Mainnet OFF by default)
 - Flow allowlist (marketplace / services / events only)
 - Attack-vector automated tests (expired, memo, destination, amount, replay, race, refund-before-settle)
+- **Direct-split settlement model** (buyer→merchant + platform fee in one user-signed tx) with legacy platform_collect fallback
+- Merchant receive-key registration table/UI (`stellar_receive_accounts`)
 - Mobile WebView canonical host alignment work (see store release docs)
 - Search hub + query forwarding; account block RLS migration (repo; Production apply Owner-gated)
+- See also `docs/scf/SCF-STRATEGY-DIRECT-SPLIT-20261110.md`
 
 ### Planned / external (not claimed done)
 
