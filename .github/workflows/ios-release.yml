@@ -154,6 +154,7 @@ jobs:
           PY
 
       - name: Import Apple Distribution certificate and optional profile
+        id: signing_materials
         env:
           APPLE_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_BASE64 }}
           APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD }}
@@ -162,6 +163,27 @@ jobs:
           set -euo pipefail
           chmod +x scripts/ios-import-signing-materials.sh
           scripts/ios-import-signing-materials.sh import
+          # If Owner provided a Distribution profile, prefer manual export to avoid
+          # "Cloud signing permission error / No profiles" when ASC cloud signing
+          # is not enabled for the API key.
+          PROFILE_UUID=""
+          if [ -n "${APPLE_PROVISIONING_PROFILE_BASE64:-}" ]; then
+            for f in "$HOME/Library/MobileDevice/Provisioning Profiles"/*.mobileprovision; do
+              [ -f "$f" ] || continue
+              PROFILE_UUID="$(security cms -D -i "$f" 2>/dev/null | plutil -extract UUID raw - 2>/dev/null || true)"
+              if [ -n "$PROFILE_UUID" ]; then
+                break
+              fi
+            done
+          fi
+          if [ -n "$PROFILE_UUID" ]; then
+            echo "profile_uuid=$PROFILE_UUID" >> "$GITHUB_OUTPUT"
+            echo "export_signing_style=manual" >> "$GITHUB_OUTPUT"
+            echo "Installed profile UUID present; export will use manual signingStyle."
+          else
+            echo "export_signing_style=automatic" >> "$GITHUB_OUTPUT"
+            echo "No profile UUID detected; export will use automatic/cloud signing."
+          fi
 
       - name: Install App Store Connect API key
         env:
@@ -194,20 +216,34 @@ jobs:
         run: |
           xcodebuild -resolvePackageDependencies -project "$PROJECT" -scheme "$SCHEME"
 
-      - name: Archive Release (automatic signing)
+      - name: Archive Release
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          EXPORT_SIGNING_STYLE: ${{ steps.signing_materials.outputs.export_signing_style }}
+          PROFILE_UUID: ${{ steps.signing_materials.outputs.profile_uuid }}
         run: |
           set -euo pipefail
           mkdir -p "$DERIVED"
-          # project.pbxproj keeps CODE_SIGNING_ALLOWED=NO for Simulator CI.
-          # Release job enables automatic signing with Team ID only.
-          # Do NOT set CODE_SIGN_IDENTITY=Apple Distribution with Automatic —
-          # that causes Xcode exit 65 conflicting provisioning settings
-          # ("automatically signed for development" vs manual Distribution identity).
-          # Xcode selects the Distribution cert/profile during archive/export.
+          # Prefer Manual when Owner supplied a Distribution profile UUID.
+          # Otherwise Automatic (requires ASC cloud signing permission).
+          # Never combine Automatic with CODE_SIGN_IDENTITY=Apple Distribution.
+          STYLE="${EXPORT_SIGNING_STYLE:-automatic}"
+          EXTRA=()
+          if [ "$STYLE" = "manual" ]; then
+            EXTRA+=(
+              CODE_SIGN_STYLE=Manual
+              CODE_SIGN_IDENTITY="Apple Distribution"
+              PROVISIONING_PROFILE="$PROFILE_UUID"
+              PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID"
+            )
+          else
+            EXTRA+=(
+              CODE_SIGN_STYLE=Automatic
+              CODE_SIGN_IDENTITY=
+            )
+          fi
           xcodebuild \
             -project "$PROJECT" \
             -scheme "$SCHEME" \
@@ -218,11 +254,10 @@ jobs:
             -authenticationKeyID "$APP_STORE_CONNECT_API_KEY_ID" \
             -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID" \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-            CODE_SIGN_STYLE=Automatic \
             CODE_SIGNING_ALLOWED=YES \
             CODE_SIGNING_REQUIRED=YES \
-            CODE_SIGN_IDENTITY= \
             PRODUCT_BUNDLE_IDENTIFIER="$PRODUCT_BUNDLE_IDENTIFIER" \
+            "${EXTRA[@]}" \
             -allowProvisioningUpdates \
             -allowProvisioningDeviceRegistration \
             archive
@@ -230,10 +265,13 @@ jobs:
       - name: Write ExportOptions.plist
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          EXPORT_SIGNING_STYLE: ${{ steps.signing_materials.outputs.export_signing_style }}
+          PROFILE_UUID: ${{ steps.signing_materials.outputs.profile_uuid }}
+          PRODUCT_BUNDLE_IDENTIFIER: online.havkar.app
         run: |
           set -euo pipefail
-          # Keep export signingStyle=automatic and teamID in sync with archive.
-          # Do not embed provisioningProfiles (manual-only) when using automatic.
+          # Prefer manual export when Owner supplied APPLE_PROVISIONING_PROFILE_BASE64.
+          # Otherwise keep automatic (requires ASC cloud signing permission).
           python3 - <<'PY'
           import os
           from pathlib import Path
@@ -241,6 +279,11 @@ jobs:
           team = os.environ["APPLE_TEAM_ID"]
           if not team or team == "YOUR_APPLE_TEAM_ID":
               raise SystemExit("APPLE_TEAM_ID is missing/invalid")
+          style = (os.environ.get("EXPORT_SIGNING_STYLE") or "automatic").strip()
+          profile = (os.environ.get("PROFILE_UUID") or "").strip()
+          bundle = os.environ["PRODUCT_BUNDLE_IDENTIFIER"]
+          if style == "manual" and not profile:
+              raise SystemExit("manual export requested but PROFILE_UUID is empty")
           derived = Path(os.environ["DERIVED"])
           lines = [
               '<?xml version="1.0" encoding="UTF-8"?>',
@@ -252,9 +295,21 @@ jobs:
               '\t<key>destination</key>',
               '\t<string>export</string>',
               '\t<key>signingStyle</key>',
-              '\t<string>automatic</string>',
+              f'\t<string>{style}</string>',
               '\t<key>teamID</key>',
               f'\t<string>{team}</string>',
+          ]
+          if style == "manual":
+              lines.extend([
+                  '\t<key>signingCertificate</key>',
+                  '\t<string>Apple Distribution</string>',
+                  '\t<key>provisioningProfiles</key>',
+                  '\t<dict>',
+                  f'\t\t<key>{bundle}</key>',
+                  f'\t\t<string>{profile}</string>',
+                  '\t</dict>',
+              ])
+          lines.extend([
               '\t<key>uploadSymbols</key>',
               '\t<true/>',
               '\t<key>manageAppVersionAndBuildNumber</key>',
@@ -264,11 +319,10 @@ jobs:
               '</dict>',
               '</plist>',
               '',
-          ]
+          ])
           out = derived / "ExportOptions.plist"
           out.write_text("\n".join(lines))
-          # Presence/consistency only — never print Team ID.
-          print(f"Wrote ExportOptions.plist signingStyle=automatic method=app-store-connect")
+          print(f"Wrote ExportOptions.plist signingStyle={style} method=app-store-connect")
           PY
           plutil -lint "$DERIVED/ExportOptions.plist"
 

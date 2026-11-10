@@ -9,6 +9,12 @@ import {
   tryConstructAdsBoostEvent,
   processAdsBoostEvent
 } from "../lib/ad-boost-webhook.cjs";
+import {
+  ticketIdFromMetadata,
+  settlementActionForEvent,
+  ticketUpdateFromSettlement,
+  isDuplicatePaidActivation
+} from "../lib/stripe-ticket-settlement.cjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -216,11 +222,7 @@ export default async function handler(req, res) {
        * If this ticket was already activated by this Checkout
        * Session, no second update is necessary.
        */
-      if (
-        existingTicket.payment_status === "paid" &&
-        existingTicket.ticket_status === "valid" &&
-        existingTicket.payment_reference === session.id
-      ) {
+      if (isDuplicatePaidActivation(existingTicket, session.id)) {
         return res.status(200).json({
           received: true,
           duplicate: true,
@@ -251,25 +253,82 @@ export default async function handler(req, res) {
     }
 
     /*
-     * Optional settlement events. Live endpoint currently subscribes only to
-     * checkout.session.completed (read-only MCP cannot expand it). These
-     * handlers acknowledge future Dashboard event additions without inventing
-     * Connect transfers or marking commissions collected.
+     * Settlement events. Live Dashboard must subscribe these (MCP write denied).
+     * Refund/dispute update ticket rows by event_ticket_id metadata when present.
      */
     if (
       event.type === "charge.refunded" ||
       event.type === "charge.dispute.created" ||
+      event.type === "charge.dispute.closed" ||
       event.type === "payout.paid" ||
       event.type === "payout.failed"
     ) {
+      const action = settlementActionForEvent(event.type);
+      const chargeOrObject = event.data && event.data.object;
+      let ticketId = ticketIdFromMetadata(
+        chargeOrObject && chargeOrObject.metadata
+      );
+
+      // Checkout stores event_ticket_id on PaymentIntent metadata; Charge may omit it.
+      if (
+        !ticketId &&
+        chargeOrObject &&
+        typeof chargeOrObject.payment_intent === "string" &&
+        chargeOrObject.payment_intent.startsWith("pi_")
+      ) {
+        try {
+          const intent = await stripe.paymentIntents.retrieve(
+            chargeOrObject.payment_intent
+          );
+          ticketId = ticketIdFromMetadata(intent && intent.metadata);
+        } catch (lookupError) {
+          console.error(
+            "HAVKAR could not load PaymentIntent metadata for settlement:",
+            lookupError && lookupError.message
+          );
+        }
+      }
+
+      const patch = ticketUpdateFromSettlement(
+        action,
+        new Date().toISOString()
+      );
+
+      if (ticketId && patch) {
+        const { error: settlementError } = await supabase
+          .from("event_tickets")
+          .update(patch)
+          .eq("id", ticketId)
+          .in("payment_status", ["paid", "disputed"]);
+
+        if (settlementError) {
+          throw settlementError;
+        }
+
+        console.log(
+          "HAVKAR ticket settlement applied:",
+          event.type,
+          ticketId
+        );
+
+        return res.status(200).json({
+          received: true,
+          settlement_event: event.type,
+          ticket_id: ticketId,
+          applied: true
+        });
+      }
+
       console.log(
         "HAVKAR Stripe settlement event acknowledged:",
         event.type,
-        event.id
+        event.id,
+        ticketId ? "ticket_metadata_present_but_no_patch" : "no_ticket_metadata"
       );
       return res.status(200).json({
         received: true,
-        settlement_event: event.type
+        settlement_event: event.type,
+        applied: false
       });
     }
 
