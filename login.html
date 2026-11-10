@@ -984,12 +984,15 @@ googleBtn.addEventListener("click", async () => {
                 new URLSearchParams(window.location.search).get("next")
               )
             : "";
-        const loginPath = nextPath
-            ? "login.html?next=" + encodeURIComponent(nextPath)
-            : "login.html";
-        const redirectTo = window.HAVKAR_CANONICAL
-            ? window.HAVKAR_CANONICAL.authRedirectUrl(loginPath)
-            : new URL(loginPath, "https://havkar.online/").href;
+        const redirectUrl = new URL(
+            window.HAVKAR_CANONICAL
+                ? window.HAVKAR_CANONICAL.authRedirectUrl("login.html")
+                : "https://havkar.online/login.html"
+        );
+        if (nextPath) {
+            redirectUrl.searchParams.set("next", nextPath);
+        }
+        const redirectTo = redirectUrl.href;
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: "google",
             options: {
