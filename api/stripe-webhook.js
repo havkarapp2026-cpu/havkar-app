@@ -15,6 +15,11 @@ import {
   ticketUpdateFromSettlement,
   isDuplicatePaidActivation
 } from "../lib/stripe-ticket-settlement.cjs";
+import {
+  claimStripeWebhookEvent,
+  isOwnerEur1Session,
+  ownerEur1Response
+} from "../lib/stripe-webhook-idempotency.cjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -112,14 +117,12 @@ export default async function handler(req, res) {
     }
   }
 
-  if (!cardPaymentsAllowed()) {
-    return res.status(403).json({
-      ok: false,
-      error: REAL_PAYMENTS_PAUSED_MESSAGE,
-      code: REAL_PAYMENTS_PAUSED_CODE
-    });
-  }
-
+  /*
+   * Public Checkout creation stays gated by cardPaymentsAllowed().
+   * Signed webhook delivery must still verify and settle even while that
+   * gate is paused, otherwise Stripe retries forever after Owner micro-tests
+   * or any accidental live Checkout and ticket rows never reconcile.
+   */
   if (!process.env.STRIPE_WEBHOOK_SECRET) {
     console.error("STRIPE_WEBHOOK_SECRET is not configured");
 
@@ -148,6 +151,32 @@ export default async function handler(req, res) {
   }
 
   try {
+    const claim = await claimStripeWebhookEvent(supabase, event);
+    if (!claim.ok) {
+      console.error(
+        "HAVKAR Stripe webhook event claim failed:",
+        claim.error && claim.error.message
+      );
+      return res.status(500).json({
+        error: "Webhook event claim failed",
+      });
+    }
+
+    if (claim.duplicate) {
+      return res.status(200).json({
+        received: true,
+        duplicate: true,
+        event_id: event.id,
+        event_type: event.type
+      });
+    }
+
+    if (claim.warning === "table_missing") {
+      console.warn(
+        "HAVKAR stripe_webhook_events table missing; processing without durable idempotency"
+      );
+    }
+
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
 
@@ -162,6 +191,21 @@ export default async function handler(req, res) {
       const ticketId = session.metadata?.event_ticket_id;
 
       if (!ticketId) {
+        if (isOwnerEur1Session(session)) {
+          console.log(
+            "HAVKAR Owner EUR micro-test Checkout acknowledged:",
+            session.id,
+            session.payment_status,
+            event.id
+          );
+          return res.status(200).json(
+            ownerEur1Response(session, {
+              event_id: event.id,
+              durable_idempotency: Boolean(claim.durable)
+            })
+          );
+        }
+
         console.error(
           "checkout.session.completed has no event_ticket_id metadata",
           session.id
