@@ -30,6 +30,14 @@ async function main() {
   assert.match(mainnetHelper, /HAVKAR_STELLAR_MAINNET_DESTINATION/);
   assert.match(mainnetHelper, /stellarMainnetLiveCollectionEnabled/);
 
+  const geoHelper = fs.readFileSync(
+    path.join(root, "lib/crypto-geo-policy.cjs"),
+    "utf8"
+  );
+  assert.match(geoHelper, /HAVKAR_CRYPTO_GEO_ENFORCEMENT/);
+  assert.match(geoHelper, /CRYPTO_GEO_RESTRICTED/);
+  assert.match(geoHelper, /x-vercel-ip-country/);
+
   const webhook = await fetch(base + "/api/stripe-webhook", {
     method: "POST",
     headers: { "content-type": "application/json" },

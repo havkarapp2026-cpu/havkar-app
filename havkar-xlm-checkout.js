@@ -13,6 +13,16 @@
       return "Stellar Mainnet payments are disabled until owner authorization gates are live. Testnet remains available.";
     }
 
+    if (
+      result.code === "CRYPTO_GEO_RESTRICTED" ||
+      result.code === "CRYPTO_GEO_UNCERTAIN"
+    ) {
+      return (
+        result.error ||
+        "XLM checkout is unavailable in this location under HAVKAR crypto geo policy. Other features remain available."
+      );
+    }
+
     if (result.code === "STELLAR_MAINNET_LIVE_COLLECTION_OFF") {
       return "Stellar Mainnet customer collection is armed but not live until Owner final approval. Use Testnet or wait for live collection.";
     }

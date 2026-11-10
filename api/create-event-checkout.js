@@ -212,6 +212,9 @@ async function buildPaymentActivationStatus() {
   const {
     handleMainnetWalletOwnership
   } = require("../lib/stellar-mainnet-ownership.cjs");
+  const {
+    describeCryptoGeoStatus
+  } = require("../lib/crypto-geo-policy.cjs");
 
   const stripeMode = stripeSecretMode();
 
@@ -455,7 +458,8 @@ async function buildPaymentActivationStatus() {
         services_provider_bps: 1000
       },
       unsupported_flows: ["subscription", "recurring", "trade", "ai", "jobs"],
-      supported_flows: ["marketplace", "services", "events"]
+      supported_flows: ["marketplace", "services", "events"],
+      crypto_geo: describeCryptoGeoStatus()
     },
     owner_activation_required:
       !cardsAllowed || !stellarMainnetCustomerLive,
@@ -1449,11 +1453,17 @@ export default async function handler(req, res) {
     }
 
     if (req.body?.payment_method === "xlm") {
+      const {
+        resolveRequestCountry
+      } = require("../lib/crypto-geo-policy.cjs");
+      const requestGeo = resolveRequestCountry(req);
+
       if (req.body?.action === "verify" || req.body?.action === "refund") {
         const settled = await verifyStellarSettlement(
           getSupabaseAdmin(),
           user.id,
-          req.body
+          req.body,
+          { geo: requestGeo }
         );
 
         if (
@@ -1485,7 +1495,10 @@ export default async function handler(req, res) {
         });
       }
 
-      const decision = evaluateStellarCheckout(req.body);
+      const decision = evaluateStellarCheckout({
+        ...req.body,
+        _geo: requestGeo
+      });
 
       if (!decision.ok) {
         return res.status(decision.status).json(decision);
