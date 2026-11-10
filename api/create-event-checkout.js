@@ -295,22 +295,43 @@ async function buildPaymentActivationStatus() {
   );
 
   // Safe payout-bank summary only (bank name + last4). Never include IBAN/BIC.
+  // Prefer GET /v1/account (own secret key). Restricted keys may omit banks.
   let payoutBank = {
     probed: false,
     default_eur: null
   };
   if (stripeMode === "live" || stripeMode === "test") {
     try {
-      // Account id is not a secret (already in Owner Stripe docs). Prefer env override.
+      const stripe = getStripe();
       const accountId = String(
         process.env.STRIPE_ACCOUNT_ID || "acct_1UJwZZECWiUpELSP"
       ).trim();
-      const account = await getStripe().accounts.retrieve(accountId, {
-        expand: ["external_accounts"]
-      });
-      const banks = Array.isArray(account?.external_accounts?.data)
+      let account = null;
+      try {
+        account = await stripe.request({
+          method: "GET",
+          path: "/v1/account",
+          params: { expand: ["external_accounts"] }
+        });
+      } catch (_ownAccountError) {
+        account = await stripe.accounts.retrieve(accountId, {
+          expand: ["external_accounts"]
+        });
+      }
+      let banks = Array.isArray(account?.external_accounts?.data)
         ? account.external_accounts.data
         : [];
+      if (!banks.length) {
+        try {
+          const listed = await stripe.accounts.listExternalAccounts(accountId, {
+            object: "bank_account",
+            limit: 10
+          });
+          banks = Array.isArray(listed?.data) ? listed.data : [];
+        } catch (_listError) {
+          banks = [];
+        }
+      }
       const eurDefault =
         banks.find(
           (b) =>
@@ -332,6 +353,7 @@ async function buildPaymentActivationStatus() {
         payouts_enabled: account?.payouts_enabled === true,
         tax_id_provided: account?.company?.tax_id_provided === true,
         vat_id_provided: account?.company?.vat_id_provided === true,
+        bank_accounts_visible: banks.length > 0,
         default_eur: eurDefault
           ? {
               bank_name: String(eurDefault.bank_name || ""),
@@ -343,18 +365,24 @@ async function buildPaymentActivationStatus() {
             }
           : null
       };
-      if (
-        !payoutBank.default_eur ||
-        payoutBank.default_eur.last4 !== "8455" ||
-        !/revolut/i.test(payoutBank.default_eur.bank_name || "")
-      ) {
-        blockers.push(
-          "Confirm Revolut Business EUR (last4 8455) remains the default Stripe payout bank."
-        );
-      } else if (payoutBank.default_eur.status !== "verified") {
-        blockers.push(
-          "Stripe payout bank Revolut …8455 is attached as default but status is not verified yet."
-        );
+      if (payoutBank.default_eur) {
+        if (
+          payoutBank.default_eur.last4 !== "8455" ||
+          !/revolut/i.test(payoutBank.default_eur.bank_name || "")
+        ) {
+          blockers.push(
+            "Confirm Revolut Business EUR (last4 8455) remains the default Stripe payout bank."
+          );
+        } else if (payoutBank.default_eur.status !== "verified") {
+          blockers.push(
+            "Stripe payout bank Revolut …8455 is attached as default but status is not verified yet."
+          );
+        }
+      } else if (!payoutBank.bank_accounts_visible) {
+        // Restricted Production keys often cannot list external accounts.
+        // Authoritative verification remains Stripe Dashboard / Owner MCP audit.
+        payoutBank.note =
+          "Bank list not readable with current Production Stripe key permissions; use Dashboard/MCP for last4 confirmation.";
       }
     } catch (error) {
       payoutBank = {
