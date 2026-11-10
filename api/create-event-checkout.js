@@ -549,7 +549,7 @@ function getOrigin(req) {
       : req.headers.host;
 
   if (!host) {
-    return "https://havkar-app.vercel.app";
+    return "https://havkar.online";
   }
 
   const forwardedProto =
@@ -569,19 +569,26 @@ function allowedCheckoutOrigin(req) {
   try {
     const url = new URL(origin);
     const host = url.hostname;
+    const stagingHost =
+      host === "staging.havkar.online" || host === "testnet.havkar.online";
     const havkarHost = host === "havkar.online"
+      || host === "www.havkar.online"
       || host.endsWith(".havkar.online")
       || host === "havkar-app.vercel.app"
       || (host.endsWith(".vercel.app") && host.includes("havkar"));
 
     if (url.protocol === "https:" && havkarHost) {
-      return origin;
+      // Keep dedicated preview hosts; canonicalize Production aliases to apex.
+      if (stagingHost) {
+        return origin;
+      }
+      return "https://havkar.online";
     }
   } catch {
     /* Use the public site when the request host is not a HAVKAR host. */
   }
 
-  return "https://havkar-app.vercel.app";
+  return "https://havkar.online";
 }
 
 async function authenticateUser(req) {

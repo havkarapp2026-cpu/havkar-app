@@ -646,6 +646,7 @@ button:disabled {
 
 
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-canonical-origin.js"></script>
 <script src="/havkar-auth-ui.js"></script>
 <script type="module">
 
@@ -978,7 +979,17 @@ googleBtn.addEventListener("click", async () => {
     if (label) label.textContent = "Connecting to Google...";
     showMessage("");
     try {
-        const redirectTo = new URL("login.html", window.location.href).href;
+        const nextPath = window.HAVKAR_CANONICAL
+            ? window.HAVKAR_CANONICAL.safeNextPath(
+                new URLSearchParams(window.location.search).get("next")
+              )
+            : "";
+        const loginPath = nextPath
+            ? "login.html?next=" + encodeURIComponent(nextPath)
+            : "login.html";
+        const redirectTo = window.HAVKAR_CANONICAL
+            ? window.HAVKAR_CANONICAL.authRedirectUrl(loginPath)
+            : new URL(loginPath, "https://havkar.online/").href;
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: "google",
             options: {
@@ -1007,7 +1018,9 @@ resendConfirmBtn.addEventListener("click", async () => {
     resendConfirmBtn.disabled = true;
     resendConfirmBtn.textContent = "Sending confirmation...";
     try {
-        const redirectTo = new URL("login.html", window.location.href).href;
+        const redirectTo = window.HAVKAR_CANONICAL
+            ? window.HAVKAR_CANONICAL.authRedirectUrl("login.html")
+            : "https://havkar.online/login.html";
         const { error } = await supabase.auth.resend({
             type: "signup",
             email: email,
@@ -1267,9 +1280,9 @@ async function sendPasswordReset() {
          * session from the email link.
          */
 
-        const redirectTo =
-            window.location.origin +
-            window.location.pathname;
+        const redirectTo = window.HAVKAR_CANONICAL
+            ? window.HAVKAR_CANONICAL.authRedirectUrl("login.html")
+            : "https://havkar.online/login.html";
 
 
         const {
@@ -1897,6 +1910,17 @@ function authCallbackMessage(){
             data.session &&
             data.session.user
         ){
+
+            const nextPath = window.HAVKAR_CANONICAL
+                ? window.HAVKAR_CANONICAL.safeNextPath(
+                    new URLSearchParams(window.location.search).get("next")
+                  )
+                : "";
+
+            if (nextPath) {
+                window.location.replace(nextPath);
+                return;
+            }
 
             showAccountMode(data.session.user);
 
