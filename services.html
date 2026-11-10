@@ -2416,6 +2416,20 @@ function clearSearch() {
 
 }
 
+(function applySearchQueryFromUrl() {
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const query = String(params.get("q") || "").trim();
+        if (query && searchInput) {
+            searchInput.value = query;
+            updateClearSearchButton();
+            renderServices();
+        }
+    } catch (error) {
+        // Ignore malformed query strings.
+    }
+})();
+
 
 /* =========================================================
    CATEGORY

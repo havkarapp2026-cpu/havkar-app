@@ -2722,12 +2722,9 @@ input:focus-visible{
         </button>
 
 
-        <!-- BLOCKED USERS: hidden until account-level blocking exists. -->
-
         <button
-            class="setting-row settings-deferred"
+            class="setting-row"
             type="button"
-            hidden
             onclick="openBlockedUsers()">
 
             <div class="setting-icon">
@@ -5697,67 +5694,148 @@ function(){
 ========================================================= */
 
 window.openBlockedUsers =
-function(){
+async function(){
 
-    const blockedKey =
-        currentUser
-        ?
-        "havkar_blocked_users_" + currentUser.id
-        :
-        "havkar_blocked_users";
+    if(!currentUser || !supabase){
 
+        showSettingsPanel(
+            "Blocked Users",
+            "fas fa-user-slash",
+            "Sign in to manage account-level blocked users.",
+            []
+        );
+        return;
+
+    }
 
     let blocked = [];
-
+    let backendReady = true;
+    let errorText = "";
 
     try{
 
-        blocked =
-            JSON.parse(
-                localStorage.getItem(
-                    blockedKey
-                ) || "[]"
+        const loaded =
+            await supabase
+                .from("user_blocks")
+                .select("blocked_id,created_at")
+                .eq("blocker_id", currentUser.id)
+                .order("created_at", { ascending: false });
+
+        if(loaded.error){
+
+            backendReady = false;
+            errorText =
+                String(
+                    loaded.error.message ||
+                    loaded.error.code ||
+                    ""
+                );
+
+        }else{
+
+            blocked =
+                Array.isArray(loaded.data)
+                    ? loaded.data
+                    : [];
+
+        }
+
+    }catch(error){
+
+        backendReady = false;
+        errorText =
+            String(
+                (error && error.message) ||
+                error ||
+                ""
             );
 
     }
-    catch(error){
 
-        blocked = [];
-
-    }
-
-
-    showSettingsPanel(
-
-        "Blocked Users",
-
-        "fas fa-user-slash",
-
-        blocked.length
+    const body =
+        !backendReady
         ?
         `
-        You currently have
-        <strong>${blocked.length}</strong>
-        blocked user(s) on this device.
+        Account-level blocking is prepared in the release branch
+        (<code>user_blocks</code>).
 
         <br><br>
 
-        Cross-device blocking will require the
-        HAVKAR backend blocking system.
+        Production still needs the Owner-approved migration
+        before cross-device blocks can be stored.
+
+        <br><br>
+
+        ${errorText ? ("Detail: " + errorText) : ""}
         `
         :
-        `
-        You have no locally stored blocked users.
+        (
+            blocked.length
+            ?
+            `
+            You have
+            <strong>${blocked.length}</strong>
+            blocked account(s).
 
-        <br><br>
+            <br><br>
 
-        HAVKAR will use account-level blocking so
-        blocked users cannot continue unwanted contact.
-        `,
+            Blocked users stay hidden from your conversation list
+            after chat refresh. Unblock from a future profile action
+            or ask support if you need help.
+            `
+            :
+            `
+            You have no blocked accounts yet.
 
+            <br><br>
+
+            Account-level blocks use the HAVKAR
+            <code>user_blocks</code> table (not device-only storage).
+            `
+        );
+
+    showSettingsPanel(
+        "Blocked Users",
+        "fas fa-user-slash",
+        body,
         []
-
     );
+
+};
+
+window.havkarBlockUser =
+async function(blockedUserId){
+
+    if(!currentUser || !supabase){
+        return { ok:false, error:"Sign in required." };
+    }
+
+    const target =
+        String(blockedUserId || "").trim();
+
+    if(!target || target === String(currentUser.id)){
+        return { ok:false, error:"Invalid user." };
+    }
+
+    const inserted =
+        await supabase
+            .from("user_blocks")
+            .upsert(
+                {
+                    blocker_id: currentUser.id,
+                    blocked_id: target
+                },
+                { onConflict: "blocker_id,blocked_id" }
+            );
+
+    if(inserted.error){
+        return {
+            ok:false,
+            error: inserted.error.message || "Block failed."
+        };
+    }
+
+    return { ok:true };
 
 };
 
