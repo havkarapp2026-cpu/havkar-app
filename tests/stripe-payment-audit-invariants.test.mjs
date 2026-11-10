@@ -35,9 +35,14 @@ assert.equal(settlement.settlementActionForEvent("payout.created").kind, "payout
 const webhook = fs.readFileSync("api/stripe-webhook.js", "utf8");
 assert.match(webhook, /constructEvent/);
 assert.match(webhook, /bodyParser:\s*false/);
-assert.match(webhook, /owner_micro_test/);
+assert.match(webhook, /claimStripeWebhookEvent/);
+assert.match(webhook, /isOwnerEur1Session/);
 assert.match(webhook, /Signed webhook delivery must still verify and settle/);
 assert.doesNotMatch(webhook, /sk_live_[A-Za-z0-9]+/);
+assert.match(
+  fs.readFileSync("lib/stripe-webhook-idempotency.cjs", "utf8"),
+  /owner_micro_test/
+);
 
 const marketplaceJs = fs.readFileSync("havkar-marketplace.js", "utf8");
 assert.match(marketplaceJs, /SELLER_FEE_RATE = 0\.03/);

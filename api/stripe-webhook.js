@@ -15,6 +15,11 @@ import {
   ticketUpdateFromSettlement,
   isDuplicatePaidActivation
 } from "../lib/stripe-ticket-settlement.cjs";
+import {
+  claimStripeWebhookEvent,
+  isOwnerEur1Session,
+  ownerEur1Response
+} from "../lib/stripe-webhook-idempotency.cjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -146,6 +151,32 @@ export default async function handler(req, res) {
   }
 
   try {
+    const claim = await claimStripeWebhookEvent(supabase, event);
+    if (!claim.ok) {
+      console.error(
+        "HAVKAR Stripe webhook event claim failed:",
+        claim.error && claim.error.message
+      );
+      return res.status(500).json({
+        error: "Webhook event claim failed",
+      });
+    }
+
+    if (claim.duplicate) {
+      return res.status(200).json({
+        received: true,
+        duplicate: true,
+        event_id: event.id,
+        event_type: event.type
+      });
+    }
+
+    if (claim.warning === "table_missing") {
+      console.warn(
+        "HAVKAR stripe_webhook_events table missing; processing without durable idempotency"
+      );
+    }
+
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
 
@@ -160,17 +191,19 @@ export default async function handler(req, res) {
       const ticketId = session.metadata?.event_ticket_id;
 
       if (!ticketId) {
-        if (String(session.metadata?.havkar_owner_micro_test || "") === "true") {
+        if (isOwnerEur1Session(session)) {
           console.log(
             "HAVKAR Owner EUR micro-test Checkout acknowledged:",
             session.id,
-            session.payment_status
+            session.payment_status,
+            event.id
           );
-          return res.status(200).json({
-            received: true,
-            owner_micro_test: true,
-            payment_status: session.payment_status || null
-          });
+          return res.status(200).json(
+            ownerEur1Response(session, {
+              event_id: event.id,
+              durable_idempotency: Boolean(claim.durable)
+            })
+          );
         }
 
         console.error(
