@@ -202,8 +202,11 @@ async function readXlmInvoice(req) {
 async function buildPaymentActivationStatus() {
   const {
     stellarMainnetPaymentsEnabled,
+    stellarMainnetLiveCollectionEnabled,
     mainnetReady,
+    mainnetCustomerLiveReady,
     MAINNET_FLAG,
+    MAINNET_LIVE_COLLECTION_FLAG,
     MAINNET_DESTINATION_ENV
   } = require("../lib/stellar-mainnet.cjs");
   const {
@@ -215,7 +218,9 @@ async function buildPaymentActivationStatus() {
   const realEnabled = process.env.HAVKAR_REAL_PAYMENTS_ENABLED === "true";
   const cardsAllowed = cardPaymentsAllowed();
   const stellarMainnetFlag = stellarMainnetPaymentsEnabled();
+  const stellarMainnetLive = stellarMainnetLiveCollectionEnabled();
   const stellarMainnetReady = mainnetReady();
+  const stellarMainnetCustomerLive = mainnetCustomerLiveReady();
   const testnetDestinationConfigured = Boolean(
     String(
       process.env.HAVKAR_STELLAR_TESTNET_DESTINATION ||
@@ -296,6 +301,12 @@ async function buildPaymentActivationStatus() {
           "=true on Vercel Production, then redeploy."
       );
     }
+  } else if (!stellarMainnetLive) {
+    blockers.push(
+      "Mainnet infrastructure is armed, but customer live collection stays off until Owner sets " +
+        MAINNET_LIVE_COLLECTION_FLAG +
+        "=true after final approval, then redeploys. Testnet XLM remains available."
+    );
   }
 
   blockers.push(
@@ -408,11 +419,15 @@ async function buildPaymentActivationStatus() {
     generated_at: new Date().toISOString(),
     customer_facing_collection: cardsAllowed ? "armed" : "paused",
     stellar_mainnet_collection: stellarMainnetReady ? "armed" : "paused",
+    stellar_mainnet_customer_live: stellarMainnetCustomerLive
+      ? "armed"
+      : "paused",
     flags: {
       HAVKAR_REAL_PAYMENTS_ENABLED: realEnabled,
       HAVKAR_STRIPE_LIVE_ENABLED:
         process.env.HAVKAR_STRIPE_LIVE_ENABLED === "true",
       HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED: stellarMainnetFlag,
+      HAVKAR_STELLAR_MAINNET_LIVE_COLLECTION: stellarMainnetLive,
       STELLAR_MAINNET_PAYMENTS_ENABLED_SOURCE: true
     },
     stripe: {
@@ -426,21 +441,25 @@ async function buildPaymentActivationStatus() {
       testnet_destination_configured: testnetDestinationConfigured,
       mainnet_payments_enabled_in_source: true,
       mainnet_flag: stellarMainnetFlag,
+      mainnet_live_collection: stellarMainnetLive,
       mainnet_destination_configured: mainnetDestinationConfigured,
       mainnet_ownership_verified: mainnetOwnership.verified === true,
       mainnet_ownership_verified_at: mainnetOwnership.verified_at,
       mainnet_ownership_method: mainnetOwnership.method,
       mainnet_ready: stellarMainnetReady,
+      mainnet_customer_live: stellarMainnetCustomerLive,
       migration_20261109033000: "applied_or_reconciled",
       commissions: {
         marketplace_buyer_bps: 200,
         marketplace_seller_bps: 300,
         services_provider_bps: 1000
       },
-      unsupported_flows: ["subscription", "recurring", "trade"]
+      unsupported_flows: ["subscription", "recurring", "trade", "ai", "jobs"],
+      supported_flows: ["marketplace", "services", "events"]
     },
-    owner_activation_required: !cardsAllowed || !stellarMainnetReady,
-    owner_actions: stellarMainnetReady
+    owner_activation_required:
+      !cardsAllowed || !stellarMainnetCustomerLive,
+    owner_actions: stellarMainnetCustomerLive
       ? []
       : [
           ...(mainnetDestinationConfigured
@@ -470,10 +489,16 @@ async function buildPaymentActivationStatus() {
               "After ownership proof, set HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED=true (exact) on Vercel Production and redeploy."
           },
           {
-            id: "smoke_settle",
-            required: true,
+            id: "enable_mainnet_live_collection",
+            required: stellarMainnetReady && !stellarMainnetLive,
             detail:
-              "After stellar.mainnet_ready=true, run one tiny real Mainnet payment and confirm the intent settles with the Horizon tx hash."
+              "After final Owner approval of the XLM release branch, set HAVKAR_STELLAR_MAINNET_LIVE_COLLECTION=true (exact) and redeploy. Until then customer Mainnet quotes stay refused; Testnet remains available."
+          },
+          {
+            id: "smoke_settle",
+            required: stellarMainnetCustomerLive,
+            detail:
+              "After stellar.mainnet_customer_live=true, run one tiny real Mainnet payment and confirm the intent settles with the Horizon tx hash."
           }
         ],
     blockers: blockers
@@ -718,7 +743,307 @@ async function countReservedTickets(eventId) {
 }
 
 /**
- * After Horizon verifies a Testnet XLM settlement, create the domain object
+ * Validate marketplace / services / events subjects before storing an unpaid quote.
+ * Never invents prices. Never allows self-purchase marketplace quotes.
+ */
+async function validateXlmQuoteSubject(admin, userId, decision) {
+  const flow = String(decision.flow || "");
+  const subjectId = String(decision.subject_id || "").trim();
+
+  if (!subjectId) {
+    return {
+      ok: false,
+      status: 400,
+      code: "SUBJECT_REQUIRED",
+      error: "A subject_id is required for XLM checkout.",
+      paid: false,
+      order_paid: false,
+      payable: false
+    };
+  }
+
+  if (flow === "marketplace") {
+    const listingId = Number(subjectId);
+
+    if (!Number.isSafeInteger(listingId) || listingId <= 0) {
+      return {
+        ok: false,
+        status: 400,
+        code: "SUBJECT_INVALID",
+        error: "Marketplace subject_id must be a listing id.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    const loaded = await admin
+      .from("ads")
+      .select("id,user_id,price,status,listing_surface")
+      .eq("id", listingId)
+      .maybeSingle();
+
+    const ad = loaded && loaded.data;
+
+    if (!ad) {
+      return {
+        ok: false,
+        status: 404,
+        code: "LISTING_NOT_FOUND",
+        error: "Marketplace listing was not found.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    if (String(ad.listing_surface || "") !== "marketplace") {
+      return {
+        ok: false,
+        status: 409,
+        code: "NOT_MARKETPLACE_LISTING",
+        error: "XLM marketplace checkout is only for marketplace listings.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    if (String(ad.status || "").toLowerCase() !== "active") {
+      return {
+        ok: false,
+        status: 409,
+        code: "LISTING_NOT_ACTIVE",
+        error: "Only active marketplace listings can be paid with XLM.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    if (String(ad.user_id) === String(userId)) {
+      return {
+        ok: false,
+        status: 403,
+        code: "SELF_PURCHASE_FORBIDDEN",
+        error: "You cannot pay yourself for your own listing.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    const listed = Number(ad.price);
+
+    if (!Number.isFinite(listed) || listed <= 0) {
+      return {
+        ok: false,
+        status: 409,
+        code: "LISTING_PRICE_INVALID",
+        error: "The listing has no positive price for XLM.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    if (Number(decision.fees.price) !== listed) {
+      return {
+        ok: false,
+        status: 409,
+        code: "PRICE_MISMATCH",
+        error: "Quoted price does not match the current listing price.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    return { ok: true, listing: ad };
+  }
+
+  if (flow === "services") {
+    const serviceId = Number(subjectId);
+
+    if (!Number.isSafeInteger(serviceId) || serviceId <= 0) {
+      return {
+        ok: false,
+        status: 400,
+        code: "SUBJECT_INVALID",
+        error: "Services subject_id must be a service id.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    const loaded = await admin
+      .from("services")
+      .select("id,provider_id,price,price_type,status")
+      .eq("id", serviceId)
+      .maybeSingle();
+
+    const service = loaded && loaded.data;
+
+    if (!service) {
+      return {
+        ok: false,
+        status: 404,
+        code: "SERVICE_NOT_FOUND",
+        error: "Service was not found for XLM checkout.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    if (String(service.provider_id) === String(userId)) {
+      return {
+        ok: false,
+        status: 403,
+        code: "SELF_PURCHASE_FORBIDDEN",
+        error: "You cannot pay yourself for your own service.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    if (
+      service.status != null &&
+      String(service.status).toLowerCase() !== "active"
+    ) {
+      return {
+        ok: false,
+        status: 409,
+        code: "SERVICE_NOT_ACTIVE",
+        error: "Only active services can be paid with XLM.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    const priceType = String(service.price_type || "").toLowerCase();
+
+    if (["hour", "day", "week", "month"].indexOf(priceType) !== -1) {
+      return {
+        ok: false,
+        status: 403,
+        code: "XLM_RECURRING_UNSUPPORTED",
+        error: "Recurring service pricing cannot be settled with one-time XLM.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    const listed = Number(service.price);
+
+    if (!Number.isFinite(listed) || listed <= 0) {
+      return {
+        ok: false,
+        status: 409,
+        code: "SERVICE_PRICE_INVALID",
+        error: "The service has no positive one-time price for XLM.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    if (Number(decision.fees.price) !== listed) {
+      return {
+        ok: false,
+        status: 409,
+        code: "PRICE_MISMATCH",
+        error: "Quoted price does not match the current service price.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    return { ok: true, service: service };
+  }
+
+  if (flow === "events") {
+    const eventId = Number(subjectId);
+
+    if (!Number.isSafeInteger(eventId) || eventId <= 0) {
+      return {
+        ok: false,
+        status: 400,
+        code: "SUBJECT_INVALID",
+        error: "Events subject_id must be an event id.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    const loaded = await admin
+      .from("events")
+      .select("id,price,status,max_attendees")
+      .eq("id", eventId)
+      .maybeSingle();
+
+    const event = loaded && loaded.data;
+
+    if (!event) {
+      return {
+        ok: false,
+        status: 404,
+        code: "EVENT_NOT_FOUND",
+        error: "Event was not found for XLM checkout.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    const listed = Number(event.price);
+
+    if (!Number.isFinite(listed) || listed <= 0) {
+      return {
+        ok: false,
+        status: 409,
+        code: "EVENT_PRICE_INVALID",
+        error: "The event has no positive one-time price for XLM.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    if (Number(decision.fees.price) !== listed) {
+      return {
+        ok: false,
+        status: 409,
+        code: "PRICE_MISMATCH",
+        error: "Quoted price does not match the current event price.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    return { ok: true, event: event };
+  }
+
+  return {
+    ok: false,
+    status: 400,
+    code: "XLM_FLOW_UNSUPPORTED",
+    error: "Unsupported XLM flow.",
+    paid: false,
+    order_paid: false,
+    payable: false
+  };
+}
+
+/**
+ * After Horizon verifies an XLM settlement, create the domain object
  * for supported one-time flows. Never invents a ticket for unpaid quotes.
  */
 async function fulfillSettledXlmIntent(admin, userId, intentId) {
@@ -735,7 +1060,58 @@ async function fulfillSettledXlmIntent(admin, userId, intentId) {
     return { ticket_id: null, fulfillment: null, error: null };
   }
 
-  if (String(intent.flow || "") !== "events") {
+  const flow = String(intent.flow || "");
+
+  if (flow === "marketplace") {
+    const listingId = Number(intent.subject_id);
+
+    if (!Number.isSafeInteger(listingId) || listingId <= 0) {
+      return {
+        ticket_id: null,
+        fulfillment: null,
+        error: "Marketplace subject is missing on the settled quote."
+      };
+    }
+
+    const updated = await admin
+      .from("ads")
+      .update({ status: "ended" })
+      .eq("id", listingId)
+      .eq("listing_surface", "marketplace")
+      .eq("status", "active")
+      .select("id,status")
+      .maybeSingle();
+
+    if (!updated.data || String(updated.data.status) !== "ended") {
+      return {
+        ticket_id: null,
+        fulfillment: "marketplace_intent",
+        listing_id: listingId,
+        error:
+          "Settlement was verified. Listing could not be marked ended (already ended or unavailable)."
+      };
+    }
+
+    return {
+      ticket_id: null,
+      fulfillment: "marketplace_listing_ended",
+      listing_id: listingId,
+      error: null
+    };
+  }
+
+  if (flow === "services") {
+    return {
+      ticket_id: null,
+      fulfillment: "services_intent",
+      service_id: intent.subject_id || null,
+      payment_reference: intent.tx_hash || null,
+      network: intent.network || null,
+      error: null
+    };
+  }
+
+  if (flow !== "events") {
     return {
       ticket_id: null,
       fulfillment: "intent_only",
@@ -1113,6 +1489,16 @@ export default async function handler(req, res) {
 
       if (!decision.ok) {
         return res.status(decision.status).json(decision);
+      }
+
+      const subjectCheck = await validateXlmQuoteSubject(
+        getSupabaseAdmin(),
+        user.id,
+        decision
+      );
+
+      if (!subjectCheck.ok) {
+        return res.status(subjectCheck.status).json(subjectCheck);
       }
 
       const quoted = await buildXlmQuote(decision);
