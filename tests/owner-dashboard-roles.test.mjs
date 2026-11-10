@@ -32,10 +32,11 @@ assert.match(operator, /soranEmail:\s*"soran@havkar\.online"/);
 assert.match(operator, /infoEmail:\s*"info@havkar\.online"/);
 assert.match(operator, /supportEmail:\s*"support@havkar\.online"/);
 assert.match(operator, /registrationNumber:\s*"KR234170"/);
+assert.match(operator, /reaNumber:\s*"KR-234170"/);
 assert.match(operator, /registeredAddress:\s*"Francesco Antonio Lucifero 40, 88900 Crotone, Italy"/);
 assert.match(
   operator,
-  /chamberRegistrationStatus:\s*"registration_number_from_revolut_business_2026-11-09"/
+  /chamberRegistrationStatus:\s*"rea_from_revolut_business_registration_2026-11-09"/
 );
 assert.match(operator, /hidePersonalEmails:\s*\["amirjalilnia@gmail\.com"\]/);
 assert.match(operator, /havkarapp2026@gmail\.com/);
@@ -58,8 +59,10 @@ assert.match(profile, /profileStaffWorkspace/);
 assert.match(about, /soran@havkar\.online/);
 assert.match(about, /Owner \/ Investment/);
 assert.match(about, /KR234170/);
+assert.match(about, /KR-234170/);
 assert.doesNotMatch(about, /amirjalilnia@gmail\.com/);
 assert.doesNotMatch(about, /LT16\s*3250|REVOLT21/);
+assert.doesNotMatch(about, /04086440791/);
 assert.doesNotMatch(support, /amirjalilnia@gmail\.com/);
 assert.doesNotMatch(privacy, /amirjalilnia@gmail\.com/);
 assert.match(support, /support@havkar\.online/);

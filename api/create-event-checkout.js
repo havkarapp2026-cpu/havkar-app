@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import { cardPaymentsAllowed } from "../lib/real-payments.cjs";
+import { cardPaymentsAllowed, stripeSecretMode } from "../lib/real-payments.cjs";
 import {
   allowedStripeFiatCurrencies,
   normalizeStripeFiatCurrency
@@ -199,14 +199,7 @@ async function buildPaymentActivationStatus() {
     handleMainnetWalletOwnership
   } = require("../lib/stellar-mainnet-ownership.cjs");
 
-  const stripeKey = String(process.env.STRIPE_SECRET_KEY || "");
-  const stripeMode = /^sk_live(?:_|\b)/.test(stripeKey)
-    ? "live"
-    : /^sk_test(?:_|\b)/.test(stripeKey)
-      ? "test"
-      : stripeKey
-        ? "unknown"
-        : "missing";
+  const stripeMode = stripeSecretMode();
 
   const realEnabled = process.env.HAVKAR_REAL_PAYMENTS_ENABLED === "true";
   const cardsAllowed = cardPaymentsAllowed();

@@ -1,6 +1,6 @@
 # HAVKAR — Production activation status
 
-Updated: **9 November 2026** (ops-legal-staff release)
+Updated: **10 November 2026** (Stripe audit + REA publish; Partita still unpublished)
 
 ## Stellar Mainnet
 
@@ -26,7 +26,8 @@ Updated: **9 November 2026** (ops-legal-staff release)
 | Legal name | HAVKAR DI JALILNIA AMIR |
 | Registration number | KR234170 (Revolut Business doc 9 Nov 2026) |
 | Registered address | Francesco Antonio Lucifero 40, 88900 Crotone, Italy |
-| Partita IVA / REA | Empty / unpublished until Visura |
+| REA | KR-234170 (from Revolut Business registration KR234170) |
+| Partita IVA | Unpublished — no Visura on file |
 | Bank / IBAN / BIC | Never in frontend or git — Stripe Dashboard only |
 
 ### YELLOW
