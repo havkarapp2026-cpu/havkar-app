@@ -38,8 +38,13 @@ console.log(
       ok: true,
       base,
       stellar_mainnet_collection: body.stellar_mainnet_collection,
+      stellar_mainnet_customer_live:
+        body.stellar_mainnet_customer_live ||
+        (body.stellar && body.stellar.mainnet_customer_live ? "armed" : "paused"),
       mainnet_ready: body.stellar.mainnet_ready,
+      mainnet_customer_live: body.stellar.mainnet_customer_live || false,
       mainnet_flag: body.stellar.mainnet_flag,
+      mainnet_live_collection: body.stellar.mainnet_live_collection || false,
       mainnet_destination_configured: body.stellar.mainnet_destination_configured,
       stripe_collection: body.customer_facing_collection,
       blockers: body.blockers

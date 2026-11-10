@@ -26,7 +26,9 @@ async function main() {
     "utf8"
   );
   assert.match(mainnetHelper, /HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED/);
+  assert.match(mainnetHelper, /HAVKAR_STELLAR_MAINNET_LIVE_COLLECTION/);
   assert.match(mainnetHelper, /HAVKAR_STELLAR_MAINNET_DESTINATION/);
+  assert.match(mainnetHelper, /stellarMainnetLiveCollectionEnabled/);
 
   const webhook = await fetch(base + "/api/stripe-webhook", {
     method: "POST",

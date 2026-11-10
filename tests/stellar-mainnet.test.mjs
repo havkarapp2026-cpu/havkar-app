@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import {
   mainnetReady,
+  mainnetCustomerLiveReady,
   readMainnetDestination,
-  stellarMainnetPaymentsEnabled
+  stellarMainnetPaymentsEnabled,
+  stellarMainnetLiveCollectionEnabled
 } from "../lib/stellar-mainnet.cjs";
 import {
   buildXlmQuote,
@@ -13,6 +15,14 @@ import {
 assert.equal(stellarMainnetPaymentsEnabled({}), false);
 assert.equal(
   stellarMainnetPaymentsEnabled({ HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED: "true" }),
+  true
+);
+assert.equal(stellarMainnetLiveCollectionEnabled({}), false);
+assert.equal(
+  stellarMainnetLiveCollectionEnabled({
+    HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED: "true",
+    HAVKAR_STELLAR_MAINNET_LIVE_COLLECTION: "true"
+  }),
   true
 );
 
@@ -28,8 +38,15 @@ const readyEnv = {
   HAVKAR_STELLAR_MAINNET_DESTINATION: destination
 };
 assert.equal(mainnetReady(readyEnv), true);
+assert.equal(mainnetCustomerLiveReady(readyEnv), false);
 
-const decision = evaluateStellarCheckout(
+const liveEnv = {
+  ...readyEnv,
+  HAVKAR_STELLAR_MAINNET_LIVE_COLLECTION: "true"
+};
+assert.equal(mainnetCustomerLiveReady(liveEnv), true);
+
+const liveOff = evaluateStellarCheckout(
   {
     network: "mainnet",
     flow: "marketplace",
@@ -39,12 +56,24 @@ const decision = evaluateStellarCheckout(
   new Date(),
   readyEnv
 );
+assert.equal(liveOff.code, "STELLAR_MAINNET_LIVE_COLLECTION_OFF");
+
+const decision = evaluateStellarCheckout(
+  {
+    network: "mainnet",
+    flow: "marketplace",
+    price: 50,
+    idempotency_key: "mainnet-123456"
+  },
+  new Date(),
+  liveEnv
+);
 assert.equal(decision.ok, true);
 assert.equal(decision.network, "mainnet");
 
 const now = Math.floor(Date.now() / 1000);
 const quoted = await buildXlmQuote(decision, {
-  env: readyEnv,
+  env: liveEnv,
   fetchImpl: async (url) => {
     const href = String(url);
     if (href.includes("/accounts/")) {
@@ -67,7 +96,7 @@ assert.equal(quoted.destination, destination);
 assert.equal(quoted.horizon, "https://horizon.stellar.org");
 
 const missingAccount = await buildXlmQuote(decision, {
-  env: readyEnv,
+  env: liveEnv,
   fetchImpl: async (url) => {
     if (String(url).includes("/accounts/")) {
       return { ok: false, status: 404, json: async () => ({}) };
@@ -146,7 +175,7 @@ const settled = await verifyStellarSettlement(
   "user-1",
   { intent_id: "intent-mainnet", tx_hash: hash },
   {
-    env: readyEnv,
+    env: liveEnv,
     fetchImpl: async (url) => {
       if (String(url).includes("/payments")) {
         return {
