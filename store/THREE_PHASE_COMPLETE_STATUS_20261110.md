@@ -57,11 +57,12 @@ https://havkar.online/owner-eur1-checkout.html
 | --- | --- |
 | Agent `workflow_dispatch` | HTTP **403** |
 | Signed build trigger added | tag `havkar-android-signed-*` / `havkar-ios-signed-*` |
-| Workflow permissions | `contents: read` + `actions: write` for artifacts |
+| Android signed AAB | ✅ run `42744481961` tag `havkar-android-signed-20261110a` · artifact `havkar-app-release-signed-42744481961` · jarsigner-strict + fingerprint OK · package `online.havkar.app` · versionName `1.0.0` · versionCode `2` |
+| iOS signed IPA | ⛔ run `42744829769` archive path reached; export exit 70 — `Cloud signing permission error` / `No profiles for online.havkar.app` (secret `APPLE_PROVISIONING_PROFILE_BASE64` missing or ASC cloud signing disabled) |
 | Play / App Store submit | not performed (no console credentials in agent) |
 
 ### Exact Owner actions (Phase 3)
 
-1. Ensure Android upload-key secrets exist, then either Run workflow `signed` **or** create tag `havkar-android-signed-<date>`.
-2. Ensure Apple Distribution + ASC API secrets (+ profile recommended), then Run `signed_ipa` **or** tag `havkar-ios-signed-<date>`.
-3. Upload AAB / IPA in Play Console / App Store Connect and report review IDs.
+1. Download Android artifact from run `42744481961` and upload in Google Play Console when ready.
+2. Add GitHub secret `APPLE_PROVISIONING_PROFILE_BASE64` (App Store Distribution profile for `online.havkar.app`) **or** enable ASC cloud signing for the API key, then re-run tag `havkar-ios-signed-*`.
+3. Upload IPA in App Store Connect and report review IDs.
