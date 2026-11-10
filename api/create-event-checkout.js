@@ -294,6 +294,76 @@ async function buildPaymentActivationStatus() {
     "Refunds require an Owner-signed return payment from the merchant Mainnet account; server only verifies Horizon."
   );
 
+  // Safe payout-bank summary only (bank name + last4). Never include IBAN/BIC.
+  let payoutBank = {
+    probed: false,
+    default_eur: null
+  };
+  if (stripeMode === "live" || stripeMode === "test") {
+    try {
+      // Account id is not a secret (already in Owner Stripe docs). Prefer env override.
+      const accountId = String(
+        process.env.STRIPE_ACCOUNT_ID || "acct_1UJwZZECWiUpELSP"
+      ).trim();
+      const account = await getStripe().accounts.retrieve(accountId, {
+        expand: ["external_accounts"]
+      });
+      const banks = Array.isArray(account?.external_accounts?.data)
+        ? account.external_accounts.data
+        : [];
+      const eurDefault =
+        banks.find(
+          (b) =>
+            b &&
+            b.object === "bank_account" &&
+            String(b.currency || "").toLowerCase() === "eur" &&
+            b.default_for_currency === true
+        ) ||
+        banks.find(
+          (b) =>
+            b &&
+            b.object === "bank_account" &&
+            String(b.currency || "").toLowerCase() === "eur"
+        ) ||
+        null;
+      payoutBank = {
+        probed: true,
+        charges_enabled: account?.charges_enabled === true,
+        payouts_enabled: account?.payouts_enabled === true,
+        tax_id_provided: account?.company?.tax_id_provided === true,
+        vat_id_provided: account?.company?.vat_id_provided === true,
+        default_eur: eurDefault
+          ? {
+              bank_name: String(eurDefault.bank_name || ""),
+              last4: String(eurDefault.last4 || ""),
+              country: String(eurDefault.country || ""),
+              currency: String(eurDefault.currency || "").toLowerCase(),
+              default_for_currency: eurDefault.default_for_currency === true,
+              status: String(eurDefault.status || "")
+            }
+          : null
+      };
+      if (
+        !payoutBank.default_eur ||
+        payoutBank.default_eur.last4 !== "8455" ||
+        !/revolut/i.test(payoutBank.default_eur.bank_name || "")
+      ) {
+        blockers.push(
+          "Confirm Revolut Business EUR (last4 8455) remains the default Stripe payout bank."
+        );
+      } else if (payoutBank.default_eur.status !== "verified") {
+        blockers.push(
+          "Stripe payout bank Revolut …8455 is attached as default but status is not verified yet."
+        );
+      }
+    } catch (error) {
+      payoutBank = {
+        probed: false,
+        error: "payout_bank_probe_unavailable"
+      };
+    }
+  }
+
   return {
     ok: true,
     generated_at: new Date().toISOString(),
@@ -310,7 +380,8 @@ async function buildPaymentActivationStatus() {
       secret_key_mode: stripeMode,
       webhook_secret_configured: Boolean(process.env.STRIPE_WEBHOOK_SECRET),
       allowed_fiat: allowedStripeFiatCurrencies().map((c) => c.toUpperCase()),
-      live_collection_allowed: cardsAllowed
+      live_collection_allowed: cardsAllowed,
+      payout_bank: payoutBank
     },
     stellar: {
       testnet_destination_configured: testnetDestinationConfigured,
