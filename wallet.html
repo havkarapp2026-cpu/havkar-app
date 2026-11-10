@@ -1354,7 +1354,18 @@ select:focus{
         <button id="stellarSendButton" class="stellar-send-button" type="button" onclick="sendHAVKARStellarPayment()">  
             Sign and send on Testnet  
         </button>  
-    </div>  
+    </div>
+    <div id="stellarReceiveRegister" class="stellar-send" style="margin-top:14px">
+        <label class="stellar-label" for="stellarReceivePublicKey">Marketplace / services receive public key</label>
+        <p class="stellar-note">Register the G… account that should receive buyer XLM under direct-split settlement. HAVKAR never asks for a secret key.</p>
+        <input id="stellarReceivePublicKey" class="stellar-input" type="text" autocomplete="off" spellcheck="false" placeholder="G...">
+        <button id="stellarReceiveSaveButton" class="stellar-send-button" type="button" onclick="saveHAVKARStellarReceiveKey()">
+            Save receive key
+        </button>
+        <button id="stellarReceiveUseConnectedButton" class="stellar-disconnect-button" type="button" onclick="useConnectedAsStellarReceiveKey()">
+            Use connected wallet
+        </button>
+    </div>
     <div id="stellarStatus" class="stellar-status"></div>  
     <div class="stellar-note">  
         Pi Network payment is disconnected on this screen. No Mainnet Pi payment is started from Wallet.  
@@ -5789,6 +5800,68 @@ async function disconnectHAVKARStellar(){
     }  
 }  
   
+function useConnectedAsStellarReceiveKey(){
+    const address=String(window.HAVKAR_STELLAR?.address||"").trim();
+    const input=document.getElementById("stellarReceivePublicKey");
+    if(!input){
+        return;
+    }
+    if(!/^G[A-Z2-7]{55}$/.test(address)){
+        setStellarStatus("Connect a Stellar wallet first, or paste a G… public key.","error");
+        return;
+    }
+    input.value=address;
+    setStellarStatus("Connected public key copied into the receive field. Save to register it.","info");
+}
+
+async function saveHAVKARStellarReceiveKey(){
+    const input=document.getElementById("stellarReceivePublicKey");
+    const button=document.getElementById("stellarReceiveSaveButton");
+    const key=String(input?.value||"").trim();
+    if(!/^G[A-Z2-7]{55}$/.test(key)){
+        setStellarStatus("Enter a valid Stellar public key (G…). Never paste a secret key.","error");
+        return;
+    }
+    if(!supabaseClient){
+        setStellarStatus("Sign in is required to register a receive key.","error");
+        return;
+    }
+    button.disabled=true;
+    try{
+        const session=await supabaseClient.auth.getSession();
+        const user=session?.data?.session?.user;
+        if(!user?.id){
+            setStellarStatus("Sign in before saving a marketplace receive key.","error");
+            return;
+        }
+        const saved=await supabaseClient
+            .from("stellar_receive_accounts")
+            .upsert(
+                {
+                    user_id:user.id,
+                    public_key:key,
+                    updated_at:new Date().toISOString()
+                },
+                { onConflict:"user_id" }
+            )
+            .select("public_key")
+            .single();
+        if(saved.error){
+            setStellarStatus(
+                saved.error.message||
+                "Could not save receive key. Owner may still need to apply the stellar_receive_accounts migration.",
+                "error"
+            );
+            return;
+        }
+        setStellarStatus("Receive public key saved for direct-split XLM settlement.","success");
+    }catch(error){
+        setStellarStatus(error?.message||"Could not save receive key.","error");
+    }finally{
+        button.disabled=false;
+    }
+}
+
 async function sendHAVKARStellarPayment(){  
     const button=document.getElementById("stellarSendButton");  
     const destination=document.getElementById("stellarDestination")?.value||"";  

@@ -116,5 +116,10 @@ assert.match(details, /cannot pay yourself for your own listing/);
 const xlm = fs.readFileSync("havkar-xlm-checkout.js", "utf8");
 assert.match(xlm, /mainnet_customer_live/);
 assert.match(xlm, /describeNetworkAvailability/);
+assert.match(xlm, /direct_split/);
+
+const models = fs.readFileSync("lib/stellar-settlement-models.cjs", "utf8");
+assert.match(models, /MODEL_DIRECT_SPLIT/);
+assert.match(models, /buyerPays/);
 
 console.log("XLM_FLOW_GUARDS_TEST_OK");

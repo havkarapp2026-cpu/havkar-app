@@ -215,6 +215,9 @@ async function buildPaymentActivationStatus() {
   const {
     describeCryptoGeoStatus
   } = require("../lib/crypto-geo-policy.cjs");
+  const {
+    describeSettlementModels
+  } = require("../lib/stellar-settlement-models.cjs");
 
   const stripeMode = stripeSecretMode();
 
@@ -459,7 +462,8 @@ async function buildPaymentActivationStatus() {
       },
       unsupported_flows: ["subscription", "recurring", "trade", "ai", "jobs"],
       supported_flows: ["marketplace", "services", "events"],
-      crypto_geo: describeCryptoGeoStatus()
+      crypto_geo: describeCryptoGeoStatus(),
+      settlement_models: describeSettlementModels()
     },
     owner_activation_required:
       !cardsAllowed || !stellarMainnetCustomerLive,
@@ -750,6 +754,32 @@ async function countReservedTickets(eventId) {
  * Validate marketplace / services / events subjects before storing an unpaid quote.
  * Never invents prices. Never allows self-purchase marketplace quotes.
  */
+async function loadMerchantStellarReceive(admin, ownerUserId) {
+  const owner = String(ownerUserId || "").trim();
+
+  if (!owner) {
+    return null;
+  }
+
+  try {
+    const loaded = await admin
+      .from("stellar_receive_accounts")
+      .select("public_key")
+      .eq("user_id", owner)
+      .maybeSingle();
+
+    const key = String((loaded && loaded.data && loaded.data.public_key) || "").trim();
+
+    if (/^G[A-Z2-7]{55}$/.test(key)) {
+      return key;
+    }
+  } catch (_error) {
+    // Table may not exist until Owner applies migration.
+  }
+
+  return null;
+}
+
 async function validateXlmQuoteSubject(admin, userId, decision) {
   const flow = String(decision.flow || "");
   const subjectId = String(decision.subject_id || "").trim();
@@ -863,7 +893,13 @@ async function validateXlmQuoteSubject(admin, userId, decision) {
       };
     }
 
-    return { ok: true, listing: ad };
+    const merchantKey = await loadMerchantStellarReceive(admin, ad.user_id);
+
+    return {
+      ok: true,
+      listing: ad,
+      merchant_stellar_receive: merchantKey
+    };
   }
 
   if (flow === "services") {
@@ -968,7 +1004,16 @@ async function validateXlmQuoteSubject(admin, userId, decision) {
       };
     }
 
-    return { ok: true, service: service };
+    const merchantKey = await loadMerchantStellarReceive(
+      admin,
+      service.provider_id
+    );
+
+    return {
+      ok: true,
+      service: service,
+      merchant_stellar_receive: merchantKey
+    };
   }
 
   if (flow === "events") {
@@ -1514,7 +1559,9 @@ export default async function handler(req, res) {
         return res.status(subjectCheck.status).json(subjectCheck);
       }
 
-      const quoted = await buildXlmQuote(decision);
+      const quoted = await buildXlmQuote(decision, {
+        merchantDestination: subjectCheck.merchant_stellar_receive || null
+      });
 
       if (!quoted.ok) {
         return res.status(quoted.status).json(quoted);

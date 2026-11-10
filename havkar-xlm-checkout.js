@@ -292,11 +292,26 @@
 
     stageWalletPayment(quoted.result);
 
-    const payment = await root.havkarSignAndSubmitStellarPayment({
+    const signRequest = {
       destination: quoted.result.destination,
       amount: quoted.result.amount_xlm,
       memo: quoted.result.memo
-    });
+    };
+
+    if (
+      quoted.result.settlement_model === "direct_split" &&
+      Array.isArray(quoted.result.payments) &&
+      quoted.result.payments.length >= 2
+    ) {
+      signRequest.payments = quoted.result.payments.map(function (entry) {
+        return {
+          destination: entry.destination,
+          amount: entry.amount_xlm
+        };
+      });
+    }
+
+    const payment = await root.havkarSignAndSubmitStellarPayment(signRequest);
 
     const txHash = String(
       (payment && (payment.hash || payment.txHash || payment.id)) || ""
