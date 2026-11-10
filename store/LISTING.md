@@ -9,10 +9,10 @@ This file prepares store text. It does not submit HAVKAR to Google Play or the A
 - iOS bundle id: online.havkar.app
 - Version: 1.0.0 (version code 2)
 - Icon: assets/icons/havkar-icon-1024-20261022-v3.png
-- Website: https://havkar-app.vercel.app
+- Website: https://havkar.online
 - Support: support@havkar.online
-- Privacy draft: https://havkar-app.vercel.app/privacy.html
-- Account deletion request: https://havkar-app.vercel.app/privacy-request.html
+- Privacy draft: https://havkar.online/privacy.html
+- Account deletion request: https://havkar.online/privacy-request.html
 
 ## Short description
 
@@ -56,7 +56,7 @@ This is a preparation checklist. It is not a Play Console submission and it is n
 - Session: stored by the Supabase client in browser storage. The Android app does not add its own analytics SDK.
 - Payments: card, Pi, Stellar mainnet, and paid AI are off. Do not declare an active payment processor while those switches stay off.
 - Data sharing: Supabase (eu-west-1), Vercel (observed function region iad1), Google sign-in only if the person chooses it, and Google Gemini for signed-in AI text.
-- Account deletion: the public page https://havkar-app.vercel.app/privacy-request.html stores a request. It does not delete the account immediately. Play’s account-deletion URL can point at that page only after the owner accepts that wording.
+- Account deletion: the public page https://havkar.online/privacy-request.html stores a request. It does not delete the account immediately. Play’s account-deletion URL can point at that page only after the owner accepts that wording.
 - Encryption in transit: the site is HTTPS. Android cleartext traffic is not permitted.
 - Tracking: the Android manifest does not request the advertising id. Do not answer the tracking question as a completed declaration until counsel reviews it.
 

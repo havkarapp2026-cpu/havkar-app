@@ -43,7 +43,7 @@ Do **not** declare live Stripe/Pi/Mainnet processors while `HAVKAR_REAL_PAYMENTS
 ## Security practices
 
 - Encryption in transit: HTTPS; Android cleartext disabled
-- Account deletion request URL: `https://havkar-app.vercel.app/privacy-request.html` (stores request; not instant wipe)
+- Account deletion request URL: `https://havkar.online/privacy-request.html` (stores request; not instant wipe)
 - Independent security review: not claimed by this draft
 
 ## Content rating notes for IARC (owner answers in Console)
