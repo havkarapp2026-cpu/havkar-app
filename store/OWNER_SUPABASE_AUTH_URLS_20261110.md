@@ -3,7 +3,14 @@
 Production project: `gispovnciifgikvgpzck`
 
 App code now always sends Google / email `redirectTo` to `https://havkar.online/...`.
-Supabase Auth **Site URL** and **Redirect URLs** must allow that host, or OAuth falls back to the old `havkar-app.vercel.app` Site URL.
+
+Verified on Production (2026-11-10): the browser request to
+`/auth/v1/authorize?...&redirect_to=https://havkar.online/login.html?...`
+is correct, but Supabase’s Google `Location` response still embeds
+`redirect_to=https://havkar-app.vercel.app/...` until Site URL is changed.
+
+Supabase Auth **Site URL** and **Redirect URLs** must allow `havkar.online`,
+or OAuth continues returning sessions on `havkar-app.vercel.app`.
 
 ## Exact Dashboard steps
 
