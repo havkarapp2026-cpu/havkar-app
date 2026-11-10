@@ -29,13 +29,15 @@ https://www.bancaditalia.it/compiti/vigilanza/accesso-mercato/soggetti-mercato-c
 | Fact | Status |
 | --- | --- |
 | End-user private keys / seeds stored by HAVKAR | No |
-| User signs with external wallet | Yes |
+| User signs with external wallet | Yes — Stellar Wallets Kit `defaultModules()` (Albedo, Freighter, LOBSTR, Rabet, xBull, …) + WalletConnect |
+| HAVKAR creates buyer wallets / stores secrets | No |
 | Preferred settlement | `direct_split`: buyer pays merchant + platform fee in one signed tx |
 | Legacy settlement | `platform_collect` fallback to HAVKAR network destination |
 | Marketplace / services / events one-time XLM | Yes |
-| Custodial exchange / order book | No |
+| Custodial exchange / order book | No (`trade` refused) |
 | MiCA CASP license held by HAVKAR | **No — never claim** |
 | LIVE_COLLECTION Mainnet customer | OFF by default |
+| Technical evidence pack | `store/PLAY_CRYPTO_NONCUSTODIAL_EVIDENCE_20261110.md` |
 
 Architecture detail: `store/XLM_LICENSE_MINIMIZING_ARCHITECTURE_20261110.md`.
 

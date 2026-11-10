@@ -33,7 +33,7 @@ Preparation only. Owner submits in Play Console after counsel review. Evidence s
 | Överföring av pengar och elektroniska tjänster | **Nej (پیش‌فرض)** / **نیازمند بررسی حقوقی** | In-app peer remittance / wire product is not a shipped live rail. If counsel considers Stellar/Pi settlement “money transfer,” revisit before submit. |
 | Belöningar، poäng، flygbonuspoäng och andra incitament | Nej | No loyalty/points currency product. |
 | Handla nu, betala senare | Nej | No BNPL. |
-| **Kryptovalutaplånbok** | **Ja — تیک بزن (غیرحضانتی)** | App connects external Stellar wallets and prepares XLM payments; recovery phrases are not collected. Expect Play crypto-wallet country questionnaires; confirm non-custodial answers with counsel. |
+| **Kryptovalutaplånbok** | **Ja — تیک بزن (اتصال کیف‌پول خارجی؛ غیرحضانتی)** | App connects external Stellar wallets (Albedo/Freighter/LOBSTR/… + WalletConnect) and prepares XLM payments; HAVKAR does not create wallets or collect recovery phrases. Expect Play crypto-wallet country questionnaires. Selecting Play Additional Option “non-custodial software wallet” still needs counsel — HAVKAR is a marketplace connector, not a pure wallet product. Evidence: `store/PLAY_CRYPTO_NONCUSTODIAL_EVIDENCE_20261110.md`. |
 | Kryptobörs | **Nej** | Stellar unsupported flows include `trade`. Buy & Sell is goods marketplace UGC, not a crypto exchange. |
 | Försäljning/handel/utdelning av tokeniserade digitala tillgångar (NFT) | Nej | No NFT sales/trading feature. |
 | Aktiehandel och portföljförvaltning | Nej | Not present. |

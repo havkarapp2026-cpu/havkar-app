@@ -6,12 +6,14 @@ Evidence-oriented. This is **not** legal advice. Unresolved licensing determinat
 
 | Fact | Evidence |
 | --- | --- |
-| Noncustodial Stellar XLM checkout | Client wallet signs; server verifies Horizon; no seed/secret stored server-side for end users |
-| Flows | marketplace, services, events (one-time only) |
+| Noncustodial Stellar XLM checkout | External wallets via Stellar Wallets Kit + WalletConnect; server verifies Horizon; no seed/secret stored for end users |
+| Android surface | WebView to `havkar.online` only — no native keystore/crypto signing |
+| Flows | marketplace, services, events (one-time only); `trade` unsupported |
 | Fees in code | marketplace 2% buyer + 3% seller; services 10% commission; events ticket fulfillment path |
 | Mainnet customer live collection | Gated by `HAVKAR_STELLAR_MAINNET_LIVE_COLLECTION` (default OFF) |
 | Stripe / Pi live customer charging | Kept OFF / not activated in this release work |
 | Google Play Billing / Apple IAP | Required for digital subscriptions / entitlements; XLM recurring refused in code |
+| Evidence pack | `store/PLAY_CRYPTO_NONCUSTODIAL_EVIDENCE_20261110.md` |
 
 ## Google Play primary sources (consult current Console text)
 
