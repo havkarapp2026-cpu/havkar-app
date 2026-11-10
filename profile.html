@@ -2175,6 +2175,40 @@ input:focus-visible{
         </button>
 
 
+        <!-- STAFF WORKSPACE: internal section 16; not on public home grid. -->
+
+        <button
+            id="profileStaffWorkspace"
+            class="action"
+            type="button"
+            hidden
+            onclick="goTo('staff.html')">
+
+            <div class="action-icon">
+
+                <i class="fas fa-briefcase"></i>
+
+            </div>
+
+            <div class="action-content">
+
+                <div class="action-title">
+                    Staff Workspace
+                </div>
+
+                <div class="action-subtitle">
+                    Internal ops for Staff / Support / Admin
+                </div>
+
+            </div>
+
+            <div class="action-arrow">
+                <i class="fas fa-chevron-right"></i>
+            </div>
+
+        </button>
+
+
         <!-- ADMINISTRATION: hidden until the server confirms an administrator or the owner. -->
 
         <button
@@ -4114,6 +4148,11 @@ async function revealAdministration(
             "profileAdministration"
         );
 
+    const staffButton =
+        document.getElementById(
+            "profileStaffWorkspace"
+        );
+
     const settingsEmail =
         document.getElementById(
             "settingsAccountEmail"
@@ -4130,14 +4169,19 @@ async function revealAdministration(
     }
 
 
-    if(!button){
+    if(!button && !staffButton){
 
         return;
 
     }
 
 
-    button.hidden = true;
+    if(button){
+        button.hidden = true;
+    }
+    if(staffButton){
+        staffButton.hidden = true;
+    }
 
 
     if(!user){
@@ -4166,6 +4210,14 @@ async function revealAdministration(
             roleName === "staff" ||
             roleName === "support";
 
+        if(staffButton){
+            staffButton.hidden = !privileged;
+        }
+
+        const adminCapable =
+            roleName === "owner" ||
+            roleName === "admin";
+
         // Fallback for environments before havkar_session_role exists.
         if(
             !privileged &&
@@ -4185,7 +4237,7 @@ async function revealAdministration(
                     "havkar_session_is_owner"
                 );
 
-            button.hidden = !(
+            const isAdminOrOwner = (
                 (
                     admin &&
                     admin.error == null &&
@@ -4198,11 +4250,20 @@ async function revealAdministration(
                 )
             );
 
+            if(button){
+                button.hidden = !isAdminOrOwner;
+            }
+            if(staffButton){
+                staffButton.hidden = !isAdminOrOwner;
+            }
+
             return;
 
         }
 
-        button.hidden = !privileged;
+        if(button){
+            button.hidden = !adminCapable;
+        }
 
     }
     catch(error){
@@ -4212,7 +4273,12 @@ async function revealAdministration(
             error
         );
 
-        button.hidden = true;
+        if(button){
+            button.hidden = true;
+        }
+        if(staffButton){
+            staffButton.hidden = true;
+        }
 
     }
 

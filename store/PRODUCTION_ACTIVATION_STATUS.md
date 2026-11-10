@@ -1,6 +1,6 @@
 # HAVKAR — Production activation status
 
-Updated: **9 November 2026** (live Production reconciled)
+Updated: **9 November 2026** (ops-legal-staff release)
 
 ## Stellar Mainnet
 
@@ -19,22 +19,37 @@ Updated: **9 November 2026** (live Production reconciled)
 | Settlement guards | memo/amount/destination/replay/expiry enforced in `lib/stellar-checkout.cjs` |
 | Invoice verify path | `/xlm-invoice.html` + `/api/xlm-invoice` |
 
+### Legal identity (public)
+
+| Item | Status |
+| --- | --- |
+| Legal name | HAVKAR DI JALILNIA AMIR |
+| Registration number | KR234170 (Revolut Business doc 9 Nov 2026) |
+| Registered address | Francesco Antonio Lucifero 40, 88900 Crotone, Italy |
+| Partita IVA / REA | Empty / unpublished until Visura |
+| Bank / IBAN / BIC | Never in frontend or git — Stripe Dashboard only |
+
 ### YELLOW
 
 | Item | Status |
 | --- | --- |
 | Stripe / Pi live collection | Still paused (`HAVKAR_REAL_PAYMENTS_ENABLED` not true; secret mode unknown in status API) |
+| Revolut as Stripe payout bank | Owner must attach in Stripe Dashboard |
 | Partita IVA / REA / ATECO | Not published — verified Visura not present in repo/env |
-| Mailbox SMTP send/receive | Official addresses published; inbox AUTH not proven in this environment |
+| Mailbox SMTP send/receive | MX/SPF/DMARC present; inbox AUTH not proven in this environment |
+| Staff Workspace | `staff.html` + RPCs applied; MFA/elevation remain Owner-ops |
 
 ## Stripe Live
 
 | Item | Status |
 | --- | --- |
 | Collection armed | RED — paused |
-| Evidence | `store/STRIPE_LIVE_VERIFICATION_20261108.md` |
+| Evidence | `store/STRIPE_ACTIVATION_BLOCKERS_20261109.md` |
 
 ## Actually activated
 
 - Stellar Mainnet **one-time** XLM quotes/settlement path (Owner-armed after smoke).
-- Not activated: Stripe live, Pi, Trade, recurring XLM, Play/App Store public release, invented chamber numbers.
+- Public legal registration number + address (no bank secrets).
+- Staff Workspace section 16 (non-public home tile) + Owner finance ledger RPC.
+- AI route redirects `/ai` and `/ai.html` → `havkar-ai.html`.
+- Not activated: Stripe live, Pi, Trade, recurring XLM, Taxi/Transfer booking, Play/App Store public release, invented Partita IVA.
