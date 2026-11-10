@@ -47,16 +47,17 @@
     if (address) {
       target.appendChild(el("div", null, "Registered address: " + address));
     }
+    if (rea) {
+      target.appendChild(el("div", null, "REA: " + rea));
+    }
     if (partita) {
-      target.appendChild(
-        el("div", null, "Partita IVA: " + partita + (rea ? " · REA: " + rea : ""))
-      );
+      target.appendChild(el("div", null, "Partita IVA: " + partita));
     } else {
       target.appendChild(
         el(
           "div",
           "muted",
-          "Partita IVA / separate Chamber Visura fields are published only after a verified Visura. Bank account details are never shown on public pages."
+          "Partita IVA is published only after a verified Visura. Bank account details are never shown on public pages."
         )
       );
     }

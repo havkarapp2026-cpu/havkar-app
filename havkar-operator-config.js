@@ -16,13 +16,13 @@ window.HAVKAR_OPERATOR = {
   businessPhone: "+39 334 263 2863",
   businessPhoneTel: "+393342632863",
   /* From Owner-provided Revolut Business document dated 9 November 2026.
-     Registration number only — not a Partita IVA. */
+     Registration number matches Camera di Commercio Crotone REA form KR-234170.
+     Partita IVA is separate and stays empty until Visura confirms it. */
   registrationNumber: "KR234170",
   registeredAddress: "Francesco Antonio Lucifero 40, 88900 Crotone, Italy",
   registeredCountry: "IT",
-  /* Partita IVA / separate REA remain unpublished until a Visura confirms them. */
   partitaIva: "",
-  reaNumber: "",
-  chamberRegistrationStatus: "registration_number_from_revolut_business_2026-11-09",
+  reaNumber: "KR-234170",
+  chamberRegistrationStatus: "rea_from_revolut_business_registration_2026-11-09",
   hidePersonalEmails: ["amirjalilnia@gmail.com"]
 };

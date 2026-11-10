@@ -1,5 +1,5 @@
 /* HAVKAR service worker — safe no-cache pass-through with versioned install. */
-var HAVKAR_SW_VERSION = "havkar-sw-20261109-ops-legal-v3";
+var HAVKAR_SW_VERSION = "havkar-sw-20261110-stripe-legal-v4";
 
 self.addEventListener("install", function (event) {
   self.skipWaiting();
