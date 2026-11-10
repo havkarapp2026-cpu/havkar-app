@@ -55,6 +55,7 @@
     .status { margin-top: 0.85rem; white-space: pre-wrap; color: var(--warn); }
     .ok { color: #8fdbb0; }
   </style>
+  <script src="/havkar-supabase-config.js"></script>
 </head>
 <body>
   <main>
@@ -63,7 +64,6 @@
       Public card collection stays paused. This page only prepares one Live Checkout
       Session for the verified Owner. Payment is charged only after you complete Stripe Checkout.
     </p>
-    <p style="color:#c47a3a">Temporary HTTPS path while apex DNS is repaired: <a class="link" style="margin:0" href="https://havkar-app.vercel.app/owner-eur1-checkout.html">https://havkar-app.vercel.app/owner-eur1-checkout.html</a></p>
     <div class="panel">
       <button id="prepare" type="button">Prepare EUR 1.00 Checkout</button>
       <div id="out" class="status" aria-live="polite"></div>
@@ -85,12 +85,13 @@
       out.className = "status" + (ok ? " ok" : "");
     }
 
-    async function supabaseClient() {
-      const res = await fetch("/havkar-supabase-config.js");
-      const text = await res.text();
-      const url = (text.match(/url:\s*["']([^"']+)["']/) || [])[1];
-      const key = (text.match(/anonKey:\s*["']([^"']+)["']/) || [])[1];
-      if (!url || !key) throw new Error("Supabase public config missing");
+    function supabaseClient() {
+      const config = window.HAVKAR_SUPABASE_CONFIG;
+      const url = config && config.url;
+      const key = config && config.publishableKey;
+      if (!url || !key) {
+        throw new Error("Supabase public config missing");
+      }
       return createClient(url, key);
     }
 
@@ -140,7 +141,7 @@
       btn.disabled = true;
       pay.hidden = true;
       try {
-        const client = await supabaseClient();
+        const client = supabaseClient();
         const session = await ensureSession(client);
         if (!session) {
           btn.disabled = false;
@@ -178,9 +179,15 @@
       }
     });
 
-    supabaseClient()
-      .then(checkReturn)
-      .catch((err) => message(err && err.message ? err.message : String(err)));
+    try {
+      const client = supabaseClient();
+      message("Supabase public config loaded. Sign in as Owner, then prepare Checkout.", true);
+      checkReturn(client).catch((err) =>
+        message(err && err.message ? err.message : String(err))
+      );
+    } catch (err) {
+      message(err && err.message ? err.message : String(err));
+    }
   </script>
 </body>
 </html>

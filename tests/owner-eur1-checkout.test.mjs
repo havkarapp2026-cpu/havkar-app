@@ -65,6 +65,17 @@ assert.match(vercel, /\/api\/owner-eur1-checkout/);
 const page = fs.readFileSync("owner-eur1-checkout.html", "utf8");
 assert.match(page, /PREPARE_EUR_1_00_LIVE_CHECKOUT/);
 assert.match(page, /noindex/);
+assert.match(page, /src="\/havkar-supabase-config\.js"/);
+assert.match(page, /window\.HAVKAR_SUPABASE_CONFIG/);
+assert.match(page, /config\.publishableKey/);
+assert.doesNotMatch(page, /anonKey/);
+assert.doesNotMatch(page, /service_role/);
+
+const config = fs.readFileSync("havkar-supabase-config.js", "utf8");
+assert.match(config, /publishableKey:/);
+assert.match(config, /gispovnciifgikvgpzck\.supabase\.co/);
+assert.doesNotMatch(config, /service_role/);
+assert.doesNotMatch(config, /anonKey:/);
 
 const realPayments = fs.readFileSync("lib/real-payments.cjs", "utf8");
 assert.match(realPayments, /HAVKAR_REAL_PAYMENTS_ENABLED/);
