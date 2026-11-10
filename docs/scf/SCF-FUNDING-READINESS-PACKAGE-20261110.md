@@ -2,6 +2,8 @@
 
 **Status:** Evidence package only. **Not submitted.** No award claim. Owner approval required before any external application action.
 
+**Eligibility (verified as of 10 November 2026):** SCF #46 Interest / Build deadline recorded as **9 November 2026** in prior readiness docs — treat same-round resubmit as **unconfirmed / likely closed**. Next-round Interest Form remains the safe path unless `communityfund@stellar.org` confirms otherwise. October Interest Form was **rejected** (16 Oct 2026). **No verified Build invitation.**
+
 ## 1. Product summary
 
 HAVKAR is a multilingual marketplace and services platform (web + Android/iOS WebView shells) with noncustodial Stellar XLM checkout for one-time marketplace, services, and event flows. Official identity: HAVKAR DI JALILNIA AMIR (KR234170). Public surfaces include Buy & Sell, Services, Jobs, Ads, Events/Tickets, Delivery, Chat, Wallet UI, and Owner/Staff controls.

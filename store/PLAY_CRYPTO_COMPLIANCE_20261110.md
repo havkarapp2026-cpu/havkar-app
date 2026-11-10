@@ -64,3 +64,17 @@ Never fabricate licenses or 14-day closed-test results.
 3. Mainnet live collection remains OFF until Owner + legal clearance + Production deploy.
 4. No secret keys in APK/AAB assets or source.
 5. Counsel memo filed for MiCA/CASP and IT distribution.
+
+## Server-side geo control (implemented, Production OFF by default)
+
+| Env | Effect |
+| --- | --- |
+| `HAVKAR_CRYPTO_GEO_ENFORCEMENT=true` | Enables server refusal of XLM quote/settle for restricted countries |
+| `HAVKAR_CRYPTO_GEO_PRESET=eu_eea` (default preset) | Deny-list EU+EEA ISO2 |
+| `HAVKAR_CRYPTO_GEO_PRESET=play_listed` | Deny-list Play crypto-form countries |
+| `HAVKAR_CRYPTO_RESTRICTED_COUNTRIES` | Custom deny-list override |
+| `HAVKAR_CRYPTO_GEO_MODE=allow_list` + `HAVKAR_CRYPTO_ALLOWED_COUNTRIES` | Allow-list mode |
+| `HAVKAR_CRYPTO_GEO_UNCERTAIN=deny` (default) | Missing/VPN-uncertain geo → refuse crypto |
+| `HAVKAR_CRYPTO_GEO_TRUST_CLIENT_HEADER` | Default off — blocks client spoof bypass |
+
+See also: `store/EU_CRYPTO_DECLARATION_OPTIONS_20261110.md`, `store/PLAY_CRYPTO_COUNTRY_MATRIX_20261110.md`.

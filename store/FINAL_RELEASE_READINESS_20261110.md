@@ -9,6 +9,8 @@ Branch: `cursor/havkar-final-release-readiness-d4b2`
    - `HAVKAR_REAL_PAYMENTS_ENABLED` / Stripe live: remain paused / OFF
    - `HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED` — only if intentional
    - `HAVKAR_STELLAR_MAINNET_LIVE_COLLECTION` — must stay unset/`false` until legal + Owner go-live
+   - `HAVKAR_CRYPTO_GEO_ENFORCEMENT` — must stay unset/`false` until counsel + Owner approve geo strategy (A/B/C)
+   - Optional after approval: `HAVKAR_CRYPTO_GEO_PRESET=eu_eea` or `play_listed`
    - Stellar destinations: public keys only (no secrets)
 3. Apply Supabase migration `20261110183000_user_blocks_and_event_interest_anon_revoke.sql` on Production (Owner).
 4. Deploy web after merge approval.
