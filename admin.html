@@ -78,8 +78,10 @@ nav.bottom a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px
 
   <section class="panel hidden" id="financePanel">
     <h2>Revenue & transactions</h2>
-    <p class="note">Owner-only financial counts. Live Stripe / XLM / Pi collection is not enabled from this panel.</p>
+    <p class="note">Owner-only ledger. Stellar XLM is not a EUR bank deposit. Bank/IBAN details are never shown here — attach Revolut in Stripe Dashboard.</p>
     <div class="grid" id="financeGrid"></div>
+    <div class="grid" id="financeLedgerGrid" style="margin-top:10px"></div>
+    <p id="financeLedgerNote" class="note"></p>
   </section>
 
   <section class="panel hidden" id="staffPanel">
@@ -172,6 +174,33 @@ nav.bottom a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px
     }
     overview = result.data;
     return overview;
+  }
+
+  async function loadOwnerFinanceLedger() {
+    var note = document.getElementById("financeLedgerNote");
+    var grid = document.getElementById("financeLedgerGrid");
+    if (!note || !grid || !db) return;
+    var res = await db.rpc("havkar_owner_finance_ledger_summary");
+    if (res.error) {
+      note.textContent = res.error.message || "Finance ledger unavailable.";
+      return;
+    }
+    var d = res.data || {};
+    var stellar = d.stellar || {};
+    var tickets = d.event_tickets || {};
+    var commissions = d.commissions || {};
+    fillGrid("financeLedgerGrid", [
+      { label: "Mainnet settled", value: stellar.mainnet_settled || 0 },
+      { label: "Mainnet unpaid", value: stellar.mainnet_unpaid || 0 },
+      { label: "Testnet settled", value: stellar.testnet_settled || 0 },
+      { label: "Paid tickets", value: tickets.paid_valid || 0 },
+      { label: "Pending holds", value: tickets.pending_holds || 0 },
+      { label: "Service commissions open", value: commissions.service_uncollected || 0 }
+    ]);
+    note.textContent =
+      (stellar.note || "") +
+      " " +
+      ((d.settlement_bank && d.settlement_bank.instruction) || "");
   }
 
   async function loadRecentTickets() {
@@ -283,6 +312,7 @@ nav.bottom a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px
         { label: "Job subscriptions", value: f.job_subscriptions || 0 },
         { label: "Uncollected commissions", value: data.commissions_uncollected || 0 }
       ]);
+      loadOwnerFinanceLedger();
     }
 
     if ((role === "owner" || role === "admin") && data.staff_roles) {

@@ -8,7 +8,11 @@ Evidence-based. No claim of SCF award or invitation.
 - Events / operational tickets: create, capacity holds, free/paid issuance, unique code + QR, organizer check-in, cancel, Owner listing
 - Buy & Sell marketplace with Testnet and Mainnet XLM checkout path (Mainnet Owner-armed after smoke)
 - Owner Control dashboard (server RPC role gates)
+- Staff Workspace (`staff.html`) — internal section 16, not on the 15-tile public home grid
+- Owner finance ledger summary RPC (counts only; no bank secrets)
+- Legal identity: HAVKAR DI JALILNIA AMIR · KR234170 · Crotone address (Partita IVA unpublished)
 - Official contacts: `info@havkar.online`, `support@havkar.online`, `soran@havkar.online` (SORAN owner-confidential)
+- AI entry: `/ai` and `/ai.html` redirect to `/havkar-ai.html`
 
 ## Stellar Mainnet payment path
 
@@ -20,13 +24,15 @@ Evidence-based. No claim of SCF award or invitation.
 | Smoke intent settled with matching Horizon tx | PASS — see `store/PRODUCTION_ACTIVATION_STATUS.md` |
 | Replay / memo / amount / destination / expiry checks | PASS (unit + source) |
 | Testnet never presented as Mainnet | PASS |
+| XLM ≠ automatic EUR Revolut credit | PASS (documented; conversion separate) |
 
 ## Not claimed
 
-- Stripe live customer charging
+- Stripe live customer charging / Revolut payout attachment complete
 - Taxi / transfer booking inside HAVKAR (contract-gated; UI states unavailable)
 - Partita IVA / REA numbers (await Visura)
 - App Store / Play Store public worldwide release completion
+- Proven SMTP send/receive for official mailboxes
 - Any SCF funding approval
 
 ## Smoke transaction (Mainnet)

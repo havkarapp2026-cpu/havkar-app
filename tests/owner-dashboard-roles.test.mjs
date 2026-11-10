@@ -31,10 +31,16 @@ assert.match(operator, /legalEntityName:\s*"HAVKAR DI JALILNIA AMIR"/);
 assert.match(operator, /soranEmail:\s*"soran@havkar\.online"/);
 assert.match(operator, /infoEmail:\s*"info@havkar\.online"/);
 assert.match(operator, /supportEmail:\s*"support@havkar\.online"/);
-assert.match(operator, /chamberRegistrationStatus:\s*"awaiting_verified_visura"/);
+assert.match(operator, /registrationNumber:\s*"KR234170"/);
+assert.match(operator, /registeredAddress:\s*"Francesco Antonio Lucifero 40, 88900 Crotone, Italy"/);
+assert.match(
+  operator,
+  /chamberRegistrationStatus:\s*"registration_number_from_revolut_business_2026-11-09"/
+);
 assert.match(operator, /hidePersonalEmails:\s*\["amirjalilnia@gmail\.com"\]/);
 assert.match(operator, /havkarapp2026@gmail\.com/);
 assert.doesNotMatch(operator, /partitaIva:\s*"[0-9]/);
+assert.doesNotMatch(operator, /LT16\s*3250|REVOLT21/);
 
 assert.match(admin, /havkar_owner_dashboard_overview/);
 assert.match(admin, /havkar_owner_assign_role/);
@@ -46,13 +52,31 @@ assert.doesNotMatch(admin, /amirjalilnia@gmail\.com/);
 
 assert.match(profile, /havkar_session_role/);
 assert.match(profile, /goTo\('admin\.html'\)/);
+assert.match(profile, /goTo\('staff\.html'\)/);
+assert.match(profile, /profileStaffWorkspace/);
 
 assert.match(about, /soran@havkar\.online/);
 assert.match(about, /Owner \/ Investment/);
+assert.match(about, /KR234170/);
 assert.doesNotMatch(about, /amirjalilnia@gmail\.com/);
+assert.doesNotMatch(about, /LT16\s*3250|REVOLT21/);
 assert.doesNotMatch(support, /amirjalilnia@gmail\.com/);
 assert.doesNotMatch(privacy, /amirjalilnia@gmail\.com/);
 assert.match(support, /support@havkar\.online/);
 assert.match(privacy, /support@havkar\.online/);
+assert.match(privacy, /KR234170/);
+
+const staffPage = fs.readFileSync("staff.html", "utf8");
+const staffSql = fs.readFileSync(
+  "supabase/migrations/20261109240000_staff_workspace_and_owner_finance.sql",
+  "utf8"
+);
+const index = fs.readFileSync("index.html", "utf8");
+assert.match(staffPage, /havkar_staff_workspace_overview/);
+assert.match(staffPage, /noindex/);
+assert.match(staffSql, /havkar_owner_finance_ledger_summary/);
+assert.match(staffSql, /caller_is_owner/);
+assert.doesNotMatch(index, /staff\.html/);
+assert.match(admin, /havkar_owner_finance_ledger_summary/);
 
 console.log("OWNER_DASHBOARD_ROLES_TEST_OK");

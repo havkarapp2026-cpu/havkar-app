@@ -4,9 +4,11 @@
   var owner = operator.legalName || "Amir Jalilnia";
   var info = operator.infoEmail || "info@havkar.online";
   var support = operator.supportEmail || "support@havkar.online";
-  var chamber = operator.chamberRegistrationStatus || "awaiting_verified_visura";
+  var registration = String(operator.registrationNumber || "").trim();
+  var address = String(operator.registeredAddress || "").trim();
   var partita = String(operator.partitaIva || "").trim();
   var rea = String(operator.reaNumber || "").trim();
+  var chamber = operator.chamberRegistrationStatus || "";
 
   function el(tag, className, text) {
     var node = document.createElement(tag);
@@ -23,29 +25,38 @@
     target.setAttribute("data-havkar-legal-ready", "1");
     target.classList.add("havkar-legal-footer");
 
-    var style = document.createElement("style");
-    style.textContent =
-      ".havkar-legal-footer{margin:24px auto 12px;max-width:920px;padding:14px 16px;border-top:1px solid rgba(20,35,26,.12);font:500 .86rem/1.45 Georgia,'Times New Roman',serif;color:#31453a}" +
-      ".havkar-legal-footer strong{font-weight:700}" +
-      ".havkar-legal-footer a{color:#1b4332;text-decoration:underline}" +
-      ".havkar-legal-footer .muted{color:#5f6f66;font-size:.8rem;margin-top:6px}";
-    document.head.appendChild(style);
+    if (!document.getElementById("havkar-legal-footer-style")) {
+      var style = document.createElement("style");
+      style.id = "havkar-legal-footer-style";
+      style.textContent =
+        ".havkar-legal-footer{margin:24px auto 12px;max-width:920px;padding:14px 16px;border-top:1px solid rgba(20,35,26,.12);font:500 .86rem/1.45 Georgia,'Times New Roman',serif;color:#31453a}" +
+        ".havkar-legal-footer strong{font-weight:700}" +
+        ".havkar-legal-footer a{color:#1b4332;text-decoration:underline}" +
+        ".havkar-legal-footer .muted{color:#5f6f66;font-size:.8rem;margin-top:6px}";
+      document.head.appendChild(style);
+    }
 
-    target.appendChild(el("div", null, null));
     var line = el("div", null, null);
-    var strong = el("strong", null, entity);
-    line.appendChild(strong);
+    line.appendChild(el("strong", null, entity));
     line.appendChild(document.createTextNode(" · Operator: " + owner));
     target.appendChild(line);
 
+    if (registration) {
+      target.appendChild(el("div", null, "Registration number: " + registration));
+    }
+    if (address) {
+      target.appendChild(el("div", null, "Registered address: " + address));
+    }
     if (partita) {
-      target.appendChild(el("div", null, "Partita IVA: " + partita + (rea ? " · REA: " + rea : "")));
+      target.appendChild(
+        el("div", null, "Partita IVA: " + partita + (rea ? " · REA: " + rea : ""))
+      );
     } else {
       target.appendChild(
         el(
           "div",
           "muted",
-          "Chamber / Partita IVA / REA numbers are published only after a verified Visura. HAVKAR does not invent registration numbers."
+          "Partita IVA / separate Chamber Visura fields are published only after a verified Visura. Bank account details are never shown on public pages."
         )
       );
     }
@@ -59,7 +70,9 @@
     contacts.appendChild(document.createTextNode(" · "));
     contacts.appendChild(a2);
     if (chamber) {
-      contacts.appendChild(document.createTextNode(" · Legal status: " + chamber.replace(/_/g, " ")));
+      contacts.appendChild(
+        document.createTextNode(" · Legal status: " + String(chamber).replace(/_/g, " "))
+      );
     }
     target.appendChild(contacts);
   }
@@ -73,7 +86,7 @@
       mount(fallback);
       return;
     }
-    nodes.forEach(mount);
+    Array.prototype.forEach.call(nodes, mount);
   }
 
   if (document.readyState === "loading") {
