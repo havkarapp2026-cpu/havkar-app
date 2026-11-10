@@ -26,6 +26,8 @@ New workflow:
 
 Pull requests that touch `android/**` or this workflow run **`unsigned_smoke` only**. Signed builds are manual (`workflow_dispatch`) after secrets exist on the default branch.
 
+When the agent cannot call `workflow_dispatch` (GitHub App HTTP 403), a signed build can also be started by pushing an annotated tag matching `havkar-android-signed-*` (for example `havkar-android-signed-20261110`). Tag pushes always use **signed** mode.
+
 ## Required repository secrets (signed mode)
 
 Add these under GitHub → Settings → Secrets and variables → Actions. Never commit them. Never paste them into chat or issues.

@@ -16,6 +16,8 @@ assert.equal(ticketIdFromMetadata(null), "");
 
 assert.equal(settlementActionForEvent("charge.refunded").kind, "refund");
 assert.equal(settlementActionForEvent("charge.dispute.created").kind, "dispute_opened");
+assert.equal(settlementActionForEvent("charge.dispute.updated").kind, "dispute_updated");
+assert.equal(settlementActionForEvent("payout.created").kind, "payout");
 assert.equal(settlementActionForEvent("payout.paid").kind, "payout");
 assert.equal(settlementActionForEvent("checkout.session.completed").kind, "ignore");
 
@@ -48,9 +50,11 @@ assert.equal(
 const webhook = fs.readFileSync("api/stripe-webhook.js", "utf8");
 assert.match(webhook, /stripe-ticket-settlement\.cjs/);
 assert.match(webhook, /charge\.dispute\.closed/);
+assert.match(webhook, /charge\.dispute\.updated/);
+assert.match(webhook, /payout\.created/);
 assert.match(webhook, /paymentIntents\.retrieve/);
 assert.match(webhook, /bodyParser:\s*false/);
-assert.doesNotMatch(webhook, /sk_live_[A-Za-z0-9]/);
+assert.doesNotMatch(webhook, /sk_live_[A-Za-z0-9]+/);
 
 const checkout = fs.readFileSync("api/create-event-checkout.js", "utf8");
 assert.match(checkout, /idempotencyKey:/);
