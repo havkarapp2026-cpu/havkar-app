@@ -61,8 +61,14 @@ fi
 
 if [[ -f "$WF" ]]; then
   grep -q 'workflow_dispatch:' "$WF" && ok "Release workflow is workflow_dispatch" || fail "missing workflow_dispatch"
+  # Tag-only push is allowed so agents blocked from workflow_dispatch can still
+  # start signed_ipa. Broad branch push triggers remain forbidden.
   if grep -Eq '^[[:space:]]+push:' "$WF"; then
-    fail "ios-release.yml must not trigger on push"
+    if grep -q 'havkar-ios-signed-\*' "$WF" || grep -q 'havkar-ios-signed-*' "$WF"; then
+      ok "Release workflow may trigger on havkar-ios-signed-* tags only"
+    else
+      fail "ios-release.yml push trigger must be limited to havkar-ios-signed-* tags"
+    fi
   else
     ok "Release workflow does not trigger on push"
   fi
@@ -76,8 +82,14 @@ if [[ -f "$WF" ]]; then
   else
     fail "workflow missing scripts/ios-import-signing-materials.sh import step"
   fi
-  # Catch the run #6 failure mode: Automatic style + forced Distribution identity.
-  if grep -q 'CODE_SIGN_STYLE=Automatic' "$WF" && grep -q 'CODE_SIGN_IDENTITY="Apple Distribution"' "$WF"; then
+  # Catch the run #6 failure mode: Automatic style + forced Distribution identity
+  # in the SAME xcodebuild EXTRA branch. Manual branch may set Apple Distribution.
+  if awk '
+    /CODE_SIGN_STYLE=Automatic/ { auto=1 }
+    /CODE_SIGN_STYLE=Manual/ { auto=0 }
+    auto && /CODE_SIGN_IDENTITY="Apple Distribution"/ { bad=1 }
+    END { exit bad ? 0 : 1 }
+  ' "$WF"; then
     fail "conflicting signing: CODE_SIGN_STYLE=Automatic with CODE_SIGN_IDENTITY=Apple Distribution"
   else
     ok "no Automatic + Apple Distribution identity conflict in workflow"
