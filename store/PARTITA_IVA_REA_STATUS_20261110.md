@@ -14,11 +14,11 @@
 | --- | --- |
 | Partita IVA | **Not published** |
 
-Evidence searched:
+Evidence searched (updated 10 Nov evening):
 
-- Repo docs / SCF notes — no Visura PDF or verified VAT number
-- Stripe Live account — `company.tax_id_provided=false`
+- Repo docs / SCF notes — no Visura PDF or verified VAT number digits
+- Stripe Live account — `company.tax_id_provided=true` and `vat_id_provided=true`, but API **does not return** the VAT digits
 - Public Registro Imprese / web search — no authoritative Partita published for this entity
 - Production `business_applications` id=1: self-entered `vat_number` present, status `pending`, `documents={}` — **rejected as legal proof**
 
-Owner action: upload/confirm Visura camerale (or Agenzia delle Entrate proof). Only then publish Partita IVA.
+Owner action required: provide Visura camerale (PDF/photo) or paste the exact Partita IVA from that official document into Owner chat / secure channel. Only then will HAVKAR publish it on About/footer/legal pages.

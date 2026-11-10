@@ -1,6 +1,6 @@
 # HAVKAR — Production activation status
 
-Updated: **10 November 2026** (Stripe audit + REA publish; Partita still unpublished)
+Updated: **10 November 2026** (Revolut …8455 default payout verified; card collection still paused; Partita unpublished)
 
 ## Stellar Mainnet
 
