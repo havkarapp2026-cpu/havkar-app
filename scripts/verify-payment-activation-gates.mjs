@@ -52,6 +52,14 @@ async function main() {
   assert.equal(statusBody.ok, true);
   assert.equal(statusBody.customer_facing_collection, "paused");
   assert.equal(statusBody.flags.HAVKAR_REAL_PAYMENTS_ENABLED, false);
+  assert.equal(statusBody.flags.HAVKAR_STRIPE_LIVE_ENABLED, false);
+  // Exact "true" required for customer Mainnet live collection. Missing/false = OFF.
+  if ("HAVKAR_STELLAR_MAINNET_LIVE_COLLECTION" in statusBody.flags) {
+    assert.equal(statusBody.flags.HAVKAR_STELLAR_MAINNET_LIVE_COLLECTION, false);
+  }
+  if ("stellar_mainnet_customer_live" in statusBody) {
+    assert.equal(statusBody.stellar_mainnet_customer_live, "paused");
+  }
   assert.ok(Array.isArray(statusBody.blockers));
   assert.ok(statusBody.blockers.length > 0);
 

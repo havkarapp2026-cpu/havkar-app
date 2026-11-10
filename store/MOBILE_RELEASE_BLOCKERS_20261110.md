@@ -4,11 +4,14 @@
 
 | Item | Status |
 | --- | --- |
-| Last successful signed AAB | GitHub Actions run `42425500153` (7 Nov 2026) |
-| Branch version bump (this readiness branch) | `versionCode=3` / `versionName=1.0.1` in `android/app/build.gradle.kts` — new signed AAB not produced in this agent run |
-| Dispatch from this agent | **403** — Owner must Run workflow **Android release AAB** → mode `signed` on an authorized branch/`main` |
-| Play Console closed testing / production | Owner Console only |
+| Signed AAB for versionCode 3 | **PASS** — GitHub Actions run `42886038671` (tag `havkar-android-signed-v101-202611101930`, commit `ce2e5fd3`) |
+| Package / versions | `online.havkar.app` · `versionCode=3` · `versionName=1.0.1` |
+| jarsigner -strict vs upload key | **PASS** (CI + synthetic verifier suite) |
+| SHA-256 | `ee69b57a899d405cd0fb05144d52a55fd3424138bddcc7e43ae4d3c31df8757d` |
+| Closed testing pack | `store/PLAY_CLOSED_TESTING_RELEASE_20261110.md` |
+| Play Console upload / closed rollout | **Owner Console only** — not done by agent |
 | Fake testers | Not invented |
+| Dispatch 403 workaround | Tag push `havkar-android-signed-*` works |
 
 ## iOS
 

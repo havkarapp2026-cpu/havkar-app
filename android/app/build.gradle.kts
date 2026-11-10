@@ -38,6 +38,8 @@ android {
 
     buildTypes {
         release {
+            // Explicit Play release posture — never ship a debuggable AAB.
+            isDebuggable = false
             isMinifyEnabled = false
             isShrinkResources = false
             val releaseSigning = signingConfigs.findByName("release")
@@ -47,6 +49,9 @@ android {
             ) {
                 signingConfig = releaseSigning
             }
+        }
+        debug {
+            isDebuggable = true
         }
     }
 

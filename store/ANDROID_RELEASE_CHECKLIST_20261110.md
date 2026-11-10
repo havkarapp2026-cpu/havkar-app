@@ -3,16 +3,17 @@
 Package: `online.havkar.app`  
 Branch versions: `versionCode=3`, `versionName=1.0.1`  
 WebView UA: `HAVKAR-Android/1.0.1`  
-targetSdk: 36 · minSdk: 24 · cleartext: false · INTERNET only
+targetSdk: 36 · minSdk: 24 · cleartext: false · INTERNET only · release `isDebuggable=false`
 
 ## Artifact
 
 | Step | Owner / Agent | Status |
 | --- | --- | --- |
-| Signed AAB via workflow `Android release AAB` mode `signed` | Owner (agent dispatch often 403) | Pending Owner |
-| jarsigner -strict vs upload keystore | Script + CI | Verifier PASS locally on synthetic cases |
+| Signed AAB via workflow `Android release AAB` mode `signed` | CI run `42886038671` (tag trigger) | **PASS** |
+| jarsigner -strict vs upload keystore | CI + `tests/android-aab-signing-verify.test.sh` | **PASS** |
+| Package / versionCode / non-debuggable verified from AAB manifest | bundletool dump | **PASS** |
 | Play App Signing enrollment | Owner Console | Owner |
-| Upload to Closed testing | Owner | Pending |
+| Upload to Closed testing | Owner — see `store/PLAY_CLOSED_TESTING_RELEASE_20261110.md` | Pending Owner |
 | Invented testers / 14-day evidence | Forbidden | Not done |
 
 ## Console declarations
@@ -24,6 +25,7 @@ targetSdk: 36 · minSdk: 24 · cleartext: false · INTERNET only
 | Country targeting | Matrix `PLAY_CRYPTO_COUNTRY_MATRIX_20261110.md` | Owner |
 | Account deletion URL | `https://havkar.online/privacy-request.html` | Live request form (not instant delete) |
 | Privacy / support | Canonical havkar.online URLs | Owner verify |
+| App access | `store/PLAY_APP_ACCESS.md` | Owner pastes password in Console only |
 
 ## Functional (WebView → Production web)
 
@@ -42,10 +44,11 @@ targetSdk: 36 · minSdk: 24 · cleartext: false · INTERNET only
 - Navigation allowlist in `HavkarLinks`
 - No secrets in APK assets
 - Crypto geo server-enforced when Owner enables flag (client bypass resisted)
+- Production gates verified paused for card/Pi (`REAL_PAYMENTS_PAUSED`)
 
 ## Do not claim
 
 - Closed testing duration completed
 - MiCA license
 - Production geo enforcement enabled
-- Signed AAB for versionCode 3 built in this agent environment (SDK/keystore password missing locally)
+- Play upload completed by agent

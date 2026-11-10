@@ -7,7 +7,7 @@ This file prepares store text. It does not submit HAVKAR to Google Play or the A
 - App name: HAVKAR
 - Android application id: online.havkar.app
 - iOS bundle id: online.havkar.app
-- Version: 1.0.0 (version code 2)
+- Version: 1.0.1 (version code 3)
 - Icon: assets/icons/havkar-icon-1024-20261022-v3.png
 - Website: https://havkar.online
 - Support: support@havkar.online
@@ -20,9 +20,9 @@ HAVKAR is a multi-service marketplace app (buy & sell, ads, jobs, services, even
 
 ## Full description
 
-HAVKAR opens the live HAVKAR website inside a native Android and iOS project. Sign-up, sign-in, language, and enabled modules use the real HAVKAR backend. The Android package is online.havkar.app (targetSdk 36, versionCode 2) and uses the HAVKAR icon.
+HAVKAR opens the live HAVKAR website inside a native Android and iOS project. Sign-up, sign-in, language, and enabled modules use the real HAVKAR backend. The Android package is online.havkar.app (targetSdk 36, versionCode 3 / versionName 1.0.1) and uses the HAVKAR icon.
 
-Flights: signed-in Duffel search and Duffel TEST MODE orders only. Train/bus/ferry await Omio. Taxi/transfer stay unavailable. Hotels have no partner yet. Stellar Testnet quote+verify can settle enabled one-time flows; Stellar Mainnet stays disabled. Card, Pi, currency trade, paid subscriptions, and paid AI stay off until the owner flips explicit flags.
+Flights: signed-in Duffel search and Duffel TEST MODE orders only. Train/bus/ferry await Omio. Taxi/transfer stay unavailable. Hotels have no partner yet. Stellar Testnet quote+verify can settle enabled one-time flows; Stellar Mainnet customer LIVE_COLLECTION stays off until Owner approval. Card, Pi, currency trade, paid subscriptions, and paid AI stay off until the owner flips explicit flags.
 
 Sending a privacy request does not delete the account by itself. Data safety draft: `store/PLAY_DATA_SAFETY.md`.
 
