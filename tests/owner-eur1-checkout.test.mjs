@@ -65,6 +65,8 @@ assert.match(vercel, /\/api\/owner-eur1-checkout/);
 const page = fs.readFileSync("owner-eur1-checkout.html", "utf8");
 assert.match(page, /PREPARE_EUR_1_00_LIVE_CHECKOUT/);
 assert.match(page, /noindex/);
+assert.match(page, /login\.html\?next=/);
+assert.match(page, /havkar-canonical-origin\.js/);
 assert.match(page, /src="\/havkar-supabase-config\.js"/);
 assert.match(page, /window\.HAVKAR_SUPABASE_CONFIG/);
 assert.match(page, /config\.publishableKey/);

@@ -35,7 +35,7 @@
       border-radius: 12px;
       background: rgba(8, 14, 12, 0.55);
     }
-    button {
+    button, a.btn {
       appearance: none;
       border: 0;
       border-radius: 10px;
@@ -44,6 +44,8 @@
       color: #04110a;
       font-weight: 700;
       cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
     }
     button:disabled { opacity: 0.55; cursor: not-allowed; }
     a.link {
@@ -54,18 +56,24 @@
     }
     .status { margin-top: 0.85rem; white-space: pre-wrap; color: var(--warn); }
     .ok { color: #8fdbb0; }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.35rem; }
   </style>
   <script src="/havkar-supabase-config.js"></script>
+  <script src="/havkar-canonical-origin.js"></script>
 </head>
 <body>
   <main>
     <h1>Owner EUR 1.00 live card test</h1>
     <p>
       Public card collection stays paused. This page only prepares one Live Checkout
-      Session for the verified Owner. Payment is charged only after you complete Stripe Checkout.
+      Session for the verified Owner. Sign in on havkar.online first so the session
+      stays on the same domain. Payment is charged only after you complete Stripe Checkout.
     </p>
     <div class="panel">
-      <button id="prepare" type="button">Prepare EUR 1.00 Checkout</button>
+      <div class="actions">
+        <a id="loginLink" class="btn" href="/login.html?next=%2Fowner-eur1-checkout.html">Sign in on havkar.online</a>
+        <button id="prepare" type="button">Prepare EUR 1.00 Checkout</button>
+      </div>
       <div id="out" class="status" aria-live="polite"></div>
       <a id="pay" class="link" href="#" hidden target="_blank" rel="noopener">Open payment link</a>
     </div>
@@ -76,9 +84,13 @@
     const out = document.getElementById("out");
     const pay = document.getElementById("pay");
     const btn = document.getElementById("prepare");
+    const loginLink = document.getElementById("loginLink");
     const params = new URLSearchParams(location.search);
     const returnStatus = params.get("status");
     const sessionId = params.get("session_id");
+
+    const loginHref = "/login.html?next=" + encodeURIComponent("/owner-eur1-checkout.html");
+    loginLink.href = loginHref;
 
     function message(text, ok) {
       out.textContent = text;
@@ -92,13 +104,21 @@
       if (!url || !key) {
         throw new Error("Supabase public config missing");
       }
-      return createClient(url, key);
+      return createClient(url, key, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
+        }
+      });
     }
 
     async function ensureSession(client) {
       const { data } = await client.auth.getSession();
       if (data && data.session && data.session.access_token) return data.session;
-      message("Sign in as Owner on HAVKAR first, then reopen this page.");
+      message(
+        "No session on havkar.online. Use Sign in on havkar.online (Google or password), then return here. Do not stay on havkar-app.vercel.app."
+      );
       return null;
     }
 
@@ -181,7 +201,13 @@
 
     try {
       const client = supabaseClient();
-      message("Supabase public config loaded. Sign in as Owner, then prepare Checkout.", true);
+      const session = await ensureSession(client);
+      if (session) {
+        message(
+          "Owner session detected on havkar.online. You can prepare the EUR 1.00 Checkout.",
+          true
+        );
+      }
       checkReturn(client).catch((err) =>
         message(err && err.message ? err.message : String(err))
       );
