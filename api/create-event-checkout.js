@@ -98,6 +98,17 @@ function isXlmInvoiceRequest(req) {
   );
 }
 
+function isOwnerEur1CheckoutRequest(req) {
+  try {
+    const {
+      isOwnerEur1Request
+    } = require("../lib/owner-eur1-checkout.cjs");
+    return isOwnerEur1Request(req);
+  } catch {
+    return false;
+  }
+}
+
 async function readXlmInvoice(req) {
   const intentId = String(
     (req.query && (req.query.intent || req.query.id)) ||
@@ -864,6 +875,76 @@ export default async function handler(req, res) {
     } catch (error) {
       console.error("XLM invoice read failed", error && error.message);
       return sendError(res, 500, "XLM invoice could not be loaded");
+    }
+  }
+
+  if (isOwnerEur1CheckoutRequest(req)) {
+    if (req.method !== "POST") {
+      res.setHeader("Allow", "POST");
+      return sendError(res, 405, "Method not allowed");
+    }
+
+    try {
+      const {
+        CONFIRM_PHRASE,
+        isOwnerIdentity,
+        createOwnerEur1CheckoutSession,
+        retrieveOwnerEur1Session
+      } = require("../lib/owner-eur1-checkout.cjs");
+
+      const auth = await authenticateUser(req);
+      if (!auth.user) {
+        return sendError(res, 401, auth.error || "Authentication required");
+      }
+      if (!isOwnerIdentity(auth.user)) {
+        return sendError(res, 403, "Owner identity required for EUR 1 micro-test.");
+      }
+
+      if (!process.env.STRIPE_SECRET_KEY) {
+        return sendError(res, 503, "Stripe is not configured.");
+      }
+
+      const action = String((req.body && req.body.action) || "owner_eur1_prepare");
+
+      if (action === "owner_eur1_status") {
+        const status = await retrieveOwnerEur1Session(
+          getStripe(),
+          req.body && req.body.session_id
+        );
+        return res.status(status.httpStatus || 500).json(status);
+      }
+
+      if (String((req.body && req.body.confirm) || "") !== CONFIRM_PHRASE) {
+        return res.status(400).json({
+          ok: false,
+          error: "Exact confirm phrase required.",
+          required_confirm: CONFIRM_PHRASE
+        });
+      }
+
+      // Intentionally bypasses public HAVKAR_REAL_PAYMENTS_ENABLED gate.
+      // Public / events checkout remains paused; this path is Owner-only.
+      const session = await createOwnerEur1CheckoutSession(
+        getStripe(),
+        allowedCheckoutOrigin(req)
+      );
+
+      return res.status(200).json({
+        ok: true,
+        public_collection: "paused",
+        amount_eur: "1.00",
+        session_id: session.id,
+        url: session.url,
+        expires_at: session.expires_at,
+        livemode: session.livemode === true,
+        note: "Complete payment in Stripe Checkout. Public card collection stays disabled."
+      });
+    } catch (error) {
+      console.error(
+        "Owner EUR1 checkout prepare failed",
+        error && error.message
+      );
+      return sendError(res, 500, "Owner EUR 1 Checkout could not be prepared");
     }
   }
 

@@ -259,7 +259,9 @@ export default async function handler(req, res) {
     if (
       event.type === "charge.refunded" ||
       event.type === "charge.dispute.created" ||
+      event.type === "charge.dispute.updated" ||
       event.type === "charge.dispute.closed" ||
+      event.type === "payout.created" ||
       event.type === "payout.paid" ||
       event.type === "payout.failed"
     ) {

@@ -18,6 +18,10 @@ on:
           - signed_ipa
           - testflight
         default: preflight
+  # Agent tokens cannot always workflow_dispatch (HTTP 403). Tag push runs signed_ipa.
+  push:
+    tags:
+      - "havkar-ios-signed-*"
   pull_request:
     paths:
       - "ios/**"
@@ -29,6 +33,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
 
 concurrency:
   group: ios-release-${{ github.workflow }}-${{ github.ref }}
@@ -51,6 +56,8 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "mode=${{ inputs.mode }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            echo "mode=signed_ipa" >> "$GITHUB_OUTPUT"
           else
             # pull_request: never sign or upload
             echo "mode=preflight" >> "$GITHUB_OUTPUT"

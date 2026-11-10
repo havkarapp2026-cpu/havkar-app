@@ -1,9 +1,12 @@
 # iOS Release audit — GitHub Actions signed IPA path
 
-Updated: **9 November 2026**  
+Updated: **10 November 2026**  
 Environment: Linux Cloud Agent (no local Xcode).  
 No production payments enabled. No App Store public submission.  
 **No signed IPA produced. No TestFlight upload dispatched.**
+
+When the agent cannot call `workflow_dispatch` (GitHub App HTTP 403), push tag
+`havkar-ios-signed-*` to start **signed_ipa** mode (requires Apple secrets).
 
 ## Fix note — iOS Release run #6 (main)
 
