@@ -22,7 +22,7 @@ test("marketplace fee rules are 2% buyer and 3% seller", () => {
   assert.equal(ex.buyer_pays_eur, 102);
   assert.equal(ex.seller_receives_eur, 97);
   assert.equal(ex.platform_commission_eur, 5);
-  assert.equal(ex.stripe_connect_used, false);
+  assert.equal(ex.stripe_connect_used, true);
 });
 
 test("service commission is 10% liability only", () => {

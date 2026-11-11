@@ -1,6 +1,7 @@
 /**
  * Ensures the live readiness verifier stays honest: collection paused,
  * live key mode reported, activation never auto-allowed.
+ * status=new on Revolut is not treated as a hard verification blocker.
  */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -25,10 +26,15 @@ assert.equal(report.evidence.production_customer_facing_collection, "paused");
 assert.equal(report.evidence.production_stripe_key_mode, "live");
 assert.equal(report.evidence.unsigned_webhook_response, "REAL_PAYMENTS_PAUSED");
 assert.equal(report.stripe_live_account.revolut_default_attached, true);
-assert.equal(report.stripe_live_account.bank_verified, false);
-assert.ok(report.blockers.some((b) => /Marketplace Stripe Checkout/i.test(b)));
-assert.ok(report.blockers.some((b) => /uncollected/i.test(b)));
+assert.equal(report.stripe_live_account.bank_status_new_is_blocker, false);
+assert.equal(
+  report.stripe_live_account.bank_payout_readiness.eligible_for_scheduled_payouts,
+  true
+);
 assert.ok(
-  report.blockers.some((b) => /checkout\.session\.completed/i.test(b))
+  report.blockers.some((b) => /REQUIRED_WEBHOOK_EVENTS|expand live webhook/i.test(b))
+);
+assert.ok(
+  !report.blockers.some((b) => /status is not verified yet/i.test(b))
 );
 console.log("STRIPE_LIVE_READINESS_TEST_OK");

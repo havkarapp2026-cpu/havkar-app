@@ -1,6 +1,20 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import { cardPaymentsAllowed, stripeSecretMode } from "../lib/real-payments.cjs";
+import {
+  cardPaymentsAllowed,
+  stripeSecretMode,
+  stripeTestCheckoutAllowed
+} from "../lib/real-payments.cjs";
+import {
+  describeExternalBankPayoutReadiness,
+  isBlockingExternalBankStatus
+} from "../lib/stripe-bank-status.cjs";
+import {
+  marketplaceCardSplit,
+  buildRecipientAccountV2CreateBody,
+  buildMarketplaceDestinationCheckoutParams
+} from "../lib/marketplace-connect.cjs";
+import { REQUIRED_WEBHOOK_EVENTS } from "../lib/stripe-webhook-processor.cjs";
 import {
   allowedStripeFiatCurrencies,
   normalizeStripeFiatCurrency
@@ -96,6 +110,32 @@ function isXlmInvoiceRequest(req) {
       url.indexOf("xlm-invoice") !== -1 ||
       action === "xlm_invoice"
   );
+}
+
+function isMarketplaceConnectRequest(req) {
+  const action = String((req && req.body && req.body.action) || "");
+  const url = String((req && req.url) || "");
+  return Boolean(
+    (req && req.query && req.query.havkarAction === "marketplaceConnect") ||
+      url.indexOf("marketplace-connect") !== -1 ||
+      action === "marketplace_connect_onboard" ||
+      action === "marketplace_connect_status" ||
+      action === "marketplace_connect_quote"
+  );
+}
+
+function eventCardCheckoutAllowed(body) {
+  if (cardPaymentsAllowed()) {
+    return { allowed: true, mode: "live_or_armed" };
+  }
+  if (
+    stripeTestCheckoutAllowed() &&
+    body &&
+    body.test_mode === true
+  ) {
+    return { allowed: true, mode: "stripe_test" };
+  }
+  return { allowed: false, mode: "paused" };
 }
 
 function isOwnerEur1CheckoutRequest(req) {
@@ -394,6 +434,17 @@ async function buildPaymentActivationStatus() {
           : null
       };
       if (payoutBank.default_eur) {
+        const readiness = describeExternalBankPayoutReadiness(
+          {
+            status: payoutBank.default_eur.status,
+            available_payout_methods: ["standard"]
+          },
+          {
+            payouts_enabled: payoutBank.payouts_enabled === true,
+            charges_enabled: payoutBank.charges_enabled === true
+          }
+        );
+        payoutBank.default_eur.payout_readiness = readiness;
         if (
           payoutBank.default_eur.last4 !== "8455" ||
           !/revolut/i.test(payoutBank.default_eur.bank_name || "")
@@ -401,11 +452,18 @@ async function buildPaymentActivationStatus() {
           blockers.push(
             "Confirm Revolut Business EUR (last4 8455) remains the default Stripe payout bank."
           );
-        } else if (payoutBank.default_eur.status !== "verified") {
+        } else if (isBlockingExternalBankStatus(payoutBank.default_eur.status)) {
           blockers.push(
-            "Stripe payout bank Revolut …8455 is attached as default but status is not verified yet."
+            "Stripe payout bank Revolut …8455 is in a blocking status (" +
+              payoutBank.default_eur.status +
+              "). Replace bank details in Dashboard before relying on payouts."
+          );
+        } else if (!payoutBank.payouts_enabled) {
+          blockers.push(
+            "Stripe account payouts_enabled is false; scheduled Revolut payouts cannot run."
           );
         }
+        // status=new is normal and not a blocker when payouts_enabled=true.
       } else if (!payoutBank.bank_accounts_visible) {
         // Restricted Production keys often cannot list external accounts.
         // Authoritative verification remains Stripe Dashboard / Owner MCP audit.
@@ -441,7 +499,16 @@ async function buildPaymentActivationStatus() {
       webhook_secret_configured: Boolean(process.env.STRIPE_WEBHOOK_SECRET),
       allowed_fiat: allowedStripeFiatCurrencies().map((c) => c.toUpperCase()),
       live_collection_allowed: cardsAllowed,
-      payout_bank: payoutBank
+      test_checkout_allowed: stripeTestCheckoutAllowed(),
+      required_webhook_events: REQUIRED_WEBHOOK_EVENTS,
+      payout_bank: payoutBank,
+      marketplace_connect: {
+        implemented: true,
+        charge_pattern: "destination",
+        buyer_fee_bps: 200,
+        seller_fee_bps: 300,
+        live_armed: cardsAllowed
+      }
     },
     stellar: {
       testnet_destination_configured: testnetDestinationConfigured,
@@ -1295,6 +1362,143 @@ export default async function handler(req, res) {
     return res.status(200).json(await buildPaymentActivationStatus());
   }
 
+  if (isMarketplaceConnectRequest(req)) {
+    if (req.method !== "GET" && req.method !== "POST") {
+      res.setHeader("Allow", "GET, POST");
+      return sendError(res, 405, "Method not allowed");
+    }
+
+    const action = String((req.body && req.body.action) || "");
+    if (action === "marketplace_connect_quote") {
+      const listPrice = Number((req.body && req.body.list_price_eur) || 0);
+      const split = marketplaceCardSplit(listPrice);
+      if (!split) {
+        return sendError(res, 400, "list_price_eur must be a positive number");
+      }
+      return res.status(200).json({
+        ok: true,
+        live_collection: cardPaymentsAllowed() ? "armed" : "paused",
+        split
+      });
+    }
+
+    const auth = await authenticateUser(req);
+    if (!auth.user) {
+      return sendError(res, 401, auth.error || "Authentication required");
+    }
+
+    if (action === "marketplace_connect_status") {
+      const { data, error } = await getSupabaseAdmin()
+        .from("marketplace_seller_connect_accounts")
+        .select(
+          "stripe_account_id,charges_enabled,payouts_enabled,details_submitted,onboarding_status,updated_at"
+        )
+        .eq("user_id", auth.user.id)
+        .maybeSingle();
+      if (error) {
+        return sendError(res, 500, "Could not load Connect status");
+      }
+      return res.status(200).json({
+        ok: true,
+        live_collection: cardPaymentsAllowed() ? "armed" : "paused",
+        account: data || null
+      });
+    }
+
+    // marketplace_connect_onboard
+    if (!cardPaymentsAllowed() && !stripeTestCheckoutAllowed()) {
+      return res.status(403).json({
+        ok: false,
+        error: "Connect onboarding is paused until Stripe test or live collection is enabled.",
+        code: "REAL_PAYMENTS_PAUSED"
+      });
+    }
+
+    try {
+      const stripe = getStripe();
+      const existing = await getSupabaseAdmin()
+        .from("marketplace_seller_connect_accounts")
+        .select("stripe_account_id")
+        .eq("user_id", auth.user.id)
+        .maybeSingle();
+
+      let accountId = existing.data && existing.data.stripe_account_id;
+      if (!accountId) {
+        // Prefer Accounts v2; fall back to controller-property v1 if v2 unavailable on this SDK/key.
+        let created;
+        try {
+          created = await stripe.request({
+            method: "POST",
+            path: "/v2/core/accounts",
+            body: buildRecipientAccountV2CreateBody({
+              email: auth.user.email,
+              displayName:
+                (auth.user.user_metadata && auth.user.user_metadata.full_name) ||
+                "HAVKAR seller"
+            })
+          });
+        } catch (_v2Error) {
+          created = await stripe.accounts.create({
+            controller: {
+              stripe_dashboard: { type: "express" },
+              fees: { payer: "application" },
+              losses: { payments: "application" }
+            },
+            capabilities: {
+              transfers: { requested: true }
+            },
+            email: auth.user.email || undefined,
+            metadata: {
+              havkar_flow: "marketplace_connect",
+              havkar_user_id: String(auth.user.id)
+            }
+          });
+        }
+        accountId = created.id;
+        await getSupabaseAdmin()
+          .from("marketplace_seller_connect_accounts")
+          .upsert({
+            user_id: auth.user.id,
+            stripe_account_id: accountId,
+            onboarding_status: "pending",
+            updated_at: new Date().toISOString()
+          });
+      }
+
+      const origin = allowedCheckoutOrigin(req);
+      const accountLink = await stripe.accountLinks.create({
+        account: accountId,
+        refresh_url: `${origin}/market.html?connect=refresh`,
+        return_url: `${origin}/market.html?connect=return`,
+        type: "account_onboarding"
+      });
+
+      // Example destination Checkout params (not charged unless Owner arms collection).
+      const demoSplit = marketplaceCardSplit(100);
+      const exampleCheckout = buildMarketplaceDestinationCheckoutParams({
+        split: demoSplit,
+        connectedAccountId: accountId,
+        listingTitle: "Example HAVKAR listing",
+        successUrl: `${origin}/market.html?payment=success`,
+        cancelUrl: `${origin}/market.html?payment=cancelled`,
+        metadata: { havkar_user_id: String(auth.user.id) },
+        customerEmail: auth.user.email
+      });
+
+      return res.status(200).json({
+        ok: true,
+        live_collection: cardPaymentsAllowed() ? "armed" : "paused",
+        stripe_account_id: accountId,
+        onboarding_url: accountLink.url,
+        fee_example_eur_100: demoSplit,
+        destination_checkout_example: exampleCheckout
+      });
+    } catch (error) {
+      console.error("marketplace connect onboard failed", error && error.message);
+      return sendError(res, 500, "Connect onboarding could not be started");
+    }
+  }
+
   if (isXlmInvoiceRequest(req)) {
     if (req.method !== "GET" && req.method !== "POST") {
       res.setHeader("Allow", "GET, POST");
@@ -1789,7 +1993,8 @@ export default async function handler(req, res) {
       });
     }
 
-    if (!cardPaymentsAllowed()) {
+    const cardGate = eventCardCheckoutAllowed(req.body || {});
+    if (!cardGate.allowed) {
       return res.status(403).json({
         ok: false,
         error: "Card payments are paused until the owner enables them.",
@@ -1876,6 +2081,11 @@ export default async function handler(req, res) {
 
               havkar_currency:
                 fiat.currencyUpper,
+
+              havkar_flow: "events",
+              ...(cardGate.mode === "stripe_test"
+                ? { test_mode: "true", havkar_test_mode: "true" }
+                : {})
             },
 
             payment_intent_data: {
@@ -1891,6 +2101,11 @@ export default async function handler(req, res) {
 
                 havkar_currency:
                   fiat.currencyUpper,
+
+                havkar_flow: "events",
+                ...(cardGate.mode === "stripe_test"
+                  ? { test_mode: "true", havkar_test_mode: "true" }
+                  : {})
               },
             },
 
