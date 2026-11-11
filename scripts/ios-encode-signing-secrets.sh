@@ -8,11 +8,15 @@ usage() {
   cat <<'EOF'
 Usage:
   scripts/ios-encode-signing-secrets.sh certificate <Distribution.p12>
+  scripts/ios-encode-signing-secrets.sh profile <AppStore.mobileprovision>
   scripts/ios-encode-signing-secrets.sh api-key <AuthKey_XXXXXX.p8>
 
 Prints base64 suitable for pasting into GitHub Actions secrets:
-  APPLE_DISTRIBUTION_CERTIFICATE_BASE64
-  APP_STORE_CONNECT_API_KEY   (optional base64 form; raw PEM text also works)
+  APPLE_DISTRIBUTION_CERTIFICATE_BASE64   (MUST be a .p12 with private key — not a .cer)
+  APPLE_PROVISIONING_PROFILE_BASE64       (App Store .mobileprovision)
+  APP_STORE_CONNECT_API_KEY               (optional base64 form; raw PEM text also works)
+
+Never commit the output, the .p12, the .mobileprovision, the .p8, or passwords.
 EOF
 }
 
@@ -30,18 +34,36 @@ if [[ ! -f "$file" ]]; then
 fi
 
 case "$mode" in
-  certificate|api-key)
-    # Single-line base64 for GitHub secret paste.
-    if base64 --help 2>&1 | grep -q -- '-w'; then
-      base64 -w 0 "$file"
-      echo
-    else
-      base64 < "$file" | tr -d '\n'
-      echo
-    fi
+  certificate)
+    case "$file" in
+      *.p12|*.P12) ;;
+      *)
+        echo "ERROR: certificate input must be a .p12 (cert + private key). A .cer download is not enough." >&2
+        exit 1
+        ;;
+    esac
     ;;
+  profile)
+    case "$file" in
+      *.mobileprovision|*.MOBILEPROVISION) ;;
+      *)
+        echo "ERROR: profile input must be a .mobileprovision file." >&2
+        exit 1
+        ;;
+    esac
+    ;;
+  api-key) ;;
   *)
     usage
     exit 1
     ;;
 esac
+
+# Single-line base64 for GitHub secret paste.
+if base64 --help 2>&1 | grep -q -- '-w'; then
+  base64 -w 0 "$file"
+  echo
+else
+  base64 < "$file" | tr -d '\n'
+  echo
+fi

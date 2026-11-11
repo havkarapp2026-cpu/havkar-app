@@ -17,8 +17,10 @@
 
 | Item | Status |
 | --- | --- |
-| Latest signed IPA attempt | run `42554524860` **failed** |
-| Error | `Cloud signing permission error` + `No profiles for 'online.havkar.app'` |
+| Latest signed IPA attempt | run `42554524860` **failed** (exit **70**) |
+| Exact export errors | `Cloud signing permission error` + `No profiles for 'online.havkar.app'` |
+| Root cause | Automatic/cloud export without local App Store `.mobileprovision` in CI |
+| Profile created by Owner | `HAVKAR App Store Distribution` (expires 2027-11-09) — currently on Android tablet, **not** in CI secrets |
+| Missing for next IPA | GitHub secret `APPLE_PROVISIONING_PROFILE_BASE64` (+ confirm Distribution secret is a **`.p12` with private key**, not `.cer`) |
 | TestFlight / App Store submit | Not done |
-| Required Owner fix | Apple Developer: App Store Connect cloud signing permission + Distribution profile for `online.havkar.app` (prefer GitHub secret `APPLE_PROVISIONING_PROFILE_BASE64`), then re-run **iOS Release** mode `signed_ipa` |
-| CI messaging | Export step now fails with explicit Owner actions when IPA is missing |
+| Owner guide | `store/IOS_SIGNING_ASSETS_MISSING_20261111.md` |
