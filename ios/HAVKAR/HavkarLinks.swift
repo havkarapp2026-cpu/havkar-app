@@ -1,7 +1,7 @@
 import Foundation
 
 enum HavkarLinks {
-    static let startURL = URL(string: "https://havkar-app.vercel.app/")
+    static let startURL = URL(string: "https://havkar.online/")
 
     static func isAllowedNavigation(_ raw: String?) -> Bool {
         guard let raw = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty,

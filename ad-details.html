@@ -1029,8 +1029,11 @@ button:focus-visible{
             </div>
 
             <button id="xlmQuoteButton" type="button" hidden>
-                XLM Testnet quote
+                Pay with XLM (Stellar Testnet)
             </button>
+            <p id="xlmNetworkNote" class="meta-row" hidden>
+                Stellar Mainnet customer live collection stays off until Owner final approval. Quotes use Testnet unless live collection is armed.
+            </p>
 
             <h2 id="title" class="title">
                 Loading...
@@ -1417,6 +1420,7 @@ button:focus-visible{
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-ad-publish.js"></script>
 <script src="/havkar-marketplace.js"></script>
+<script src="/stellar-wallet-bundle.js"></script>
 <script src="/havkar-xlm-checkout.js"></script>
 <script>
 "use strict";
@@ -2763,9 +2767,16 @@ function renderListing(){
         )
     ){
 
-        throw new Error(
-            "This record is an advertising campaign and is not shown in Buy & Sell."
+        window.location.replace(
+            "ad-view.html?id=" +
+            encodeURIComponent(
+                String(
+                    ad.id
+                )
+            )
         );
+
+        return;
 
     }
 
@@ -2800,18 +2811,45 @@ function renderListing(){
 
     const xlmButton =
         $("xlmQuoteButton");
+    const xlmNote =
+        $("xlmNetworkNote");
+    const isOwnerListing =
+        Boolean(
+            state.currentUserId &&
+            ad.user_id &&
+            String(state.currentUserId) === String(ad.user_id)
+        );
+    const xlmVisible =
+        Number(ad.price) > 0 &&
+        !isOwnerListing &&
+        (
+            !window.HAVKAR_MARKETPLACE ||
+            window.HAVKAR_MARKETPLACE.isMarketplaceRow(ad)
+        );
 
     if(xlmButton){
+        xlmButton.hidden = !xlmVisible;
+    }
 
-        xlmButton.hidden =
-            !(
-                Number(ad.price) > 0 &&
-                (
-                    !window.HAVKAR_MARKETPLACE ||
-                    window.HAVKAR_MARKETPLACE.isMarketplaceRow(ad)
-                )
-            );
+    if(xlmNote){
+        xlmNote.hidden = !xlmVisible;
+    }
 
+    if(
+        xlmVisible &&
+        window.HAVKAR_XLM &&
+        typeof window.HAVKAR_XLM.describeNetworkAvailability === "function"
+    ){
+        window.HAVKAR_XLM.describeNetworkAvailability()
+            .then(function (info) {
+                if(xlmButton && info && info.buttonLabel){
+                    xlmButton.textContent = info.buttonLabel;
+                }
+                if(xlmNote && info && info.note){
+                    xlmNote.textContent = info.note;
+                }
+            })
+            .catch(function () {});
     }
 
     attachListingVideo();
@@ -4306,6 +4344,17 @@ async function quoteListingXlm(){
 
     }
 
+    if(
+        state.currentUserId &&
+        ad.user_id &&
+        String(state.currentUserId) === String(ad.user_id)
+    ){
+        showToast(
+            "You cannot pay yourself for your own listing."
+        );
+        return;
+    }
+
     const session =
         await supabaseClient.auth.getSession();
     const accessToken =
@@ -4324,18 +4373,58 @@ async function quoteListingXlm(){
 
     }
 
-    const quoted =
-        await window.HAVKAR_XLM.quote({
+    if (typeof window.havkarConnectStellarWallet === "function") {
+        try {
+            await window.havkarConnectStellarWallet();
+        } catch (connectError) {
+            showToast(
+                (connectError && connectError.message) ||
+                    "Connect a Stellar wallet first. HAVKAR never asks for a recovery phrase."
+            );
+            return;
+        }
+    }
+
+    const settled =
+        await window.HAVKAR_XLM.payAndVerify({
             flow: "marketplace",
             price: amount,
             subjectId: String(ad.id),
             accessToken: accessToken
         });
 
-    showToast(
+    const result =
+        settled && settled.result;
+
+    if(
+        result &&
+        result.payable === true &&
+        result.order_paid !== true
+    ){
+        window.HAVKAR_XLM.stageWalletPayment(
+            result
+        );
+    }
+
+    let message =
         window.HAVKAR_XLM.describe(
-            quoted.result
-        )
+            result
+        );
+
+    if(
+        result &&
+        result.order_paid === true &&
+        result.fulfillment === "marketplace_listing_ended"
+    ){
+        message +=
+            " Listing marked ended after settlement.";
+        if(state.ad){
+            state.ad.status = "ended";
+        }
+    }
+
+    showToast(
+        message
     );
 
 }

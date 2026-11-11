@@ -3,7 +3,7 @@ package online.havkar.app
 import java.net.URI
 
 object HavkarLinks {
-    const val START_URL = "https://havkar-app.vercel.app/"
+    const val START_URL = "https://havkar.online/"
 
     fun isAllowedNavigation(url: String?): Boolean {
         if (url.isNullOrBlank()) return false

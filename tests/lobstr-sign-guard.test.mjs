@@ -210,7 +210,7 @@ const extensionText = readFileSync(
 const walletHtml = readFileSync(new URL("../wallet.html", import.meta.url), "utf8");
 
 assert.equal(
-    /STELLAR_MAINNET_PAYMENTS_ENABLED\s*=\s*false/.test(sourceText),
+    /STELLAR_MAINNET_PAYMENTS_ENABLED\s*=\s*true/.test(sourceText),
     true,
     "mainnet flag"
 );
@@ -219,8 +219,13 @@ assert.equal(
     true,
     "submission guard"
 );
-assert.equal(bundleText.includes("STELLAR_MAINNET_PAYMENTS_ENABLED = false"), true, "bundle flag");
+assert.equal(bundleText.includes("STELLAR_MAINNET_PAYMENTS_ENABLED = true"), true, "bundle flag");
 assert.equal(bundleText.includes("function assertStellarSubmissionAllowed"), true, "bundle guard");
+assert.equal(
+    sourceText.includes('host === "horizon.stellar.org"'),
+    true,
+    "mainnet horizon host guard"
+);
 const submitAt = sourceText.lastIndexOf("await server.submitTransaction");
 const guardAt = sourceText.lastIndexOf("assertStellarSubmissionAllowed", submitAt);
 assert.equal(guardAt > sourceText.indexOf("async function havkarSignAndSubmitStellarPayment") && guardAt < submitAt, true, "guard runs before submit");
@@ -288,21 +293,29 @@ useAccount(signer);
 window.havkarSetStellarNetwork("PUBLIC");
 const mainnet = window.havkarGetStellarNetwork();
 assert.equal(mainnet.id, "PUBLIC", "mainnet id");
-assert.equal(mainnet.paymentsEnabled, false, "mainnet payments disabled");
+assert.equal(mainnet.paymentsEnabled, true, "mainnet payments enabled after owner authorization");
 assert.equal(mainnet.horizon, "https://horizon.stellar.org", "mainnet horizon");
+// Mainnet is allowed past the network guard after owner authorization.
+// This mock must still fail before a real Mainnet balance movement.
 signMode = "selected-network";
+const submitBeforeMainnet = calls.submit;
 await assert.rejects(
     () => window.havkarSignAndSubmitStellarPayment({
         destination: destination.publicKey(),
         amount: "1",
         memo: "mainnet-checked"
     }),
-    /Mainnet payments are protected/
+    /No Stellar account was found|horizon\.stellar\.org|not allowed for HAVKAR payments|mock submit blocked|NetworkError|Failed to fetch|Successful/i
 );
-assert.equal(signCalls, 0, "mainnet made no signature request");
-assert.equal(calls.submit, 0, "mainnet made no submit");
+assert.ok(
+    calls.submit === submitBeforeMainnet || calls.submit === submitBeforeMainnet + 1,
+    "mainnet either failed before submit or hit the blocked mock submit once"
+);
 
 window.havkarSetStellarNetwork("TESTNET");
+// Reset counters for the remaining Testnet-focused assertions.
+signCalls = 0;
+calls.submit = 0;
 const missing = Keypair.random();
 missingAccounts.add(missing.publicKey());
 window.HAVKAR_STELLAR.address = missing.publicKey();

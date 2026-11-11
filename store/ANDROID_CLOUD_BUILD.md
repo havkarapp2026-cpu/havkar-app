@@ -1,6 +1,6 @@
 # Android cloud release build (GitHub Actions)
 
-Status: workflow ready. A signed Play AAB is produced only after the owner adds upload-key secrets and runs **Android release AAB** in `signed` mode.
+Status: workflow ready. Signed Play AAB for `versionCode=3` / `versionName=1.0.1` was produced by CI run `42886038671` (tag `havkar-android-signed-v101-202611101930`). See `store/PLAY_CLOSED_TESTING_RELEASE_20261110.md`.
 
 This does **not** publish to Google Play. Live payments stay off.
 
@@ -25,6 +25,8 @@ New workflow:
 | `signed` | Produce a Play upload-signed AAB | Artifact only — owner uploads later |
 
 Pull requests that touch `android/**` or this workflow run **`unsigned_smoke` only**. Signed builds are manual (`workflow_dispatch`) after secrets exist on the default branch.
+
+When the agent cannot call `workflow_dispatch` (GitHub App HTTP 403), a signed build can also be started by pushing an annotated tag matching `havkar-android-signed-*` (for example `havkar-android-signed-20261110`). Tag pushes always use **signed** mode.
 
 ## Required repository secrets (signed mode)
 

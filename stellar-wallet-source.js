@@ -55,11 +55,12 @@ const NETWORK_STORAGE_KEY =
 const PENDING_PAYMENT_KEY =
     "havkar_stellar_pending_payment";
 
-/* Mainnet submission stays off.
-   The submit function refuses a PUBLIC network and
-   horizon.stellar.org even if this constant changes. */
+/* Owner-authorized Mainnet client capability.
+   Server still requires HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED=true
+   and HAVKAR_STELLAR_MAINNET_DESTINATION before any quote is payable.
+   Submission remains restricted to the matching Horizon + passphrase. */
 const STELLAR_MAINNET_PAYMENTS_ENABLED =
-    false;
+    true;
 
 let paymentInFlight =
     false;
@@ -221,8 +222,11 @@ function havkarGetStellarNetwork(){
         horizon:network.horizon,
 
         paymentsEnabled:
-            network.id === "TESTNET" &&
-            STELLAR_MAINNET_PAYMENTS_ENABLED === false
+            network.id === "TESTNET" ||
+            (
+                network.id === "PUBLIC" &&
+                STELLAR_MAINNET_PAYMENTS_ENABLED === true
+            )
 
     };
 
@@ -1021,11 +1025,6 @@ function readUnsignedPaymentRequest(
             HAVKAR_STELLAR.address || ""
         ).trim();
 
-    const destination =
-        String(
-            options?.destination || ""
-        ).trim();
-
     const memo =
         String(
             options?.memo || ""
@@ -1039,6 +1038,115 @@ function readUnsignedPaymentRequest(
         );
 
     }
+
+
+    if(
+        memo &&
+        new TextEncoder()
+            .encode(memo)
+            .length > 28
+    ){
+
+        throw new Error(
+            "A Stellar text memo can contain at most 28 bytes."
+        );
+
+    }
+
+
+    const rawPayments =
+        Array.isArray(options?.payments)
+        ? options.payments
+        : null;
+
+    let payments =
+        null;
+
+    if(
+        rawPayments &&
+        rawPayments.length > 0
+    ){
+
+        payments =
+            rawPayments.map(
+                function(entry){
+
+                    const destination =
+                        String(
+                            entry?.destination ||
+                            ""
+                        ).trim();
+
+                    if(!isPublicKey(destination)){
+
+                        throw new Error(
+                            "Enter a valid Stellar destination public key."
+                        );
+
+                    }
+
+                    if(destination === source){
+
+                        throw new Error(
+                            "The destination must be a different Stellar account."
+                        );
+
+                    }
+
+                    return {
+
+                        destination:destination,
+
+                        amount:parseXlm(
+                            entry?.amount
+                        )
+
+                    };
+
+                }
+            );
+
+        let totalStroops =
+            0n;
+
+        payments.forEach(
+            function(entry){
+
+                totalStroops +=
+                    entry.amount.stroops;
+
+            }
+        );
+
+        return {
+
+            network:network,
+
+            source:source,
+
+            destination:payments[0].destination,
+
+            memo:memo,
+
+            amount:{
+
+                text:(Number(totalStroops) / 1e7).toFixed(7),
+
+                stroops:totalStroops
+
+            },
+
+            payments:payments
+
+        };
+
+    }
+
+
+    const destination =
+        String(
+            options?.destination || ""
+        ).trim();
 
 
     if(!isPublicKey(destination)){
@@ -1059,20 +1167,6 @@ function readUnsignedPaymentRequest(
     }
 
 
-    if(
-        memo &&
-        new TextEncoder()
-            .encode(memo)
-            .length > 28
-    ){
-
-        throw new Error(
-            "A Stellar text memo can contain at most 28 bytes."
-        );
-
-    }
-
-
     return {
 
         network:network,
@@ -1085,7 +1179,9 @@ function readUnsignedPaymentRequest(
 
         amount:parseXlm(
             options?.amount
-        )
+        ),
+
+        payments:null
 
     };
 
@@ -1116,6 +1212,12 @@ async function havkarPrepareStellarPayment(
     const amount =
         request.amount;
 
+    const splitPayments =
+        Array.isArray(request.payments) &&
+        request.payments.length > 0
+        ? request.payments
+        : null;
+
     const server =
         horizonServer(network);
 
@@ -1140,10 +1242,17 @@ async function havkarPrepareStellarPayment(
             limits.baseReserve
         );
 
+    const opCount =
+        BigInt(
+            splitPayments
+            ? splitPayments.length
+            : 1
+        );
+
     const spendable =
         available.stroops -
         minimum -
-        limits.baseFee;
+        limits.baseFee * opCount;
 
 
     if(amount.stroops > spendable){
@@ -1155,65 +1264,12 @@ async function havkarPrepareStellarPayment(
     }
 
 
-    let destinationExists =
-        true;
-
-
-    try{
-
-        await server.loadAccount(
-            destination
-        );
-
-    }
-    catch(error){
-
-        if(
-            !(error instanceof NotFoundError)
-        ){
-
-            throw error;
-
-        }
-
-
-        destinationExists =
-            false;
-
-    }
-
-
-    const kind =
-        destinationExists
-        ? "payment"
-        : "createAccount";
-
-    const createMinimum =
-        2n * limits.baseReserve;
-
-
-    if(
-        kind === "createAccount" &&
-        amount.stroops < createMinimum
-    ){
-
-        throw new Error(
-            "A new Stellar account on " +
-            network.label +
-            " needs at least " +
-            formatStroops(createMinimum) +
-            " XLM."
-        );
-
-    }
-
-
     let builder =
         new TransactionBuilder(
             sourceAccount,
             {
 
-                fee:limits.baseFee.toString(),
+                fee:(limits.baseFee * opCount).toString(),
 
                 networkPassphrase:
                     network.passphrase
@@ -1222,38 +1278,153 @@ async function havkarPrepareStellarPayment(
         );
 
 
-    if(kind === "payment"){
+    let kind =
+        "payment";
 
-        builder =
-            builder.addOperation(
 
-                Operation.payment({
+    if(splitPayments){
 
-                    destination:destination,
+        for(
+            let index = 0;
+            index < splitPayments.length;
+            index += 1
+        ){
 
-                    asset:Asset.native(),
+            const entry =
+                splitPayments[index];
 
-                    amount:amount.text
+            try{
 
-                })
+                await server.loadAccount(
+                    entry.destination
+                );
 
-            );
+            }
+            catch(error){
+
+                if(
+                    error instanceof NotFoundError
+                ){
+
+                    throw new Error(
+                        "Destination account does not exist on " +
+                        network.label +
+                        ". Fund or create it before split XLM settlement."
+                    );
+
+                }
+
+                throw error;
+
+            }
+
+            builder =
+                builder.addOperation(
+
+                    Operation.payment({
+
+                        destination:entry.destination,
+
+                        asset:Asset.native(),
+
+                        amount:entry.amount.text
+
+                    })
+
+                );
+
+        }
 
     }
     else{
 
-        builder =
-            builder.addOperation(
+        let destinationExists =
+            true;
 
-                Operation.createAccount({
 
-                    destination:destination,
+        try{
 
-                    startingBalance:amount.text
-
-                })
-
+            await server.loadAccount(
+                destination
             );
+
+        }
+        catch(error){
+
+            if(
+                !(error instanceof NotFoundError)
+            ){
+
+                throw error;
+
+            }
+
+
+            destinationExists =
+                false;
+
+        }
+
+
+        kind =
+            destinationExists
+            ? "payment"
+            : "createAccount";
+
+        const createMinimum =
+            2n * limits.baseReserve;
+
+
+        if(
+            kind === "createAccount" &&
+            amount.stroops < createMinimum
+        ){
+
+            throw new Error(
+                "A new Stellar account on " +
+                network.label +
+                " needs at least " +
+                formatStroops(createMinimum) +
+                " XLM."
+            );
+
+        }
+
+
+        if(kind === "payment"){
+
+            builder =
+                builder.addOperation(
+
+                    Operation.payment({
+
+                        destination:destination,
+
+                        asset:Asset.native(),
+
+                        amount:amount.text
+
+                    })
+
+                );
+
+        }
+        else{
+
+            builder =
+                builder.addOperation(
+
+                    Operation.createAccount({
+
+                        destination:destination,
+
+                        startingBalance:amount.text
+
+                    })
+
+                );
+
+        }
 
     }
 
@@ -1312,7 +1483,23 @@ async function havkarPrepareStellarPayment(
 
         hash:bytesToHex(
             transaction.hash()
-        )
+        ),
+
+        payments:splitPayments
+            ? splitPayments.map(
+                function(entry){
+
+                    return {
+
+                        destination:entry.destination,
+
+                        amount:entry.amount.text
+
+                    };
+
+                }
+            )
+            : null
 
     };
 
@@ -1427,40 +1614,89 @@ function assertSignedPayment(
     const operations =
         signed.operations || [];
 
+    const expectedPayments =
+        Array.isArray(prepared.payments) &&
+        prepared.payments.length > 0
+        ? prepared.payments
+        : null;
 
-    if(operations.length !== 1){
 
-        throw new Error(
-            mismatch
+    if(expectedPayments){
+
+        if(operations.length !== expectedPayments.length){
+
+            throw new Error(
+                mismatch
+            );
+
+        }
+
+        expectedPayments.forEach(
+            function(expected, index){
+
+                const operation =
+                    operations[index];
+
+                if(
+                    !operation ||
+                    operation.type !== "payment" ||
+                    operation.destination !==
+                        expected.destination ||
+                    parseXlm(operation.amount).text !==
+                        expected.amount ||
+                    (
+                        operation.asset &&
+                        !operation.asset.isNative()
+                    )
+                ){
+
+                    throw new Error(
+                        mismatch
+                    );
+
+                }
+
+            }
         );
 
     }
+    else{
+
+        if(operations.length !== 1){
+
+            throw new Error(
+                mismatch
+            );
+
+        }
 
 
-    const operation =
-        operations[0];
+        const operation =
+            operations[0];
 
-    const amount =
-        operation.type === "createAccount"
-        ? operation.startingBalance
-        : operation.amount;
+        const amount =
+            operation.type === "createAccount"
+            ? operation.startingBalance
+            : operation.amount;
 
 
-    if(
-        operation.type !== prepared.kind ||
-        operation.destination !==
-            prepared.destination ||
-        parseXlm(amount).text !==
-            prepared.amount ||
-        (
-            operation.asset &&
-            !operation.asset.isNative()
-        )
-    ){
+        if(
+            operation.type !== prepared.kind ||
+            operation.destination !==
+                prepared.destination ||
+            parseXlm(amount).text !==
+                prepared.amount ||
+            (
+                operation.asset &&
+                !operation.asset.isNative()
+            )
+        ){
 
-        throw new Error(
-            mismatch
-        );
+            throw new Error(
+                mismatch
+            );
+
+        }
 
     }
 
@@ -2228,14 +2464,60 @@ function samePayment(
     prepared
 ){
 
-    return Boolean(
-        pending &&
-        pending.network === prepared.network &&
-        pending.source === prepared.source &&
-        pending.destination === prepared.destination &&
-        pending.amount === prepared.amount &&
-        pending.memo === prepared.memo &&
-        pending.kind === prepared.kind
+    if(
+        !pending ||
+        pending.network !== prepared.network ||
+        pending.source !== prepared.source ||
+        pending.destination !== prepared.destination ||
+        pending.amount !== prepared.amount ||
+        pending.memo !== prepared.memo ||
+        pending.kind !== prepared.kind
+    ){
+
+        return false;
+
+    }
+
+    const pendingPayments =
+        Array.isArray(pending.payments)
+        ? pending.payments
+        : null;
+
+    const preparedPayments =
+        Array.isArray(prepared.payments)
+        ? prepared.payments
+        : null;
+
+    if(!pendingPayments && !preparedPayments){
+
+        return true;
+
+    }
+
+    if(
+        !pendingPayments ||
+        !preparedPayments ||
+        pendingPayments.length !== preparedPayments.length
+    ){
+
+        return false;
+
+    }
+
+    return pendingPayments.every(
+        function(entry, index){
+
+            const expected =
+                preparedPayments[index];
+
+            return (
+                entry &&
+                expected &&
+                entry.destination === expected.destination &&
+                entry.amount === expected.amount
+            );
+
+        }
     );
 
 }
@@ -2306,6 +2588,50 @@ async function horizonOperationMatches(
 
     const records =
         page.records || [];
+
+    const expectedPayments =
+        Array.isArray(prepared.payments) &&
+        prepared.payments.length > 0
+        ? prepared.payments
+        : null;
+
+
+    if(expectedPayments){
+
+        if(records.length < expectedPayments.length){
+
+            return false;
+
+        }
+
+        return expectedPayments.every(
+            function(expected){
+
+                return records.some(
+                    function(operation){
+
+                        const source =
+                            operation.source_account ||
+                            operation.funder ||
+                            prepared.source;
+
+                        return (
+                            source === prepared.source &&
+                            operation.type === "payment" &&
+                            (operation.to || operation.destination) ===
+                                expected.destination &&
+                            operation.asset_type === "native" &&
+                            parseXlm(operation.amount).text ===
+                                expected.amount
+                        );
+
+                    }
+                );
+
+            }
+        );
+
+    }
 
 
     if(records.length !== 1){
@@ -2453,18 +2779,32 @@ function assertStellarSubmissionAllowed(
     }
 
 
-    if(
-        !network ||
-        network.id !== "TESTNET" ||
-        network.passphrase !== Networks.TESTNET ||
-        host !== "horizon-testnet.stellar.org"
-    ){
-
+    if(!network){
         throw new Error(
-            "Mainnet payments are protected. Use Testnet."
+            "Stellar network is not selected."
         );
-
     }
+
+    if(
+        network.id === "TESTNET" &&
+        network.passphrase === Networks.TESTNET &&
+        host === "horizon-testnet.stellar.org"
+    ){
+        return;
+    }
+
+    if(
+        STELLAR_MAINNET_PAYMENTS_ENABLED === true &&
+        network.id === "PUBLIC" &&
+        network.passphrase === Networks.PUBLIC &&
+        host === "horizon.stellar.org"
+    ){
+        return;
+    }
+
+    throw new Error(
+        "This Stellar network is not allowed for HAVKAR payments."
+    );
 
 }
 
@@ -2532,7 +2872,22 @@ async function havkarSignAndSubmitStellarPayment(
                     destination:request.destination,
                     amount:request.amount.text,
                     memo:request.memo,
-                    kind:pending.kind
+                    kind:pending.kind,
+                    payments:Array.isArray(request.payments)
+                        ? request.payments.map(
+                            function(entry){
+
+                                return {
+
+                                    destination:entry.destination,
+
+                                    amount:entry.amount.text
+
+                                };
+
+                            }
+                        )
+                        : null
                 };
 
 
@@ -2716,7 +3071,9 @@ async function havkarSignAndSubmitStellarPayment(
 
             timeBounds:prepared.timeBounds,
 
-            maxTime:prepared.timeBounds.maxTime
+            maxTime:prepared.timeBounds.maxTime,
+
+            payments:prepared.payments || null
 
         });
 

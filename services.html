@@ -2298,6 +2298,7 @@ textarea.form-control {
 
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-services.js"></script>
+<script src="/stellar-wallet-bundle.js"></script>
 <script src="/havkar-xlm-checkout.js"></script>
 <script>
 
@@ -2414,6 +2415,20 @@ function clearSearch() {
     searchInput.focus();
 
 }
+
+(function applySearchQueryFromUrl() {
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const query = String(params.get("q") || "").trim();
+        if (query && searchInput) {
+            searchInput.value = query;
+            updateClearSearchButton();
+            renderServices();
+        }
+    } catch (error) {
+        // Ignore malformed query strings.
+    }
+})();
 
 
 /* =========================================================
@@ -3055,21 +3070,56 @@ async function submitBooking(event) {
             return;
         }
 
-        const quoted = await window.HAVKAR_XLM.quote({
-            flow: recurring ? "subscription" : "services",
+        if (recurring) {
+            setButtonBusy(submitButton, false, "Confirm Booking");
+            showToast("Recurring XLM subscriptions are not supported. Nothing was collected.");
+            return;
+        }
+
+        if (typeof window.havkarConnectStellarWallet === "function") {
+            try {
+                await window.havkarConnectStellarWallet();
+            } catch (connectError) {
+                setButtonBusy(submitButton, false, "Confirm Booking");
+                showToast(
+                    (connectError && connectError.message) ||
+                        "Connect a Stellar wallet first. Nothing was collected."
+                );
+                return;
+            }
+        }
+
+        const settled = await window.HAVKAR_XLM.payAndVerify({
+            flow: "services",
             price: servicePrice,
             subjectId: String(selectedBookingService.id),
             accessToken: accessToken
         });
 
-        if (!quoted.result || quoted.result.order_paid === true || quoted.result.payable !== true) {
+        if (!settled.result || settled.result.order_paid !== true) {
             setButtonBusy(submitButton, false, "Confirm Booking");
-            showToast(window.HAVKAR_XLM.describe(quoted.result));
+            showToast(window.HAVKAR_XLM.describe(settled.result));
             return;
         }
 
         payload.payment_method = "online";
         payload.status = "pending";
+        const settledNetwork =
+            settled.result.network === "mainnet" ? "Mainnet" : "Testnet";
+        const settledTx =
+            settled.result.tx_hash ||
+            (settled.result.payment_reference || "");
+        if (settledTx) {
+            payload.message = String(payload.message || "")
+                + (payload.message ? "\n" : "")
+                + "XLM " + settledNetwork + " settled tx " + settledTx;
+            payload.agreed_price = servicePrice;
+            if (settled.result.fulfillment === "services_intent") {
+                payload.commission_bps = 1000;
+                payload.commission_amount =
+                    Math.round(servicePrice * 0.1 * 100) / 100;
+            }
+        }
     }
 
     const inserted = await db

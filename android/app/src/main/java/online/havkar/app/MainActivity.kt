@@ -69,7 +69,7 @@ class MainActivity : AppCompatActivity() {
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             javaScriptCanOpenWindowsAutomatically = false
             setSupportMultipleWindows(false)
-            userAgentString = userAgentString + " HAVKAR-Android/1.0.0"
+            userAgentString = userAgentString + " HAVKAR-Android/1.0.1"
         }
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {

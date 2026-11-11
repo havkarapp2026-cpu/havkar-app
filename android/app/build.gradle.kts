@@ -5,14 +5,14 @@ plugins {
 
 android {
     namespace = "online.havkar.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "online.havkar.app"
         minSdk = 24
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0-beta"
+        targetSdk = 36
+        versionCode = 3
+        versionName = "1.0.1"
     }
 
     signingConfigs {
@@ -38,6 +38,8 @@ android {
 
     buildTypes {
         release {
+            // Explicit Play release posture — never ship a debuggable AAB.
+            isDebuggable = false
             isMinifyEnabled = false
             isShrinkResources = false
             val releaseSigning = signingConfigs.findByName("release")
@@ -47,6 +49,9 @@ android {
             ) {
                 signingConfig = releaseSigning
             }
+        }
+        debug {
+            isDebuggable = true
         }
     }
 
