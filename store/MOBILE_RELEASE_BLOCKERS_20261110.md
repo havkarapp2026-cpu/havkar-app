@@ -21,6 +21,8 @@
 | Exact export errors | `Cloud signing permission error` + `No profiles for 'online.havkar.app'` |
 | Root cause | Automatic/cloud export without local App Store `.mobileprovision` in CI |
 | Profile created by Owner | `HAVKAR App Store Distribution` (expires 2027-11-09) — currently on Android tablet, **not** in CI secrets |
-| Missing for next IPA | GitHub secret `APPLE_PROVISIONING_PROFILE_BASE64` (+ confirm Distribution secret is a **`.p12` with private key**, not `.cer`) |
+| Distribution `.p12` in CI | **Valid** — run `42554524860` imported PKCS#12 and found **1** codesigning identity |
+| Missing for next IPA | Only GitHub secret `APPLE_PROVISIONING_PROFILE_BASE64` (from tablet `.mobileprovision`) |
+| Local Mac required for next step? | **No** — GitHub-hosted `macos-15` runners handle signing |
 | TestFlight / App Store submit | Not done |
-| Owner guide | `store/IOS_SIGNING_ASSETS_MISSING_20261111.md` |
+| Owner guide | `store/IOS_SIGNING_TABLET_NEXT_ACTION_20261111.md` |
