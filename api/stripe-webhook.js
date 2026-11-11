@@ -5,6 +5,16 @@ import {
   REAL_PAYMENTS_PAUSED_CODE,
   REAL_PAYMENTS_PAUSED_MESSAGE
 } from "../lib/real-payments.cjs";
+import {
+  tryConstructAdsBoostEvent,
+  processAdsBoostEvent
+} from "../lib/ad-boost-webhook.cjs";
+import {
+  ticketIdFromMetadata,
+  settlementActionForEvent,
+  ticketUpdateFromSettlement,
+  isDuplicatePaidActivation
+} from "../lib/stripe-ticket-settlement.cjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -40,14 +50,6 @@ async function getRawBody(req) {
 }
 
 export default async function handler(req, res) {
-  if (!cardPaymentsAllowed()) {
-    return res.status(403).json({
-      ok: false,
-      error: REAL_PAYMENTS_PAUSED_MESSAGE,
-      code: REAL_PAYMENTS_PAUSED_CODE
-    });
-  }
-
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({
@@ -58,8 +60,63 @@ export default async function handler(req, res) {
   const stripeSignature = req.headers["stripe-signature"];
 
   if (!stripeSignature) {
+    if (!cardPaymentsAllowed()) {
+      return res.status(403).json({
+        ok: false,
+        error: REAL_PAYMENTS_PAUSED_MESSAGE,
+        code: REAL_PAYMENTS_PAUSED_CODE
+      });
+    }
+
     return res.status(400).json({
       error: "Missing Stripe signature",
+    });
+  }
+
+  let rawBody;
+
+  try {
+    rawBody = await getRawBody(req);
+  } catch (error) {
+    return res.status(400).json({
+      error: "Could not read webhook body",
+    });
+  }
+
+  /*
+   * Ads boost TEST MODE is prepared on this same function so Hobby
+   * stays within the 12-function limit. It must run even while real
+   * card payments remain paused.
+   */
+  const adsBoost = await tryConstructAdsBoostEvent(
+    rawBody,
+    stripeSignature,
+    process.env
+  );
+
+  if (adsBoost.handled && adsBoost.event) {
+    try {
+      const result = await processAdsBoostEvent(
+        adsBoost.event,
+        process.env
+      );
+      return res.status(200).json(result);
+    } catch (error) {
+      console.error(
+        "HAVKAR Ads boost webhook processing error:",
+        error
+      );
+      return res.status(500).json({
+        error: "Ads boost webhook processing failed",
+      });
+    }
+  }
+
+  if (!cardPaymentsAllowed()) {
+    return res.status(403).json({
+      ok: false,
+      error: REAL_PAYMENTS_PAUSED_MESSAGE,
+      code: REAL_PAYMENTS_PAUSED_CODE
     });
   }
 
@@ -74,8 +131,6 @@ export default async function handler(req, res) {
   let event;
 
   try {
-    const rawBody = await getRawBody(req);
-
     event = stripe.webhooks.constructEvent(
       rawBody,
       stripeSignature,
@@ -95,6 +150,14 @@ export default async function handler(req, res) {
   try {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
+
+      if (
+        session.metadata?.havkar_flow === "ad_boost" &&
+        session.metadata?.test_mode === "true"
+      ) {
+        const result = await processAdsBoostEvent(event, process.env);
+        return res.status(200).json(result);
+      }
 
       const ticketId = session.metadata?.event_ticket_id;
 
@@ -159,11 +222,7 @@ export default async function handler(req, res) {
        * If this ticket was already activated by this Checkout
        * Session, no second update is necessary.
        */
-      if (
-        existingTicket.payment_status === "paid" &&
-        existingTicket.ticket_status === "valid" &&
-        existingTicket.payment_reference === session.id
-      ) {
+      if (isDuplicatePaidActivation(existingTicket, session.id)) {
         return res.status(200).json({
           received: true,
           duplicate: true,
@@ -191,6 +250,88 @@ export default async function handler(req, res) {
         ticketId,
         session.id
       );
+    }
+
+    /*
+     * Settlement events. Live Dashboard must subscribe these (MCP write denied).
+     * Refund/dispute update ticket rows by event_ticket_id metadata when present.
+     */
+    if (
+      event.type === "charge.refunded" ||
+      event.type === "charge.dispute.created" ||
+      event.type === "charge.dispute.updated" ||
+      event.type === "charge.dispute.closed" ||
+      event.type === "payout.created" ||
+      event.type === "payout.paid" ||
+      event.type === "payout.failed"
+    ) {
+      const action = settlementActionForEvent(event.type);
+      const chargeOrObject = event.data && event.data.object;
+      let ticketId = ticketIdFromMetadata(
+        chargeOrObject && chargeOrObject.metadata
+      );
+
+      // Checkout stores event_ticket_id on PaymentIntent metadata; Charge may omit it.
+      if (
+        !ticketId &&
+        chargeOrObject &&
+        typeof chargeOrObject.payment_intent === "string" &&
+        chargeOrObject.payment_intent.startsWith("pi_")
+      ) {
+        try {
+          const intent = await stripe.paymentIntents.retrieve(
+            chargeOrObject.payment_intent
+          );
+          ticketId = ticketIdFromMetadata(intent && intent.metadata);
+        } catch (lookupError) {
+          console.error(
+            "HAVKAR could not load PaymentIntent metadata for settlement:",
+            lookupError && lookupError.message
+          );
+        }
+      }
+
+      const patch = ticketUpdateFromSettlement(
+        action,
+        new Date().toISOString()
+      );
+
+      if (ticketId && patch) {
+        const { error: settlementError } = await supabase
+          .from("event_tickets")
+          .update(patch)
+          .eq("id", ticketId)
+          .in("payment_status", ["paid", "disputed"]);
+
+        if (settlementError) {
+          throw settlementError;
+        }
+
+        console.log(
+          "HAVKAR ticket settlement applied:",
+          event.type,
+          ticketId
+        );
+
+        return res.status(200).json({
+          received: true,
+          settlement_event: event.type,
+          ticket_id: ticketId,
+          applied: true
+        });
+      }
+
+      console.log(
+        "HAVKAR Stripe settlement event acknowledged:",
+        event.type,
+        event.id,
+        ticketId ? "ticket_metadata_present_but_no_patch" : "no_ticket_metadata"
+      );
+      return res.status(200).json({
+        received: true,
+        settlement_event: event.type,
+        applied: false
+      });
     }
 
     return res.status(200).json({

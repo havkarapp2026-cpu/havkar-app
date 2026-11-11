@@ -26,10 +26,12 @@
 <div id="message" class="message" role="status" aria-live="polite"></div>
 </form><footer>HAVKAR • Safe • Secure 🔒<br><a href="privacy.html">Privacy draft</a><a href="terms.html">Terms draft</a><a href="privacy-request.html">Privacy request</a></footer></main>
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-canonical-origin.js"></script>
 <script src="/havkar-auth-ui.js"></script>
 <script type="module">
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2';
 const supabase=createClient(window.HAVKAR_SUPABASE_CONFIG.url,window.HAVKAR_SUPABASE_CONFIG.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+const authRedirect=(path)=>window.HAVKAR_CANONICAL?window.HAVKAR_CANONICAL.authRedirectUrl(path):('https://havkar.online/'+String(path||'login.html').replace(/^\//,''));
 const $=id=>document.getElementById(id), form=$('signupForm'),message=$('message'),createBtn=$('createBtn'),googleBtn=$('googleBtn');
 const language=$('language');
 const i18n=window.HAVKAR_I18N;
@@ -91,7 +93,7 @@ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){show('Enter a valid email address.
 if(pass.length<8){show('Password must be at least 8 characters.','error');await paint();return;}
 if(pass!==confirm){show('Passwords do not match.','error');await paint();return;}
 saveLanguage();setBusy(true);
-try{const {data,error}=await supabase.auth.signUp({email,password:pass,options:{emailRedirectTo:new URL('login.html',location.href).href,data:{first_name:first,last_name:last,full_name:first+' '+last,account_type:type,organization_name:type==='personal'?null:org,preferred_language:language.value,verification_status:'unverified'}}});if(error)throw error;
+try{const {data,error}=await supabase.auth.signUp({email,password:pass,options:{emailRedirectTo:authRedirect('login.html'),data:{first_name:first,last_name:last,full_name:first+' '+last,account_type:type,organization_name:type==='personal'?null:org,preferred_language:language.value,verification_status:'unverified'}}});if(error)throw error;
 if(!data?.user){show('Account creation could not be confirmed. Please try again.','error');await paint();return;}
 const signupOutcome=window.HAVKAR_AUTH_UI?window.HAVKAR_AUTH_UI.signupResult(data):{code:data.session?'signed_in':'confirmation_required',text:''};
 if(signupOutcome.code==='existing_account'){show(signupOutcome.text,'error');await paint();return;}
@@ -102,5 +104,5 @@ else{show(window.HAVKAR_AUTH_UI?window.HAVKAR_AUTH_UI.signupResult(data).text:'A
 }catch(err){console.error('HAVKAR Signup Error:',err);show('Account creation could not be completed. Please try again.','error');}finally{googleBtn.disabled=false;if(!createBtn.disabled&&createBtn.textContent!=='Go to HAVKAR')setBusy(false);}
 await paint();
 });
-googleBtn.addEventListener('click',async()=>{saveLanguage();googleBtn.disabled=true;show('');try{const {error}=await supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:new URL('login.html',location.href).href}});if(error)throw error;}catch(err){console.error('HAVKAR Google OAuth Error:',err);show('Google sign-in could not be started. Please try again.','error');googleBtn.disabled=false;await paint();}});
+googleBtn.addEventListener('click',async()=>{saveLanguage();googleBtn.disabled=true;show('');try{const {error}=await supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:authRedirect('login.html'),queryParams:{prompt:'select_account'}}});if(error)throw error;}catch(err){console.error('HAVKAR Google OAuth Error:',err);show('Google sign-in could not be started. Please try again.','error');googleBtn.disabled=false;await paint();}});
 </script></body></html>

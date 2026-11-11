@@ -2991,7 +2991,7 @@ async function removeSaved(savedId){
     }
 }
 
-function openSavedItem(savedId){
+async function openSavedItem(savedId){
 
     const item =
         state.items
@@ -3018,11 +3018,63 @@ function openSavedItem(savedId){
         );
 
     /*
-     * Verified from the current HAVKAR project:
-     * Buy & Sell opens an ad with:
-     * ad-details.html?id=AD_ID
+     * Buy & Sell opens marketplace rows in ad-details.html.
+     * Advertising rows open ad-view.html (never Buy & Sell detail).
      */
     if(type === "ad"){
+
+        let surface =
+            String(
+                item.listing_surface ||
+                item.surface ||
+                ""
+            ).toLowerCase();
+
+        if(
+            !surface &&
+            db
+        ){
+
+            try{
+
+                const probe =
+                    await db
+                        .from("ads")
+                        .select(
+                            "listing_surface"
+                        )
+                        .eq(
+                            "id",
+                            item.item_id
+                        )
+                        .maybeSingle();
+
+                surface =
+                    String(
+                        probe &&
+                        probe.data &&
+                        probe.data.listing_surface ||
+                        ""
+                    ).toLowerCase();
+
+            }catch(_error){
+
+                surface =
+                    "";
+
+            }
+
+        }
+
+        if(surface === "advertising"){
+
+            window.location.href =
+                "ad-view.html?id=" +
+                id;
+
+            return;
+
+        }
 
         window.location.href =
             "ad-details.html?id=" +
