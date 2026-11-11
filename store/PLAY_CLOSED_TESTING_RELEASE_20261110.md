@@ -6,12 +6,12 @@ Agent does **not** upload or publish. Owner uploads after review.
 
 | Field | Value |
 | --- | --- |
-| CI run | `42886038671` |
+| CI run | `42965500206` |
 | Workflow | Android release AAB (signed) |
-| Tag | `havkar-android-signed-v101-202611101930` |
-| Commit | `ce2e5fd354ec64e0419f1ec4e3d61c8aa214c61e` |
-| Artifact name | `havkar-app-release-signed-42886038671` |
-| Artifact id | `13795957867` |
+| Tag | `havkar-android-signed-v101-202611110520` |
+| Commit | `8575252c1c3da29e848b07030c18cee9fbaa968b` |
+| Artifact name | `havkar-app-release-signed-42965500206` |
+| Artifact id | `13830609010` |
 | File inside zip | `app-release.aab` |
 | Size | 2686902 bytes |
 | SHA-256 (AAB) | `ee69b57a899d405cd0fb05144d52a55fd3424138bddcc7e43ae4d3c31df8757d` |
@@ -26,26 +26,26 @@ Agent does **not** upload or publish. Owner uploads after review.
 Run page:
 
 ```
-https://github.com/havkarapp2026-cpu/havkar-app/actions/runs/42886038671
+https://github.com/havkarapp2026-cpu/havkar-app/actions/runs/42965500206
 ```
 
-Artifact API (authenticated):
+Artifact page:
 
 ```
-https://github.com/havkarapp2026-cpu/havkar-app/actions/runs/42886038671/artifacts/13795957867
+https://github.com/havkarapp2026-cpu/havkar-app/actions/runs/42965500206/artifacts/13830609010
 ```
 
 Agent local verified copy (same SHA-256):
 
 ```
-/opt/cursor/artifacts/android-aab-signed-run/havkar-app-release-signed-42886038671/app-release.aab
+/opt/cursor/artifacts/android-aab-signed-run/havkar-app-release-signed-42965500206/app-release.aab
 ```
 
 Owner download copy + checksum sidecar:
 
 ```
-/opt/cursor/artifacts/play-closed-testing/online.havkar.app-v1.0.1-vc3-run42886038671.aab
-/opt/cursor/artifacts/play-closed-testing/online.havkar.app-v1.0.1-vc3-run42886038671.aab.sha256
+/opt/cursor/artifacts/play-closed-testing/online.havkar.app-v1.0.1-vc3-run42965500206.aab
+/opt/cursor/artifacts/play-closed-testing/online.havkar.app-v1.0.1-vc3-run42965500206.aab.sha256
 ```
 
 ## Signing verification
