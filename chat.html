@@ -764,10 +764,23 @@ select:focus-visible{
 .message-checks{
     font-size:11px;
     letter-spacing:-2px;
+    color:rgba(232,245,233,.88);
+}
+
+.message-checks.delivered{
+    color:#e8f5e9;
+    letter-spacing:-1px;
 }
 
 .message-checks.read{
-    color:#dff7d5;
+    color:#e8f5e9;
+    letter-spacing:-1px;
+    font-weight:800;
+    text-shadow:
+        0 0 4px rgba(255, 213, 79, 0.95),
+        0 0 8px rgba(255, 193, 7, 0.75),
+        0 1px 0 rgba(11, 61, 20, 0.55);
+    filter: drop-shadow(0 0 2px rgba(255, 215, 64, 0.9));
 }
 
 /* =========================================================
@@ -2786,7 +2799,7 @@ async function enrichConversations(){
                             supabaseClient
                                 .from("messages")
                                 .select(
-                                    "id,sender_id,message_text,created_at,is_read"
+                                    "id,sender_id,message_text,created_at,is_read,delivered_at,read_at"
                                 )
                                 .eq(
                                     "conversation_id",
@@ -3317,6 +3330,10 @@ async function openConversation(
         conversation.id
     );
 
+    await markMessagesDelivered(
+        conversation.id
+    );
+
     await markMessagesRead(
         conversation.id
     );
@@ -3601,7 +3618,7 @@ async function loadMessages(
                 supabaseClient
                     .from("messages")
                     .select(
-                        "id,conversation_id,sender_id,message_text,created_at,is_read"
+                        "id,conversation_id,sender_id,message_text,created_at,is_read,delivered_at,read_at"
                     )
                     .eq(
                         "conversation_id",
@@ -3879,25 +3896,15 @@ function appendMessage(
             );
 
         checks.className =
-            "message-checks" +
-            (
-                message.is_read
-                    ? " read"
-                    : ""
-            );
+            "message-checks";
 
         checks.dataset.messageId =
             messageId;
 
-        checks.textContent =
-            message.is_read
-                ? "✓✓"
-                : "✓";
-
-        checks.title =
-            message.is_read
-                ? "Read"
-                : "Sent";
+        applyMessageChecks(
+            checks,
+            message
+        );
 
         meta.appendChild(
             checks
@@ -4929,7 +4936,7 @@ async function sendMessage(){
                         is_read:false
                     })
                     .select(
-                        "id,conversation_id,sender_id,message_text,created_at,is_read"
+                        "id,conversation_id,sender_id,message_text,created_at,is_read,delivered_at,read_at"
                     )
                     .single()
             );
@@ -5074,8 +5081,98 @@ async function updateConversationTimestamp(){
 
 
 /* =========================================================
-   MARK READ
+   MESSAGE RECEIPTS (SENT / DELIVERED / READ)
 ========================================================= */
+
+function messageReceiptState(message){
+    if(!message){
+        return "sent";
+    }
+    if(message.read_at || message.is_read === true){
+        return "read";
+    }
+    if(message.delivered_at){
+        return "delivered";
+    }
+    return "sent";
+}
+
+function applyMessageChecks(element, message){
+    if(!element){
+        return;
+    }
+    const receipt =
+        messageReceiptState(message);
+    element.classList.remove(
+        "delivered",
+        "read"
+    );
+    if(receipt === "read"){
+        element.classList.add("read");
+        element.textContent = "✓✓";
+        element.title = "Read";
+    }else if(receipt === "delivered"){
+        element.classList.add("delivered");
+        element.textContent = "✓✓";
+        element.title = "Delivered";
+    }else{
+        element.textContent = "✓";
+        element.title = "Sent";
+    }
+}
+
+async function markMessagesDelivered(
+    conversationId,
+    messageIds
+){
+
+    if(
+        !state.currentUser ||
+        !conversationId
+    ){
+        return;
+    }
+
+    try{
+
+        const params = {
+            p_conversation_id:
+                conversationId
+        };
+
+        if(
+            Array.isArray(messageIds) &&
+            messageIds.length
+        ){
+            params.p_message_ids =
+                messageIds;
+        }
+
+        const result =
+            await withTimeout(
+                supabaseClient.rpc(
+                    "havkar_mark_messages_delivered",
+                    params
+                )
+            );
+
+        if(result.error){
+            console.warn(
+                "[HAVKAR] Mark delivered error:",
+                result.error
+            );
+        }
+
+    }catch(error){
+
+        console.warn(
+            "[HAVKAR] Mark delivered failed:",
+            error
+        );
+
+    }
+
+}
 
 async function markMessagesRead(
     conversationId
@@ -5092,23 +5189,13 @@ async function markMessagesRead(
 
         const result =
             await withTimeout(
-                supabaseClient
-                    .from("messages")
-                    .update({
-                        is_read:true
-                    })
-                    .eq(
-                        "conversation_id",
-                        conversationId
-                    )
-                    .neq(
-                        "sender_id",
-                        state.currentUser.id
-                    )
-                    .eq(
-                        "is_read",
-                        false
-                    )
+                supabaseClient.rpc(
+                    "havkar_mark_messages_read",
+                    {
+                        p_conversation_id:
+                            conversationId
+                    }
+                )
             );
 
         if(result.error){
@@ -5288,6 +5375,13 @@ function attachConversationRealtime(
                             )
                         ){
 
+                            await markMessagesDelivered(
+                                conversationId,
+                                message.id
+                                    ? [message.id]
+                                    : null
+                            );
+
                             await markMessagesRead(
                                 conversationId
                             );
@@ -5411,20 +5505,10 @@ function updateRenderedMessage(
         )
     ){
 
-        element.textContent =
-            message.is_read
-                ? "✓✓"
-                : "✓";
-
-        element.classList.toggle(
-            "read",
-            !!message.is_read
+        applyMessageChecks(
+            element,
+            message
         );
-
-        element.title =
-            message.is_read
-                ? "Read"
-                : "Sent";
 
     }
 

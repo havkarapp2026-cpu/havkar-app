@@ -44,6 +44,8 @@
       <input id="toDate" type="date">
       <button type="button" id="reloadSummary">Apply dates</button>
       <a class="btn" id="csvLink" href="#">Download CSV</a>
+      <a class="btn" id="pdfReportLink" href="#">Download PDF report</a>
+      <button class="btn" type="button" id="stellarBackfillBtn">Backfill Stellar ledger</button>
     </p>
     <p>
       <input id="searchQ" placeholder="Invoice / payment reference">
@@ -150,11 +152,17 @@
       rows.forEach(function (row) {
         html += "<tr><td>" + row.document_number + "</td><td>" + row.document_kind +
           "</td><td>" + row.issue_date + "</td><td>" + euros(row.amount_cents) +
-          "</td><td><a href='/api/finance?action=document&id=" + row.id +
-          "&format=html' target='_blank'>Open</a></td></tr>";
+          "</td><td><button type='button' data-doc='" + row.id +
+          "' data-fmt='html'>HTML</button> <button type='button' data-doc='" +
+          row.id + "' data-fmt='pdf'>PDF</button></td></tr>";
       });
       html += "</tbody></table>";
       root.innerHTML = html;
+      root.querySelectorAll("button[data-doc]").forEach(function (btn) {
+        btn.onclick = function () {
+          downloadDocument(btn.getAttribute("data-doc"), btn.getAttribute("data-fmt"));
+        };
+      });
     } catch (err) {
       root.textContent = err.message;
     }
@@ -167,24 +175,69 @@
       return;
     }
     accessToken = session.access_token;
-    document.getElementById("csvLink").href = "/api/finance?action=export_csv";
-    document.getElementById("csvLink").onclick = async function (event) {
-      event.preventDefault();
-      var res = await fetch("/api/finance?action=export_csv", {
+    async function downloadBlob(url, filename) {
+      var res = await fetch(url, {
         headers: { Authorization: "Bearer " + accessToken }
       });
       if (!res.ok) {
-        message.className = "err";
-        message.textContent = "CSV export failed.";
-        return;
+        throw new Error("download_failed_" + res.status);
       }
       var blob = await res.blob();
-      var url = URL.createObjectURL(blob);
+      var objectUrl = URL.createObjectURL(blob);
       var a = document.createElement("a");
-      a.href = url;
-      a.download = "havkar-finance-documents.csv";
+      a.href = objectUrl;
+      a.download = filename;
       a.click();
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(objectUrl);
+    }
+
+    window.downloadDocument = async function (id, format) {
+      try {
+        await downloadBlob(
+          "/api/finance?action=document&id=" + id + "&format=" + format,
+          "havkar-doc-" + id + "." + format
+        );
+      } catch (err) {
+        message.className = "err";
+        message.textContent = err.message || "Document download failed.";
+      }
+    };
+
+    document.getElementById("csvLink").href = "/api/finance?action=export_csv";
+    document.getElementById("csvLink").onclick = async function (event) {
+      event.preventDefault();
+      try {
+        await downloadBlob("/api/finance?action=export_csv", "havkar-finance-documents.csv");
+      } catch (err) {
+        message.className = "err";
+        message.textContent = "CSV export failed.";
+      }
+    };
+    document.getElementById("pdfReportLink").onclick = async function (event) {
+      event.preventDefault();
+      try {
+        var qs = new URLSearchParams({
+          action: "export_pdf_report",
+          from: document.getElementById("fromDate").value || "",
+          to: document.getElementById("toDate").value || ""
+        });
+        await downloadBlob("/api/finance?" + qs.toString(), "havkar-owner-finance-report.pdf");
+      } catch (err) {
+        message.className = "err";
+        message.textContent = "PDF report export failed.";
+      }
+    };
+    document.getElementById("stellarBackfillBtn").onclick = async function () {
+      try {
+        var body = await api("backfill_stellar_settlements");
+        message.className = "";
+        message.textContent =
+          "Stellar backfill done: " + ((body.results && body.results.length) || 0) + " intent(s).";
+        await loadSummary();
+      } catch (err) {
+        message.className = "err";
+        message.textContent = err.message || "Stellar backfill failed.";
+      }
     };
     try {
       await loadGates();
