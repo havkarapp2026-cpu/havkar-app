@@ -131,4 +131,23 @@ const processor = fs.readFileSync(
 assert.match(processor, /postAccountingFromEvent/);
 assert.match(processor, /havkar-finance-ledger/);
 
+const financeApi = fs.readFileSync(
+  path.join(process.cwd(), "lib/havkar-finance-api.cjs"),
+  "utf8"
+);
+assert.match(financeApi, /SUPABASE_SERVICE_ROLE_KEY/);
+assert.match(financeApi, /isOwnerIdentity/);
+assert.match(financeApi, /owner_only/);
+assert.doesNotMatch(financeApi, /SUPABASE_ANON_KEY/);
+
+const { isOwnerUser } = await import("../lib/havkar-finance-api.cjs");
+assert.equal(
+  isOwnerUser({ id: "9b34b0bb-271a-49ee-aeb7-a9d28be06a06" }),
+  true
+);
+assert.equal(
+  isOwnerUser({ id: "00000000-0000-0000-0000-000000000000" }),
+  false
+);
+
 console.log("HAVKAR_FINANCE_LEDGER_TEST_OK");
