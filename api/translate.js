@@ -130,12 +130,15 @@ function sendJSON(res, status, body) {
 
 const BUILTIN_TRUSTED_ORIGINS = [
   "https://havkar-app.vercel.app",
-  "https://testnet.havkar.online"
+  "https://testnet.havkar.online",
+  // Bundled Capacitor origins only. These are exact origins, not wildcards.
+  "https://localhost",
+  "capacitor://localhost"
 ];
 
 /*
  * HAVKAR_ADDITIONAL_ORIGINS is optional. An absent or empty value
- * leaves only the two built-in origins. Each entry must be one
+ * leaves only the built-in origins. Each entry must be one
  * HTTPS origin: no wildcard, HTTP, path, query, or fragment.
  * Invalid entries are ignored so the built-in origins stay trusted.
  */
