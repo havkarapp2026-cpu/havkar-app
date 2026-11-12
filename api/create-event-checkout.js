@@ -11,8 +11,9 @@ import {
 } from "../lib/stripe-bank-status.cjs";
 import {
   marketplaceCardSplit,
-  buildRecipientAccountV2CreateBody,
-  buildMarketplaceDestinationCheckoutParams
+  buildMarketplaceDestinationCheckoutParams,
+  createRecipientAccountV2,
+  createRecipientAccountOnboardingLink
 } from "../lib/marketplace-connect.cjs";
 import { REQUIRED_WEBHOOK_EVENTS } from "../lib/stripe-webhook-processor.cjs";
 import {
@@ -1455,36 +1456,13 @@ export default async function handler(req, res) {
 
       let accountId = existing.data && existing.data.stripe_account_id;
       if (!accountId) {
-        // Prefer Accounts v2; fall back to controller-property v1 if v2 unavailable on this SDK/key.
-        let created;
-        try {
-          created = await stripe.request({
-            method: "POST",
-            path: "/v2/core/accounts",
-            body: buildRecipientAccountV2CreateBody({
-              email: auth.user.email,
-              displayName:
-                (auth.user.user_metadata && auth.user.user_metadata.full_name) ||
-                "HAVKAR seller"
-            })
-          });
-        } catch (_v2Error) {
-          created = await stripe.accounts.create({
-            controller: {
-              stripe_dashboard: { type: "express" },
-              fees: { payer: "application" },
-              losses: { payments: "application" }
-            },
-            capabilities: {
-              transfers: { requested: true }
-            },
-            email: auth.user.email || undefined,
-            metadata: {
-              havkar_flow: "marketplace_connect",
-              havkar_user_id: String(auth.user.id)
-            }
-          });
-        }
+        // Accounts v2 only — Accounts v1 create is blocked on this platform.
+        const created = await createRecipientAccountV2(stripe, {
+          email: auth.user.email,
+          displayName:
+            (auth.user.user_metadata && auth.user.user_metadata.full_name) ||
+            "HAVKAR seller"
+        });
         accountId = created.id;
         await getSupabaseAdmin()
           .from("marketplace_seller_connect_accounts")
@@ -1497,11 +1475,10 @@ export default async function handler(req, res) {
       }
 
       const origin = allowedCheckoutOrigin(req);
-      const accountLink = await stripe.accountLinks.create({
-        account: accountId,
-        refresh_url: `${origin}/market.html?connect=refresh`,
-        return_url: `${origin}/market.html?connect=return`,
-        type: "account_onboarding"
+      const accountLink = await createRecipientAccountOnboardingLink(stripe, {
+        accountId,
+        refreshUrl: `${origin}/market.html?connect=refresh`,
+        returnUrl: `${origin}/market.html?connect=return`
       });
 
       // Example destination Checkout params (not charged unless Owner arms collection).
@@ -1520,7 +1497,7 @@ export default async function handler(req, res) {
         ok: true,
         live_collection: cardPaymentsAllowed() ? "armed" : "paused",
         stripe_account_id: accountId,
-        onboarding_url: accountLink.url,
+        onboarding_url: accountLink.url || accountLink.link || null,
         fee_example_eur_100: demoSplit,
         destination_checkout_example: exampleCheckout
       });

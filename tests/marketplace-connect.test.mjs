@@ -6,7 +6,8 @@ const require = createRequire(import.meta.url);
 const {
   marketplaceCardSplit,
   buildRecipientAccountV2CreateBody,
-  buildMarketplaceDestinationCheckoutParams
+  buildMarketplaceDestinationCheckoutParams,
+  connectAccountFlagsFromV2
 } = require("../lib/marketplace-connect.cjs");
 
 test("marketplace 2% buyer + 3% seller routes 5% application fee on destination charge", () => {
@@ -25,6 +26,7 @@ test("Accounts v2 recipient body requests express + application responsibilities
     country: "IT"
   });
   assert.equal(body.dashboard, "express");
+  assert.equal(body.identity.country, "it");
   assert.equal(body.defaults.responsibilities.fees_collector, "application");
   assert.equal(body.defaults.responsibilities.losses_collector, "application");
   assert.equal(
@@ -32,6 +34,24 @@ test("Accounts v2 recipient body requests express + application responsibilities
       .requested,
     true
   );
+  assert.ok(body.include.includes("configuration.recipient"));
+});
+
+test("connectAccountFlagsFromV2 reads transfer capability status", () => {
+  const flags = connectAccountFlagsFromV2({
+    configuration: {
+      recipient: {
+        capabilities: {
+          stripe_balance: {
+            stripe_transfers: { status: "pending" }
+          }
+        }
+      }
+    },
+    requirements: { summary: { minimum_deadline: "2026-01-01" } }
+  });
+  assert.equal(flags.charges_enabled, false);
+  assert.equal(flags.transfer_capability_status, "pending");
 });
 
 test("destination Checkout params keep fee routing server-side", () => {
