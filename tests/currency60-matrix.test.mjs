@@ -55,6 +55,8 @@ assert.equal(quote.seller_fee_rate, 0.03);
 const api = fs.readFileSync("api/create-event-checkout.js", "utf8");
 assert.match(api, /isCurrencyMatrixRequest/);
 assert.match(api, /currency_quote/);
+assert.match(api, /marketplace_buy_checkout/);
+assert.match(api, /LIVE_COLLECTION_PAUSED/);
 
 const vercel = fs.readFileSync("vercel.json", "utf8");
 assert.match(vercel, /currency-matrix/);
@@ -63,6 +65,17 @@ assert.match(vercel, /chat\|product\|checkout-currency/);
 const page = fs.readFileSync("checkout-currency.html", "utf8");
 assert.match(page, /currency-matrix/);
 assert.match(page, /live payments gated OFF/i);
+
+const adDetails = fs.readFileSync("ad-details.html", "utf8");
+assert.match(adDetails, /buyNowPanel/);
+assert.match(adDetails, /buyCurrencyList/);
+assert.match(adDetails, /marketplace_buy_checkout/);
+assert.match(adDetails, /Pay with XLM wallet/);
+assert.doesNotMatch(adDetails, /xlmQuoteButton/);
+assert.doesNotMatch(
+  adDetails,
+  /gallery[\s\S]{0,400}Pay with XLM \(Stellar/
+);
 
 const chat = fs.readFileSync("chat.html", "utf8");
 assert.match(chat, /HAVKAR_CHAT_BUILD/);

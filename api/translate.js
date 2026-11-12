@@ -129,15 +129,22 @@ function sendJSON(res, status, body) {
 }
 
 const BUILTIN_TRUSTED_ORIGINS = [
+  "https://havkar.online",
+  "https://www.havkar.online",
   "https://havkar-app.vercel.app",
-  "https://testnet.havkar.online"
+  "https://testnet.havkar.online",
+  "https://staging.havkar.online"
 ];
 
 /*
  * HAVKAR_ADDITIONAL_ORIGINS is optional. An absent or empty value
- * leaves only the two built-in origins. Each entry must be one
+ * leaves only the built-in production origins. Each entry must be one
  * HTTPS origin: no wildcard, HTTP, path, query, or fragment.
  * Invalid entries are ignored so the built-in origins stay trusted.
+ *
+ * Android WebView on https://havkar.online sends Origin: https://havkar.online
+ * for fetch('/api/translate'). Missing that origin caused production
+ * "Translation failed. Retry sends the original text."
  */
 function additionalTrustedOrigins(raw) {
   if (typeof raw !== "string" || !raw.trim()) {
@@ -186,6 +193,38 @@ const ALLOWED_ORIGINS = new Set([
   )
 ]);
 
+function isHavkarAppOrigin(origin) {
+  if (!origin || typeof origin !== "string") {
+    return false;
+  }
+  if (ALLOWED_ORIGINS.has(origin)) {
+    return true;
+  }
+  try {
+    const parsed = new URL(origin);
+    if (parsed.protocol !== "https:") {
+      return false;
+    }
+    const host = parsed.hostname.toLowerCase();
+    if (host === "havkar.online" || host === "www.havkar.online") {
+      return true;
+    }
+    if (host.endsWith(".havkar.online")) {
+      return true;
+    }
+    // Preview deploys for this project only.
+    if (
+      host.endsWith("-havkarapp2026-4055s-projects.vercel.app") ||
+      host === "havkar-app.vercel.app"
+    ) {
+      return true;
+    }
+  } catch (_e) {
+    return false;
+  }
+  return false;
+}
+
 const VERCEL_TRUSTED_IP_HEADER = "x-vercel-forwarded-for";
 
 function headerValue(req, name) {
@@ -208,7 +247,7 @@ function applyCors(req, res) {
     "Content-Type, Authorization"
   );
 
-  if (origin && ALLOWED_ORIGINS.has(origin)) {
+  if (origin && isHavkarAppOrigin(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
 
     return {
@@ -217,6 +256,7 @@ function applyCors(req, res) {
     };
   }
 
+  // Same-origin / non-browser clients omit Origin.
   if (!origin) {
     return {
       allowed: true,

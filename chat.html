@@ -995,58 +995,8 @@ select:focus-visible{
     font-weight:700;
 }
 
-.reaction-trigger{
-    position:absolute;
-    right:4px;
-    top:auto;
-    bottom:calc(100% - 14px);
-    width:34px;
-    height:34px;
-    border-radius:50%;
-    border:1px solid #e0e4e0;
-    background:#fff;
-    color:#777;
-    box-shadow:0 2px 7px rgba(0,0,0,.14);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    cursor:pointer;
-    z-index:25;
-    touch-action:manipulation;
-}
-
-.message-row.received .reaction-trigger{
-    left:4px;
-    right:auto;
-}
-
-.reaction-trigger:active{
-    transform:scale(.9);
-}
-
-.reaction-picker{
-    position:absolute;
-    right:0;
-    bottom:calc(100% + 8px);
-    display:none;
-    align-items:center;
-    gap:4px;
-    padding:7px;
-    border-radius:19px;
-    background:#fff;
-    box-shadow:0 8px 25px rgba(0,0,0,.18);
-    border:1px solid #e5e9e5;
-    z-index:50;
-}
-
-.message-row.received .reaction-picker{
-    left:0;
-    right:auto;
-}
-
-.message-wrap.reaction-open .reaction-picker{
-    display:flex;
-}
+/* Floating smile triggers are intentionally removed — they covered bubble text.
+   WhatsApp-style: long-press the bubble to open the quick reaction bar. */
 
 #reactionPortal{
     position:fixed;
@@ -1211,6 +1161,12 @@ select:focus-visible{
     justify-content:center;
     font-size:21px;
     cursor:pointer;
+}
+
+.reaction-option.reaction-more{
+    background:#e8f5e9;
+    color:#1b5e20;
+    font-weight:800;
 }
 
 .reaction-option:active{
@@ -1860,11 +1816,11 @@ select:focus-visible{
 
 /* =========================================================
    HAVKAR CHAT — PRODUCTION VERSION
-   Build: 2026-11-12-currency-messaging-v2
+   Build: 2026-11-12-android-translate-react-v3
 ========================================================= */
 
 const HAVKAR_CHAT_BUILD =
-    "2026-11-12-currency-messaging-v2";
+    "2026-11-12-android-translate-react-v3";
 
 function loadEmojiCatalogDeferred(){
     if(window.HAVKAR_EMOJI_CATALOG){
@@ -2056,6 +2012,10 @@ const state = {
 
     emojiCategory:"recent",
 
+    emojiPickerMode:"compose",
+
+    emojiReactMessageId:null,
+
     reactionPortalMessageId:null,
 
     pushConfigured:false
@@ -2187,6 +2147,10 @@ async function openEmojiModal(){
     if(btn){
         btn.setAttribute("aria-expanded", "true");
     }
+    const title = $("emojiModalTitle");
+    if(title && state.emojiPickerMode !== "react"){
+        title.textContent = "Emoji";
+    }
     renderEmojiCats();
     renderEmojiGrid();
     const search = $("emojiSearchInput");
@@ -2204,6 +2168,12 @@ function closeEmojiModal(){
     const btn = $("emojiPickerButton");
     if(btn){
         btn.setAttribute("aria-expanded", "false");
+    }
+    state.emojiPickerMode = "compose";
+    state.emojiReactMessageId = null;
+    const title = $("emojiModalTitle");
+    if(title){
+        title.textContent = "Emoji";
     }
 }
 
@@ -2257,6 +2227,13 @@ function renderEmojiGrid(){
         button.title = name || emoji;
         button.setAttribute("aria-label", name || emoji);
         button.addEventListener("click", () => {
+            if(state.emojiPickerMode === "react" && state.emojiReactMessageId){
+                const messageId = state.emojiReactMessageId;
+                rememberEmoji(emoji);
+                closeEmojiModal();
+                addOrToggleReaction(messageId, emoji);
+                return;
+            }
             insertEmojiAtCursor(emoji);
             closeEmojiModal();
         });
@@ -4759,44 +4736,14 @@ function appendMessage(
         meta
     );
 
-    const trigger =
-        document.createElement(
-            "button"
-        );
-
-    trigger.type =
-        "button";
-
-    trigger.className =
-        "reaction-trigger";
-
-    trigger.setAttribute(
-        "aria-label",
-        "React to message"
-    );
-
-    trigger.innerHTML =
-        '<i class="far fa-face-smile"></i>';
-
-    trigger.addEventListener(
-        "click",
-        event => {
-
-            event.stopPropagation();
-
-            toggleReactionPicker(
-                wrap
-            );
-
-        }
+    bindMessageLongPressReaction(
+        bubble,
+        wrap,
+        messageId
     );
 
     wrap.appendChild(
         bubble
-    );
-
-    wrap.appendChild(
-        trigger
     );
 
     const reactionBar =
@@ -4834,7 +4781,7 @@ function appendMessage(
 
 
 /* =========================================================
-   REACTION PICKER (fixed portal — never clipped by bubbles)
+   REACTION PICKER — WhatsApp-style long-press + fixed portal
 ========================================================= */
 
 function fillReactionPortal(messageId){
@@ -4844,7 +4791,21 @@ function fillReactionPortal(messageId){
     }
     portal.innerHTML = "";
     portal.dataset.messageId = String(messageId);
+
+    const recent = readRecentEmojis().filter(isLikelyEmoji).slice(0, 3);
+    const quick = [];
+    recent.forEach(emoji => {
+        if(quick.indexOf(emoji) < 0){
+            quick.push(emoji);
+        }
+    });
     REACTIONS.forEach(emoji => {
+        if(quick.indexOf(emoji) < 0){
+            quick.push(emoji);
+        }
+    });
+
+    quick.slice(0, 7).forEach(emoji => {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "reaction-option";
@@ -4852,11 +4813,24 @@ function fillReactionPortal(messageId){
         button.setAttribute("aria-label", "React " + emoji);
         button.addEventListener("click", event => {
             event.stopPropagation();
+            rememberEmoji(emoji);
             addOrToggleReaction(messageId, emoji);
             closeAllReactionPickers();
         });
         portal.appendChild(button);
     });
+
+    const more = document.createElement("button");
+    more.type = "button";
+    more.className = "reaction-option reaction-more";
+    more.setAttribute("aria-label", "More emoji reactions");
+    more.textContent = "＋";
+    more.addEventListener("click", event => {
+        event.stopPropagation();
+        closeAllReactionPickers();
+        openReactionEmojiPicker(messageId);
+    });
+    portal.appendChild(more);
 }
 
 function positionReactionPortal(anchor){
@@ -4868,12 +4842,13 @@ function positionReactionPortal(anchor){
     const pad = 8;
     portal.style.visibility = "hidden";
     portal.classList.add("show");
-    const width = portal.offsetWidth || 280;
+    const width = portal.offsetWidth || 300;
     const height = portal.offsetHeight || 56;
+    // Prefer above the bubble; if clipped, place below without covering text.
     let left = rect.left + (rect.width / 2) - (width / 2);
-    let top = rect.top - height - 10;
+    let top = rect.top - height - 12;
     if(top < pad){
-        top = rect.bottom + 10;
+        top = rect.bottom + 12;
     }
     left = Math.max(pad, Math.min(left, window.innerWidth - width - pad));
     top = Math.max(pad, Math.min(top, window.innerHeight - height - pad));
@@ -4882,22 +4857,87 @@ function positionReactionPortal(anchor){
     portal.style.visibility = "visible";
 }
 
-function toggleReactionPicker(wrap){
-    const wasOpen = wrap.classList.contains("reaction-open");
+function openReactionPickerForWrap(wrap, messageId){
     closeAllReactionPickers();
-    if(wasOpen){
-        return;
-    }
-    const messageId = wrap.querySelector(".reaction-bar")
-        && wrap.querySelector(".reaction-bar").dataset.reactionBar;
-    if(!messageId){
+    if(!wrap || !messageId){
         return;
     }
     wrap.classList.add("reaction-open");
     state.reactionPortalMessageId = String(messageId);
     fillReactionPortal(messageId);
-    const trigger = wrap.querySelector(".reaction-trigger");
-    positionReactionPortal(trigger || wrap);
+    const bubble = wrap.querySelector(".message");
+    positionReactionPortal(bubble || wrap);
+}
+
+function bindMessageLongPressReaction(bubble, wrap, messageId){
+    if(!bubble || !wrap || !messageId){
+        return;
+    }
+    let timer = null;
+    let moved = false;
+    const LONG_MS = 480;
+
+    function clearTimer(){
+        if(timer){
+            window.clearTimeout(timer);
+            timer = null;
+        }
+    }
+
+    function start(event){
+        if(event.type === "mousedown" && event.button !== 0){
+            return;
+        }
+        moved = false;
+        clearTimer();
+        timer = window.setTimeout(() => {
+            timer = null;
+            if(moved){
+                return;
+            }
+            if(navigator.vibrate){
+                try{ navigator.vibrate(18); }catch(_e){}
+            }
+            openReactionPickerForWrap(wrap, messageId);
+        }, LONG_MS);
+    }
+
+    function cancel(){
+        clearTimer();
+    }
+
+    function onMove(event){
+        if(!timer){
+            return;
+        }
+        const touch = event.touches && event.touches[0];
+        if(touch && (
+            Math.abs(touch.clientX - (bubble._lpX || touch.clientX)) > 10 ||
+            Math.abs(touch.clientY - (bubble._lpY || touch.clientY)) > 10
+        )){
+            moved = true;
+            clearTimer();
+        }
+    }
+
+    bubble.addEventListener("touchstart", event => {
+        const touch = event.touches && event.touches[0];
+        if(touch){
+            bubble._lpX = touch.clientX;
+            bubble._lpY = touch.clientY;
+        }
+        start(event);
+    }, { passive:true });
+    bubble.addEventListener("touchmove", onMove, { passive:true });
+    bubble.addEventListener("touchend", cancel, { passive:true });
+    bubble.addEventListener("touchcancel", cancel, { passive:true });
+    bubble.addEventListener("mousedown", start);
+    bubble.addEventListener("mouseup", cancel);
+    bubble.addEventListener("mouseleave", cancel);
+    bubble.addEventListener("contextmenu", event => {
+        event.preventDefault();
+        openReactionPickerForWrap(wrap, messageId);
+    });
 }
 
 function closeAllReactionPickers(){
@@ -4911,6 +4951,16 @@ function closeAllReactionPickers(){
         portal.removeAttribute("data-message-id");
     }
     state.reactionPortalMessageId = null;
+}
+
+async function openReactionEmojiPicker(messageId){
+    state.emojiPickerMode = "react";
+    state.emojiReactMessageId = String(messageId);
+    const title = $("emojiModalTitle");
+    if(title){
+        title.textContent = "React with emoji";
+    }
+    await openEmojiModal();
 }
 
 
@@ -5353,95 +5403,51 @@ function renderMessageReactions(
             )
             : null;
 
-    REACTIONS.forEach(
-        emoji => {
+    const emojiKeys = Object.keys(data || {}).filter(emoji => {
+        const users = data[emoji];
+        return Array.isArray(users) && users.length > 0 && isLikelyEmoji(emoji);
+    });
 
-            const users =
-                Array.isArray(
-                    data[emoji]
-                )
-                    ? data[emoji]
-                    : [];
-
-            if(!users.length){
-                return;
-            }
-
-            const chip =
-                document.createElement(
-                    "button"
-                );
-
-            chip.type =
-                "button";
-
-            chip.className =
-                "reaction-chip";
-
-            if(
-                userId &&
-                users.some(
-                    id =>
-                        String(id) ===
-                        userId
-                )
-            ){
-
-                chip.classList.add(
-                    "mine"
-                );
-
-            }
-
-            const emojiSpan =
-                document.createElement(
-                    "span"
-                );
-
-            emojiSpan.textContent =
-                emoji;
-
-            const count =
-                document.createElement(
-                    "span"
-                );
-
-            count.className =
-                "reaction-count";
-
-            count.textContent =
-                String(
-                    users.length
-                );
-
-            chip.appendChild(
-                emojiSpan
-            );
-
-            chip.appendChild(
-                count
-            );
-
-            chip.addEventListener(
-                "click",
-                event => {
-
-                    event.stopPropagation();
-
-                    addOrToggleReaction(
-                        messageId,
-                        emoji
-                    );
-
-                }
-            );
-
-            bar.appendChild(
-                chip
-            );
-
+    // Stable order: quick reactions first, then remaining by popularity.
+    emojiKeys.sort((a, b) => {
+        const ai = REACTIONS.indexOf(a);
+        const bi = REACTIONS.indexOf(b);
+        if(ai >= 0 && bi >= 0){
+            return ai - bi;
         }
-    );
+        if(ai >= 0){
+            return -1;
+        }
+        if(bi >= 0){
+            return 1;
+        }
+        return (data[b].length - data[a].length) || a.localeCompare(b);
+    });
+
+    emojiKeys.forEach(emoji => {
+        const users = data[emoji];
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "reaction-chip";
+        if(
+            userId &&
+            users.some(id => String(id) === userId)
+        ){
+            chip.classList.add("mine");
+        }
+        const emojiSpan = document.createElement("span");
+        emojiSpan.textContent = emoji;
+        const count = document.createElement("span");
+        count.className = "reaction-count";
+        count.textContent = String(users.length);
+        chip.appendChild(emojiSpan);
+        chip.appendChild(count);
+        chip.addEventListener("click", event => {
+            event.stopPropagation();
+            addOrToggleReaction(messageId, emoji);
+        });
+        bar.appendChild(chip);
+    });
 
 }
 
@@ -7519,6 +7525,8 @@ function setupEvents(){
             "click",
             event => {
                 event.stopPropagation();
+                state.emojiPickerMode = "compose";
+                state.emojiReactMessageId = null;
                 openEmojiModal();
             }
         );
@@ -7552,7 +7560,7 @@ function setupEvents(){
                 const openWrap = document.querySelector(".message-wrap.reaction-open");
                 if(openWrap){
                     positionReactionPortal(
-                        openWrap.querySelector(".reaction-trigger") || openWrap
+                        openWrap.querySelector(".message") || openWrap
                     );
                 }
             }
