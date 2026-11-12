@@ -59,13 +59,19 @@ test("required webhook event list covers success failure refund dispute payout",
   for (const needed of [
     "checkout.session.completed",
     "checkout.session.async_payment_failed",
+    "payment_intent.succeeded",
+    "payment_intent.payment_failed",
     "charge.refunded",
     "charge.dispute.created",
     "payout.paid",
-    "payout.failed"
+    "payout.failed",
+    "account.updated",
+    "transfer.created",
+    "transfer.reversed"
   ]) {
     assert.ok(REQUIRED_WEBHOOK_EVENTS.includes(needed), needed);
   }
+  assert.equal(REQUIRED_WEBHOOK_EVENTS.length, 18);
 });
 
 test("paid checkout activates ticket once; duplicate is idempotent", async () => {
@@ -167,6 +173,50 @@ test("payout.paid is recorded for reconciliation", async () => {
   assert.equal(result.kind, "payout");
   assert.equal(store.payouts.length, 1);
   assert.equal(store.payouts[0].payout_id, "po_1");
+});
+
+test("account.updated updates Connect seller row when store supports it", async () => {
+  const store = memoryStore();
+  const updates = [];
+  store.updateConnectAccount = async (row) => {
+    updates.push(row);
+    return { updated: true };
+  };
+  const result = await processStripeEvent(
+    {
+      id: "evt_acct",
+      type: "account.updated",
+      livemode: false,
+      data: {
+        object: {
+          id: "acct_seller_1",
+          charges_enabled: true,
+          payouts_enabled: false,
+          details_submitted: true
+        }
+      }
+    },
+    store
+  );
+  assert.equal(result.applied, true);
+  assert.equal(updates[0].stripe_account_id, "acct_seller_1");
+  assert.equal(updates[0].onboarding_status, "complete");
+});
+
+test("transfer.created is claimed as transfer lifecycle", async () => {
+  const store = memoryStore();
+  const result = await processStripeEvent(
+    {
+      id: "evt_tr",
+      type: "transfer.created",
+      livemode: false,
+      data: { object: { id: "tr_1", amount: 9700, currency: "eur" } }
+    },
+    store
+  );
+  assert.equal(result.kind, "transfer");
+  assert.equal(result.transfer_id, "tr_1");
+  assert.equal(store.events.has("evt_tr"), true);
 });
 
 test("Stripe signature helper constructs verifiable test header", () => {

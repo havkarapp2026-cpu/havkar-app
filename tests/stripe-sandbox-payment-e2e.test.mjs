@@ -20,5 +20,6 @@ test("parseScenario defaults to payout_paid and rejects unknown", () => {
   assert.equal(parseScenario({ scenario: "payment_success" }), "payment_success");
   assert.equal(parseScenario({ scenario: "refund" }), "refund");
   assert.equal(parseScenario({ scenario: "payment_fail" }), "payment_fail");
+  assert.equal(parseScenario({ scenario: "connect_onboard" }), "connect_onboard");
   assert.equal(parseScenario({ scenario: "live_charge" }), null);
 });

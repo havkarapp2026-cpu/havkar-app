@@ -123,6 +123,29 @@ function createWebhookStore(supabase) {
         return { duplicate: false, skipped: true };
       }
       return { duplicate: false };
+    },
+    async updateConnectAccount(row) {
+      const patch = {
+        charges_enabled: row.charges_enabled === true,
+        payouts_enabled: row.payouts_enabled === true,
+        details_submitted: row.details_submitted === true,
+        onboarding_status: row.onboarding_status || "pending",
+        updated_at: row.updated_at || new Date().toISOString()
+      };
+      const { data, error } = await supabase
+        .from("marketplace_seller_connect_accounts")
+        .update(patch)
+        .eq("stripe_account_id", row.stripe_account_id)
+        .select("stripe_account_id")
+        .maybeSingle();
+      if (error) {
+        console.error(
+          "marketplace_seller_connect_accounts update skipped:",
+          error.message
+        );
+        return { updated: false, skipped: true };
+      }
+      return { updated: Boolean(data && data.stripe_account_id) };
     }
   };
 }
