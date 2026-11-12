@@ -407,6 +407,128 @@ button:focus-visible{
     font-weight:900;
 }
 
+.buy-now-panel{
+    margin-top:16px;
+    padding:14px;
+    border:1px solid #d7e8d9;
+    border-radius:16px;
+    background:linear-gradient(180deg,#f7fbf7,#eef7ef);
+}
+
+.buy-now-panel[hidden]{
+    display:none !important;
+}
+
+.buy-now-panel h3{
+    margin:0 0 8px;
+    font-size:1rem;
+    color:var(--green-800);
+}
+
+.buy-now-panel .gate-note{
+    margin:0 0 10px;
+    padding:8px 10px;
+    border-radius:10px;
+    background:#fff8e1;
+    color:#8a4b08;
+    font-size:.82rem;
+    line-height:1.4;
+}
+
+.buy-now-panel label{
+    display:block;
+    margin:8px 0 4px;
+    font-size:.78rem;
+    color:#456;
+    font-weight:700;
+}
+
+.buy-now-panel input[type=search]{
+    width:100%;
+    min-height:44px;
+    border:1px solid #cfd;
+    border-radius:12px;
+    padding:0 12px;
+    font:inherit;
+    background:#fff;
+}
+
+.buy-currency-list{
+    max-height:180px;
+    overflow:auto;
+    border:1px solid #e0ebe2;
+    border-radius:12px;
+    margin-top:8px;
+    background:#fff;
+}
+
+.buy-currency-opt{
+    width:100%;
+    text-align:left;
+    border:0;
+    border-bottom:1px solid #eef5ef;
+    background:#fff;
+    padding:11px 12px;
+    cursor:pointer;
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+    font:inherit;
+}
+
+.buy-currency-opt.active,
+.buy-currency-opt:hover{
+    background:#e8f5e9;
+}
+
+.buy-totals{
+    margin-top:10px;
+    padding:10px 12px;
+    border-radius:12px;
+    background:#fff;
+    border:1px solid #e3eee4;
+    font-size:.86rem;
+    line-height:1.55;
+    color:#234;
+}
+
+.buy-actions{
+    display:grid;
+    gap:8px;
+    margin-top:12px;
+}
+
+.buy-actions button{
+    min-height:46px;
+    border-radius:12px;
+    border:0;
+    font:inherit;
+    font-weight:800;
+    cursor:pointer;
+}
+
+.buy-actions .pay-card{
+    background:var(--green-800);
+    color:#fff;
+}
+
+.buy-actions .pay-xlm{
+    background:#fff;
+    color:var(--green-800);
+    border:1px solid #b7d7ba;
+}
+
+.buy-actions button:disabled{
+    opacity:.55;
+    cursor:not-allowed;
+}
+
+@media (max-width:560px){
+    .buy-now-panel{
+        padding:12px;
+    }
+}
+
 .meta-list{
     margin-top:17px;
     display:flex;
@@ -1028,13 +1150,6 @@ button:focus-visible{
 
             </div>
 
-            <button id="xlmQuoteButton" type="button" hidden>
-                Pay with XLM (Stellar Testnet)
-            </button>
-            <p id="xlmNetworkNote" class="meta-row" hidden>
-                Stellar Mainnet customer live collection stays off until Owner final approval. Quotes use Testnet unless live collection is armed.
-            </p>
-
             <h2 id="title" class="title">
                 Loading...
             </h2>
@@ -1042,6 +1157,33 @@ button:focus-visible{
             <div id="price" class="price">
                 Price on request
             </div>
+
+            <section id="buyNowPanel" class="buy-now-panel" hidden>
+                <h3>BUY NOW</h3>
+                <p id="buyGateNote" class="gate-note">
+                    Checking payment gates…
+                </p>
+                <label for="buyCurrencySearch">Pay in (60 Stripe currencies)</label>
+                <input
+                    id="buyCurrencySearch"
+                    type="search"
+                    placeholder="Search EUR, Yen, Brazil…"
+                    autocomplete="off"
+                >
+                <div id="buyCurrencyList" class="buy-currency-list" role="listbox" aria-label="Checkout currencies"></div>
+                <div id="buyTotals" class="buy-totals">
+                    Select a currency to see fees, FX and total.
+                </div>
+                <div class="buy-actions">
+                    <button id="buyCardButton" class="pay-card" type="button" disabled>
+                        Pay with card (Stripe)
+                    </button>
+                    <button id="buyXlmButton" class="pay-xlm" type="button" hidden>
+                        Pay with XLM wallet
+                    </button>
+                </div>
+                <pre id="buyReceipt" hidden style="white-space:pre-wrap;word-break:break-word;font-size:12px;background:#f7fbf7;padding:10px;border-radius:10px;margin:10px 0 0;"></pre>
+            </section>
 
             <div class="meta-list">
 
@@ -2809,17 +2951,13 @@ function renderListing(){
             ad.currency
         );
 
-    const xlmButton =
-        $("xlmQuoteButton");
-    const xlmNote =
-        $("xlmNetworkNote");
     const isOwnerListing =
         Boolean(
             state.currentUserId &&
             ad.user_id &&
             String(state.currentUserId) === String(ad.user_id)
         );
-    const xlmVisible =
+    const buyVisible =
         Number(ad.price) > 0 &&
         !isOwnerListing &&
         (
@@ -2827,30 +2965,7 @@ function renderListing(){
             window.HAVKAR_MARKETPLACE.isMarketplaceRow(ad)
         );
 
-    if(xlmButton){
-        xlmButton.hidden = !xlmVisible;
-    }
-
-    if(xlmNote){
-        xlmNote.hidden = !xlmVisible;
-    }
-
-    if(
-        xlmVisible &&
-        window.HAVKAR_XLM &&
-        typeof window.HAVKAR_XLM.describeNetworkAvailability === "function"
-    ){
-        window.HAVKAR_XLM.describeNetworkAvailability()
-            .then(function (info) {
-                if(xlmButton && info && info.buttonLabel){
-                    xlmButton.textContent = info.buttonLabel;
-                }
-                if(xlmNote && info && info.note){
-                    xlmNote.textContent = info.note;
-                }
-            })
-            .catch(function () {});
-    }
+    syncBuyNowPanel(buyVisible);
 
     attachListingVideo();
 
@@ -4316,8 +4431,302 @@ function setupOwnerActions(){
 
 
 /* =========================================================
-   NAVIGATION SETUP
+   BUY NOW CHECKOUT (Stripe 60 currencies + XLM in panel)
+   XLM is intentionally NOT under the product image.
    ========================================================= */
+
+const buyCheckoutState = {
+    currencies: [],
+    selected: { code: "eur", name: "Euro", symbol: "€" },
+    quote: null,
+    liveCollection: "paused",
+    loaded: false
+};
+
+function syncBuyNowPanel(visible){
+    const panel = $("buyNowPanel");
+    if(!panel){
+        return;
+    }
+    panel.hidden = !visible;
+    if(!visible){
+        return;
+    }
+    if(!buyCheckoutState.loaded){
+        loadBuyCurrencyMatrix().catch(function (err) {
+            const note = $("buyGateNote");
+            if(note){
+                note.textContent = (err && err.message) || "Could not load currencies.";
+            }
+        });
+    }else{
+        renderBuyCurrencyList(($("buyCurrencySearch") && $("buyCurrencySearch").value) || "");
+        refreshBuyQuote();
+    }
+    const xlmBtn = $("buyXlmButton");
+    if(xlmBtn){
+        xlmBtn.hidden = false;
+        if(
+            window.HAVKAR_XLM &&
+            typeof window.HAVKAR_XLM.describeNetworkAvailability === "function"
+        ){
+            window.HAVKAR_XLM.describeNetworkAvailability()
+                .then(function (info) {
+                    if(info && info.buttonLabel){
+                        xlmBtn.textContent = info.buttonLabel;
+                    }
+                    const note = $("buyGateNote");
+                    if(note && info && info.note){
+                        note.textContent =
+                            "Live card collection: " +
+                            buyCheckoutState.liveCollection +
+                            ". " +
+                            info.note;
+                    }
+                })
+                .catch(function () {});
+        }
+    }
+}
+
+async function loadBuyCurrencyMatrix(){
+    const res = await fetch("/api/currency-matrix");
+    const body = await res.json();
+    if(!res.ok){
+        throw new Error((body && body.error) || "currency_matrix_failed");
+    }
+    buyCheckoutState.currencies =
+        (body.matrix && body.matrix.currencies) || [];
+    buyCheckoutState.liveCollection =
+        body.live_collection || "paused";
+    buyCheckoutState.loaded = true;
+    const note = $("buyGateNote");
+    if(note){
+        note.textContent =
+            "Live collection: " +
+            buyCheckoutState.liveCollection +
+            " · " +
+            buyCheckoutState.currencies.length +
+            " currencies. Public live payments stay OFF without Owner authorization.";
+    }
+    if(!buyCheckoutState.selected && buyCheckoutState.currencies[0]){
+        buyCheckoutState.selected = buyCheckoutState.currencies[0];
+    }
+    renderBuyCurrencyList("");
+    await refreshBuyQuote();
+}
+
+function renderBuyCurrencyList(filter){
+    const root = $("buyCurrencyList");
+    if(!root){
+        return;
+    }
+    root.innerHTML = "";
+    const q = String(filter || "").trim().toLowerCase();
+    const selectedCode =
+        (buyCheckoutState.selected && buyCheckoutState.selected.code) || "eur";
+    buyCheckoutState.currencies
+        .filter(function (c) {
+            if(!q){
+                return true;
+            }
+            return (c.code + " " + c.name).toLowerCase().indexOf(q) >= 0;
+        })
+        .forEach(function (c) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className =
+                "buy-currency-opt" +
+                (c.code === selectedCode ? " active" : "");
+            btn.innerHTML = "<span></span><span></span>";
+            btn.children[0].textContent =
+                String(c.code || "").toUpperCase() + " — " + (c.name || "");
+            btn.children[1].textContent = c.symbol || "";
+            btn.addEventListener("click", function () {
+                buyCheckoutState.selected = c;
+                renderBuyCurrencyList(
+                    ($("buyCurrencySearch") && $("buyCurrencySearch").value) || ""
+                );
+                refreshBuyQuote();
+            });
+            root.appendChild(btn);
+        });
+}
+
+function listingPriceEurGuess(){
+    const ad = state.ad;
+    const amount = Number(ad && ad.price);
+    if(!Number.isFinite(amount) || amount <= 0){
+        return 0;
+    }
+    const currency = String((ad && ad.currency) || "EUR").toUpperCase();
+    if(currency === "EUR" || !currency){
+        return amount;
+    }
+    // Quote API converts presentment from EUR list; for non-EUR listings
+    // send the listed major as EUR-equivalent until FX reverse is available client-side.
+    return amount;
+}
+
+async function refreshBuyQuote(){
+    const totals = $("buyTotals");
+    const cardBtn = $("buyCardButton");
+    const amountEur = listingPriceEurGuess();
+    const currency =
+        (buyCheckoutState.selected && buyCheckoutState.selected.code) || "eur";
+    if(!(amountEur > 0)){
+        if(totals){
+            totals.textContent = "No purchasable price on this listing.";
+        }
+        if(cardBtn){
+            cardBtn.disabled = true;
+        }
+        return;
+    }
+    if(totals){
+        totals.textContent = "Calculating fees and FX…";
+    }
+    try{
+        const res = await fetch("/api/currency-matrix?action=currency_quote", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                action: "currency_quote",
+                currency: currency,
+                list_price_eur: amountEur
+            })
+        });
+        const body = await res.json();
+        if(!res.ok || !body.quote){
+            throw new Error((body && body.error) || "quote_failed");
+        }
+        buyCheckoutState.quote = body.quote;
+        buyCheckoutState.liveCollection =
+            body.live_collection || buyCheckoutState.liveCollection;
+        const q = body.quote;
+        if(totals){
+            totals.innerHTML =
+                "<div><strong>List</strong>: " +
+                q.list_price +
+                " " +
+                q.currency +
+                " (from €" +
+                q.list_price_eur +
+                ")</div>" +
+                "<div><strong>Buyer fee 2%</strong>: " +
+                (Math.round((q.buyer_pays - q.list_price) * 100) / 100) +
+                " " +
+                q.currency +
+                "</div>" +
+                "<div><strong>You pay</strong>: " +
+                q.buyer_pays +
+                " " +
+                q.currency +
+                "</div>" +
+                "<div><strong>Seller receives</strong>: " +
+                q.seller_receives +
+                " " +
+                q.currency +
+                "</div>" +
+                "<div><strong>Platform</strong>: " +
+                q.platform_fee +
+                " " +
+                q.currency +
+                " · FX " +
+                q.fx_rate +
+                "</div>";
+        }
+        if(cardBtn){
+            cardBtn.disabled = false;
+            cardBtn.textContent =
+                buyCheckoutState.liveCollection === "armed"
+                    ? "Pay with card (Stripe) — " +
+                      q.buyer_pays +
+                      " " +
+                      q.currency
+                    : "Get card checkout quote — live collection paused";
+        }
+        const note = $("buyGateNote");
+        if(note){
+            note.textContent =
+                "Live collection: " +
+                buyCheckoutState.liveCollection +
+                ". Public live payments stay OFF without Owner authorization.";
+        }
+    }catch(err){
+        if(totals){
+            totals.textContent = (err && err.message) || "Quote failed";
+        }
+        if(cardBtn){
+            cardBtn.disabled = true;
+        }
+    }
+}
+
+async function startBuyCardCheckout(){
+    const ad = state.ad;
+    if(!ad){
+        return;
+    }
+    const session = await supabaseClient.auth.getSession();
+    const accessToken =
+        session &&
+        session.data &&
+        session.data.session &&
+        session.data.session.access_token;
+    if(!accessToken){
+        showToast("Sign in before starting Buy Now checkout.");
+        return;
+    }
+    const cardBtn = $("buyCardButton");
+    if(cardBtn){
+        cardBtn.disabled = true;
+    }
+    try{
+        const res = await fetch("/api/create-event-checkout", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + accessToken
+            },
+            body: JSON.stringify({
+                action: "marketplace_buy_checkout",
+                listing_id: String(ad.id),
+                currency:
+                    (buyCheckoutState.selected &&
+                        buyCheckoutState.selected.code) ||
+                    "eur"
+            })
+        });
+        const body = await res.json();
+        const receipt = $("buyReceipt");
+        if(receipt){
+            receipt.hidden = false;
+            receipt.textContent = JSON.stringify(
+                body.receipt || body,
+                null,
+                2
+            );
+        }
+        if(!res.ok){
+            throw new Error((body && body.error) || "checkout_failed");
+        }
+        if(body.checkout_url){
+            window.location.href = body.checkout_url;
+            return;
+        }
+        showToast(
+            body.message ||
+                "Quote ready. Live card collection is paused until Owner authorization."
+        );
+    }catch(err){
+        showToast((err && err.message) || "Buy Now checkout failed.");
+    }finally{
+        if(cardBtn){
+            cardBtn.disabled = false;
+        }
+    }
+}
 
 async function quoteListingXlm(){
 
@@ -4462,16 +4871,38 @@ function setupNavigation(){
             shareCurrentListing
         );
 
-    const xlmButton =
-        $("xlmQuoteButton");
+    const buyXlmButton =
+        $("buyXlmButton");
 
-    if(xlmButton){
+    if(buyXlmButton){
 
-        xlmButton.addEventListener(
+        buyXlmButton.addEventListener(
             "click",
             quoteListingXlm
         );
 
+    }
+
+    const buyCardButton =
+        $("buyCardButton");
+
+    if(buyCardButton){
+        buyCardButton.addEventListener(
+            "click",
+            startBuyCardCheckout
+        );
+    }
+
+    const buyCurrencySearch =
+        $("buyCurrencySearch");
+
+    if(buyCurrencySearch){
+        buyCurrencySearch.addEventListener(
+            "input",
+            function () {
+                renderBuyCurrencyList(this.value);
+            }
+        );
     }
 
     $("saveButton")

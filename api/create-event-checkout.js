@@ -131,7 +131,8 @@ function isMarketplaceConnectRequest(req) {
       url.indexOf("marketplace-connect") !== -1 ||
       action === "marketplace_connect_onboard" ||
       action === "marketplace_connect_status" ||
-      action === "marketplace_connect_quote"
+      action === "marketplace_connect_quote" ||
+      action === "marketplace_buy_checkout"
   );
 }
 
@@ -1547,6 +1548,239 @@ export default async function handler(req, res) {
         split,
         currency_quote: currencyQuote
       });
+    }
+
+    if (action === "marketplace_buy_checkout") {
+      const authBuy = await authenticateUser(req);
+      if (!authBuy.user) {
+        return sendError(res, 401, authBuy.error || "Authentication required");
+      }
+      try {
+        const listingId = String((req.body && req.body.listing_id) || "").trim();
+        const currencyRaw = String((req.body && req.body.currency) || "eur");
+        if (!listingId) {
+          return sendError(res, 400, "listing_id is required");
+        }
+        const {
+          normalizeStripeFiatCurrency,
+          toMinorUnits
+        } = require("../lib/stripe-fiat-currency.cjs");
+        const { quoteWithFees, fetchEurRates } = require("../lib/havkar-fx-rates.cjs");
+        const normalized = normalizeStripeFiatCurrency(currencyRaw);
+        if (!normalized.ok) {
+          return sendError(res, 400, normalized.error || "Unsupported currency");
+        }
+
+        const { data: ad, error: adError } = await getSupabaseAdmin()
+          .from("advertisements")
+          .select(
+            "id,title,price,currency,user_id,status,listing_surface,expires_at"
+          )
+          .eq("id", listingId)
+          .maybeSingle();
+        if (adError || !ad) {
+          return sendError(res, 404, "Listing not found");
+        }
+        if (String(ad.user_id) === String(authBuy.user.id)) {
+          return sendError(res, 400, "You cannot buy your own listing");
+        }
+        const surface = String(ad.listing_surface || "marketplace").toLowerCase();
+        if (
+          surface &&
+          surface !== "marketplace" &&
+          surface !== "buy_sell" &&
+          surface !== "buysell"
+        ) {
+          return sendError(
+            res,
+            400,
+            "This listing is not available for Buy Now checkout"
+          );
+        }
+        const listPrice = Number(ad.price);
+        if (!Number.isFinite(listPrice) || listPrice <= 0) {
+          return sendError(res, 400, "Listing has no purchasable price");
+        }
+
+        const fx = await fetchEurRates();
+        const listingCurrency = String(ad.currency || "EUR").toUpperCase();
+        let listPriceEur = listPrice;
+        if (listingCurrency !== "EUR") {
+          const rate = fx.rates[listingCurrency];
+          if (!rate) {
+            return sendError(
+              res,
+              400,
+              "Cannot convert listing currency " + listingCurrency + " to EUR for checkout"
+            );
+          }
+          listPriceEur = Math.round((listPrice / Number(rate)) * 100) / 100;
+        }
+        const currencyQuote = quoteWithFees(
+          listPriceEur,
+          normalized.currencyUpper,
+          fx.rates
+        );
+        if (!currencyQuote.ok) {
+          return sendError(res, 400, currencyQuote.error || "quote_failed");
+        }
+        const buyerMinor = toMinorUnits(
+          currencyQuote.buyer_pays,
+          normalized.currency
+        );
+        const feeMinor = toMinorUnits(
+          currencyQuote.platform_fee,
+          normalized.currency
+        );
+        if (!buyerMinor.ok || !feeMinor.ok) {
+          return sendError(res, 400, "Could not convert amounts to Stripe minor units");
+        }
+        const split = marketplaceCardSplit(listPriceEur);
+        const liveArmed = cardPaymentsAllowed();
+        const testAllowed =
+          stripeTestCheckoutAllowed() &&
+          req.body &&
+          req.body.test_mode === true;
+        const receipt = {
+          listing_id: String(ad.id),
+          listing_title: ad.title || "HAVKAR listing",
+          list_price_eur: listPriceEur,
+          presentment_currency: normalized.currencyUpper,
+          buyer_pays: currencyQuote.buyer_pays,
+          seller_receives: currencyQuote.seller_receives,
+          platform_fee: currencyQuote.platform_fee,
+          fx_rate: currencyQuote.fx_rate,
+          fx_date: fx.date,
+          live_collection: liveArmed ? "armed" : "paused",
+          public_live_payments: false
+        };
+
+        if (!liveArmed && !testAllowed) {
+          return res.status(200).json({
+            ok: true,
+            charged: false,
+            code: "LIVE_COLLECTION_PAUSED",
+            message:
+              "Checkout quote ready. Public live card collection stays OFF without Owner authorization.",
+            receipt,
+            split,
+            currency_quote: currencyQuote,
+            checkout_url: null
+          });
+        }
+
+        const sellerConnect = await getSupabaseAdmin()
+          .from("marketplace_seller_connect_accounts")
+          .select(
+            "stripe_account_id,charges_enabled,payouts_enabled,onboarding_status"
+          )
+          .eq("user_id", ad.user_id)
+          .maybeSingle();
+        const connectedAccountId =
+          sellerConnect.data &&
+          sellerConnect.data.charges_enabled === true
+            ? sellerConnect.data.stripe_account_id
+            : null;
+
+        const origin = allowedCheckoutOrigin(req);
+        const successUrl =
+          origin +
+          "/ad-details.html?id=" +
+          encodeURIComponent(String(ad.id)) +
+          "&paid=1";
+        const cancelUrl =
+          origin +
+          "/ad-details.html?id=" +
+          encodeURIComponent(String(ad.id)) +
+          "&paid=0";
+
+        let sessionParams;
+        if (connectedAccountId) {
+          const presentmentSplit = {
+            ...split,
+            buyer_pays_cents: buyerMinor.amount_minor,
+            application_fee_cents: feeMinor.amount_minor
+          };
+          sessionParams = buildMarketplaceDestinationCheckoutParams({
+            split: presentmentSplit,
+            connectedAccountId,
+            listingTitle: ad.title || "HAVKAR marketplace purchase",
+            currency: normalized.currency,
+            successUrl,
+            cancelUrl,
+            customerEmail: authBuy.user.email,
+            metadata: {
+              listing_id: String(ad.id),
+              havkar_user_id: String(authBuy.user.id),
+              havkar_currency: normalized.currencyUpper,
+              list_price_eur: String(listPriceEur)
+            }
+          });
+        } else {
+          sessionParams = {
+            mode: "payment",
+            customer_email: authBuy.user.email || undefined,
+            line_items: [
+              {
+                quantity: 1,
+                price_data: {
+                  currency: normalized.currency,
+                  unit_amount: buyerMinor.amount_minor,
+                  product_data: {
+                    name: ad.title || "HAVKAR marketplace purchase",
+                    description:
+                      "Includes HAVKAR buyer fee (2%). Seller Connect pending — platform collects."
+                  }
+                }
+              }
+            ],
+            metadata: {
+              listing_id: String(ad.id),
+              havkar_user_id: String(authBuy.user.id),
+              havkar_currency: normalized.currencyUpper,
+              havkar_flow: "marketplace",
+              list_price_eur: String(listPriceEur)
+            },
+            payment_intent_data: {
+              metadata: {
+                listing_id: String(ad.id),
+                havkar_user_id: String(authBuy.user.id),
+                havkar_currency: normalized.currencyUpper,
+                havkar_flow: "marketplace"
+              }
+            },
+            success_url: successUrl,
+            cancel_url: cancelUrl
+          };
+        }
+        if (testAllowed) {
+          sessionParams.metadata = {
+            ...(sessionParams.metadata || {}),
+            test_mode: "true",
+            havkar_test_mode: "true"
+          };
+        }
+
+        const session = await getStripe().checkout.sessions.create(sessionParams);
+        return res.status(200).json({
+          ok: true,
+          charged: false,
+          checkout_url: session.url,
+          session_id: session.id,
+          receipt,
+          split,
+          currency_quote: currencyQuote,
+          destination_charge: Boolean(connectedAccountId),
+          live_collection: liveArmed ? "armed" : "paused",
+          public_live_payments: false
+        });
+      } catch (error) {
+        console.error(
+          "marketplace_buy_checkout failed",
+          error && error.message
+        );
+        return sendError(res, 500, "Buy Now checkout could not be prepared");
+      }
     }
 
     const auth = await authenticateUser(req);
