@@ -14,7 +14,7 @@ No bank account numbers, IBAN, or BIC are stored in this repository.
 
 - Intended EUR settlement bank: Revolut Bank UAB (Owner Revolut Business)
 - IBAN/BIC: configure only inside Stripe payout settings / Revolut — never in frontend, staff UI, git, or staff reports
-- Current live Stripe payout bank (prior audit): PosteMobile still attached / status `new`; Revolut **not attached** yet → Owner must replace/attach Revolut in Stripe Dashboard before claiming Revolut settlement
+- Current live Stripe payout bank (11 Nov 2026 audit): Revolut Payments UAB …8455 is default EUR; status still `new` until Stripe verifies. Daily payout schedule configured (`delay_days=3`). See `store/STRIPE_PRODUCTION_READINESS_AUDIT_20261111.md`.
 
 ## Money flows (as implemented)
 
@@ -37,6 +37,7 @@ No bank account numbers, IBAN, or BIC are stored in this repository.
 
 ## Stripe activation blockers (live)
 
-1. Production `STRIPE_SECRET_KEY` mode must report `live` via `/api/payment-activation-status`.
-2. Set `HAVKAR_STRIPE_LIVE_ENABLED=true` and `HAVKAR_REAL_PAYMENTS_ENABLED=true` only after (1) and Revolut payout attachment.
-3. Expand webhook events if refunds/disputes must be automated beyond `checkout.session.completed`.
+1. Revolut bank `status` must be `verified` (attached alone is insufficient).
+2. Expand webhook events beyond `checkout.session.completed` for refunds/disputes/payouts.
+3. Marketplace Connect + Services automatic collection remain unimplemented — do not claim them.
+4. Set `HAVKAR_STRIPE_LIVE_ENABLED=true` then `HAVKAR_REAL_PAYMENTS_ENABLED=true` only after Owner exact-amount approval (Production key mode already `live`).

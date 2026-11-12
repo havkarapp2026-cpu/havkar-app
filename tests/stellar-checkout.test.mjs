@@ -56,7 +56,7 @@ assert.equal(mainnetDisabled.status, 403);
 assert.equal(mainnetDisabled.code, "STELLAR_MAINNET_DISABLED");
 assert.equal(mainnetDisabled.paid, false);
 
-const mainnetArmed = evaluateStellarCheckout(
+const mainnetArmedButLiveOff = evaluateStellarCheckout(
   {
     network: "mainnet",
     flow: "marketplace",
@@ -66,10 +66,40 @@ const mainnetArmed = evaluateStellarCheckout(
   new Date(),
   { HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED: "true" }
 );
+assert.equal(mainnetArmedButLiveOff.code, "STELLAR_MAINNET_LIVE_COLLECTION_OFF");
+assert.equal(mainnetArmedButLiveOff.paid, false);
+
+const mainnetArmed = evaluateStellarCheckout(
+  {
+    network: "mainnet",
+    flow: "marketplace",
+    price: 50,
+    idempotency_key: "listing-123456"
+  },
+  new Date(),
+  {
+    HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED: "true",
+    HAVKAR_STELLAR_MAINNET_LIVE_COLLECTION: "true"
+  }
+);
 assert.equal(mainnetArmed.ok, true);
 assert.equal(mainnetArmed.network, "mainnet");
 assert.equal(mainnetArmed.horizon, "https://horizon.stellar.org");
 assert.equal(mainnetArmed.fees.buyerPays, 51);
+
+const unsupportedFlow = evaluateStellarCheckout({
+  flow: "one_time",
+  price: 10,
+  idempotency_key: "listing-123456"
+});
+assert.equal(unsupportedFlow.code, "XLM_FLOW_UNSUPPORTED");
+
+const aiFlow = evaluateStellarCheckout({
+  flow: "ai",
+  price: 10,
+  idempotency_key: "listing-123456"
+});
+assert.equal(aiFlow.code, "XLM_RECURRING_UNSUPPORTED");
 
 const subscription = evaluateStellarCheckout({
   flow: "subscription",

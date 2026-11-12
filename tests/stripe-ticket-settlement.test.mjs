@@ -48,18 +48,23 @@ assert.equal(
 );
 
 const webhook = fs.readFileSync("api/stripe-webhook.js", "utf8");
-assert.match(webhook, /stripe-ticket-settlement\.cjs/);
-assert.match(webhook, /charge\.dispute\.closed/);
-assert.match(webhook, /charge\.dispute\.updated/);
-assert.match(webhook, /payout\.created/);
-assert.match(webhook, /paymentIntents\.retrieve/);
+assert.match(webhook, /stripe-webhook-processor\.cjs/);
+assert.match(webhook, /constructEvent/);
+assert.match(webhook, /stripe_webhook_events/);
 assert.match(webhook, /bodyParser:\s*false/);
 assert.doesNotMatch(webhook, /sk_live_[A-Za-z0-9]+/);
+
+const processor = fs.readFileSync("lib/stripe-webhook-processor.cjs", "utf8");
+assert.match(processor, /stripe-ticket-settlement\.cjs/);
+assert.match(processor, /charge\.dispute\.closed/);
+assert.match(processor, /charge\.dispute\.updated/);
+assert.match(processor, /payout\.created/);
+assert.match(processor, /checkout\.session\.async_payment_failed/);
 
 const checkout = fs.readFileSync("api/create-event-checkout.js", "utf8");
 assert.match(checkout, /idempotencyKey:/);
 assert.match(checkout, /havkar-event-ticket-/);
-assert.match(checkout, /cardPaymentsAllowed\(\)/);
+assert.match(checkout, /eventCardCheckoutAllowed/);
 assert.match(checkout, /checkout\.sessions\.create/);
 
 const events = fs.readFileSync("events.html", "utf8");

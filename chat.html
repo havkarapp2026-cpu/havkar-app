@@ -1210,6 +1210,11 @@ select:focus-visible{
                 <span>Profile</span>
             </button>
 
+            <button id="blockUserButton" type="button">
+                <i class="fas fa-user-slash"></i>
+                <span>Block user</span>
+            </button>
+
         </div>
 
     </header>
@@ -2492,6 +2497,52 @@ async function loadConversations(){
             Array.isArray(result.data)
                 ? result.data
                 : [];
+
+        try{
+            const blocked =
+                await withTimeout(
+                    supabaseClient
+                        .from("user_blocks")
+                        .select("blocked_id")
+                        .eq("blocker_id", userId)
+                );
+            if(
+                !blocked.error &&
+                Array.isArray(blocked.data)
+            ){
+                const blockedIds =
+                    {};
+                blocked.data.forEach(function(row){
+                    if(row && row.blocked_id){
+                        blockedIds[
+                            String(row.blocked_id)
+                        ] = true;
+                    }
+                });
+                state.conversations =
+                    state.conversations.filter(
+                        function(conversation){
+                            const other =
+                                String(
+                                    conversation.buyer_id
+                                ) === userId
+                                ?
+                                String(
+                                    conversation.seller_id ||
+                                    ""
+                                )
+                                :
+                                String(
+                                    conversation.buyer_id ||
+                                    ""
+                                );
+                            return !blockedIds[other];
+                        }
+                    );
+            }
+        }catch(blockError){
+            // Table may be undeployed; keep conversations visible.
+        }
 
         state.conversations.forEach(
             conversation => {
@@ -5875,6 +5926,97 @@ function setupEvents(){
                 closeHeaderMenu();
 
                 goProfile();
+
+            }
+        );
+
+    $("blockUserButton")
+        ?.addEventListener(
+            "click",
+            async () => {
+
+                closeHeaderMenu();
+
+                const conversation =
+                    state.currentConversation;
+
+                if(
+                    !state.currentUser ||
+                    !conversation
+                ){
+                    showToast(
+                        "Open a conversation before blocking."
+                    );
+                    return;
+                }
+
+                const me =
+                    String(
+                        state.currentUser.id
+                    );
+                const other =
+                    String(
+                        conversation.buyer_id
+                    ) === me
+                    ?
+                    String(
+                        conversation.seller_id ||
+                        ""
+                    )
+                    :
+                    String(
+                        conversation.buyer_id ||
+                        ""
+                    );
+
+                if(!other){
+                    showToast(
+                        "Could not identify the other user."
+                    );
+                    return;
+                }
+
+                const confirmed =
+                    window.confirm(
+                        "Block this user? Their conversations will be hidden from your list after refresh."
+                    );
+
+                if(!confirmed){
+                    return;
+                }
+
+                const inserted =
+                    await supabaseClient
+                        .from("user_blocks")
+                        .upsert(
+                            {
+                                blocker_id: me,
+                                blocked_id: other
+                            },
+                            {
+                                onConflict:
+                                    "blocker_id,blocked_id"
+                            }
+                        );
+
+                if(inserted.error){
+                    showToast(
+                        inserted.error.message ||
+                        "Block failed. Migration may not be applied on Production yet."
+                    );
+                    return;
+                }
+
+                showToast(
+                    "User blocked."
+                );
+
+                state.currentConversation =
+                    null;
+                state.currentConversationId =
+                    null;
+
+                await loadConversations();
 
             }
         );

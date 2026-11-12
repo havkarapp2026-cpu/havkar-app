@@ -138,9 +138,12 @@ test("ads production files keep Buy & Sell / AI separation and Stripe test gates
   assert.equal(fs.existsSync(path.join(root, "api/ad-boost-webhook.js")), false);
 
   assert.doesNotMatch(ai, /\.from\(["']ads["']\)\.insert/);
-  assert.match(admin, /adsModeration/);
-  assert.match(admin, /moderate_advertisement/);
-  assert.match(admin, /pending_review/);
+  // Owner Control shows moderation counts; approve/reject runs on ad-view via RPC.
+  assert.match(admin, /moderationPanel|Reports & complaints/);
+  assert.match(admin, /ad_reports/);
+  assert.match(adView, /moderate_advertisement/);
+  assert.match(adView, /data-moderate/);
+  assert.match(adsHtml, /pending_review/);
 });
 
 test("ads visibility helper respects schedule and status", () => {

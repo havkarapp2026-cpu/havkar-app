@@ -1,38 +1,24 @@
 #!/usr/bin/env node
 /**
- * Stripe live readiness verifier.
- * Does not enable flags, create charges, or print secrets.
- * Exit 0 prints a report. Live activation stays blocked until every
- * required production check is green; this script never flips flags.
+ * Stripe live readiness verifier (read-only).
+ * Does not enable flags, create charges, print secrets, or change payout banks.
  */
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import {
   cardPaymentsAllowed,
   realPaymentsEnabled,
   stripeSecretMode
 } from "../lib/real-payments.cjs";
+import {
+  describeExternalBankPayoutReadiness,
+  isBlockingExternalBankStatus
+} from "../lib/stripe-bank-status.cjs";
+import { REQUIRED_WEBHOOK_EVENTS } from "../lib/stripe-webhook-processor.cjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const base = process.env.HAVKAR_APP_URL || "https://havkar-app.vercel.app";
-const liveDoc = path.join(root, "store/STRIPE_LIVE_VERIFICATION_20261108.md");
-
-function required(fileText, needle, label) {
-  assert.ok(fileText.includes(needle), label);
-}
+const LIVE_ACCOUNT_ID = "acct_1UJwZZECWiUpELSP";
 
 async function main() {
-  const live = fs.readFileSync(liveDoc, "utf8");
-  required(live, "acct_1UJwZZECWiUpELSP", "live account id must be recorded");
-  required(live, "charges_enabled", "live charges_enabled evidence");
-  required(live, "payouts_enabled", "live payouts_enabled evidence");
-  required(live, "**true**", "live enabled flags present");
-  required(live, "NOT ACTIVATED", "must not claim activation");
-  required(live, "**unknown**", "unknown key mode blocker");
-  required(live, "POSTEMOBILE", "payout bank recorded");
-
   const localMode = stripeSecretMode(process.env);
   const localArmed = cardPaymentsAllowed(process.env);
   const localMaster = realPaymentsEnabled(process.env);
@@ -56,8 +42,26 @@ async function main() {
   const masterOn = status.flags?.HAVKAR_REAL_PAYMENTS_ENABLED === true;
   const liveFlagOn = status.flags?.HAVKAR_STRIPE_LIVE_ENABLED === true;
   const collection = status.customer_facing_collection;
+  const payout = status.stripe?.payout_bank?.default_eur || null;
+  const revolutDefault =
+    payout &&
+    /REVOLUT/i.test(String(payout.bank_name || "")) &&
+    payout.default_for_currency === true &&
+    String(payout.last4) === "8455";
+
+  const bankReadiness = describeExternalBankPayoutReadiness(
+    {
+      status: payout?.status,
+      available_payout_methods: ["standard"]
+    },
+    {
+      payouts_enabled: status.stripe?.payout_bank?.payouts_enabled === true,
+      charges_enabled: status.stripe?.payout_bank?.charges_enabled === true
+    }
+  );
 
   const blockers = [];
+
   if (keyMode !== "live") {
     blockers.push(
       "Production STRIPE_SECRET_KEY mode must be live (currently " +
@@ -65,34 +69,74 @@ async function main() {
         ")."
     );
   }
+  if (!revolutDefault) {
+    blockers.push(
+      "Default EUR payout bank must be Revolut …8455 (probe missing or not default)."
+    );
+  }
+  if (isBlockingExternalBankStatus(payout?.status)) {
+    blockers.push(
+      "Revolut external account status blocks payouts (" +
+        JSON.stringify(payout?.status) +
+        ")."
+    );
+  }
+  if (!bankReadiness.payouts_enabled) {
+    blockers.push("Stripe payouts_enabled is false.");
+  }
   if (!liveFlagOn) {
     blockers.push("HAVKAR_STRIPE_LIVE_ENABLED is not true on Production.");
   }
   if (!masterOn) {
     blockers.push("HAVKAR_REAL_PAYMENTS_ENABLED is not true on Production.");
   }
-  if (collection !== "paused" && keyMode !== "live") {
-    blockers.push("Collection is not paused while key mode is unsafe.");
-  }
+  blockers.push(
+    "Merge payment webhook processor branch before arming flags: Production main still returns REAL_PAYMENTS_PAUSED for signed Stripe deliveries while paused."
+  );
+  blockers.push(
+    "Live Dashboard webhook subscriptions must equal REQUIRED_WEBHOOK_EVENTS (" +
+      REQUIRED_WEBHOOK_EVENTS.length +
+      " events). Re-verify in Stripe Dashboard / MCP before arming."
+  );
   blockers.push(
     "No irreversible live charge without separate exact-amount owner confirmation."
   );
 
-  const liveActivationAllowed = false;
+  if (collection !== "paused" && (!masterOn || !liveFlagOn || keyMode !== "live")) {
+    blockers.push(
+      "Collection is not paused while activation prerequisites are incomplete."
+    );
+  }
+
   const report = {
     ok: true,
     generated_at: new Date().toISOString(),
     stripe_live_account: {
-      mcp_connected: true,
-      account_id: "acct_1UJwZZECWiUpELSP",
-      charges_enabled: true,
-      payouts_enabled: true,
-      requirements_clear: true,
-      webhook_to_production: true,
-      payout_bank: "POSTEMOBILE S.P.A. last4 0596 status=new"
+      account_id: LIVE_ACCOUNT_ID,
+      production_key_mode: keyMode,
+      charges_enabled_probed:
+        status.stripe?.payout_bank?.charges_enabled ?? null,
+      payouts_enabled_probed:
+        status.stripe?.payout_bank?.payouts_enabled ?? null,
+      default_eur_bank: payout
+        ? {
+            bank_name: payout.bank_name,
+            last4: payout.last4,
+            country: payout.country,
+            currency: payout.currency,
+            default_for_currency: payout.default_for_currency,
+            status: payout.status
+          }
+        : null,
+      revolut_default_attached: Boolean(revolutDefault),
+      bank_status_new_is_blocker: false,
+      bank_payout_readiness: bankReadiness,
+      note:
+        "Stripe docs: external account status=new means no validation activity yet; blocking statuses are errored / verification_failed / tokenized_account_number_deactivated."
     },
     stripe_live_activation: "BLOCKED",
-    live_activation_allowed: liveActivationAllowed,
+    live_activation_allowed: false,
+    recommendation: "NO-GO",
     evidence: {
       production_customer_facing_collection: collection,
       production_master_flag: masterOn,
@@ -105,16 +149,19 @@ async function main() {
       unsigned_webhook_response: webhook.code || webhook.error || null,
       local_process_env_secret_mode: localMode,
       local_master_enabled: localMaster,
-      local_cards_allowed: localArmed
+      local_cards_allowed: localArmed,
+      production_blockers: status.blockers || []
     },
     blockers,
     required_owner_action:
-      "In Vercel Production, set STRIPE_SECRET_KEY to the Live HAVKAR sk_live_ key for acct_1UJwZZECWiUpELSP so payment-activation-status reports secret_key_mode=live. Then set HAVKAR_STRIPE_LIVE_ENABLED=true and HAVKAR_REAL_PAYMENTS_ENABLED=true after reviewing PR #133. Confirm PosteMobile payout bank (or attach Revolut). Do not charge until a separate exact-amount confirmation."
+      "Keep collection paused until (1) this webhook-processor branch is on Production, (2) live webhook enabled_events match REQUIRED_WEBHOOK_EVENTS, (3) Test Mode e2e PASS, (4) Owner exact-amount confirmation. Then set HAVKAR_STRIPE_LIVE_ENABLED=true and HAVKAR_REAL_PAYMENTS_ENABLED=true on Vercel Production and redeploy. Do not bypass gates."
   };
 
   assert.equal(report.live_activation_allowed, false);
   assert.equal(collection, "paused");
   assert.equal(webhook.code, "REAL_PAYMENTS_PAUSED");
+  assert.equal(keyMode, "live");
+  assert.equal(report.stripe_live_account.bank_status_new_is_blocker, false);
   assert.ok(blockers.length >= 3);
 
   console.log(JSON.stringify(report, null, 2));

@@ -2666,6 +2666,21 @@
         }
 
 
+        (function applyEventSearchQueryFromUrl() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const query = String(params.get("q") || "").trim();
+                const input = document.getElementById("searchInput");
+                if (query && input) {
+                    input.value = query;
+                    searchTerm = query;
+                    document
+                        .getElementById("clearSearch")
+                        .classList.add("show");
+                }
+            } catch (error) {}
+        })();
+
         document
             .getElementById("searchInput")
             .addEventListener(
@@ -3627,7 +3642,7 @@
                 } catch (connectError) {
                     showToast(
                         (connectError && connectError.message) ||
-                            "Connect a Stellar Testnet wallet first.",
+                            "Connect a Stellar wallet first. HAVKAR never asks for a recovery phrase.",
                         "error"
                     );
                     return;

@@ -26,7 +26,17 @@ async function main() {
     "utf8"
   );
   assert.match(mainnetHelper, /HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED/);
+  assert.match(mainnetHelper, /HAVKAR_STELLAR_MAINNET_LIVE_COLLECTION/);
   assert.match(mainnetHelper, /HAVKAR_STELLAR_MAINNET_DESTINATION/);
+  assert.match(mainnetHelper, /stellarMainnetLiveCollectionEnabled/);
+
+  const geoHelper = fs.readFileSync(
+    path.join(root, "lib/crypto-geo-policy.cjs"),
+    "utf8"
+  );
+  assert.match(geoHelper, /HAVKAR_CRYPTO_GEO_ENFORCEMENT/);
+  assert.match(geoHelper, /CRYPTO_GEO_RESTRICTED/);
+  assert.match(geoHelper, /x-vercel-ip-country/);
 
   const webhook = await fetch(base + "/api/stripe-webhook", {
     method: "POST",
@@ -42,6 +52,14 @@ async function main() {
   assert.equal(statusBody.ok, true);
   assert.equal(statusBody.customer_facing_collection, "paused");
   assert.equal(statusBody.flags.HAVKAR_REAL_PAYMENTS_ENABLED, false);
+  assert.equal(statusBody.flags.HAVKAR_STRIPE_LIVE_ENABLED, false);
+  // Exact "true" required for customer Mainnet live collection. Missing/false = OFF.
+  if ("HAVKAR_STELLAR_MAINNET_LIVE_COLLECTION" in statusBody.flags) {
+    assert.equal(statusBody.flags.HAVKAR_STELLAR_MAINNET_LIVE_COLLECTION, false);
+  }
+  if ("stellar_mainnet_customer_live" in statusBody) {
+    assert.equal(statusBody.stellar_mainnet_customer_live, "paused");
+  }
   assert.ok(Array.isArray(statusBody.blockers));
   assert.ok(statusBody.blockers.length > 0);
 

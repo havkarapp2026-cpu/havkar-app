@@ -20,7 +20,7 @@ Live account `acct_1UJwZZECWiUpELSP`. No IBAN printed.
 | `charges_enabled` | true |
 | `payouts_enabled` | true |
 | Requirements currently/past due | empty |
-| Payout schedule | manual, delay_days 3 |
+| Payout schedule | **daily**, delay_days 3 (Owner-confirmed 11 Nov 2026; MCP `settings.payouts.schedule.interval=daily`) |
 | Connect connected accounts | none |
 
 ## Webhook

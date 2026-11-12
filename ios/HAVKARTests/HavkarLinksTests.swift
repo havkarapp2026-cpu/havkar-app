@@ -2,6 +2,8 @@ import XCTest
 
 final class HavkarLinksTests: XCTestCase {
     func testAllowsHavkarHosts() {
+        XCTAssertEqual(HavkarLinks.startURL?.absoluteString, "https://havkar.online/")
+        XCTAssertTrue(HavkarLinks.isAllowedNavigation(HavkarLinks.startURL?.absoluteString))
         XCTAssertTrue(HavkarLinks.isAllowedNavigation("https://havkar-app.vercel.app/"))
         XCTAssertTrue(HavkarLinks.isAllowedNavigation("https://havkar-app.vercel.app/login.html"))
         XCTAssertTrue(HavkarLinks.isAllowedNavigation("https://havkar.online/privacy.html"))

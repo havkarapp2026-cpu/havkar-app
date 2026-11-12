@@ -1,6 +1,20 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import { cardPaymentsAllowed, stripeSecretMode } from "../lib/real-payments.cjs";
+import {
+  cardPaymentsAllowed,
+  stripeSecretMode,
+  stripeTestCheckoutAllowed
+} from "../lib/real-payments.cjs";
+import {
+  describeExternalBankPayoutReadiness,
+  isBlockingExternalBankStatus
+} from "../lib/stripe-bank-status.cjs";
+import {
+  marketplaceCardSplit,
+  buildRecipientAccountV2CreateBody,
+  buildMarketplaceDestinationCheckoutParams
+} from "../lib/marketplace-connect.cjs";
+import { REQUIRED_WEBHOOK_EVENTS } from "../lib/stripe-webhook-processor.cjs";
 import {
   allowedStripeFiatCurrencies,
   normalizeStripeFiatCurrency
@@ -96,6 +110,32 @@ function isXlmInvoiceRequest(req) {
       url.indexOf("xlm-invoice") !== -1 ||
       action === "xlm_invoice"
   );
+}
+
+function isMarketplaceConnectRequest(req) {
+  const action = String((req && req.body && req.body.action) || "");
+  const url = String((req && req.url) || "");
+  return Boolean(
+    (req && req.query && req.query.havkarAction === "marketplaceConnect") ||
+      url.indexOf("marketplace-connect") !== -1 ||
+      action === "marketplace_connect_onboard" ||
+      action === "marketplace_connect_status" ||
+      action === "marketplace_connect_quote"
+  );
+}
+
+function eventCardCheckoutAllowed(body) {
+  if (cardPaymentsAllowed()) {
+    return { allowed: true, mode: "live_or_armed" };
+  }
+  if (
+    stripeTestCheckoutAllowed() &&
+    body &&
+    body.test_mode === true
+  ) {
+    return { allowed: true, mode: "stripe_test" };
+  }
+  return { allowed: false, mode: "paused" };
 }
 
 function isOwnerEur1CheckoutRequest(req) {
@@ -202,20 +242,31 @@ async function readXlmInvoice(req) {
 async function buildPaymentActivationStatus() {
   const {
     stellarMainnetPaymentsEnabled,
+    stellarMainnetLiveCollectionEnabled,
     mainnetReady,
+    mainnetCustomerLiveReady,
     MAINNET_FLAG,
+    MAINNET_LIVE_COLLECTION_FLAG,
     MAINNET_DESTINATION_ENV
   } = require("../lib/stellar-mainnet.cjs");
   const {
     handleMainnetWalletOwnership
   } = require("../lib/stellar-mainnet-ownership.cjs");
+  const {
+    describeCryptoGeoStatus
+  } = require("../lib/crypto-geo-policy.cjs");
+  const {
+    describeSettlementModels
+  } = require("../lib/stellar-settlement-models.cjs");
 
   const stripeMode = stripeSecretMode();
 
   const realEnabled = process.env.HAVKAR_REAL_PAYMENTS_ENABLED === "true";
   const cardsAllowed = cardPaymentsAllowed();
   const stellarMainnetFlag = stellarMainnetPaymentsEnabled();
+  const stellarMainnetLive = stellarMainnetLiveCollectionEnabled();
   const stellarMainnetReady = mainnetReady();
+  const stellarMainnetCustomerLive = mainnetCustomerLiveReady();
   const testnetDestinationConfigured = Boolean(
     String(
       process.env.HAVKAR_STELLAR_TESTNET_DESTINATION ||
@@ -296,6 +347,12 @@ async function buildPaymentActivationStatus() {
           "=true on Vercel Production, then redeploy."
       );
     }
+  } else if (!stellarMainnetLive) {
+    blockers.push(
+      "Mainnet infrastructure is armed, but customer live collection stays off until Owner sets " +
+        MAINNET_LIVE_COLLECTION_FLAG +
+        "=true after final approval, then redeploys. Testnet XLM remains available."
+    );
   }
 
   blockers.push(
@@ -377,6 +434,17 @@ async function buildPaymentActivationStatus() {
           : null
       };
       if (payoutBank.default_eur) {
+        const readiness = describeExternalBankPayoutReadiness(
+          {
+            status: payoutBank.default_eur.status,
+            available_payout_methods: ["standard"]
+          },
+          {
+            payouts_enabled: payoutBank.payouts_enabled === true,
+            charges_enabled: payoutBank.charges_enabled === true
+          }
+        );
+        payoutBank.default_eur.payout_readiness = readiness;
         if (
           payoutBank.default_eur.last4 !== "8455" ||
           !/revolut/i.test(payoutBank.default_eur.bank_name || "")
@@ -384,11 +452,18 @@ async function buildPaymentActivationStatus() {
           blockers.push(
             "Confirm Revolut Business EUR (last4 8455) remains the default Stripe payout bank."
           );
-        } else if (payoutBank.default_eur.status !== "verified") {
+        } else if (isBlockingExternalBankStatus(payoutBank.default_eur.status)) {
           blockers.push(
-            "Stripe payout bank Revolut …8455 is attached as default but status is not verified yet."
+            "Stripe payout bank Revolut …8455 is in a blocking status (" +
+              payoutBank.default_eur.status +
+              "). Replace bank details in Dashboard before relying on payouts."
+          );
+        } else if (!payoutBank.payouts_enabled) {
+          blockers.push(
+            "Stripe account payouts_enabled is false; scheduled Revolut payouts cannot run."
           );
         }
+        // status=new is normal and not a blocker when payouts_enabled=true.
       } else if (!payoutBank.bank_accounts_visible) {
         // Restricted Production keys often cannot list external accounts.
         // Authoritative verification remains Stripe Dashboard / Owner MCP audit.
@@ -408,11 +483,15 @@ async function buildPaymentActivationStatus() {
     generated_at: new Date().toISOString(),
     customer_facing_collection: cardsAllowed ? "armed" : "paused",
     stellar_mainnet_collection: stellarMainnetReady ? "armed" : "paused",
+    stellar_mainnet_customer_live: stellarMainnetCustomerLive
+      ? "armed"
+      : "paused",
     flags: {
       HAVKAR_REAL_PAYMENTS_ENABLED: realEnabled,
       HAVKAR_STRIPE_LIVE_ENABLED:
         process.env.HAVKAR_STRIPE_LIVE_ENABLED === "true",
       HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED: stellarMainnetFlag,
+      HAVKAR_STELLAR_MAINNET_LIVE_COLLECTION: stellarMainnetLive,
       STELLAR_MAINNET_PAYMENTS_ENABLED_SOURCE: true
     },
     stripe: {
@@ -420,27 +499,42 @@ async function buildPaymentActivationStatus() {
       webhook_secret_configured: Boolean(process.env.STRIPE_WEBHOOK_SECRET),
       allowed_fiat: allowedStripeFiatCurrencies().map((c) => c.toUpperCase()),
       live_collection_allowed: cardsAllowed,
-      payout_bank: payoutBank
+      test_checkout_allowed: stripeTestCheckoutAllowed(),
+      required_webhook_events: REQUIRED_WEBHOOK_EVENTS,
+      payout_bank: payoutBank,
+      marketplace_connect: {
+        implemented: true,
+        charge_pattern: "destination",
+        buyer_fee_bps: 200,
+        seller_fee_bps: 300,
+        live_armed: cardsAllowed
+      }
     },
     stellar: {
       testnet_destination_configured: testnetDestinationConfigured,
       mainnet_payments_enabled_in_source: true,
       mainnet_flag: stellarMainnetFlag,
+      mainnet_live_collection: stellarMainnetLive,
       mainnet_destination_configured: mainnetDestinationConfigured,
       mainnet_ownership_verified: mainnetOwnership.verified === true,
       mainnet_ownership_verified_at: mainnetOwnership.verified_at,
       mainnet_ownership_method: mainnetOwnership.method,
       mainnet_ready: stellarMainnetReady,
+      mainnet_customer_live: stellarMainnetCustomerLive,
       migration_20261109033000: "applied_or_reconciled",
       commissions: {
         marketplace_buyer_bps: 200,
         marketplace_seller_bps: 300,
         services_provider_bps: 1000
       },
-      unsupported_flows: ["subscription", "recurring", "trade"]
+      unsupported_flows: ["subscription", "recurring", "trade", "ai", "jobs"],
+      supported_flows: ["marketplace", "services", "events"],
+      crypto_geo: describeCryptoGeoStatus(),
+      settlement_models: describeSettlementModels()
     },
-    owner_activation_required: !cardsAllowed || !stellarMainnetReady,
-    owner_actions: stellarMainnetReady
+    owner_activation_required:
+      !cardsAllowed || !stellarMainnetCustomerLive,
+    owner_actions: stellarMainnetCustomerLive
       ? []
       : [
           ...(mainnetDestinationConfigured
@@ -470,10 +564,16 @@ async function buildPaymentActivationStatus() {
               "After ownership proof, set HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED=true (exact) on Vercel Production and redeploy."
           },
           {
-            id: "smoke_settle",
-            required: true,
+            id: "enable_mainnet_live_collection",
+            required: stellarMainnetReady && !stellarMainnetLive,
             detail:
-              "After stellar.mainnet_ready=true, run one tiny real Mainnet payment and confirm the intent settles with the Horizon tx hash."
+              "After final Owner approval of the XLM release branch, set HAVKAR_STELLAR_MAINNET_LIVE_COLLECTION=true (exact) and redeploy. Until then customer Mainnet quotes stay refused; Testnet remains available."
+          },
+          {
+            id: "smoke_settle",
+            required: stellarMainnetCustomerLive,
+            detail:
+              "After stellar.mainnet_customer_live=true, run one tiny real Mainnet payment and confirm the intent settles with the Horizon tx hash."
           }
         ],
     blockers: blockers
@@ -718,7 +818,348 @@ async function countReservedTickets(eventId) {
 }
 
 /**
- * After Horizon verifies a Testnet XLM settlement, create the domain object
+ * Validate marketplace / services / events subjects before storing an unpaid quote.
+ * Never invents prices. Never allows self-purchase marketplace quotes.
+ */
+async function loadMerchantStellarReceive(admin, ownerUserId) {
+  const owner = String(ownerUserId || "").trim();
+
+  if (!owner) {
+    return null;
+  }
+
+  try {
+    const loaded = await admin
+      .from("stellar_receive_accounts")
+      .select("public_key")
+      .eq("user_id", owner)
+      .maybeSingle();
+
+    const key = String((loaded && loaded.data && loaded.data.public_key) || "").trim();
+
+    if (/^G[A-Z2-7]{55}$/.test(key)) {
+      return key;
+    }
+  } catch (_error) {
+    // Table may not exist until Owner applies migration.
+  }
+
+  return null;
+}
+
+async function validateXlmQuoteSubject(admin, userId, decision) {
+  const flow = String(decision.flow || "");
+  const subjectId = String(decision.subject_id || "").trim();
+
+  if (!subjectId) {
+    return {
+      ok: false,
+      status: 400,
+      code: "SUBJECT_REQUIRED",
+      error: "A subject_id is required for XLM checkout.",
+      paid: false,
+      order_paid: false,
+      payable: false
+    };
+  }
+
+  if (flow === "marketplace") {
+    const listingId = Number(subjectId);
+
+    if (!Number.isSafeInteger(listingId) || listingId <= 0) {
+      return {
+        ok: false,
+        status: 400,
+        code: "SUBJECT_INVALID",
+        error: "Marketplace subject_id must be a listing id.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    const loaded = await admin
+      .from("ads")
+      .select("id,user_id,price,status,listing_surface")
+      .eq("id", listingId)
+      .maybeSingle();
+
+    const ad = loaded && loaded.data;
+
+    if (!ad) {
+      return {
+        ok: false,
+        status: 404,
+        code: "LISTING_NOT_FOUND",
+        error: "Marketplace listing was not found.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    if (String(ad.listing_surface || "") !== "marketplace") {
+      return {
+        ok: false,
+        status: 409,
+        code: "NOT_MARKETPLACE_LISTING",
+        error: "XLM marketplace checkout is only for marketplace listings.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    if (String(ad.status || "").toLowerCase() !== "active") {
+      return {
+        ok: false,
+        status: 409,
+        code: "LISTING_NOT_ACTIVE",
+        error: "Only active marketplace listings can be paid with XLM.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    if (String(ad.user_id) === String(userId)) {
+      return {
+        ok: false,
+        status: 403,
+        code: "SELF_PURCHASE_FORBIDDEN",
+        error: "You cannot pay yourself for your own listing.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    const listed = Number(ad.price);
+
+    if (!Number.isFinite(listed) || listed <= 0) {
+      return {
+        ok: false,
+        status: 409,
+        code: "LISTING_PRICE_INVALID",
+        error: "The listing has no positive price for XLM.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    if (Number(decision.fees.price) !== listed) {
+      return {
+        ok: false,
+        status: 409,
+        code: "PRICE_MISMATCH",
+        error: "Quoted price does not match the current listing price.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    const merchantKey = await loadMerchantStellarReceive(admin, ad.user_id);
+
+    return {
+      ok: true,
+      listing: ad,
+      merchant_stellar_receive: merchantKey
+    };
+  }
+
+  if (flow === "services") {
+    const serviceId = Number(subjectId);
+
+    if (!Number.isSafeInteger(serviceId) || serviceId <= 0) {
+      return {
+        ok: false,
+        status: 400,
+        code: "SUBJECT_INVALID",
+        error: "Services subject_id must be a service id.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    const loaded = await admin
+      .from("services")
+      .select("id,provider_id,price,price_type,status")
+      .eq("id", serviceId)
+      .maybeSingle();
+
+    const service = loaded && loaded.data;
+
+    if (!service) {
+      return {
+        ok: false,
+        status: 404,
+        code: "SERVICE_NOT_FOUND",
+        error: "Service was not found for XLM checkout.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    if (String(service.provider_id) === String(userId)) {
+      return {
+        ok: false,
+        status: 403,
+        code: "SELF_PURCHASE_FORBIDDEN",
+        error: "You cannot pay yourself for your own service.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    if (
+      service.status != null &&
+      String(service.status).toLowerCase() !== "active"
+    ) {
+      return {
+        ok: false,
+        status: 409,
+        code: "SERVICE_NOT_ACTIVE",
+        error: "Only active services can be paid with XLM.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    const priceType = String(service.price_type || "").toLowerCase();
+
+    if (["hour", "day", "week", "month"].indexOf(priceType) !== -1) {
+      return {
+        ok: false,
+        status: 403,
+        code: "XLM_RECURRING_UNSUPPORTED",
+        error: "Recurring service pricing cannot be settled with one-time XLM.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    const listed = Number(service.price);
+
+    if (!Number.isFinite(listed) || listed <= 0) {
+      return {
+        ok: false,
+        status: 409,
+        code: "SERVICE_PRICE_INVALID",
+        error: "The service has no positive one-time price for XLM.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    if (Number(decision.fees.price) !== listed) {
+      return {
+        ok: false,
+        status: 409,
+        code: "PRICE_MISMATCH",
+        error: "Quoted price does not match the current service price.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    const merchantKey = await loadMerchantStellarReceive(
+      admin,
+      service.provider_id
+    );
+
+    return {
+      ok: true,
+      service: service,
+      merchant_stellar_receive: merchantKey
+    };
+  }
+
+  if (flow === "events") {
+    const eventId = Number(subjectId);
+
+    if (!Number.isSafeInteger(eventId) || eventId <= 0) {
+      return {
+        ok: false,
+        status: 400,
+        code: "SUBJECT_INVALID",
+        error: "Events subject_id must be an event id.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    const loaded = await admin
+      .from("events")
+      .select("id,price,status,max_attendees")
+      .eq("id", eventId)
+      .maybeSingle();
+
+    const event = loaded && loaded.data;
+
+    if (!event) {
+      return {
+        ok: false,
+        status: 404,
+        code: "EVENT_NOT_FOUND",
+        error: "Event was not found for XLM checkout.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    const listed = Number(event.price);
+
+    if (!Number.isFinite(listed) || listed <= 0) {
+      return {
+        ok: false,
+        status: 409,
+        code: "EVENT_PRICE_INVALID",
+        error: "The event has no positive one-time price for XLM.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    if (Number(decision.fees.price) !== listed) {
+      return {
+        ok: false,
+        status: 409,
+        code: "PRICE_MISMATCH",
+        error: "Quoted price does not match the current event price.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    return { ok: true, event: event };
+  }
+
+  return {
+    ok: false,
+    status: 400,
+    code: "XLM_FLOW_UNSUPPORTED",
+    error: "Unsupported XLM flow.",
+    paid: false,
+    order_paid: false,
+    payable: false
+  };
+}
+
+/**
+ * After Horizon verifies an XLM settlement, create the domain object
  * for supported one-time flows. Never invents a ticket for unpaid quotes.
  */
 async function fulfillSettledXlmIntent(admin, userId, intentId) {
@@ -735,7 +1176,58 @@ async function fulfillSettledXlmIntent(admin, userId, intentId) {
     return { ticket_id: null, fulfillment: null, error: null };
   }
 
-  if (String(intent.flow || "") !== "events") {
+  const flow = String(intent.flow || "");
+
+  if (flow === "marketplace") {
+    const listingId = Number(intent.subject_id);
+
+    if (!Number.isSafeInteger(listingId) || listingId <= 0) {
+      return {
+        ticket_id: null,
+        fulfillment: null,
+        error: "Marketplace subject is missing on the settled quote."
+      };
+    }
+
+    const updated = await admin
+      .from("ads")
+      .update({ status: "ended" })
+      .eq("id", listingId)
+      .eq("listing_surface", "marketplace")
+      .eq("status", "active")
+      .select("id,status")
+      .maybeSingle();
+
+    if (!updated.data || String(updated.data.status) !== "ended") {
+      return {
+        ticket_id: null,
+        fulfillment: "marketplace_intent",
+        listing_id: listingId,
+        error:
+          "Settlement was verified. Listing could not be marked ended (already ended or unavailable)."
+      };
+    }
+
+    return {
+      ticket_id: null,
+      fulfillment: "marketplace_listing_ended",
+      listing_id: listingId,
+      error: null
+    };
+  }
+
+  if (flow === "services") {
+    return {
+      ticket_id: null,
+      fulfillment: "services_intent",
+      service_id: intent.subject_id || null,
+      payment_reference: intent.tx_hash || null,
+      network: intent.network || null,
+      error: null
+    };
+  }
+
+  if (flow !== "events") {
     return {
       ticket_id: null,
       fulfillment: "intent_only",
@@ -868,6 +1360,143 @@ export default async function handler(req, res) {
     }
 
     return res.status(200).json(await buildPaymentActivationStatus());
+  }
+
+  if (isMarketplaceConnectRequest(req)) {
+    if (req.method !== "GET" && req.method !== "POST") {
+      res.setHeader("Allow", "GET, POST");
+      return sendError(res, 405, "Method not allowed");
+    }
+
+    const action = String((req.body && req.body.action) || "");
+    if (action === "marketplace_connect_quote") {
+      const listPrice = Number((req.body && req.body.list_price_eur) || 0);
+      const split = marketplaceCardSplit(listPrice);
+      if (!split) {
+        return sendError(res, 400, "list_price_eur must be a positive number");
+      }
+      return res.status(200).json({
+        ok: true,
+        live_collection: cardPaymentsAllowed() ? "armed" : "paused",
+        split
+      });
+    }
+
+    const auth = await authenticateUser(req);
+    if (!auth.user) {
+      return sendError(res, 401, auth.error || "Authentication required");
+    }
+
+    if (action === "marketplace_connect_status") {
+      const { data, error } = await getSupabaseAdmin()
+        .from("marketplace_seller_connect_accounts")
+        .select(
+          "stripe_account_id,charges_enabled,payouts_enabled,details_submitted,onboarding_status,updated_at"
+        )
+        .eq("user_id", auth.user.id)
+        .maybeSingle();
+      if (error) {
+        return sendError(res, 500, "Could not load Connect status");
+      }
+      return res.status(200).json({
+        ok: true,
+        live_collection: cardPaymentsAllowed() ? "armed" : "paused",
+        account: data || null
+      });
+    }
+
+    // marketplace_connect_onboard
+    if (!cardPaymentsAllowed() && !stripeTestCheckoutAllowed()) {
+      return res.status(403).json({
+        ok: false,
+        error: "Connect onboarding is paused until Stripe test or live collection is enabled.",
+        code: "REAL_PAYMENTS_PAUSED"
+      });
+    }
+
+    try {
+      const stripe = getStripe();
+      const existing = await getSupabaseAdmin()
+        .from("marketplace_seller_connect_accounts")
+        .select("stripe_account_id")
+        .eq("user_id", auth.user.id)
+        .maybeSingle();
+
+      let accountId = existing.data && existing.data.stripe_account_id;
+      if (!accountId) {
+        // Prefer Accounts v2; fall back to controller-property v1 if v2 unavailable on this SDK/key.
+        let created;
+        try {
+          created = await stripe.request({
+            method: "POST",
+            path: "/v2/core/accounts",
+            body: buildRecipientAccountV2CreateBody({
+              email: auth.user.email,
+              displayName:
+                (auth.user.user_metadata && auth.user.user_metadata.full_name) ||
+                "HAVKAR seller"
+            })
+          });
+        } catch (_v2Error) {
+          created = await stripe.accounts.create({
+            controller: {
+              stripe_dashboard: { type: "express" },
+              fees: { payer: "application" },
+              losses: { payments: "application" }
+            },
+            capabilities: {
+              transfers: { requested: true }
+            },
+            email: auth.user.email || undefined,
+            metadata: {
+              havkar_flow: "marketplace_connect",
+              havkar_user_id: String(auth.user.id)
+            }
+          });
+        }
+        accountId = created.id;
+        await getSupabaseAdmin()
+          .from("marketplace_seller_connect_accounts")
+          .upsert({
+            user_id: auth.user.id,
+            stripe_account_id: accountId,
+            onboarding_status: "pending",
+            updated_at: new Date().toISOString()
+          });
+      }
+
+      const origin = allowedCheckoutOrigin(req);
+      const accountLink = await stripe.accountLinks.create({
+        account: accountId,
+        refresh_url: `${origin}/market.html?connect=refresh`,
+        return_url: `${origin}/market.html?connect=return`,
+        type: "account_onboarding"
+      });
+
+      // Example destination Checkout params (not charged unless Owner arms collection).
+      const demoSplit = marketplaceCardSplit(100);
+      const exampleCheckout = buildMarketplaceDestinationCheckoutParams({
+        split: demoSplit,
+        connectedAccountId: accountId,
+        listingTitle: "Example HAVKAR listing",
+        successUrl: `${origin}/market.html?payment=success`,
+        cancelUrl: `${origin}/market.html?payment=cancelled`,
+        metadata: { havkar_user_id: String(auth.user.id) },
+        customerEmail: auth.user.email
+      });
+
+      return res.status(200).json({
+        ok: true,
+        live_collection: cardPaymentsAllowed() ? "armed" : "paused",
+        stripe_account_id: accountId,
+        onboarding_url: accountLink.url,
+        fee_example_eur_100: demoSplit,
+        destination_checkout_example: exampleCheckout
+      });
+    } catch (error) {
+      console.error("marketplace connect onboard failed", error && error.message);
+      return sendError(res, 500, "Connect onboarding could not be started");
+    }
   }
 
   if (isXlmInvoiceRequest(req)) {
@@ -1073,11 +1702,17 @@ export default async function handler(req, res) {
     }
 
     if (req.body?.payment_method === "xlm") {
+      const {
+        resolveRequestCountry
+      } = require("../lib/crypto-geo-policy.cjs");
+      const requestGeo = resolveRequestCountry(req);
+
       if (req.body?.action === "verify" || req.body?.action === "refund") {
         const settled = await verifyStellarSettlement(
           getSupabaseAdmin(),
           user.id,
-          req.body
+          req.body,
+          { geo: requestGeo }
         );
 
         if (
@@ -1109,13 +1744,28 @@ export default async function handler(req, res) {
         });
       }
 
-      const decision = evaluateStellarCheckout(req.body);
+      const decision = evaluateStellarCheckout({
+        ...req.body,
+        _geo: requestGeo
+      });
 
       if (!decision.ok) {
         return res.status(decision.status).json(decision);
       }
 
-      const quoted = await buildXlmQuote(decision);
+      const subjectCheck = await validateXlmQuoteSubject(
+        getSupabaseAdmin(),
+        user.id,
+        decision
+      );
+
+      if (!subjectCheck.ok) {
+        return res.status(subjectCheck.status).json(subjectCheck);
+      }
+
+      const quoted = await buildXlmQuote(decision, {
+        merchantDestination: subjectCheck.merchant_stellar_receive || null
+      });
 
       if (!quoted.ok) {
         return res.status(quoted.status).json(quoted);
@@ -1343,7 +1993,8 @@ export default async function handler(req, res) {
       });
     }
 
-    if (!cardPaymentsAllowed()) {
+    const cardGate = eventCardCheckoutAllowed(req.body || {});
+    if (!cardGate.allowed) {
       return res.status(403).json({
         ok: false,
         error: "Card payments are paused until the owner enables them.",
@@ -1430,6 +2081,11 @@ export default async function handler(req, res) {
 
               havkar_currency:
                 fiat.currencyUpper,
+
+              havkar_flow: "events",
+              ...(cardGate.mode === "stripe_test"
+                ? { test_mode: "true", havkar_test_mode: "true" }
+                : {})
             },
 
             payment_intent_data: {
@@ -1445,6 +2101,11 @@ export default async function handler(req, res) {
 
                 havkar_currency:
                   fiat.currencyUpper,
+
+                havkar_flow: "events",
+                ...(cardGate.mode === "stripe_test"
+                  ? { test_mode: "true", havkar_test_mode: "true" }
+                  : {})
               },
             },
 

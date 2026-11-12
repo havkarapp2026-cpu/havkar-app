@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import {
   mainnetReady,
+  mainnetCustomerLiveReady,
   readMainnetDestination,
-  stellarMainnetPaymentsEnabled
+  stellarMainnetPaymentsEnabled,
+  stellarMainnetLiveCollectionEnabled
 } from "../lib/stellar-mainnet.cjs";
 import {
   buildXlmQuote,
@@ -13,6 +15,14 @@ import {
 assert.equal(stellarMainnetPaymentsEnabled({}), false);
 assert.equal(
   stellarMainnetPaymentsEnabled({ HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED: "true" }),
+  true
+);
+assert.equal(stellarMainnetLiveCollectionEnabled({}), false);
+assert.equal(
+  stellarMainnetLiveCollectionEnabled({
+    HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED: "true",
+    HAVKAR_STELLAR_MAINNET_LIVE_COLLECTION: "true"
+  }),
   true
 );
 
@@ -28,8 +38,15 @@ const readyEnv = {
   HAVKAR_STELLAR_MAINNET_DESTINATION: destination
 };
 assert.equal(mainnetReady(readyEnv), true);
+assert.equal(mainnetCustomerLiveReady(readyEnv), false);
 
-const decision = evaluateStellarCheckout(
+const liveEnv = {
+  ...readyEnv,
+  HAVKAR_STELLAR_MAINNET_LIVE_COLLECTION: "true"
+};
+assert.equal(mainnetCustomerLiveReady(liveEnv), true);
+
+const liveOff = evaluateStellarCheckout(
   {
     network: "mainnet",
     flow: "marketplace",
@@ -39,35 +56,63 @@ const decision = evaluateStellarCheckout(
   new Date(),
   readyEnv
 );
+assert.equal(liveOff.code, "STELLAR_MAINNET_LIVE_COLLECTION_OFF");
+
+const decision = evaluateStellarCheckout(
+  {
+    network: "mainnet",
+    flow: "marketplace",
+    price: 50,
+    idempotency_key: "mainnet-123456"
+  },
+  new Date(),
+  liveEnv
+);
 assert.equal(decision.ok, true);
 assert.equal(decision.network, "mainnet");
 
 const now = Math.floor(Date.now() / 1000);
-const quoted = await buildXlmQuote(decision, {
-  env: readyEnv,
-  fetchImpl: async (url) => {
-    const href = String(url);
-    if (href.includes("/accounts/")) {
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({ id: destination, balances: [{ asset_type: "native", balance: "1" }] })
-      };
-    }
+const accountFetch = async (url) => {
+  const href = String(url);
+  if (href.includes("/accounts/")) {
     return {
       ok: true,
-      json: async () => ({ stellar: { eur: 0.1, last_updated_at: now } })
+      status: 200,
+      json: async () => ({ id: destination, balances: [{ asset_type: "native", balance: "1" }] })
     };
-  },
+  }
+  return {
+    ok: true,
+    json: async () => ({ stellar: { eur: 0.1, last_updated_at: now } })
+  };
+};
+
+const collectBlocked = await buildXlmQuote(decision, {
+  env: liveEnv,
+  fetchImpl: accountFetch,
+  nowMs: Date.now(),
+  memoBytes: Buffer.from("mainnetmemo00")
+});
+assert.equal(collectBlocked.payable, false);
+assert.equal(collectBlocked.code, "MERCHANT_RECEIVE_KEY_REQUIRED");
+
+const collectEnv = {
+  ...liveEnv,
+  HAVKAR_XLM_ALLOW_PLATFORM_COLLECT: "true"
+};
+const quoted = await buildXlmQuote(decision, {
+  env: collectEnv,
+  fetchImpl: accountFetch,
   nowMs: Date.now(),
   memoBytes: Buffer.from("mainnetmemo01")
 });
 assert.equal(quoted.payable, true);
 assert.equal(quoted.destination, destination);
+assert.equal(quoted.settlement_model, "platform_collect");
 assert.equal(quoted.horizon, "https://horizon.stellar.org");
 
 const missingAccount = await buildXlmQuote(decision, {
-  env: readyEnv,
+  env: collectEnv,
   fetchImpl: async (url) => {
     if (String(url).includes("/accounts/")) {
       return { ok: false, status: 404, json: async () => ({}) };
@@ -136,6 +181,7 @@ const intent = {
   destination,
   memo: quoted.memo,
   amount_xlm: quoted.amount_xlm,
+  settlement_model: "platform_collect",
   tx_hash: null,
   payer_account: null,
   network: "mainnet"
@@ -146,7 +192,7 @@ const settled = await verifyStellarSettlement(
   "user-1",
   { intent_id: "intent-mainnet", tx_hash: hash },
   {
-    env: readyEnv,
+    env: collectEnv,
     fetchImpl: async (url) => {
       if (String(url).includes("/payments")) {
         return {

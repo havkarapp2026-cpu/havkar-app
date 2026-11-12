@@ -46,13 +46,13 @@ Do not generate an upload keystore inside the repository.
 ## Google Play Console checklist (owner)
 
 - Store listing (short/full description from `store/LISTING.md`)
-- Privacy Policy URL: `https://havkar-app.vercel.app/privacy.html`
-- Support URL: `https://havkar-app.vercel.app/support.html`
+- Privacy Policy URL: `https://havkar.online/privacy.html`
+- Support URL: `https://havkar.online/support.html`
 - Data safety (draft notes in `store/LISTING.md` — counsel review)
 - Content rating / IARC
 - Target audience
 - Advertising declaration (no ads SDK in the Android manifest)
-- Account deletion URL: `https://havkar-app.vercel.app/privacy-request.html`
+- Account deletion URL: `https://havkar.online/privacy-request.html`
 - Real phone screenshots (Home, Buy & Sell 2-col, Explore 3-col, Support, Login)
 - Closed testing track + testers
 - App Access: `store/PLAY_APP_ACCESS.md`

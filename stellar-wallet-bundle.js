@@ -148230,9 +148230,6 @@ ${value}`, dataLines++;
     const source = String(
       HAVKAR_STELLAR.address || ""
     ).trim();
-    const destination = String(
-      options?.destination || ""
-    ).trim();
     const memo = String(
       options?.memo || ""
     ).trim();
@@ -148241,6 +148238,58 @@ ${value}`, dataLines++;
         "Connect a Stellar wallet before sending."
       );
     }
+    if (memo && new TextEncoder().encode(memo).length > 28) {
+      throw new Error(
+        "A Stellar text memo can contain at most 28 bytes."
+      );
+    }
+    const rawPayments = Array.isArray(options?.payments) ? options.payments : null;
+    let payments = null;
+    if (rawPayments && rawPayments.length > 0) {
+      payments = rawPayments.map(
+        function(entry) {
+          const destination2 = String(
+            entry?.destination || ""
+          ).trim();
+          if (!isPublicKey(destination2)) {
+            throw new Error(
+              "Enter a valid Stellar destination public key."
+            );
+          }
+          if (destination2 === source) {
+            throw new Error(
+              "The destination must be a different Stellar account."
+            );
+          }
+          return {
+            destination: destination2,
+            amount: parseXlm(
+              entry?.amount
+            )
+          };
+        }
+      );
+      let totalStroops = 0n;
+      payments.forEach(
+        function(entry) {
+          totalStroops += entry.amount.stroops;
+        }
+      );
+      return {
+        network,
+        source,
+        destination: payments[0].destination,
+        memo,
+        amount: {
+          text: (Number(totalStroops) / 1e7).toFixed(7),
+          stroops: totalStroops
+        },
+        payments
+      };
+    }
+    const destination = String(
+      options?.destination || ""
+    ).trim();
     if (!isPublicKey(destination)) {
       throw new Error(
         "Enter a valid Stellar destination public key."
@@ -148251,11 +148300,6 @@ ${value}`, dataLines++;
         "The destination must be a different Stellar account."
       );
     }
-    if (memo && new TextEncoder().encode(memo).length > 28) {
-      throw new Error(
-        "A Stellar text memo can contain at most 28 bytes."
-      );
-    }
     return {
       network,
       source,
@@ -148263,7 +148307,8 @@ ${value}`, dataLines++;
       memo,
       amount: parseXlm(
         options?.amount
-      )
+      ),
+      payments: null
     };
   }
   async function havkarPrepareStellarPayment(options) {
@@ -148275,6 +148320,7 @@ ${value}`, dataLines++;
     const destination = request2.destination;
     const memo = request2.memo;
     const amount = request2.amount;
+    const splitPayments = Array.isArray(request2.payments) && request2.payments.length > 0 ? request2.payments : null;
     const server = horizonServer(network);
     const sourceAccount = await server.loadAccount(
       source
@@ -148289,52 +148335,81 @@ ${value}`, dataLines++;
       sourceAccount,
       limits.baseReserve
     );
-    const spendable = available.stroops - minimum - limits.baseFee;
+    const opCount = BigInt(
+      splitPayments ? splitPayments.length : 1
+    );
+    const spendable = available.stroops - minimum - limits.baseFee * opCount;
     if (amount.stroops > spendable) {
       throw new Error(
         "The available XLM is not enough for this payment and the account reserve."
       );
     }
-    let destinationExists = true;
-    try {
-      await server.loadAccount(
-        destination
-      );
-    } catch (error) {
-      if (!(error instanceof NotFoundError2)) {
-        throw error;
-      }
-      destinationExists = false;
-    }
-    const kind = destinationExists ? "payment" : "createAccount";
-    const createMinimum = 2n * limits.baseReserve;
-    if (kind === "createAccount" && amount.stroops < createMinimum) {
-      throw new Error(
-        "A new Stellar account on " + network.label + " needs at least " + formatStroops(createMinimum) + " XLM."
-      );
-    }
     let builder = new TransactionBuilder(
       sourceAccount,
       {
-        fee: limits.baseFee.toString(),
+        fee: (limits.baseFee * opCount).toString(),
         networkPassphrase: network.passphrase
       }
     );
-    if (kind === "payment") {
-      builder = builder.addOperation(
-        Operation2.payment({
-          destination,
-          asset: Asset.native(),
-          amount: amount.text
-        })
-      );
+    let kind = "payment";
+    if (splitPayments) {
+      for (let index2 = 0; index2 < splitPayments.length; index2 += 1) {
+        const entry = splitPayments[index2];
+        try {
+          await server.loadAccount(
+            entry.destination
+          );
+        } catch (error) {
+          if (error instanceof NotFoundError2) {
+            throw new Error(
+              "Destination account does not exist on " + network.label + ". Fund or create it before split XLM settlement."
+            );
+          }
+          throw error;
+        }
+        builder = builder.addOperation(
+          Operation2.payment({
+            destination: entry.destination,
+            asset: Asset.native(),
+            amount: entry.amount.text
+          })
+        );
+      }
     } else {
-      builder = builder.addOperation(
-        Operation2.createAccount({
-          destination,
-          startingBalance: amount.text
-        })
-      );
+      let destinationExists = true;
+      try {
+        await server.loadAccount(
+          destination
+        );
+      } catch (error) {
+        if (!(error instanceof NotFoundError2)) {
+          throw error;
+        }
+        destinationExists = false;
+      }
+      kind = destinationExists ? "payment" : "createAccount";
+      const createMinimum = 2n * limits.baseReserve;
+      if (kind === "createAccount" && amount.stroops < createMinimum) {
+        throw new Error(
+          "A new Stellar account on " + network.label + " needs at least " + formatStroops(createMinimum) + " XLM."
+        );
+      }
+      if (kind === "payment") {
+        builder = builder.addOperation(
+          Operation2.payment({
+            destination,
+            asset: Asset.native(),
+            amount: amount.text
+          })
+        );
+      } else {
+        builder = builder.addOperation(
+          Operation2.createAccount({
+            destination,
+            startingBalance: amount.text
+          })
+        );
+      }
     }
     if (memo) {
       builder = builder.addMemo(
@@ -148364,7 +148439,15 @@ ${value}`, dataLines++;
       },
       hash: bytesToHex6(
         transaction.hash()
-      )
+      ),
+      payments: splitPayments ? splitPayments.map(
+        function(entry) {
+          return {
+            destination: entry.destination,
+            amount: entry.amount.text
+          };
+        }
+      ) : null
     };
   }
   function bytesToHex6(bytes) {
@@ -148406,17 +148489,36 @@ ${value}`, dataLines++;
       );
     }
     const operations = signed.operations || [];
-    if (operations.length !== 1) {
-      throw new Error(
-        mismatch
+    const expectedPayments = Array.isArray(prepared.payments) && prepared.payments.length > 0 ? prepared.payments : null;
+    if (expectedPayments) {
+      if (operations.length !== expectedPayments.length) {
+        throw new Error(
+          mismatch
+        );
+      }
+      expectedPayments.forEach(
+        function(expected, index2) {
+          const operation = operations[index2];
+          if (!operation || operation.type !== "payment" || operation.destination !== expected.destination || parseXlm(operation.amount).text !== expected.amount || operation.asset && !operation.asset.isNative()) {
+            throw new Error(
+              mismatch
+            );
+          }
+        }
       );
-    }
-    const operation = operations[0];
-    const amount = operation.type === "createAccount" ? operation.startingBalance : operation.amount;
-    if (operation.type !== prepared.kind || operation.destination !== prepared.destination || parseXlm(amount).text !== prepared.amount || operation.asset && !operation.asset.isNative()) {
-      throw new Error(
-        mismatch
-      );
+    } else {
+      if (operations.length !== 1) {
+        throw new Error(
+          mismatch
+        );
+      }
+      const operation = operations[0];
+      const amount = operation.type === "createAccount" ? operation.startingBalance : operation.amount;
+      if (operation.type !== prepared.kind || operation.destination !== prepared.destination || parseXlm(amount).text !== prepared.amount || operation.asset && !operation.asset.isNative()) {
+        throw new Error(
+          mismatch
+        );
+      }
     }
     const signedMemo = memoText(
       signed.memo
@@ -148752,8 +148854,22 @@ ${value}`, dataLines++;
     }
   }
   function samePayment(pending, prepared) {
-    return Boolean(
-      pending && pending.network === prepared.network && pending.source === prepared.source && pending.destination === prepared.destination && pending.amount === prepared.amount && pending.memo === prepared.memo && pending.kind === prepared.kind
+    if (!pending || pending.network !== prepared.network || pending.source !== prepared.source || pending.destination !== prepared.destination || pending.amount !== prepared.amount || pending.memo !== prepared.memo || pending.kind !== prepared.kind) {
+      return false;
+    }
+    const pendingPayments = Array.isArray(pending.payments) ? pending.payments : null;
+    const preparedPayments = Array.isArray(prepared.payments) ? prepared.payments : null;
+    if (!pendingPayments && !preparedPayments) {
+      return true;
+    }
+    if (!pendingPayments || !preparedPayments || pendingPayments.length !== preparedPayments.length) {
+      return false;
+    }
+    return pendingPayments.every(
+      function(entry, index2) {
+        const expected = preparedPayments[index2];
+        return entry && expected && entry.destination === expected.destination && entry.amount === expected.amount;
+      }
     );
   }
   function pendingStillOpen(pending) {
@@ -148775,6 +148891,22 @@ ${value}`, dataLines++;
   async function horizonOperationMatches(server, hash5, prepared) {
     const page = await server.operations().forTransaction(hash5).limit(5).call();
     const records = page.records || [];
+    const expectedPayments = Array.isArray(prepared.payments) && prepared.payments.length > 0 ? prepared.payments : null;
+    if (expectedPayments) {
+      if (records.length < expectedPayments.length) {
+        return false;
+      }
+      return expectedPayments.every(
+        function(expected) {
+          return records.some(
+            function(operation2) {
+              const source2 = operation2.source_account || operation2.funder || prepared.source;
+              return source2 === prepared.source && operation2.type === "payment" && (operation2.to || operation2.destination) === expected.destination && operation2.asset_type === "native" && parseXlm(operation2.amount).text === expected.amount;
+            }
+          );
+        }
+      );
+    }
     if (records.length !== 1) {
       return false;
     }
@@ -148873,7 +149005,15 @@ ${value}`, dataLines++;
           destination: request2.destination,
           amount: request2.amount.text,
           memo: request2.memo,
-          kind: pending.kind
+          kind: pending.kind,
+          payments: Array.isArray(request2.payments) ? request2.payments.map(
+            function(entry) {
+              return {
+                destination: entry.destination,
+                amount: entry.amount.text
+              };
+            }
+          ) : null
         };
         if (samePayment(
           pending,
@@ -148962,7 +149102,8 @@ ${value}`, dataLines++;
         fee: prepared.fee,
         sequence: prepared.sequence,
         timeBounds: prepared.timeBounds,
-        maxTime: prepared.timeBounds.maxTime
+        maxTime: prepared.timeBounds.maxTime,
+        payments: prepared.payments || null
       });
       let submitError = null;
       try {

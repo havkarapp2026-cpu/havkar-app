@@ -1,6 +1,6 @@
 # Android cloud release build (GitHub Actions)
 
-Status: workflow ready. A signed Play AAB is produced only after the owner adds upload-key secrets and runs **Android release AAB** in `signed` mode.
+Status: workflow ready. Signed Play AAB for `versionCode=3` / `versionName=1.0.1` was produced by CI run `42886038671` (tag `havkar-android-signed-v101-202611101930`). See `store/PLAY_CLOSED_TESTING_RELEASE_20261110.md`.
 
 This does **not** publish to Google Play. Live payments stay off.
 
