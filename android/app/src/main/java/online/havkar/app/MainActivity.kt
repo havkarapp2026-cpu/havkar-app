@@ -84,14 +84,18 @@ class MainActivity : AppCompatActivity() {
         webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
+            // Avoid stale chat/checkout HTML after Production deploys.
+            cacheMode = WebSettings.LOAD_DEFAULT
             mediaPlaybackRequiresUserGesture = true
             allowFileAccess = false
             allowContentAccess = false
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             javaScriptCanOpenWindowsAutomatically = false
             setSupportMultipleWindows(false)
-            userAgentString = userAgentString + " HAVKAR-Android/1.0.1"
+            userAgentString = userAgentString + " HAVKAR-Android/1.0.2"
         }
+        // Drop old WebView HTTP cache entries that can keep broken chat.js after deploys.
+        webView.clearCache(true)
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val url = request.url?.toString()

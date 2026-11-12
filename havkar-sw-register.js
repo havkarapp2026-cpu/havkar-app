@@ -3,7 +3,7 @@
     return;
   }
 
-  var SW_URL = "/sw.js?v=havkar-sw-20261112-chat-push-v1";
+  var SW_URL = "/sw.js?v=havkar-sw-20261112-chat-currency-v2";
 
   window.addEventListener("load", function () {
     navigator.serviceWorker
