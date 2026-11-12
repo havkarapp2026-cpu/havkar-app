@@ -22,3 +22,12 @@
 - Marketplace Connect remains gated by code (`live_armed` false until Connect recipients verified)
 - Unsupported modules stay OFF (subscription/recurring/trade/ai/jobs)
 - No Owner-authorized real charge/transfer/refund/payout was executed as a smoke charge
+
+
+## Production flags after arm
+- `HAVKAR_REAL_PAYMENTS_ENABLED=true`
+- `HAVKAR_STRIPE_LIVE_ENABLED=true`
+- `customer_facing_collection=armed`
+- `live_collection_allowed=true`
+- Production deploy on main: `dpl_AuV7ETQ25EiW4vYYVGRVDz81abYN` (READY) / building twin `dpl_7mpk8YhSwy8cAy48ZT9enbB9fxTk`
+- No new live PaymentIntent created in this go-live run
