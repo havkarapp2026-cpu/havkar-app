@@ -32,7 +32,9 @@ assert.equal(
   true
 );
 assert.ok(
-  report.blockers.some((b) => /REQUIRED_WEBHOOK_EVENTS|expand live webhook/i.test(b))
+  report.blockers.some((b) =>
+    /REQUIRED_WEBHOOK_EVENTS|webhook processor|Merge payment webhook/i.test(b)
+  )
 );
 assert.ok(
   !report.blockers.some((b) => /status is not verified yet/i.test(b))
