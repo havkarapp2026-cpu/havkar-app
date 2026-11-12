@@ -91,8 +91,12 @@ async function main() {
     blockers.push("HAVKAR_REAL_PAYMENTS_ENABLED is not true on Production.");
   }
   blockers.push(
-    "Owner must expand live webhook events to: " +
-      REQUIRED_WEBHOOK_EVENTS.join(", ")
+    "Merge payment webhook processor branch before arming flags: Production main still returns REAL_PAYMENTS_PAUSED for signed Stripe deliveries while paused."
+  );
+  blockers.push(
+    "Live Dashboard webhook subscriptions must equal REQUIRED_WEBHOOK_EVENTS (" +
+      REQUIRED_WEBHOOK_EVENTS.length +
+      " events). Re-verify in Stripe Dashboard / MCP before arming."
   );
   blockers.push(
     "No irreversible live charge without separate exact-amount owner confirmation."
@@ -150,7 +154,7 @@ async function main() {
     },
     blockers,
     required_owner_action:
-      "Keep collection paused. Expand live webhook event subscriptions to REQUIRED_WEBHOOK_EVENTS. Marketplace Connect onboarding code is present but live-armed only after flags. Then Owner may set HAVKAR_STRIPE_LIVE_ENABLED=true and HAVKAR_REAL_PAYMENTS_ENABLED=true after exact-amount confirmation."
+      "Keep collection paused until (1) this webhook-processor branch is on Production, (2) live webhook enabled_events match REQUIRED_WEBHOOK_EVENTS, (3) Test Mode e2e PASS, (4) Owner exact-amount confirmation. Then set HAVKAR_STRIPE_LIVE_ENABLED=true and HAVKAR_REAL_PAYMENTS_ENABLED=true on Vercel Production and redeploy. Do not bypass gates."
   };
 
   assert.equal(report.live_activation_allowed, false);
