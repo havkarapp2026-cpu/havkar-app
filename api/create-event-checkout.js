@@ -101,6 +101,16 @@ function isPaymentStatusRequest(req) {
   );
 }
 
+function isStripeSandboxPayoutE2eRequest(req) {
+  const action = String((req && req.body && req.body.action) || "");
+  const url = String((req && req.url) || "");
+  return Boolean(
+    (req && req.query && req.query.havkarAction === "stripeSandboxPayoutE2e") ||
+      url.indexOf("stripe-sandbox-payout-e2e") !== -1 ||
+      action === "stripe_sandbox_payout_e2e"
+  );
+}
+
 function isXlmInvoiceRequest(req) {
   const action = String(req && req.body && req.body.action || "");
   const url = String(req && req.url || "");
@@ -1360,6 +1370,35 @@ export default async function handler(req, res) {
     }
 
     return res.status(200).json(await buildPaymentActivationStatus());
+  }
+
+  if (isStripeSandboxPayoutE2eRequest(req)) {
+    if (req.method !== "POST") {
+      res.setHeader("Allow", "POST");
+      return sendError(res, 405, "Method not allowed");
+    }
+    try {
+      const {
+        parseConfirm,
+        runSandboxPayoutPaidE2e
+      } = require("../lib/stripe-sandbox-payout-e2e.cjs");
+      if (!parseConfirm(req.body)) {
+        return res.status(400).json({
+          ok: false,
+          code: "CONFIRM_REQUIRED",
+          error: "confirm phrase required for staging sandbox payout e2e"
+        });
+      }
+      const result = await runSandboxPayoutPaidE2e(process.env);
+      return res.status(result.httpStatus || (result.ok ? 200 : 500)).json(result);
+    } catch (error) {
+      console.error("HAVKAR staging sandbox payout e2e error:", error && error.message);
+      return res.status(500).json({
+        ok: false,
+        code: "SANDBOX_PAYOUT_E2E_FAILED",
+        error: "Sandbox payout e2e failed"
+      });
+    }
   }
 
   if (isMarketplaceConnectRequest(req)) {

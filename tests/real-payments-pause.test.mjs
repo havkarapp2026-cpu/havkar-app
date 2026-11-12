@@ -65,7 +65,11 @@ assert.match(checkout, /allowedCheckoutOrigin/);
 assert.doesNotMatch(checkout, /sk_live_/);
 
 const webhookSource = read("api/stripe-webhook.js");
-assert.match(webhookSource, /const stripe = new Stripe\(process\.env\.STRIPE_SECRET_KEY\);/);
+assert.match(webhookSource, /createStripeClient/);
+assert.doesNotMatch(
+  webhookSource,
+  /const stripe = new Stripe\(process\.env\.STRIPE_SECRET_KEY\);/
+);
 assert.ok(webhookSource.indexOf("cardPaymentsAllowed()") < webhookSource.indexOf("checkout.session.completed"));
 
 const wallet = read("wallet.html");
