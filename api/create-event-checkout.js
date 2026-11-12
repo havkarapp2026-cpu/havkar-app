@@ -1379,24 +1379,16 @@ export default async function handler(req, res) {
     }
     try {
       const {
-        parseConfirm,
-        runSandboxPayoutPaidE2e
-      } = require("../lib/stripe-sandbox-payout-e2e.cjs");
-      if (!parseConfirm(req.body)) {
-        return res.status(400).json({
-          ok: false,
-          code: "CONFIRM_REQUIRED",
-          error: "confirm phrase required for staging sandbox payout e2e"
-        });
-      }
-      const result = await runSandboxPayoutPaidE2e(process.env);
+        runSandboxPaymentScenario
+      } = require("../lib/stripe-sandbox-payment-e2e.cjs");
+      const result = await runSandboxPaymentScenario(process.env, req.body);
       return res.status(result.httpStatus || (result.ok ? 200 : 500)).json(result);
     } catch (error) {
-      console.error("HAVKAR staging sandbox payout e2e error:", error && error.message);
+      console.error("HAVKAR staging sandbox payment e2e error:", error && error.message);
       return res.status(500).json({
         ok: false,
-        code: "SANDBOX_PAYOUT_E2E_FAILED",
-        error: "Sandbox payout e2e failed"
+        code: "SANDBOX_PAYMENT_E2E_FAILED",
+        error: "Sandbox payment e2e failed"
       });
     }
   }
