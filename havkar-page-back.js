@@ -142,6 +142,31 @@
         };
     }
 
+    function internalAssignHref(href) {
+
+        const value = String(href || "").trim();
+
+        if (
+            !value ||
+            value.indexOf("\\") !== -1 ||
+            value.indexOf("//") === 0
+        ) {
+            return "";
+        }
+
+        const url = pageUrl(value, "https://havkar.invalid");
+
+        if (
+            !url ||
+            url.origin !== "https://havkar.invalid" ||
+            !isHtmlPage(url)
+        ) {
+            return "";
+        }
+
+        return relativePage(url);
+    }
+
     function parentFromDocument() {
 
         if (typeof document === "undefined" || !document.body) {
@@ -160,7 +185,21 @@
         );
 
         if (decision.action === "history") {
-            window.history.back();
+
+            /*
+             * A normal Home visit still has a previous entry, so
+             * history.back() restores that page. A direct open can
+             * keep the Home referrer while history.length is 1, and
+             * history.back() would then leave this page in place.
+             */
+            if (window.history.length > 1) {
+                window.history.back();
+                return;
+            }
+
+            window.location.assign(
+                internalAssignHref(decision.href) || FALLBACK
+            );
             return;
         }
 
