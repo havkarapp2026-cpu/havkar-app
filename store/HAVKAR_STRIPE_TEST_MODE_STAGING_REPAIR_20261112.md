@@ -45,21 +45,28 @@ Evidence: `/opt/cursor/artifacts/stripe-staging-e2e-verify.log`, `stripe-staging
 - Staging: `secret_key_mode=test`, `webhook_secret_configured=true`, live collection disallowed
 - Production: unchanged (paused, live key mode, live flags false)
 
+## Redeploy after Preview `STRIPE_WEBHOOK_SECRET` update
+
+| Item | Value |
+| --- | --- |
+| Commit | `aa1b916774783c4d82fd78b29fb79ba45ca3f68b` |
+| Redeploy | `dpl_ELn4aq91bD8mdbh36oH3ezoNYVqR` **READY** |
+| Alias | `staging.havkar.online` → that deploy |
+| Proof secret rotated | prior agent whsec → HTTP 400 on new deploy |
+| Staging flags | test key, webhook configured, REAL/LIVE false |
+| Production | unchanged (count=1, REAL/LIVE false) |
+
 ## Stripe MCP
 
 - Read connected: sandbox `acct_1UJwZzEAHNL6NCGl` + live `acct_1UJwZZECWiUpELSP`
-- Sandbox webhook endpoints list: **empty** (`[]`)
-- Write (`PostWebhookEndpoints`): still **Unauthorized** after Owner “Connected Stripe”
-- Therefore platform-pushed Stripe Dashboard delivery is **not** registered yet; e2e used Stripe-format HMAC (`constructEvent`-compatible) with Preview branch `STRIPE_WEBHOOK_SECRET`
+- Sandbox webhook endpoints list: **empty** (`[]`); v2 destinations empty
+- Write (`PostWebhookEndpoints` / customers): **Unauthorized** after “Connected Stripe”
+- `manage_stripe_accounts` issued a **reconsent URL** so Owner can grant write scope
+- Platform-pushed Test Mode delivery after redeploy: **not verified** (blocked)
 
-## Remaining Owner action (optional, for Dashboard-delivered events)
+## Remaining Owner action (required for Stripe-delivered Test event)
 
-Stripe MCP **write** remains Unauthorized, so the agent cannot create the Test Mode endpoint.
+1. Open the Stripe MCP reconsent URL and grant **write** permission for the sandbox (not only connect/read).
+2. Reply “Connected Stripe” again so the agent can create/send the Test Mode staging webhook event.
 
-In Stripe Dashboard → **Test Mode** (sandbox HAVKAR-sandlåda) → Webhooks → create endpoint URL exactly:
-
-```
-https://staging.havkar.online/api/stripe-webhook
-```
-
-Enable all 14 `REQUIRED_WEBHOOK_EVENTS`, copy that endpoint’s `whsec_…` into Vercel Preview env `STRIPE_WEBHOOK_SECRET` for branch `cursor/stripe-test-mode-staging-d4b2` only, then Redeploy. Do **not** use Live secrets or change Production.
+Do **not** use Live secrets or change Production. Live payments stay OFF.
