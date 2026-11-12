@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HAVKAR My Receipts</title>
+  <link rel="icon" type="image/png" href="/assets/icons/havkar-icon-32-20261022-v3.png">
+  <style>
+    body{font-family:Georgia,serif;background:#f4faf5;margin:0;color:#123;}
+    header{background:linear-gradient(135deg,#1b5e20,#43a047);color:#fff;padding:16px 18px;}
+    main{max-width:720px;margin:0 auto;padding:18px;}
+    .card{background:#fff;border-radius:14px;padding:14px;margin:10px 0;box-shadow:0 6px 18px rgba(0,0,0,.06);}
+    .note{color:#456;font-size:14px;} .err{color:#b71c1c;}
+    a.btn{display:inline-block;background:#1b5e20;color:#fff;text-decoration:none;padding:8px 12px;border-radius:8px;font-weight:700;}
+  </style>
+</head>
+<body>
+<header>
+  <h1>My receipts</h1>
+  <p>Your HAVKAR payment receipts. Tax invoices appear only when legally issued.</p>
+</header>
+<main>
+  <p id="message" class="note">Loading…</p>
+  <div id="list"></div>
+  <p><a href="/profile.html">Profile</a></p>
+</main>
+<script src="/havkar-supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function () {
+  var cfg = window.HAVKAR_SUPABASE_CONFIG || {};
+  var db = window.supabase.createClient(cfg.url, cfg.publishableKey, {
+    auth: { persistSession: true, autoRefreshToken: true }
+  });
+  var message = document.getElementById("message");
+  var list = document.getElementById("list");
+
+  function euros(cents) {
+    return "€" + (Number(cents || 0) / 100).toFixed(2);
+  }
+
+  db.auth.getSession().then(async function (result) {
+    var session = result && result.data && result.data.session;
+    if (!session) {
+      window.location.href = "/login.html?next=" + encodeURIComponent("/my-receipts.html");
+      return;
+    }
+    try {
+      var res = await fetch("/api/finance?action=my_receipts", {
+        headers: { Authorization: "Bearer " + session.access_token }
+      });
+      var body = await res.json();
+      if (!res.ok) throw new Error(body.error || "Could not load receipts");
+      var docs = body.documents || [];
+      if (!docs.length) {
+        message.textContent = "No receipts yet.";
+        return;
+      }
+      message.textContent = docs.length + " document(s)";
+      docs.forEach(function (doc) {
+        var card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML =
+          "<strong></strong><div class='note'></div><p></p><a class='btn' target='_blank'>Open / print PDF</a>";
+        card.querySelector("strong").textContent = doc.document_number + " · " + doc.document_kind;
+        card.querySelector(".note").textContent =
+          doc.issue_date + " · " + euros(doc.amount_cents) + " " + (doc.currency || "EUR") +
+          " · SDI: " + doc.sdi_status;
+        card.querySelector("p").textContent = doc.payment_reference || "";
+        card.querySelector("a").href =
+          "/api/finance?action=document&id=" + doc.id + "&format=html";
+        list.appendChild(card);
+      });
+    } catch (err) {
+      message.className = "err";
+      message.textContent = err.message;
+    }
+  });
+})();
+</script>
+</body>
+</html>

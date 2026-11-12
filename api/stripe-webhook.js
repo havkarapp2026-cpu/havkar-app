@@ -146,6 +146,41 @@ function createWebhookStore(supabase) {
         return { updated: false, skipped: true };
       }
       return { updated: Boolean(data && data.stripe_account_id) };
+    },
+    async postFinanceJournal(built) {
+      const {
+        postJournalEntry
+      } = require("../lib/havkar-finance-ledger.cjs");
+      try {
+        return await postJournalEntry(supabase, built);
+      } catch (error) {
+        console.error("havkar finance journal post skipped:", error.message);
+        return { ok: false, skipped: true, error: error.message };
+      }
+    },
+    async nextFinanceDocumentSequence(kind) {
+      const { count, error } = await supabase
+        .from("havkar_finance_documents")
+        .select("id", { count: "exact", head: true })
+        .eq("document_kind", kind || "payment_receipt");
+      if (error) {
+        return Date.now() % 1000000;
+      }
+      return Number(count || 0) + 1;
+    },
+    async insertFinanceDocument(doc) {
+      const { error } = await supabase.from("havkar_finance_documents").insert(doc);
+      if (error) {
+        if (
+          error.code === "23505" ||
+          /duplicate|unique/i.test(String(error.message || ""))
+        ) {
+          return { duplicate: true };
+        }
+        console.error("havkar_finance_documents insert skipped:", error.message);
+        return { skipped: true, error: error.message };
+      }
+      return { ok: true };
     }
   };
 }
@@ -293,10 +328,32 @@ export default async function handler(req, res) {
       return res.status(200).json(result);
     }
 
+    let financeGates = null;
+    try {
+      const gates = await supabaseRuntime.client
+        .from("havkar_finance_issuance_gates")
+        .select("*")
+        .eq("id", true)
+        .maybeSingle();
+      financeGates = gates.data || null;
+    } catch (_gatesError) {
+      financeGates = null;
+    }
+
     const result = await processStripeEvent(
       event,
       createWebhookStore(supabaseRuntime.client),
-      { stripe }
+      {
+        stripe,
+        financeGates,
+        operator: {
+          legalEntityName: "HAVKAR DI JALILNIA AMIR",
+          registeredAddress:
+            "Francesco Antonio Lucifero 40, 88900 Crotone, Italy",
+          reaNumber: "KR-234170",
+          partitaIva: ""
+        }
+      }
     );
     return res.status(200).json({ received: true, ...result });
   } catch (error) {
