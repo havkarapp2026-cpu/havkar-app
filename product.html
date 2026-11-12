@@ -923,30 +923,31 @@ async function contactSeller() {
             "Sending message...";
 
 
+        const clientMessageId =
+            (globalThis.crypto &&
+                typeof globalThis.crypto.randomUUID === "function")
+                ? globalThis.crypto.randomUUID()
+                : null;
+
         const sent =
-            await supabaseClient
-                .from("messages")
-                .insert({
-
-                    conversation_id:
-                        conversationId,
-
-                    sender_id:
-                        user.id,
-
-                    message_text:
-                        message.trim(),
-
-                    is_read:
-                        false
-
-                });
+            await supabaseClient.rpc(
+                "havkar_send_chat_message",
+                {
+                    p_conversation_id: conversationId,
+                    p_message_text: message.trim(),
+                    p_client_message_id: clientMessageId
+                }
+            );
 
 
         if (sent.error) {
 
             throw sent.error;
 
+        }
+
+        if (!sent.data || (Array.isArray(sent.data) && !sent.data[0])) {
+            throw new Error("Message was not persisted.");
         }
 
 
