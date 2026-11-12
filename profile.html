@@ -19,6 +19,7 @@
 
 <link rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/havkar-verification-badges.css">
 
 <style>
 
@@ -402,57 +403,9 @@ button{
    VERIFICATION BADGES
 ========================================================= */
 
-.verification-badge{
-    display:inline-flex;
-
-    align-items:center;
-    justify-content:center;
-
-    gap:7px;
-
+.verification-badge,
+.havkar-badge{
     margin-top:12px;
-
-    padding:7px 12px;
-
-    border-radius:20px;
-
-    background:#e8f5e9;
-
-    color:#2e7d32;
-
-    font-size:12px;
-
-    font-weight:800;
-}
-
-.verification-badge.personal{
-    background:#e8f5e9;
-    color:#2e7d32;
-}
-
-.verification-badge.business{
-    background:#edf7e8;
-    color:#2e7d32;
-}
-
-.verification-badge.company{
-    background:
-        linear-gradient(
-            135deg,
-            #e8f5e9,
-            #d5efda
-        );
-
-    color:#087f23;
-
-    border:1px solid #b7ddb9;
-
-    box-shadow:
-        0 0 12px rgba(46,125,50,.18);
-}
-
-.verification-badge i{
-    font-size:13px;
 }
 
 .badge-symbol{
@@ -4013,57 +3966,19 @@ function renderVerificationBadge(
     }
 
 
-    if(type === "business"){
+    if(
+        window.HAVKAR_VERIFICATION &&
+        typeof window.HAVKAR_VERIFICATION.renderBadgeHtml === "function"
+    ){
 
-        return `
-
-            <div class="verification-badge business">
-
-                <span class="badge-symbol">
-                    ★
-                </span>
-
-                Verified Business
-
-            </div>
-
-        `;
+        return window.HAVKAR_VERIFICATION.renderBadgeHtml(
+            type
+        );
 
     }
 
 
-    if(type === "company"){
-
-        return `
-
-            <div class="verification-badge company">
-
-                <span class="badge-symbol">
-                    ◆
-                </span>
-
-                Verified Company / Factory
-
-            </div>
-
-        `;
-
-    }
-
-
-    return `
-
-        <div class="verification-badge personal">
-
-            <span class="badge-symbol">
-                ✓
-            </span>
-
-            Verified Account
-
-        </div>
-
-    `;
+    return "";
 
 }
 

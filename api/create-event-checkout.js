@@ -160,6 +160,15 @@ function isOwnerEur1CheckoutRequest(req) {
   }
 }
 
+function isFinanceApiRequest(req) {
+  const url = String((req && req.url) || "");
+  return Boolean(
+    (req && req.query && req.query.havkarAction === "finance") ||
+      url.indexOf("havkarAction=finance") !== -1 ||
+      url.indexOf("/api/finance") !== -1
+  );
+}
+
 async function readXlmInvoice(req) {
   const intentId = String(
     (req.query && (req.query.intent || req.query.id)) ||
@@ -1364,6 +1373,20 @@ async function fulfillSettledXlmIntent(admin, userId, intentId) {
 }
 
 export default async function handler(req, res) {
+  if (isFinanceApiRequest(req)) {
+    if (req.method !== "GET" && req.method !== "POST") {
+      res.setHeader("Allow", "GET, POST");
+      return sendError(res, 405, "Method not allowed");
+    }
+    try {
+      const { handler: financeHandler } = require("../lib/havkar-finance-api.cjs");
+      return await financeHandler(req, res);
+    } catch (error) {
+      console.error("HAVKAR finance API error:", error && error.message);
+      return sendError(res, 500, "Finance API failed");
+    }
+  }
+
   if (isPaymentStatusRequest(req)) {
     if (req.method !== "GET" && req.method !== "POST") {
       res.setHeader("Allow", "GET, POST");

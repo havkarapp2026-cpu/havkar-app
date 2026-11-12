@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HAVKAR Verification Review</title>
+  <link rel="icon" type="image/png" href="/assets/icons/havkar-icon-32-20261022-v3.png">
+  <style>
+    body{font-family:Georgia,serif;background:#f3faf4;margin:0;color:#123;}
+    header{background:linear-gradient(135deg,#0d3b12,#1b5e20);color:#fff;padding:16px 18px;}
+    main{max-width:900px;margin:0 auto;padding:18px;}
+    .card{background:#fff;border-radius:14px;padding:14px;margin:10px 0;box-shadow:0 8px 20px rgba(13,59,18,.08);}
+    button{margin-right:6px;margin-top:8px;background:#1b5e20;color:#fff;border:0;border-radius:8px;padding:8px 12px;font-weight:700;cursor:pointer;}
+    button.reject{background:#8b1e1e;} button.suspend{background:#6d4c41;}
+    .note{color:#456;font-size:14px;} .err{color:#b71c1c;}
+    .badge-preview{display:inline-flex;align-items:center;gap:8px;margin-top:8px;}
+  </style>
+  <link rel="stylesheet" href="/havkar-verification-badges.css">
+</head>
+<body>
+<header>
+  <h1>Verification badge review</h1>
+  <p>Authorized staff only. Payment never auto-awards badges.</p>
+</header>
+<main>
+  <p id="message" class="note">Loading…</p>
+  <section class="card">
+    <h2>Official badge meanings</h2>
+    <div class="badge-preview"><span class="havkar-badge personal" title="Verified Person"><span class="icon" aria-hidden="true"></span><span>Verified Person</span></span></div>
+    <div class="badge-preview"><span class="havkar-badge business" title="Verified Business"><span class="icon" aria-hidden="true"></span><span>Verified Business</span></span></div>
+    <div class="badge-preview"><span class="havkar-badge company" title="Verified Company / Factory"><span class="icon" aria-hidden="true"></span><span>Verified Company / Factory</span></span></div>
+    <p class="note">These marks mean identity/registration verification — not ratings, popularity, or paid subscriptions.</p>
+  </section>
+  <div id="cases"></div>
+  <p><a href="/admin.html">Owner Control</a> · <a href="/staff.html">Staff</a></p>
+</main>
+<script src="/havkar-supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function () {
+  var cfg = window.HAVKAR_SUPABASE_CONFIG || {};
+  var db = window.supabase.createClient(cfg.url, cfg.publishableKey, {
+    auth: { persistSession: true, autoRefreshToken: true }
+  });
+  var message = document.getElementById("message");
+  var casesRoot = document.getElementById("cases");
+
+  async function reviewCase(id, decision) {
+    var notes = window.prompt("Review notes (optional)", "") || "";
+    var res = await db.rpc("havkar_review_verification_case", {
+      p_case_id: id,
+      p_decision: decision,
+      p_notes: notes
+    });
+    if (res.error) throw new Error(res.error.message);
+    return res.data;
+  }
+
+  async function loadCases() {
+    var res = await db
+      .from("havkar_verification_cases")
+      .select("id,user_id,badge_type,status,evidence_notes,created_at,reviewed_at,expires_at")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (res.error) throw new Error(res.error.message);
+    var rows = res.data || [];
+    casesRoot.innerHTML = "";
+    if (!rows.length) {
+      message.textContent = "No verification cases yet.";
+      return;
+    }
+    message.textContent = rows.length + " case(s)";
+    rows.forEach(function (row) {
+      var card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML =
+        "<strong></strong><div class='note'></div><div class='note evidence'></div>" +
+        "<button type='button' data-act='approved'>Approve</button>" +
+        "<button class='reject' type='button' data-act='rejected'>Reject</button>" +
+        "<button class='suspend' type='button' data-act='suspended'>Suspend</button>" +
+        "<button class='suspend' type='button' data-act='revoked'>Revoke</button>";
+      card.querySelector("strong").textContent =
+        "#" + row.id + " · " + row.badge_type + " · " + row.status;
+      card.querySelector(".note").textContent =
+        "User " + row.user_id + " · created " + row.created_at;
+      card.querySelector(".evidence").textContent = row.evidence_notes || "No notes";
+      card.querySelectorAll("button").forEach(function (btn) {
+        btn.addEventListener("click", async function () {
+          try {
+            await reviewCase(row.id, btn.getAttribute("data-act"));
+            await loadCases();
+          } catch (err) {
+            message.className = "err";
+            message.textContent = err.message;
+          }
+        });
+      });
+      casesRoot.appendChild(card);
+    });
+  }
+
+  db.auth.getSession().then(async function (result) {
+    if (!(result && result.data && result.data.session)) {
+      window.location.href =
+        "/login.html?next=" + encodeURIComponent("/verification-review.html");
+      return;
+    }
+    try {
+      await loadCases();
+    } catch (err) {
+      message.className = "err";
+      message.textContent = err.message;
+    }
+  });
+})();
+</script>
+</body>
+</html>
