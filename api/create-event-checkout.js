@@ -169,6 +169,15 @@ function isFinanceApiRequest(req) {
   );
 }
 
+function isChatNotifyRequest(req) {
+  const url = String((req && req.url) || "");
+  return Boolean(
+    (req && req.query && req.query.havkarAction === "chatNotify") ||
+      url.indexOf("havkarAction=chatNotify") !== -1 ||
+      url.indexOf("/api/chat-notify") !== -1
+  );
+}
+
 async function readXlmInvoice(req) {
   const intentId = String(
     (req.query && (req.query.intent || req.query.id)) ||
@@ -1384,6 +1393,20 @@ export default async function handler(req, res) {
     } catch (error) {
       console.error("HAVKAR finance API error:", error && error.message);
       return sendError(res, 500, "Finance API failed");
+    }
+  }
+
+  if (isChatNotifyRequest(req)) {
+    if (req.method !== "GET" && req.method !== "POST") {
+      res.setHeader("Allow", "GET, POST");
+      return sendError(res, 405, "Method not allowed");
+    }
+    try {
+      const { handler: chatNotifyHandler } = require("../lib/havkar-chat-notify-api.cjs");
+      return await chatNotifyHandler(req, res);
+    } catch (error) {
+      console.error("HAVKAR chat notify API error:", error && error.message);
+      return sendError(res, 500, "Chat notify API failed");
     }
   }
 

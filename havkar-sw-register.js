@@ -3,7 +3,7 @@
     return;
   }
 
-  var SW_URL = "/sw.js?v=havkar-sw-20261110-stripe-legal-v4";
+  var SW_URL = "/sw.js?v=havkar-sw-20261112-chat-push-v1";
 
   window.addEventListener("load", function () {
     navigator.serviceWorker

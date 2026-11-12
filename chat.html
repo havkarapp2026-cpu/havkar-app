@@ -610,10 +610,10 @@ select:focus-visible{
     align-items:center;
 }
 
-.translation-language{
+.translation-language-button{
     width:100%;
-    height:42px;
-    padding:0 10px;
+    min-height:44px;
+    padding:10px 12px;
     border:1px solid #d7ddd7;
     border-radius:11px;
     outline:none;
@@ -621,10 +621,169 @@ select:focus-visible{
     color:#333;
     font-size:14px;
     font-weight:650;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    text-align:left;
+    cursor:pointer;
 }
 
-.translation-language:focus{
+.translation-language-button:focus{
     border-color:#7cb342;
+}
+
+.translation-language-button .lang-meta{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    min-width:0;
+}
+
+.translation-language-button .lang-native{
+    font-size:15px;
+    font-weight:750;
+    line-height:1.2;
+}
+
+.translation-language-button .lang-english{
+    font-size:11px;
+    color:#678067;
+    font-weight:600;
+}
+
+.language-modal{
+    position:fixed;
+    inset:0;
+    z-index:5000;
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    background:rgba(12,28,14,.42);
+    padding:12px;
+}
+
+.language-modal.open{
+    display:flex;
+}
+
+.language-sheet{
+    width:min(520px,100%);
+    max-height:min(78vh,640px);
+    background:#fff;
+    border-radius:18px 18px 14px 14px;
+    box-shadow:0 18px 48px rgba(0,0,0,.28);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+}
+
+.language-sheet-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:14px 14px 8px;
+    border-bottom:1px solid #e7ece7;
+}
+
+.language-sheet-header h3{
+    margin:0;
+    color:#1b5e20;
+    font-size:16px;
+}
+
+.language-search{
+    margin:10px 14px 8px;
+    width:calc(100% - 28px);
+    min-height:44px;
+    border:1px solid #d7ddd7;
+    border-radius:12px;
+    padding:0 12px;
+    font-size:15px;
+}
+
+.language-list{
+    overflow:auto;
+    -webkit-overflow-scrolling:touch;
+    padding:4px 8px 14px;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+}
+
+.language-option{
+    min-height:52px;
+    border:0;
+    border-radius:12px;
+    background:#f7faf6;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:10px 12px;
+    cursor:pointer;
+    text-align:left;
+}
+
+.language-option[aria-selected="true"]{
+    background:#e8f5e9;
+    box-shadow:inset 0 0 0 2px #7cb342;
+}
+
+.language-option .check{
+    color:#2e7d32;
+    font-weight:900;
+    opacity:0;
+}
+
+.language-option[aria-selected="true"] .check{
+    opacity:1;
+}
+
+.language-option .native{
+    display:block;
+    font-size:15px;
+    font-weight:750;
+    color:#1f3b22;
+}
+
+.language-option .english{
+    display:block;
+    font-size:12px;
+    color:#5f7a5f;
+    margin-top:2px;
+}
+
+.language-option.rtl .native{
+    direction:rtl;
+    text-align:right;
+    width:100%;
+}
+
+.send-retry-bar{
+    display:none;
+    gap:8px;
+    align-items:center;
+    padding:8px 12px;
+    background:#fff8e1;
+    border-top:1px solid #ffe082;
+    color:#5d4037;
+    font-size:13px;
+}
+
+.send-retry-bar.show{
+    display:flex;
+}
+
+.send-retry-bar button{
+    margin-left:auto;
+    min-height:36px;
+    padding:0 12px;
+    border-radius:10px;
+    background:#2e7d32;
+    color:#fff;
+    font-weight:700;
 }
 
 .auto-translate-toggle{
@@ -695,8 +854,8 @@ select:focus-visible{
     min-height:0;
     width:100%;
     overflow-y:auto;
-    overflow-x:hidden;
-    padding:18px 13px 24px;
+    overflow-x:visible;
+    padding:18px 14px 24px;
     -webkit-overflow-scrolling:touch;
     overscroll-behavior:contain;
     display:flex;
@@ -721,6 +880,11 @@ select:focus-visible{
 .message-wrap{
     position:relative;
     max-width:82%;
+    z-index:1;
+}
+
+.message-wrap.reaction-open{
+    z-index:40;
 }
 
 .message{
@@ -733,6 +897,7 @@ select:focus-visible{
     line-height:1.45;
     word-break:break-word;
     overflow-wrap:anywhere;
+    z-index:2;
 }
 
 .message.sent{
@@ -832,10 +997,11 @@ select:focus-visible{
 
 .reaction-trigger{
     position:absolute;
-    right:-8px;
-    bottom:-8px;
-    width:31px;
-    height:31px;
+    right:4px;
+    top:auto;
+    bottom:calc(100% - 14px);
+    width:34px;
+    height:34px;
     border-radius:50%;
     border:1px solid #e0e4e0;
     background:#fff;
@@ -845,11 +1011,12 @@ select:focus-visible{
     align-items:center;
     justify-content:center;
     cursor:pointer;
-    z-index:8;
+    z-index:25;
+    touch-action:manipulation;
 }
 
 .message-row.received .reaction-trigger{
-    left:-8px;
+    left:4px;
     right:auto;
 }
 
@@ -860,7 +1027,7 @@ select:focus-visible{
 .reaction-picker{
     position:absolute;
     right:0;
-    bottom:37px;
+    bottom:calc(100% + 8px);
     display:none;
     align-items:center;
     gap:4px;
@@ -869,7 +1036,7 @@ select:focus-visible{
     background:#fff;
     box-shadow:0 8px 25px rgba(0,0,0,.18);
     border:1px solid #e5e9e5;
-    z-index:20;
+    z-index:50;
 }
 
 .message-row.received .reaction-picker{
@@ -1380,24 +1547,20 @@ select:focus-visible{
 
         <div class="translation-controls">
 
-            <select
-                id="translationTargetLanguage"
-                class="translation-language"
+            <button
+                id="translationLanguageButton"
+                class="translation-language-button"
+                type="button"
+                aria-haspopup="dialog"
+                aria-expanded="false"
                 aria-label="Translate messages to">
-
-                <option value="en">English</option>
-                <option value="it">Italian</option>
-                <option value="fa">Persian</option>
-                <option value="ar">Arabic</option>
-                <option value="de">German</option>
-                <option value="fr">French</option>
-                <option value="es">Spanish</option>
-                <option value="sv">Swedish</option>
-                <option value="tr">Turkish</option>
-                <option value="ckb">Kurdish (Sorani) — کوردی سۆرانی</option>
-                <option value="kmr">Kurdish (Kurmanji) — Kurdî Kurmancî</option>
-
-            </select>
+                <span class="lang-meta">
+                    <span id="translationLanguageNative" class="lang-native">English</span>
+                    <span id="translationLanguageEnglish" class="lang-english">English</span>
+                </span>
+                <i class="fas fa-chevron-down" aria-hidden="true"></i>
+            </button>
+            <input type="hidden" id="translationTargetLanguage" value="en">
 
             <button
                 id="autoTranslateToggle"
@@ -1431,6 +1594,11 @@ select:focus-visible{
             Auto Translate
         </span>
 
+    </div>
+
+    <div id="sendRetryBar" class="send-retry-bar" role="status">
+        <span id="sendRetryText">Message not sent.</span>
+        <button id="sendRetryButton" type="button">Retry</button>
     </div>
 
     <main id="chatMessages" class="chat-messages">
@@ -1483,6 +1651,19 @@ select:focus-visible{
 
 </div>
 
+
+<div id="languageModal" class="language-modal" role="dialog" aria-modal="true" aria-labelledby="languageModalTitle" hidden>
+    <div class="language-sheet">
+        <div class="language-sheet-header">
+            <h3 id="languageModalTitle">Choose language</h3>
+            <button id="languageModalClose" class="translation-close" type="button" aria-label="Close language list">
+                <i class="fas fa-xmark"></i>
+            </button>
+        </div>
+        <input id="languageSearchInput" class="language-search" type="search" placeholder="Search languages" autocomplete="off">
+        <div id="languageList" class="language-list" role="listbox" aria-label="Supported languages"></div>
+    </div>
+</div>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
@@ -1635,9 +1816,33 @@ const state = {
 
     translationTarget:"en",
 
-    translating:false
+    translating:false,
+
+    inboxChannel:null,
+
+    pendingDraft:"",
+
+    lastSendError:null,
+
+    knownMessageIds:{},
+
+    pushConfigured:false
 
 };
+
+const TRANSLATION_LANGUAGES = [
+    { code:"en", english:"English", native:"English", dir:"ltr" },
+    { code:"it", english:"Italian", native:"Italiano", dir:"ltr" },
+    { code:"fa", english:"Persian", native:"فارسی", dir:"rtl" },
+    { code:"ar", english:"Arabic", native:"العربية", dir:"rtl" },
+    { code:"de", english:"German", native:"Deutsch", dir:"ltr" },
+    { code:"fr", english:"French", native:"Français", dir:"ltr" },
+    { code:"es", english:"Spanish", native:"Español", dir:"ltr" },
+    { code:"sv", english:"Swedish", native:"Svenska", dir:"ltr" },
+    { code:"tr", english:"Turkish", native:"Türkçe", dir:"ltr" },
+    { code:"ckb", english:"Kurdish (Sorani)", native:"کوردی سۆرانی", dir:"rtl" },
+    { code:"kmr", english:"Kurdish (Kurmanji)", native:"Kurdî Kurmancî", dir:"ltr" }
+];
 
 
 /* =========================================================
@@ -1807,33 +2012,212 @@ function saveTranslationPreferences(){
    TRANSLATION UI
 ========================================================= */
 
+function getTranslationLanguage(
+    code
+){
+
+    return TRANSLATION_LANGUAGES.find(
+        item =>
+            item.code === code
+    ) || null;
+
+}
+
 function getTranslationLanguageName(
     code
 ){
 
-    const select =
-        $("translationTargetLanguage");
+    const lang =
+        getTranslationLanguage(code);
 
-    if(select){
-
-        const option =
-            Array.from(
-                select.options
-            ).find(
-                item =>
-                    item.value === code
-            );
-
-        if(option){
-
-            return option.textContent.trim();
-
-        }
-
+    if(lang){
+        return lang.native + " (" + lang.english + ")";
     }
 
     return String(code || "")
         .toUpperCase();
+
+}
+
+function syncTranslationLanguageButton(){
+
+    const hidden =
+        $("translationTargetLanguage");
+
+    const nativeEl =
+        $("translationLanguageNative");
+
+    const englishEl =
+        $("translationLanguageEnglish");
+
+    const lang =
+        getTranslationLanguage(
+            state.translationTarget
+        ) || TRANSLATION_LANGUAGES[0];
+
+    if(hidden){
+        hidden.value = lang.code;
+    }
+
+    if(nativeEl){
+        nativeEl.textContent =
+            lang.native;
+        nativeEl.dir = lang.dir;
+    }
+
+    if(englishEl){
+        englishEl.textContent =
+            lang.english;
+    }
+
+}
+
+function renderLanguageOptions(
+    filterText
+){
+
+    const list =
+        $("languageList");
+
+    if(!list){
+        return;
+    }
+
+    const q =
+        String(filterText || "")
+            .trim()
+            .toLowerCase();
+
+    list.innerHTML = "";
+
+    TRANSLATION_LANGUAGES.forEach(
+        lang => {
+
+            const hay =
+                (
+                    lang.code +
+                    " " +
+                    lang.english +
+                    " " +
+                    lang.native
+                ).toLowerCase();
+
+            if(
+                q &&
+                hay.indexOf(q) === -1
+            ){
+                return;
+            }
+
+            const btn =
+                document.createElement(
+                    "button"
+                );
+
+            btn.type = "button";
+            btn.className =
+                "language-option" +
+                (
+                    lang.dir === "rtl"
+                        ? " rtl"
+                        : ""
+                );
+            btn.setAttribute(
+                "role",
+                "option"
+            );
+            btn.setAttribute(
+                "aria-selected",
+                lang.code ===
+                state.translationTarget
+                    ? "true"
+                    : "false"
+            );
+            btn.dataset.code =
+                lang.code;
+            btn.innerHTML =
+                '<span><span class="native"></span><span class="english"></span></span><span class="check">✓</span>';
+            btn.querySelector(
+                ".native"
+            ).textContent =
+                lang.native;
+            btn.querySelector(
+                ".english"
+            ).textContent =
+                lang.english;
+            btn.addEventListener(
+                "click",
+                () => {
+
+                    changeTranslationTarget(
+                        lang.code
+                    );
+                    closeLanguageModal();
+
+                }
+            );
+            list.appendChild(btn);
+
+        }
+    );
+
+}
+
+function openLanguageModal(){
+
+    const modal =
+        $("languageModal");
+
+    const button =
+        $("translationLanguageButton");
+
+    if(!modal){
+        return;
+    }
+
+    modal.hidden = false;
+    modal.classList.add("open");
+
+    if(button){
+        button.setAttribute(
+            "aria-expanded",
+            "true"
+        );
+    }
+
+    renderLanguageOptions("");
+
+    const search =
+        $("languageSearchInput");
+
+    if(search){
+        search.value = "";
+        search.focus();
+    }
+
+}
+
+function closeLanguageModal(){
+
+    const modal =
+        $("languageModal");
+
+    const button =
+        $("translationLanguageButton");
+
+    if(!modal){
+        return;
+    }
+
+    modal.classList.remove("open");
+    modal.hidden = true;
+
+    if(button){
+        button.setAttribute(
+            "aria-expanded",
+            "false"
+        );
+    }
 
 }
 
@@ -1860,6 +2244,8 @@ function updateTranslationUI(){
 
     const activeText =
         $("translationActiveText");
+
+    syncTranslationLanguageButton();
 
     if(panel){
 
@@ -1921,12 +2307,8 @@ function updateTranslationUI(){
     if(target){
 
         const exists =
-            Array.from(
-                target.options
-            ).some(
-                option =>
-                    option.value ===
-                    state.translationTarget
+            getTranslationLanguage(
+                state.translationTarget
             );
 
         if(exists){
@@ -1937,7 +2319,8 @@ function updateTranslationUI(){
         }else{
 
             state.translationTarget =
-                target.value;
+                "en";
+            target.value = "en";
 
         }
 
@@ -4790,7 +5173,125 @@ function removeReactionSubscription(){
    SEND MESSAGE
 ========================================================= */
 
-async function sendMessage(){
+function hideSendRetry(){
+
+    const bar =
+        $("sendRetryBar");
+
+    if(bar){
+        bar.classList.remove("show");
+    }
+
+    state.lastSendError =
+        null;
+
+}
+
+function showSendRetry(
+    message
+){
+
+    const bar =
+        $("sendRetryBar");
+
+    const text =
+        $("sendRetryText");
+
+    if(text){
+        text.textContent =
+            message ||
+            "Message not sent.";
+    }
+
+    if(bar){
+        bar.classList.add("show");
+    }
+
+}
+
+function newClientMessageId(){
+
+    if(
+        globalThis.crypto &&
+        typeof globalThis.crypto.randomUUID ===
+            "function"
+    ){
+        return globalThis.crypto.randomUUID();
+    }
+
+    return (
+        "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"
+    ).replace(
+        /[xy]/g,
+        c => {
+            const r =
+                Math.random() * 16 | 0;
+            const v =
+                c === "x"
+                    ? r
+                    : (r & 0x3 | 0x8);
+            return v.toString(16);
+        }
+    );
+
+}
+
+async function dispatchChatPush(
+    message
+){
+
+    try{
+
+        const session =
+            await supabaseClient.auth.getSession();
+
+        const token =
+            session &&
+            session.data &&
+            session.data.session &&
+            session.data.session.access_token;
+
+        if(!token || !message){
+            return;
+        }
+
+        await fetch(
+            "/api/chat-notify?action=notify_message",
+            {
+                method:"POST",
+                headers:{
+                    "Content-Type":
+                        "application/json",
+                    Authorization:
+                        "Bearer " +
+                        token
+                },
+                body:JSON.stringify({
+                    conversation_id:
+                        message.conversation_id,
+                    message_id:
+                        message.id
+                })
+            }
+        );
+
+    }catch(error){
+
+        console.warn(
+            "[HAVKAR] Push dispatch skipped:",
+            error
+        );
+
+    }
+
+}
+
+async function sendMessage(
+    options
+){
+
+    const opts =
+        options || {};
 
     if(!state.currentUser){
 
@@ -4831,7 +5332,11 @@ async function sendMessage(){
     }
 
     const originalText =
-        input.value.trim();
+        String(
+            opts.forceText != null
+                ? opts.forceText
+                : input.value
+        ).trim();
 
     if(!originalText){
         return;
@@ -4851,6 +5356,11 @@ async function sendMessage(){
 
     }
 
+    state.pendingDraft =
+        originalText;
+
+    hideSendRetry();
+
     input.disabled =
         true;
 
@@ -4867,9 +5377,15 @@ async function sendMessage(){
     let textToSend =
         originalText;
 
+    let translationFailed =
+        false;
+
     try{
 
-        if(state.autoTranslate){
+        if(
+            state.autoTranslate &&
+            !opts.skipTranslate
+        ){
 
             state.translating =
                 true;
@@ -4890,10 +5406,21 @@ async function sendMessage(){
                 "..."
             );
 
-            textToSend =
-                await translateOutgoingMessage(
-                    originalText
-                );
+            try{
+
+                textToSend =
+                    await translateOutgoingMessage(
+                        originalText
+                    );
+
+            }catch(translateError){
+
+                translationFailed =
+                    true;
+
+                throw translateError;
+
+            }
 
             if(
                 textToSend.length >
@@ -4919,40 +5446,58 @@ async function sendMessage(){
 
         }
 
+        const clientMessageId =
+            newClientMessageId();
+
         const result =
             await withTimeout(
-                supabaseClient
-                    .from("messages")
-                    .insert({
-                        conversation_id:
+                supabaseClient.rpc(
+                    "havkar_send_chat_message",
+                    {
+                        p_conversation_id:
                             state.currentConversationId,
-
-                        sender_id:
-                            state.currentUser.id,
-
-                        message_text:
+                        p_message_text:
                             textToSend,
-
-                        is_read:false
-                    })
-                    .select(
-                        "id,conversation_id,sender_id,message_text,created_at,is_read,delivered_at,read_at"
-                    )
-                    .single()
+                        p_client_message_id:
+                            clientMessageId
+                    }
+                ),
+                20000
             );
 
         if(result.error){
             throw result.error;
         }
 
+        const saved =
+            Array.isArray(result.data)
+                ? result.data[0]
+                : result.data;
+
+        if(
+            !saved ||
+            !saved.id
+        ){
+            throw new Error(
+                "Message was not persisted."
+            );
+        }
+
+        // Only clear draft after confirmed persistence.
         input.value = "";
+        state.pendingDraft = "";
+        hideSendRetry();
+
+        state.knownMessageIds[
+            String(saved.id)
+        ] = true;
 
         appendMessage(
-            result.data,
+            saved,
             true
         );
 
-        if(state.autoTranslate){
+        if(state.autoTranslate && !opts.skipTranslate){
 
             showToast(
                 "Translated message sent.",
@@ -4961,7 +5506,7 @@ async function sendMessage(){
 
         }
 
-        await updateConversationTimestamp();
+        dispatchChatPush(saved);
 
     }catch(error){
 
@@ -4970,35 +5515,56 @@ async function sendMessage(){
             error
         );
 
+        // Preserve the original draft for retry.
+        input.value =
+            state.pendingDraft ||
+            originalText;
+
         const message =
             String(
-                error?.message || ""
+                error?.message ||
+                error?.error_description ||
+                ""
             );
 
-        if(
-            state.autoTranslate &&
-            (
-                message.toLowerCase()
-                    .includes("translation") ||
-                message.toLowerCase()
-                    .includes("translate") ||
-                message.toLowerCase()
-                    .includes("timed out")
-            )
+        state.lastSendError =
+            message;
+
+        if(translationFailed){
+
+            showToast(
+                "Translation failed. Your original text was kept — tap Retry to send without translation, or fix translation settings.",
+                "error"
+            );
+            showSendRetry(
+                "Translation failed. Retry sends the original text."
+            );
+
+        }else if(
+            message === "REQUEST_TIMEOUT"
         ){
 
             showToast(
-                "Translation failed. Message was not sent.",
+                "Sending the message timed out.",
                 "error"
+            );
+            showSendRetry(
+                "Timed out. Retry send."
             );
 
         }else{
 
             showToast(
-                message === "REQUEST_TIMEOUT"
-                    ? "Sending the message timed out."
-                    : "Message could not be sent.",
+                "Message could not be sent" +
+                (
+                    message
+                        ? ": " + message
+                        : "."
+                ),
                 "error"
+            );
+            showSendRetry(
+                "Message not saved. Retry."
             );
 
         }
@@ -5361,10 +5927,30 @@ function attachConversationRealtime(
                             return;
                         }
 
-                        appendMessage(
-                            message,
-                            true
-                        );
+                        if(
+                            message &&
+                            message.id &&
+                            state.knownMessageIds[
+                                String(message.id)
+                            ]
+                        ){
+                            updateRenderedMessage(
+                                message
+                            );
+                        }else{
+                            if(
+                                message &&
+                                message.id
+                            ){
+                                state.knownMessageIds[
+                                    String(message.id)
+                                ] = true;
+                            }
+                            appendMessage(
+                                message,
+                                true
+                            );
+                        }
 
                         if(
                             String(
@@ -5387,6 +5973,10 @@ function attachConversationRealtime(
                             );
 
                         }
+
+                        bumpInboxFromMessage(
+                            message
+                        );
 
                     }
                 )
@@ -5452,6 +6042,330 @@ function removeRealtimeSubscription(){
 
         state.realtimeChannel =
             null;
+
+    }
+
+}
+
+function bumpInboxFromMessage(
+    message
+){
+
+    if(
+        !message ||
+        !state.currentUser
+    ){
+        return;
+    }
+
+    const conversation =
+        state.conversations.find(
+            item =>
+                String(item.id) ===
+                String(
+                    message.conversation_id
+                )
+        );
+
+    if(!conversation){
+        // Unknown conversation — refresh list on next tick.
+        window.setTimeout(
+            () => {
+                loadConversations();
+            },
+            250
+        );
+        return;
+    }
+
+    conversation.lastMessage =
+        message;
+    conversation.updated_at =
+        message.created_at ||
+        new Date().toISOString();
+
+    if(
+        String(message.sender_id) !==
+        String(state.currentUser.id) &&
+        String(
+            state.currentConversationId ||
+            ""
+        ) !==
+        String(message.conversation_id)
+    ){
+        conversation.unreadCount =
+            Number(
+                conversation.unreadCount ||
+                0
+            ) + 1;
+    }
+
+    state.conversations.sort(
+        (a, b) =>
+            new Date(
+                b.updated_at || 0
+            ) -
+            new Date(
+                a.updated_at || 0
+            )
+    );
+
+    if(!state.currentConversationId){
+        renderConversationList();
+    }
+
+}
+
+async function subscribeInboxRealtime(){
+
+    if(
+        !supabaseClient ||
+        !state.currentUser
+    ){
+        return;
+    }
+
+    await prepareChatRealtimeAuth();
+
+    if(state.inboxChannel){
+
+        try{
+            supabaseClient.removeChannel(
+                state.inboxChannel
+            );
+        }catch(_e){}
+
+        state.inboxChannel =
+            null;
+
+    }
+
+    try{
+
+        state.inboxChannel =
+            supabaseClient
+                .channel(
+                    "havkar-inbox-" +
+                    state.currentUser.id +
+                    "-" +
+                    Date.now()
+                )
+                .on(
+                    "postgres_changes",
+                    {
+                        event:"INSERT",
+                        schema:"public",
+                        table:"messages"
+                    },
+                    payload => {
+
+                        const message =
+                            payload?.new;
+
+                        if(!message){
+                            return;
+                        }
+
+                        if(
+                            String(
+                                message.conversation_id
+                            ) ===
+                            String(
+                                state.currentConversationId ||
+                                ""
+                            )
+                        ){
+                            return;
+                        }
+
+                        bumpInboxFromMessage(
+                            message
+                        );
+
+                    }
+                )
+                .on(
+                    "postgres_changes",
+                    {
+                        event:"UPDATE",
+                        schema:"public",
+                        table:"conversations"
+                    },
+                    () => {
+
+                        if(
+                            !state.currentConversationId
+                        ){
+                            loadConversations();
+                        }
+
+                    }
+                )
+                .subscribe(
+                    status => {
+
+                        console.log(
+                            "[HAVKAR] Inbox realtime:",
+                            status
+                        );
+
+                    }
+                );
+
+    }catch(error){
+
+        console.warn(
+            "[HAVKAR] Inbox realtime failed:",
+            error
+        );
+
+    }
+
+}
+
+async function ensurePushRegistration(){
+
+    try{
+
+        const session =
+            await supabaseClient.auth.getSession();
+
+        const accessToken =
+            session &&
+            session.data &&
+            session.data.session &&
+            session.data.session.access_token;
+
+        if(!accessToken){
+            return;
+        }
+
+        const statusRes =
+            await fetch(
+                "/api/chat-notify?action=status",
+                {
+                    headers:{
+                        Authorization:
+                            "Bearer " +
+                            accessToken
+                    }
+                }
+            );
+
+        const statusBody =
+            await statusRes
+                .json()
+                .catch(
+                    () => ({})
+                );
+
+        state.pushConfigured =
+            Boolean(
+                statusBody.web_push_configured
+            );
+
+        if(
+            !state.pushConfigured ||
+            !("Notification" in window) ||
+            !("serviceWorker" in navigator) ||
+            !("PushManager" in window)
+        ){
+            return;
+        }
+
+        let permission =
+            Notification.permission;
+
+        if(permission === "default"){
+            permission =
+                await Notification.requestPermission();
+        }
+
+        if(permission !== "granted"){
+            return;
+        }
+
+        const registration =
+            await navigator.serviceWorker.ready;
+
+        const vapid =
+            statusBody.vapid_public_key;
+
+        if(!vapid){
+            return;
+        }
+
+        const raw =
+            Uint8Array.from(
+                atob(
+                    vapid
+                        .replace(
+                            /-/g,
+                            "+"
+                        )
+                        .replace(
+                            /_/g,
+                            "/"
+                        )
+                ),
+                c =>
+                    c.charCodeAt(0)
+            );
+
+        let subscription =
+            await registration.pushManager.getSubscription();
+
+        if(!subscription){
+            subscription =
+                await registration.pushManager.subscribe({
+                    userVisibleOnly:true,
+                    applicationServerKey:raw
+                });
+        }
+
+        const json =
+            subscription.toJSON();
+
+        await fetch(
+            "/api/chat-notify?action=register",
+            {
+                method:"POST",
+                headers:{
+                    "Content-Type":
+                        "application/json",
+                    Authorization:
+                        "Bearer " +
+                        accessToken
+                },
+                body:JSON.stringify({
+                    platform:
+                        /android/i.test(
+                            navigator.userAgent
+                        )
+                            ? "android"
+                            : /iphone|ipad|ios/i.test(
+                                navigator.userAgent
+                            )
+                                ? "ios"
+                                : "web",
+                    endpoint:
+                        json.endpoint,
+                    p256dh:
+                        json.keys &&
+                        json.keys.p256dh,
+                    auth:
+                        json.keys &&
+                        json.keys.auth
+                })
+            }
+        );
+
+    }catch(error){
+
+        console.warn(
+            "[HAVKAR] Push registration skipped:",
+            error
+        );
 
     }
 
@@ -5889,13 +6803,15 @@ document.addEventListener(
     "keydown",
     event => {
 
-        if(event.key === "Escape"){
+            if(event.key === "Escape"){
 
             closeHeaderMenu();
 
             closeAllReactionPickers();
 
             closeTranslationPanel();
+
+            closeLanguageModal();
 
         }
 
@@ -5927,6 +6843,16 @@ function setupAuthListener(){
                 removeRealtimeSubscription();
 
                 removeReactionSubscription();
+
+                if(state.inboxChannel){
+                    try{
+                        supabaseClient.removeChannel(
+                            state.inboxChannel
+                        );
+                    }catch(_e){}
+                    state.inboxChannel =
+                        null;
+                }
 
                 redirectToLogin();
 
@@ -6189,17 +7115,118 @@ function setupEvents(){
             toggleAutoTranslate
         );
 
-    $("translationTargetLanguage")
+    $("translationLanguageButton")
         ?.addEventListener(
-            "change",
+            "click",
+            openLanguageModal
+        );
+
+    $("languageModalClose")
+        ?.addEventListener(
+            "click",
+            closeLanguageModal
+        );
+
+    $("languageModal")
+        ?.addEventListener(
+            "click",
             event => {
 
-                changeTranslationTarget(
+                if(
+                    event.target ===
+                    $("languageModal")
+                ){
+                    closeLanguageModal();
+                }
+
+            }
+        );
+
+    $("languageSearchInput")
+        ?.addEventListener(
+            "input",
+            event => {
+
+                renderLanguageOptions(
                     event.target.value
                 );
 
             }
         );
+
+    $("sendRetryButton")
+        ?.addEventListener(
+            "click",
+            () => {
+
+                const draft =
+                    state.pendingDraft ||
+                    (
+                        $("messageInput") &&
+                        $("messageInput").value
+                    );
+
+                if(!draft){
+                    return;
+                }
+
+                // Retry keeps original draft; skip auto-translate after translation failures.
+                sendMessage({
+                    forceText:draft,
+                    skipTranslate:
+                        Boolean(
+                            state.lastSendError &&
+                            String(
+                                state.lastSendError
+                            )
+                                .toLowerCase()
+                                .includes(
+                                    "translat"
+                                )
+                        )
+                });
+
+            }
+        );
+
+    window.addEventListener(
+        "online",
+        () => {
+
+            if(state.currentConversationId){
+                subscribeToConversation(
+                    state.currentConversationId
+                );
+            }
+            subscribeInboxRealtime();
+            if(!state.currentConversationId){
+                loadConversations();
+            }
+
+        }
+    );
+
+    document.addEventListener(
+        "visibilitychange",
+        () => {
+
+            if(
+                document.visibilityState ===
+                "visible"
+            ){
+                prepareChatRealtimeAuth();
+                if(state.currentConversationId){
+                    subscribeToConversation(
+                        state.currentConversationId
+                    );
+                }else{
+                    subscribeInboxRealtime();
+                    loadConversations();
+                }
+            }
+
+        }
+    );
 
 }
 
@@ -6267,6 +7294,9 @@ async function startPage(){
         params.get(
             "conversation_id"
         );
+
+    await subscribeInboxRealtime();
+    ensurePushRegistration();
 
     if(conversationId){
 
