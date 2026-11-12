@@ -1,5 +1,3 @@
-import Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
 import {
   cardPaymentsAllowed,
   REAL_PAYMENTS_PAUSED_CODE,
@@ -13,19 +11,12 @@ import {
   processStripeEvent,
   isTestModeTicketEvent
 } from "../lib/stripe-webhook-processor.cjs";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false
-    }
-  }
-);
+import {
+  createStripeClient,
+  createServiceSupabase,
+  configErrorResponse,
+  stagingIsolationFailure
+} from "../lib/stripe-runtime.cjs";
 
 export const config = {
   api: {
@@ -41,7 +32,7 @@ async function getRawBody(req) {
   return Buffer.concat(chunks);
 }
 
-function createWebhookStore() {
+function createWebhookStore(supabase) {
   return {
     async insertEvent(row) {
       const { error } = await supabase.from("stripe_webhook_events").insert({
@@ -142,6 +133,25 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  const isolation = stagingIsolationFailure(process.env);
+  if (isolation) {
+    console.error("HAVKAR Stripe webhook isolation block:", isolation.error);
+    return configErrorResponse(res, isolation.error);
+  }
+
+  const stripeRuntime = createStripeClient(process.env);
+  if (!stripeRuntime.ok || !stripeRuntime.client) {
+    console.error(
+      "HAVKAR Stripe webhook config:",
+      stripeRuntime.reason || "stripe_client_unavailable"
+    );
+    return configErrorResponse(
+      res,
+      stripeRuntime.reason || "stripe_client_unavailable"
+    );
+  }
+  const stripe = stripeRuntime.client;
+
   const stripeSignature = req.headers["stripe-signature"];
 
   if (!stripeSignature) {
@@ -185,7 +195,7 @@ export default async function handler(req, res) {
 
   if (!process.env.STRIPE_WEBHOOK_SECRET) {
     console.error("STRIPE_WEBHOOK_SECRET is not configured");
-    return res.status(500).json({ error: "Webhook configuration error" });
+    return configErrorResponse(res, "STRIPE_WEBHOOK_SECRET missing");
   }
 
   let event;
@@ -201,6 +211,32 @@ export default async function handler(req, res) {
       error.message
     );
     return res.status(400).json({ error: "Invalid webhook signature" });
+  }
+
+  // Fail closed: livemode events must never mutate staging DB via Preview.
+  if (
+    event.livemode === true &&
+    (process.env.VERCEL_ENV === "preview" ||
+      String(process.env.SUPABASE_URL || "").includes("keglioewbkgdabsizvys"))
+  ) {
+    console.error("HAVKAR refused livemode Stripe event on staging/preview");
+    return res.status(403).json({
+      ok: false,
+      code: "LIVE_EVENT_REFUSED_ON_STAGING",
+      error: "Live Stripe events are refused on staging"
+    });
+  }
+
+  const supabaseRuntime = createServiceSupabase(process.env);
+  if (!supabaseRuntime.ok || !supabaseRuntime.client) {
+    console.error(
+      "HAVKAR Stripe webhook Supabase config:",
+      supabaseRuntime.reason || "supabase_unavailable"
+    );
+    return configErrorResponse(
+      res,
+      supabaseRuntime.reason || "supabase_unavailable"
+    );
   }
 
   /*
@@ -234,9 +270,11 @@ export default async function handler(req, res) {
       return res.status(200).json(result);
     }
 
-    const result = await processStripeEvent(event, createWebhookStore(), {
-      stripe
-    });
+    const result = await processStripeEvent(
+      event,
+      createWebhookStore(supabaseRuntime.client),
+      { stripe }
+    );
     return res.status(200).json({ received: true, ...result });
   } catch (error) {
     console.error("HAVKAR Stripe webhook processing error:", error);
