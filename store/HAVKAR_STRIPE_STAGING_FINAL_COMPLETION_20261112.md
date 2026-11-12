@@ -1,67 +1,38 @@
 # HAVKAR Stripe staging final completion — 2026-11-12
 
-## Correct destination (identified)
-
-| Item | Value |
-| --- | --- |
-| Sandbox account | `acct_1UJwZzEAHNL6NCGl` (HAVKAR-sandlåda) |
-| Correct staging webhook | `we_1UawCfEAHNL6NCGlIEajIIcv` |
-| Name/description | HAVKAR-Sandbox-Staging / staging payout tests only |
-| URL | `https://staging.havkar.online/api/stripe-webhook` |
-| Enabled events | `payout.paid`, `payout.failed` |
-| Status | enabled, livemode=false |
-
-**Not the staging target:** `we_1Uav2VECWiUpELSPbcU0mpHP` (Live-account Test Mode / wrong context).
-
-## Branch / deploy
+## Result: delivery NOT PASS (account mismatch proven)
 
 | Item | Value |
 | --- | --- |
 | Branch | `cursor/stripe-test-mode-staging-d4b2` |
-| Commit | `95526654216331d09177714577898b250afb4fa2` |
-| Latest READY Preview | `dpl_3Qr99kJ4uDbTzzwvN5KsPHhwnwC9` |
-| Alias | `staging.havkar.online` → that deploy |
+| Commit | `9bd053ab3d73cb9b4df692a54125ca6e24890332` |
+| Deploy | `dpl_9QNrsaxxQr3NJ67gGZ7MJBEjan7K` READY → `staging.havkar.online` |
+| Sandbox webhook | `we_1UawCfEAHNL6NCGlIEajIIcv` on `acct_1UJwZzEAHNL6NCGl` |
+| Preview key account (resolved) | `acct_1UJwZZECWiUpELSP` (**mismatch**) |
+| Stripe-originated `payout.paid` | **NOT verified** |
+| Production | unchanged; live payments OFF |
 
-## Preview env scopes (presence only; values not printed)
+## What was executed
 
-Branch-scoped Preview (`cursor/stripe-test-mode-staging-d4b2`):
+1. Identified correct sandbox destination `we_1UawCf…` (not Live-test `we_1Uav2V…`).
+2. Added staging-only e2e trigger via multiplexed checkout API (`/api/stripe-sandbox-payout-e2e`) using Preview `sk_test` — no new Hobby function, no MCP write, no secret exposure.
+3. Trigger call funded a PaymentIntent whose id fragment matched Live account (`…ECWiUpELSP…`), then returned `INSUFFICIENT_TEST_BALANCE` (balance lag on wrong account).
+4. Fail-closed account check now returns `STRIPE_ACCOUNT_MISMATCH` with:
+   - `stripe_account_id=acct_1UJwZZECWiUpELSP`
+   - `expected_sandbox_account_id=acct_1UJwZzEAHNL6NCGl`
+5. Automated tests: **14+/12+ PASS** (sandbox e2e gates + runtime isolation + settlement).
+6. Invalid webhook signature still **HTTP 400**.
 
-- `STRIPE_SECRET_KEY` (sensitive) — present; runtime `secret_key_mode=test`
-- `STRIPE_WEBHOOK_SECRET` (sensitive) — present; updated after sandbox webhook create
-- `SUPABASE_URL` = staging `https://keglioewbkgdabsizvys.supabase.co`
-- `SUPABASE_SERVICE_ROLE_KEY` (sensitive) — present
-- `HAVKAR_STRIPE_TEST_CHECKOUT_ENABLED=true`
-- `HAVKAR_REAL_PAYMENTS_ENABLED=false`
-- `HAVKAR_STRIPE_LIVE_ENABLED=false`
+## Exact external blocker (single action)
 
-## Runtime / app-side
+Preview branch `STRIPE_SECRET_KEY` is the **Live account** Test Mode key (`acct_1UJwZZECWiUpELSP`), but the staging webhook lives on sandbox **HAVKAR-sandlåda** (`acct_1UJwZzEAHNL6NCGl` / `we_1UawCf…`).
 
-- Lazy Stripe init + staging isolation: `lib/stripe-runtime.cjs`, `api/stripe-webhook.js`
-- Signature verification via `constructEvent`
-- Idempotent ledger insert (`23505` → duplicate)
-- Staging refuses livemode events
-- Payout handler records `stripe_payout_events`
-- GET webhook → 405; invalid signature → 400
+In Vercel → Project → Environment Variables → **Preview** → git branch `cursor/stripe-test-mode-staging-d4b2` only:
 
-## Automated tests
+1. Set `STRIPE_SECRET_KEY` to the **sandbox** `sk_test` from Dashboard → Sandboxes → HAVKAR-sandlåda → API keys.
+2. Keep `STRIPE_WEBHOOK_SECRET` as the signing secret for `we_1UawCf…` (do not rotate unless mismatched).
+3. Redeploy that Preview branch.
 
-`node --test` (stripe-runtime-isolation, real-payments-pause, stripe-ticket-settlement, stripe-live-readiness, events-ticket-qr-flow): **12/12 PASS**
+Do **not** paste keys into chat. Do **not** change Production envs or live payments.
 
-## Real Stripe platform delivery
-
-**Not completed.** Stripe MCP **write** remains Unauthorized after repeated Owner “Connected Stripe” (read-only OAuth). Agent cannot:
-
-- create sandbox customers/payouts
-- trigger `payout.paid`
-- rotate/retrieve endpoint signing secret via API
-
-Preview `STRIPE_WEBHOOK_SECRET` is sensitive and not decryptable to the agent, so matching HMAC re-sign against the rotated Dashboard secret is also unavailable without write or secret read.
-
-## Production
-
-- Untouched; `secret_key_mode=live`, REAL/LIVE false, collection paused
-- Production webhook ledger count remains 1
-
-## Single required Owner action
-
-Grant Stripe MCP **write** for sandbox `acct_1UJwZzEAHNL6NCGl` via reconsent (not read-only Connect), then agent can trigger Test Mode `payout.paid` to `we_1UawCf…` and verify HTTP 200 + staging ledger.
+After that redeploy, agent can re-run `/api/stripe-sandbox-payout-e2e` and verify Stripe-originated `payout.paid` → HTTP 200 + staging ledger.
