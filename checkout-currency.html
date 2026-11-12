@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>HAVKAR — Currency checkout (gated)</title>
+  <link rel="icon" type="image/png" href="/assets/icons/havkar-icon-32-20261022-v3.png">
+  <style>
+    :root{--g:#1b5e20;--g2:#2e7d32;--bg:#eef6f0;--card:#fff}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Georgia,"Times New Roman",serif;background:linear-gradient(180deg,#f3faf4,#e8f2ea);color:#123}
+    header{background:linear-gradient(135deg,var(--g),var(--g2));color:#fff;padding:18px 16px}
+    main{max-width:720px;margin:0 auto;padding:16px}
+    .card{background:var(--card);border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 8px 24px rgba(27,94,32,.08)}
+    label{display:block;font-size:13px;color:#456;margin:8px 0 4px}
+    input,button,select{font:inherit}
+    input[type=search],input[type=number]{width:100%;min-height:46px;border:1px solid #cfd;border-radius:12px;padding:0 12px}
+    .list{max-height:280px;overflow:auto;border:1px solid #e0ebe2;border-radius:12px;margin-top:8px}
+    .opt{width:100%;text-align:left;border:0;border-bottom:1px solid #eef5ef;background:#fff;padding:12px;cursor:pointer;display:flex;justify-content:space-between;gap:8px}
+    .opt.active,.opt:hover{background:#e8f5e9}
+    .badge{display:inline-block;background:#e8f5e9;color:var(--g);padding:3px 8px;border-radius:999px;font-size:12px;font-weight:700}
+    .warn{color:#8a4b08;background:#fff8e1;border-radius:10px;padding:10px;font-size:14px;line-height:1.4}
+    .ok{color:var(--g)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media(max-width:560px){.row{grid-template-columns:1fr}}
+    button.primary{background:var(--g);color:#fff;border:0;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer;width:100%;margin-top:10px}
+    button.primary:disabled{opacity:.5;cursor:not-allowed}
+    pre{white-space:pre-wrap;word-break:break-word;font-size:12px;background:#f7fbf7;padding:10px;border-radius:10px}
+  </style>
+</head>
+<body>
+<header>
+  <h1>60-currency checkout matrix</h1>
+  <p>Stripe presentment currencies · buyer 2% · seller 3% · live payments gated OFF</p>
+</header>
+<main>
+  <div class="card warn" id="gateNote">Checking payment gates…</div>
+  <div class="card">
+    <span class="badge" id="countBadge">0 currencies</span>
+    <label for="currencySearch">Search currency</label>
+    <input id="currencySearch" type="search" placeholder="EUR, Yen, Brazil…" autocomplete="off">
+    <div id="currencyList" class="list" role="listbox" aria-label="Currencies"></div>
+    <div class="row">
+      <div>
+        <label for="listPrice">List price (EUR)</label>
+        <input id="listPrice" type="number" min="0.5" step="0.01" value="100">
+      </div>
+      <div>
+        <label>Selected</label>
+        <div id="selectedLabel" class="ok">EUR — Euro</div>
+      </div>
+    </div>
+    <button class="primary" id="quoteBtn" type="button">Get fee quote (no charge)</button>
+    <pre id="quoteOut">Quote appears here. This page never charges a card.</pre>
+  </div>
+  <p><a href="/admin.html">Owner Control</a> · <a href="/my-receipts.html">Receipts</a> · XLM uses existing Stellar Mainnet gates</p>
+</main>
+<script>
+(function () {
+  var selected = { code: "eur", name: "Euro" };
+  var currencies = [];
+
+  function $(id) { return document.getElementById(id); }
+
+  function renderList(filter) {
+    var q = String(filter || "").trim().toLowerCase();
+    var root = $("currencyList");
+    root.innerHTML = "";
+    currencies.filter(function (c) {
+      if (!q) return true;
+      return (c.code + " " + c.name).toLowerCase().indexOf(q) >= 0;
+    }).forEach(function (c) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "opt" + (c.code === selected.code ? " active" : "");
+      btn.innerHTML = "<span></span><span></span>";
+      btn.children[0].textContent = c.code.toUpperCase() + " — " + c.name;
+      btn.children[1].textContent = c.symbol || "";
+      btn.onclick = function () {
+        selected = c;
+        $("selectedLabel").textContent = c.code.toUpperCase() + " — " + c.name;
+        renderList($("currencySearch").value);
+      };
+      root.appendChild(btn);
+    });
+  }
+
+  async function loadMatrix() {
+    var res = await fetch("/api/currency-matrix");
+    var body = await res.json();
+    if (!res.ok) throw new Error(body.error || "matrix_failed");
+    currencies = (body.matrix && body.matrix.currencies) || [];
+    $("countBadge").textContent = currencies.length + " currencies";
+    $("gateNote").textContent =
+      "Live collection: " + body.live_collection +
+      " · real_payments_enabled=" + body.real_payments_enabled +
+      ". Public live payments stay OFF without Owner authorization.";
+    renderList("");
+  }
+
+  $("currencySearch").oninput = function () {
+    renderList(this.value);
+  };
+
+  $("quoteBtn").onclick = async function () {
+    $("quoteBtn").disabled = true;
+    $("quoteOut").textContent = "Quoting…";
+    try {
+      var res = await fetch("/api/currency-matrix?action=currency_quote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "currency_quote",
+          currency: selected.code,
+          list_price_eur: Number($("listPrice").value)
+        })
+      });
+      var body = await res.json();
+      if (!res.ok) throw new Error(body.error || "quote_failed");
+      $("quoteOut").textContent = JSON.stringify(body, null, 2);
+    } catch (err) {
+      $("quoteOut").textContent = String(err.message || err);
+    } finally {
+      $("quoteBtn").disabled = false;
+    }
+  };
+
+  loadMatrix().catch(function (err) {
+    $("gateNote").textContent = err.message || "Failed to load currency matrix";
+  });
+})();
+</script>
+</body>
+</html>

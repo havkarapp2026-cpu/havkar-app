@@ -1855,13 +1855,43 @@ select:focus-visible{
 
 
 <script src="/havkar-supabase-config.js"></script>
-<script src="/assets/havkar-emoji-catalog.js"></script>
 <script>
 "use strict";
 
 /* =========================================================
    HAVKAR CHAT — PRODUCTION VERSION
+   Build: 2026-11-12-currency-messaging-v2
 ========================================================= */
+
+const HAVKAR_CHAT_BUILD =
+    "2026-11-12-currency-messaging-v2";
+
+function loadEmojiCatalogDeferred(){
+    if(window.HAVKAR_EMOJI_CATALOG){
+        return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+        const existing =
+            document.querySelector(
+                'script[data-havkar-emoji-catalog="1"]'
+            );
+        if(existing){
+            existing.addEventListener("load", () => resolve());
+            existing.addEventListener("error", () => resolve());
+            return;
+        }
+        const script =
+            document.createElement("script");
+        script.src =
+            "/assets/havkar-emoji-catalog.js?v=" +
+            encodeURIComponent(HAVKAR_CHAT_BUILD);
+        script.async = true;
+        script.dataset.havkarEmojiCatalog = "1";
+        script.onload = () => resolve();
+        script.onerror = () => resolve();
+        document.head.appendChild(script);
+    });
+}
 
 const SUPABASE_URL =
     window.HAVKAR_SUPABASE_CONFIG.url;
@@ -2146,11 +2176,12 @@ function getEmojiCatalog(){
     return catalog;
 }
 
-function openEmojiModal(){
+async function openEmojiModal(){
     const modal = $("emojiModal");
     if(!modal){
         return;
     }
+    await loadEmojiCatalogDeferred();
     modal.hidden = false;
     const btn = $("emojiPickerButton");
     if(btn){
@@ -7705,6 +7736,16 @@ async function startPage(){
     setupEvents();
 
     setupAuthListener();
+
+    loadEmojiCatalogDeferred();
+
+    try{
+        const stamp = document.createElement("meta");
+        stamp.name = "havkar-chat-build";
+        stamp.content = HAVKAR_CHAT_BUILD;
+        document.head.appendChild(stamp);
+        console.info("[HAVKAR] chat build", HAVKAR_CHAT_BUILD);
+    }catch(_e){}
 
     try{
 

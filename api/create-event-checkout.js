@@ -178,6 +178,17 @@ function isChatNotifyRequest(req) {
   );
 }
 
+function isCurrencyMatrixRequest(req) {
+  const action = String((req && req.body && req.body.action) || "");
+  const url = String((req && req.url) || "");
+  return Boolean(
+    (req && req.query && req.query.havkarAction === "currencyMatrix") ||
+      url.indexOf("/api/currency-matrix") !== -1 ||
+      action === "currency_matrix" ||
+      action === "currency_quote"
+  );
+}
+
 async function readXlmInvoice(req) {
   const intentId = String(
     (req.query && (req.query.intent || req.query.id)) ||
@@ -1419,6 +1430,69 @@ export default async function handler(req, res) {
     return res.status(200).json(await buildPaymentActivationStatus());
   }
 
+  if (isCurrencyMatrixRequest(req)) {
+    if (req.method !== "GET" && req.method !== "POST") {
+      res.setHeader("Allow", "GET, POST");
+      return sendError(res, 405, "Method not allowed");
+    }
+    try {
+      const {
+        describeCurrencyMatrix,
+        normalizeStripeFiatCurrency
+      } = require("../lib/stripe-fiat-currency.cjs");
+      const { quoteWithFees, fetchEurRates } = require("../lib/havkar-fx-rates.cjs");
+      const {
+        cardPaymentsAllowed,
+        realPaymentsEnabled
+      } = require("../lib/real-payments.cjs");
+      const action = String(
+        (req.query && req.query.action) ||
+          (req.body && req.body.action) ||
+          "currency_matrix"
+      );
+      if (action === "currency_quote") {
+        const listEur = Number(
+          (req.body && req.body.list_price_eur) ||
+            (req.query && req.query.list_price_eur) ||
+            0
+        );
+        const currency = String(
+          (req.body && req.body.currency) ||
+            (req.query && req.query.currency) ||
+            "eur"
+        );
+        const normalized = normalizeStripeFiatCurrency(currency);
+        if (!normalized.ok) {
+          return sendError(res, 400, normalized.error);
+        }
+        if (!(listEur > 0)) {
+          return sendError(res, 400, "list_price_eur must be a positive number");
+        }
+        const fx = await fetchEurRates();
+        const quote = quoteWithFees(listEur, normalized.currencyUpper, fx.rates);
+        if (!quote.ok) {
+          return sendError(res, 400, quote.error || "quote_failed");
+        }
+        return res.status(200).json({
+          ok: true,
+          fx_date: fx.date,
+          live_collection: cardPaymentsAllowed() ? "armed" : "paused",
+          real_payments_enabled: realPaymentsEnabled(),
+          quote
+        });
+      }
+      return res.status(200).json({
+        ok: true,
+        live_collection: cardPaymentsAllowed() ? "armed" : "paused",
+        real_payments_enabled: realPaymentsEnabled(),
+        matrix: describeCurrencyMatrix()
+      });
+    } catch (error) {
+      console.error("HAVKAR currency matrix error:", error && error.message);
+      return sendError(res, 500, "Currency matrix failed");
+    }
+  }
+
   if (isStripeSandboxPayoutE2eRequest(req)) {
     if (req.method !== "POST") {
       res.setHeader("Allow", "POST");
@@ -1453,10 +1527,25 @@ export default async function handler(req, res) {
       if (!split) {
         return sendError(res, 400, "list_price_eur must be a positive number");
       }
+      const currencyRaw = String((req.body && req.body.currency) || "eur");
+      let currencyQuote = null;
+      try {
+        const { normalizeStripeFiatCurrency } = require("../lib/stripe-fiat-currency.cjs");
+        const { quoteWithFees, fetchEurRates } = require("../lib/havkar-fx-rates.cjs");
+        const normalized = normalizeStripeFiatCurrency(currencyRaw);
+        if (normalized.ok) {
+          const fx = await fetchEurRates();
+          currencyQuote = quoteWithFees(listPrice, normalized.currencyUpper, fx.rates);
+        }
+      } catch (_e) {
+        currencyQuote = null;
+      }
       return res.status(200).json({
         ok: true,
         live_collection: cardPaymentsAllowed() ? "armed" : "paused",
-        split
+        public_live_payments: false,
+        split,
+        currency_quote: currencyQuote
       });
     }
 
