@@ -135,6 +135,81 @@ a{color:inherit}
     gap:10px;
     grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
 }
+.airport-field{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+.airport-field input[type="search"],
+.airport-field input[type="text"]{
+    width:100%;
+    min-height:44px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:10px 12px;
+    background:#fff;
+    color:var(--text);
+}
+.airport-suggestions{
+    position:absolute;
+    left:0;
+    right:0;
+    top:calc(100% + 4px);
+    z-index:40;
+    max-height:260px;
+    overflow:auto;
+    margin:0;
+    padding:6px;
+    list-style:none;
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:12px;
+    box-shadow:var(--shadow);
+}
+.airport-suggestions[hidden]{display:none !important}
+.airport-suggestion{
+    width:100%;
+    border:0;
+    background:transparent;
+    text-align:left;
+    border-radius:10px;
+    padding:10px 12px;
+    cursor:pointer;
+    color:var(--text);
+}
+.airport-suggestion:hover,
+.airport-suggestion[aria-selected="true"]{
+    background:var(--green-light);
+}
+.airport-suggestion strong{
+    display:block;
+    font-size:14px;
+}
+.airport-suggestion span{
+    display:block;
+    margin-top:2px;
+    font-size:12px;
+    color:var(--muted);
+}
+.airport-meta{
+    font-size:12px;
+    color:var(--muted);
+}
+.flight-card .flight-meta{
+    display:grid;
+    gap:4px;
+    margin:8px 0;
+    font-size:13px;
+    color:var(--muted);
+}
+.flight-card .flight-meta b{color:var(--text);font-weight:650}
+.flight-card .price-line{
+    margin-top:8px;
+    font-size:16px;
+    font-weight:750;
+    color:var(--green-deep);
+}
 .more-transfers[hidden]{display:none !important}
 .page{
     width:min(1040px, calc(100% - 28px));
@@ -501,12 +576,20 @@ h2{
         </div>
         <p class="lead">Search real flight offers after signing in. Results come from the server-side Duffel API. Paid production booking stays off until the owner enables real payments; test orders are labeled as Duffel test mode only.</p>
         <form id="flightSearchForm" class="flight-form" novalidate>
-            <label>Origin IATA
-                <input id="flightOrigin" name="origin" maxlength="3" placeholder="MXP" autocomplete="off" required>
-            </label>
-            <label>Destination IATA
-                <input id="flightDestination" name="destination" maxlength="3" placeholder="FCO" autocomplete="off" required>
-            </label>
+            <div class="airport-field">
+                <label for="flightOriginQuery">From (country, city, or airport)</label>
+                <input id="flightOriginQuery" type="search" enterkeyhint="search" autocomplete="off" spellcheck="false" placeholder="e.g. Milan, Italy, Malpensa" aria-autocomplete="list" aria-controls="flightOriginSuggestions" aria-expanded="false" required>
+                <input id="flightOrigin" name="origin" type="hidden" value="">
+                <div id="flightOriginMeta" class="airport-meta" aria-live="polite"></div>
+                <ul id="flightOriginSuggestions" class="airport-suggestions" role="listbox" hidden></ul>
+            </div>
+            <div class="airport-field">
+                <label for="flightDestinationQuery">To (country, city, or airport)</label>
+                <input id="flightDestinationQuery" type="search" enterkeyhint="search" autocomplete="off" spellcheck="false" placeholder="e.g. Rome, Fiumicino, Italy" aria-autocomplete="list" aria-controls="flightDestinationSuggestions" aria-expanded="false" required>
+                <input id="flightDestination" name="destination" type="hidden" value="">
+                <div id="flightDestinationMeta" class="airport-meta" aria-live="polite"></div>
+                <ul id="flightDestinationSuggestions" class="airport-suggestions" role="listbox" hidden></ul>
+            </div>
             <label>Departure date
                 <input id="flightDepart" name="departure_date" type="date" required>
             </label>
@@ -526,7 +609,7 @@ h2{
             </label>
             <button class="partner-link" type="submit" id="flightSearchButton">Search flights</button>
         </form>
-        <p id="flightSearchStatus" class="pending-note" role="status" aria-live="polite">Sign in, then search with real airport codes. No sample fares are invented here.</p>
+        <p id="flightSearchStatus" class="pending-note" role="status" aria-live="polite">Sign in, then type a city, country, or airport name. HAVKAR stores the selected IATA code for Duffel search. No sample fares are invented.</p>
         <div id="flightResults" class="flight-results" hidden></div>
         <div id="flightBookPanel" class="flight-book-panel" hidden>
             <h3>Duffel test booking</h3>
@@ -750,6 +833,110 @@ h2{
         setBookStatus("");
     }
 
+    function havkarLanguage() {
+        try {
+            return String(
+                localStorage.getItem("havkar_language") ||
+                localStorage.getItem("selectedLanguage") ||
+                localStorage.getItem("language") ||
+                "en"
+            ).toLowerCase();
+        } catch (error) {
+            return "en";
+        }
+    }
+
+    function formatIsoLocal(value) {
+        if (!value) return "";
+        var text = String(value);
+        if (text.length >= 16) {
+            return text.slice(0, 10) + " " + text.slice(11, 16);
+        }
+        return text;
+    }
+
+    function describeOfferRoute(offer) {
+        var slices = Array.isArray(offer && offer.slices) ? offer.slices : [];
+        if (!slices.length) return [];
+        return slices.map(function (slice, index) {
+            var segments = Array.isArray(slice.segments) ? slice.segments : [];
+            var first = segments[0] || {};
+            var last = segments[segments.length - 1] || first;
+            var depAirport = (first.origin && (first.origin.iata_code || first.origin.name)) ||
+                (slice.origin && (slice.origin.iata_code || slice.origin.name)) || "?";
+            var arrAirport = (last.destination && (last.destination.iata_code || last.destination.name)) ||
+                (slice.destination && (slice.destination.iata_code || slice.destination.name)) || "?";
+            var stops = Math.max(0, segments.length - 1);
+            var carriers = segments.map(function (segment) {
+                return (segment.marketing_carrier && segment.marketing_carrier.name) ||
+                    (segment.operating_carrier && segment.operating_carrier.name) || "";
+            }).filter(Boolean);
+            var uniqueCarriers = Array.from(new Set(carriers));
+            var flightNumbers = segments.map(function (segment) {
+                var carrier = (segment.marketing_carrier && segment.marketing_carrier.iata_code) || "";
+                var number = segment.marketing_carrier_flight_number || segment.operating_carrier_flight_number || "";
+                return (carrier + number).trim();
+            }).filter(Boolean);
+            return {
+                label: (index === 0 ? "Outbound" : "Return") + ": " + depAirport + " → " + arrAirport,
+                times: formatIsoLocal(first.departing_at) +
+                    (last.arriving_at ? " → " + formatIsoLocal(last.arriving_at) : ""),
+                stops: stops === 0 ? "Nonstop" : (stops + " stop" + (stops > 1 ? "s" : "")),
+                airline: uniqueCarriers.join(", ") || (offer.owner && offer.owner.name) || "Airline",
+                flights: flightNumbers.join(", ")
+            };
+        });
+    }
+
+    function describeBaggage(offer) {
+        var bags = Array.isArray(offer && offer.available_services)
+            ? offer.available_services.filter(function (service) {
+                return String(service.type || "").toLowerCase().indexOf("baggage") >= 0;
+            })
+            : [];
+        if (bags.length) {
+            return "Baggage options available from provider (" + bags.length + ")";
+        }
+        var slices = Array.isArray(offer && offer.slices) ? offer.slices : [];
+        var included = [];
+        slices.forEach(function (slice) {
+            (slice.segments || []).forEach(function (segment) {
+                (segment.passengers || []).forEach(function (passenger) {
+                    (passenger.baggages || []).forEach(function (bag) {
+                        var type = bag.type || "bag";
+                        var qty = bag.quantity != null ? bag.quantity : "";
+                        included.push(String(qty ? qty + "× " : "") + type);
+                    });
+                });
+            });
+        });
+        if (included.length) {
+            return "Included baggage: " + Array.from(new Set(included)).join(", ");
+        }
+        return "Baggage details as provided by airline at booking";
+    }
+
+    function describeConditions(offer) {
+        var conditions = offer && offer.conditions ? offer.conditions : null;
+        if (!conditions) return "Fare conditions per airline / Duffel offer";
+        var bits = [];
+        if (conditions.refund_before_departure) {
+            bits.push(
+                conditions.refund_before_departure.allowed
+                    ? "Refundable before departure"
+                    : "Non-refundable before departure"
+            );
+        }
+        if (conditions.change_before_departure) {
+            bits.push(
+                conditions.change_before_departure.allowed
+                    ? "Changes allowed before departure"
+                    : "Changes not allowed before departure"
+            );
+        }
+        return bits.length ? bits.join(" · ") : "Fare conditions per airline / Duffel offer";
+    }
+
     function openBookPanel(offer) {
         selectedOfferId = String(offer && offer.id || "");
         if (!selectedOfferId || !flightBookPanel) return;
@@ -781,18 +968,44 @@ h2{
         offers.slice(0, 20).forEach(function (offer) {
             var card = document.createElement("article");
             card.className = "flight-card";
-            var total = offer.total_amount || offer.total_currency
-                ? String(offer.total_amount || "") + " " + String(offer.total_currency || "")
-                : (offer.price ? String(offer.price) : "Price on request");
+            var totalAmount = offer.total_amount != null ? String(offer.total_amount) : "";
+            var totalCurrency = offer.total_currency ? String(offer.total_currency) : "";
+            var total = (totalAmount || totalCurrency)
+                ? (totalAmount + " " + totalCurrency).trim()
+                : (offer.price ? String(offer.price) : "");
+            if (!total) {
+                card.innerHTML = "<strong></strong><p></p>";
+                card.querySelector("strong").textContent = "Offer unavailable";
+                card.querySelector("p").textContent = "Provider did not return a total price for this offer. It is hidden from booking.";
+                flightResults.appendChild(card);
+                return;
+            }
             var owner = offer.owner && offer.owner.name ? offer.owner.name : "Airline offer";
             var id = offer.id || "";
             var live = offer.live_mode === true;
-            card.innerHTML = "<strong></strong><p></p><p></p><button class=\"partner-link\" type=\"button\"></button>";
+            var routes = describeOfferRoute(offer);
+            card.innerHTML = "<strong></strong><div class=\"flight-meta\"></div><p class=\"price-line\"></p><p></p><button class=\"partner-link\" type=\"button\"></button>";
             card.querySelector("strong").textContent = owner;
-            card.querySelectorAll("p")[0].textContent = total.trim() + (id ? " · offer " + id : "");
+            var meta = card.querySelector(".flight-meta");
+            routes.forEach(function (route) {
+                var line = document.createElement("div");
+                line.innerHTML = "<b></b> <span></span>";
+                line.querySelector("b").textContent = route.label;
+                line.querySelector("span").textContent = route.times + " · " + route.stops +
+                    (route.airline ? " · " + route.airline : "") +
+                    (route.flights ? " · " + route.flights : "");
+                meta.appendChild(line);
+            });
+            var bagLine = document.createElement("div");
+            bagLine.textContent = describeBaggage(offer);
+            meta.appendChild(bagLine);
+            var condLine = document.createElement("div");
+            condLine.textContent = describeConditions(offer);
+            meta.appendChild(condLine);
+            card.querySelector(".price-line").textContent = "Total " + total;
             card.querySelectorAll("p")[1].textContent = live
                 ? "Live Duffel offer. Production booking stays blocked until the owner enables real payments."
-                : "Duffel test offer. You can create a TEST MODE order below; no real traveller payment is collected by HAVKAR.";
+                : "Duffel TEST offer. You can create a TEST MODE order below; no real traveller payment is collected by HAVKAR.";
             var bookBtn = card.querySelector("button");
             bookBtn.textContent = live ? "Live booking blocked" : "Book test order";
             bookBtn.disabled = live || !id;
@@ -805,8 +1018,199 @@ h2{
             });
             flightResults.appendChild(card);
         });
-        setFlightStatus("Showing " + Math.min(offers.length, 20) + " offer(s). Test booking uses Duffel balance only.");
+        setFlightStatus("Showing " + Math.min(offers.length, 20) + " offer(s) from Duffel. Test booking uses Duffel balance only.");
     }
+
+    function createAirportAutocomplete(options) {
+        var queryInput = document.getElementById(options.queryId);
+        var hiddenInput = document.getElementById(options.hiddenId);
+        var listEl = document.getElementById(options.listId);
+        var metaEl = document.getElementById(options.metaId);
+        if (!queryInput || !hiddenInput || !listEl) return;
+        var debounceTimer = null;
+        var activeIndex = -1;
+        var currentItems = [];
+        var requestSeq = 0;
+
+        function setMeta(text) {
+            if (metaEl) metaEl.textContent = text || "";
+        }
+
+        function closeList() {
+            listEl.hidden = true;
+            listEl.innerHTML = "";
+            queryInput.setAttribute("aria-expanded", "false");
+            activeIndex = -1;
+            currentItems = [];
+        }
+
+        function selectItem(item) {
+            if (!item || !item.iata_code) return;
+            hiddenInput.value = String(item.iata_code).toUpperCase();
+            queryInput.value = item.label || (item.name + " (" + item.iata_code + ")");
+            setMeta("Selected " + hiddenInput.value + (item.type === "city" ? " (city)" : " (airport)"));
+            closeList();
+        }
+
+        function renderList(items, stateMessage) {
+            listEl.innerHTML = "";
+            currentItems = items || [];
+            activeIndex = -1;
+            if (stateMessage && !currentItems.length) {
+                var empty = document.createElement("li");
+                empty.setAttribute("role", "presentation");
+                empty.className = "airport-suggestion";
+                empty.textContent = stateMessage;
+                listEl.appendChild(empty);
+                listEl.hidden = false;
+                queryInput.setAttribute("aria-expanded", "true");
+                return;
+            }
+            currentItems.forEach(function (item, index) {
+                var li = document.createElement("li");
+                li.setAttribute("role", "option");
+                li.id = options.listId + "-opt-" + index;
+                var button = document.createElement("button");
+                button.type = "button";
+                button.className = "airport-suggestion";
+                button.setAttribute("aria-selected", "false");
+                button.innerHTML = "<strong></strong><span></span>";
+                button.querySelector("strong").textContent =
+                    (item.name || "") + " (" + item.iata_code + ")";
+                button.querySelector("span").textContent =
+                    [item.type, item.city_name, item.country_name || item.country_code]
+                        .filter(Boolean)
+                        .join(" · ");
+                button.addEventListener("click", function () {
+                    selectItem(item);
+                });
+                li.appendChild(button);
+                listEl.appendChild(li);
+            });
+            listEl.hidden = currentItems.length === 0;
+            queryInput.setAttribute("aria-expanded", currentItems.length ? "true" : "false");
+        }
+
+        function highlight(index) {
+            var buttons = listEl.querySelectorAll(".airport-suggestion");
+            buttons.forEach(function (button, i) {
+                button.setAttribute("aria-selected", i === index ? "true" : "false");
+            });
+            activeIndex = index;
+            if (buttons[index]) {
+                buttons[index].scrollIntoView({ block: "nearest" });
+            }
+        }
+
+        async function runSearch(rawQuery) {
+            var query = String(rawQuery || "").trim();
+            if (query.length < 2) {
+                hiddenInput.value = "";
+                setMeta("Type at least 2 characters");
+                closeList();
+                return;
+            }
+            if (!navigator.onLine) {
+                setMeta("Offline — reconnect to search airports");
+                renderList([], "You appear offline. Airport search needs a network connection.");
+                return;
+            }
+            if (!supabaseClient) {
+                setMeta("Supabase is not configured");
+                renderList([], "Sign-in configuration missing.");
+                return;
+            }
+            var token = await accessToken();
+            if (!token) {
+                setMeta("Sign in to search airports");
+                renderList([], "Sign in to search airports worldwide.");
+                return;
+            }
+            var seq = ++requestSeq;
+            setMeta("Searching airports…");
+            renderList([], "Loading suggestions…");
+            try {
+                var params = new URLSearchParams({
+                    q: query,
+                    lang: havkarLanguage()
+                });
+                var response = await fetch("/api/flights?" + params.toString(), {
+                    method: "GET",
+                    headers: {
+                        Accept: "application/json",
+                        Authorization: "Bearer " + token
+                    }
+                });
+                var body = await response.json().catch(function () { return null; });
+                if (seq !== requestSeq) return;
+                if (!response.ok || !body || body.ok === false) {
+                    setMeta((body && body.error) || "Airport search failed");
+                    renderList([], (body && body.error) || "Airport search failed. Try again.");
+                    return;
+                }
+                var suggestions = Array.isArray(body.suggestions) ? body.suggestions : [];
+                if (!suggestions.length) {
+                    setMeta("No airports found");
+                    renderList([], "No matching airports or cities. Try another spelling.");
+                    return;
+                }
+                setMeta(suggestions.length + " suggestion(s)");
+                renderList(suggestions);
+            } catch (error) {
+                if (seq !== requestSeq) return;
+                setMeta("Airport search unavailable");
+                renderList([], "Could not reach airport search. Check your connection.");
+            }
+        }
+
+        queryInput.addEventListener("input", function () {
+            hiddenInput.value = "";
+            setMeta("");
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(function () {
+                runSearch(queryInput.value);
+            }, 280);
+        });
+
+        queryInput.addEventListener("keydown", function (event) {
+            if (listEl.hidden) return;
+            if (event.key === "ArrowDown") {
+                event.preventDefault();
+                highlight(Math.min(activeIndex + 1, currentItems.length - 1));
+            } else if (event.key === "ArrowUp") {
+                event.preventDefault();
+                highlight(Math.max(activeIndex - 1, 0));
+            } else if (event.key === "Enter" && activeIndex >= 0 && currentItems[activeIndex]) {
+                event.preventDefault();
+                selectItem(currentItems[activeIndex]);
+            } else if (event.key === "Escape") {
+                closeList();
+            }
+        });
+
+        queryInput.addEventListener("blur", function () {
+            setTimeout(closeList, 180);
+        });
+
+        document.addEventListener("click", function (event) {
+            if (!queryInput.contains(event.target) && !listEl.contains(event.target)) {
+                closeList();
+            }
+        });
+    }
+
+    createAirportAutocomplete({
+        queryId: "flightOriginQuery",
+        hiddenId: "flightOrigin",
+        listId: "flightOriginSuggestions",
+        metaId: "flightOriginMeta"
+    });
+    createAirportAutocomplete({
+        queryId: "flightDestinationQuery",
+        hiddenId: "flightDestination",
+        listId: "flightDestinationSuggestions",
+        metaId: "flightDestinationMeta"
+    });
 
     if (flightForm) {
         flightForm.addEventListener("submit", async function (event) {
@@ -822,6 +1226,10 @@ h2{
             }
             var origin = String(document.getElementById("flightOrigin").value || "").trim().toUpperCase();
             var destination = String(document.getElementById("flightDestination").value || "").trim().toUpperCase();
+            if (!/^[A-Z]{3}$/.test(origin) || !/^[A-Z]{3}$/.test(destination)) {
+                setFlightStatus("Select origin and destination from the airport suggestions so HAVKAR can use valid IATA codes.");
+                return;
+            }
             var departure = String(document.getElementById("flightDepart").value || "").trim();
             var ret = String(document.getElementById("flightReturn").value || "").trim();
             var adults = Number(document.getElementById("flightAdults").value || 1);
