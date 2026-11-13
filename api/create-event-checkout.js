@@ -190,6 +190,19 @@ function isCurrencyMatrixRequest(req) {
   );
 }
 
+function isGlobalPaymentsRequest(req) {
+  const action = String((req && req.body && req.body.action) || "");
+  const url = String((req && req.url) || "");
+  return Boolean(
+    (req && req.query && req.query.havkarAction === "globalPayments") ||
+      url.indexOf("/api/global-payments") !== -1 ||
+      url.indexOf("havkarAction=globalPayments") !== -1 ||
+      action === "global_payments_catalog" ||
+      action === "global_payment_quote" ||
+      action === "global_live_checkout"
+  );
+}
+
 async function readXlmInvoice(req) {
   const intentId = String(
     (req.query && (req.query.intent || req.query.id)) ||
@@ -569,7 +582,18 @@ async function buildPaymentActivationStatus() {
         services_provider_bps: 1000
       },
       unsupported_flows: ["subscription", "recurring", "trade", "ai", "jobs"],
-      supported_flows: ["marketplace", "services", "events"],
+      supported_flows: [
+        "marketplace",
+        "services",
+        "events",
+        "ads",
+        "jobs_listing",
+        "business_listing",
+        "ai_credits",
+        "flights"
+      ],
+      prepaid_only_note:
+        "ai_credits, jobs_listing, and business_listing are one-time prepaid windows. Automatic XLM renewals are not claimed.",
       crypto_geo: describeCryptoGeoStatus(),
       settlement_models: describeSettlementModels()
     },
@@ -1194,6 +1218,209 @@ async function validateXlmQuoteSubject(admin, userId, decision) {
     return { ok: true, event: event };
   }
 
+  if (flow === "ads") {
+    const adId = Number(subjectId);
+
+    if (!Number.isSafeInteger(adId) || adId <= 0) {
+      return {
+        ok: false,
+        status: 400,
+        code: "SUBJECT_INVALID",
+        error: "Ads subject_id must be an advertisement id.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    const loaded = await admin
+      .from("ads")
+      .select("id,user_id,listing_surface,status")
+      .eq("id", adId)
+      .maybeSingle();
+
+    const ad = loaded && loaded.data;
+
+    if (!ad || String(ad.listing_surface || "") !== "advertising") {
+      return {
+        ok: false,
+        status: 404,
+        code: "AD_NOT_FOUND",
+        error: "Advertisement was not found for XLM boost checkout.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    if (String(ad.user_id) !== String(userId)) {
+      return {
+        ok: false,
+        status: 403,
+        code: "AD_OWNER_REQUIRED",
+        error: "Only the advertiser can pay for an XLM boost.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    return { ok: true, ad: ad };
+  }
+
+  if (flow === "jobs_listing") {
+    const jobId = Number(subjectId);
+
+    if (!Number.isSafeInteger(jobId) || jobId <= 0) {
+      return {
+        ok: false,
+        status: 400,
+        code: "SUBJECT_INVALID",
+        error: "jobs_listing subject_id must be a job id.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    const loaded = await admin
+      .from("jobs")
+      .select("id,user_id,status,monthly_fee")
+      .eq("id", jobId)
+      .maybeSingle();
+
+    const job = loaded && loaded.data;
+
+    if (!job) {
+      return {
+        ok: false,
+        status: 404,
+        code: "JOB_NOT_FOUND",
+        error: "Job listing was not found for XLM prepaid checkout.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    if (String(job.user_id) !== String(userId)) {
+      return {
+        ok: false,
+        status: 403,
+        code: "JOB_OWNER_REQUIRED",
+        error: "Only the employer can pay for this job listing.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    const listed = Number(job.monthly_fee);
+    if (Number.isFinite(listed) && listed > 0) {
+      if (Number(decision.fees.price) !== listed) {
+        return {
+          ok: false,
+          status: 409,
+          code: "PRICE_MISMATCH",
+          error: "Quoted price does not match the job listing fee.",
+          paid: false,
+          order_paid: false,
+          payable: false
+        };
+      }
+    }
+
+    return { ok: true, job: job };
+  }
+
+  if (flow === "business_listing") {
+    const {
+      BUSINESS_LISTING_PLANS
+    } = require("../lib/havkar-global-payments.cjs");
+    const plan = BUSINESS_LISTING_PLANS.find(
+      (row) => row.id === subjectId
+    );
+
+    if (!plan) {
+      return {
+        ok: false,
+        status: 400,
+        code: "SUBJECT_INVALID",
+        error: "business_listing subject_id must be a known prepaid plan id.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    if (Number(decision.fees.price) !== Number(plan.list_price_eur)) {
+      return {
+        ok: false,
+        status: 409,
+        code: "PRICE_MISMATCH",
+        error: "Quoted price does not match the business listing plan.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    return { ok: true, business_plan: plan };
+  }
+
+  if (flow === "ai_credits") {
+    const { AI_CREDIT_PACKS } = require("../lib/havkar-global-payments.cjs");
+    const pack = AI_CREDIT_PACKS.find((row) => row.id === subjectId);
+
+    if (!pack) {
+      return {
+        ok: false,
+        status: 400,
+        code: "SUBJECT_INVALID",
+        error: "ai_credits subject_id must be a known credit pack id.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    if (Number(decision.fees.price) !== Number(pack.list_price_eur)) {
+      return {
+        ok: false,
+        status: 409,
+        code: "PRICE_MISMATCH",
+        error: "Quoted price does not match the AI credit pack.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    return { ok: true, ai_pack: pack };
+  }
+
+  if (flow === "flights") {
+    const offerId = String(subjectId || "");
+    if (!/^off_[A-Za-z0-9_-]{6,}$/.test(offerId) && !/^[A-Za-z0-9_-]{8,80}$/.test(offerId)) {
+      return {
+        ok: false,
+        status: 400,
+        code: "SUBJECT_INVALID",
+        error: "flights subject_id must be a Duffel offer id.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+
+    return {
+      ok: true,
+      flight_offer_id: offerId,
+      note:
+        "Flight live XLM collection remains Owner-gated. Quote/intent only until armed."
+    };
+  }
+
   return {
     ok: false,
     status: 400,
@@ -1270,6 +1497,64 @@ async function fulfillSettledXlmIntent(admin, userId, intentId) {
       service_id: intent.subject_id || null,
       payment_reference: intent.tx_hash || null,
       network: intent.network || null,
+      error: null
+    };
+  }
+
+  if (flow === "ads") {
+    return {
+      ticket_id: null,
+      fulfillment: "ads_boost_intent",
+      ad_id: intent.subject_id || null,
+      payment_reference: intent.tx_hash || null,
+      network: intent.network || null,
+      error: null
+    };
+  }
+
+  if (flow === "jobs_listing") {
+    const jobId = Number(intent.subject_id);
+    if (Number.isSafeInteger(jobId) && jobId > 0) {
+      const updated = await admin
+        .from("jobs")
+        .update({ status: "active" })
+        .eq("id", jobId)
+        .eq("user_id", userId)
+        .eq("status", "pending_payment")
+        .select("id,status")
+        .maybeSingle();
+
+      if (!updated.data || String(updated.data.status) !== "active") {
+        return {
+          ticket_id: null,
+          fulfillment: "jobs_listing_intent",
+          job_id: jobId,
+          payment_reference: intent.tx_hash || null,
+          error:
+            "Settlement verified. Job could not be activated (already active or unavailable)."
+        };
+      }
+
+      return {
+        ticket_id: null,
+        fulfillment: "jobs_listing_activated",
+        job_id: jobId,
+        payment_reference: intent.tx_hash || null,
+        network: intent.network || null,
+        error: null
+      };
+    }
+  }
+
+  if (flow === "business_listing" || flow === "ai_credits" || flow === "flights") {
+    return {
+      ticket_id: null,
+      fulfillment: flow + "_prepaid_intent",
+      subject_id: intent.subject_id || null,
+      payment_reference: intent.tx_hash || null,
+      network: intent.network || null,
+      renewal_note:
+        "One-time prepaid settlement only. No automatic XLM renewal was scheduled.",
       error: null
     };
   }
@@ -1497,6 +1782,43 @@ export default async function handler(req, res) {
     } catch (error) {
       console.error("HAVKAR currency matrix error:", error && error.message);
       return sendError(res, 500, "Currency matrix failed");
+    }
+  }
+
+  if (isGlobalPaymentsRequest(req)) {
+    if (req.method !== "GET" && req.method !== "POST") {
+      res.setHeader("Allow", "GET, POST");
+      return sendError(res, 405, "Method not allowed");
+    }
+
+    try {
+      const {
+        moduleCatalog,
+        buildGlobalPaymentQuote,
+        refuseLiveCheckout
+      } = require("../lib/havkar-global-payments.cjs");
+      const action = String(
+        (req.query && req.query.action) ||
+          (req.body && req.body.action) ||
+          "global_payments_catalog"
+      );
+
+      if (action === "global_live_checkout") {
+        const refused = refuseLiveCheckout(
+          (req.body && req.body.method) || null
+        );
+        return res.status(refused.status).json(refused);
+      }
+
+      if (action === "global_payment_quote") {
+        const quoted = await buildGlobalPaymentQuote(req.body || {});
+        return res.status(quoted.status || (quoted.ok ? 200 : 400)).json(quoted);
+      }
+
+      return res.status(200).json(moduleCatalog());
+    } catch (error) {
+      console.error("HAVKAR global payments error:", error && error.message);
+      return sendError(res, 500, "Global payments catalog failed");
     }
   }
 
