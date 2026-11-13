@@ -8,7 +8,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#7cb342">
-<meta name="description" content="HAVKAR Tickets: create and join event tickets with QR check-in. Flights use Duffel test search. Train, bus, ferry, taxi and transfer stay partner-gated.">
+<meta name="description" content="HAVKAR Tickets: event tickets with QR check-in, Duffel flight search, and Omio affiliate search for trains, buses, and ferries. Taxi and transfer stay disabled.">
 <title>HAVKAR - Tickets</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <style>
@@ -135,6 +135,90 @@ a{color:inherit}
     gap:10px;
     grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
 }
+
+.airport-field{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+.airport-field input[type="search"],
+.airport-field input[type="text"]{
+    width:100%;
+    min-height:44px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:10px 12px;
+    background:#fff;
+    color:var(--text);
+}
+.airport-suggestions{
+    position:absolute;
+    left:0;
+    right:0;
+    top:calc(100% + 4px);
+    z-index:40;
+    max-height:260px;
+    overflow:auto;
+    margin:0;
+    padding:6px;
+    list-style:none;
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:12px;
+    box-shadow:var(--shadow);
+}
+.airport-suggestions[hidden]{display:none !important}
+.airport-suggestion{
+    width:100%;
+    border:0;
+    background:transparent;
+    text-align:left;
+    border-radius:10px;
+    padding:10px 12px;
+    cursor:pointer;
+    color:var(--text);
+}
+.airport-suggestion:hover,
+.airport-suggestion[aria-selected="true"]{
+    background:var(--green-light);
+}
+.airport-suggestion strong{
+    display:block;
+    font-size:14px;
+}
+.airport-suggestion span{
+    display:block;
+    margin-top:2px;
+    font-size:12px;
+    color:var(--muted);
+}
+.airport-meta{
+    font-size:12px;
+    color:var(--muted);
+}
+.flight-card .flight-meta{
+    display:grid;
+    gap:4px;
+    margin:8px 0;
+    font-size:13px;
+    color:var(--muted);
+}
+.flight-card .flight-meta b{color:var(--text);font-weight:650}
+.flight-card .price-line{
+    margin-top:8px;
+    font-size:16px;
+    font-weight:750;
+    color:var(--green-deep);
+}
+.dob-field{display:flex;flex-direction:column;gap:6px}
+.dob-legend{font-size:14px;font-weight:650}
+.dob-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.dob-grid select{min-height:44px;width:100%}
+.flight-pay-panel{margin-top:16px;padding:14px;border:1px dashed #c5d6b8;border-radius:14px;background:#f7faf5}
+.flight-pay-panel h4{margin:0 0 8px;font-size:16px}
+.flight-pay-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-top:10px}
+
 .more-transfers[hidden]{display:none !important}
 .page{
     width:min(1040px, calc(100% - 28px));
@@ -178,6 +262,35 @@ a{color:inherit}
     background:#eef3f5;
     color:#37515c;
 }
+.omio-widget-host{
+    min-height:160px;
+    margin-top:16px;
+    width:100%;
+    overflow:auto;
+    -webkit-overflow-scrolling:touch;
+}
+.omio-widget-host [data-omio-widget="true"]{
+    width:100%;
+    max-width:100%;
+}
+.omio-affiliate-note{
+    margin-top:12px;
+}
+.omio-tracked-link{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    min-height:44px;
+    margin-top:10px;
+    padding:10px 16px;
+    border-radius:12px;
+    background:var(--green);
+    color:#fff;
+    font-weight:750;
+    text-decoration:none;
+}
+.omio-tracked-link:hover{filter:brightness(.97)}
 h2{
     font-size:32px;
     line-height:1.15;
@@ -437,7 +550,7 @@ h2{
     <p class="intro">
         Event Tickets are live inside HAVKAR: create events, reserve seats, issue QR tickets, manage capacity, and check in guests.
         Card collection stays paused until the Owner enables it; free tickets still issue.
-        Flights use signed-in Duffel search. Train, bus, and ferry wait for Omio.
+        Flights use signed-in Duffel search. Trains, buses, and ferries use the approved Omio affiliate search widget; booking completes on Omio with HAVKAR tracking.
         Taxi and transfer booking is not available inside HAVKAR.
     </p>
 
@@ -501,12 +614,20 @@ h2{
         </div>
         <p class="lead">Search real flight offers after signing in. Results come from the server-side Duffel API. Paid production booking stays off until the owner enables real payments; test orders are labeled as Duffel test mode only.</p>
         <form id="flightSearchForm" class="flight-form" novalidate>
-            <label>Origin IATA
-                <input id="flightOrigin" name="origin" maxlength="3" placeholder="MXP" autocomplete="off" required>
-            </label>
-            <label>Destination IATA
-                <input id="flightDestination" name="destination" maxlength="3" placeholder="FCO" autocomplete="off" required>
-            </label>
+            <div class="airport-field">
+                <label for="flightOriginQuery">From (country, city, or airport)</label>
+                <input id="flightOriginQuery" type="search" enterkeyhint="search" autocomplete="off" spellcheck="false" placeholder="e.g. Stockholm, Milano, London" aria-autocomplete="list" aria-controls="flightOriginSuggestions" aria-expanded="false" required>
+                <input id="flightOrigin" name="origin" type="hidden" value="">
+                <div id="flightOriginMeta" class="airport-meta" aria-live="polite"></div>
+                <ul id="flightOriginSuggestions" class="airport-suggestions" role="listbox" hidden></ul>
+            </div>
+            <div class="airport-field">
+                <label for="flightDestinationQuery">To (country, city, or airport)</label>
+                <input id="flightDestinationQuery" type="search" enterkeyhint="search" autocomplete="off" spellcheck="false" placeholder="e.g. Rome, Milan, London" aria-autocomplete="list" aria-controls="flightDestinationSuggestions" aria-expanded="false" required>
+                <input id="flightDestination" name="destination" type="hidden" value="">
+                <div id="flightDestinationMeta" class="airport-meta" aria-live="polite"></div>
+                <ul id="flightDestinationSuggestions" class="airport-suggestions" role="listbox" hidden></ul>
+            </div>
             <label>Departure date
                 <input id="flightDepart" name="departure_date" type="date" required>
             </label>
@@ -526,7 +647,7 @@ h2{
             </label>
             <button class="partner-link" type="submit" id="flightSearchButton">Search flights</button>
         </form>
-        <p id="flightSearchStatus" class="pending-note" role="status" aria-live="polite">Sign in, then search with real airport codes. No sample fares are invented here.</p>
+        <p id="flightSearchStatus" class="pending-note" role="status" aria-live="polite">Sign in, then type a city, country, or airport name. Suggestions appear while typing. HAVKAR stores the selected IATA code for Duffel search.</p>
         <div id="flightResults" class="flight-results" hidden></div>
         <div id="flightBookPanel" class="flight-book-panel" hidden>
             <h3>Duffel test booking</h3>
@@ -548,9 +669,22 @@ h2{
                     <label>Family name
                         <input id="paxFamily" required autocomplete="family-name">
                     </label>
-                    <label>Date of birth
-                        <input id="paxBorn" type="date" required>
-                    </label>
+                    <div class="dob-field" data-havkar-translate-block="flight-dob">
+                        <span class="dob-legend">Date of birth</span>
+                        <div class="dob-grid" role="group" aria-label="Date of birth">
+                            <label for="paxBornDay">Day
+                                <select id="paxBornDay" required aria-label="Day of birth"></select>
+                            </label>
+                            <label for="paxBornMonth">Month
+                                <select id="paxBornMonth" required aria-label="Month of birth"></select>
+                            </label>
+                            <label for="paxBornYear">Year
+                                <select id="paxBornYear" required aria-label="Year of birth"></select>
+                            </label>
+                        </div>
+                        <input id="paxBorn" type="hidden" value="" required>
+                        <div id="paxBornError" class="airport-meta" role="alert" aria-live="polite"></div>
+                    </div>
                     <label>Gender
                         <select id="paxGender" required>
                             <option value="m">Male</option>
@@ -567,6 +701,24 @@ h2{
                 <button class="partner-link" type="submit" id="flightBookButton">Create Duffel test order</button>
             </form>
             <p id="flightBookStatus" class="pending-note" role="status" aria-live="polite"></p>
+            <div id="flightPayPanel" class="flight-pay-panel" hidden>
+                <h4>Global flight payment (Owner-gated)</h4>
+                <p class="lead">Prepared rails: Stripe (60 verified presentment currencies) and Stellar XLM Mainnet. Public real-money checkout stays DISABLED until explicit Owner approval. Duffel TEST MODE booking remains available above.</p>
+                <div class="flight-pay-grid">
+                    <label>Method
+                        <select id="flightPayMethod">
+                            <option value="stripe">Stripe card (fiat)</option>
+                            <option value="xlm_mainnet">Stellar XLM Mainnet</option>
+                        </select>
+                    </label>
+                    <label>Currency
+                        <select id="flightPayCurrency"></select>
+                    </label>
+                </div>
+                <button class="partner-link" type="button" id="flightPayQuoteButton">Show conversion quote</button>
+                <button class="text-link" type="button" id="flightPayLiveButton">Request live checkout</button>
+                <p id="flightPayStatus" class="pending-note" role="status" aria-live="polite"></p>
+            </div>
         </div>
     </section>
 
@@ -574,30 +726,59 @@ h2{
         <div class="kicker"><i class="fas fa-train" aria-hidden="true"></i> Trains</div>
         <h2 id="trainTitle">Trains</h2>
         <div class="status-row">
-            <span class="status-badge"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Awaiting partner access</span>
+            <span class="status-badge" style="background:#e8f5e0;color:#2f6b1f"><i class="fas fa-circle-check" aria-hidden="true"></i> Omio affiliate live</span>
         </div>
-        <p class="lead">Reserved for Omio rail search after access is approved. HAVKAR is preparing train search through Omio. Omio has not connected API access to HAVKAR yet.</p>
-        <div class="pending-note">The Omio integration is being prepared. Search will be added here only after Omio grants cooperation and API access. No booking is offered from HAVKAR in the meantime.</div>
+        <p class="lead">Live train search through the approved Omio affiliate widget. Results and booking continue on Omio with HAVKAR Impact tracking (Partner ID 7763968).</p>
+        <div class="omio-widget-host" data-i18n-ignore translate="no">
+            <div
+              data-omio-widget="true"
+              data-partner-id="omio-affiliates"
+              data-new-tab="true"
+              data-redirect="https://omio.sjv.io/c/7763968/3963000/7385?u="
+            ></div>
+        </div>
+        <p class="lead omio-affiliate-note">HAVKAR participates in the Omio affiliate program. Booking is completed on Omio.</p>
+        <a class="omio-tracked-link" href="https://omio.sjv.io/c/7763968/3963000/7385" target="_blank" rel="noopener noreferrer">Open Omio train search</a>
     </section>
 
     <section id="ticket-bus" class="panel omio-panel" data-ticket-panel="bus" hidden aria-labelledby="busTitle">
         <div class="kicker"><i class="fas fa-bus" aria-hidden="true"></i> Buses</div>
         <h2 id="busTitle">Buses</h2>
         <div class="status-row">
-            <span class="status-badge"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Awaiting partner access</span>
+            <span class="status-badge" style="background:#e8f5e0;color:#2f6b1f"><i class="fas fa-circle-check" aria-hidden="true"></i> Omio affiliate live</span>
         </div>
-        <p class="lead">Reserved for Omio bus search after access is approved. This section does not list journeys, seats, or fares, and it cannot complete a booking.</p>
-        <div class="pending-note">The Omio integration is being prepared. Search will be added here only after Omio grants cooperation and API access. No booking is offered from HAVKAR in the meantime.</div>
+        <p class="lead">Live bus search through the approved Omio affiliate widget. Results and booking continue on Omio with HAVKAR Impact tracking (Partner ID 7763968).</p>
+        <div class="omio-widget-host" data-i18n-ignore translate="no">
+            <div
+              data-omio-widget="true"
+              data-partner-id="omio-affiliates"
+              data-default-travel-mode="bus"
+              data-new-tab="true"
+              data-redirect="https://omio.sjv.io/c/7763968/3963000/7385?u="
+            ></div>
+        </div>
+        <p class="lead omio-affiliate-note">HAVKAR participates in the Omio affiliate program. Booking is completed on Omio.</p>
+        <a class="omio-tracked-link" href="https://omio.sjv.io/c/7763968/3963000/7385" target="_blank" rel="noopener noreferrer">Open Omio bus search</a>
     </section>
 
     <section id="ticket-ferry" class="panel omio-panel" data-ticket-panel="ferry" hidden aria-labelledby="ferryTitle">
         <div class="kicker"><i class="fas fa-ship" aria-hidden="true"></i> Ferries</div>
         <h2 id="ferryTitle">Ferries</h2>
         <div class="status-row">
-            <span class="status-badge"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Awaiting partner access</span>
+            <span class="status-badge" style="background:#e8f5e0;color:#2f6b1f"><i class="fas fa-circle-check" aria-hidden="true"></i> Omio affiliate live</span>
         </div>
-        <p class="lead">Reserved for Omio ferry search after access is approved. This section does not list journeys, seats, or fares, and it cannot complete a booking.</p>
-        <div class="pending-note">The Omio integration is being prepared. Search will be added here only after Omio grants cooperation and API access. No booking is offered from HAVKAR in the meantime.</div>
+        <p class="lead">Live ferry search through the approved Omio affiliate widget. Results and booking continue on Omio with HAVKAR Impact tracking (Partner ID 7763968).</p>
+        <div class="omio-widget-host" data-i18n-ignore translate="no">
+            <div
+              data-omio-widget="true"
+              data-partner-id="omio-affiliates"
+              data-default-travel-mode="ferry"
+              data-new-tab="true"
+              data-redirect="https://omio.sjv.io/c/7763968/3963000/7385?u="
+            ></div>
+        </div>
+        <p class="lead omio-affiliate-note">HAVKAR participates in the Omio affiliate program. Booking is completed on Omio.</p>
+        <a class="omio-tracked-link" href="https://omio.sjv.io/c/7763968/3963000/7385" target="_blank" rel="noopener noreferrer">Open Omio ferry search</a>
     </section>
 
     <section id="taxi-transfer" class="panel taxi-panel" data-ticket-panel="ride" hidden aria-labelledby="taxiTitle">
@@ -683,6 +864,21 @@ h2{
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-page-back.js"></script>
 <script>
+(function addOmioAffiliateWidget(d) {
+    // Approved Impact / Omio affiliate search widget (Partner ID 7763968 / ad 3963000 / ircid 7385).
+    // Restored from the 2026-10-24 HAVKAR implementation. Booking completes on Omio via tracked redirect.
+    var widgetStyle = d.createElement("link");
+    widgetStyle.setAttribute("rel", "stylesheet");
+    widgetStyle.setAttribute("href", "https://www.omio.com/gcs-proxy/b2b-nemo-prod/bundle/en/bundle.css?v=" + new Date().getTime());
+    d.head.appendChild(widgetStyle);
+
+    var widgetScript = d.createElement("script");
+    widgetScript.setAttribute("src", "https://www.omio.com/gcs-proxy/b2b-nemo-prod/bundle/en/bundle.js?v=" + new Date().getTime());
+    widgetScript.setAttribute("async", "true");
+    d.body.appendChild(widgetScript);
+})(document);
+</script>
+<script>
 (function () {
     var buttons = document.querySelectorAll("[data-ticket-type]");
     var panels = document.querySelectorAll("[data-ticket-panel]");
@@ -750,6 +946,110 @@ h2{
         setBookStatus("");
     }
 
+    function havkarLanguage() {
+        try {
+            return String(
+                localStorage.getItem("havkar_language") ||
+                localStorage.getItem("selectedLanguage") ||
+                localStorage.getItem("language") ||
+                "en"
+            ).toLowerCase();
+        } catch (error) {
+            return "en";
+        }
+    }
+
+    function formatIsoLocal(value) {
+        if (!value) return "";
+        var text = String(value);
+        if (text.length >= 16) {
+            return text.slice(0, 10) + " " + text.slice(11, 16);
+        }
+        return text;
+    }
+
+    function describeOfferRoute(offer) {
+        var slices = Array.isArray(offer && offer.slices) ? offer.slices : [];
+        if (!slices.length) return [];
+        return slices.map(function (slice, index) {
+            var segments = Array.isArray(slice.segments) ? slice.segments : [];
+            var first = segments[0] || {};
+            var last = segments[segments.length - 1] || first;
+            var depAirport = (first.origin && (first.origin.iata_code || first.origin.name)) ||
+                (slice.origin && (slice.origin.iata_code || slice.origin.name)) || "?";
+            var arrAirport = (last.destination && (last.destination.iata_code || last.destination.name)) ||
+                (slice.destination && (slice.destination.iata_code || slice.destination.name)) || "?";
+            var stops = Math.max(0, segments.length - 1);
+            var carriers = segments.map(function (segment) {
+                return (segment.marketing_carrier && segment.marketing_carrier.name) ||
+                    (segment.operating_carrier && segment.operating_carrier.name) || "";
+            }).filter(Boolean);
+            var uniqueCarriers = Array.from(new Set(carriers));
+            var flightNumbers = segments.map(function (segment) {
+                var carrier = (segment.marketing_carrier && segment.marketing_carrier.iata_code) || "";
+                var number = segment.marketing_carrier_flight_number || segment.operating_carrier_flight_number || "";
+                return (carrier + number).trim();
+            }).filter(Boolean);
+            return {
+                label: (index === 0 ? "Outbound" : "Return") + ": " + depAirport + " → " + arrAirport,
+                times: formatIsoLocal(first.departing_at) +
+                    (last.arriving_at ? " → " + formatIsoLocal(last.arriving_at) : ""),
+                stops: stops === 0 ? "Nonstop" : (stops + " stop" + (stops > 1 ? "s" : "")),
+                airline: uniqueCarriers.join(", ") || (offer.owner && offer.owner.name) || "Airline",
+                flights: flightNumbers.join(", ")
+            };
+        });
+    }
+
+    function describeBaggage(offer) {
+        var bags = Array.isArray(offer && offer.available_services)
+            ? offer.available_services.filter(function (service) {
+                return String(service.type || "").toLowerCase().indexOf("baggage") >= 0;
+            })
+            : [];
+        if (bags.length) {
+            return "Baggage options available from provider (" + bags.length + ")";
+        }
+        var slices = Array.isArray(offer && offer.slices) ? offer.slices : [];
+        var included = [];
+        slices.forEach(function (slice) {
+            (slice.segments || []).forEach(function (segment) {
+                (segment.passengers || []).forEach(function (passenger) {
+                    (passenger.baggages || []).forEach(function (bag) {
+                        var type = bag.type || "bag";
+                        var qty = bag.quantity != null ? bag.quantity : "";
+                        included.push(String(qty ? qty + "× " : "") + type);
+                    });
+                });
+            });
+        });
+        if (included.length) {
+            return "Included baggage: " + Array.from(new Set(included)).join(", ");
+        }
+        return "Baggage details as provided by airline at booking";
+    }
+
+    function describeConditions(offer) {
+        var conditions = offer && offer.conditions ? offer.conditions : null;
+        if (!conditions) return "Fare conditions per airline / Duffel offer";
+        var bits = [];
+        if (conditions.refund_before_departure) {
+            bits.push(
+                conditions.refund_before_departure.allowed
+                    ? "Refundable before departure"
+                    : "Non-refundable before departure"
+            );
+        }
+        if (conditions.change_before_departure) {
+            bits.push(
+                conditions.change_before_departure.allowed
+                    ? "Changes allowed before departure"
+                    : "Changes not allowed before departure"
+            );
+        }
+        return bits.length ? bits.join(" · ") : "Fare conditions per airline / Duffel offer";
+    }
+
     function openBookPanel(offer) {
         selectedOfferId = String(offer && offer.id || "");
         if (!selectedOfferId || !flightBookPanel) return;
@@ -781,18 +1081,44 @@ h2{
         offers.slice(0, 20).forEach(function (offer) {
             var card = document.createElement("article");
             card.className = "flight-card";
-            var total = offer.total_amount || offer.total_currency
-                ? String(offer.total_amount || "") + " " + String(offer.total_currency || "")
-                : (offer.price ? String(offer.price) : "Price on request");
+            var totalAmount = offer.total_amount != null ? String(offer.total_amount) : "";
+            var totalCurrency = offer.total_currency ? String(offer.total_currency) : "";
+            var total = (totalAmount || totalCurrency)
+                ? (totalAmount + " " + totalCurrency).trim()
+                : (offer.price ? String(offer.price) : "");
+            if (!total) {
+                card.innerHTML = "<strong></strong><p></p>";
+                card.querySelector("strong").textContent = "Offer unavailable";
+                card.querySelector("p").textContent = "Provider did not return a total price for this offer. It is hidden from booking.";
+                flightResults.appendChild(card);
+                return;
+            }
             var owner = offer.owner && offer.owner.name ? offer.owner.name : "Airline offer";
             var id = offer.id || "";
             var live = offer.live_mode === true;
-            card.innerHTML = "<strong></strong><p></p><p></p><button class=\"partner-link\" type=\"button\"></button>";
+            var routes = describeOfferRoute(offer);
+            card.innerHTML = "<strong></strong><div class=\"flight-meta\"></div><p class=\"price-line\"></p><p></p><button class=\"partner-link\" type=\"button\"></button>";
             card.querySelector("strong").textContent = owner;
-            card.querySelectorAll("p")[0].textContent = total.trim() + (id ? " · offer " + id : "");
+            var meta = card.querySelector(".flight-meta");
+            routes.forEach(function (route) {
+                var line = document.createElement("div");
+                line.innerHTML = "<b></b> <span></span>";
+                line.querySelector("b").textContent = route.label;
+                line.querySelector("span").textContent = route.times + " · " + route.stops +
+                    (route.airline ? " · " + route.airline : "") +
+                    (route.flights ? " · " + route.flights : "");
+                meta.appendChild(line);
+            });
+            var bagLine = document.createElement("div");
+            bagLine.textContent = describeBaggage(offer);
+            meta.appendChild(bagLine);
+            var condLine = document.createElement("div");
+            condLine.textContent = describeConditions(offer);
+            meta.appendChild(condLine);
+            card.querySelector(".price-line").textContent = "Total " + total;
             card.querySelectorAll("p")[1].textContent = live
                 ? "Live Duffel offer. Production booking stays blocked until the owner enables real payments."
-                : "Duffel test offer. You can create a TEST MODE order below; no real traveller payment is collected by HAVKAR.";
+                : "Duffel TEST offer. You can create a TEST MODE order below; no real traveller payment is collected by HAVKAR.";
             var bookBtn = card.querySelector("button");
             bookBtn.textContent = live ? "Live booking blocked" : "Book test order";
             bookBtn.disabled = live || !id;
@@ -805,8 +1131,190 @@ h2{
             });
             flightResults.appendChild(card);
         });
-        setFlightStatus("Showing " + Math.min(offers.length, 20) + " offer(s). Test booking uses Duffel balance only.");
+        setFlightStatus("Showing " + Math.min(offers.length, 20) + " offer(s) from Duffel. Test booking uses Duffel balance only.");
     }
+
+    function createAirportAutocomplete(options) {
+        var queryInput = document.getElementById(options.queryId);
+        var hiddenInput = document.getElementById(options.hiddenId);
+        var listEl = document.getElementById(options.listId);
+        var metaEl = document.getElementById(options.metaId);
+        if (!queryInput || !hiddenInput || !listEl) return;
+        var debounceTimer = null;
+        var activeIndex = -1;
+        var currentItems = [];
+        var requestSeq = 0;
+
+        function setMeta(text) {
+            if (metaEl) metaEl.textContent = text || "";
+        }
+
+        function closeList() {
+            listEl.hidden = true;
+            listEl.innerHTML = "";
+            queryInput.setAttribute("aria-expanded", "false");
+            activeIndex = -1;
+            currentItems = [];
+        }
+
+        function selectItem(item) {
+            if (!item || !item.iata_code) return;
+            hiddenInput.value = String(item.iata_code).toUpperCase();
+            queryInput.value = item.label || (item.name + " (" + item.iata_code + ")");
+            setMeta("Selected " + hiddenInput.value + (item.type === "city" ? " (city)" : " (airport)"));
+            closeList();
+        }
+
+        function renderList(items, stateMessage) {
+            listEl.innerHTML = "";
+            currentItems = items || [];
+            activeIndex = -1;
+            if (stateMessage && !currentItems.length) {
+                var empty = document.createElement("li");
+                empty.setAttribute("role", "presentation");
+                empty.className = "airport-suggestion";
+                empty.textContent = stateMessage;
+                listEl.appendChild(empty);
+                listEl.hidden = false;
+                queryInput.setAttribute("aria-expanded", "true");
+                return;
+            }
+            currentItems.forEach(function (item, index) {
+                var li = document.createElement("li");
+                li.setAttribute("role", "option");
+                li.id = options.listId + "-opt-" + index;
+                var button = document.createElement("button");
+                button.type = "button";
+                button.className = "airport-suggestion";
+                button.setAttribute("aria-selected", "false");
+                button.innerHTML = "<strong></strong><span></span>";
+                var city = item.city_name || (item.type === "city" ? item.name : "") || "";
+                var airport = item.name || "";
+                var country = item.country_name || item.country_code || "";
+                var iata = item.iata_code || "";
+                button.querySelector("strong").textContent =
+                    [city, airport, country, iata].filter(Boolean).join(" — ");
+                button.querySelector("span").textContent =
+                    (item.type === "city" ? "City" : "Airport") +
+                    (item.airports && item.airports.length ? (" · " + item.airports.length + " airports") : "");
+                button.addEventListener("click", function () {
+                    selectItem(item);
+                });
+                li.appendChild(button);
+                listEl.appendChild(li);
+            });
+            listEl.hidden = currentItems.length === 0;
+            queryInput.setAttribute("aria-expanded", currentItems.length ? "true" : "false");
+        }
+
+        function highlight(index) {
+            var buttons = listEl.querySelectorAll(".airport-suggestion");
+            buttons.forEach(function (button, i) {
+                button.setAttribute("aria-selected", i === index ? "true" : "false");
+            });
+            activeIndex = index;
+            if (buttons[index]) {
+                buttons[index].scrollIntoView({ block: "nearest" });
+            }
+        }
+
+        async function runSearch(rawQuery) {
+            var query = String(rawQuery || "").trim();
+            if (query.length < 2) {
+                hiddenInput.value = "";
+                setMeta("Type at least 2 characters");
+                closeList();
+                return;
+            }
+            if (!navigator.onLine) {
+                setMeta("Offline — reconnect to search airports");
+                renderList([], "You appear offline. Airport search needs a network connection.");
+                return;
+            }
+            var seq = ++requestSeq;
+            setMeta("Searching airports…");
+            renderList([], "Loading suggestions…");
+            try {
+                var params = new URLSearchParams({
+                    q: query,
+                    lang: havkarLanguage()
+                });
+                var response = await fetch("/api/flights?" + params.toString(), {
+                    method: "GET",
+                    headers: {
+                        Accept: "application/json"
+                    }
+                });
+                var body = await response.json().catch(function () { return null; });
+                if (seq !== requestSeq) return;
+                if (!response.ok || !body || body.ok === false) {
+                    setMeta((body && body.error) || "Airport search failed");
+                    renderList([], (body && body.error) || "Airport search failed. Try again.");
+                    return;
+                }
+                var suggestions = Array.isArray(body.suggestions) ? body.suggestions : [];
+                if (!suggestions.length) {
+                    setMeta("No airports found");
+                    renderList([], "No matching airports or cities. Try another spelling.");
+                    return;
+                }
+                setMeta(suggestions.length + " suggestion(s)");
+                renderList(suggestions);
+            } catch (error) {
+                if (seq !== requestSeq) return;
+                setMeta("Airport search unavailable");
+                renderList([], "Could not reach airport search. Check your connection.");
+            }
+        }
+
+        queryInput.addEventListener("input", function () {
+            hiddenInput.value = "";
+            setMeta("");
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(function () {
+                runSearch(queryInput.value);
+            }, 280);
+        });
+
+        queryInput.addEventListener("keydown", function (event) {
+            if (listEl.hidden) return;
+            if (event.key === "ArrowDown") {
+                event.preventDefault();
+                highlight(Math.min(activeIndex + 1, currentItems.length - 1));
+            } else if (event.key === "ArrowUp") {
+                event.preventDefault();
+                highlight(Math.max(activeIndex - 1, 0));
+            } else if (event.key === "Enter" && activeIndex >= 0 && currentItems[activeIndex]) {
+                event.preventDefault();
+                selectItem(currentItems[activeIndex]);
+            } else if (event.key === "Escape") {
+                closeList();
+            }
+        });
+
+        queryInput.addEventListener("blur", function () {
+            setTimeout(closeList, 180);
+        });
+
+        document.addEventListener("click", function (event) {
+            if (!queryInput.contains(event.target) && !listEl.contains(event.target)) {
+                closeList();
+            }
+        });
+    }
+
+    createAirportAutocomplete({
+        queryId: "flightOriginQuery",
+        hiddenId: "flightOrigin",
+        listId: "flightOriginSuggestions",
+        metaId: "flightOriginMeta"
+    });
+    createAirportAutocomplete({
+        queryId: "flightDestinationQuery",
+        hiddenId: "flightDestination",
+        listId: "flightDestinationSuggestions",
+        metaId: "flightDestinationMeta"
+    });
 
     if (flightForm) {
         flightForm.addEventListener("submit", async function (event) {
@@ -822,6 +1330,10 @@ h2{
             }
             var origin = String(document.getElementById("flightOrigin").value || "").trim().toUpperCase();
             var destination = String(document.getElementById("flightDestination").value || "").trim().toUpperCase();
+            if (!/^[A-Z]{3}$/.test(origin) || !/^[A-Z]{3}$/.test(destination)) {
+                setFlightStatus("Select origin and destination from the airport suggestions so HAVKAR can use valid IATA codes.");
+                return;
+            }
             var departure = String(document.getElementById("flightDepart").value || "").trim();
             var ret = String(document.getElementById("flightReturn").value || "").trim();
             var adults = Number(document.getElementById("flightAdults").value || 1);
@@ -860,6 +1372,226 @@ h2{
         });
     }
 
+
+    function padDobPart(value) {
+        return String(value).padStart(2, "0");
+    }
+
+    function isLeapYearDob(year) {
+        var y = Number(year);
+        return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+    }
+
+    function daysInMonthDob(year, month) {
+        var m = Number(month);
+        if ([1, 3, 5, 7, 8, 10, 12].indexOf(m) >= 0) return 31;
+        if ([4, 6, 9, 11].indexOf(m) >= 0) return 30;
+        return isLeapYearDob(year) ? 29 : 28;
+    }
+
+    function composePassengerDob() {
+        var dayEl = document.getElementById("paxBornDay");
+        var monthEl = document.getElementById("paxBornMonth");
+        var yearEl = document.getElementById("paxBornYear");
+        var hidden = document.getElementById("paxBorn");
+        var err = document.getElementById("paxBornError");
+        if (!dayEl || !monthEl || !yearEl || !hidden) return "";
+        var day = Number(dayEl.value);
+        var month = Number(monthEl.value);
+        var year = Number(yearEl.value);
+        if (!day || !month || !year) {
+            hidden.value = "";
+            if (err) err.textContent = "";
+            return "";
+        }
+        var dim = daysInMonthDob(year, month);
+        if (day < 1 || day > dim) {
+            hidden.value = "";
+            if (err) err.textContent = "Invalid date for the selected month/year.";
+            return "";
+        }
+        var iso = year + "-" + padDobPart(month) + "-" + padDobPart(day);
+        hidden.value = iso;
+        if (err) err.textContent = "";
+        return iso;
+    }
+
+    function initPassengerDobSelectors() {
+        var dayEl = document.getElementById("paxBornDay");
+        var monthEl = document.getElementById("paxBornMonth");
+        var yearEl = document.getElementById("paxBornYear");
+        if (!dayEl || !monthEl || !yearEl) return;
+        var y;
+        var nowY = new Date().getFullYear();
+        yearEl.innerHTML = '<option value=\"\">Year</option>';
+        for (y = nowY; y >= 1900; y -= 1) {
+            yearEl.innerHTML += '<option value=\"' + y + '\">' + y + '</option>';
+        }
+        monthEl.innerHTML = '<option value=\"\">Month</option>';
+        var m;
+        for (m = 1; m <= 12; m += 1) {
+            monthEl.innerHTML += '<option value=\"' + m + '\">' + padDobPart(m) + '</option>';
+        }
+        function refreshDays() {
+            var month = Number(monthEl.value) || 1;
+            var year = Number(yearEl.value) || nowY;
+            var selected = Number(dayEl.value) || 0;
+            var dim = daysInMonthDob(year, month);
+            var d;
+            var html = '<option value=\"\">Day</option>';
+            for (d = 1; d <= dim; d += 1) {
+                html += '<option value=\"' + d + '\">' + padDobPart(d) + '</option>';
+            }
+            dayEl.innerHTML = html;
+            if (selected && selected <= dim) dayEl.value = String(selected);
+            composePassengerDob();
+        }
+        dayEl.addEventListener("change", composePassengerDob);
+        monthEl.addEventListener("change", refreshDays);
+        yearEl.addEventListener("change", refreshDays);
+        refreshDays();
+    }
+
+    initPassengerDobSelectors();
+
+    var flightPayPanel = document.getElementById("flightPayPanel");
+    var flightPayCurrency = document.getElementById("flightPayCurrency");
+    var flightPayStatus = document.getElementById("flightPayStatus");
+    var flightPayMethod = document.getElementById("flightPayMethod");
+
+    function setPayStatus(message) {
+        if (flightPayStatus) flightPayStatus.textContent = message || "";
+    }
+
+    async function loadFlightPaymentOptions() {
+        if (!flightPayCurrency) return;
+        try {
+            var token = await accessToken();
+            if (!token) {
+                setPayStatus("Sign in to load verified flight payment currencies.");
+                return;
+            }
+            var response = await fetch("/api/flight-order", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: "Bearer " + token
+                },
+                body: JSON.stringify({ intent: "payment_options" })
+            });
+            var body = await response.json().catch(function () { return null; });
+            if (!response.ok || !body || body.ok === false) {
+                setPayStatus((body && body.error) || "Unable to load payment options.");
+                return;
+            }
+            var currencies = body.stripe && Array.isArray(body.stripe.supported_currencies)
+                ? body.stripe.supported_currencies
+                : [];
+            flightPayCurrency.innerHTML = currencies.map(function (row) {
+                return '<option value=\"' + row.code + '\">' +
+                    String(row.code).toUpperCase() + " — " + row.name +
+                    '</option>';
+            }).join("");
+            if (flightPayPanel) flightPayPanel.hidden = false;
+            setPayStatus(
+                "Loaded " + currencies.length +
+                " verified Stripe currencies. Flight customer charges stay blocked until Duffel live settlement is verified."
+            );
+        } catch (error) {
+            setPayStatus("Payment options unavailable.");
+        }
+    }
+
+    var quoteBtn = document.getElementById("flightPayQuoteButton");
+    if (quoteBtn) {
+        quoteBtn.addEventListener("click", async function () {
+            if (!selectedOfferId) {
+                setPayStatus("Select a flight offer first.");
+                return;
+            }
+            var token = await accessToken();
+            if (!token) {
+                setPayStatus("Sign in required.");
+                return;
+            }
+            setPayStatus("Building verified FX quote…");
+            try {
+                var response = await fetch("/api/flight-order", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: "Bearer " + token
+                    },
+                    body: JSON.stringify({
+                        intent: "payment_quote",
+                        offer_id: selectedOfferId,
+                        currency: flightPayCurrency ? flightPayCurrency.value : "eur",
+                        method: flightPayMethod ? flightPayMethod.value : "stripe"
+                    })
+                });
+                var body = await response.json().catch(function () { return null; });
+                if (!response.ok || !body || body.ok === false) {
+                    setPayStatus((body && body.error) || "Quote failed.");
+                    return;
+                }
+                var q = body.quote || {};
+                setPayStatus(
+                    "Quote " + (q.buyer_pays != null ? q.buyer_pays : "") + " " +
+                    String(q.currency || "").toUpperCase() +
+                    " (list " + q.list_price + ", buyer fee " +
+                    Math.round((q.buyer_fee_rate || 0) * 100) +
+                    "%). Live checkout allowed=" +
+                    String(body.live_checkout_allowed === true) +
+                    ". Public collection remains gated."
+                );
+            } catch (error) {
+                setPayStatus("Could not reach payment quote.");
+            }
+        });
+    }
+
+    var liveBtn = document.getElementById("flightPayLiveButton");
+    if (liveBtn) {
+        liveBtn.addEventListener("click", async function () {
+            var token = await accessToken();
+            if (!token) {
+                setPayStatus("Sign in required.");
+                return;
+            }
+            setPayStatus("Checking Owner payment gate…");
+            try {
+                var response = await fetch("/api/flight-order", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: "Bearer " + token
+                    },
+                    body: JSON.stringify({
+                        intent: "live_checkout",
+                        offer_id: selectedOfferId,
+                        currency: flightPayCurrency ? flightPayCurrency.value : "eur",
+                        method: flightPayMethod ? flightPayMethod.value : "stripe",
+                        idempotency_key: "flight-" + String(selectedOfferId || "") + "-" + Date.now()
+                    })
+                });
+                var body = await response.json().catch(function () { return null; });
+                setPayStatus(
+                    (body && (body.error || body.code)) ||
+                    "Live checkout refused. No payment was taken."
+                );
+            } catch (error) {
+                setPayStatus("Live checkout unavailable.");
+            }
+        });
+    }
+
+    // Reveal payment panel when a test offer is selected.
+    var originalOpenBookPanel = openBookPanel;
+    openBookPanel = function (offer) {
+        originalOpenBookPanel(offer);
+        loadFlightPaymentOptions();
+    };
+
     if (flightBookForm) {
         flightBookForm.addEventListener("submit", async function (event) {
             event.preventDefault();
@@ -872,11 +1604,16 @@ h2{
                 setBookStatus("Sign in before creating a Duffel test order.");
                 return;
             }
+            var bornOn = composePassengerDob();
+            if (!bornOn) {
+                setBookStatus("Enter a valid date of birth (day, month, year).");
+                return;
+            }
             var passengers = [{
                 title: String(document.getElementById("paxTitle").value || ""),
                 given_name: String(document.getElementById("paxGiven").value || "").trim(),
                 family_name: String(document.getElementById("paxFamily").value || "").trim(),
-                born_on: String(document.getElementById("paxBorn").value || "").trim(),
+                born_on: bornOn,
                 gender: String(document.getElementById("paxGender").value || ""),
                 email: String(document.getElementById("paxEmail").value || "").trim(),
                 phone_number: String(document.getElementById("paxPhone").value || "").trim()
