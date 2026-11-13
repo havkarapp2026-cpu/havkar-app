@@ -11,8 +11,31 @@
 
 <meta name="viewport"
       content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 
 <title>HAVKAR - Product Details</title>
+
+<script>
+/* Buy & Sell checkout lives on ad-details (BUY NOW + 60 currencies + XLM).
+   Keep product.html as a thin redirect so Android/deep links never show a stale page. */
+(function () {
+  try {
+    var params = new URLSearchParams(window.location.search || "");
+    var id = params.get("id");
+    if (id) {
+      var next = "ad-details.html?id=" + encodeURIComponent(id);
+      var paid = params.get("paid");
+      if (paid !== null && paid !== "") {
+        next += "&paid=" + encodeURIComponent(paid);
+      }
+      window.location.replace(next);
+      return;
+    }
+  } catch (_e) {}
+})();
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 

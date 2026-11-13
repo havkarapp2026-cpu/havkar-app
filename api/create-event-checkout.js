@@ -1571,8 +1571,9 @@ export default async function handler(req, res) {
           return sendError(res, 400, normalized.error || "Unsupported currency");
         }
 
+        // Production marketplace rows live in public.ads (not advertisements).
         const { data: ad, error: adError } = await getSupabaseAdmin()
-          .from("advertisements")
+          .from("ads")
           .select(
             "id,title,price,currency,user_id,status,listing_surface,expires_at"
           )

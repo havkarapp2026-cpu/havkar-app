@@ -57,6 +57,14 @@ assert.match(api, /isCurrencyMatrixRequest/);
 assert.match(api, /currency_quote/);
 assert.match(api, /marketplace_buy_checkout/);
 assert.match(api, /LIVE_COLLECTION_PAUSED/);
+assert.match(api, /\.from\("ads"\)/);
+assert.doesNotMatch(
+  api.slice(api.indexOf("marketplace_buy_checkout")),
+  /\.from\("advertisements"\)/
+);
+
+const vercelHeaders = fs.readFileSync("vercel.json", "utf8");
+assert.match(vercelHeaders, /ad-details\|buy-sell/);
 
 const vercel = fs.readFileSync("vercel.json", "utf8");
 assert.match(vercel, /currency-matrix/);
