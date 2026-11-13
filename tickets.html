@@ -211,6 +211,14 @@ a{color:inherit}
     font-weight:750;
     color:var(--green-deep);
 }
+.dob-field{display:flex;flex-direction:column;gap:6px}
+.dob-legend{font-size:14px;font-weight:650}
+.dob-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.dob-grid select{min-height:44px;width:100%}
+.flight-pay-panel{margin-top:16px;padding:14px;border:1px dashed #c5d6b8;border-radius:14px;background:#f7faf5}
+.flight-pay-panel h4{margin:0 0 8px;font-size:16px}
+.flight-pay-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-top:10px}
+
 .more-transfers[hidden]{display:none !important}
 .page{
     width:min(1040px, calc(100% - 28px));
@@ -661,9 +669,22 @@ h2{
                     <label>Family name
                         <input id="paxFamily" required autocomplete="family-name">
                     </label>
-                    <label>Date of birth
-                        <input id="paxBorn" type="date" required>
-                    </label>
+                    <div class="dob-field" data-havkar-translate-block="flight-dob">
+                        <span class="dob-legend">Date of birth</span>
+                        <div class="dob-grid" role="group" aria-label="Date of birth">
+                            <label for="paxBornDay">Day
+                                <select id="paxBornDay" required aria-label="Day of birth"></select>
+                            </label>
+                            <label for="paxBornMonth">Month
+                                <select id="paxBornMonth" required aria-label="Month of birth"></select>
+                            </label>
+                            <label for="paxBornYear">Year
+                                <select id="paxBornYear" required aria-label="Year of birth"></select>
+                            </label>
+                        </div>
+                        <input id="paxBorn" type="hidden" value="" required>
+                        <div id="paxBornError" class="airport-meta" role="alert" aria-live="polite"></div>
+                    </div>
                     <label>Gender
                         <select id="paxGender" required>
                             <option value="m">Male</option>
@@ -680,6 +701,24 @@ h2{
                 <button class="partner-link" type="submit" id="flightBookButton">Create Duffel test order</button>
             </form>
             <p id="flightBookStatus" class="pending-note" role="status" aria-live="polite"></p>
+            <div id="flightPayPanel" class="flight-pay-panel" hidden>
+                <h4>Global flight payment (Owner-gated)</h4>
+                <p class="lead">Prepared rails: Stripe (60 verified presentment currencies) and Stellar XLM Mainnet. Public real-money checkout stays DISABLED until explicit Owner approval. Duffel TEST MODE booking remains available above.</p>
+                <div class="flight-pay-grid">
+                    <label>Method
+                        <select id="flightPayMethod">
+                            <option value="stripe">Stripe card (fiat)</option>
+                            <option value="xlm_mainnet">Stellar XLM Mainnet</option>
+                        </select>
+                    </label>
+                    <label>Currency
+                        <select id="flightPayCurrency"></select>
+                    </label>
+                </div>
+                <button class="partner-link" type="button" id="flightPayQuoteButton">Show conversion quote</button>
+                <button class="text-link" type="button" id="flightPayLiveButton">Request live checkout</button>
+                <p id="flightPayStatus" class="pending-note" role="status" aria-live="polite"></p>
+            </div>
         </div>
     </section>
 
@@ -1333,6 +1372,226 @@ h2{
         });
     }
 
+
+    function padDobPart(value) {
+        return String(value).padStart(2, "0");
+    }
+
+    function isLeapYearDob(year) {
+        var y = Number(year);
+        return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+    }
+
+    function daysInMonthDob(year, month) {
+        var m = Number(month);
+        if ([1, 3, 5, 7, 8, 10, 12].indexOf(m) >= 0) return 31;
+        if ([4, 6, 9, 11].indexOf(m) >= 0) return 30;
+        return isLeapYearDob(year) ? 29 : 28;
+    }
+
+    function composePassengerDob() {
+        var dayEl = document.getElementById("paxBornDay");
+        var monthEl = document.getElementById("paxBornMonth");
+        var yearEl = document.getElementById("paxBornYear");
+        var hidden = document.getElementById("paxBorn");
+        var err = document.getElementById("paxBornError");
+        if (!dayEl || !monthEl || !yearEl || !hidden) return "";
+        var day = Number(dayEl.value);
+        var month = Number(monthEl.value);
+        var year = Number(yearEl.value);
+        if (!day || !month || !year) {
+            hidden.value = "";
+            if (err) err.textContent = "";
+            return "";
+        }
+        var dim = daysInMonthDob(year, month);
+        if (day < 1 || day > dim) {
+            hidden.value = "";
+            if (err) err.textContent = "Invalid date for the selected month/year.";
+            return "";
+        }
+        var iso = year + "-" + padDobPart(month) + "-" + padDobPart(day);
+        hidden.value = iso;
+        if (err) err.textContent = "";
+        return iso;
+    }
+
+    function initPassengerDobSelectors() {
+        var dayEl = document.getElementById("paxBornDay");
+        var monthEl = document.getElementById("paxBornMonth");
+        var yearEl = document.getElementById("paxBornYear");
+        if (!dayEl || !monthEl || !yearEl) return;
+        var y;
+        var nowY = new Date().getFullYear();
+        yearEl.innerHTML = '<option value=\"\">Year</option>';
+        for (y = nowY; y >= 1900; y -= 1) {
+            yearEl.innerHTML += '<option value=\"' + y + '\">' + y + '</option>';
+        }
+        monthEl.innerHTML = '<option value=\"\">Month</option>';
+        var m;
+        for (m = 1; m <= 12; m += 1) {
+            monthEl.innerHTML += '<option value=\"' + m + '\">' + padDobPart(m) + '</option>';
+        }
+        function refreshDays() {
+            var month = Number(monthEl.value) || 1;
+            var year = Number(yearEl.value) || nowY;
+            var selected = Number(dayEl.value) || 0;
+            var dim = daysInMonthDob(year, month);
+            var d;
+            var html = '<option value=\"\">Day</option>';
+            for (d = 1; d <= dim; d += 1) {
+                html += '<option value=\"' + d + '\">' + padDobPart(d) + '</option>';
+            }
+            dayEl.innerHTML = html;
+            if (selected && selected <= dim) dayEl.value = String(selected);
+            composePassengerDob();
+        }
+        dayEl.addEventListener("change", composePassengerDob);
+        monthEl.addEventListener("change", refreshDays);
+        yearEl.addEventListener("change", refreshDays);
+        refreshDays();
+    }
+
+    initPassengerDobSelectors();
+
+    var flightPayPanel = document.getElementById("flightPayPanel");
+    var flightPayCurrency = document.getElementById("flightPayCurrency");
+    var flightPayStatus = document.getElementById("flightPayStatus");
+    var flightPayMethod = document.getElementById("flightPayMethod");
+
+    function setPayStatus(message) {
+        if (flightPayStatus) flightPayStatus.textContent = message || "";
+    }
+
+    async function loadFlightPaymentOptions() {
+        if (!flightPayCurrency) return;
+        try {
+            var token = await accessToken();
+            if (!token) {
+                setPayStatus("Sign in to load verified flight payment currencies.");
+                return;
+            }
+            var response = await fetch("/api/flight-order", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: "Bearer " + token
+                },
+                body: JSON.stringify({ intent: "payment_options" })
+            });
+            var body = await response.json().catch(function () { return null; });
+            if (!response.ok || !body || body.ok === false) {
+                setPayStatus((body && body.error) || "Unable to load payment options.");
+                return;
+            }
+            var currencies = body.stripe && Array.isArray(body.stripe.supported_currencies)
+                ? body.stripe.supported_currencies
+                : [];
+            flightPayCurrency.innerHTML = currencies.map(function (row) {
+                return '<option value=\"' + row.code + '\">' +
+                    String(row.code).toUpperCase() + " — " + row.name +
+                    '</option>';
+            }).join("");
+            if (flightPayPanel) flightPayPanel.hidden = false;
+            setPayStatus(
+                "Loaded " + currencies.length +
+                " verified Stripe currencies. Public live checkout is DISABLED until Owner approval."
+            );
+        } catch (error) {
+            setPayStatus("Payment options unavailable.");
+        }
+    }
+
+    var quoteBtn = document.getElementById("flightPayQuoteButton");
+    if (quoteBtn) {
+        quoteBtn.addEventListener("click", async function () {
+            if (!selectedOfferId) {
+                setPayStatus("Select a flight offer first.");
+                return;
+            }
+            var token = await accessToken();
+            if (!token) {
+                setPayStatus("Sign in required.");
+                return;
+            }
+            setPayStatus("Building verified FX quote…");
+            try {
+                var response = await fetch("/api/flight-order", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: "Bearer " + token
+                    },
+                    body: JSON.stringify({
+                        intent: "payment_quote",
+                        offer_id: selectedOfferId,
+                        currency: flightPayCurrency ? flightPayCurrency.value : "eur",
+                        method: flightPayMethod ? flightPayMethod.value : "stripe"
+                    })
+                });
+                var body = await response.json().catch(function () { return null; });
+                if (!response.ok || !body || body.ok === false) {
+                    setPayStatus((body && body.error) || "Quote failed.");
+                    return;
+                }
+                var q = body.quote || {};
+                setPayStatus(
+                    "Quote " + (q.buyer_pays != null ? q.buyer_pays : "") + " " +
+                    String(q.currency || "").toUpperCase() +
+                    " (list " + q.list_price + ", buyer fee " +
+                    Math.round((q.buyer_fee_rate || 0) * 100) +
+                    "%). Live checkout allowed=" +
+                    String(body.live_checkout_allowed === true) +
+                    ". Public collection remains gated."
+                );
+            } catch (error) {
+                setPayStatus("Could not reach payment quote.");
+            }
+        });
+    }
+
+    var liveBtn = document.getElementById("flightPayLiveButton");
+    if (liveBtn) {
+        liveBtn.addEventListener("click", async function () {
+            var token = await accessToken();
+            if (!token) {
+                setPayStatus("Sign in required.");
+                return;
+            }
+            setPayStatus("Checking Owner payment gate…");
+            try {
+                var response = await fetch("/api/flight-order", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: "Bearer " + token
+                    },
+                    body: JSON.stringify({
+                        intent: "live_checkout",
+                        offer_id: selectedOfferId,
+                        currency: flightPayCurrency ? flightPayCurrency.value : "eur",
+                        method: flightPayMethod ? flightPayMethod.value : "stripe",
+                        idempotency_key: "flight-" + String(selectedOfferId || "") + "-" + Date.now()
+                    })
+                });
+                var body = await response.json().catch(function () { return null; });
+                setPayStatus(
+                    (body && (body.error || body.code)) ||
+                    "Live checkout refused. No payment was taken."
+                );
+            } catch (error) {
+                setPayStatus("Live checkout unavailable.");
+            }
+        });
+    }
+
+    // Reveal payment panel when a test offer is selected.
+    var originalOpenBookPanel = openBookPanel;
+    openBookPanel = function (offer) {
+        originalOpenBookPanel(offer);
+        loadFlightPaymentOptions();
+    };
+
     if (flightBookForm) {
         flightBookForm.addEventListener("submit", async function (event) {
             event.preventDefault();
@@ -1345,11 +1604,16 @@ h2{
                 setBookStatus("Sign in before creating a Duffel test order.");
                 return;
             }
+            var bornOn = composePassengerDob();
+            if (!bornOn) {
+                setBookStatus("Enter a valid date of birth (day, month, year).");
+                return;
+            }
             var passengers = [{
                 title: String(document.getElementById("paxTitle").value || ""),
                 given_name: String(document.getElementById("paxGiven").value || "").trim(),
                 family_name: String(document.getElementById("paxFamily").value || "").trim(),
-                born_on: String(document.getElementById("paxBorn").value || "").trim(),
+                born_on: bornOn,
                 gender: String(document.getElementById("paxGender").value || ""),
                 email: String(document.getElementById("paxEmail").value || "").trim(),
                 phone_number: String(document.getElementById("paxPhone").value || "").trim()
