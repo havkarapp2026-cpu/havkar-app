@@ -11,8 +11,31 @@
 
 <meta name="viewport"
       content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 
 <title>HAVKAR - Product Details</title>
+
+<script>
+/* Buy & Sell checkout lives on ad-details (BUY NOW + Stripe presentment currencies + XLM).
+   Keep product.html as a thin redirect so Android/deep links never show a stale page. */
+(function () {
+  try {
+    var params = new URLSearchParams(window.location.search || "");
+    var id = params.get("id");
+    if (id) {
+      var next = "ad-details.html?id=" + encodeURIComponent(id);
+      var paid = params.get("paid");
+      if (paid !== null && paid !== "") {
+        next += "&paid=" + encodeURIComponent(paid);
+      }
+      window.location.replace(next);
+      return;
+    }
+  } catch (_e) {}
+})();
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -337,7 +360,7 @@ const SUPABASE_URL =
 
 
 const SUPABASE_PUBLISHABLE_KEY =
-    "sb_publishable_h6RUZrukEovZn_N3XLDukw_Ui67UsWG";
+    window.HAVKAR_SUPABASE_CONFIG.publishableKey;
 
 
 const supabaseClient =
@@ -923,30 +946,31 @@ async function contactSeller() {
             "Sending message...";
 
 
+        const clientMessageId =
+            (globalThis.crypto &&
+                typeof globalThis.crypto.randomUUID === "function")
+                ? globalThis.crypto.randomUUID()
+                : null;
+
         const sent =
-            await supabaseClient
-                .from("messages")
-                .insert({
-
-                    conversation_id:
-                        conversationId,
-
-                    sender_id:
-                        user.id,
-
-                    message_text:
-                        message.trim(),
-
-                    is_read:
-                        false
-
-                });
+            await supabaseClient.rpc(
+                "havkar_send_chat_message",
+                {
+                    p_conversation_id: conversationId,
+                    p_message_text: message.trim(),
+                    p_client_message_id: clientMessageId
+                }
+            );
 
 
         if (sent.error) {
 
             throw sent.error;
 
+        }
+
+        if (!sent.data || (Array.isArray(sent.data) && !sent.data[0])) {
+            throw new Error("Message was not persisted.");
         }
 
 

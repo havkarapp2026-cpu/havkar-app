@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>HAVKAR Owner EUR 1.00 live test</title>
+  <style>
+    :root {
+      --bg: #0f1714;
+      --ink: #e8f2ec;
+      --muted: #9bb5a6;
+      --accent: #3d8f6a;
+      --warn: #c47a3a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #1d3a2e 0%, transparent 55%),
+        radial-gradient(900px 500px at 100% 0%, #243528 0%, transparent 50%),
+        var(--bg);
+      padding: 2rem 1.25rem 3rem;
+    }
+    main { max-width: 36rem; margin: 0 auto; }
+    h1 { font-size: 1.45rem; margin: 0 0 0.5rem; }
+    p { color: var(--muted); line-height: 1.45; }
+    .panel {
+      margin-top: 1.25rem;
+      padding: 1rem 1.1rem;
+      border: 1px solid rgba(232, 242, 236, 0.12);
+      border-radius: 12px;
+      background: rgba(8, 14, 12, 0.55);
+    }
+    button, a.btn {
+      appearance: none;
+      border: 0;
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      background: var(--accent);
+      color: #04110a;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+    }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+    a.link {
+      display: inline-block;
+      margin-top: 0.75rem;
+      color: #9fe0bf;
+      word-break: break-all;
+    }
+    .status { margin-top: 0.85rem; white-space: pre-wrap; color: var(--warn); }
+    .ok { color: #8fdbb0; }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.35rem; }
+  </style>
+  <script src="/havkar-supabase-config.js"></script>
+  <script src="/havkar-canonical-origin.js"></script>
+</head>
+<body>
+  <main>
+    <h1>Owner EUR 1.00 live card test</h1>
+    <p>
+      Owner-only controlled live smoke: exactly €1.00 EUR, one Checkout Session.
+      Sign in on havkar.online first (same domain). Card details are entered only on
+      official Stripe Checkout — never paste card numbers into HAVKAR. No automatic
+      refund or transfer after this charge.
+    </p>
+    <div class="panel">
+      <div class="actions">
+        <a id="loginLink" class="btn" href="/login.html?next=%2Fowner-eur1-checkout.html">Sign in on havkar.online</a>
+        <button id="prepare" type="button">Prepare EUR 1.00 Checkout</button>
+      </div>
+      <div id="out" class="status" aria-live="polite"></div>
+      <a id="pay" class="link" href="#" hidden target="_blank" rel="noopener">Open payment link</a>
+    </div>
+  </main>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    const out = document.getElementById("out");
+    const pay = document.getElementById("pay");
+    const btn = document.getElementById("prepare");
+    const loginLink = document.getElementById("loginLink");
+    const params = new URLSearchParams(location.search);
+    const returnStatus = params.get("status");
+    const sessionId = params.get("session_id");
+
+    const loginHref = "/login.html?next=" + encodeURIComponent("/owner-eur1-checkout.html");
+    loginLink.href = loginHref;
+
+    function message(text, ok) {
+      out.textContent = text;
+      out.className = "status" + (ok ? " ok" : "");
+    }
+
+    function supabaseClient() {
+      const config = window.HAVKAR_SUPABASE_CONFIG;
+      const url = config && config.url;
+      const key = config && config.publishableKey;
+      if (!url || !key) {
+        throw new Error("Supabase public config missing");
+      }
+      return createClient(url, key, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
+        }
+      });
+    }
+
+    async function ensureSession(client) {
+      const { data } = await client.auth.getSession();
+      if (data && data.session && data.session.access_token) return data.session;
+      message(
+        "No session on havkar.online. Use Sign in on havkar.online (Google or password), then return here. Do not stay on havkar-app.vercel.app."
+      );
+      return null;
+    }
+
+    async function checkReturn(client) {
+      if (returnStatus === "cancelled") {
+        message("Checkout cancelled. No charge.");
+        return;
+      }
+      if (returnStatus !== "success" || !sessionId) return;
+      const session = await ensureSession(client);
+      if (!session) return;
+      const res = await fetch("/api/owner-eur1-checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + session.access_token
+        },
+        body: JSON.stringify({
+          action: "owner_eur1_status",
+          session_id: sessionId
+        })
+      });
+      const body = await res.json();
+      if (!res.ok || !body.ok) {
+        message((body && body.error) || "Could not verify session status.");
+        return;
+      }
+      message(
+        [
+          "Verified session " + body.session_id,
+          "payment_status=" + body.payment_status,
+          "status=" + body.status,
+          "livemode=" + body.livemode
+        ].join("\n"),
+        body.payment_status === "paid"
+      );
+    }
+
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      pay.hidden = true;
+      try {
+        const client = supabaseClient();
+        const session = await ensureSession(client);
+        if (!session) {
+          btn.disabled = false;
+          return;
+        }
+        const res = await fetch("/api/owner-eur1-checkout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + session.access_token
+          },
+          body: JSON.stringify({
+            action: "owner_eur1_prepare",
+            confirm: "PREPARE_EUR_1_00_LIVE_CHECKOUT"
+          })
+        });
+        const body = await res.json();
+        if (!res.ok || !body.ok || !body.url) {
+          message((body && body.error) || ("HTTP " + res.status));
+          btn.disabled = false;
+          return;
+        }
+        pay.href = body.url;
+        pay.hidden = false;
+        message(
+          "Checkout prepared (session " +
+            body.session_id +
+            "). Public collection remains paused. Open the link to pay €1.00.",
+          true
+        );
+      } catch (err) {
+        message(err && err.message ? err.message : String(err));
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    try {
+      const client = supabaseClient();
+      const session = await ensureSession(client);
+      if (session) {
+        message(
+          "Owner session detected on havkar.online. You can prepare the EUR 1.00 Checkout.",
+          true
+        );
+      }
+      checkReturn(client).catch((err) =>
+        message(err && err.message ? err.message : String(err))
+      );
+    } catch (err) {
+      message(err && err.message ? err.message : String(err));
+    }
+  </script>
+</body>
+</html>

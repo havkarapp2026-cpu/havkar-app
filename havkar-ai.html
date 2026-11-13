@@ -596,16 +596,20 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 <li>Use examples for better results.</li>
 </ul>
 <section class="panel" id="plans">
-<h3>HAVKAR AI plans</h3>
-<p>Payment is not active. These prices are a proposal.</p>
+<h3>HAVKAR AI prepaid credits</h3>
+<p>Live collection stays OFF until Owner approval. Quotes use one-time prepaid credit packs — not automatic XLM renewals.</p>
 <div class="plan-grid">
-<article class="plan-card"><h4 translate="no">FREE</h4><p><bdi dir="ltr">Free: €0 a month. 8 requests a day, 40 a month, and 2 images a month.</bdi></p></article>
-<article class="plan-card"><h4 translate="no">PLUS</h4><p><bdi dir="ltr">Plus: €7.99 a month. 20 requests a day, 240 a month, and 20 images a month. Payment is not active.</bdi></p></article>
-<article class="plan-card"><h4 translate="no">PRO</h4><p><bdi dir="ltr">Pro: €14.99 a month. 32 requests a day, 480 a month, and 40 images a month. Payment is not active.</bdi></p></article>
-<article class="plan-card"><h4 translate="no">BUSINESS</h4><p><bdi dir="ltr">Business: €29.99 a month. 60 requests a day, 900 a month, and 80 images a month. Payment is not active.</bdi></p></article>
+<article class="plan-card"><h4 translate="no">FREE</h4><p><bdi dir="ltr">Free: €0. 8 requests a day, 40 a month, and 2 images a month.</bdi></p></article>
+<article class="plan-card"><h4 translate="no">PLUS</h4><p><bdi dir="ltr">Plus prepaid: €7.99 / 30 days. 20 requests a day, 240 a month, and 20 images a month.</bdi></p></article>
+<article class="plan-card"><h4 translate="no">PRO</h4><p><bdi dir="ltr">Pro prepaid: €14.99 / 30 days. 32 requests a day, 480 a month, and 40 images a month.</bdi></p></article>
+<article class="plan-card"><h4 translate="no">BUSINESS</h4><p><bdi dir="ltr">Business prepaid: €29.99 / 30 days. 60 requests a day, 900 a month, and 80 images a month.</bdi></p></article>
 </div>
-<p>Paid plans cannot be purchased in this release.</p>
+<p id="aiPayStatus" role="status">Public live checkout is DISABLED. Quotes only.</p>
 <div class="plan-actions">
+<button id="quoteAiPlusStripe" class="ghost" type="button">Quote Plus (Stripe)</button>
+<button id="quoteAiProStripe" class="ghost" type="button">Quote Pro (Stripe)</button>
+<button id="quoteAiBusinessStripe" class="ghost" type="button">Quote Business (Stripe)</button>
+<button id="quoteAiPlusXlm" class="ghost" type="button">Quote Plus (XLM)</button>
 <button id="reviewPlus" class="ghost" type="button">Review Plus</button>
 <button id="reviewPro" class="ghost" type="button">Review Pro</button>
 <button id="reviewBusiness" class="ghost" type="button">Review Business</button>
@@ -615,7 +619,7 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 <p class="unavailable">This file has not been scanned for malware.</p>
 <p class="unavailable">Kurdish Kurmanji is not in the Google Speech-to-Text language list. Audio is not uploaded.</p>
 <p class="unavailable">Google Speech-to-Text lists Central Kurdish, but HAVKAR staging has no speech credential. Audio is not uploaded.</p>
-<p class="unavailable">Payment is not active. These prices are a proposal.</p>
+<p class="unavailable">Live AI collection stays Owner-gated. No automatic XLM subscription debits.</p>
 </section>
 </aside>
 </div>
@@ -1705,8 +1709,50 @@ document.getElementById("stopGeneration").addEventListener("click", () => {
   if (activeController) activeController.abort();
 });
 function billingUnavailable() {
-  setStatus("Payment is not active. These prices are a proposal.");
+  setStatus("Live billing stays Owner-gated. Use Quote buttons for prepaid packs (no charge).");
 }
+async function quoteAiPack(method, packId) {
+  const status = document.getElementById("aiPayStatus");
+  if (status) status.textContent = "Building gated quote…";
+  try {
+    const response = await fetch("/api/global-payments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "global_payment_quote",
+        module: "ai",
+        method: method,
+        currency: "eur",
+        subject_id: packId,
+        idempotency_key: "ai-" + packId + "-" + Date.now()
+      })
+    });
+    const body = await response.json().catch(() => null);
+    if (!body || body.ok !== true) {
+      const msg = (body && (body.error || body.decision && body.decision.error)) || "Quote failed.";
+      if (status) status.textContent = msg;
+      setStatus(msg);
+      return;
+    }
+    let summary = "Quote OK (no charge). Live checkout: " + (body.live_checkout_allowed ? "armed" : "paused") + ".";
+    if (method === "stripe" && body.quote) {
+      summary += " Buyer pays " + body.quote.buyer_pays + " " + String((body.currency && body.currency.code) || "eur").toUpperCase() + ".";
+    }
+    if (method.indexOf("xlm") === 0 && body.decision) {
+      summary += " XLM flow " + String(body.decision.flow || "ai_credits") + " prepaid only.";
+    }
+    if (status) status.textContent = summary;
+    setStatus(summary);
+  } catch (error) {
+    const msg = "Quote request failed. No payment was taken.";
+    if (status) status.textContent = msg;
+    setStatus(msg);
+  }
+}
+document.getElementById("quoteAiPlusStripe").addEventListener("click", () => quoteAiPack("stripe", "ai_credits_plus"));
+document.getElementById("quoteAiProStripe").addEventListener("click", () => quoteAiPack("stripe", "ai_credits_pro"));
+document.getElementById("quoteAiBusinessStripe").addEventListener("click", () => quoteAiPack("stripe", "ai_credits_business"));
+document.getElementById("quoteAiPlusXlm").addEventListener("click", () => quoteAiPack("xlm", "ai_credits_plus"));
 document.getElementById("reviewPlus").addEventListener("click", billingUnavailable);
 document.getElementById("reviewPro").addEventListener("click", billingUnavailable);
 document.getElementById("reviewBusiness").addEventListener("click", billingUnavailable);

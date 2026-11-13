@@ -610,10 +610,10 @@ select:focus-visible{
     align-items:center;
 }
 
-.translation-language{
+.translation-language-button{
     width:100%;
-    height:42px;
-    padding:0 10px;
+    min-height:44px;
+    padding:10px 12px;
     border:1px solid #d7ddd7;
     border-radius:11px;
     outline:none;
@@ -621,10 +621,169 @@ select:focus-visible{
     color:#333;
     font-size:14px;
     font-weight:650;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    text-align:left;
+    cursor:pointer;
 }
 
-.translation-language:focus{
+.translation-language-button:focus{
     border-color:#7cb342;
+}
+
+.translation-language-button .lang-meta{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    min-width:0;
+}
+
+.translation-language-button .lang-native{
+    font-size:15px;
+    font-weight:750;
+    line-height:1.2;
+}
+
+.translation-language-button .lang-english{
+    font-size:11px;
+    color:#678067;
+    font-weight:600;
+}
+
+.language-modal{
+    position:fixed;
+    inset:0;
+    z-index:5000;
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    background:rgba(12,28,14,.42);
+    padding:12px;
+}
+
+.language-modal.open{
+    display:flex;
+}
+
+.language-sheet{
+    width:min(520px,100%);
+    max-height:min(78vh,640px);
+    background:#fff;
+    border-radius:18px 18px 14px 14px;
+    box-shadow:0 18px 48px rgba(0,0,0,.28);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+}
+
+.language-sheet-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:14px 14px 8px;
+    border-bottom:1px solid #e7ece7;
+}
+
+.language-sheet-header h3{
+    margin:0;
+    color:#1b5e20;
+    font-size:16px;
+}
+
+.language-search{
+    margin:10px 14px 8px;
+    width:calc(100% - 28px);
+    min-height:44px;
+    border:1px solid #d7ddd7;
+    border-radius:12px;
+    padding:0 12px;
+    font-size:15px;
+}
+
+.language-list{
+    overflow:auto;
+    -webkit-overflow-scrolling:touch;
+    padding:4px 8px 14px;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+}
+
+.language-option{
+    min-height:52px;
+    border:0;
+    border-radius:12px;
+    background:#f7faf6;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:10px 12px;
+    cursor:pointer;
+    text-align:left;
+}
+
+.language-option[aria-selected="true"]{
+    background:#e8f5e9;
+    box-shadow:inset 0 0 0 2px #7cb342;
+}
+
+.language-option .check{
+    color:#2e7d32;
+    font-weight:900;
+    opacity:0;
+}
+
+.language-option[aria-selected="true"] .check{
+    opacity:1;
+}
+
+.language-option .native{
+    display:block;
+    font-size:15px;
+    font-weight:750;
+    color:#1f3b22;
+}
+
+.language-option .english{
+    display:block;
+    font-size:12px;
+    color:#5f7a5f;
+    margin-top:2px;
+}
+
+.language-option.rtl .native{
+    direction:rtl;
+    text-align:right;
+    width:100%;
+}
+
+.send-retry-bar{
+    display:none;
+    gap:8px;
+    align-items:center;
+    padding:8px 12px;
+    background:#fff8e1;
+    border-top:1px solid #ffe082;
+    color:#5d4037;
+    font-size:13px;
+}
+
+.send-retry-bar.show{
+    display:flex;
+}
+
+.send-retry-bar button{
+    margin-left:auto;
+    min-height:36px;
+    padding:0 12px;
+    border-radius:10px;
+    background:#2e7d32;
+    color:#fff;
+    font-weight:700;
 }
 
 .auto-translate-toggle{
@@ -696,7 +855,7 @@ select:focus-visible{
     width:100%;
     overflow-y:auto;
     overflow-x:hidden;
-    padding:18px 13px 24px;
+    padding:18px 14px 24px;
     -webkit-overflow-scrolling:touch;
     overscroll-behavior:contain;
     display:flex;
@@ -721,6 +880,11 @@ select:focus-visible{
 .message-wrap{
     position:relative;
     max-width:82%;
+    z-index:1;
+}
+
+.message-wrap.reaction-open{
+    z-index:40;
 }
 
 .message{
@@ -733,6 +897,28 @@ select:focus-visible{
     line-height:1.45;
     word-break:break-word;
     overflow-wrap:anywhere;
+    z-index:2;
+    /* Android WebView: long-press must open reactions, not text selection handles. */
+    -webkit-user-select:none;
+    user-select:none;
+    -webkit-touch-callout:none;
+    -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+}
+
+.message *,
+.message-text{
+    -webkit-user-select:none;
+    user-select:none;
+    -webkit-touch-callout:none;
+}
+
+/* Composer keeps normal text selection / caret. */
+#messageInput,
+#messageInput *{
+    -webkit-user-select:text !important;
+    user-select:text !important;
+    -webkit-touch-callout:default;
 }
 
 .message.sent{
@@ -764,10 +950,23 @@ select:focus-visible{
 .message-checks{
     font-size:11px;
     letter-spacing:-2px;
+    color:rgba(232,245,233,.88);
+}
+
+.message-checks.delivered{
+    color:#e8f5e9;
+    letter-spacing:-1px;
 }
 
 .message-checks.read{
-    color:#dff7d5;
+    color:#e8f5e9;
+    letter-spacing:-1px;
+    font-weight:800;
+    text-shadow:
+        0 0 4px rgba(255, 213, 79, 0.95),
+        0 0 8px rgba(255, 193, 7, 0.75),
+        0 1px 0 rgba(11, 61, 20, 0.55);
+    filter: drop-shadow(0 0 2px rgba(255, 215, 64, 0.9));
 }
 
 /* =========================================================
@@ -817,55 +1016,197 @@ select:focus-visible{
     font-weight:700;
 }
 
-.reaction-trigger{
-    position:absolute;
-    right:-8px;
-    bottom:-8px;
-    width:31px;
-    height:31px;
-    border-radius:50%;
-    border:1px solid #e0e4e0;
+/* Floating smile triggers are intentionally removed — they covered bubble text.
+   WhatsApp-style: long-press the bubble to open the quick reaction bar. */
+
+#reactionPortal{
+    position:fixed;
+    z-index:1200;
+    display:none;
+    align-items:center;
+    gap:4px;
+    padding:8px;
+    border-radius:20px;
     background:#fff;
-    color:#777;
-    box-shadow:0 2px 7px rgba(0,0,0,.14);
+    box-shadow:0 10px 28px rgba(27,94,32,.22);
+    border:1px solid #cfe6d1;
+    max-width:calc(100vw - 16px);
+}
+
+#reactionPortal.show{
+    display:flex;
+}
+
+.emoji-btn{
+    width:44px;
+    min-width:44px;
+    height:44px;
+    border:0;
+    border-radius:50%;
+    background:#e8f5e9;
+    color:#1b5e20;
+    font-size:20px;
     display:flex;
     align-items:center;
     justify-content:center;
     cursor:pointer;
-    z-index:8;
+    flex:0 0 auto;
 }
 
-.message-row.received .reaction-trigger{
-    left:-8px;
-    right:auto;
+.emoji-btn:active{
+    transform:scale(.94);
+    background:#c8e6c9;
 }
 
-.reaction-trigger:active{
-    transform:scale(.9);
-}
-
-.reaction-picker{
-    position:absolute;
-    right:0;
-    bottom:37px;
-    display:none;
-    align-items:center;
-    gap:4px;
-    padding:7px;
-    border-radius:19px;
-    background:#fff;
-    box-shadow:0 8px 25px rgba(0,0,0,.18);
-    border:1px solid #e5e9e5;
-    z-index:20;
-}
-
-.message-row.received .reaction-picker{
-    left:0;
-    right:auto;
-}
-
-.message-wrap.reaction-open .reaction-picker{
+.emoji-modal{
+    position:fixed;
+    inset:0;
+    z-index:1300;
+    background:rgba(10,30,12,.42);
     display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    padding:0;
+}
+
+.emoji-modal[hidden]{
+    display:none !important;
+}
+
+.emoji-sheet{
+    width:min(560px,100%);
+    height:min(72vh,620px);
+    max-height:min(72vh,620px);
+    background:#fff;
+    border-radius:18px 18px 0 0;
+    box-shadow:0 -10px 36px rgba(0,0,0,.22);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    /* Android WebView: keep chrome above the scrolling grid. */
+    isolation:isolate;
+}
+
+.emoji-sheet-chrome{
+    flex:0 0 auto;
+    position:relative;
+    z-index:3;
+    background:#fff;
+    border-bottom:1px solid #e7ece7;
+}
+
+.emoji-sheet-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:12px 14px 8px;
+}
+
+.emoji-sheet-header h3{
+    margin:0;
+    color:#1b5e20;
+    font-size:16px;
+}
+
+.emoji-search{
+    display:block;
+    margin:0 14px 8px;
+    width:calc(100% - 28px);
+    min-height:42px;
+    border:1px solid #d7ddd7;
+    border-radius:12px;
+    padding:0 12px;
+    font-size:15px;
+    background:#fff;
+}
+
+.emoji-cats{
+    display:flex;
+    flex-wrap:nowrap;
+    gap:4px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    padding:0 10px 10px;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior-x:contain;
+    scrollbar-width:thin;
+}
+
+.emoji-cat{
+    flex:0 0 auto;
+    min-height:36px;
+    padding:0 10px;
+    border:0;
+    border-radius:999px;
+    background:#f1f6f1;
+    color:#1b5e20;
+    font-size:12px;
+    font-weight:700;
+    cursor:pointer;
+    white-space:nowrap;
+}
+
+.emoji-cat.active{
+    background:#2e7d32;
+    color:#fff;
+}
+
+.emoji-grid{
+    flex:1 1 auto;
+    min-height:0;
+    overflow-x:hidden;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+    padding:4px 10px 18px;
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(42px,1fr));
+    gap:4px;
+    align-content:start;
+    position:relative;
+    z-index:1;
+    background:#fff;
+}
+
+.emoji-sheet-note{
+    flex:0 0 auto;
+    margin:0;
+    padding:8px 14px 12px;
+    color:#567;
+    font-size:12px;
+    line-height:1.35;
+    background:#fff;
+    border-top:1px solid #eef3ee;
+    position:relative;
+    z-index:2;
+}
+
+.emoji-cell{
+    width:100%;
+    aspect-ratio:1;
+    border:0;
+    border-radius:10px;
+    background:transparent;
+    font-size:24px;
+    line-height:1;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.emoji-cell:active,
+.emoji-cell:hover{
+    background:#e8f5e9;
+}
+
+.emoji-section-label{
+    grid-column:1 / -1;
+    color:#456;
+    font-size:12px;
+    font-weight:700;
+    padding:8px 4px 2px;
 }
 
 .reaction-option{
@@ -879,6 +1220,12 @@ select:focus-visible{
     justify-content:center;
     font-size:21px;
     cursor:pointer;
+}
+
+.reaction-option.reaction-more{
+    background:#e8f5e9;
+    color:#1b5e20;
+    font-weight:800;
 }
 
 .reaction-option:active{
@@ -918,7 +1265,7 @@ select:focus-visible{
         10px
         calc(9px + env(safe-area-inset-bottom));
     display:flex;
-    align-items:center;
+    align-items:flex-end;
     gap:8px;
     background:#fff;
     border-top:1px solid #ddd;
@@ -961,14 +1308,19 @@ select:focus-visible{
     flex:1 1 auto;
     min-width:0;
     width:100%;
-    height:49px;
-    padding:0 17px;
+    min-height:49px;
+    max-height:120px;
+    padding:12px 17px;
     border:1px solid #d7ddd7;
-    border-radius:26px;
+    border-radius:22px;
     outline:none;
     background:#fff;
     color:#333;
     font-size:16px;
+    line-height:1.35;
+    resize:none;
+    overflow-y:auto;
+    font-family:inherit;
 }
 
 .message-input:focus{
@@ -1210,6 +1562,11 @@ select:focus-visible{
                 <span>Profile</span>
             </button>
 
+            <button id="blockUserButton" type="button">
+                <i class="fas fa-user-slash"></i>
+                <span>Block user</span>
+            </button>
+
         </div>
 
     </header>
@@ -1362,24 +1719,20 @@ select:focus-visible{
 
         <div class="translation-controls">
 
-            <select
-                id="translationTargetLanguage"
-                class="translation-language"
+            <button
+                id="translationLanguageButton"
+                class="translation-language-button"
+                type="button"
+                aria-haspopup="dialog"
+                aria-expanded="false"
                 aria-label="Translate messages to">
-
-                <option value="en">English</option>
-                <option value="it">Italian</option>
-                <option value="fa">Persian</option>
-                <option value="ar">Arabic</option>
-                <option value="de">German</option>
-                <option value="fr">French</option>
-                <option value="es">Spanish</option>
-                <option value="sv">Swedish</option>
-                <option value="tr">Turkish</option>
-                <option value="ckb">Kurdish (Sorani) — کوردی سۆرانی</option>
-                <option value="kmr">Kurdish (Kurmanji) — Kurdî Kurmancî</option>
-
-            </select>
+                <span class="lang-meta">
+                    <span id="translationLanguageNative" class="lang-native">English</span>
+                    <span id="translationLanguageEnglish" class="lang-english">English</span>
+                </span>
+                <i class="fas fa-chevron-down" aria-hidden="true"></i>
+            </button>
+            <input type="hidden" id="translationTargetLanguage" value="en">
 
             <button
                 id="autoTranslateToggle"
@@ -1415,6 +1768,11 @@ select:focus-visible{
 
     </div>
 
+    <div id="sendRetryBar" class="send-retry-bar" role="status">
+        <span id="sendRetryText">Message not sent.</span>
+        <button id="sendRetryButton" type="button">Retry</button>
+    </div>
+
     <main id="chatMessages" class="chat-messages">
 
         <div class="chat-empty">
@@ -1440,16 +1798,26 @@ select:focus-visible{
 
         </button>
 
-        <input
+        <button
+            id="emojiPickerButton"
+            class="emoji-btn"
+            type="button"
+            aria-label="Open emoji picker"
+            aria-expanded="false">
+            🙂
+        </button>
+
+        <textarea
             id="messageInput"
             class="message-input"
-            type="text"
+            rows="1"
             inputmode="text"
             enterkeyhint="send"
             placeholder="Write a message..."
             autocomplete="off"
             autocapitalize="sentences"
-            maxlength="4000">
+            maxlength="4000"
+            aria-label="Message"></textarea>
 
         <button
             id="sendButton"
@@ -1466,6 +1834,40 @@ select:focus-visible{
 </div>
 
 
+<div id="emojiModal" class="emoji-modal" role="dialog" aria-modal="true" aria-labelledby="emojiModalTitle" hidden>
+    <div class="emoji-sheet">
+        <div class="emoji-sheet-chrome">
+            <div class="emoji-sheet-header">
+                <h3 id="emojiModalTitle">Emoji</h3>
+                <button id="emojiModalClose" class="translation-close" type="button" aria-label="Close emoji picker">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+            <input id="emojiSearchInput" class="emoji-search" type="search" placeholder="Search emoji" autocomplete="off">
+            <div id="emojiCats" class="emoji-cats" role="tablist" aria-label="Emoji categories"></div>
+        </div>
+        <div id="emojiGrid" class="emoji-grid" role="listbox" aria-label="Emoji list"></div>
+        <p class="emoji-sheet-note">
+            Your phone keyboard still works for every emoji your device supports. This picker adds search and categories.
+        </p>
+    </div>
+</div>
+
+<div id="reactionPortal" role="toolbar" aria-label="Message reactions"></div>
+
+<div id="languageModal" class="language-modal" role="dialog" aria-modal="true" aria-labelledby="languageModalTitle" hidden>
+    <div class="language-sheet">
+        <div class="language-sheet-header">
+            <h3 id="languageModalTitle">Choose language</h3>
+            <button id="languageModalClose" class="translation-close" type="button" aria-label="Close language list">
+                <i class="fas fa-xmark"></i>
+            </button>
+        </div>
+        <input id="languageSearchInput" class="language-search" type="search" placeholder="Search languages" autocomplete="off">
+        <div id="languageList" class="language-list" role="listbox" aria-label="Supported languages"></div>
+    </div>
+</div>
+
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 
@@ -1475,7 +1877,38 @@ select:focus-visible{
 
 /* =========================================================
    HAVKAR CHAT — PRODUCTION VERSION
+   Build: 2026-11-13-emoji-sticky-tabs-v6
 ========================================================= */
+
+const HAVKAR_CHAT_BUILD =
+    "2026-11-13-emoji-sticky-tabs-v6";
+
+function loadEmojiCatalogDeferred(){
+    if(window.HAVKAR_EMOJI_CATALOG){
+        return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+        const existing =
+            document.querySelector(
+                'script[data-havkar-emoji-catalog="1"]'
+            );
+        if(existing){
+            existing.addEventListener("load", () => resolve());
+            existing.addEventListener("error", () => resolve());
+            return;
+        }
+        const script =
+            document.createElement("script");
+        script.src =
+            "/assets/havkar-emoji-catalog.js?v=" +
+            encodeURIComponent(HAVKAR_CHAT_BUILD);
+        script.async = true;
+        script.dataset.havkarEmojiCatalog = "1";
+        script.onload = () => resolve();
+        script.onerror = () => resolve();
+        document.head.appendChild(script);
+    });
+}
 
 const SUPABASE_URL =
     window.HAVKAR_SUPABASE_CONFIG.url;
@@ -1572,17 +2005,26 @@ const REACTIONS = [
     "😍",
     "👍",
     "😢",
-    "😡"
+    "😡",
+    "🙏",
+    "🔥",
+    "👏",
+    "🎉"
 ];
 
 const MAX_MESSAGE_LENGTH = 4000;
 
-const REQUEST_TIMEOUT = 10000;
+const REQUEST_TIMEOUT = 20000;
 
 const TRANSLATION_TIMEOUT = 15000;
 
 const TRANSLATION_STORAGE_KEY =
     "havkar_chat_translation_v1";
+
+const EMOJI_RECENT_KEY =
+    "havkar_chat_emoji_recent_v1";
+
+const EMOJI_RECENT_LIMIT = 48;
 
 
 /* =========================================================
@@ -1617,9 +2059,331 @@ const state = {
 
     translationTarget:"en",
 
-    translating:false
+    translating:false,
+
+    inboxChannel:null,
+
+    pendingDraft:"",
+
+    lastSendError:null,
+
+    knownMessageIds:{},
+
+    sending:false,
+
+    emojiCategory:"recent",
+
+    emojiPickerMode:"compose",
+
+    emojiReactMessageId:null,
+
+    reactionPortalMessageId:null,
+
+    pushConfigured:false,
+
+    /* Prevent duplicate reaction writes while a save is in-flight. */
+    reactionInFlight:{}
 
 };
+
+const TRANSLATION_LANGUAGES = [
+    { code:"en", english:"English", native:"English", dir:"ltr" },
+    { code:"it", english:"Italian", native:"Italiano", dir:"ltr" },
+    { code:"fa", english:"Persian", native:"فارسی", dir:"rtl" },
+    { code:"ar", english:"Arabic", native:"العربية", dir:"rtl" },
+    { code:"de", english:"German", native:"Deutsch", dir:"ltr" },
+    { code:"fr", english:"French", native:"Français", dir:"ltr" },
+    { code:"es", english:"Spanish", native:"Español", dir:"ltr" },
+    { code:"sv", english:"Swedish", native:"Svenska", dir:"ltr" },
+    { code:"tr", english:"Turkish", native:"Türkçe", dir:"ltr" },
+    { code:"ckb", english:"Kurdish (Sorani)", native:"کوردی سۆرانی", dir:"rtl" },
+    { code:"kmr", english:"Kurdish (Kurmanji)", native:"Kurdî Kurmancî", dir:"ltr" }
+];
+
+
+/* =========================================================
+   EMOJI / UNICODE SAFETY
+========================================================= */
+
+function isLikelyEmoji(value){
+    const s = String(value || "");
+    if(!s || s.length > 64){
+        return false;
+    }
+    // Never allow markup/control injection via reaction storage.
+    if(/[<>&"'`\\]/.test(s)){
+        return false;
+    }
+    try{
+        return /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(s);
+    }catch(_e){
+        return Array.from(s).length > 0 && Array.from(s).length <= 16;
+    }
+}
+
+function unicodeSafeTrim(text){
+    return String(text || "").replace(/^\s+|\s+$/g, "");
+}
+
+function readRecentEmojis(){
+    try{
+        const raw = localStorage.getItem(EMOJI_RECENT_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        if(!Array.isArray(parsed)){
+            return [];
+        }
+        return parsed.filter(isLikelyEmoji).slice(0, EMOJI_RECENT_LIMIT);
+    }catch(_e){
+        return [];
+    }
+}
+
+function rememberEmoji(emoji){
+    if(!isLikelyEmoji(emoji)){
+        return;
+    }
+    const next = [emoji].concat(
+        readRecentEmojis().filter(item => item !== emoji)
+    ).slice(0, EMOJI_RECENT_LIMIT);
+    try{
+        localStorage.setItem(EMOJI_RECENT_KEY, JSON.stringify(next));
+    }catch(_e){
+        // ignore quota
+    }
+}
+
+function insertEmojiAtCursor(emoji){
+    const input = $("messageInput");
+    if(!input || !isLikelyEmoji(emoji)){
+        return;
+    }
+    const value = String(input.value || "");
+    const start = typeof input.selectionStart === "number"
+        ? input.selectionStart
+        : value.length;
+    const end = typeof input.selectionEnd === "number"
+        ? input.selectionEnd
+        : value.length;
+    const next = value.slice(0, start) + emoji + value.slice(end);
+    if(next.length > MAX_MESSAGE_LENGTH){
+        showToast("Message is too long.", "error");
+        return;
+    }
+    input.value = next;
+    const caret = start + emoji.length;
+    try{
+        input.setSelectionRange(caret, caret);
+    }catch(_e){}
+    input.focus();
+    autoSizeMessageInput();
+    rememberEmoji(emoji);
+}
+
+function autoSizeMessageInput(){
+    const input = $("messageInput");
+    if(!input){
+        return;
+    }
+    input.style.height = "auto";
+    input.style.height = Math.min(120, Math.max(49, input.scrollHeight)) + "px";
+}
+
+function getEmojiCatalog(){
+    const catalog = window.HAVKAR_EMOJI_CATALOG;
+    if(!catalog || !Array.isArray(catalog.categories)){
+        return { version:"fallback", categories:[{
+            id:"quick",
+            label:"Quick",
+            emojis: REACTIONS.map(e => ({ e, n: e }))
+        }]};
+    }
+    return catalog;
+}
+
+async function openEmojiModal(){
+    const modal = $("emojiModal");
+    if(!modal){
+        return;
+    }
+    await loadEmojiCatalogDeferred();
+    modal.hidden = false;
+    const btn = $("emojiPickerButton");
+    if(btn){
+        btn.setAttribute("aria-expanded", "true");
+    }
+    const title = $("emojiModalTitle");
+    if(title && state.emojiPickerMode !== "react"){
+        title.textContent = "Emoji";
+    }
+    renderEmojiCats();
+    renderEmojiGrid();
+    const search = $("emojiSearchInput");
+    if(search){
+        search.value = "";
+        window.setTimeout(() => search.focus(), 30);
+    }
+}
+
+function closeEmojiModal(){
+    const modal = $("emojiModal");
+    if(modal){
+        modal.hidden = true;
+    }
+    const btn = $("emojiPickerButton");
+    if(btn){
+        btn.setAttribute("aria-expanded", "false");
+    }
+    state.emojiPickerMode = "compose";
+    state.emojiReactMessageId = null;
+    const title = $("emojiModalTitle");
+    if(title){
+        title.textContent = "Emoji";
+    }
+}
+
+function listEmojiCategories(){
+    return [{ id:"recent", label:"Recent" }].concat(
+        getEmojiCatalog().categories.map(cat => ({
+            id: cat.id,
+            label: cat.label
+        }))
+    );
+}
+
+function scrollEmojiGridToCategory(categoryId){
+    const root = $("emojiGrid");
+    const section = $("emoji-section-" + String(categoryId || ""));
+    if(!root || !section){
+        return;
+    }
+    try{
+        const top = Math.max(0, section.offsetTop - 4);
+        root.scrollTo({
+            top: top,
+            behavior: "smooth"
+        });
+    }catch(_e){
+        section.scrollIntoView({
+            block: "start",
+            behavior: "smooth"
+        });
+    }
+}
+
+function renderEmojiCats(){
+    const root = $("emojiCats");
+    if(!root){
+        return;
+    }
+    root.innerHTML = "";
+    listEmojiCategories().forEach(cat => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "emoji-cat" + (state.emojiCategory === cat.id ? " active" : "");
+        button.textContent = cat.label;
+        button.setAttribute("role", "tab");
+        button.setAttribute("aria-selected", state.emojiCategory === cat.id ? "true" : "false");
+        button.dataset.emojiCat = cat.id;
+        button.addEventListener("click", () => {
+            state.emojiCategory = cat.id;
+            renderEmojiCats();
+            const search = unicodeSafeTrim(($("emojiSearchInput") && $("emojiSearchInput").value) || "");
+            if(search){
+                // Leaving search restores the full sectional grid, then jumps.
+                if($("emojiSearchInput")){
+                    $("emojiSearchInput").value = "";
+                }
+                renderEmojiGrid();
+            }
+            // Ensure the active chip stays visible in the horizontal strip.
+            try{
+                button.scrollIntoView({
+                    inline: "center",
+                    block: "nearest",
+                    behavior: "smooth"
+                });
+            }catch(_e){}
+            window.setTimeout(() => {
+                scrollEmojiGridToCategory(cat.id);
+            }, 16);
+        });
+        root.appendChild(button);
+    });
+}
+
+function renderEmojiGrid(){
+    const root = $("emojiGrid");
+    if(!root){
+        return;
+    }
+    root.innerHTML = "";
+    const search = unicodeSafeTrim(($("emojiSearchInput") && $("emojiSearchInput").value) || "").toLowerCase();
+    const catalog = getEmojiCatalog();
+
+    function addCell(emoji, name){
+        if(!isLikelyEmoji(emoji)){
+            return;
+        }
+        if(search && String(name || "").toLowerCase().indexOf(search) < 0 && emoji.indexOf(search) < 0){
+            return;
+        }
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "emoji-cell";
+        button.textContent = emoji;
+        button.title = name || emoji;
+        button.setAttribute("aria-label", name || emoji);
+        button.addEventListener("click", () => {
+            if(state.emojiPickerMode === "react" && state.emojiReactMessageId){
+                const messageId = state.emojiReactMessageId;
+                rememberEmoji(emoji);
+                closeEmojiModal();
+                addOrToggleReaction(messageId, emoji);
+                return;
+            }
+            insertEmojiAtCursor(emoji);
+            closeEmojiModal();
+        });
+        root.appendChild(button);
+    }
+
+    function addSection(id, labelText){
+        const label = document.createElement("div");
+        label.className = "emoji-section-label";
+        label.id = "emoji-section-" + String(id);
+        label.textContent = labelText;
+        root.appendChild(label);
+        return label;
+    }
+
+    if(search){
+        addSection("search", "Search results");
+        catalog.categories.forEach(cat => {
+            (cat.emojis || []).forEach(item => addCell(item.e, item.n));
+        });
+        return;
+    }
+
+    // Full catalog in one vertical scroller; category tabs jump to sections.
+    addSection("recent", "Recently used");
+    const recent = readRecentEmojis();
+    if(!recent.length){
+        REACTIONS.forEach(emoji => addCell(emoji, emoji));
+    }else{
+        recent.forEach(emoji => addCell(emoji, emoji));
+    }
+
+    catalog.categories.forEach(cat => {
+        addSection(cat.id, cat.label);
+        (cat.emojis || []).forEach(item => addCell(item.e, item.n));
+    });
+
+    if(state.emojiCategory){
+        window.setTimeout(() => {
+            scrollEmojiGridToCategory(state.emojiCategory);
+        }, 0);
+    }
+}
 
 
 /* =========================================================
@@ -1789,33 +2553,212 @@ function saveTranslationPreferences(){
    TRANSLATION UI
 ========================================================= */
 
+function getTranslationLanguage(
+    code
+){
+
+    return TRANSLATION_LANGUAGES.find(
+        item =>
+            item.code === code
+    ) || null;
+
+}
+
 function getTranslationLanguageName(
     code
 ){
 
-    const select =
-        $("translationTargetLanguage");
+    const lang =
+        getTranslationLanguage(code);
 
-    if(select){
-
-        const option =
-            Array.from(
-                select.options
-            ).find(
-                item =>
-                    item.value === code
-            );
-
-        if(option){
-
-            return option.textContent.trim();
-
-        }
-
+    if(lang){
+        return lang.native + " (" + lang.english + ")";
     }
 
     return String(code || "")
         .toUpperCase();
+
+}
+
+function syncTranslationLanguageButton(){
+
+    const hidden =
+        $("translationTargetLanguage");
+
+    const nativeEl =
+        $("translationLanguageNative");
+
+    const englishEl =
+        $("translationLanguageEnglish");
+
+    const lang =
+        getTranslationLanguage(
+            state.translationTarget
+        ) || TRANSLATION_LANGUAGES[0];
+
+    if(hidden){
+        hidden.value = lang.code;
+    }
+
+    if(nativeEl){
+        nativeEl.textContent =
+            lang.native;
+        nativeEl.dir = lang.dir;
+    }
+
+    if(englishEl){
+        englishEl.textContent =
+            lang.english;
+    }
+
+}
+
+function renderLanguageOptions(
+    filterText
+){
+
+    const list =
+        $("languageList");
+
+    if(!list){
+        return;
+    }
+
+    const q =
+        String(filterText || "")
+            .trim()
+            .toLowerCase();
+
+    list.innerHTML = "";
+
+    TRANSLATION_LANGUAGES.forEach(
+        lang => {
+
+            const hay =
+                (
+                    lang.code +
+                    " " +
+                    lang.english +
+                    " " +
+                    lang.native
+                ).toLowerCase();
+
+            if(
+                q &&
+                hay.indexOf(q) === -1
+            ){
+                return;
+            }
+
+            const btn =
+                document.createElement(
+                    "button"
+                );
+
+            btn.type = "button";
+            btn.className =
+                "language-option" +
+                (
+                    lang.dir === "rtl"
+                        ? " rtl"
+                        : ""
+                );
+            btn.setAttribute(
+                "role",
+                "option"
+            );
+            btn.setAttribute(
+                "aria-selected",
+                lang.code ===
+                state.translationTarget
+                    ? "true"
+                    : "false"
+            );
+            btn.dataset.code =
+                lang.code;
+            btn.innerHTML =
+                '<span><span class="native"></span><span class="english"></span></span><span class="check">✓</span>';
+            btn.querySelector(
+                ".native"
+            ).textContent =
+                lang.native;
+            btn.querySelector(
+                ".english"
+            ).textContent =
+                lang.english;
+            btn.addEventListener(
+                "click",
+                () => {
+
+                    changeTranslationTarget(
+                        lang.code
+                    );
+                    closeLanguageModal();
+
+                }
+            );
+            list.appendChild(btn);
+
+        }
+    );
+
+}
+
+function openLanguageModal(){
+
+    const modal =
+        $("languageModal");
+
+    const button =
+        $("translationLanguageButton");
+
+    if(!modal){
+        return;
+    }
+
+    modal.hidden = false;
+    modal.classList.add("open");
+
+    if(button){
+        button.setAttribute(
+            "aria-expanded",
+            "true"
+        );
+    }
+
+    renderLanguageOptions("");
+
+    const search =
+        $("languageSearchInput");
+
+    if(search){
+        search.value = "";
+        search.focus();
+    }
+
+}
+
+function closeLanguageModal(){
+
+    const modal =
+        $("languageModal");
+
+    const button =
+        $("translationLanguageButton");
+
+    if(!modal){
+        return;
+    }
+
+    modal.classList.remove("open");
+    modal.hidden = true;
+
+    if(button){
+        button.setAttribute(
+            "aria-expanded",
+            "false"
+        );
+    }
 
 }
 
@@ -1842,6 +2785,8 @@ function updateTranslationUI(){
 
     const activeText =
         $("translationActiveText");
+
+    syncTranslationLanguageButton();
 
     if(panel){
 
@@ -1903,12 +2848,8 @@ function updateTranslationUI(){
     if(target){
 
         const exists =
-            Array.from(
-                target.options
-            ).some(
-                option =>
-                    option.value ===
-                    state.translationTarget
+            getTranslationLanguage(
+                state.translationTarget
             );
 
         if(exists){
@@ -1919,7 +2860,8 @@ function updateTranslationUI(){
         }else{
 
             state.translationTarget =
-                target.value;
+                "en";
+            target.value = "en";
 
         }
 
@@ -2493,6 +3435,52 @@ async function loadConversations(){
                 ? result.data
                 : [];
 
+        try{
+            const blocked =
+                await withTimeout(
+                    supabaseClient
+                        .from("user_blocks")
+                        .select("blocked_id")
+                        .eq("blocker_id", userId)
+                );
+            if(
+                !blocked.error &&
+                Array.isArray(blocked.data)
+            ){
+                const blockedIds =
+                    {};
+                blocked.data.forEach(function(row){
+                    if(row && row.blocked_id){
+                        blockedIds[
+                            String(row.blocked_id)
+                        ] = true;
+                    }
+                });
+                state.conversations =
+                    state.conversations.filter(
+                        function(conversation){
+                            const other =
+                                String(
+                                    conversation.buyer_id
+                                ) === userId
+                                ?
+                                String(
+                                    conversation.seller_id ||
+                                    ""
+                                )
+                                :
+                                String(
+                                    conversation.buyer_id ||
+                                    ""
+                                );
+                            return !blockedIds[other];
+                        }
+                    );
+            }
+        }catch(blockError){
+            // Table may be undeployed; keep conversations visible.
+        }
+
         state.conversations.forEach(
             conversation => {
 
@@ -2735,7 +3723,7 @@ async function enrichConversations(){
                             supabaseClient
                                 .from("messages")
                                 .select(
-                                    "id,sender_id,message_text,created_at,is_read"
+                                    "id,sender_id,message_text,created_at,is_read,delivered_at,read_at"
                                 )
                                 .eq(
                                     "conversation_id",
@@ -3199,6 +4187,53 @@ function getConversationRole(
 
 }
 
+function conversationMatchesRoute(conversation, route){
+    if(!conversation || !conversation.id){
+        return false;
+    }
+    if(
+        route.conversationId &&
+        String(conversation.id) !== String(route.conversationId)
+    ){
+        return false;
+    }
+    if(
+        route.adId &&
+        String(conversation.ad_id) !== String(route.adId)
+    ){
+        return false;
+    }
+    if(
+        route.sellerId &&
+        String(conversation.seller_id) !== String(route.sellerId)
+    ){
+        return false;
+    }
+    const me = state.currentUser && String(state.currentUser.id);
+    if(!me){
+        return false;
+    }
+    const isBuyer = String(conversation.buyer_id) === me;
+    const isSeller = String(conversation.seller_id) === me;
+    if(!isBuyer && !isSeller){
+        return false;
+    }
+    // Message Seller always creates buyer-side threads for this listing seller.
+    if(route.sellerId && isBuyer && String(conversation.seller_id) !== String(route.sellerId)){
+        return false;
+    }
+    return true;
+}
+
+function readChatRouteParams(){
+    const params = new URLSearchParams(window.location.search || "");
+    return {
+        conversationId: params.get("conversation_id"),
+        adId: params.get("ad_id"),
+        sellerId: params.get("seller_id")
+    };
+}
+
 
 /* =========================================================
    OPEN CONVERSATION
@@ -3266,6 +4301,10 @@ async function openConversation(
         conversation.id
     );
 
+    await markMessagesDelivered(
+        conversation.id
+    );
+
     await markMessagesRead(
         conversation.id
     );
@@ -3297,62 +4336,100 @@ async function openConversation(
 
 async function openConversationFromUrl(){
 
-    const params =
-        new URLSearchParams(
-            window.location.search
-        );
+    const route = readChatRouteParams();
+    const conversationId = route.conversationId;
 
-    const conversationId =
-        params.get(
-            "conversation_id"
-        );
-
-    if(!conversationId){
+    if(!conversationId && !route.adId){
         return;
     }
 
-    const localConversation =
-        state.conversations.find(
-            conversation =>
-                String(
-                    conversation.id
-                ) ===
-                String(
-                    conversationId
-                )
-        );
+    async function resolveConversationRow(){
+        if(conversationId){
+            const localConversation =
+                state.conversations.find(
+                    conversation =>
+                        conversationMatchesRoute(conversation, route)
+                );
 
-    if(localConversation){
+            if(localConversation){
+                return localConversation;
+            }
 
-        await openConversation(
-            localConversation
-        );
+            const result =
+                await withTimeout(
+                    supabaseClient
+                        .from("conversations")
+                        .select(
+                            "id,ad_id,buyer_id,seller_id,created_at,updated_at"
+                        )
+                        .eq("id", conversationId)
+                        .maybeSingle()
+                );
 
-        return;
+            if(result.error){
+                throw result.error;
+            }
 
+            if(!result.data){
+                return null;
+            }
+
+            if(!conversationMatchesRoute(result.data, {
+                conversationId: conversationId,
+                adId: route.adId,
+                sellerId: route.sellerId
+            })){
+                console.error(
+                    "[HAVKAR] Refusing mismatched conversation route",
+                    {
+                        route: route,
+                        row: result.data
+                    }
+                );
+                showToast(
+                    "That chat does not match this listing seller.",
+                    "error"
+                );
+                return null;
+            }
+
+            return result.data;
+        }
+
+        // Fallback: listing-scoped resolve when only ad_id/seller_id are present.
+        if(route.adId){
+            const rpc =
+                await supabaseClient.rpc(
+                    "havkar_get_or_create_listing_conversation",
+                    {
+                        p_ad_id: Number(route.adId)
+                    }
+                );
+            const row =
+                Array.isArray(rpc.data)
+                    ? rpc.data[0]
+                    : rpc.data;
+            if(rpc.error || !row){
+                throw rpc.error || new Error("Listing conversation resolve failed");
+            }
+            if(!conversationMatchesRoute(row, route)){
+                showToast(
+                    "That chat does not match this listing seller.",
+                    "error"
+                );
+                return null;
+            }
+            return row;
+        }
+
+        return null;
     }
 
     try{
 
-        const result =
-            await withTimeout(
-                supabaseClient
-                    .from("conversations")
-                    .select(
-                        "id,ad_id,buyer_id,seller_id,created_at,updated_at"
-                    )
-                    .eq(
-                        "id",
-                        conversationId
-                    )
-                    .maybeSingle()
-            );
+        const row = await resolveConversationRow();
 
-        if(result.error){
-            throw result.error;
-        }
-
-        if(!result.data){
+        if(!row){
 
             showToast(
                 "Conversation not found.",
@@ -3363,65 +4440,54 @@ async function openConversationFromUrl(){
 
         }
 
-        const belongsToUser =
-            String(
-                result.data.buyer_id
-            ) ===
-            String(
-                state.currentUser.id
-            ) ||
-            String(
-                result.data.seller_id
-            ) ===
-            String(
-                state.currentUser.id
+        row.ad = row.ad || null;
+        row.lastMessage = row.lastMessage || null;
+        row.unreadCount = Number(row.unreadCount || 0);
+
+        const alreadyListed =
+            state.conversations.some(
+                item => String(item.id) === String(row.id)
             );
 
-        if(!belongsToUser){
-
-            showToast(
-                "You do not have access to this conversation.",
-                "error"
-            );
-
-            return;
-
+        if(!alreadyListed){
+            state.conversations = [row, ...state.conversations];
         }
 
-        result.data.ad =
-            null;
+        await openConversation(row);
 
-        result.data.lastMessage =
-            null;
-
-        result.data.unreadCount =
-            0;
-
-        state.conversations =
-            [
-                result.data,
-                ...state.conversations
-            ];
-
-        await openConversation(
-            result.data
-        );
+        // Keep URL canonical with listing identity so Android bfcache cannot
+        // restore an unrelated recent thread for the same seller.
+        try{
+            const canonical =
+                "chat.html?conversation_id=" +
+                encodeURIComponent(String(row.id)) +
+                "&ad_id=" +
+                encodeURIComponent(String(row.ad_id || "")) +
+                "&seller_id=" +
+                encodeURIComponent(String(row.seller_id || "")) +
+                "&v=msgroute1";
+            history.replaceState({}, "", canonical);
+        }catch(_e){}
 
         enrichSingleConversation(
-            result.data
+            row
         )
         .then(
             () => {
 
                 if(
-                    state.currentConversationId ===
-                    result.data.id
+                    String(state.currentConversationId) ===
+                    String(row.id)
                 ){
 
                     $("chatSubtitle")
                         .textContent =
-                        result.data.ad?.title ||
+                        (row.ad && row.ad.title) ||
                         "HAVKAR Conversation";
+
+                    $("chatPerson")
+                        .textContent =
+                        getConversationRole(row);
 
                 }
 
@@ -3543,6 +4609,29 @@ async function loadMessages(
         return;
     }
 
+    if(
+        state.currentConversation &&
+        String(state.currentConversation.id) === String(conversationId)
+    ){
+        const route = readChatRouteParams();
+        if(
+            (route.conversationId || route.adId || route.sellerId) &&
+            !conversationMatchesRoute(state.currentConversation, {
+                conversationId: route.conversationId || conversationId,
+                adId: route.adId,
+                sellerId: route.sellerId
+            })
+        ){
+            box.innerHTML = `
+                <div class="chat-empty">
+                    <i class="fas fa-shield-halved"></i>
+                    <p>Conversation identity mismatch. Messages were not loaded.</p>
+                </div>
+            `;
+            return;
+        }
+    }
+
     try{
 
         const result =
@@ -3550,7 +4639,7 @@ async function loadMessages(
                 supabaseClient
                     .from("messages")
                     .select(
-                        "id,conversation_id,sender_id,message_text,created_at,is_read"
+                        "id,conversation_id,sender_id,message_text,created_at,is_read,delivered_at,read_at"
                     )
                     .eq(
                         "conversation_id",
@@ -3566,6 +4655,14 @@ async function loadMessages(
 
         if(result.error){
             throw result.error;
+        }
+
+        // Drop stale responses if the user already switched threads.
+        if(
+            String(state.currentConversationId || "") !==
+            String(conversationId)
+        ){
+            return;
         }
 
         renderMessages(
@@ -3828,25 +4925,15 @@ function appendMessage(
             );
 
         checks.className =
-            "message-checks" +
-            (
-                message.is_read
-                    ? " read"
-                    : ""
-            );
+            "message-checks";
 
         checks.dataset.messageId =
             messageId;
 
-        checks.textContent =
-            message.is_read
-                ? "✓✓"
-                : "✓";
-
-        checks.title =
-            message.is_read
-                ? "Read"
-                : "Sent";
+        applyMessageChecks(
+            checks,
+            message
+        );
 
         meta.appendChild(
             checks
@@ -3862,53 +4949,14 @@ function appendMessage(
         meta
     );
 
-    const trigger =
-        document.createElement(
-            "button"
-        );
-
-    trigger.type =
-        "button";
-
-    trigger.className =
-        "reaction-trigger";
-
-    trigger.setAttribute(
-        "aria-label",
-        "React to message"
+    bindMessageLongPressReaction(
+        bubble,
+        wrap,
+        messageId
     );
-
-    trigger.innerHTML =
-        '<i class="far fa-face-smile"></i>';
-
-    trigger.addEventListener(
-        "click",
-        event => {
-
-            event.stopPropagation();
-
-            toggleReactionPicker(
-                wrap
-            );
-
-        }
-    );
-
-    const picker =
-        createReactionPicker(
-            messageId
-        );
 
     wrap.appendChild(
         bubble
-    );
-
-    wrap.appendChild(
-        trigger
-    );
-
-    wrap.appendChild(
-        picker
     );
 
     const reactionBar =
@@ -3946,110 +4994,248 @@ function appendMessage(
 
 
 /* =========================================================
-   REACTION PICKER
+   REACTION PICKER — WhatsApp-style long-press + fixed portal
 ========================================================= */
 
-function createReactionPicker(
-    messageId
-){
+function fillReactionPortal(messageId){
+    const portal = $("reactionPortal");
+    if(!portal){
+        return;
+    }
+    portal.innerHTML = "";
+    portal.dataset.messageId = String(messageId);
 
-    const picker =
-        document.createElement(
-            "div"
-        );
-
-    picker.className =
-        "reaction-picker";
-
-    picker.dataset.pickerFor =
-        messageId;
-
-    REACTIONS.forEach(
-        emoji => {
-
-            const button =
-                document.createElement(
-                    "button"
-                );
-
-            button.type =
-                "button";
-
-            button.className =
-                "reaction-option";
-
-            button.textContent =
-                emoji;
-
-            button.setAttribute(
-                "aria-label",
-                "React " + emoji
-            );
-
-            button.addEventListener(
-                "click",
-                event => {
-
-                    event.stopPropagation();
-
-                    addOrToggleReaction(
-                        messageId,
-                        emoji
-                    );
-
-                }
-            );
-
-            picker.appendChild(
-                button
-            );
-
+    const recent = readRecentEmojis().filter(isLikelyEmoji).slice(0, 3);
+    const quick = [];
+    recent.forEach(emoji => {
+        if(quick.indexOf(emoji) < 0){
+            quick.push(emoji);
         }
-    );
+    });
+    REACTIONS.forEach(emoji => {
+        if(quick.indexOf(emoji) < 0){
+            quick.push(emoji);
+        }
+    });
 
-    return picker;
+    quick.slice(0, 7).forEach(emoji => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "reaction-option";
+        button.textContent = emoji;
+        button.setAttribute("aria-label", "React " + emoji);
+        button.addEventListener("click", event => {
+            event.stopPropagation();
+            rememberEmoji(emoji);
+            addOrToggleReaction(messageId, emoji);
+            closeAllReactionPickers();
+        });
+        portal.appendChild(button);
+    });
 
+    const more = document.createElement("button");
+    more.type = "button";
+    more.className = "reaction-option reaction-more";
+    more.setAttribute("aria-label", "More emoji reactions");
+    more.textContent = "＋";
+    more.addEventListener("click", event => {
+        event.stopPropagation();
+        closeAllReactionPickers();
+        openReactionEmojiPicker(messageId);
+    });
+    portal.appendChild(more);
+
+    const copyBtn = document.createElement("button");
+    copyBtn.type = "button";
+    copyBtn.className = "reaction-option reaction-more";
+    copyBtn.setAttribute("aria-label", "Copy message text");
+    copyBtn.textContent = "⎘";
+    copyBtn.title = "Copy";
+    copyBtn.addEventListener("click", event => {
+        event.stopPropagation();
+        copyMessageText(messageId);
+        closeAllReactionPickers();
+    });
+    portal.appendChild(copyBtn);
 }
 
+function positionReactionPortal(anchor){
+    const portal = $("reactionPortal");
+    if(!portal || !anchor){
+        return;
+    }
+    const rect = anchor.getBoundingClientRect();
+    const pad = 8;
+    portal.style.visibility = "hidden";
+    portal.classList.add("show");
+    const width = portal.offsetWidth || 300;
+    const height = portal.offsetHeight || 56;
+    // Prefer above the bubble; if clipped, place below without covering text.
+    let left = rect.left + (rect.width / 2) - (width / 2);
+    let top = rect.top - height - 12;
+    if(top < pad){
+        top = rect.bottom + 12;
+    }
+    left = Math.max(pad, Math.min(left, window.innerWidth - width - pad));
+    top = Math.max(pad, Math.min(top, window.innerHeight - height - pad));
+    portal.style.left = left + "px";
+    portal.style.top = top + "px";
+    portal.style.visibility = "visible";
+}
 
-function toggleReactionPicker(
-    wrap
-){
-
-    const wasOpen =
-        wrap.classList.contains(
-            "reaction-open"
-        );
-
+function openReactionPickerForWrap(wrap, messageId){
     closeAllReactionPickers();
+    if(!wrap || !messageId){
+        return;
+    }
+    wrap.classList.add("reaction-open");
+    state.reactionPortalMessageId = String(messageId);
+    fillReactionPortal(messageId);
+    const bubble = wrap.querySelector(".message");
+    positionReactionPortal(bubble || wrap);
+}
 
-    if(!wasOpen){
+function clearNativeTextSelection(){
+    try{
+        const selection = window.getSelection && window.getSelection();
+        if(selection && selection.removeAllRanges){
+            selection.removeAllRanges();
+        }
+    }catch(_e){}
+}
 
-        wrap.classList.add(
-            "reaction-open"
-        );
+function copyMessageText(messageId){
+    const wrap = document.querySelector(
+        '[data-message-wrap="' + cssEscape(String(messageId)) + '"]'
+    );
+    const textEl = wrap && wrap.querySelector(".message-text");
+    const text = textEl ? String(textEl.textContent || "") : "";
+    if(!text){
+        return;
+    }
+    const done = () => showToast("Message copied.");
+    if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done).catch(() => {
+            window.prompt("Copy message", text);
+        });
+        return;
+    }
+    window.prompt("Copy message", text);
+}
 
+function bindMessageLongPressReaction(bubble, wrap, messageId){
+    if(!bubble || !wrap || !messageId){
+        return;
+    }
+    let timer = null;
+    let moved = false;
+    let longPressed = false;
+    const LONG_MS = 480;
+
+    bubble.setAttribute("unselectable", "on");
+    bubble.style.webkitUserSelect = "none";
+    bubble.style.userSelect = "none";
+
+    function clearTimer(){
+        if(timer){
+            window.clearTimeout(timer);
+            timer = null;
+        }
     }
 
+    function fireReaction(){
+        longPressed = true;
+        clearNativeTextSelection();
+        if(navigator.vibrate){
+            try{ navigator.vibrate(18); }catch(_e){}
+        }
+        openReactionPickerForWrap(wrap, messageId);
+    }
+
+    function start(event){
+        if(event.type === "mousedown" && event.button !== 0){
+            return;
+        }
+        moved = false;
+        longPressed = false;
+        clearNativeTextSelection();
+        clearTimer();
+        timer = window.setTimeout(() => {
+            timer = null;
+            if(moved){
+                return;
+            }
+            fireReaction();
+        }, LONG_MS);
+    }
+
+    function cancel(event){
+        clearTimer();
+        if(longPressed && event){
+            // Stop Android from turning the long-press into a drag-select.
+            event.preventDefault();
+        }
+    }
+
+    function onMove(event){
+        if(!timer){
+            return;
+        }
+        const touch = event.touches && event.touches[0];
+        if(touch && (
+            Math.abs(touch.clientX - (bubble._lpX || touch.clientX)) > 10 ||
+            Math.abs(touch.clientY - (bubble._lpY || touch.clientY)) > 10
+        )){
+            moved = true;
+            clearTimer();
+        }
+    }
+
+    bubble.addEventListener("selectstart", event => {
+        event.preventDefault();
+    });
+    bubble.addEventListener("touchstart", event => {
+        const touch = event.touches && event.touches[0];
+        if(touch){
+            bubble._lpX = touch.clientX;
+            bubble._lpY = touch.clientY;
+        }
+        start(event);
+    }, { passive:true });
+    bubble.addEventListener("touchmove", onMove, { passive:true });
+    bubble.addEventListener("touchend", cancel, { passive:false });
+    bubble.addEventListener("touchcancel", cancel, { passive:false });
+    bubble.addEventListener("mousedown", start);
+    bubble.addEventListener("mouseup", cancel);
+    bubble.addEventListener("mouseleave", cancel);
+    bubble.addEventListener("contextmenu", event => {
+        event.preventDefault();
+        clearNativeTextSelection();
+        openReactionPickerForWrap(wrap, messageId);
+    });
 }
 
-
 function closeAllReactionPickers(){
+    document.querySelectorAll(".message-wrap.reaction-open").forEach(element => {
+        element.classList.remove("reaction-open");
+    });
+    const portal = $("reactionPortal");
+    if(portal){
+        portal.classList.remove("show");
+        portal.innerHTML = "";
+        portal.removeAttribute("data-message-id");
+    }
+    state.reactionPortalMessageId = null;
+}
 
-    document
-        .querySelectorAll(
-            ".message-wrap.reaction-open"
-        )
-        .forEach(
-            element => {
-
-                element.classList.remove(
-                    "reaction-open"
-                );
-
-            }
-        );
-
+async function openReactionEmojiPicker(messageId){
+    state.emojiPickerMode = "react";
+    state.emojiReactMessageId = String(messageId);
+    const title = $("emojiModalTitle");
+    if(title){
+        title.textContent = "React with emoji";
+    }
+    await openEmojiModal();
 }
 
 
@@ -4127,7 +5313,7 @@ async function loadReactions(
                 const emoji =
                     String(reaction.emoji || "");
 
-                if(!REACTIONS.includes(emoji)){
+                if(!isLikelyEmoji(emoji)){
                     return;
                 }
 
@@ -4217,7 +5403,7 @@ async function refreshMessageReaction(
                 const userId =
                     String(reaction.user_id);
 
-                if(!REACTIONS.includes(emoji)){
+                if(!isLikelyEmoji(emoji)){
                     return;
                 }
 
@@ -4295,9 +5481,18 @@ async function addOrToggleReaction(
         return;
     }
 
-    if(!REACTIONS.includes(emoji)){
+    if(!isLikelyEmoji(emoji)){
         return;
     }
+
+    const reactionKey =
+        String(messageId);
+
+    if(state.reactionInFlight[reactionKey]){
+        return;
+    }
+
+    state.reactionInFlight[reactionKey] = true;
 
     const userId =
         String(state.currentUser.id);
@@ -4340,6 +5535,8 @@ async function addOrToggleReaction(
 
         }else{
 
+            /* UNIQUE(message_id,user_id) + upsert = one reaction per user;
+               retries replace emoji instead of inserting duplicates. */
             const upsertResult =
                 await withTimeout(
                     supabaseClient
@@ -4355,7 +5552,9 @@ async function addOrToggleReaction(
                             },
                             {
                                 onConflict:
-                                    "message_id,user_id"
+                                    "message_id,user_id",
+                                ignoreDuplicates:
+                                    false
                             }
                         )
                 );
@@ -4379,13 +5578,30 @@ async function addOrToggleReaction(
 
         console.error(
             "[HAVKAR] Reaction database write failed:",
-            error
+            {
+                messageId:
+                    String(messageId),
+                emoji:
+                    emoji,
+                code:
+                    error?.code || null,
+                message:
+                    error?.message || String(error),
+                details:
+                    error?.details || null,
+                hint:
+                    error?.hint || null
+            }
         );
 
         showToast(
             "Reaction could not be saved.",
             "error"
         );
+
+    }finally{
+
+        delete state.reactionInFlight[reactionKey];
 
     }
 
@@ -4492,95 +5708,51 @@ function renderMessageReactions(
             )
             : null;
 
-    REACTIONS.forEach(
-        emoji => {
+    const emojiKeys = Object.keys(data || {}).filter(emoji => {
+        const users = data[emoji];
+        return Array.isArray(users) && users.length > 0 && isLikelyEmoji(emoji);
+    });
 
-            const users =
-                Array.isArray(
-                    data[emoji]
-                )
-                    ? data[emoji]
-                    : [];
-
-            if(!users.length){
-                return;
-            }
-
-            const chip =
-                document.createElement(
-                    "button"
-                );
-
-            chip.type =
-                "button";
-
-            chip.className =
-                "reaction-chip";
-
-            if(
-                userId &&
-                users.some(
-                    id =>
-                        String(id) ===
-                        userId
-                )
-            ){
-
-                chip.classList.add(
-                    "mine"
-                );
-
-            }
-
-            const emojiSpan =
-                document.createElement(
-                    "span"
-                );
-
-            emojiSpan.textContent =
-                emoji;
-
-            const count =
-                document.createElement(
-                    "span"
-                );
-
-            count.className =
-                "reaction-count";
-
-            count.textContent =
-                String(
-                    users.length
-                );
-
-            chip.appendChild(
-                emojiSpan
-            );
-
-            chip.appendChild(
-                count
-            );
-
-            chip.addEventListener(
-                "click",
-                event => {
-
-                    event.stopPropagation();
-
-                    addOrToggleReaction(
-                        messageId,
-                        emoji
-                    );
-
-                }
-            );
-
-            bar.appendChild(
-                chip
-            );
-
+    // Stable order: quick reactions first, then remaining by popularity.
+    emojiKeys.sort((a, b) => {
+        const ai = REACTIONS.indexOf(a);
+        const bi = REACTIONS.indexOf(b);
+        if(ai >= 0 && bi >= 0){
+            return ai - bi;
         }
-    );
+        if(ai >= 0){
+            return -1;
+        }
+        if(bi >= 0){
+            return 1;
+        }
+        return (data[b].length - data[a].length) || a.localeCompare(b);
+    });
+
+    emojiKeys.forEach(emoji => {
+        const users = data[emoji];
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "reaction-chip";
+        if(
+            userId &&
+            users.some(id => String(id) === userId)
+        ){
+            chip.classList.add("mine");
+        }
+        const emojiSpan = document.createElement("span");
+        emojiSpan.textContent = emoji;
+        const count = document.createElement("span");
+        count.className = "reaction-count";
+        count.textContent = String(users.length);
+        chip.appendChild(emojiSpan);
+        chip.appendChild(count);
+        chip.addEventListener("click", event => {
+            event.stopPropagation();
+            addOrToggleReaction(messageId, emoji);
+        });
+        bar.appendChild(chip);
+    });
 
 }
 
@@ -4732,7 +5904,125 @@ function removeReactionSubscription(){
    SEND MESSAGE
 ========================================================= */
 
-async function sendMessage(){
+function hideSendRetry(){
+
+    const bar =
+        $("sendRetryBar");
+
+    if(bar){
+        bar.classList.remove("show");
+    }
+
+    state.lastSendError =
+        null;
+
+}
+
+function showSendRetry(
+    message
+){
+
+    const bar =
+        $("sendRetryBar");
+
+    const text =
+        $("sendRetryText");
+
+    if(text){
+        text.textContent =
+            message ||
+            "Message not sent.";
+    }
+
+    if(bar){
+        bar.classList.add("show");
+    }
+
+}
+
+function newClientMessageId(){
+
+    if(
+        globalThis.crypto &&
+        typeof globalThis.crypto.randomUUID ===
+            "function"
+    ){
+        return globalThis.crypto.randomUUID();
+    }
+
+    return (
+        "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"
+    ).replace(
+        /[xy]/g,
+        c => {
+            const r =
+                Math.random() * 16 | 0;
+            const v =
+                c === "x"
+                    ? r
+                    : (r & 0x3 | 0x8);
+            return v.toString(16);
+        }
+    );
+
+}
+
+async function dispatchChatPush(
+    message
+){
+
+    try{
+
+        const session =
+            await supabaseClient.auth.getSession();
+
+        const token =
+            session &&
+            session.data &&
+            session.data.session &&
+            session.data.session.access_token;
+
+        if(!token || !message){
+            return;
+        }
+
+        await fetch(
+            "/api/chat-notify?action=notify_message",
+            {
+                method:"POST",
+                headers:{
+                    "Content-Type":
+                        "application/json",
+                    Authorization:
+                        "Bearer " +
+                        token
+                },
+                body:JSON.stringify({
+                    conversation_id:
+                        message.conversation_id,
+                    message_id:
+                        message.id
+                })
+            }
+        );
+
+    }catch(error){
+
+        console.warn(
+            "[HAVKAR] Push dispatch skipped:",
+            error
+        );
+
+    }
+
+}
+
+async function sendMessage(
+    options
+){
+
+    const opts =
+        options || {};
 
     if(!state.currentUser){
 
@@ -4772,15 +6062,23 @@ async function sendMessage(){
         return;
     }
 
+    if(state.sending){
+        return;
+    }
+
     const originalText =
-        input.value.trim();
+        unicodeSafeTrim(
+            opts.forceText != null
+                ? opts.forceText
+                : input.value
+        );
 
     if(!originalText){
         return;
     }
 
     if(
-        originalText.length >
+        Array.from(originalText).length >
         MAX_MESSAGE_LENGTH
     ){
 
@@ -4792,6 +6090,12 @@ async function sendMessage(){
         return;
 
     }
+
+    state.sending = true;
+    state.pendingDraft =
+        originalText;
+
+    hideSendRetry();
 
     input.disabled =
         true;
@@ -4809,9 +6113,15 @@ async function sendMessage(){
     let textToSend =
         originalText;
 
+    let translationFailed =
+        false;
+
     try{
 
-        if(state.autoTranslate){
+        if(
+            state.autoTranslate &&
+            !opts.skipTranslate
+        ){
 
             state.translating =
                 true;
@@ -4832,10 +6142,21 @@ async function sendMessage(){
                 "..."
             );
 
-            textToSend =
-                await translateOutgoingMessage(
-                    originalText
-                );
+            try{
+
+                textToSend =
+                    await translateOutgoingMessage(
+                        originalText
+                    );
+
+            }catch(translateError){
+
+                translationFailed =
+                    true;
+
+                throw translateError;
+
+            }
 
             if(
                 textToSend.length >
@@ -4861,40 +6182,58 @@ async function sendMessage(){
 
         }
 
+        const clientMessageId =
+            newClientMessageId();
+
         const result =
             await withTimeout(
-                supabaseClient
-                    .from("messages")
-                    .insert({
-                        conversation_id:
+                supabaseClient.rpc(
+                    "havkar_send_chat_message",
+                    {
+                        p_conversation_id:
                             state.currentConversationId,
-
-                        sender_id:
-                            state.currentUser.id,
-
-                        message_text:
+                        p_message_text:
                             textToSend,
-
-                        is_read:false
-                    })
-                    .select(
-                        "id,conversation_id,sender_id,message_text,created_at,is_read"
-                    )
-                    .single()
+                        p_client_message_id:
+                            clientMessageId
+                    }
+                ),
+                20000
             );
 
         if(result.error){
             throw result.error;
         }
 
+        const saved =
+            Array.isArray(result.data)
+                ? result.data[0]
+                : result.data;
+
+        if(
+            !saved ||
+            !saved.id
+        ){
+            throw new Error(
+                "Message was not persisted."
+            );
+        }
+
+        // Only clear draft after confirmed persistence.
         input.value = "";
+        state.pendingDraft = "";
+        hideSendRetry();
+
+        state.knownMessageIds[
+            String(saved.id)
+        ] = true;
 
         appendMessage(
-            result.data,
+            saved,
             true
         );
 
-        if(state.autoTranslate){
+        if(state.autoTranslate && !opts.skipTranslate){
 
             showToast(
                 "Translated message sent.",
@@ -4903,7 +6242,7 @@ async function sendMessage(){
 
         }
 
-        await updateConversationTimestamp();
+        dispatchChatPush(saved);
 
     }catch(error){
 
@@ -4912,35 +6251,56 @@ async function sendMessage(){
             error
         );
 
+        // Preserve the original draft for retry.
+        input.value =
+            state.pendingDraft ||
+            originalText;
+
         const message =
             String(
-                error?.message || ""
+                error?.message ||
+                error?.error_description ||
+                ""
             );
 
-        if(
-            state.autoTranslate &&
-            (
-                message.toLowerCase()
-                    .includes("translation") ||
-                message.toLowerCase()
-                    .includes("translate") ||
-                message.toLowerCase()
-                    .includes("timed out")
-            )
+        state.lastSendError =
+            message;
+
+        if(translationFailed){
+
+            showToast(
+                "Translation failed. Your original text was kept — tap Retry to send without translation, or fix translation settings.",
+                "error"
+            );
+            showSendRetry(
+                "Translation failed. Retry sends the original text."
+            );
+
+        }else if(
+            message === "REQUEST_TIMEOUT"
         ){
 
             showToast(
-                "Translation failed. Message was not sent.",
+                "Sending the message timed out.",
                 "error"
+            );
+            showSendRetry(
+                "Timed out. Retry send."
             );
 
         }else{
 
             showToast(
-                message === "REQUEST_TIMEOUT"
-                    ? "Sending the message timed out."
-                    : "Message could not be sent.",
+                "Message could not be sent" +
+                (
+                    message
+                        ? ": " + message
+                        : "."
+                ),
                 "error"
+            );
+            showSendRetry(
+                "Message not saved. Retry."
             );
 
         }
@@ -4948,6 +6308,9 @@ async function sendMessage(){
     }finally{
 
         state.translating =
+            false;
+
+        state.sending =
             false;
 
         if(translationButton){
@@ -4967,6 +6330,7 @@ async function sendMessage(){
         button.disabled =
             false;
 
+        autoSizeMessageInput();
         input.focus();
 
     }
@@ -5023,8 +6387,98 @@ async function updateConversationTimestamp(){
 
 
 /* =========================================================
-   MARK READ
+   MESSAGE RECEIPTS (SENT / DELIVERED / READ)
 ========================================================= */
+
+function messageReceiptState(message){
+    if(!message){
+        return "sent";
+    }
+    if(message.read_at || message.is_read === true){
+        return "read";
+    }
+    if(message.delivered_at){
+        return "delivered";
+    }
+    return "sent";
+}
+
+function applyMessageChecks(element, message){
+    if(!element){
+        return;
+    }
+    const receipt =
+        messageReceiptState(message);
+    element.classList.remove(
+        "delivered",
+        "read"
+    );
+    if(receipt === "read"){
+        element.classList.add("read");
+        element.textContent = "✓✓";
+        element.title = "Read";
+    }else if(receipt === "delivered"){
+        element.classList.add("delivered");
+        element.textContent = "✓✓";
+        element.title = "Delivered";
+    }else{
+        element.textContent = "✓";
+        element.title = "Sent";
+    }
+}
+
+async function markMessagesDelivered(
+    conversationId,
+    messageIds
+){
+
+    if(
+        !state.currentUser ||
+        !conversationId
+    ){
+        return;
+    }
+
+    try{
+
+        const params = {
+            p_conversation_id:
+                conversationId
+        };
+
+        if(
+            Array.isArray(messageIds) &&
+            messageIds.length
+        ){
+            params.p_message_ids =
+                messageIds;
+        }
+
+        const result =
+            await withTimeout(
+                supabaseClient.rpc(
+                    "havkar_mark_messages_delivered",
+                    params
+                )
+            );
+
+        if(result.error){
+            console.warn(
+                "[HAVKAR] Mark delivered error:",
+                result.error
+            );
+        }
+
+    }catch(error){
+
+        console.warn(
+            "[HAVKAR] Mark delivered failed:",
+            error
+        );
+
+    }
+
+}
 
 async function markMessagesRead(
     conversationId
@@ -5041,23 +6495,13 @@ async function markMessagesRead(
 
         const result =
             await withTimeout(
-                supabaseClient
-                    .from("messages")
-                    .update({
-                        is_read:true
-                    })
-                    .eq(
-                        "conversation_id",
-                        conversationId
-                    )
-                    .neq(
-                        "sender_id",
-                        state.currentUser.id
-                    )
-                    .eq(
-                        "is_read",
-                        false
-                    )
+                supabaseClient.rpc(
+                    "havkar_mark_messages_read",
+                    {
+                        p_conversation_id:
+                            conversationId
+                    }
+                )
             );
 
         if(result.error){
@@ -5223,10 +6667,30 @@ function attachConversationRealtime(
                             return;
                         }
 
-                        appendMessage(
-                            message,
-                            true
-                        );
+                        if(
+                            message &&
+                            message.id &&
+                            state.knownMessageIds[
+                                String(message.id)
+                            ]
+                        ){
+                            updateRenderedMessage(
+                                message
+                            );
+                        }else{
+                            if(
+                                message &&
+                                message.id
+                            ){
+                                state.knownMessageIds[
+                                    String(message.id)
+                                ] = true;
+                            }
+                            appendMessage(
+                                message,
+                                true
+                            );
+                        }
 
                         if(
                             String(
@@ -5237,11 +6701,22 @@ function attachConversationRealtime(
                             )
                         ){
 
+                            await markMessagesDelivered(
+                                conversationId,
+                                message.id
+                                    ? [message.id]
+                                    : null
+                            );
+
                             await markMessagesRead(
                                 conversationId
                             );
 
                         }
+
+                        bumpInboxFromMessage(
+                            message
+                        );
 
                     }
                 )
@@ -5312,6 +6787,330 @@ function removeRealtimeSubscription(){
 
 }
 
+function bumpInboxFromMessage(
+    message
+){
+
+    if(
+        !message ||
+        !state.currentUser
+    ){
+        return;
+    }
+
+    const conversation =
+        state.conversations.find(
+            item =>
+                String(item.id) ===
+                String(
+                    message.conversation_id
+                )
+        );
+
+    if(!conversation){
+        // Unknown conversation — refresh list on next tick.
+        window.setTimeout(
+            () => {
+                loadConversations();
+            },
+            250
+        );
+        return;
+    }
+
+    conversation.lastMessage =
+        message;
+    conversation.updated_at =
+        message.created_at ||
+        new Date().toISOString();
+
+    if(
+        String(message.sender_id) !==
+        String(state.currentUser.id) &&
+        String(
+            state.currentConversationId ||
+            ""
+        ) !==
+        String(message.conversation_id)
+    ){
+        conversation.unreadCount =
+            Number(
+                conversation.unreadCount ||
+                0
+            ) + 1;
+    }
+
+    state.conversations.sort(
+        (a, b) =>
+            new Date(
+                b.updated_at || 0
+            ) -
+            new Date(
+                a.updated_at || 0
+            )
+    );
+
+    if(!state.currentConversationId){
+        renderConversationList();
+    }
+
+}
+
+async function subscribeInboxRealtime(){
+
+    if(
+        !supabaseClient ||
+        !state.currentUser
+    ){
+        return;
+    }
+
+    await prepareChatRealtimeAuth();
+
+    if(state.inboxChannel){
+
+        try{
+            supabaseClient.removeChannel(
+                state.inboxChannel
+            );
+        }catch(_e){}
+
+        state.inboxChannel =
+            null;
+
+    }
+
+    try{
+
+        state.inboxChannel =
+            supabaseClient
+                .channel(
+                    "havkar-inbox-" +
+                    state.currentUser.id +
+                    "-" +
+                    Date.now()
+                )
+                .on(
+                    "postgres_changes",
+                    {
+                        event:"INSERT",
+                        schema:"public",
+                        table:"messages"
+                    },
+                    payload => {
+
+                        const message =
+                            payload?.new;
+
+                        if(!message){
+                            return;
+                        }
+
+                        if(
+                            String(
+                                message.conversation_id
+                            ) ===
+                            String(
+                                state.currentConversationId ||
+                                ""
+                            )
+                        ){
+                            return;
+                        }
+
+                        bumpInboxFromMessage(
+                            message
+                        );
+
+                    }
+                )
+                .on(
+                    "postgres_changes",
+                    {
+                        event:"UPDATE",
+                        schema:"public",
+                        table:"conversations"
+                    },
+                    () => {
+
+                        if(
+                            !state.currentConversationId
+                        ){
+                            loadConversations();
+                        }
+
+                    }
+                )
+                .subscribe(
+                    status => {
+
+                        console.log(
+                            "[HAVKAR] Inbox realtime:",
+                            status
+                        );
+
+                    }
+                );
+
+    }catch(error){
+
+        console.warn(
+            "[HAVKAR] Inbox realtime failed:",
+            error
+        );
+
+    }
+
+}
+
+async function ensurePushRegistration(){
+
+    try{
+
+        const session =
+            await supabaseClient.auth.getSession();
+
+        const accessToken =
+            session &&
+            session.data &&
+            session.data.session &&
+            session.data.session.access_token;
+
+        if(!accessToken){
+            return;
+        }
+
+        const statusRes =
+            await fetch(
+                "/api/chat-notify?action=status",
+                {
+                    headers:{
+                        Authorization:
+                            "Bearer " +
+                            accessToken
+                    }
+                }
+            );
+
+        const statusBody =
+            await statusRes
+                .json()
+                .catch(
+                    () => ({})
+                );
+
+        state.pushConfigured =
+            Boolean(
+                statusBody.web_push_configured
+            );
+
+        if(
+            !state.pushConfigured ||
+            !("Notification" in window) ||
+            !("serviceWorker" in navigator) ||
+            !("PushManager" in window)
+        ){
+            return;
+        }
+
+        let permission =
+            Notification.permission;
+
+        if(permission === "default"){
+            permission =
+                await Notification.requestPermission();
+        }
+
+        if(permission !== "granted"){
+            return;
+        }
+
+        const registration =
+            await navigator.serviceWorker.ready;
+
+        const vapid =
+            statusBody.vapid_public_key;
+
+        if(!vapid){
+            return;
+        }
+
+        const raw =
+            Uint8Array.from(
+                atob(
+                    vapid
+                        .replace(
+                            /-/g,
+                            "+"
+                        )
+                        .replace(
+                            /_/g,
+                            "/"
+                        )
+                ),
+                c =>
+                    c.charCodeAt(0)
+            );
+
+        let subscription =
+            await registration.pushManager.getSubscription();
+
+        if(!subscription){
+            subscription =
+                await registration.pushManager.subscribe({
+                    userVisibleOnly:true,
+                    applicationServerKey:raw
+                });
+        }
+
+        const json =
+            subscription.toJSON();
+
+        await fetch(
+            "/api/chat-notify?action=register",
+            {
+                method:"POST",
+                headers:{
+                    "Content-Type":
+                        "application/json",
+                    Authorization:
+                        "Bearer " +
+                        accessToken
+                },
+                body:JSON.stringify({
+                    platform:
+                        /android/i.test(
+                            navigator.userAgent
+                        )
+                            ? "android"
+                            : /iphone|ipad|ios/i.test(
+                                navigator.userAgent
+                            )
+                                ? "ios"
+                                : "web",
+                    endpoint:
+                        json.endpoint,
+                    p256dh:
+                        json.keys &&
+                        json.keys.p256dh,
+                    auth:
+                        json.keys &&
+                        json.keys.auth
+                })
+            }
+        );
+
+    }catch(error){
+
+        console.warn(
+            "[HAVKAR] Push registration skipped:",
+            error
+        );
+
+    }
+
+}
+
 
 /* =========================================================
    UPDATE MESSAGE
@@ -5360,20 +7159,10 @@ function updateRenderedMessage(
         )
     ){
 
-        element.textContent =
-            message.is_read
-                ? "✓✓"
-                : "✓";
-
-        element.classList.toggle(
-            "read",
-            !!message.is_read
+        applyMessageChecks(
+            element,
+            message
         );
-
-        element.title =
-            message.is_read
-                ? "Read"
-                : "Sent";
 
     }
 
@@ -5754,13 +7543,15 @@ document.addEventListener(
     "keydown",
     event => {
 
-        if(event.key === "Escape"){
+            if(event.key === "Escape"){
 
             closeHeaderMenu();
 
             closeAllReactionPickers();
 
             closeTranslationPanel();
+
+            closeLanguageModal();
 
         }
 
@@ -5792,6 +7583,16 @@ function setupAuthListener(){
                 removeRealtimeSubscription();
 
                 removeReactionSubscription();
+
+                if(state.inboxChannel){
+                    try{
+                        supabaseClient.removeChannel(
+                            state.inboxChannel
+                        );
+                    }catch(_e){}
+                    state.inboxChannel =
+                        null;
+                }
 
                 redirectToLogin();
 
@@ -5879,6 +7680,97 @@ function setupEvents(){
             }
         );
 
+    $("blockUserButton")
+        ?.addEventListener(
+            "click",
+            async () => {
+
+                closeHeaderMenu();
+
+                const conversation =
+                    state.currentConversation;
+
+                if(
+                    !state.currentUser ||
+                    !conversation
+                ){
+                    showToast(
+                        "Open a conversation before blocking."
+                    );
+                    return;
+                }
+
+                const me =
+                    String(
+                        state.currentUser.id
+                    );
+                const other =
+                    String(
+                        conversation.buyer_id
+                    ) === me
+                    ?
+                    String(
+                        conversation.seller_id ||
+                        ""
+                    )
+                    :
+                    String(
+                        conversation.buyer_id ||
+                        ""
+                    );
+
+                if(!other){
+                    showToast(
+                        "Could not identify the other user."
+                    );
+                    return;
+                }
+
+                const confirmed =
+                    window.confirm(
+                        "Block this user? Their conversations will be hidden from your list after refresh."
+                    );
+
+                if(!confirmed){
+                    return;
+                }
+
+                const inserted =
+                    await supabaseClient
+                        .from("user_blocks")
+                        .upsert(
+                            {
+                                blocker_id: me,
+                                blocked_id: other
+                            },
+                            {
+                                onConflict:
+                                    "blocker_id,blocked_id"
+                            }
+                        );
+
+                if(inserted.error){
+                    showToast(
+                        inserted.error.message ||
+                        "Block failed. Migration may not be applied on Production yet."
+                    );
+                    return;
+                }
+
+                showToast(
+                    "User blocked."
+                );
+
+                state.currentConversation =
+                    null;
+                state.currentConversationId =
+                    null;
+
+                await loadConversations();
+
+            }
+        );
+
     $("navHome")
         ?.addEventListener(
             "click",
@@ -5927,6 +7819,60 @@ function setupEvents(){
             handleMessageKeydown
         );
 
+    $("messageInput")
+        ?.addEventListener(
+            "input",
+            autoSizeMessageInput
+        );
+
+    $("emojiPickerButton")
+        ?.addEventListener(
+            "click",
+            event => {
+                event.stopPropagation();
+                state.emojiPickerMode = "compose";
+                state.emojiReactMessageId = null;
+                openEmojiModal();
+            }
+        );
+
+    $("emojiModalClose")
+        ?.addEventListener(
+            "click",
+            closeEmojiModal
+        );
+
+    $("emojiModal")
+        ?.addEventListener(
+            "click",
+            event => {
+                if(event.target === $("emojiModal")){
+                    closeEmojiModal();
+                }
+            }
+        );
+
+    $("emojiSearchInput")
+        ?.addEventListener(
+            "input",
+            renderEmojiGrid
+        );
+
+    window.addEventListener(
+        "resize",
+        () => {
+            if(state.reactionPortalMessageId){
+                const openWrap = document.querySelector(".message-wrap.reaction-open");
+                if(openWrap){
+                    positionReactionPortal(
+                        openWrap.querySelector(".message") || openWrap
+                    );
+                }
+            }
+        },
+        { passive:true }
+    );
+
     $("searchInput")
         ?.addEventListener(
             "input",
@@ -5963,17 +7909,118 @@ function setupEvents(){
             toggleAutoTranslate
         );
 
-    $("translationTargetLanguage")
+    $("translationLanguageButton")
         ?.addEventListener(
-            "change",
+            "click",
+            openLanguageModal
+        );
+
+    $("languageModalClose")
+        ?.addEventListener(
+            "click",
+            closeLanguageModal
+        );
+
+    $("languageModal")
+        ?.addEventListener(
+            "click",
             event => {
 
-                changeTranslationTarget(
+                if(
+                    event.target ===
+                    $("languageModal")
+                ){
+                    closeLanguageModal();
+                }
+
+            }
+        );
+
+    $("languageSearchInput")
+        ?.addEventListener(
+            "input",
+            event => {
+
+                renderLanguageOptions(
                     event.target.value
                 );
 
             }
         );
+
+    $("sendRetryButton")
+        ?.addEventListener(
+            "click",
+            () => {
+
+                const draft =
+                    state.pendingDraft ||
+                    (
+                        $("messageInput") &&
+                        $("messageInput").value
+                    );
+
+                if(!draft){
+                    return;
+                }
+
+                // Retry keeps original draft; skip auto-translate after translation failures.
+                sendMessage({
+                    forceText:draft,
+                    skipTranslate:
+                        Boolean(
+                            state.lastSendError &&
+                            String(
+                                state.lastSendError
+                            )
+                                .toLowerCase()
+                                .includes(
+                                    "translat"
+                                )
+                        )
+                });
+
+            }
+        );
+
+    window.addEventListener(
+        "online",
+        () => {
+
+            if(state.currentConversationId){
+                subscribeToConversation(
+                    state.currentConversationId
+                );
+            }
+            subscribeInboxRealtime();
+            if(!state.currentConversationId){
+                loadConversations();
+            }
+
+        }
+    );
+
+    document.addEventListener(
+        "visibilitychange",
+        () => {
+
+            if(
+                document.visibilityState ===
+                "visible"
+            ){
+                prepareChatRealtimeAuth();
+                if(state.currentConversationId){
+                    subscribeToConversation(
+                        state.currentConversationId
+                    );
+                }else{
+                    subscribeInboxRealtime();
+                    loadConversations();
+                }
+            }
+
+        }
+    );
 
 }
 
@@ -6002,6 +8049,16 @@ async function startPage(){
     setupEvents();
 
     setupAuthListener();
+
+    loadEmojiCatalogDeferred();
+
+    try{
+        const stamp = document.createElement("meta");
+        stamp.name = "havkar-chat-build";
+        stamp.content = HAVKAR_CHAT_BUILD;
+        document.head.appendChild(stamp);
+        console.info("[HAVKAR] chat build", HAVKAR_CHAT_BUILD);
+    }catch(_e){}
 
     try{
 
@@ -6032,20 +8089,16 @@ async function startPage(){
 
     }
 
-    const params =
-        new URLSearchParams(
-            window.location.search
-        );
+    const route = readChatRouteParams();
 
-    const conversationId =
-        params.get(
-            "conversation_id"
-        );
+    await subscribeInboxRealtime();
+    ensurePushRegistration();
 
-    if(conversationId){
+    if(route.conversationId || route.adId){
 
         await openConversationFromUrl();
 
+        // Refresh inbox list without replacing the active verified thread.
         loadConversations();
 
         return;
@@ -6055,6 +8108,28 @@ async function startPage(){
     await loadConversations();
 
 }
+
+window.addEventListener("pageshow", function (event) {
+    // Android WebView / bfcache can restore an older chat document and ignore
+    // a newer Message Seller query string. Force a clean route open.
+    if(!event.persisted){
+        return;
+    }
+    const route = readChatRouteParams();
+    if(!route.conversationId && !route.adId){
+        return;
+    }
+    if(
+        state.currentConversationId &&
+        route.conversationId &&
+        String(state.currentConversationId) === String(route.conversationId) &&
+        state.currentConversation &&
+        conversationMatchesRoute(state.currentConversation, route)
+    ){
+        return;
+    }
+    window.location.reload();
+});
 
 
 /* =========================================================

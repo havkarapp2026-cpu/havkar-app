@@ -276,8 +276,15 @@ test("production is refused and the route stays inside the existing function", a
   assert.match(checkout, /function getStripe\(\)/);
   assert.equal(checkout.includes("const stripe = new Stripe"), false);
   assert.equal(ownership.includes("@stellar/stellar-sdk"), false);
-  assert.ok(handler.indexOf("isOwnershipRequest") < handler.indexOf("STRIPE_SECRET_KEY"));
-  assert.ok(handler.indexOf("isOwnershipRequest") < handler.indexOf("authenticateUser"));
+  assert.match(handler, /if \(isOwnershipRequest\(req\)\)/);
+  assert.match(handler, /handleWalletOwnership/);
+  // Ownership short-circuit must not depend on Stripe secrets.
+  const ownershipBranch = handler.slice(
+    handler.indexOf("if (isOwnershipRequest(req))"),
+    handler.indexOf("if (isOwnershipRequest(req))") + 700
+  );
+  assert.doesNotMatch(ownershipBranch, /STRIPE_SECRET_KEY/);
+  assert.doesNotMatch(ownershipBranch, /authenticateUser/);
   assert.equal(handler.includes("allowTestPubkey"), false);
   assert.equal(handler.includes("expectedPubkey"), false);
   assert.match(vercel, /\/api\/stellar-ownership/);

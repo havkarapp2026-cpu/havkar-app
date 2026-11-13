@@ -7,6 +7,8 @@ import org.junit.Test
 class HavkarLinksTest {
     @Test
     fun allowsHavkarHosts() {
+        assertTrue(HavkarLinks.START_URL == "https://havkar.online/")
+        assertTrue(HavkarLinks.isAllowedNavigation(HavkarLinks.START_URL))
         assertTrue(HavkarLinks.isAllowedNavigation("https://havkar-app.vercel.app/"))
         assertTrue(HavkarLinks.isAllowedNavigation("https://havkar-app.vercel.app/login.html"))
         assertTrue(HavkarLinks.isAllowedNavigation("https://havkar.online/privacy.html"))

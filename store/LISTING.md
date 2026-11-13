@@ -7,22 +7,24 @@ This file prepares store text. It does not submit HAVKAR to Google Play or the A
 - App name: HAVKAR
 - Android application id: online.havkar.app
 - iOS bundle id: online.havkar.app
-- Version: 1.0.0-beta (version code 1)
+- Version: 1.0.1 (version code 3)
 - Icon: assets/icons/havkar-icon-1024-20261022-v3.png
-- Website: https://havkar-app.vercel.app
+- Website: https://havkar.online
 - Support: support@havkar.online
-- Privacy draft: https://havkar-app.vercel.app/privacy.html
-- Account deletion request: https://havkar-app.vercel.app/privacy-request.html
+- Privacy draft: https://havkar.online/privacy.html
+- Account deletion request: https://havkar.online/privacy-request.html
 
 ## Short description
 
-HAVKAR is a multi-service app for account, language, support, and the free features that are switched on. Real payments are off.
+HAVKAR is a multi-service marketplace app (buy & sell, ads, jobs, services, events, delivery, tickets). Real card/Pi/Mainnet payments stay off.
 
 ## Full description
 
-HAVKAR opens the live HAVKAR website inside a native Android and iOS project. Sign-up, sign-in, language, and the free pages use the real HAVKAR backend. The Android package is online.havkar.app and uses the HAVKAR icon.
+HAVKAR opens the live HAVKAR website inside a native Android and iOS project. Sign-up, sign-in, language, and enabled modules use the real HAVKAR backend. The Android package is online.havkar.app (targetSdk 36, versionCode 3 / versionName 1.0.1) and uses the HAVKAR icon.
 
-Real card payments, Pi payments, Stellar mainnet, money transfer, currency trade, paid tickets, paid subscriptions, and paid AI stay off. Sending a privacy request does not delete the account by itself.
+Flights: signed-in Duffel search and Duffel TEST MODE orders only. Train/bus/ferry await Omio. Taxi/transfer stay unavailable. Hotels have no partner yet. Stellar Testnet quote+verify can settle enabled one-time flows; Stellar Mainnet customer LIVE_COLLECTION stays off until Owner approval. Card, Pi, currency trade, paid subscriptions, and paid AI stay off until the owner flips explicit flags.
+
+Sending a privacy request does not delete the account by itself. Data safety draft: `store/PLAY_DATA_SAFETY.md`.
 
 The native screens load the real web app. They are not a separate rewrite of every HAVKAR page. Google sign-in inside an embedded view can be rejected by Google. Email and password remain the path that the app keeps inside the view.
 
@@ -54,7 +56,7 @@ This is a preparation checklist. It is not a Play Console submission and it is n
 - Session: stored by the Supabase client in browser storage. The Android app does not add its own analytics SDK.
 - Payments: card, Pi, Stellar mainnet, and paid AI are off. Do not declare an active payment processor while those switches stay off.
 - Data sharing: Supabase (eu-west-1), Vercel (observed function region iad1), Google sign-in only if the person chooses it, and Google Gemini for signed-in AI text.
-- Account deletion: the public page https://havkar-app.vercel.app/privacy-request.html stores a request. It does not delete the account immediately. Play’s account-deletion URL can point at that page only after the owner accepts that wording.
+- Account deletion: the public page https://havkar.online/privacy-request.html stores a request. It does not delete the account immediately. Play’s account-deletion URL can point at that page only after the owner accepts that wording.
 - Encryption in transit: the site is HTTPS. Android cleartext traffic is not permitted.
 - Tracking: the Android manifest does not request the advertising id. Do not answer the tracking question as a completed declaration until counsel reviews it.
 

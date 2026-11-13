@@ -421,7 +421,8 @@ async function main() {
   assert.equal(publishBlock.includes("Promise.race"), false);
   assert.equal(publishBlock.includes("The publish request timed out"), false);
   assert.equal(publishBlock.includes("markUncertain"), true);
-  assert.equal(publishBlock.includes("await insertPromise"), true);
+  assert.equal(publishBlock.includes('.from("ads")'), true);
+  assert.equal(publishBlock.includes(".insert(["), true);
   assert.equal(publishBlock.includes("classifyInsertResult"), true);
   const uncertainOutcome = publishBlock.indexOf("outcome === \"uncertain\"");
   const failedOutcome = publishBlock.indexOf("markFailed");

@@ -30,6 +30,8 @@ import {
 
 const ALLOWED_ORIGINS = new Set([
   "https://havkar-app.vercel.app",
+  "https://havkar.online",
+  "https://www.havkar.online",
   "https://testnet.havkar.online",
   "https://staging.havkar.online"
 ]);

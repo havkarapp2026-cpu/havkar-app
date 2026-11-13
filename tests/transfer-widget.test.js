@@ -23,7 +23,8 @@ assert.strictEqual(handler.googleLanguageCode("fa"), "fa");
 
 const tickets = fs.readFileSync(path.join(__dirname, "../tickets.html"), "utf8");
 const typeOrder = [...tickets.matchAll(/data-ticket-type="([^"]+)"/g)].map(match => match[1]);
-assert.deepStrictEqual(typeOrder.slice(0, 7), [
+assert.deepStrictEqual(typeOrder.slice(0, 8), [
+    "events",
     "flight",
     "train",
     "bus",
@@ -32,12 +33,21 @@ assert.deepStrictEqual(typeOrder.slice(0, 7), [
     "transfer",
     "hotel"
 ]);
+assert.ok(tickets.includes("Event Tickets"));
+assert.ok(tickets.includes("events.html?open=create"));
+assert.ok(tickets.includes("events.html?open=my-event-tickets"));
+assert.ok(tickets.includes("events.html?open=check-in"));
+assert.ok(tickets.includes("REAL_PAYMENTS_PAUSED"));
 assert.ok(tickets.includes("Airport Transfer"));
 assert.ok(tickets.includes("Train Station Transfer"));
 assert.ok(tickets.includes("Hotel Transfer"));
 assert.ok(tickets.includes("City-to-City Transfer"));
 assert.ok(tickets.includes("Scheduled Transfer"));
-assert.ok(!tickets.includes("Duffel"));
+assert.ok(tickets.includes("Duffel"));
+assert.ok(tickets.includes("/api/flight-order"));
+assert.ok(tickets.includes("test_mode: true"));
+assert.ok(tickets.includes("moreTransfers"));
+assert.ok(tickets.includes('id="navTransfer"'));
 assert.ok(!tickets.includes("createTestOrder"));
 assert.ok(!tickets.includes("welcomepickups.com/widget/bundle.js"));
 assert.ok(tickets.includes("Welcome Pickups does not allow this site to load its city list."));
@@ -49,7 +59,7 @@ assert.ok(!taxi.includes("powered by Welcome Pickups"));
 assert.ok(taxi.includes("Taxi booking is not available on this page"));
 assert.ok(!tickets.includes("arranged with Welcome Pickups"));
 assert.ok(!tickets.includes("Continue to Hotel Transfer"));
-assert.ok(tickets.includes("Hotel transfer is unavailable"));
+assert.ok(tickets.includes("Hotel booking stays unavailable"));
 
 const events = fs.readFileSync(path.join(__dirname, "../events.html"), "utf8");
 assert.ok(events.includes(".favorite-btn:not(.active) i"));

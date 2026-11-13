@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HAVKAR Owner Finance</title>
+  <link rel="icon" type="image/png" href="/assets/icons/havkar-icon-32-20261022-v3.png">
+  <style>
+    body{font-family:Georgia,serif;background:linear-gradient(180deg,#f3faf4,#eef6f0);margin:0;color:#123;}
+    header{background:linear-gradient(135deg,#1b5e20,#2e7d32);color:#fff;padding:18px 20px;}
+    main{max-width:980px;margin:0 auto;padding:20px;}
+    .card{background:#fff;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 8px 24px rgba(27,94,32,.08);}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;}
+    .stat{background:#f7fbf7;border:1px solid #d7ead9;border-radius:12px;padding:12px;}
+    .label{font-size:12px;color:#456;} .value{font-size:22px;font-weight:800;color:#1b5e20;}
+    button,.btn{background:#1b5e20;color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block;}
+    input{padding:8px 10px;border:1px solid #bcd;border-radius:8px;min-width:180px;}
+    .note{color:#456;font-size:14px;line-height:1.45;}
+    .err{color:#b71c1c;} table{width:100%;border-collapse:collapse;} td,th{padding:8px;border-bottom:1px solid #e2efe4;text-align:left;font-size:14px;}
+    .badge{display:inline-block;background:#e8f5e9;color:#1b5e20;padding:3px 8px;border-radius:999px;font-size:12px;font-weight:700;}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Owner financial accounting</h1>
+  <p>Double-entry ledger · receipts · gated tax invoicing · no bank secrets</p>
+</header>
+<main>
+  <p id="message" class="note">Checking Owner session…</p>
+  <section class="card" id="gatesCard" hidden>
+    <h2>Legal issuance gates</h2>
+    <p id="gatesNote" class="note"></p>
+    <span class="badge" id="gatesBadge"></span>
+  </section>
+  <section class="card" id="summaryCard" hidden>
+    <h2>Accounting summary</h2>
+    <div class="grid" id="summaryGrid"></div>
+    <p class="note">Buy &amp; Sell fees: buyer 2% + seller 3%. Services: 10%. Personal listing publication: FREE. Seller GMV is liability, not HAVKAR revenue.</p>
+  </section>
+  <section class="card" id="toolsCard" hidden>
+    <h2>Reports</h2>
+    <p>
+      <input id="fromDate" type="date">
+      <input id="toDate" type="date">
+      <button type="button" id="reloadSummary">Apply dates</button>
+      <a class="btn" id="csvLink" href="#">Download CSV</a>
+      <a class="btn" id="pdfReportLink" href="#">Download PDF report</a>
+      <button class="btn" type="button" id="stellarBackfillBtn">Backfill Stellar ledger</button>
+    </p>
+    <p>
+      <input id="searchQ" placeholder="Invoice / payment reference">
+      <button type="button" id="searchBtn">Search</button>
+    </p>
+    <div id="searchResults"></div>
+  </section>
+  <p><a href="/admin.html">Back to Owner Control</a> · <a href="/my-receipts.html">Customer receipts</a></p>
+</main>
+<script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-operator-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function () {
+  var cfg = window.HAVKAR_SUPABASE_CONFIG || {};
+  var message = document.getElementById("message");
+  var db = window.supabase.createClient(cfg.url, cfg.publishableKey, {
+    auth: { persistSession: true, autoRefreshToken: true }
+  });
+  var accessToken = "";
+
+  function euros(cents) {
+    return "€" + (Number(cents || 0) / 100).toFixed(2);
+  }
+
+  function fillGrid(id, entries) {
+    var root = document.getElementById(id);
+    root.innerHTML = "";
+    entries.forEach(function (item) {
+      var card = document.createElement("div");
+      card.className = "stat";
+      card.innerHTML = "<div class='label'></div><div class='value'></div>";
+      card.querySelector(".label").textContent = item.label;
+      card.querySelector(".value").textContent = String(item.value);
+      root.appendChild(card);
+    });
+  }
+
+  async function api(action, params) {
+    var url = new URL("/api/finance", window.location.origin);
+    url.searchParams.set("action", action);
+    Object.keys(params || {}).forEach(function (key) {
+      if (params[key] != null && params[key] !== "") {
+        url.searchParams.set(key, params[key]);
+      }
+    });
+    var res = await fetch(url.toString(), {
+      headers: { Authorization: "Bearer " + accessToken }
+    });
+    var text = await res.text();
+    var body = null;
+    try { body = JSON.parse(text); } catch (_e) { body = { raw: text }; }
+    if (!res.ok) throw new Error((body && body.error) || ("HTTP " + res.status));
+    return body;
+  }
+
+  async function loadSummary() {
+    var body = await api("summary", {
+      from: document.getElementById("fromDate").value || null,
+      to: document.getElementById("toDate").value || null
+    });
+    var s = body.summary || {};
+    fillGrid("summaryGrid", [
+      { label: "Journal entries", value: s.journal_entries || 0 },
+      { label: "Revenue credits", value: euros(s.revenue_credits_cents) },
+      { label: "Expense debits", value: euros(s.expense_debits_cents) },
+      { label: "Seller payables", value: euros(s.seller_payables_credit_cents) },
+      { label: "Receipts", value: (s.documents && s.documents.receipts) || 0 },
+      { label: "Tax invoices", value: (s.documents && s.documents.tax_invoices) || 0 },
+      { label: "Live Stripe events", value: s.stripe_webhook_events_live || 0 }
+    ]);
+    document.getElementById("summaryCard").hidden = false;
+    document.getElementById("toolsCard").hidden = false;
+  }
+
+  async function loadGates() {
+    var body = await api("issuance_gates");
+    var ev = body.evaluation || {};
+    document.getElementById("gatesCard").hidden = false;
+    document.getElementById("gatesNote").textContent = ev.reason || "";
+    document.getElementById("gatesBadge").textContent =
+      "SDI: " + (ev.sdi_status || "unknown");
+  }
+
+  document.getElementById("reloadSummary").onclick = function () {
+    loadSummary().catch(function (err) {
+      message.className = "err";
+      message.textContent = err.message;
+    });
+  };
+
+  document.getElementById("searchBtn").onclick = async function () {
+    var q = document.getElementById("searchQ").value.trim();
+    var root = document.getElementById("searchResults");
+    root.textContent = "Searching…";
+    try {
+      var body = await api("search", { q: q });
+      var rows = body.documents || [];
+      if (!rows.length) {
+        root.textContent = "No documents matched.";
+        return;
+      }
+      var html = "<table><thead><tr><th>Number</th><th>Kind</th><th>Date</th><th>Amount</th><th></th></tr></thead><tbody>";
+      rows.forEach(function (row) {
+        html += "<tr><td>" + row.document_number + "</td><td>" + row.document_kind +
+          "</td><td>" + row.issue_date + "</td><td>" + euros(row.amount_cents) +
+          "</td><td><button type='button' data-doc='" + row.id +
+          "' data-fmt='html'>HTML</button> <button type='button' data-doc='" +
+          row.id + "' data-fmt='pdf'>PDF</button></td></tr>";
+      });
+      html += "</tbody></table>";
+      root.innerHTML = html;
+      root.querySelectorAll("button[data-doc]").forEach(function (btn) {
+        btn.onclick = function () {
+          downloadDocument(btn.getAttribute("data-doc"), btn.getAttribute("data-fmt"));
+        };
+      });
+    } catch (err) {
+      root.textContent = err.message;
+    }
+  };
+
+  db.auth.getSession().then(async function (result) {
+    var session = result && result.data && result.data.session;
+    if (!session) {
+      window.location.href = "/login.html?next=" + encodeURIComponent("/finance.html");
+      return;
+    }
+    accessToken = session.access_token;
+    async function downloadBlob(url, filename) {
+      var res = await fetch(url, {
+        headers: { Authorization: "Bearer " + accessToken }
+      });
+      if (!res.ok) {
+        throw new Error("download_failed_" + res.status);
+      }
+      var blob = await res.blob();
+      var objectUrl = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(objectUrl);
+    }
+
+    window.downloadDocument = async function (id, format) {
+      try {
+        await downloadBlob(
+          "/api/finance?action=document&id=" + id + "&format=" + format,
+          "havkar-doc-" + id + "." + format
+        );
+      } catch (err) {
+        message.className = "err";
+        message.textContent = err.message || "Document download failed.";
+      }
+    };
+
+    document.getElementById("csvLink").href = "/api/finance?action=export_csv";
+    document.getElementById("csvLink").onclick = async function (event) {
+      event.preventDefault();
+      try {
+        await downloadBlob("/api/finance?action=export_csv", "havkar-finance-documents.csv");
+      } catch (err) {
+        message.className = "err";
+        message.textContent = "CSV export failed.";
+      }
+    };
+    document.getElementById("pdfReportLink").onclick = async function (event) {
+      event.preventDefault();
+      try {
+        var qs = new URLSearchParams({
+          action: "export_pdf_report",
+          from: document.getElementById("fromDate").value || "",
+          to: document.getElementById("toDate").value || ""
+        });
+        await downloadBlob("/api/finance?" + qs.toString(), "havkar-owner-finance-report.pdf");
+      } catch (err) {
+        message.className = "err";
+        message.textContent = "PDF report export failed.";
+      }
+    };
+    document.getElementById("stellarBackfillBtn").onclick = async function () {
+      try {
+        var body = await api("backfill_stellar_settlements");
+        message.className = "";
+        message.textContent =
+          "Stellar backfill done: " + ((body.results && body.results.length) || 0) + " intent(s).";
+        await loadSummary();
+      } catch (err) {
+        message.className = "err";
+        message.textContent = err.message || "Stellar backfill failed.";
+      }
+    };
+    try {
+      await loadGates();
+      await loadSummary();
+      message.textContent = "Owner finance ledger ready.";
+    } catch (err) {
+      message.className = "err";
+      message.textContent = err.message || "Owner-only finance access required.";
+    }
+  });
+})();
+</script>
+</body>
+</html>

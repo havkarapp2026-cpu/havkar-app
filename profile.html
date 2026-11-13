@@ -19,6 +19,7 @@
 
 <link rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/havkar-verification-badges.css">
 
 <style>
 
@@ -402,57 +403,9 @@ button{
    VERIFICATION BADGES
 ========================================================= */
 
-.verification-badge{
-    display:inline-flex;
-
-    align-items:center;
-    justify-content:center;
-
-    gap:7px;
-
+.verification-badge,
+.havkar-badge{
     margin-top:12px;
-
-    padding:7px 12px;
-
-    border-radius:20px;
-
-    background:#e8f5e9;
-
-    color:#2e7d32;
-
-    font-size:12px;
-
-    font-weight:800;
-}
-
-.verification-badge.personal{
-    background:#e8f5e9;
-    color:#2e7d32;
-}
-
-.verification-badge.business{
-    background:#edf7e8;
-    color:#2e7d32;
-}
-
-.verification-badge.company{
-    background:
-        linear-gradient(
-            135deg,
-            #e8f5e9,
-            #d5efda
-        );
-
-    color:#087f23;
-
-    border:1px solid #b7ddb9;
-
-    box-shadow:
-        0 0 12px rgba(46,125,50,.18);
-}
-
-.verification-badge i{
-    font-size:13px;
 }
 
 .badge-symbol{
@@ -2175,6 +2128,40 @@ input:focus-visible{
         </button>
 
 
+        <!-- STAFF WORKSPACE: internal section 16; not on public home grid. -->
+
+        <button
+            id="profileStaffWorkspace"
+            class="action"
+            type="button"
+            hidden
+            onclick="goTo('staff.html')">
+
+            <div class="action-icon">
+
+                <i class="fas fa-briefcase"></i>
+
+            </div>
+
+            <div class="action-content">
+
+                <div class="action-title">
+                    Staff Workspace
+                </div>
+
+                <div class="action-subtitle">
+                    Internal ops for Staff / Support / Admin
+                </div>
+
+            </div>
+
+            <div class="action-arrow">
+                <i class="fas fa-chevron-right"></i>
+            </div>
+
+        </button>
+
+
         <!-- ADMINISTRATION: hidden until the server confirms an administrator or the owner. -->
 
         <button
@@ -2197,7 +2184,7 @@ input:focus-visible{
                 </div>
 
                 <div class="action-subtitle">
-                    Server-confirmed administrators only
+                    Owner or server-confirmed administrator only
                 </div>
 
             </div>
@@ -2688,12 +2675,9 @@ input:focus-visible{
         </button>
 
 
-        <!-- BLOCKED USERS: hidden until account-level blocking exists. -->
-
         <button
-            class="setting-row settings-deferred"
+            class="setting-row"
             type="button"
-            hidden
             onclick="openBlockedUsers()">
 
             <div class="setting-icon">
@@ -3207,6 +3191,7 @@ input:focus-visible{
 
 <script src="/havkar-i18n.js"></script>
 <script src="/havkar-verification.js"></script>
+<script src="/havkar-business-verification.js"></script>
 
 
 <!-- =========================================================
@@ -3214,6 +3199,7 @@ input:focus-visible{
 ========================================================= -->
 
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-canonical-origin.js"></script>
 <script type="module">
 
 import {
@@ -3980,57 +3966,19 @@ function renderVerificationBadge(
     }
 
 
-    if(type === "business"){
+    if(
+        window.HAVKAR_VERIFICATION &&
+        typeof window.HAVKAR_VERIFICATION.renderBadgeHtml === "function"
+    ){
 
-        return `
-
-            <div class="verification-badge business">
-
-                <span class="badge-symbol">
-                    ★
-                </span>
-
-                Verified Business
-
-            </div>
-
-        `;
+        return window.HAVKAR_VERIFICATION.renderBadgeHtml(
+            type
+        );
 
     }
 
 
-    if(type === "company"){
-
-        return `
-
-            <div class="verification-badge company">
-
-                <span class="badge-symbol">
-                    ◆
-                </span>
-
-                Verified Company / Factory
-
-            </div>
-
-        `;
-
-    }
-
-
-    return `
-
-        <div class="verification-badge personal">
-
-            <span class="badge-symbol">
-                ✓
-            </span>
-
-            Verified Account
-
-        </div>
-
-    `;
+    return "";
 
 }
 
@@ -4113,6 +4061,11 @@ async function revealAdministration(
             "profileAdministration"
         );
 
+    const staffButton =
+        document.getElementById(
+            "profileStaffWorkspace"
+        );
+
     const settingsEmail =
         document.getElementById(
             "settingsAccountEmail"
@@ -4129,14 +4082,19 @@ async function revealAdministration(
     }
 
 
-    if(!button){
+    if(!button && !staffButton){
 
         return;
 
     }
 
 
-    button.hidden = true;
+    if(button){
+        button.hidden = true;
+    }
+    if(staffButton){
+        staffButton.hidden = true;
+    }
 
 
     if(!user){
@@ -4148,30 +4106,77 @@ async function revealAdministration(
 
     try{
 
-        const admin =
+        const roleResult =
             await supabase.rpc(
-                "havkar_session_is_admin"
+                "havkar_session_role"
             );
 
-        const owner =
-            await supabase.rpc(
-                "havkar_session_is_owner"
+        const roleName =
+            roleResult &&
+            roleResult.error == null
+            ? String(roleResult.data || "")
+            : "";
+
+        const privileged =
+            roleName === "owner" ||
+            roleName === "admin" ||
+            roleName === "staff" ||
+            roleName === "support";
+
+        if(staffButton){
+            staffButton.hidden = !privileged;
+        }
+
+        const adminCapable =
+            roleName === "owner" ||
+            roleName === "admin";
+
+        // Fallback for environments before havkar_session_role exists.
+        if(
+            !privileged &&
+            (
+                !roleResult ||
+                roleResult.error
+            )
+        ){
+
+            const admin =
+                await supabase.rpc(
+                    "havkar_session_is_admin"
+                );
+
+            const owner =
+                await supabase.rpc(
+                    "havkar_session_is_owner"
+                );
+
+            const isAdminOrOwner = (
+                (
+                    admin &&
+                    admin.error == null &&
+                    admin.data === true
+                ) ||
+                (
+                    owner &&
+                    owner.error == null &&
+                    owner.data === true
+                )
             );
 
-        const adminAllowed =
-            admin &&
-            admin.error == null &&
-            admin.data === true;
+            if(button){
+                button.hidden = !isAdminOrOwner;
+            }
+            if(staffButton){
+                staffButton.hidden = !isAdminOrOwner;
+            }
 
-        const ownerAllowed =
-            owner &&
-            owner.error == null &&
-            owner.data === true;
+            return;
 
-        button.hidden = !(
-            adminAllowed ||
-            ownerAllowed
-        );
+        }
+
+        if(button){
+            button.hidden = !adminCapable;
+        }
 
     }
     catch(error){
@@ -4181,7 +4186,12 @@ async function revealAdministration(
             error
         );
 
-        button.hidden = true;
+        if(button){
+            button.hidden = true;
+        }
+        if(staffButton){
+            staffButton.hidden = true;
+        }
 
     }
 
@@ -4417,11 +4427,21 @@ async function(){
                     </div>
 
 
-                    <!--
-                        Change Photo controls stay unimplemented here.
-                        Avatar upload code remains below and can be
-                        shown again after a secure avatars bucket exists.
-                    -->
+                    <button
+                        id="changePhotoBtn"
+                        class="avatar-edit"
+                        type="button"
+                        onclick="openAvatarPicker()"
+                    >
+                        <i class="fas fa-camera"></i>
+                        Change Photo
+                    </button>
+                    <input
+                        id="avatarInput"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onchange="handleAvatarSelected(event)"
+                    >
 
 
                     <div class="profile-name">
@@ -5589,67 +5609,148 @@ function(){
 ========================================================= */
 
 window.openBlockedUsers =
-function(){
+async function(){
 
-    const blockedKey =
-        currentUser
-        ?
-        "havkar_blocked_users_" + currentUser.id
-        :
-        "havkar_blocked_users";
+    if(!currentUser || !supabase){
 
+        showSettingsPanel(
+            "Blocked Users",
+            "fas fa-user-slash",
+            "Sign in to manage account-level blocked users.",
+            []
+        );
+        return;
+
+    }
 
     let blocked = [];
-
+    let backendReady = true;
+    let errorText = "";
 
     try{
 
-        blocked =
-            JSON.parse(
-                localStorage.getItem(
-                    blockedKey
-                ) || "[]"
+        const loaded =
+            await supabase
+                .from("user_blocks")
+                .select("blocked_id,created_at")
+                .eq("blocker_id", currentUser.id)
+                .order("created_at", { ascending: false });
+
+        if(loaded.error){
+
+            backendReady = false;
+            errorText =
+                String(
+                    loaded.error.message ||
+                    loaded.error.code ||
+                    ""
+                );
+
+        }else{
+
+            blocked =
+                Array.isArray(loaded.data)
+                    ? loaded.data
+                    : [];
+
+        }
+
+    }catch(error){
+
+        backendReady = false;
+        errorText =
+            String(
+                (error && error.message) ||
+                error ||
+                ""
             );
 
     }
-    catch(error){
 
-        blocked = [];
-
-    }
-
-
-    showSettingsPanel(
-
-        "Blocked Users",
-
-        "fas fa-user-slash",
-
-        blocked.length
+    const body =
+        !backendReady
         ?
         `
-        You currently have
-        <strong>${blocked.length}</strong>
-        blocked user(s) on this device.
+        Account-level blocking is prepared in the release branch
+        (<code>user_blocks</code>).
 
         <br><br>
 
-        Cross-device blocking will require the
-        HAVKAR backend blocking system.
+        Production still needs the Owner-approved migration
+        before cross-device blocks can be stored.
+
+        <br><br>
+
+        ${errorText ? ("Detail: " + errorText) : ""}
         `
         :
-        `
-        You have no locally stored blocked users.
+        (
+            blocked.length
+            ?
+            `
+            You have
+            <strong>${blocked.length}</strong>
+            blocked account(s).
 
-        <br><br>
+            <br><br>
 
-        HAVKAR will use account-level blocking so
-        blocked users cannot continue unwanted contact.
-        `,
+            Blocked users stay hidden from your conversation list
+            after chat refresh. Unblock from a future profile action
+            or ask support if you need help.
+            `
+            :
+            `
+            You have no blocked accounts yet.
 
+            <br><br>
+
+            Account-level blocks use the HAVKAR
+            <code>user_blocks</code> table (not device-only storage).
+            `
+        );
+
+    showSettingsPanel(
+        "Blocked Users",
+        "fas fa-user-slash",
+        body,
         []
-
     );
+
+};
+
+window.havkarBlockUser =
+async function(blockedUserId){
+
+    if(!currentUser || !supabase){
+        return { ok:false, error:"Sign in required." };
+    }
+
+    const target =
+        String(blockedUserId || "").trim();
+
+    if(!target || target === String(currentUser.id)){
+        return { ok:false, error:"Invalid user." };
+    }
+
+    const inserted =
+        await supabase
+            .from("user_blocks")
+            .upsert(
+                {
+                    blocker_id: currentUser.id,
+                    blocked_id: target
+                },
+                { onConflict: "blocker_id,blocked_id" }
+            );
+
+    if(inserted.error){
+        return {
+            ok:false,
+            error: inserted.error.message || "Block failed."
+        };
+    }
+
+    return { ok:true };
 
 };
 
@@ -5732,6 +5833,181 @@ function(){
 
 let currentBusinessApplication = null;
 let businessApplicationBusy = false;
+let businessEvidenceBusy = false;
+
+const BUSINESS_DRAFT_FIELDS = [
+    "businessType",
+    "businessName",
+    "businessLegalName",
+    "businessVat",
+    "businessCountry",
+    "businessCity",
+    "businessAddress",
+    "businessPhone",
+    "businessEmail",
+    "businessWebsite",
+    "businessDescription"
+];
+
+function businessDraftKey(){
+    const uid = currentUser && currentUser.id ? currentUser.id : "anon";
+    return "havkar_business_application_draft_v1:" + uid;
+}
+
+function readBusinessFormSnapshot(){
+    const snapshot = {};
+    BUSINESS_DRAFT_FIELDS.forEach((id) => {
+        const el = document.getElementById(id);
+        if(el) snapshot[id] = String(el.value || "");
+    });
+    return snapshot;
+}
+
+function saveBusinessDraft(extra){
+    if(!currentUser || !currentUser.id) return;
+    try{
+        const payload = Object.assign(readBusinessFormSnapshot(), extra || {}, {
+            savedAt: new Date().toISOString(),
+            applicationId: currentBusinessApplication && currentBusinessApplication.id
+                ? currentBusinessApplication.id
+                : null
+        });
+        // Never persist private document bytes or filenames with evidence content.
+        sessionStorage.setItem(businessDraftKey(), JSON.stringify(payload));
+    }catch(_error){
+        /* private mode / quota — ignore */
+    }
+}
+
+function loadBusinessDraft(){
+    if(!currentUser || !currentUser.id) return null;
+    try{
+        const raw = sessionStorage.getItem(businessDraftKey());
+        if(!raw) return null;
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === "object" ? parsed : null;
+    }catch(_error){
+        return null;
+    }
+}
+
+function clearBusinessDraft(){
+    try{
+        sessionStorage.removeItem(businessDraftKey());
+    }catch(_error){
+        /* ignore */
+    }
+}
+
+function applyBusinessDraftToForm(draft){
+    if(!draft) return;
+    BUSINESS_DRAFT_FIELDS.forEach((id) => {
+        if(!Object.prototype.hasOwnProperty.call(draft, id)) return;
+        const el = document.getElementById(id);
+        if(el && !el.disabled) el.value = String(draft[id] ?? "");
+    });
+}
+
+function bindBusinessDraftPersistence(){
+    const form = document.getElementById("businessApplicationForm");
+    if(!form || form.dataset.draftBound === "1") return;
+    form.dataset.draftBound = "1";
+    form.addEventListener("input", () => saveBusinessDraft());
+    form.addEventListener("change", () => saveBusinessDraft());
+
+    const uploadButton = document.getElementById("businessEvidenceUploadButton");
+    if(uploadButton && uploadButton.dataset.bound !== "1"){
+        uploadButton.dataset.bound = "1";
+        uploadButton.addEventListener("click", function(event){
+            event.preventDefault();
+            uploadBusinessEvidence();
+        });
+    }
+
+    const fileEl = document.getElementById("businessEvidenceFile");
+    const selected = document.getElementById("businessEvidenceSelected");
+    if(fileEl && fileEl.dataset.bound !== "1"){
+        fileEl.dataset.bound = "1";
+        fileEl.addEventListener("change", function(){
+            const file = fileEl.files && fileEl.files[0] ? fileEl.files[0] : null;
+            if(selected){
+                selected.textContent = file
+                    ? ("Selected: " + file.name + " (" + Math.max(1, Math.round(file.size / 1024)) + " KiB)")
+                    : "No file selected yet.";
+            }
+            if(file){
+                setBusinessEvidenceUploadState("", "File ready. Tap “Save document privately” to upload.");
+            }
+        });
+    }
+}
+
+async function persistBusinessApplicationFields(options){
+    if(!currentUser || !currentBusinessApplication || !currentBusinessApplication.id){
+        return { ok: false, error: "No application to update." };
+    }
+
+    const locked = String(currentBusinessApplication.status || "").toLowerCase() === "approved";
+    if(locked){
+        return { ok: false, error: "Approved business data is locked." };
+    }
+
+    const businessType = readBusinessField("businessType") || currentBusinessApplication.business_type || "business";
+    const businessName = readBusinessField("businessName") || currentBusinessApplication.business_name || "";
+    const legalName = readBusinessField("businessLegalName");
+    const vatNumber = readBusinessField("businessVat");
+    const country = readBusinessField("businessCountry") || currentBusinessApplication.country || "";
+    const city = readBusinessField("businessCity") || currentBusinessApplication.city || "";
+    const address = readBusinessField("businessAddress");
+    const phone = readBusinessField("businessPhone");
+    const email = readBusinessField("businessEmail") || currentBusinessApplication.email || (currentUser.email || "");
+    const website = readBusinessField("businessWebsite");
+    const description = readBusinessField("businessDescription");
+
+    if(!businessName || !country || !city || !email){
+        return { ok: false, error: "Complete business name, country, city, and email before saving." };
+    }
+
+    if(website && !validBusinessWebsite(website)){
+        return { ok: false, error: "Website must start with http:// or https://" };
+    }
+
+    const now = new Date().toISOString();
+    const payload = {
+        business_type: businessType,
+        business_name: businessName,
+        legal_name: legalName || null,
+        vat_number: vatNumber || null,
+        country,
+        city,
+        address: address || null,
+        phone: phone || null,
+        email,
+        website: website || null,
+        description: description || null,
+        status: "pending",
+        updated_at: now
+    };
+
+    const result = await supabase
+        .from("business_applications")
+        .update(payload)
+        .eq("id", currentBusinessApplication.id)
+        .eq("user_id", currentUser.id)
+        .select("id,created_at,user_id,business_type,business_name,legal_name,vat_number,country,city,address,phone,email,website,description,status,updated_at,documents,submitted_at,rejection_reason,reviewed_by,reviewed_at,review_notes")
+        .single();
+
+    if(result.error){
+        return { ok: false, error: result.error.message || "Could not save application fields." };
+    }
+
+    currentBusinessApplication = result.data;
+    saveBusinessDraft();
+    if(!(options && options.silentStatus)){
+        await refreshBusinessEvidenceStatus(currentBusinessApplication);
+    }
+    return { ok: true, data: result.data };
+}
 
 function businessValue(value){
     return value === null || value === undefined
@@ -5746,6 +6022,7 @@ function businessStatusLabel(status){
     if(value === "rejected") return "Rejected";
     if(value === "pending") return "Pending review";
     if(value === "under_review") return "Under review";
+    if(value === "needs_more_info") return "Needs more information";
 
     return "Draft";
 }
@@ -5755,7 +6032,7 @@ function businessStatusClass(status){
 
     if(value === "approved") return "approved";
     if(value === "rejected") return "rejected";
-    if(value === "pending" || value === "under_review") return "pending";
+    if(value === "pending" || value === "under_review" || value === "needs_more_info") return "pending";
 
     return "";
 }
@@ -5781,23 +6058,58 @@ function businessApplicationStatusHtml(application){
 
     return `
         <div class="business-status-card ${statusClass}">
-            <strong>Status: ${escapeHtml(status)}</strong>
+            <strong>Application #${escapeHtml(String(application.id))} — Status: ${escapeHtml(status)}</strong>
             ${rejection}
             ${notes}
         </div>
     `;
 }
 
-function renderBusinessApplication(application){
+function mergeBusinessDisplayValues(application, draft){
+    const map = {
+        business_type: "businessType",
+        business_name: "businessName",
+        legal_name: "businessLegalName",
+        vat_number: "businessVat",
+        country: "businessCountry",
+        city: "businessCity",
+        address: "businessAddress",
+        phone: "businessPhone",
+        email: "businessEmail",
+        website: "businessWebsite",
+        description: "businessDescription"
+    };
+    const out = Object.assign({}, application || {});
+    if(!draft) return out;
+    Object.keys(map).forEach((dbKey) => {
+        const draftKey = map[dbKey];
+        if(Object.prototype.hasOwnProperty.call(draft, draftKey) && String(draft[draftKey]).length){
+            out[dbKey] = draft[draftKey];
+        }
+    });
+    return out;
+}
+
+function renderBusinessApplication(application, options){
+    const preserveLive = !(options && options.discardLive === true);
+    const liveSnapshot = preserveLive ? readBusinessFormSnapshot() : {};
+    const draft = loadBusinessDraft() || {};
+    const mergedDraft = Object.assign({}, draft, liveSnapshot);
+    const hasLiveValues = Object.keys(liveSnapshot).some((k) => String(liveSnapshot[k] || "").length > 0);
+
     currentBusinessApplication = application || null;
 
     const locked = application &&
         String(application.status || "").toLowerCase() === "approved";
 
-    const value = (key) =>
-        escapeHtml(businessValue(application && application[key]));
+    const display = locked
+        ? (application || {})
+        : mergeBusinessDisplayValues(application, hasLiveValues || draft ? mergedDraft : null);
 
-    const type = businessValue(application && application.business_type) || "business";
+    const value = (key) =>
+        escapeHtml(businessValue(display && display[key]));
+
+    const type = businessValue(display && display.business_type) || "business";
 
     showSettingsPanel(
         "Business Account",
@@ -5837,7 +6149,7 @@ function renderBusinessApplication(application){
                 </div>
 
                 <div class="business-field">
-                    <label for="businessVat">VAT / registration number</label>
+                    <label for="businessVat">VAT / Partita IVA number</label>
                     <input id="businessVat" type="text" maxlength="80"
                         value="${value("vat_number")}" ${locked ? "disabled" : ""}>
                 </div>
@@ -5859,7 +6171,7 @@ function renderBusinessApplication(application){
                 </div>
 
                 <div class="business-field full">
-                    <label for="businessAddress">Business address</label>
+                    <label for="businessAddress">Registered business address</label>
                     <input id="businessAddress" type="text" maxlength="240"
                         value="${value("address")}" ${locked ? "disabled" : ""}>
                 </div>
@@ -5898,34 +6210,223 @@ function renderBusinessApplication(application){
                     This business application is approved. Approved application data is locked from self-service editing to protect verification integrity.
                 </div>
             ` : `
+                <div class="business-field full">
+                    <label for="businessEvidenceType">Verification document type</label>
+                    <select id="businessEvidenceType" ${application ? "" : "disabled"}>
+                        <option value="vat_registration">VAT / Partita IVA registration certificate</option>
+                        <option value="company_registration">Company or business registration extract (Chamber of Commerce)</option>
+                        <option value="proof_of_registered_address">Proof of registered business address</option>
+                        <option value="other_supporting">Other supporting document</option>
+                    </select>
+                </div>
+                <div class="business-field full">
+                    <label for="businessEvidenceFile">Upload verification document (PDF/JPEG/PNG/WebP, max 10 MiB)</label>
+                    <input id="businessEvidenceFile" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp" ${application ? "" : "disabled"}>
+                    <div class="business-help" id="businessEvidenceSelected">No file selected yet.</div>
+                </div>
                 <div class="business-form-actions">
+                    <button id="businessEvidenceUploadButton" class="panel-button secondary" type="button"
+                        ${application ? "" : "disabled"}>
+                        <i class="fas fa-file-upload"></i>
+                        Save document privately
+                    </button>
                     <button id="businessSubmitButton" class="panel-button" type="submit">
                         <i class="fas fa-paper-plane"></i>
                         ${application ? "Update & submit for review" : "Submit application"}
                     </button>
 
-                    <button class="panel-button secondary" type="button" onclick="openBusinessAccount()">
+                    <button class="panel-button secondary" type="button" onclick="refreshBusinessAccountPreserveDraft()">
                         <i class="fas fa-rotate"></i>
                         Refresh status
                     </button>
                 </div>
 
-                <div class="business-help">
-                    Required fields are marked with *. HAVKAR stores this application in your authenticated account. Review fields and approval status are controlled separately from this form.
+                <div class="business-help" id="businessEvidenceHelp">
+                    Required fields are marked with *. Before approval, HAVKAR needs VAT / Partita IVA number, registered address, and private uploads of: VAT registration, Chamber of Commerce / company registration, and proof of registered address. Identity documents (passport/ID/selfie) are refused. Form field drafts are kept in this browser session only (never document files). An independent administrator must review the application; self-approval is blocked.
                 </div>
+                <div class="business-help" id="businessEvidenceStatus"></div>
+                <div class="business-help" id="businessEvidenceUploadState" aria-live="polite"></div>
             `}
 
         </form>
         `,
         []
     );
+
+    bindBusinessDraftPersistence();
+    if(!locked) saveBusinessDraft(mergedDraft);
 }
 
-async function loadBusinessApplication(){
+async function refreshBusinessEvidenceStatus(application){
+    const box = document.getElementById("businessEvidenceStatus");
+    if(!box || !application || !application.id){
+        return;
+    }
+
+    const docs = await supabase
+        .from("business_application_documents")
+        .select("id,doc_type,created_at,original_filename,mime_type,byte_size")
+        .eq("application_id", application.id)
+        .order("created_at", { ascending: false });
+
+    if(docs.error){
+        box.textContent = "Verification documents could not be loaded: " +
+            (docs.error.message || "unknown error");
+        return;
+    }
+
+    const latestByType = {};
+    (docs.data || []).forEach((row) => {
+        if(!latestByType[row.doc_type]) latestByType[row.doc_type] = row;
+    });
+    const currentRows = Object.keys(latestByType).map((k) => latestByType[k]);
+    const types = currentRows.map((row) => row.doc_type);
+    const missing = window.HAVKAR_BUSINESS_VERIFICATION
+        ? window.HAVKAR_BUSINESS_VERIFICATION.missingRequired(types)
+        : [];
+    const labels = window.HAVKAR_BUSINESS_VERIFICATION
+        ? missing.map(window.HAVKAR_BUSINESS_VERIFICATION.labelFor)
+        : missing;
+    const uploaded = currentRows.length
+        ? ("<ul style=\"margin:0.4rem 0 0 1.1rem;padding:0\">" +
+            currentRows.map((row) => {
+                const label = window.HAVKAR_BUSINESS_VERIFICATION
+                    ? window.HAVKAR_BUSINESS_VERIFICATION.labelFor(row.doc_type)
+                    : row.doc_type;
+                const name = row.original_filename
+                    ? escapeHtml(row.original_filename)
+                    : "stored";
+                const meta = [
+                    row.mime_type ? escapeHtml(row.mime_type) : null,
+                    row.byte_size ? (Math.round(row.byte_size / 1024) + " KiB") : null,
+                    "stored"
+                ].filter(Boolean).join(" · ");
+                return "<li><strong>" + escapeHtml(label) + "</strong>: " +
+                    name + " <span>(" + meta + ")</span></li>";
+            }).join("") +
+            "</ul>")
+        : "none";
+
+    const liveVat = readBusinessField("businessVat") || businessValue(application.vat_number);
+    const liveAddress = readBusinessField("businessAddress") || businessValue(application.address);
+    const blankFields = [
+        liveVat ? null : "VAT / Partita IVA number",
+        liveAddress ? null : "registered business address"
+    ].filter(Boolean);
+
+    box.innerHTML =
+        "<strong>Uploaded documents:</strong> " + uploaded +
+        "<br><strong>Still required:</strong> " + (labels.length ? labels.join("; ") : "none") +
+        "<br><strong>Fields still blank:</strong> " +
+        (blankFields.length ? blankFields.join("; ") : "none");
+}
+
+function setBusinessEvidenceUploadState(kind, text){
+    const box = document.getElementById("businessEvidenceUploadState");
+    const button = document.getElementById("businessEvidenceUploadButton");
+    if(box){
+        box.textContent = text || "";
+        box.style.color = kind === "error"
+            ? "#b42318"
+            : (kind === "success" ? "#027a48" : "");
+    }
+    if(!button) return;
+    if(kind === "loading"){
+        button.disabled = true;
+        button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Uploading...`;
+        return;
+    }
+    button.disabled = !currentBusinessApplication || !currentBusinessApplication.id;
+    if(kind === "success"){
+        button.innerHTML = `<i class="fas fa-check"></i> Stored — upload another`;
+        return;
+    }
+    if(kind === "error"){
+        button.innerHTML = `<i class="fas fa-triangle-exclamation"></i> Retry upload`;
+        return;
+    }
+    button.innerHTML = `<i class="fas fa-file-upload"></i> Save document privately`;
+}
+
+async function uploadBusinessEvidence(){
+    if(businessEvidenceBusy) return;
+
+    saveBusinessDraft();
+
+    if(!currentUser || !currentBusinessApplication || !currentBusinessApplication.id){
+        showMessage("Submit the business application first, then upload documents.", "error");
+        setBusinessEvidenceUploadState("error", "Submit the application before uploading documents.");
+        return;
+    }
+
+    const typeEl = document.getElementById("businessEvidenceType");
+    const fileEl = document.getElementById("businessEvidenceFile");
+    const docType = typeEl ? typeEl.value : "";
+    const file = fileEl && fileEl.files && fileEl.files[0] ? fileEl.files[0] : null;
+
+    if(!window.HAVKAR_BUSINESS_VERIFICATION){
+        showMessage("Document upload is unavailable.", "error");
+        setBusinessEvidenceUploadState("error", "Document upload library failed to load.");
+        return;
+    }
+
+    const check = window.HAVKAR_BUSINESS_VERIFICATION.validateFile(file);
+    if(!check.ok){
+        showMessage(check.error, "error");
+        setBusinessEvidenceUploadState("error", check.error);
+        return;
+    }
+
+    businessEvidenceBusy = true;
+    setBusinessEvidenceUploadState("loading", "Saving form fields, then uploading private document...");
+
+    try{
+        // Persist VAT/address/etc. with the document save so values are not lost on refresh.
+        const fieldSave = await persistBusinessApplicationFields({ silentStatus: true });
+        if(!fieldSave.ok){
+            throw new Error(fieldSave.error || "Could not save application fields.");
+        }
+
+        await window.HAVKAR_BUSINESS_VERIFICATION.uploadEvidence(
+            supabase,
+            currentUser.id,
+            currentBusinessApplication.id,
+            docType,
+            file
+        );
+        if(fileEl) fileEl.value = "";
+        const selected = document.getElementById("businessEvidenceSelected");
+        if(selected) selected.textContent = "No file selected yet.";
+        saveBusinessDraft();
+        showMessage("Document and application fields saved privately for verification review.", "success");
+        setBusinessEvidenceUploadState(
+            "success",
+            "Saved. Document is stored privately and your form fields (VAT, address, etc.) were written to application #" +
+            currentBusinessApplication.id + "."
+        );
+        await refreshBusinessEvidenceStatus(currentBusinessApplication);
+    }catch(error){
+        console.error("Business evidence upload error:", error);
+        const message = (error && error.message) || "Document could not be uploaded.";
+        showMessage(message, "error");
+        setBusinessEvidenceUploadState("error", message);
+        saveBusinessDraft();
+    }finally{
+        businessEvidenceBusy = false;
+        const button = document.getElementById("businessEvidenceUploadButton");
+        if(button && !button.disabled && !/Uploading|Stored|Retry/i.test(button.textContent || "")){
+            button.innerHTML = `<i class="fas fa-file-upload"></i> Save document privately`;
+        }
+    }
+}
+
+async function loadBusinessApplication(options){
     if(!currentUser){
         showMessage("Please log in before creating a business account.", "error");
         return;
     }
+
+    saveBusinessDraft();
 
     showSettingsPanel(
         "Business Account",
@@ -5954,13 +6455,23 @@ async function loadBusinessApplication(){
         return;
     }
 
-    renderBusinessApplication(Array.isArray(data) && data.length ? data[0] : null);
+    const application = Array.isArray(data) && data.length ? data[0] : null;
+    renderBusinessApplication(application, options);
+    await refreshBusinessEvidenceStatus(application);
 }
 
 window.openBusinessAccount =
 async function(){
     await loadBusinessApplication();
 };
+
+window.refreshBusinessAccountPreserveDraft =
+async function(){
+    saveBusinessDraft();
+    await loadBusinessApplication({ discardLive: false });
+};
+
+window.uploadBusinessEvidence = uploadBusinessEvidence;
 
 function readBusinessField(id){
     const element = document.getElementById(id);
@@ -5995,6 +6506,8 @@ async function(event){
         showMessage("Approved business data is locked.", "error");
         return;
     }
+
+    saveBusinessDraft();
 
     const businessType = readBusinessField("businessType");
     const businessName = readBusinessField("businessName");
@@ -6063,14 +6576,34 @@ async function(event){
             .single();
     }
     else{
-        result = await supabase
+        // Guard against duplicate create if an application already exists for this user.
+        const existing = await supabase
             .from("business_applications")
-            .insert({
-                ...payload,
-                documents: {}
-            })
             .select("id,created_at,user_id,business_type,business_name,legal_name,vat_number,country,city,address,phone,email,website,description,status,updated_at,documents,submitted_at,rejection_reason,reviewed_by,reviewed_at,review_notes")
-            .single();
+            .eq("user_id", currentUser.id)
+            .order("created_at", { ascending:false })
+            .limit(1);
+
+        if(!existing.error && existing.data && existing.data.length){
+            currentBusinessApplication = existing.data[0];
+            result = await supabase
+                .from("business_applications")
+                .update(payload)
+                .eq("id", currentBusinessApplication.id)
+                .eq("user_id", currentUser.id)
+                .select("id,created_at,user_id,business_type,business_name,legal_name,vat_number,country,city,address,phone,email,website,description,status,updated_at,documents,submitted_at,rejection_reason,reviewed_by,reviewed_at,review_notes")
+                .single();
+        }
+        else{
+            result = await supabase
+                .from("business_applications")
+                .insert({
+                    ...payload,
+                    documents: {}
+                })
+                .select("id,created_at,user_id,business_type,business_name,legal_name,vat_number,country,city,address,phone,email,website,description,status,updated_at,documents,submitted_at,rejection_reason,reviewed_by,reviewed_at,review_notes")
+                .single();
+        }
     }
 
     businessApplicationBusy = false;
@@ -6080,14 +6613,26 @@ async function(event){
 
         if(button){
             button.disabled = false;
-            button.innerHTML = `<i class="fas fa-paper-plane"></i> Submit application`;
+            button.innerHTML = currentBusinessApplication
+                ? `<i class="fas fa-paper-plane"></i> Update & submit for review`
+                : `<i class="fas fa-paper-plane"></i> Submit application`;
         }
 
-        showMessage(result.error.message || "Business application could not be submitted.", "error");
+        saveBusinessDraft();
+        const duplicate = /unique|duplicate|business_applications_one_per_user/i.test(
+            String(result.error.message || "")
+        );
+        showMessage(
+            duplicate
+                ? "You already have a business application. Refresh status and update the existing one."
+                : (result.error.message || "Business application could not be submitted."),
+            "error"
+        );
         return;
     }
 
     currentBusinessApplication = result.data;
+    clearBusinessDraft();
 
     let emailNotificationSent = false;
 
@@ -6132,13 +6677,14 @@ async function(event){
     }
 
     if(emailNotificationSent){
-        showMessage("Business application submitted successfully and HAVKAR was notified at info@havkar.online.", "success");
+        showMessage("Business application saved. HAVKAR was notified at info@havkar.online.", "success");
     }
     else{
-        showMessage("Business application was saved successfully, but the email notification to info@havkar.online could not be sent. Please try again after the HAVKAR mail service is configured.", "error");
+        showMessage("Business application saved. Email notification to info@havkar.online could not be sent yet — your application data was still stored.", "success");
     }
 
-    renderBusinessApplication(result.data);
+    renderBusinessApplication(result.data, { discardLive: true });
+    await refreshBusinessEvidenceStatus(result.data);
 };
 
 
@@ -6329,10 +6875,9 @@ async function(){
     try{
 
         const redirectTo =
-            new URL(
-                "login.html",
-                window.location.href
-            ).href;
+            window.HAVKAR_CANONICAL
+                ? window.HAVKAR_CANONICAL.authRedirectUrl("login.html")
+                : "https://havkar.online/login.html";
 
 
         const {

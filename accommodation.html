@@ -10,7 +10,44 @@
 <meta name="theme-color" content="#609b38">
 <title>HAVKAR | Accommodation</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <link rel="stylesheet" href="/havkar-accommodation.css">
+<style>
+.search-panel{background:#fff;border-radius:14px;padding:14px;margin:12px 0;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+.search-panel label{display:block;font-size:13px;margin:8px 0 4px;color:#456}
+.search-panel input,.search-panel select{width:100%;min-height:44px;border:1px solid #cfd;border-radius:10px;padding:0 10px;font:inherit}
+.search-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:640px){.search-grid{grid-template-columns:1fr}}
+.search-panel button.primary{width:100%;margin-top:12px;min-height:46px;border:0;border-radius:12px;background:#1b5e20;color:#fff;font-weight:700}
+.search-panel button.secondary{width:100%;margin-top:8px;min-height:42px;border:1px solid #1b5e20;border-radius:12px;background:#fff;color:#1b5e20;font-weight:600}
+.provider-note{font-size:13px;line-height:1.4;color:#555;margin:8px 0}
+#searchStatus{min-height:1.2em;font-size:14px}
+.currency-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#map{height:240px;border-radius:12px;margin-top:10px;border:1px solid #d7e6db}
+.suggest{border:1px solid #d7e6db;border-radius:10px;margin-top:4px;max-height:180px;overflow:auto;background:#fff}
+.suggest button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #eef5ef;background:#fff;padding:10px;cursor:pointer;font:inherit}
+.suggest button:hover{background:#e8f5e9}
+#historyOut,#payQuoteRaw{white-space:pre-wrap;font-size:12px;background:#f7fbf7;padding:10px;border-radius:10px}
+.pay-panel{margin-top:14px;padding-top:8px;border-top:1px solid #d7e6db}
+.pay-title{margin:8px 0 4px;font-size:1.05rem;color:#1b5e20}
+.pay-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+@media(max-width:640px){.pay-grid{grid-template-columns:1fr}}
+.pay-card{border:1px solid #cfe0d3;border-radius:14px;padding:12px;background:linear-gradient(180deg,#fff,#f4faf5)}
+.pay-card.pay-xlm{border-color:#8fbf7a;background:linear-gradient(180deg,#f7fcf7,#e8f5e9)}
+.pay-card h3{margin:6px 0;font-size:1rem;color:#123}
+.pay-card-head{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+.pay-badge{display:inline-flex;align-items:center;gap:6px;background:#1b5e20;color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700}
+.pay-badge.xlm{background:#2e7d32}
+.xlm-mark{font-size:14px;line-height:1}
+.pay-status{font-size:12px;font-weight:700;color:#8a4b08;background:#fff8e1;border-radius:999px;padding:4px 8px}
+.pay-status.ready{color:#1b5e20;background:#e8f5e9}
+.pay-card button.primary.xlm{background:#2e7d32}
+.pay-quote{margin-top:10px;padding:12px;border-radius:12px;background:#f7fbf7;border:1px solid #d7e6db}
+.pay-quote dl{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;margin:0}
+.pay-quote dt{font-size:12px;color:#567}
+.pay-quote dd{margin:0;font-weight:700;color:#123}
+@media(max-width:640px){.pay-quote dl{grid-template-columns:1fr}}
+</style>
 </head>
 <body data-accommodation-page="public" data-i18n-ignore>
 <header>
@@ -18,11 +55,86 @@
     <button class="back" type="button" id="backButton" aria-label="Back"><i class="fas fa-arrow-left"></i></button>
     <div>
       <h1>Accommodation</h1>
-      <p class="subtitle">Published Italian listings only. No sample stays and no prices.</p>
+      <p class="subtitle">Search published HAVKAR stays + eligible suppliers. Live booking stays Owner-gated.</p>
     </div>
   </div>
 </header>
 <main>
+  <section class="search-panel" aria-label="Hotel search">
+    <div>
+      <label for="cityInput">City / destination</label>
+      <input id="cityInput" type="search" placeholder="Rome, Milan, Paris…" autocomplete="off">
+      <div id="geoSuggest" class="suggest" hidden></div>
+    </div>
+    <div id="map" role="application" aria-label="Destination map"></div>
+    <p id="geoLabel" class="provider-note">Choose a destination to place the map marker.</p>
+    <div class="search-grid">
+      <div>
+        <label for="checkInInput">Check-in</label>
+        <input id="checkInInput" type="date">
+      </div>
+      <div>
+        <label for="checkOutInput">Check-out</label>
+        <input id="checkOutInput" type="date">
+      </div>
+      <div>
+        <label for="adultsInput">Adults</label>
+        <input id="adultsInput" type="number" min="1" max="12" value="2">
+      </div>
+      <div>
+        <label for="childrenInput">Children</label>
+        <input id="childrenInput" type="number" min="0" max="12" value="0">
+      </div>
+      <div>
+        <label for="roomsInput">Rooms</label>
+        <input id="roomsInput" type="number" min="1" max="10" value="1">
+      </div>
+      <div>
+        <label for="currencySelect">Display / charge currency</label>
+        <select id="currencySelect" aria-label="Currency"></select>
+      </div>
+    </div>
+    <p id="currencyCount" class="provider-note"></p>
+
+    <section class="pay-panel" aria-label="Payment methods">
+      <h2 class="pay-title">Payment methods</h2>
+      <p class="provider-note">Two separate rails. XLM is not a Stripe currency. Live hotel charges stay OFF.</p>
+      <div class="pay-grid">
+        <article class="pay-card" id="payStripeCard" data-method="stripe">
+          <div class="pay-card-head">
+            <span class="pay-badge">Stripe</span>
+            <span class="pay-status" id="stripeStatus">…</span>
+          </div>
+          <h3>Pay by card / supported currencies</h3>
+          <p id="stripeMeta" class="provider-note">Loading Stripe options…</p>
+          <label for="listPriceEur">Sample list price (EUR)</label>
+          <input id="listPriceEur" type="number" min="1" step="0.01" value="120">
+          <button class="primary" type="button" id="quoteStripeBtn">Stripe fee quote (no charge)</button>
+        </article>
+        <article class="pay-card pay-xlm" id="payXlmCard" data-method="xlm_mainnet">
+          <div class="pay-card-head">
+            <span class="pay-badge xlm"><span class="xlm-mark" aria-hidden="true">✦</span> Stellar XLM</span>
+            <span class="pay-status" id="xlmStatus">…</span>
+          </div>
+          <h3>Pay with XLM wallet</h3>
+          <p id="xlmMeta" class="provider-note">Loading XLM options…</p>
+          <button class="primary xlm" type="button" id="quoteXlmBtn">XLM quote (no charge)</button>
+        </article>
+      </div>
+      <div id="payQuoteBox" class="pay-quote" hidden>
+        <h3 id="payQuoteTitle">Quote</h3>
+        <dl id="payQuoteDl"></dl>
+        <p id="payQuoteNote" class="provider-note"></p>
+        <pre id="payQuoteRaw" hidden></pre>
+      </div>
+    </section>
+
+    <button class="primary" type="button" id="searchHotelsBtn">Search stays</button>
+    <button class="secondary" type="button" id="historyBtn">My booking history</button>
+    <p id="searchStatus" class="provider-note" role="status"></p>
+    <pre id="historyOut" hidden></pre>
+  </section>
+
   <p class="links" id="authLinks">
     <a href="login.html">Log In</a>
     <a href="signup.html">Create New Account</a>
@@ -30,10 +142,12 @@
   <p id="message" class="error" role="status"></p>
   <div id="empty" class="empty">No verified accommodation is published.</div>
   <div id="listings"></div>
+  <div id="searchResults"></div>
   <div class="links">
     <a href="accommodation-apply.html">List a property</a>
     <a href="accommodation-status.html">Case status</a>
     <a href="accommodation-manage.html">Owner tools</a>
+    <a href="checkout-currency.html">Currency matrix</a>
   </div>
 </main>
 <nav class="bottom" aria-label="Accommodation">
@@ -44,6 +158,400 @@
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-accommodation.js"></script>
 <script type="module" src="/havkar-accommodation-ui.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+(function () {
+  var currencySelect = document.getElementById("currencySelect");
+  var currencyCount = document.getElementById("currencyCount");
+  var searchStatus = document.getElementById("searchStatus");
+  var searchResults = document.getElementById("searchResults");
+  var historyOut = document.getElementById("historyOut");
+  var geoSuggest = document.getElementById("geoSuggest");
+  var geoLabel = document.getElementById("geoLabel");
+  var payQuoteBox = document.getElementById("payQuoteBox");
+  var payQuoteDl = document.getElementById("payQuoteDl");
+  var payQuoteTitle = document.getElementById("payQuoteTitle");
+  var payQuoteNote = document.getElementById("payQuoteNote");
+  var payQuoteRaw = document.getElementById("payQuoteRaw");
+  var selectedGeo = { latitude: 41.8933203, longitude: 12.4829321, label: "Roma, Italia" };
+  var map = null;
+  var marker = null;
+  var geoTimer = null;
+  var langIt = false;
+  try { langIt = (localStorage.getItem("havkar_language") || "en") === "it"; } catch (e) {}
+
+  function setStatus(text) {
+    if (searchStatus) searchStatus.textContent = text || "";
+  }
+
+  function authHeader() {
+    try {
+      var keys = Object.keys(localStorage);
+      for (var i = 0; i < keys.length; i++) {
+        if (keys[i].indexOf("-auth-token") === -1) continue;
+        var parsed = JSON.parse(localStorage.getItem(keys[i]) || "{}");
+        if (parsed && parsed.access_token) {
+          return { Authorization: "Bearer " + parsed.access_token };
+        }
+      }
+      return {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function initMap() {
+    if (!window.L || map) return;
+    map = L.map("map").setView([selectedGeo.latitude, selectedGeo.longitude], 11);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      attribution: "&copy; OpenStreetMap"
+    }).addTo(map);
+    marker = L.marker([selectedGeo.latitude, selectedGeo.longitude]).addTo(map);
+    map.on("click", function (ev) {
+      selectedGeo = {
+        latitude: ev.latlng.lat,
+        longitude: ev.latlng.lng,
+        label: ev.latlng.lat.toFixed(5) + ", " + ev.latlng.lng.toFixed(5)
+      };
+      marker.setLatLng(ev.latlng);
+      geoLabel.textContent = "Map pin: " + selectedGeo.label;
+    });
+  }
+
+  function setGeo(row) {
+    selectedGeo = {
+      latitude: row.latitude,
+      longitude: row.longitude,
+      label: row.label
+    };
+    geoLabel.textContent = row.label;
+    if (map && marker) {
+      var latlng = [row.latitude, row.longitude];
+      marker.setLatLng(latlng);
+      map.setView(latlng, 12);
+    }
+  }
+
+  async function geocode(query) {
+    var res = await fetch("/api/hotels", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "hotels_geocode", query: query })
+    });
+    return res.json();
+  }
+
+  function renderSuggest(results) {
+    geoSuggest.innerHTML = "";
+    if (!results || !results.length) {
+      geoSuggest.hidden = true;
+      return;
+    }
+    results.forEach(function (row) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = row.label;
+      btn.addEventListener("click", function () {
+        document.getElementById("cityInput").value = row.label.split(",")[0];
+        setGeo(row);
+        geoSuggest.hidden = true;
+      });
+      geoSuggest.appendChild(btn);
+    });
+    geoSuggest.hidden = false;
+  }
+
+  document.getElementById("cityInput").addEventListener("input", function () {
+    var q = this.value.trim();
+    clearTimeout(geoTimer);
+    if (q.length < 2) {
+      geoSuggest.hidden = true;
+      return;
+    }
+    geoTimer = setTimeout(async function () {
+      try {
+        var body = await geocode(q);
+        if (body && body.ok) {
+          renderSuggest(body.results || []);
+          if (body.primary) setGeo(body.primary);
+        } else {
+          renderSuggest([]);
+          setStatus((body && body.error) || "Destination not found");
+        }
+      } catch (e) {
+        setStatus("Geocoding failed");
+      }
+    }, 350);
+  });
+
+  async function loadCurrencies() {
+    try {
+      var res = await fetch("/api/currency-matrix");
+      var body = await res.json();
+      var list = (body && body.matrix && body.matrix.currencies) || [];
+      if (!currencySelect) return;
+      currencySelect.innerHTML = list.map(function (c) {
+        return '<option value="' + c.code + '">' +
+          String(c.code).toUpperCase() + " — " + c.name +
+          (c.symbol ? " (" + c.symbol + ")" : "") +
+          "</option>";
+      }).join("");
+      if (currencyCount) {
+        currencyCount.textContent =
+          String(body.matrix && body.matrix.count || list.length) +
+          " Stripe presentment currencies · settlement EUR · XLM separate";
+      }
+      currencySelect.value = "eur";
+    } catch (e) {
+      if (currencyCount) currencyCount.textContent = "Currency matrix unavailable";
+    }
+  }
+
+  function searchPayload() {
+    return {
+      action: "hotels_search",
+      city: document.getElementById("cityInput").value,
+      check_in: document.getElementById("checkInInput").value,
+      check_out: document.getElementById("checkOutInput").value,
+      adults: Number(document.getElementById("adultsInput").value || 2),
+      children: Number(document.getElementById("childrenInput").value || 0),
+      rooms: Number(document.getElementById("roomsInput").value || 1),
+      currency: currencySelect && currencySelect.value,
+      latitude: selectedGeo.latitude,
+      longitude: selectedGeo.longitude
+    };
+  }
+
+  async function runSearch() {
+    setStatus("Searching…");
+    searchResults.innerHTML = "";
+    try {
+      if (document.getElementById("cityInput").value.trim().length >= 2 && !selectedGeo.label) {
+        var geo = await geocode(document.getElementById("cityInput").value);
+        if (geo && geo.ok && geo.primary) setGeo(geo.primary);
+      }
+      var res = await fetch("/api/hotels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(searchPayload())
+      });
+      var body = await res.json();
+      if (!body || body.ok !== true) {
+        setStatus((body && body.error) || "Search failed");
+        return;
+      }
+      var direct = (body.results && body.results.havkar_direct) || [];
+      var duffel = (body.results && body.results.duffel_stays) || {};
+      var duffelRows = duffel.results || [];
+      setStatus(
+        "Direct: " + direct.length +
+        " · Duffel: " + duffelRows.length +
+        " (" + String(duffel.access || "unknown") + ")" +
+        " · Live booking: OFF · currencies: " +
+        String(body.stripe_presentment_count || "")
+      );
+      var cards = direct.concat(duffelRows);
+      searchResults.innerHTML = cards.map(function () {
+        return '<article class="card listing"><h2></h2><p></p><p class="provider-note"></p></article>';
+      }).join("");
+      Array.prototype.forEach.call(searchResults.querySelectorAll("article"), function (card, i) {
+        var row = cards[i];
+        card.querySelector("h2").textContent = row.title || "";
+        card.querySelector("p").textContent = row.summary || "";
+        card.querySelector(".provider-note").textContent =
+          "provider=" + (row.provider || "") +
+          " · bookable=" + String(row.bookable) +
+          " · " + (row.reason || row.requirement || "");
+      });
+      if (!cards.length) {
+        var note = document.createElement("p");
+        note.className = "provider-note";
+        note.textContent = duffel.note || duffel.requirement || "No published matches.";
+        searchResults.appendChild(note);
+      }
+    } catch (e) {
+      setStatus("Search request failed");
+    }
+  }
+
+  function setPayStatus(el, label, ready) {
+    if (!el) return;
+    el.textContent = label || "Not yet available";
+    el.className = "pay-status" + (ready ? " ready" : "");
+  }
+
+  function renderQuoteRows(rows) {
+    payQuoteDl.innerHTML = "";
+    rows.forEach(function (row) {
+      var dt = document.createElement("dt");
+      dt.textContent = row[0];
+      var dd = document.createElement("dd");
+      dd.textContent = row[1];
+      payQuoteDl.appendChild(dt);
+      payQuoteDl.appendChild(dd);
+    });
+  }
+
+  async function loadPaymentMethods() {
+    try {
+      var res = await fetch("/api/hotels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "hotels_payment_methods",
+          currency: currencySelect && currencySelect.value,
+          role: "guest"
+        })
+      });
+      var body = await res.json();
+      var methods = (body && body.methods) || [];
+      var stripe = methods.find(function (m) { return m.id === "stripe"; }) || {};
+      var xlm = methods.find(function (m) { return m.id === "xlm_mainnet"; }) || {};
+      setPayStatus(
+        document.getElementById("stripeStatus"),
+        langIt ? (stripe.status_label_it || stripe.status_label) : stripe.status_label,
+        stripe.status !== "not_yet_available"
+      );
+      setPayStatus(
+        document.getElementById("xlmStatus"),
+        langIt ? (xlm.status_label_it || xlm.status_label) : xlm.status_label,
+        xlm.status !== "not_yet_available"
+      );
+      document.getElementById("stripeMeta").textContent =
+        String(stripe.currency_count || "") +
+        " Stripe presentment currencies · settlement EUR · charge_now=" +
+        String(stripe.charge_allowed_now === true);
+      document.getElementById("xlmMeta").textContent =
+        "Native XLM only (not a Stripe currency) · Mainnet rails wired · charge_now=" +
+        String(xlm.charge_allowed_now === true) +
+        " · Duffel XLM=" + String(xlm.offered_for_duffel_stays === true);
+    } catch (e) {
+      setPayStatus(document.getElementById("stripeStatus"), "Unavailable");
+      setPayStatus(document.getElementById("xlmStatus"), "Unavailable");
+    }
+  }
+
+  async function runMethodQuote(method) {
+    payQuoteBox.hidden = false;
+    payQuoteTitle.textContent = method === "xlm_mainnet" ? "XLM quote" : "Stripe quote";
+    payQuoteNote.textContent = "Loading real quote…";
+    payQuoteDl.innerHTML = "";
+    payQuoteRaw.hidden = true;
+    try {
+      var listPrice = Number(document.getElementById("listPriceEur").value || 120);
+      var res = await fetch("/api/hotels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "hotels_quote",
+          list_price_eur: listPrice,
+          currency: currencySelect && currencySelect.value,
+          method: method === "xlm_mainnet" ? "xlm_mainnet" : "stripe",
+          provider: "havkar_direct",
+          idempotency_key: "hotels-ui-" + method + "-" + Date.now()
+        })
+      });
+      var body = await res.json();
+      payQuoteRaw.hidden = false;
+      payQuoteRaw.textContent = JSON.stringify(body, null, 2);
+      var rows = [];
+      rows.push(["Availability", body.availability_label || body.availability_status || "—"]);
+      rows.push(["Method", body.payment_method || method]);
+      rows.push(["List price (EUR)", String(body.list_price_eur || listPrice)]);
+      if (method === "xlm_mainnet") {
+        var decision = body.decision || {};
+        var fees = body.fees || decision.fees || {};
+        var xlmDisp = body.xlm_display || {};
+        var xlmSettled = body.xlm_quote && body.xlm_quote.ok === true ? body.xlm_quote : null;
+        var amountXlm =
+          (xlmSettled && xlmSettled.amount_xlm) ||
+          body.amount_xlm ||
+          xlmDisp.amount_xlm ||
+          decision.amount_xlm;
+        var eurPer =
+          (xlmSettled && xlmSettled.eur_per_xlm) ||
+          body.eur_per_xlm ||
+          xlmDisp.eur_per_xlm ||
+          decision.eur_per_xlm;
+        var rateAsOf =
+          (xlmSettled && xlmSettled.rate_as_of) ||
+          body.rate_as_of ||
+          xlmDisp.rate_as_of ||
+          decision.rate_as_of ||
+          decision.eur_per_xlm_as_of;
+        var rateSource =
+          (xlmSettled && xlmSettled.rate_source) ||
+          xlmDisp.rate_source ||
+          body.rate_source ||
+          "";
+        var netFee =
+          (xlmSettled && xlmSettled.network_fee_xlm) ||
+          body.network_fee_xlm ||
+          xlmDisp.network_fee_xlm ||
+          decision.network_fee_xlm;
+        rows.push(["Buyer pays (EUR)", String(fees.buyerPays != null ? fees.buyerPays : "—")]);
+        rows.push(["XLM amount", amountXlm != null ? String(amountXlm) : "—"]);
+        rows.push(["EUR per XLM", eurPer != null ? String(eurPer) : "—"]);
+        rows.push(["FX timestamp", rateAsOf || "—"]);
+        rows.push(["FX source", rateSource || "—"]);
+        rows.push(["Network fee (XLM)", netFee != null ? String(netFee) : "—"]);
+        rows.push([
+          "Quote mode",
+          xlmSettled ? "settlement-ready" : xlmDisp.display_only ? "display-only (no charge)" : "—"
+        ]);
+        rows.push(["XLM is Stripe currency?", "No"]);
+      } else {
+        var q = body.quote || {};
+        rows.push(["Display/charge currency", String((body.currency && body.currency.code) || currencySelect.value || "eur").toUpperCase()]);
+        rows.push(["Buyer total", String(q.buyer_pays != null ? q.buyer_pays : q.buyerPays || "—")]);
+        rows.push(["FX provider", String(q.fx_provider || "—")]);
+        rows.push(["FX date", String(q.fx_date || "—")]);
+        rows.push(["Settlement", "EUR (IT Stripe account)"]);
+      }
+      rows.push(["Live charge now", String(body.charge_allowed_now === true)]);
+      renderQuoteRows(rows);
+      payQuoteNote.textContent =
+        body.availability_reason ||
+        body.error ||
+        "Quote only — no hotel charge was created.";
+    } catch (e) {
+      payQuoteNote.textContent = "Quote request failed";
+    }
+  }
+
+  async function runHistory() {
+    historyOut.hidden = false;
+    historyOut.textContent = "Loading…";
+    try {
+      var headers = Object.assign({ "Content-Type": "application/json" }, authHeader());
+      var res = await fetch("/api/hotels", {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify({ action: "hotels_history" })
+      });
+      historyOut.textContent = JSON.stringify(await res.json(), null, 2);
+    } catch (e) {
+      historyOut.textContent = "History request failed";
+    }
+  }
+
+  document.getElementById("searchHotelsBtn").addEventListener("click", runSearch);
+  document.getElementById("quoteStripeBtn").addEventListener("click", function () {
+    runMethodQuote("stripe");
+  });
+  document.getElementById("quoteXlmBtn").addEventListener("click", function () {
+    runMethodQuote("xlm_mainnet");
+  });
+  document.getElementById("historyBtn").addEventListener("click", runHistory);
+  initMap();
+  setGeo(selectedGeo);
+  loadCurrencies().then(loadPaymentMethods);
+  geocode("Rome").then(function (body) {
+    if (body && body.ok && body.primary) setGeo(body.primary);
+  });
+})();
+</script>
 <script>
 document.getElementById("backButton").addEventListener("click", function () {
   if (window.havkarNavigateBack) {
