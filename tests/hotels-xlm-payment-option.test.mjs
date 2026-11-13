@@ -20,6 +20,8 @@ assert.match(api, /xlm_is_not_a_stripe_currency/);
 assert.match(api, /Stellar XLM — Pay with XLM wallet/);
 assert.match(api, /availability_status: "not_yet_available"/);
 assert.match(api, /buildXlmQuote/);
+assert.match(api, /xlm_display/);
+assert.match(api, /display_only: true/);
 assert.match(api, /charge_allowed_now: false/);
 assert.match(api, /HOTELS_LIVE_BOOKING_OFF|public_live_booking: false/);
 
@@ -31,6 +33,8 @@ assert.match(page, /quoteStripeBtn/);
 assert.match(page, /xlm-mark/);
 assert.match(page, /hotels_payment_methods/);
 assert.match(page, /xlm_mainnet/);
+assert.match(page, /xlm_display/);
+assert.match(page, /display-only \(no charge\)/);
 assert.doesNotMatch(page, /id="quoteBtn"/);
 
 const i18n = fs.readFileSync("havkar-accommodation-i18n.js", "utf8");

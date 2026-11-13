@@ -462,16 +462,43 @@
       if (method === "xlm_mainnet") {
         var decision = body.decision || {};
         var fees = body.fees || decision.fees || {};
+        var xlmDisp = body.xlm_display || {};
+        var xlmSettled = body.xlm_quote && body.xlm_quote.ok === true ? body.xlm_quote : null;
+        var amountXlm =
+          (xlmSettled && xlmSettled.amount_xlm) ||
+          body.amount_xlm ||
+          xlmDisp.amount_xlm ||
+          decision.amount_xlm;
+        var eurPer =
+          (xlmSettled && xlmSettled.eur_per_xlm) ||
+          body.eur_per_xlm ||
+          xlmDisp.eur_per_xlm ||
+          decision.eur_per_xlm;
+        var rateAsOf =
+          (xlmSettled && xlmSettled.rate_as_of) ||
+          body.rate_as_of ||
+          xlmDisp.rate_as_of ||
+          decision.rate_as_of ||
+          decision.eur_per_xlm_as_of;
+        var rateSource =
+          (xlmSettled && xlmSettled.rate_source) ||
+          xlmDisp.rate_source ||
+          body.rate_source ||
+          "";
+        var netFee =
+          (xlmSettled && xlmSettled.network_fee_xlm) ||
+          body.network_fee_xlm ||
+          xlmDisp.network_fee_xlm ||
+          decision.network_fee_xlm;
         rows.push(["Buyer pays (EUR)", String(fees.buyerPays != null ? fees.buyerPays : "—")]);
-        rows.push(["XLM amount", String(decision.amount_xlm || body.amount_xlm || "—")]);
-        rows.push(["EUR per XLM", String(decision.eur_per_xlm || body.eur_per_xlm || "—")]);
+        rows.push(["XLM amount", amountXlm != null ? String(amountXlm) : "—"]);
+        rows.push(["EUR per XLM", eurPer != null ? String(eurPer) : "—"]);
+        rows.push(["FX timestamp", rateAsOf || "—"]);
+        rows.push(["FX source", rateSource || "—"]);
+        rows.push(["Network fee (XLM)", netFee != null ? String(netFee) : "—"]);
         rows.push([
-          "FX timestamp",
-          decision.rate_as_of || decision.eur_per_xlm_as_of || body.rate_as_of || "from CoinGecko when quote ok"
-        ]);
-        rows.push([
-          "Network fee (XLM)",
-          String(decision.network_fee_xlm || body.network_fee_xlm || "—")
+          "Quote mode",
+          xlmSettled ? "settlement-ready" : xlmDisp.display_only ? "display-only (no charge)" : "—"
         ]);
         rows.push(["XLM is Stripe currency?", "No"]);
       } else {
