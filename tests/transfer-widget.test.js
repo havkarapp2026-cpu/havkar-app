@@ -23,7 +23,8 @@ assert.strictEqual(handler.googleLanguageCode("fa"), "fa");
 
 const tickets = fs.readFileSync(path.join(__dirname, "../tickets.html"), "utf8");
 const typeOrder = [...tickets.matchAll(/data-ticket-type="([^"]+)"/g)].map(match => match[1]);
-assert.deepStrictEqual(typeOrder.slice(0, 7), [
+assert.deepStrictEqual(typeOrder.slice(0, 8), [
+    "events",
     "flight",
     "train",
     "bus",
@@ -32,6 +33,11 @@ assert.deepStrictEqual(typeOrder.slice(0, 7), [
     "transfer",
     "hotel"
 ]);
+assert.ok(tickets.includes("Event Tickets"));
+assert.ok(tickets.includes("events.html?open=create"));
+assert.ok(tickets.includes("events.html?open=my-event-tickets"));
+assert.ok(tickets.includes("events.html?open=check-in"));
+assert.ok(tickets.includes("REAL_PAYMENTS_PAUSED"));
 assert.ok(tickets.includes("Airport Transfer"));
 assert.ok(tickets.includes("Train Station Transfer"));
 assert.ok(tickets.includes("Hotel Transfer"));

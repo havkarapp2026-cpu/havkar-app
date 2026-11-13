@@ -2251,7 +2251,9 @@
                 interested: Number(
                     interestedCounts.get(String(row.id)) ?? row.interested ?? 0
                 ),
-                price: row.price || "Free",
+                price: row.price == null || String(row.price).trim() === ""
+                    ? "0"
+                    : String(row.price),
                 description: row.description || "",
                 image_url: row.image_url || "",
                 is_public: row.is_public,
@@ -2262,6 +2264,41 @@
 
         }
 
+
+        function formatEventPrice(value) {
+            if (
+                value === null ||
+                value === undefined ||
+                String(value).trim() === ""
+            ) {
+                return "Free";
+            }
+
+            const text = String(value).trim();
+
+            if (/^(free|gratis)$/i.test(text)) {
+                return "Free";
+            }
+
+            const amount = Number(
+                text.replace(/[€$£\s]/g, "").replace(",", ".")
+            );
+
+            if (Number.isFinite(amount) && amount <= 0) {
+                return "Free";
+            }
+
+            if (Number.isFinite(amount)) {
+                return "€" + amount.toFixed(2).replace(/\.00$/, "");
+            }
+
+            return text;
+        }
+
+        function isFreeEventPrice(value) {
+            const formatted = formatEventPrice(value);
+            return formatted === "Free";
+        }
 
         function safeImageUrl(url) {
             if (!url) return "";
@@ -2475,20 +2512,14 @@
 
             if (filterPrice === "free") {
                 events = events.filter(
-                    event =>
-                        String(event.price || "Free")
-                            .trim()
-                            .toLowerCase() === "free"
+                    event => isFreeEventPrice(event.price)
                 );
             }
 
 
             if (filterPrice === "paid") {
                 events = events.filter(
-                    event =>
-                        String(event.price || "Free")
-                            .trim()
-                            .toLowerCase() !== "free"
+                    event => !isFreeEventPrice(event.price)
                 );
             }
 
@@ -2631,7 +2662,7 @@
 
 
                             <div class="event-price">
-                                ${escapeHtml(event.price || "Free")}
+                                ${escapeHtml(formatEventPrice(event.price))}
                             </div>
 
                         </div>
@@ -3012,7 +3043,7 @@
                         <div class="detail-row-content">
                             <strong>${et("PRICE")}</strong>
                             <span>
-                                ${escapeHtml(event.price || "Free")}
+                                ${escapeHtml(formatEventPrice(event.price))}
                             </span>
                         </div>
 
@@ -3053,9 +3084,7 @@
                         >
                             <i class="fas fa-ticket"></i>
                             ${
-                                String(event.price || "Free")
-                                    .trim()
-                                    .toLowerCase() === "free"
+                                isFreeEventPrice(event.price)
                                     ? et("Join Event")
                                     : et("Get Ticket")
                             }
@@ -3176,7 +3205,8 @@
 
                         price = String(Number(priceNumber.toFixed(2)));
                     } else {
-                        price = "Free";
+                        /* Store numeric 0 so checkout/API free issuance works. */
+                        price = "0";
                     }
 
                     const date =
@@ -3501,9 +3531,7 @@
                                 event_id: eventId,
                                 quantity: 1,
                                 ticket_type:
-                                    String(event.price || "Free")
-                                        .trim()
-                                        .toLowerCase() === "free"
+                                    isFreeEventPrice(event.price)
                                         ? "free"
                                         : "general"
                             })
@@ -3523,11 +3551,17 @@
                     !response.ok ||
                     !result?.ok
                 ) {
+                    const paused =
+                        result?.code === "REAL_PAYMENTS_PAUSED";
                     const message =
-                        typeof result?.error === "string" &&
-                        result.error.trim()
-                            ? result.error.trim()
-                            : "Unable to create ticket checkout.";
+                        paused
+                            ? "Card ticket checkout is paused. Free tickets still work, or use XLM Testnet when offered."
+                            : (
+                                typeof result?.error === "string" &&
+                                result.error.trim()
+                                    ? result.error.trim()
+                                    : "Unable to create ticket checkout."
+                            );
 
                     showToast(
                         message,
@@ -4422,11 +4456,79 @@
         }
 
 
+        async function handleTicketsDeepLink() {
+            const params = new URLSearchParams(window.location.search);
+            const open = String(params.get("open") || "").trim().toLowerCase();
+
+            if (!open) {
+                return;
+            }
+
+            if (open === "create") {
+                openCreateEventModal();
+            } else if (
+                open === "my-event-tickets" ||
+                open === "tickets"
+            ) {
+                if (!currentUser) {
+                    showToast(
+                        "Please sign in to view your event tickets.",
+                        "error"
+                    );
+                } else {
+                    await openTickets();
+                }
+            } else if (
+                open === "check-in" ||
+                open === "checkin"
+            ) {
+                if (!currentUser) {
+                    showToast(
+                        "Please sign in as the event organizer to check tickets in.",
+                        "error"
+                    );
+                } else {
+                    const owned = allEvents.find(
+                        event =>
+                            String(event.user_id) ===
+                            String(currentUser.id)
+                    );
+
+                    if (owned) {
+                        openEventDetails(String(owned.id));
+                        showToast(
+                            "Open Organizer check-in on your event and enter the ticket code.",
+                            "success"
+                        );
+                    } else {
+                        showToast(
+                            "Create an event first, then use organizer check-in on that event.",
+                            "error"
+                        );
+                        openCreateEventModal();
+                    }
+                }
+            }
+
+            window.history.replaceState(
+                {},
+                document.title,
+                window.location.pathname +
+                    (
+                        params.get("q")
+                            ? ("?q=" + encodeURIComponent(params.get("q")))
+                            : ""
+                    )
+            );
+        }
+
+
         async function initializeEventsPage() {
             localizeEventsStatic();
             await loadCurrentUser();
             await refreshEvents();
             await handleEventCheckoutReturn();
+            await handleTicketsDeepLink();
 
             supabase.auth.onAuthStateChange(
                 async (_event, session) => {

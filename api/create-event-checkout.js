@@ -642,6 +642,12 @@ function normalizePrice(value) {
     return null;
   }
 
+  // UI historically stored free events as the word "Free".
+  // Treat Free/gratis/0 as zero so free tickets still issue while card collection stays paused.
+  if (/^(free|gratis|0+|0+[.,]0+)$/i.test(text)) {
+    return 0;
+  }
+
   if (/^\d+,\d{1,2}$/.test(text)) {
     text = text.replace(",", ".");
   }
