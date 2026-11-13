@@ -1075,6 +1075,7 @@ select:focus-visible{
 
 .emoji-sheet{
     width:min(560px,100%);
+    height:min(72vh,620px);
     max-height:min(72vh,620px);
     background:#fff;
     border-radius:18px 18px 0 0;
@@ -1082,6 +1083,16 @@ select:focus-visible{
     display:flex;
     flex-direction:column;
     overflow:hidden;
+    /* Android WebView: keep chrome above the scrolling grid. */
+    isolation:isolate;
+}
+
+.emoji-sheet-chrome{
+    flex:0 0 auto;
+    position:relative;
+    z-index:3;
+    background:#fff;
+    border-bottom:1px solid #e7ece7;
 }
 
 .emoji-sheet-header{
@@ -1090,7 +1101,6 @@ select:focus-visible{
     justify-content:space-between;
     gap:10px;
     padding:12px 14px 8px;
-    border-bottom:1px solid #e7ece7;
 }
 
 .emoji-sheet-header h3{
@@ -1100,21 +1110,27 @@ select:focus-visible{
 }
 
 .emoji-search{
-    margin:8px 14px;
+    display:block;
+    margin:0 14px 8px;
     width:calc(100% - 28px);
     min-height:42px;
     border:1px solid #d7ddd7;
     border-radius:12px;
     padding:0 12px;
     font-size:15px;
+    background:#fff;
 }
 
 .emoji-cats{
     display:flex;
+    flex-wrap:nowrap;
     gap:4px;
     overflow-x:auto;
-    padding:0 10px 8px;
+    overflow-y:hidden;
+    padding:0 10px 10px;
     -webkit-overflow-scrolling:touch;
+    overscroll-behavior-x:contain;
+    scrollbar-width:thin;
 }
 
 .emoji-cat{
@@ -1128,6 +1144,7 @@ select:focus-visible{
     font-size:12px;
     font-weight:700;
     cursor:pointer;
+    white-space:nowrap;
 }
 
 .emoji-cat.active{
@@ -1136,12 +1153,33 @@ select:focus-visible{
 }
 
 .emoji-grid{
-    overflow:auto;
+    flex:1 1 auto;
+    min-height:0;
+    overflow-x:hidden;
+    overflow-y:auto;
     -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
     padding:4px 10px 18px;
     display:grid;
     grid-template-columns:repeat(auto-fill,minmax(42px,1fr));
     gap:4px;
+    align-content:start;
+    position:relative;
+    z-index:1;
+    background:#fff;
+}
+
+.emoji-sheet-note{
+    flex:0 0 auto;
+    margin:0;
+    padding:8px 14px 12px;
+    color:#567;
+    font-size:12px;
+    line-height:1.35;
+    background:#fff;
+    border-top:1px solid #eef3ee;
+    position:relative;
+    z-index:2;
 }
 
 .emoji-cell{
@@ -1798,16 +1836,18 @@ select:focus-visible{
 
 <div id="emojiModal" class="emoji-modal" role="dialog" aria-modal="true" aria-labelledby="emojiModalTitle" hidden>
     <div class="emoji-sheet">
-        <div class="emoji-sheet-header">
-            <h3 id="emojiModalTitle">Emoji</h3>
-            <button id="emojiModalClose" class="translation-close" type="button" aria-label="Close emoji picker">
-                <i class="fas fa-xmark"></i>
-            </button>
+        <div class="emoji-sheet-chrome">
+            <div class="emoji-sheet-header">
+                <h3 id="emojiModalTitle">Emoji</h3>
+                <button id="emojiModalClose" class="translation-close" type="button" aria-label="Close emoji picker">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+            <input id="emojiSearchInput" class="emoji-search" type="search" placeholder="Search emoji" autocomplete="off">
+            <div id="emojiCats" class="emoji-cats" role="tablist" aria-label="Emoji categories"></div>
         </div>
-        <input id="emojiSearchInput" class="emoji-search" type="search" placeholder="Search emoji" autocomplete="off">
-        <div id="emojiCats" class="emoji-cats" role="tablist" aria-label="Emoji categories"></div>
         <div id="emojiGrid" class="emoji-grid" role="listbox" aria-label="Emoji list"></div>
-        <p style="margin:0 14px 12px;color:#567;font-size:12px;line-height:1.35;">
+        <p class="emoji-sheet-note">
             Your phone keyboard still works for every emoji your device supports. This picker adds search and categories.
         </p>
     </div>
@@ -1837,11 +1877,11 @@ select:focus-visible{
 
 /* =========================================================
    HAVKAR CHAT — PRODUCTION VERSION
-   Build: 2026-11-13-chat-react-routing-v5
+   Build: 2026-11-13-emoji-sticky-tabs-v6
 ========================================================= */
 
 const HAVKAR_CHAT_BUILD =
-    "2026-11-13-chat-react-routing-v5";
+    "2026-11-13-emoji-sticky-tabs-v6";
 
 function loadEmojiCatalogDeferred(){
     if(window.HAVKAR_EMOJI_CATALOG){
@@ -2198,28 +2238,71 @@ function closeEmojiModal(){
     }
 }
 
+function listEmojiCategories(){
+    return [{ id:"recent", label:"Recent" }].concat(
+        getEmojiCatalog().categories.map(cat => ({
+            id: cat.id,
+            label: cat.label
+        }))
+    );
+}
+
+function scrollEmojiGridToCategory(categoryId){
+    const root = $("emojiGrid");
+    const section = $("emoji-section-" + String(categoryId || ""));
+    if(!root || !section){
+        return;
+    }
+    try{
+        const top = Math.max(0, section.offsetTop - 4);
+        root.scrollTo({
+            top: top,
+            behavior: "smooth"
+        });
+    }catch(_e){
+        section.scrollIntoView({
+            block: "start",
+            behavior: "smooth"
+        });
+    }
+}
+
 function renderEmojiCats(){
     const root = $("emojiCats");
     if(!root){
         return;
     }
     root.innerHTML = "";
-    const cats = [{ id:"recent", label:"Recent" }].concat(
-        getEmojiCatalog().categories.map(cat => ({
-            id: cat.id,
-            label: cat.label
-        }))
-    );
-    cats.forEach(cat => {
+    listEmojiCategories().forEach(cat => {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "emoji-cat" + (state.emojiCategory === cat.id ? " active" : "");
         button.textContent = cat.label;
         button.setAttribute("role", "tab");
+        button.setAttribute("aria-selected", state.emojiCategory === cat.id ? "true" : "false");
+        button.dataset.emojiCat = cat.id;
         button.addEventListener("click", () => {
             state.emojiCategory = cat.id;
             renderEmojiCats();
-            renderEmojiGrid();
+            const search = unicodeSafeTrim(($("emojiSearchInput") && $("emojiSearchInput").value) || "");
+            if(search){
+                // Leaving search restores the full sectional grid, then jumps.
+                if($("emojiSearchInput")){
+                    $("emojiSearchInput").value = "";
+                }
+                renderEmojiGrid();
+            }
+            // Ensure the active chip stays visible in the horizontal strip.
+            try{
+                button.scrollIntoView({
+                    inline: "center",
+                    block: "nearest",
+                    behavior: "smooth"
+                });
+            }catch(_e){}
+            window.setTimeout(() => {
+                scrollEmojiGridToCategory(cat.id);
+            }, 16);
         });
         root.appendChild(button);
     });
@@ -2261,41 +2344,42 @@ function renderEmojiGrid(){
         root.appendChild(button);
     }
 
-    if(search){
+    function addSection(id, labelText){
         const label = document.createElement("div");
         label.className = "emoji-section-label";
-        label.textContent = "Search results";
+        label.id = "emoji-section-" + String(id);
+        label.textContent = labelText;
         root.appendChild(label);
+        return label;
+    }
+
+    if(search){
+        addSection("search", "Search results");
         catalog.categories.forEach(cat => {
             (cat.emojis || []).forEach(item => addCell(item.e, item.n));
         });
         return;
     }
 
-    if(state.emojiCategory === "recent"){
-        const label = document.createElement("div");
-        label.className = "emoji-section-label";
-        label.textContent = "Recently used";
-        root.appendChild(label);
-        const recent = readRecentEmojis();
-        if(!recent.length){
-            REACTIONS.forEach(emoji => addCell(emoji, emoji));
-        }else{
-            recent.forEach(emoji => addCell(emoji, emoji));
-        }
-        return;
+    // Full catalog in one vertical scroller; category tabs jump to sections.
+    addSection("recent", "Recently used");
+    const recent = readRecentEmojis();
+    if(!recent.length){
+        REACTIONS.forEach(emoji => addCell(emoji, emoji));
+    }else{
+        recent.forEach(emoji => addCell(emoji, emoji));
     }
 
-    const cat = catalog.categories.find(item => item.id === state.emojiCategory)
-        || catalog.categories[0];
-    if(!cat){
-        return;
+    catalog.categories.forEach(cat => {
+        addSection(cat.id, cat.label);
+        (cat.emojis || []).forEach(item => addCell(item.e, item.n));
+    });
+
+    if(state.emojiCategory){
+        window.setTimeout(() => {
+            scrollEmojiGridToCategory(state.emojiCategory);
+        }, 0);
     }
-    const label = document.createElement("div");
-    label.className = "emoji-section-label";
-    label.textContent = cat.label;
-    root.appendChild(label);
-    (cat.emojis || []).forEach(item => addCell(item.e, item.n));
 }
 
 
