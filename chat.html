@@ -2079,7 +2079,10 @@ const state = {
 
     reactionPortalMessageId:null,
 
-    pushConfigured:false
+    pushConfigured:false,
+
+    /* Prevent duplicate reaction writes while a save is in-flight. */
+    reactionInFlight:{}
 
 };
 
@@ -5482,6 +5485,15 @@ async function addOrToggleReaction(
         return;
     }
 
+    const reactionKey =
+        String(messageId);
+
+    if(state.reactionInFlight[reactionKey]){
+        return;
+    }
+
+    state.reactionInFlight[reactionKey] = true;
+
     const userId =
         String(state.currentUser.id);
 
@@ -5523,6 +5535,8 @@ async function addOrToggleReaction(
 
         }else{
 
+            /* UNIQUE(message_id,user_id) + upsert = one reaction per user;
+               retries replace emoji instead of inserting duplicates. */
             const upsertResult =
                 await withTimeout(
                     supabaseClient
@@ -5538,7 +5552,9 @@ async function addOrToggleReaction(
                             },
                             {
                                 onConflict:
-                                    "message_id,user_id"
+                                    "message_id,user_id",
+                                ignoreDuplicates:
+                                    false
                             }
                         )
                 );
@@ -5562,13 +5578,30 @@ async function addOrToggleReaction(
 
         console.error(
             "[HAVKAR] Reaction database write failed:",
-            error
+            {
+                messageId:
+                    String(messageId),
+                emoji:
+                    emoji,
+                code:
+                    error?.code || null,
+                message:
+                    error?.message || String(error),
+                details:
+                    error?.details || null,
+                hint:
+                    error?.hint || null
+            }
         );
 
         showToast(
             "Reaction could not be saved.",
             "error"
         );
+
+    }finally{
+
+        delete state.reactionInFlight[reactionKey];
 
     }
 
