@@ -2196,17 +2196,59 @@ export default async function handler(req, res) {
 
         const isXlm = method === "xlm" || method === "xlm_mainnet";
         let xlmQuote = null;
+        let xlmDisplay = null;
         if (isXlm && quote && quote.ok && quote.decision && quote.decision.ok) {
           try {
-            const { buildXlmQuote } = require("../lib/stellar-checkout.cjs");
+            const { buildXlmQuote, xlmFromEur } = require("../lib/stellar-checkout.cjs");
             xlmQuote = await buildXlmQuote(quote.decision, {
               env: process.env,
               nowMs: Date.now()
             });
+            // Display-only EUR→XLM conversion when settlement destination
+            // is not yet configured for hotels (live charges remain OFF).
+            if (!xlmQuote || xlmQuote.ok !== true || !xlmQuote.amount_xlm) {
+              const rateRes = await fetch(
+                "https://api.coingecko.com/api/v3/simple/price?ids=stellar&vs_currencies=eur&include_last_updated_at=true",
+                { headers: { Accept: "application/json" } }
+              );
+              if (rateRes.ok) {
+                const rateBody = await rateRes.json();
+                const eurPer = Number(
+                  rateBody && rateBody.stellar && rateBody.stellar.eur
+                );
+                const updated = Number(
+                  rateBody && rateBody.stellar && rateBody.stellar.last_updated_at
+                );
+                const buyerPays =
+                  (quote.fees && quote.fees.buyerPays) ||
+                  (quote.decision.fees && quote.decision.fees.buyerPays);
+                if (Number.isFinite(eurPer) && eurPer > 0 && buyerPays) {
+                  xlmDisplay = {
+                    ok: true,
+                    display_only: true,
+                    payable: false,
+                    amount_xlm: xlmFromEur(buyerPays, eurPer),
+                    eur_per_xlm: eurPer,
+                    network_fee_xlm: "0.00001",
+                    rate_as_of: Number.isFinite(updated)
+                      ? new Date(updated * 1000).toISOString()
+                      : null,
+                    rate_source: "coingecko:stellar:eur",
+                    note:
+                      "Display-only XLM equivalent. Settlement destination not armed for hotel live charges."
+                  };
+                }
+              }
+            }
           } catch (_e) {
             xlmQuote = null;
           }
         }
+
+        const xlmEffective =
+          xlmQuote && xlmQuote.ok === true && xlmQuote.amount_xlm
+            ? xlmQuote
+            : xlmDisplay;
 
         return res.status(quote.status || (quote.ok ? 200 : 400)).json({
           ...quote,
@@ -2217,10 +2259,11 @@ export default async function handler(req, res) {
           payment_method: isXlm ? "xlm_mainnet" : "stripe",
           xlm_is_not_a_stripe_currency: isXlm ? true : undefined,
           xlm_quote: xlmQuote,
-          amount_xlm: xlmQuote && xlmQuote.amount_xlm,
-          eur_per_xlm: xlmQuote && xlmQuote.eur_per_xlm,
-          network_fee_xlm: xlmQuote && xlmQuote.network_fee_xlm,
-          rate_as_of: xlmQuote && xlmQuote.rate_as_of,
+          xlm_display: xlmDisplay,
+          amount_xlm: xlmEffective && xlmEffective.amount_xlm,
+          eur_per_xlm: xlmEffective && xlmEffective.eur_per_xlm,
+          network_fee_xlm: xlmEffective && xlmEffective.network_fee_xlm,
+          rate_as_of: xlmEffective && xlmEffective.rate_as_of,
           availability_status: "not_yet_available",
           availability_label: "Not yet available",
           availability_label_it: "Non ancora disponibile",
