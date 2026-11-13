@@ -13,6 +13,7 @@ const { classifyStaysAccess, searchDuffelStays } = require("../lib/duffel-stays.
 const { moduleCatalog, buildGlobalPaymentQuote } = require("../lib/havkar-global-payments.cjs");
 
 assert.ok(PRESENTMENT_COUNT >= 130);
+assert.equal(PRESENTMENT_COUNT, 133);
 assert.equal(listStripePresentmentCurrencies().length, PRESENTMENT_COUNT);
 assert.ok(searchCurrencies("yen").some((row) => row.code === "jpy"));
 assert.equal(isSupportedCheckoutCurrency("xpf"), true);

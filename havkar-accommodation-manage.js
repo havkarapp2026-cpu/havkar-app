@@ -148,6 +148,39 @@ async function start() {
     show(saved.error ? saved.error.message : "Draft price saved. It was not charged.");
   });
 
+  document.getElementById("saveRoom").addEventListener("click", async function() {
+    const roomName = document.getElementById("roomName").value.trim();
+    if (!roomName) {
+      show("Enter a room name.");
+      return;
+    }
+    try {
+      const res = await fetch("/api/hotels", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + session.data.session.access_token
+        },
+        body: JSON.stringify({
+          action: "hotels_owner_rooms",
+          property_id: selectedProperty(),
+          name: roomName,
+          category: document.getElementById("roomCategory").value,
+          quantity: Number(document.getElementById("roomQty").value || 1)
+        })
+      });
+      const body = await res.json();
+      show(
+        body && body.ok
+          ? "Room saved. Public booking stays gated."
+          : (body && body.error) || "Room save failed."
+      );
+      await refreshOwnerStatus(session.data.session.access_token);
+    } catch (_e) {
+      show("Room save request failed.");
+    }
+  });
+
   document.getElementById("savePhoto").addEventListener("click", async function() {
     const file = document.getElementById("photo").files && document.getElementById("photo").files[0];
     const path = file

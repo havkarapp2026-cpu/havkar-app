@@ -218,7 +218,11 @@ function isHotelsRequest(req) {
       action === "hotels_cancel" ||
       action === "hotels_history" ||
       action === "hotels_owner_status" ||
-      action === "hotels_payment_methods"
+      action === "hotels_payment_methods" ||
+      action === "hotels_geocode" ||
+      action === "hotels_stripe_currency_audit" ||
+      action === "hotels_owner_rooms" ||
+      action === "hotels_payment_probe"
   );
 }
 
@@ -2252,6 +2256,15 @@ export default async function handler(req, res) {
             .from("accommodation_properties")
             .select("id,display_name,property_status")
             .eq("operator_id", operator.data.id);
+          const propertyIds = (properties.data || []).map((row) => row.id);
+          let rooms = [];
+          if (propertyIds.length) {
+            const roomLoad = await admin
+              .from("accommodation_rooms")
+              .select("id,property_id,name,category,max_adults,max_children,quantity")
+              .in("property_id", propertyIds);
+            rooms = (roomLoad && roomLoad.data) || [];
+          }
           const payoutsEligible =
             operator.data.identity_status === "verified" &&
             (properties.data || []).some(
@@ -2265,6 +2278,7 @@ export default async function handler(req, res) {
               identity_status: operator.data.identity_status
             },
             properties: properties.data || [],
+            rooms,
             payouts_eligible: payoutsEligible === true,
             payouts_note:
               "Property registration does not authorize unverified owners to receive payouts. Stripe Connect country/currency capability checks still apply.",
@@ -2273,6 +2287,152 @@ export default async function handler(req, res) {
         } catch (error) {
           return sendError(res, 500, "Owner status failed");
         }
+      }
+
+      if (action === "hotels_geocode") {
+        const { geocodeDestination } = require("../lib/geocode-destination.cjs");
+        const query = String(
+          (req.body && (req.body.query || req.body.city || req.body.destination)) ||
+            (req.query && (req.query.query || req.query.city)) ||
+            ""
+        );
+        const geo = await geocodeDestination(query);
+        return res.status(geo.ok ? 200 : 404).json({
+          action: "hotels_geocode",
+          ...geo
+        });
+      }
+
+      if (action === "hotels_stripe_currency_audit") {
+        const {
+          buildCurrencyAudit
+        } = require("../lib/stripe-currency-capability-audit.cjs");
+        let account = null;
+        try {
+          account = await getStripe().accounts.retrieve();
+        } catch (error) {
+          return sendError(
+            res,
+            500,
+            "Unable to retrieve Stripe account for currency audit"
+          );
+        }
+        const audit = buildCurrencyAudit(account, []);
+        return res.status(200).json({
+          ok: true,
+          action: "hotels_stripe_currency_audit",
+          public_live_booking: false,
+          ...audit,
+          stripe_api_accepted_extra_vs_prior_60_removed: true
+        });
+      }
+
+      if (action === "hotels_owner_rooms") {
+        const auth = await authenticateUser(req);
+        if (!auth.user) {
+          return sendError(res, 401, auth.error || "Authentication required");
+        }
+        const propertyId = String(
+          (req.body && req.body.property_id) || ""
+        ).trim();
+        const name = String((req.body && req.body.name) || "").trim();
+        const category = String((req.body && req.body.category) || "standard")
+          .trim()
+          .toLowerCase();
+        if (!propertyId || name.length < 2) {
+          return sendError(res, 400, "property_id and room name required");
+        }
+        try {
+          const admin = getSupabaseAdmin();
+          const property = await admin
+            .from("accommodation_properties")
+            .select("id,operator_id,accommodation_operators!inner(user_id)")
+            .eq("id", propertyId)
+            .maybeSingle();
+          const ownerId =
+            property.data &&
+            property.data.accommodation_operators &&
+            property.data.accommodation_operators.user_id;
+          if (!property.data || ownerId !== auth.user.id) {
+            // Fallback without join shape
+            const op = await admin
+              .from("accommodation_operators")
+              .select("id")
+              .eq("user_id", auth.user.id)
+              .maybeSingle();
+            const owned = await admin
+              .from("accommodation_properties")
+              .select("id")
+              .eq("id", propertyId)
+              .eq("operator_id", op.data && op.data.id)
+              .maybeSingle();
+            if (!owned.data) {
+              return sendError(res, 403, "Not your property");
+            }
+          }
+          const inserted = await admin
+            .from("accommodation_rooms")
+            .insert({
+              property_id: propertyId,
+              name,
+              category,
+              max_adults: Math.max(
+                1,
+                Math.min(20, Number((req.body && req.body.max_adults) || 2))
+              ),
+              max_children: Math.max(
+                0,
+                Math.min(20, Number((req.body && req.body.max_children) || 0))
+              ),
+              quantity: Math.max(
+                1,
+                Math.min(500, Number((req.body && req.body.quantity) || 1))
+              ),
+              description: String((req.body && req.body.description) || "").slice(
+                0,
+                4000
+              ) || null
+            })
+            .select("id,property_id,name,category,quantity,max_adults,max_children")
+            .single();
+          if (inserted.error) {
+            return sendError(res, 400, inserted.error.message || "Room save failed");
+          }
+          return res.status(200).json({
+            ok: true,
+            action: "hotels_owner_rooms",
+            room: inserted.data,
+            note: "Room inventory saved. Public booking stays gated."
+          });
+        } catch (error) {
+          return sendError(res, 500, "Room inventory failed");
+        }
+      }
+
+      if (action === "hotels_payment_probe") {
+        // Verifies quote rails without creating public live charges.
+        const method = String((req.body && req.body.method) || "stripe")
+          .trim()
+          .toLowerCase();
+        const currency = String((req.body && req.body.currency) || "eur")
+          .trim()
+          .toLowerCase();
+        const quote = await buildGlobalPaymentQuote({
+          module: "hotels",
+          method,
+          currency,
+          list_price_eur: Number((req.body && req.body.list_price_eur) || 80),
+          subject_id: "hotels_payment_probe",
+          idempotency_key: "hotels-probe-" + Date.now()
+        });
+        return res.status(quote.status || (quote.ok ? 200 : 400)).json({
+          ...quote,
+          action: "hotels_payment_probe",
+          public_live_booking: false,
+          charge_created: false,
+          note:
+            "Probe only — no PaymentIntent/Checkout Session created. Public live hotel payments stay OFF."
+        });
       }
 
       return sendError(res, 400, "Unknown hotels action");

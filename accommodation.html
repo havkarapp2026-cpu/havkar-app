@@ -10,6 +10,7 @@
 <meta name="theme-color" content="#609b38">
 <title>HAVKAR | Accommodation</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <link rel="stylesheet" href="/havkar-accommodation.css">
 <style>
 .search-panel{background:#fff;border-radius:14px;padding:14px;margin:12px 0;box-shadow:0 6px 18px rgba(0,0,0,.06)}
@@ -22,8 +23,11 @@
 .provider-note{font-size:13px;line-height:1.4;color:#555;margin:8px 0}
 #searchStatus{min-height:1.2em;font-size:14px}
 .currency-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.map-box{height:180px;border-radius:12px;background:linear-gradient(135deg,#dfeee3,#c8e0d0);display:flex;align-items:center;justify-content:center;color:#1b5e20;font-size:14px;margin-top:8px;text-align:center;padding:12px}
-#quoteOut,#historyOut{white-space:pre-wrap;font-size:12px;background:#f7fbf7;padding:10px;border-radius:10px}
+#map{height:240px;border-radius:12px;margin-top:10px;border:1px solid #d7e6db}
+.suggest{border:1px solid #d7e6db;border-radius:10px;margin-top:4px;max-height:180px;overflow:auto;background:#fff}
+.suggest button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #eef5ef;background:#fff;padding:10px;cursor:pointer;font:inherit}
+.suggest button:hover{background:#e8f5e9}
+#quoteOut,#historyOut,#probeOut{white-space:pre-wrap;font-size:12px;background:#f7fbf7;padding:10px;border-radius:10px}
 </style>
 </head>
 <body data-accommodation-page="public" data-i18n-ignore>
@@ -38,15 +42,14 @@
 </header>
 <main>
   <section class="search-panel" aria-label="Hotel search">
+    <div>
+      <label for="cityInput">City / destination</label>
+      <input id="cityInput" type="search" placeholder="Rome, Milan, Paris…" autocomplete="off">
+      <div id="geoSuggest" class="suggest" hidden></div>
+    </div>
+    <div id="map" role="application" aria-label="Destination map"></div>
+    <p id="geoLabel" class="provider-note">Choose a destination to place the map marker.</p>
     <div class="search-grid">
-      <div>
-        <label for="cityInput">City / destination</label>
-        <input id="cityInput" type="search" placeholder="Rome, Milan, Paris…" autocomplete="off">
-      </div>
-      <div>
-        <label for="roomsInput">Rooms</label>
-        <input id="roomsInput" type="number" min="1" max="10" value="1">
-      </div>
       <div>
         <label for="checkInInput">Check-in</label>
         <input id="checkInInput" type="date">
@@ -64,27 +67,22 @@
         <input id="childrenInput" type="number" min="0" max="12" value="0">
       </div>
       <div>
-        <label for="latInput">Map latitude</label>
-        <input id="latInput" type="number" step="any" placeholder="41.9028">
+        <label for="roomsInput">Rooms</label>
+        <input id="roomsInput" type="number" min="1" max="10" value="1">
       </div>
       <div>
-        <label for="lngInput">Map longitude</label>
-        <input id="lngInput" type="number" step="any" placeholder="12.4964">
+        <label for="currencySelect">Display / charge currency</label>
+        <select id="currencySelect" aria-label="Currency"></select>
       </div>
     </div>
-    <div class="map-box" id="mapHint" role="img" aria-label="Map coordinates for supplier search">
-      Enter destination coordinates for Duffel Stays geographic search (Rome default available). Interactive map tiles load when a map provider key is configured.
-    </div>
-    <div class="currency-row">
-      <label for="currencySelect">Display / charge currency</label>
-      <select id="currencySelect" aria-label="Currency"></select>
-      <span id="currencyCount" class="provider-note"></span>
-    </div>
+    <p id="currencyCount" class="provider-note"></p>
     <button class="primary" type="button" id="searchHotelsBtn">Search stays</button>
     <button class="secondary" type="button" id="quoteBtn">Fee quote (no charge)</button>
+    <button class="secondary" type="button" id="probePayBtn">Payment probe (no charge)</button>
     <button class="secondary" type="button" id="historyBtn">My booking history</button>
     <p id="searchStatus" class="provider-note" role="status"></p>
     <pre id="quoteOut" hidden></pre>
+    <pre id="probeOut" hidden></pre>
     <pre id="historyOut" hidden></pre>
   </section>
 
@@ -111,6 +109,7 @@
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-accommodation.js"></script>
 <script type="module" src="/havkar-accommodation-ui.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 (function () {
   var currencySelect = document.getElementById("currencySelect");
@@ -119,6 +118,13 @@
   var searchResults = document.getElementById("searchResults");
   var quoteOut = document.getElementById("quoteOut");
   var historyOut = document.getElementById("historyOut");
+  var probeOut = document.getElementById("probeOut");
+  var geoSuggest = document.getElementById("geoSuggest");
+  var geoLabel = document.getElementById("geoLabel");
+  var selectedGeo = { latitude: 41.8933203, longitude: 12.4829321, label: "Roma, Italia" };
+  var map = null;
+  var marker = null;
+  var geoTimer = null;
 
   function setStatus(text) {
     if (searchStatus) searchStatus.textContent = text || "";
@@ -126,15 +132,104 @@
 
   function authHeader() {
     try {
-      var raw = localStorage.getItem("sb-" + (window.HAVKAR_SUPABASE_CONFIG && window.HAVKAR_SUPABASE_CONFIG.projectRef || "") + "-auth-token");
-      if (!raw) return {};
-      var parsed = JSON.parse(raw);
-      var token = parsed && parsed.access_token;
-      return token ? { Authorization: "Bearer " + token } : {};
+      var keys = Object.keys(localStorage);
+      for (var i = 0; i < keys.length; i++) {
+        if (keys[i].indexOf("-auth-token") === -1) continue;
+        var parsed = JSON.parse(localStorage.getItem(keys[i]) || "{}");
+        if (parsed && parsed.access_token) {
+          return { Authorization: "Bearer " + parsed.access_token };
+        }
+      }
+      return {};
     } catch (e) {
       return {};
     }
   }
+
+  function initMap() {
+    if (!window.L || map) return;
+    map = L.map("map").setView([selectedGeo.latitude, selectedGeo.longitude], 11);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      attribution: "&copy; OpenStreetMap"
+    }).addTo(map);
+    marker = L.marker([selectedGeo.latitude, selectedGeo.longitude]).addTo(map);
+    map.on("click", function (ev) {
+      selectedGeo = {
+        latitude: ev.latlng.lat,
+        longitude: ev.latlng.lng,
+        label: ev.latlng.lat.toFixed(5) + ", " + ev.latlng.lng.toFixed(5)
+      };
+      marker.setLatLng(ev.latlng);
+      geoLabel.textContent = "Map pin: " + selectedGeo.label;
+    });
+  }
+
+  function setGeo(row) {
+    selectedGeo = {
+      latitude: row.latitude,
+      longitude: row.longitude,
+      label: row.label
+    };
+    geoLabel.textContent = row.label;
+    if (map && marker) {
+      var latlng = [row.latitude, row.longitude];
+      marker.setLatLng(latlng);
+      map.setView(latlng, 12);
+    }
+  }
+
+  async function geocode(query) {
+    var res = await fetch("/api/hotels", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "hotels_geocode", query: query })
+    });
+    return res.json();
+  }
+
+  function renderSuggest(results) {
+    geoSuggest.innerHTML = "";
+    if (!results || !results.length) {
+      geoSuggest.hidden = true;
+      return;
+    }
+    results.forEach(function (row) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = row.label;
+      btn.addEventListener("click", function () {
+        document.getElementById("cityInput").value = row.label.split(",")[0];
+        setGeo(row);
+        geoSuggest.hidden = true;
+      });
+      geoSuggest.appendChild(btn);
+    });
+    geoSuggest.hidden = false;
+  }
+
+  document.getElementById("cityInput").addEventListener("input", function () {
+    var q = this.value.trim();
+    clearTimeout(geoTimer);
+    if (q.length < 2) {
+      geoSuggest.hidden = true;
+      return;
+    }
+    geoTimer = setTimeout(async function () {
+      try {
+        var body = await geocode(q);
+        if (body && body.ok) {
+          renderSuggest(body.results || []);
+          if (body.primary) setGeo(body.primary);
+        } else {
+          renderSuggest([]);
+          setStatus((body && body.error) || "Destination not found");
+        }
+      } catch (e) {
+        setStatus("Geocoding failed");
+      }
+    }, 350);
+  });
 
   async function loadCurrencies() {
     try {
@@ -160,8 +255,6 @@
   }
 
   function searchPayload() {
-    var lat = document.getElementById("latInput").value;
-    var lng = document.getElementById("lngInput").value;
     return {
       action: "hotels_search",
       city: document.getElementById("cityInput").value,
@@ -171,8 +264,8 @@
       children: Number(document.getElementById("childrenInput").value || 0),
       rooms: Number(document.getElementById("roomsInput").value || 1),
       currency: currencySelect && currencySelect.value,
-      latitude: lat === "" ? undefined : Number(lat),
-      longitude: lng === "" ? undefined : Number(lng)
+      latitude: selectedGeo.latitude,
+      longitude: selectedGeo.longitude
     };
   }
 
@@ -180,6 +273,10 @@
     setStatus("Searching…");
     searchResults.innerHTML = "";
     try {
+      if (document.getElementById("cityInput").value.trim().length >= 2 && !selectedGeo.label) {
+        var geo = await geocode(document.getElementById("cityInput").value);
+        if (geo && geo.ok && geo.primary) setGeo(geo.primary);
+      }
       var res = await fetch("/api/hotels", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -239,10 +336,29 @@
           provider: "havkar_direct"
         })
       });
-      var body = await res.json();
-      quoteOut.textContent = JSON.stringify(body, null, 2);
+      quoteOut.textContent = JSON.stringify(await res.json(), null, 2);
     } catch (e) {
       quoteOut.textContent = "Quote failed";
+    }
+  }
+
+  async function runProbe() {
+    probeOut.hidden = false;
+    probeOut.textContent = "Probing payment rails…";
+    try {
+      var res = await fetch("/api/hotels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "hotels_payment_probe",
+          method: "stripe",
+          currency: currencySelect && currencySelect.value,
+          list_price_eur: 80
+        })
+      });
+      probeOut.textContent = JSON.stringify(await res.json(), null, 2);
+    } catch (e) {
+      probeOut.textContent = "Payment probe failed";
     }
   }
 
@@ -256,8 +372,7 @@
         headers: headers,
         body: JSON.stringify({ action: "hotels_history" })
       });
-      var body = await res.json();
-      historyOut.textContent = JSON.stringify(body, null, 2);
+      historyOut.textContent = JSON.stringify(await res.json(), null, 2);
     } catch (e) {
       historyOut.textContent = "History request failed";
     }
@@ -265,10 +380,14 @@
 
   document.getElementById("searchHotelsBtn").addEventListener("click", runSearch);
   document.getElementById("quoteBtn").addEventListener("click", runQuote);
+  document.getElementById("probePayBtn").addEventListener("click", runProbe);
   document.getElementById("historyBtn").addEventListener("click", runHistory);
-  document.getElementById("latInput").value = "41.9028";
-  document.getElementById("lngInput").value = "12.4964";
+  initMap();
+  setGeo(selectedGeo);
   loadCurrencies();
+  geocode("Rome").then(function (body) {
+    if (body && body.ok && body.primary) setGeo(body.primary);
+  });
 })();
 </script>
 <script>
