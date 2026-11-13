@@ -515,7 +515,7 @@ module.exports = async function handler(req, res) {
         },
         public_live_checkout: false,
         message:
-          "Flight payment rails are prepared. Public real-money checkout stays DISABLED until explicit Owner approval."
+          "Flight payment rails are prepared. Customer money for flights stays blocked until Duffel live booking settlement is verified, even when Owner has armed other HAVKAR modules."
       });
     }
 
@@ -637,15 +637,17 @@ module.exports = async function handler(req, res) {
         });
       }
 
-      // Armed path reserved for Owner-approved go-live.
-      // Still refuse until a dedicated flight settlement + idempotency
-      // pipeline is explicitly completed for flights (separate from events).
+      // Owner may arm Stripe/XLM globally, but flights still require verified
+      // Duffel live merchant booking + settlement before customer money is taken.
       return send(res, 403, {
         ok: false,
-        code: "FLIGHT_LIVE_CHECKOUT_NOT_ARMED",
+        code: "FLIGHT_LIVE_CHECKOUT_BLOCKED_DUFFEL",
         error:
-          "Flight live checkout infrastructure is prepared but not Owner-armed for public collection. No payment was taken.",
-        public_live_checkout: false
+          "Flight customer charges stay blocked until Duffel live booking/settlement merchant authorization is verified. No payment was taken. Duffel TEST MODE orders remain available.",
+        public_live_checkout: false,
+        duffel_order_mode: "test_only",
+        note:
+          "Do not collect customer money for flights through incomplete live order flows."
       });
     }
 

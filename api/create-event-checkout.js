@@ -410,8 +410,8 @@ async function buildPaymentActivationStatus() {
   }
 
   blockers.push(
-    "XLM recurring/AI subscriptions remain unsupported — do not sell recurring access via one-time XLM."
-  );
+      "Automatic XLM subscription debits remain unsupported — use prepaid ai_credits / jobs_listing / business_listing one-time flows only."
+    );
   blockers.push(
     "Refunds require an Owner-signed return payment from the merchant Mainnet account; server only verifies Horizon."
   );

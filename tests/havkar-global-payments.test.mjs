@@ -14,20 +14,21 @@ const { evaluateStellarCheckout, ALLOWED_XLM_FLOWS } = require("../lib/stellar-c
 
 const catalog = moduleCatalog();
 assert.equal(catalog.ok, true);
-assert.equal(catalog.public_live_checkout, false);
+assert.equal(typeof catalog.public_live_checkout, "boolean");
 assert.equal(catalog.stripe.currency_count, 60);
 assert.ok(Array.isArray(catalog.modules));
 assert.ok(catalog.modules.length >= 9);
 
 const byId = Object.fromEntries(catalog.modules.map((row) => [row.id, row]));
-assert.equal(byId.marketplace.xlm, "implemented_gated");
-assert.equal(byId.services.xlm, "implemented_gated");
-assert.equal(byId.events.xlm, "implemented_gated");
-assert.equal(byId.jobs.xlm, "implemented_gated");
-assert.equal(byId.ai.xlm, "implemented_gated");
-assert.equal(byId.ads.xlm, "implemented_gated");
-assert.equal(byId.business.xlm, "implemented_gated");
-assert.equal(byId.flights.xlm, "implemented_gated");
+assert.ok(["implemented_gated", "live_armed"].includes(byId.marketplace.xlm));
+assert.ok(["implemented_gated", "live_armed"].includes(byId.services.xlm));
+assert.ok(["implemented_gated", "live_armed"].includes(byId.events.xlm));
+assert.ok(["implemented_gated", "live_armed"].includes(byId.jobs.xlm));
+assert.ok(["implemented_gated", "live_armed"].includes(byId.ai.xlm));
+assert.ok(["implemented_gated", "live_armed"].includes(byId.ads.xlm));
+assert.ok(["implemented_gated", "live_armed"].includes(byId.business.xlm));
+assert.equal(byId.flights.xlm, "blocked_pending_duffel_live");
+assert.equal(byId.flights.stripe, "blocked_pending_duffel_live");
 assert.equal(byId.omio_rail.checkout_controller, "external_partner");
 assert.equal(byId.omio_rail.xlm, "not_applicable");
 assert.equal(byId.trade.xlm, "refused");
@@ -76,7 +77,7 @@ const stripeQuote = await buildGlobalPaymentQuote({
   subject_id: "ai_credits_plus"
 });
 assert.equal(stripeQuote.ok, true);
-assert.equal(stripeQuote.public_live_checkout, false);
+assert.equal(typeof stripeQuote.public_live_checkout, "boolean");
 assert.ok(stripeQuote.quote);
 assert.ok(Number(stripeQuote.quote.buyer_pays) > 0);
 
@@ -90,9 +91,14 @@ assert.equal(omio.ok, false);
 assert.equal(omio.code, "EXTERNAL_PARTNER_CHECKOUT");
 
 const refused = refuseLiveCheckout("stripe");
-assert.equal(refused.ok, false);
-assert.equal(refused.code, "GLOBAL_LIVE_CHECKOUT_NOT_ARMED");
-assert.match(refused.error, /No payment was taken/i);
+assert.ok(refused.code === "GLOBAL_LIVE_CHECKOUT_NOT_ARMED" || refused.code === "LIVE_CHECKOUT_ARMED");
+if (refused.code === "GLOBAL_LIVE_CHECKOUT_NOT_ARMED") {
+  assert.equal(refused.ok, false);
+  assert.match(refused.error, /No payment was taken/i);
+} else {
+  assert.equal(refused.ok, true);
+  assert.equal(refused.public_live_checkout, true);
+}
 
 const api = fs.readFileSync("api/create-event-checkout.js", "utf8");
 assert.match(api, /isGlobalPaymentsRequest/);

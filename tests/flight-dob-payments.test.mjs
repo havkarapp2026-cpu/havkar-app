@@ -53,7 +53,10 @@ assert.match(flightOrder, /listStripeCurrencies60/);
 assert.match(flightOrder, /xlm_mainnet/);
 assert.match(flightOrder, new RegExp(REAL_PAYMENTS_PAUSED_CODE));
 assert.match(flightOrder, /public_live_checkout: false/);
-assert.match(flightOrder, /FLIGHT_LIVE_CHECKOUT_NOT_ARMED|REAL_PAYMENTS_PAUSED/);
+assert.match(
+  flightOrder,
+  /FLIGHT_LIVE_CHECKOUT_BLOCKED_DUFFEL|FLIGHT_LIVE_CHECKOUT_NOT_ARMED|REAL_PAYMENTS_PAUSED/
+);
 assert.equal(listStripeCurrencies60().length, 60);
 assert.equal(isSupportedCheckoutCurrency("eur"), true);
 assert.equal(isSupportedCheckoutCurrency("xxx"), false);
