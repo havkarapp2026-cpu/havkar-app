@@ -27,7 +27,26 @@
 .suggest{border:1px solid #d7e6db;border-radius:10px;margin-top:4px;max-height:180px;overflow:auto;background:#fff}
 .suggest button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #eef5ef;background:#fff;padding:10px;cursor:pointer;font:inherit}
 .suggest button:hover{background:#e8f5e9}
-#quoteOut,#historyOut,#probeOut{white-space:pre-wrap;font-size:12px;background:#f7fbf7;padding:10px;border-radius:10px}
+#historyOut,#payQuoteRaw{white-space:pre-wrap;font-size:12px;background:#f7fbf7;padding:10px;border-radius:10px}
+.pay-panel{margin-top:14px;padding-top:8px;border-top:1px solid #d7e6db}
+.pay-title{margin:8px 0 4px;font-size:1.05rem;color:#1b5e20}
+.pay-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+@media(max-width:640px){.pay-grid{grid-template-columns:1fr}}
+.pay-card{border:1px solid #cfe0d3;border-radius:14px;padding:12px;background:linear-gradient(180deg,#fff,#f4faf5)}
+.pay-card.pay-xlm{border-color:#8fbf7a;background:linear-gradient(180deg,#f7fcf7,#e8f5e9)}
+.pay-card h3{margin:6px 0;font-size:1rem;color:#123}
+.pay-card-head{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+.pay-badge{display:inline-flex;align-items:center;gap:6px;background:#1b5e20;color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700}
+.pay-badge.xlm{background:#2e7d32}
+.xlm-mark{font-size:14px;line-height:1}
+.pay-status{font-size:12px;font-weight:700;color:#8a4b08;background:#fff8e1;border-radius:999px;padding:4px 8px}
+.pay-status.ready{color:#1b5e20;background:#e8f5e9}
+.pay-card button.primary.xlm{background:#2e7d32}
+.pay-quote{margin-top:10px;padding:12px;border-radius:12px;background:#f7fbf7;border:1px solid #d7e6db}
+.pay-quote dl{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;margin:0}
+.pay-quote dt{font-size:12px;color:#567}
+.pay-quote dd{margin:0;font-weight:700;color:#123}
+@media(max-width:640px){.pay-quote dl{grid-template-columns:1fr}}
 </style>
 </head>
 <body data-accommodation-page="public" data-i18n-ignore>
@@ -76,13 +95,43 @@
       </div>
     </div>
     <p id="currencyCount" class="provider-note"></p>
+
+    <section class="pay-panel" aria-label="Payment methods">
+      <h2 class="pay-title">Payment methods</h2>
+      <p class="provider-note">Two separate rails. XLM is not a Stripe currency. Live hotel charges stay OFF.</p>
+      <div class="pay-grid">
+        <article class="pay-card" id="payStripeCard" data-method="stripe">
+          <div class="pay-card-head">
+            <span class="pay-badge">Stripe</span>
+            <span class="pay-status" id="stripeStatus">…</span>
+          </div>
+          <h3>Pay by card / supported currencies</h3>
+          <p id="stripeMeta" class="provider-note">Loading Stripe options…</p>
+          <label for="listPriceEur">Sample list price (EUR)</label>
+          <input id="listPriceEur" type="number" min="1" step="0.01" value="120">
+          <button class="primary" type="button" id="quoteStripeBtn">Stripe fee quote (no charge)</button>
+        </article>
+        <article class="pay-card pay-xlm" id="payXlmCard" data-method="xlm_mainnet">
+          <div class="pay-card-head">
+            <span class="pay-badge xlm"><span class="xlm-mark" aria-hidden="true">✦</span> Stellar XLM</span>
+            <span class="pay-status" id="xlmStatus">…</span>
+          </div>
+          <h3>Pay with XLM wallet</h3>
+          <p id="xlmMeta" class="provider-note">Loading XLM options…</p>
+          <button class="primary xlm" type="button" id="quoteXlmBtn">XLM quote (no charge)</button>
+        </article>
+      </div>
+      <div id="payQuoteBox" class="pay-quote" hidden>
+        <h3 id="payQuoteTitle">Quote</h3>
+        <dl id="payQuoteDl"></dl>
+        <p id="payQuoteNote" class="provider-note"></p>
+        <pre id="payQuoteRaw" hidden></pre>
+      </div>
+    </section>
+
     <button class="primary" type="button" id="searchHotelsBtn">Search stays</button>
-    <button class="secondary" type="button" id="quoteBtn">Fee quote (no charge)</button>
-    <button class="secondary" type="button" id="probePayBtn">Payment probe (no charge)</button>
     <button class="secondary" type="button" id="historyBtn">My booking history</button>
     <p id="searchStatus" class="provider-note" role="status"></p>
-    <pre id="quoteOut" hidden></pre>
-    <pre id="probeOut" hidden></pre>
     <pre id="historyOut" hidden></pre>
   </section>
 
@@ -116,15 +165,20 @@
   var currencyCount = document.getElementById("currencyCount");
   var searchStatus = document.getElementById("searchStatus");
   var searchResults = document.getElementById("searchResults");
-  var quoteOut = document.getElementById("quoteOut");
   var historyOut = document.getElementById("historyOut");
-  var probeOut = document.getElementById("probeOut");
   var geoSuggest = document.getElementById("geoSuggest");
   var geoLabel = document.getElementById("geoLabel");
+  var payQuoteBox = document.getElementById("payQuoteBox");
+  var payQuoteDl = document.getElementById("payQuoteDl");
+  var payQuoteTitle = document.getElementById("payQuoteTitle");
+  var payQuoteNote = document.getElementById("payQuoteNote");
+  var payQuoteRaw = document.getElementById("payQuoteRaw");
   var selectedGeo = { latitude: 41.8933203, longitude: 12.4829321, label: "Roma, Italia" };
   var map = null;
   var marker = null;
   var geoTimer = null;
+  var langIt = false;
+  try { langIt = (localStorage.getItem("havkar_language") || "en") === "it"; } catch (e) {}
 
   function setStatus(text) {
     if (searchStatus) searchStatus.textContent = text || "";
@@ -246,7 +300,7 @@
       if (currencyCount) {
         currencyCount.textContent =
           String(body.matrix && body.matrix.count || list.length) +
-          " Stripe presentment currencies · settlement EUR";
+          " Stripe presentment currencies · settlement EUR · XLM separate";
       }
       currencySelect.value = "eur";
     } catch (e) {
@@ -321,44 +375,121 @@
     }
   }
 
-  async function runQuote() {
-    quoteOut.hidden = false;
-    quoteOut.textContent = "Quoting…";
+  function setPayStatus(el, label, ready) {
+    if (!el) return;
+    el.textContent = label || "Not yet available";
+    el.className = "pay-status" + (ready ? " ready" : "");
+  }
+
+  function renderQuoteRows(rows) {
+    payQuoteDl.innerHTML = "";
+    rows.forEach(function (row) {
+      var dt = document.createElement("dt");
+      dt.textContent = row[0];
+      var dd = document.createElement("dd");
+      dd.textContent = row[1];
+      payQuoteDl.appendChild(dt);
+      payQuoteDl.appendChild(dd);
+    });
+  }
+
+  async function loadPaymentMethods() {
     try {
+      var res = await fetch("/api/hotels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "hotels_payment_methods",
+          currency: currencySelect && currencySelect.value,
+          role: "guest"
+        })
+      });
+      var body = await res.json();
+      var methods = (body && body.methods) || [];
+      var stripe = methods.find(function (m) { return m.id === "stripe"; }) || {};
+      var xlm = methods.find(function (m) { return m.id === "xlm_mainnet"; }) || {};
+      setPayStatus(
+        document.getElementById("stripeStatus"),
+        langIt ? (stripe.status_label_it || stripe.status_label) : stripe.status_label,
+        stripe.status !== "not_yet_available"
+      );
+      setPayStatus(
+        document.getElementById("xlmStatus"),
+        langIt ? (xlm.status_label_it || xlm.status_label) : xlm.status_label,
+        xlm.status !== "not_yet_available"
+      );
+      document.getElementById("stripeMeta").textContent =
+        String(stripe.currency_count || "") +
+        " Stripe presentment currencies · settlement EUR · charge_now=" +
+        String(stripe.charge_allowed_now === true);
+      document.getElementById("xlmMeta").textContent =
+        "Native XLM only (not a Stripe currency) · Mainnet rails wired · charge_now=" +
+        String(xlm.charge_allowed_now === true) +
+        " · Duffel XLM=" + String(xlm.offered_for_duffel_stays === true);
+    } catch (e) {
+      setPayStatus(document.getElementById("stripeStatus"), "Unavailable");
+      setPayStatus(document.getElementById("xlmStatus"), "Unavailable");
+    }
+  }
+
+  async function runMethodQuote(method) {
+    payQuoteBox.hidden = false;
+    payQuoteTitle.textContent = method === "xlm_mainnet" ? "XLM quote" : "Stripe quote";
+    payQuoteNote.textContent = "Loading real quote…";
+    payQuoteDl.innerHTML = "";
+    payQuoteRaw.hidden = true;
+    try {
+      var listPrice = Number(document.getElementById("listPriceEur").value || 120);
       var res = await fetch("/api/hotels", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "hotels_quote",
-          list_price_eur: 120,
+          list_price_eur: listPrice,
           currency: currencySelect && currencySelect.value,
-          method: "stripe",
-          provider: "havkar_direct"
+          method: method === "xlm_mainnet" ? "xlm_mainnet" : "stripe",
+          provider: "havkar_direct",
+          idempotency_key: "hotels-ui-" + method + "-" + Date.now()
         })
       });
-      quoteOut.textContent = JSON.stringify(await res.json(), null, 2);
+      var body = await res.json();
+      payQuoteRaw.hidden = false;
+      payQuoteRaw.textContent = JSON.stringify(body, null, 2);
+      var rows = [];
+      rows.push(["Availability", body.availability_label || body.availability_status || "—"]);
+      rows.push(["Method", body.payment_method || method]);
+      rows.push(["List price (EUR)", String(body.list_price_eur || listPrice)]);
+      if (method === "xlm_mainnet") {
+        var decision = body.decision || {};
+        var fees = body.fees || decision.fees || {};
+        rows.push(["Buyer pays (EUR)", String(fees.buyerPays != null ? fees.buyerPays : "—")]);
+        rows.push(["XLM amount", String(decision.amount_xlm || body.amount_xlm || "—")]);
+        rows.push(["EUR per XLM", String(decision.eur_per_xlm || body.eur_per_xlm || "—")]);
+        rows.push([
+          "FX timestamp",
+          decision.rate_as_of || decision.eur_per_xlm_as_of || body.rate_as_of || "from CoinGecko when quote ok"
+        ]);
+        rows.push([
+          "Network fee (XLM)",
+          String(decision.network_fee_xlm || body.network_fee_xlm || "—")
+        ]);
+        rows.push(["XLM is Stripe currency?", "No"]);
+      } else {
+        var q = body.quote || {};
+        rows.push(["Display/charge currency", String((body.currency && body.currency.code) || currencySelect.value || "eur").toUpperCase()]);
+        rows.push(["Buyer total", String(q.buyer_pays != null ? q.buyer_pays : q.buyerPays || "—")]);
+        rows.push(["FX provider", String(q.fx_provider || "—")]);
+        rows.push(["FX date", String(q.fx_date || "—")]);
+        rows.push(["Settlement", "EUR (IT Stripe account)"]);
+      }
+      rows.push(["Live charge now", String(body.charge_allowed_now === true)]);
+      renderQuoteRows(rows);
+      payQuoteNote.textContent =
+        body.availability_reason ||
+        body.error ||
+        "Quote only — no hotel charge was created.";
     } catch (e) {
-      quoteOut.textContent = "Quote failed";
-    }
-  }
-
-  async function runProbe() {
-    probeOut.hidden = false;
-    probeOut.textContent = "Probing payment rails…";
-    try {
-      var res = await fetch("/api/hotels", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "hotels_payment_probe",
-          method: "stripe",
-          currency: currencySelect && currencySelect.value,
-          list_price_eur: 80
-        })
-      });
-      probeOut.textContent = JSON.stringify(await res.json(), null, 2);
-    } catch (e) {
-      probeOut.textContent = "Payment probe failed";
+      payQuoteNote.textContent = "Quote request failed";
     }
   }
 
@@ -379,12 +510,16 @@
   }
 
   document.getElementById("searchHotelsBtn").addEventListener("click", runSearch);
-  document.getElementById("quoteBtn").addEventListener("click", runQuote);
-  document.getElementById("probePayBtn").addEventListener("click", runProbe);
+  document.getElementById("quoteStripeBtn").addEventListener("click", function () {
+    runMethodQuote("stripe");
+  });
+  document.getElementById("quoteXlmBtn").addEventListener("click", function () {
+    runMethodQuote("xlm_mainnet");
+  });
   document.getElementById("historyBtn").addEventListener("click", runHistory);
   initMap();
   setGeo(selectedGeo);
-  loadCurrencies();
+  loadCurrencies().then(loadPaymentMethods);
   geocode("Rome").then(function (body) {
     if (body && body.ok && body.primary) setGeo(body.primary);
   });

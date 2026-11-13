@@ -1931,23 +1931,98 @@ export default async function handler(req, res) {
             "Currency is not in Stripe's verified presentment list."
           );
         }
+        const role = String(
+          (req.body && req.body.role) ||
+            (req.query && req.query.role) ||
+            "guest"
+        )
+          .trim()
+          .toLowerCase();
+        const hotelLiveOff = publicLiveHotelBooking !== true;
+        const stripeArmed = cardPaymentsAllowed();
+        const xlmArmed = mainnetCustomerLiveReady();
+        const guestChargeStatus = hotelLiveOff
+          ? "not_yet_available"
+          : stripeArmed
+            ? "ready_when_inventory_confirmed"
+            : "not_yet_available";
+        const guestXlmStatus = hotelLiveOff
+          ? "not_yet_available"
+          : xlmArmed
+            ? "ready_when_inventory_confirmed"
+            : "not_yet_available";
+
         return res.status(200).json({
           ok: true,
           action: "hotels_payment_methods",
+          role: role === "owner" ? "owner" : "guest",
           currency: getCurrencyMeta(currency),
           settlement_currency: "eur",
+          stripe_presentment_count: PRESENTMENT_COUNT,
+          xlm_is_not_a_stripe_currency: true,
           public_live_booking: false,
-          methods: {
-            stripe_dynamic:
-              "Eligible methods come from Stripe account capabilities + customer location + currency at Checkout/PaymentIntent time (cards, Apple Pay, Google Pay, local PMs when available).",
-            xlm_mainnet: {
+          methods: [
+            {
+              id: "stripe",
+              kind: "fiat_card",
+              label: "Stripe — Pay by card / supported currencies",
+              label_it: "Stripe — Paga con carta / valute supportate",
+              symbol: null,
+              currencies: "stripe_presentment_it_account",
+              currency_count: PRESENTMENT_COUNT,
+              status: guestChargeStatus,
+              status_label: hotelLiveOff
+                ? "Not yet available"
+                : "Armed (Owner-gated inventory)",
+              status_label_it: hotelLiveOff
+                ? "Non ancora disponibile"
+                : "Armato (inventario con gate Owner)",
+              live_collection_armed: stripeArmed,
+              charge_allowed_now: false,
+              note:
+                "Eligible Stripe methods (cards, Apple Pay, Google Pay, local PMs) are chosen dynamically at Checkout from account capabilities + customer location + currency.",
+              guest_flow: "havkar_direct_booking_checkout",
+              owner_payout_flow: "stripe_connect_after_kyb",
+              distinct_from_xlm: true
+            },
+            {
+              id: "xlm_mainnet",
+              kind: "stellar_xlm",
+              label: "Stellar XLM — Pay with XLM wallet",
+              label_it: "Stellar XLM — Paga con wallet XLM",
+              symbol: "✦",
+              symbol_note: "Official Stellar mark used as ✦ in HAVKAR green UI",
+              currencies: "native_xlm_only",
+              currency_count: 1,
+              status: guestXlmStatus,
+              status_label: hotelLiveOff
+                ? "Not yet available"
+                : "Armed (Owner-gated inventory)",
+              status_label_it: hotelLiveOff
+                ? "Non ancora disponibile"
+                : "Armato (inventario con gate Owner)",
+              live_collection_armed: xlmArmed,
+              charge_allowed_now: false,
               offered_for_havkar_direct: true,
               offered_for_duffel_stays: false,
               reason_duffel:
-                "Supplier funding/settlement for Duffel Stays via XLM is not verified."
-            },
-            stripe_live_armed: cardPaymentsAllowed(),
-            xlm_live_armed: mainnetCustomerLiveReady()
+                "Supplier funding/settlement for Duffel Stays via XLM is not verified.",
+              guest_flow: "stellar_checkout_services_flow",
+              owner_payout_flow: "separate_from_guest_xlm_never_auto",
+              uses_existing_rails: [
+                "lib/stellar-checkout.cjs",
+                "lib/stellar-mainnet.cjs",
+                "Horizon verification",
+                "idempotency + memo uniqueness"
+              ],
+              note:
+                "XLM is not a Stripe presentment currency. Quotes use CoinGecko EUR/XLM with timestamp; live hotel charges stay OFF until Duffel/supplier readiness and Owner approval."
+            }
+          ],
+          gate: {
+            code: "HOTELS_LIVE_BOOKING_OFF",
+            message:
+              "Visible payment options may quote fees, but public live hotel charges remain disabled."
           }
         });
       }
@@ -2119,14 +2194,44 @@ export default async function handler(req, res) {
             "hotels-quote-" + Date.now()
         });
 
+        const isXlm = method === "xlm" || method === "xlm_mainnet";
+        let xlmQuote = null;
+        if (isXlm && quote && quote.ok && quote.decision && quote.decision.ok) {
+          try {
+            const { buildXlmQuote } = require("../lib/stellar-checkout.cjs");
+            xlmQuote = await buildXlmQuote(quote.decision, {
+              env: process.env,
+              nowMs: Date.now()
+            });
+          } catch (_e) {
+            xlmQuote = null;
+          }
+        }
+
         return res.status(quote.status || (quote.ok ? 200 : 400)).json({
           ...quote,
           action: "hotels_quote",
           public_live_booking: false,
+          charge_allowed_now: false,
+          charge_created: false,
+          payment_method: isXlm ? "xlm_mainnet" : "stripe",
+          xlm_is_not_a_stripe_currency: isXlm ? true : undefined,
+          xlm_quote: xlmQuote,
+          amount_xlm: xlmQuote && xlmQuote.amount_xlm,
+          eur_per_xlm: xlmQuote && xlmQuote.eur_per_xlm,
+          network_fee_xlm: xlmQuote && xlmQuote.network_fee_xlm,
+          rate_as_of: xlmQuote && xlmQuote.rate_as_of,
+          availability_status: "not_yet_available",
+          availability_label: "Not yet available",
+          availability_label_it: "Non ancora disponibile",
+          availability_reason:
+            "Live hotel charges stay OFF until Duffel Stays access, end-to-end verification, and explicit Owner approval.",
           taxes_note:
             "Taxes and service fees must be disclosed from supplier/property before charge.",
           cancellation_note:
-            "Cancellation/refund terms come from the property policy or Duffel rate conditions."
+            "Cancellation/refund terms come from the property policy or Duffel rate conditions.",
+          duplicate_protection:
+            "Live XLM settlement uses memo uniqueness + Horizon tx verification; Stripe uses PaymentIntent/Checkout idempotency keys when armed."
         });
       }
 
@@ -2425,13 +2530,19 @@ export default async function handler(req, res) {
           subject_id: "hotels_payment_probe",
           idempotency_key: "hotels-probe-" + Date.now()
         });
+        const isXlm = method === "xlm" || method === "xlm_mainnet";
         return res.status(quote.status || (quote.ok ? 200 : 400)).json({
           ...quote,
           action: "hotels_payment_probe",
           public_live_booking: false,
           charge_created: false,
+          charge_allowed_now: false,
+          payment_method: isXlm ? "xlm_mainnet" : "stripe",
+          xlm_is_not_a_stripe_currency: isXlm ? true : undefined,
+          availability_status: "not_yet_available",
+          availability_label: "Not yet available",
           note:
-            "Probe only — no PaymentIntent/Checkout Session created. Public live hotel payments stay OFF."
+            "Probe only — no PaymentIntent/Checkout/XLM settlement created. Public live hotel payments stay OFF."
         });
       }
 
