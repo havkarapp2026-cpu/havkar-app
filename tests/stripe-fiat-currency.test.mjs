@@ -15,12 +15,13 @@ const {
   tradePaymentsAllowed
 } = require("../lib/real-payments.cjs");
 
-test("default Stripe fiat allow-list is the verified 60-currency matrix", () => {
+test("default Stripe fiat allow-list is the full presentment matrix", () => {
   const allowed = allowedStripeFiatCurrencies({});
-  assert.equal(allowed.length, 60);
+  assert.ok(allowed.length >= 130);
   assert.ok(allowed.includes("eur"));
   assert.ok(allowed.includes("usd"));
   assert.ok(allowed.includes("gbp"));
+  assert.ok(allowed.includes("afn"));
   assert.equal(normalizeStripeFiatCurrency("EUR").ok, true);
   assert.equal(normalizeStripeFiatCurrency("usd").currency, "usd");
   assert.equal(normalizeStripeFiatCurrency("gbp").ok, true);

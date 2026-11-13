@@ -15,7 +15,8 @@ const { evaluateStellarCheckout, ALLOWED_XLM_FLOWS } = require("../lib/stellar-c
 const catalog = moduleCatalog();
 assert.equal(catalog.ok, true);
 assert.equal(typeof catalog.public_live_checkout, "boolean");
-assert.equal(catalog.stripe.currency_count, 60);
+assert.ok(catalog.stripe.currency_count >= 130);
+assert.equal(catalog.stripe.fixed_60_limit_removed, true);
 assert.ok(Array.isArray(catalog.modules));
 assert.ok(catalog.modules.length >= 9);
 

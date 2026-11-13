@@ -14,14 +14,15 @@ import {
 import { quoteWithFees } from "../lib/havkar-fx-rates.cjs";
 import fs from "node:fs";
 
-assert.equal(CURRENCIES_60.length, 60);
-assert.equal(listStripeCurrencies60().length, 60);
-assert.equal(DEFAULT_ALLOWED.length, 60);
+assert.ok(CURRENCIES_60.length >= 130);
+assert.ok(listStripeCurrencies60().length >= 130);
+assert.ok(DEFAULT_ALLOWED.length >= 130);
 
 const codes = new Set(CURRENCIES_60.map((c) => c.code));
-assert.equal(codes.size, 60);
+assert.equal(codes.size, CURRENCIES_60.length);
 assert.equal(isSupportedCheckoutCurrency("eur"), true);
 assert.equal(isSupportedCheckoutCurrency("jpy"), true);
+assert.equal(isSupportedCheckoutCurrency("afn"), true);
 assert.equal(isSupportedCheckoutCurrency("xxx"), false);
 
 const jpy = toMinorUnits(50, "jpy");
@@ -39,8 +40,10 @@ assert.equal(fees.seller_receives, 97);
 assert.equal(fees.platform_fee, 5);
 
 const matrix = describeCurrencyMatrix();
-assert.equal(matrix.count, 60);
-assert.equal(matrix.currencies.length, 60);
+assert.ok(matrix.count >= 130);
+assert.ok(matrix.currencies.length >= 130);
+assert.equal(matrix.fixed_60_limit_removed, true);
+assert.equal(matrix.settlement_currency, "eur");
 
 const bad = normalizeStripeFiatCurrency("zzz");
 assert.equal(bad.ok, false);
@@ -72,7 +75,7 @@ assert.match(vercel, /chat\|product\|checkout-currency/);
 
 const page = fs.readFileSync("checkout-currency.html", "utf8");
 assert.match(page, /currency-matrix/);
-assert.match(page, /live payments gated OFF/i);
+assert.match(page, /settlement EUR \(IT\)|never charges a card/i);
 
 const adDetails = fs.readFileSync("ad-details.html", "utf8");
 assert.match(adDetails, /buyNowPanel/);

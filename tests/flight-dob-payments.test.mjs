@@ -57,7 +57,7 @@ assert.match(
   flightOrder,
   /FLIGHT_LIVE_CHECKOUT_BLOCKED_DUFFEL|FLIGHT_LIVE_CHECKOUT_NOT_ARMED|REAL_PAYMENTS_PAUSED/
 );
-assert.equal(listStripeCurrencies60().length, 60);
+assert.ok(listStripeCurrencies60().length >= 130);
 assert.equal(isSupportedCheckoutCurrency("eur"), true);
 assert.equal(isSupportedCheckoutCurrency("xxx"), false);
 assert.equal(realPaymentsEnabled({ HAVKAR_REAL_PAYMENTS_ENABLED: "false" }), false);

@@ -13,6 +13,36 @@ function selectedProperty() {
   return propertySelect.value || "";
 }
 
+async function refreshOwnerStatus(accessToken) {
+  const note = document.getElementById("ownerPayoutNote");
+  if (!note) return;
+  try {
+    const res = await fetch("/api/hotels", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + accessToken
+      },
+      body: JSON.stringify({ action: "hotels_owner_status" })
+    });
+    const body = await res.json();
+    if (!body || body.ok !== true) {
+      note.textContent = (body && body.error) || "Owner status unavailable.";
+      return;
+    }
+    note.textContent =
+      "Payouts eligible: " +
+      String(body.payouts_eligible === true) +
+      ". " +
+      (body.payouts_note || "") +
+      " Properties: " +
+      String((body.properties && body.properties.length) || 0) +
+      ".";
+  } catch (_e) {
+    note.textContent = "Owner status request failed.";
+  }
+}
+
 async function start() {
   const config = window.HAVKAR_SUPABASE_CONFIG;
 
@@ -27,8 +57,12 @@ async function start() {
 
   if (!user) {
     show("Sign in before managing a property.");
+    const note = document.getElementById("ownerPayoutNote");
+    if (note) note.textContent = "Sign in to view payout eligibility.";
     return;
   }
+
+  await refreshOwnerStatus(session.data.session.access_token);
 
   const booking = await db.rpc("havkar_accommodation_booking_enabled");
 

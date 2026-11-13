@@ -11,6 +11,20 @@
 <title>HAVKAR | Accommodation</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <link rel="stylesheet" href="/havkar-accommodation.css">
+<style>
+.search-panel{background:#fff;border-radius:14px;padding:14px;margin:12px 0;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+.search-panel label{display:block;font-size:13px;margin:8px 0 4px;color:#456}
+.search-panel input,.search-panel select{width:100%;min-height:44px;border:1px solid #cfd;border-radius:10px;padding:0 10px;font:inherit}
+.search-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:640px){.search-grid{grid-template-columns:1fr}}
+.search-panel button.primary{width:100%;margin-top:12px;min-height:46px;border:0;border-radius:12px;background:#1b5e20;color:#fff;font-weight:700}
+.search-panel button.secondary{width:100%;margin-top:8px;min-height:42px;border:1px solid #1b5e20;border-radius:12px;background:#fff;color:#1b5e20;font-weight:600}
+.provider-note{font-size:13px;line-height:1.4;color:#555;margin:8px 0}
+#searchStatus{min-height:1.2em;font-size:14px}
+.currency-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.map-box{height:180px;border-radius:12px;background:linear-gradient(135deg,#dfeee3,#c8e0d0);display:flex;align-items:center;justify-content:center;color:#1b5e20;font-size:14px;margin-top:8px;text-align:center;padding:12px}
+#quoteOut,#historyOut{white-space:pre-wrap;font-size:12px;background:#f7fbf7;padding:10px;border-radius:10px}
+</style>
 </head>
 <body data-accommodation-page="public" data-i18n-ignore>
 <header>
@@ -18,11 +32,62 @@
     <button class="back" type="button" id="backButton" aria-label="Back"><i class="fas fa-arrow-left"></i></button>
     <div>
       <h1>Accommodation</h1>
-      <p class="subtitle">Published Italian listings only. No sample stays and no prices.</p>
+      <p class="subtitle">Search published HAVKAR stays + eligible suppliers. Live booking stays Owner-gated.</p>
     </div>
   </div>
 </header>
 <main>
+  <section class="search-panel" aria-label="Hotel search">
+    <div class="search-grid">
+      <div>
+        <label for="cityInput">City / destination</label>
+        <input id="cityInput" type="search" placeholder="Rome, Milan, Paris…" autocomplete="off">
+      </div>
+      <div>
+        <label for="roomsInput">Rooms</label>
+        <input id="roomsInput" type="number" min="1" max="10" value="1">
+      </div>
+      <div>
+        <label for="checkInInput">Check-in</label>
+        <input id="checkInInput" type="date">
+      </div>
+      <div>
+        <label for="checkOutInput">Check-out</label>
+        <input id="checkOutInput" type="date">
+      </div>
+      <div>
+        <label for="adultsInput">Adults</label>
+        <input id="adultsInput" type="number" min="1" max="12" value="2">
+      </div>
+      <div>
+        <label for="childrenInput">Children</label>
+        <input id="childrenInput" type="number" min="0" max="12" value="0">
+      </div>
+      <div>
+        <label for="latInput">Map latitude</label>
+        <input id="latInput" type="number" step="any" placeholder="41.9028">
+      </div>
+      <div>
+        <label for="lngInput">Map longitude</label>
+        <input id="lngInput" type="number" step="any" placeholder="12.4964">
+      </div>
+    </div>
+    <div class="map-box" id="mapHint" role="img" aria-label="Map coordinates for supplier search">
+      Enter destination coordinates for Duffel Stays geographic search (Rome default available). Interactive map tiles load when a map provider key is configured.
+    </div>
+    <div class="currency-row">
+      <label for="currencySelect">Display / charge currency</label>
+      <select id="currencySelect" aria-label="Currency"></select>
+      <span id="currencyCount" class="provider-note"></span>
+    </div>
+    <button class="primary" type="button" id="searchHotelsBtn">Search stays</button>
+    <button class="secondary" type="button" id="quoteBtn">Fee quote (no charge)</button>
+    <button class="secondary" type="button" id="historyBtn">My booking history</button>
+    <p id="searchStatus" class="provider-note" role="status"></p>
+    <pre id="quoteOut" hidden></pre>
+    <pre id="historyOut" hidden></pre>
+  </section>
+
   <p class="links" id="authLinks">
     <a href="login.html">Log In</a>
     <a href="signup.html">Create New Account</a>
@@ -30,10 +95,12 @@
   <p id="message" class="error" role="status"></p>
   <div id="empty" class="empty">No verified accommodation is published.</div>
   <div id="listings"></div>
+  <div id="searchResults"></div>
   <div class="links">
     <a href="accommodation-apply.html">List a property</a>
     <a href="accommodation-status.html">Case status</a>
     <a href="accommodation-manage.html">Owner tools</a>
+    <a href="checkout-currency.html">Currency matrix</a>
   </div>
 </main>
 <nav class="bottom" aria-label="Accommodation">
@@ -44,6 +111,166 @@
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-accommodation.js"></script>
 <script type="module" src="/havkar-accommodation-ui.js"></script>
+<script>
+(function () {
+  var currencySelect = document.getElementById("currencySelect");
+  var currencyCount = document.getElementById("currencyCount");
+  var searchStatus = document.getElementById("searchStatus");
+  var searchResults = document.getElementById("searchResults");
+  var quoteOut = document.getElementById("quoteOut");
+  var historyOut = document.getElementById("historyOut");
+
+  function setStatus(text) {
+    if (searchStatus) searchStatus.textContent = text || "";
+  }
+
+  function authHeader() {
+    try {
+      var raw = localStorage.getItem("sb-" + (window.HAVKAR_SUPABASE_CONFIG && window.HAVKAR_SUPABASE_CONFIG.projectRef || "") + "-auth-token");
+      if (!raw) return {};
+      var parsed = JSON.parse(raw);
+      var token = parsed && parsed.access_token;
+      return token ? { Authorization: "Bearer " + token } : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  async function loadCurrencies() {
+    try {
+      var res = await fetch("/api/currency-matrix");
+      var body = await res.json();
+      var list = (body && body.matrix && body.matrix.currencies) || [];
+      if (!currencySelect) return;
+      currencySelect.innerHTML = list.map(function (c) {
+        return '<option value="' + c.code + '">' +
+          String(c.code).toUpperCase() + " — " + c.name +
+          (c.symbol ? " (" + c.symbol + ")" : "") +
+          "</option>";
+      }).join("");
+      if (currencyCount) {
+        currencyCount.textContent =
+          String(body.matrix && body.matrix.count || list.length) +
+          " Stripe presentment currencies · settlement EUR";
+      }
+      currencySelect.value = "eur";
+    } catch (e) {
+      if (currencyCount) currencyCount.textContent = "Currency matrix unavailable";
+    }
+  }
+
+  function searchPayload() {
+    var lat = document.getElementById("latInput").value;
+    var lng = document.getElementById("lngInput").value;
+    return {
+      action: "hotels_search",
+      city: document.getElementById("cityInput").value,
+      check_in: document.getElementById("checkInInput").value,
+      check_out: document.getElementById("checkOutInput").value,
+      adults: Number(document.getElementById("adultsInput").value || 2),
+      children: Number(document.getElementById("childrenInput").value || 0),
+      rooms: Number(document.getElementById("roomsInput").value || 1),
+      currency: currencySelect && currencySelect.value,
+      latitude: lat === "" ? undefined : Number(lat),
+      longitude: lng === "" ? undefined : Number(lng)
+    };
+  }
+
+  async function runSearch() {
+    setStatus("Searching…");
+    searchResults.innerHTML = "";
+    try {
+      var res = await fetch("/api/hotels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(searchPayload())
+      });
+      var body = await res.json();
+      if (!body || body.ok !== true) {
+        setStatus((body && body.error) || "Search failed");
+        return;
+      }
+      var direct = (body.results && body.results.havkar_direct) || [];
+      var duffel = (body.results && body.results.duffel_stays) || {};
+      var duffelRows = duffel.results || [];
+      setStatus(
+        "Direct: " + direct.length +
+        " · Duffel: " + duffelRows.length +
+        " (" + String(duffel.access || "unknown") + ")" +
+        " · Live booking: OFF · currencies: " +
+        String(body.stripe_presentment_count || "")
+      );
+      var cards = direct.concat(duffelRows);
+      searchResults.innerHTML = cards.map(function () {
+        return '<article class="card listing"><h2></h2><p></p><p class="provider-note"></p></article>';
+      }).join("");
+      Array.prototype.forEach.call(searchResults.querySelectorAll("article"), function (card, i) {
+        var row = cards[i];
+        card.querySelector("h2").textContent = row.title || "";
+        card.querySelector("p").textContent = row.summary || "";
+        card.querySelector(".provider-note").textContent =
+          "provider=" + (row.provider || "") +
+          " · bookable=" + String(row.bookable) +
+          " · " + (row.reason || row.requirement || "");
+      });
+      if (!cards.length) {
+        var note = document.createElement("p");
+        note.className = "provider-note";
+        note.textContent = duffel.note || duffel.requirement || "No published matches.";
+        searchResults.appendChild(note);
+      }
+    } catch (e) {
+      setStatus("Search request failed");
+    }
+  }
+
+  async function runQuote() {
+    quoteOut.hidden = false;
+    quoteOut.textContent = "Quoting…";
+    try {
+      var res = await fetch("/api/hotels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "hotels_quote",
+          list_price_eur: 120,
+          currency: currencySelect && currencySelect.value,
+          method: "stripe",
+          provider: "havkar_direct"
+        })
+      });
+      var body = await res.json();
+      quoteOut.textContent = JSON.stringify(body, null, 2);
+    } catch (e) {
+      quoteOut.textContent = "Quote failed";
+    }
+  }
+
+  async function runHistory() {
+    historyOut.hidden = false;
+    historyOut.textContent = "Loading…";
+    try {
+      var headers = Object.assign({ "Content-Type": "application/json" }, authHeader());
+      var res = await fetch("/api/hotels", {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify({ action: "hotels_history" })
+      });
+      var body = await res.json();
+      historyOut.textContent = JSON.stringify(body, null, 2);
+    } catch (e) {
+      historyOut.textContent = "History request failed";
+    }
+  }
+
+  document.getElementById("searchHotelsBtn").addEventListener("click", runSearch);
+  document.getElementById("quoteBtn").addEventListener("click", runQuote);
+  document.getElementById("historyBtn").addEventListener("click", runHistory);
+  document.getElementById("latInput").value = "41.9028";
+  document.getElementById("lngInput").value = "12.4964";
+  loadCurrencies();
+})();
+</script>
 <script>
 document.getElementById("backButton").addEventListener("click", function () {
   if (window.havkarNavigateBack) {

@@ -203,6 +203,25 @@ function isGlobalPaymentsRequest(req) {
   );
 }
 
+function isHotelsRequest(req) {
+  const action = String((req && req.body && req.body.action) || "");
+  const url = String((req && req.url) || "");
+  return Boolean(
+    (req && req.query && req.query.havkarAction === "hotels") ||
+      url.indexOf("/api/hotels") !== -1 ||
+      url.indexOf("havkarAction=hotels") !== -1 ||
+      action === "hotels_search" ||
+      action === "hotels_status" ||
+      action === "hotels_duffel_probe" ||
+      action === "hotels_quote" ||
+      action === "hotels_book" ||
+      action === "hotels_cancel" ||
+      action === "hotels_history" ||
+      action === "hotels_owner_status" ||
+      action === "hotels_payment_methods"
+  );
+}
+
 async function readXlmInvoice(req) {
   const intentId = String(
     (req.query && (req.query.intent || req.query.id)) ||
@@ -1825,6 +1844,441 @@ export default async function handler(req, res) {
     } catch (error) {
       console.error("HAVKAR global payments error:", error && error.message);
       return sendError(res, 500, "Global payments catalog failed");
+    }
+  }
+
+  if (isHotelsRequest(req)) {
+    if (req.method !== "GET" && req.method !== "POST") {
+      res.setHeader("Allow", "GET, POST");
+      return sendError(res, 405, "Method not allowed");
+    }
+
+    try {
+      const {
+        listStripePresentmentCurrencies,
+        PRESENTMENT_COUNT,
+        isSupportedCheckoutCurrency,
+        getCurrencyMeta
+      } = require("../lib/stripe-supported-currencies-60.cjs");
+      const {
+        probeDuffelStaysAccess,
+        searchDuffelStays
+      } = require("../lib/duffel-stays.cjs");
+      const {
+        cardPaymentsAllowed,
+        realPaymentsEnabled
+      } = require("../lib/real-payments.cjs");
+      const { mainnetCustomerLiveReady } = require("../lib/stellar-mainnet.cjs");
+      const { buildGlobalPaymentQuote } = require("../lib/havkar-global-payments.cjs");
+      const action = String(
+        (req.query && req.query.action) ||
+          (req.body && req.body.action) ||
+          "hotels_status"
+      );
+
+      const publicLiveHotelBooking =
+        String(process.env.HAVKAR_HOTELS_LIVE_BOOKING_ENABLED || "")
+          .trim()
+          .toLowerCase() === "true";
+
+      if (action === "hotels_duffel_probe" || action === "hotels_status") {
+        const stays = await probeDuffelStaysAccess(process.env);
+        return res.status(200).json({
+          ok: true,
+          action: "hotels_status",
+          public_live_booking: false,
+          owner_live_booking_flag: publicLiveHotelBooking,
+          providers: {
+            havkar_direct: {
+              inventory: "accommodation_listings",
+              bookings_table: "accommodation_guest_bookings",
+              booking_enabled_rpc: "havkar_accommodation_booking_enabled",
+              note:
+                "Direct owner inventory is separate from Duffel. Unverified owners cannot receive payouts."
+            },
+            duffel_stays: stays
+          },
+          payments: {
+            stripe_presentment_count: PRESENTMENT_COUNT,
+            settlement_currency: "eur",
+            stripe_live: cardPaymentsAllowed(),
+            xlm_live: mainnetCustomerLiveReady(),
+            real_payments_enabled: realPaymentsEnabled(),
+            xlm_for_duffel:
+              "XLM checkout for Duffel Stays stays OFF until supplier funding/settlement is verified."
+          },
+          currencies: listStripePresentmentCurrencies().slice(0, 20),
+          currency_total: PRESENTMENT_COUNT
+        });
+      }
+
+      if (action === "hotels_payment_methods") {
+        const currency = String(
+          (req.body && req.body.currency) ||
+            (req.query && req.query.currency) ||
+            "eur"
+        )
+          .trim()
+          .toLowerCase();
+        if (!isSupportedCheckoutCurrency(currency)) {
+          return sendError(
+            res,
+            400,
+            "Currency is not in Stripe's verified presentment list."
+          );
+        }
+        return res.status(200).json({
+          ok: true,
+          action: "hotels_payment_methods",
+          currency: getCurrencyMeta(currency),
+          settlement_currency: "eur",
+          public_live_booking: false,
+          methods: {
+            stripe_dynamic:
+              "Eligible methods come from Stripe account capabilities + customer location + currency at Checkout/PaymentIntent time (cards, Apple Pay, Google Pay, local PMs when available).",
+            xlm_mainnet: {
+              offered_for_havkar_direct: true,
+              offered_for_duffel_stays: false,
+              reason_duffel:
+                "Supplier funding/settlement for Duffel Stays via XLM is not verified."
+            },
+            stripe_live_armed: cardPaymentsAllowed(),
+            xlm_live_armed: mainnetCustomerLiveReady()
+          }
+        });
+      }
+
+      if (action === "hotels_search") {
+        const city = String(
+          (req.body && req.body.city) ||
+            (req.query && req.query.city) ||
+            ""
+        ).trim();
+        const checkIn = String(
+          (req.body && req.body.check_in) ||
+            (req.query && req.query.check_in) ||
+            ""
+        ).trim();
+        const checkOut = String(
+          (req.body && req.body.check_out) ||
+            (req.query && req.query.check_out) ||
+            ""
+        ).trim();
+        const adults = Number(
+          (req.body && req.body.adults) ||
+            (req.query && req.query.adults) ||
+            2
+        );
+        const children = Number(
+          (req.body && req.body.children) ||
+            (req.query && req.query.children) ||
+            0
+        );
+        const rooms = Number(
+          (req.body && req.body.rooms) || (req.query && req.query.rooms) || 1
+        );
+        const currency = String(
+          (req.body && req.body.currency) ||
+            (req.query && req.query.currency) ||
+            "eur"
+        )
+          .trim()
+          .toLowerCase();
+        const latitude = Number(
+          (req.body && req.body.latitude) ||
+            (req.query && req.query.latitude)
+        );
+        const longitude = Number(
+          (req.body && req.body.longitude) ||
+            (req.query && req.query.longitude)
+        );
+
+        let direct = [];
+        try {
+          const admin = getSupabaseAdmin();
+          let query = admin
+            .from("accommodation_listings")
+            .select("id,title,summary,publication_status,property_id")
+            .eq("publication_status", "published")
+            .limit(40);
+          if (city) {
+            const safe = city.replace(/[%(),]/g, "").slice(0, 80);
+            if (safe) {
+              query = query.ilike("title", "%" + safe + "%");
+            }
+          }
+          const loaded = await query;
+          direct = (loaded && loaded.data) || [];
+        } catch (_error) {
+          direct = [];
+        }
+
+        let duffelSearch = {
+          access: "skipped",
+          results: [],
+          requirement: "Coordinates required for Duffel geographic search."
+        };
+        if (Number.isFinite(latitude) && Number.isFinite(longitude) && checkIn && checkOut) {
+          duffelSearch = await searchDuffelStays(
+            {
+              check_in: checkIn,
+              check_out: checkOut,
+              adults,
+              children,
+              rooms,
+              latitude,
+              longitude
+            },
+            process.env
+          );
+        } else {
+          const stays = await probeDuffelStaysAccess(process.env);
+          duffelSearch = {
+            access: stays.access,
+            stays_ready: stays.stays_ready === true,
+            results: [],
+            note:
+              stays.requirement ||
+              "Provide check-in/out + map coordinates for Duffel Stays search. Probe-only status returned."
+          };
+        }
+
+        return res.status(200).json({
+          ok: true,
+          action: "hotels_search",
+          public_live_booking: false,
+          query: {
+            city: city || null,
+            check_in: checkIn || null,
+            check_out: checkOut || null,
+            adults: Number.isFinite(adults) ? adults : 2,
+            children: Number.isFinite(children) ? children : 0,
+            rooms: Number.isFinite(rooms) ? rooms : 1,
+            currency: isSupportedCheckoutCurrency(currency) ? currency : "eur",
+            latitude: Number.isFinite(latitude) ? latitude : null,
+            longitude: Number.isFinite(longitude) ? longitude : null
+          },
+          results: {
+            havkar_direct: direct.map((row) => ({
+              provider: "havkar_direct",
+              id: row.id,
+              property_id: row.property_id,
+              title: row.title,
+              summary: row.summary,
+              bookable: false,
+              reason:
+                "Guest booking checkout stays gated until Owner enables accommodation booking + verified payments."
+            })),
+            duffel_stays: duffelSearch
+          },
+          payments_ready: {
+            stripe: cardPaymentsAllowed(),
+            xlm: mainnetCustomerLiveReady()
+          },
+          stripe_presentment_count: PRESENTMENT_COUNT
+        });
+      }
+
+      if (action === "hotels_quote") {
+        const listPrice = Number(
+          (req.body && req.body.list_price_eur) || 0
+        );
+        const currency = String(
+          (req.body && req.body.currency) || "eur"
+        )
+          .trim()
+          .toLowerCase();
+        const method = String((req.body && req.body.method) || "stripe")
+          .trim()
+          .toLowerCase();
+        const provider = String((req.body && req.body.provider) || "havkar_direct")
+          .trim()
+          .toLowerCase();
+
+        if (provider === "duffel_stays" && (method === "xlm" || method === "xlm_mainnet")) {
+          return res.status(403).json({
+            ok: false,
+            code: "XLM_DUFFEL_STAYS_BLOCKED",
+            error:
+              "XLM is not offered for Duffel Stays until supplier funding/settlement is verified."
+          });
+        }
+
+        const quote = await buildGlobalPaymentQuote({
+          module: "hotels",
+          method,
+          currency,
+          list_price_eur: listPrice,
+          subject_id: String((req.body && req.body.listing_id) || "hotel_quote"),
+          idempotency_key:
+            String((req.body && req.body.idempotency_key) || "") ||
+            "hotels-quote-" + Date.now()
+        });
+
+        return res.status(quote.status || (quote.ok ? 200 : 400)).json({
+          ...quote,
+          action: "hotels_quote",
+          public_live_booking: false,
+          taxes_note:
+            "Taxes and service fees must be disclosed from supplier/property before charge.",
+          cancellation_note:
+            "Cancellation/refund terms come from the property policy or Duffel rate conditions."
+        });
+      }
+
+      if (action === "hotels_book") {
+        if (!publicLiveHotelBooking) {
+          return res.status(403).json({
+            ok: false,
+            code: "HOTELS_LIVE_BOOKING_OFF",
+            error:
+              "Public live hotel booking is OFF. Owner must set HAVKAR_HOTELS_LIVE_BOOKING_ENABLED=true after verification.",
+            public_live_booking: false
+          });
+        }
+
+        const auth = await authenticateUser(req);
+        if (!auth.user) {
+          return sendError(res, 401, auth.error || "Authentication required");
+        }
+
+        return res.status(403).json({
+          ok: false,
+          code: "HOTELS_BOOKING_NOT_ARMED",
+          error:
+            "Booking pipeline requires verified inventory acceptance + payment settlement before confirmation. Not armed for public traffic."
+        });
+      }
+
+      if (action === "hotels_cancel") {
+        const auth = await authenticateUser(req);
+        if (!auth.user) {
+          return sendError(res, 401, auth.error || "Authentication required");
+        }
+        const reference = String(
+          (req.body && req.body.booking_reference) || ""
+        ).trim();
+        if (!reference) {
+          return sendError(res, 400, "booking_reference required");
+        }
+        try {
+          const admin = getSupabaseAdmin();
+          const loaded = await admin
+            .from("accommodation_guest_bookings")
+            .select("id,status,guest_user_id,booking_reference")
+            .eq("booking_reference", reference)
+            .eq("guest_user_id", auth.user.id)
+            .maybeSingle();
+          if (!loaded.data) {
+            return sendError(res, 404, "Booking not found");
+          }
+          if (loaded.data.status === "confirmed" || loaded.data.status === "paid_pending_supplier") {
+            return res.status(403).json({
+              ok: false,
+              code: "CANCEL_REQUIRES_REFUND_WORKFLOW",
+              error:
+                "Confirmed bookings cancel only through verified refund workflow. Public auto-cancel is OFF."
+            });
+          }
+          const updated = await admin
+            .from("accommodation_guest_bookings")
+            .update({ status: "cancelled", updated_at: new Date().toISOString() })
+            .eq("id", loaded.data.id)
+            .select("id,booking_reference,status")
+            .single();
+          return res.status(200).json({
+            ok: true,
+            action: "hotels_cancel",
+            booking: updated.data
+          });
+        } catch (error) {
+          return sendError(res, 500, "Cancel failed");
+        }
+      }
+
+      if (action === "hotels_history") {
+        const auth = await authenticateUser(req);
+        if (!auth.user) {
+          return sendError(res, 401, auth.error || "Authentication required");
+        }
+        try {
+          const admin = getSupabaseAdmin();
+          const loaded = await admin
+            .from("accommodation_guest_bookings")
+            .select(
+              "id,booking_reference,provider,check_in,check_out,status,currency,total_cents,created_at"
+            )
+            .eq("guest_user_id", auth.user.id)
+            .order("created_at", { ascending: false })
+            .limit(50);
+          return res.status(200).json({
+            ok: true,
+            action: "hotels_history",
+            bookings: (loaded && loaded.data) || []
+          });
+        } catch (_error) {
+          return res.status(200).json({
+            ok: true,
+            action: "hotels_history",
+            bookings: [],
+            note: "Bookings table unavailable until migration is applied."
+          });
+        }
+      }
+
+      if (action === "hotels_owner_status") {
+        const auth = await authenticateUser(req);
+        if (!auth.user) {
+          return sendError(res, 401, auth.error || "Authentication required");
+        }
+        try {
+          const admin = getSupabaseAdmin();
+          const operator = await admin
+            .from("accommodation_operators")
+            .select("id,identity_status,phone_confirmed_at")
+            .eq("user_id", auth.user.id)
+            .maybeSingle();
+          if (!operator.data) {
+            return res.status(200).json({
+              ok: true,
+              action: "hotels_owner_status",
+              operator: null,
+              properties: [],
+              payouts_eligible: false,
+              note: "Register via accommodation-apply before owner tools unlock."
+            });
+          }
+          const properties = await admin
+            .from("accommodation_properties")
+            .select("id,display_name,property_status")
+            .eq("operator_id", operator.data.id);
+          const payoutsEligible =
+            operator.data.identity_status === "verified" &&
+            (properties.data || []).some(
+              (row) => row.property_status === "approved"
+            );
+          return res.status(200).json({
+            ok: true,
+            action: "hotels_owner_status",
+            operator: {
+              id: operator.data.id,
+              identity_status: operator.data.identity_status
+            },
+            properties: properties.data || [],
+            payouts_eligible: payoutsEligible === true,
+            payouts_note:
+              "Property registration does not authorize unverified owners to receive payouts. Stripe Connect country/currency capability checks still apply.",
+            staff_permissions: "Owner tools only; staff roles require admin assignment."
+          });
+        } catch (error) {
+          return sendError(res, 500, "Owner status failed");
+        }
+      }
+
+      return sendError(res, 400, "Unknown hotels action");
+    } catch (error) {
+      console.error("HAVKAR hotels error:", error && error.message);
+      return sendError(res, 500, "Hotels request failed");
     }
   }
 

@@ -508,7 +508,7 @@ module.exports = async function handler(req, res) {
         real_payments_enabled: realPaymentsEnabled(),
         stripe: {
           supported_currencies: listStripeCurrencies60(),
-          currency_count: 60,
+          currency_count: listStripeCurrencies60().length,
           card_payments_allowed: cardPaymentsAllowed(),
           source: "https://docs.stripe.com/currencies",
           settlement_currency: "eur",
@@ -548,7 +548,7 @@ module.exports = async function handler(req, res) {
         return send(res, 400, {
           ok: false,
           error:
-            "Currency is not in HAVKAR's verified Stripe presentment list of 60."
+            "Currency is not in Stripe's verified presentment currency list."
         });
       }
 
