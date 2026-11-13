@@ -1,16 +1,14 @@
 import assert from "assert";
 import fs from "fs";
 import path from "path";
-import { createRequire } from "module";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
-const require = createRequire(import.meta.url);
 const ticketsHtml = fs.readFileSync(path.join(root, "tickets.html"), "utf8");
 const flightsApi = fs.readFileSync(path.join(root, "api/flights.js"), "utf8");
 const flightOrderApi = fs.readFileSync(path.join(root, "api/flight-order.js"), "utf8");
-const placesLib = fs.readFileSync(path.join(root, "lib/duffel-places.cjs"), "utf8");
+const placesLib = fs.readFileSync(path.join(root, "lib/duffel-places.mjs"), "utf8");
 
 // UI: raw IATA text inputs replaced by searchable autocomplete
 assert.ok(ticketsHtml.includes('id="flightOriginQuery"'));
@@ -63,7 +61,7 @@ assert.ok(ticketsHtml.includes("REAL_PAYMENTS_PAUSED"));
 assert.ok(!fs.existsSync(path.join(root, "api/flight-places.js")));
 assert.ok(flightsApi.includes('req.method !== "POST" && req.method !== "GET"'));
 assert.ok(flightsApi.includes("searchAirportSuggestions"));
-assert.ok(flightsApi.includes("duffel-places.cjs"));
+assert.ok(flightsApi.includes("duffel-places.mjs"));
 assert.ok(placesLib.includes("places/suggestions"));
 assert.ok(placesLib.includes("expandSuggestions"));
 assert.ok(placesLib.includes("normalizePlace"));
@@ -72,7 +70,7 @@ assert.ok(flightOrderApi.includes("test_mode") || flightOrderApi.includes("live_
 const {
   normalizePlace,
   expandSuggestions
-} = require("../lib/duffel-places.cjs");
+} = await import(pathToFileURL(path.join(root, "lib/duffel-places.mjs")).href);
 
 assert.equal(normalizePlace(null), null);
 assert.equal(normalizePlace({ type: "airport", name: "X", iata_code: "AB" }), null);

@@ -1,10 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { createRequire } from "module";
-
-const require = createRequire(import.meta.url);
-const {
-    searchAirportSuggestions
-} = require("../lib/duffel-places.cjs");
+import { searchAirportSuggestions } from "../lib/duffel-places.mjs";
 
 function bearerToken(req) {
     const header = req.headers?.authorization;
