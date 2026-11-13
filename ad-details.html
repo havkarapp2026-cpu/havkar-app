@@ -3599,123 +3599,117 @@ async function openSellerMessage(){
 
         initializeSupabase();
 
-        const existing =
-            await supabaseClient
-                .from("conversations")
-                .select(
-                    "id,ad_id,buyer_id,seller_id,created_at,updated_at"
-                )
-                .eq(
-                    "ad_id",
-                    state.ad.id
-                )
-                .eq(
-                    "buyer_id",
-                    state.currentUserId
-                )
-                .eq(
-                    "seller_id",
-                    state.ad.user_id
-                )
-                .maybeSingle();
+        const listingId =
+            Number(state.ad.id);
+        const sellerId =
+            String(state.ad.user_id);
+        const buyerId =
+            String(state.currentUserId);
 
-        if(existing.error){
-
-            console.error(
-                "[HAVKAR] Conversation lookup failed:",
-                existing.error
+        if(
+            !Number.isFinite(listingId) ||
+            listingId <= 0
+        ){
+            throw new Error(
+                "Listing id is missing for Message Seller."
             );
-
-            throw existing.error;
-
         }
 
-        let conversationId =
-            existing.data?.id ||
-            null;
+        // Server-validated get-or-create: never reuse another listing's thread
+        // merely because buyer/seller already chatted about a different ad.
+        const rpc =
+            await supabaseClient.rpc(
+                "havkar_get_or_create_listing_conversation",
+                {
+                    p_ad_id: listingId
+                }
+            );
 
-        if(!conversationId){
+        let conversation =
+            Array.isArray(rpc.data)
+                ? rpc.data[0]
+                : rpc.data;
 
-            const created =
+        if(rpc.error || !conversation || !conversation.id){
+
+            console.warn(
+                "[HAVKAR] Listing conversation RPC unavailable, using scoped client fallback:",
+                rpc.error
+            );
+
+            const existing =
                 await supabaseClient
                     .from("conversations")
-                    .insert({
-                        ad_id:
-                            state.ad.id,
-
-                        buyer_id:
-                            state.currentUserId,
-
-                        seller_id:
-                            state.ad.user_id
-                    })
                     .select(
                         "id,ad_id,buyer_id,seller_id,created_at,updated_at"
                     )
-                    .single();
+                    .eq("ad_id", listingId)
+                    .eq("buyer_id", buyerId)
+                    .eq("seller_id", sellerId)
+                    .maybeSingle();
 
-            if(created.error){
+            if(existing.error){
+                throw existing.error;
+            }
 
-                console.error(
-                    "[HAVKAR] Conversation creation failed:",
-                    created.error
-                );
+            conversation = existing.data;
 
-                const retry =
+            if(!conversation || !conversation.id){
+                const created =
                     await supabaseClient
                         .from("conversations")
+                        .insert({
+                            ad_id: listingId,
+                            buyer_id: buyerId,
+                            seller_id: sellerId
+                        })
                         .select(
                             "id,ad_id,buyer_id,seller_id,created_at,updated_at"
                         )
-                        .eq(
-                            "ad_id",
-                            state.ad.id
-                        )
-                        .eq(
-                            "buyer_id",
-                            state.currentUserId
-                        )
-                        .eq(
-                            "seller_id",
-                            state.ad.user_id
-                        )
-                        .maybeSingle();
+                        .single();
 
-                if(
-                    retry.error ||
-                    !retry.data?.id
-                ){
+                if(created.error){
+                    const retry =
+                        await supabaseClient
+                            .from("conversations")
+                            .select(
+                                "id,ad_id,buyer_id,seller_id,created_at,updated_at"
+                            )
+                            .eq("ad_id", listingId)
+                            .eq("buyer_id", buyerId)
+                            .eq("seller_id", sellerId)
+                            .maybeSingle();
 
-                    throw created.error;
-
+                    if(retry.error || !retry.data?.id){
+                        throw created.error;
+                    }
+                    conversation = retry.data;
+                }else{
+                    conversation = created.data;
                 }
-
-                conversationId =
-                    retry.data.id;
-
-            }else{
-
-                conversationId =
-                    created.data?.id ||
-                    null;
-
             }
-
         }
 
-        if(!conversationId){
-
+        if(
+            !conversation ||
+            !conversation.id ||
+            String(conversation.ad_id) !== String(listingId) ||
+            String(conversation.seller_id) !== sellerId ||
+            String(conversation.buyer_id) !== buyerId
+        ){
             throw new Error(
-                "Could not create a seller conversation."
+                "Conversation identity mismatch for this listing."
             );
-
         }
 
         window.location.href =
             "chat.html?conversation_id=" +
-            encodeURIComponent(
-                conversationId
-            );
+            encodeURIComponent(String(conversation.id)) +
+            "&ad_id=" +
+            encodeURIComponent(String(listingId)) +
+            "&seller_id=" +
+            encodeURIComponent(sellerId) +
+            "&v=msgroute1";
 
     }catch(error){
 

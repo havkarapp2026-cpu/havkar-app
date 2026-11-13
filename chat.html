@@ -898,6 +898,27 @@ select:focus-visible{
     word-break:break-word;
     overflow-wrap:anywhere;
     z-index:2;
+    /* Android WebView: long-press must open reactions, not text selection handles. */
+    -webkit-user-select:none;
+    user-select:none;
+    -webkit-touch-callout:none;
+    -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+}
+
+.message *,
+.message-text{
+    -webkit-user-select:none;
+    user-select:none;
+    -webkit-touch-callout:none;
+}
+
+/* Composer keeps normal text selection / caret. */
+#messageInput,
+#messageInput *{
+    -webkit-user-select:text !important;
+    user-select:text !important;
+    -webkit-touch-callout:default;
 }
 
 .message.sent{
@@ -1816,11 +1837,11 @@ select:focus-visible{
 
 /* =========================================================
    HAVKAR CHAT — PRODUCTION VERSION
-   Build: 2026-11-12-android-translate-react-v3
+   Build: 2026-11-13-chat-react-routing-v5
 ========================================================= */
 
 const HAVKAR_CHAT_BUILD =
-    "2026-11-12-android-translate-react-v3";
+    "2026-11-13-chat-react-routing-v5";
 
 function loadEmojiCatalogDeferred(){
     if(window.HAVKAR_EMOJI_CATALOG){
@@ -4079,6 +4100,53 @@ function getConversationRole(
 
 }
 
+function conversationMatchesRoute(conversation, route){
+    if(!conversation || !conversation.id){
+        return false;
+    }
+    if(
+        route.conversationId &&
+        String(conversation.id) !== String(route.conversationId)
+    ){
+        return false;
+    }
+    if(
+        route.adId &&
+        String(conversation.ad_id) !== String(route.adId)
+    ){
+        return false;
+    }
+    if(
+        route.sellerId &&
+        String(conversation.seller_id) !== String(route.sellerId)
+    ){
+        return false;
+    }
+    const me = state.currentUser && String(state.currentUser.id);
+    if(!me){
+        return false;
+    }
+    const isBuyer = String(conversation.buyer_id) === me;
+    const isSeller = String(conversation.seller_id) === me;
+    if(!isBuyer && !isSeller){
+        return false;
+    }
+    // Message Seller always creates buyer-side threads for this listing seller.
+    if(route.sellerId && isBuyer && String(conversation.seller_id) !== String(route.sellerId)){
+        return false;
+    }
+    return true;
+}
+
+function readChatRouteParams(){
+    const params = new URLSearchParams(window.location.search || "");
+    return {
+        conversationId: params.get("conversation_id"),
+        adId: params.get("ad_id"),
+        sellerId: params.get("seller_id")
+    };
+}
+
 
 /* =========================================================
    OPEN CONVERSATION
@@ -4181,62 +4249,100 @@ async function openConversation(
 
 async function openConversationFromUrl(){
 
-    const params =
-        new URLSearchParams(
-            window.location.search
-        );
+    const route = readChatRouteParams();
+    const conversationId = route.conversationId;
 
-    const conversationId =
-        params.get(
-            "conversation_id"
-        );
-
-    if(!conversationId){
+    if(!conversationId && !route.adId){
         return;
     }
 
-    const localConversation =
-        state.conversations.find(
-            conversation =>
-                String(
-                    conversation.id
-                ) ===
-                String(
-                    conversationId
-                )
-        );
+    async function resolveConversationRow(){
+        if(conversationId){
+            const localConversation =
+                state.conversations.find(
+                    conversation =>
+                        conversationMatchesRoute(conversation, route)
+                );
 
-    if(localConversation){
+            if(localConversation){
+                return localConversation;
+            }
 
-        await openConversation(
-            localConversation
-        );
+            const result =
+                await withTimeout(
+                    supabaseClient
+                        .from("conversations")
+                        .select(
+                            "id,ad_id,buyer_id,seller_id,created_at,updated_at"
+                        )
+                        .eq("id", conversationId)
+                        .maybeSingle()
+                );
 
-        return;
+            if(result.error){
+                throw result.error;
+            }
 
+            if(!result.data){
+                return null;
+            }
+
+            if(!conversationMatchesRoute(result.data, {
+                conversationId: conversationId,
+                adId: route.adId,
+                sellerId: route.sellerId
+            })){
+                console.error(
+                    "[HAVKAR] Refusing mismatched conversation route",
+                    {
+                        route: route,
+                        row: result.data
+                    }
+                );
+                showToast(
+                    "That chat does not match this listing seller.",
+                    "error"
+                );
+                return null;
+            }
+
+            return result.data;
+        }
+
+        // Fallback: listing-scoped resolve when only ad_id/seller_id are present.
+        if(route.adId){
+            const rpc =
+                await supabaseClient.rpc(
+                    "havkar_get_or_create_listing_conversation",
+                    {
+                        p_ad_id: Number(route.adId)
+                    }
+                );
+            const row =
+                Array.isArray(rpc.data)
+                    ? rpc.data[0]
+                    : rpc.data;
+            if(rpc.error || !row){
+                throw rpc.error || new Error("Listing conversation resolve failed");
+            }
+            if(!conversationMatchesRoute(row, route)){
+                showToast(
+                    "That chat does not match this listing seller.",
+                    "error"
+                );
+                return null;
+            }
+            return row;
+        }
+
+        return null;
     }
 
     try{
 
-        const result =
-            await withTimeout(
-                supabaseClient
-                    .from("conversations")
-                    .select(
-                        "id,ad_id,buyer_id,seller_id,created_at,updated_at"
-                    )
-                    .eq(
-                        "id",
-                        conversationId
-                    )
-                    .maybeSingle()
-            );
+        const row = await resolveConversationRow();
 
-        if(result.error){
-            throw result.error;
-        }
-
-        if(!result.data){
+        if(!row){
 
             showToast(
                 "Conversation not found.",
@@ -4247,65 +4353,54 @@ async function openConversationFromUrl(){
 
         }
 
-        const belongsToUser =
-            String(
-                result.data.buyer_id
-            ) ===
-            String(
-                state.currentUser.id
-            ) ||
-            String(
-                result.data.seller_id
-            ) ===
-            String(
-                state.currentUser.id
+        row.ad = row.ad || null;
+        row.lastMessage = row.lastMessage || null;
+        row.unreadCount = Number(row.unreadCount || 0);
+
+        const alreadyListed =
+            state.conversations.some(
+                item => String(item.id) === String(row.id)
             );
 
-        if(!belongsToUser){
-
-            showToast(
-                "You do not have access to this conversation.",
-                "error"
-            );
-
-            return;
-
+        if(!alreadyListed){
+            state.conversations = [row, ...state.conversations];
         }
 
-        result.data.ad =
-            null;
+        await openConversation(row);
 
-        result.data.lastMessage =
-            null;
-
-        result.data.unreadCount =
-            0;
-
-        state.conversations =
-            [
-                result.data,
-                ...state.conversations
-            ];
-
-        await openConversation(
-            result.data
-        );
+        // Keep URL canonical with listing identity so Android bfcache cannot
+        // restore an unrelated recent thread for the same seller.
+        try{
+            const canonical =
+                "chat.html?conversation_id=" +
+                encodeURIComponent(String(row.id)) +
+                "&ad_id=" +
+                encodeURIComponent(String(row.ad_id || "")) +
+                "&seller_id=" +
+                encodeURIComponent(String(row.seller_id || "")) +
+                "&v=msgroute1";
+            history.replaceState({}, "", canonical);
+        }catch(_e){}
 
         enrichSingleConversation(
-            result.data
+            row
         )
         .then(
             () => {
 
                 if(
-                    state.currentConversationId ===
-                    result.data.id
+                    String(state.currentConversationId) ===
+                    String(row.id)
                 ){
 
                     $("chatSubtitle")
                         .textContent =
-                        result.data.ad?.title ||
+                        (row.ad && row.ad.title) ||
                         "HAVKAR Conversation";
+
+                    $("chatPerson")
+                        .textContent =
+                        getConversationRole(row);
 
                 }
 
@@ -4427,6 +4522,29 @@ async function loadMessages(
         return;
     }
 
+    if(
+        state.currentConversation &&
+        String(state.currentConversation.id) === String(conversationId)
+    ){
+        const route = readChatRouteParams();
+        if(
+            (route.conversationId || route.adId || route.sellerId) &&
+            !conversationMatchesRoute(state.currentConversation, {
+                conversationId: route.conversationId || conversationId,
+                adId: route.adId,
+                sellerId: route.sellerId
+            })
+        ){
+            box.innerHTML = `
+                <div class="chat-empty">
+                    <i class="fas fa-shield-halved"></i>
+                    <p>Conversation identity mismatch. Messages were not loaded.</p>
+                </div>
+            `;
+            return;
+        }
+    }
+
     try{
 
         const result =
@@ -4450,6 +4568,14 @@ async function loadMessages(
 
         if(result.error){
             throw result.error;
+        }
+
+        // Drop stale responses if the user already switched threads.
+        if(
+            String(state.currentConversationId || "") !==
+            String(conversationId)
+        ){
+            return;
         }
 
         renderMessages(
@@ -4831,6 +4957,19 @@ function fillReactionPortal(messageId){
         openReactionEmojiPicker(messageId);
     });
     portal.appendChild(more);
+
+    const copyBtn = document.createElement("button");
+    copyBtn.type = "button";
+    copyBtn.className = "reaction-option reaction-more";
+    copyBtn.setAttribute("aria-label", "Copy message text");
+    copyBtn.textContent = "⎘";
+    copyBtn.title = "Copy";
+    copyBtn.addEventListener("click", event => {
+        event.stopPropagation();
+        copyMessageText(messageId);
+        closeAllReactionPickers();
+    });
+    portal.appendChild(copyBtn);
 }
 
 function positionReactionPortal(anchor){
@@ -4869,13 +5008,46 @@ function openReactionPickerForWrap(wrap, messageId){
     positionReactionPortal(bubble || wrap);
 }
 
+function clearNativeTextSelection(){
+    try{
+        const selection = window.getSelection && window.getSelection();
+        if(selection && selection.removeAllRanges){
+            selection.removeAllRanges();
+        }
+    }catch(_e){}
+}
+
+function copyMessageText(messageId){
+    const wrap = document.querySelector(
+        '[data-message-wrap="' + cssEscape(String(messageId)) + '"]'
+    );
+    const textEl = wrap && wrap.querySelector(".message-text");
+    const text = textEl ? String(textEl.textContent || "") : "";
+    if(!text){
+        return;
+    }
+    const done = () => showToast("Message copied.");
+    if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done).catch(() => {
+            window.prompt("Copy message", text);
+        });
+        return;
+    }
+    window.prompt("Copy message", text);
+}
+
 function bindMessageLongPressReaction(bubble, wrap, messageId){
     if(!bubble || !wrap || !messageId){
         return;
     }
     let timer = null;
     let moved = false;
+    let longPressed = false;
     const LONG_MS = 480;
+
+    bubble.setAttribute("unselectable", "on");
+    bubble.style.webkitUserSelect = "none";
+    bubble.style.userSelect = "none";
 
     function clearTimer(){
         if(timer){
@@ -4884,26 +5056,38 @@ function bindMessageLongPressReaction(bubble, wrap, messageId){
         }
     }
 
+    function fireReaction(){
+        longPressed = true;
+        clearNativeTextSelection();
+        if(navigator.vibrate){
+            try{ navigator.vibrate(18); }catch(_e){}
+        }
+        openReactionPickerForWrap(wrap, messageId);
+    }
+
     function start(event){
         if(event.type === "mousedown" && event.button !== 0){
             return;
         }
         moved = false;
+        longPressed = false;
+        clearNativeTextSelection();
         clearTimer();
         timer = window.setTimeout(() => {
             timer = null;
             if(moved){
                 return;
             }
-            if(navigator.vibrate){
-                try{ navigator.vibrate(18); }catch(_e){}
-            }
-            openReactionPickerForWrap(wrap, messageId);
+            fireReaction();
         }, LONG_MS);
     }
 
-    function cancel(){
+    function cancel(event){
         clearTimer();
+        if(longPressed && event){
+            // Stop Android from turning the long-press into a drag-select.
+            event.preventDefault();
+        }
     }
 
     function onMove(event){
@@ -4920,6 +5104,9 @@ function bindMessageLongPressReaction(bubble, wrap, messageId){
         }
     }
 
+    bubble.addEventListener("selectstart", event => {
+        event.preventDefault();
+    });
     bubble.addEventListener("touchstart", event => {
         const touch = event.touches && event.touches[0];
         if(touch){
@@ -4929,13 +5116,14 @@ function bindMessageLongPressReaction(bubble, wrap, messageId){
         start(event);
     }, { passive:true });
     bubble.addEventListener("touchmove", onMove, { passive:true });
-    bubble.addEventListener("touchend", cancel, { passive:true });
-    bubble.addEventListener("touchcancel", cancel, { passive:true });
+    bubble.addEventListener("touchend", cancel, { passive:false });
+    bubble.addEventListener("touchcancel", cancel, { passive:false });
     bubble.addEventListener("mousedown", start);
     bubble.addEventListener("mouseup", cancel);
     bubble.addEventListener("mouseleave", cancel);
     bubble.addEventListener("contextmenu", event => {
         event.preventDefault();
+        clearNativeTextSelection();
         openReactionPickerForWrap(wrap, messageId);
     });
 }
@@ -7784,23 +7972,16 @@ async function startPage(){
 
     }
 
-    const params =
-        new URLSearchParams(
-            window.location.search
-        );
-
-    const conversationId =
-        params.get(
-            "conversation_id"
-        );
+    const route = readChatRouteParams();
 
     await subscribeInboxRealtime();
     ensurePushRegistration();
 
-    if(conversationId){
+    if(route.conversationId || route.adId){
 
         await openConversationFromUrl();
 
+        // Refresh inbox list without replacing the active verified thread.
         loadConversations();
 
         return;
@@ -7810,6 +7991,28 @@ async function startPage(){
     await loadConversations();
 
 }
+
+window.addEventListener("pageshow", function (event) {
+    // Android WebView / bfcache can restore an older chat document and ignore
+    // a newer Message Seller query string. Force a clean route open.
+    if(!event.persisted){
+        return;
+    }
+    const route = readChatRouteParams();
+    if(!route.conversationId && !route.adId){
+        return;
+    }
+    if(
+        state.currentConversationId &&
+        route.conversationId &&
+        String(state.currentConversationId) === String(route.conversationId) &&
+        state.currentConversation &&
+        conversationMatchesRoute(state.currentConversation, route)
+    ){
+        return;
+    }
+    window.location.reload();
+});
 
 
 /* =========================================================
