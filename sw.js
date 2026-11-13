@@ -1,5 +1,5 @@
 /* HAVKAR service worker — versioned install + web push display. */
-var HAVKAR_SW_VERSION = "havkar-sw-20261112-prod-buynow-v4";
+var HAVKAR_SW_VERSION = "havkar-sw-20261113-chat-react-routing-v5";
 
 self.addEventListener("install", function (event) {
   self.skipWaiting();

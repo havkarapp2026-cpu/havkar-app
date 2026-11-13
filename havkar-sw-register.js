@@ -3,7 +3,7 @@
     return;
   }
 
-  var SW_URL = "/sw.js?v=havkar-sw-20261112-prod-buynow-v4";
+  var SW_URL = "/sw.js?v=havkar-sw-20261113-chat-react-routing-v5";
 
   window.addEventListener("load", function () {
     navigator.serviceWorker

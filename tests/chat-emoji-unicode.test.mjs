@@ -16,6 +16,8 @@ assert.match(chat, /openEmojiModal/);
 assert.match(chat, /bindMessageLongPressReaction/);
 assert.match(chat, /openReactionEmojiPicker/);
 assert.match(chat, /emojiPickerMode/);
+assert.match(chat, /clearNativeTextSelection/);
+assert.match(chat, /conversationMatchesRoute/);
 assert.doesNotMatch(chat, /reaction-trigger/);
 assert.match(chat, /textarea/);
 assert.match(chat, /state\.sending/);
