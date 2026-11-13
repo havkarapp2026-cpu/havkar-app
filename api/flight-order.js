@@ -496,6 +496,12 @@ module.exports = async function handler(req, res) {
     */
     if (intent === "payment_options") {
       const destination = readMainnetDestination(process.env);
+      const {
+        classifyDuffelAccessToken,
+        duffelLiveOrdersReady
+      } = require("../lib/duffel-live-ready.cjs");
+      const duffel = classifyDuffelAccessToken(process.env);
+      const flightsLive = duffelLiveOrdersReady(process.env);
       return send(res, 200, {
         ok: true,
         intent: "payment_options",
@@ -504,7 +510,9 @@ module.exports = async function handler(req, res) {
           supported_currencies: listStripeCurrencies60(),
           currency_count: 60,
           card_payments_allowed: cardPaymentsAllowed(),
-          source: "https://docs.stripe.com/currencies"
+          source: "https://docs.stripe.com/currencies",
+          settlement_currency: "eur",
+          stripe_account_country: "IT"
         },
         stellar_xlm_mainnet: {
           payments_flag: stellarMainnetPaymentsEnabled(),
@@ -513,9 +521,16 @@ module.exports = async function handler(req, res) {
           destination_configured: destination.ok === true,
           network: "mainnet"
         },
+        duffel: {
+          token_mode: duffel.mode,
+          live_orders_ready: flightsLive,
+          requirement: duffel.requirement
+        },
         public_live_checkout: false,
-        message:
-          "Flight payment rails are prepared. Customer money for flights stays blocked until Duffel live booking settlement is verified, even when Owner has armed other HAVKAR modules."
+        customer_money_collection: flightsLive ? "armed" : "blocked",
+        message: flightsLive
+          ? "Duffel live orders are armed. Customer money may be collected only with verified issuance + recovery."
+          : "Customer money for flights stays blocked until Duffel live booking settlement is verified."
       });
     }
 
@@ -637,17 +652,32 @@ module.exports = async function handler(req, res) {
         });
       }
 
-      // Owner may arm Stripe/XLM globally, but flights still require verified
-      // Duffel live merchant booking + settlement before customer money is taken.
+      const {
+        classifyDuffelAccessToken,
+        duffelLiveOrdersReady
+      } = require("../lib/duffel-live-ready.cjs");
+      const duffel = classifyDuffelAccessToken(process.env);
+      if (!duffelLiveOrdersReady(process.env)) {
+        return send(res, 403, {
+          ok: false,
+          code: "FLIGHT_LIVE_CHECKOUT_BLOCKED_DUFFEL",
+          error:
+            "Flight customer charges stay blocked until Duffel live booking/settlement is verified. No payment was taken. Duffel TEST MODE orders remain available.",
+          public_live_checkout: false,
+          duffel_token_mode: duffel.mode,
+          requirement: duffel.requirement,
+          note:
+            "Do not collect customer money for flights through incomplete live order flows."
+        });
+      }
+
       return send(res, 403, {
         ok: false,
-        code: "FLIGHT_LIVE_CHECKOUT_BLOCKED_DUFFEL",
+        code: "FLIGHT_LIVE_CHECKOUT_NEEDS_AUTHENTICATED_ORDER",
         error:
-          "Flight customer charges stay blocked until Duffel live booking/settlement merchant authorization is verified. No payment was taken. Duffel TEST MODE orders remain available.",
-        public_live_checkout: false,
-        duffel_order_mode: "test_only",
-        note:
-          "Do not collect customer money for flights through incomplete live order flows."
+          "Duffel live credentials are armed, but this intent alone does not charge. Use authenticated booking with verified payment recovery.",
+        public_live_checkout: true,
+        duffel_token_mode: duffel.mode
       });
     }
 

@@ -552,6 +552,11 @@ async function buildPaymentActivationStatus() {
       secret_key_mode: stripeMode,
       webhook_secret_configured: Boolean(process.env.STRIPE_WEBHOOK_SECRET),
       allowed_fiat: allowedStripeFiatCurrencies().map((c) => c.toUpperCase()),
+      presentment_currency_count: allowedStripeFiatCurrencies().length,
+      stripe_account_country: "IT",
+      settlement_currency: "eur",
+      display_vs_charge_vs_settlement:
+        "display=buyer presentment; charge=Checkout/PI presentment; settlement=EUR to Revolut …8455",
       live_collection_allowed: cardsAllowed,
       test_checkout_allowed: stripeTestCheckoutAllowed(),
       required_webhook_events: REQUIRED_WEBHOOK_EVENTS,
@@ -564,6 +569,7 @@ async function buildPaymentActivationStatus() {
         live_armed: cardsAllowed
       }
     },
+    duffel: require("../lib/duffel-live-ready.cjs").classifyDuffelAccessToken(),
     stellar: {
       testnet_destination_configured: testnetDestinationConfigured,
       mainnet_payments_enabled_in_source: true,
