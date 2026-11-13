@@ -84,24 +84,31 @@ class MainActivity : AppCompatActivity() {
         webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
-            // Avoid stale chat/checkout HTML after Production deploys.
-            cacheMode = WebSettings.LOAD_DEFAULT
+            // Production Buy & Sell / chat HTML must not reuse stale WebView disk cache.
+            cacheMode = WebSettings.LOAD_NO_CACHE
             mediaPlaybackRequiresUserGesture = true
             allowFileAccess = false
             allowContentAccess = false
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             javaScriptCanOpenWindowsAutomatically = false
             setSupportMultipleWindows(false)
-            userAgentString = userAgentString + " HAVKAR-Android/1.0.2"
+            userAgentString = userAgentString + " HAVKAR-Android/1.0.3"
         }
-        // Drop old WebView HTTP cache entries that can keep broken chat.js after deploys.
+        // Drop old WebView HTTP cache entries that can keep broken checkout HTML after deploys.
         webView.clearCache(true)
+        webView.clearHistory()
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val url = request.url?.toString()
                 if (HavkarLinks.isAllowedNavigation(url)) return false
                 openOutside(url)
                 return true
+            }
+
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                // After each navigation, drop HTTP cache so the next listing/chat open is fresh.
+                view?.clearCache(false)
             }
         }
         webView.webChromeClient = object : WebChromeClient() {

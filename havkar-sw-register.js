@@ -3,7 +3,7 @@
     return;
   }
 
-  var SW_URL = "/sw.js?v=havkar-sw-20261112-android-translate-react-v3";
+  var SW_URL = "/sw.js?v=havkar-sw-20261112-prod-buynow-v4";
 
   window.addEventListener("load", function () {
     navigator.serviceWorker
