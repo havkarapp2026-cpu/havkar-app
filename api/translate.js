@@ -129,6 +129,8 @@ function sendJSON(res, status, body) {
 }
 
 const BUILTIN_TRUSTED_ORIGINS = [
+  "https://havkar.online",
+  "https://www.havkar.online",
   "https://havkar-app.vercel.app",
   "https://testnet.havkar.online"
 ];

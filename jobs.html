@@ -1239,6 +1239,22 @@ a.primary{
 
     </button>
 
+    <button
+      class="icon-btn"
+      type="button"
+      onclick="openApplicantDashboard()"
+      aria-label="Applications">
+      <i class="fas fa-file-alt"></i>
+    </button>
+
+    <button
+      class="icon-btn"
+      type="button"
+      onclick="openEmployerCompanyPanel()"
+      aria-label="Company">
+      <i class="fas fa-building"></i>
+    </button>
+
   </div>
 
 </header>
@@ -1839,6 +1855,102 @@ a.primary{
 </div>
 
 <!-- =======================================================
+     APPLY / APPLICANT / EMPLOYER / COMPANY
+     ======================================================= -->
+
+<div class="modal" id="applyJobModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>Apply for this job</h2>
+      <button class="close" type="button" onclick="closeModal('applyJobModal')">×</button>
+    </div>
+    <input type="hidden" id="applyJobId" value="">
+    <div class="form-group">
+      <label for="applyCoverLetter">Cover letter</label>
+      <textarea id="applyCoverLetter" maxlength="5000" rows="5" placeholder="Why you are a fit"></textarea>
+    </div>
+    <div class="form-group">
+      <label for="applyResumeFile">CV / Resume (PDF, DOC, DOCX · max 5 MB)</label>
+      <input id="applyResumeFile" type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+    </div>
+    <label style="display:flex;gap:8px;align-items:flex-start;margin:12px 0;">
+      <input id="applyConsent" type="checkbox">
+      <span>I consent to HAVKAR sharing this application and CV with the employer for recruitment on this listing.</span>
+    </label>
+    <button class="primary" type="button" onclick="submitJobApplication()">Submit application</button>
+  </div>
+</div>
+
+<div class="modal" id="applicantDashboardModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>My applications &amp; profile</h2>
+      <button class="close" type="button" onclick="closeModal('applicantDashboardModal')">×</button>
+    </div>
+    <div class="form-group">
+      <label for="profileHeadline">Headline</label>
+      <input id="profileHeadline" type="text" maxlength="120">
+    </div>
+    <div class="form-group">
+      <label for="profileSummary">Summary</label>
+      <textarea id="profileSummary" maxlength="3000" rows="3"></textarea>
+    </div>
+    <div class="form-group">
+      <label for="profileSkills">Skills</label>
+      <input id="profileSkills" type="text" maxlength="500" placeholder="Comma-separated">
+    </div>
+    <div class="form-group">
+      <label for="profileLocation">Location</label>
+      <input id="profileLocation" type="text" maxlength="120">
+    </div>
+    <button class="secondary" type="button" onclick="saveApplicantProfile()">Save profile</button>
+    <div id="applicantAppsList" style="margin-top:16px;"></div>
+  </div>
+</div>
+
+<div class="modal" id="employerReviewModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>Applications for this job</h2>
+      <button class="close" type="button" onclick="closeModal('employerReviewModal')">×</button>
+    </div>
+    <div id="employerAppsList"></div>
+  </div>
+</div>
+
+<div class="modal" id="employerCompanyModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>Company onboarding</h2>
+      <button class="close" type="button" onclick="closeModal('employerCompanyModal')">×</button>
+    </div>
+    <p class="upload-note">Register a company to unlock corporate monthly plans. Verification stays pending until Owner review. Staff roles: owner, branch_manager.</p>
+    <div class="form-group">
+      <label for="companyLegalName">Legal company name *</label>
+      <input id="companyLegalName" type="text" maxlength="160" placeholder="Registered legal name">
+    </div>
+    <div class="form-group">
+      <label for="companyBranchName">First branch name (optional)</label>
+      <input id="companyBranchName" type="text" maxlength="160">
+    </div>
+    <div class="form-group">
+      <label for="companyStaffEmail">Invite staff user id (UUID, optional)</label>
+      <input id="companyStaffUserId" type="text" maxlength="80" placeholder="auth user uuid">
+    </div>
+    <div class="form-group">
+      <label for="companyStaffRole">Staff role</label>
+      <select id="companyStaffRole">
+        <option value="branch_manager">branch_manager</option>
+        <option value="owner">owner</option>
+      </select>
+    </div>
+    <button class="primary" type="button" onclick="registerEmployerCompany()">Register company</button>
+    <button class="secondary" type="button" onclick="inviteCompanyStaff()">Add staff permission</button>
+    <div id="companyStatusOut" style="margin-top:12px;white-space:pre-wrap;font-size:13px;"></div>
+  </div>
+</div>
+
+<!-- =======================================================
      EDIT JOB MODAL
      ======================================================= -->
 
@@ -1980,6 +2092,7 @@ a.primary{
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-job-billing.js"></script>
 <script src="/havkar-jobs.js"></script>
+<script src="/havkar-job-applications.js"></script>
 <script>
 
 /* =========================================================
@@ -2871,6 +2984,39 @@ function jobStatusHTML(job){
 
 function renderApplicationAction(job){
 
+  const publicListing =
+    window.HAVKAR_JOBS
+      ? window.HAVKAR_JOBS.isPublicListing(job)
+      : job && job.status === "active";
+
+  const inAppApply = publicListing
+    ? `
+      <button
+        class="primary"
+        type="button"
+        onclick="openApplyJob('${escapeJS(job.id)}')">
+        <i class="fas fa-file-alt"></i>
+        Apply with CV
+      </button>
+      ${
+        job.owner
+          ? `
+            <button
+              class="secondary"
+              type="button"
+              onclick="openEmployerReview('${escapeJS(job.id)}')">
+              Review applications
+            </button>
+          `
+          : ""
+      }
+    `
+    : `
+      <p class="notice">
+        Applications open only while this listing is publicly active.
+      </p>
+    `;
+
   const action =
     window.HAVKAR_JOBS
       ? window.HAVKAR_JOBS.contactAction(job)
@@ -2880,7 +3026,7 @@ function renderApplicationAction(job){
         };
 
   if(!action.available){
-    return `
+    return inAppApply + `
       <p class="notice">
         ${escapeHTML(action.label)}
       </p>
@@ -2888,7 +3034,7 @@ function renderApplicationAction(job){
   }
 
   if(action.kind === "text"){
-    return `
+    return inAppApply + `
       <div class="notice">
         <strong>${escapeHTML(action.label)}</strong>
         <br>
@@ -2906,7 +3052,7 @@ function renderApplicationAction(job){
       `
       : "";
 
-  return `
+  return inAppApply + `
     <a
       class="primary"
       href="${escapeHTML(action.href)}"
@@ -3531,6 +3677,27 @@ async function submitJob(){
     positions:document.getElementById("jobPositions").value,
     image:selectedJobImage || null
   };
+
+  const apps = appsApi();
+  if(apps && typeof apps.fraudSignals === "function"){
+    const recentTitles = jobs
+      .filter(function(item){ return item.owner === true; })
+      .map(function(item){ return item.title || ""; });
+    const fraud = apps.fraudSignals(draft, recentTitles);
+    if(fraud.block_publish){
+      if(submitButton){
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalButtonHTML;
+      }
+      alert(
+        fraud.illegal_recruitment_fee_language
+          ? "This listing was blocked: illegal recruitment-fee language is not allowed."
+          : "This listing was blocked: too many duplicate titles from your account."
+      );
+      return;
+    }
+  }
+
   let result;
   if(selectedPlan.kind === "company"){
     const built = window.HAVKAR_JOBS.buildCompanyJobInsert(
@@ -3759,6 +3926,17 @@ async function loadJobsPaymentMethodsStatus(){
   }catch(_e){}
 }
 
+async function probeJobsGlobalPaymentsCatalog(){
+  try{
+    const res = await fetch("/api/global-payments?action=global_payments_catalog");
+    const body = await res.json().catch(() => ({}));
+    window.__HAVKAR_GLOBAL_PAYMENTS = body;
+    return body;
+  }catch(_e){
+    return null;
+  }
+}
+
 async function startRealPayment(jobId, method){
 
   const job =
@@ -3773,6 +3951,23 @@ async function startRealPayment(jobId, method){
   const payMethod = method || "stripe";
   const companyJob = job.employer_kind === "company";
 
+  // Global catalog probe: jobs_listing flow via /api/global-payments (no charge).
+  await probeJobsGlobalPaymentsCatalog();
+  try{
+    await fetch("/api/global-payments", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({
+        action:"global_payment_quote",
+        module:"jobs",
+        method: payMethod === "xlm_mainnet" || payMethod === "xlm" ? "xlm" : "stripe",
+        currency:"eur",
+        flow: "jobs_listing",
+        subject_id: String(job.id)
+      })
+    });
+  }catch(_e){}
+
   if(payMethod === "xlm_mainnet" || payMethod === "xlm"){
     if(companyJob){
       alert("Corporate monthly subscriptions renew on Stripe only. XLM cannot start automatic renewals. The advertisement has NOT been activated.");
@@ -3784,7 +3979,8 @@ async function startRealPayment(jobId, method){
       body:JSON.stringify({
         action:"jobs_quote",
         method:"xlm_mainnet",
-        plan: job.plan || "Professional"
+        plan: job.plan || "Professional",
+        flow: "jobs_listing"
       })
     });
     const quote = await quoteRes.json().catch(() => ({}));
@@ -3801,7 +3997,8 @@ async function startRealPayment(jobId, method){
         "FX source: " + (quote.rate_source || "—"),
         "Network fee (XLM): " + (quote.network_fee_xlm || "—"),
         "Live charge now: " + String(quote.charge_allowed_now === true),
-        "XLM is Stripe currency?: No"
+        "XLM is Stripe currency?: No",
+        "flow: jobs_listing"
       ].join("\n");
     }
     if(quote.charge_allowed_now !== true){
@@ -4463,6 +4660,303 @@ document.addEventListener(
     }
   }
 );
+
+/* =========================================================
+   APPLICATIONS / EMPLOYER / COMPANY
+   ========================================================= */
+
+function appsApi(){
+  return window.HAVKAR_JOB_APPLICATIONS || null;
+}
+
+async function openApplyJob(jobId){
+  await refreshCurrentUser();
+  if(!currentUser){
+    alert("Please sign in before applying.");
+    window.location.href = "profile.html";
+    return;
+  }
+  document.getElementById("applyJobId").value = String(jobId);
+  document.getElementById("applyCoverLetter").value = "";
+  document.getElementById("applyResumeFile").value = "";
+  document.getElementById("applyConsent").checked = false;
+  openModal("applyJobModal");
+}
+
+async function submitJobApplication(){
+  const api = appsApi();
+  if(!api){
+    alert("Applications module is not loaded.");
+    return;
+  }
+  await refreshCurrentUser();
+  if(!currentUser){
+    alert("Please sign in before applying.");
+    return;
+  }
+  const jobId = document.getElementById("applyJobId").value;
+  const cover = document.getElementById("applyCoverLetter").value;
+  const fileInput = document.getElementById("applyResumeFile");
+  const consent = document.getElementById("applyConsent").checked;
+  const result = await api.submitApplication(supabaseClient, {
+    jobId: Number(jobId) || jobId,
+    applicantId: currentUser.id,
+    coverLetter: cover,
+    applicantConsent: consent,
+    file: fileInput && fileInput.files && fileInput.files[0] ? fileInput.files[0] : null
+  });
+  if(!result.ok){
+    alert(result.message || "Application was not submitted.");
+    return;
+  }
+  closeModal("applyJobModal");
+  alert("Application submitted. Status: " + (result.row && result.row.status));
+}
+
+async function openApplicantDashboard(){
+  const api = appsApi();
+  await refreshCurrentUser();
+  if(!currentUser){
+    alert("Please sign in.");
+    window.location.href = "profile.html";
+    return;
+  }
+  if(api){
+    const { data } = await supabaseClient
+      .from("job_applicant_profiles")
+      .select("headline,summary,skills,location")
+      .eq("user_id", currentUser.id)
+      .maybeSingle();
+    document.getElementById("profileHeadline").value = (data && data.headline) || "";
+    document.getElementById("profileSummary").value = (data && data.summary) || "";
+    document.getElementById("profileSkills").value = (data && data.skills) || "";
+    document.getElementById("profileLocation").value = (data && data.location) || "";
+    const mine = await api.listMine(supabaseClient, currentUser.id);
+    const list = document.getElementById("applicantAppsList");
+    if(!mine.ok || !mine.rows.length){
+      list.textContent = "No applications yet.";
+    }else{
+      list.innerHTML = mine.rows.map(function(row){
+        const job = row.jobs || {};
+        return `
+          <div class="saved-job-card">
+            <strong>${escapeHTML(job.title || ("Job #" + row.job_id))}</strong>
+            <div>Status: ${escapeHTML(row.status)}</div>
+            <div>Interview: ${escapeHTML(row.interview_at || "—")}</div>
+            <button class="secondary" type="button" onclick="withdrawMyApplication('${escapeJS(row.id)}')">Withdraw</button>
+          </div>
+        `;
+      }).join("");
+    }
+  }
+  openModal("applicantDashboardModal");
+}
+
+async function saveApplicantProfile(){
+  const api = appsApi();
+  if(!api || !currentUser) return;
+  const result = await api.upsertApplicantProfile(supabaseClient, {
+    userId: currentUser.id,
+    profile: {
+      headline: document.getElementById("profileHeadline").value,
+      summary: document.getElementById("profileSummary").value,
+      skills: document.getElementById("profileSkills").value,
+      location: document.getElementById("profileLocation").value
+    }
+  });
+  alert(result.ok ? "Profile saved." : (result.message || "Profile was not saved."));
+}
+
+async function withdrawMyApplication(applicationId){
+  const api = appsApi();
+  if(!api || !currentUser) return;
+  const result = await api.decideApplication(supabaseClient, {
+    applicationId: applicationId,
+    applicantId: currentUser.id,
+    status: "withdrawn"
+  });
+  alert(result.ok ? "Application withdrawn." : (result.message || "Could not withdraw."));
+  openApplicantDashboard();
+}
+
+async function openEmployerReview(jobId){
+  const api = appsApi();
+  await refreshCurrentUser();
+  if(!api || !currentUser){
+    alert("Please sign in as the employer.");
+    return;
+  }
+  const listed = await api.listForJob(supabaseClient, Number(jobId) || jobId, currentUser.id);
+  const list = document.getElementById("employerAppsList");
+  if(!listed.ok){
+    list.textContent = listed.message || "Could not load applications.";
+    openModal("employerReviewModal");
+    return;
+  }
+  if(!listed.rows.length){
+    list.textContent = "No applications yet.";
+  }else{
+    list.innerHTML = listed.rows.map(function(row){
+      return `
+        <div class="saved-job-card">
+          <div>Applicant: ${escapeHTML(row.applicant_id)}</div>
+          <div>Status: ${escapeHTML(row.status)}</div>
+          <div>${escapeHTML(row.cover_letter || "")}</div>
+          <div class="booking-actions" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
+            <button class="secondary" type="button" onclick="employerDecide('${escapeJS(row.id)}','under_review')">Under review</button>
+            <button class="secondary" type="button" onclick="employerDecide('${escapeJS(row.id)}','shortlisted')">Shortlist</button>
+            <button class="secondary" type="button" onclick="employerDecideInterview('${escapeJS(row.id)}')">Interview</button>
+            <button class="secondary" type="button" onclick="employerDecide('${escapeJS(row.id)}','rejected')">Reject</button>
+            <button class="primary" type="button" onclick="employerDecide('${escapeJS(row.id)}','hired')">Hire</button>
+            <button class="secondary" type="button" onclick="openApplicationConversation('${escapeJS(row.id)}','${escapeJS(row.applicant_id)}','${escapeJS(row.conversation_id || "")}')">Message</button>
+            ${row.resume_path ? `<button class="secondary" type="button" onclick="openResumeSigned('${escapeJS(row.resume_path)}')">Open CV</button>` : ""}
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+  openModal("employerReviewModal");
+  window.__HAVKAR_REVIEW_JOB_ID = jobId;
+}
+
+async function employerDecide(applicationId, status){
+  const api = appsApi();
+  if(!api) return;
+  const notes = prompt("Employer notes (optional)", "") || "";
+  const result = await api.decideApplication(supabaseClient, {
+    applicationId: applicationId,
+    status: status,
+    employerNotes: notes
+  });
+  alert(result.ok ? ("Updated to " + status) : (result.message || "Update failed."));
+  if(window.__HAVKAR_REVIEW_JOB_ID) openEmployerReview(window.__HAVKAR_REVIEW_JOB_ID);
+}
+
+async function employerDecideInterview(applicationId){
+  const when = prompt("Interview time (ISO, e.g. 2026-12-01T10:00:00Z)", "");
+  if(!when) return;
+  const api = appsApi();
+  const result = await api.decideApplication(supabaseClient, {
+    applicationId: applicationId,
+    status: "interview",
+    interviewAt: when
+  });
+  alert(result.ok ? "Interview scheduled." : (result.message || "Could not schedule."));
+  if(window.__HAVKAR_REVIEW_JOB_ID) openEmployerReview(window.__HAVKAR_REVIEW_JOB_ID);
+}
+
+async function openApplicationConversation(applicationId, applicantId, conversationId){
+  const api = appsApi();
+  await refreshCurrentUser();
+  if(!api || !currentUser) return;
+  const opened = await api.openConversation(supabaseClient, {
+    application: { id: applicationId, applicant_id: applicantId, conversation_id: conversationId || null },
+    applicantId: applicantId,
+    employerId: currentUser.id
+  });
+  if(!opened.ok){
+    alert(opened.message || "Conversation was not opened.");
+    return;
+  }
+  window.location.href = "chat.html?conversation=" + encodeURIComponent(opened.conversationId);
+}
+
+async function openResumeSigned(path){
+  const api = appsApi();
+  if(!api) return;
+  const signed = await api.resumeSignedUrl(supabaseClient, path);
+  if(!signed.ok){
+    alert(signed.message || "CV link unavailable.");
+    return;
+  }
+  window.open(signed.url, "_blank", "noopener,noreferrer");
+}
+
+async function openEmployerCompanyPanel(){
+  await refreshCurrentUser();
+  if(!currentUser){
+    alert("Please sign in.");
+    window.location.href = "profile.html";
+    return;
+  }
+  const out = document.getElementById("companyStatusOut");
+  const { data, error } = await supabaseClient
+    .from("job_companies")
+    .select("id,legal_name,verification_status,created_at")
+    .eq("owner_user_id", currentUser.id)
+    .order("created_at", { ascending: false });
+  if(error){
+    out.textContent = "Could not load companies: " + error.message;
+  }else if(!data || !data.length){
+    out.textContent = "No company registered yet.";
+  }else{
+    out.textContent = data.map(function(row){
+      return row.legal_name + " · " + row.verification_status + " · id=" + row.id;
+    }).join("\n");
+    if(data[0] && data[0].id){
+      document.getElementById("jobCompanyId").value = data[0].id;
+    }
+  }
+  openModal("employerCompanyModal");
+}
+
+async function registerEmployerCompany(){
+  await refreshCurrentUser();
+  if(!currentUser) return;
+  const legalName = document.getElementById("companyLegalName").value.trim();
+  if(legalName.length < 2){
+    alert("Enter the legal company name.");
+    return;
+  }
+  const inserted = await supabaseClient
+    .from("job_companies")
+    .insert({
+      owner_user_id: currentUser.id,
+      legal_name: legalName,
+      verification_status: "pending"
+    })
+    .select("id,legal_name,verification_status")
+    .single();
+  if(inserted.error || !inserted.data){
+    alert((inserted.error && inserted.error.message) || "Company was not registered.");
+    return;
+  }
+  const branchName = document.getElementById("companyBranchName").value.trim();
+  if(branchName){
+    await supabaseClient.from("job_company_branches").insert({
+      company_id: inserted.data.id,
+      name: branchName,
+      verification_status: "pending"
+    });
+  }
+  document.getElementById("jobCompanyId").value = inserted.data.id;
+  alert("Company registered. Verification status: " + inserted.data.verification_status + ". Id copied into Verified company id.");
+  openEmployerCompanyPanel();
+}
+
+async function inviteCompanyStaff(){
+  await refreshCurrentUser();
+  if(!currentUser) return;
+  const companyId = document.getElementById("jobCompanyId").value.trim();
+  const staffId = document.getElementById("companyStaffUserId").value.trim();
+  const role = document.getElementById("companyStaffRole").value;
+  if(!companyId || !staffId){
+    alert("Company id and staff user id are required.");
+    return;
+  }
+  const result = await supabaseClient
+    .from("job_company_members")
+    .upsert({
+      company_id: companyId,
+      user_id: staffId,
+      member_role: role
+    }, { onConflict: "company_id,user_id" })
+    .select("company_id,user_id,member_role")
+    .single();
+  alert(result.error
+    ? result.error.message
+    : ("Staff permission saved: " + role));
+}
 
 /* =========================================================
    NAVIGATION

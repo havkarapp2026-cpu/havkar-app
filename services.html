@@ -2313,6 +2313,7 @@ textarea.form-control {
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-services.js"></script>
 <script src="/havkar-service-commerce.js"></script>
+<script src="/havkar-service-operations.js"></script>
 <script>
 
 /* =========================================================
@@ -4045,6 +4046,44 @@ function buildBookingCard(booking) {
             rateServiceProvider(booking);
         });
         card.appendChild(ratingButton);
+
+        const disputeButton = document.createElement("button");
+        disputeButton.type = "button";
+        disputeButton.className = "bookings-btn";
+        disputeButton.textContent = "Open dispute / refund request";
+        disputeButton.addEventListener("click", function() {
+            openServiceDispute(booking);
+        });
+        card.appendChild(disputeButton);
+    }
+
+    const invoiceButton = document.createElement("button");
+    invoiceButton.type = "button";
+    invoiceButton.className = "bookings-btn";
+    invoiceButton.textContent = "Issue invoice / receipt";
+    invoiceButton.addEventListener("click", function() {
+        issueServiceInvoice(booking);
+    });
+    card.appendChild(invoiceButton);
+
+    if (bookingRole === "provider") {
+        const milestoneButton = document.createElement("button");
+        milestoneButton.type = "button";
+        milestoneButton.className = "bookings-btn";
+        milestoneButton.textContent = "Add milestone";
+        milestoneButton.addEventListener("click", function() {
+            addServiceMilestone(booking);
+        });
+        card.appendChild(milestoneButton);
+
+        const availButton = document.createElement("button");
+        availButton.type = "button";
+        availButton.className = "bookings-btn";
+        availButton.textContent = "Set availability slot";
+        availButton.addEventListener("click", function() {
+            setProviderAvailability(booking);
+        });
+        card.appendChild(availButton);
     }
 
     return card;
@@ -4331,11 +4370,22 @@ function publicProviderName(service) {
 
 async function fileServiceComplaint(booking) {
     const user = await requireUser();
-    if (!user || !window.HAVKAR_SERVICE_COMMERCE) return;
+    if (!user) return;
     const category = window.prompt(
-        "Complaint category: service_not_completed, poor_service_quality, incorrect_price, payment_disagreement, provider_did_not_arrive, customer_did_not_pay, other"
+        "Complaint category: service_not_completed, poor_service_quality, incorrect_price, payment_disagreement, provider_did_not_arrive, customer_did_not_pay, refund_request, other"
     );
     const explanation = category ? window.prompt("Describe the complaint. This text cannot be edited after it is saved.") : "";
+    if (window.HAVKAR_SERVICE_OPERATIONS) {
+        const opened = await window.HAVKAR_SERVICE_OPERATIONS.openDispute(db, {
+            bookingId: booking.id,
+            userId: user.id,
+            category: category,
+            details: explanation
+        });
+        showToast(opened.ok ? "Complaint submitted. It stays linked to this booking." : (opened.message || "The complaint was not saved."));
+        return;
+    }
+    if (!window.HAVKAR_SERVICE_COMMERCE) return;
     const draft = window.HAVKAR_SERVICE_COMMERCE.complaintDraft({
         bookingId: booking.id,
         authorId: user.id,
@@ -4355,11 +4405,90 @@ async function fileServiceComplaint(booking) {
 }
 
 
+async function openServiceDispute(booking) {
+    return fileServiceComplaint(booking);
+}
+
+
+async function issueServiceInvoice(booking) {
+    const user = await requireUser();
+    if (!user || !window.HAVKAR_SERVICE_OPERATIONS) {
+        showToast("Invoice tools are not loaded.");
+        return;
+    }
+    const agreed = Number(booking.agreed_price != null ? booking.agreed_price : booking.price);
+    const issued = await window.HAVKAR_SERVICE_OPERATIONS.issueInvoice(db, {
+        id: booking.id,
+        customer_id: booking.customer_id,
+        provider_id: booking.provider_id,
+        agreed_price: agreed,
+        currency: booking.currency || "EUR",
+        payment_method: booking.payment_method || "unset"
+    }, { status: "issued", collection_state: "uncollected" });
+    if (!issued.ok) {
+        showToast(issued.message || "Invoice was not issued.");
+        return;
+    }
+    const inv = issued.invoice || {};
+    showToast(
+        "Invoice/receipt recorded. Customer total cents: " +
+        inv.customer_total_cents +
+        ". Provider commission 10% cents: " +
+        inv.provider_commission_cents +
+        ". No live charge was taken."
+    );
+}
+
+
+async function addServiceMilestone(booking) {
+    const user = await requireUser();
+    if (!user || !window.HAVKAR_SERVICE_OPERATIONS) return;
+    const title = window.prompt("Milestone title");
+    const amount = Number(window.prompt("Milestone amount (EUR)"));
+    const result = await window.HAVKAR_SERVICE_OPERATIONS.createMilestone(db, {
+        bookingId: booking.id,
+        title: title,
+        amount: amount
+    });
+    showToast(result.ok ? "Milestone saved." : (result.message || "Milestone was not saved."));
+}
+
+
+async function setProviderAvailability(booking) {
+    const user = await requireUser();
+    if (!user || !window.HAVKAR_SERVICE_OPERATIONS) return;
+    const slotDate = window.prompt("Availability date (YYYY-MM-DD)", booking.booking_date || "");
+    const start = window.prompt("Start time (HH:MM)", "09:00");
+    const end = window.prompt("End time (HH:MM)", "17:00");
+    const result = await window.HAVKAR_SERVICE_OPERATIONS.upsertAvailability(db, {
+        providerId: user.id,
+        serviceId: booking.service_id || null,
+        slot_date: slotDate,
+        start_time: start,
+        end_time: end,
+        is_available: true
+    });
+    showToast(result.ok ? "Availability slot saved." : (result.message || "Availability was not saved."));
+}
+
+
 async function rateServiceProvider(booking) {
     const user = await requireUser();
-    if (!user || !window.HAVKAR_SERVICE_COMMERCE) return;
+    if (!user) return;
     const rating = Number(window.prompt("Rate the provider from 1 to 5. A rating is separate from a complaint."));
     const reviewText = window.prompt("Write the review. The provider can reply, but cannot change this rating.");
+    if (window.HAVKAR_SERVICE_OPERATIONS) {
+        const verified = await window.HAVKAR_SERVICE_OPERATIONS.createVerifiedReview(db, {
+            bookingId: booking.id,
+            customerId: user.id,
+            providerId: booking.provider_id,
+            rating: rating,
+            review_text: reviewText
+        });
+        showToast(verified.ok ? "Verified review submitted." : (verified.message || "This booking cannot take a verified review yet."));
+        return;
+    }
+    if (!window.HAVKAR_SERVICE_COMMERCE) return;
     const draft = window.HAVKAR_SERVICE_COMMERCE.reviewDraft({
         bookingId: booking.id,
         customerId: user.id,

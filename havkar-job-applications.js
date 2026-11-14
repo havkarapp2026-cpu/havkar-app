@@ -2,6 +2,7 @@
  * HAVKAR job applications.
  *
  * Resumes stay in the private job-resumes bucket.
+ * Status values match public.job_applications CHECK constraint.
  * Messages use the existing conversations and messages tables.
  * This file does not confirm payment or grant a role.
  */
@@ -17,7 +18,8 @@
 
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
 
-  const APPLICATION_COLUMNS = "id,job_id,applicant_id,cover_letter,resume_path,status,conversation_id,created_at,updated_at";
+  const APPLICATION_COLUMNS =
+    "id,job_id,applicant_id,cover_letter,resume_path,status,conversation_id,employer_notes,interview_at,applicant_consent_at,withdrawn_at,created_at,updated_at";
   const RESUME_BUCKET = "job-resumes";
   const MAX_RESUME_BYTES = 5242880;
   const MIME_EXTENSIONS = {
@@ -26,13 +28,32 @@
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx"
   };
 
+  const APPLICANT_STATUSES = [
+    "submitted",
+    "under_review",
+    "shortlisted",
+    "interview",
+    "rejected",
+    "hired",
+    "withdrawn"
+  ];
+
+  const EMPLOYER_DECISIONS = [
+    "under_review",
+    "shortlisted",
+    "interview",
+    "rejected",
+    "hired"
+  ];
+
   const MESSAGES = {
     missing: "Please sign in before continuing.",
     invalid_resume: "Choose a PDF, DOC, or DOCX resume up to 5 MB.",
     rejected: "The server rejected this change.",
     not_confirmed: "The server did not confirm this change.",
     duplicate: "You already applied to this job.",
-    invalid_decision: "Choose accept or reject."
+    invalid_decision: "Choose a valid application decision.",
+    consent_required: "Applicant consent is required before interview scheduling."
   };
 
   function clean(value) {
@@ -47,8 +68,8 @@
   }
 
   function extensionFor(file) {
-    const type = String(file && file.type || "").toLowerCase();
-    const name = String(file && file.name || "").toLowerCase();
+    const type = String((file && file.type) || "").toLowerCase();
+    const name = String((file && file.name) || "").toLowerCase();
     const fromType = MIME_EXTENSIONS[type] || "";
     const fromName = name.endsWith(".pdf")
       ? "pdf"
@@ -110,15 +131,59 @@
     return { ok: true, row: row };
   }
 
+  function validateApplicantProfile(profile) {
+    const source = profile || {};
+    const headline = clean(source.headline);
+    const summary = clean(source.summary);
+    const skills = clean(source.skills);
+    const location = clean(source.location);
+    if (headline && (headline.length < 2 || headline.length > 120)) {
+      return { ok: false, reason: "rejected", message: MESSAGES.rejected };
+    }
+    if (summary.length > 3000 || skills.length > 500 || location.length > 120) {
+      return { ok: false, reason: "rejected", message: MESSAGES.rejected };
+    }
+    return {
+      ok: true,
+      value: {
+        headline: headline || null,
+        summary: summary || null,
+        skills: skills || null,
+        location: location || null
+      }
+    };
+  }
+
+  async function upsertApplicantProfile(client, input) {
+    const source = input || {};
+    const userId = clean(source.userId);
+    if (!client || !userId) {
+      return { ok: false, reason: "missing", message: MESSAGES.missing };
+    }
+    const validated = validateApplicantProfile(source.profile);
+    if (!validated.ok) return validated;
+    const payload = Object.assign({ user_id: userId, updated_at: new Date().toISOString() }, validated.value);
+    const result = await client
+      .from("job_applicant_profiles")
+      .upsert(payload, { onConflict: "user_id" })
+      .select("user_id,headline,summary,skills,location,updated_at")
+      .single();
+    return confirmed(result);
+  }
+
   async function submitApplication(client, input) {
     const source = input || {};
     const applicantId = clean(source.applicantId);
     const jobId = source.jobId;
     const cover = clean(source.coverLetter);
+    const consent = source.applicantConsent === true;
     if (!client || !applicantId || jobId == null) {
       return { ok: false, reason: "missing", message: MESSAGES.missing };
     }
-    if (cover.length > 2000) {
+    if (!consent) {
+      return { ok: false, reason: "consent_required", message: MESSAGES.consent_required };
+    }
+    if (cover.length > 5000) {
       return { ok: false, reason: "rejected", message: MESSAGES.rejected };
     }
     const resume = validateResumeFile(source.file);
@@ -150,7 +215,8 @@
         applicant_id: applicantId,
         cover_letter: cover || null,
         resume_path: resumePath || null,
-        status: "pending"
+        status: "submitted",
+        applicant_consent_at: new Date().toISOString()
       })
       .select(APPLICATION_COLUMNS)
       .single();
@@ -167,7 +233,7 @@
     }
     const result = await client
       .from("job_applications")
-      .select(APPLICATION_COLUMNS + ",jobs(user_id)")
+      .select(APPLICATION_COLUMNS + ",jobs(id,title,company,user_id,status)")
       .eq("applicant_id", applicantId)
       .order("created_at", { ascending: false });
     if (!result || result.error) {
@@ -180,13 +246,22 @@
     return { ok: true, rows: Array.isArray(result.data) ? result.data : [] };
   }
 
-  async function listForJob(client, jobId) {
-    if (!client || jobId == null) {
+  async function listForJob(client, jobId, employerId) {
+    if (!client || jobId == null || !employerId) {
       return { ok: false, reason: "missing", message: MESSAGES.missing };
+    }
+    const owned = await client
+      .from("jobs")
+      .select("id")
+      .eq("id", jobId)
+      .eq("user_id", employerId)
+      .maybeSingle();
+    if (!owned || owned.error || !owned.data) {
+      return { ok: false, reason: "rejected", message: MESSAGES.rejected };
     }
     const result = await client
       .from("job_applications")
-      .select(APPLICATION_COLUMNS + ",jobs(user_id)")
+      .select(APPLICATION_COLUMNS)
       .eq("job_id", jobId)
       .order("created_at", { ascending: false });
     if (!result || result.error) {
@@ -205,14 +280,34 @@
     if (!client || !source.applicationId) {
       return { ok: false, reason: "missing", message: MESSAGES.missing };
     }
-    if (status !== "accepted" && status !== "rejected" && status !== "withdrawn") {
+    if (EMPLOYER_DECISIONS.indexOf(status) === -1 && status !== "withdrawn") {
       return { ok: false, reason: "invalid_decision", message: MESSAGES.invalid_decision };
     }
-    const result = await client
+    const patch = {
+      status: status,
+      updated_at: new Date().toISOString()
+    };
+    if (status === "withdrawn") {
+      patch.withdrawn_at = new Date().toISOString();
+    }
+    if (Object.prototype.hasOwnProperty.call(source, "employerNotes")) {
+      patch.employer_notes = clean(source.employerNotes).slice(0, 2000) || null;
+    }
+    if (status === "interview") {
+      const when = Date.parse(source.interviewAt);
+      if (!Number.isFinite(when)) {
+        return { ok: false, reason: "invalid_decision", message: "Interview time is required." };
+      }
+      patch.interview_at = new Date(when).toISOString();
+    }
+    let query = client
       .from("job_applications")
-      .update({ status: status })
-      .eq("id", source.applicationId)
-      .select(APPLICATION_COLUMNS);
+      .update(patch)
+      .eq("id", source.applicationId);
+    if (source.applicantId) {
+      query = query.eq("applicant_id", source.applicantId);
+    }
+    const result = await query.select(APPLICATION_COLUMNS);
     return confirmed(result);
   }
 
@@ -269,17 +364,37 @@
     return { ok: true, url: signed.data.signedUrl };
   }
 
+  function fraudSignals(job, recentTitles) {
+    const title = clean(job && job.title).toLowerCase();
+    const duplicates = (recentTitles || []).filter(function (row) {
+      return clean(row).toLowerCase() === title;
+    }).length;
+    const feeAsk = /registration fee|upfront fee|send money|crypto payment to apply/i.test(
+      String((job && job.description) || "") + " " + String((job && job.requirements) || "")
+    );
+    return {
+      duplicate_title_count: duplicates,
+      illegal_recruitment_fee_language: feeAsk,
+      block_publish: feeAsk || duplicates >= 3
+    };
+  }
+
   return {
     APPLICATION_COLUMNS: APPLICATION_COLUMNS,
     RESUME_BUCKET: RESUME_BUCKET,
+    APPLICANT_STATUSES: APPLICANT_STATUSES,
+    EMPLOYER_DECISIONS: EMPLOYER_DECISIONS,
     validateResumeFile: validateResumeFile,
     buildResumePath: buildResumePath,
+    validateApplicantProfile: validateApplicantProfile,
+    upsertApplicantProfile: upsertApplicantProfile,
     submitApplication: submitApplication,
     listMine: listMine,
     listForJob: listForJob,
     decideApplication: decideApplication,
     openConversation: openConversation,
-    resumeSignedUrl: resumeSignedUrl
+    resumeSignedUrl: resumeSignedUrl,
+    fraudSignals: fraudSignals
   };
 
 });

@@ -24,6 +24,19 @@ async function loadJobBilling() {
   return import("../havkar-job-billing.js");
 }
 
+function isGlobalPaymentsRequest(req) {
+  const action = String((req && req.body && req.body.action) || "");
+  const url = String((req && req.url) || "");
+  return Boolean(
+    (req && req.query && req.query.havkarAction === "globalPayments") ||
+      url.indexOf("/api/global-payments") !== -1 ||
+      url.indexOf("havkarAction=globalPayments") !== -1 ||
+      action === "global_payments_catalog" ||
+      action === "global_payment_quote" ||
+      action === "global_live_checkout"
+  );
+}
+
 function getStripe() {
   if (!stripeClient) {
     stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -258,6 +271,40 @@ async function fetchDisplayXlmFromEur(buyerPaysEur) {
 }
 
 export default async function handler(req, res) {
+  // Global catalog covers jobs_listing, ai_credits, business_listing and other modules.
+  // Live charging stays Owner-gated via refuseLiveCheckout.
+  if (isGlobalPaymentsRequest(req)) {
+    if (req.method !== "GET" && req.method !== "POST") {
+      res.setHeader("Allow", "GET, POST");
+      return sendError(res, 405, "Method not allowed");
+    }
+    try {
+      const payments = await import("../lib/havkar-global-payments.cjs");
+      const moduleCatalog = payments.moduleCatalog || payments.default?.moduleCatalog;
+      const buildGlobalPaymentQuote =
+        payments.buildGlobalPaymentQuote || payments.default?.buildGlobalPaymentQuote;
+      const refuseLiveCheckout =
+        payments.refuseLiveCheckout || payments.default?.refuseLiveCheckout;
+      const action = String(
+        (req.query && req.query.action) ||
+          (req.body && req.body.action) ||
+          "global_payments_catalog"
+      );
+      if (action === "global_live_checkout") {
+        const refused = refuseLiveCheckout((req.body && req.body.method) || null);
+        return res.status(refused.status || 403).json(refused);
+      }
+      if (action === "global_payment_quote") {
+        const quoted = await buildGlobalPaymentQuote(req.body || {});
+        return res.status(quoted.status || (quoted.ok ? 200 : 400)).json(quoted);
+      }
+      return res.status(200).json(moduleCatalog());
+    } catch (error) {
+      console.error("HAVKAR global payments error:", error && error.message);
+      return sendError(res, 500, "Global payments catalog failed");
+    }
+  }
+
   const commerceRoute =
     typeof req.query?.havkarRoute === "string" ? req.query.havkarRoute : "";
 

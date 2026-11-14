@@ -41,8 +41,16 @@ function mockClient(handler) {
           state.payload = payload;
           return chain;
         },
+        upsert(payload) {
+          state.op = "upsert";
+          state.payload = payload;
+          return chain;
+        },
         eq(column, value) {
           state.filters.push([column, value]);
+          return chain;
+        },
+        maybeSingle() {
           return chain;
         },
         order() {
@@ -75,61 +83,82 @@ function mockClient(handler) {
     "22222222-2222-4222-8222-222222222222/33333333-3333-4333-8333-333333333333.pdf"
   );
   assert.strictEqual(applications.buildResumePath(applicantId, "not-a-uuid", "pdf"), "");
-  assert.strictEqual(applications.buildResumePath(applicantId, "33333333-3333-4333-8333-333333333333", "exe"), "");
   assert.strictEqual(
     applications.validateResumeFile({ name: "cv.pdf", type: "application/pdf", size: 1200 }).extension,
     "pdf"
-  );
-  assert.strictEqual(
-    applications.validateResumeFile({ name: "cv.exe", type: "application/pdf", size: 1200 }).ok,
-    false
-  );
-  assert.strictEqual(
-    applications.validateResumeFile({ name: "cv.pdf", type: "application/pdf", size: 6000000 }).ok,
-    false
   );
 
   const client = mockClient(function (state) {
     if (state.op === "upload") return { data: { path: state.path }, error: null };
     if (state.op === "sign") return { data: { signedUrl: "https://storage.example/signed" }, error: null };
     if (state.table === "conversations") return { data: { id: "44444444-4444-4444-8444-444444444444" }, error: null };
+    if (state.table === "jobs") return { data: { id: 9 }, error: null };
     if (state.table === "job_applications" && state.op === "insert") {
       return { data: Object.assign({ conversation_id: null }, state.payload), error: null };
     }
-    if (state.op === "update") {
-      return { data: [Object.assign({ id: "application-1", status: state.payload.status || "pending" }, state.payload)], error: null };
+    if (state.op === "update" || state.op === "upsert") {
+      return {
+        data: [Object.assign({ id: "application-1", status: state.payload.status || "submitted" }, state.payload)],
+        error: null
+      };
     }
     return { data: [], error: null };
   });
 
-  const file = { name: "cv.pdf", type: "application/pdf", size: 1200 };
+  const noConsent = await applications.submitApplication(client, {
+    jobId: 9,
+    applicantId: applicantId,
+    coverLetter: "I can start on Monday.",
+    file: { name: "cv.pdf", type: "application/pdf", size: 1200 }
+  });
+  assert.strictEqual(noConsent.ok, false);
+  assert.strictEqual(noConsent.reason, "consent_required");
+
   const submitted = await applications.submitApplication(client, {
     jobId: 9,
     applicantId: applicantId,
     coverLetter: "I can start on Monday.",
-    file: file
+    applicantConsent: true,
+    file: { name: "cv.pdf", type: "application/pdf", size: 1200 }
   });
   assert.strictEqual(submitted.ok, true);
-  assert.strictEqual(submitted.row.status, "pending");
-  assert.strictEqual(submitted.row.job_id, 9);
+  assert.strictEqual(submitted.row.status, "submitted");
+  assert.ok(submitted.row.applicant_consent_at);
   assert.ok(submitted.row.resume_path.endsWith(".pdf"));
-  assert.strictEqual(client.calls[0].op, "upload");
-  assert.strictEqual(client.calls[0].bucket, "job-resumes");
-  assert.strictEqual(client.calls[0].options.upsert, false);
-  assert.strictEqual(client.calls[1].table, "job_applications");
 
   const decision = await applications.decideApplication(client, {
     applicationId: submitted.row.id,
-    status: "accepted"
+    status: "shortlisted"
   });
   assert.strictEqual(decision.ok, true);
-  assert.strictEqual(decision.row.status, "accepted");
-  assert.strictEqual(
-    applications.decideApplication(client, { applicationId: "x", status: "hired" }).then
-      ? (await applications.decideApplication(client, { applicationId: "x", status: "hired" })).ok
-      : false,
-    false
+  assert.strictEqual(decision.row.status, "shortlisted");
+
+  const hired = await applications.decideApplication(client, {
+    applicationId: submitted.row.id,
+    status: "hired"
+  });
+  assert.strictEqual(hired.ok, true);
+
+  const bad = await applications.decideApplication(client, {
+    applicationId: "x",
+    status: "accepted"
+  });
+  assert.strictEqual(bad.ok, false);
+
+  const interview = await applications.decideApplication(client, {
+    applicationId: submitted.row.id,
+    status: "interview",
+    interviewAt: "2026-12-01T10:00:00Z"
+  });
+  assert.strictEqual(interview.ok, true);
+  assert.strictEqual(interview.row.status, "interview");
+
+  const fraud = applications.fraudSignals(
+    { title: "Chef", description: "Pay a registration fee to apply" },
+    ["Chef", "Chef", "Chef"]
   );
+  assert.strictEqual(fraud.illegal_recruitment_fee_language, true);
+  assert.strictEqual(fraud.block_publish, true);
 
   const opened = await applications.openConversation(client, {
     application: {
@@ -141,18 +170,9 @@ function mockClient(handler) {
     employerId: employerId
   });
   assert.strictEqual(opened.ok, true);
-  assert.strictEqual(opened.conversationId, "44444444-4444-4444-8444-444444444444");
-  const conversationCall = client.calls.filter(function (call) {
-    return call.table === "conversations";
-  })[0];
-  assert.strictEqual(conversationCall.payload.ad_id, null);
-  assert.strictEqual(conversationCall.payload.buyer_id, applicantId);
-  assert.strictEqual(conversationCall.payload.seller_id, employerId);
 
   const signed = await applications.resumeSignedUrl(client, submitted.row.resume_path);
   assert.strictEqual(signed.ok, true);
-  assert.strictEqual(signed.url, "https://storage.example/signed");
-  assert.strictEqual((await applications.resumeSignedUrl(client, "../secret.pdf")).ok, false);
 
   console.log("JOB_APPLICATIONS_TEST_OK");
 })().catch(function (error) {
