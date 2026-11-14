@@ -271,6 +271,23 @@ async function fetchDisplayXlmFromEur(buyerPaysEur) {
 }
 
 export default async function handler(req, res) {
+  // Hotels guest search + owner inventory (gated live booking).
+  {
+    const hotelsApi = await import("../lib/havkar-hotels-api.cjs");
+    const isHotelsRequest =
+      hotelsApi.isHotelsRequest || hotelsApi.default?.isHotelsRequest;
+    const handleHotelsRequest =
+      hotelsApi.handleHotelsRequest || hotelsApi.default?.handleHotelsRequest;
+    if (typeof isHotelsRequest === "function" && isHotelsRequest(req)) {
+      return handleHotelsRequest(req, res, {
+        sendError,
+        getSupabaseAdmin,
+        authenticateUser,
+        getStripe
+      });
+    }
+  }
+
   // Global catalog covers jobs_listing, ai_credits, business_listing and other modules.
   // Live charging stays Owner-gated via refuseLiveCheckout.
   if (isGlobalPaymentsRequest(req)) {

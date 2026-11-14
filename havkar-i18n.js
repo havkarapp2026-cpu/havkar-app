@@ -1130,7 +1130,13 @@
             "Create New Account": "Crea un nuovo account",
             "Already have an account?": "Hai già un account?",
             "Log In": "Accedi",
-            "Safe • Secure • Trusted": "Sicuro • Protetto • Affidabile"
+            "Safe • Secure • Trusted": "Sicuro • Protetto • Affidabile",
+            "Apply with CV": "Candidati con CV",
+            "Company onboarding": "Onboarding azienda",
+            "My applications & profile": "Le mie candidature e profilo",
+            "Applications for this job": "Candidature per questo lavoro",
+            "Guest hotels search": "Ricerca hotel per ospiti",
+            "Property owners": "Proprietari"
         }),
         de: Object.freeze({
             "Connect • Trade • Work • Help": "Verbinden • Handeln • Arbeiten • Helfen",
@@ -1217,7 +1223,16 @@
             "Messages": "نامەکان",
             "Profile": "پرۆفایل",
             "Loading...": "بارکردن...",
-            "All": "هەموو"
+            "All": "هەموو",
+            "Apply with CV": "پێشکەشکردن بە سیڤی",
+            "Company onboarding": "تۆمارکردنی کۆمپانیا",
+            "My applications & profile": "داواکاری و پرۆفایلی من",
+            "Applications for this job": "داواکارییەکانی ئەم کارە",
+            "Guest hotels search": "گەڕانی میوان بۆ هۆتێل",
+            "Property owners": "خاوەن موڵکەکان",
+            "Jobs": "کارەکان",
+            "Services": "خزمەتگوزارییەکان",
+            "Accommodation": "شوێنی مانەوە"
         }),
         kmr: Object.freeze({
             "Buy & Sell": "Kirîn û firotin",
@@ -1235,7 +1250,16 @@
             "Messages": "Peyam",
             "Profile": "Profîl",
             "Loading...": "Tê barkirin...",
-            "All": "Hemû"
+            "All": "Hemû",
+            "Apply with CV": "Bi CV serlêdan bike",
+            "Company onboarding": "Tomarkirina pargîdaniyê",
+            "My applications & profile": "Serlêdan û profîla min",
+            "Applications for this job": "Serlêdanên vî karî",
+            "Guest hotels search": "Lêgerîna otêlan ji bo mêvanan",
+            "Property owners": "Xwediyên milkê",
+            "Jobs": "Kar",
+            "Services": "Xizmet",
+            "Accommodation": "Cihê manê"
         }),
         it: Object.freeze({
             "Buy & Sell": "Compra e vendi",
@@ -1253,7 +1277,16 @@
             "Messages": "Messaggi",
             "Profile": "Profilo",
             "Loading...": "Caricamento...",
-            "All": "Tutti"
+            "All": "Tutti",
+            "Apply with CV": "Candidati con CV",
+            "Company onboarding": "Onboarding azienda",
+            "My applications & profile": "Le mie candidature e profilo",
+            "Applications for this job": "Candidature per questo lavoro",
+            "Guest hotels search": "Ricerca hotel per ospiti",
+            "Property owners": "Proprietari",
+            "Jobs": "Lavori",
+            "Services": "Servizi",
+            "Accommodation": "Alloggi"
         }),
         sv: Object.freeze({
             "Buy & Sell": "Köp & sälj",
