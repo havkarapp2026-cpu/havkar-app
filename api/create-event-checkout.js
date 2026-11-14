@@ -312,6 +312,25 @@ export default async function handler(req, res) {
     }
   }
 
+  // Buy & Sell marketplace quotes / gated checkout (HAVKAR_TRADE_ENABLED).
+  {
+    const marketApi = await import("../lib/havkar-marketplace-api.cjs");
+    const isMarketplaceRequest =
+      marketApi.isMarketplaceRequest || marketApi.default?.isMarketplaceRequest;
+    const handleMarketplaceRequest =
+      marketApi.handleMarketplaceRequest ||
+      marketApi.default?.handleMarketplaceRequest;
+    if (typeof isMarketplaceRequest === "function" && isMarketplaceRequest(req)) {
+      return handleMarketplaceRequest(req, res, {
+        sendError,
+        getSupabaseAdmin,
+        authenticateUser,
+        getStripe,
+        getOrigin: allowedCheckoutOrigin
+      });
+    }
+  }
+
   // Global catalog covers jobs_listing, ai_credits, business_listing and other modules.
   // Live charging stays Owner-gated via refuseLiveCheckout.
   if (isGlobalPaymentsRequest(req)) {
