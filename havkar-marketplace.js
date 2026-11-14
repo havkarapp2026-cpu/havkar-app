@@ -31,7 +31,9 @@
     video_bytes: true,
     video_duration_seconds: true,
     country_code: true,
-    city: true
+    city: true,
+    condition: true,
+    fulfillment_mode: true
   };
 
   function money(value) {
@@ -147,6 +149,21 @@
           ",location.ilike." +
           pattern
       );
+    }
+
+    const currency = String(input.currency || "").trim().toUpperCase();
+    if (currency && typeof query.eq === "function") {
+      query = query.eq("currency", currency);
+    }
+
+    const condition = String(input.condition || "").trim().toLowerCase();
+    if (condition && typeof query.eq === "function") {
+      query = query.eq("condition", condition);
+    }
+
+    const fulfillment = String(input.fulfillment || "").trim().toLowerCase();
+    if (fulfillment && typeof query.eq === "function") {
+      query = query.eq("fulfillment_mode", fulfillment);
     }
 
     return query;

@@ -280,47 +280,13 @@ async function main() {
   }
 
   // Authenticated checkout should remain gated (no live charge).
-  if (listingId) {
-    const checkoutRes = await fetch("https://havkar.online/api/marketplace", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: "Bearer " + buyer.token
-      },
-      body: JSON.stringify({
-        action: "marketplace_create_checkout",
-        listing_id: listingId
-      })
-    });
-    const checkoutText = await checkoutRes.text();
-    let checkoutBody = null;
-    try {
-      checkoutBody = JSON.parse(checkoutText);
-    } catch (_e) {
-      mark("payments", "checkout_http", checkoutRes.status);
-      mark("payments", "checkout_deploy", "NOT_DEPLOYED_OR_HTML");
-      checkoutBody = null;
-    }
-    if (checkoutBody) {
-      mark("payments", "checkout_http", checkoutRes.status);
-      mark(
-        "payments",
-        "checkout_charge_created",
-        Boolean(checkoutBody.charge_created)
-      );
-      mark(
-        "payments",
-        "checkout_code",
-        checkoutBody.code || checkoutBody.error
-      );
-      if (checkoutBody.charge_created === true) {
-        fail("payments", "unexpected_live_charge", checkoutBody);
-      } else {
-        mark("payments", "live_charge_gated", "PASS");
-      }
-    }
-  }
+  // Never create live Stripe Checkout sessions from automated E2E once TRADE is armed.
+  // Quotes + status prove fee math and arming; paid settlement requires a controlled Owner smoke.
+  mark(
+    "payments",
+    "create_checkout_skipped_in_e2e",
+    "PASS — automated suite does not open cs_live sessions; use Owner-controlled smoke only."
+  );
 
   // Cleanup marketplace E2E listing
   if (listingId) {
