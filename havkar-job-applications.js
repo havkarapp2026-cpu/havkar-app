@@ -109,7 +109,9 @@
 
   function oneRow(data) {
     if (Array.isArray(data)) return data.length === 1 ? data[0] : null;
-    if (data && typeof data === "object" && data.id != null) return data;
+    if (data && typeof data === "object") {
+      if (data.id != null || data.user_id != null) return data;
+    }
     return null;
   }
 
