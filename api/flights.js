@@ -1,9 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { createRequire } from "module";
 import { searchAirportSuggestions } from "../lib/duffel-places.cjs";
-
-const require = createRequire(import.meta.url);
-const { geocodeDestination } = require("../lib/geocode-destination.cjs");
 
 function bearerToken(req) {
     const header = req.headers?.authorization;
@@ -132,6 +128,11 @@ export default async function handler(req, res) {
                 (req.query && (req.query.q || req.query.query || req.query.name)) ||
                     ""
             ).trim();
+            // Dynamic import avoids import.meta/createRequire under Vercel CJS runtime.
+            const geoMod = await import("../lib/geocode-destination.cjs");
+            const geocodeDestination =
+                geoMod.geocodeDestination ||
+                (geoMod.default && geoMod.default.geocodeDestination);
             const geo = await geocodeDestination(query);
             const status = geo.ok ? 200 : query.length < 2 ? 200 : 400;
             return res.status(status).json({
