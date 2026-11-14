@@ -5,10 +5,37 @@ import {
   evaluateStellarCheckout,
   buildXlmQuote,
   verifyStellarSettlement,
-  saveUnpaidIntent
+  saveUnpaidIntent,
+  xlmFromEur
 } from "../lib/stellar-checkout.cjs";
+
 let stripeClient = null;
 let supabaseAdminClient = null;
+
+async function loadCommerceApi() {
+  return import("../havkar-commerce-api.js");
+}
+
+async function loadJobsServicesPayments() {
+  return import("../lib/jobs-services-payments.cjs");
+}
+
+async function loadJobBilling() {
+  return import("../havkar-job-billing.js");
+}
+
+function isGlobalPaymentsRequest(req) {
+  const action = String((req && req.body && req.body.action) || "");
+  const url = String((req && req.url) || "");
+  return Boolean(
+    (req && req.query && req.query.havkarAction === "globalPayments") ||
+      url.indexOf("/api/global-payments") !== -1 ||
+      url.indexOf("havkarAction=globalPayments") !== -1 ||
+      action === "global_payments_catalog" ||
+      action === "global_payment_quote" ||
+      action === "global_live_checkout"
+  );
+}
 
 function getStripe() {
   if (!stripeClient) {
@@ -69,6 +96,12 @@ function normalizePrice(value) {
     return null;
   }
 
+  // UI historically stored free events as the word "Free".
+  // Treat Free/gratis/0 as zero so free tickets still issue while card collection stays paused.
+  if (/^(free|gratis|0+|0+[.,]0+)$/i.test(text)) {
+    return 0;
+  }
+
   if (/^\d+,\d{1,2}$/.test(text)) {
     text = text.replace(",", ".");
   }
@@ -84,6 +117,15 @@ function normalizePrice(value) {
   }
 
   return amount;
+}
+
+function generateTicketCode() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let out = "HK";
+  for (let i = 0; i < 8; i += 1) {
+    out += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return out;
 }
 
 function safeQuantity(value) {
@@ -192,10 +234,19 @@ async function authenticateUser(req) {
 }
 
 async function countReservedTickets(eventId) {
+  const admin = getSupabaseAdmin();
+  const rpc = await admin.rpc("havkar_event_occupied_seats", {
+    p_event_id: eventId
+  });
+
+  if (!rpc.error && rpc.data != null) {
+    return Number(rpc.data) || 0;
+  }
+
   const {
     data,
     error,
-  } = await getSupabaseAdmin()
+  } = await admin
     .from("event_tickets")
     .select("quantity")
     .eq("event_id", eventId)
@@ -213,7 +264,275 @@ async function countReservedTickets(eventId) {
   );
 }
 
+async function fetchDisplayXlmFromEur(buyerPaysEur) {
+  const rateRes = await fetch(
+    "https://api.coingecko.com/api/v3/simple/price?ids=stellar&vs_currencies=eur&include_last_updated_at=true",
+    { headers: { Accept: "application/json" } }
+  );
+  if (!rateRes.ok) {
+    return { ok: false, error: "Exchange rate provider unavailable." };
+  }
+  const rateBody = await rateRes.json();
+  const eurPer = Number(rateBody && rateBody.stellar && rateBody.stellar.eur);
+  const updated = Number(
+    rateBody && rateBody.stellar && rateBody.stellar.last_updated_at
+  );
+  if (!Number.isFinite(eurPer) || eurPer <= 0 || !buyerPaysEur) {
+    return { ok: false, error: "Exchange rate missing." };
+  }
+  return {
+    ok: true,
+    display_only: true,
+    payable: false,
+    amount_xlm: xlmFromEur(buyerPaysEur, eurPer),
+    eur_per_xlm: eurPer,
+    network_fee_xlm: "0.00001",
+    rate_as_of: Number.isFinite(updated)
+      ? new Date(updated * 1000).toISOString()
+      : null,
+    rate_source: "coingecko:stellar:eur"
+  };
+}
+
 export default async function handler(req, res) {
+  // Hotels guest search + owner inventory (gated live booking).
+  {
+    const hotelsApi = await import("../lib/havkar-hotels-api.cjs");
+    const isHotelsRequest =
+      hotelsApi.isHotelsRequest || hotelsApi.default?.isHotelsRequest;
+    const handleHotelsRequest =
+      hotelsApi.handleHotelsRequest || hotelsApi.default?.handleHotelsRequest;
+    if (typeof isHotelsRequest === "function" && isHotelsRequest(req)) {
+      return handleHotelsRequest(req, res, {
+        sendError,
+        getSupabaseAdmin,
+        authenticateUser,
+        getStripe
+      });
+    }
+  }
+
+  // Buy & Sell marketplace quotes / gated checkout (HAVKAR_TRADE_ENABLED).
+  {
+    const marketApi = await import("../lib/havkar-marketplace-api.cjs");
+    const isMarketplaceRequest =
+      marketApi.isMarketplaceRequest || marketApi.default?.isMarketplaceRequest;
+    const handleMarketplaceRequest =
+      marketApi.handleMarketplaceRequest ||
+      marketApi.default?.handleMarketplaceRequest;
+    if (typeof isMarketplaceRequest === "function" && isMarketplaceRequest(req)) {
+      return handleMarketplaceRequest(req, res, {
+        sendError,
+        getSupabaseAdmin,
+        authenticateUser,
+        getStripe,
+        getOrigin: allowedCheckoutOrigin
+      });
+    }
+  }
+
+  // Global catalog covers jobs_listing, ai_credits, business_listing and other modules.
+  // Live charging stays Owner-gated via refuseLiveCheckout.
+  if (isGlobalPaymentsRequest(req)) {
+    if (req.method !== "GET" && req.method !== "POST") {
+      res.setHeader("Allow", "GET, POST");
+      return sendError(res, 405, "Method not allowed");
+    }
+    try {
+      const payments = await import("../lib/havkar-global-payments.cjs");
+      const moduleCatalog = payments.moduleCatalog || payments.default?.moduleCatalog;
+      const buildGlobalPaymentQuote =
+        payments.buildGlobalPaymentQuote || payments.default?.buildGlobalPaymentQuote;
+      const refuseLiveCheckout =
+        payments.refuseLiveCheckout || payments.default?.refuseLiveCheckout;
+      const action = String(
+        (req.query && req.query.action) ||
+          (req.body && req.body.action) ||
+          "global_payments_catalog"
+      );
+      if (action === "global_live_checkout") {
+        const refused = refuseLiveCheckout((req.body && req.body.method) || null);
+        return res.status(refused.status || 403).json(refused);
+      }
+      if (action === "global_payment_quote") {
+        const quoted = await buildGlobalPaymentQuote(req.body || {});
+        return res.status(quoted.status || (quoted.ok ? 200 : 400)).json(quoted);
+      }
+      return res.status(200).json(moduleCatalog());
+    } catch (error) {
+      console.error("HAVKAR global payments error:", error && error.message);
+      return sendError(res, 500, "Global payments catalog failed");
+    }
+  }
+
+  const commerceRoute =
+    typeof req.query?.havkarRoute === "string" ? req.query.havkarRoute : "";
+
+  const commerceApi = await loadCommerceApi();
+  const isCommerceRoute = commerceApi.isCommerceRoute || commerceApi.default?.isCommerceRoute;
+  const handleCommerceRoute =
+    commerceApi.handleCommerceRoute || commerceApi.default?.handleCommerceRoute;
+
+  if (typeof isCommerceRoute === "function" && isCommerceRoute(commerceRoute)) {
+    return handleCommerceRoute({
+      route: commerceRoute,
+      req,
+      res,
+      stripe: getStripe(),
+      supabaseAdmin: getSupabaseAdmin(),
+      authenticateUser,
+      getOrigin
+    });
+  }
+
+  const bodyAction = String((req.body && req.body.action) || "");
+
+  if (
+    req.method === "POST" &&
+    (bodyAction === "jobs_payment_methods" ||
+      bodyAction === "services_payment_methods" ||
+      bodyAction === "jobs_quote" ||
+      bodyAction === "services_quote")
+  ) {
+    const paymentsApi = await loadJobsServicesPayments();
+    const jobsPaymentMethods =
+      paymentsApi.jobsPaymentMethods || paymentsApi.default?.jobsPaymentMethods;
+    const servicesPaymentMethods =
+      paymentsApi.servicesPaymentMethods ||
+      paymentsApi.default?.servicesPaymentMethods;
+    const billingMod = await loadJobBilling();
+    const jobBilling = billingMod.default || billingMod;
+
+    if (bodyAction === "jobs_payment_methods") {
+      return res.status(200).json(jobsPaymentMethods(process.env));
+    }
+    if (bodyAction === "services_payment_methods") {
+      return res.status(200).json(servicesPaymentMethods(process.env));
+    }
+
+    const method = String((req.body && req.body.method) || "stripe");
+    const isXlm = method === "xlm" || method === "xlm_mainnet";
+
+    if (bodyAction === "jobs_quote") {
+      const planName = String((req.body && req.body.plan) || "Professional");
+      const ordinary = jobBilling.ORDINARY_PLANS[planName];
+      const corporate = jobBilling.COMPANY_PLANS[planName];
+      const listEur = ordinary
+        ? ordinary.eur
+        : corporate
+          ? corporate.eur
+          : null;
+      if (listEur == null) {
+        return res.status(400).json({
+          ok: false,
+          error: "Unknown jobs plan.",
+          ordinary_plans: Object.keys(jobBilling.ORDINARY_PLANS),
+          corporate_plans: Object.keys(jobBilling.COMPANY_PLANS)
+        });
+      }
+      const catalog = jobsPaymentMethods(process.env);
+      const chargeAllowed = Boolean(
+        catalog.live_flag_armed &&
+          ((isXlm &&
+            catalog.methods.find((m) => m.id === "xlm_mainnet")
+              ?.charge_allowed_now) ||
+            (!isXlm &&
+              catalog.methods.find((m) => m.id === "stripe")?.charge_allowed_now))
+      );
+      let xlmDisplay = null;
+      if (isXlm) {
+        if (corporate) {
+          return res.status(200).json({
+            ok: true,
+            action: "jobs_quote",
+            payment_method: "xlm_mainnet",
+            plan: planName,
+            billing: "stripe_subscription_monthly",
+            xlm_supported: false,
+            charge_allowed_now: false,
+            charge_created: false,
+            availability_status: "not_yet_available",
+            availability_label: "Not yet available",
+            error:
+              "Corporate monthly subscriptions renew on Stripe only. XLM cannot start automatic renewals."
+          });
+        }
+        xlmDisplay = await fetchDisplayXlmFromEur(listEur);
+      }
+      return res.status(200).json({
+        ok: true,
+        action: "jobs_quote",
+        payment_method: isXlm ? "xlm_mainnet" : "stripe",
+        plan: planName,
+        list_price_eur: listEur,
+        billing: ordinary ? "one_time_prepaid" : "stripe_subscription_monthly",
+        period_days: ordinary ? ordinary.durationDays : null,
+        auto_renew: Boolean(corporate),
+        stripe_presentment_count: catalog.stripe_presentment_count,
+        xlm_is_not_a_stripe_currency: true,
+        xlm_display: xlmDisplay,
+        amount_xlm: xlmDisplay && xlmDisplay.amount_xlm,
+        eur_per_xlm: xlmDisplay && xlmDisplay.eur_per_xlm,
+        rate_as_of: xlmDisplay && xlmDisplay.rate_as_of,
+        rate_source: xlmDisplay && xlmDisplay.rate_source,
+        network_fee_xlm: xlmDisplay && xlmDisplay.network_fee_xlm,
+        charge_allowed_now: chargeAllowed,
+        charge_created: false,
+        availability_status: chargeAllowed ? "available" : "not_yet_available",
+        availability_label: chargeAllowed ? "Available" : "Not yet available",
+        availability_reason: catalog.gate.message,
+        duplicate_protection:
+          "Live XLM uses memo uniqueness + Horizon verification; Stripe uses Checkout/Subscription idempotency when armed."
+      });
+    }
+
+    if (bodyAction === "services_quote") {
+      const listEur = Number((req.body && req.body.list_price_eur) || 100);
+      if (!Number.isFinite(listEur) || listEur <= 0) {
+        return res.status(400).json({ ok: false, error: "list_price_eur required." });
+      }
+      const catalog = servicesPaymentMethods(process.env);
+      const commissionCents = Math.round(listEur * 100 * 1000 / 10000);
+      const chargeAllowed = Boolean(
+        catalog.live_flag_armed &&
+          ((isXlm &&
+            catalog.methods.find((m) => m.id === "xlm_mainnet")
+              ?.charge_allowed_now) ||
+            (!isXlm &&
+              catalog.methods.find((m) => m.id === "stripe")?.charge_allowed_now))
+      );
+      let xlmDisplay = null;
+      if (isXlm) {
+        xlmDisplay = await fetchDisplayXlmFromEur(listEur);
+      }
+      return res.status(200).json({
+        ok: true,
+        action: "services_quote",
+        payment_method: isXlm ? "xlm_mainnet" : "stripe",
+        list_price_eur: listEur,
+        customer_pays_eur: listEur,
+        provider_commission_bps: 1000,
+        provider_commission_eur: commissionCents / 100,
+        provider_settlement_eur: listEur - commissionCents / 100,
+        commission_payer: "provider",
+        customer_extra_havkar_commission: false,
+        stripe_presentment_count: catalog.stripe_presentment_count,
+        xlm_is_not_a_stripe_currency: true,
+        xlm_display: xlmDisplay,
+        amount_xlm: xlmDisplay && xlmDisplay.amount_xlm,
+        eur_per_xlm: xlmDisplay && xlmDisplay.eur_per_xlm,
+        rate_as_of: xlmDisplay && xlmDisplay.rate_as_of,
+        rate_source: xlmDisplay && xlmDisplay.rate_source,
+        network_fee_xlm: xlmDisplay && xlmDisplay.network_fee_xlm,
+        charge_allowed_now: chargeAllowed,
+        charge_created: false,
+        availability_status: chargeAllowed ? "available" : "not_yet_available",
+        availability_label: chargeAllowed ? "Available" : "Not yet available",
+        availability_reason: catalog.gate.message
+      });
+    }
+  }
+
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
 
@@ -457,6 +776,7 @@ export default async function handler(req, res) {
     const origin = allowedCheckoutOrigin(req);
 
     if (unitPrice === 0) {
+      const ticketCode = generateTicketCode();
       const {
         data: freeTicket,
         error: freeTicketError,
@@ -474,8 +794,10 @@ export default async function handler(req, res) {
           payment_provider: "free",
           payment_reference: null,
           paid_at: new Date().toISOString(),
+          ticket_code: ticketCode,
+          ticket_type: "free",
         })
-        .select("id")
+        .select("id,ticket_code")
         .single();
 
       if (freeTicketError) {
@@ -486,6 +808,7 @@ export default async function handler(req, res) {
         ok: true,
         free: true,
         ticket_id: freeTicket.id,
+        ticket_code: freeTicket.ticket_code || ticketCode,
       });
     }
 
@@ -497,6 +820,7 @@ export default async function handler(req, res) {
       });
     }
 
+    const pendingTicketCode = generateTicketCode();
     const {
       data: pendingTicket,
       error: ticketError,
@@ -514,8 +838,10 @@ export default async function handler(req, res) {
         payment_provider: "stripe",
         payment_reference: null,
         paid_at: null,
+        ticket_code: pendingTicketCode,
+        ticket_type: "general",
       })
-      .select("id")
+      .select("id,ticket_code")
       .single();
 
     if (ticketError) {

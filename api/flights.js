@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { searchAirportSuggestions } from "../lib/duffel-places.cjs";
 
 function bearerToken(req) {
     const header = req.headers?.authorization;
@@ -91,15 +92,108 @@ export default async function handler(req, res) {
 
     // =========================================================
     // METHOD
+    // GET  = Duffel Places airport/city autocomplete
+    // POST = Duffel Offer Request flight search
     // =========================================================
 
-    if (req.method !== "POST") {
-        res.setHeader("Allow", "POST");
+    if (req.method !== "POST" && req.method !== "GET") {
+        res.setHeader("Allow", "GET, POST");
 
         return res.status(405).json({
             ok: false,
             error: "Method not allowed"
         });
+    }
+
+    // =========================================================
+    // DUFFEL TOKEN
+    // =========================================================
+
+    const token =
+        process.env.DUFFEL_ACCESS_TOKEN;
+
+    // Airport autocomplete is public (token stays server-side).
+    // Flight offer search (POST) still requires a signed-in HAVKAR user.
+    // GET ?action=geocode uses OpenStreetMap Nominatim for the Tickets map
+    // (no invented coordinates; separate from Duffel Places IATA search).
+    if (req.method === "GET") {
+        const action = String(
+            (req.query && (req.query.action || req.query.havkarAction)) || ""
+        )
+            .trim()
+            .toLowerCase();
+
+        if (action === "geocode") {
+            const query = String(
+                (req.query && (req.query.q || req.query.query || req.query.name)) ||
+                    ""
+            ).trim();
+            // Dynamic import avoids import.meta/createRequire under Vercel CJS runtime.
+            const geoMod = await import("../lib/geocode-destination.cjs");
+            const geocodeDestination =
+                geoMod.geocodeDestination ||
+                (geoMod.default && geoMod.default.geocodeDestination);
+            const geo = await geocodeDestination(query);
+            const status = geo.ok ? 200 : query.length < 2 ? 200 : 400;
+            return res.status(status).json({
+                action: "geocode",
+                ...geo
+            });
+        }
+
+        if (!token) {
+            return res.status(500).json({
+                ok: false,
+                error: "DUFFEL_ACCESS_TOKEN is not configured."
+            });
+        }
+
+        const query = String(
+            (req.query && (req.query.q || req.query.query || req.query.name)) ||
+                ""
+        ).trim();
+        const language = String(
+            (req.query && (req.query.lang || req.query.language)) || "en"
+        ).trim();
+
+        if (query.length < 2) {
+            return res.status(200).json({
+                ok: true,
+                query,
+                suggestions: [],
+                message:
+                    "Type at least 2 characters to search airports and cities."
+            });
+        }
+
+        if (query.length > 80) {
+            return res.status(400).json({
+                ok: false,
+                error: "Search query is too long."
+            });
+        }
+
+        try {
+            const result = await searchAirportSuggestions({
+                token,
+                query,
+                language
+            });
+            return res.status(200).json({
+                ok: true,
+                ...result
+            });
+        } catch (error) {
+            console.error("HAVKAR Duffel places search error:", error);
+            const status = Number(error?.status) || 500;
+            return res.status(status).json({
+                ok: false,
+                error:
+                    error?.message ||
+                    "Unable to search airports right now.",
+                offline: status >= 500
+            });
+        }
     }
 
     const auth = await requireHavkarUser(req);
@@ -110,13 +204,6 @@ export default async function handler(req, res) {
             error: auth.error
         });
     }
-
-    // =========================================================
-    // DUFFEL TOKEN
-    // =========================================================
-
-    const token =
-        process.env.DUFFEL_ACCESS_TOKEN;
 
     if (!token) {
         return res.status(500).json({
