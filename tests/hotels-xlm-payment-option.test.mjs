@@ -24,6 +24,7 @@ assert.match(api, /xlm_display/);
 assert.match(api, /display_only: true/);
 assert.match(api, /charge_allowed_now: false/);
 assert.match(api, /HOTELS_LIVE_BOOKING_OFF|public_live_booking: false/);
+assert.match(api, /req\.body\.method \|\| req\.body\.payment_method/);
 
 const page = fs.readFileSync("accommodation.html", "utf8");
 assert.match(page, /payXlmCard/);
