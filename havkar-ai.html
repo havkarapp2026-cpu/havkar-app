@@ -598,6 +598,41 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 <section class="panel" id="plans">
 <h3>HAVKAR AI plans</h3>
 <p>Payment is not active. These prices are a proposal.</p>
+<p data-plan-id="ai_credits_plus">Prepaid catalog id <code>ai_credits_plus</code> quotes through <code>/api/global-payments</code> only. Live charging stays Owner-gated.</p>
+<pre id="aiGlobalPaymentsOut" style="display:none;white-space:pre-wrap;font-size:12px;"></pre>
+<script>
+(function probeAiGlobalPayments(){
+  fetch("/api/global-payments?action=global_payments_catalog")
+    .then(function(res){ return res.json(); })
+    .then(function(body){
+      window.__HAVKAR_GLOBAL_PAYMENTS = body;
+      return fetch("/api/global-payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "global_payment_quote",
+          module: "ai",
+          method: "stripe",
+          currency: "eur",
+          subject_id: "ai_credits_plus"
+        })
+      });
+    })
+    .then(function(res){ return res ? res.json() : null; })
+    .then(function(quote){
+      var out = document.getElementById("aiGlobalPaymentsOut");
+      if(!out || !quote) return;
+      out.style.display = "block";
+      out.textContent = [
+        "ai_credits_plus via /api/global-payments",
+        "ok=" + String(quote.ok),
+        "live=" + String(quote.public_live_checkout),
+        "buyer_pays=" + (quote.quote && quote.quote.buyer_pays)
+      ].join("\n");
+    })
+    .catch(function(){});
+})();
+</script>
 <div class="plan-grid">
 <article class="plan-card"><h4 translate="no">FREE</h4><p><bdi dir="ltr">Free: €0 a month. 8 requests a day, 40 a month, and 2 images a month.</bdi></p></article>
 <article class="plan-card"><h4 translate="no">PLUS</h4><p><bdi dir="ltr">Plus: €7.99 a month. 20 requests a day, 240 a month, and 20 images a month. Payment is not active.</bdi></p></article>
