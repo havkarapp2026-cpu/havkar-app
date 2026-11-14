@@ -831,6 +831,81 @@ input:focus-visible{
     pointer-events:none;
 }
 
+/* ===== Premium Buy & Sell nav + filter sheet ===== */
+.feed-toolbar{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:8px 14px 0;
+}
+.filter-open-btn{
+    display:inline-flex;align-items:center;gap:8px;
+    min-height:40px;padding:0 14px;border-radius:999px;
+    border:1px solid rgba(27,94,32,.18);background:#fff;color:#1b5e20;
+    font-weight:750;font-size:13px;cursor:pointer;
+    box-shadow:0 6px 16px rgba(27,94,32,.08);
+}
+.filter-open-btn .count{
+    min-width:20px;height:20px;border-radius:999px;background:#2e7d32;color:#fff;
+    display:inline-grid;place-items:center;font-size:11px;
+}
+.filter-chips{
+    display:flex;flex-wrap:wrap;gap:8px;padding:8px 14px 0;
+}
+.filter-chip{
+    display:inline-flex;align-items:center;gap:6px;
+    min-height:30px;padding:0 10px;border-radius:999px;
+    background:#e8f5e9;color:#1b5e20;font-size:12px;font-weight:700;border:0;
+}
+.filter-chip button{
+    border:0;background:transparent;color:#1b5e20;cursor:pointer;padding:0;line-height:1;
+}
+.filter-sheet-backdrop{
+    position:fixed;inset:0;z-index:400;background:rgba(10,30,16,.42);
+}
+.filter-sheet-backdrop[hidden]{display:none !important}
+.filter-sheet{
+    position:fixed;left:0;right:0;bottom:0;z-index:410;
+    max-height:min(88vh,760px);overflow:auto;
+    background:linear-gradient(180deg,#f7fbf7 0%,#ffffff 40%);
+    border-radius:22px 22px 0 0;
+    box-shadow:0 -18px 40px rgba(16,48,24,.22);
+    padding:14px 16px calc(18px + env(safe-area-inset-bottom));
+}
+.filter-sheet[hidden]{display:none !important}
+.filter-sheet h2{margin:4px 0 12px;font-size:1.15rem;color:#0d3d16}
+.filter-sheet .sheet-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:10px;
+}
+.filter-sheet label{display:block;font-size:12px;font-weight:700;color:#45634b;margin:0 0 4px}
+.filter-sheet select,.filter-sheet input{
+    width:100%;min-height:44px;border-radius:12px;border:1px solid rgba(27,94,32,.16);
+    padding:0 12px;background:#fff;font:inherit;
+}
+.filter-sheet .sheet-actions{
+    display:flex;gap:8px;margin-top:14px;position:sticky;bottom:0;background:linear-gradient(180deg,transparent,#fff 30%);padding-top:10px;
+}
+.filter-sheet .sheet-actions button{
+    flex:1;min-height:48px;border-radius:14px;border:0;font-weight:780;cursor:pointer;
+}
+.filter-sheet .sheet-apply{background:#1b5e20;color:#fff}
+.filter-sheet .sheet-reset{background:#e8f5e9;color:#1b5e20}
+.filter-sheet .sheet-close{background:#fff;color:#1b5e20;border:1px solid rgba(27,94,32,.2) !important}
+.bottom-nav .nav-item.create-nav{
+    transform:translateY(-10px);
+}
+.bottom-nav .nav-item.create-nav i{
+    width:48px;height:48px;border-radius:50%;
+    display:grid;place-items:center;background:linear-gradient(145deg,#1b5e20,#43a047);
+    color:#fff;box-shadow:0 10px 22px rgba(27,94,32,.35);font-size:1.15rem;
+}
+.bottom-nav .nav-item.create-nav span{font-weight:780;color:#1b5e20}
+.ads-grid .ad-card{
+    border-radius:18px;
+    box-shadow:0 10px 28px rgba(20,60,28,.08);
+    border:1px solid rgba(27,94,32,.06);
+}
+.country-filter,.detail-filters{display:none !important}
+
+
 .save-button:focus-visible{
     outline:3px solid rgba(76,175,80,.35);
     outline-offset:2px;
@@ -1091,6 +1166,19 @@ input:focus-visible{
 
 </div>
 
+<div class="feed-toolbar">
+    <button type="button" id="openFiltersBtn" class="filter-open-btn" aria-haspopup="dialog">
+        <i class="fas fa-sliders" aria-hidden="true"></i>
+        Filters
+        <span class="count" id="activeFilterCount" hidden>0</span>
+    </button>
+    <button type="button" id="openMapQuickBtn" class="filter-open-btn" style="background:#e8f5e9">
+        <i class="fas fa-globe" aria-hidden="true"></i>
+        Map
+    </button>
+</div>
+<div id="activeFilterChips" class="filter-chips" aria-live="polite"></div>
+
 <div class="country-filter">
 
     <label class="visually-hidden" for="countryFilter">
@@ -1257,65 +1345,94 @@ id="addButton"
 class="fab"
 type="button"
 aria-label="Post a new ad"
+hidden
 >
 
 <i class="fas fa-plus"></i>
 
 </button>
 
-<nav class="bottom-nav">
+<nav class="bottom-nav" aria-label="Buy and Sell primary navigation">
 
-<div
-    class="nav-item active"
-    id="navHome"
-    role="button"
-    tabindex="0"
->
+<div class="nav-item active" id="navHome" role="button" tabindex="0">
     <i class="fas fa-house"></i>
     <span>Home</span>
 </div>
 
-<div
-    class="nav-item"
-    id="navSearch"
-    role="button"
-    tabindex="0"
->
-    <i class="fas fa-magnifying-glass"></i>
-    <span>Search</span>
+<div class="nav-item" id="navExplore" role="button" tabindex="0">
+    <i class="fas fa-compass"></i>
+    <span>Explore</span>
 </div>
 
-<div
-    class="nav-item"
-    id="navSaved"
-    role="button"
-    tabindex="0"
->
-    <i class="fas fa-heart"></i>
-    <span>Saved</span>
+<div class="nav-item create-nav" id="navCreate" role="button" tabindex="0">
+    <i class="fas fa-plus"></i>
+    <span>Create</span>
 </div>
 
-<div
-    class="nav-item"
-    id="navMessages"
-    role="button"
-    tabindex="0"
->
+<div class="nav-item" id="navMessages" role="button" tabindex="0">
     <i class="fas fa-comment"></i>
     <span>Messages</span>
 </div>
 
-<div
-    class="nav-item"
-    id="navProfile"
-    role="button"
-    tabindex="0"
->
-    <i class="fas fa-user"></i>
-    <span>Profile</span>
+<div class="nav-item" id="navFilters" role="button" tabindex="0">
+    <i class="fas fa-sliders"></i>
+    <span>Filters</span>
 </div>
 
 </nav>
+
+<div id="filterSheetBackdrop" class="filter-sheet-backdrop" hidden></div>
+<aside id="filterSheet" class="filter-sheet" hidden role="dialog" aria-modal="true" aria-labelledby="filterSheetTitle">
+    <h2 id="filterSheetTitle">Filters</h2>
+    <div class="sheet-grid">
+        <div>
+            <label for="countryFilter">Country</label>
+            <!-- select already exists earlier; mirrored controls below for sheet -->
+            <select id="sheetCountry" aria-label="Filter by country"><option value="">All countries</option></select>
+        </div>
+        <div>
+            <label for="sheetCity">City / region</label>
+            <select id="sheetCity" aria-label="Filter by city"><option value="">All cities</option></select>
+        </div>
+        <div>
+            <label for="sheetMinPrice">Min price</label>
+            <input id="sheetMinPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0">
+        </div>
+        <div>
+            <label for="sheetMaxPrice">Max price</label>
+            <input id="sheetMaxPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Any">
+        </div>
+        <div>
+            <label for="sheetCurrency">Currency</label>
+            <select id="sheetCurrency"><option value="">Any</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option><option value="SEK">SEK</option><option value="IRT">IRT</option></select>
+        </div>
+        <div>
+            <label for="sheetCondition">Condition</label>
+            <select id="sheetCondition"><option value="">Any</option><option value="new">New</option><option value="used">Used</option><option value="refurbished">Refurbished</option></select>
+        </div>
+        <div>
+            <label for="sheetFulfillment">Delivery / pickup</label>
+            <select id="sheetFulfillment"><option value="">Any</option><option value="delivery">Delivery</option><option value="pickup">Local pickup</option><option value="both">Both</option></select>
+        </div>
+        <div>
+            <label for="sheetSort">Sort</label>
+            <select id="sheetSort"><option value="newest">Newest</option><option value="price_asc">Price ↑</option><option value="price_desc">Price ↓</option></select>
+        </div>
+        <div>
+            <label for="sheetDistance">Distance (approx.)</label>
+            <select id="sheetDistance"><option value="">Worldwide</option><option value="city">Same city</option><option value="country">Same country</option></select>
+        </div>
+        <div>
+            <label for="sheetVerified">Seller verification</label>
+            <select id="sheetVerified"><option value="">Any</option><option value="verified">Verified only</option></select>
+        </div>
+    </div>
+    <div class="sheet-actions">
+        <button type="button" class="sheet-reset" id="filterResetBtn">Reset</button>
+        <button type="button" class="sheet-close" id="filterCloseBtn">Close</button>
+        <button type="button" class="sheet-apply" id="filterApplyBtn">Apply</button>
+    </div>
+</aside>
 
 <div
     id="toast"
@@ -1398,6 +1515,18 @@ const state = {
     minPrice: "",
 
     maxPrice: "",
+
+    currencyFilter: "",
+
+    condition: "",
+
+    fulfillment: "",
+
+    sortMode: "newest",
+
+    distanceMode: "",
+
+    verifiedOnly: false,
 
     listingPage: 0,
 
@@ -3288,7 +3417,16 @@ async function queryListings(
                     maxPrice:
                         state.maxPrice,
                     search:
-                        state.search
+                        state.search,
+                    currency:
+                        state.currencyFilter ||
+                        "",
+                    condition:
+                        state.condition ||
+                        "",
+                    fulfillment:
+                        state.fulfillment ||
+                        ""
                 }
             );
 
@@ -3296,17 +3434,17 @@ async function queryListings(
 
     return Promise.race([
 
-        request
-            .order(
-                "created_at",
-                {
-                    ascending:false
-                }
-            )
-            .range(
-                page.from,
-                page.to
-            ),
+        (function(){
+            let ordered = request;
+            if(state.sortMode === "price_asc"){
+                ordered = ordered.order("price", { ascending: true });
+            } else if(state.sortMode === "price_desc"){
+                ordered = ordered.order("price", { ascending: false });
+            } else {
+                ordered = ordered.order("created_at", { ascending: false });
+            }
+            return ordered.range(page.from, page.to);
+        })(),
 
         new Promise(
             (_,reject) => {
@@ -3400,7 +3538,9 @@ async function fetchListings(
         "listing_surface",
         "expires_at",
         "video_path",
-        "video_duration_seconds"
+        "video_duration_seconds",
+        "condition",
+        "fulfillment_mode"
     ];
 
     let surfaceFilter =
@@ -4355,6 +4495,48 @@ function applyFilters(){
 
                 }
 
+                if(
+                    state.currencyFilter &&
+                    String(ad.currency || "").toUpperCase() !==
+                    String(state.currencyFilter).toUpperCase()
+                ){
+                    return false;
+                }
+
+                if(
+                    state.condition &&
+                    String(ad.condition || "").toLowerCase() !==
+                    String(state.condition).toLowerCase()
+                ){
+                    return false;
+                }
+
+                if(
+                    state.fulfillment &&
+                    String(ad.fulfillment_mode || "").toLowerCase() !==
+                    String(state.fulfillment).toLowerCase()
+                ){
+                    return false;
+                }
+
+                if(
+                    state.distanceMode === "city" &&
+                    state.city &&
+                    String(ad.city || "").toLowerCase() !==
+                    String(state.city).toLowerCase()
+                ){
+                    return false;
+                }
+
+                if(
+                    state.distanceMode === "country" &&
+                    state.country &&
+                    String(ad.country_code || "").toUpperCase() !==
+                    String(state.country).toUpperCase()
+                ){
+                    return false;
+                }
+
                 const categoryMatch =
                     category === "All" ||
                     String(
@@ -4798,20 +4980,197 @@ function goHome(){
 }
 
 
-function goProfile(){
-
-    window.location.href =
-        "profile.html";
-
+function rememberBuySellReturn(){
+    try{
+        sessionStorage.setItem(
+            "havkar_buysell_return",
+            window.location.pathname + window.location.search + window.location.hash
+        );
+        sessionStorage.setItem(
+            "havkar_buysell_filters",
+            JSON.stringify({
+                search: state.search,
+                country: state.country,
+                city: state.city,
+                minPrice: state.minPrice,
+                maxPrice: state.maxPrice,
+                category: state.category,
+                currencyFilter: state.currencyFilter,
+                condition: state.condition,
+                fulfillment: state.fulfillment,
+                sortMode: state.sortMode,
+                exploreMode: state.exploreMode
+            })
+        );
+    }catch(_e){}
 }
 
+function goProfile(){
+    rememberBuySellReturn();
+    window.location.href =
+        "profile.html?from=buy-sell";
+}
 
 function goMessages(){
-
+    rememberBuySellReturn();
     window.location.href =
-        "chat.html";
-
+        "chat.html?from=buy-sell";
 }
+
+function openFilterSheet(){
+    const sheet = $("filterSheet");
+    const backdrop = $("filterSheetBackdrop");
+    if(!sheet) return;
+    syncSheetFromState();
+    sheet.hidden = false;
+    if(backdrop) backdrop.hidden = false;
+    setActiveNav("navFilters");
+}
+
+function closeFilterSheet(){
+    const sheet = $("filterSheet");
+    const backdrop = $("filterSheetBackdrop");
+    if(sheet) sheet.hidden = true;
+    if(backdrop) backdrop.hidden = true;
+}
+
+function syncSheetFromState(){
+    const map = [
+        ["sheetCountry", state.country || ""],
+        ["sheetCity", state.city || ""],
+        ["sheetMinPrice", state.minPrice || ""],
+        ["sheetMaxPrice", state.maxPrice || ""],
+        ["sheetCurrency", state.currencyFilter || ""],
+        ["sheetCondition", state.condition || ""],
+        ["sheetFulfillment", state.fulfillment || ""],
+        ["sheetSort", state.sortMode || "newest"],
+        ["sheetDistance", state.distanceMode || ""],
+        ["sheetVerified", state.verifiedOnly ? "verified" : ""]
+    ];
+    map.forEach(function(pair){
+        const node = $(pair[0]);
+        if(node) node.value = pair[1];
+    });
+    // Mirror country/city options into sheet selects
+    const sourceCountry = $("countryFilter");
+    const sheetCountry = $("sheetCountry");
+    if(sourceCountry && sheetCountry && sheetCountry.options.length <= 1){
+        sheetCountry.innerHTML = sourceCountry.innerHTML;
+        sheetCountry.value = state.country || "";
+    }
+    const sourceCity = $("cityFilter");
+    const sheetCity = $("sheetCity");
+    if(sourceCity && sheetCity){
+        sheetCity.innerHTML = sourceCity.innerHTML;
+        sheetCity.value = state.city || "";
+    }
+}
+
+function applySheetFilters(){
+    state.country = ($("sheetCountry") && $("sheetCountry").value) || "";
+    state.city = ($("sheetCity") && $("sheetCity").value) || "";
+    state.minPrice = ($("sheetMinPrice") && $("sheetMinPrice").value) || "";
+    state.maxPrice = ($("sheetMaxPrice") && $("sheetMaxPrice").value) || "";
+    state.currencyFilter = ($("sheetCurrency") && $("sheetCurrency").value) || "";
+    state.condition = ($("sheetCondition") && $("sheetCondition").value) || "";
+    state.fulfillment = ($("sheetFulfillment") && $("sheetFulfillment").value) || "";
+    state.sortMode = ($("sheetSort") && $("sheetSort").value) || "newest";
+    state.distanceMode = ($("sheetDistance") && $("sheetDistance").value) || "";
+    state.verifiedOnly = ($("sheetVerified") && $("sheetVerified").value) === "verified";
+    if($("countryFilter")) $("countryFilter").value = state.country;
+    if($("cityFilter")) $("cityFilter").value = state.city;
+    if($("minPrice")) $("minPrice").value = state.minPrice;
+    if($("maxPrice")) $("maxPrice").value = state.maxPrice;
+    renderFilterChips();
+    closeFilterSheet();
+    state.listingPage = 0;
+    loadListings();
+}
+
+function resetSheetFilters(){
+    state.country = "";
+    state.city = "";
+    state.minPrice = "";
+    state.maxPrice = "";
+    state.currencyFilter = "";
+    state.condition = "";
+    state.fulfillment = "";
+    state.sortMode = "newest";
+    state.distanceMode = "";
+    state.verifiedOnly = false;
+    syncSheetFromState();
+    renderFilterChips();
+}
+
+function countActiveFilters(){
+    let n = 0;
+    if(state.country) n += 1;
+    if(state.city) n += 1;
+    if(state.minPrice !== "") n += 1;
+    if(state.maxPrice !== "") n += 1;
+    if(state.currencyFilter) n += 1;
+    if(state.condition) n += 1;
+    if(state.fulfillment) n += 1;
+    if(state.distanceMode) n += 1;
+    if(state.verifiedOnly) n += 1;
+    if(state.sortMode && state.sortMode !== "newest") n += 1;
+    return n;
+}
+
+function renderFilterChips(){
+    const host = $("activeFilterChips");
+    const count = $("activeFilterCount");
+    if(!host) return;
+    const chips = [];
+    function push(key, label){
+        chips.push('<button type="button" class="filter-chip" data-chip="'+key+'">'+label+' <span aria-hidden="true">×</span></button>');
+    }
+    if(state.country) push("country", state.country);
+    if(state.city) push("city", state.city);
+    if(state.minPrice !== "") push("minPrice", "Min "+state.minPrice);
+    if(state.maxPrice !== "") push("maxPrice", "Max "+state.maxPrice);
+    if(state.currencyFilter) push("currencyFilter", state.currencyFilter);
+    if(state.condition) push("condition", state.condition);
+    if(state.fulfillment) push("fulfillment", state.fulfillment);
+    if(state.distanceMode) push("distanceMode", state.distanceMode);
+    if(state.verifiedOnly) push("verifiedOnly", "Verified");
+    if(state.sortMode && state.sortMode !== "newest") push("sortMode", state.sortMode);
+    host.innerHTML = chips.join("");
+    const n = countActiveFilters();
+    if(count){
+        count.hidden = n === 0;
+        count.textContent = String(n);
+    }
+    host.querySelectorAll("[data-chip]").forEach(function(btn){
+        btn.addEventListener("click", function(){
+            const key = btn.getAttribute("data-chip");
+            if(key === "verifiedOnly") state.verifiedOnly = false;
+            else if(key === "sortMode") state.sortMode = "newest";
+            else state[key] = "";
+            renderFilterChips();
+            state.listingPage = 0;
+            loadListings();
+        });
+    });
+}
+
+function setupFilterSheet(){
+    const openBtn = $("openFiltersBtn");
+    const mapBtn = $("openMapQuickBtn");
+    if(openBtn) openBtn.addEventListener("click", openFilterSheet);
+    if(mapBtn) mapBtn.addEventListener("click", function(){
+        const mapMode = document.querySelector('[data-view-mode="map"]');
+        if(mapMode) mapMode.click();
+    });
+    const backdrop = $("filterSheetBackdrop");
+    if(backdrop) backdrop.addEventListener("click", closeFilterSheet);
+    if($("filterCloseBtn")) $("filterCloseBtn").addEventListener("click", closeFilterSheet);
+    if($("filterResetBtn")) $("filterResetBtn").addEventListener("click", function(){
+        resetSheetFilters();
+    });
+    if($("filterApplyBtn")) $("filterApplyBtn").addEventListener("click", applySheetFilters);
+}
+
 
 
 /* =========================================================
@@ -4835,7 +5194,7 @@ function applyShotModeFromQuery(){
             true;
 
         setActiveNav(
-            "navSearch"
+            "navExplore"
         );
 
         updateListingLayout();
@@ -4899,49 +5258,36 @@ function setupNavigation(){
         .addEventListener(
             "click",
             () => {
-
+                closeFilterSheet();
                 goMarketplaceHome();
-
+                setActiveNav("navHome");
             }
         );
 
-    $("navSearch")
-        .addEventListener(
-            "click",
-            () => {
-
-                state.savedOnly =
-                    false;
-
-                state.exploreMode =
-                    true;
-
-                setActiveNav(
-                    "navSearch"
-                );
-
+    if($("navExplore")){
+        $("navExplore").addEventListener("click", () => {
+            closeFilterSheet();
+            state.savedOnly = false;
+            state.exploreMode = true;
+            const mapPanel = $("buySellMapPanel");
+            if(mapPanel) mapPanel.hidden = true;
+            setActiveNav("navExplore");
+            const exploreBtn = document.querySelector('[data-view-mode="explore"]');
+            if(exploreBtn) exploreBtn.click();
+            else {
                 updateListingLayout();
-
                 applyFilters();
-
-                $("searchInput")
-                    .focus();
-
-                window.scrollTo(
-                    {
-                        top:0,
-                        behavior:"smooth"
-                    }
-                );
-
             }
-        );
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+    }
 
-    $("navSaved")
-        .addEventListener(
-            "click",
-            showSavedListings
-        );
+    if($("navCreate")){
+        $("navCreate").addEventListener("click", () => {
+            rememberBuySellReturn();
+            window.location.href = "post-ad.html?from=buy-sell";
+        });
+    }
 
     $("navMessages")
         .addEventListener(
@@ -4949,11 +5295,20 @@ function setupNavigation(){
             goMessages
         );
 
-    $("navProfile")
-        .addEventListener(
-            "click",
-            goProfile
-        );
+    if($("navFilters")){
+        $("navFilters").addEventListener("click", openFilterSheet);
+    }
+
+    // Saved remains reachable via hash / profile; keep helper for deep links.
+    if($("navSaved")){
+        $("navSaved").addEventListener("click", showSavedListings);
+    }
+    if($("navProfile")){
+        $("navProfile").addEventListener("click", goProfile);
+    }
+
+    setupFilterSheet();
+    renderFilterChips();
 
     document
         .querySelectorAll(
@@ -5319,6 +5674,19 @@ applyShotModeFromQuery();
         setupViewModes();
 
         setupVideoLightbox();
+
+        try {
+            const savedFilters = sessionStorage.getItem("havkar_buysell_filters");
+            if (savedFilters) {
+                const parsed = JSON.parse(savedFilters);
+                Object.keys(parsed || {}).forEach(function (key) {
+                    if (Object.prototype.hasOwnProperty.call(state, key)) {
+                        state[key] = parsed[key];
+                    }
+                });
+                renderFilterChips();
+            }
+        } catch (_e) {}
 
         setupRetry();
 

@@ -36,6 +36,11 @@ assert.match(buySell, /toggleLiked/);
 assert.match(buySell, /applyServerListingFilters/);
 assert.match(buySell, /leaflet\.markercluster/);
 assert.match(buySell, /leaflet@1\.9\.4/);
+assert.match(buySell, /id="navExplore"/);
+assert.match(buySell, /id="navCreate"/);
+assert.match(buySell, /id="navFilters"/);
+assert.match(buySell, /id="filterSheet"/);
+assert.match(buySell, /openFilterSheet/);
 assert.doesNotMatch(buySell, /ads advertising module only/);
 
 const product = fs.readFileSync("product.html", "utf8");
