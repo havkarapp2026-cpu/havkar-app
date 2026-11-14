@@ -96,6 +96,12 @@ function normalizePrice(value) {
     return null;
   }
 
+  // UI historically stored free events as the word "Free".
+  // Treat Free/gratis/0 as zero so free tickets still issue while card collection stays paused.
+  if (/^(free|gratis|0+|0+[.,]0+)$/i.test(text)) {
+    return 0;
+  }
+
   if (/^\d+,\d{1,2}$/.test(text)) {
     text = text.replace(",", ".");
   }
@@ -111,6 +117,15 @@ function normalizePrice(value) {
   }
 
   return amount;
+}
+
+function generateTicketCode() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let out = "HK";
+  for (let i = 0; i < 8; i += 1) {
+    out += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return out;
 }
 
 function safeQuantity(value) {
@@ -219,10 +234,19 @@ async function authenticateUser(req) {
 }
 
 async function countReservedTickets(eventId) {
+  const admin = getSupabaseAdmin();
+  const rpc = await admin.rpc("havkar_event_occupied_seats", {
+    p_event_id: eventId
+  });
+
+  if (!rpc.error && rpc.data != null) {
+    return Number(rpc.data) || 0;
+  }
+
   const {
     data,
     error,
-  } = await getSupabaseAdmin()
+  } = await admin
     .from("event_tickets")
     .select("quantity")
     .eq("event_id", eventId)
@@ -733,6 +757,7 @@ export default async function handler(req, res) {
     const origin = allowedCheckoutOrigin(req);
 
     if (unitPrice === 0) {
+      const ticketCode = generateTicketCode();
       const {
         data: freeTicket,
         error: freeTicketError,
@@ -750,8 +775,10 @@ export default async function handler(req, res) {
           payment_provider: "free",
           payment_reference: null,
           paid_at: new Date().toISOString(),
+          ticket_code: ticketCode,
+          ticket_type: "free",
         })
-        .select("id")
+        .select("id,ticket_code")
         .single();
 
       if (freeTicketError) {
@@ -762,6 +789,7 @@ export default async function handler(req, res) {
         ok: true,
         free: true,
         ticket_id: freeTicket.id,
+        ticket_code: freeTicket.ticket_code || ticketCode,
       });
     }
 
@@ -773,6 +801,7 @@ export default async function handler(req, res) {
       });
     }
 
+    const pendingTicketCode = generateTicketCode();
     const {
       data: pendingTicket,
       error: ticketError,
@@ -790,8 +819,10 @@ export default async function handler(req, res) {
         payment_provider: "stripe",
         payment_reference: null,
         paid_at: null,
+        ticket_code: pendingTicketCode,
+        ticket_type: "general",
       })
-      .select("id")
+      .select("id,ticket_code")
       .single();
 
     if (ticketError) {
