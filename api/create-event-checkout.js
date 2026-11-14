@@ -1,12 +1,26 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { createRequire } from "module";
 import { cardPaymentsAllowed } from "../lib/real-payments.cjs";
 import {
   evaluateStellarCheckout,
   buildXlmQuote,
   verifyStellarSettlement,
-  saveUnpaidIntent
+  saveUnpaidIntent,
+  xlmFromEur
 } from "../lib/stellar-checkout.cjs";
+
+const require = createRequire(import.meta.url);
+const {
+  isCommerceRoute,
+  handleCommerceRoute
+} = require("../havkar-commerce-api.js");
+const {
+  jobsPaymentMethods,
+  servicesPaymentMethods
+} = require("../lib/jobs-services-payments.cjs");
+const jobBilling = require("../havkar-job-billing.js");
+
 let stripeClient = null;
 let supabaseAdminClient = null;
 
@@ -213,7 +227,191 @@ async function countReservedTickets(eventId) {
   );
 }
 
+async function fetchDisplayXlmFromEur(buyerPaysEur) {
+  const rateRes = await fetch(
+    "https://api.coingecko.com/api/v3/simple/price?ids=stellar&vs_currencies=eur&include_last_updated_at=true",
+    { headers: { Accept: "application/json" } }
+  );
+  if (!rateRes.ok) {
+    return { ok: false, error: "Exchange rate provider unavailable." };
+  }
+  const rateBody = await rateRes.json();
+  const eurPer = Number(rateBody && rateBody.stellar && rateBody.stellar.eur);
+  const updated = Number(
+    rateBody && rateBody.stellar && rateBody.stellar.last_updated_at
+  );
+  if (!Number.isFinite(eurPer) || eurPer <= 0 || !buyerPaysEur) {
+    return { ok: false, error: "Exchange rate missing." };
+  }
+  return {
+    ok: true,
+    display_only: true,
+    payable: false,
+    amount_xlm: xlmFromEur(buyerPaysEur, eurPer),
+    eur_per_xlm: eurPer,
+    network_fee_xlm: "0.00001",
+    rate_as_of: Number.isFinite(updated)
+      ? new Date(updated * 1000).toISOString()
+      : null,
+    rate_source: "coingecko:stellar:eur"
+  };
+}
+
 export default async function handler(req, res) {
+  const commerceRoute =
+    typeof req.query?.havkarRoute === "string" ? req.query.havkarRoute : "";
+
+  if (isCommerceRoute(commerceRoute)) {
+    return handleCommerceRoute({
+      route: commerceRoute,
+      req,
+      res,
+      stripe: getStripe(),
+      supabaseAdmin: getSupabaseAdmin(),
+      authenticateUser,
+      getOrigin
+    });
+  }
+
+  const bodyAction = String((req.body && req.body.action) || "");
+
+  if (
+    req.method === "POST" &&
+    (bodyAction === "jobs_payment_methods" ||
+      bodyAction === "services_payment_methods" ||
+      bodyAction === "jobs_quote" ||
+      bodyAction === "services_quote")
+  ) {
+    if (bodyAction === "jobs_payment_methods") {
+      return res.status(200).json(jobsPaymentMethods(process.env));
+    }
+    if (bodyAction === "services_payment_methods") {
+      return res.status(200).json(servicesPaymentMethods(process.env));
+    }
+
+    const method = String((req.body && req.body.method) || "stripe");
+    const isXlm = method === "xlm" || method === "xlm_mainnet";
+
+    if (bodyAction === "jobs_quote") {
+      const planName = String((req.body && req.body.plan) || "Professional");
+      const ordinary = jobBilling.ORDINARY_PLANS[planName];
+      const corporate = jobBilling.COMPANY_PLANS[planName];
+      const listEur = ordinary
+        ? ordinary.eur
+        : corporate
+          ? corporate.eur
+          : null;
+      if (listEur == null) {
+        return res.status(400).json({
+          ok: false,
+          error: "Unknown jobs plan.",
+          ordinary_plans: Object.keys(jobBilling.ORDINARY_PLANS),
+          corporate_plans: Object.keys(jobBilling.COMPANY_PLANS)
+        });
+      }
+      const catalog = jobsPaymentMethods(process.env);
+      const chargeAllowed = Boolean(
+        catalog.live_flag_armed &&
+          ((isXlm &&
+            catalog.methods.find((m) => m.id === "xlm_mainnet")
+              ?.charge_allowed_now) ||
+            (!isXlm &&
+              catalog.methods.find((m) => m.id === "stripe")?.charge_allowed_now))
+      );
+      let xlmDisplay = null;
+      if (isXlm) {
+        if (corporate) {
+          return res.status(200).json({
+            ok: true,
+            action: "jobs_quote",
+            payment_method: "xlm_mainnet",
+            plan: planName,
+            billing: "stripe_subscription_monthly",
+            xlm_supported: false,
+            charge_allowed_now: false,
+            charge_created: false,
+            availability_status: "not_yet_available",
+            availability_label: "Not yet available",
+            error:
+              "Corporate monthly subscriptions renew on Stripe only. XLM cannot start automatic renewals."
+          });
+        }
+        xlmDisplay = await fetchDisplayXlmFromEur(listEur);
+      }
+      return res.status(200).json({
+        ok: true,
+        action: "jobs_quote",
+        payment_method: isXlm ? "xlm_mainnet" : "stripe",
+        plan: planName,
+        list_price_eur: listEur,
+        billing: ordinary ? "one_time_prepaid" : "stripe_subscription_monthly",
+        period_days: ordinary ? ordinary.durationDays : null,
+        auto_renew: Boolean(corporate),
+        stripe_presentment_count: catalog.stripe_presentment_count,
+        xlm_is_not_a_stripe_currency: true,
+        xlm_display: xlmDisplay,
+        amount_xlm: xlmDisplay && xlmDisplay.amount_xlm,
+        eur_per_xlm: xlmDisplay && xlmDisplay.eur_per_xlm,
+        rate_as_of: xlmDisplay && xlmDisplay.rate_as_of,
+        rate_source: xlmDisplay && xlmDisplay.rate_source,
+        network_fee_xlm: xlmDisplay && xlmDisplay.network_fee_xlm,
+        charge_allowed_now: chargeAllowed,
+        charge_created: false,
+        availability_status: chargeAllowed ? "available" : "not_yet_available",
+        availability_label: chargeAllowed ? "Available" : "Not yet available",
+        availability_reason: catalog.gate.message,
+        duplicate_protection:
+          "Live XLM uses memo uniqueness + Horizon verification; Stripe uses Checkout/Subscription idempotency when armed."
+      });
+    }
+
+    if (bodyAction === "services_quote") {
+      const listEur = Number((req.body && req.body.list_price_eur) || 100);
+      if (!Number.isFinite(listEur) || listEur <= 0) {
+        return res.status(400).json({ ok: false, error: "list_price_eur required." });
+      }
+      const catalog = servicesPaymentMethods(process.env);
+      const commissionCents = Math.round(listEur * 100 * 1000 / 10000);
+      const chargeAllowed = Boolean(
+        catalog.live_flag_armed &&
+          ((isXlm &&
+            catalog.methods.find((m) => m.id === "xlm_mainnet")
+              ?.charge_allowed_now) ||
+            (!isXlm &&
+              catalog.methods.find((m) => m.id === "stripe")?.charge_allowed_now))
+      );
+      let xlmDisplay = null;
+      if (isXlm) {
+        xlmDisplay = await fetchDisplayXlmFromEur(listEur);
+      }
+      return res.status(200).json({
+        ok: true,
+        action: "services_quote",
+        payment_method: isXlm ? "xlm_mainnet" : "stripe",
+        list_price_eur: listEur,
+        customer_pays_eur: listEur,
+        provider_commission_bps: 1000,
+        provider_commission_eur: commissionCents / 100,
+        provider_settlement_eur: listEur - commissionCents / 100,
+        commission_payer: "provider",
+        customer_extra_havkar_commission: false,
+        stripe_presentment_count: catalog.stripe_presentment_count,
+        xlm_is_not_a_stripe_currency: true,
+        xlm_display: xlmDisplay,
+        amount_xlm: xlmDisplay && xlmDisplay.amount_xlm,
+        eur_per_xlm: xlmDisplay && xlmDisplay.eur_per_xlm,
+        rate_as_of: xlmDisplay && xlmDisplay.rate_as_of,
+        rate_source: xlmDisplay && xlmDisplay.rate_source,
+        network_fee_xlm: xlmDisplay && xlmDisplay.network_fee_xlm,
+        charge_allowed_now: chargeAllowed,
+        charge_created: false,
+        availability_status: chargeAllowed ? "available" : "not_yet_available",
+        availability_label: chargeAllowed ? "Available" : "Not yet available",
+        availability_reason: catalog.gate.message
+      });
+    }
+  }
+
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
 

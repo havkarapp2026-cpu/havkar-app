@@ -1,10 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><link rel="manifest" href="/manifest.json">
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/havkar-icon-32-20261022-v3.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/havkar-icon-16-20261022-v3.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/havkar-icon-180-20261022-v3.png">
-
+<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -1486,6 +1482,14 @@ textarea.form-control {
         id="servicesContainer">
     </div>
 
+    <button
+        id="loadMoreServices"
+        class="submit-btn"
+        type="button"
+        hidden>
+        Load more services
+    </button>
+
 
     <!-- EMPTY SEARCH RESULT -->
 
@@ -1693,42 +1697,6 @@ textarea.form-control {
             </div>
 
 
-            <p class="form-label" id="bookingCommission">
-                The customer pays the listed price. The provider owes 10%. Fees and taxes are separate. This screen does not collect the commission.
-            </p>
-
-
-            <div class="form-group">
-
-                <label
-                    class="form-label"
-                    for="bookingPayment">
-
-                    Payment
-
-                </label>
-
-                <select
-                    id="bookingPayment"
-                    class="form-control">
-
-                    <option value="unset">
-                        Request only
-                    </option>
-
-                    <option value="cash">
-                        Cash / manual
-                    </option>
-
-                    <option value="xlm">
-                        XLM Testnet, one-time
-                    </option>
-
-                </select>
-
-            </div>
-
-
             <div class="form-group">
 
                 <label
@@ -1845,6 +1813,45 @@ textarea.form-control {
                     placeholder="Describe what you need..."></textarea>
 
             </div>
+
+
+            <fieldset class="form-group">
+                <legend class="form-label">Payment method</legend>
+                <div style="display:grid;gap:10px;margin-bottom:10px;">
+                  <article style="border:1px solid #1b5e20;border-radius:12px;padding:10px;background:#f4faf4;">
+                    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
+                      <strong style="background:#1b5e20;color:#fff;padding:3px 8px;border-radius:999px;">Stripe</strong>
+                      <span style="color:#c77700;font-weight:600;font-size:12px;">Not yet available</span>
+                    </div>
+                    <label style="display:block;margin-top:8px;">
+                      <input type="radio" name="bookingPaymentMethod" value="stripe" checked>
+                      Stripe — Pay by card / supported currencies (133 IT)
+                    </label>
+                  </article>
+                  <article style="border:1px solid #1b5e20;border-radius:12px;padding:10px;background:#f4faf4;">
+                    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
+                      <strong style="background:#1b5e20;color:#fff;padding:3px 8px;border-radius:999px;">✦ Stellar XLM</strong>
+                      <span style="color:#c77700;font-weight:600;font-size:12px;">Not yet available</span>
+                    </div>
+                    <label style="display:block;margin-top:8px;">
+                      <input type="radio" name="bookingPaymentMethod" value="xlm_mainnet">
+                      Stellar XLM — Pay with XLM wallet
+                    </label>
+                    <button type="button" class="submit-btn" style="margin-top:8px;" onclick="quoteServiceXlm(event)">Preventivo XLM (senza addebito)</button>
+                    <pre id="serviceXlmQuoteOut" style="display:none;white-space:pre-wrap;font-size:12px;margin-top:8px;background:#fff;border-radius:8px;padding:8px;"></pre>
+                  </article>
+                </div>
+                <label>
+                    <input type="radio" name="bookingPaymentMethod" value="cash">
+                    Cash / offline (commission liability only — not collected here)
+                </label>
+                <p>
+                    The customer pays the agreed price. The provider alone pays HAVKAR's 10% commission.
+                    Server rate remains exactly 1000 bps. No second HAVKAR commission is added to the customer.
+                    Cash is not treated as Stripe-collected funds; liability stays uncollected until authorized settlement.
+                    Live charging stays OFF until Owner sets <code>HAVKAR_SERVICE_PAYMENTS_ENABLED=true</code>.
+                </p>
+            </fieldset>
 
 
             <button
@@ -2003,7 +2010,7 @@ textarea.form-control {
                     id="newServiceLocation"
                     class="form-control"
                     type="text"
-                    placeholder="Example: City, country"
+                    placeholder="Example: Crotone, Italy"
                     maxlength="120"
                     required>
 
@@ -2027,6 +2034,13 @@ textarea.form-control {
                     maxlength="3000"
                     required></textarea>
 
+            </div>
+
+
+            <div class="form-group">
+                <label class="form-label" for="newServiceImage">Service image</label>
+                <input id="newServiceImage" class="form-control" type="file" accept="image/jpeg,image/png,image/webp">
+                <p>Images are stored only in the service-images bucket. They are not uploaded to advertisement storage.</p>
             </div>
 
 
@@ -2298,7 +2312,7 @@ textarea.form-control {
 
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-services.js"></script>
-<script src="/havkar-xlm-checkout.js"></script>
+<script src="/havkar-service-commerce.js"></script>
 <script>
 
 /* =========================================================
@@ -2326,7 +2340,7 @@ let selectedBookingService = null;
 let toastTimer = null;
 let bookingRole = "customer";
 let loadedBookings = [];
-let commissionByBooking = {};
+let serviceFetchLimit = 24;
 
 const searchInput =
     document.getElementById("searchInput");
@@ -2350,6 +2364,13 @@ document.addEventListener(
         bindCategoryButtons();
         bindSearch();
         bindForms();
+        const loadMoreButton = document.getElementById("loadMoreServices");
+        if (loadMoreButton) {
+            loadMoreButton.addEventListener("click", async function() {
+                serviceFetchLimit += 24;
+                await loadServices();
+            });
+        }
 
         const {
             data: { user },
@@ -2496,7 +2517,7 @@ async function loadServices() {
         .select(columns)
         .eq("status", "active")
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(serviceFetchLimit);
 
     if (activeResult.error) {
 
@@ -2546,7 +2567,53 @@ async function loadServices() {
 
     }
 
+    const providerIds = merged
+        .map(function(service) { return service.provider_id; })
+        .filter(Boolean);
+    if (providerIds.length) {
+        const profileResult = await db
+            .from("service_provider_profiles")
+            .select("user_id,display_name,verification_status")
+            .in("user_id", providerIds);
+        if (!profileResult.error && Array.isArray(profileResult.data)) {
+            const profilesById = {};
+            profileResult.data.forEach(function(profile) {
+                profilesById[profile.user_id] = profile;
+            });
+            merged.forEach(function(service) {
+                const profile = profilesById[service.provider_id];
+                if (!profile) return;
+                service.public_display_name = profile.display_name || "";
+                service.provider_verified = profile.verification_status === "verified";
+            });
+        }
+        const statsResult = await db
+            .from("service_provider_public_stats")
+            .select("provider_id,average_rating,review_count,completed_bookings,verification_status")
+            .in("provider_id", providerIds);
+        if (!statsResult.error && Array.isArray(statsResult.data)) {
+            const statsById = {};
+            statsResult.data.forEach(function(row) {
+                statsById[row.provider_id] = row;
+            });
+            merged.forEach(function(service) {
+                const stats = statsById[service.provider_id];
+                if (!stats) return;
+                service.average_rating = stats.average_rating;
+                service.review_count = stats.review_count;
+                service.completed_bookings = stats.completed_bookings;
+                if (stats.verification_status === "verified") {
+                    service.provider_verified = true;
+                }
+            });
+        }
+    }
+
     services = merged;
+    const loadMoreButton = document.getElementById("loadMoreServices");
+    if (loadMoreButton) {
+        loadMoreButton.hidden = !activeResult.data || activeResult.data.length < serviceFetchLimit;
+    }
     renderServices();
 
 }
@@ -2637,7 +2704,7 @@ function buildServiceCard(service) {
     const providerName =
         service.provider_id === currentUser?.id
             ? getCurrentUserDisplayName()
-            : "HAVKAR Provider";
+            : publicProviderName(service);
 
     const priceText =
         formatServicePrice(service);
@@ -2674,6 +2741,7 @@ function buildServiceCard(service) {
                 <div class="rating">
                     <i class="fas fa-circle-check"></i>
                     ${escapeHtml(serviceStatusLabel(service))}
+                    ${service.review_count == null ? "" : " · " + escapeHtml(String(service.average_rating)) + "/5 · " + escapeHtml(String(service.review_count)) + " reviews"}
                 </div>
             </div>
         </div>
@@ -2861,7 +2929,7 @@ function openBooking(service) {
     ).value =
         service.provider_id === currentUser?.id
             ? getCurrentUserDisplayName()
-            : "HAVKAR Provider";
+            : publicProviderName(service);
 
     document.getElementById(
         "bookingPrice"
@@ -3005,6 +3073,18 @@ async function submitBooking(event) {
         return;
     }
 
+    const paymentMethod = document.querySelector('input[name="bookingPaymentMethod"]:checked');
+    const methodValue = paymentMethod ? paymentMethod.value : "";
+    if (methodValue === "cash") {
+        const decision = window.HAVKAR_SERVICE_COMMERCE.cashBookingDecision();
+        showToast(decision.error);
+        return;
+    }
+    if (methodValue !== "stripe" && methodValue !== "xlm_mainnet" && methodValue !== "online") {
+        showToast("Choose Stripe or Stellar XLM. Live charges stay OFF until Owner authorization.");
+        return;
+    }
+
     const submitButton =
         event.currentTarget.querySelector(
             '.submit-btn'
@@ -3016,69 +3096,29 @@ async function submitBooking(event) {
         "Booking..."
     );
 
-    const payment =
-        document.getElementById("bookingPayment").value;
-
-    const payload = {
-        service_id:
-            selectedBookingService.id,
-        customer_id:
-            user.id,
-        provider_id:
-            selectedBookingService.provider_id,
-        booking_date:
-            date,
-        booking_time:
-            time,
-        message:
-            message || null,
-        status:
-            "pending"
+    const bookingPayload = {
+        service_id: selectedBookingService.id,
+        customer_id: user.id,
+        provider_id: selectedBookingService.provider_id,
+        booking_date: date,
+        booking_time: time,
+        message: message || null,
+        status: "pending",
+        payment_method: "online"
     };
-
-    if (payment === "cash") {
-        payload.payment_method = "cash";
-    }
-
-    if (payment === "xlm") {
-        const servicePrice = Number(selectedBookingService.price);
-        const priceType = String(selectedBookingService.price_type || "").toLowerCase();
-        const recurring = ["hour", "day", "week", "month"].indexOf(priceType) !== -1;
-        const session = await db.auth.getSession();
-        const accessToken = session && session.data && session.data.session
-            ? session.data.session.access_token
-            : "";
-
-        if (!accessToken || !window.HAVKAR_XLM || !Number.isFinite(servicePrice) || servicePrice <= 0) {
-            setButtonBusy(submitButton, false, "Confirm Booking");
-            showToast("XLM needs a signed-in customer and a positive listed price. Nothing was collected.");
-            return;
-        }
-
-        const quoted = await window.HAVKAR_XLM.quote({
-            flow: recurring ? "subscription" : "services",
-            price: servicePrice,
-            subjectId: String(selectedBookingService.id),
-            accessToken: accessToken
-        });
-
-        if (!quoted.result || quoted.result.order_paid === true || quoted.result.payable !== true) {
-            setButtonBusy(submitButton, false, "Confirm Booking");
-            showToast(window.HAVKAR_XLM.describe(quoted.result));
-            return;
-        }
-
-        payload.payment_method = "online";
-        payload.status = "pending";
-    }
-
-    const inserted = await db
+    let bookingResult = await db
         .from("service_bookings")
-        .insert(payload)
-        .select("id")
-        .single();
-
-    const error = inserted.error;
+        .insert(bookingPayload);
+    if (
+        bookingResult.error &&
+        /payment_method|schema cache|Could not find the/i.test(bookingResult.error.message || "")
+    ) {
+        delete bookingPayload.payment_method;
+        bookingResult = await db
+            .from("service_bookings")
+            .insert(bookingPayload);
+    }
+    const error = bookingResult.error;
 
     setButtonBusy(
         submitButton,
@@ -3088,11 +3128,7 @@ async function submitBooking(event) {
 
     if (error) {
         console.error("Booking error:", error);
-        showToast(
-            payment === "cash"
-                ? "The cash request was not recorded. Nothing was collected."
-                : "Could not create booking."
-        );
+        showToast("Could not create booking.");
         return;
     }
 
@@ -3100,13 +3136,60 @@ async function submitBooking(event) {
     event.currentTarget.reset();
     selectedBookingService = null;
 
-    const ledger = await readCommissionEntry(inserted.data && inserted.data.id);
     showToast(
-        ledger
-            ? window.HAVKAR_SERVICES.liabilityText(ledger.liability_state)
-            : "Booking request sent. Nothing was collected."
+      methodValue === "xlm_mainnet"
+        ? "Booking request recorded. XLM quote available; live charge stays OFF until Owner authorization. Commission remains 10% on the provider."
+        : "Booking request recorded. Stripe path gated; live charge stays OFF until Owner authorization. Provider owes 10% (1000 bps)."
     );
 
+}
+
+async function quoteServiceXlm(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  const priceText = document.getElementById("bookingPrice")
+    ? document.getElementById("bookingPrice").value
+    : "";
+  const parsed = window.HAVKAR_SERVICES && window.HAVKAR_SERVICES.parsePriceInput
+    ? window.HAVKAR_SERVICES.parsePriceInput(priceText)
+    : null;
+  const listEur = parsed && parsed.ok ? parsed.amount : Number(String(priceText).replace(/[^\d.]/g, ""));
+  const out = document.getElementById("serviceXlmQuoteOut");
+  try {
+    const res = await fetch("/api/services", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "services_quote",
+        method: "xlm_mainnet",
+        list_price_eur: listEur || 100
+      })
+    });
+    const quote = await res.json();
+    if (out) {
+      out.style.display = "block";
+      out.textContent = [
+        "Availability: " + (quote.availability_label || "—"),
+        "Customer pays (EUR): " + (quote.customer_pays_eur != null ? quote.customer_pays_eur : "—"),
+        "Provider commission 10%: " + (quote.provider_commission_eur != null ? quote.provider_commission_eur : "—"),
+        "Provider settlement (EUR): " + (quote.provider_settlement_eur != null ? quote.provider_settlement_eur : "—"),
+        "XLM amount: " + (quote.amount_xlm || "—"),
+        "EUR per XLM: " + (quote.eur_per_xlm != null ? quote.eur_per_xlm : "—"),
+        "FX timestamp: " + (quote.rate_as_of || "—"),
+        "FX source: " + (quote.rate_source || "—"),
+        "Network fee (XLM): " + (quote.network_fee_xlm || "—"),
+        "Live charge now: " + String(quote.charge_allowed_now === true),
+        "XLM is Stripe currency?: No"
+      ].join("\n");
+    }
+  } catch (_e) {
+    if (out) {
+      out.style.display = "block";
+      out.textContent = "XLM quote request failed.";
+    }
+  }
 }
 
 
@@ -3133,6 +3216,12 @@ async function submitService(event) {
 
     if (!user) {
         return;
+    }
+
+    const imageInput = document.getElementById("newServiceImage");
+    if (imageInput && imageInput.files && imageInput.files.length) {
+        showToast("The service image was not uploaded. service-images storage is not active on this database yet.");
+        imageInput.value = "";
     }
 
     const title =
@@ -3617,11 +3706,6 @@ function setButtonBusy(
 
 function goBack() {
 
-    if (window.havkarNavigateBack) {
-        window.havkarNavigateBack();
-        return;
-    }
-
     if (window.history.length > 1) {
         window.history.back();
     } else {
@@ -3809,84 +3893,6 @@ function showBookingRole(role) {
 }
 
 
-function centsText(cents) {
-
-    const amount = Number(cents);
-
-    if (!Number.isInteger(amount)) {
-        return "";
-    }
-
-    return (amount / 100).toFixed(2);
-
-}
-
-
-function commissionLine(entry) {
-
-    const rules = window.HAVKAR_SERVICES;
-
-    return [
-        "Customer pays " + centsText(entry.customer_charge_cents),
-        "Provider commission " + centsText(entry.commission_cents),
-        "Fee " + centsText(entry.processing_fee_cents),
-        "Tax " + centsText(entry.tax_cents),
-        rules.liabilityText(entry.liability_state)
-    ].filter(Boolean).join(". ");
-
-}
-
-
-async function readCommissionEntry(bookingId) {
-
-    if (!bookingId) {
-        return null;
-    }
-
-    const result = await db
-        .from("service_commission_entries")
-        .select("booking_id,customer_charge_cents,commission_cents,processing_fee_cents,tax_cents,liability_state,collection_state")
-        .eq("booking_id", bookingId)
-        .maybeSingle();
-
-    if (result.error || !result.data || result.data.collection_state !== "uncollected") {
-        return null;
-    }
-
-    return result.data;
-
-}
-
-
-async function loadCommissionEntries(bookings) {
-
-    commissionByBooking = {};
-    const ids = (bookings || []).map(function(booking) {
-        return booking.id;
-    }).filter(Boolean);
-
-    if (!ids.length) {
-        return;
-    }
-
-    const result = await db
-        .from("service_commission_entries")
-        .select("booking_id,customer_charge_cents,commission_cents,processing_fee_cents,tax_cents,liability_state,collection_state")
-        .in("booking_id", ids);
-
-    if (result.error || !Array.isArray(result.data)) {
-        return;
-    }
-
-    result.data.forEach(function(entry) {
-        if (entry.collection_state === "uncollected") {
-            commissionByBooking[String(entry.booking_id)] = entry;
-        }
-    });
-
-}
-
-
 async function loadBookings() {
 
     const list = document.getElementById("bookingsList");
@@ -3919,7 +3925,6 @@ async function loadBookings() {
     }
 
     loadedBookings = Array.isArray(result.data) ? result.data : [];
-    await loadCommissionEntries(loadedBookings);
     renderBookings();
 
 }
@@ -4002,16 +4007,6 @@ function buildBookingCard(booking) {
 
     }
 
-    const ledger = commissionByBooking[String(booking.id)];
-
-    if (ledger) {
-
-        const money = document.createElement("p");
-        money.textContent = commissionLine(ledger);
-        card.appendChild(money);
-
-    }
-
     const actions = document.createElement("div");
     actions.className = "booking-actions";
 
@@ -4032,6 +4027,26 @@ function buildBookingCard(booking) {
         card.appendChild(actions);
     }
 
+    const complaintButton = document.createElement("button");
+    complaintButton.type = "button";
+    complaintButton.className = "bookings-btn";
+    complaintButton.textContent = "File complaint";
+    complaintButton.addEventListener("click", function() {
+        fileServiceComplaint(booking);
+    });
+    card.appendChild(complaintButton);
+
+    if (bookingRole !== "provider") {
+        const ratingButton = document.createElement("button");
+        ratingButton.type = "button";
+        ratingButton.className = "bookings-btn";
+        ratingButton.textContent = "Rate provider";
+        ratingButton.addEventListener("click", function() {
+            rateServiceProvider(booking);
+        });
+        card.appendChild(ratingButton);
+    }
+
     return card;
 
 }
@@ -4043,7 +4058,7 @@ function bookingActions(booking) {
 
     if (bookingRole === "provider") {
 
-        return ["accepted", "declined", "completed"]
+        return ["accepted", "declined", "completion_requested"]
             .filter(function(status) {
                 return rules.providerBookingTransition(booking.status, status);
             })
@@ -4052,7 +4067,7 @@ function bookingActions(booking) {
                 const labels = {
                     accepted: "Accept",
                     declined: "Decline",
-                    completed: "Mark completed"
+                    completion_requested: "Request completion code"
                 };
 
                 return {
@@ -4083,6 +4098,25 @@ async function changeBookingStatus(booking, toStatus) {
     const user = await requireUser();
 
     if (!user) {
+        return;
+    }
+
+    if (toStatus === "completion_requested") {
+        const { data } = await db.auth.getSession();
+        const token = data && data.session && data.session.access_token;
+        const response = await fetch("/api/service-commerce", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": token ? "Bearer " + token : ""
+            },
+            body: JSON.stringify({
+                action: "request-completion",
+                bookingId: booking.id
+            })
+        });
+        const payload = await response.json().catch(function() { return {}; });
+        showToast(payload.error || "Completion confirmation is not available yet. The booking was not marked completed.");
         return;
     }
 
@@ -4284,6 +4318,70 @@ async function changeOwnServiceStatus(serviceId, toStatus) {
 }
 
 
+function publicProviderName(service) {
+    const name = service && (service.public_display_name || service.display_name);
+    const label = typeof name === "string" && name.trim() && name.trim() !== "HAVKAR Provider"
+        ? name.trim()
+        : "Service provider";
+    return service && service.provider_verified === true
+        ? label + " (verified)"
+        : label;
+}
+
+
+async function fileServiceComplaint(booking) {
+    const user = await requireUser();
+    if (!user || !window.HAVKAR_SERVICE_COMMERCE) return;
+    const category = window.prompt(
+        "Complaint category: service_not_completed, poor_service_quality, incorrect_price, payment_disagreement, provider_did_not_arrive, customer_did_not_pay, other"
+    );
+    const explanation = category ? window.prompt("Describe the complaint. This text cannot be edited after it is saved.") : "";
+    const draft = window.HAVKAR_SERVICE_COMMERCE.complaintDraft({
+        bookingId: booking.id,
+        authorId: user.id,
+        category: category,
+        explanation: explanation
+    });
+    if (!draft.ok) {
+        showToast("The complaint was not saved.");
+        return;
+    }
+    const result = await db.from("service_complaints").insert(draft.row);
+    if (result.error) {
+        showToast("The complaint could not be saved. The database update may still need approval.");
+        return;
+    }
+    showToast("Complaint submitted. It stays linked to this booking.");
+}
+
+
+async function rateServiceProvider(booking) {
+    const user = await requireUser();
+    if (!user || !window.HAVKAR_SERVICE_COMMERCE) return;
+    const rating = Number(window.prompt("Rate the provider from 1 to 5. A rating is separate from a complaint."));
+    const reviewText = window.prompt("Write the review. The provider can reply, but cannot change this rating.");
+    const draft = window.HAVKAR_SERVICE_COMMERCE.reviewDraft({
+        bookingId: booking.id,
+        customerId: user.id,
+        providerId: booking.provider_id,
+        bookingCustomerId: booking.customer_id,
+        bookingStatus: booking.status,
+        rating: rating,
+        reviewText: reviewText
+    });
+    if (!draft.ok) {
+        showToast("This booking cannot take a verified review yet.");
+        return;
+    }
+    const result = await db.from("service_reviews").insert(draft.row);
+    if (result.error) {
+        showToast("The review was not saved. Only an eligible booking customer can review once.");
+        return;
+    }
+    showToast("Review submitted.");
+}
+
+
 function getCurrentUserDisplayName() {
 
     const meta =
@@ -4312,10 +4410,7 @@ function safeImageUrl(value) {
             window.location.origin
         );
 
-        if (
-            url.protocol === "https:" ||
-            url.protocol === "http:"
-        ) {
+        if (url.protocol === "https:" && !url.username && !url.password) {
             return url.href;
         }
     } catch (_) {}
@@ -4345,6 +4440,5 @@ function escapeHtml(text) {
 
 <script src="/havkar-i18n.js"></script>
 
-<script src="/havkar-page-back.js"></script>
 </body>
    </html>

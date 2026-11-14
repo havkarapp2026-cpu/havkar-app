@@ -1,10 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><link rel="manifest" href="/manifest.json">
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/havkar-icon-32-20261022-v3.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/havkar-icon-16-20261022-v3.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/havkar-icon-180-20261022-v3.png">
-
+<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -1210,7 +1206,7 @@ a.primary{
     <button
       class="back-btn"
       type="button"
-      onclick="window.havkarNavigateBack ? window.havkarNavigateBack() : goHome()"
+      onclick="goHome()"
       aria-label="Back">
 
       <i class="fas fa-arrow-left"></i>
@@ -1546,7 +1542,7 @@ a.primary{
         id="jobLocation"
         type="text"
         maxlength="120"
-        placeholder="City, country"
+        placeholder="Crotone, Italy"
       >
     </div>
 
@@ -1619,13 +1615,25 @@ a.primary{
         id="jobContact"
         type="text"
         maxlength="200"
-        placeholder="name@company.com or phone number"
+        placeholder="name@company.com or +391234567890"
         autocomplete="off"
       >
     </div>
 
+    <div class="form-group">
+      <label for="jobPositions">Open positions</label>
+      <input
+        id="jobPositions"
+        type="number"
+        min="1"
+        max="100000"
+        step="1"
+        value="1"
+      >
+    </div>
+
     <div class="plan-title">
-      Choose a monthly publishing plan
+      Choose a one-time 30-day publishing plan
     </div>
 
     <div class="plans">
@@ -1636,7 +1644,7 @@ a.primary{
         data-plan="Basic"
         onclick="selectPlan(this)">
 
-        <strong>Basic — €9.99 / month</strong>
+        <strong>Basic — €9.99 for 30 days</strong>
 
         <span>
           For small businesses and one active job.
@@ -1650,7 +1658,7 @@ a.primary{
         data-plan="Professional"
         onclick="selectPlan(this)">
 
-        <strong>Professional — €19.99 / month</strong>
+        <strong>Professional — €19.99 for 30 days</strong>
 
         <span>
           More visibility and multiple active jobs.
@@ -1664,7 +1672,7 @@ a.primary{
         data-plan="Business"
         onclick="selectPlan(this)">
 
-        <strong>Business — €39.99 / month</strong>
+        <strong>Business — €39.99 for 30 days</strong>
 
         <span>
           For businesses with regular recruitment.
@@ -1674,10 +1682,40 @@ a.primary{
 
     </div>
 
+    <div class="plan-title">
+      Company monthly subscription
+    </div>
+
+    <p class="notice">
+      A company subscription covers advertisements for that verified company and its branches.
+      The limit counts advertisements, not open positions.
+      If payment fails, is canceled, or expires, advertisements stay in history and leave public search.
+    </p>
+
+    <div class="plans">
+      <div class="plan" data-price="49.99" data-plan="business" data-kind="company" onclick="selectPlan(this)">
+        <strong>Business — €49.99 / month</strong>
+        <span>Maximum 10 simultaneously active advertisements.</span>
+      </div>
+      <div class="plan" data-price="99.99" data-plan="business_plus" data-kind="company" onclick="selectPlan(this)">
+        <strong>Business Plus — €99.99 / month</strong>
+        <span>Maximum 30 simultaneously active advertisements.</span>
+      </div>
+      <div class="plan" data-price="199.99" data-plan="enterprise" data-kind="company" onclick="selectPlan(this)">
+        <strong>Enterprise — €199.99 / month</strong>
+        <span>Maximum 100 simultaneously active advertisements.</span>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="jobCompanyId">Verified company id</label>
+      <input id="jobCompanyId" type="text" maxlength="80" autocomplete="off" placeholder="Required only for a company subscription">
+    </div>
+
     <div class="summary">
 
       <strong>
-        Monthly publishing fee
+        One-time publishing fee
       </strong>
 
       <br>
@@ -1695,7 +1733,8 @@ a.primary{
     <div class="notice">
       Your job will remain
       <strong>Pending payment</strong>
-      until a real payment provider confirms the subscription.
+      until a verified payment confirms this 30-day advertisement.
+      It does not renew automatically.
     </div>
 
     <button
@@ -1939,8 +1978,8 @@ a.primary{
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-job-billing.js"></script>
 <script src="/havkar-jobs.js"></script>
-<script src="/havkar-xlm-checkout.js"></script>
 <script>
 
 /* =========================================================
@@ -2040,11 +2079,35 @@ async function loadSupabaseJobs(){
 
   await refreshCurrentUser();
 
-  const { data, error } =
+  const columns = "id,created_at,user_id,title,company,location,job_type,salary,description,requirements,contact,status,expires_at,application_url,remote,category,language,experience_level,education_level,skills,currency,salary_min,salary_max,type,image,plan,monthly_fee";
+  const publicResult =
     await supabaseClient
       .from("jobs")
-      .select("id,created_at,user_id,title,company,location,job_type,salary,description,requirements,contact,status,expires_at,application_url,remote,category,language,experience_level,education_level,skills,currency,salary_min,salary_max,type,image,plan,monthly_fee")
+      .select(columns)
+      .eq("status", "active")
       .order("created_at", { ascending:false });
+
+  let ownRows = [];
+  if(currentUser){
+    const ownResult =
+      await supabaseClient
+        .from("jobs")
+        .select(columns)
+        .eq("user_id", currentUser.id)
+        .order("created_at", { ascending:false });
+    if(ownResult.error){
+      console.error("HAVKAR: Could not load your jobs from Supabase.", ownResult.error);
+    }else{
+      ownRows = ownResult.data || [];
+    }
+  }
+
+  const data = []
+    .concat(publicResult.data || [], ownRows)
+    .filter((job, index, list) =>
+      list.findIndex(item => String(item.id) === String(job.id)) === index
+    );
+  const error = publicResult.error;
 
   if(error){
     console.error("HAVKAR: Could not load jobs from Supabase.", error);
@@ -2974,7 +3037,10 @@ function selectPlan(element){
     price:
       Number(
         element.dataset.price
-      )
+      ),
+
+    kind:
+      element.dataset.kind || "ordinary"
 
   };
 
@@ -3451,26 +3517,50 @@ async function submitJob(){
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
   }
 
-  const result = await window.HAVKAR_JOBS.createOwnJob(
-    supabaseClient,
-    {
-      userId:currentUser.id,
-      plan:selectedPlan,
-      draft:{
-        title,
-        company,
-        location,
-        type,
-        salary,
-        skills,
-        description,
-        requirements,
-        application_url:applicationUrl,
-        contact,
-        image:selectedJobImage || null
-      }
+  const draft = {
+    title,
+    company,
+    location,
+    type,
+    salary,
+    skills,
+    description,
+    requirements,
+    application_url:applicationUrl,
+    contact,
+    positions:document.getElementById("jobPositions").value,
+    image:selectedJobImage || null
+  };
+  let result;
+  if(selectedPlan.kind === "company"){
+    const built = window.HAVKAR_JOBS.buildCompanyJobInsert(
+      draft,
+      currentUser.id,
+      selectedPlan.name,
+      document.getElementById("jobCompanyId").value.trim()
+    );
+    if(!built.ok){
+      result = built;
+    }else{
+      const inserted = await supabaseClient
+        .from("jobs")
+        .insert(built.payload)
+        .select(window.HAVKAR_JOBS.JOB_COLUMNS)
+        .single();
+      result = inserted.error
+        ? { ok:false, message:inserted.error.message || "The company advertisement could not be saved." }
+        : { ok:true, row:inserted.data };
     }
-  );
+  }else{
+    result = await window.HAVKAR_JOBS.createOwnJob(
+      supabaseClient,
+      {
+        userId:currentUser.id,
+        plan:selectedPlan,
+        draft:draft
+      }
+    );
+  }
 
   if(submitButton){
     submitButton.disabled = false;
@@ -3490,6 +3580,15 @@ async function submitJob(){
   }
 
   const newJob = normalizeJob(result.row);
+  if(selectedPlan.kind === "company"){
+    newJob.employer_kind = "company";
+    newJob.company_id = document.getElementById("jobCompanyId").value.trim();
+    newJob.plan = selectedPlan.name;
+    newJob.monthly_fee = selectedPlan.price;
+  }
+  if(result.positionsStored === false && Number(draft.positions) > 1){
+    alert("The advertisement was saved as unpaid. The open-position count is not stored until the jobs database update is applied.");
+  }
   jobs = [newJob, ...jobs.filter(job => String(job.id) !== String(newJob.id))];
 
   closeModal("postModal");
@@ -3551,7 +3650,7 @@ function showPaymentScreen(job){
       <div class="detail-row">
 
         <span class="detail-label">
-          Monthly plan
+          30-day plan
         </span>
 
         <span class="detail-value">
@@ -3563,7 +3662,7 @@ function showPaymentScreen(job){
       <div class="detail-row">
 
         <span class="detail-label">
-          Monthly fee
+          One-time fee
         </span>
 
         <span class="detail-value">
@@ -3585,39 +3684,45 @@ function showPaymentScreen(job){
 
       It will not be treated as an active paid advertisement
       until the real payment provider confirms the transaction.
+      Live charging stays OFF until Owner sets
+      <code>HAVKAR_JOB_PAYMENTS_ENABLED=true</code>.
 
     </div>
 
-    <button
-      class="primary"
-      type="button"
-      onclick="
-        startRealPayment(
-          '${escapeJS(job.id)}'
-        )
-      ">
-
-      <i class="fas fa-credit-card"></i>
-
-      Pay €${Number(
-        job.monthly_fee
-      ).toFixed(2)} / month
-
-    </button>
-
-    <button
-      class="secondary"
-      type="button"
-      onclick="
-        quoteJobXlm(
-          '${escapeJS(job.id)}',
-          '${escapeJS(String(job.monthly_fee))}'
-        )
-      ">
-
-      XLM cannot start this monthly plan
-
-    </button>
+    <div class="pay-methods" style="display:grid;gap:12px;margin:14px 0;">
+      <article class="pay-card" style="border:1px solid #1b5e20;border-radius:12px;padding:12px;background:#f4faf4;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <strong style="background:#1b5e20;color:#fff;padding:4px 10px;border-radius:999px;">Stripe</strong>
+          <span style="color:#c77700;font-weight:600;">Not yet available</span>
+        </div>
+        <p style="margin:8px 0 4px;"><strong>Pay by card / supported currencies</strong></p>
+        <p style="margin:0;font-size:12px;opacity:.85;">133 IT Stripe presentment currencies · settlement EUR · charge_now=false</p>
+        <button
+          class="primary"
+          type="button"
+          style="margin-top:10px;"
+          onclick="startRealPayment('${escapeJS(job.id)}','stripe')">
+          <i class="fas fa-credit-card"></i>
+          Stripe quote / pay €${Number(job.monthly_fee || 0).toFixed(2)}
+        </button>
+      </article>
+      <article class="pay-card" style="border:1px solid #1b5e20;border-radius:12px;padding:12px;background:#f4faf4;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <strong style="background:#1b5e20;color:#fff;padding:4px 10px;border-radius:999px;">✦ Stellar XLM</strong>
+          <span style="color:#c77700;font-weight:600;">Not yet available</span>
+        </div>
+        <p style="margin:8px 0 4px;"><strong>Pay with XLM wallet</strong></p>
+        <p style="margin:0;font-size:12px;opacity:.85;">Native XLM only (not a Stripe currency) · Mainnet rails · ordinary one-time only</p>
+        <button
+          class="primary"
+          type="button"
+          style="margin-top:10px;"
+          onclick="startRealPayment('${escapeJS(job.id)}','xlm_mainnet')">
+          XLM quote (no charge until Owner arm)
+        </button>
+        <pre id="jobXlmQuoteOut" style="display:none;white-space:pre-wrap;font-size:12px;margin-top:8px;background:#fff;border-radius:8px;padding:8px;"></pre>
+      </article>
+    </div>
 
     <button
       class="secondary"
@@ -3635,21 +3740,26 @@ function showPaymentScreen(job){
   openModal(
     "paymentModal"
   );
+  loadJobsPaymentMethodsStatus();
 }
 
 /* =========================================================
    PAYMENT
    ========================================================= */
 
-function startRealPayment(jobId){
+async function loadJobsPaymentMethodsStatus(){
+  try{
+    const res = await fetch("/api/jobs", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ action:"jobs_payment_methods" })
+    });
+    const body = await res.json();
+    window.__HAVKAR_JOBS_PAY_METHODS = body;
+  }catch(_e){}
+}
 
-  /*
-    IMPORTANT:
-    No fake payment confirmation.
-
-    A real payment provider/backend
-    must be connected before activation.
-  */
+async function startRealPayment(jobId, method){
 
   const job =
     jobs.find(
@@ -3660,36 +3770,76 @@ function startRealPayment(jobId){
 
   if(!job) return;
 
-  alert(
-    "The payment gateway is not connected yet. " +
-    "Your advertisement has NOT been activated."
-  );
-}
+  const payMethod = method || "stripe";
+  const companyJob = job.employer_kind === "company";
 
-async function quoteJobXlm(jobId, fee){
-
-  const session =
-    await supabaseClient.auth.getSession();
-  const accessToken =
-    session &&
-    session.data &&
-    session.data.session &&
-    session.data.session.access_token;
-
-  if(!accessToken || !window.HAVKAR_XLM){
-    alert("Sign in before checking XLM. The job was not activated.");
+  if(payMethod === "xlm_mainnet" || payMethod === "xlm"){
+    if(companyJob){
+      alert("Corporate monthly subscriptions renew on Stripe only. XLM cannot start automatic renewals. The advertisement has NOT been activated.");
+      return;
+    }
+    const quoteRes = await fetch("/api/jobs", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({
+        action:"jobs_quote",
+        method:"xlm_mainnet",
+        plan: job.plan || "Professional"
+      })
+    });
+    const quote = await quoteRes.json().catch(() => ({}));
+    const out = document.getElementById("jobXlmQuoteOut");
+    if(out){
+      out.style.display = "block";
+      out.textContent = [
+        "Availability: " + (quote.availability_label || "—"),
+        "Method: " + (quote.payment_method || "xlm_mainnet"),
+        "List EUR: " + (quote.list_price_eur != null ? quote.list_price_eur : "—"),
+        "XLM amount: " + (quote.amount_xlm || "—"),
+        "EUR per XLM: " + (quote.eur_per_xlm != null ? quote.eur_per_xlm : "—"),
+        "FX timestamp: " + (quote.rate_as_of || "—"),
+        "FX source: " + (quote.rate_source || "—"),
+        "Network fee (XLM): " + (quote.network_fee_xlm || "—"),
+        "Live charge now: " + String(quote.charge_allowed_now === true),
+        "XLM is Stripe currency?: No"
+      ].join("\n");
+    }
+    if(quote.charge_allowed_now !== true){
+      alert((quote.availability_reason || quote.error || "XLM job payment is not armed.") + " The advertisement has NOT been activated.");
+      return;
+    }
+    alert("XLM live settlement path is armed only after Owner authorization. The advertisement has NOT been activated.");
     return;
   }
 
-  const quoted =
-    await window.HAVKAR_XLM.quote({
-      flow: "subscription",
-      price: fee,
-      subjectId: String(jobId),
-      accessToken: accessToken
-    });
+  const { data } = await supabaseClient.auth.getSession();
+  const token = data && data.session && data.session.access_token;
+  if(!token){
+    alert("Please sign in before payment. The advertisement has NOT been activated.");
+    return;
+  }
 
-  alert(window.HAVKAR_XLM.describe(quoted.result) + " The job was not activated.");
+  const response = await fetch(companyJob ? "/api/job-billing" : "/api/job-checkout", {
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization":"Bearer " + token
+    },
+    body:JSON.stringify(companyJob
+      ? { companyId:job.company_id, planCode:job.plan }
+      : { jobId:job.id })
+  });
+  const payload = await response.json().catch(() => ({}));
+
+  if(payload.url && payload.activated !== true){
+    window.location.href = payload.url;
+    return;
+  }
+
+  alert(
+    (payload.error || "The payment gateway is not connected yet.") +
+    " Your advertisement has NOT been activated."
+  );
 }
 
 /* =========================================================
@@ -4412,6 +4562,5 @@ loadSupabaseJobs();
 
 <script src="/havkar-i18n.js"></script>
 
-<script src="/havkar-page-back.js"></script>
 </body>
   </html>
