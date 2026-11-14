@@ -1,6 +1,5 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import { createRequire } from "module";
 import { cardPaymentsAllowed } from "../lib/real-payments.cjs";
 import {
   evaluateStellarCheckout,
@@ -10,19 +9,20 @@ import {
   xlmFromEur
 } from "../lib/stellar-checkout.cjs";
 
-const require = createRequire(import.meta.url);
-const {
-  isCommerceRoute,
-  handleCommerceRoute
-} = require("../havkar-commerce-api.js");
-const {
-  jobsPaymentMethods,
-  servicesPaymentMethods
-} = require("../lib/jobs-services-payments.cjs");
-const jobBilling = require("../havkar-job-billing.js");
-
 let stripeClient = null;
 let supabaseAdminClient = null;
+
+async function loadCommerceApi() {
+  return import("../havkar-commerce-api.js");
+}
+
+async function loadJobsServicesPayments() {
+  return import("../lib/jobs-services-payments.cjs");
+}
+
+async function loadJobBilling() {
+  return import("../havkar-job-billing.js");
+}
 
 function getStripe() {
   if (!stripeClient) {
@@ -261,7 +261,12 @@ export default async function handler(req, res) {
   const commerceRoute =
     typeof req.query?.havkarRoute === "string" ? req.query.havkarRoute : "";
 
-  if (isCommerceRoute(commerceRoute)) {
+  const commerceApi = await loadCommerceApi();
+  const isCommerceRoute = commerceApi.isCommerceRoute || commerceApi.default?.isCommerceRoute;
+  const handleCommerceRoute =
+    commerceApi.handleCommerceRoute || commerceApi.default?.handleCommerceRoute;
+
+  if (typeof isCommerceRoute === "function" && isCommerceRoute(commerceRoute)) {
     return handleCommerceRoute({
       route: commerceRoute,
       req,
@@ -282,6 +287,15 @@ export default async function handler(req, res) {
       bodyAction === "jobs_quote" ||
       bodyAction === "services_quote")
   ) {
+    const paymentsApi = await loadJobsServicesPayments();
+    const jobsPaymentMethods =
+      paymentsApi.jobsPaymentMethods || paymentsApi.default?.jobsPaymentMethods;
+    const servicesPaymentMethods =
+      paymentsApi.servicesPaymentMethods ||
+      paymentsApi.default?.servicesPaymentMethods;
+    const billingMod = await loadJobBilling();
+    const jobBilling = billingMod.default || billingMod;
+
     if (bodyAction === "jobs_payment_methods") {
       return res.status(200).json(jobsPaymentMethods(process.env));
     }
