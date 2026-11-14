@@ -418,15 +418,26 @@ body {
 
         </button>
 
+        <button id="buyNowButton" class="contact-btn" type="button" style="margin-top:10px;background:linear-gradient(145deg,#0d3d16,#2e7d32);font-weight:800">
+            Buy Now
+        </button>
+
         <div id="payPanel" class="pay-panel" hidden>
             <h3>Secure checkout</h3>
-            <p>Buyer fee 2% · Seller fee 3% · Listing publication free. Shipping and taxes are separate when applicable.</p>
+            <p>Buyer fee 2% · Seller fee 3% · Listing publication free. Shipping and taxes are separate when applicable. XLM is Stellar Mainnet (not Stripe Testnet).</p>
+            <label for="productCheckoutCurrency" style="display:block;margin:8px 0 4px;font-weight:700">Presentment currency (133)</label>
+            <select id="productCheckoutCurrency" style="width:100%;min-height:44px;border-radius:12px;margin-bottom:8px"></select>
+            <label for="productFulfillment" style="display:block;margin:8px 0 4px;font-weight:700">Shipping or pickup</label>
+            <select id="productFulfillment" style="width:100%;min-height:44px;border-radius:12px;margin-bottom:8px">
+                <option value="pickup">Local pickup</option>
+                <option value="delivery">Delivery / shipping</option>
+            </select>
             <dl id="feeBreakdown"></dl>
             <div class="pay-actions">
-                <button id="quoteStripeBtn" class="pay-btn" type="button">Quote Stripe (no charge yet)</button>
-                <button id="quoteXlmBtn" class="pay-btn secondary" type="button">Quote Stellar XLM (no charge yet)</button>
-                <button id="payStripeBtn" class="pay-btn" type="button" hidden>Pay with Stripe</button>
-                <button id="payXlmBtn" class="pay-btn secondary" type="button" hidden>Pay with Stellar XLM</button>
+                <button id="quoteStripeBtn" class="pay-btn" type="button">Quote Stripe</button>
+                <button id="quoteXlmBtn" class="pay-btn secondary" type="button">Quote Stellar XLM Mainnet</button>
+                <button id="payStripeBtn" class="pay-btn" type="button">Pay with Stripe</button>
+                <button id="payXlmBtn" class="pay-btn secondary" type="button">Pay with Stellar XLM Mainnet</button>
             </div>
             <p id="payStatus" class="pay-status" role="status" aria-live="polite"></p>
         </div>
@@ -438,6 +449,7 @@ body {
 
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-marketplace.js"></script>
+<script src="/havkar-presentment-currencies.js"></script>
 <script>
 
 
@@ -706,7 +718,7 @@ async function quoteMarketplace(method) {
             body: JSON.stringify({
                 action: "marketplace_quote",
                 method: method,
-                currency: String(currentAd.currency || "eur").toLowerCase(),
+                currency: String((currentAd._checkoutCurrency || currentAd.currency || "eur")).toLowerCase(),
                 list_price_eur: Number(currentAd.price),
                 listing_id: currentAd.id
             })
@@ -719,7 +731,7 @@ async function quoteMarketplace(method) {
         if (body.fees) renderFeeBreakdown(body.fees);
         const extra =
             method.indexOf("xlm") >= 0 && body.amount_xlm
-                ? " · XLM display " + body.amount_xlm + " (rate " + (body.eur_per_xlm || "?") + ")"
+                ? " · XLM Mainnet " + body.amount_xlm + " (rate " + (body.eur_per_xlm || "?") + ")"
                 : "";
         setPayStatus(
             "Quote ready. charge_created=" +
@@ -731,12 +743,8 @@ async function quoteMarketplace(method) {
         );
         const payBtn = document.getElementById("payStripeBtn");
         const payXlm = document.getElementById("payXlmBtn");
-        if (payBtn && method === "stripe" && body.trade_payments_enabled) {
-            payBtn.hidden = false;
-        }
-        if (payXlm && method.indexOf("xlm") >= 0 && body.trade_payments_enabled) {
-            payXlm.hidden = false;
-        }
+        if (payBtn) payBtn.hidden = false;
+        if (payXlm) payXlm.hidden = false;
     } catch (_error) {
         setPayStatus("Could not reach marketplace quote API.");
     }
@@ -825,7 +833,33 @@ async function startStripeCheckout() {
 function setupMarketplacePayments(ad) {
     const panel = document.getElementById("payPanel");
     if (!panel || !ad) return;
-    panel.hidden = false;
+    const buyNow = document.getElementById("buyNowButton");
+    const currencySelect = document.getElementById("productCheckoutCurrency");
+    if (currencySelect && window.HAVKAR_PRESENTMENT_CURRENCIES) {
+        const preferred = String(ad.currency || "eur").toLowerCase();
+        currencySelect.innerHTML = "";
+        window.HAVKAR_PRESENTMENT_CURRENCIES.list.forEach(function (item) {
+            const opt = document.createElement("option");
+            opt.value = item.code;
+            opt.textContent = String(item.code).toUpperCase() + " — " + item.name;
+            if (item.code === preferred) opt.selected = true;
+            currencySelect.appendChild(opt);
+        });
+        currencySelect.onchange = function () {
+            currentAd = currentAd || ad;
+            currentAd._checkoutCurrency = currencySelect.value;
+        };
+    }
+    if (buyNow) {
+        buyNow.onclick = function () {
+            panel.hidden = false;
+            panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        };
+        // Keep Buy Now visible; open panel by default for purchasable items
+        panel.hidden = false;
+    } else {
+        panel.hidden = false;
+    }
     const localFees =
         window.HAVKAR_MARKETPLACE &&
         typeof window.HAVKAR_MARKETPLACE.quoteListingFees === "function"
