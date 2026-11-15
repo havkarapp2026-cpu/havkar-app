@@ -219,4 +219,8 @@ stub عمدی launch-safe.
 
 ## Commit / PR
 
-پس از push در همین اجرا پر می‌شود: SHA شاخه + شماره PR.
+- شاخه: `cursor/global-premium-platform-d4b2`
+- Tip SHA: `830dcb672cb89ba8072482b7a094ea3ac7614b7e`
+- Hotels restore SHA: `89f4ece5`
+- PR: **#199** (base: `cursor/platform-audit-repair-d4b2`, stacked on #197)
+- Production live: **NOT LIVE** until Owner merge/deploy
