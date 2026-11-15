@@ -8,6 +8,7 @@ import {
   assistantInstruction,
   validateAssistantRequest
 } from "../supabase/functions/havkar-ai-assistant/policy.mjs";
+import { markdownInlineParts } from "../havkar-ai-render.mjs";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const page = fs.readFileSync(path.join(root, "havkar-ai.html"), "utf8");
@@ -57,13 +58,36 @@ assert.match(page, />Business Ideas</);
 assert.match(page, /new_idea: \{ messages: 12/);
 assert.match(page, /Refine this idea/);
 assert.match(page, /Develop this idea/);
+assert.match(page, /labeledAction\("Refine this idea"\)/);
+assert.match(page, /labeledAction\("Develop this idea"\)/);
+assert.match(page, /labeledAction\("Copy"\)/);
+assert.match(page, /labeledAction\("Regenerate"/);
+assert.match(page, /refreshActionLabels/);
 assert.match(page, /task: currentTool/);
 assert.match(page, /from\("ai_messages"\)\.upsert/);
+assert.match(page, /item\.task \|\| restoredTask/);
+assert.match(page, /selectTool\(restoredTask\)/);
 assert.doesNotMatch(page, /mockNewIdea|fakeNewIdea|MOCK_NEW_IDEA/i);
 
 assert.match(phrases, /"New Idea"/);
 assert.match(phrases, /ایده جدید/);
+assert.match(phrases, /"Copy"/);
+assert.match(phrases, /"Regenerate"/);
+assert.match(phrases, /این ایده را اصلاح کن/);
+assert.match(phrases, /بازتولید/);
 assert.match(bundled, /new_idea:R/);
 assert.match(bundled, /HAVKAR New Idea tool/);
+
+assert.deepEqual(markdownInlineParts("Try **bold** and plain"), [
+  { type: "text", text: "Try " },
+  { type: "strong", text: "bold" },
+  { type: "text", text: " and plain" }
+]);
+assert.deepEqual(markdownInlineParts("**عنوان** ایده"), [
+  { type: "strong", text: "عنوان" },
+  { type: "text", text: " ایده" }
+]);
+assert.match(fs.readFileSync(path.join(root, "havkar-ai-render.mjs"), "utf8"), /markdownInlineParts/);
+assert.match(fs.readFileSync(path.join(root, "havkar-ai-render.mjs"), "utf8"), /createElement\("strong"\)/);
 
 console.log("HAVKAR_AI_NEW_IDEA_TEST_OK");

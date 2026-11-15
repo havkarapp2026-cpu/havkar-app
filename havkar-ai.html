@@ -833,7 +833,7 @@ function speechEngine() {
 }
 
 function interfaceText(text) {
-  const code = document.documentElement.lang;
+  const code = languageCode() || document.documentElement.lang || "en";
   const table = window.HAVKAR_UI_DICTIONARY && window.HAVKAR_UI_DICTIONARY[code];
   return table && table[text] ? table[text] : text;
 }
@@ -1016,29 +1016,6 @@ function addBubble(role, text, pending) {
     dots.append(document.createElement("i"), document.createElement("i"), document.createElement("i"));
     bubble.appendChild(dots);
   } else renderAssistant(bubble, text);
-  if (!pending && role === "assistant") {
-    const actions = document.createElement("div");
-    actions.className = "bubble-actions";
-    const copy = document.createElement("button");
-    copy.type = "button";
-    copy.className = "mini";
-    copy.textContent = "Copy";
-    copy.addEventListener("click", async () => {
-      try {
-        await navigator.clipboard.writeText(text);
-        copy.textContent = "Copied";
-      } catch (error) {
-        setStatus("Copy is not available in this browser.");
-      }
-    });
-    const regen = document.createElement("button");
-    regen.type = "button";
-    regen.className = "mini regen";
-    regen.textContent = "Regenerate";
-    regen.addEventListener("click", () => regenerate());
-    actions.append(copy, regen);
-    bubble.appendChild(actions);
-  }
   turn.appendChild(bubble);
   transcript.appendChild(turn);
   transcript.scrollTop = transcript.scrollHeight;
@@ -1273,9 +1250,12 @@ async function openThread(id) {
   if (!Array.isArray(thread.messages)) return;
   activeThreadId = thread.id;
   history.splice(0, history.length, ...thread.messages.filter((item) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string"));
+  const restoredTask = [...history].reverse().find((item) => item.task && limits[item.task])?.task || "general";
+  selectTool(restoredTask);
   transcript.replaceChildren();
   for (const item of history) {
     const bubble = addBubble(item.role, item.content, false);
+    if (item.role === "assistant") addAssistantActions(bubble, item.content, item.task || restoredTask);
     if (item.imagePath) await showGeneratedImage(bubble, item.imagePath);
   }
   if (!history.length) {
@@ -1339,6 +1319,8 @@ async function chooseLanguage(code) {
   }
   const i18n = window.HAVKAR_I18N;
   if (i18n && typeof i18n.setLanguage === "function") i18n.setLanguage(code);
+  applyInterfaceDirection();
+  refreshActionLabels();
   syncVoiceAvailability(code);
   const blocked = kurdishSpeechBlock(code);
   if (blocked) setStatus(blocked);
@@ -1534,43 +1516,52 @@ function beginSend(sendPart) {
   askAssistant(content, null);
 }
 
-function addAssistantActions(bubble, text) {
+function labeledAction(english, className) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className || "mini";
+  button.dataset.actionLabel = english;
+  button.textContent = interfaceText(english);
+  return button;
+}
+
+function refreshActionLabels() {
+  document.querySelectorAll("[data-action-label]").forEach((button) => {
+    if (button.dataset.actionState === "copied") {
+      button.textContent = interfaceText("Copied");
+      return;
+    }
+    button.textContent = interfaceText(button.dataset.actionLabel);
+  });
+}
+
+function addAssistantActions(bubble, text, taskOverride) {
   if (!bubble || bubble.querySelector(".bubble-actions")) return;
+  const tool = taskOverride && limits[taskOverride] ? taskOverride : currentTool;
   const actions = document.createElement("div");
   actions.className = "bubble-actions";
-  const copy = document.createElement("button");
-  copy.type = "button";
-  copy.className = "mini";
-  copy.textContent = "Copy";
+  const copy = labeledAction("Copy");
   copy.addEventListener("click", async () => {
     try {
       await navigator.clipboard.writeText(text);
-      copy.textContent = "Copied";
+      copy.dataset.actionState = "copied";
+      copy.textContent = interfaceText("Copied");
     } catch (error) {
-      setStatus("Copy is not available in this browser.");
+      setStatus(interfaceText("Copy is not available in this browser."));
     }
   });
-  const regen = document.createElement("button");
-  regen.type = "button";
-  regen.className = "mini regen";
-  regen.textContent = "Regenerate";
+  const regen = labeledAction("Regenerate", "mini regen");
   regen.addEventListener("click", () => regenerate());
   actions.append(copy, regen);
-  if (currentTool === "new_idea") {
-    const refine = document.createElement("button");
-    refine.type = "button";
-    refine.className = "mini";
-    refine.textContent = "Refine this idea";
+  if (tool === "new_idea") {
+    const refine = labeledAction("Refine this idea");
     refine.addEventListener("click", () => {
       selectTool("new_idea");
       question.value = "Refine the idea above. Keep what works, improve clarity, and propose a sharper version.";
       updateCount();
       beginSend(false);
     });
-    const develop = document.createElement("button");
-    develop.type = "button";
-    develop.className = "mini";
-    develop.textContent = "Develop this idea";
+    const develop = labeledAction("Develop this idea");
     develop.addEventListener("click", () => {
       selectTool("new_idea");
       question.value = "Develop the idea above with structure, next steps, risks, and two useful variations.";
