@@ -53,7 +53,10 @@ function isIdeasStudioRequest(req) {
     action.startsWith("accept_agreement") ||
     action.startsWith("aldo_") ||
     action === "list_templates" ||
-    action === "ideas_studio_status"
+    action === "ideas_studio_status" ||
+    action === "analyze_idea" ||
+    action === "billing_quote" ||
+    action === "marketplace_prepare"
   );
 }
 

@@ -196,11 +196,11 @@
     preview.style.setProperty("--preview-accent", theme.accent || "#1c9a43");
     preview.innerHTML =
       '<div class="preview-shell">' +
-      '<p class="sim-banner">PRIVATE PREVIEW · not publicly published</p>' +
+      '<p class="sim-banner">PRIVATE SANDBOX · not publicly published · payments OFF</p>' +
       "<h3>" +
       escapeHtml((config && config.heroTitle) || (config && config.template_name) || "Venture") +
       "</h3><p>" +
-      escapeHtml((config && config.heroSubtitle) || "Template-based Studio preview") +
+      escapeHtml((config && config.heroSubtitle) || "HAVKAR CREATE template preview") +
       "</p><ul>" +
       ((config && config.sections) || [])
         .map(function (s) {
@@ -213,7 +213,15 @@
           escapeHtml(config.unsupported.join(", ")) +
           "</p>"
         : "") +
+      (config && config.gameUrl
+        ? "<p><a href='" +
+          escapeHtml(config.gameUrl) +
+          "' target='_blank' rel='noopener'>Open linked demo</a></p>"
+        : "") +
       "</div>";
+    if (root.HAVKAR_CREATE_RUNTIME && $("createSandbox")) {
+      root.HAVKAR_CREATE_RUNTIME.mount($("createSandbox"), config || {});
+    }
   }
 
   async function openVenture(id) {
@@ -515,6 +523,70 @@
           });
           await refreshLedger(id);
           setStatus("Partner acceptance recorded — awaiting owner approval");
+        } catch (e) {
+          setStatus(e.message, true);
+        }
+      });
+    }
+
+    const extra = $("createExtraOut");
+    if ($("analyzeIdeaBtn")) {
+      $("analyzeIdeaBtn").addEventListener("click", async function () {
+        if (!(await ensureAuth())) return;
+        try {
+          const result = await api("analyze_idea", {
+            title: $("ideaTitle") ? $("ideaTitle").value : "",
+            category: $("ideaCategory") ? $("ideaCategory").value : "other",
+            description:
+              ($("ideaDescription") && $("ideaDescription").value) ||
+              ($("ventureSubInput") && $("ventureSubInput").value) ||
+              "HAVKAR CREATE venture analysis placeholder description for feasibility."
+          });
+          if (extra) extra.textContent = JSON.stringify(result.analysis, null, 2);
+          setStatus("Structured AI analysis ready (" + result.analysis.ai_mode + ")");
+        } catch (e) {
+          setStatus(e.message, true);
+        }
+      });
+    }
+    if ($("billingQuoteBtn")) {
+      $("billingQuoteBtn").addEventListener("click", async function () {
+        try {
+          const result = await api("billing_quote", {
+            items: [
+              { sku: "ai_analysis", qty: 1 },
+              { sku: "preview_build", qty: 1 },
+              { sku: "sandbox_runtime_hour", qty: 1 }
+            ]
+          });
+          if (extra) {
+            extra.textContent =
+              "DRAFT quote only · live_charges_enabled=" +
+              result.live_charges_enabled +
+              "\n" +
+              JSON.stringify(result, null, 2);
+          }
+          setStatus("Draft CREATE cost quote (not charged)");
+        } catch (e) {
+          setStatus(e.message, true);
+        }
+      });
+    }
+    if ($("marketplacePrepareBtn")) {
+      $("marketplacePrepareBtn").addEventListener("click", async function () {
+        const id = $("activeVentureId").value;
+        if (!id) {
+          setStatus("Open a venture workspace first", true);
+          return;
+        }
+        try {
+          const result = await api("marketplace_prepare", { venture_id: id });
+          if (extra) extra.textContent = JSON.stringify(result, null, 2);
+          setStatus(
+            result.created_listing
+              ? "Marketplace listing created"
+              : "Marketplace draft prepared — listing not created"
+          );
         } catch (e) {
           setStatus(e.message, true);
         }

@@ -54,15 +54,17 @@ assert.doesNotMatch(home, /ideas-studio\.html/);
 
 const ai = fs.readFileSync("havkar-ai.html", "utf8");
 assert.match(ai, /ideas-studio\.html/);
-assert.match(ai, /Ideas Portal &amp; HAVKAR Studio|Ideas &amp; Studio/);
+assert.match(ai, /HAVKAR CREATE/);
 
 const profile = fs.readFileSync("profile.html", "utf8");
 assert.match(profile, /ideas-studio\.html/);
+assert.match(profile, /HAVKAR CREATE/);
 
 const page = fs.readFileSync("ideas-studio.html", "utf8");
-assert.match(page, /Payments OFF/);
-assert.match(page, /TEST\/SIMULATION|simulation/i);
+assert.match(page, /Payments OFF|payments OFF/i);
+assert.match(page, /TEST\/SIMULATION|simulation|sandbox/i);
 assert.match(page, /havkar-ideas-studio\.js/);
+assert.match(page, /HAVKAR CREATE/);
 
 const client = fs.readFileSync("havkar-ideas-studio.js", "utf8");
 assert.match(client, /\/api\/ideas-studio/);
