@@ -211,28 +211,34 @@ async function main() {
     }
 
     const vercel = JSON.parse(fs.readFileSync(path.join(root, "vercel.json"), "utf8"));
-    assert.deepStrictEqual(vercel.rewrites, [
-        {
-            source: "/api/pi-complete",
-            destination: "/api/pi-approve?piAction=complete"
-        },
-        {
-            source: "/api/stellar-ownership",
-            destination: "/api/create-event-checkout?havkarAction=ownership"
-        },
-        {
-            source: "/api/support-request",
-            destination: "/api/business-application-notify?havkarAction=support"
-        },
-        {
-            source: "/api/create-ad-boost-checkout",
-            destination: "/api/create-event-checkout?havkarAction=adBoost"
-        },
-        {
-            source: "/api/ad-boost-webhook",
-            destination: "/api/stripe-webhook"
-        }
-    ]);
+    const rewriteMap = Object.fromEntries(
+        (vercel.rewrites || []).map((row) => [row.source, row.destination])
+    );
+    assert.strictEqual(
+        rewriteMap["/api/pi-complete"],
+        "/api/pi-approve?piAction=complete"
+    );
+    assert.strictEqual(
+        rewriteMap["/api/stellar-ownership"],
+        "/api/create-event-checkout?havkarAction=ownership"
+    );
+    assert.strictEqual(
+        rewriteMap["/api/support-request"],
+        "/api/business-application-notify?havkarAction=support"
+    );
+    assert.strictEqual(
+        rewriteMap["/api/create-ad-boost-checkout"],
+        "/api/create-event-checkout?havkarAction=adBoost"
+    );
+    assert.strictEqual(rewriteMap["/api/ad-boost-webhook"], "/api/stripe-webhook");
+    assert.strictEqual(
+        rewriteMap["/api/payment-status"],
+        "/api/create-event-checkout?havkarAction=paymentStatus"
+    );
+    assert.strictEqual(
+        rewriteMap["/api/global-payments"],
+        "/api/create-event-checkout?havkarAction=globalPayments"
+    );
     assert.strictEqual(JSON.stringify(vercel).includes("/api/:path*"), false);
 
     const apiFiles = fs.readdirSync(path.join(root, "api"))
@@ -275,10 +281,11 @@ async function main() {
     assert.strictEqual(fs.existsSync(path.join(root, "accommodation.html")), true);
 
     const approveSource = fs.readFileSync(path.join(root, "api/pi-approve.js"), "utf8");
-    assert.strictEqual(
-        approveSource.includes('process.env.HAVKAR_PI_PAYMENTS_ENABLED !== "true"'),
-        true
-    );
+    assert.match(approveSource, /piPaymentsAllowed/);
+    assert.match(approveSource, /error:\s*"Not found"/);
+    const realPayments = fs.readFileSync(path.join(root, "lib/real-payments.cjs"), "utf8");
+    assert.match(realPayments, /function piPaymentsAllowed/);
+    assert.match(realPayments, /HAVKAR_PI_PAYMENTS_ENABLED/);
 
     console.log(`PI_PAYMENT_TEST_OK functions=${apiFiles.length}`);
 }
