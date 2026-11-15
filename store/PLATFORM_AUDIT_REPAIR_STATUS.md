@@ -14,6 +14,8 @@ Branch: `cursor/platform-audit-repair-d4b2` (based on PR #196 tip `6306b92a`)
 | Restored business application review UI (anti self-review) | PASS | `verification-review.html` |
 | PWA manifest/icon tags on previously missing HTML pages | PASS | `official-app-icon` test |
 | Regression tests for security + Home 15 + AI entitlements | PASS | 18/18 focused suite |
+| Checkout 133-currency mobile (~375) + tablet (~820) UI | PASS | Preview: label 133 (not 60), list loaded, live payments gated OFF, no horizontal overflow |
+| PR #197 CI (`audit` + Vercel deploy) | PASS | GitHub Actions `43714702108`; Vercel preview success |
 
 ## Production smoke (live havkar.online)
 
