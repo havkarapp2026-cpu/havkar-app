@@ -178,11 +178,15 @@
     }
 
     function apply(root) {
-        if (applying || language() !== "it") {
-            if (language() !== "it") {
-                document.documentElement.lang = "en";
-            }
+        if (applying) {
+            return;
+        }
 
+        if (language() !== "it") {
+            document.documentElement.lang = language() === "en" ? "en" : language();
+            if (window.HAVKAR_PREMIUM_I18N && typeof window.HAVKAR_PREMIUM_I18N.apply === "function") {
+                window.HAVKAR_PREMIUM_I18N.apply(root && root.nodeType === 1 ? root : document.body);
+            }
             return;
         }
 

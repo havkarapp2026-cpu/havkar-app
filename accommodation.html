@@ -36,6 +36,12 @@
 .suggest button:hover{background:#e8f5e9}
 .filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .filter-row select{min-height:42px;border-radius:10px;border:1px solid #cfd;padding:0 10px;font:inherit;flex:1}
+.fav-btn,.cmp-btn{min-height:36px;border-radius:10px;border:1px solid #1b5e20;background:#fff;color:#1b5e20;font-weight:700;padding:0 10px;cursor:pointer;margin-top:8px;margin-right:6px}
+.fav-btn.active{background:#e53935;border-color:#e53935;color:#fff}
+#compareTray{position:sticky;bottom:64px;z-index:30;background:#fff;border:1px solid #cfe0d3;border-radius:14px;padding:10px;margin:12px 0;box-shadow:0 8px 20px rgba(0,0,0,.08)}
+#compareTray[hidden]{display:none!important}
+.compare-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.compare-card{border:1px solid #d7e6db;border-radius:10px;padding:8px;font-size:13px}
 #historyOut,#payQuoteRaw{white-space:pre-wrap;font-size:12px;background:#f7fbf7;padding:10px;border-radius:10px}
 .pay-panel{margin-top:14px;padding-top:8px;border-top:1px solid #d7e6db}
 .pay-title{margin:8px 0 4px;font-size:1.05rem;color:#1b5e20}
@@ -93,6 +99,8 @@
       <button type="button" id="viewBothBtn" class="active" aria-pressed="true">Map + list</button>
       <button type="button" id="viewMapBtn" aria-pressed="false">Map</button>
       <button type="button" id="viewListBtn" aria-pressed="false">List</button>
+      <button type="button" id="favoritesOnlyBtn" aria-pressed="false">Favorites</button>
+      <button type="button" id="openCompareBtn" aria-pressed="false">Compare</button>
     </div>
     <p id="geoLabel" class="provider-note">Map stays available even when no verified stay is published. Choose a destination or use GPS.</p>
     <div class="search-grid">
@@ -189,6 +197,7 @@
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-accommodation.js"></script>
 <script type="module" src="/havkar-accommodation-ui.js"></script>
+<script src="/havkar-premium-i18n.js"></script>
 <script src="/havkar-presentment-currencies.js"></script>
 <script src="/havkar-currency-select.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -231,6 +240,81 @@
     } catch (e) {
       return {};
     }
+  }
+
+
+  var FAV_KEY = "havkar_hotel_favorites_v1";
+  var CMP_KEY = "havkar_hotel_compare_v1";
+  var favoritesOnly = false;
+
+  function loadJson(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      var parsed = raw ? JSON.parse(raw) : fallback;
+      return Array.isArray(parsed) ? parsed : fallback;
+    } catch (e) { return fallback; }
+  }
+  function saveJson(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value || [])); } catch (e) {}
+  }
+  function favIds() { return loadJson(FAV_KEY, []).map(String); }
+  function cmpIds() { return loadJson(CMP_KEY, []).map(String); }
+  function toggleFavorite(id, title) {
+    id = String(id || "");
+    if (!id) return;
+    var list = favIds();
+    var i = list.indexOf(id);
+    if (i >= 0) list.splice(i, 1);
+    else {
+      list.push(id);
+      try {
+        var meta = loadJson(FAV_KEY + "_meta", []);
+        meta = meta.filter(function (m) { return String(m.id) !== id; });
+        meta.push({ id: id, title: title || id });
+        saveJson(FAV_KEY + "_meta", meta);
+      } catch (e) {}
+    }
+    saveJson(FAV_KEY, list);
+  }
+  function toggleCompare(row) {
+    var id = String(row && (row.id || row.title) || "");
+    if (!id) return;
+    var list = loadJson(CMP_KEY, []);
+    var found = list.findIndex(function (x) { return String(x.id) === id; });
+    if (found >= 0) list.splice(found, 1);
+    else {
+      if (list.length >= 3) {
+        setStatus("Compare supports up to 3 stays from real search results.");
+        return;
+      }
+      list.push({
+        id: id,
+        title: row.title || id,
+        summary: row.summary || "",
+        provider: row.provider || "",
+        bookable: row.bookable === true
+      });
+    }
+    saveJson(CMP_KEY, list);
+    renderCompareTray();
+  }
+  function renderCompareTray() {
+    var tray = document.getElementById("compareTray");
+    var grid = document.getElementById("compareGrid");
+    if (!tray || !grid) return;
+    var list = loadJson(CMP_KEY, []);
+    if (!list.length) { tray.hidden = true; grid.innerHTML = ""; return; }
+    tray.hidden = false;
+    grid.innerHTML = list.map(function () {
+      return '<article class="compare-card"><strong></strong><p></p><p class="provider-note"></p></article>';
+    }).join("");
+    Array.prototype.forEach.call(grid.querySelectorAll("article"), function (card, i) {
+      var row = list[i];
+      card.querySelector("strong").textContent = row.title || "";
+      card.querySelector("p").textContent = row.summary || "";
+      card.querySelector(".provider-note").textContent =
+        "provider=" + (row.provider || "") + " · bookable=" + String(row.bookable === true);
+    });
   }
 
   function initMap() {
@@ -463,17 +547,41 @@
           .toLowerCase();
         return !cat || cat.indexOf(categoryWanted) !== -1;
       });
+      if (favoritesOnly) {
+        var fids = favIds();
+        cards = cards.filter(function (row) {
+          return fids.indexOf(String(row.id || row.title || "")) !== -1;
+        });
+      }
       searchResults.innerHTML = cards.map(function () {
-        return '<article class="card listing"><h2></h2><p></p><p class="provider-note"></p></article>';
+        return '<article class="card listing"><h2></h2><p></p><p class="provider-note"></p><div class="card-actions"></div></article>';
       }).join("");
       Array.prototype.forEach.call(searchResults.querySelectorAll("article"), function (card, i) {
         var row = cards[i];
+        var rid = String(row.id || row.title || ("row-" + i));
         card.querySelector("h2").textContent = row.title || "";
         card.querySelector("p").textContent = row.summary || "";
         card.querySelector(".provider-note").textContent =
           "provider=" + (row.provider || "") +
           " · bookable=" + String(row.bookable) +
           " · " + (row.reason || row.requirement || "");
+        var actions = card.querySelector(".card-actions");
+        var fav = document.createElement("button");
+        fav.type = "button";
+        fav.className = "fav-btn" + (favIds().indexOf(rid) >= 0 ? " active" : "");
+        fav.textContent = favIds().indexOf(rid) >= 0 ? "Remove from favorites" : "Add to favorites";
+        fav.addEventListener("click", function () {
+          toggleFavorite(rid, row.title || rid);
+          fav.classList.toggle("active");
+          fav.textContent = fav.classList.contains("active") ? "Remove from favorites" : "Add to favorites";
+        });
+        var cmp = document.createElement("button");
+        cmp.type = "button";
+        cmp.className = "cmp-btn";
+        cmp.textContent = "Compare";
+        cmp.addEventListener("click", function () { toggleCompare(Object.assign({}, row, { id: rid })); });
+        actions.appendChild(fav);
+        actions.appendChild(cmp);
         if (row.latitude != null && row.longitude != null && map && window.L) {
           L.circleMarker([row.latitude, row.longitude], {
             radius: 8,
@@ -676,6 +784,22 @@
   if (bothBtn) bothBtn.addEventListener("click", function () { setViewMode("both"); });
   if (mapBtn) mapBtn.addEventListener("click", function () { setViewMode("map"); });
   if (listBtn) listBtn.addEventListener("click", function () { setViewMode("list"); });
+  var favOnlyBtn = document.getElementById("favoritesOnlyBtn");
+  if (favOnlyBtn) favOnlyBtn.addEventListener("click", function () {
+    favoritesOnly = !favoritesOnly;
+    favOnlyBtn.classList.toggle("active", favoritesOnly);
+    favOnlyBtn.setAttribute("aria-pressed", favoritesOnly ? "true" : "false");
+    setStatus(favoritesOnly ? "Showing favorites only (local device)." : "");
+    runSearch();
+  });
+  var openCmp = document.getElementById("openCompareBtn");
+  if (openCmp) openCmp.addEventListener("click", renderCompareTray);
+  var clearCmp = document.getElementById("clearCompareBtn");
+  if (clearCmp) clearCmp.addEventListener("click", function () {
+    saveJson(CMP_KEY, []);
+    renderCompareTray();
+  });
+  renderCompareTray();
   initMap();
   setViewMode("both");
   setGeo(selectedGeo);
