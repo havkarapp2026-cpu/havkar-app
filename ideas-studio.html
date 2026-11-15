@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>HAVKAR Ideas & Studio</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/havkar-icon-32-20261022-v3.png">
+<style>
+:root{
+  --bg0:#041108;
+  --bg1:#0a1c10;
+  --card:#0d2416;
+  --line:rgba(120,200,140,.18);
+  --text:#e8f6ec;
+  --muted:#9bb8a4;
+  --green:#1c9a43;
+  --green2:#0d3d16;
+  --gold:#c9a227;
+  --danger:#c0392b;
+  --radius:18px;
+  --font:"Segoe UI",Tahoma,Geneva,Verdana,sans-serif;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:var(--font);
+  color:var(--text);
+  background:
+    radial-gradient(900px 500px at 10% -10%, rgba(28,154,67,.28), transparent 60%),
+    radial-gradient(700px 400px at 100% 0%, rgba(201,162,39,.12), transparent 55%),
+    linear-gradient(165deg,var(--bg0),var(--bg1) 45%,#07150c);
+  min-height:100vh;
+}
+a{color:inherit}
+.top{
+  position:sticky;top:0;z-index:20;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:14px 18px;
+  background:rgba(4,17,8,.88);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.02em}
+.brand img{width:34px;height:34px;border-radius:10px}
+.nav{display:flex;flex-wrap:wrap;gap:8px}
+.nav button,.btn{
+  border:1px solid var(--line);
+  background:rgba(13,61,22,.55);
+  color:var(--text);
+  border-radius:999px;
+  padding:10px 14px;
+  font-weight:700;
+  cursor:pointer;
+}
+.nav button.active,.btn.primary{background:linear-gradient(135deg,var(--green),var(--green2));border-color:transparent}
+.btn.secondary{background:transparent}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 16px 90px}
+.hero{
+  display:grid;gap:18px;
+  padding:28px 22px;
+  border:1px solid var(--line);
+  border-radius:28px;
+  background:linear-gradient(145deg,rgba(13,36,22,.92),rgba(7,20,12,.8));
+  box-shadow:0 20px 50px rgba(0,0,0,.28);
+}
+.hero h1{margin:0;font-size:clamp(1.6rem,4vw,2.4rem);line-height:1.15}
+.hero p{margin:0;color:var(--muted);max-width:58ch;line-height:1.5}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.pill.warn{color:#f0d78c;border-color:rgba(201,162,39,.45)}
+.status{
+  margin:14px 0 0;
+  min-height:1.3em;
+  color:var(--muted);
+  font-size:14px;
+}
+.status[data-tone="error"]{color:#ffb4a8}
+.grid{display:grid;gap:14px;margin-top:18px}
+@media(min-width:820px){.grid.two{grid-template-columns:1.1fr .9fr}}
+.card{
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:rgba(13,36,22,.72);
+  padding:16px;
+}
+.card h2,.card h3{margin:0 0 10px}
+label{display:block;font-size:12px;font-weight:700;color:#b7d4c2;margin:10px 0 4px}
+input,select,textarea{
+  width:100%;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:#07140b;
+  color:var(--text);
+  padding:12px 12px;
+  font:inherit;
+}
+textarea{min-height:110px;resize:vertical}
+.idea-card,.venture-card,.template-card{
+  display:block;width:100%;text-align:left;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:#08180f;
+  padding:14px;
+  margin:0 0 10px;
+  color:inherit;
+  cursor:pointer;
+}
+.template-card strong{display:block;margin-bottom:4px}
+.template-card small,.template-card em{display:block;color:var(--muted);font-size:12px;font-style:normal;margin-top:4px}
+.badge{
+  display:inline-block;font-size:11px;padding:3px 8px;border-radius:999px;
+  background:rgba(28,154,67,.2);color:#9be0b0;text-transform:uppercase;letter-spacing:.04em;
+}
+.idea-card header,.venture-card header{display:flex;justify-content:space-between;gap:8px;align-items:start}
+.idea-card footer,.venture-card footer{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.empty{color:var(--muted)}
+.sim-banner{
+  display:inline-block;
+  margin:0 0 10px;
+  padding:6px 10px;
+  border-radius:999px;
+  background:rgba(201,162,39,.18);
+  color:#f0d78c;
+  font-size:12px;font-weight:800;letter-spacing:.03em;
+}
+#builderPreview .preview-shell{
+  border-radius:16px;
+  padding:18px;
+  background:linear-gradient(160deg,var(--preview-primary,#0d3d16),#07140b);
+  border:1px solid rgba(255,255,255,.08);
+}
+#builderPreview .unsupported{color:#f0d78c;font-size:13px}
+#aldoBox button{margin:4px 6px 4px 0}
+dl{display:grid;grid-template-columns:1fr auto;gap:6px 12px;margin:0}
+dt{color:var(--muted)} dd{margin:0;font-weight:700}
+.links{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.links a{color:#9be0b0;font-weight:700;text-decoration:none}
+.bottom-note{margin-top:24px;color:var(--muted);font-size:13px;line-height:1.45}
+[hidden]{display:none !important}
+</style>
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="havkar-ai.html">
+      <img src="/assets/icons/havkar-icon-32-20261022-v3.png" alt="">
+      <span>Ideas & Studio</span>
+    </a>
+    <nav class="nav" aria-label="Studio sections">
+      <button type="button" data-studio-nav="overview" class="active">Overview</button>
+      <button type="button" data-studio-nav="ideas">Ideas</button>
+      <button type="button" data-studio-nav="studio">Studio</button>
+      <button type="button" data-studio-nav="ventures">Ventures</button>
+      <button type="button" data-studio-nav="builder">Builder</button>
+      <a class="btn secondary" href="index.html">Home</a>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <div>
+        <div class="pills">
+          <span class="pill">Private by default</span>
+          <span class="pill warn">Payments OFF</span>
+          <span class="pill warn">Public publish OFF</span>
+          <span class="pill">Home 15 tiles unchanged</span>
+        </div>
+        <h1>Turn original ideas into controlled HAVKAR ventures</h1>
+        <p>
+          Submit confidential business ideas, build template-based mini-apps in HAVKAR Studio,
+          and manage proposed partnerships. Aldo’s SPEED UP MY TOUCH is the first hardware pilot —
+          sensors are not installed yet; simulation is clearly labeled.
+        </p>
+        <div class="links">
+          <a href="havkar-ai.html">Open HAVKAR AI</a>
+          <a href="profile.html">Profile / Business</a>
+          <a href="/docs/ideas-studio/LEGAL_CHECKLIST.md">Legal checklist (draft)</a>
+          <a href="/docs/ideas-studio/ALDO_HARDWARE_SENSOR_CONTRACT.md">Aldo sensor contract</a>
+        </div>
+      </div>
+      <p id="studioStatus" class="status" role="status"></p>
+    </section>
+
+    <section data-studio-panel="overview">
+      <div class="grid two">
+        <article class="card">
+          <h2>Platform gates</h2>
+          <div id="flagsBox"></div>
+        </article>
+        <article class="card">
+          <h2>How to enter</h2>
+          <p class="empty">No new Home tile was added. Use HAVKAR AI → Ideas & Studio, or Profile → Business tools.</p>
+          <p class="empty">Marketplace 2%/3% fees stay separate from any proposed 70/30 net-profit venture agreement.</p>
+        </article>
+      </div>
+    </section>
+
+    <section data-studio-panel="ideas" hidden>
+      <div class="grid two">
+        <article class="card">
+          <h2>Submit a private idea</h2>
+          <form id="ideaForm">
+            <label for="ideaTitle">Title</label>
+            <input id="ideaTitle" required minlength="3" maxlength="160" placeholder="Idea title">
+            <label for="ideaCategory">Category</label>
+            <select id="ideaCategory" required>
+              <option value="website">Business website</option>
+              <option value="restaurant">Restaurant</option>
+              <option value="shop">Shop</option>
+              <option value="marketplace">Marketplace</option>
+              <option value="community">Community</option>
+              <option value="booking">Booking / services</option>
+              <option value="sports">Sports / training</option>
+              <option value="hardware">Hardware-connected</option>
+              <option value="dashboard">Dashboard / forms</option>
+              <option value="other">Other</option>
+            </select>
+            <label for="ideaDescription">Description</label>
+            <textarea id="ideaDescription" required minlength="20" maxlength="8000" placeholder="Describe the idea, problem, and solution"></textarea>
+            <label for="ideaAudience">Intended audience</label>
+            <input id="ideaAudience" maxlength="500">
+            <label for="ideaCountry">Country</label>
+            <input id="ideaCountry" maxlength="8" placeholder="IT">
+            <label for="ideaBudget">Budget range</label>
+            <input id="ideaBudget" maxlength="80" placeholder="e.g. under €5k">
+            <label for="ideaGoals">Development goals</label>
+            <textarea id="ideaGoals" maxlength="2000"></textarea>
+            <label for="ideaModel">Preferred business model</label>
+            <input id="ideaModel" maxlength="500" placeholder="subscription, marketplace, training, etc.">
+            <div style="margin-top:14px">
+              <button class="btn primary" type="submit">Save private draft</button>
+            </div>
+          </form>
+        </article>
+        <article class="card">
+          <h2>Your ideas</h2>
+          <div id="ideasList"><p class="empty">Sign in to load private ideas.</p></div>
+        </article>
+      </div>
+    </section>
+
+    <section data-studio-panel="studio" hidden>
+      <article class="card">
+        <h2>HAVKAR Studio templates</h2>
+        <p class="empty">Limited, real template builder — not unrestricted app generation. Unsupported features are listed on each card.</p>
+        <div id="templateList" class="grid"></div>
+      </article>
+    </section>
+
+    <section data-studio-panel="ventures" hidden>
+      <article class="card">
+        <h2>Your ventures</h2>
+        <div id="venturesList"><p class="empty">No ventures yet.</p></div>
+      </article>
+    </section>
+
+    <section data-studio-panel="builder" hidden>
+      <div class="grid two">
+        <article class="card">
+          <h2>Venture workspace</h2>
+          <input type="hidden" id="activeVentureId">
+          <label for="ventureNameInput">Name</label>
+          <input id="ventureNameInput">
+          <label for="ventureHeroInput">Hero title</label>
+          <input id="ventureHeroInput">
+          <label for="ventureSubInput">Supporting line</label>
+          <input id="ventureSubInput">
+          <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px">
+            <button type="button" class="btn primary" id="saveBuilderBtn">Save version</button>
+          </div>
+          <div id="aldoBox" hidden style="margin-top:18px"></div>
+          <div style="margin-top:18px">
+            <h3>Proposed accounting (simulated)</h3>
+            <div id="ledgerBox"><p class="empty">Open a venture to view ledger.</p></div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
+              <button type="button" class="btn secondary" id="addRevenueBtn">+€100 simulated revenue</button>
+              <button type="button" class="btn secondary" id="addExpenseBtn">+€25 simulated expense</button>
+              <button type="button" class="btn secondary" id="presentAgreementBtn">Present 70/30 draft</button>
+              <button type="button" class="btn secondary" id="acceptAgreementBtn">Partner accept (pending owner)</button>
+            </div>
+          </div>
+        </article>
+        <article class="card">
+          <h2>Preview</h2>
+          <div id="builderPreview"><p class="empty">Select a venture workspace.</p></div>
+        </article>
+      </div>
+    </section>
+
+    <p class="bottom-note">
+      Funding references (including any proposed €500,000 support for Aldo’s project) are unverified opportunities, not approved grants.
+      Electrical, mechanical and user safety review is required before field deployment of hardware.
+    </p>
+  </main>
+
+  <script src="/havkar-supabase-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    (function(){
+      var cfg = window.HAVKAR_SUPABASE_CONFIG;
+      if (cfg && window.supabase) {
+        window.supabaseClient = window.supabase.createClient(
+          cfg.url,
+          cfg.publishableKey || cfg.anonKey
+        );
+      }
+    })();
+  </script>
+  <script src="/havkar-ideas-studio.js"></script>
+</body>
+</html>
