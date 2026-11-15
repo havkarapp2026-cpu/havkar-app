@@ -3660,6 +3660,23 @@ function startRealPayment(jobId){
 
   if(!job) return;
 
+  // Quote-only probe via /api/global-payments (jobs_listing). No charge.
+  try {
+    await fetch("/api/global-payments?action=global_payments_catalog");
+    await fetch("/api/global-payments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "global_payment_quote",
+        module: "jobs",
+        method: "stripe",
+        currency: "eur",
+        flow: "jobs_listing",
+        subject_id: String(job.id)
+      })
+    });
+  } catch (_e) {}
+
   alert(
     "The payment gateway is not connected yet. " +
     "Your advertisement has NOT been activated."
@@ -3681,9 +3698,10 @@ async function quoteJobXlm(jobId, fee){
     return;
   }
 
+  // Prepaid one-time jobs_listing only — XLM cannot start automatic renewals.
   const quoted =
     await window.HAVKAR_XLM.quote({
-      flow: "subscription",
+      flow: "jobs_listing",
       price: fee,
       subjectId: String(jobId),
       accessToken: accessToken
