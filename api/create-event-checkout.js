@@ -24,10 +24,49 @@ import {
   evaluateStellarCheckout,
   buildXlmQuote,
   verifyStellarSettlement,
-  saveUnpaidIntent
+  saveUnpaidIntent,
+  xlmFromEur
 } from "../lib/stellar-checkout.cjs";
 let stripeClient = null;
 let supabaseAdminClient = null;
+
+async function loadJobsServicesPayments() {
+  return import("../lib/jobs-services-payments.cjs");
+}
+
+async function loadJobBilling() {
+  return import("../havkar-job-billing.js");
+}
+
+async function fetchDisplayXlmFromEur(buyerPaysEur) {
+  const rateRes = await fetch(
+    "https://api.coingecko.com/api/v3/simple/price?ids=stellar&vs_currencies=eur&include_last_updated_at=true",
+    { headers: { Accept: "application/json" } }
+  );
+  if (!rateRes.ok) {
+    return { ok: false, error: "Exchange rate provider unavailable." };
+  }
+  const rateBody = await rateRes.json();
+  const eurPer = Number(rateBody && rateBody.stellar && rateBody.stellar.eur);
+  const updated = Number(
+    rateBody && rateBody.stellar && rateBody.stellar.last_updated_at
+  );
+  if (!Number.isFinite(eurPer) || eurPer <= 0 || !buyerPaysEur) {
+    return { ok: false, error: "Exchange rate missing." };
+  }
+  return {
+    ok: true,
+    display_only: true,
+    payable: false,
+    amount_xlm: xlmFromEur(buyerPaysEur, eurPer),
+    eur_per_xlm: eurPer,
+    network_fee_xlm: "0.00001",
+    rate_as_of: Number.isFinite(updated)
+      ? new Date(updated * 1000).toISOString()
+      : null,
+    rate_source: "coingecko:stellar:eur"
+  };
+}
 
 function getStripe() {
   if (!stripeClient) {
@@ -199,7 +238,13 @@ function isGlobalPaymentsRequest(req) {
       url.indexOf("havkarAction=globalPayments") !== -1 ||
       action === "global_payments_catalog" ||
       action === "global_payment_quote" ||
-      action === "global_live_checkout"
+      action === "global_live_checkout" ||
+      action === "ads_payment_methods" ||
+      action === "business_payment_methods" ||
+      action === "hotels_payment_methods" ||
+      action === "ai_payment_methods" ||
+      action === "currency_capability_audit" ||
+      action === "ai_entitlement_check"
   );
 }
 
@@ -1466,6 +1511,7 @@ export default async function handler(req, res) {
         payments.default?.buildGlobalPaymentQuote;
       const refuseLiveCheckout =
         payments.refuseLiveCheckout || payments.default?.refuseLiveCheckout;
+      const modulePayments = await import("../lib/havkar-module-payments.cjs");
       const action = String(
         (req.query && req.query.action) ||
           (req.body && req.body.action) ||
@@ -1478,6 +1524,54 @@ export default async function handler(req, res) {
       if (action === "global_payment_quote") {
         const quoted = await buildGlobalPaymentQuote(req.body || {});
         return res.status(quoted.status || (quoted.ok ? 200 : 400)).json(quoted);
+      }
+      if (action === "ads_payment_methods") {
+        return res.status(200).json(modulePayments.adsPaymentMethods(process.env));
+      }
+      if (action === "business_payment_methods") {
+        return res
+          .status(200)
+          .json(modulePayments.businessPaymentMethods(process.env));
+      }
+      if (action === "hotels_payment_methods") {
+        return res
+          .status(200)
+          .json(modulePayments.hotelsPaymentMethods(process.env));
+      }
+      if (action === "ai_payment_methods") {
+        return res.status(200).json(modulePayments.aiPaymentMethods(process.env));
+      }
+      if (action === "currency_capability_audit") {
+        const {
+          describePresentmentCapabilityMatrix
+        } = require("../lib/stripe-currency-capability-audit.cjs");
+        let account = null;
+        if (
+          req.body &&
+          req.body.include_account_snapshot === true &&
+          process.env.STRIPE_SECRET_KEY
+        ) {
+          try {
+            account = await getStripe().accounts.retrieve();
+          } catch (_e) {
+            account = null;
+          }
+        }
+        return res.status(200).json(describePresentmentCapabilityMatrix(account));
+      }
+      if (action === "ai_entitlement_check") {
+        const entitlements = require("../lib/havkar-ai-entitlements.cjs");
+        const body = req.body || {};
+        const decision = entitlements.logoEntitlementDecision(
+          body.verification || { ok: false },
+          body.request || body,
+          body.now || Date.now()
+        );
+        return res.status(decision.status || 200).json({
+          ok: decision.allowed === true,
+          ...decision,
+          live_collection: false
+        });
       }
       return res.status(200).json(moduleCatalog());
     } catch (error) {
@@ -1578,6 +1672,174 @@ export default async function handler(req, res) {
     }
   }
 
+  {
+    const bodyActionEarly = String((req.body && req.body.action) || "");
+    if (
+      req.method === "POST" &&
+      (bodyActionEarly === "jobs_payment_methods" ||
+        bodyActionEarly === "services_payment_methods" ||
+        bodyActionEarly === "jobs_quote" ||
+        bodyActionEarly === "services_quote")
+    ) {
+      try {
+        const paymentsApi = await loadJobsServicesPayments();
+        const jobsPaymentMethods =
+          paymentsApi.jobsPaymentMethods ||
+          paymentsApi.default?.jobsPaymentMethods;
+        const servicesPaymentMethods =
+          paymentsApi.servicesPaymentMethods ||
+          paymentsApi.default?.servicesPaymentMethods;
+        const billingMod = await loadJobBilling();
+        const jobBilling = billingMod.default || billingMod;
+
+        if (bodyActionEarly === "jobs_payment_methods") {
+          return res.status(200).json(jobsPaymentMethods(process.env));
+        }
+        if (bodyActionEarly === "services_payment_methods") {
+          return res.status(200).json(servicesPaymentMethods(process.env));
+        }
+
+        const method = String(
+          (req.body && (req.body.method || req.body.payment_method)) || "stripe"
+        );
+        const isXlm = method === "xlm" || method === "xlm_mainnet";
+
+        if (bodyActionEarly === "jobs_quote") {
+          const planName = String((req.body && req.body.plan) || "Professional");
+          const ordinary = jobBilling.ORDINARY_PLANS[planName];
+          const corporate = jobBilling.COMPANY_PLANS[planName];
+          const listEur = ordinary
+            ? ordinary.eur
+            : corporate
+              ? corporate.eur
+              : null;
+          if (listEur == null) {
+            return res.status(400).json({
+              ok: false,
+              error: "Unknown jobs plan.",
+              ordinary_plans: Object.keys(jobBilling.ORDINARY_PLANS),
+              corporate_plans: Object.keys(jobBilling.COMPANY_PLANS)
+            });
+          }
+          const catalog = jobsPaymentMethods(process.env);
+          const chargeAllowed = Boolean(
+            catalog.live_flag_armed &&
+              ((isXlm &&
+                catalog.methods.find((m) => m.id === "xlm_mainnet")
+                  ?.charge_allowed_now) ||
+                (!isXlm &&
+                  catalog.methods.find((m) => m.id === "stripe")
+                    ?.charge_allowed_now))
+          );
+          let xlmDisplay = null;
+          if (isXlm) {
+            if (corporate) {
+              return res.status(200).json({
+                ok: true,
+                action: "jobs_quote",
+                payment_method: "xlm_mainnet",
+                plan: planName,
+                billing: "stripe_subscription_monthly",
+                xlm_supported: false,
+                charge_allowed_now: false,
+                charge_created: false,
+                availability_status: "not_yet_available",
+                availability_label: "Not yet available",
+                error:
+                  "Corporate monthly subscriptions renew on Stripe only. XLM cannot start automatic renewals."
+              });
+            }
+            xlmDisplay = await fetchDisplayXlmFromEur(listEur);
+          }
+          return res.status(200).json({
+            ok: true,
+            action: "jobs_quote",
+            payment_method: isXlm ? "xlm_mainnet" : "stripe",
+            plan: planName,
+            list_price_eur: listEur,
+            billing: ordinary
+              ? "one_time_prepaid"
+              : "stripe_subscription_monthly",
+            period_days: ordinary ? ordinary.durationDays : null,
+            auto_renew: Boolean(corporate),
+            stripe_presentment_count: catalog.stripe_presentment_count,
+            xlm_is_not_a_stripe_currency: true,
+            xlm_display: xlmDisplay,
+            amount_xlm: xlmDisplay && xlmDisplay.amount_xlm,
+            eur_per_xlm: xlmDisplay && xlmDisplay.eur_per_xlm,
+            rate_as_of: xlmDisplay && xlmDisplay.rate_as_of,
+            rate_source: xlmDisplay && xlmDisplay.rate_source,
+            network_fee_xlm: xlmDisplay && xlmDisplay.network_fee_xlm,
+            charge_allowed_now: chargeAllowed,
+            charge_created: false,
+            availability_status: chargeAllowed
+              ? "available"
+              : "not_yet_available",
+            availability_label: chargeAllowed
+              ? "Available"
+              : "Not yet available",
+            availability_reason: catalog.gate && catalog.gate.message
+          });
+        }
+
+        if (bodyActionEarly === "services_quote") {
+          const listEur = Number((req.body && req.body.list_price_eur) || 100);
+          if (!Number.isFinite(listEur) || listEur <= 0) {
+            return res
+              .status(400)
+              .json({ ok: false, error: "list_price_eur required." });
+          }
+          const catalog = servicesPaymentMethods(process.env);
+          const commissionCents = Math.round((listEur * 100 * 1000) / 10000);
+          const chargeAllowed = Boolean(
+            catalog.live_flag_armed &&
+              ((isXlm &&
+                catalog.methods.find((m) => m.id === "xlm_mainnet")
+                  ?.charge_allowed_now) ||
+                (!isXlm &&
+                  catalog.methods.find((m) => m.id === "stripe")
+                    ?.charge_allowed_now))
+          );
+          let xlmDisplay = null;
+          if (isXlm) {
+            xlmDisplay = await fetchDisplayXlmFromEur(listEur);
+          }
+          return res.status(200).json({
+            ok: true,
+            action: "services_quote",
+            payment_method: isXlm ? "xlm_mainnet" : "stripe",
+            list_price_eur: listEur,
+            customer_pays_eur: listEur,
+            provider_commission_bps: 1000,
+            provider_commission_eur: commissionCents / 100,
+            provider_settlement_eur: listEur - commissionCents / 100,
+            commission_payer: "provider",
+            customer_extra_havkar_commission: false,
+            stripe_presentment_count: catalog.stripe_presentment_count,
+            xlm_is_not_a_stripe_currency: true,
+            xlm_display: xlmDisplay,
+            amount_xlm: xlmDisplay && xlmDisplay.amount_xlm,
+            eur_per_xlm: xlmDisplay && xlmDisplay.eur_per_xlm,
+            rate_as_of: xlmDisplay && xlmDisplay.rate_as_of,
+            rate_source: xlmDisplay && xlmDisplay.rate_source,
+            network_fee_xlm: xlmDisplay && xlmDisplay.network_fee_xlm,
+            charge_allowed_now: chargeAllowed,
+            charge_created: false,
+            availability_status: chargeAllowed
+              ? "available"
+              : "not_yet_available",
+            availability_label: chargeAllowed
+              ? "Available"
+              : "Not yet available"
+          });
+        }
+      } catch (error) {
+        console.error("HAVKAR jobs/services payments error:", error && error.message);
+        return sendError(res, 500, "Jobs/services payment catalog failed");
+      }
+    }
+  }
+
   if (isMarketplaceConnectRequest(req)) {
     if (req.method !== "GET" && req.method !== "POST") {
       res.setHeader("Allow", "GET, POST");
@@ -1599,7 +1861,12 @@ export default async function handler(req, res) {
         const normalized = normalizeStripeFiatCurrency(currencyRaw);
         if (normalized.ok) {
           const fx = await fetchEurRates();
-          currencyQuote = quoteWithFees(listPrice, normalized.currencyUpper, fx.rates);
+          currencyQuote = quoteWithFees(
+            listPrice,
+            normalized.currencyUpper,
+            fx.rates,
+            fx
+          );
         }
       } catch (_e) {
         currencyQuote = null;

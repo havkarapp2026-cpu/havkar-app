@@ -23,6 +23,38 @@
   </div>
 </header>
 <main>
+  <section class="card" id="hotelsPaymentPanel" data-checkout-surface="hotels" aria-label="Hotels payment methods">
+    <h2>Payment methods</h2>
+    <p>Display-only quotes. Live booking stays OFF until Owner authorization.</p>
+    <div id="payStripeCard" class="pay-card">Card (Stripe) — <span class="status">Not yet available</span></div>
+    <div id="payXlmCard" class="pay-card" data-method="xlm_mainnet">Stellar XLM — Pay with XLM wallet — <span class="status">Not yet available</span><span class="xlm-mark"> XLM</span></div>
+    <button type="button" id="quoteStripeBtn">Quote Stripe (no charge)</button>
+    <button type="button" id="quoteXlmBtn">Quote XLM (display-only)</button>
+    <pre id="hotelsPayOut" style="display:none;white-space:pre-wrap;font-size:12px;"></pre>
+  </section>
+  <script>
+  (function hotelsPaymentProbe(){
+    function show(text){
+      var out=document.getElementById("hotelsPayOut");
+      if(!out) return;
+      out.style.display="block";
+      out.textContent=text;
+    }
+    async function loadMethods(){
+      try{
+        var res=await fetch("/api/global-payments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"hotels_payment_methods"})});
+        var body=await res.json();
+        window.__HAVKAR_HOTELS_PAY=body;
+        show("hotels_payment_methods live_flag_armed="+String(body.live_flag_armed)+" public_live_booking="+String(body.public_live_booking)+" xlm_is_not_a_stripe_currency="+String(body.xlm_is_not_a_stripe_currency)+" methods="+((body.methods||[]).map(function(m){return m.id+":"+(m.availability_status||m.status);}).join(",")));
+      }catch(e){ show(String(e&&e.message||e)); }
+    }
+    var qs=document.getElementById("quoteStripeBtn");
+    var qx=document.getElementById("quoteXlmBtn");
+    if(qs) qs.onclick=function(){ fetch("/api/global-payments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"global_payment_quote",module:"hotels",method:"stripe",currency:"eur",list_price_eur:100})}).then(function(r){return r.json();}).then(function(b){show("stripe quote display-only (no charge)\n"+JSON.stringify(b,null,2));}); };
+    if(qx) qx.onclick=function(){ fetch("/api/global-payments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"global_payment_quote",module:"hotels",method:"xlm",currency:"eur",list_price_eur:100})}).then(function(r){return r.json();}).then(function(b){show("xlm_display quote display-only (no charge) charge_allowed_now=false\n"+JSON.stringify(b,null,2));}); };
+    loadMethods();
+  })();
+  </script>
   <p class="links" id="authLinks">
     <a href="login.html">Log In</a>
     <a href="signup.html">Create New Account</a>

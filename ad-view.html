@@ -456,6 +456,15 @@ textarea{min-height:90px;resize:vertical}
     const token = session && session.data && session.data.session
       ? session.data.session.access_token
       : "";
+    try {
+      await fetch("/api/global-payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "ads_payment_methods" })
+      }).then(function (r) { return r.json(); }).then(function (catalog) {
+        window.__HAVKAR_ADS_PAY = catalog;
+      });
+    } catch (_e) {}
     const response = await fetch("/api/create-ad-boost-checkout", {
       method: "POST",
       headers: {

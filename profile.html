@@ -2878,6 +2878,42 @@ input:focus-visible{
                 <div class="setting-description">
                     Manage HAVKAR premium plans and payments.
                 </div>
+                <p data-plan-id="business_listing_annual" style="font-size:12px;margin:8px 0 0;">
+                  Business listing catalog id <code>business_listing_annual</code> (€99 / 365 days) quotes through <code>/api/global-payments</code> only. Live charging stays Owner-gated.
+                </p>
+                <pre id="businessGlobalPaymentsOut" style="display:none;white-space:pre-wrap;font-size:12px;"></pre>
+                <script>
+                (function probeBusinessGlobalPayments(){
+                  fetch("/api/global-payments", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "business_payment_methods" })
+                  }).then(function(res){ return res.json(); }).then(function(methods){
+                    window.__HAVKAR_BUSINESS_PAY = methods;
+                    return fetch("/api/global-payments", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        action: "global_payment_quote",
+                        module: "business",
+                        method: "stripe",
+                        currency: "eur",
+                        subject_id: "business_listing_annual"
+                      })
+                    });
+                  }).then(function(res){ return res ? res.json() : null; }).then(function(quote){
+                    var out = document.getElementById("businessGlobalPaymentsOut");
+                    if (!out || !quote) return;
+                    out.style.display = "block";
+                    out.textContent = [
+                      "business_listing_annual via /api/global-payments",
+                      "ok=" + String(quote.ok),
+                      "live=" + String(quote.public_live_checkout),
+                      "buyer_pays=" + (quote.quote && quote.quote.buyer_pays)
+                    ].join("\n");
+                  }).catch(function(){});
+                })();
+                </script>
 
             </div>
 
