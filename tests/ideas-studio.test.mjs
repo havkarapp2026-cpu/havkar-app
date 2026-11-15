@@ -68,7 +68,9 @@ const client = fs.readFileSync("havkar-ideas-studio.js", "utf8");
 assert.match(client, /\/api\/ideas-studio/);
 assert.match(client, /measured_force/);
 
-assert.ok(fs.existsSync("api/ideas-studio.js"));
+assert.ok(fs.existsSync("api/business-application-notify.js"));
+assert.match(fs.readFileSync("api/business-application-notify.js","utf8"), /handleIdeasStudioRequest/);
+assert.match(fs.readFileSync("vercel.json","utf8"), /ideas-studio/);
 assert.ok(fs.existsSync("docs/ideas-studio/LEGAL_CHECKLIST.md"));
 assert.ok(fs.existsSync("docs/ideas-studio/ALDO_HARDWARE_SENSOR_CONTRACT.md"));
 
