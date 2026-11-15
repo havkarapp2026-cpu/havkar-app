@@ -85,11 +85,13 @@ See CI / local `node --test` run in the PR notes. Live card charges and Mainnet 
 
 ## G. CI
 
-Local payment suite: **PASS** (12/12 + stellar regression). GitHub CI on PR #196: **pending** (subscribed).
+Local payment suite: **PASS** (12/12 + stellar regression).
+GitHub CI on PR #196 tip `e305531e`: **PASS** (3/3 checks, no failures).
+Vercel Preview: **Ready**.
 
 ## H. Commit SHA / PR
 
-- Commit: `1d14df55f2708b32f251ef4ea3bb1f4b38c91cf1`
+- Commit: `e305531e4a21b4912bc6b4d710640905d9235ace`
 - Branch: `cursor/global-133-currencies-xlm-d4b2`
 - PR: https://github.com/havkarapp2026-cpu/havkar-app/pull/196 (#196)
 - Base: `main`
