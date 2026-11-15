@@ -2366,6 +2366,7 @@
             interestedIds = new Set();
             interestedCounts = new Map();
 
+            // Aggregate-only RPC (no user ids). Safe for guests on public events.
             const counts = await supabase.rpc("event_interest_counts");
 
             if (!counts.error && Array.isArray(counts.data)) {
@@ -2375,6 +2376,11 @@
                         Number(row.interested_count) || 0
                     );
                 });
+            } else if (counts.error) {
+                console.warn(
+                    "HAVKAR Events interest counts unavailable:",
+                    counts.error.message || counts.error
+                );
             }
 
             if (!currentUser) {
