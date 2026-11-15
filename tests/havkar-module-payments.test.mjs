@@ -57,11 +57,12 @@ assert.match(api, /ai_entitlement_check/);
 assert.match(api, /xlm_is_not_a_stripe_currency/);
 
 const hotelsPage = fs.readFileSync("accommodation.html", "utf8");
-assert.match(hotelsPage, /hotels_payment_methods/);
 assert.match(hotelsPage, /payXlmCard/);
 assert.match(hotelsPage, /payStripeCard/);
-assert.match(hotelsPage, /quoteXlmBtn/);
-assert.match(hotelsPage, /display-only/);
+assert.match(hotelsPage, /Not yet available/);
+assert.match(hotelsPage, /Owner authorization/);
+assert.doesNotMatch(hotelsPage, /quoteXlmBtn/);
+assert.doesNotMatch(hotelsPage, /hotels_payment_methods/);
 
 const checkout = fs.readFileSync("checkout-currency.html", "utf8");
 assert.match(checkout, /133-currency checkout matrix/);
@@ -71,7 +72,8 @@ assert.match(checkout, /@media\(max-width:560px\)/);
 
 const profile = fs.readFileSync("profile.html", "utf8");
 assert.match(profile, /business_listing_annual/);
-assert.match(profile, /business_payment_methods/);
+assert.match(profile, /\/api\/global-payments/);
+assert.doesNotMatch(profile, /probeBusinessGlobalPayments/);
 
 const adsPage = fs.readFileSync("ad-view.html", "utf8");
 assert.match(adsPage, /ads_payment_methods/);
