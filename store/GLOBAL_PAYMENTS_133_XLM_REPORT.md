@@ -89,7 +89,7 @@ Local payment suite: **PASS** (12/12 + stellar regression). GitHub CI on PR #196
 
 ## H. Commit SHA / PR
 
-- Commit: `2b6b2618ae626b9750a01fd14dcb76d984faeca5`
+- Commit: `1d14df55f2708b32f251ef4ea3bb1f4b38c91cf1`
 - Branch: `cursor/global-133-currencies-xlm-d4b2`
 - PR: https://github.com/havkarapp2026-cpu/havkar-app/pull/196 (#196)
 - Base: `main`
