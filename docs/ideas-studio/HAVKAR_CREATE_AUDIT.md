@@ -48,3 +48,23 @@
 - Staging project `keglioewbkgdabsizvys` does **not** contain CREATE tables.
 - Fix: ephemeral `analyze_idea` (no `idea_id`) works without service role; status reports `backend_configured` + missing env **names** only.
 - Auth-backed save/venture/Aldo/marketplace_prepare on Preview remain blocked until Owner adds Preview env pointing at the production CREATE schema project (or applies CREATE migration to staging + staging keys).
+
+## save_idea 503 — exact dependency (no secrets invented)
+**Cause:** handler calls `createServiceClient()` before `save_idea`. Client requires both:
+1. `SUPABASE_URL`
+2. `SUPABASE_SERVICE_ROLE_KEY`
+
+On Preview for `cursor/havkar-create-complete-d4b2` both are **missing** (verified by API `missing_env`).  
+After env is present, `save_idea` also requires a signed-in user `Authorization: Bearer <access_token>` (otherwise **401**).
+
+**Where these already exist:** Vercel project `havkar-app` → Environment Variables → **Production** target (sensitive). Values were not readable/decryptable from this agent session; Cursor workspace secrets list is empty; agent VM env has neither key.
+
+**Where Owner must add them for Preview CREATE:**
+- Vercel Dashboard → Project **havkar-app** → Settings → Environment Variables
+- Add (or copy from Production) for target **Preview**, preferably git branch `cursor/havkar-create-complete-d4b2`:
+  - `SUPABASE_URL`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+- Point URL at project `gispovnciifgikvgpzck` (CREATE tables already present) — or migrate staging first if using staging URL
+- Redeploy the Preview deployment after saving env
+
+**Do not paste secret values into chat.** Agent will not invent keys.

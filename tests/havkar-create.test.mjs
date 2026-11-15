@@ -124,4 +124,26 @@ await api.handleIdeasStudioRequest(
 assert.equal(analyzeRes.body.ok, true);
 assert.equal(analyzeRes.body.mode, "ephemeral");
 
+// save_idea must fail closed when Supabase service env is absent (no fake keys).
+const saveRes = mockRes();
+await api.handleIdeasStudioRequest(
+  {
+    method: "POST",
+    headers: {},
+    body: {
+      action: "save_idea",
+      title: "Blocked save",
+      category: "website",
+      description: "This save must not succeed without SUPABASE_URL and SERVICE_ROLE."
+    }
+  },
+  saveRes
+);
+assert.equal(saveRes.body.ok, false);
+assert.match(String(saveRes.body.error || ""), /not configured/i);
+assert.deepEqual(saveRes.body.missing_env, [
+  "SUPABASE_URL",
+  "SUPABASE_SERVICE_ROLE_KEY"
+]);
+
 console.log("HAVKAR_CREATE_TEST_OK");
