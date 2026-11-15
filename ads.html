@@ -1083,6 +1083,16 @@
             <button
                 class="header-icon-btn"
                 type="button"
+                onclick="showMyCampaigns()"
+                aria-label="My Campaigns"
+                title="My Campaigns"
+            >
+                <i class="fas fa-chart-line"></i>
+            </button>
+
+            <button
+                class="header-icon-btn"
+                type="button"
                 onclick="focusSearch()"
                 aria-label="Search"
             >
@@ -1236,6 +1246,17 @@
         >
             <i class="fas fa-bookmark"></i>
             <span>Saved</span>
+        </button>
+
+        <button
+            class="nav-item"
+            id="myCampaignsNavButton"
+            type="button"
+            onclick="showMyCampaigns()"
+            aria-label="My Campaigns"
+        >
+            <i class="fas fa-chart-line"></i>
+            <span>Campaigns</span>
         </button>
 
         <button
@@ -1631,6 +1652,9 @@
             "all";
 
         let showingSavedOnly =
+            false;
+
+        let showingMineOnly =
             false;
 
         let selectedImageData =
@@ -2205,6 +2229,9 @@
             showingSavedOnly =
                 false;
 
+            showingMineOnly =
+                false;
+
             document
                 .querySelectorAll(".tab")
                 .forEach(
@@ -2249,6 +2276,20 @@
                 ad => {
 
                     if (
+                        showingMineOnly
+                    ) {
+
+                        if (
+                            !currentUserId ||
+                            String(ad.user_id || "") !==
+                                String(currentUserId)
+                        ) {
+
+                            return false;
+
+                        }
+
+                    } else if (
                         !isPublicListingStatus(
                             ad.status
                         )
@@ -2376,7 +2417,9 @@
 
                         <h3>
                             ${
-                                showingSavedOnly
+                                showingMineOnly
+                                    ? "No campaigns yet"
+                                    : showingSavedOnly
                                     ? "No saved advertisements"
                                     : "No advertisements found"
                             }
@@ -2384,7 +2427,9 @@
 
                         <p>
                             ${
-                                showingSavedOnly
+                                showingMineOnly
+                                    ? "Create an advertisement with the + button. Pending, active and expired campaigns you own appear here."
+                                    : showingSavedOnly
                                     ? "Advertisements you save will appear here."
                                     : "Try another search or category, or create a new advertisement."
                             }
@@ -3236,6 +3281,9 @@
             showingSavedOnly =
                 true;
 
+            showingMineOnly =
+                false;
+
             activeCategory =
                 "all";
 
@@ -3295,6 +3343,60 @@
 
         }
 
+        async function showMyCampaigns() {
+
+            if (!currentUserId) {
+
+                showToast(
+                    "Please log in to view your campaigns."
+                );
+
+                setTimeout(
+                    function () {
+                        window.location.href = "login.html";
+                    },
+                    700
+                );
+
+                return;
+
+            }
+
+            showingSavedOnly = false;
+            showingMineOnly = true;
+            activeCategory = "all";
+
+            document
+                .querySelectorAll(".tab")
+                .forEach(function (tab) {
+                    tab.classList.remove("active");
+                });
+
+            const allTab = document.querySelector(
+                '.tab[data-category="all"]'
+            );
+
+            if (allTab) {
+                allTab.classList.add("active");
+            }
+
+            const search = document.getElementById(
+                "searchInput"
+            );
+
+            if (search) {
+                search.value = "";
+            }
+
+            updateResultsTitle();
+            renderAds();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            showToast(
+                "Showing your advertisement campaigns (pending, active, expired)."
+            );
+
+        }
+
         function updateResultsTitle() {
 
             const title =
@@ -3304,6 +3406,17 @@
 
             if (!title) {
                 return;
+            }
+
+            if (
+                showingMineOnly
+            ) {
+
+                title.textContent =
+                    "My Campaigns";
+
+                return;
+
             }
 
             if (
@@ -3951,6 +4064,9 @@
                     "all";
 
                 showingSavedOnly =
+                    false;
+
+                showingMineOnly =
                     false;
 
                 document

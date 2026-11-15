@@ -601,11 +601,29 @@ textarea {
     border-color: #b7d997;
 }
 
+
 .save-btn.saved {
     color: #689f38;
     background: #f1f8eb;
     border-color: #b7d997;
 }
+
+html[dir="rtl"] .save-btn {
+    right: auto;
+    left: 18px;
+}
+
+html[dir="rtl"] .service-title {
+    padding-right: 0;
+    padding-left: 34px;
+}
+
+.provider-avatar.is-empty {
+    font-size: 22px;
+    color: #558b2f;
+    letter-spacing: 0;
+}
+
 
 .service-details {
     display: flex;
@@ -2661,8 +2679,8 @@ function buildServiceCard(service) {
         safeImageUrl(service.image_url);
 
     const avatarContent = image
-        ? `<img src="${escapeAttribute(image)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:17px">`
-        : "🛠️";
+        ? `<img src="${escapeAttribute(image)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:17px" onerror="this.remove(); this.parentElement.classList.add('is-empty'); this.parentElement.textContent='No photo';">`
+        : "No photo";
 
     card.innerHTML = `
         <button
@@ -2673,7 +2691,7 @@ function buildServiceCard(service) {
         </button>
 
         <div class="service-top">
-            <div class="provider-avatar">
+            <div class="provider-avatar ${image ? "" : "is-empty"}">
                 ${avatarContent}
             </div>
 

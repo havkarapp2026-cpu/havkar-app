@@ -1744,6 +1744,10 @@
             </button>
 
         </div>
+        <div class="search-wrapper" style="margin-top:8px">
+            <i class="fas fa-location-dot search-icon"></i>
+            <input id="locationFilter" class="search-input" type="search" placeholder="City / country / address..." autocomplete="off" aria-label="Location filter">
+        </div>
 
     </section>
 
@@ -1768,6 +1772,14 @@
 
 
     <main class="content">
+        <section class="card" id="eventsMapPanel" aria-label="Event map discovery" style="margin:12px 16px;padding:12px;border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.06)">
+            <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+                <strong style="color:#1b5e20">Map discovery</strong>
+                <button type="button" id="eventsGpsBtn" style="min-height:40px;border:1px solid #1b5e20;border-radius:10px;background:#fff;color:#1b5e20;font-weight:700;padding:0 12px;cursor:pointer">Use my location</button>
+            </div>
+            <div id="eventsMap" style="height:220px;border-radius:12px;border:1px solid #d7e6db" role="application" aria-label="Events map"></div>
+            <p id="eventsMapNote" style="margin:8px 0 0;font-size:.85rem;color:#567;line-height:1.4">Interactive map stays available even when no events match. Pins appear only for events with real coordinates — never invented.</p>
+        </section>
         <div id="eventsContainer"></div>
         <div id="emptyState" class="empty-state">
             <div class="empty-icon"><i class="fas fa-calendar-xmark"></i></div>
@@ -2051,7 +2063,7 @@
             "Create New Event":"Skapa nytt evenemang", "Event Title":"Evenemangets namn", "Category":"Kategori",
             "Select":"Välj", "Price":"Pris", "Date":"Datum", "Time":"Tid", "Location":"Plats",
             "Organizer":"Arrangör", "Description":"Beskrivning", "Expected Attendees":"Förväntat antal deltagare",
-            "Cancel":"Avbryt", "Create Event":"Skapa evenemang", "Event Details":"Evenemangsdetaljer",
+            "Cancel":"Avbryt", "Create Event":"Skapa evenemang", "Map discovery":"Kartupptäckt", "Use my location":"Använd min plats", "City / country / address...":"Stad / land / adress...", "Event Details":"Evenemangsdetaljer",
             "Filter Events":"Filtrera evenemang", "All":"Alla", "Free":"Gratis", "Paid":"Betalt",
             "All categories":"Alla kategorier", "Reset":"Återställ", "Apply":"Tillämpa",
             "My Event Tickets":"Evenemangsbiljetter", "Loading your tickets...":"Laddar dina biljetter...",
@@ -2492,6 +2504,22 @@
                 );
             }
 
+            const locationFilterEl =
+                document.getElementById("locationFilter");
+            const locationTerm =
+                locationFilterEl
+                    ? String(locationFilterEl.value || "")
+                        .trim()
+                        .toLowerCase()
+                    : "";
+            if (locationTerm) {
+                events = events.filter(event =>
+                    String(event.location || "")
+                        .toLowerCase()
+                        .includes(locationTerm)
+                );
+            }
+
 
             const selectedCategory =
                 currentCategory !== "all"
@@ -2592,7 +2620,7 @@
                 );
 
             return `
-                <article class="event-card">
+                <article class="event-card" data-event-location="${escapeHtml(String(event.location || ""))}">
                     <div
                         class="event-image ${escapeHtml(event.category)}"
                         ${imageStyle(event)}
@@ -3064,6 +3092,11 @@
                     </div>
 
 
+                    <p style="margin:10px 0;font-size:.85rem;color:#567;line-height:1.4">
+                        Card tickets currently settle in EUR. HAVKAR supports 133 Stripe presentment currencies and a separate XLM crypto rail in the global matrix — without inventing live multi-currency event settlement here.
+                        <a href="checkout-currency.html">View 133 currencies + XLM</a>
+                    </p>
+                    <div id="eventCurrencyMount" style="margin:8px 0 12px"></div>
                     <div class="detail-buttons">
                         <button
                             class="btn btn-secondary"
@@ -4553,6 +4586,114 @@
 <div data-havkar-legal-footer></div>
 <script src="/havkar-operator-config.js"></script>
 <script src="/havkar-legal-footer.js"></script>
+<script src="/havkar-premium-i18n.js"></script>
+<script src="/havkar-presentment-currencies.js"></script>
+<script src="/havkar-currency-select.js"></script>
+<script src="/havkar-map.js"></script>
+
+<script>
+(function(){
+  if(!window.HAVKAR_MAP) return;
+  var note=document.getElementById("eventsMapNote");
+  window.HAVKAR_MAP.create("eventsMap",{latitude:41.9,longitude:12.5,zoom:5}).then(function(api){
+    window.__havkarEventsMap=api;
+    var btn=document.getElementById("eventsGpsBtn");
+    if(btn){
+      btn.addEventListener("click",function(){
+        api.requestGps().then(function(){
+          if(note) note.textContent="GPS permission granted. Matching events with coordinates can use this center.";
+        }).catch(function(){
+          if(note) note.textContent="Location permission denied or unavailable. Search and list still work.";
+        });
+      });
+    }
+  }).catch(function(){
+    if(note) note.textContent="Map provider unavailable in this browser. Event list remains usable.";
+  });
+})();
+</script>
+
+
+<script>
+(function(){
+  function locationQuery(){
+    var el=document.getElementById("locationFilter");
+    return el?String(el.value||"").trim().toLowerCase():"";
+  }
+  var loc=document.getElementById("locationFilter");
+  if(loc){
+    loc.addEventListener("input", function(){
+      if(typeof renderEvents==="function") renderEvents();
+      else if(typeof window.renderEvents==="function") window.renderEvents();
+      else {
+        var search=document.getElementById("searchInput");
+        if(search) search.dispatchEvent(new Event("input"));
+      }
+      pinEventsOnMap();
+    });
+  }
+  async function geocodeLabel(label){
+    try{
+      var res=await fetch("/api/hotels",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"hotels_geocode",query:label})});
+      var body=await res.json();
+      return body&&body.ok&&body.primary?body.primary:null;
+    }catch(e){return null;}
+  }
+  async function pinEventsOnMap(){
+    var api=window.__havkarEventsMap;
+    if(!api||!api.map||!api.L) return;
+    if(window.__havkarEventPinLayer){
+      try{ api.map.removeLayer(window.__havkarEventPinLayer);}catch(e){}
+    }
+    window.__havkarEventPinLayer=api.L.layerGroup().addTo(api.map);
+    var cards=Array.prototype.slice.call(document.querySelectorAll("[data-event-location]")).slice(0,12);
+    for(var i=0;i<cards.length;i++){
+      var label=cards[i].getAttribute("data-event-location");
+      if(!label||label.length<3) continue;
+      var geo=await geocodeLabel(label);
+      if(!geo) continue;
+      api.addPricePin(geo.latitude, geo.longitude, label);
+    }
+  }
+  window.__havkarPinEventsOnMap=pinEventsOnMap;
+  // Soft-patch: when events re-render, try pins after short delay
+  var obs=new MutationObserver(function(){
+    clearTimeout(window.__havkarPinTimer);
+    window.__havkarPinTimer=setTimeout(pinEventsOnMap, 400);
+  });
+  var root=document.getElementById("eventsContainer");
+  if(root) obs.observe(root,{childList:true,subtree:true});
+})();
+</script>
+
+
+<script>
+(function(){
+  function mountEventCurrencySelect(){
+    var mount=document.getElementById("eventCurrencyMount");
+    if(!mount||!window.HAVKAR_CURRENCY_SELECT) return;
+    mount.innerHTML="";
+    window.HAVKAR_CURRENCY_SELECT.mount(mount,{
+      idPrefix:"eventCur",
+      initialCurrency:"eur",
+      onChange:function(sel){
+        if(sel.method==="xlm_mainnet"){
+          if(window.showToast) showToast("XLM is a separate crypto rail. Use XLM Testnet button when offered.", "info");
+        }
+      }
+    });
+  }
+  var root=document.getElementById("detailsModal")||document.body;
+  var obs=new MutationObserver(function(){
+    if(document.getElementById("eventCurrencyMount")){
+      clearTimeout(window.__eventCurTimer);
+      window.__eventCurTimer=setTimeout(mountEventCurrencySelect, 50);
+    }
+  });
+  obs.observe(document.body,{childList:true,subtree:true});
+})();
+</script>
+
 <script src="/havkar-page-back.js"></script>
 <script src="/havkar-sw-register.js"></script>
 </body>
