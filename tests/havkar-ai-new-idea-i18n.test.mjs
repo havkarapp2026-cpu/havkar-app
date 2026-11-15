@@ -17,7 +17,14 @@ const requiredKeys = [
   "Regenerate",
   "Refine this idea",
   "Develop this idea",
-  "New Idea"
+  "New Idea",
+  "Business Ideas",
+  "Ideas and guidance",
+  "Your multilingual business assistant",
+  "Start voice input",
+  "Stop voice input",
+  "Create Content",
+  "Design Logo"
 ];
 
 for (const code of requiredLangs) {
@@ -40,6 +47,9 @@ assert.match(page, /function interfaceText\(/);
 assert.match(page, /HAVKAR_UI_DICTIONARY/);
 assert.match(page, /labeledAction\("Refine this idea"\)/);
 assert.match(page, /labeledAction\("Develop this idea"\)/);
+assert.match(page, /data-i18n-label="Business Ideas"/);
+assert.match(page, /data-i18n-label="Create Content"/);
+assert.match(page, /data-i18n-label/);
 assert.match(page, /applyInterfaceDirection/);
 assert.match(page, /dir === "rtl"/);
 

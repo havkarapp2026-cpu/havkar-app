@@ -28,12 +28,13 @@ assert.match(api, /xlm_is_not_a_stripe_currency/);
 const page = fs.readFileSync("accommodation.html", "utf8");
 assert.match(page, /payXlmCard/);
 assert.match(page, /payStripeCard/);
-assert.match(page, /quoteXlmBtn/);
-assert.match(page, /quoteStripeBtn/);
 assert.match(page, /xlm-mark/);
-assert.match(page, /hotels_payment_methods/);
 assert.match(page, /xlm_mainnet/);
-assert.match(page, /display-only/);
+assert.match(page, /Not yet available/);
+assert.match(page, /Owner authorization/);
+assert.doesNotMatch(page, /quoteStripeBtn/);
+assert.doesNotMatch(page, /loadMethods\(\)/);
+assert.doesNotMatch(page, /hotels_payment_methods/);
 
 const stellar = fs.readFileSync("lib/stellar-checkout.cjs", "utf8");
 assert.match(stellar, /rate_as_of/);
