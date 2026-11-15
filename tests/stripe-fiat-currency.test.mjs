@@ -15,11 +15,29 @@ const {
   tradePaymentsAllowed
 } = require("../lib/real-payments.cjs");
 
-test("default Stripe fiat allow-list is EUR and USD", () => {
-  assert.deepEqual(allowedStripeFiatCurrencies({}), ["eur", "usd"]);
+test("default Stripe fiat allow-list is the verified 133 presentment matrix", () => {
+  const allowed = allowedStripeFiatCurrencies({});
+  assert.equal(allowed.length, 133);
+  assert.ok(allowed.includes("eur"));
+  assert.ok(allowed.includes("usd"));
+  assert.ok(allowed.includes("gbp"));
   assert.equal(normalizeStripeFiatCurrency("EUR").ok, true);
   assert.equal(normalizeStripeFiatCurrency("usd").currency, "usd");
-  assert.equal(normalizeStripeFiatCurrency("gbp").ok, false);
+  assert.equal(normalizeStripeFiatCurrency("gbp").ok, true);
+  assert.equal(normalizeStripeFiatCurrency("xxx").ok, false);
+});
+
+test("Owner CSV override can narrow the live allow-list", () => {
+  const allowed = allowedStripeFiatCurrencies({
+    HAVKAR_STRIPE_FIAT_CURRENCIES: "eur,usd"
+  });
+  assert.deepEqual(allowed, ["eur", "usd"]);
+  assert.equal(
+    normalizeStripeFiatCurrency("gbp", {
+      HAVKAR_STRIPE_FIAT_CURRENCIES: "eur,usd"
+    }).ok,
+    false
+  );
 });
 
 test("live card collection stays paused without exact owner flags", () => {
