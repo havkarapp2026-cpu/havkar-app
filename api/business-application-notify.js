@@ -3,36 +3,6 @@ import {
     createSupportRequestHandler,
     isSupportRequest
 } from "../lib/support-request.cjs";
-import { handleIdeasStudioRequest } from "../lib/ideas-studio-api.mjs";
-
-function isIdeasStudioRequest(req) {
-    const q = req.query || {};
-    const body = req.body && typeof req.body === "object" ? req.body : {};
-    const marker = String(
-        q.havkarAction || q.havkarRoute || body.havkarAction || ""
-    ).toLowerCase();
-    if (marker === "ideas_studio" || marker === "ideas-studio") return true;
-    const action = String(body.action || q.action || "").toLowerCase();
-    return (
-        action.startsWith("ideas_") ||
-        action.startsWith("list_ideas") ||
-        action.startsWith("save_idea") ||
-        action.startsWith("submit_idea") ||
-        action.startsWith("review_idea") ||
-        action.startsWith("create_venture") ||
-        action.startsWith("list_ventures") ||
-        action.startsWith("update_venture") ||
-        action.startsWith("request_publish") ||
-        action.startsWith("moderate_venture") ||
-        action.startsWith("ledger_") ||
-        action.startsWith("add_simulated") ||
-        action.startsWith("present_agreement") ||
-        action.startsWith("accept_agreement") ||
-        action.startsWith("aldo_") ||
-        action === "list_templates" ||
-        action === "ideas_studio_status"
-    );
-}
 
 const FIELD_LIMITS = {
     business_name: 160,
@@ -167,24 +137,6 @@ export function createBusinessNotificationHandler({
                 fetchImpl,
                 createSupabase
             })(req, res);
-        }
-
-        if (isIdeasStudioRequest(req)) {
-            try {
-                return await handleIdeasStudioRequest(req, res);
-            } catch (error) {
-                console.error(
-                    "Ideas Studio handler error:",
-                    error instanceof Error ? error.message : error
-                );
-                return res.status(500).json({
-                    ok: false,
-                    error:
-                        error instanceof Error
-                            ? error.message
-                            : "Ideas Studio handler failed."
-                });
-            }
         }
 
         if (req.method !== "POST") {
