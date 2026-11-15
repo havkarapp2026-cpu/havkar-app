@@ -81,10 +81,20 @@
     const data = await api("ideas_studio_status");
     const box = $("flagsBox");
     if (box) {
+      const backendOk = !!(data.backend_configured || (data.backend && data.backend.configured));
+      const missing =
+        (data.backend && data.backend.missing_env && data.backend.missing_env.join(", ")) ||
+        "";
       box.innerHTML =
         "<p><strong>Payments:</strong> OFF</p>" +
         "<p><strong>Public publish:</strong> OFF</p>" +
         "<p><strong>Ownership transfer:</strong> OFF</p>" +
+        "<p><strong>Supabase backend:</strong> " +
+        (backendOk
+          ? "configured (auth-backed CREATE actions available)"
+          : "not configured on this deployment — ephemeral AI analyze still works; save/venture/Aldo need SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY" +
+            (missing ? " (missing: " + missing + ")" : "")) +
+        "</p>" +
         "<p><strong>Proposed split:</strong> 70% HAVKAR / 30% partner (net profit, inactive)</p>" +
         "<p>" + data.flags.note + "</p>";
     }
@@ -111,7 +121,11 @@
 
   async function refreshIdeas() {
     if (!(await ensureAuth())) return;
-    const data = await api("list_ideas");
+    const data = await api("list_ideas", {
+      q: $("ideaSearch") ? $("ideaSearch").value : "",
+      category: $("ideaFilterCategory") ? $("ideaFilterCategory").value : "",
+      status: $("ideaFilterStatus") ? $("ideaFilterStatus").value : ""
+    });
     const list = $("ideasList");
     if (!list) return;
     if (!data.ideas.length) {
@@ -120,6 +134,9 @@
     }
     list.innerHTML = data.ideas
       .map(function (idea) {
+        const editable =
+          idea.status === "draft" || idea.status === "rejected" || idea.status === "withdrawn";
+        const withdrawable = idea.status === "submitted" || idea.status === "in_review";
         return (
           '<article class="idea-card" data-idea-id="' +
           idea.id +
@@ -127,15 +144,32 @@
           escapeHtml(idea.title) +
           '</h3><span class="badge">' +
           escapeHtml(idea.status) +
+          " · " +
+          escapeHtml(idea.category) +
           "</span></header><p>" +
           escapeHtml(idea.description).slice(0, 180) +
-          "</p><footer><button type='button' data-submit-idea='" +
+          "</p><footer style='display:flex;flex-wrap:wrap;gap:6px'>" +
+          "<button type='button' data-edit-idea='" +
           idea.id +
           "' " +
-          (idea.status === "draft" || idea.status === "rejected" || idea.status === "withdrawn"
-            ? ""
-            : "disabled") +
-          ">Submit for review</button></footer></article>"
+          (editable ? "" : "disabled") +
+          ">Edit</button>" +
+          "<button type='button' data-submit-idea='" +
+          idea.id +
+          "' " +
+          (editable ? "" : "disabled") +
+          ">Submit for review</button>" +
+          "<button type='button' data-withdraw-idea='" +
+          idea.id +
+          "' " +
+          (withdrawable ? "" : "disabled") +
+          ">Withdraw</button>" +
+          "<button type='button' data-delete-idea='" +
+          idea.id +
+          "' " +
+          (editable ? "" : "disabled") +
+          ">Delete</button>" +
+          "</footer></article>"
         );
       })
       .join("");
@@ -196,11 +230,11 @@
     preview.style.setProperty("--preview-accent", theme.accent || "#1c9a43");
     preview.innerHTML =
       '<div class="preview-shell">' +
-      '<p class="sim-banner">PRIVATE PREVIEW · not publicly published</p>' +
+      '<p class="sim-banner">PRIVATE SANDBOX · not publicly published · payments OFF</p>' +
       "<h3>" +
       escapeHtml((config && config.heroTitle) || (config && config.template_name) || "Venture") +
       "</h3><p>" +
-      escapeHtml((config && config.heroSubtitle) || "Template-based Studio preview") +
+      escapeHtml((config && config.heroSubtitle) || "HAVKAR CREATE template preview") +
       "</p><ul>" +
       ((config && config.sections) || [])
         .map(function (s) {
@@ -213,7 +247,15 @@
           escapeHtml(config.unsupported.join(", ")) +
           "</p>"
         : "") +
+      (config && config.gameUrl
+        ? "<p><a href='" +
+          escapeHtml(config.gameUrl) +
+          "' target='_blank' rel='noopener'>Open linked demo</a></p>"
+        : "") +
       "</div>";
+    if (root.HAVKAR_CREATE_RUNTIME && $("createSandbox")) {
+      root.HAVKAR_CREATE_RUNTIME.mount($("createSandbox"), config || {});
+    }
   }
 
   async function openVenture(id) {
@@ -356,7 +398,7 @@
         ev.preventDefault();
         if (!(await ensureAuth())) return;
         try {
-          await api("save_idea", {
+          const payload = {
             title: $("ideaTitle").value,
             category: $("ideaCategory").value,
             description: $("ideaDescription").value,
@@ -365,14 +407,27 @@
             budget_range: $("ideaBudget").value,
             development_goals: $("ideaGoals").value,
             preferred_business_model: $("ideaModel").value
-          });
+          };
+          if ($("ideaEditId") && $("ideaEditId").value) {
+            payload.id = $("ideaEditId").value;
+          }
+          await api("save_idea", payload);
           ideaForm.reset();
-          setStatus("Private idea draft saved");
+          if ($("ideaEditId")) $("ideaEditId").value = "";
+          setStatus(payload.id ? "Private idea updated" : "Private idea draft saved");
           await refreshIdeas();
           showPanel("ideas");
         } catch (e) {
           setStatus(e.message, true);
         }
+      });
+    }
+
+    if ($("ideaFilterBtn")) {
+      $("ideaFilterBtn").addEventListener("click", function () {
+        refreshIdeas().catch(function (e) {
+          setStatus(e.message, true);
+        });
       });
     }
 
@@ -384,6 +439,50 @@
           await api("submit_idea", { id: t.dataset.submitIdea });
           setStatus("Idea submitted for private review");
           await refreshIdeas();
+        } catch (e) {
+          setStatus(e.message, true);
+        }
+      }
+      if (t.dataset.deleteIdea) {
+        try {
+          if (!window.confirm("Delete this private idea permanently?")) return;
+          await api("delete_idea", { id: t.dataset.deleteIdea });
+          setStatus("Idea deleted");
+          await refreshIdeas();
+        } catch (e) {
+          setStatus(e.message, true);
+        }
+      }
+      if (t.dataset.withdrawIdea) {
+        try {
+          await api("withdraw_idea", { id: t.dataset.withdrawIdea });
+          setStatus("Idea withdrawn");
+          await refreshIdeas();
+        } catch (e) {
+          setStatus(e.message, true);
+        }
+      }
+      if (t.dataset.editIdea) {
+        try {
+          const data = await api("list_ideas", {});
+          const idea = (data.ideas || []).find(function (row) {
+            return row.id === t.dataset.editIdea;
+          });
+          if (!idea) {
+            setStatus("Idea not found", true);
+            return;
+          }
+          if ($("ideaEditId")) $("ideaEditId").value = idea.id;
+          if ($("ideaTitle")) $("ideaTitle").value = idea.title || "";
+          if ($("ideaCategory")) $("ideaCategory").value = idea.category || "other";
+          if ($("ideaDescription")) $("ideaDescription").value = idea.description || "";
+          if ($("ideaAudience")) $("ideaAudience").value = idea.intended_audience || "";
+          if ($("ideaCountry")) $("ideaCountry").value = idea.country_code || "";
+          if ($("ideaBudget")) $("ideaBudget").value = idea.budget_range || "";
+          if ($("ideaGoals")) $("ideaGoals").value = idea.development_goals || "";
+          if ($("ideaModel")) $("ideaModel").value = idea.preferred_business_model || "";
+          showPanel("ideas");
+          setStatus("Editing idea draft — save to update");
         } catch (e) {
           setStatus(e.message, true);
         }
@@ -515,6 +614,85 @@
           });
           await refreshLedger(id);
           setStatus("Partner acceptance recorded — awaiting owner approval");
+        } catch (e) {
+          setStatus(e.message, true);
+        }
+      });
+    }
+
+    const extra = $("createExtraOut");
+    if ($("analyzeIdeaBtn")) {
+      $("analyzeIdeaBtn").addEventListener("click", async function () {
+        // Ephemeral field analysis does not require auth or Supabase service role.
+        try {
+          const result = await api("analyze_idea", {
+            title: $("ideaTitle") ? $("ideaTitle").value : "",
+            category: $("ideaCategory") ? $("ideaCategory").value : "other",
+            description:
+              ($("ideaDescription") && $("ideaDescription").value) ||
+              ($("ventureSubInput") && $("ventureSubInput").value) ||
+              "HAVKAR CREATE venture analysis placeholder description for feasibility."
+          });
+          if (extra) {
+            extra.textContent =
+              "mode=" +
+              (result.mode || "ephemeral") +
+              " · audit_persisted=" +
+              !!result.audit_persisted +
+              " · backend_configured=" +
+              !!result.backend_configured +
+              "\n" +
+              JSON.stringify(result.analysis, null, 2);
+          }
+          setStatus(
+            "Structured AI analysis ready (" +
+              result.analysis.ai_mode +
+              (result.audit_persisted ? ", audit saved" : ", ephemeral") +
+              ")"
+          );
+        } catch (e) {
+          setStatus(e.message, true);
+        }
+      });
+    }
+    if ($("billingQuoteBtn")) {
+      $("billingQuoteBtn").addEventListener("click", async function () {
+        try {
+          const result = await api("billing_quote", {
+            items: [
+              { sku: "ai_analysis", qty: 1 },
+              { sku: "preview_build", qty: 1 },
+              { sku: "sandbox_runtime_hour", qty: 1 }
+            ]
+          });
+          if (extra) {
+            extra.textContent =
+              "DRAFT quote only · live_charges_enabled=" +
+              result.live_charges_enabled +
+              "\n" +
+              JSON.stringify(result, null, 2);
+          }
+          setStatus("Draft CREATE cost quote (not charged)");
+        } catch (e) {
+          setStatus(e.message, true);
+        }
+      });
+    }
+    if ($("marketplacePrepareBtn")) {
+      $("marketplacePrepareBtn").addEventListener("click", async function () {
+        const id = $("activeVentureId").value;
+        if (!id) {
+          setStatus("Open a venture workspace first", true);
+          return;
+        }
+        try {
+          const result = await api("marketplace_prepare", { venture_id: id });
+          if (extra) extra.textContent = JSON.stringify(result, null, 2);
+          setStatus(
+            result.created_listing
+              ? "Marketplace listing created"
+              : "Marketplace draft prepared — listing not created"
+          );
         } catch (e) {
           setStatus(e.message, true);
         }

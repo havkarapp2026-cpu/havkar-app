@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>HAVKAR Ideas & Studio</title>
+<title>HAVKAR CREATE</title>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/havkar-icon-32-20261022-v3.png">
 <style>
@@ -144,14 +144,17 @@ dt{color:var(--muted)} dd{margin:0;font-weight:700}
   <header class="top">
     <a class="brand" href="havkar-ai.html">
       <img src="/assets/icons/havkar-icon-32-20261022-v3.png" alt="">
-      <span>Ideas & Studio</span>
+      <span>HAVKAR CREATE</span>
     </a>
-    <nav class="nav" aria-label="Studio sections">
+    <nav class="nav" aria-label="CREATE sections">
       <button type="button" data-studio-nav="overview" class="active">Overview</button>
       <button type="button" data-studio-nav="ideas">Ideas</button>
       <button type="button" data-studio-nav="studio">Studio</button>
       <button type="button" data-studio-nav="ventures">Ventures</button>
       <button type="button" data-studio-nav="builder">Builder</button>
+      <a class="btn secondary" href="create-football-2d.html">2D Football</a>
+      <a class="btn secondary" href="havkar-ai.html">AI</a>
+      <a class="btn secondary" href="buy-sell.html">Marketplace</a>
       <a class="btn secondary" href="index.html">Home</a>
     </nav>
   </header>
@@ -165,15 +168,19 @@ dt{color:var(--muted)} dd{margin:0;font-weight:700}
           <span class="pill warn">Public publish OFF</span>
           <span class="pill">Home 15 tiles unchanged</span>
         </div>
-        <h1>Turn original ideas into controlled HAVKAR ventures</h1>
+        <h1>HAVKAR CREATE — build real digital ventures</h1>
         <p>
-          Submit confidential business ideas, build template-based mini-apps in HAVKAR Studio,
-          and manage proposed partnerships. Aldo’s SPEED UP MY TOUCH is the first hardware pilot —
-          sensors are not installed yet; simulation is clearly labeled.
+          Layer B of HAVKAR: create websites, shops, booking pages, mini-apps and demos inside a
+          secure sandbox. Entry is from Home tile 14 (HAVKAR AI). Marketplace listing stays gated.
+          Aldo SPEED UP MY TOUCH is a hardware pilot (sensors not installed). The 2D football demo
+          is a separate playable sample — not Aldo hardware.
         </p>
         <div class="links">
-          <a href="havkar-ai.html">Open HAVKAR AI</a>
+          <a href="havkar-ai.html">A · HAVKAR AI</a>
+          <a href="ideas-studio.html">B · HAVKAR CREATE</a>
+          <a href="buy-sell.html">C · Marketplace</a>
           <a href="profile.html">Profile / Business</a>
+          <a href="create-football-2d.html">2D Football demo</a>
           <a href="/docs/ideas-studio/LEGAL_CHECKLIST.md">Legal checklist (draft)</a>
           <a href="/docs/ideas-studio/ALDO_HARDWARE_SENSOR_CONTRACT.md">Aldo sensor contract</a>
         </div>
@@ -189,7 +196,7 @@ dt{color:var(--muted)} dd{margin:0;font-weight:700}
         </article>
         <article class="card">
           <h2>How to enter</h2>
-          <p class="empty">No new Home tile was added. Use HAVKAR AI → Ideas & Studio, or Profile → Business tools.</p>
+          <p class="empty">Home stays at 15 tiles. Entry: Home tile 14 (HAVKAR AI) → HAVKAR CREATE, or Profile → Business tools.</p>
           <p class="empty">Marketplace 2%/3% fees stay separate from any proposed 70/30 net-profit venture agreement.</p>
         </article>
       </div>
@@ -200,6 +207,7 @@ dt{color:var(--muted)} dd{margin:0;font-weight:700}
         <article class="card">
           <h2>Submit a private idea</h2>
           <form id="ideaForm">
+            <input type="hidden" id="ideaEditId" value="">
             <label for="ideaTitle">Title</label>
             <input id="ideaTitle" required minlength="3" maxlength="160" placeholder="Idea title">
             <label for="ideaCategory">Category</label>
@@ -234,6 +242,34 @@ dt{color:var(--muted)} dd{margin:0;font-weight:700}
         </article>
         <article class="card">
           <h2>Your ideas</h2>
+          <div style="display:grid;gap:8px;margin-bottom:12px">
+            <input id="ideaSearch" maxlength="120" placeholder="Search title or description">
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <select id="ideaFilterCategory">
+                <option value="">All categories</option>
+                <option value="website">Business website</option>
+                <option value="restaurant">Restaurant</option>
+                <option value="shop">Shop</option>
+                <option value="marketplace">Marketplace</option>
+                <option value="community">Community</option>
+                <option value="booking">Booking / services</option>
+                <option value="sports">Sports / training</option>
+                <option value="hardware">Hardware-connected</option>
+                <option value="dashboard">Dashboard / forms</option>
+                <option value="other">Other</option>
+              </select>
+              <select id="ideaFilterStatus">
+                <option value="">All statuses</option>
+                <option value="draft">draft</option>
+                <option value="submitted">submitted</option>
+                <option value="in_review">in_review</option>
+                <option value="approved">approved</option>
+                <option value="rejected">rejected</option>
+                <option value="withdrawn">withdrawn</option>
+              </select>
+              <button type="button" class="btn secondary" id="ideaFilterBtn">Filter</button>
+            </div>
+          </div>
           <div id="ideasList"><p class="empty">Sign in to load private ideas.</p></div>
         </article>
       </div>
@@ -281,8 +317,16 @@ dt{color:var(--muted)} dd{margin:0;font-weight:700}
           </div>
         </article>
         <article class="card">
-          <h2>Preview</h2>
+          <h2>Sandbox preview</h2>
+          <p class="empty">Trusted renderer only — user scripts are not executed on HAVKAR core.</p>
           <div id="builderPreview"><p class="empty">Select a venture workspace.</p></div>
+          <iframe id="createSandbox" title="HAVKAR CREATE sandbox" style="width:100%;min-height:420px;border:1px solid rgba(120,200,140,.18);border-radius:16px;margin-top:10px;background:#020805" sandbox="allow-forms allow-scripts allow-modals"></iframe>
+          <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px">
+            <button type="button" class="btn secondary" id="analyzeIdeaBtn">AI analyze active idea fields</button>
+            <button type="button" class="btn secondary" id="billingQuoteBtn">Draft CREATE cost quote</button>
+            <button type="button" class="btn secondary" id="marketplacePrepareBtn">Prepare marketplace draft</button>
+          </div>
+          <pre id="createExtraOut" style="white-space:pre-wrap;color:#9bb8a4;font-size:12px"></pre>
         </article>
       </div>
     </section>
@@ -306,6 +350,7 @@ dt{color:var(--muted)} dd{margin:0;font-weight:700}
       }
     })();
   </script>
+  <script src="/havkar-create-runtime.js"></script>
   <script src="/havkar-ideas-studio.js"></script>
 </body>
 </html>
