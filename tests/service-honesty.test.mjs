@@ -10,8 +10,12 @@ assert.match(reviews, /linked to a completed service/);
 assert.doesNotMatch(reviews, /from\("reviews"\)/);
 assert.doesNotMatch(reviews, /user_id/);
 
-assert.match(tickets, /No booking is offered from HAVKAR in the meantime/);
-assert.match(tickets, /Awaiting partner access/);
+assert.match(tickets, /Booking is completed on Omio/);
+assert.match(tickets, /https:\/\/omio\.sjv\.io\/c\/7763968\/3963000\/7385/);
+assert.match(tickets, /data-default-travel-mode="bus"/);
+assert.match(tickets, /data-default-travel-mode="ferry"/);
+assert.match(tickets, /Taxi and transfer booking is not available inside HAVKAR/);
+assert.doesNotMatch(tickets, /Awaiting partner access/);
 assert.doesNotMatch(tickets, /api\.omio\.com/);
 
 assert.match(jobs, /The payment gateway is not connected yet/);
