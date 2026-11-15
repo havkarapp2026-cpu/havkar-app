@@ -26,4 +26,4 @@ Base remains `main`. **No production payment flags changed. No live-money transa
 ## Tests
 
 Local: 17/17 PASS (`/opt/cursor/artifacts/pr196-completion-tests.log`)
-CI: pending after push
+CI tip `f4eccbbc`: **PASS** (3/3 checks)
