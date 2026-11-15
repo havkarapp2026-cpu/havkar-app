@@ -80,6 +80,48 @@ assert.match(eur, /billing_quote/);
 assert.match(eur, /marketplace_prepare/);
 
 assert.ok(fs.existsSync("docs/ideas-studio/HAVKAR_CREATE_AUDIT.md"));
-assert.ok(typeof api.analyzeIdeaLocal === "function" || typeof api.handleIdeasStudioRequest === "function");
+assert.equal(typeof api.analyzeIdeaLocal, "function");
+assert.equal(typeof api.supabaseEnvStatus, "function");
+assert.equal(typeof api.handleIdeasStudioRequest, "function");
+
+delete process.env.SUPABASE_URL;
+delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+assert.equal(api.supabaseEnvStatus().configured, false);
+
+function mockRes() {
+  return {
+    statusCode: 0,
+    body: null,
+    headers: {},
+    setHeader() {},
+    status(c) {
+      this.statusCode = c;
+      return this;
+    },
+    json(b) {
+      this.body = b;
+      return this;
+    },
+    end(s) {
+      if (s) this.body = JSON.parse(s);
+    }
+  };
+}
+const analyzeRes = mockRes();
+await api.handleIdeasStudioRequest(
+  {
+    method: "POST",
+    headers: {},
+    body: {
+      action: "analyze_idea",
+      title: "Demo",
+      category: "website",
+      description: "Ephemeral CREATE analysis without Supabase service role configured."
+    }
+  },
+  analyzeRes
+);
+assert.equal(analyzeRes.body.ok, true);
+assert.equal(analyzeRes.body.mode, "ephemeral");
 
 console.log("HAVKAR_CREATE_TEST_OK");

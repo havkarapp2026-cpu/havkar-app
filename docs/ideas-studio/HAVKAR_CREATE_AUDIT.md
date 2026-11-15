@@ -40,3 +40,11 @@
 - Maps location services, social video pipeline, real 3D games
 - Live shop/booking payments inside CREATE ventures
 - Aldo physical sensors / field deployment
+
+## 503 root cause (Preview) — verified 15 Nov 2026
+- `analyze_idea` previously required `createServiceClient()` for every call.
+- Vercel Preview for `cursor/havkar-create-complete-d4b2` has **no** `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` (those exist on Production target only; other Preview values are branch-scoped to unrelated branches).
+- Production Supabase project `gispovnciifgikvgpzck` is ACTIVE_HEALTHY and already has `venture_*` / `aldo_*` tables with RLS (verified via MCP — no secrets invented).
+- Staging project `keglioewbkgdabsizvys` does **not** contain CREATE tables.
+- Fix: ephemeral `analyze_idea` (no `idea_id`) works without service role; status reports `backend_configured` + missing env **names** only.
+- Auth-backed save/venture/Aldo/marketplace_prepare on Preview remain blocked until Owner adds Preview env pointing at the production CREATE schema project (or applies CREATE migration to staging + staging keys).

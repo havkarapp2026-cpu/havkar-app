@@ -107,8 +107,13 @@
     let body = renderLanding(c);
     if (tid === "online_shop") body = renderLanding(c) + renderShop(c);
     else if (tid === "restaurant_ordering") body = renderLanding(c) + renderRestaurant(c);
-    else if (tid === "booking_services") body = renderLanding(c) + renderBooking(c);
-    else if (tid === "sports_training" || tid === "hardware_connected" || tid === "game_2d_football") {
+    else if (
+      tid === "booking_services" ||
+      tid === "salon_services" ||
+      tid === "repair_workshop"
+    ) {
+      body = renderLanding(c) + renderBooking(c);
+    } else if (tid === "sports_training" || tid === "hardware_connected" || tid === "game_2d_football") {
       body = renderLanding(c) + renderSports(c);
     } else if (tid === "community_creator") {
       body =

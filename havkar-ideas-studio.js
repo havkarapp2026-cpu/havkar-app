@@ -81,10 +81,20 @@
     const data = await api("ideas_studio_status");
     const box = $("flagsBox");
     if (box) {
+      const backendOk = !!(data.backend_configured || (data.backend && data.backend.configured));
+      const missing =
+        (data.backend && data.backend.missing_env && data.backend.missing_env.join(", ")) ||
+        "";
       box.innerHTML =
         "<p><strong>Payments:</strong> OFF</p>" +
         "<p><strong>Public publish:</strong> OFF</p>" +
         "<p><strong>Ownership transfer:</strong> OFF</p>" +
+        "<p><strong>Supabase backend:</strong> " +
+        (backendOk
+          ? "configured (auth-backed CREATE actions available)"
+          : "not configured on this deployment — ephemeral AI analyze still works; save/venture/Aldo need SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY" +
+            (missing ? " (missing: " + missing + ")" : "")) +
+        "</p>" +
         "<p><strong>Proposed split:</strong> 70% HAVKAR / 30% partner (net profit, inactive)</p>" +
         "<p>" + data.flags.note + "</p>";
     }
@@ -532,7 +542,7 @@
     const extra = $("createExtraOut");
     if ($("analyzeIdeaBtn")) {
       $("analyzeIdeaBtn").addEventListener("click", async function () {
-        if (!(await ensureAuth())) return;
+        // Ephemeral field analysis does not require auth or Supabase service role.
         try {
           const result = await api("analyze_idea", {
             title: $("ideaTitle") ? $("ideaTitle").value : "",
@@ -542,8 +552,23 @@
               ($("ventureSubInput") && $("ventureSubInput").value) ||
               "HAVKAR CREATE venture analysis placeholder description for feasibility."
           });
-          if (extra) extra.textContent = JSON.stringify(result.analysis, null, 2);
-          setStatus("Structured AI analysis ready (" + result.analysis.ai_mode + ")");
+          if (extra) {
+            extra.textContent =
+              "mode=" +
+              (result.mode || "ephemeral") +
+              " · audit_persisted=" +
+              !!result.audit_persisted +
+              " · backend_configured=" +
+              !!result.backend_configured +
+              "\n" +
+              JSON.stringify(result.analysis, null, 2);
+          }
+          setStatus(
+            "Structured AI analysis ready (" +
+              result.analysis.ai_mode +
+              (result.audit_persisted ? ", audit saved" : ", ephemeral") +
+              ")"
+          );
         } catch (e) {
           setStatus(e.message, true);
         }
