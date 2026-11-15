@@ -17,6 +17,10 @@ Branch: `cursor/platform-audit-repair-d4b2` (based on PR #196 tip `6306b92a`)
 | Checkout 133-currency mobile (~375) + tablet (~820) UI | PASS | Preview: label 133 (not 60), list loaded, live payments gated OFF, no horizontal overflow |
 | PR #197 CI (`audit` + Vercel deploy) | PASS | GitHub Actions `43714702108`; Vercel preview success |
 | PR #197 preview `/api/global-payments` + `/api/payment-status` | PASS | Both HTTP 200; catalog `currency_count=133`; `public_live_checkout=false` |
+| Stripe live readiness verifier vs Owner-armed prod | PASS | Accepts `armed`; unsigned webhook still rejected |
+| New Idea action i18n (it/sv/ckb/kmr/ar/fa) | PASS | Dictionary + regression test |
+| iOS repo preflight | PASS | `scripts/ios-release-preflight.sh` |
+| Android unsigned `bundleRelease` smoke | PASS | Gradle BUILD SUCCESSFUL (local SDK) |
 
 ## Production smoke (live havkar.online)
 
