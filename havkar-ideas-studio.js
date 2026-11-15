@@ -532,7 +532,7 @@
         setStatus("Browse templates freely. Sign in to save ideas and ventures.");
       }
     } catch (e) {
-      setStatus(e.message, true);
+      setStatus((e && e.message) || String(e), true);
     }
   }
 

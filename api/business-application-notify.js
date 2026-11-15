@@ -5,9 +5,6 @@ import {
     isSupportRequest
 } from "../lib/support-request.cjs";
 
-const require = createRequire(import.meta.url);
-const { handleIdeasStudioRequest } = require("../lib/ideas-studio-api.cjs");
-
 function isIdeasStudioRequest(req) {
     const q = req.query || {};
     const body = req.body && typeof req.body === "object" ? req.body : {};
@@ -173,7 +170,25 @@ export function createBusinessNotificationHandler({
         }
 
         if (isIdeasStudioRequest(req)) {
-            return handleIdeasStudioRequest(req, res);
+            try {
+                const requireCjs = createRequire(import.meta.url);
+                const { handleIdeasStudioRequest } = requireCjs(
+                    "../lib/ideas-studio-api.cjs"
+                );
+                return await handleIdeasStudioRequest(req, res);
+            } catch (error) {
+                console.error(
+                    "Ideas Studio handler error:",
+                    error instanceof Error ? error.message : error
+                );
+                return res.status(500).json({
+                    ok: false,
+                    error:
+                        error instanceof Error
+                            ? error.message
+                            : "Ideas Studio handler failed."
+                });
+            }
         }
 
         if (req.method !== "POST") {
