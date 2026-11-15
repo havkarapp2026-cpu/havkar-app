@@ -42,6 +42,7 @@
   <div class="card warn" id="gateNote">Checking payment gates…</div>
   <div class="card" id="checkoutPanel" data-checkout-surface="global-currency">
     <span class="badge" id="countBadge">0 currencies</span>
+    <div id="currencySelectMount" style="margin:10px 0 14px"></div>
     <label for="currencySearch">Search currency</label>
     <input id="currencySearch" type="search" placeholder="EUR, Yen, Brazil…" autocomplete="off">
     <div id="currencyList" class="list" role="listbox" aria-label="Currencies"></div>
@@ -60,6 +61,8 @@
   </div>
   <p><a href="/admin.html">Owner Control</a> · <a href="/my-receipts.html">Receipts</a> · XLM uses existing Stellar Mainnet gates</p>
 </main>
+<script src="/havkar-presentment-currencies.js"></script>
+<script src="/havkar-currency-select.js"></script>
 <script>
 (function () {
   var selected = { code: "eur", name: "Euro" };
@@ -130,7 +133,26 @@
     }
   };
 
-  loadMatrix().catch(function (err) {
+  loadMatrix().then(function () {
+    if (window.HAVKAR_CURRENCY_SELECT && $("currencySelectMount")) {
+      window.HAVKAR_CURRENCY_SELECT.mount($("currencySelectMount"), {
+        idPrefix: "matrixCur",
+        initialCurrency: selected.code,
+        onChange: function (sel) {
+          if (sel.method === "xlm_mainnet") {
+            $("selectedLabel").textContent = "XLM — Stellar Lumens (crypto, not Stripe fiat)";
+            return;
+          }
+          if (sel.meta) {
+            selected = sel.meta;
+            $("selectedLabel").textContent =
+              String(sel.meta.code || "").toUpperCase() + " — " + (sel.meta.name || "");
+            renderList($("currencySearch").value);
+          }
+        }
+      });
+    }
+  }).catch(function (err) {
     $("gateNote").textContent = err.message || "Failed to load currency matrix";
   });
 })();

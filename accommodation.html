@@ -121,6 +121,7 @@
         <select id="currencySelect" aria-label="Currency"></select>
       </div>
     </div>
+    <div id="currencySelectMount" aria-label="Featured currencies"></div>
     <p id="currencyCount" class="provider-note"></p>
 
     <section class="pay-panel" aria-label="Payment methods">
@@ -188,6 +189,8 @@
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-accommodation.js"></script>
 <script type="module" src="/havkar-accommodation-ui.js"></script>
+<script src="/havkar-presentment-currencies.js"></script>
+<script src="/havkar-currency-select.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 (function () {
@@ -676,7 +679,26 @@
   initMap();
   setViewMode("both");
   setGeo(selectedGeo);
-  loadCurrencies().then(loadPaymentMethods);
+  loadCurrencies().then(function () {
+    loadPaymentMethods();
+    var mount = document.getElementById("currencySelectMount");
+    if (mount && window.HAVKAR_CURRENCY_SELECT) {
+      window.HAVKAR_CURRENCY_SELECT.mount(mount, {
+        idPrefix: "hotelsCur",
+        initialCurrency: (currencySelect && currencySelect.value) || "eur",
+        onChange: function (sel) {
+          if (sel.method === "xlm_mainnet") {
+            setStatus("XLM selected as crypto payment rail (not a Stripe fiat currency).");
+            return;
+          }
+          if (currencySelect && sel.currency) {
+            currencySelect.value = sel.currency;
+            loadPaymentMethods();
+          }
+        }
+      });
+    }
+  });
   geocode("Rome").then(function (body) {
     if (body && body.ok && body.primary) setGeo(body.primary);
   });

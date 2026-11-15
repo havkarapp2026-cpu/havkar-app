@@ -1768,6 +1768,14 @@
 
 
     <main class="content">
+        <section class="card" id="eventsMapPanel" aria-label="Event map discovery" style="margin:12px 16px;padding:12px;border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.06)">
+            <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+                <strong style="color:#1b5e20">Map discovery</strong>
+                <button type="button" id="eventsGpsBtn" style="min-height:40px;border:1px solid #1b5e20;border-radius:10px;background:#fff;color:#1b5e20;font-weight:700;padding:0 12px;cursor:pointer">Use my location</button>
+            </div>
+            <div id="eventsMap" style="height:220px;border-radius:12px;border:1px solid #d7e6db" role="application" aria-label="Events map"></div>
+            <p id="eventsMapNote" style="margin:8px 0 0;font-size:.85rem;color:#567;line-height:1.4">Interactive map stays available even when no events match. Pins appear only for events with real coordinates — never invented.</p>
+        </section>
         <div id="eventsContainer"></div>
         <div id="emptyState" class="empty-state">
             <div class="empty-icon"><i class="fas fa-calendar-xmark"></i></div>
@@ -4553,6 +4561,30 @@
 <div data-havkar-legal-footer></div>
 <script src="/havkar-operator-config.js"></script>
 <script src="/havkar-legal-footer.js"></script>
+<script src="/havkar-map.js"></script>
+
+<script>
+(function(){
+  if(!window.HAVKAR_MAP) return;
+  var note=document.getElementById("eventsMapNote");
+  window.HAVKAR_MAP.create("eventsMap",{latitude:41.9,longitude:12.5,zoom:5}).then(function(api){
+    window.__havkarEventsMap=api;
+    var btn=document.getElementById("eventsGpsBtn");
+    if(btn){
+      btn.addEventListener("click",function(){
+        api.requestGps().then(function(){
+          if(note) note.textContent="GPS permission granted. Matching events with coordinates can use this center.";
+        }).catch(function(){
+          if(note) note.textContent="Location permission denied or unavailable. Search and list still work.";
+        });
+      });
+    }
+  }).catch(function(){
+    if(note) note.textContent="Map provider unavailable in this browser. Event list remains usable.";
+  });
+})();
+</script>
+
 <script src="/havkar-page-back.js"></script>
 <script src="/havkar-sw-register.js"></script>
 </body>
