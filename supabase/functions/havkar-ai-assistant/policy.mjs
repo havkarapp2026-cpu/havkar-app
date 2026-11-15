@@ -36,6 +36,7 @@ const TASK_LIMITS = Object.freeze({
   menu: Object.freeze({ ...LIMITS, maxOutputTokens: 2048 }),
   translation: LIMITS,
   ideas: LIMITS,
+  new_idea: LIMITS,
   advertising: LIMITS,
   social: LIMITS,
   guidance: LIMITS,
@@ -247,6 +248,10 @@ function assistantInstruction(languageName, task) {
 
   if (task === "ideas") {
     return base + " Suggest practical business ideas as text only. Do not claim that a business, page, or payment was created.";
+  }
+
+  if (task === "new_idea") {
+    return base + " This is the HAVKAR New Idea tool, separate from Business Ideas. Invent original ideas from the user's request: products, services, stories, campaigns, features, names, or creative concepts. Prefer fresh combinations over common lists. When the user asks to refine or develop an idea, deepen that idea with clearer structure, next steps, risks, and variations instead of starting over unless they ask for a new idea. Number distinct ideas when you offer more than one. Do not claim that a business, page, payment, or listing was created.";
   }
 
   if (task === "advertising") {
