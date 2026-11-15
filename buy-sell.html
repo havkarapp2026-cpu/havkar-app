@@ -13,8 +13,12 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Sora:wght@600;700&display=swap" rel="stylesheet">
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 
 <style>
 :root{
@@ -25,18 +29,21 @@
     --green-600:#43a047;
     --green-500:#4caf50;
     --green-100:#e8f5e9;
-    --bg:#f4f7f4;
+    --mint:#d9f0d0;
+    --bg:#f7faf6;
     --surface:#fff;
-    --text:#202522;
+    --text:#1d2b1c;
     --text-2:#4d554f;
-    --muted:#7b827d;
-    --border:#e0e5e1;
+    --muted:#5a6a58;
+    --border:#dce7d6;
     --red:#b71c1c;
     --red-bg:#ffebee;
     --shadow:0 4px 18px rgba(0,0,0,.07);
-    --shadow-lg:0 10px 30px rgba(0,0,0,.11);
+    --shadow-lg:0 14px 40px rgba(36,70,28,.10);
     --header:68px;
     --bottom:76px;
+    --font-display:"Sora",ui-sans-serif,system-ui,sans-serif;
+    --font-body:"Manrope",ui-sans-serif,system-ui,sans-serif;
 }
 
 *{
@@ -51,9 +58,11 @@ html{
 
 body{
     min-height:100vh;
-    background:linear-gradient(180deg,#f7faf7 0%,var(--bg) 100%);
+    background:
+      radial-gradient(1000px 420px at 85% -8%, rgba(76,175,80,.16), transparent 55%),
+      linear-gradient(180deg,#fbfdf9 0%,var(--bg) 100%);
     color:var(--text);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    font-family:var(--font-body);
     padding-bottom:calc(var(--bottom) + env(safe-area-inset-bottom) + 20px);
     -webkit-font-smoothing:antialiased;
 }
@@ -351,6 +360,135 @@ input:focus-visible{
 .ads-grid.is-explore .ad-image{
     aspect-ratio:1 / 1;
 }
+.view-modes{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    padding:0 16px 12px;
+}
+.view-modes button{
+    min-height:40px;
+    padding:8px 12px;
+    border-radius:999px;
+    border:1px solid var(--border);
+    background:#fff;
+    color:var(--text);
+    font-weight:750;
+    font-size:13px;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+}
+.view-modes button.active{
+    background:var(--green-100);
+    border-color:#8fbf63;
+    color:var(--green-800);
+}
+.buysell-map-panel{
+    margin:0 16px 16px;
+    padding:16px;
+    border-radius:24px;
+    border:1px solid rgba(46,125,50,.22);
+    background:linear-gradient(145deg, rgba(255,255,255,.96), rgba(232,245,233,.9));
+    box-shadow:var(--shadow-lg);
+}
+.buysell-map-panel[hidden]{display:none !important}
+.buysell-map-panel h2{
+    font-family:var(--font-display);
+    font-size:1.25rem;
+    margin:0 0 6px;
+}
+.buysell-map-search{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:8px;
+    margin:12px 0;
+}
+.buysell-map-search input,
+.buysell-map-search button{
+    min-height:46px;
+    border-radius:12px;
+    border:1px solid var(--border);
+    padding:0 12px;
+    font:inherit;
+}
+.buysell-map-search button{
+    border:0;
+    background:linear-gradient(135deg,#2e7d32,#43a047);
+    color:#fff;
+    font-weight:750;
+    cursor:pointer;
+}
+#buySellWorldMap{
+    height:min(48vh,380px);
+    min-height:240px;
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow:inset 0 0 0 1px rgba(46,125,50,.08);
+}
+.havkar-map-pin-wrap{background:transparent;border:0}
+.havkar-map-pin{
+    width:34px;height:34px;
+    border-radius:50% 50% 50% 6px;
+    transform:rotate(-45deg);
+    background:var(--pin,#2e7d32);
+    color:#fff;
+    display:grid;place-items:center;
+    box-shadow:0 8px 16px rgba(36,70,28,.28);
+}
+.havkar-map-pin i{transform:rotate(45deg);font-size:13px}
+.video-badge{
+    position:absolute;
+    left:10px;bottom:10px;
+    z-index:3;
+    min-height:28px;
+    padding:4px 8px;
+    border-radius:999px;
+    border:0;
+    background:rgba(11,61,22,.82);
+    color:#fff;
+    font-size:11px;
+    font-weight:750;
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    cursor:pointer;
+}
+.like-button{
+    position:absolute;
+    left:10px;top:10px;
+    z-index:3;
+    width:36px;height:36px;
+    border:0;border-radius:50%;
+    background:rgba(255,255,255,.92);
+    color:#455a64;
+    display:grid;place-items:center;
+    cursor:pointer;
+}
+.like-button.liked{color:#1b5e20;background:#e8f5e9}
+.video-lightbox{
+    position:fixed;inset:0;z-index:9999;
+    background:rgba(0,0,0,.92);
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    gap:12px;padding:16px;
+}
+.video-lightbox[hidden]{display:none !important}
+.video-lightbox video{
+    width:min(100%,720px);
+    max-height:70vh;
+    border-radius:12px;
+    background:#000;
+}
+.video-lightbox .video-actions{
+    display:flex;flex-wrap:wrap;gap:8px;justify-content:center;
+}
+.video-lightbox button{
+    min-height:44px;padding:0 14px;border-radius:12px;
+    border:0;background:#43a047;color:#fff;font-weight:750;cursor:pointer;
+}
+.video-lightbox button.secondary{background:#fff;color:#1b5e20}
 
 /* CARD */
 
@@ -693,6 +831,81 @@ input:focus-visible{
     pointer-events:none;
 }
 
+/* ===== Premium Buy & Sell nav + filter sheet ===== */
+.feed-toolbar{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:8px 14px 0;
+}
+.filter-open-btn{
+    display:inline-flex;align-items:center;gap:8px;
+    min-height:40px;padding:0 14px;border-radius:999px;
+    border:1px solid rgba(27,94,32,.18);background:#fff;color:#1b5e20;
+    font-weight:750;font-size:13px;cursor:pointer;
+    box-shadow:0 6px 16px rgba(27,94,32,.08);
+}
+.filter-open-btn .count{
+    min-width:20px;height:20px;border-radius:999px;background:#2e7d32;color:#fff;
+    display:inline-grid;place-items:center;font-size:11px;
+}
+.filter-chips{
+    display:flex;flex-wrap:wrap;gap:8px;padding:8px 14px 0;
+}
+.filter-chip{
+    display:inline-flex;align-items:center;gap:6px;
+    min-height:30px;padding:0 10px;border-radius:999px;
+    background:#e8f5e9;color:#1b5e20;font-size:12px;font-weight:700;border:0;
+}
+.filter-chip button{
+    border:0;background:transparent;color:#1b5e20;cursor:pointer;padding:0;line-height:1;
+}
+.filter-sheet-backdrop{
+    position:fixed;inset:0;z-index:400;background:rgba(10,30,16,.42);
+}
+.filter-sheet-backdrop[hidden]{display:none !important}
+.filter-sheet{
+    position:fixed;left:0;right:0;bottom:0;z-index:410;
+    max-height:min(88vh,760px);overflow:auto;
+    background:linear-gradient(180deg,#f7fbf7 0%,#ffffff 40%);
+    border-radius:22px 22px 0 0;
+    box-shadow:0 -18px 40px rgba(16,48,24,.22);
+    padding:14px 16px calc(18px + env(safe-area-inset-bottom));
+}
+.filter-sheet[hidden]{display:none !important}
+.filter-sheet h2{margin:4px 0 12px;font-size:1.15rem;color:#0d3d16}
+.filter-sheet .sheet-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:10px;
+}
+.filter-sheet label{display:block;font-size:12px;font-weight:700;color:#45634b;margin:0 0 4px}
+.filter-sheet select,.filter-sheet input{
+    width:100%;min-height:44px;border-radius:12px;border:1px solid rgba(27,94,32,.16);
+    padding:0 12px;background:#fff;font:inherit;
+}
+.filter-sheet .sheet-actions{
+    display:flex;gap:8px;margin-top:14px;position:sticky;bottom:0;background:linear-gradient(180deg,transparent,#fff 30%);padding-top:10px;
+}
+.filter-sheet .sheet-actions button{
+    flex:1;min-height:48px;border-radius:14px;border:0;font-weight:780;cursor:pointer;
+}
+.filter-sheet .sheet-apply{background:#1b5e20;color:#fff}
+.filter-sheet .sheet-reset{background:#e8f5e9;color:#1b5e20}
+.filter-sheet .sheet-close{background:#fff;color:#1b5e20;border:1px solid rgba(27,94,32,.2) !important}
+.bottom-nav .nav-item.create-nav{
+    transform:translateY(-10px);
+}
+.bottom-nav .nav-item.create-nav i{
+    width:48px;height:48px;border-radius:50%;
+    display:grid;place-items:center;background:linear-gradient(145deg,#1b5e20,#43a047);
+    color:#fff;box-shadow:0 10px 22px rgba(27,94,32,.35);font-size:1.15rem;
+}
+.bottom-nav .nav-item.create-nav span{font-weight:780;color:#1b5e20}
+.ads-grid .ad-card{
+    border-radius:18px;
+    box-shadow:0 10px 28px rgba(20,60,28,.08);
+    border:1px solid rgba(27,94,32,.06);
+}
+.country-filter,.detail-filters{display:none !important}
+
+
 .save-button:focus-visible{
     outline:3px solid rgba(76,175,80,.35);
     outline-offset:2px;
@@ -896,6 +1109,32 @@ input:focus-visible{
 
 </header>
 
+<div class="view-modes" role="group" aria-label="Buy and Sell view modes">
+    <button type="button" class="active" data-view-mode="home" aria-pressed="true"><i class="fas fa-house" aria-hidden="true"></i> Home</button>
+    <button type="button" data-view-mode="explore" aria-pressed="false"><i class="fas fa-compass" aria-hidden="true"></i> Explore</button>
+    <button type="button" data-view-mode="map" aria-pressed="false"><i class="fas fa-globe" aria-hidden="true"></i> Map</button>
+</div>
+
+<section id="buySellMapPanel" class="buysell-map-panel" hidden aria-labelledby="buySellMapTitle">
+    <div class="tickets-map-brand" style="display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:linear-gradient(135deg,#1b5e20,#43a047);color:#fff;font-size:12px;font-weight:750;margin-bottom:8px">
+        <img src="/assets/icons/havkar-icon-32-20261022-v3.png" alt="" width="18" height="18" style="border-radius:50%;background:#fff">
+        HAVKAR Marketplace Map
+    </div>
+    <h2 id="buySellMapTitle">Discover products worldwide</h2>
+    <p style="color:var(--muted);font-size:14px;line-height:1.5;margin:0">
+        Interactive city-level discovery. Exact seller home addresses stay private. Markers are approximate.
+    </p>
+    <div class="buysell-map-search">
+        <label class="visually-hidden" for="buySellMapSearch">Search country or city</label>
+        <input id="buySellMapSearch" type="search" autocomplete="off" placeholder="Search country or city…">
+        <button id="buySellMapSearchBtn" type="button">Search map</button>
+    </div>
+    <div id="buySellWorldMap" role="application" aria-label="HAVKAR Buy and Sell map"></div>
+    <div id="buySellMapResults" class="tickets-map-results" style="margin-top:10px"></div>
+    <p id="buySellMapStatus" class="status-message" role="status" aria-live="polite" style="margin-top:10px"></p>
+    <p id="buySellMapPrivacy" style="margin-top:8px;color:var(--muted);font-size:12px;line-height:1.45"></p>
+</section>
+
 <section class="search-panel">
 
 <div class="search-container">
@@ -926,6 +1165,19 @@ input:focus-visible{
     </div>
 
 </div>
+
+<div class="feed-toolbar">
+    <button type="button" id="openFiltersBtn" class="filter-open-btn" aria-haspopup="dialog">
+        <i class="fas fa-sliders" aria-hidden="true"></i>
+        Filters
+        <span class="count" id="activeFilterCount" hidden>0</span>
+    </button>
+    <button type="button" id="openMapQuickBtn" class="filter-open-btn" style="background:#e8f5e9">
+        <i class="fas fa-globe" aria-hidden="true"></i>
+        Map
+    </button>
+</div>
+<div id="activeFilterChips" class="filter-chips" aria-live="polite"></div>
 
 <div class="country-filter">
 
@@ -1093,65 +1345,94 @@ id="addButton"
 class="fab"
 type="button"
 aria-label="Post a new ad"
+hidden
 >
 
 <i class="fas fa-plus"></i>
 
 </button>
 
-<nav class="bottom-nav">
+<nav class="bottom-nav" aria-label="Buy and Sell primary navigation">
 
-<div
-    class="nav-item active"
-    id="navHome"
-    role="button"
-    tabindex="0"
->
+<div class="nav-item active" id="navHome" role="button" tabindex="0">
     <i class="fas fa-house"></i>
     <span>Home</span>
 </div>
 
-<div
-    class="nav-item"
-    id="navSearch"
-    role="button"
-    tabindex="0"
->
-    <i class="fas fa-magnifying-glass"></i>
-    <span>Search</span>
+<div class="nav-item" id="navExplore" role="button" tabindex="0">
+    <i class="fas fa-compass"></i>
+    <span>Explore</span>
 </div>
 
-<div
-    class="nav-item"
-    id="navSaved"
-    role="button"
-    tabindex="0"
->
-    <i class="fas fa-heart"></i>
-    <span>Saved</span>
+<div class="nav-item create-nav" id="navCreate" role="button" tabindex="0">
+    <i class="fas fa-plus"></i>
+    <span>Create</span>
 </div>
 
-<div
-    class="nav-item"
-    id="navMessages"
-    role="button"
-    tabindex="0"
->
+<div class="nav-item" id="navMessages" role="button" tabindex="0">
     <i class="fas fa-comment"></i>
     <span>Messages</span>
 </div>
 
-<div
-    class="nav-item"
-    id="navProfile"
-    role="button"
-    tabindex="0"
->
-    <i class="fas fa-user"></i>
-    <span>Profile</span>
+<div class="nav-item" id="navFilters" role="button" tabindex="0">
+    <i class="fas fa-sliders"></i>
+    <span>Filters</span>
 </div>
 
 </nav>
+
+<div id="filterSheetBackdrop" class="filter-sheet-backdrop" hidden></div>
+<aside id="filterSheet" class="filter-sheet" hidden role="dialog" aria-modal="true" aria-labelledby="filterSheetTitle">
+    <h2 id="filterSheetTitle">Filters</h2>
+    <div class="sheet-grid">
+        <div>
+            <label for="countryFilter">Country</label>
+            <!-- select already exists earlier; mirrored controls below for sheet -->
+            <select id="sheetCountry" aria-label="Filter by country"><option value="">All countries</option></select>
+        </div>
+        <div>
+            <label for="sheetCity">City / region</label>
+            <select id="sheetCity" aria-label="Filter by city"><option value="">All cities</option></select>
+        </div>
+        <div>
+            <label for="sheetMinPrice">Min price</label>
+            <input id="sheetMinPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0">
+        </div>
+        <div>
+            <label for="sheetMaxPrice">Max price</label>
+            <input id="sheetMaxPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Any">
+        </div>
+        <div>
+            <label for="sheetCurrency">Currency</label>
+            <select id="sheetCurrency"><option value="">Any</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option><option value="SEK">SEK</option><option value="IRT">IRT</option></select>
+        </div>
+        <div>
+            <label for="sheetCondition">Condition</label>
+            <select id="sheetCondition"><option value="">Any</option><option value="new">New</option><option value="used">Used</option><option value="refurbished">Refurbished</option></select>
+        </div>
+        <div>
+            <label for="sheetFulfillment">Delivery / pickup</label>
+            <select id="sheetFulfillment"><option value="">Any</option><option value="delivery">Delivery</option><option value="pickup">Local pickup</option><option value="both">Both</option></select>
+        </div>
+        <div>
+            <label for="sheetSort">Sort</label>
+            <select id="sheetSort"><option value="newest">Newest</option><option value="price_asc">Price ↑</option><option value="price_desc">Price ↓</option></select>
+        </div>
+        <div>
+            <label for="sheetDistance">Distance (approx.)</label>
+            <select id="sheetDistance"><option value="">Worldwide</option><option value="city">Same city</option><option value="country">Same country</option></select>
+        </div>
+        <div>
+            <label for="sheetVerified">Seller verification</label>
+            <select id="sheetVerified"><option value="">Any</option><option value="verified">Verified only</option></select>
+        </div>
+    </div>
+    <div class="sheet-actions">
+        <button type="button" class="sheet-reset" id="filterResetBtn">Reset</button>
+        <button type="button" class="sheet-close" id="filterCloseBtn">Close</button>
+        <button type="button" class="sheet-apply" id="filterApplyBtn">Apply</button>
+    </div>
+</aside>
 
 <div
     id="toast"
@@ -1213,6 +1494,12 @@ const state = {
 
     savedIds: new Set(),
 
+    likedIds: new Set(),
+
+    likedOperation: false,
+
+    videoListingId: null,
+
     currentUserId: null,
 
     authReady: false,
@@ -1228,6 +1515,18 @@ const state = {
     minPrice: "",
 
     maxPrice: "",
+
+    currencyFilter: "",
+
+    condition: "",
+
+    fulfillment: "",
+
+    sortMode: "newest",
+
+    distanceMode: "",
+
+    verifiedOnly: false,
 
     listingPage: 0,
 
@@ -2172,6 +2471,432 @@ async function toggleSaved(
 
 
 /* =========================================================
+   LIKES (ad_reactions) + VIDEO LIGHTBOX
+   ========================================================= */
+
+async function loadLikedIds(){
+
+    initializeSupabase();
+
+    if(!state.currentUserId){
+
+        state.likedIds =
+            new Set();
+
+        return state.likedIds;
+
+    }
+
+    try{
+
+        const result =
+            await supabaseClient
+                .from("ad_reactions")
+                .select("ad_id")
+                .eq(
+                    "user_id",
+                    state.currentUserId
+                )
+                .eq(
+                    "reaction",
+                    "like"
+                );
+
+        if(result.error){
+
+            throw result.error;
+
+        }
+
+        state.likedIds =
+            new Set(
+                (result.data || [])
+                    .map(
+                        row =>
+                            String(
+                                row.ad_id
+                            )
+                    )
+            );
+
+    }catch(error){
+
+        console.warn(
+            "[HAVKAR] Liked listings query failed:",
+            error
+        );
+
+        state.likedIds =
+            new Set();
+
+    }
+
+    return state.likedIds;
+
+}
+
+
+async function toggleLiked(
+    adId,
+    event
+){
+
+    if(event){
+
+        event.preventDefault();
+        event.stopPropagation();
+
+    }
+
+    if(!adId){
+
+        return;
+
+    }
+
+    if(!state.currentUserId){
+
+        showToast(
+            "Please sign in to like listings."
+        );
+
+        window.setTimeout(
+            () => {
+
+                window.location.href =
+                    "login.html";
+
+            },
+            700
+        );
+
+        return;
+
+    }
+
+    if(state.likedOperation){
+
+        return;
+
+    }
+
+    state.likedOperation =
+        true;
+
+    initializeSupabase();
+
+    const id =
+        String(
+            adId
+        );
+
+    const already =
+        state.likedIds.has(
+            id
+        );
+
+    try{
+
+        if(already){
+
+            const removed =
+                await supabaseClient
+                    .from("ad_reactions")
+                    .delete()
+                    .eq(
+                        "ad_id",
+                        adId
+                    )
+                    .eq(
+                        "user_id",
+                        state.currentUserId
+                    )
+                    .eq(
+                        "reaction",
+                        "like"
+                    );
+
+            if(removed.error){
+
+                throw removed.error;
+
+            }
+
+            state.likedIds.delete(
+                id
+            );
+
+        }else{
+
+            const inserted =
+                await supabaseClient
+                    .from("ad_reactions")
+                    .insert({
+                        ad_id: Number(adId) || adId,
+                        user_id: state.currentUserId,
+                        reaction: "like"
+                    });
+
+            if(inserted.error){
+
+                throw inserted.error;
+
+            }
+
+            state.likedIds.add(
+                id
+            );
+
+        }
+
+        applyFilters();
+
+    }catch(error){
+
+        console.error(
+            "[HAVKAR] Like toggle failed:",
+            error
+        );
+
+        showToast(
+            "Could not update like."
+        );
+
+    }finally{
+
+        state.likedOperation =
+            false;
+
+    }
+
+}
+
+
+async function openListingVideo(
+    adId,
+    videoPath,
+    event
+){
+
+    if(event){
+
+        event.preventDefault();
+        event.stopPropagation();
+
+    }
+
+    const shell =
+        $("videoLightbox");
+
+    const player =
+        $("videoLightboxPlayer");
+
+    if(
+        !shell ||
+        !player ||
+        !videoPath ||
+        !window.HAVKAR_MARKETPLACE ||
+        typeof window.HAVKAR_MARKETPLACE.signedListingVideoUrl !==
+            "function"
+    ){
+
+        showToast(
+            "Video playback is unavailable."
+        );
+
+        return;
+
+    }
+
+    initializeSupabase();
+
+    const signed =
+        await window.HAVKAR_MARKETPLACE.signedListingVideoUrl(
+            supabaseClient,
+            videoPath
+        );
+
+    if(!signed.ok || !signed.url){
+
+        showToast(
+            "Could not open the listing video."
+        );
+
+        return;
+
+    }
+
+    state.videoListingId =
+        adId
+            ? String(
+                adId
+            )
+            : null;
+
+    player.src =
+        signed.url;
+
+    player.muted =
+        true;
+
+    shell.hidden =
+        false;
+
+    try{
+
+        await player.play();
+
+    }catch(_error){
+
+        /* Autoplay may be blocked; controls remain available. */
+
+    }
+
+}
+
+
+function closeListingVideo(){
+
+    const shell =
+        $("videoLightbox");
+
+    const player =
+        $("videoLightboxPlayer");
+
+    if(player){
+
+        player.pause();
+        player.removeAttribute(
+            "src"
+        );
+
+        player.load();
+
+    }
+
+    if(shell){
+
+        shell.hidden =
+            true;
+
+    }
+
+    state.videoListingId =
+        null;
+
+}
+
+
+function setupVideoLightbox(){
+
+    const pauseBtn =
+        $("videoPauseBtn");
+
+    const muteBtn =
+        $("videoMuteBtn");
+
+    const openBtn =
+        $("videoOpenListingBtn");
+
+    const closeBtn =
+        $("videoCloseBtn");
+
+    const player =
+        $("videoLightboxPlayer");
+
+    if(pauseBtn && player){
+
+        pauseBtn.addEventListener(
+            "click",
+            () => {
+
+                if(player.paused){
+
+                    player.play();
+                    pauseBtn.textContent =
+                        "Pause";
+
+                }else{
+
+                    player.pause();
+                    pauseBtn.textContent =
+                        "Play";
+
+                }
+
+            }
+        );
+
+    }
+
+    if(muteBtn && player){
+
+        muteBtn.addEventListener(
+            "click",
+            () => {
+
+                player.muted =
+                    !player.muted;
+
+                muteBtn.textContent =
+                    player.muted
+                        ? "Unmute"
+                        : "Mute";
+
+            }
+        );
+
+    }
+
+    if(openBtn){
+
+        openBtn.addEventListener(
+            "click",
+            () => {
+
+                if(state.videoListingId){
+
+                    openAd(
+                        state.videoListingId
+                    );
+
+                }
+
+            }
+        );
+
+    }
+
+    if(closeBtn){
+
+        closeBtn.addEventListener(
+            "click",
+            closeListingVideo
+        );
+
+    }
+
+    document.addEventListener(
+        "keydown",
+        event => {
+
+            if(
+                event.key === "Escape" &&
+                $("videoLightbox") &&
+                !$("videoLightbox").hidden
+            ){
+
+                closeListingVideo();
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================================
    SAVED PAGE
    ========================================================= */
 
@@ -2663,19 +3388,63 @@ async function queryListings(
 
     }
 
+    if(
+        window.HAVKAR_MARKETPLACE &&
+        typeof window.HAVKAR_MARKETPLACE.applyServerListingFilters ===
+            "function"
+    ){
+
+        request =
+            window.HAVKAR_MARKETPLACE.applyServerListingFilters(
+                request,
+                {
+                    userId:
+                        state.currentUserId ||
+                        "",
+                    country:
+                        state.country ||
+                        "",
+                    city:
+                        state.city ||
+                        "",
+                    category:
+                        state.category &&
+                        state.category !== "All"
+                            ? state.category
+                            : "",
+                    minPrice:
+                        state.minPrice,
+                    maxPrice:
+                        state.maxPrice,
+                    search:
+                        state.search,
+                    currency:
+                        state.currencyFilter ||
+                        "",
+                    condition:
+                        state.condition ||
+                        "",
+                    fulfillment:
+                        state.fulfillment ||
+                        ""
+                }
+            );
+
+    }
+
     return Promise.race([
 
-        request
-            .order(
-                "created_at",
-                {
-                    ascending:false
-                }
-            )
-            .range(
-                page.from,
-                page.to
-            ),
+        (function(){
+            let ordered = request;
+            if(state.sortMode === "price_asc"){
+                ordered = ordered.order("price", { ascending: true });
+            } else if(state.sortMode === "price_desc"){
+                ordered = ordered.order("price", { ascending: false });
+            } else {
+                ordered = ordered.order("created_at", { ascending: false });
+            }
+            return ordered.range(page.from, page.to);
+        })(),
 
         new Promise(
             (_,reject) => {
@@ -2767,7 +3536,11 @@ async function fetchListings(
         "created_at",
         "status",
         "listing_surface",
-        "expires_at"
+        "expires_at",
+        "video_path",
+        "video_duration_seconds",
+        "condition",
+        "fulfillment_mode"
     ];
 
     let surfaceFilter =
@@ -3186,6 +3959,22 @@ function cardHtml(
                     ${category}
                 </span>
 
+                ${
+                    ad.video_path
+                        ? `<button type="button" class="video-badge" data-video-path="${escapeHtml(ad.video_path)}" data-video-ad-id="${escapeHtml(ad.id)}" aria-label="Play listing video"><i class="fas fa-play" aria-hidden="true"></i> Video</button>`
+                        : ""
+                }
+
+                <button
+                    type="button"
+                    class="like-button ${state.likedIds && state.likedIds.has(String(ad.id)) ? "liked" : ""}"
+                    data-like-id="${escapeHtml(ad.id)}"
+                    aria-pressed="${state.likedIds && state.likedIds.has(String(ad.id)) ? "true" : "false"}"
+                    aria-label="Like listing"
+                >
+                    <i class="fas fa-thumbs-up"></i>
+                </button>
+
                 <img
                     alt="${title}"
                     loading="lazy"
@@ -3547,6 +4336,49 @@ function renderAds(
 
             }
 
+            const likeButton =
+                card.querySelector(
+                    ".like-button"
+                );
+
+            if(likeButton){
+
+                likeButton.addEventListener(
+                    "click",
+                    event => {
+
+                        toggleLiked(
+                            likeButton.dataset.likeId,
+                            event
+                        );
+
+                    }
+                );
+
+            }
+
+            const videoButton =
+                card.querySelector(
+                    "[data-video-path]"
+                );
+
+            if(videoButton){
+
+                videoButton.addEventListener(
+                    "click",
+                    event => {
+
+                        openListingVideo(
+                            videoButton.dataset.videoAdId,
+                            videoButton.dataset.videoPath,
+                            event
+                        );
+
+                    }
+                );
+
+            }
+
             card.addEventListener(
                 "click",
                 open
@@ -3661,6 +4493,48 @@ function applyFilters(){
 
                     return false;
 
+                }
+
+                if(
+                    state.currencyFilter &&
+                    String(ad.currency || "").toUpperCase() !==
+                    String(state.currencyFilter).toUpperCase()
+                ){
+                    return false;
+                }
+
+                if(
+                    state.condition &&
+                    String(ad.condition || "").toLowerCase() !==
+                    String(state.condition).toLowerCase()
+                ){
+                    return false;
+                }
+
+                if(
+                    state.fulfillment &&
+                    String(ad.fulfillment_mode || "").toLowerCase() !==
+                    String(state.fulfillment).toLowerCase()
+                ){
+                    return false;
+                }
+
+                if(
+                    state.distanceMode === "city" &&
+                    state.city &&
+                    String(ad.city || "").toLowerCase() !==
+                    String(state.city).toLowerCase()
+                ){
+                    return false;
+                }
+
+                if(
+                    state.distanceMode === "country" &&
+                    state.country &&
+                    String(ad.country_code || "").toUpperCase() !==
+                    String(state.country).toUpperCase()
+                ){
+                    return false;
                 }
 
                 const categoryMatch =
@@ -4106,20 +4980,197 @@ function goHome(){
 }
 
 
-function goProfile(){
-
-    window.location.href =
-        "profile.html";
-
+function rememberBuySellReturn(){
+    try{
+        sessionStorage.setItem(
+            "havkar_buysell_return",
+            window.location.pathname + window.location.search + window.location.hash
+        );
+        sessionStorage.setItem(
+            "havkar_buysell_filters",
+            JSON.stringify({
+                search: state.search,
+                country: state.country,
+                city: state.city,
+                minPrice: state.minPrice,
+                maxPrice: state.maxPrice,
+                category: state.category,
+                currencyFilter: state.currencyFilter,
+                condition: state.condition,
+                fulfillment: state.fulfillment,
+                sortMode: state.sortMode,
+                exploreMode: state.exploreMode
+            })
+        );
+    }catch(_e){}
 }
 
+function goProfile(){
+    rememberBuySellReturn();
+    window.location.href =
+        "profile.html?from=buy-sell";
+}
 
 function goMessages(){
-
+    rememberBuySellReturn();
     window.location.href =
-        "chat.html";
-
+        "chat.html?from=buy-sell";
 }
+
+function openFilterSheet(){
+    const sheet = $("filterSheet");
+    const backdrop = $("filterSheetBackdrop");
+    if(!sheet) return;
+    syncSheetFromState();
+    sheet.hidden = false;
+    if(backdrop) backdrop.hidden = false;
+    setActiveNav("navFilters");
+}
+
+function closeFilterSheet(){
+    const sheet = $("filterSheet");
+    const backdrop = $("filterSheetBackdrop");
+    if(sheet) sheet.hidden = true;
+    if(backdrop) backdrop.hidden = true;
+}
+
+function syncSheetFromState(){
+    const map = [
+        ["sheetCountry", state.country || ""],
+        ["sheetCity", state.city || ""],
+        ["sheetMinPrice", state.minPrice || ""],
+        ["sheetMaxPrice", state.maxPrice || ""],
+        ["sheetCurrency", state.currencyFilter || ""],
+        ["sheetCondition", state.condition || ""],
+        ["sheetFulfillment", state.fulfillment || ""],
+        ["sheetSort", state.sortMode || "newest"],
+        ["sheetDistance", state.distanceMode || ""],
+        ["sheetVerified", state.verifiedOnly ? "verified" : ""]
+    ];
+    map.forEach(function(pair){
+        const node = $(pair[0]);
+        if(node) node.value = pair[1];
+    });
+    // Mirror country/city options into sheet selects
+    const sourceCountry = $("countryFilter");
+    const sheetCountry = $("sheetCountry");
+    if(sourceCountry && sheetCountry && sheetCountry.options.length <= 1){
+        sheetCountry.innerHTML = sourceCountry.innerHTML;
+        sheetCountry.value = state.country || "";
+    }
+    const sourceCity = $("cityFilter");
+    const sheetCity = $("sheetCity");
+    if(sourceCity && sheetCity){
+        sheetCity.innerHTML = sourceCity.innerHTML;
+        sheetCity.value = state.city || "";
+    }
+}
+
+function applySheetFilters(){
+    state.country = ($("sheetCountry") && $("sheetCountry").value) || "";
+    state.city = ($("sheetCity") && $("sheetCity").value) || "";
+    state.minPrice = ($("sheetMinPrice") && $("sheetMinPrice").value) || "";
+    state.maxPrice = ($("sheetMaxPrice") && $("sheetMaxPrice").value) || "";
+    state.currencyFilter = ($("sheetCurrency") && $("sheetCurrency").value) || "";
+    state.condition = ($("sheetCondition") && $("sheetCondition").value) || "";
+    state.fulfillment = ($("sheetFulfillment") && $("sheetFulfillment").value) || "";
+    state.sortMode = ($("sheetSort") && $("sheetSort").value) || "newest";
+    state.distanceMode = ($("sheetDistance") && $("sheetDistance").value) || "";
+    state.verifiedOnly = ($("sheetVerified") && $("sheetVerified").value) === "verified";
+    if($("countryFilter")) $("countryFilter").value = state.country;
+    if($("cityFilter")) $("cityFilter").value = state.city;
+    if($("minPrice")) $("minPrice").value = state.minPrice;
+    if($("maxPrice")) $("maxPrice").value = state.maxPrice;
+    renderFilterChips();
+    closeFilterSheet();
+    state.listingPage = 0;
+    loadListings();
+}
+
+function resetSheetFilters(){
+    state.country = "";
+    state.city = "";
+    state.minPrice = "";
+    state.maxPrice = "";
+    state.currencyFilter = "";
+    state.condition = "";
+    state.fulfillment = "";
+    state.sortMode = "newest";
+    state.distanceMode = "";
+    state.verifiedOnly = false;
+    syncSheetFromState();
+    renderFilterChips();
+}
+
+function countActiveFilters(){
+    let n = 0;
+    if(state.country) n += 1;
+    if(state.city) n += 1;
+    if(state.minPrice !== "") n += 1;
+    if(state.maxPrice !== "") n += 1;
+    if(state.currencyFilter) n += 1;
+    if(state.condition) n += 1;
+    if(state.fulfillment) n += 1;
+    if(state.distanceMode) n += 1;
+    if(state.verifiedOnly) n += 1;
+    if(state.sortMode && state.sortMode !== "newest") n += 1;
+    return n;
+}
+
+function renderFilterChips(){
+    const host = $("activeFilterChips");
+    const count = $("activeFilterCount");
+    if(!host) return;
+    const chips = [];
+    function push(key, label){
+        chips.push('<button type="button" class="filter-chip" data-chip="'+key+'">'+label+' <span aria-hidden="true">×</span></button>');
+    }
+    if(state.country) push("country", state.country);
+    if(state.city) push("city", state.city);
+    if(state.minPrice !== "") push("minPrice", "Min "+state.minPrice);
+    if(state.maxPrice !== "") push("maxPrice", "Max "+state.maxPrice);
+    if(state.currencyFilter) push("currencyFilter", state.currencyFilter);
+    if(state.condition) push("condition", state.condition);
+    if(state.fulfillment) push("fulfillment", state.fulfillment);
+    if(state.distanceMode) push("distanceMode", state.distanceMode);
+    if(state.verifiedOnly) push("verifiedOnly", "Verified");
+    if(state.sortMode && state.sortMode !== "newest") push("sortMode", state.sortMode);
+    host.innerHTML = chips.join("");
+    const n = countActiveFilters();
+    if(count){
+        count.hidden = n === 0;
+        count.textContent = String(n);
+    }
+    host.querySelectorAll("[data-chip]").forEach(function(btn){
+        btn.addEventListener("click", function(){
+            const key = btn.getAttribute("data-chip");
+            if(key === "verifiedOnly") state.verifiedOnly = false;
+            else if(key === "sortMode") state.sortMode = "newest";
+            else state[key] = "";
+            renderFilterChips();
+            state.listingPage = 0;
+            loadListings();
+        });
+    });
+}
+
+function setupFilterSheet(){
+    const openBtn = $("openFiltersBtn");
+    const mapBtn = $("openMapQuickBtn");
+    if(openBtn) openBtn.addEventListener("click", openFilterSheet);
+    if(mapBtn) mapBtn.addEventListener("click", function(){
+        const mapMode = document.querySelector('[data-view-mode="map"]');
+        if(mapMode) mapMode.click();
+    });
+    const backdrop = $("filterSheetBackdrop");
+    if(backdrop) backdrop.addEventListener("click", closeFilterSheet);
+    if($("filterCloseBtn")) $("filterCloseBtn").addEventListener("click", closeFilterSheet);
+    if($("filterResetBtn")) $("filterResetBtn").addEventListener("click", function(){
+        resetSheetFilters();
+    });
+    if($("filterApplyBtn")) $("filterApplyBtn").addEventListener("click", applySheetFilters);
+}
+
 
 
 /* =========================================================
@@ -4143,7 +5194,7 @@ function applyShotModeFromQuery(){
             true;
 
         setActiveNav(
-            "navSearch"
+            "navExplore"
         );
 
         updateListingLayout();
@@ -4207,49 +5258,36 @@ function setupNavigation(){
         .addEventListener(
             "click",
             () => {
-
+                closeFilterSheet();
                 goMarketplaceHome();
-
+                setActiveNav("navHome");
             }
         );
 
-    $("navSearch")
-        .addEventListener(
-            "click",
-            () => {
-
-                state.savedOnly =
-                    false;
-
-                state.exploreMode =
-                    true;
-
-                setActiveNav(
-                    "navSearch"
-                );
-
+    if($("navExplore")){
+        $("navExplore").addEventListener("click", () => {
+            closeFilterSheet();
+            state.savedOnly = false;
+            state.exploreMode = true;
+            const mapPanel = $("buySellMapPanel");
+            if(mapPanel) mapPanel.hidden = true;
+            setActiveNav("navExplore");
+            const exploreBtn = document.querySelector('[data-view-mode="explore"]');
+            if(exploreBtn) exploreBtn.click();
+            else {
                 updateListingLayout();
-
                 applyFilters();
-
-                $("searchInput")
-                    .focus();
-
-                window.scrollTo(
-                    {
-                        top:0,
-                        behavior:"smooth"
-                    }
-                );
-
             }
-        );
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+    }
 
-    $("navSaved")
-        .addEventListener(
-            "click",
-            showSavedListings
-        );
+    if($("navCreate")){
+        $("navCreate").addEventListener("click", () => {
+            rememberBuySellReturn();
+            window.location.href = "post-ad.html?from=buy-sell";
+        });
+    }
 
     $("navMessages")
         .addEventListener(
@@ -4257,11 +5295,20 @@ function setupNavigation(){
             goMessages
         );
 
-    $("navProfile")
-        .addEventListener(
-            "click",
-            goProfile
-        );
+    if($("navFilters")){
+        $("navFilters").addEventListener("click", openFilterSheet);
+    }
+
+    // Saved remains reachable via hash / profile; keep helper for deep links.
+    if($("navSaved")){
+        $("navSaved").addEventListener("click", showSavedListings);
+    }
+    if($("navProfile")){
+        $("navProfile").addEventListener("click", goProfile);
+    }
+
+    setupFilterSheet();
+    renderFilterChips();
 
     document
         .querySelectorAll(
@@ -4624,6 +5671,23 @@ applyShotModeFromQuery();
 
         setupSearch();
 
+        setupViewModes();
+
+        setupVideoLightbox();
+
+        try {
+            const savedFilters = sessionStorage.getItem("havkar_buysell_filters");
+            if (savedFilters) {
+                const parsed = JSON.parse(savedFilters);
+                Object.keys(parsed || {}).forEach(function (key) {
+                    if (Object.prototype.hasOwnProperty.call(state, key)) {
+                        state[key] = parsed[key];
+                    }
+                });
+                renderFilterChips();
+            }
+        } catch (_e) {}
+
         setupRetry();
 
         renderSkeletons();
@@ -4635,10 +5699,13 @@ applyShotModeFromQuery();
         setupAuthListener();
 
         /*
-         * Load real ads and real Saved records.
+         * Load real ads, likes, and Saved records.
          */
 
-        await loadListings();
+        await Promise.all([
+            loadLikedIds(),
+            loadListings()
+        ]);
 
         /*
          * Support:
@@ -4681,6 +5748,45 @@ applyShotModeFromQuery();
    START
    ========================================================= */
 
+function setupViewModes(){
+    const buttons = document.querySelectorAll("[data-view-mode]");
+    const mapPanel = $("buySellMapPanel");
+    buttons.forEach(function (button) {
+        button.addEventListener("click", function () {
+            const mode = button.getAttribute("data-view-mode") || "home";
+            buttons.forEach(function (node) {
+                const on = node === button;
+                node.classList.toggle("active", on);
+                node.setAttribute("aria-pressed", on ? "true" : "false");
+            });
+            if (mode === "explore") {
+                state.exploreMode = true;
+                state.savedOnly = false;
+                if (mapPanel) mapPanel.hidden = true;
+                updateListingLayout();
+                applyFilters();
+            } else if (mode === "map") {
+                state.exploreMode = true;
+                if (mapPanel) mapPanel.hidden = false;
+                updateListingLayout();
+                window.dispatchEvent(new CustomEvent("havkar:buysell-map-refresh"));
+            } else {
+                state.exploreMode = false;
+                state.savedOnly = false;
+                if (mapPanel) mapPanel.hidden = true;
+                updateListingLayout();
+                applyFilters();
+            }
+        });
+    });
+}
+
+window.HAVKAR_BUYSELL_MAP_LISTINGS = function () {
+    return (state.ads || []).filter(function (ad) {
+        return ad && (ad.city || ad.country_code || ad.location);
+    });
+};
+
 document.addEventListener(
     "DOMContentLoaded",
     boot
@@ -4688,6 +5794,21 @@ document.addEventListener(
 
 </script>
 
+<div id="videoLightbox" class="video-lightbox" hidden>
+    <video id="videoLightboxPlayer" controls playsinline></video>
+    <div class="video-actions">
+        <button type="button" id="videoPauseBtn">Pause</button>
+        <button type="button" id="videoMuteBtn">Mute</button>
+        <button type="button" class="secondary" id="videoOpenListingBtn">Open listing</button>
+        <button type="button" class="secondary" id="videoCloseBtn">Close</button>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="/havkar-buy-sell-map.js"></script>
 <script src="/havkar-i18n.js"></script>
 
 <script src="/havkar-page-back.js"></script>

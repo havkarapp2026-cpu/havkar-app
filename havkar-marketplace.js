@@ -31,23 +31,27 @@
     video_bytes: true,
     video_duration_seconds: true,
     country_code: true,
-    city: true
+    city: true,
+    condition: true,
+    fulfillment_mode: true
   };
 
   function money(value) {
     return Math.round(value * 100) / 100;
   }
 
-  function quoteListingFees(price) {
+  function quoteListingFees(price, currency) {
     const amount = Number(price);
 
     if (!Number.isFinite(amount) || amount < 0) {
       return { ok: false, error: "Price must be a non-negative number." };
     }
 
+    const code = String(currency || "EUR").trim().toUpperCase() || "EUR";
+
     return {
       ok: true,
-      currency: "EUR",
+      currency: code,
       price: money(amount),
       listingPublicationFee: LISTING_PUBLICATION_FEE,
       buyerFee: money(amount * BUYER_FEE_RATE),
@@ -58,6 +62,111 @@
       shipping: null,
       paymentProcessing: null
     };
+  }
+
+  function escapeListingSearch(value) {
+    return String(value || "")
+      .replace(/[%_,.()]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 80);
+  }
+
+  function priceBound(value) {
+    if (value === "" || value === null || value === undefined) {
+      return { ok: false };
+    }
+    const amount = Number(value);
+    if (!Number.isFinite(amount) || amount < 0) {
+      return { ok: false };
+    }
+    return { ok: true, value: amount };
+  }
+
+  /*
+   * Applies discoverability filters on a Supabase ads query.
+   * Does not invent payments. Caller still page-ranges and orders.
+   */
+  function applyServerListingFilters(request, filters) {
+    if (!request || typeof request.eq !== "function") {
+      return request;
+    }
+
+    const input = filters || {};
+    let query = request;
+    const userId = String(input.userId || "").trim();
+
+    if (userId) {
+      query = query.or("status.eq.active,user_id.eq." + userId);
+    } else {
+      query = query.eq("status", "active");
+    }
+
+    if (typeof query.or === "function") {
+      query = query.or(
+        "expires_at.is.null,expires_at.gt." + new Date().toISOString()
+      );
+    }
+
+    const country = String(input.country || "").trim().toUpperCase();
+    if (country && typeof query.eq === "function") {
+      query = query.eq("country_code", country);
+    }
+
+    const city = String(input.city || "").trim();
+    if (city && typeof query.ilike === "function") {
+      query = query.ilike("city", city);
+    }
+
+    const category = String(input.category || "").trim();
+    if (
+      category &&
+      category.toLowerCase() !== "all" &&
+      typeof query.ilike === "function"
+    ) {
+      query = query.ilike("category", category);
+    }
+
+    const min = priceBound(input.minPrice);
+    const max = priceBound(input.maxPrice);
+
+    if (min && min.ok && typeof query.gte === "function") {
+      query = query.gte("price", min.value);
+    }
+
+    if (max && max.ok && typeof query.lte === "function") {
+      query = query.lte("price", max.value);
+    }
+
+    const search = escapeListingSearch(input.search);
+    if (search && typeof query.or === "function") {
+      const pattern = "%" + search + "%";
+      query = query.or(
+        "title.ilike." +
+          pattern +
+          ",description.ilike." +
+          pattern +
+          ",location.ilike." +
+          pattern
+      );
+    }
+
+    const currency = String(input.currency || "").trim().toUpperCase();
+    if (currency && typeof query.eq === "function") {
+      query = query.eq("currency", currency);
+    }
+
+    const condition = String(input.condition || "").trim().toLowerCase();
+    if (condition && typeof query.eq === "function") {
+      query = query.eq("condition", condition);
+    }
+
+    const fulfillment = String(input.fulfillment || "").trim().toLowerCase();
+    if (fulfillment && typeof query.eq === "function") {
+      query = query.eq("fulfillment_mode", fulfillment);
+    }
+
+    return query;
   }
 
   function normalizedCategory(row) {
@@ -474,6 +583,8 @@
     listingShareUrl,
     shareListing,
     quoteListingFees,
+    escapeListingSearch,
+    applyServerListingFilters,
     isMarketplaceRow,
     isAdvertisingRow,
     validateListingVideo,

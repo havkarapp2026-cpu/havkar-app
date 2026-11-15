@@ -197,6 +197,94 @@ body {
     cursor: not-allowed;
 }
 
+.pay-panel {
+    margin-top: 18px;
+    padding: 16px;
+    border-radius: 14px;
+    border: 1px solid #dce7d6;
+    background: linear-gradient(180deg, #f7fbf4, #fff);
+}
+
+.pay-panel h3 {
+    margin: 0 0 8px;
+    font-size: 1.05rem;
+    color: #1b5e20;
+}
+
+.pay-panel p,
+.pay-panel dl {
+    margin: 0;
+    color: #555;
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+
+.pay-panel dl {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 12px;
+    margin: 12px 0;
+}
+
+.pay-panel dt { color: #777; }
+.pay-panel dd { margin: 0; font-weight: 700; color: #243024; text-align: right; }
+
+.pay-actions {
+    display: grid;
+    gap: 8px;
+}
+
+.pay-btn {
+    width: 100%;
+    min-height: 48px;
+    border: 0;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #2e7d32, #43a047);
+    color: #fff;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.pay-btn.secondary {
+    background: #fff;
+    color: #1b5e20;
+    border: 1px solid #cfe3c2;
+}
+
+.pay-status {
+    margin-top: 10px;
+    color: #5a6a58;
+    font-size: 0.88rem;
+    line-height: 1.45;
+}
+
+.media-strip {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 10px 12px 0;
+}
+
+.media-strip button {
+    flex: 0 0 auto;
+    width: 72px;
+    height: 72px;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    overflow: hidden;
+    padding: 0;
+    background: #eee;
+    cursor: pointer;
+}
+
+.media-strip button.active { border-color: #43a047; }
+.media-strip img, .media-strip video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
 @media (max-width: 500px) {
 
     .product {
@@ -319,12 +407,49 @@ body {
 
         </button>
 
+        <button
+            id="followSellerButton"
+            class="contact-btn"
+            type="button"
+            style="margin-top:10px;background:#e8f5e9;color:#1b5e20;border:1px solid #a5d6a7"
+            onclick="toggleFollowSeller()">
+
+            Follow seller
+
+        </button>
+
+        <button id="buyNowButton" class="contact-btn" type="button" style="margin-top:10px;background:linear-gradient(145deg,#0d3d16,#2e7d32);font-weight:800">
+            Buy Now
+        </button>
+
+        <div id="payPanel" class="pay-panel" hidden>
+            <h3>Secure checkout</h3>
+            <p>Buyer fee 2% · Seller fee 3% · Listing publication free. Shipping and taxes are separate when applicable. XLM is Stellar Mainnet (not Stripe Testnet).</p>
+            <label for="productCheckoutCurrency" style="display:block;margin:8px 0 4px;font-weight:700">Presentment currency (133)</label>
+            <select id="productCheckoutCurrency" style="width:100%;min-height:44px;border-radius:12px;margin-bottom:8px"></select>
+            <label for="productFulfillment" style="display:block;margin:8px 0 4px;font-weight:700">Shipping or pickup</label>
+            <select id="productFulfillment" style="width:100%;min-height:44px;border-radius:12px;margin-bottom:8px">
+                <option value="pickup">Local pickup</option>
+                <option value="delivery">Delivery / shipping</option>
+            </select>
+            <dl id="feeBreakdown"></dl>
+            <div class="pay-actions">
+                <button id="quoteStripeBtn" class="pay-btn" type="button">Quote Stripe</button>
+                <button id="quoteXlmBtn" class="pay-btn secondary" type="button">Quote Stellar XLM Mainnet</button>
+                <button id="payStripeBtn" class="pay-btn" type="button">Pay with Stripe</button>
+                <button id="payXlmBtn" class="pay-btn secondary" type="button">Pay with Stellar XLM Mainnet</button>
+            </div>
+            <p id="payStatus" class="pay-status" role="status" aria-live="polite"></p>
+        </div>
+
     </div>
 
 </div>
 
 
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-marketplace.js"></script>
+<script src="/havkar-presentment-currencies.js"></script>
 <script>
 
 
@@ -542,6 +667,246 @@ function showError(message) {
 
 
 /* =========================================================
+   PAYMENTS (quotes + gated Stripe checkout)
+   ========================================================= */
+
+function setPayStatus(message) {
+    const node = document.getElementById("payStatus");
+    if (node) node.textContent = message || "";
+}
+
+function renderFeeBreakdown(fees) {
+    const dl = document.getElementById("feeBreakdown");
+    if (!dl || !fees) return;
+    const rows = [
+        ["Item price", fees.list_price_eur ?? fees.price],
+        ["Buyer fee (2%)", fees.buyer_fee_eur ?? fees.buyerFee],
+        ["Seller fee (3%)", fees.seller_fee_eur ?? fees.sellerFee],
+        ["Buyer pays", fees.buyer_pays_eur ?? fees.buyerPays],
+        ["Seller receives", fees.seller_receives_eur ?? fees.sellerReceives],
+        ["Listing publication", fees.listing_publication_fee ?? 0]
+    ];
+    dl.innerHTML = rows
+        .map(function (pair) {
+            return (
+                "<dt>" +
+                pair[0] +
+                "</dt><dd>" +
+                String(pair[1]) +
+                " " +
+                String((fees.currency || "EUR")).toUpperCase() +
+                "</dd>"
+            );
+        })
+        .join("");
+}
+
+async function accessToken() {
+    const session = await supabaseClient.auth.getSession();
+    return session && session.data && session.data.session
+        ? session.data.session.access_token
+        : "";
+}
+
+async function quoteMarketplace(method) {
+    if (!currentAd) return;
+    setPayStatus("Requesting " + method + " quote…");
+    try {
+        const response = await fetch("/api/marketplace", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                action: "marketplace_quote",
+                method: method,
+                currency: String((currentAd._checkoutCurrency || currentAd.currency || "eur")).toLowerCase(),
+                list_price_eur: Number(currentAd.price),
+                listing_id: currentAd.id
+            })
+        });
+        const body = await response.json().catch(function () { return null; });
+        if (!response.ok || !body || body.ok === false) {
+            setPayStatus((body && body.error) || "Quote failed. No charge was created.");
+            return;
+        }
+        if (body.fees) renderFeeBreakdown(body.fees);
+        const extra =
+            method.indexOf("xlm") >= 0 && body.amount_xlm
+                ? " · XLM Mainnet " + body.amount_xlm + " (rate " + (body.eur_per_xlm || "?") + ")"
+                : "";
+        setPayStatus(
+            "Quote ready. charge_created=" +
+                String(body.charge_created) +
+                ", trade_enabled=" +
+                String(body.trade_payments_enabled) +
+                extra +
+                ". Live pay requires Owner HAVKAR_TRADE_ENABLED."
+        );
+        const payBtn = document.getElementById("payStripeBtn");
+        const payXlm = document.getElementById("payXlmBtn");
+        if (payBtn) payBtn.hidden = false;
+        if (payXlm) payXlm.hidden = false;
+    } catch (_error) {
+        setPayStatus("Could not reach marketplace quote API.");
+    }
+}
+
+async function startXlmCheckout() {
+    if (!currentAd) return;
+    const token = await accessToken();
+    if (!token) {
+        setPayStatus("Sign in to start Stellar XLM checkout.");
+        window.location.href = "login.html";
+        return;
+    }
+    setPayStatus("Creating Stellar XLM payment intent…");
+    try {
+        const response = await fetch("/api/marketplace", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + token
+            },
+            body: JSON.stringify({
+                action: "marketplace_create_checkout",
+                method: "xlm_mainnet",
+                listing_id: currentAd.id
+            })
+        });
+        const body = await response.json().catch(function () { return null; });
+        if (!response.ok || !body || body.ok === false) {
+            setPayStatus((body && body.error) || "XLM checkout was not created.");
+            return;
+        }
+        if (body.checkout_url || body.url) {
+            window.location.href = body.checkout_url || body.url;
+            return;
+        }
+        if (body.amount_xlm && body.destination) {
+            setPayStatus(
+                "Pay " + body.amount_xlm + " XLM to " + body.destination +
+                " (memo " + (body.memo || "n/a") + "). Confirm after network settlement."
+            );
+            return;
+        }
+        setPayStatus("XLM intent created. Follow wallet instructions to complete payment.");
+    } catch (_error) {
+        setPayStatus("Could not start Stellar XLM checkout.");
+    }
+}
+
+async function startStripeCheckout() {
+    if (!currentAd) return;
+    const token = await accessToken();
+    if (!token) {
+        setPayStatus("Sign in to start Stripe checkout.");
+        window.location.href = "login.html";
+        return;
+    }
+    setPayStatus("Creating Stripe Checkout…");
+    try {
+        const response = await fetch("/api/marketplace", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + token
+            },
+            body: JSON.stringify({
+                action: "marketplace_create_checkout",
+                listing_id: currentAd.id
+            })
+        });
+        const body = await response.json().catch(function () { return null; });
+        if (!response.ok || !body || body.ok === false) {
+            setPayStatus((body && body.error) || "Checkout was not created.");
+            return;
+        }
+        if (body.url) {
+            window.location.href = body.url;
+            return;
+        }
+        setPayStatus("Checkout session created without redirect URL.");
+    } catch (_error) {
+        setPayStatus("Could not start Stripe checkout.");
+    }
+}
+
+function setupMarketplacePayments(ad) {
+    const panel = document.getElementById("payPanel");
+    if (!panel || !ad) return;
+    const buyNow = document.getElementById("buyNowButton");
+    const currencySelect = document.getElementById("productCheckoutCurrency");
+    if (currencySelect && window.HAVKAR_PRESENTMENT_CURRENCIES) {
+        const preferred = String(ad.currency || "eur").toLowerCase();
+        currencySelect.innerHTML = "";
+        window.HAVKAR_PRESENTMENT_CURRENCIES.list.forEach(function (item) {
+            const opt = document.createElement("option");
+            opt.value = item.code;
+            opt.textContent = String(item.code).toUpperCase() + " — " + item.name;
+            if (item.code === preferred) opt.selected = true;
+            currencySelect.appendChild(opt);
+        });
+        currencySelect.onchange = function () {
+            currentAd = currentAd || ad;
+            currentAd._checkoutCurrency = currencySelect.value;
+        };
+    }
+    if (buyNow) {
+        buyNow.onclick = function () {
+            panel.hidden = false;
+            panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        };
+        // Keep Buy Now visible; open panel by default for purchasable items
+        panel.hidden = false;
+    } else {
+        panel.hidden = false;
+    }
+    const localFees =
+        window.HAVKAR_MARKETPLACE &&
+        typeof window.HAVKAR_MARKETPLACE.quoteListingFees === "function"
+            ? window.HAVKAR_MARKETPLACE.quoteListingFees(ad.price, ad.currency)
+            : null;
+    if (localFees && localFees.ok) {
+        renderFeeBreakdown({
+            list_price_eur: localFees.price,
+            buyer_fee_eur: localFees.buyerFee,
+            seller_fee_eur: localFees.sellerFee,
+            buyer_pays_eur: localFees.buyerPays,
+            seller_receives_eur: localFees.sellerReceives,
+            listing_publication_fee: localFees.listingPublicationFee,
+            currency: localFees.currency
+        });
+    }
+    const stripeQuote = document.getElementById("quoteStripeBtn");
+    const xlmQuote = document.getElementById("quoteXlmBtn");
+    const payStripe = document.getElementById("payStripeBtn");
+    if (stripeQuote) {
+        stripeQuote.onclick = function () {
+            quoteMarketplace("stripe");
+        };
+    }
+    if (xlmQuote) {
+        xlmQuote.onclick = function () {
+            quoteMarketplace("xlm_mainnet");
+        };
+    }
+    if (payStripe) {
+        payStripe.onclick = function () {
+            startStripeCheckout();
+        };
+    }
+    const payXlm = document.getElementById("payXlmBtn");
+    if (payXlm) {
+        payXlm.onclick = function () {
+            setPayStatus("Starting Stellar XLM checkout…");
+            startXlmCheckout();
+        };
+    }
+    setPayStatus(
+        "Quotes are free to request. Live charging stays Owner-gated via HAVKAR_TRADE_ENABLED."
+    );
+}
+
+/* =========================================================
    LOAD PRODUCT
    ========================================================= */
 
@@ -686,6 +1051,8 @@ async function loadProduct() {
         productBox.style.display =
             "block";
 
+        setupMarketplacePayments(currentAd);
+        refreshFollowButton();
 
         document.title =
             "HAVKAR - " +
@@ -713,6 +1080,88 @@ async function loadProduct() {
 
     }
 
+}
+
+
+/* =========================================================
+   FOLLOW SELLER
+   ========================================================= */
+
+let followingSeller = false;
+
+async function refreshFollowButton() {
+    const button = document.getElementById("followSellerButton");
+    if (!button || !currentAd || !currentAd.user_id) return;
+
+    const session = await supabaseClient.auth.getUser();
+    const user = session && session.data && session.data.user;
+    if (!user) {
+        button.textContent = "Follow seller";
+        followingSeller = false;
+        return;
+    }
+    if (user.id === currentAd.user_id) {
+        button.hidden = true;
+        return;
+    }
+
+    const result = await supabaseClient
+        .from("seller_follows")
+        .select("id")
+        .eq("follower_id", user.id)
+        .eq("seller_id", currentAd.user_id)
+        .maybeSingle();
+
+    followingSeller = Boolean(result && result.data && result.data.id);
+    button.hidden = false;
+    button.textContent = followingSeller ? "Following ✓" : "Follow seller";
+}
+
+async function toggleFollowSeller() {
+    const button = document.getElementById("followSellerButton");
+    if (!currentAd || !currentAd.user_id) return;
+
+    const session = await supabaseClient.auth.getUser();
+    const user = session && session.data && session.data.user;
+    if (!user) {
+        alert("Please login first to follow the seller.");
+        window.location.href = "login.html";
+        return;
+    }
+    if (user.id === currentAd.user_id) {
+        alert("You cannot follow yourself.");
+        return;
+    }
+
+    if (button) button.disabled = true;
+    try {
+        if (followingSeller) {
+            const removed = await supabaseClient
+                .from("seller_follows")
+                .delete()
+                .eq("follower_id", user.id)
+                .eq("seller_id", currentAd.user_id);
+            if (removed.error) throw removed.error;
+            followingSeller = false;
+        } else {
+            const inserted = await supabaseClient
+                .from("seller_follows")
+                .insert({
+                    follower_id: user.id,
+                    seller_id: currentAd.user_id
+                });
+            if (inserted.error) throw inserted.error;
+            followingSeller = true;
+        }
+        if (button) {
+            button.textContent = followingSeller ? "Following ✓" : "Follow seller";
+        }
+    } catch (error) {
+        console.error("[HAVKAR] Follow seller failed:", error);
+        alert("Could not update seller follow.");
+    } finally {
+        if (button) button.disabled = false;
+    }
 }
 
 

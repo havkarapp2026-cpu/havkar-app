@@ -11,6 +11,25 @@
 */
 
 const { createClient } = require("@supabase/supabase-js");
+const { composeFlightDob } = require("../lib/flight-dob.cjs");
+const {
+  realPaymentsEnabled,
+  cardPaymentsAllowed,
+  REAL_PAYMENTS_PAUSED_CODE,
+  REAL_PAYMENTS_PAUSED_MESSAGE
+} = require("../lib/real-payments.cjs");
+const {
+  listStripeCurrencies60,
+  isSupportedCheckoutCurrency,
+  getCurrencyMeta
+} = require("../lib/stripe-supported-currencies-60.cjs");
+const { fetchEurRates, quoteWithFees } = require("../lib/havkar-fx-rates.cjs");
+const {
+  stellarMainnetPaymentsEnabled,
+  stellarMainnetLiveCollectionEnabled,
+  readMainnetDestination,
+  mainnetCustomerLiveReady
+} = require("../lib/stellar-mainnet.cjs");
 
 const DUFFEL_API = "https://api.duffel.com";
 const DUFFEL_VERSION = "v2";
@@ -96,7 +115,10 @@ function validEmail(value) {
 }
 
 function validDate(value) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(cleanString(value));
+  const raw = cleanString(value);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return false;
+  const [year, month, day] = raw.split("-");
+  return composeFlightDob(day, month, year) === raw;
 }
 
 function validOfferId(value) {
@@ -464,6 +486,168 @@ module.exports = async function handler(req, res) {
       req.body && typeof req.body === "object"
         ? req.body
         : {};
+
+    const intent = cleanString(body.intent || "").toLowerCase();
+
+    /*
+      Payment matrix / gated live checkout for flights.
+      Real-money collection stays OFF until Owner flags are armed.
+      Duffel TEST MODE booking remains the only public booking path.
+    */
+    if (intent === "payment_options") {
+      const destination = readMainnetDestination(process.env);
+      return send(res, 200, {
+        ok: true,
+        intent: "payment_options",
+        real_payments_enabled: realPaymentsEnabled(),
+        stripe: {
+          supported_currencies: listStripeCurrencies60(),
+          currency_count: listStripeCurrencies60().length,
+          card_payments_allowed: cardPaymentsAllowed(),
+          source: "https://docs.stripe.com/currencies"
+        },
+        stellar_xlm_mainnet: {
+          payments_flag: stellarMainnetPaymentsEnabled(),
+          live_collection_flag: stellarMainnetLiveCollectionEnabled(),
+          customer_live_ready: mainnetCustomerLiveReady(),
+          destination_configured: destination.ok === true,
+          network: "mainnet"
+        },
+        public_live_checkout: false,
+        message:
+          "Flight payment rails are prepared. Public real-money checkout stays DISABLED until explicit Owner approval."
+      });
+    }
+
+    if (intent === "payment_quote") {
+      const offerIdForQuote = cleanString(body.offer_id);
+      if (!validOfferId(offerIdForQuote)) {
+        return send(res, 400, {
+          ok: false,
+          error: "A valid offer_id is required for a payment quote."
+        });
+      }
+
+      const currency = cleanString(body.currency || "eur").toLowerCase();
+      if (!isSupportedCheckoutCurrency(currency)) {
+        return send(res, 400, {
+          ok: false,
+          error:
+            "Currency is not in HAVKAR's verified Stripe presentment currency list."
+        });
+      }
+
+      const method = cleanString(body.method || "stripe").toLowerCase();
+      if (method !== "stripe" && method !== "xlm_mainnet") {
+        return send(res, 400, {
+          ok: false,
+          error: "Payment method must be stripe or xlm_mainnet."
+        });
+      }
+
+      const offer = await getOffer(token, offerIdForQuote);
+      if (!offer?.id) {
+        return send(res, 404, {
+          ok: false,
+          error: "The selected Duffel offer could not be found."
+        });
+      }
+
+      const totalAmount = Number(offer.total_amount);
+      const offerCurrency = cleanString(offer.total_currency).toUpperCase();
+      if (!Number.isFinite(totalAmount) || totalAmount < 0) {
+        return send(res, 409, {
+          ok: false,
+          error: "Duffel did not return a valid total amount for this offer."
+        });
+      }
+
+      // FX helpers quote from EUR. Convert offer total to EUR first when needed.
+      let amountEur = totalAmount;
+      if (offerCurrency !== "EUR") {
+        const ratesFromOffer = await fetchEurRates();
+        const rate = ratesFromOffer.rates[offerCurrency];
+        if (!rate) {
+          return send(res, 409, {
+            ok: false,
+            error: `No verified FX rate for offer currency ${offerCurrency}.`
+          });
+        }
+        amountEur = Math.round((totalAmount / Number(rate)) * 100) / 100;
+      }
+
+      const rates = await fetchEurRates();
+      const quote = quoteWithFees(amountEur, currency.toUpperCase(), rates.rates);
+      if (!quote.ok) {
+        return send(res, 409, {
+          ok: false,
+          error: quote.error || "Unable to build FX quote."
+        });
+      }
+
+      const meta = getCurrencyMeta(currency);
+      const xlmReady = mainnetCustomerLiveReady();
+      const stripeReady = cardPaymentsAllowed();
+
+      return send(res, 200, {
+        ok: true,
+        intent: "payment_quote",
+        offer_id: offer.id,
+        offer_total: {
+          amount: cleanString(offer.total_amount),
+          currency: offerCurrency
+        },
+        method,
+        currency: meta,
+        quote: {
+          ...quote,
+          fx_provider: "frankfurter.app",
+          fx_date: rates.date,
+          conversion_fee_note:
+            "Buyer fee 2% and seller fee 3% are shown for transparency."
+        },
+        live_checkout_allowed:
+          method === "stripe" ? stripeReady : xlmReady,
+        public_live_checkout: false,
+        gate: {
+          code: REAL_PAYMENTS_PAUSED_CODE,
+          message: REAL_PAYMENTS_PAUSED_MESSAGE,
+          real_payments_enabled: realPaymentsEnabled()
+        }
+      });
+    }
+
+    if (intent === "live_checkout") {
+      const method = cleanString(body.method || "stripe").toLowerCase();
+      const allowed =
+        method === "xlm_mainnet"
+          ? mainnetCustomerLiveReady()
+          : cardPaymentsAllowed();
+
+      if (!allowed) {
+        return send(res, 403, {
+          ok: false,
+          code: REAL_PAYMENTS_PAUSED_CODE,
+          error: REAL_PAYMENTS_PAUSED_MESSAGE,
+          intent: "live_checkout",
+          method,
+          public_live_checkout: false,
+          note:
+            "No Stripe charge, XLM transfer, Duffel live order, or refund was created."
+        });
+      }
+
+      // Armed path reserved for Owner-approved go-live.
+      // Still refuse until a dedicated flight settlement + idempotency
+      // pipeline is explicitly completed for flights (separate from events).
+      return send(res, 403, {
+        ok: false,
+        code: "FLIGHT_LIVE_CHECKOUT_NOT_ARMED",
+        error:
+          "Flight live checkout infrastructure is prepared but not Owner-armed for public collection. No payment was taken.",
+        public_live_checkout: false
+      });
+    }
 
     const offerId = cleanString(body.offer_id);
 

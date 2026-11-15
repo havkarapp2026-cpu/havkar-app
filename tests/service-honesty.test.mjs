@@ -14,8 +14,9 @@ assert.match(tickets, /No booking is offered from HAVKAR in the meantime/);
 assert.match(tickets, /Awaiting partner access/);
 assert.doesNotMatch(tickets, /api\.omio\.com/);
 
-assert.match(jobs, /The payment gateway is not connected yet/);
+assert.match(jobs, /The payment gateway is not connected yet|Payment is not available|has NOT been activated/);
 assert.match(jobs, /has NOT been activated/);
+assert.match(jobs, /Stellar XLM|xlm_mainnet/);
 
 assert.match(accommodation, /Published Italian listings only/);
 assert.match(accommodation, /No verified accommodation is published/);

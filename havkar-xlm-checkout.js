@@ -1,6 +1,7 @@
 /*
- * Shared browser caller for the server-side Testnet XLM checkout.
- * Fiat buttons stay in place. This file never marks an order paid locally.
+ * Shared browser caller for server-side XLM checkout helpers.
+ * Marketplace Buy Now uses /api/marketplace Mainnet path instead.
+ * This file never marks an order paid locally.
  */
 (function (root) {
   function describe(result) {
@@ -12,14 +13,16 @@
       return "Horizon verified the refund. The order is no longer paid.";
     }
 
+    var networkLabel =
+      String(result.network || "").toLowerCase() === "mainnet" ? "Mainnet" : "Testnet";
     if (result.order_paid === true && result.settlement === "settled") {
       return result.idempotent
-        ? "This Testnet payment was already verified."
-        : "Horizon verified the Testnet payment. The quote is settled.";
+        ? "This " + networkLabel + " payment was already verified."
+        : "Horizon verified the " + networkLabel + " payment. The quote is settled.";
     }
 
     if (result.payable === true && result.order_paid === false) {
-      return "Unpaid Testnet quote. Send " + result.amount_xlm +
+      return "Unpaid " + networkLabel + " quote. Send " + result.amount_xlm +
         " native XLM to " + result.destination +
         " with text memo " + result.memo +
         ". The network fee is separate. The order stays unpaid until Horizon verification.";

@@ -8,9 +8,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#7cb342">
-<meta name="description" content="HAVKAR Tickets: taxi and transfer booking is not available inside HAVKAR. Train, bus, flight, and ferry booking waits for Omio partner approval.">
+<meta name="description" content="HAVKAR Tickets: premium global travel discovery with interactive map, event QR tickets, Duffel flights, and Omio affiliate train/bus/ferry search.">
 <title>HAVKAR - Tickets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Sora:wght@600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <style>
 *{
     margin:0;
@@ -20,23 +24,29 @@
 :root{
     --green:#7cb342;
     --green-dark:#558b2f;
-    --green-deep:#3e6b22;
+    --green-deep:#2f5a1c;
     --green-light:#eef7e8;
-    --bg:#f4f6f3;
+    --mint:#d9f0d0;
+    --bg:#f7faf6;
+    --bg-glow:radial-gradient(1200px 500px at 80% -10%, rgba(124,179,66,.18), transparent 55%),
+               radial-gradient(900px 420px at 10% 0%, rgba(86,139,47,.12), transparent 50%),
+               linear-gradient(180deg,#fbfdf9 0%,#f3f7f1 100%);
     --white:#fff;
-    --text:#243024;
-    --muted:#5f6b60;
-    --border:#e1e8df;
-    --shadow:0 8px 28px rgba(36,48,36,.08);
+    --text:#1d2b1c;
+    --muted:#5a6a58;
+    --border:#dce7d6;
+    --shadow:0 14px 40px rgba(36,70,28,.10);
     --nav-height:74px;
+    --font-display:"Sora",ui-sans-serif,system-ui,sans-serif;
+    --font-body:"Manrope",ui-sans-serif,system-ui,sans-serif;
 }
 html{scroll-behavior:smooth}
 body{
     min-height:100vh;
     padding-bottom:calc(var(--nav-height) + env(safe-area-inset-bottom));
-    background:var(--bg);
+    background:var(--bg-glow);
     color:var(--text);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    font-family:var(--font-body);
 }
 button,a{font:inherit;-webkit-tap-highlight-color:transparent}
 a{color:inherit}
@@ -58,8 +68,9 @@ a{color:inherit}
     min-width:0;
 }
 .header-title{
+    font-family:var(--font-display);
     font-size:22px;
-    font-weight:750;
+    font-weight:700;
     letter-spacing:.2px;
 }
 .icon-button{
@@ -78,12 +89,150 @@ a{color:inherit}
 .service-card:focus-visible,
 .partner-link:focus-visible,
 .text-link:focus-visible,
-.nav-item:focus-visible{
+.nav-item:focus-visible,
+.flight-form input:focus-visible,
+.flight-form select:focus-visible,
+.flight-form button:focus-visible{
     outline:3px solid rgba(255,255,255,.85);
     outline-offset:2px;
 }
+.flight-form{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+    gap:12px;
+    margin:18px 0 12px;
+}
+.flight-form label{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    font-size:13px;
+    color:var(--muted);
+}
+.flight-form input,
+.flight-form select{
+    min-height:42px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:8px 10px;
+    background:#fff;
+    color:var(--text);
+}
+.flight-results{
+    display:grid;
+    gap:12px;
+    margin-top:14px;
+}
+.flight-card{
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:14px 16px;
+    background:#fbfdf9;
+}
+.flight-card strong{display:block;margin-bottom:4px}
+.flight-card p{margin:0;color:var(--muted);font-size:14px;line-height:1.45}
+.flight-card .partner-link{margin-top:12px}
+.flight-book-panel{
+    margin-top:18px;
+    padding:16px;
+    border:1px solid var(--border);
+    border-radius:16px;
+    background:#f8fbf9;
+}
+.flight-book-panel[hidden]{display:none !important}
+.flight-book-panel h3{margin:0 0 10px;font-size:18px}
+.flight-book-grid{
+    display:grid;
+    gap:10px;
+    grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+}
+
+.airport-field{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+.airport-field input[type="search"],
+.airport-field input[type="text"]{
+    width:100%;
+    min-height:44px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:10px 12px;
+    background:#fff;
+    color:var(--text);
+}
+.airport-suggestions{
+    position:absolute;
+    left:0;
+    right:0;
+    top:calc(100% + 4px);
+    z-index:40;
+    max-height:260px;
+    overflow:auto;
+    margin:0;
+    padding:6px;
+    list-style:none;
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:12px;
+    box-shadow:var(--shadow);
+}
+.airport-suggestions[hidden]{display:none !important}
+.airport-suggestion{
+    width:100%;
+    border:0;
+    background:transparent;
+    text-align:left;
+    border-radius:10px;
+    padding:10px 12px;
+    cursor:pointer;
+    color:var(--text);
+}
+.airport-suggestion:hover,
+.airport-suggestion[aria-selected="true"]{
+    background:var(--green-light);
+}
+.airport-suggestion strong{
+    display:block;
+    font-size:14px;
+}
+.airport-suggestion span{
+    display:block;
+    margin-top:2px;
+    font-size:12px;
+    color:var(--muted);
+}
+.airport-meta{
+    font-size:12px;
+    color:var(--muted);
+}
+.flight-card .flight-meta{
+    display:grid;
+    gap:4px;
+    margin:8px 0;
+    font-size:13px;
+    color:var(--muted);
+}
+.flight-card .flight-meta b{color:var(--text);font-weight:650}
+.flight-card .price-line{
+    margin-top:8px;
+    font-size:16px;
+    font-weight:750;
+    color:var(--green-deep);
+}
+.dob-field{display:flex;flex-direction:column;gap:6px}
+.dob-legend{font-size:14px;font-weight:650}
+.dob-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.dob-grid select{min-height:44px;width:100%}
+.flight-pay-panel{margin-top:16px;padding:14px;border:1px dashed #c5d6b8;border-radius:14px;background:#f7faf5}
+.flight-pay-panel h4{margin:0 0 8px;font-size:16px}
+.flight-pay-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-top:10px}
+
+.more-transfers[hidden]{display:none !important}
 .page{
-    width:min(1040px, calc(100% - 28px));
+    width:min(1180px, calc(100% - 28px));
     margin:22px auto 28px;
 }
 .intro{
@@ -124,11 +273,265 @@ a{color:inherit}
     background:#eef3f5;
     color:#37515c;
 }
+.omio-widget-host{
+    min-height:160px;
+    margin-top:16px;
+    width:100%;
+    overflow:auto;
+    -webkit-overflow-scrolling:touch;
+}
+.omio-widget-host [data-omio-widget="true"]{
+    width:100%;
+    max-width:100%;
+}
+.omio-affiliate-note{
+    margin-top:12px;
+}
+.omio-tracked-link{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    min-height:44px;
+    margin-top:10px;
+    padding:10px 16px;
+    border-radius:12px;
+    background:var(--green);
+    color:#fff;
+    font-weight:750;
+    text-decoration:none;
+}
+.omio-tracked-link:hover{filter:brightness(.97)}
 h2{
+    font-family:var(--font-display);
     font-size:32px;
     line-height:1.15;
     margin-bottom:10px;
 }
+.tickets-discovery{
+    margin:0 0 22px;
+    padding:22px 20px 18px;
+    border-radius:28px;
+    border:1px solid rgba(124,179,66,.28);
+    background:
+      linear-gradient(145deg, rgba(255,255,255,.96), rgba(238,247,232,.92)),
+      radial-gradient(circle at 90% 10%, rgba(124,179,66,.16), transparent 40%);
+    box-shadow:var(--shadow);
+}
+.tickets-discovery-head{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:14px;
+    margin-bottom:14px;
+}
+.tickets-discovery-head h2{
+    font-size:26px;
+    margin:0 0 6px;
+}
+.tickets-discovery-head p{
+    max-width:62ch;
+    color:var(--muted);
+    font-size:14px;
+    line-height:1.55;
+    margin:0;
+}
+.tickets-map-brand{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    padding:8px 12px;
+    border-radius:999px;
+    background:linear-gradient(135deg,#3e6b22,#7cb342);
+    color:#fff;
+    font-size:12px;
+    font-weight:750;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    box-shadow:0 8px 20px rgba(62,107,34,.25);
+}
+.tickets-map-brand img{
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    background:#fff;
+    object-fit:cover;
+}
+.tickets-map-filters{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin:0 0 12px;
+}
+.tickets-map-filters button{
+    min-height:40px;
+    padding:8px 12px;
+    border-radius:999px;
+    border:1px solid var(--border);
+    background:#fff;
+    color:var(--text);
+    font-weight:700;
+    font-size:13px;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    transition:transform .18s ease, border-color .18s ease, background .18s ease;
+}
+.tickets-map-filters button:hover{transform:translateY(-1px);border-color:#a8cf84}
+.tickets-map-filters button.active{
+    background:var(--green-light);
+    border-color:#8fbf63;
+    color:var(--green-deep);
+}
+.tickets-map-search-row{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:10px;
+    margin-bottom:12px;
+}
+.tickets-map-search-row input{
+    min-height:48px;
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:10px 14px;
+    background:#fff;
+    color:var(--text);
+    font-size:15px;
+}
+.tickets-map-search-row button{
+    min-height:48px;
+    border:0;
+    border-radius:14px;
+    padding:0 18px;
+    background:linear-gradient(135deg,#558b2f,#7cb342);
+    color:#fff;
+    font-weight:750;
+    cursor:pointer;
+}
+.tickets-globe-shell{
+    position:relative;
+    border-radius:28px;
+    padding:14px;
+    background:
+      radial-gradient(circle at 50% 45%, rgba(217,240,208,.55), rgba(255,255,255,.2) 42%, transparent 68%),
+      linear-gradient(160deg, #edf6e8, #ffffff 55%, #e7f2e1);
+    border:1px solid rgba(124,179,66,.22);
+    overflow:hidden;
+}
+.tickets-globe-shell::before{
+    content:"";
+    position:absolute;
+    inset:-18% -8% auto;
+    height:48%;
+    border-radius:50%;
+    border:1px solid rgba(124,179,66,.28);
+    pointer-events:none;
+    animation:havkarOrbit 18s linear infinite;
+}
+.tickets-globe-shell::after{
+    content:"";
+    position:absolute;
+    width:120px;
+    height:120px;
+    right:18px;
+    top:18px;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, rgba(255,255,255,.55), rgba(124,179,66,.18) 45%, transparent 70%);
+    pointer-events:none;
+}
+@keyframes havkarOrbit{
+    from{transform:rotate(0deg)}
+    to{transform:rotate(360deg)}
+}
+#ticketsWorldMap{
+    height:min(52vh, 420px);
+    min-height:280px;
+    border-radius:22px;
+    overflow:hidden;
+    box-shadow:inset 0 0 0 1px rgba(62,107,34,.08), 0 18px 40px rgba(36,70,28,.12);
+    z-index:1;
+}
+.havkar-map-pin-wrap{background:transparent;border:0}
+.havkar-map-pin{
+    width:34px;
+    height:34px;
+    border-radius:50% 50% 50% 6px;
+    transform:rotate(-45deg);
+    background:var(--pin, #7cb342);
+    color:#fff;
+    display:grid;
+    place-items:center;
+    box-shadow:0 8px 16px rgba(36,70,28,.28);
+}
+.havkar-map-pin i{transform:rotate(45deg);font-size:13px}
+.tickets-map-toolbar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:12px;
+}
+.tickets-map-toolbar button,
+.tickets-map-endpoints button{
+    min-height:42px;
+    padding:8px 12px;
+    border-radius:12px;
+    border:1px solid #cfe3c2;
+    background:#fff;
+    color:var(--green-deep);
+    font-weight:700;
+    cursor:pointer;
+}
+.tickets-map-endpoints{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:10px;
+    margin-top:12px;
+}
+.tickets-map-endpoint{
+    padding:12px 14px;
+    border-radius:16px;
+    background:rgba(255,255,255,.88);
+    border:1px solid var(--border);
+}
+.tickets-map-endpoint strong{
+    display:block;
+    font-size:12px;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:4px;
+}
+.tickets-map-endpoint span{
+    display:block;
+    font-size:14px;
+    line-height:1.4;
+    min-height:2.8em;
+}
+.tickets-map-results{
+    display:grid;
+    gap:8px;
+    margin-top:12px;
+    max-height:220px;
+    overflow:auto;
+}
+.tickets-map-result{
+    text-align:left;
+    border:1px solid var(--border);
+    border-radius:14px;
+    background:#fff;
+    padding:10px 12px;
+    cursor:pointer;
+    display:grid;
+    gap:2px;
+}
+.tickets-map-result:hover{border-color:#8fbf63;background:#f7fbf4}
+.tickets-map-result strong{font-size:14px}
+.tickets-map-result span,
+.tickets-map-coords{color:var(--muted);font-size:12px;font-style:normal}
+.tickets-map-empty{color:var(--muted);font-size:14px;padding:8px 2px}
+#ticketsMapStatus{margin-top:12px}
 .lead{
     max-width:68ch;
     color:var(--muted);
@@ -344,6 +747,13 @@ h2{
     .ticket-types{grid-template-columns:repeat(4, minmax(0, 1fr))}
     h2{font-size:28px}
 }
+.visually-hidden{
+    position:absolute !important;
+    width:1px;height:1px;
+    padding:0;margin:-1px;
+    overflow:hidden;clip:rect(0,0,0,0);
+    white-space:nowrap;border:0;
+}
 @media (max-width:640px){
     .page{width:min(100% - 20px, 1040px);margin-top:14px}
     .panel{padding:18px 14px 16px;border-radius:18px}
@@ -354,10 +764,16 @@ h2{
     .booking-actions{flex-direction:column}
     .partner-link,.text-link{width:100%}
     .header-title{font-size:20px}
+    .tickets-discovery{padding:16px 12px}
+    .tickets-map-search-row{grid-template-columns:1fr}
+    .tickets-map-endpoints{grid-template-columns:1fr}
+    #ticketsWorldMap{min-height:240px;height:42vh}
+    .tickets-globe-shell::before{animation:none}
 }
 @media (prefers-reduced-motion:reduce){
     html{scroll-behavior:auto}
     .service-card{transition:none}
+    .tickets-globe-shell::before{animation:none}
 }
 </style>
 </head>
@@ -381,13 +797,65 @@ h2{
 
 <main class="page">
     <p class="intro">
-        Choose a ticket type. Flight, train, bus, and ferry search stays on this page until Omio access is approved.
-        Taxi and transfer booking is not available inside HAVKAR.
-        HAVKAR does not show sample bookings or sample payments as real reservations.
+        Discover destinations on the HAVKAR global map, then choose Events, Flights, Trains, Buses, or Ferries.
+        Event Tickets are live inside HAVKAR with QR check-in. Flights use signed-in Duffel search.
+        Trains, buses, and ferries use the approved Omio affiliate widget (booking completes on Omio).
+        Taxi and transfer booking is not available inside HAVKAR. HAVKAR never invents fares or confirmations.
     </p>
 
+    <section class="tickets-discovery" aria-labelledby="ticketsMapTitle">
+        <div class="tickets-discovery-head">
+            <div>
+                <div class="tickets-map-brand">
+                    <img src="/assets/icons/havkar-icon-32-20261022-v3.png" alt="" width="22" height="22">
+                    <span>HAVKAR Global Map</span>
+                </div>
+                <h2 id="ticketsMapTitle">Explore the world</h2>
+                <p>
+                    Search countries, cities, airports, stations, and ports with verified geographic coordinates.
+                    Pick origin and destination on the map. Transport results stay supplier-backed — never invented.
+                </p>
+            </div>
+        </div>
+        <div class="tickets-map-filters" role="group" aria-label="Transport map filters">
+            <button type="button" class="active" data-map-mode="all" aria-pressed="true"><i class="fas fa-globe" aria-hidden="true"></i> All</button>
+            <button type="button" data-map-mode="flight" aria-pressed="false"><i class="fas fa-plane" aria-hidden="true"></i> Flights</button>
+            <button type="button" data-map-mode="train" aria-pressed="false"><i class="fas fa-train" aria-hidden="true"></i> Trains</button>
+            <button type="button" data-map-mode="bus" aria-pressed="false"><i class="fas fa-bus" aria-hidden="true"></i> Buses</button>
+            <button type="button" data-map-mode="ferry" aria-pressed="false"><i class="fas fa-ship" aria-hidden="true"></i> Ferries</button>
+            <button type="button" data-map-mode="events" aria-pressed="false"><i class="fas fa-ticket" aria-hidden="true"></i> Events</button>
+        </div>
+        <div class="tickets-map-search-row">
+            <label class="visually-hidden" for="ticketsMapSearch">Worldwide destination search</label>
+            <input id="ticketsMapSearch" type="search" enterkeyhint="search" autocomplete="off" spellcheck="false" placeholder="Search worldwide: Rome, Tokyo, New York, ports, stations…">
+            <button id="ticketsMapSearchBtn" type="button">Search map</button>
+        </div>
+        <div class="tickets-globe-shell">
+            <div id="ticketsWorldMap" role="application" aria-label="HAVKAR interactive world map"></div>
+        </div>
+        <div class="tickets-map-endpoints">
+            <div class="tickets-map-endpoint">
+                <strong>Origin</strong>
+                <span id="ticketsMapOriginLabel">Not set</span>
+            </div>
+            <div class="tickets-map-endpoint">
+                <strong>Destination</strong>
+                <span id="ticketsMapDestLabel">Not set</span>
+            </div>
+        </div>
+        <div class="tickets-map-toolbar">
+            <button id="ticketsMapUseOrigin" type="button">Set as origin</button>
+            <button id="ticketsMapUseDest" type="button">Set as destination</button>
+            <button id="ticketsMapApplyFlight" type="button">Open flights search</button>
+            <button id="ticketsMapClear" type="button">Clear map</button>
+        </div>
+        <div id="ticketsMapResults" class="tickets-map-results" aria-live="polite"></div>
+        <p id="ticketsMapStatus" class="pending-note" role="status" aria-live="polite"></p>
+    </section>
+
     <div class="ticket-types" role="group" aria-label="Ticket types">
-        <button class="ticket-type active" type="button" data-ticket-type="flight" aria-pressed="true"><i class="fas fa-plane" aria-hidden="true"></i><span>Flights</span></button>
+        <button class="ticket-type active" type="button" data-ticket-type="events" aria-pressed="true"><i class="fas fa-ticket" aria-hidden="true"></i><span>Events</span></button>
+        <button class="ticket-type" type="button" data-ticket-type="flight" aria-pressed="false"><i class="fas fa-plane" aria-hidden="true"></i><span>Flights</span></button>
         <button class="ticket-type" type="button" data-ticket-type="train" aria-pressed="false"><i class="fas fa-train" aria-hidden="true"></i><span>Trains</span></button>
         <button class="ticket-type" type="button" data-ticket-type="bus" aria-pressed="false"><i class="fas fa-bus" aria-hidden="true"></i><span>Buses</span></button>
         <button class="ticket-type" type="button" data-ticket-type="ferry" aria-pressed="false"><i class="fas fa-ship" aria-hidden="true"></i><span>Ferries</span></button>
@@ -396,44 +864,220 @@ h2{
         <button class="ticket-type" type="button" data-ticket-type="hotel" aria-pressed="false"><i class="fas fa-hotel" aria-hidden="true"></i><span>Hotels</span></button>
     </div>
 
-    <section id="ticket-flight" class="panel omio-panel" data-ticket-panel="flight" aria-labelledby="flightTitle">
+    <section id="ticket-events" class="panel" data-ticket-panel="events" aria-labelledby="eventsTitle">
+        <div class="kicker"><i class="fas fa-ticket" aria-hidden="true"></i> Event Tickets</div>
+        <h2 id="eventsTitle">Event Tickets</h2>
+        <div class="status-row">
+            <span class="status-badge"><i class="fas fa-circle-check" aria-hidden="true"></i> Live in HAVKAR</span>
+        </div>
+        <p class="lead">
+            Create public events, publish ticket listings, reserve capacity, issue QR ticket codes, and check guests in.
+            Real card payment collection stays OFF until explicit Owner approval. Free tickets and XLM Testnet paths remain available.
+        </p>
+        <div class="service-grid" style="margin-top:14px">
+            <a class="service-card" href="events.html">
+                <span class="service-icon" aria-hidden="true"><i class="fas fa-calendar-days"></i></span>
+                <strong>Browse &amp; Create Events</strong>
+                <p>Open the Events workspace to list events and create new ones with capacity.</p>
+                <span>Open Events</span>
+            </a>
+            <a class="service-card" href="events.html?open=create">
+                <span class="service-icon" aria-hidden="true"><i class="fas fa-calendar-plus"></i></span>
+                <strong>Create Event</strong>
+                <p>Publish a free or paid EUR event. Paid card checkout stays paused until armed.</p>
+                <span>Create now</span>
+            </a>
+            <a class="service-card" href="events.html?open=my-event-tickets">
+                <span class="service-icon" aria-hidden="true"><i class="fas fa-qrcode"></i></span>
+                <strong>My Event Tickets / QR</strong>
+                <p>View issued tickets, QR codes, and reservation status.</p>
+                <span>Open my tickets</span>
+            </a>
+            <a class="service-card" href="events.html?open=check-in">
+                <span class="service-icon" aria-hidden="true"><i class="fas fa-clipboard-check"></i></span>
+                <strong>Organizer Check-in</strong>
+                <p>Enter a ticket code to check a guest in for your event.</p>
+                <span>Check-in tools</span>
+            </a>
+        </div>
+        <div class="pending-note" style="margin-top:14px">
+            Card payments remain paused (`REAL_PAYMENTS_PAUSED`). Free ticket issuance, capacity holds, QR codes, and check-in RPCs stay active.
+        </div>
+    </section>
+
+    <section id="ticket-flight" class="panel" data-ticket-panel="flight" hidden aria-labelledby="flightTitle">
         <div class="kicker"><i class="fas fa-plane" aria-hidden="true"></i> Flights</div>
         <h2 id="flightTitle">Flights</h2>
         <div class="status-row">
-            <span class="status-badge"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Awaiting partner access</span>
+            <span class="status-badge"><i class="fas fa-plane-departure" aria-hidden="true"></i> Live partner search</span>
         </div>
-        <p class="lead">Reserved for Omio flight search after access is approved. This section does not list journeys, seats, or fares, and it cannot complete a booking.</p>
-        <div class="pending-note">The Omio integration is being prepared. Search will be added here only after Omio grants cooperation and API access. No booking is offered from HAVKAR in the meantime.</div>
+        <p class="lead">Search real flight offers after signing in. Results come from the server-side Duffel API. Paid production booking stays off until the owner enables real payments; test orders are labeled as Duffel test mode only.</p>
+        <form id="flightSearchForm" class="flight-form" novalidate>
+            <div class="airport-field">
+                <label for="flightOriginQuery">From (country, city, or airport)</label>
+                <input id="flightOriginQuery" type="search" enterkeyhint="search" autocomplete="off" spellcheck="false" placeholder="e.g. Stockholm, Milano, London" aria-autocomplete="list" aria-controls="flightOriginSuggestions" aria-expanded="false" required>
+                <input id="flightOrigin" name="origin" type="hidden" value="">
+                <div id="flightOriginMeta" class="airport-meta" aria-live="polite"></div>
+                <ul id="flightOriginSuggestions" class="airport-suggestions" role="listbox" hidden></ul>
+            </div>
+            <div class="airport-field">
+                <label for="flightDestinationQuery">To (country, city, or airport)</label>
+                <input id="flightDestinationQuery" type="search" enterkeyhint="search" autocomplete="off" spellcheck="false" placeholder="e.g. Rome, Milan, London" aria-autocomplete="list" aria-controls="flightDestinationSuggestions" aria-expanded="false" required>
+                <input id="flightDestination" name="destination" type="hidden" value="">
+                <div id="flightDestinationMeta" class="airport-meta" aria-live="polite"></div>
+                <ul id="flightDestinationSuggestions" class="airport-suggestions" role="listbox" hidden></ul>
+            </div>
+            <label>Departure date
+                <input id="flightDepart" name="departure_date" type="date" required>
+            </label>
+            <label>Return date (optional)
+                <input id="flightReturn" name="return_date" type="date">
+            </label>
+            <label>Adults
+                <input id="flightAdults" name="adults" type="number" min="1" max="9" value="1" required>
+            </label>
+            <label>Cabin
+                <select id="flightCabin" name="cabin_class">
+                    <option value="economy">Economy</option>
+                    <option value="premium_economy">Premium economy</option>
+                    <option value="business">Business</option>
+                    <option value="first">First</option>
+                </select>
+            </label>
+            <button class="partner-link" type="submit" id="flightSearchButton">Search flights</button>
+        </form>
+        <p id="flightSearchStatus" class="pending-note" role="status" aria-live="polite">Sign in, then type a city, country, or airport name. Suggestions appear while typing. HAVKAR stores the selected IATA code for Duffel search.</p>
+        <div id="flightResults" class="flight-results" hidden></div>
+        <div id="flightBookPanel" class="flight-book-panel" hidden>
+            <h3>Duffel test booking</h3>
+            <p class="lead">Creates a Duffel TEST MODE order only. Live offers and real payments stay blocked.</p>
+            <p id="flightBookOffer" class="pending-note"></p>
+            <form id="flightBookForm" class="flight-form" novalidate>
+                <div class="flight-book-grid">
+                    <label>Title
+                        <select id="paxTitle" required>
+                            <option value="mr">Mr</option>
+                            <option value="ms">Ms</option>
+                            <option value="mrs">Mrs</option>
+                            <option value="miss">Miss</option>
+                        </select>
+                    </label>
+                    <label>Given name
+                        <input id="paxGiven" required autocomplete="given-name">
+                    </label>
+                    <label>Family name
+                        <input id="paxFamily" required autocomplete="family-name">
+                    </label>
+                    <div class="dob-field" data-havkar-translate-block="flight-dob">
+                        <span class="dob-legend">Date of birth</span>
+                        <div class="dob-grid" role="group" aria-label="Date of birth">
+                            <label for="paxBornDay">Day
+                                <select id="paxBornDay" required aria-label="Day of birth"></select>
+                            </label>
+                            <label for="paxBornMonth">Month
+                                <select id="paxBornMonth" required aria-label="Month of birth"></select>
+                            </label>
+                            <label for="paxBornYear">Year
+                                <select id="paxBornYear" required aria-label="Year of birth"></select>
+                            </label>
+                        </div>
+                        <input id="paxBorn" type="hidden" value="" required>
+                        <div id="paxBornError" class="airport-meta" role="alert" aria-live="polite"></div>
+                    </div>
+                    <label>Gender
+                        <select id="paxGender" required>
+                            <option value="m">Male</option>
+                            <option value="f">Female</option>
+                        </select>
+                    </label>
+                    <label>Email
+                        <input id="paxEmail" type="email" required autocomplete="email">
+                    </label>
+                    <label>Phone (+international)
+                        <input id="paxPhone" type="tel" placeholder="+393331234567" autocomplete="tel">
+                    </label>
+                </div>
+                <button class="partner-link" type="submit" id="flightBookButton">Create Duffel test order</button>
+            </form>
+            <p id="flightBookStatus" class="pending-note" role="status" aria-live="polite"></p>
+            <div id="flightPayPanel" class="flight-pay-panel" hidden>
+                <h4>Global flight payment (Owner-gated)</h4>
+                <p class="lead">Prepared rails: Stripe (60 verified presentment currencies) and Stellar XLM Mainnet. Public real-money checkout stays DISABLED until explicit Owner approval. Duffel TEST MODE booking remains available above.</p>
+                <div class="flight-pay-grid">
+                    <label>Method
+                        <select id="flightPayMethod">
+                            <option value="stripe">Stripe card (fiat)</option>
+                            <option value="xlm_mainnet">Stellar XLM Mainnet</option>
+                        </select>
+                    </label>
+                    <label>Currency
+                        <select id="flightPayCurrency"></select>
+                    </label>
+                </div>
+                <button class="partner-link" type="button" id="flightPayQuoteButton">Show conversion quote</button>
+                <button class="text-link" type="button" id="flightPayLiveButton">Request live checkout</button>
+                <p id="flightPayStatus" class="pending-note" role="status" aria-live="polite"></p>
+            </div>
+        </div>
     </section>
 
     <section id="ticket-train" class="panel omio-panel" data-ticket-panel="train" hidden aria-labelledby="trainTitle">
         <div class="kicker"><i class="fas fa-train" aria-hidden="true"></i> Trains</div>
         <h2 id="trainTitle">Trains</h2>
         <div class="status-row">
-            <span class="status-badge"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Awaiting partner access</span>
+            <span class="status-badge" style="background:#e8f5e0;color:#2f6b1f"><i class="fas fa-circle-check" aria-hidden="true"></i> Omio affiliate live</span>
         </div>
-        <p class="lead">Reserved for Omio rail search after access is approved. HAVKAR is preparing train search through Omio. Omio has not connected API access to HAVKAR yet.</p>
-        <div class="pending-note">The Omio integration is being prepared. Search will be added here only after Omio grants cooperation and API access. No booking is offered from HAVKAR in the meantime.</div>
+        <p class="lead">Live train search through the approved Omio affiliate widget. Results and booking continue on Omio with HAVKAR Impact tracking (Partner ID 7763968).</p>
+        <div class="omio-widget-host" data-i18n-ignore translate="no">
+            <div
+              data-omio-widget="true"
+              data-partner-id="omio-affiliates"
+              data-new-tab="true"
+              data-redirect="https://omio.sjv.io/c/7763968/3963000/7385?u="
+            ></div>
+        </div>
+        <p class="lead omio-affiliate-note">HAVKAR participates in the Omio affiliate program. Booking is completed on Omio.</p>
+        <a class="omio-tracked-link" href="https://omio.sjv.io/c/7763968/3963000/7385" target="_blank" rel="noopener noreferrer">Open Omio train search</a>
     </section>
 
     <section id="ticket-bus" class="panel omio-panel" data-ticket-panel="bus" hidden aria-labelledby="busTitle">
         <div class="kicker"><i class="fas fa-bus" aria-hidden="true"></i> Buses</div>
         <h2 id="busTitle">Buses</h2>
         <div class="status-row">
-            <span class="status-badge"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Awaiting partner access</span>
+            <span class="status-badge" style="background:#e8f5e0;color:#2f6b1f"><i class="fas fa-circle-check" aria-hidden="true"></i> Omio affiliate live</span>
         </div>
-        <p class="lead">Reserved for Omio bus search after access is approved. This section does not list journeys, seats, or fares, and it cannot complete a booking.</p>
-        <div class="pending-note">The Omio integration is being prepared. Search will be added here only after Omio grants cooperation and API access. No booking is offered from HAVKAR in the meantime.</div>
+        <p class="lead">Live bus search through the approved Omio affiliate widget. Results and booking continue on Omio with HAVKAR Impact tracking (Partner ID 7763968).</p>
+        <div class="omio-widget-host" data-i18n-ignore translate="no">
+            <div
+              data-omio-widget="true"
+              data-partner-id="omio-affiliates"
+              data-default-travel-mode="bus"
+              data-new-tab="true"
+              data-redirect="https://omio.sjv.io/c/7763968/3963000/7385?u="
+            ></div>
+        </div>
+        <p class="lead omio-affiliate-note">HAVKAR participates in the Omio affiliate program. Booking is completed on Omio.</p>
+        <a class="omio-tracked-link" href="https://omio.sjv.io/c/7763968/3963000/7385" target="_blank" rel="noopener noreferrer">Open Omio bus search</a>
     </section>
 
     <section id="ticket-ferry" class="panel omio-panel" data-ticket-panel="ferry" hidden aria-labelledby="ferryTitle">
         <div class="kicker"><i class="fas fa-ship" aria-hidden="true"></i> Ferries</div>
         <h2 id="ferryTitle">Ferries</h2>
         <div class="status-row">
-            <span class="status-badge"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Awaiting partner access</span>
+            <span class="status-badge" style="background:#e8f5e0;color:#2f6b1f"><i class="fas fa-circle-check" aria-hidden="true"></i> Omio affiliate live</span>
         </div>
-        <p class="lead">Reserved for Omio ferry search after access is approved. This section does not list journeys, seats, or fares, and it cannot complete a booking.</p>
-        <div class="pending-note">The Omio integration is being prepared. Search will be added here only after Omio grants cooperation and API access. No booking is offered from HAVKAR in the meantime.</div>
+        <p class="lead">Live ferry search through the approved Omio affiliate widget. Results and booking continue on Omio with HAVKAR Impact tracking (Partner ID 7763968).</p>
+        <div class="omio-widget-host" data-i18n-ignore translate="no">
+            <div
+              data-omio-widget="true"
+              data-partner-id="omio-affiliates"
+              data-default-travel-mode="ferry"
+              data-new-tab="true"
+              data-redirect="https://omio.sjv.io/c/7763968/3963000/7385?u="
+            ></div>
+        </div>
+        <p class="lead omio-affiliate-note">HAVKAR participates in the Omio affiliate program. Booking is completed on Omio.</p>
+        <a class="omio-tracked-link" href="https://omio.sjv.io/c/7763968/3963000/7385" target="_blank" rel="noopener noreferrer">Open Omio ferry search</a>
     </section>
 
     <section id="taxi-transfer" class="panel taxi-panel" data-ticket-panel="ride" hidden aria-labelledby="taxiTitle">
@@ -450,46 +1094,65 @@ h2{
     </section>
 
     <section id="ticket-hotel" class="panel" data-ticket-panel="hotel" hidden aria-labelledby="hotelTitle">
-        <div class="kicker"><i class="fas fa-hotel" aria-hidden="true"></i> Hotels</div>
+        <div class="kicker"><i class="fas fa-hotel" aria-hidden="true"></i> Hotels / Alloggi</div>
         <h2 id="hotelTitle">Hotels</h2>
-        <p class="lead">HAVKAR does not book hotel rooms yet, and it does not list sample hotels or sample prices. A hotel transfer is also unavailable inside HAVKAR because the partner city list cannot be loaded.</p>
-        <div class="booking-actions">
-            <button class="partner-link" type="button" data-open-transfer="hotel">Hotel transfer is unavailable</button>
+        <div class="status-row">
+            <span class="status-badge" style="background:#e8f5e0;color:#2f6b1f"><i class="fas fa-circle-check" aria-hidden="true"></i> Guest search restored</span>
+        </div>
+        <p class="lead">
+            Hotel guest search lives in the HAVKAR Accommodation experience (destination, map, dates, guests, Stripe and XLM quotes).
+            Property-owner registration stays on a separate workflow. Live hotel charges stay OFF until Owner authorization. No invented hotels or prices.
+        </p>
+        <div class="service-grid" style="margin-top:14px">
+            <a class="service-card" href="accommodation.html">
+                <span class="service-icon" aria-hidden="true"><i class="fas fa-magnifying-glass-location"></i></span>
+                <strong>Guest Hotels search</strong>
+                <p>Open Alloggi destination search, map, and payment quotes.</p>
+                <span>Open guest Hotels</span>
+            </a>
+            <a class="service-card" href="accommodation-manage.html">
+                <span class="service-icon" aria-hidden="true"><i class="fas fa-building"></i></span>
+                <strong>Property owners</strong>
+                <p>Register and manage properties separately from guest search.</p>
+                <span>Owner tools</span>
+            </a>
         </div>
     </section>
 
-    <h2 class="more-title">More transfer types</h2>
-    <div class="service-grid">
-        <button class="service-card" type="button" data-open-transfer="airport">
-            <span class="service-icon" aria-hidden="true"><i class="fas fa-plane-arrival"></i></span>
-            <strong>Airport Transfer</strong>
-            <p>Airport pickup or drop-off is not available inside HAVKAR.</p>
-            <span>Not available in HAVKAR</span>
-        </button>
-        <button class="service-card" type="button" data-open-transfer="station">
-            <span class="service-icon" aria-hidden="true"><i class="fas fa-train"></i></span>
-            <strong>Train Station Transfer</strong>
-            <p>A ride to or from a railway station is not available inside HAVKAR.</p>
-            <span>Not available in HAVKAR</span>
-        </button>
-        <button class="service-card" type="button" data-open-transfer="hotel">
-            <span class="service-icon" aria-hidden="true"><i class="fas fa-hotel"></i></span>
-            <strong>Hotel Transfer</strong>
-            <p>A hotel pickup or drop-off is not available inside HAVKAR.</p>
-            <span>Not available in HAVKAR</span>
-        </button>
-        <button class="service-card" type="button" data-open-transfer="city">
-            <span class="service-icon" aria-hidden="true"><i class="fas fa-road"></i></span>
-            <strong>City-to-City Transfer</strong>
-            <p>A private transfer between cities is not available inside HAVKAR.</p>
-            <span>Not available in HAVKAR</span>
-        </button>
-        <button class="service-card" type="button" data-open-transfer="scheduled">
-            <span class="service-icon" aria-hidden="true"><i class="fas fa-calendar-check"></i></span>
-            <strong>Scheduled Transfer</strong>
-            <p>A transfer for a chosen date and time is not available inside HAVKAR.</p>
-            <span>Not available in HAVKAR</span>
-        </button>
+    <div id="moreTransfers" class="more-transfers" hidden>
+        <h2 class="more-title">More transfer types</h2>
+        <div class="service-grid">
+            <button class="service-card" type="button" data-open-transfer="airport">
+                <span class="service-icon" aria-hidden="true"><i class="fas fa-plane-arrival"></i></span>
+                <strong>Airport Transfer</strong>
+                <p>Airport pickup or drop-off is not available inside HAVKAR.</p>
+                <span>Not available in HAVKAR</span>
+            </button>
+            <button class="service-card" type="button" data-open-transfer="station">
+                <span class="service-icon" aria-hidden="true"><i class="fas fa-train"></i></span>
+                <strong>Train Station Transfer</strong>
+                <p>A ride to or from a railway station is not available inside HAVKAR.</p>
+                <span>Not available in HAVKAR</span>
+            </button>
+            <button class="service-card" type="button" data-open-transfer="hotel">
+                <span class="service-icon" aria-hidden="true"><i class="fas fa-hotel"></i></span>
+                <strong>Hotel Transfer</strong>
+                <p>A hotel pickup or drop-off is not available inside HAVKAR.</p>
+                <span>Not available in HAVKAR</span>
+            </button>
+            <button class="service-card" type="button" data-open-transfer="city">
+                <span class="service-icon" aria-hidden="true"><i class="fas fa-road"></i></span>
+                <strong>City-to-City Transfer</strong>
+                <p>A private transfer between cities is not available inside HAVKAR.</p>
+                <span>Not available in HAVKAR</span>
+            </button>
+            <button class="service-card" type="button" data-open-transfer="scheduled">
+                <span class="service-icon" aria-hidden="true"><i class="fas fa-calendar-check"></i></span>
+                <strong>Scheduled Transfer</strong>
+                <p>A transfer for a chosen date and time is not available inside HAVKAR.</p>
+                <span>Not available in HAVKAR</span>
+            </button>
+        </div>
     </div>
 </main>
 
@@ -498,7 +1161,7 @@ h2{
         <i class="fas fa-home" aria-hidden="true"></i>
         <span>Home</span>
     </a>
-    <a class="nav-item" href="#transfer-booking">
+    <a class="nav-item" href="#transfer-booking" id="navTransfer">
         <i class="fas fa-taxi" aria-hidden="true"></i>
         <span>Transfer</span>
     </a>
@@ -515,15 +1178,61 @@ h2{
         <span>Profile</span>
     </a>
 </nav>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-page-back.js"></script>
+<script>
+(function addOmioAffiliateWidget(d) {
+    // Approved Impact / Omio affiliate search widget (Partner ID 7763968 / ad 3963000 / ircid 7385).
+    // Restored from the 2026-10-24 HAVKAR implementation. Booking completes on Omio via tracked redirect.
+    var widgetStyle = d.createElement("link");
+    widgetStyle.setAttribute("rel", "stylesheet");
+    widgetStyle.setAttribute("href", "https://www.omio.com/gcs-proxy/b2b-nemo-prod/bundle/en/bundle.css?v=" + new Date().getTime());
+    d.head.appendChild(widgetStyle);
+
+    var widgetScript = d.createElement("script");
+    widgetScript.setAttribute("src", "https://www.omio.com/gcs-proxy/b2b-nemo-prod/bundle/en/bundle.js?v=" + new Date().getTime());
+    widgetScript.setAttribute("async", "true");
+    d.body.appendChild(widgetScript);
+})(document);
+</script>
 <script>
 (function () {
     var buttons = document.querySelectorAll("[data-ticket-type]");
     var panels = document.querySelectorAll("[data-ticket-panel]");
     var rideTitle = document.getElementById("taxiTitle");
     var rideKicker = document.getElementById("rideKicker");
+    var flightForm = document.getElementById("flightSearchForm");
+    var flightStatus = document.getElementById("flightSearchStatus");
+    var flightResults = document.getElementById("flightResults");
+    var flightBookPanel = document.getElementById("flightBookPanel");
+    var flightBookForm = document.getElementById("flightBookForm");
+    var flightBookOffer = document.getElementById("flightBookOffer");
+    var flightBookStatus = document.getElementById("flightBookStatus");
+    var moreTransfers = document.getElementById("moreTransfers");
+    var selectedOfferId = "";
+    var supabaseClient = window.supabase && window.HAVKAR_SUPABASE_CONFIG
+        ? window.supabase.createClient(
+            window.HAVKAR_SUPABASE_CONFIG.url,
+            window.HAVKAR_SUPABASE_CONFIG.publishableKey
+        )
+        : null;
 
+    async function accessToken() {
+        if (!supabaseClient) return "";
+        var session = await supabaseClient.auth.getSession();
+        return session && session.data && session.data.session
+            ? session.data.session.access_token
+            : "";
+    }
+
+    var showingType = "";
     function show(type) {
+        if (!type || showingType === type) {
+            window.dispatchEvent(new CustomEvent("havkar:tickets-map-resize"));
+            return;
+        }
+        showingType = type;
         var panelName = type === "taxi" || type === "transfer" ? "ride" : type;
         buttons.forEach(function (button) {
             var on = button.getAttribute("data-ticket-type") === type;
@@ -533,11 +1242,744 @@ h2{
         panels.forEach(function (panel) {
             panel.hidden = panel.getAttribute("data-ticket-panel") !== panelName;
         });
+        if (moreTransfers) moreTransfers.hidden = panelName !== "ride";
         if (rideTitle && rideKicker && panelName === "ride") {
             var label = type === "taxi" ? "Taxi" : "Transfers";
             rideTitle.textContent = label;
             rideKicker.textContent = label;
         }
+        if (panelName === "ride") {
+            var booking = document.getElementById("transfer-booking");
+            if (booking && type === "transfer") {
+                booking.scrollIntoView({ block: "start" });
+            }
+        }
+        window.dispatchEvent(new CustomEvent("havkar:tickets-show", { detail: { type: type } }));
+    }
+
+    window.addEventListener("havkar:tickets-show", function (event) {
+        var next = event && event.detail && event.detail.type;
+        if (!next || next === "all") return;
+        if (showingType !== next && document.querySelector('[data-ticket-type="' + next + '"]')) {
+            show(next);
+        }
+    });
+
+    function setFlightStatus(message) {
+        if (flightStatus) flightStatus.textContent = message;
+    }
+
+    function setBookStatus(message) {
+        if (flightBookStatus) flightBookStatus.textContent = message;
+    }
+
+    function hideBookPanel() {
+        selectedOfferId = "";
+        if (flightBookPanel) flightBookPanel.hidden = true;
+        setBookStatus("");
+    }
+
+    function havkarLanguage() {
+        try {
+            return String(
+                localStorage.getItem("havkar_language") ||
+                localStorage.getItem("selectedLanguage") ||
+                localStorage.getItem("language") ||
+                "en"
+            ).toLowerCase();
+        } catch (error) {
+            return "en";
+        }
+    }
+
+    function formatIsoLocal(value) {
+        if (!value) return "";
+        var text = String(value);
+        if (text.length >= 16) {
+            return text.slice(0, 10) + " " + text.slice(11, 16);
+        }
+        return text;
+    }
+
+    function describeOfferRoute(offer) {
+        var slices = Array.isArray(offer && offer.slices) ? offer.slices : [];
+        if (!slices.length) return [];
+        return slices.map(function (slice, index) {
+            var segments = Array.isArray(slice.segments) ? slice.segments : [];
+            var first = segments[0] || {};
+            var last = segments[segments.length - 1] || first;
+            var depAirport = (first.origin && (first.origin.iata_code || first.origin.name)) ||
+                (slice.origin && (slice.origin.iata_code || slice.origin.name)) || "?";
+            var arrAirport = (last.destination && (last.destination.iata_code || last.destination.name)) ||
+                (slice.destination && (slice.destination.iata_code || slice.destination.name)) || "?";
+            var stops = Math.max(0, segments.length - 1);
+            var carriers = segments.map(function (segment) {
+                return (segment.marketing_carrier && segment.marketing_carrier.name) ||
+                    (segment.operating_carrier && segment.operating_carrier.name) || "";
+            }).filter(Boolean);
+            var uniqueCarriers = Array.from(new Set(carriers));
+            var flightNumbers = segments.map(function (segment) {
+                var carrier = (segment.marketing_carrier && segment.marketing_carrier.iata_code) || "";
+                var number = segment.marketing_carrier_flight_number || segment.operating_carrier_flight_number || "";
+                return (carrier + number).trim();
+            }).filter(Boolean);
+            return {
+                label: (index === 0 ? "Outbound" : "Return") + ": " + depAirport + " → " + arrAirport,
+                times: formatIsoLocal(first.departing_at) +
+                    (last.arriving_at ? " → " + formatIsoLocal(last.arriving_at) : ""),
+                stops: stops === 0 ? "Nonstop" : (stops + " stop" + (stops > 1 ? "s" : "")),
+                airline: uniqueCarriers.join(", ") || (offer.owner && offer.owner.name) || "Airline",
+                flights: flightNumbers.join(", ")
+            };
+        });
+    }
+
+    function describeBaggage(offer) {
+        var bags = Array.isArray(offer && offer.available_services)
+            ? offer.available_services.filter(function (service) {
+                return String(service.type || "").toLowerCase().indexOf("baggage") >= 0;
+            })
+            : [];
+        if (bags.length) {
+            return "Baggage options available from provider (" + bags.length + ")";
+        }
+        var slices = Array.isArray(offer && offer.slices) ? offer.slices : [];
+        var included = [];
+        slices.forEach(function (slice) {
+            (slice.segments || []).forEach(function (segment) {
+                (segment.passengers || []).forEach(function (passenger) {
+                    (passenger.baggages || []).forEach(function (bag) {
+                        var type = bag.type || "bag";
+                        var qty = bag.quantity != null ? bag.quantity : "";
+                        included.push(String(qty ? qty + "× " : "") + type);
+                    });
+                });
+            });
+        });
+        if (included.length) {
+            return "Included baggage: " + Array.from(new Set(included)).join(", ");
+        }
+        return "Baggage details as provided by airline at booking";
+    }
+
+    function describeConditions(offer) {
+        var conditions = offer && offer.conditions ? offer.conditions : null;
+        if (!conditions) return "Fare conditions per airline / Duffel offer";
+        var bits = [];
+        if (conditions.refund_before_departure) {
+            bits.push(
+                conditions.refund_before_departure.allowed
+                    ? "Refundable before departure"
+                    : "Non-refundable before departure"
+            );
+        }
+        if (conditions.change_before_departure) {
+            bits.push(
+                conditions.change_before_departure.allowed
+                    ? "Changes allowed before departure"
+                    : "Changes not allowed before departure"
+            );
+        }
+        return bits.length ? bits.join(" · ") : "Fare conditions per airline / Duffel offer";
+    }
+
+    function openBookPanel(offer) {
+        selectedOfferId = String(offer && offer.id || "");
+        if (!selectedOfferId || !flightBookPanel) return;
+        flightBookPanel.hidden = false;
+        if (flightBookOffer) {
+            var total = offer.total_amount || offer.total_currency
+                ? String(offer.total_amount || "") + " " + String(offer.total_currency || "")
+                : "";
+            flightBookOffer.textContent = "Selected offer " + selectedOfferId +
+                (total ? " · " + total.trim() : "") +
+                ". Duffel test_mode only; live_mode offers are rejected by the server.";
+        }
+        setBookStatus("Enter passenger details for a Duffel TEST MODE order. No HAVKAR card/Pi/Mainnet payment is taken here.");
+        flightBookPanel.scrollIntoView({ block: "start" });
+    }
+
+    function renderFlightOffers(payload) {
+        if (!flightResults) return;
+        hideBookPanel();
+        flightResults.hidden = false;
+        flightResults.innerHTML = "";
+        var offers = Array.isArray(payload && payload.data && payload.data.offers)
+            ? payload.data.offers
+            : (Array.isArray(payload && payload.offers) ? payload.offers : []);
+        if (!offers.length) {
+            setFlightStatus("No offers returned for that search. Nothing was booked.");
+            return;
+        }
+        offers.slice(0, 20).forEach(function (offer) {
+            var card = document.createElement("article");
+            card.className = "flight-card";
+            var totalAmount = offer.total_amount != null ? String(offer.total_amount) : "";
+            var totalCurrency = offer.total_currency ? String(offer.total_currency) : "";
+            var total = (totalAmount || totalCurrency)
+                ? (totalAmount + " " + totalCurrency).trim()
+                : (offer.price ? String(offer.price) : "");
+            if (!total) {
+                card.innerHTML = "<strong></strong><p></p>";
+                card.querySelector("strong").textContent = "Offer unavailable";
+                card.querySelector("p").textContent = "Provider did not return a total price for this offer. It is hidden from booking.";
+                flightResults.appendChild(card);
+                return;
+            }
+            var owner = offer.owner && offer.owner.name ? offer.owner.name : "Airline offer";
+            var id = offer.id || "";
+            var live = offer.live_mode === true;
+            var routes = describeOfferRoute(offer);
+            card.innerHTML = "<strong></strong><div class=\"flight-meta\"></div><p class=\"price-line\"></p><p></p><button class=\"partner-link\" type=\"button\"></button>";
+            card.querySelector("strong").textContent = owner;
+            var meta = card.querySelector(".flight-meta");
+            routes.forEach(function (route) {
+                var line = document.createElement("div");
+                line.innerHTML = "<b></b> <span></span>";
+                line.querySelector("b").textContent = route.label;
+                line.querySelector("span").textContent = route.times + " · " + route.stops +
+                    (route.airline ? " · " + route.airline : "") +
+                    (route.flights ? " · " + route.flights : "");
+                meta.appendChild(line);
+            });
+            var bagLine = document.createElement("div");
+            bagLine.textContent = describeBaggage(offer);
+            meta.appendChild(bagLine);
+            var condLine = document.createElement("div");
+            condLine.textContent = describeConditions(offer);
+            meta.appendChild(condLine);
+            card.querySelector(".price-line").textContent = "Total " + total;
+            card.querySelectorAll("p")[1].textContent = live
+                ? "Live Duffel offer. Production booking stays blocked until the owner enables real payments."
+                : "Duffel TEST offer. You can create a TEST MODE order below; no real traveller payment is collected by HAVKAR.";
+            var bookBtn = card.querySelector("button");
+            bookBtn.textContent = live ? "Live booking blocked" : "Book test order";
+            bookBtn.disabled = live || !id;
+            bookBtn.addEventListener("click", function () {
+                if (live) {
+                    setFlightStatus("Live Duffel offers cannot be booked from HAVKAR yet.");
+                    return;
+                }
+                openBookPanel(offer);
+            });
+            flightResults.appendChild(card);
+        });
+        setFlightStatus("Showing " + Math.min(offers.length, 20) + " offer(s) from Duffel. Test booking uses Duffel balance only.");
+    }
+
+    function createAirportAutocomplete(options) {
+        var queryInput = document.getElementById(options.queryId);
+        var hiddenInput = document.getElementById(options.hiddenId);
+        var listEl = document.getElementById(options.listId);
+        var metaEl = document.getElementById(options.metaId);
+        if (!queryInput || !hiddenInput || !listEl) return;
+        var debounceTimer = null;
+        var activeIndex = -1;
+        var currentItems = [];
+        var requestSeq = 0;
+
+        function setMeta(text) {
+            if (metaEl) metaEl.textContent = text || "";
+        }
+
+        function closeList() {
+            listEl.hidden = true;
+            listEl.innerHTML = "";
+            queryInput.setAttribute("aria-expanded", "false");
+            activeIndex = -1;
+            currentItems = [];
+        }
+
+        function selectItem(item) {
+            if (!item || !item.iata_code) return;
+            hiddenInput.value = String(item.iata_code).toUpperCase();
+            queryInput.value = item.label || (item.name + " (" + item.iata_code + ")");
+            setMeta("Selected " + hiddenInput.value + (item.type === "city" ? " (city)" : " (airport)"));
+            closeList();
+        }
+
+        function renderList(items, stateMessage) {
+            listEl.innerHTML = "";
+            currentItems = items || [];
+            activeIndex = -1;
+            if (stateMessage && !currentItems.length) {
+                var empty = document.createElement("li");
+                empty.setAttribute("role", "presentation");
+                empty.className = "airport-suggestion";
+                empty.textContent = stateMessage;
+                listEl.appendChild(empty);
+                listEl.hidden = false;
+                queryInput.setAttribute("aria-expanded", "true");
+                return;
+            }
+            currentItems.forEach(function (item, index) {
+                var li = document.createElement("li");
+                li.setAttribute("role", "option");
+                li.id = options.listId + "-opt-" + index;
+                var button = document.createElement("button");
+                button.type = "button";
+                button.className = "airport-suggestion";
+                button.setAttribute("aria-selected", "false");
+                button.innerHTML = "<strong></strong><span></span>";
+                var city = item.city_name || (item.type === "city" ? item.name : "") || "";
+                var airport = item.name || "";
+                var country = item.country_name || item.country_code || "";
+                var iata = item.iata_code || "";
+                button.querySelector("strong").textContent =
+                    [city, airport, country, iata].filter(Boolean).join(" — ");
+                button.querySelector("span").textContent =
+                    (item.type === "city" ? "City" : "Airport") +
+                    (item.airports && item.airports.length ? (" · " + item.airports.length + " airports") : "");
+                button.addEventListener("click", function () {
+                    selectItem(item);
+                });
+                li.appendChild(button);
+                listEl.appendChild(li);
+            });
+            listEl.hidden = currentItems.length === 0;
+            queryInput.setAttribute("aria-expanded", currentItems.length ? "true" : "false");
+        }
+
+        function highlight(index) {
+            var buttons = listEl.querySelectorAll(".airport-suggestion");
+            buttons.forEach(function (button, i) {
+                button.setAttribute("aria-selected", i === index ? "true" : "false");
+            });
+            activeIndex = index;
+            if (buttons[index]) {
+                buttons[index].scrollIntoView({ block: "nearest" });
+            }
+        }
+
+        async function runSearch(rawQuery) {
+            var query = String(rawQuery || "").trim();
+            if (query.length < 2) {
+                hiddenInput.value = "";
+                setMeta("Type at least 2 characters");
+                closeList();
+                return;
+            }
+            if (!navigator.onLine) {
+                setMeta("Offline — reconnect to search airports");
+                renderList([], "You appear offline. Airport search needs a network connection.");
+                return;
+            }
+            var seq = ++requestSeq;
+            setMeta("Searching airports…");
+            renderList([], "Loading suggestions…");
+            try {
+                var params = new URLSearchParams({
+                    q: query,
+                    lang: havkarLanguage()
+                });
+                var response = await fetch("/api/flights?" + params.toString(), {
+                    method: "GET",
+                    headers: {
+                        Accept: "application/json"
+                    }
+                });
+                var body = await response.json().catch(function () { return null; });
+                if (seq !== requestSeq) return;
+                if (!response.ok || !body || body.ok === false) {
+                    setMeta((body && body.error) || "Airport search failed");
+                    renderList([], (body && body.error) || "Airport search failed. Try again.");
+                    return;
+                }
+                var suggestions = Array.isArray(body.suggestions) ? body.suggestions : [];
+                if (!suggestions.length) {
+                    setMeta("No airports found");
+                    renderList([], "No matching airports or cities. Try another spelling.");
+                    return;
+                }
+                setMeta(suggestions.length + " suggestion(s)");
+                renderList(suggestions);
+            } catch (error) {
+                if (seq !== requestSeq) return;
+                setMeta("Airport search unavailable");
+                renderList([], "Could not reach airport search. Check your connection.");
+            }
+        }
+
+        queryInput.addEventListener("input", function () {
+            hiddenInput.value = "";
+            setMeta("");
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(function () {
+                runSearch(queryInput.value);
+            }, 280);
+        });
+
+        queryInput.addEventListener("keydown", function (event) {
+            if (listEl.hidden) return;
+            if (event.key === "ArrowDown") {
+                event.preventDefault();
+                highlight(Math.min(activeIndex + 1, currentItems.length - 1));
+            } else if (event.key === "ArrowUp") {
+                event.preventDefault();
+                highlight(Math.max(activeIndex - 1, 0));
+            } else if (event.key === "Enter" && activeIndex >= 0 && currentItems[activeIndex]) {
+                event.preventDefault();
+                selectItem(currentItems[activeIndex]);
+            } else if (event.key === "Escape") {
+                closeList();
+            }
+        });
+
+        queryInput.addEventListener("blur", function () {
+            setTimeout(closeList, 180);
+        });
+
+        document.addEventListener("click", function (event) {
+            if (!queryInput.contains(event.target) && !listEl.contains(event.target)) {
+                closeList();
+            }
+        });
+    }
+
+    createAirportAutocomplete({
+        queryId: "flightOriginQuery",
+        hiddenId: "flightOrigin",
+        listId: "flightOriginSuggestions",
+        metaId: "flightOriginMeta"
+    });
+    createAirportAutocomplete({
+        queryId: "flightDestinationQuery",
+        hiddenId: "flightDestination",
+        listId: "flightDestinationSuggestions",
+        metaId: "flightDestinationMeta"
+    });
+
+    if (flightForm) {
+        flightForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+            if (!supabaseClient) {
+                setFlightStatus("Supabase is not configured in this browser session.");
+                return;
+            }
+            var token = await accessToken();
+            if (!token) {
+                setFlightStatus("Sign in to search live flights. HAVKAR does not invent sample fares.");
+                return;
+            }
+            var origin = String(document.getElementById("flightOrigin").value || "").trim().toUpperCase();
+            var destination = String(document.getElementById("flightDestination").value || "").trim().toUpperCase();
+            if (!/^[A-Z]{3}$/.test(origin) || !/^[A-Z]{3}$/.test(destination)) {
+                setFlightStatus("Select origin and destination from the airport suggestions so HAVKAR can use valid IATA codes.");
+                return;
+            }
+            var departure = String(document.getElementById("flightDepart").value || "").trim();
+            var ret = String(document.getElementById("flightReturn").value || "").trim();
+            var adults = Number(document.getElementById("flightAdults").value || 1);
+            var cabin = String(document.getElementById("flightCabin").value || "economy");
+            setFlightStatus("Searching live flights…");
+            hideBookPanel();
+            if (flightResults) {
+                flightResults.hidden = true;
+                flightResults.innerHTML = "";
+            }
+            try {
+                var response = await fetch("/api/flights", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: "Bearer " + token
+                    },
+                    body: JSON.stringify({
+                        origin: origin,
+                        destination: destination,
+                        departure_date: departure,
+                        return_date: ret || null,
+                        adults: adults,
+                        cabin_class: cabin
+                    })
+                });
+                var body = await response.json().catch(function () { return null; });
+                if (!response.ok || !body || body.ok === false) {
+                    setFlightStatus((body && body.error) || "Flight search failed. Nothing was booked.");
+                    return;
+                }
+                renderFlightOffers(body);
+            } catch (error) {
+                setFlightStatus("Flight search could not reach the server. Nothing was booked.");
+            }
+        });
+    }
+
+
+    function padDobPart(value) {
+        return String(value).padStart(2, "0");
+    }
+
+    function isLeapYearDob(year) {
+        var y = Number(year);
+        return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+    }
+
+    function daysInMonthDob(year, month) {
+        var m = Number(month);
+        if ([1, 3, 5, 7, 8, 10, 12].indexOf(m) >= 0) return 31;
+        if ([4, 6, 9, 11].indexOf(m) >= 0) return 30;
+        return isLeapYearDob(year) ? 29 : 28;
+    }
+
+    function composePassengerDob() {
+        var dayEl = document.getElementById("paxBornDay");
+        var monthEl = document.getElementById("paxBornMonth");
+        var yearEl = document.getElementById("paxBornYear");
+        var hidden = document.getElementById("paxBorn");
+        var err = document.getElementById("paxBornError");
+        if (!dayEl || !monthEl || !yearEl || !hidden) return "";
+        var day = Number(dayEl.value);
+        var month = Number(monthEl.value);
+        var year = Number(yearEl.value);
+        if (!day || !month || !year) {
+            hidden.value = "";
+            if (err) err.textContent = "";
+            return "";
+        }
+        var dim = daysInMonthDob(year, month);
+        if (day < 1 || day > dim) {
+            hidden.value = "";
+            if (err) err.textContent = "Invalid date for the selected month/year.";
+            return "";
+        }
+        var iso = year + "-" + padDobPart(month) + "-" + padDobPart(day);
+        hidden.value = iso;
+        if (err) err.textContent = "";
+        return iso;
+    }
+
+    function initPassengerDobSelectors() {
+        var dayEl = document.getElementById("paxBornDay");
+        var monthEl = document.getElementById("paxBornMonth");
+        var yearEl = document.getElementById("paxBornYear");
+        if (!dayEl || !monthEl || !yearEl) return;
+        var y;
+        var nowY = new Date().getFullYear();
+        yearEl.innerHTML = '<option value=\"\">Year</option>';
+        for (y = nowY; y >= 1900; y -= 1) {
+            yearEl.innerHTML += '<option value=\"' + y + '\">' + y + '</option>';
+        }
+        monthEl.innerHTML = '<option value=\"\">Month</option>';
+        var m;
+        for (m = 1; m <= 12; m += 1) {
+            monthEl.innerHTML += '<option value=\"' + m + '\">' + padDobPart(m) + '</option>';
+        }
+        function refreshDays() {
+            var month = Number(monthEl.value) || 1;
+            var year = Number(yearEl.value) || nowY;
+            var selected = Number(dayEl.value) || 0;
+            var dim = daysInMonthDob(year, month);
+            var d;
+            var html = '<option value=\"\">Day</option>';
+            for (d = 1; d <= dim; d += 1) {
+                html += '<option value=\"' + d + '\">' + padDobPart(d) + '</option>';
+            }
+            dayEl.innerHTML = html;
+            if (selected && selected <= dim) dayEl.value = String(selected);
+            composePassengerDob();
+        }
+        dayEl.addEventListener("change", composePassengerDob);
+        monthEl.addEventListener("change", refreshDays);
+        yearEl.addEventListener("change", refreshDays);
+        refreshDays();
+    }
+
+    initPassengerDobSelectors();
+
+    var flightPayPanel = document.getElementById("flightPayPanel");
+    var flightPayCurrency = document.getElementById("flightPayCurrency");
+    var flightPayStatus = document.getElementById("flightPayStatus");
+    var flightPayMethod = document.getElementById("flightPayMethod");
+
+    function setPayStatus(message) {
+        if (flightPayStatus) flightPayStatus.textContent = message || "";
+    }
+
+    async function loadFlightPaymentOptions() {
+        if (!flightPayCurrency) return;
+        try {
+            var token = await accessToken();
+            if (!token) {
+                setPayStatus("Sign in to load verified flight payment currencies.");
+                return;
+            }
+            var response = await fetch("/api/flight-order", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: "Bearer " + token
+                },
+                body: JSON.stringify({ intent: "payment_options" })
+            });
+            var body = await response.json().catch(function () { return null; });
+            if (!response.ok || !body || body.ok === false) {
+                setPayStatus((body && body.error) || "Unable to load payment options.");
+                return;
+            }
+            var currencies = body.stripe && Array.isArray(body.stripe.supported_currencies)
+                ? body.stripe.supported_currencies
+                : [];
+            flightPayCurrency.innerHTML = currencies.map(function (row) {
+                return '<option value=\"' + row.code + '\">' +
+                    String(row.code).toUpperCase() + " — " + row.name +
+                    '</option>';
+            }).join("");
+            if (flightPayPanel) flightPayPanel.hidden = false;
+            setPayStatus(
+                "Loaded " + currencies.length +
+                " verified Stripe currencies. Public live checkout is DISABLED until Owner approval."
+            );
+        } catch (error) {
+            setPayStatus("Payment options unavailable.");
+        }
+    }
+
+    var quoteBtn = document.getElementById("flightPayQuoteButton");
+    if (quoteBtn) {
+        quoteBtn.addEventListener("click", async function () {
+            if (!selectedOfferId) {
+                setPayStatus("Select a flight offer first.");
+                return;
+            }
+            var token = await accessToken();
+            if (!token) {
+                setPayStatus("Sign in required.");
+                return;
+            }
+            setPayStatus("Building verified FX quote…");
+            try {
+                var response = await fetch("/api/flight-order", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: "Bearer " + token
+                    },
+                    body: JSON.stringify({
+                        intent: "payment_quote",
+                        offer_id: selectedOfferId,
+                        currency: flightPayCurrency ? flightPayCurrency.value : "eur",
+                        method: flightPayMethod ? flightPayMethod.value : "stripe"
+                    })
+                });
+                var body = await response.json().catch(function () { return null; });
+                if (!response.ok || !body || body.ok === false) {
+                    setPayStatus((body && body.error) || "Quote failed.");
+                    return;
+                }
+                var q = body.quote || {};
+                setPayStatus(
+                    "Quote " + (q.buyer_pays != null ? q.buyer_pays : "") + " " +
+                    String(q.currency || "").toUpperCase() +
+                    " (list " + q.list_price + ", buyer fee " +
+                    Math.round((q.buyer_fee_rate || 0) * 100) +
+                    "%). Live checkout allowed=" +
+                    String(body.live_checkout_allowed === true) +
+                    ". Public collection remains gated."
+                );
+            } catch (error) {
+                setPayStatus("Could not reach payment quote.");
+            }
+        });
+    }
+
+    var liveBtn = document.getElementById("flightPayLiveButton");
+    if (liveBtn) {
+        liveBtn.addEventListener("click", async function () {
+            var token = await accessToken();
+            if (!token) {
+                setPayStatus("Sign in required.");
+                return;
+            }
+            setPayStatus("Checking Owner payment gate…");
+            try {
+                var response = await fetch("/api/flight-order", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: "Bearer " + token
+                    },
+                    body: JSON.stringify({
+                        intent: "live_checkout",
+                        offer_id: selectedOfferId,
+                        currency: flightPayCurrency ? flightPayCurrency.value : "eur",
+                        method: flightPayMethod ? flightPayMethod.value : "stripe",
+                        idempotency_key: "flight-" + String(selectedOfferId || "") + "-" + Date.now()
+                    })
+                });
+                var body = await response.json().catch(function () { return null; });
+                setPayStatus(
+                    (body && (body.error || body.code)) ||
+                    "Live checkout refused. No payment was taken."
+                );
+            } catch (error) {
+                setPayStatus("Live checkout unavailable.");
+            }
+        });
+    }
+
+    // Reveal payment panel when a test offer is selected.
+    var originalOpenBookPanel = openBookPanel;
+    openBookPanel = function (offer) {
+        originalOpenBookPanel(offer);
+        loadFlightPaymentOptions();
+    };
+
+    if (flightBookForm) {
+        flightBookForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+            if (!selectedOfferId) {
+                setBookStatus("Select a test offer first.");
+                return;
+            }
+            var token = await accessToken();
+            if (!token) {
+                setBookStatus("Sign in before creating a Duffel test order.");
+                return;
+            }
+            var bornOn = composePassengerDob();
+            if (!bornOn) {
+                setBookStatus("Enter a valid date of birth (day, month, year).");
+                return;
+            }
+            var passengers = [{
+                title: String(document.getElementById("paxTitle").value || ""),
+                given_name: String(document.getElementById("paxGiven").value || "").trim(),
+                family_name: String(document.getElementById("paxFamily").value || "").trim(),
+                born_on: bornOn,
+                gender: String(document.getElementById("paxGender").value || ""),
+                email: String(document.getElementById("paxEmail").value || "").trim(),
+                phone_number: String(document.getElementById("paxPhone").value || "").trim()
+            }];
+            setBookStatus("Creating Duffel TEST MODE order…");
+            try {
+                var response = await fetch("/api/flight-order", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: "Bearer " + token
+                    },
+                    body: JSON.stringify({
+                        offer_id: selectedOfferId,
+                        test_mode: true,
+                        passengers: passengers
+                    })
+                });
+                var body = await response.json().catch(function () { return null; });
+                if (!response.ok || !body || body.ok === false) {
+                    setBookStatus((body && body.error) || "Duffel test order failed. Nothing was charged by HAVKAR.");
+                    return;
+                }
+                var orderId = body.order && body.order.id ? body.order.id : (body.data && body.data.id ? body.data.id : "");
+                setBookStatus(
+                    "Duffel TEST MODE order created" +
+                    (orderId ? " (" + orderId + ")" : "") +
+                    ". No HAVKAR real payment was taken."
+                );
+            } catch (error) {
+                setBookStatus("Could not reach /api/flight-order. Nothing was booked.");
+            }
+        });
     }
 
     buttons.forEach(function (button) {
@@ -549,10 +1991,28 @@ h2{
     document.querySelectorAll("[data-open-transfer]").forEach(function (button) {
         button.addEventListener("click", function () {
             show("transfer");
-            var booking = document.getElementById("transfer-booking");
-            if (booking) booking.scrollIntoView({ block: "start" });
         });
     });
+
+    var navTransfer = document.getElementById("navTransfer");
+    if (navTransfer) {
+        navTransfer.addEventListener("click", function (event) {
+            event.preventDefault();
+            show("transfer");
+            if (history.replaceState) {
+                history.replaceState(null, "", "#transfer-booking");
+            } else {
+                location.hash = "transfer-booking";
+            }
+        });
+    }
+
+    function applyHashRoute() {
+        if (String(location.hash || "") === "#transfer-booking") {
+            show("transfer");
+        }
+    }
+    window.addEventListener("hashchange", applyHashRoute);
 
     document.getElementById("backButton").addEventListener("click", function () {
         if (window.havkarNavigateBack) {
@@ -562,9 +2022,15 @@ h2{
         window.location.href = "index.html";
     });
 
-    show("flight");
+    if (String(location.hash || "") === "#transfer-booking") {
+        show("transfer");
+    } else {
+        show("events");
+    }
 })();
 </script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="/havkar-tickets-map.js"></script>
 <script src="/havkar-i18n.js"></script>
 </body>
 </html>

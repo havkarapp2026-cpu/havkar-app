@@ -875,6 +875,55 @@ button:focus-visible{
         animation-duration:.01ms!important;
     }
 }
+
+/* Buy Now checkout */
+.buy-now-button{
+    width:100%;
+    min-height:52px;
+    margin:0 0 12px;
+    border:0;
+    border-radius:16px;
+    background:linear-gradient(145deg,#0d3d16,#2e7d32);
+    color:#fff;
+    font-weight:800;
+    font-size:1.05rem;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    box-shadow:0 12px 28px rgba(27,94,32,.28);
+    cursor:pointer;
+}
+.buy-now-button[hidden]{display:none !important}
+.checkout-panel{
+    margin:14px 0 18px;
+    padding:16px;
+    border-radius:18px;
+    background:linear-gradient(180deg,#f4faf4,#ffffff);
+    border:1px solid rgba(27,94,32,.12);
+    box-shadow:0 10px 28px rgba(20,60,28,.08);
+}
+.checkout-panel[hidden]{display:none !important}
+.checkout-panel h3{margin:0 0 8px;color:#0d3d16;font-size:1.1rem}
+.checkout-panel .checkout-note{color:#45634b;font-size:13px;line-height:1.45;margin:0 0 12px}
+.checkout-panel label{display:block;font-size:12px;font-weight:750;color:#1b5e20;margin:10px 0 4px}
+.checkout-panel select,.checkout-panel input{
+    width:100%;min-height:44px;border-radius:12px;border:1px solid rgba(27,94,32,.18);
+    padding:0 12px;background:#fff;font:inherit;
+}
+.checkout-methods{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.checkout-methods button{
+    min-height:48px;border-radius:14px;border:1px solid rgba(27,94,32,.2);
+    background:#fff;color:#1b5e20;font-weight:780;cursor:pointer;
+}
+.checkout-methods button.active{background:#1b5e20;color:#fff;border-color:#1b5e20}
+.checkout-fee{margin:12px 0;font-size:14px}
+.checkout-fee dt{float:left;clear:left;color:#56705c}
+.checkout-fee dd{margin:0 0 6px 0;text-align:right;font-weight:750;color:#0d3d16}
+.checkout-pay{
+    width:100%;min-height:50px;margin-top:10px;border:0;border-radius:14px;
+    background:#1b5e20;color:#fff;font-weight:800;cursor:pointer;
+}
+.checkout-pay.secondary{background:#e8f5e9;color:#1b5e20;border:1px solid #a5d6a7}
+.checkout-status{margin-top:10px;font-size:13px;color:#34553c;min-height:1.2em}
+#xlmQuoteButton{display:none !important}
 </style>
 </head>
 
@@ -1028,9 +1077,34 @@ button:focus-visible{
 
             </div>
 
-            <button id="xlmQuoteButton" type="button" hidden>
-                XLM Testnet quote
+            <button id="xlmQuoteButton" type="button" hidden aria-hidden="true">
+                XLM quote
             </button>
+
+            <button id="buyNowButton" class="buy-now-button" type="button" hidden>
+                <i class="fas fa-bag-shopping" aria-hidden="true"></i>
+                <span>Buy Now</span>
+            </button>
+
+            <section id="checkoutPanel" class="checkout-panel" hidden aria-live="polite">
+                <h3>Secure checkout</h3>
+                <p class="checkout-note">Buyer fee 2% · Seller fee 3% · Listing publication free. Shipping, taxes, and processor fees are separate when applicable. Stellar XLM is a separate Mainnet payment method (not a Stripe fiat currency).</p>
+                <label for="checkoutCurrency">Presentment currency (Stripe)</label>
+                <select id="checkoutCurrency" aria-label="Select checkout currency"></select>
+                <label for="checkoutFulfillment">Shipping or pickup</label>
+                <select id="checkoutFulfillment">
+                    <option value="pickup">Local pickup</option>
+                    <option value="delivery">Delivery / shipping</option>
+                </select>
+                <div class="checkout-methods" role="group" aria-label="Payment method">
+                    <button type="button" id="methodStripeBtn" class="active" data-method="stripe">Stripe card</button>
+                    <button type="button" id="methodXlmBtn" data-method="xlm_mainnet">Stellar XLM Mainnet</button>
+                </div>
+                <dl id="checkoutFeeBreakdown" class="checkout-fee"></dl>
+                <button type="button" class="checkout-pay" id="checkoutConfirmBtn">Continue to payment</button>
+                <button type="button" class="checkout-pay secondary" id="checkoutQuoteBtn">Refresh quote</button>
+                <p id="checkoutStatus" class="checkout-status" role="status"></p>
+            </section>
 
             <h2 id="title" class="title">
                 Loading...
@@ -1417,6 +1491,7 @@ button:focus-visible{
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-ad-publish.js"></script>
 <script src="/havkar-marketplace.js"></script>
+<script src="/havkar-presentment-currencies.js"></script>
 <script src="/havkar-xlm-checkout.js"></script>
 <script>
 "use strict";
@@ -2798,22 +2873,6 @@ function renderListing(){
             ad.currency
         );
 
-    const xlmButton =
-        $("xlmQuoteButton");
-
-    if(xlmButton){
-
-        xlmButton.hidden =
-            !(
-                Number(ad.price) > 0 &&
-                (
-                    !window.HAVKAR_MARKETPLACE ||
-                    window.HAVKAR_MARKETPLACE.isMarketplaceRow(ad)
-                )
-            );
-
-    }
-
     attachListingVideo();
 
     const place =
@@ -2892,6 +2951,27 @@ function renderListing(){
                 ad.user_id
             )
         );
+
+    const xlmButton =
+        $("xlmQuoteButton");
+    if(xlmButton){
+        xlmButton.hidden = true;
+    }
+    const buyNow = $("buyNowButton");
+    if(buyNow){
+        const purchasable =
+            Number(ad.price) > 0 &&
+            (
+                !window.HAVKAR_MARKETPLACE ||
+                window.HAVKAR_MARKETPLACE.isMarketplaceRow(ad)
+            ) &&
+            !state.isOwnListing;
+        buyNow.hidden = !purchasable;
+    }
+    const checkoutPanel = $("checkoutPanel");
+    if(checkoutPanel){
+        checkoutPanel.hidden = true;
+    }
 
     updateSellerUI();
 
@@ -4281,64 +4361,244 @@ function setupOwnerActions(){
    NAVIGATION SETUP
    ========================================================= */
 
-async function quoteListingXlm(){
+const checkoutState = {
+    method: "stripe",
+    currency: "eur",
+    fulfillment: "pickup",
+    tradeEnabled: false,
+    lastQuote: null
+};
 
-    const ad =
-        state.ad;
-    const amount =
-        Number(ad && ad.price);
-
-    if(
-        !ad ||
-        !Number.isFinite(amount) ||
-        amount <= 0 ||
-        (
-            window.HAVKAR_MARKETPLACE &&
-            !window.HAVKAR_MARKETPLACE.isMarketplaceRow(ad)
-        )
-    ){
-
-        showToast(
-            "This record has no marketplace price for XLM."
-        );
-
-        return;
-
-    }
-
-    const session =
-        await supabaseClient.auth.getSession();
-    const accessToken =
-        session &&
-        session.data &&
-        session.data.session &&
-        session.data.session.access_token;
-
-    if(!accessToken || !window.HAVKAR_XLM){
-
-        showToast(
-            "Sign in before requesting an XLM quote."
-        );
-
-        return;
-
-    }
-
-    const quoted =
-        await window.HAVKAR_XLM.quote({
-            flow: "marketplace",
-            price: amount,
-            subjectId: String(ad.id),
-            accessToken: accessToken
-        });
-
-    showToast(
-        window.HAVKAR_XLM.describe(
-            quoted.result
-        )
-    );
-
+function setCheckoutStatus(message){
+    const node = $("checkoutStatus");
+    if(node) node.textContent = String(message || "");
 }
+
+function populateCheckoutCurrencies(){
+    const select = $("checkoutCurrency");
+    if(!select) return;
+    const pack = window.HAVKAR_PRESENTMENT_CURRENCIES;
+    const list = pack && Array.isArray(pack.list) ? pack.list : [];
+    const preferred = String((state.ad && state.ad.currency) || "EUR").toLowerCase();
+    select.innerHTML = "";
+    list.forEach(function(item){
+        const opt = document.createElement("option");
+        opt.value = item.code;
+        opt.textContent = String(item.code).toUpperCase() + " — " + (item.name || item.code);
+        if(item.code === preferred) opt.selected = true;
+        select.appendChild(opt);
+    });
+    if(!select.value && list.length){
+        select.value = preferred || "eur";
+    }
+    checkoutState.currency = select.value || "eur";
+    const countNote = pack && pack.count ? pack.count : list.length;
+    if(countNote !== 133){
+        console.warn("[HAVKAR] Presentment currency count is", countNote);
+    }
+}
+
+function renderCheckoutFees(fees, extra){
+    const box = $("checkoutFeeBreakdown");
+    if(!box || !fees) return;
+    const currency = String((fees.currency || checkoutState.currency || "EUR")).toUpperCase();
+    const rows = [
+        ["Item price", fees.list_price_eur ?? fees.price],
+        ["Buyer fee (2%)", fees.buyer_fee_eur ?? fees.buyerFee],
+        ["Seller fee (3%)", fees.seller_fee_eur ?? fees.sellerFee],
+        ["Buyer pays", fees.buyer_pays_eur ?? fees.buyerPays],
+        ["Seller receives", fees.seller_receives_eur ?? fees.sellerReceives],
+        ["Listing publication", fees.listing_publication_fee ?? fees.listingPublicationFee ?? 0]
+    ];
+    if(extra && extra.amount_xlm != null){
+        rows.push(["XLM amount", extra.amount_xlm + " XLM"]);
+        if(extra.eur_per_xlm != null) rows.push(["EUR per XLM", extra.eur_per_xlm]);
+        if(extra.network_fee_xlm != null) rows.push(["Network fee", extra.network_fee_xlm + " XLM"]);
+        if(extra.rate_as_of) rows.push(["Rate as of", extra.rate_as_of]);
+    }
+    box.innerHTML = rows.map(function(pair){
+        return "<dt>" + pair[0] + "</dt><dd>" + pair[1] + (typeof pair[1] === "number" ? " " + currency : "") + "</dd>";
+    }).join("");
+}
+
+function openCheckoutPanel(){
+    const ad = state.ad;
+    const amount = Number(ad && ad.price);
+    if(!ad || !Number.isFinite(amount) || amount <= 0 || (window.HAVKAR_MARKETPLACE && !window.HAVKAR_MARKETPLACE.isMarketplaceRow(ad))){
+        showToast("This listing is not available for Buy Now checkout.");
+        return;
+    }
+    const panel = $("checkoutPanel");
+    if(!panel) return;
+    panel.hidden = false;
+    populateCheckoutCurrencies();
+    if($("checkoutFulfillment")){
+        $("checkoutFulfillment").value = checkoutState.fulfillment || "pickup";
+    }
+    const localFees = window.HAVKAR_MARKETPLACE && window.HAVKAR_MARKETPLACE.quoteListingFees
+        ? window.HAVKAR_MARKETPLACE.quoteListingFees(ad.price, checkoutState.currency)
+        : null;
+    if(localFees && localFees.ok){
+        renderCheckoutFees({
+            list_price_eur: localFees.price,
+            buyer_fee_eur: localFees.buyerFee,
+            seller_fee_eur: localFees.sellerFee,
+            buyer_pays_eur: localFees.buyerPays,
+            seller_receives_eur: localFees.sellerReceives,
+            listing_publication_fee: localFees.listingPublicationFee,
+            currency: localFees.currency
+        });
+    }
+    setCheckoutStatus("Select Stripe or Stellar XLM Mainnet, then continue to payment.");
+    panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    refreshMarketplaceQuote();
+}
+
+async function refreshMarketplaceQuote(){
+    const ad = state.ad;
+    if(!ad) return;
+    setCheckoutStatus("Requesting live " + checkoutState.method + " quote…");
+    try{
+        const response = await fetch("/api/marketplace", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({
+                action: "marketplace_quote",
+                method: checkoutState.method,
+                currency: checkoutState.currency,
+                list_price_eur: Number(ad.price),
+                listing_id: ad.id
+            })
+        });
+        const body = await response.json().catch(function(){ return null; });
+        if(!response.ok || !body || body.ok === false){
+            setCheckoutStatus((body && body.error) || "Quote failed. No charge was created.");
+            return;
+        }
+        checkoutState.tradeEnabled = Boolean(body.trade_payments_enabled);
+        checkoutState.lastQuote = body;
+        if(body.fees) renderCheckoutFees(body.fees, body);
+        const xlmBit = checkoutState.method.indexOf("xlm") >= 0 && body.amount_xlm
+            ? (" · " + body.amount_xlm + " XLM Mainnet")
+            : "";
+        setCheckoutStatus(
+            "Quote ready" + xlmBit +
+            ". trade_enabled=" + String(body.trade_payments_enabled) +
+            ", charge_created=" + String(body.charge_created) +
+            ". Presentment currencies: 133."
+        );
+    }catch(_e){
+        setCheckoutStatus("Could not reach marketplace quote API.");
+    }
+}
+
+async function accessTokenForCheckout(){
+    const session = await supabaseClient.auth.getSession();
+    return session && session.data && session.data.session
+        ? session.data.session.access_token
+        : "";
+}
+
+async function startMarketplacePayment(){
+    const ad = state.ad;
+    if(!ad) return;
+    const token = await accessTokenForCheckout();
+    if(!token){
+        showToast("Please sign in to buy this item.");
+        window.location.href = "login.html?from=ad-details&id=" + encodeURIComponent(ad.id);
+        return;
+    }
+    setCheckoutStatus("Creating secure checkout…");
+    try{
+        const response = await fetch("/api/marketplace", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+                Authorization: "Bearer " + token
+            },
+            body: JSON.stringify({
+                action: "marketplace_create_checkout",
+                method: checkoutState.method,
+                currency: checkoutState.currency,
+                listing_id: ad.id,
+                fulfillment: checkoutState.fulfillment
+            })
+        });
+        const body = await response.json().catch(function(){ return null; });
+        if(!response.ok || !body || body.ok === false){
+            setCheckoutStatus((body && body.error) || "Checkout was not created.");
+            return;
+        }
+        if(body.url){
+            window.location.href = body.url;
+            return;
+        }
+        if(body.amount_xlm && body.destination){
+            setCheckoutStatus(
+                "Pay " + body.amount_xlm + " XLM on Stellar Mainnet to " + body.destination +
+                " with memo " + (body.memo || "n/a") +
+                ". Network fee separate. Order stays unpaid until server-side Horizon verification."
+            );
+            showToast("XLM Mainnet payment instructions ready.");
+            return;
+        }
+        setCheckoutStatus("Checkout response received without redirect URL.");
+    }catch(_e){
+        setCheckoutStatus("Could not start checkout.");
+    }
+}
+
+function setupCheckoutPanel(){
+    const buyNow = $("buyNowButton");
+    if(buyNow){
+        buyNow.addEventListener("click", openCheckoutPanel);
+    }
+    const stripeBtn = $("methodStripeBtn");
+    const xlmBtn = $("methodXlmBtn");
+    if(stripeBtn){
+        stripeBtn.addEventListener("click", function(){
+            checkoutState.method = "stripe";
+            stripeBtn.classList.add("active");
+            if(xlmBtn) xlmBtn.classList.remove("active");
+            refreshMarketplaceQuote();
+        });
+    }
+    if(xlmBtn){
+        xlmBtn.addEventListener("click", function(){
+            checkoutState.method = "xlm_mainnet";
+            xlmBtn.classList.add("active");
+            if(stripeBtn) stripeBtn.classList.remove("active");
+            refreshMarketplaceQuote();
+        });
+    }
+    const currency = $("checkoutCurrency");
+    if(currency){
+        currency.addEventListener("change", function(){
+            checkoutState.currency = currency.value || "eur";
+            refreshMarketplaceQuote();
+        });
+    }
+    const fulfillment = $("checkoutFulfillment");
+    if(fulfillment){
+        fulfillment.addEventListener("change", function(){
+            checkoutState.fulfillment = fulfillment.value || "pickup";
+        });
+    }
+    if($("checkoutQuoteBtn")){
+        $("checkoutQuoteBtn").addEventListener("click", refreshMarketplaceQuote);
+    }
+    if($("checkoutConfirmBtn")){
+        $("checkoutConfirmBtn").addEventListener("click", startMarketplacePayment);
+    }
+}
+
+async function quoteListingXlm(){
+    // Legacy Testnet path removed from public UI. Keep as Mainnet quote bridge.
+    checkoutState.method = "xlm_mainnet";
+    openCheckoutPanel();
+}
+
 
 
 function setupNavigation(){
@@ -4373,17 +4633,7 @@ function setupNavigation(){
             shareCurrentListing
         );
 
-    const xlmButton =
-        $("xlmQuoteButton");
-
-    if(xlmButton){
-
-        xlmButton.addEventListener(
-            "click",
-            quoteListingXlm
-        );
-
-    }
+    setupCheckoutPanel();
 
     $("saveButton")
         .addEventListener(

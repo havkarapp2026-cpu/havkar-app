@@ -1835,10 +1835,32 @@
 
 
                         <div class="form-group">
-                            <label class="form-label">Price</label>
-                            <input id="eventPrice" class="form-control" type="text" placeholder="Free / €10" maxlength="30">
+                            <label class="form-label">Ticket type</label>
+                            <select id="eventTicketType" class="form-control">
+                                <option value="general">General</option>
+                                <option value="early">Early bird</option>
+                                <option value="vip">VIP</option>
+                                <option value="free">Free</option>
+                            </select>
                         </div>
 
+                    </div>
+
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Pricing <span class="required">*</span></label>
+                            <select id="eventPricingMode" class="form-control" required>
+                                <option value="free">Free ticket</option>
+                                <option value="paid">Paid (EUR)</option>
+                            </select>
+                        </div>
+
+
+                        <div class="form-group">
+                            <label class="form-label">Price (EUR)</label>
+                            <input id="eventPrice" class="form-control" type="number" min="0" step="0.01" placeholder="0 for free" value="0">
+                        </div>
                     </div>
 
 
@@ -1870,14 +1892,20 @@
 
 
                     <div class="form-group">
+                        <label class="form-label">Cover image URL</label>
+                        <input id="eventImageUrl" class="form-control" type="url" placeholder="https://..." maxlength="500">
+                    </div>
+
+
+                    <div class="form-group">
                         <label class="form-label">Description <span class="required">*</span></label>
                         <textarea id="eventDescription" class="form-control" placeholder="Describe your event..." maxlength="1000" required></textarea>
                     </div>
 
 
                     <div class="form-group">
-                        <label class="form-label">Expected Attendees</label>
-                        <input id="eventAttendees" class="form-control" type="number" min="0" max="1000000" placeholder="e.g. 100">
+                        <label class="form-label">Capacity (max tickets) <span class="required">*</span></label>
+                        <input id="eventAttendees" class="form-control" type="number" min="1" max="1000000" placeholder="e.g. 100" required>
                     </div>
 
 
@@ -1997,6 +2025,7 @@
     <script src="havkar-i18n.js"></script>
 
     <script src="/havkar-supabase-config.js"></script>
+    <script src="/stellar-wallet-bundle.js"></script>
     <script src="/havkar-xlm-checkout.js"></script>
 <script type="module">
         import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
@@ -2222,7 +2251,9 @@
                 interested: Number(
                     interestedCounts.get(String(row.id)) ?? row.interested ?? 0
                 ),
-                price: row.price || "Free",
+                price: row.price == null || String(row.price).trim() === ""
+                    ? "0"
+                    : String(row.price),
                 description: row.description || "",
                 image_url: row.image_url || "",
                 is_public: row.is_public,
@@ -2233,6 +2264,41 @@
 
         }
 
+
+        function formatEventPrice(value) {
+            if (
+                value === null ||
+                value === undefined ||
+                String(value).trim() === ""
+            ) {
+                return "Free";
+            }
+
+            const text = String(value).trim();
+
+            if (/^(free|gratis)$/i.test(text)) {
+                return "Free";
+            }
+
+            const amount = Number(
+                text.replace(/[€$£\s]/g, "").replace(",", ".")
+            );
+
+            if (Number.isFinite(amount) && amount <= 0) {
+                return "Free";
+            }
+
+            if (Number.isFinite(amount)) {
+                return "€" + amount.toFixed(2).replace(/\.00$/, "");
+            }
+
+            return text;
+        }
+
+        function isFreeEventPrice(value) {
+            const formatted = formatEventPrice(value);
+            return formatted === "Free";
+        }
 
         function safeImageUrl(url) {
             if (!url) return "";
@@ -2446,20 +2512,14 @@
 
             if (filterPrice === "free") {
                 events = events.filter(
-                    event =>
-                        String(event.price || "Free")
-                            .trim()
-                            .toLowerCase() === "free"
+                    event => isFreeEventPrice(event.price)
                 );
             }
 
 
             if (filterPrice === "paid") {
                 events = events.filter(
-                    event =>
-                        String(event.price || "Free")
-                            .trim()
-                            .toLowerCase() !== "free"
+                    event => !isFreeEventPrice(event.price)
                 );
             }
 
@@ -2602,7 +2662,7 @@
 
 
                             <div class="event-price">
-                                ${escapeHtml(event.price || "Free")}
+                                ${escapeHtml(formatEventPrice(event.price))}
                             </div>
 
                         </div>
@@ -2636,6 +2696,21 @@
             `;
         }
 
+
+        (function applyEventSearchQueryFromUrl() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const query = String(params.get("q") || "").trim();
+                const input = document.getElementById("searchInput");
+                if (query && input) {
+                    input.value = query;
+                    searchTerm = query;
+                    document
+                        .getElementById("clearSearch")
+                        .classList.add("show");
+                }
+            } catch (error) {}
+        })();
 
         document
             .getElementById("searchInput")
@@ -2968,7 +3043,7 @@
                         <div class="detail-row-content">
                             <strong>${et("PRICE")}</strong>
                             <span>
-                                ${escapeHtml(event.price || "Free")}
+                                ${escapeHtml(formatEventPrice(event.price))}
                             </span>
                         </div>
 
@@ -3009,9 +3084,7 @@
                         >
                             <i class="fas fa-ticket"></i>
                             ${
-                                String(event.price || "Free")
-                                    .trim()
-                                    .toLowerCase() === "free"
+                                isFreeEventPrice(event.price)
                                     ? et("Join Event")
                                     : et("Get Ticket")
                             }
@@ -3024,6 +3097,32 @@
                     ${
                         isOwner
                             ? `
+                                <div class="detail-description" style="margin-top:14px;">
+                                    <h3>${et("Organizer check-in")}</h3>
+                                    <p>${et("Enter the unique ticket code to validate entry once.")}</p>
+                                    <div class="form-group">
+                                        <input id="organizerCheckInCode" class="form-control" type="text" maxlength="32" placeholder="Ticket code" autocomplete="off">
+                                    </div>
+                                    <button
+                                        class="btn btn-primary"
+                                        style="width:100%;margin-top:8px;"
+                                        type="button"
+                                        onclick="checkInEventTicket('${escapeHtml(String(event.id))}')"
+                                    >
+                                        <i class="fas fa-qrcode"></i>
+                                        ${et("Check in ticket")}
+                                    </button>
+                                    <button
+                                        class="btn btn-secondary"
+                                        style="width:100%;margin-top:8px;"
+                                        type="button"
+                                        onclick="loadOrganizerEventTickets('${escapeHtml(String(event.id))}')"
+                                    >
+                                        <i class="fas fa-list"></i>
+                                        ${et("View issued tickets")}
+                                    </button>
+                                    <div id="organizerTicketPanel" style="margin-top:10px;"></div>
+                                </div>
                                 <button
                                     class="btn"
                                     style="
@@ -3076,11 +3175,39 @@
                             .getElementById("eventCategory")
                             .value;
 
-                    const price =
+                    const pricingMode =
+                        document
+                            .getElementById("eventPricingMode")
+                            .value;
+
+                    const ticketType =
+                        document
+                            .getElementById("eventTicketType")
+                            .value || "general";
+
+                    const priceRaw =
                         document
                             .getElementById("eventPrice")
                             .value
-                            .trim() || "Free";
+                            .trim();
+
+                    const priceNumber = Number(priceRaw);
+                    let price = "Free";
+
+                    if (pricingMode === "paid") {
+                        if (!Number.isFinite(priceNumber) || priceNumber <= 0) {
+                            showToast(
+                                "Enter a valid EUR price greater than 0 for paid tickets.",
+                                "error"
+                            );
+                            return;
+                        }
+
+                        price = String(Number(priceNumber.toFixed(2)));
+                    } else {
+                        /* Store numeric 0 so checkout/API free issuance works. */
+                        price = "0";
+                    }
 
                     const date =
                         document
@@ -3110,12 +3237,42 @@
                             .value
                             .trim();
 
+                    const imageUrlRaw =
+                        document
+                            .getElementById("eventImageUrl")
+                            .value
+                            .trim();
+
+                    let imageUrl = null;
+
+                    if (imageUrlRaw) {
+                        try {
+                            const parsed = new URL(imageUrlRaw);
+
+                            if (parsed.protocol !== "https:") {
+                                showToast(
+                                    "Cover image must use https://",
+                                    "error"
+                                );
+                                return;
+                            }
+
+                            imageUrl = parsed.href;
+                        } catch {
+                            showToast(
+                                "Cover image URL is invalid.",
+                                "error"
+                            );
+                            return;
+                        }
+                    }
+
                     const attendees =
                         Number(
                             document
                                 .getElementById("eventAttendees")
                                 .value
-                        ) || 0;
+                        );
 
                     if (
                         !title ||
@@ -3123,10 +3280,12 @@
                         !date ||
                         !time ||
                         !location ||
-                        !description
+                        !description ||
+                        !Number.isSafeInteger(attendees) ||
+                        attendees < 1
                     ) {
                         showToast(
-                            "Please complete all required fields.",
+                            "Please complete all required fields, including capacity.",
                             "error"
                         );
                         return;
@@ -3151,7 +3310,7 @@
                                 event_time: time,
                                 location,
                                 description,
-                                image_url: null,
+                                image_url: imageUrl,
                                 max_attendees: attendees,
                                 is_public: true,
                                 status: "active",
@@ -3370,7 +3529,11 @@
                             },
                             body: JSON.stringify({
                                 event_id: eventId,
-                                quantity: 1
+                                quantity: 1,
+                                ticket_type:
+                                    isFreeEventPrice(event.price)
+                                        ? "free"
+                                        : "general"
                             })
                         }
                     );
@@ -3388,11 +3551,17 @@
                     !response.ok ||
                     !result?.ok
                 ) {
+                    const paused =
+                        result?.code === "REAL_PAYMENTS_PAUSED";
                     const message =
-                        typeof result?.error === "string" &&
-                        result.error.trim()
-                            ? result.error.trim()
-                            : "Unable to create ticket checkout.";
+                        paused
+                            ? "Card ticket checkout is paused. Free tickets still work, or use XLM Testnet when offered."
+                            : (
+                                typeof result?.error === "string" &&
+                                result.error.trim()
+                                    ? result.error.trim()
+                                    : "Unable to create ticket checkout."
+                            );
 
                     showToast(
                         message,
@@ -3406,9 +3575,17 @@
                     closeModal("detailModal");
 
                     showToast(
-                        "Your HAVKAR ticket has been issued successfully.",
+                        result.ticket_code
+                            ? `Ticket issued. Code: ${result.ticket_code}`
+                            : "Your HAVKAR ticket has been issued successfully.",
                         "success"
                     );
+
+                    if (typeof loadMyEventTickets === "function") {
+                        try {
+                            await loadMyEventTickets();
+                        } catch (_) {}
+                    }
                     return;
                 }
 
@@ -3489,18 +3666,46 @@
             const accessToken = sessionData?.session?.access_token || "";
 
             if (!accessToken || !window.HAVKAR_XLM) {
-                showToast("Sign in before requesting an XLM quote.", "error");
+                showToast("Sign in before paying with XLM.", "error");
                 return;
             }
 
-            const quoted = await window.HAVKAR_XLM.quote({
+            if (typeof window.havkarConnectStellarWallet === "function") {
+                try {
+                    await window.havkarConnectStellarWallet();
+                } catch (connectError) {
+                    showToast(
+                        (connectError && connectError.message) ||
+                            "Connect a Stellar wallet first. HAVKAR never asks for a recovery phrase.",
+                        "error"
+                    );
+                    return;
+                }
+            }
+
+            const settled = await window.HAVKAR_XLM.payAndVerify({
                 flow: "events",
                 price: amount,
                 subjectId: String(id),
                 accessToken: accessToken
             });
 
-            showToast(window.HAVKAR_XLM.describe(quoted.result), quoted.result && quoted.result.payable ? "success" : "error");
+            const result = settled && settled.result;
+            showToast(
+                window.HAVKAR_XLM.describe(result) +
+                    (result && result.ticket_id
+                        ? " Ticket " + result.ticket_id + " is ready."
+                        : ""),
+                result && result.order_paid ? "success" : "error"
+            );
+
+            if (result && result.order_paid && typeof loadMyEventTickets === "function") {
+                try {
+                    await loadMyEventTickets();
+                } catch (reloadError) {
+                    console.warn("[HAVKAR] Could not reload event tickets after XLM settlement");
+                }
+            }
         }
 
         function ticketStatusClass(status) {
@@ -3602,7 +3807,7 @@
             } = await supabase
                 .from("event_tickets")
                 .select(
-                    "id,created_at,event_id,quantity,unit_price,currency,total_amount,payment_status,ticket_status,payment_provider,payment_reference,paid_at"
+                    "id,created_at,event_id,quantity,unit_price,currency,total_amount,payment_status,ticket_status,payment_provider,payment_reference,paid_at,ticket_code,ticket_type,checked_in_at,cancelled_at,hold_expires_at"
                 )
                 .eq("user_id", currentUser.id)
                 .order("created_at", {
@@ -3707,6 +3912,19 @@
                                 ticket.paid_at
                             );
 
+                        const ticketCode =
+                            String(ticket.ticket_code || "").trim();
+
+                        const qrUrl = ticketCode
+                            ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent("HAVKAR:" + ticketCode)}`
+                            : "";
+
+                        const canCancel =
+                            ticketStatus === "valid" &&
+                            paymentStatus === "paid" &&
+                            !ticket.checked_in_at &&
+                            !ticket.cancelled_at;
+
                         return `
                             <article class="ticket-card">
                                 <div class="ticket-card-top">
@@ -3721,6 +3939,7 @@
                                         <div class="ticket-payment-state">
                                             ${et("Payment:")}
                                             ${escapeHtml(et(paymentStatus))}
+                                            · ${escapeHtml(et(ticket.ticket_type || "general"))}
                                         </div>
                                     </div>
 
@@ -3772,10 +3991,41 @@
                                         </div>
                                     ` : ""}
 
-                                    <div class="ticket-reference">
-                                        ${et("Ticket ID:")}
-                                        ${escapeHtml(ticket.id)}
-                                    </div>
+                                    ${ticket.checked_in_at ? `
+                                        <div class="ticket-info-row">
+                                            <i class="fas fa-door-open"></i>
+                                            <span>
+                                                ${et("Checked in:")}
+                                                ${escapeHtml(formatTicketPaidAt(ticket.checked_in_at))}
+                                            </span>
+                                        </div>
+                                    ` : ""}
+
+                                    ${ticketCode ? `
+                                        <div class="ticket-reference">
+                                            ${et("Ticket code:")}
+                                            ${escapeHtml(ticketCode)}
+                                        </div>
+                                        <div style="margin:12px 0;text-align:center;">
+                                            <img src="${escapeHtml(qrUrl)}" width="160" height="160" alt="Ticket QR ${escapeHtml(ticketCode)}" style="border-radius:12px;background:#fff;padding:8px;">
+                                        </div>
+                                    ` : `
+                                        <div class="ticket-reference">
+                                            ${et("Ticket ID:")}
+                                            ${escapeHtml(ticket.id)}
+                                        </div>
+                                    `}
+
+                                    ${canCancel ? `
+                                        <button
+                                            class="btn btn-secondary"
+                                            style="width:100%;margin-top:8px;"
+                                            type="button"
+                                            onclick="cancelMyEventTicket(${Number(ticket.id)})"
+                                        >
+                                            ${et("Cancel ticket")}
+                                        </button>
+                                    ` : ""}
                                 </div>
                             </article>
                         `;
@@ -3784,6 +4034,121 @@
             `;
         }
 
+
+        window.checkInEventTicket = async function(eventId) {
+            const input = document.getElementById("organizerCheckInCode");
+            const code = String(input?.value || "").trim();
+
+            if (!code) {
+                showToast("Enter a ticket code.", "error");
+                return;
+            }
+
+            const { data, error } = await supabase.rpc(
+                "havkar_check_in_event_ticket",
+                { p_ticket_code: code }
+            );
+
+            if (error) {
+                showToast(error.message || "Check-in failed.", "error");
+                return;
+            }
+
+            if (data && data.ok === false && data.code === "ALREADY_CHECKED_IN") {
+                showToast(
+                    `Already checked in at ${data.checked_in_at || "earlier"}.`,
+                    "error"
+                );
+                return;
+            }
+
+            if (data && data.ok === true) {
+                showToast(
+                    `Checked in ${data.ticket_code || code}.`,
+                    "success"
+                );
+                if (input) input.value = "";
+                await loadOrganizerEventTickets(eventId);
+                return;
+            }
+
+            showToast("Check-in failed.", "error");
+        };
+
+        window.loadOrganizerEventTickets = async function(eventId) {
+            const panel = document.getElementById("organizerTicketPanel");
+
+            if (!panel) {
+                return;
+            }
+
+            panel.innerHTML = `<div class="ticket-loading"><i class="fas fa-spinner fa-spin"></i> ${et("Loading...")}</div>`;
+
+            const { data, error } = await supabase.rpc(
+                "havkar_list_event_tickets_for_organizer",
+                { p_event_id: Number(eventId) }
+            );
+
+            if (error) {
+                panel.innerHTML = `<p>${escapeHtml(error.message || "Could not load tickets.")}</p>`;
+                return;
+            }
+
+            const rows = data || [];
+
+            if (!rows.length) {
+                panel.innerHTML = `<p>${et("No tickets issued yet.")}</p>`;
+                return;
+            }
+
+            panel.innerHTML = `
+                <div class="ticket-list">
+                    ${rows.map(row => `
+                        <article class="ticket-card" style="margin-bottom:8px;">
+                            <div class="ticket-card-body">
+                                <div class="ticket-info-row">
+                                    <i class="fas fa-barcode"></i>
+                                    <span class="ticket-reference">${escapeHtml(row.ticket_code || "")}</span>
+                                </div>
+                                <div class="ticket-info-row">
+                                    <i class="fas fa-ticket"></i>
+                                    <span>${escapeHtml(row.ticket_type || "general")} · ${escapeHtml(row.ticket_status || "")} · ${escapeHtml(row.payment_status || "")}</span>
+                                </div>
+                                <div class="ticket-info-row">
+                                    <i class="fas fa-door-open"></i>
+                                    <span>${row.checked_in_at ? escapeHtml(formatTicketPaidAt(row.checked_in_at)) : et("Not checked in")}</span>
+                                </div>
+                            </div>
+                        </article>
+                    `).join("")}
+                </div>
+            `;
+        };
+
+        window.cancelMyEventTicket = async function(ticketId) {
+            if (!window.confirm(et("Cancel this ticket?"))) {
+                return;
+            }
+
+            const { data, error } = await supabase.rpc(
+                "havkar_cancel_event_ticket",
+                {
+                    p_ticket_id: Number(ticketId),
+                    p_reason: "buyer_cancel"
+                }
+            );
+
+            if (error || !(data && data.ok)) {
+                showToast(
+                    (error && error.message) || "Cancel failed.",
+                    "error"
+                );
+                return;
+            }
+
+            showToast("Ticket cancelled.", "success");
+            await loadMyEventTickets();
+        };
 
         window.openTickets = async function() {
             openModal("ticketsModal");
@@ -4091,11 +4456,79 @@
         }
 
 
+        async function handleTicketsDeepLink() {
+            const params = new URLSearchParams(window.location.search);
+            const open = String(params.get("open") || "").trim().toLowerCase();
+
+            if (!open) {
+                return;
+            }
+
+            if (open === "create") {
+                openCreateEventModal();
+            } else if (
+                open === "my-event-tickets" ||
+                open === "tickets"
+            ) {
+                if (!currentUser) {
+                    showToast(
+                        "Please sign in to view your event tickets.",
+                        "error"
+                    );
+                } else {
+                    await openTickets();
+                }
+            } else if (
+                open === "check-in" ||
+                open === "checkin"
+            ) {
+                if (!currentUser) {
+                    showToast(
+                        "Please sign in as the event organizer to check tickets in.",
+                        "error"
+                    );
+                } else {
+                    const owned = allEvents.find(
+                        event =>
+                            String(event.user_id) ===
+                            String(currentUser.id)
+                    );
+
+                    if (owned) {
+                        openEventDetails(String(owned.id));
+                        showToast(
+                            "Open Organizer check-in on your event and enter the ticket code.",
+                            "success"
+                        );
+                    } else {
+                        showToast(
+                            "Create an event first, then use organizer check-in on that event.",
+                            "error"
+                        );
+                        openCreateEventModal();
+                    }
+                }
+            }
+
+            window.history.replaceState(
+                {},
+                document.title,
+                window.location.pathname +
+                    (
+                        params.get("q")
+                            ? ("?q=" + encodeURIComponent(params.get("q")))
+                            : ""
+                    )
+            );
+        }
+
+
         async function initializeEventsPage() {
             localizeEventsStatic();
             await loadCurrentUser();
             await refreshEvents();
             await handleEventCheckoutReturn();
+            await handleTicketsDeepLink();
 
             supabase.auth.onAuthStateChange(
                 async (_event, session) => {
@@ -4111,6 +4544,10 @@
 
         initializeEventsPage();
     </script>
+<div data-havkar-legal-footer></div>
+<script src="/havkar-operator-config.js"></script>
+<script src="/havkar-legal-footer.js"></script>
 <script src="/havkar-page-back.js"></script>
+<script src="/havkar-sw-register.js"></script>
 </body>
 </html>
