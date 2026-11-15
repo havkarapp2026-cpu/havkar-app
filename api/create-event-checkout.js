@@ -2177,8 +2177,8 @@ export default async function handler(req, res) {
       const origin = allowedCheckoutOrigin(req);
       const accountLink = await createRecipientAccountOnboardingLink(stripe, {
         accountId,
-        refreshUrl: `${origin}/market.html?connect=refresh`,
-        returnUrl: `${origin}/market.html?connect=return`
+        refreshUrl: `${origin}/buy-sell.html?connect=refresh`,
+        returnUrl: `${origin}/buy-sell.html?connect=return`
       });
 
       // Example destination Checkout params (not charged unless Owner arms collection).
@@ -2187,8 +2187,8 @@ export default async function handler(req, res) {
         split: demoSplit,
         connectedAccountId: accountId,
         listingTitle: "Example HAVKAR listing",
-        successUrl: `${origin}/market.html?payment=success`,
-        cancelUrl: `${origin}/market.html?payment=cancelled`,
+        successUrl: `${origin}/buy-sell.html?payment=success`,
+        cancelUrl: `${origin}/buy-sell.html?payment=cancelled`,
         metadata: { havkar_user_id: String(auth.user.id) },
         customerEmail: auth.user.email
       });

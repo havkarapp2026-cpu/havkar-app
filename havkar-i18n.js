@@ -1153,6 +1153,116 @@
             "Already have an account?": "Schon ein Konto?",
             "Log In": "Anmelden",
             "Safe • Secure • Trusted": "Sicher • Geschützt • Vertrauenswürdig"
+        }),
+        fa: Object.freeze({
+            "Connect • Trade • Work • Help": "ارتباط • تجارت • کار • کمک",
+            "Buy & Sell": "خرید و فروش",
+            "Jobs": "مشاغل",
+            "Services": "خدمات",
+            "Wallet": "کیف پول",
+            "Tickets": "بلیط",
+            "Accommodation": "اقامت",
+            "Ads": "آگهی‌ها",
+            "Delivery": "ارسال",
+            "Events": "رویدادها",
+            "Chat": "گفتگو",
+            "Languages": "زبان‌ها",
+            "Reviews": "نظرات",
+            "Support": "پشتیبانی",
+            "HAVKAR AI": "HAVKAR AI",
+            "About HAVKAR": "درباره HAVKAR",
+            "Create New Account": "ایجاد حساب جدید",
+            "Already have an account?": "حساب دارید؟",
+            "Log In": "ورود",
+            "Safe • Secure • Trusted": "ایمن • مطمئن • قابل اعتماد"
+        }),
+        ar: Object.freeze({
+            "Connect • Trade • Work • Help": "تواصل • تجارة • عمل • مساعدة",
+            "Buy & Sell": "بيع وشراء",
+            "Jobs": "وظائف",
+            "Services": "خدمات",
+            "Wallet": "المحفظة",
+            "Tickets": "التذاكر",
+            "Accommodation": "الإقامة",
+            "Ads": "الإعلانات",
+            "Delivery": "التوصيل",
+            "Events": "الفعاليات",
+            "Chat": "الدردشة",
+            "Languages": "اللغات",
+            "Reviews": "المراجعات",
+            "Support": "الدعم",
+            "HAVKAR AI": "HAVKAR AI",
+            "About HAVKAR": "حول HAVKAR",
+            "Create New Account": "إنشاء حساب جديد",
+            "Already have an account?": "هل لديك حساب؟",
+            "Log In": "تسجيل الدخول",
+            "Safe • Secure • Trusted": "آمن • محمي • موثوق"
+        }),
+        ckb: Object.freeze({
+            "Connect • Trade • Work • Help": "پەیوەندی • بازرگانی • کار • یارمەتی",
+            "Buy & Sell": "کڕین و فرۆشتن",
+            "Jobs": "کارەکان",
+            "Services": "خزمەتگوزارییەکان",
+            "Wallet": "جزدان",
+            "Tickets": "بلیت",
+            "Accommodation": "نیشتەجێبوون",
+            "Ads": "ڕیکلامەکان",
+            "Delivery": "گەیاندن",
+            "Events": "بۆنەکان",
+            "Chat": "گفتوگۆ",
+            "Languages": "زمانەکان",
+            "Reviews": "پێداچوونەوەکان",
+            "Support": "پشتگیری",
+            "HAVKAR AI": "HAVKAR AI",
+            "About HAVKAR": "دەربارەی HAVKAR",
+            "Create New Account": "دروستکردنی هەژماری نوێ",
+            "Already have an account?": "هەژمارت هەیە؟",
+            "Log In": "چوونەژوورەوە",
+            "Safe • Secure • Trusted": "پارێزراو • دڵنیا • متمانەپێکراو"
+        }),
+        kmr: Object.freeze({
+            "Connect • Trade • Work • Help": "Girêdan • Bazirganî • Kar • Alîkarî",
+            "Buy & Sell": "Kirîn û Firotin",
+            "Jobs": "Kar",
+            "Services": "Xizmet",
+            "Wallet": "Cûzdan",
+            "Tickets": "Bilêt",
+            "Accommodation": "Cîwar",
+            "Ads": "Reklam",
+            "Delivery": "Radestkirin",
+            "Events": "Bûyer",
+            "Chat": "Chat",
+            "Languages": "Ziman",
+            "Reviews": "Nirxandin",
+            "Support": "Piştgirî",
+            "HAVKAR AI": "HAVKAR AI",
+            "About HAVKAR": "Der barê HAVKAR",
+            "Create New Account": "Hesabekî nû çêke",
+            "Already have an account?": "Hesabê te heye?",
+            "Log In": "Têkeve",
+            "Safe • Secure • Trusted": "Ewle • Parastî • Pêbawer"
+        }),
+        sv: Object.freeze({
+            "Connect • Trade • Work • Help": "Anslut • Handla • Arbeta • Hjälp",
+            "Buy & Sell": "Köp & sälj",
+            "Jobs": "Jobb",
+            "Services": "Tjänster",
+            "Wallet": "Plånbok",
+            "Tickets": "Biljetter",
+            "Accommodation": "Boende",
+            "Ads": "Annonser",
+            "Delivery": "Leverans",
+            "Events": "Evenemang",
+            "Chat": "Chatt",
+            "Languages": "Språk",
+            "Reviews": "Recensioner",
+            "Support": "Support",
+            "HAVKAR AI": "HAVKAR AI",
+            "About HAVKAR": "Om HAVKAR",
+            "Create New Account": "Skapa nytt konto",
+            "Already have an account?": "Har du redan ett konto?",
+            "Log In": "Logga in",
+            "Safe • Secure • Trusted": "Säker • Trygg • Pålitlig"
         })
     });
 
@@ -1276,6 +1386,59 @@
     });
 
 
+    const MESSAGING_GLOSSARY = Object.freeze({
+        it: Object.freeze({
+            "Auto Translate": "Traduzione automatica",
+            "Auto Translate: Off": "Traduzione automatica: Off",
+            "Auto Translate: On": "Traduzione automatica: On",
+            "Block user": "Blocca utente",
+            "No notifications": "Nessuna notifica"
+        }),
+        de: Object.freeze({
+            "Auto Translate": "Automatische Übersetzung",
+            "Auto Translate: Off": "Automatische Übersetzung: Aus",
+            "Auto Translate: On": "Automatische Übersetzung: An",
+            "Block user": "Benutzer blockieren",
+            "No notifications": "Keine Benachrichtigungen"
+        }),
+        fa: Object.freeze({
+            "Auto Translate": "ترجمه خودکار",
+            "Auto Translate: Off": "ترجمه خودکار: خاموش",
+            "Auto Translate: On": "ترجمه خودکار: روشن",
+            "Block user": "مسدود کردن کاربر",
+            "No notifications": "اعلانی نیست"
+        }),
+        ar: Object.freeze({
+            "Auto Translate": "ترجمة تلقائية",
+            "Auto Translate: Off": "ترجمة تلقائية: إيقاف",
+            "Auto Translate: On": "ترجمة تلقائية: تشغيل",
+            "Block user": "حظر المستخدم",
+            "No notifications": "لا إشعارات"
+        }),
+        ckb: Object.freeze({
+            "Auto Translate": "وەرگێڕانی خۆکار",
+            "Auto Translate: Off": "وەرگێڕانی خۆکار: ناکارا",
+            "Auto Translate: On": "وەرگێڕانی خۆکار: کارا",
+            "Block user": "بلۆککردنی بەکارهێنەر",
+            "No notifications": "ئاگادارکردنەوە نییە"
+        }),
+        kmr: Object.freeze({
+            "Auto Translate": "Wergera otomatîk",
+            "Auto Translate: Off": "Wergera otomatîk: Girtî",
+            "Auto Translate: On": "Wergera otomatîk: Vekirî",
+            "Block user": "Bikarhênerê asteng bike",
+            "No notifications": "Agahdarî tune"
+        }),
+        sv: Object.freeze({
+            "Auto Translate": "Automatisk översättning",
+            "Auto Translate: Off": "Automatisk översättning: Av",
+            "Auto Translate: On": "Automatisk översättning: På",
+            "Block user": "Blockera användare",
+            "No notifications": "Inga aviseringar"
+        })
+    });
+
+
     function homepageGlossary(
         language
     ) {
@@ -1296,6 +1459,16 @@
     }
 
 
+    function messagingGlossary(
+        language
+    ) {
+
+        return MESSAGING_GLOSSARY[
+            language
+        ] || null;
+    }
+
+
     function applyHomepageGlossary(
         root
     ) {
@@ -1310,6 +1483,9 @@
                     language
                 ) || {},
                 marketplaceGlossary(
+                    language
+                ) || {},
+                messagingGlossary(
                     language
                 ) || {}
             );
@@ -1591,13 +1767,20 @@
         uniqueTexts.forEach(
             text => {
 
-                const glossary =
-                    homepageGlossary(
-                        targetLanguage
-                    );
+                const glossary = Object.assign(
+                    {},
+                    homepageGlossary(targetLanguage) || {},
+                    marketplaceGlossary(targetLanguage) || {},
+                    messagingGlossary(targetLanguage) || {}
+                );
+                const uiDictionary =
+                    typeof window !== "undefined" &&
+                    window.HAVKAR_UI_DICTIONARY &&
+                    window.HAVKAR_UI_DICTIONARY[targetLanguage]
+                        ? window.HAVKAR_UI_DICTIONARY[targetLanguage]
+                        : null;
 
                 if (
-                    glossary &&
                     Object.prototype.hasOwnProperty.call(
                         glossary,
                         text
@@ -1618,6 +1801,21 @@
                         translation
                     );
 
+                    return;
+                }
+
+                if (
+                    uiDictionary &&
+                    Object.prototype.hasOwnProperty.call(
+                        uiDictionary,
+                        text
+                    ) &&
+                    typeof uiDictionary[text] === "string" &&
+                    uiDictionary[text].trim()
+                ) {
+                    const translation = uiDictionary[text];
+                    resultMap.set(text, translation);
+                    setCached(text, targetLanguage, translation);
                     return;
                 }
 

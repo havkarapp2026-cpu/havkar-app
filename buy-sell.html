@@ -4629,9 +4629,45 @@ async function handleInitialHash(){
    BOOT
    ========================================================= */
 
+function applyConnectReturnFromQuery(){
+    try{
+        const params = new URLSearchParams(window.location.search || "");
+        const connect = String(params.get("connect") || "").trim().toLowerCase();
+        const payment = String(params.get("payment") || "").trim().toLowerCase();
+        let message = "";
+        if(connect === "return"){
+            message = "Stripe Connect return received. Seller onboarding status will refresh after account review.";
+        }else if(connect === "refresh"){
+            message = "Stripe Connect onboarding needs to be continued. Open Connect again when ready.";
+        }else if(payment === "success"){
+            message = "Payment return received. Live charges stay Owner-gated.";
+        }else if(payment === "cancelled"){
+            message = "Payment was cancelled. No charge was completed.";
+        }
+        if(!message) return;
+        const host = document.getElementById("statusMessage")
+            || document.getElementById("message")
+            || document.querySelector("[data-status], .status, .banner");
+        if(host){
+            host.hidden = false;
+            host.textContent = message;
+            host.setAttribute("role", "status");
+        }else if(typeof window.alert === "function"){
+            window.alert(message);
+        }
+        params.delete("connect");
+        params.delete("payment");
+        const next = params.toString();
+        const clean = window.location.pathname + (next ? ("?" + next) : "") + (window.location.hash || "");
+        window.history.replaceState({}, "", clean);
+    }catch(_e){}
+}
+
 async function boot(){
 
     try{
+
+        applyConnectReturnFromQuery();
 
         initializeSupabase();
 

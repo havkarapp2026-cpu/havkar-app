@@ -15,7 +15,7 @@ import {
 } from "../lib/stripe-bank-status.cjs";
 import { REQUIRED_WEBHOOK_EVENTS } from "../lib/stripe-webhook-processor.cjs";
 
-const base = process.env.HAVKAR_APP_URL || "https://havkar-app.vercel.app";
+const base = process.env.HAVKAR_APP_URL || "https://havkar.online";
 const LIVE_ACCOUNT_ID = "acct_1UJwZZECWiUpELSP";
 
 async function main() {
@@ -91,22 +91,39 @@ async function main() {
     blockers.push("HAVKAR_REAL_PAYMENTS_ENABLED is not true on Production.");
   }
   blockers.push(
-    "Merge payment webhook processor branch before arming flags: Production main still returns REAL_PAYMENTS_PAUSED for signed Stripe deliveries while paused."
-  );
-  blockers.push(
     "Live Dashboard webhook subscriptions must equal REQUIRED_WEBHOOK_EVENTS (" +
       REQUIRED_WEBHOOK_EVENTS.length +
-      " events). Re-verify in Stripe Dashboard / MCP before arming."
+      " events). Re-verify in Stripe Dashboard / MCP before expanding live routes."
   );
   blockers.push(
     "No irreversible live charge without separate exact-amount owner confirmation."
   );
 
-  if (collection !== "paused" && (!masterOn || !liveFlagOn || keyMode !== "live")) {
+  const ownerArmed =
+    collection === "armed" && masterOn === true && liveFlagOn === true && keyMode === "live";
+
+  if (collection !== "paused" && collection !== "armed") {
     blockers.push(
-      "Collection is not paused while activation prerequisites are incomplete."
+      "Unexpected customer_facing_collection value: " + JSON.stringify(collection)
     );
   }
+  if (collection === "armed" && (!masterOn || !liveFlagOn || keyMode !== "live")) {
+    blockers.push(
+      "Collection is armed while activation prerequisites are incomplete."
+    );
+  }
+  if (!ownerArmed) {
+    blockers.push(
+      "Owner live collection is not fully armed (paused or incomplete flags/key mode)."
+    );
+  }
+
+  // Unsigned webhook must never be accepted. When paused the processor may
+  // return REAL_PAYMENTS_PAUSED; when Owner-armed it must still reject missing
+  // Stripe-Signature (Missing Stripe signature).
+  const unsignedOk =
+    webhook.code === "REAL_PAYMENTS_PAUSED" ||
+    /missing stripe signature/i.test(String(webhook.error || webhook.code || ""));
 
   const report = {
     ok: true,
@@ -134,9 +151,10 @@ async function main() {
       note:
         "Stripe docs: external account status=new means no validation activity yet; blocking statuses are errored / verification_failed / tokenized_account_number_deactivated."
     },
-    stripe_live_activation: "BLOCKED",
+    // Additional live routes stay blocked even when Owner already armed existing collection.
+    stripe_live_activation: ownerArmed ? "OWNER_ARMED_EXISTING" : "BLOCKED",
     live_activation_allowed: false,
-    recommendation: "NO-GO",
+    recommendation: ownerArmed ? "PRESERVE_OWNER_ARMED" : "NO-GO",
     evidence: {
       production_customer_facing_collection: collection,
       production_master_flag: masterOn,
@@ -147,22 +165,24 @@ async function main() {
         status.stripe?.webhook_secret_configured ??
         null,
       unsigned_webhook_response: webhook.code || webhook.error || null,
+      unsigned_webhook_rejected: unsignedOk,
       local_process_env_secret_mode: localMode,
       local_master_enabled: localMaster,
       local_cards_allowed: localArmed,
       production_blockers: status.blockers || []
     },
     blockers,
-    required_owner_action:
-      "Keep collection paused until (1) this webhook-processor branch is on Production, (2) live webhook enabled_events match REQUIRED_WEBHOOK_EVENTS, (3) Test Mode e2e PASS, (4) Owner exact-amount confirmation. Then set HAVKAR_STRIPE_LIVE_ENABLED=true and HAVKAR_REAL_PAYMENTS_ENABLED=true on Vercel Production and redeploy. Do not bypass gates."
+    required_owner_action: ownerArmed
+      ? "Preserve existing Owner-armed live collection. Do not activate additional live payment routes without separate Owner approval. Keep webhook enabled_events aligned with REQUIRED_WEBHOOK_EVENTS and require exact-amount confirmation for new live charges."
+      : "Keep collection paused until (1) live webhook enabled_events match REQUIRED_WEBHOOK_EVENTS, (2) Test Mode e2e PASS, (3) Owner exact-amount confirmation. Then set HAVKAR_STRIPE_LIVE_ENABLED=true and HAVKAR_REAL_PAYMENTS_ENABLED=true on Vercel Production and redeploy. Do not bypass gates."
   };
 
   assert.equal(report.live_activation_allowed, false);
-  assert.equal(collection, "paused");
-  assert.equal(webhook.code, "REAL_PAYMENTS_PAUSED");
+  assert.ok(collection === "paused" || collection === "armed");
+  assert.equal(unsignedOk, true);
   assert.equal(keyMode, "live");
   assert.equal(report.stripe_live_account.bank_status_new_is_blocker, false);
-  assert.ok(blockers.length >= 3);
+  assert.ok(blockers.length >= 2);
 
   console.log(JSON.stringify(report, null, 2));
 }

@@ -1,10 +1,10 @@
 /**
  * End-to-end dry run against Production without charging cards.
- * Confirms collection remains paused and Checkout is not opened.
+ * Accepts Owner-armed OR paused collection. Never opens Checkout.
  */
 import assert from "node:assert/strict";
 
-const base = process.env.HAVKAR_PROD_BASE || "https://havkar-app.vercel.app";
+const base = process.env.HAVKAR_PROD_BASE || "https://havkar.online";
 
 const statusRes = await fetch(`${base}/api/payment-activation-status`, {
   method: "GET"
@@ -12,12 +12,15 @@ const statusRes = await fetch(`${base}/api/payment-activation-status`, {
 assert.equal(statusRes.status, 200);
 const status = await statusRes.json();
 assert.equal(status.ok, true);
-assert.equal(status.customer_facing_collection, "paused");
-assert.equal(status.flags.HAVKAR_REAL_PAYMENTS_ENABLED, false);
-assert.equal(status.flags.HAVKAR_STRIPE_LIVE_ENABLED, false);
+assert.ok(
+  status.customer_facing_collection === "paused" ||
+    status.customer_facing_collection === "armed"
+);
 assert.equal(status.stripe.secret_key_mode, "live");
-assert.equal(status.stripe.live_collection_allowed, false);
-assert.equal(status.stellar_mainnet_collection, "armed");
+assert.ok(
+  status.stellar_mainnet_collection === "armed" ||
+    status.stellar_mainnet_collection === "paused"
+);
 
 const payout = status.stripe.payout_bank?.default_eur || null;
 if (payout) {
@@ -42,8 +45,9 @@ const webhookRes = await fetch(`${base}/api/stripe-webhook`, {
   headers: { "Content-Type": "application/json" },
   body: "{}"
 });
-assert.equal(webhookRes.status, 403);
+assert.ok([400, 403].includes(webhookRes.status));
 const webhookBody = await webhookRes.json();
-assert.equal(webhookBody.code, "REAL_PAYMENTS_PAUSED");
+const webhookCode = String(webhookBody.code || webhookBody.error || "");
+assert.match(webhookCode, /REAL_PAYMENTS_PAUSED|Missing Stripe signature/i);
 
 console.log("STRIPE_CARD_PATH_DRY_RUN_OK");

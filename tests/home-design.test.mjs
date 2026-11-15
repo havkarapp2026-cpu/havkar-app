@@ -88,15 +88,13 @@ assert.match(profile, /havkar_session_is_admin/);
 assert.match(profile, /havkar_session_is_owner/);
 assert.match(profile, /id="userEmail"/);
 assert.match(profile, /onclick="logout\(\)"/);
-assert.match(profile, /button\.hidden = !\(\s*adminAllowed\s*\|\|\s*ownerAllowed\s*\)/);
+assert.match(profile, /button\.hidden = !isAdminOrOwner/);
 
-assert.match(admin, /havkar_session_is_admin/);
-assert.match(admin, /havkar_session_is_owner/);
-assert.match(admin, /admin\.data !== true/);
-assert.match(admin, /Owner access is active\. Administrator records stay separate\./);
-assert.ok(
-  admin.indexOf("Owner access is active") < admin.indexOf("service_commission_entries")
-);
+assert.match(admin, /havkar_owner_dashboard_overview/);
+assert.match(admin, /Owner \/ Admin dashboard/);
+assert.match(admin, /Only the Owner can grant or revoke/);
+assert.match(admin, /role === "owner"/);
+assert.match(admin, /role === "admin"/);
 
 assert.match(assistant, /\/functions\/v1\/havkar-ai-assistant/);
 assert.match(assistant, /supabase\.auth\.getSession/);
