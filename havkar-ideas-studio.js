@@ -121,7 +121,11 @@
 
   async function refreshIdeas() {
     if (!(await ensureAuth())) return;
-    const data = await api("list_ideas");
+    const data = await api("list_ideas", {
+      q: $("ideaSearch") ? $("ideaSearch").value : "",
+      category: $("ideaFilterCategory") ? $("ideaFilterCategory").value : "",
+      status: $("ideaFilterStatus") ? $("ideaFilterStatus").value : ""
+    });
     const list = $("ideasList");
     if (!list) return;
     if (!data.ideas.length) {
@@ -130,6 +134,9 @@
     }
     list.innerHTML = data.ideas
       .map(function (idea) {
+        const editable =
+          idea.status === "draft" || idea.status === "rejected" || idea.status === "withdrawn";
+        const withdrawable = idea.status === "submitted" || idea.status === "in_review";
         return (
           '<article class="idea-card" data-idea-id="' +
           idea.id +
@@ -137,15 +144,32 @@
           escapeHtml(idea.title) +
           '</h3><span class="badge">' +
           escapeHtml(idea.status) +
+          " · " +
+          escapeHtml(idea.category) +
           "</span></header><p>" +
           escapeHtml(idea.description).slice(0, 180) +
-          "</p><footer><button type='button' data-submit-idea='" +
+          "</p><footer style='display:flex;flex-wrap:wrap;gap:6px'>" +
+          "<button type='button' data-edit-idea='" +
           idea.id +
           "' " +
-          (idea.status === "draft" || idea.status === "rejected" || idea.status === "withdrawn"
-            ? ""
-            : "disabled") +
-          ">Submit for review</button></footer></article>"
+          (editable ? "" : "disabled") +
+          ">Edit</button>" +
+          "<button type='button' data-submit-idea='" +
+          idea.id +
+          "' " +
+          (editable ? "" : "disabled") +
+          ">Submit for review</button>" +
+          "<button type='button' data-withdraw-idea='" +
+          idea.id +
+          "' " +
+          (withdrawable ? "" : "disabled") +
+          ">Withdraw</button>" +
+          "<button type='button' data-delete-idea='" +
+          idea.id +
+          "' " +
+          (editable ? "" : "disabled") +
+          ">Delete</button>" +
+          "</footer></article>"
         );
       })
       .join("");
@@ -374,7 +398,7 @@
         ev.preventDefault();
         if (!(await ensureAuth())) return;
         try {
-          await api("save_idea", {
+          const payload = {
             title: $("ideaTitle").value,
             category: $("ideaCategory").value,
             description: $("ideaDescription").value,
@@ -383,14 +407,27 @@
             budget_range: $("ideaBudget").value,
             development_goals: $("ideaGoals").value,
             preferred_business_model: $("ideaModel").value
-          });
+          };
+          if ($("ideaEditId") && $("ideaEditId").value) {
+            payload.id = $("ideaEditId").value;
+          }
+          await api("save_idea", payload);
           ideaForm.reset();
-          setStatus("Private idea draft saved");
+          if ($("ideaEditId")) $("ideaEditId").value = "";
+          setStatus(payload.id ? "Private idea updated" : "Private idea draft saved");
           await refreshIdeas();
           showPanel("ideas");
         } catch (e) {
           setStatus(e.message, true);
         }
+      });
+    }
+
+    if ($("ideaFilterBtn")) {
+      $("ideaFilterBtn").addEventListener("click", function () {
+        refreshIdeas().catch(function (e) {
+          setStatus(e.message, true);
+        });
       });
     }
 
@@ -402,6 +439,50 @@
           await api("submit_idea", { id: t.dataset.submitIdea });
           setStatus("Idea submitted for private review");
           await refreshIdeas();
+        } catch (e) {
+          setStatus(e.message, true);
+        }
+      }
+      if (t.dataset.deleteIdea) {
+        try {
+          if (!window.confirm("Delete this private idea permanently?")) return;
+          await api("delete_idea", { id: t.dataset.deleteIdea });
+          setStatus("Idea deleted");
+          await refreshIdeas();
+        } catch (e) {
+          setStatus(e.message, true);
+        }
+      }
+      if (t.dataset.withdrawIdea) {
+        try {
+          await api("withdraw_idea", { id: t.dataset.withdrawIdea });
+          setStatus("Idea withdrawn");
+          await refreshIdeas();
+        } catch (e) {
+          setStatus(e.message, true);
+        }
+      }
+      if (t.dataset.editIdea) {
+        try {
+          const data = await api("list_ideas", {});
+          const idea = (data.ideas || []).find(function (row) {
+            return row.id === t.dataset.editIdea;
+          });
+          if (!idea) {
+            setStatus("Idea not found", true);
+            return;
+          }
+          if ($("ideaEditId")) $("ideaEditId").value = idea.id;
+          if ($("ideaTitle")) $("ideaTitle").value = idea.title || "";
+          if ($("ideaCategory")) $("ideaCategory").value = idea.category || "other";
+          if ($("ideaDescription")) $("ideaDescription").value = idea.description || "";
+          if ($("ideaAudience")) $("ideaAudience").value = idea.intended_audience || "";
+          if ($("ideaCountry")) $("ideaCountry").value = idea.country_code || "";
+          if ($("ideaBudget")) $("ideaBudget").value = idea.budget_range || "";
+          if ($("ideaGoals")) $("ideaGoals").value = idea.development_goals || "";
+          if ($("ideaModel")) $("ideaModel").value = idea.preferred_business_model || "";
+          showPanel("ideas");
+          setStatus("Editing idea draft — save to update");
         } catch (e) {
           setStatus(e.message, true);
         }

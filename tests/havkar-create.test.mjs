@@ -45,6 +45,15 @@ assert.match(home, /havkar-ai\.html/);
 const ai = fs.readFileSync("havkar-ai.html", "utf8");
 assert.match(ai, /ideas-studio\.html/);
 assert.match(ai, /HAVKAR CREATE/);
+assert.match(ai, /data-create-entry="persistent"/);
+assert.match(ai, /data-create-entry="nav"/);
+assert.match(ai, /create-persistent/);
+assert.match(ai, /Persistent CREATE entry/);
+const hideBlock = ai.match(
+  /body\.chat-active:not\(\.intro-open\)[\s\S]{0,280}?\.tips \{ display: none !important; \}/
+);
+assert.ok(hideBlock, "chat-active hide rule present");
+assert.doesNotMatch(hideBlock[0], /create-persistent/);
 
 const profile = fs.readFileSync("profile.html", "utf8");
 assert.match(profile, /ideas-studio\.html/);

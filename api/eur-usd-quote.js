@@ -40,6 +40,8 @@ function isIdeasStudioRequest(req) {
     action.startsWith("ideas_") ||
     action.startsWith("list_ideas") ||
     action.startsWith("save_idea") ||
+    action.startsWith("delete_idea") ||
+    action.startsWith("withdraw_idea") ||
     action.startsWith("submit_idea") ||
     action.startsWith("review_idea") ||
     action.startsWith("create_venture") ||
