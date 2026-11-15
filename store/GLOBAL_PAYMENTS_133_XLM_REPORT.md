@@ -85,15 +85,18 @@ See CI / local `node --test` run in the PR notes. Live card charges and Mainnet 
 
 ## G. CI
 
-Recorded in PR after push.
+Local payment suite: **PASS** (12/12 + stellar regression). GitHub CI on PR #196: **pending** (subscribed).
 
 ## H. Commit SHA / PR
 
-Filled after push.
+- Commit: `2b6b2618ae626b9750a01fd14dcb76d984faeca5`
+- Branch: `cursor/global-133-currencies-xlm-d4b2`
+- PR: https://github.com/havkarapp2026-cpu/havkar-app/pull/196 (#196)
+- Base: `main`
 
 ## I. Production deployment status
 
-Safe to deploy **catalog + quote + gated orchestration** only. Must not change live payment flags.
+**NOT deployed to production** in this turn. Catalog/quote is safe to merge; live payment flags unchanged. Production promotion requires Owner approval.
 
 ## J. Features requiring Owner approval before live activation
 
