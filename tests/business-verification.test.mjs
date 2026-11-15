@@ -42,7 +42,7 @@ test("business verification migration and UI wiring stay private and anti-self-r
     "utf8"
   );
   const profile = fs.readFileSync(path.join(root, "profile.html"), "utf8");
-  const admin = fs.readFileSync(path.join(root, "admin.html"), "utf8");
+  const review = fs.readFileSync(path.join(root, "verification-review.html"), "utf8");
 
   assert.match(migration, /business-evidence/);
   assert.match(migration, /public\.review_business_application/);
@@ -52,6 +52,7 @@ test("business verification migration and UI wiring stay private and anti-self-r
   assert.doesNotMatch(migration, /public,\s*true/);
   assert.match(profile, /havkar-business-verification\.js/);
   assert.match(profile, /uploadBusinessEvidence/);
-  assert.match(admin, /review_business_application/);
-  assert.match(admin, /Self-review is blocked/);
+  assert.match(review, /review_business_application/);
+  assert.match(review, /Self-review is blocked/);
+  assert.match(review, /havkar-business-verification\.js/);
 });

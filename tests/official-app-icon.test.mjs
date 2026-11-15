@@ -72,6 +72,9 @@ for (const file of fs.readdirSync(root).filter((name) => name.endsWith(".html"))
 
 const worker = read("sw.js").toString("utf8");
 assert.equal(worker.includes("icon.png"), false);
-assert.equal(worker.includes("caches"), false);
+// Activate may delete stale havkar-* Cache Storage keys; do not offline-cache pages.
+assert.match(worker, /caches\.delete/);
+assert.doesNotMatch(worker, /caches\.open\s*\(/);
+assert.doesNotMatch(worker, /caches\.match\s*\(/);
 
 console.log("OFFICIAL_APP_ICON_TEST_OK");

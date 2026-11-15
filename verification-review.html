@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/havkar-icon-32-20261022-v3.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/havkar-icon-16-20261022-v3.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/havkar-icon-180-20261022-v3.png">
+
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>HAVKAR Verification Review</title>
@@ -31,10 +36,16 @@
     <div class="badge-preview"><span class="havkar-badge company" title="Verified Company / Factory"><span class="icon" aria-hidden="true"></span><span>Verified Company / Factory</span></span></div>
     <p class="note">These marks mean identity/registration verification — not ratings, popularity, or paid subscriptions.</p>
   </section>
+  <section class="card">
+    <h2>Business applications</h2>
+    <p class="note">Independent staff review only. Self-review is blocked by the database RPC.</p>
+    <div id="businessReview"></div>
+  </section>
   <div id="cases"></div>
   <p><a href="/admin.html">Owner Control</a> · <a href="/staff.html">Staff</a></p>
 </main>
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-business-verification.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function () {
@@ -44,6 +55,8 @@
   });
   var message = document.getElementById("message");
   var casesRoot = document.getElementById("cases");
+  var businessRoot = document.getElementById("businessReview");
+  var sessionUser = null;
 
   async function reviewCase(id, decision) {
     var notes = window.prompt("Review notes (optional)", "") || "";
@@ -54,6 +67,102 @@
     });
     if (res.error) throw new Error(res.error.message);
     return res.data;
+  }
+
+  async function loadBusinessApplications() {
+    if (!businessRoot) return;
+    businessRoot.innerHTML = "";
+    var pendingBusiness = await db
+      .from("business_applications")
+      .select("id,business_name,legal_name,vat_number,address,country,city,status,email,user_id,submitted_at")
+      .in("status", ["pending", "under_review", "needs_more_info"])
+      .order("submitted_at", { ascending: false })
+      .limit(50);
+
+    if (pendingBusiness.error) {
+      businessRoot.textContent =
+        "Business verification queue unavailable until the verification migration is applied.";
+      return;
+    }
+    if (!pendingBusiness.data || !pendingBusiness.data.length) {
+      businessRoot.textContent = "No business applications awaiting review.";
+      return;
+    }
+
+    for (var i = 0; i < pendingBusiness.data.length; i += 1) {
+      var row = pendingBusiness.data[i];
+      var card = document.createElement("article");
+      card.className = "card";
+      var missingRpc = await db.rpc("business_application_missing_documents", {
+        p_application_id: Number(row.id)
+      });
+      var missing = missingRpc.error
+        ? ["(could not load missing list)"]
+        : (missingRpc.data || []);
+      var labels = window.HAVKAR_BUSINESS_VERIFICATION
+        ? missing.map(window.HAVKAR_BUSINESS_VERIFICATION.labelFor)
+        : missing;
+      var docs = await db
+        .from("business_application_documents")
+        .select("doc_type,original_filename,mime_type,created_at")
+        .eq("application_id", Number(row.id))
+        .order("created_at", { ascending: false });
+      var latest = {};
+      (docs.data || []).forEach(function (doc) {
+        if (!latest[doc.doc_type]) latest[doc.doc_type] = doc;
+      });
+      var uploaded = Object.keys(latest).map(function (type) {
+        var doc = latest[type];
+        var label = window.HAVKAR_BUSINESS_VERIFICATION
+          ? window.HAVKAR_BUSINESS_VERIFICATION.labelFor(type)
+          : type;
+        return label + " — " + (doc.original_filename || "stored") +
+          (doc.mime_type ? (" [" + doc.mime_type + "]") : "");
+      });
+      card.innerHTML =
+        "<p><strong>#" + row.id + " · " + (row.business_name || "Untitled") + "</strong></p>" +
+        "<p>Status: " + (row.status || "") + "</p>" +
+        "<p>Legal name: " + (row.legal_name || "(missing)") + "</p>" +
+        "<p>VAT: " + (row.vat_number || "(missing)") + "</p>" +
+        "<p>Address: " + (row.address || "(missing)") + " · " + (row.city || "") + ", " + (row.country || "") + "</p>" +
+        "<p>Uploaded documents: " + (uploaded.length ? uploaded.join("; ") : "none") + "</p>" +
+        "<p>Missing required documents: " + (labels.length ? labels.join("; ") : "none") + "</p>";
+      if (sessionUser && row.user_id === sessionUser.id) {
+        var note = document.createElement("p");
+        note.className = "note";
+        note.textContent =
+          "Self-review is blocked. An independent administrator must decide this application.";
+        card.appendChild(note);
+      } else {
+        ["mark_under_review", "request_more_info", "approve", "reject"].forEach(function (decision) {
+          var button = document.createElement("button");
+          button.type = "button";
+          button.textContent = decision.replace(/_/g, " ");
+          if (decision === "reject") button.className = "reject";
+          button.addEventListener("click", async function () {
+            var notes = window.prompt(
+              "Review notes (required for reject / request more info):",
+              ""
+            ) || "";
+            var result = await db.rpc("review_business_application", {
+              p_application_id: Number(row.id),
+              p_decision: decision,
+              p_notes: notes
+            });
+            message.className = result.error ? "err" : "note";
+            message.textContent = result.error
+              ? result.error.message
+              : ("Business application #" + row.id + " → " +
+                (result.data && result.data.status));
+            if (!result.error) {
+              await loadBusinessApplications();
+            }
+          });
+          card.appendChild(button);
+        });
+      }
+      businessRoot.appendChild(card);
+    }
   }
 
   async function loadCases() {
@@ -105,7 +214,9 @@
         "/login.html?next=" + encodeURIComponent("/verification-review.html");
       return;
     }
+    sessionUser = result.data.session.user;
     try {
+      await loadBusinessApplications();
       await loadCases();
     } catch (err) {
       message.className = "err";
