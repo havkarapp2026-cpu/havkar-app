@@ -20,6 +20,8 @@ assert.ok(source.includes("kmr: Object.freeze({"));
 assert.ok(source.includes("sv: Object.freeze({"));
 assert.ok(source.includes("homepageGlossary(targetLanguage)"));
 assert.ok(source.includes("marketplaceGlossary(targetLanguage)"));
+assert.ok(source.includes("messagingGlossary(targetLanguage)"));
+assert.ok(source.includes("MESSAGING_GLOSSARY"));
 assert.ok(source.includes("applyHomepageGlossary"));
 assert.ok(!source.includes('"Services": "Fibre"'));
 

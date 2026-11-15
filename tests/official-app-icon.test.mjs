@@ -72,6 +72,8 @@ for (const file of fs.readdirSync(root).filter((name) => name.endsWith(".html"))
 
 const worker = read("sw.js").toString("utf8");
 assert.equal(worker.includes("icon.png"), false);
+assert.match(worker, /\/assets\/icons\/havkar-icon-192-20261022-v3\.png/);
+assert.doesNotMatch(worker, /\/icons\/icon-192\.png/);
 // Activate may delete stale havkar-* Cache Storage keys; do not offline-cache pages.
 assert.match(worker, /caches\.delete/);
 assert.doesNotMatch(worker, /caches\.open\s*\(/);

@@ -55,8 +55,8 @@ self.addEventListener("push", function (event) {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
+      icon: "/assets/icons/havkar-icon-192-20261022-v3.png",
+      badge: "/assets/icons/havkar-icon-192-20261022-v3.png",
       vibrate: [120, 60, 120],
       data: { url: data.url },
       renotify: true,

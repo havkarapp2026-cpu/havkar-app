@@ -1386,6 +1386,59 @@
     });
 
 
+    const MESSAGING_GLOSSARY = Object.freeze({
+        it: Object.freeze({
+            "Auto Translate": "Traduzione automatica",
+            "Auto Translate: Off": "Traduzione automatica: Off",
+            "Auto Translate: On": "Traduzione automatica: On",
+            "Block user": "Blocca utente",
+            "No notifications": "Nessuna notifica"
+        }),
+        de: Object.freeze({
+            "Auto Translate": "Automatische Übersetzung",
+            "Auto Translate: Off": "Automatische Übersetzung: Aus",
+            "Auto Translate: On": "Automatische Übersetzung: An",
+            "Block user": "Benutzer blockieren",
+            "No notifications": "Keine Benachrichtigungen"
+        }),
+        fa: Object.freeze({
+            "Auto Translate": "ترجمه خودکار",
+            "Auto Translate: Off": "ترجمه خودکار: خاموش",
+            "Auto Translate: On": "ترجمه خودکار: روشن",
+            "Block user": "مسدود کردن کاربر",
+            "No notifications": "اعلانی نیست"
+        }),
+        ar: Object.freeze({
+            "Auto Translate": "ترجمة تلقائية",
+            "Auto Translate: Off": "ترجمة تلقائية: إيقاف",
+            "Auto Translate: On": "ترجمة تلقائية: تشغيل",
+            "Block user": "حظر المستخدم",
+            "No notifications": "لا إشعارات"
+        }),
+        ckb: Object.freeze({
+            "Auto Translate": "وەرگێڕانی خۆکار",
+            "Auto Translate: Off": "وەرگێڕانی خۆکار: ناکارا",
+            "Auto Translate: On": "وەرگێڕانی خۆکار: کارا",
+            "Block user": "بلۆککردنی بەکارهێنەر",
+            "No notifications": "ئاگادارکردنەوە نییە"
+        }),
+        kmr: Object.freeze({
+            "Auto Translate": "Wergera otomatîk",
+            "Auto Translate: Off": "Wergera otomatîk: Girtî",
+            "Auto Translate: On": "Wergera otomatîk: Vekirî",
+            "Block user": "Bikarhênerê asteng bike",
+            "No notifications": "Agahdarî tune"
+        }),
+        sv: Object.freeze({
+            "Auto Translate": "Automatisk översättning",
+            "Auto Translate: Off": "Automatisk översättning: Av",
+            "Auto Translate: On": "Automatisk översättning: På",
+            "Block user": "Blockera användare",
+            "No notifications": "Inga aviseringar"
+        })
+    });
+
+
     function homepageGlossary(
         language
     ) {
@@ -1406,6 +1459,16 @@
     }
 
 
+    function messagingGlossary(
+        language
+    ) {
+
+        return MESSAGING_GLOSSARY[
+            language
+        ] || null;
+    }
+
+
     function applyHomepageGlossary(
         root
     ) {
@@ -1420,6 +1483,9 @@
                     language
                 ) || {},
                 marketplaceGlossary(
+                    language
+                ) || {},
+                messagingGlossary(
                     language
                 ) || {}
             );
@@ -1704,7 +1770,8 @@
                 const glossary = Object.assign(
                     {},
                     homepageGlossary(targetLanguage) || {},
-                    marketplaceGlossary(targetLanguage) || {}
+                    marketplaceGlossary(targetLanguage) || {},
+                    messagingGlossary(targetLanguage) || {}
                 );
                 const uiDictionary =
                     typeof window !== "undefined" &&
