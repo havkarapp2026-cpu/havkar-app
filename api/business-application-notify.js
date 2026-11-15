@@ -1,9 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
-import { createRequire } from "module";
 import {
     createSupportRequestHandler,
     isSupportRequest
 } from "../lib/support-request.cjs";
+import { handleIdeasStudioRequest } from "../lib/ideas-studio-api.mjs";
 
 function isIdeasStudioRequest(req) {
     const q = req.query || {};
@@ -171,10 +171,6 @@ export function createBusinessNotificationHandler({
 
         if (isIdeasStudioRequest(req)) {
             try {
-                const requireCjs = createRequire(import.meta.url);
-                const { handleIdeasStudioRequest } = requireCjs(
-                    "../lib/ideas-studio-api.cjs"
-                );
                 return await handleIdeasStudioRequest(req, res);
             } catch (error) {
                 console.error(
