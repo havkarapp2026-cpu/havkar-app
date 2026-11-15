@@ -51,7 +51,11 @@
   function setStatus(message, isError) {
     const node = $("studioStatus");
     if (!node) return;
-    node.textContent = String(message || "");
+    var text = message;
+    if (text && typeof text === "object") {
+      text = text.message || text.error || JSON.stringify(text);
+    }
+    node.textContent = String(text || "");
     node.dataset.tone = isError ? "error" : "ok";
   }
 
