@@ -1725,17 +1725,17 @@ export default async function handler(req, res) {
       }
       if (action === "omio_search") {
         const { searchOmioJourneys } = require("../lib/omio-adapter.cjs");
-        const out = await searchOmioJourneys(body || {}, process.env);
+        const out = await searchOmioJourneys(req.body || {}, process.env);
         return res.status(out.ok ? 200 : 409).json(out);
       }
       if (action === "omio_booking_create") {
         const { createOmioBooking } = require("../lib/omio-adapter.cjs");
-        const out = await createOmioBooking(body || {}, process.env);
+        const out = await createOmioBooking(req.body || {}, process.env);
         return res.status(out.ok ? 200 : 409).json(out);
       }
       if (action === "omio_booking_cancel") {
         const { cancelOmioBooking } = require("../lib/omio-adapter.cjs");
-        const out = await cancelOmioBooking(body || {}, process.env);
+        const out = await cancelOmioBooking(req.body || {}, process.env);
         return res.status(out.ok ? 200 : 409).json(out);
       }
       return res.status(200).json({
