@@ -39,16 +39,26 @@ a{color:var(--g);font-weight:700}
   <div class="card">
     <label for="displayName">Professional / business display name</label>
     <input id="displayName" type="text" maxlength="200" required>
+    <label for="orgLegal">Organization legal name (if company/clinic)</label>
+    <input id="orgLegal" type="text" maxlength="200">
+    <label for="bizReg">Business registration / REA / company ID</label>
+    <input id="bizReg" type="text" maxlength="120">
     <label for="category">Category</label>
     <select id="category"></select>
     <label for="country">Country code</label>
     <input id="country" type="text" maxlength="2" placeholder="IT">
+    <label for="region">Region / province</label>
+    <input id="region" type="text" maxlength="120">
     <label for="city">City</label>
     <input id="city" type="text" maxlength="120">
-    <label for="license">License number</label>
+    <label for="address">Address</label>
+    <input id="address" type="text" maxlength="300">
+    <label for="license">License / credential number</label>
     <input id="license" type="text" maxlength="120">
     <label for="jurisdiction">License jurisdiction</label>
     <input id="jurisdiction" type="text" maxlength="120" placeholder="Italy / Ordine…">
+    <label for="licenseFile">Credential document (PDF/JPG/PNG, private)</label>
+    <input id="licenseFile" type="file" accept="application/pdf,image/jpeg,image/png,image/webp">
     <label for="languages">Languages (comma-separated codes)</label>
     <input id="languages" type="text" placeholder="en, fa, it">
     <label for="specialties">Specialties (comma-separated)</label>
@@ -75,6 +85,10 @@ a{color:var(--g);font-weight:700}
 
   function setStatus(t) { statusEl.textContent = t || ""; }
 
+  var preselect = new URLSearchParams(location.search).get("category") || "";
+  var I18N = window.HAVKAR_HEALTH_I18N;
+  if (I18N) I18N.apply(document.body);
+
   fetch("/api/health", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -84,7 +98,9 @@ a{color:var(--g);font-weight:700}
       if (c.id === "medicine_info") return;
       var opt = document.createElement("option");
       opt.value = c.id;
-      opt.textContent = c.label + (c.subscription_required === false ? " (no mandatory fee)" : "");
+      var label = I18N && I18N.categoryLabel ? I18N.categoryLabel(c.id, c.label) : c.label;
+      opt.textContent = label + (c.subscription_required === false ? " (no mandatory fee)" : "");
+      if (preselect && preselect === c.id) opt.selected = true;
       catSel.appendChild(opt);
     });
   }).catch(function () { setStatus("Catalog unavailable"); });
@@ -93,10 +109,10 @@ a{color:var(--g);font-weight:700}
     setStatus("Submitting…");
     try {
       var cfg = window.HAVKAR_SUPABASE_CONFIG || {};
-    var key = cfg.publishableKey || cfg.anonKey;
-    var client = window.supabase && cfg.url && key
-      ? window.supabase.createClient(cfg.url, key)
-      : null;
+      var key = cfg.publishableKey || cfg.anonKey;
+      var client = window.supabase && cfg.url && key
+        ? window.supabase.createClient(cfg.url, key)
+        : null;
       if (!client) {
         setStatus("Sign in required. Open login, then return here.");
         return;
@@ -104,8 +120,23 @@ a{color:var(--g);font-weight:700}
       var session = (await client.auth.getSession()).data.session;
       if (!session) {
         setStatus("Sign in required before provider registration.");
-        location.href = "login.html?next=health-provider-apply.html";
+        location.href = "login.html?next=" + encodeURIComponent(location.pathname + location.search);
         return;
+      }
+      var licenseDocumentPath = null;
+      var fileInput = document.getElementById("licenseFile");
+      var file = fileInput && fileInput.files && fileInput.files[0];
+      if (file) {
+        var path = session.user.id + "/" + Date.now() + "-" + file.name.replace(/[^\w.\-]+/g, "_");
+        var up = await client.storage.from("health-evidence").upload(path, file, {
+          upsert: false,
+          contentType: file.type || "application/octet-stream"
+        });
+        if (up.error) {
+          setStatus("Credential upload failed: " + up.error.message + ". You can still submit text license details.");
+        } else {
+          licenseDocumentPath = path;
+        }
       }
       var res = await fetch("/api/health", {
         method: "POST",
@@ -116,11 +147,16 @@ a{color:var(--g);font-weight:700}
         body: JSON.stringify({
           action: "health_provider_register",
           display_name: document.getElementById("displayName").value,
+          organization_legal_name: document.getElementById("orgLegal").value,
+          business_registration_id: document.getElementById("bizReg").value,
           category_id: catSel.value,
           country_code: document.getElementById("country").value,
+          region: document.getElementById("region").value,
           city: document.getElementById("city").value,
+          address: document.getElementById("address").value,
           license_number: document.getElementById("license").value,
           license_jurisdiction: document.getElementById("jurisdiction").value,
+          license_document_path: licenseDocumentPath,
           languages: document.getElementById("languages").value.split(",").map(function (s) { return s.trim(); }).filter(Boolean),
           specialties: document.getElementById("specialties").value.split(",").map(function (s) { return s.trim(); }).filter(Boolean),
           bio: document.getElementById("bio").value
