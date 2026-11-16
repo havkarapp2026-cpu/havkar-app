@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/havkar-icon-32-20261022-v3.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/havkar-icon-180-20261022-v3.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1b5e20">
+<title>HAVKAR | Doctors &amp; Pharmacies</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+:root{--g:#1b5e20;--g2:#2e7d32;--g3:#66bb6a;--bg:#eef6f0;--card:#fff;--text:#123;--muted:#567;--warn:#8a4b08}
+*{box-sizing:border-box}
+body{margin:0;font-family:Georgia,"Iowan Old Style","Palatino Linotype",serif;background:radial-gradient(1200px 600px at 10% -10%,#dcedc8 0%,transparent 55%),linear-gradient(180deg,#f4faf5,#e6f0e8 45%,#dfe8e1);color:var(--text);min-height:100vh;padding-bottom:84px}
+header{background:linear-gradient(135deg,var(--g),var(--g2) 55%,#388e3c);color:#fff;padding:calc(14px + env(safe-area-inset-top)) 16px 16px;box-shadow:0 10px 28px rgba(27,94,32,.22)}
+.header-inner{max-width:1100px;margin:0 auto;display:flex;gap:12px;align-items:center}
+.back{width:42px;height:42px;border:0;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;cursor:pointer}
+h1{margin:0;font-size:1.35rem}
+.subtitle{margin:4px 0 0;opacity:.95;font-size:.92rem;line-height:1.35}
+main{max-width:1100px;margin:0 auto;padding:14px 16px}
+.notice{background:linear-gradient(180deg,#fff,#f7fcf7);border:1px solid #cfe0d3;border-radius:14px;padding:12px 14px;color:var(--muted);line-height:1.45;margin-bottom:12px}
+.notice strong{color:var(--g)}
+.search-panel{background:var(--card);border-radius:16px;padding:14px;box-shadow:0 10px 28px rgba(27,94,32,.08);border:1px solid #d7e6db}
+label{display:block;font-size:13px;margin:8px 0 4px;color:#456}
+input,select,button{font:inherit}
+input[type=search],input[type=text],select{width:100%;min-height:44px;border:1px solid #cfd;border-radius:10px;padding:0 10px;background:#fff}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:700px){.grid2{grid-template-columns:1fr}}
+#map{height:min(42vh,340px);min-height:220px;border-radius:12px;margin-top:10px;border:1px solid #d7e6db}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.toolbar button,.primary,.secondary{min-height:42px;border-radius:10px;padding:0 12px;font-weight:700;cursor:pointer}
+.toolbar button,.secondary{border:1px solid var(--g);background:#fff;color:var(--g)}
+.primary{border:0;background:var(--g);color:#fff;width:100%;margin-top:10px}
+.cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin:14px 0}
+.cat{border:1px solid #d7e6db;border-radius:14px;background:linear-gradient(180deg,#fff,#f4faf5);padding:12px;text-align:left;cursor:pointer;min-height:88px}
+.cat.active{outline:2px solid var(--g);background:#e8f5e9}
+.cat small{display:block;margin-top:6px;color:var(--muted);font-size:12px}
+.badge{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:3px 8px;margin-top:6px}
+.badge.reg{background:#e8f5e9;color:var(--g)}
+.badge.free{background:#e3f2fd;color:#1565c0}
+.badge.warn{background:#fff8e1;color:var(--warn)}
+#results{display:grid;gap:10px;margin-top:12px}
+.card{background:#fff;border:1px solid #d7e6db;border-radius:14px;padding:12px;box-shadow:0 6px 18px rgba(0,0,0,.05)}
+.card h2{margin:0 0 6px;font-size:1.05rem;color:var(--g)}
+.empty{background:#f4faf5;border:1px dashed #9ccc65;border-radius:12px;padding:14px;color:#345;line-height:1.45}
+.links{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}
+.links a{color:var(--g);font-weight:700}
+nav.bottom{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #d7e6db;display:flex;justify-content:space-around;padding:10px 8px calc(10px + env(safe-area-inset-bottom));z-index:30}
+nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:700;text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <button class="back" type="button" id="backButton" aria-label="Back"><i class="fas fa-arrow-left"></i></button>
+    <div>
+      <h1>Doctors &amp; Pharmacies</h1>
+      <p class="subtitle">Global healthcare discovery. Patients use HAVKAR for free. No invented providers.</p>
+    </div>
+  </div>
+</header>
+<main>
+  <p class="notice" id="platformNotice">
+    <strong>Platform role:</strong> HAVKAR connects patients with independent licensed professionals. HAVKAR does not provide medical treatment, diagnosis, prescriptions or emergency care. For emergencies, contact local emergency services.
+  </p>
+
+  <section class="search-panel" aria-label="Health search">
+    <div class="grid2">
+      <div>
+        <label for="qInput">Specialty / treatment / procedure</label>
+        <input id="qInput" type="search" placeholder="Cardiology, MRI, pharmacy…" autocomplete="off">
+      </div>
+      <div>
+        <label for="langFilter">Provider language</label>
+        <select id="langFilter">
+          <option value="">Any language</option>
+          <option value="en">English</option>
+          <option value="fa">Persian</option>
+          <option value="it">Italian</option>
+          <option value="sv">Swedish</option>
+          <option value="ar">Arabic</option>
+          <option value="ckb">Sorani Kurdish</option>
+          <option value="kmr">Kurmanji Kurdish</option>
+        </select>
+      </div>
+      <div>
+        <label for="countryInput">Country</label>
+        <input id="countryInput" type="text" placeholder="IT, SE, IR…" maxlength="2">
+      </div>
+      <div>
+        <label for="regionInput">Region / province</label>
+        <input id="regionInput" type="search" placeholder="Lazio, Skåne…" autocomplete="off">
+      </div>
+      <div>
+        <label for="cityInput">City</label>
+        <input id="cityInput" type="search" placeholder="Rome, Stockholm…" autocomplete="off">
+      </div>
+      <div>
+        <label for="distanceInput">Distance km (with GPS)</label>
+        <input id="distanceInput" type="number" min="1" max="500" value="50">
+      </div>
+      <div>
+        <label for="groupFilter">Category group</label>
+        <select id="groupFilter">
+          <option value="">All groups</option>
+          <option value="doctors">Doctors</option>
+          <option value="pharmacy">Pharmacies</option>
+          <option value="facilities">Hospitals &amp; clinics</option>
+          <option value="diagnostics">Labs &amp; imaging</option>
+          <option value="care">Rehab / mental health / addiction</option>
+          <option value="herbal">Herbal</option>
+          <option value="travel">Medical travel</option>
+        </select>
+      </div>
+    </div>
+    <div id="map" role="application" aria-label="Health providers map"></div>
+    <div class="toolbar">
+      <button type="button" id="gpsBtn">Use my location</button>
+      <button type="button" id="verifiedOnlyBtn" aria-pressed="false">Verified only</button>
+      <button type="button" id="insuranceBtn" aria-pressed="false">Insurance listed</button>
+      <button type="button" id="accessBtn" aria-pressed="false">Accessibility notes</button>
+      <button type="button" id="slotsBtn" aria-pressed="false">Open slots</button>
+      <button type="button" id="clearCatBtn">All categories</button>
+    </div>
+    <p id="geoLabel" class="notice" style="margin-top:10px;margin-bottom:0">Map stays available with an honest empty state when no verified providers are published.</p>
+    <button class="primary" type="button" id="searchBtn">Search providers</button>
+    <p id="status" role="status"></p>
+  </section>
+
+  <h2 style="margin:16px 0 8px;color:var(--g);font-size:1.1rem">Categories</h2>
+  <div class="cats" id="categoryGrid" aria-label="Health categories"></div>
+
+  <div id="results" aria-live="polite"></div>
+  <div id="empty" class="empty">
+    <strong>No published health providers match this search.</strong>
+    HAVKAR never invents doctors, pharmacies, prices or availability. Licensed professionals can register for verification.
+  </div>
+
+  <div class="links">
+    <a href="health-provider-apply.html">Register as a doctor or pharmacy</a>
+    <a href="health-dashboard.html">Provider dashboard</a>
+    <a href="health-medicine.html">Medicine encyclopedia</a>
+    <a href="health-herbal.html">Herbal directory</a>
+    <a href="health-travel.html">International medical travel</a>
+    <a href="health-rankings.html">Professional rankings</a>
+    <a href="reviews.html?mine=1">My Reviews</a>
+    <a href="index.html">Home</a>
+  </div>
+</main>
+<nav class="bottom" aria-label="Health">
+  <a href="index.html">Home</a>
+  <a href="health.html">Directory</a>
+  <a href="health-medicine.html">Medicines</a>
+  <a href="health-dashboard.html">Dashboard</a>
+</nav>
+<script src="/havkar-map.js"></script>
+<script src="/havkar-premium-i18n.js"></script>
+<script src="/havkar-i18n.js"></script>
+<script src="/havkar-page-back.js"></script>
+<script>
+(function () {
+  var selectedCategory = "";
+  var verifiedOnly = false;
+  var insuranceOnly = false;
+  var accessOnly = false;
+  var openSlotsOnly = false;
+  var mapApi = null;
+  var categories = [];
+  var statusEl = document.getElementById("status");
+  var resultsEl = document.getElementById("results");
+  var emptyEl = document.getElementById("empty");
+
+  function setStatus(t) { statusEl.textContent = t || ""; }
+
+  function renderCategories() {
+    var grid = document.getElementById("categoryGrid");
+    grid.innerHTML = "";
+    categories.forEach(function (c) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "cat" + (selectedCategory === c.id ? " active" : "");
+      btn.innerHTML = "<strong></strong><small></small><span class=\"badge\"></span>";
+      btn.querySelector("strong").textContent = c.label;
+      btn.querySelector("small").textContent = c.group + (c.regulated ? " · regulated" : " · not a licensed clinician label");
+      var badge = btn.querySelector(".badge");
+      if (c.subscription_required === false) {
+        badge.className = "badge free";
+        badge.textContent = "No mandatory monthly fee";
+      } else if (c.regulated) {
+        badge.className = "badge reg";
+        badge.textContent = "License verification required";
+      } else {
+        badge.className = "badge warn";
+        badge.textContent = "Not labeled as verified doctor/pharmacy";
+      }
+      btn.addEventListener("click", function () {
+        selectedCategory = selectedCategory === c.id ? "" : c.id;
+        renderCategories();
+        runSearch();
+      });
+      grid.appendChild(btn);
+    });
+  }
+
+  function renderProviders(rows) {
+    resultsEl.innerHTML = "";
+    if (!rows || !rows.length) {
+      emptyEl.hidden = false;
+      return;
+    }
+    emptyEl.hidden = true;
+    rows.forEach(function (row) {
+      var card = document.createElement("article");
+      card.className = "card";
+      var verified = row.license_status === "verified";
+      card.innerHTML =
+        "<h2></h2><p></p><p class=\"notice\" style=\"margin:0\"></p>" +
+        "<span class=\"badge\"></span> " +
+        "<a class=\"secondary\" style=\"display:inline-flex;align-items:center;margin-top:8px;text-decoration:none;padding:8px 12px\" href=\"#\"></a>";
+      card.querySelector("h2").textContent = row.display_name || "Provider";
+      card.querySelector("p").textContent =
+        [row.category_id, row.city, row.country_code].filter(Boolean).join(" · ");
+      card.querySelector(".notice").textContent =
+        verified
+          ? "License status: verified for the stated jurisdiction."
+          : "License status: unverified — not presented as a verified doctor/pharmacy.";
+      var b = card.querySelector(".badge");
+      b.className = "badge " + (verified ? "reg" : "warn");
+      b.textContent = verified ? "Verified license" : "Unverified";
+      var link = card.querySelector("a");
+      if (row.latitude != null && row.longitude != null) {
+        link.href =
+          "https://www.openstreetmap.org/directions?from=&to=" +
+          encodeURIComponent(row.latitude + "," + row.longitude);
+        link.textContent = "Directions";
+        link.target = "_blank";
+        link.rel = "noopener";
+        if (mapApi && mapApi.addPricePin) {
+          mapApi.addPricePin(
+            row.latitude,
+            row.longitude,
+            (row.display_name || "Provider") + (verified ? " · verified" : " · unverified")
+          );
+        }
+      } else {
+        link.href = "health-provider.html?id=" + encodeURIComponent(row.id || "");
+        link.textContent = "Open profile";
+      }
+      resultsEl.appendChild(card);
+    });
+  }
+
+  async function loadCatalog() {
+    var res = await fetch("/api/health", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "health_catalog" })
+    });
+    var body = await res.json();
+    if (!body || body.ok !== true) {
+      setStatus((body && body.error) || "Health catalog unavailable");
+      return;
+    }
+    categories = body.categories || [];
+    if (body.platform_role && body.platform_role.en) {
+      document.getElementById("platformNotice").innerHTML =
+        "<strong>Platform role:</strong> " + body.platform_role.en;
+    }
+    renderCategories();
+    setStatus(
+      "Patients: free. Doctor/pharmacy subscription billing: " +
+        (body.subscriptions && body.subscriptions.live_billing_enabled ? "flag ON" : "OFF (proposed catalog only)") +
+        "."
+    );
+  }
+
+  async function runSearch() {
+    setStatus("Searching published providers…");
+    try {
+      var res = await fetch("/api/health", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "health_search",
+          q: document.getElementById("qInput").value,
+          city: document.getElementById("cityInput").value,
+          region: document.getElementById("regionInput").value,
+          country_code: document.getElementById("countryInput").value,
+          language: document.getElementById("langFilter").value,
+          category_id: selectedCategory,
+          category_group: document.getElementById("groupFilter").value,
+          verified_only: verifiedOnly,
+          accepts_insurance: insuranceOnly,
+          accessibility_required: accessOnly,
+          has_open_slots: openSlotsOnly,
+          distance_km: document.getElementById("distanceInput").value,
+          latitude: mapApi && mapApi.marker ? mapApi.marker.getLatLng().lat : null,
+          longitude: mapApi && mapApi.marker ? mapApi.marker.getLatLng().lng : null
+        })
+      });
+      var body = await res.json();
+      if (!body || body.ok !== true) {
+        setStatus((body && body.error) || "Search failed");
+        renderProviders([]);
+        return;
+      }
+      setStatus(
+        "Published matches: " + (body.results || []).length +
+          " · invented providers: never · live booking fees: none for patients"
+      );
+      renderProviders(body.results || []);
+    } catch (e) {
+      setStatus("Search request failed");
+      renderProviders([]);
+    }
+  }
+
+  document.getElementById("searchBtn").addEventListener("click", runSearch);
+  document.getElementById("clearCatBtn").addEventListener("click", function () {
+    selectedCategory = "";
+    renderCategories();
+    runSearch();
+  });
+  document.getElementById("verifiedOnlyBtn").addEventListener("click", function () {
+    verifiedOnly = !verifiedOnly;
+    this.setAttribute("aria-pressed", verifiedOnly ? "true" : "false");
+    this.classList.toggle("active", verifiedOnly);
+    runSearch();
+  });
+  document.getElementById("insuranceBtn").addEventListener("click", function () {
+    insuranceOnly = !insuranceOnly;
+    this.setAttribute("aria-pressed", insuranceOnly ? "true" : "false");
+    runSearch();
+  });
+  document.getElementById("accessBtn").addEventListener("click", function () {
+    accessOnly = !accessOnly;
+    this.setAttribute("aria-pressed", accessOnly ? "true" : "false");
+    runSearch();
+  });
+  document.getElementById("slotsBtn").addEventListener("click", function () {
+    openSlotsOnly = !openSlotsOnly;
+    this.setAttribute("aria-pressed", openSlotsOnly ? "true" : "false");
+    runSearch();
+  });
+  document.getElementById("groupFilter").addEventListener("change", runSearch);
+  document.getElementById("backButton").addEventListener("click", function () {
+    if (window.havkarNavigateBack) window.havkarNavigateBack();
+    else location.href = "index.html";
+  });
+
+  if (window.HAVKAR_MAP) {
+    window.HAVKAR_MAP.create("map", { latitude: 41.9, longitude: 12.5, zoom: 5 }).then(function (api) {
+      mapApi = api;
+      document.getElementById("gpsBtn").addEventListener("click", function () {
+        api.requestGps().then(function () {
+          document.getElementById("geoLabel").textContent =
+            "GPS permission granted. Nearby search uses your coordinates without inventing providers.";
+          runSearch();
+        }).catch(function () {
+          document.getElementById("geoLabel").textContent =
+            "Location permission denied or unavailable. City search still works.";
+        });
+      });
+    }).catch(function () {
+      document.getElementById("geoLabel").textContent = "Map unavailable in this browser. List search still works.";
+    });
+  }
+
+  loadCatalog().then(runSearch);
+  if (window.HAVKAR_PREMIUM_I18N) window.HAVKAR_PREMIUM_I18N.apply(document.body);
+})();
+</script>
+</body>
+</html>

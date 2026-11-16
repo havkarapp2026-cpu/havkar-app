@@ -36,7 +36,14 @@
       "Compare stays": "Confronta soggiorni",
       "City / destination / address": "Città / destinazione / indirizzo",
       "No verified accommodation is published yet":
-        "Nessun alloggio verificato è ancora pubblicato"
+        "Nessun alloggio verificato è ancora pubblicato",
+      "Doctors & Pharmacies": "Medici e farmacie",
+      "Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":
+        "Scoperta sanitaria globale. I pazienti usano HAVKAR gratis. Nessun fornitore inventato.",
+      "Medicine encyclopedia": "Enciclopedia dei farmaci",
+      "International medical travel": "Viaggi medici internazionali",
+      "Use my location": "Usa la mia posizione",
+      "Search providers": "Cerca fornitori"
     },
     sv: {
       "Transport & Logistics": "Transport och logistik",
@@ -67,7 +74,13 @@
       "Compare stays": "Jämför boenden",
       "City / destination / address": "Stad / destination / adress",
       "No verified accommodation is published yet":
-        "Inget verifierat boende är publicerat ännu"
+        "Inget verifierat boende är publicerat ännu",
+      "Doctors & Pharmacies": "Läkare & apotek",
+      "Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":
+        "Global hälsoupptäckt. Patienter använder HAVKAR gratis. Inga påhittade vårdgivare.",
+      "Medicine encyclopedia": "Läkemedelsencyklopedi",
+      "International medical travel": "Internationell medicinsk resa",
+      "Search providers": "Sök vårdgivare"
     },
     fa: {
       "Transport & Logistics": "حمل‌ونقل و لجستیک",
@@ -98,7 +111,13 @@
       "Compare stays": "مقایسه اقامتگاه‌ها",
       "City / destination / address": "شهر / مقصد / آدرس",
       "No verified accommodation is published yet":
-        "هنوز هیچ اقامتگاه تأییدشده‌ای منتشر نشده است"
+        "هنوز هیچ اقامتگاه تأییدشده‌ای منتشر نشده است",
+      "Doctors & Pharmacies": "پزشکان و داروخانه‌ها",
+      "Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":
+        "کشف جهانی مراقبت سلامت. بیماران HAVKAR را رایگان استفاده می‌کنند. هیچ ارائه‌دهندهٔ ساختگی نیست.",
+      "Medicine encyclopedia": "دانشنامه دارو",
+      "International medical travel": "سفر درمانی بین‌المللی",
+      "Search providers": "جستجوی ارائه‌دهندگان"
     },
     ar: {
       "Transport & Logistics": "النقل والخدمات اللوجستية",
@@ -129,7 +148,11 @@
       "Compare stays": "قارن الإقامات",
       "City / destination / address": "مدينة / وجهة / عنوان",
       "No verified accommodation is published yet":
-        "لا توجد إقامة موثّقة منشورة بعد"
+        "لا توجد إقامة موثّقة منشورة بعد",
+      "Doctors & Pharmacies": "الأطباء والصيدليات",
+      "Medicine encyclopedia": "موسوعة الأدوية",
+      "International medical travel": "السفر الطبي الدولي",
+      "Search providers": "ابحث عن مقدمي الخدمة"
     },
     ckb: {
       "Transport & Logistics": "گواستنەوە و لۆجستیک",
@@ -144,7 +167,11 @@
       "Operational": "چالاک",
       "Unavailable": "بەردەست نییە",
       "No verified accommodation is published yet":
-        "هێشتا هیچ شوێنی مانەوەی پشتڕاستکراو بڵاونەکراوەتەوە"
+        "هێشتا هیچ شوێنی مانەوەی پشتڕاستکراو بڵاونەکراوەتەوە",
+      "Doctors & Pharmacies": "پزیشکان و دەرمانخانەکان",
+      "Medicine encyclopedia": "ئەنسیکڵۆپیدیای دەرمان",
+      "International medical travel": "گەشتی پزیشکی نێودەوڵەتی",
+      "Search providers": "گەڕان بەدوای دابینکەران"
     },
     kmr: {
       "Transport & Logistics": "Veguheztin û lojîstîk",
@@ -159,7 +186,11 @@
       "Operational": "Çalak",
       "Unavailable": "Neynê",
       "No verified accommodation is published yet":
-        "Hîn tu cihê mayînê yê pejirandî nehatiye weşandin"
+        "Hîn tu cihê mayînê yê pejirandî nehatiye weşandin",
+      "Doctors & Pharmacies": "Bijîşk û dermanxane",
+      "Medicine encyclopedia": "Ansîklopediya dermanan",
+      "International medical travel": "Rêwîtiya bijîşkî ya navneteweyî",
+      "Search providers": "Pêşkêşkaran bigere"
     }
   };
 

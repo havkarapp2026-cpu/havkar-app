@@ -218,6 +218,17 @@ function isChatNotifyRequest(req) {
   );
 }
 
+function isHealthRequest(req) {
+  const action = String((req && req.body && req.body.action) || "");
+  const url = String((req && req.url) || "");
+  return Boolean(
+    (req && req.query && req.query.havkarAction === "health") ||
+      url.indexOf("/api/health") !== -1 ||
+      url.indexOf("havkarAction=health") !== -1 ||
+      action.indexOf("health_") === 0
+  );
+}
+
 function isCurrencyMatrixRequest(req) {
   const action = String((req && req.body && req.body.action) || "");
   const url = String((req && req.url) || "");
@@ -1506,6 +1517,20 @@ export default async function handler(req, res) {
     } catch (error) {
       console.error("HAVKAR chat notify API error:", error && error.message);
       return sendError(res, 500, "Chat notify API failed");
+    }
+  }
+
+  if (isHealthRequest(req)) {
+    if (req.method !== "GET" && req.method !== "POST") {
+      res.setHeader("Allow", "GET, POST");
+      return sendError(res, 405, "Method not allowed");
+    }
+    try {
+      const { handler: healthHandler } = require("../lib/havkar-health-api.cjs");
+      return await healthHandler(req, res);
+    } catch (error) {
+      console.error("HAVKAR health API error:", error && error.message);
+      return sendError(res, 500, "Health API failed");
     }
   }
 

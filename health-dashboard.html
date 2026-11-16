@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/havkar-icon-32-20261022-v3.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1b5e20">
+<title>HAVKAR | Health provider dashboard</title>
+<style>
+:root{--g:#1b5e20}
+*{box-sizing:border-box}
+body{margin:0;font-family:Georgia,"Iowan Old Style",serif;background:linear-gradient(180deg,#f4faf5,#e6f0e8);color:#123;min-height:100vh}
+header{background:linear-gradient(135deg,#1b5e20,#2e7d32);color:#fff;padding:calc(14px + env(safe-area-inset-top)) 16px 16px}
+.wrap{max-width:980px;margin:0 auto;padding:14px 16px}
+.card{background:#fff;border:1px solid #d7e6db;border-radius:14px;padding:14px;margin:12px 0}
+.notice{background:#fff8e1;border:1px solid #ffe082;border-radius:12px;padding:12px;line-height:1.45}
+label{display:block;margin:8px 0 4px;font-size:13px}
+input,select,textarea,button{font:inherit;width:100%;min-height:42px;border-radius:10px;padding:8px 10px}
+input,select,textarea{border:1px solid #cfd}
+button{border:0;background:var(--g);color:#fff;font-weight:700;cursor:pointer;margin-top:8px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:720px){.grid{grid-template-columns:1fr}}
+a{color:var(--g);font-weight:700}
+.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:#e8f5e9;color:var(--g);font-size:12px;font-weight:700}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap" style="padding-top:0;padding-bottom:0">
+    <h1 style="margin:0;font-size:1.25rem">Provider dashboard</h1>
+    <p style="margin:6px 0 0;opacity:.95">Doctors &amp; pharmacies manage profiles, licenses, slots and appointments. Live billing OFF.</p>
+  </div>
+</header>
+<main class="wrap">
+  <p class="notice"><strong>Patients stay free.</strong> Voice/video consultations are BLOCKED until contracted telehealth infrastructure exists. Text messaging requires explicit consent. Hospitals/labs/herbal shops have no mandatory monthly fee under current policy.</p>
+  <p id="authStatus" role="status">Checking session…</p>
+  <div class="card">
+    <h2 style="margin:0 0 8px;color:var(--g);font-size:1.05rem">My provider profiles</h2>
+    <div id="providers"></div>
+    <p><a href="health-provider-apply.html">Register another profile</a></p>
+  </div>
+  <div class="card">
+    <h2 style="margin:0 0 8px;color:var(--g);font-size:1.05rem">Selected provider tools</h2>
+    <label for="providerSelect">Provider</label>
+    <select id="providerSelect"></select>
+    <div class="grid">
+      <div>
+        <label for="licenseNumber">License number</label>
+        <input id="licenseNumber" type="text">
+      </div>
+      <div>
+        <label for="jurisdiction">Jurisdiction</label>
+        <input id="jurisdiction" type="text" placeholder="IT / medical board…">
+      </div>
+    </div>
+    <button type="button" id="licenseBtn">Submit license for verification</button>
+    <div class="grid" style="margin-top:10px">
+      <div>
+        <label for="slotStart">Open slot start</label>
+        <input id="slotStart" type="datetime-local">
+      </div>
+      <div>
+        <label for="slotEnd">Open slot end</label>
+        <input id="slotEnd" type="datetime-local">
+      </div>
+    </div>
+    <button type="button" id="slotBtn">Publish availability slot</button>
+    <button type="button" id="apptsBtn" style="background:#2e7d32">Refresh appointments</button>
+    <div id="appts"></div>
+    <p id="toolStatus" role="status"></p>
+  </div>
+  <div class="card">
+    <h2 style="margin:0 0 8px;color:var(--g);font-size:1.05rem">Subscription catalog (proposed)</h2>
+    <p id="billing" class="notice" style="margin:0"></p>
+  </div>
+  <p><a href="health.html">Directory</a> · <a href="health-rankings.html">Rankings</a> · <a href="reviews.html?mine=1">My Reviews</a></p>
+</main>
+<script src="/supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function () {
+  var token = "";
+  var providersEl = document.getElementById("providers");
+  var select = document.getElementById("providerSelect");
+  var toolStatus = document.getElementById("toolStatus");
+  var authStatus = document.getElementById("authStatus");
+
+  async function api(action, body) {
+    var res = await fetch("/api/health", {
+      method: "POST",
+      headers: Object.assign(
+        { "Content-Type": "application/json" },
+        token ? { Authorization: "Bearer " + token } : {}
+      ),
+      body: JSON.stringify(Object.assign({ action: action }, body || {}))
+    });
+    return { status: res.status, json: await res.json() };
+  }
+
+  async function boot() {
+    var client = window.supabase && window.SUPABASE_URL
+      ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
+      : null;
+    if (!client) {
+      authStatus.textContent = "Supabase not configured in this environment.";
+      return;
+    }
+    var session = (await client.auth.getSession()).data.session;
+    if (!session) {
+      authStatus.innerHTML = 'Sign in required. <a href="login.html?next=health-dashboard.html">Log in</a>';
+      return;
+    }
+    token = session.access_token;
+    authStatus.textContent = "Signed in. Patients: free. Live health billing: OFF.";
+    var catalog = await api("health_subscriptions");
+    document.getElementById("billing").textContent =
+      (catalog.json && catalog.json.note) || "Catalog unavailable";
+    await refreshProviders();
+  }
+
+  async function refreshProviders() {
+    var res = await api("health_my_providers");
+    providersEl.innerHTML = "";
+    select.innerHTML = "";
+    if (!res.json.ok) {
+      providersEl.textContent = res.json.error || "Could not load providers";
+      return;
+    }
+    var rows = res.json.providers || [];
+    if (!rows.length) {
+      providersEl.textContent = "No provider profiles yet.";
+      return;
+    }
+    rows.forEach(function (p) {
+      var div = document.createElement("div");
+      div.style.margin = "8px 0";
+      div.innerHTML = "<strong></strong> <span class='badge'></span><div></div>";
+      div.querySelector("strong").textContent = p.display_name;
+      div.querySelector(".badge").textContent = p.license_status + " · " + p.publication_status;
+      div.querySelector("div").textContent = [p.category_id, p.city, p.country_code].filter(Boolean).join(" · ");
+      providersEl.appendChild(div);
+      var opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = p.display_name + " (" + p.category_id + ")";
+      select.appendChild(opt);
+    });
+  }
+
+  document.getElementById("licenseBtn").onclick = async function () {
+    toolStatus.textContent = "Submitting license…";
+    var res = await api("health_license_submit", {
+      provider_id: select.value,
+      license_number: document.getElementById("licenseNumber").value,
+      license_jurisdiction: document.getElementById("jurisdiction").value
+    });
+    toolStatus.textContent = res.json.ok
+      ? "License pending verification: " + res.json.provider.license_status
+      : (res.json.error || "Failed") + (res.json.note ? " — " + res.json.note : "");
+    refreshProviders();
+  };
+
+  document.getElementById("slotBtn").onclick = async function () {
+    toolStatus.textContent = "Saving slot…";
+    var starts = document.getElementById("slotStart").value;
+    var ends = document.getElementById("slotEnd").value;
+    var res = await api("health_availability_set", {
+      provider_id: select.value,
+      starts_at: starts ? new Date(starts).toISOString() : "",
+      ends_at: ends ? new Date(ends).toISOString() : "",
+      modality: "in_person"
+    });
+    toolStatus.textContent = res.json.ok
+      ? "Slot open: " + res.json.slot.starts_at
+      : (res.json.error || "Failed") + (res.json.reason ? " — " + res.json.reason : "");
+  };
+
+  document.getElementById("apptsBtn").onclick = async function () {
+    var box = document.getElementById("appts");
+    box.textContent = "Loading…";
+    var res = await api("health_appointments_list", { provider_id: select.value });
+    if (!res.json.ok) {
+      box.textContent = res.json.error || "Failed";
+      return;
+    }
+    var rows = res.json.appointments || [];
+    if (!rows.length) {
+      box.textContent = "No appointments yet.";
+      return;
+    }
+    box.innerHTML = "";
+    rows.forEach(function (a) {
+      var row = document.createElement("div");
+      row.style.margin = "8px 0";
+      row.innerHTML = "<div></div><button type='button'>Confirm</button> <button type='button'>Cancel</button>";
+      row.querySelector("div").textContent = a.status + " · " + a.modality + " · " + a.starts_at;
+      var buttons = row.querySelectorAll("button");
+      buttons[0].onclick = async function () {
+        await api("health_appointment_update", { appointment_id: a.id, status: "confirmed" });
+        document.getElementById("apptsBtn").click();
+      };
+      buttons[1].onclick = async function () {
+        await api("health_appointment_update", { appointment_id: a.id, status: "cancelled" });
+        document.getElementById("apptsBtn").click();
+      };
+      box.appendChild(row);
+    });
+  };
+
+  boot();
+})();
+</script>
+</body>
+</html>
