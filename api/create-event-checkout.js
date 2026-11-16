@@ -1687,11 +1687,20 @@ export default async function handler(req, res) {
           quote
         });
       }
+      if (action === "currency_rails_status") {
+        const {
+          buildCurrencyRailsStatus
+        } = require("../lib/payment-currency-rails.cjs");
+        return res.status(200).json(buildCurrencyRailsStatus(process.env));
+      }
       return res.status(200).json({
         ok: true,
         live_collection: cardPaymentsAllowed() ? "armed" : "paused",
         real_payments_enabled: realPaymentsEnabled(),
-        matrix: describeCurrencyMatrix()
+        matrix: describeCurrencyMatrix(),
+        rails: require("../lib/payment-currency-rails.cjs").buildCurrencyRailsStatus(
+          process.env
+        )
       });
     } catch (error) {
       console.error("HAVKAR currency matrix error:", error && error.message);

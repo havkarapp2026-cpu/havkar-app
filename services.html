@@ -1499,7 +1499,8 @@ textarea.form-control {
     </div>
 
 
-    <div
+    <section id="moduleMapPanel" class="havkar-module-map" aria-label="Map" style="margin:12px 0"></section>
+<div
         class="services-grid"
         id="servicesContainer">
     </div>
@@ -4411,8 +4412,37 @@ function escapeHtml(text) {
 
 </script>
 
+<script src="/havkar-map.js"></script>
+<script src="/havkar-module-map.js"></script>
+<script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
 
 <script src="/havkar-page-back.js"></script>
+
+<script>
+(function(){
+  if(!window.HAVKAR_MODULE_MAP) return;
+  function collectCoords(){
+    var nodes = document.querySelectorAll('[data-lat][data-lng], [data-latitude][data-longitude]');
+    var out = [];
+    nodes.forEach(function(el){
+      var lat = Number(el.getAttribute('data-lat') || el.getAttribute('data-latitude'));
+      var lng = Number(el.getAttribute('data-lng') || el.getAttribute('data-longitude'));
+      if(!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      out.push({ id: el.getAttribute('data-id') || el.id || null, latitude: lat, longitude: lng, label: (el.getAttribute('data-label') || el.textContent || '').trim().slice(0,80) });
+    });
+    return out;
+  }
+  var el = document.getElementById('moduleMapPanel');
+  if(!el) return;
+  window.HAVKAR_MODULE_MAP.mount({ container: el }).then(function(panel){
+    window.__havkarModuleMapPanel = panel;
+    panel.setItems(collectCoords());
+    var mo = new MutationObserver(function(){ panel.setItems(collectCoords()); });
+    mo.observe(document.body, { childList:true, subtree:true });
+  }).catch(function(){});
+})();
+</script>
+
 </body>
    </html>
