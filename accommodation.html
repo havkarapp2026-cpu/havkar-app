@@ -96,6 +96,7 @@
     <div id="map" role="application" aria-label="Destination map"></div>
     <div class="map-toolbar" role="group" aria-label="Map controls">
       <button type="button" id="useGpsBtn" aria-label="Use my location">Use my location</button>
+      <button type="button" id="hotelsBoundsBtn">Search this area</button>
       <button type="button" id="viewBothBtn" class="active" aria-pressed="true">Map + list</button>
       <button type="button" id="viewMapBtn" aria-pressed="false">Map</button>
       <button type="button" id="viewListBtn" aria-pressed="false">List</button>
@@ -201,6 +202,10 @@
 <script src="/havkar-presentment-currencies.js"></script>
 <script src="/havkar-currency-select.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<script src="/havkar-map.js"></script>
 <script>
 (function () {
   var currencySelect = document.getElementById("currencySelect");
@@ -218,6 +223,8 @@
   var selectedGeo = { latitude: 41.8933203, longitude: 12.4829321, label: "Roma, Italia" };
   var map = null;
   var marker = null;
+  var pinLayer = null;
+  var lastListingPins = [];
   var geoTimer = null;
   var langIt = false;
   try { langIt = (localStorage.getItem("havkar_language") || "en") === "it"; } catch (e) {}
@@ -325,6 +332,10 @@
       attribution: "&copy; OpenStreetMap"
     }).addTo(map);
     marker = L.marker([selectedGeo.latitude, selectedGeo.longitude]).addTo(map);
+    pinLayer = (L.markerClusterGroup
+      ? L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 48 })
+      : L.layerGroup());
+    pinLayer.addTo(map);
     map.on("click", function (ev) {
       selectedGeo = {
         latitude: ev.latlng.lat,
@@ -335,6 +346,46 @@
       geoLabel.textContent = "Map pin: " + selectedGeo.label;
     });
     setTimeout(function () { if (map) map.invalidateSize(); }, 80);
+  }
+
+  function setListingPins(items, fit) {
+    lastListingPins = Array.isArray(items) ? items : [];
+    if (!map || !pinLayer) return;
+    pinLayer.clearLayers();
+    var bounds = [];
+    lastListingPins.forEach(function (item) {
+      var lat = Number(item.latitude);
+      var lng = Number(item.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      bounds.push([lat, lng]);
+      var m = L.circleMarker([lat, lng], {
+        radius: 8,
+        color: "#1b5e20",
+        fillColor: "#66bb6a",
+        fillOpacity: 0.85
+      }).bindPopup(String(item.label || item.title || "Stay"));
+      if (item.id != null) {
+        m.on("click", function () {
+          var card = document.querySelector('[data-listing-id="' + String(item.id).replace(/"/g, "") + '"]');
+          if (card && card.scrollIntoView) card.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+      }
+      pinLayer.addLayer(m);
+    });
+    if (fit !== false && bounds.length) {
+      try { map.fitBounds(bounds, { padding: [28, 28], maxZoom: 14 }); } catch (_e) {}
+    }
+  }
+
+  function filterPinsInBounds() {
+    if (!map) return lastListingPins.slice();
+    var b = map.getBounds();
+    return lastListingPins.filter(function (item) {
+      var lat = Number(item.latitude);
+      var lng = Number(item.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+      return b.contains([lat, lng]);
+    });
   }
 
   function setViewMode(mode) {
@@ -553,12 +604,26 @@
           return fids.indexOf(String(row.id || row.title || "")) !== -1;
         });
       }
+      if (window.__havkarHotelsBoundsOnly) {
+        var b = map && map.getBounds ? map.getBounds() : null;
+        if (b) {
+          cards = cards.filter(function (row) {
+            var lat = Number(row.latitude);
+            var lng = Number(row.longitude);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+            return b.contains([lat, lng]);
+          });
+        }
+        window.__havkarHotelsBoundsOnly = false;
+      }
       searchResults.innerHTML = cards.map(function () {
         return '<article class="card listing"><h2></h2><p></p><p class="provider-note"></p><div class="card-actions"></div></article>';
       }).join("");
+      var pins = [];
       Array.prototype.forEach.call(searchResults.querySelectorAll("article"), function (card, i) {
         var row = cards[i];
         var rid = String(row.id || row.title || ("row-" + i));
+        card.setAttribute("data-listing-id", rid);
         card.querySelector("h2").textContent = row.title || "";
         card.querySelector("p").textContent = row.summary || "";
         card.querySelector(".provider-note").textContent =
@@ -582,20 +647,18 @@
         cmp.addEventListener("click", function () { toggleCompare(Object.assign({}, row, { id: rid })); });
         actions.appendChild(fav);
         actions.appendChild(cmp);
-        if (row.latitude != null && row.longitude != null && map && window.L) {
-          L.circleMarker([row.latitude, row.longitude], {
-            radius: 8,
-            color: "#1b5e20",
-            fillColor: "#66bb6a",
-            fillOpacity: 0.85
-          })
-            .addTo(map)
-            .bindPopup(
-              (row.title || "Stay") +
-                (row.price_label ? "<br>" + row.price_label : "")
-            );
+        if (row.latitude != null && row.longitude != null) {
+          pins.push({
+            id: rid,
+            latitude: row.latitude,
+            longitude: row.longitude,
+            label: (row.title || "Stay") + (row.price_label ? " · " + row.price_label : "")
+          });
+          card.setAttribute("data-lat", String(row.latitude));
+          card.setAttribute("data-lng", String(row.longitude));
         }
       });
+      setListingPins(pins);
       if (!cards.length) {
         var note = document.createElement("p");
         note.className = "provider-note";
@@ -778,6 +841,19 @@
   document.getElementById("historyBtn").addEventListener("click", runHistory);
   var gpsBtn = document.getElementById("useGpsBtn");
   if (gpsBtn) gpsBtn.addEventListener("click", useGps);
+  var hotelsBoundsBtn = document.getElementById("hotelsBoundsBtn");
+  if (hotelsBoundsBtn) {
+    hotelsBoundsBtn.addEventListener("click", function () {
+      window.__havkarHotelsBoundsOnly = true;
+      var filtered = filterPinsInBounds();
+      setListingPins(filtered, false);
+      geoLabel.textContent = filtered.length
+        ? ("Mapped in view: " + filtered.length)
+        : "No mapped results in this view";
+      var searchBtn = document.getElementById("searchHotelsBtn");
+      if (searchBtn) searchBtn.click();
+    });
+  }
   var bothBtn = document.getElementById("viewBothBtn");
   var mapBtn = document.getElementById("viewMapBtn");
   var listBtn = document.getElementById("viewListBtn");

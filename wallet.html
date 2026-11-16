@@ -6004,7 +6004,9 @@ startWallet();
       var settle=pack['Settlement currency']||'Settlement currency';
       var paused=pack['Live payments paused']||'Live payments paused';
       var present=body.presentment&&body.presentment.count?body.presentment.count:'133';
-      el.textContent=display+' ('+present+') · '+charge+' · '+settle+' · XLM separate. '+(body.honesty&&body.honesty.live_payments_paused?paused:'');
+      var healthOff=(body.module_scopes&&body.module_scopes.health_subscription_billing&&body.module_scopes.health_subscription_billing.effective==='OFF');
+      var means=(body.honesty&&body.honesty.live_payments_paused_means)||'';
+      el.textContent=display+' ('+present+') · '+charge+' · '+settle+' · XLM separate. '+(body.honesty&&body.honesty.live_payments_paused?paused:('Global collection armed'+(healthOff?'; Health billing OFF':'')))+(means?' · '+means:'');
     }catch(_e){}
   }
   loadRails();

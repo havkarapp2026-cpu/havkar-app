@@ -961,5 +961,20 @@ h2{
 </script>
 <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
+
+<script>
+(function(){
+  fetch('/api/currency-matrix',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'external_integrations_status'})})
+    .then(function(r){return r.json()})
+    .then(function(body){
+      if(!body||!body.integrations||!body.integrations.omio) return;
+      var note=body.integrations.omio.blocker||body.integrations.omio.reason||'';
+      document.querySelectorAll('.omio-panel .pending-note').forEach(function(el){
+        if(note) el.setAttribute('data-partner-blocker', note);
+      });
+    }).catch(function(){});
+})();
+</script>
+
 </body>
 </html>

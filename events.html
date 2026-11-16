@@ -1776,6 +1776,9 @@
             <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
                 <strong style="color:#1b5e20">Map discovery</strong>
                 <button type="button" id="eventsGpsBtn" style="min-height:40px;border:1px solid #1b5e20;border-radius:10px;background:#fff;color:#1b5e20;font-weight:700;padding:0 12px;cursor:pointer">Use my location</button>
+                <button type="button" id="eventsPlaceBtn" style="min-height:40px;border:1px solid #1b5e20;border-radius:10px;background:#fff;color:#1b5e20;font-weight:700;padding:0 12px;cursor:pointer">Search place</button>
+                <button type="button" id="eventsBoundsBtn" style="min-height:40px;border:1px solid #1b5e20;border-radius:10px;background:#fff;color:#1b5e20;font-weight:700;padding:0 12px;cursor:pointer">Search this area</button>
+                <input id="eventsPlaceInput" type="search" placeholder="Country, region, city, address…" style="min-height:40px;border:1px solid #cfd;border-radius:10px;padding:0 10px;min-width:160px;flex:1">
             </div>
             <div id="eventsMap" style="height:220px;border-radius:12px;border:1px solid #d7e6db" role="application" aria-label="Events map"></div>
             <p id="eventsMapNote" style="margin:8px 0 0;font-size:.85rem;color:#567;line-height:1.4">Interactive map stays available even when no events match. Pins appear only for events with real coordinates — never invented.</p>
@@ -4596,7 +4599,15 @@
 (function(){
   if(!window.HAVKAR_MAP) return;
   var note=document.getElementById("eventsMapNote");
-  window.HAVKAR_MAP.create("eventsMap",{latitude:41.9,longitude:12.5,zoom:5}).then(function(api){
+  var lastPins=[];
+  window.HAVKAR_MAP.create("eventsMap",{
+    latitude:41.9,longitude:12.5,zoom:5,cluster:true,
+    onSelect:function(info){
+      if(!info||!info.id) return;
+      var card=document.querySelector('[data-event-id="'+info.id+'"], [data-event-location][data-id="'+info.id+'"]');
+      if(card&&card.scrollIntoView) card.scrollIntoView({behavior:"smooth",block:"center"});
+    }
+  }).then(function(api){
     window.__havkarEventsMap=api;
     var btn=document.getElementById("eventsGpsBtn");
     if(btn){
@@ -4608,6 +4619,29 @@
         });
       });
     }
+    var placeBtn=document.getElementById("eventsPlaceBtn");
+    var placeInput=document.getElementById("eventsPlaceInput");
+    if(placeBtn&&placeInput){
+      placeBtn.addEventListener("click",function(){
+        api.searchPlace(placeInput.value).then(function(geo){
+          if(!geo||!geo.ok){ if(note) note.textContent="Place not found."; return; }
+          if(note) note.textContent=(geo.primary&&geo.primary.label)||"Place ready.";
+        });
+      });
+    }
+    var boundsBtn=document.getElementById("eventsBoundsBtn");
+    if(boundsBtn){
+      boundsBtn.addEventListener("click",function(){
+        var filtered=api.filterItemsInBounds(lastPins);
+        api.setMarkers(filtered);
+        if(note) note.textContent=filtered.length?("Mapped in view: "+filtered.length):"No mapped results in this view";
+      });
+    }
+    window.__havkarEventsSetPins=function(items){
+      lastPins=Array.isArray(items)?items:[];
+      api.setMarkers(lastPins);
+      if(note) note.textContent=lastPins.length?("Mapped events: "+lastPins.length):"No mapped results in this view";
+    };
   }).catch(function(){
     if(note) note.textContent="Map provider unavailable in this browser. Event list remains usable.";
   });
@@ -4635,29 +4669,40 @@
   }
   async function geocodeLabel(label){
     try{
+      if(window.HAVKAR_MAP&&window.HAVKAR_MAP.geocode){
+        var g=await window.HAVKAR_MAP.geocode(label);
+        return g&&g.ok&&g.primary?g.primary:null;
+      }
       var res=await fetch("/api/hotels",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"hotels_geocode",query:label})});
       var body=await res.json();
       return body&&body.ok&&body.primary?body.primary:null;
     }catch(e){return null;}
   }
   async function pinEventsOnMap(){
-    var api=window.__havkarEventsMap;
-    if(!api||!api.map||!api.L) return;
-    if(window.__havkarEventPinLayer){
-      try{ api.map.removeLayer(window.__havkarEventPinLayer);}catch(e){}
-    }
-    window.__havkarEventPinLayer=api.L.layerGroup().addTo(api.map);
-    var cards=Array.prototype.slice.call(document.querySelectorAll("[data-event-location]")).slice(0,12);
+    var cards=Array.prototype.slice.call(document.querySelectorAll("[data-event-location]")).slice(0,24);
+    var items=[];
     for(var i=0;i<cards.length;i++){
       var label=cards[i].getAttribute("data-event-location");
       if(!label||label.length<3) continue;
       var geo=await geocodeLabel(label);
       if(!geo) continue;
-      api.addPricePin(geo.latitude, geo.longitude, label);
+      items.push({
+        id: cards[i].getAttribute("data-event-id")||cards[i].getAttribute("data-id")||("ev"+i),
+        latitude: geo.latitude,
+        longitude: geo.longitude,
+        label: label
+      });
+      cards[i].setAttribute("data-lat", String(geo.latitude));
+      cards[i].setAttribute("data-lng", String(geo.longitude));
+      cards[i].addEventListener("click", (function(id){
+        return function(){
+          if(window.__havkarEventsMap&&window.__havkarEventsMap.highlight) window.__havkarEventsMap.highlight(id);
+        };
+      })(items[items.length-1].id));
     }
+    if(window.__havkarEventsSetPins) window.__havkarEventsSetPins(items);
   }
   window.__havkarPinEventsOnMap=pinEventsOnMap;
-  // Soft-patch: when events re-render, try pins after short delay
   var obs=new MutationObserver(function(){
     clearTimeout(window.__havkarPinTimer);
     window.__havkarPinTimer=setTimeout(pinEventsOnMap, 400);

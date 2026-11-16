@@ -236,7 +236,9 @@ function isCurrencyMatrixRequest(req) {
     (req && req.query && req.query.havkarAction === "currencyMatrix") ||
       url.indexOf("/api/currency-matrix") !== -1 ||
       action === "currency_matrix" ||
-      action === "currency_quote"
+      action === "currency_quote" ||
+      action === "currency_rails_status" ||
+      action === "external_integrations_status"
   );
 }
 
@@ -611,6 +613,15 @@ async function buildPaymentActivationStatus() {
     }
   }
 
+  const {
+    buildCurrencyRailsStatus
+  } = require("../lib/payment-currency-rails.cjs");
+  const {
+    buildExternalIntegrationsStatus
+  } = require("../lib/external-integrations-status.cjs");
+  const currencyRails = buildCurrencyRailsStatus(process.env);
+  const externalIntegrations = buildExternalIntegrationsStatus(process.env);
+
   return {
     ok: true,
     generated_at: new Date().toISOString(),
@@ -619,12 +630,23 @@ async function buildPaymentActivationStatus() {
     stellar_mainnet_customer_live: stellarMainnetCustomerLive
       ? "armed"
       : "paused",
+    currency_rails: currencyRails,
+    external_integrations: externalIntegrations,
     flags: {
       HAVKAR_REAL_PAYMENTS_ENABLED: realEnabled,
       HAVKAR_STRIPE_LIVE_ENABLED:
         process.env.HAVKAR_STRIPE_LIVE_ENABLED === "true",
       HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED: stellarMainnetFlag,
       HAVKAR_STELLAR_MAINNET_LIVE_COLLECTION: stellarMainnetLive,
+      HAVKAR_HEALTH_LIVE_BILLING_ENABLED:
+        process.env.HAVKAR_HEALTH_LIVE_BILLING_ENABLED === "true",
+      HAVKAR_HOTELS_LIVE_BOOKING_ENABLED:
+        process.env.HAVKAR_HOTELS_LIVE_BOOKING_ENABLED === "true",
+      HAVKAR_DUFFEL_LIVE_ORDERS_ENABLED:
+        process.env.HAVKAR_DUFFEL_LIVE_ORDERS_ENABLED === "true",
+      HAVKAR_OMIO_API_ENABLED: process.env.HAVKAR_OMIO_API_ENABLED === "true",
+      HAVKAR_TELEHEALTH_LIVE_ENABLED:
+        process.env.HAVKAR_TELEHEALTH_LIVE_ENABLED === "true",
       STELLAR_MAINNET_PAYMENTS_ENABLED_SOURCE: true
     },
     stripe: {
@@ -1692,6 +1714,14 @@ export default async function handler(req, res) {
           buildCurrencyRailsStatus
         } = require("../lib/payment-currency-rails.cjs");
         return res.status(200).json(buildCurrencyRailsStatus(process.env));
+      }
+      if (action === "external_integrations_status") {
+        const {
+          buildExternalIntegrationsStatus
+        } = require("../lib/external-integrations-status.cjs");
+        return res
+          .status(200)
+          .json(buildExternalIntegrationsStatus(process.env));
       }
       return res.status(200).json({
         ok: true,
