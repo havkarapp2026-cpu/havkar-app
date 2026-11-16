@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/havkar-icon-32-20261022-v3.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1b5e20">
+<title>HAVKAR | Herbal pharmacies &amp; shops</title>
+<style>
+:root{--g:#1b5e20}
+*{box-sizing:border-box}
+body{margin:0;font-family:Georgia,"Iowan Old Style",serif;background:linear-gradient(180deg,#f4faf5,#e6f0e8);color:#123}
+header{background:linear-gradient(135deg,#1b5e20,#2e7d32);color:#fff;padding:calc(14px + env(safe-area-inset-top)) 16px 16px}
+.wrap{max-width:900px;margin:0 auto;padding:14px 16px}
+.notice{background:#fff8e1;border:1px solid #ffe082;border-radius:12px;padding:12px;line-height:1.45}
+.card{background:#fff;border:1px solid #d7e6db;border-radius:14px;padding:12px;margin-top:10px}
+input,select,button{font:inherit;min-height:44px;border-radius:10px}
+input,select{width:100%;border:1px solid #cfd;padding:0 10px}
+button{border:0;background:var(--g);color:#fff;font-weight:700;width:100%;margin-top:10px;cursor:pointer}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:700px){.grid{grid-template-columns:1fr}}
+a{color:var(--g);font-weight:700}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap" style="padding-top:0;padding-bottom:0">
+    <h1 style="margin:0;font-size:1.25rem">Herbal pharmacies &amp; shops</h1>
+    <p style="margin:6px 0 0;opacity:.95">Licensed herbal pharmacies are separated from ordinary herbal retailers.</p>
+  </div>
+</header>
+<main class="wrap">
+  <p class="notice"><strong>Never labeled as verified doctors.</strong> Unlicensed herbal shops stay clearly non-clinical. HAVKAR does not sell medicines. No cure claims.</p>
+  <div class="grid">
+    <div>
+      <label for="kind">Directory type</label>
+      <select id="kind">
+        <option value="herbal_pharmacy">Licensed herbal pharmacies</option>
+        <option value="herbal_shop">Herbal shops / traditional medicine providers</option>
+      </select>
+    </div>
+    <div>
+      <label for="city">City</label>
+      <input id="city" type="search" placeholder="City…">
+    </div>
+  </div>
+  <button type="button" id="searchBtn">Search herbal directory</button>
+  <p id="status" role="status"></p>
+  <div id="results"></div>
+  <p><a href="health-medicine.html">Medicine encyclopedia</a> · <a href="health.html">Full health directory</a></p>
+</main>
+<script>
+(function () {
+  async function run() {
+    var kind = document.getElementById("kind").value;
+    document.getElementById("status").textContent = "Searching…";
+    document.getElementById("results").innerHTML = "";
+    var res = await fetch("/api/health", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "health_search",
+        category_id: kind,
+        city: document.getElementById("city").value,
+        verified_only: kind === "herbal_pharmacy"
+      })
+    });
+    var body = await res.json();
+    var rows = (body && body.results) || [];
+    document.getElementById("status").textContent =
+      rows.length + " published match(es). " +
+      (kind === "herbal_shop"
+        ? "These are not labeled as verified doctors or pharmacies."
+        : "Licensed herbal pharmacies only when license_status verified.");
+    if (!rows.length) {
+      document.getElementById("results").innerHTML =
+        "<div class='card'>No published herbal providers match. HAVKAR invents none.</div>";
+      return;
+    }
+    rows.forEach(function (r) {
+      var card = document.createElement("article");
+      card.className = "card";
+      card.innerHTML = "<h2></h2><p></p><p></p>";
+      card.querySelector("h2").textContent = r.display_name;
+      card.querySelectorAll("p")[0].textContent =
+        [r.category_id, r.city, r.country_code, r.license_status].filter(Boolean).join(" · ");
+      card.querySelectorAll("p")[1].textContent =
+        r.regulated
+          ? "Regulated herbal pharmacy listing — verification required for verified label."
+          : "Ordinary herbal retailer / traditional medicine provider — not a verified clinician.";
+      document.getElementById("results").appendChild(card);
+    });
+  }
+  document.getElementById("searchBtn").onclick = run;
+  run();
+})();
+</script>
+</body>
+</html>

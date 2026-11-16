@@ -1,5 +1,5 @@
 /* HAVKAR service worker — versioned install + web push display. */
-var HAVKAR_SW_VERSION = "havkar-sw-20261116-health-platform-v1";
+var HAVKAR_SW_VERSION = "havkar-sw-20261116-health-platform-v2";
 
 self.addEventListener("install", function (event) {
   self.skipWaiting();

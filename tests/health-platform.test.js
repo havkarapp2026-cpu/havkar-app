@@ -12,6 +12,10 @@ const migration = fs.readFileSync(
   path.join(root, "supabase/migrations/20261115220000_health_platform_foundation.sql"),
   "utf8"
 );
+const migrationOps = fs.readFileSync(
+  path.join(root, "supabase/migrations/20261116010000_health_platform_operations.sql"),
+  "utf8"
+);
 const vercel = JSON.parse(fs.readFileSync(path.join(root, "vercel.json"), "utf8"));
 const health = require(path.join(root, "lib/havkar-health.cjs"));
 const healthApi = require(path.join(root, "lib/havkar-health-api.cjs"));
@@ -33,6 +37,14 @@ assert.ok(!/DELETE\s+FROM\s+reviews/i.test(migration));
 assert.ok(migration.includes("CREATE TABLE IF NOT EXISTS public.health_providers"));
 assert.ok(migration.includes("ENABLE ROW LEVEL SECURITY"));
 assert.ok(migration.includes("health_appointments_provider_slot_uidx"));
+assert.ok(migrationOps.includes("CREATE TABLE IF NOT EXISTS public.health_availability_slots"));
+assert.ok(migrationOps.includes("CREATE TABLE IF NOT EXISTS public.health_messages"));
+assert.ok(migrationOps.includes("CREATE TABLE IF NOT EXISTS public.health_reviews"));
+assert.ok(migrationOps.includes("Existing legacy public.reviews table is intentionally untouched"));
+assert.ok(!/DELETE\s+FROM\s+public\.reviews/i.test(migrationOps));
+assert.ok(fs.existsSync(path.join(root, "health-dashboard.html")));
+assert.ok(fs.existsSync(path.join(root, "health-herbal.html")));
+assert.ok(fs.existsSync(path.join(root, "health-rankings.html")));
 assert.ok(!health.healthLiveBillingEnabled({ HAVKAR_HEALTH_LIVE_BILLING_ENABLED: "" }));
 assert.ok(!health.healthLiveBillingEnabled({}));
 const catalog = health.subscriptionCatalog({});
@@ -104,6 +116,36 @@ async function invoke(action, body) {
   assert.equal(search.json.patients_platform_fee, "free");
   // Never invent providers when DB missing/empty
   assert.ok(search.json.results.every((r) => r && r.id));
+
+  const tele = await invoke("health_telehealth_status");
+  assert.equal(tele.json.ok, true);
+  assert.equal(tele.json.voice.status, "BLOCKED");
+  assert.equal(tele.json.video.status, "BLOCKED");
+  assert.equal(tele.json.messaging.status, "available");
+
+  const ranks = await invoke("health_rankings", { level: "global", category_id: "gp" });
+  assert.equal(ranks.json.ok, true);
+  assert.ok(Array.isArray(ranks.json.results));
+  assert.ok(ranks.json.methodology);
+  assert.ok(ranks.json.results.every((r) => r.purchased_rank_boost === false));
+
+  const score = healthApi.rankingScore({
+    avg_rating: 5,
+    review_count: 0,
+    license_status: "verified"
+  });
+  assert.ok(Number.isFinite(score));
+
+  const msgNoConsent = await invoke("health_message_send", {
+    provider_id: "00000000-0000-0000-0000-000000000001",
+    body: "hello",
+    consent_acknowledged: false
+  });
+  assert.ok(
+    ["supabase_config_missing", "consent_required", "missing_bearer_token"].indexOf(
+      msgNoConsent.json.error
+    ) !== -1
+  );
 
   console.log("HEALTH_PLATFORM_TEST_OK");
 })().catch((err) => {
