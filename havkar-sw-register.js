@@ -3,7 +3,7 @@
     return;
   }
 
-  var SW_URL = "/sw.js?v=havkar-sw-20261116-health-platform-v2";
+  var SW_URL = "/sw.js?v=havkar-sw-20261116-home-3d-glossy-v1";
 
   window.addEventListener("load", function () {
     navigator.serviceWorker
