@@ -23,6 +23,9 @@ input,button,textarea,select{font:inherit;width:100%;min-height:42px;border-radi
 input,textarea,select{border:1px solid #cfd}
 button{border:0;background:var(--g);color:#fff;font-weight:700;cursor:pointer;margin-top:8px}
 </style>
+<script src="/havkar-health-i18n.js"></script>
+<script src="/havkar-i18n.js"></script>
+<script src="/havkar-page-back.js"></script>
 </head>
 <body>
 <header>
@@ -60,7 +63,7 @@ button{border:0;background:var(--g);color:#fff;font-weight:700;cursor:pointer;ma
   </div>
   <p><a href="health.html">Directory</a> · <a href="reviews.html?mine=1">My Reviews</a> · <a href="health-rankings.html">Rankings</a></p>
 </main>
-<script src="/supabase-config.js"></script>
+<script src="/havkar-supabase-config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function () {
@@ -81,8 +84,10 @@ button{border:0;background:var(--g);color:#fff;font-weight:700;cursor:pointer;ma
 
   async function ensureAuth() {
     if (token) return true;
-    var client = window.supabase && window.SUPABASE_URL
-      ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
+    var cfg = window.HAVKAR_SUPABASE_CONFIG || {};
+    var key = cfg.publishableKey || cfg.anonKey;
+    var client = window.supabase && cfg.url && key
+      ? window.supabase.createClient(cfg.url, key)
       : null;
     if (!client) return false;
     var session = (await client.auth.getSession()).data.session;

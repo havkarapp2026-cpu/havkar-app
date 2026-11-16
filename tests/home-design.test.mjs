@@ -82,9 +82,12 @@ assert.deepEqual(labels.map((match) => match[2]), [
 ]);
 assert.equal(labels.length, tiles.length);
 assert.doesNotMatch(home, /href="admin\.html"/);
-assert.doesNotMatch(home, /id="signedInPanel"|id="signedInEmail"|id="homeLogout"/);
+assert.match(home, /id="signedInPanel"/);
+assert.match(home, /id="signedInEmail"/);
+assert.doesNotMatch(home, /id="homeLogout"/);
 assert.match(home, /id="guestSignup"/);
 assert.match(home, /id="guestLogin"/);
+assert.match(home, /href="profile\.html"/);
 assert.match(home, /supabase\.auth\.getSession/);
 
 assert.match(profile, /id="profileAdministration"/);

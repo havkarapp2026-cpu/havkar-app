@@ -1,5 +1,5 @@
 /* HAVKAR service worker — versioned install + web push display. */
-var HAVKAR_SW_VERSION = "havkar-sw-20261116-home-3d-glossy-v1";
+var HAVKAR_SW_VERSION = "havkar-sw-20261116-owner-exec-i18n-v1";
 
 self.addEventListener("install", function (event) {
   self.skipWaiting();

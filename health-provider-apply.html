@@ -22,6 +22,9 @@ button{min-height:44px;border:0;border-radius:10px;background:var(--g);color:#ff
 .notice{background:#f7fcf7;border:1px solid #cfe0d3;border-radius:12px;padding:12px;color:#456;line-height:1.45;margin:12px 0}
 a{color:var(--g);font-weight:700}
 </style>
+<script src="/havkar-health-i18n.js"></script>
+<script src="/havkar-i18n.js"></script>
+<script src="/havkar-page-back.js"></script>
 </head>
 <body>
 <header>
@@ -58,7 +61,7 @@ a{color:var(--g);font-weight:700}
   </div>
   <p><a href="health.html">Back to directory</a> · <a href="login.html">Sign in</a></p>
 </main>
-<script src="/supabase-config.js"></script>
+<script src="/havkar-supabase-config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/havkar-page-back.js"></script>
 <script>
@@ -89,9 +92,11 @@ a{color:var(--g);font-weight:700}
   document.getElementById("submitBtn").onclick = async function () {
     setStatus("Submitting…");
     try {
-      var client = window.supabase && window.SUPABASE_URL
-        ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
-        : null;
+      var cfg = window.HAVKAR_SUPABASE_CONFIG || {};
+    var key = cfg.publishableKey || cfg.anonKey;
+    var client = window.supabase && cfg.url && key
+      ? window.supabase.createClient(cfg.url, key)
+      : null;
       if (!client) {
         setStatus("Sign in required. Open login, then return here.");
         return;
