@@ -1446,33 +1446,48 @@
     });
 
 
+    function ui21Pack(language) {
+        try {
+            if (
+                typeof globalThis !== "undefined" &&
+                globalThis.HAVKAR_UI_I18N21 &&
+                typeof globalThis.HAVKAR_UI_I18N21.pack === "function"
+            ) {
+                return globalThis.HAVKAR_UI_I18N21.pack(language) || {};
+            }
+        } catch (_error) {
+            /* ignore */
+        }
+        return {};
+    }
+
     function homepageGlossary(
         language
     ) {
-
-        return HOMEPAGE_GLOSSARY[
-            language
-        ] || null;
+        const base = HOMEPAGE_GLOSSARY[language] || {};
+        const pack21 = ui21Pack(language);
+        const merged = Object.assign({}, pack21, base);
+        return Object.keys(merged).length ? merged : null;
     }
 
 
     function marketplaceGlossary(
         language
     ) {
-
-        return MARKETPLACE_GLOSSARY[
-            language
-        ] || null;
+        const base = MARKETPLACE_GLOSSARY[language] || {};
+        const pack21 = ui21Pack(language);
+        const merged = Object.assign({}, pack21, base);
+        return Object.keys(merged).length ? merged : null;
     }
 
 
     function messagingGlossary(
         language
     ) {
-
-        return MESSAGING_GLOSSARY[
-            language
-        ] || null;
+        const base = MESSAGING_GLOSSARY[language] || {};
+        const pack21 = ui21Pack(language);
+        const merged = Object.assign({}, pack21, base);
+        return Object.keys(merged).length ? merged : null;
     }
 
 

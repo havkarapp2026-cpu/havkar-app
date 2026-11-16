@@ -1,4 +1,27 @@
 (function () {
+    function language() {
+        try {
+            return (
+                (window.HAVKAR_I18N &&
+                    window.HAVKAR_I18N.getLanguage &&
+                    window.HAVKAR_I18N.getLanguage()) ||
+                localStorage.getItem("havkar_language") ||
+                "en"
+            );
+        } catch (_e) {
+            return "en";
+        }
+    }
+
+    function packFor(lang) {
+        try {
+            if (window.HAVKAR_UI_I18N21 && typeof window.HAVKAR_UI_I18N21.pack === "function") {
+                return window.HAVKAR_UI_I18N21.pack(lang) || {};
+            }
+        } catch (_e) {}
+        return {};
+    }
+
     var PHRASES = {
         "Accommodation": "Alloggi",
         "Published Italian listings only. No sample stays and no prices.": "Solo annunci italiani pubblicati. Nessun soggiorno di esempio e nessun prezzo.",
@@ -169,12 +192,10 @@
 
     var applying = false;
 
-    function language() {
-        try {
-            return localStorage.getItem("havkar_language") || "en";
-        } catch (error) {
-            return "en";
-        }
+    function phraseMap() {
+        var lang = language();
+        if (lang === "it") return PHRASES;
+        return Object.assign({}, packFor(lang));
     }
 
     function apply(root) {
@@ -182,18 +203,17 @@
             return;
         }
 
-        if (language() !== "it") {
-            document.documentElement.lang = language() === "en" ? "en" : language();
-            if (window.HAVKAR_PREMIUM_I18N && typeof window.HAVKAR_PREMIUM_I18N.apply === "function") {
-                window.HAVKAR_PREMIUM_I18N.apply(root && root.nodeType === 1 ? root : document.body);
-            }
+        var lang = language();
+        if (lang === "en") {
+            document.documentElement.lang = "en";
             return;
         }
 
         applying = true;
 
         try {
-            document.documentElement.lang = "it";
+            document.documentElement.lang = lang;
+            var phrases = phraseMap();
             var scope = root && root.nodeType === 1 ? root : document.body;
             var walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
             var node;
@@ -205,7 +225,7 @@
                     continue;
                 }
 
-                var translated = PHRASES[node.nodeValue.trim()];
+                var translated = phrases[node.nodeValue.trim()];
 
                 if (translated) {
                     node.nodeValue = translated;
@@ -213,12 +233,16 @@
             }
 
             scope.querySelectorAll("[aria-label]").forEach(function (element) {
-                var label = PHRASES[element.getAttribute("aria-label")];
+                var label = phrases[element.getAttribute("aria-label")];
 
                 if (label) {
                     element.setAttribute("aria-label", label);
                 }
             });
+
+            if (window.HAVKAR_PREMIUM_I18N && typeof window.HAVKAR_PREMIUM_I18N.apply === "function") {
+                window.HAVKAR_PREMIUM_I18N.apply(scope);
+            }
         } finally {
             applying = false;
         }
@@ -227,11 +251,8 @@
     window.HAVKAR_ACCOMMODATION_I18N = {
         apply: apply,
         phrase: function (text) {
-            if (language() !== "it") {
-                return text;
-            }
-
-            return PHRASES[text] || text;
+            var phrases = phraseMap();
+            return phrases[text] || text;
         }
     };
 

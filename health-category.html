@@ -74,10 +74,20 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
         <label for="regionInput" data-i18n="health.region">Region / province</label>
         <input id="regionInput" type="search" autocomplete="off">
       </div>
+      <div>
+        <label for="placeInput">Search place</label>
+        <input id="placeInput" type="search" placeholder="Country, region, city, address…" autocomplete="off">
+      </div>
+      <div>
+        <label for="distanceInput" data-i18n="health.distance">Distance km (with GPS)</label>
+        <input id="distanceInput" type="number" min="1" max="500" value="50">
+      </div>
     </div>
     <div id="map" role="application" data-i18n-aria="health.map_aria" aria-label="Health providers map"></div>
     <div class="toolbar">
       <button type="button" id="gpsBtn" data-i18n="health.use_location">Use my location</button>
+      <button type="button" id="placeBtn">Search place</button>
+      <button type="button" id="boundsBtn">Search this area</button>
       <button type="button" id="verifiedOnlyBtn" aria-pressed="false" data-i18n="health.verified_only">Verified only</button>
     </div>
     <p id="geoLabel" class="notice" style="margin-top:10px;margin-bottom:0" data-i18n="health.map_empty"></p>
@@ -108,6 +118,7 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
 </nav>
 <script src="/havkar-map.js"></script>
 <script src="/havkar-health-i18n.js"></script>
+<script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
 <script src="/havkar-page-back.js"></script>
 <script>
@@ -146,19 +157,36 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
       var card = document.createElement("article");
       card.className = "card";
       var verified = row.license_status === "verified";
-      card.innerHTML = "<h2></h2><p></p><p class=\"notice\" style=\"margin:8px 0 0\"></p><span class=\"badge\"></span> <a class=\"secondary\" style=\"display:inline-flex;margin-top:8px;text-decoration:none;padding:8px 12px\" href=\"#\"></a>";
+      card.innerHTML = "<h2></h2><p></p><p class=\"notice\" style=\"margin:8px 0 0\"></p><span class=\"badge\"></span><div class=\"toolbar\" style=\"margin-top:8px\"></div>";
       card.querySelector("h2").textContent = row.display_name || ht("health.provider");
       card.querySelector("p").textContent = [catLabel(row.category_id, row.category_id), row.city, row.country_code].filter(Boolean).join(" · ");
       card.querySelector(".notice").textContent = verified ? ht("health.license_verified") : ht("health.license_unverified");
       var b = card.querySelector(".badge");
       b.className = "badge " + (verified ? "reg" : "warn");
       b.textContent = verified ? ht("health.verified_license") : ht("health.unverified");
-      var link = card.querySelector("a");
-      link.href = "health-provider.html?id=" + encodeURIComponent(row.id || "");
-      link.textContent = ht("health.open_profile");
-      if (row.latitude != null && row.longitude != null && mapApi && mapApi.addPricePin) {
-        mapApi.addPricePin(row.latitude, row.longitude, (row.display_name || ht("health.provider")) + " · " + (verified ? ht("health.verified_tag") : ht("health.unverified_tag")));
+      var actions = card.querySelector(".toolbar");
+      var profile = document.createElement("a");
+      profile.className = "secondary";
+      profile.style.cssText = "display:inline-flex;text-decoration:none;padding:8px 12px";
+      profile.href = "health-provider.html?id=" + encodeURIComponent(row.id || "");
+      profile.textContent = ht("health.open_profile");
+      actions.appendChild(profile);
+      if (row.latitude != null && row.longitude != null) {
+        var dir = document.createElement("a");
+        dir.className = "secondary";
+        dir.style.cssText = "display:inline-flex;text-decoration:none;padding:8px 12px";
+        dir.href = (mapApi && mapApi.osmDirectionsUrl)
+          ? mapApi.osmDirectionsUrl(row.latitude, row.longitude)
+          : ("https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=;" +
+            encodeURIComponent(row.latitude + "," + row.longitude));
+        dir.textContent = ht("health.directions");
+        dir.target = "_blank";
+        dir.rel = "noopener";
+        actions.appendChild(dir);
       }
+      card.addEventListener("click", function () {
+        if (mapApi && mapApi.highlight && row.id) mapApi.highlight(row.id);
+      });
       resultsEl.appendChild(card);
     });
   }
@@ -187,8 +215,31 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
         renderProviders([]);
         return;
       }
-      setStatus(ht("health.matches", { n: (body.results || []).length }));
-      renderProviders(body.results || []);
+      var rows = body.results || [];
+      if (mapApi && mapApi.filterItemsInBounds && window.__havkarBoundsOnly) {
+        rows = mapApi.filterItemsInBounds(rows);
+      }
+      window.__havkarBoundsOnly = false;
+      if (mapApi && mapApi.filterByDistanceKm && mapApi.marker) {
+        var maxKm = Number(document.getElementById("distanceInput").value);
+        var c = mapApi.marker.getLatLng();
+        if (Number.isFinite(maxKm) && maxKm > 0 && c) {
+          rows = mapApi.filterByDistanceKm(rows, c.lat, c.lng, maxKm);
+        }
+      }
+      if (mapApi && mapApi.setMarkers) {
+        mapApi.setMarkers(rows.map(function (r) {
+          return {
+            id: r.id,
+            latitude: r.latitude,
+            longitude: r.longitude,
+            label: (r.display_name || ht("health.provider")) + " · " +
+              (r.license_status === "verified" ? ht("health.verified_tag") : ht("health.unverified_tag"))
+          };
+        }));
+      }
+      setStatus(ht("health.matches", { n: rows.length }));
+      renderProviders(rows);
     } catch (_e) {
       setStatus(ht("health.search_request_failed"));
       renderProviders([]);
@@ -240,8 +291,26 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
     else location.href = "health.html";
   });
 
+  document.getElementById("placeBtn").addEventListener("click", function () {
+    if (!mapApi || !mapApi.searchPlace) return;
+    mapApi.searchPlace(document.getElementById("placeInput").value).then(function (geo) {
+      if (!geo || !geo.ok) {
+        document.getElementById("geoLabel").textContent = ht("health.gps_denied");
+        return;
+      }
+      document.getElementById("geoLabel").textContent = (geo.primary && geo.primary.label) || ht("health.gps_ok");
+      runSearch();
+    }).catch(function () {
+      document.getElementById("geoLabel").textContent = ht("health.gps_denied");
+    });
+  });
+  document.getElementById("boundsBtn").addEventListener("click", function () {
+    window.__havkarBoundsOnly = true;
+    runSearch();
+  });
+
   if (window.HAVKAR_MAP) {
-    window.HAVKAR_MAP.create("map", { latitude: 41.9, longitude: 12.5, zoom: 5 }).then(function (api) {
+    window.HAVKAR_MAP.create("map", { latitude: 41.9, longitude: 12.5, zoom: 5, cluster: true }).then(function (api) {
       mapApi = api;
       document.getElementById("gpsBtn").addEventListener("click", function () {
         api.requestGps().then(function () {

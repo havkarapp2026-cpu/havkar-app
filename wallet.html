@@ -1220,7 +1220,10 @@ select:focus{
 
     </button>  
 
-    <h1>Wallet</h1>  
+    <h1>Wallet</h1>
+    <p id="currencyRailsNotice" style="margin:8px 0 0;font-size:.9rem;line-height:1.4;color:#456">
+      Display currency · Charge currency · Settlement currency are separate. XLM rail separate. Live payments paused until Owner enables collection.
+    </p>  
 
 </div>  
 
@@ -5981,8 +5984,32 @@ startWallet();
   
 </script>
 
+<script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
 
 <script src="/havkar-page-back.js"></script>
+
+<script>
+(function(){
+  async function loadRails(){
+    var el=document.getElementById('currencyRailsNotice');
+    if(!el) return;
+    try{
+      var res=await fetch('/api/currency-matrix',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'currency_rails_status'})});
+      var body=await res.json();
+      if(!body||body.ok!==true) return;
+      var pack=(window.HAVKAR_UI_I18N21&&window.HAVKAR_UI_I18N21.pack)?window.HAVKAR_UI_I18N21.pack((localStorage.getItem('havkar_language')||'en')):{};
+      var display=pack['Display currency']||'Display currency';
+      var charge=pack['Charge currency']||'Charge currency';
+      var settle=pack['Settlement currency']||'Settlement currency';
+      var paused=pack['Live payments paused']||'Live payments paused';
+      var present=body.presentment&&body.presentment.count?body.presentment.count:'133';
+      el.textContent=display+' ('+present+') · '+charge+' · '+settle+' · XLM separate. '+(body.honesty&&body.honesty.live_payments_paused?paused:'');
+    }catch(_e){}
+  }
+  loadRails();
+})();
+</script>
+
 </body>  
       </html>  
