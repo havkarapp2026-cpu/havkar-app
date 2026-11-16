@@ -576,8 +576,15 @@ h2{
         <div class="status-row">
             <span class="status-badge"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Awaiting partner access</span>
         </div>
-        <p class="lead">Reserved for Omio rail search after access is approved. HAVKAR is preparing train search through Omio. Omio has not connected API access to HAVKAR yet.</p>
-        <div class="pending-note">The Omio integration is being prepared. Search will be added here only after Omio grants cooperation and API access. No booking is offered from HAVKAR in the meantime.</div>
+        <p class="lead">Omio rail adapter is prepared. Live search stays gated until OMIO_API_KEY, Owner flag and verified partner contract exist.</p>
+        <form class="omio-search-form" data-omio-mode="train" onsubmit="return false;">
+            <label>From <input name="from" autocomplete="off" data-i18n-ph="From"></label>
+            <label>To <input name="to" autocomplete="off"></label>
+            <label>Departure date <input name="date" type="date"></label>
+            <button type="button" class="omio-search-btn" data-omio-mode="train">Search journeys</button>
+        </form>
+        <div class="pending-note">Partner booking gated. No fabricated journeys or fares.</div>
+        <div class="omio-results" data-omio-mode="train" role="status"></div>
     </section>
 
     <section id="ticket-bus" class="panel omio-panel" data-ticket-panel="bus" hidden aria-labelledby="busTitle">
@@ -586,8 +593,15 @@ h2{
         <div class="status-row">
             <span class="status-badge"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Awaiting partner access</span>
         </div>
-        <p class="lead">Reserved for Omio bus search after access is approved. This section does not list journeys, seats, or fares, and it cannot complete a booking.</p>
-        <div class="pending-note">The Omio integration is being prepared. Search will be added here only after Omio grants cooperation and API access. No booking is offered from HAVKAR in the meantime.</div>
+        <p class="lead">Omio bus adapter is prepared. Live search stays gated until credentials and contract verification exist.</p>
+        <form class="omio-search-form" data-omio-mode="bus" onsubmit="return false;">
+            <label>From <input name="from" autocomplete="off"></label>
+            <label>To <input name="to" autocomplete="off"></label>
+            <label>Departure date <input name="date" type="date"></label>
+            <button type="button" class="omio-search-btn" data-omio-mode="bus">Search journeys</button>
+        </form>
+        <div class="pending-note">Partner booking gated. No fabricated journeys or fares.</div>
+        <div class="omio-results" data-omio-mode="bus" role="status"></div>
     </section>
 
     <section id="ticket-ferry" class="panel omio-panel" data-ticket-panel="ferry" hidden aria-labelledby="ferryTitle">
@@ -596,8 +610,15 @@ h2{
         <div class="status-row">
             <span class="status-badge"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Awaiting partner access</span>
         </div>
-        <p class="lead">Reserved for Omio ferry search after access is approved. This section does not list journeys, seats, or fares, and it cannot complete a booking.</p>
-        <div class="pending-note">The Omio integration is being prepared. Search will be added here only after Omio grants cooperation and API access. No booking is offered from HAVKAR in the meantime.</div>
+        <p class="lead">Omio ferry adapter is prepared. Live search stays gated until credentials and contract verification exist.</p>
+        <form class="omio-search-form" data-omio-mode="ferry" onsubmit="return false;">
+            <label>From <input name="from" autocomplete="off"></label>
+            <label>To <input name="to" autocomplete="off"></label>
+            <label>Departure date <input name="date" type="date"></label>
+            <button type="button" class="omio-search-btn" data-omio-mode="ferry">Search journeys</button>
+        </form>
+        <div class="pending-note">Partner booking gated. No fabricated journeys or fares.</div>
+        <div class="omio-results" data-omio-mode="ferry" role="status"></div>
     </section>
 
     <section id="taxi-transfer" class="panel taxi-panel" data-ticket-panel="ride" hidden aria-labelledby="taxiTitle">
@@ -968,11 +989,50 @@ h2{
     .then(function(r){return r.json()})
     .then(function(body){
       if(!body||!body.integrations||!body.integrations.omio) return;
-      var note=body.integrations.omio.blocker||body.integrations.omio.reason||'';
+      var omio=body.integrations.omio;
+      var note=omio.blocker||omio.reason||'';
       document.querySelectorAll('.omio-panel .pending-note').forEach(function(el){
-        if(note) el.setAttribute('data-partner-blocker', note);
+        if(note){
+          el.setAttribute('data-partner-blocker', note);
+          el.textContent=note+(omio.external_actions_required&&omio.external_actions_required.length?(' · '+omio.external_actions_required.join(' · ')):'');
+        }
+      });
+      document.querySelectorAll('.omio-panel .status-badge').forEach(function(el){
+        if(omio.live_search){
+          el.innerHTML='<i class="fas fa-check" aria-hidden="true"></i> Live search ready';
+        }else{
+          el.innerHTML='<i class="fas fa-hourglass-half" aria-hidden="true"></i> Awaiting partner access';
+        }
       });
     }).catch(function(){});
+
+  document.querySelectorAll('.omio-search-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var mode=btn.getAttribute('data-omio-mode')||'train';
+      var form=document.querySelector('.omio-search-form[data-omio-mode="'+mode+'"]');
+      var out=document.querySelector('.omio-results[data-omio-mode="'+mode+'"]');
+      if(!form||!out) return;
+      out.textContent='Searching…';
+      var payload={
+        action:'omio_search',
+        mode:mode,
+        from:(form.querySelector('[name="from"]')||{}).value||'',
+        to:(form.querySelector('[name="to"]')||{}).value||'',
+        date:(form.querySelector('[name="date"]')||{}).value||''
+      };
+      fetch('/api/currency-matrix',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+        .then(function(r){return r.json()})
+        .then(function(body){
+          if(!body||!body.ok){
+            out.textContent=(body&&(body.error||(body.status&&body.status.reason)))||'omio_blocked';
+            return;
+          }
+          var n=(body.results||[]).length;
+          out.textContent=n?('Found '+n+' journeys'):'No journeys returned by partner';
+        })
+        .catch(function(err){out.textContent=String(err&&err.message||err);});
+    });
+  });
 })();
 </script>
 

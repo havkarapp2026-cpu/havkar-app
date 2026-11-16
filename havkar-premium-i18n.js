@@ -1,198 +1,12 @@
 /**
  * Offline glossary for premium-platform UI strings (Transport, Reviews, Hotels chrome).
- * Covers approved HAVKAR languages: en (source), it, sv, fa, ckb, kmr, ar.
- * ku maps to kmr when selected elsewhere.
+ * Covers all 21 HAVKAR selectable languages (en source + 20 packs).
+ * Keep Sorani (ckb) and Kurmanji (kmr) distinct. ku maps to kmr.
  */
 (function (root) {
   "use strict";
 
-  var PHRASES = {
-    it: {
-      "Transport & Logistics": "Trasporti e logistica",
-      "Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":
-        "Categorie premium HAVKAR. La prenotazione regolamentata resta bloccata finché non ci sono accordi con i fornitori.",
-      "Local courier & parcels": "Corriere locale e pacchi",
-      "Food & grocery courier": "Corriere cibo e spesa",
-      "Truck & commercial goods": "Camion e merce commerciale",
-      "Bus & passenger routes": "Autobus e tratte passeggeri",
-      "Taxi & private transfers": "Taxi e trasferimenti privati",
-      "Air cargo & flights": "Cargo aereo e voli",
-      "Maritime & ferry": "Marittimo e traghetti",
-      "Transit & forwarding": "Transito e spedizioni",
-      "Operational": "Operativo",
-      "Unavailable": "Non disponibile",
-      "Verified reviews": "Recensioni verificate",
-      "My Reviews": "Le mie recensioni",
-      "Customer Reviews": "Recensioni clienti",
-      "Public verified": "Pubbliche verificate",
-      "Search businesses & services": "Cerca attività e servizi",
-      "Use my location": "Usa la mia posizione",
-      "Map discovery": "Scoperta sulla mappa",
-      "Map + list": "Mappa + elenco",
-      "Favorites": "Preferiti",
-      "Compare": "Confronta",
-      "Add to favorites": "Aggiungi ai preferiti",
-      "Remove from favorites": "Rimuovi dai preferiti",
-      "Compare stays": "Confronta soggiorni",
-      "City / destination / address": "Città / destinazione / indirizzo",
-      "No verified accommodation is published yet":
-        "Nessun alloggio verificato è ancora pubblicato",
-      "Doctors & Pharmacies": "Medici e farmacie",
-      "Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":
-        "Scoperta sanitaria globale. I pazienti usano HAVKAR gratis. Nessun fornitore inventato.",
-      "Medicine encyclopedia": "Enciclopedia dei farmaci",
-      "International medical travel": "Viaggi medici internazionali",
-      "Use my location": "Usa la mia posizione",
-      "Search providers": "Cerca fornitori"
-    },
-    sv: {
-      "Transport & Logistics": "Transport och logistik",
-      "Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":
-        "Premiumkategorier i HAVKAR. Reglerad livebokning förblir stängd tills leverantörsavtal finns.",
-      "Local courier & parcels": "Lokal budservice och paket",
-      "Food & grocery courier": "Mat- och livsmedelsbud",
-      "Truck & commercial goods": "Lastbil och gods",
-      "Bus & passenger routes": "Buss och passagerarlinjer",
-      "Taxi & private transfers": "Taxi och privata transfer",
-      "Air cargo & flights": "Flygfrakt och flyg",
-      "Maritime & ferry": "Sjöfrakt och färja",
-      "Transit & forwarding": "Transit och spedition",
-      "Operational": "I drift",
-      "Unavailable": "Ej tillgänglig",
-      "Verified reviews": "Verifierade recensioner",
-      "My Reviews": "Mina recensioner",
-      "Customer Reviews": "Kundrecensioner",
-      "Public verified": "Offentliga verifierade",
-      "Search businesses & services": "Sök företag och tjänster",
-      "Use my location": "Använd min plats",
-      "Map discovery": "Kartupptäckt",
-      "Map + list": "Karta + lista",
-      "Favorites": "Favoriter",
-      "Compare": "Jämför",
-      "Add to favorites": "Lägg till i favoriter",
-      "Remove from favorites": "Ta bort från favoriter",
-      "Compare stays": "Jämför boenden",
-      "City / destination / address": "Stad / destination / adress",
-      "No verified accommodation is published yet":
-        "Inget verifierat boende är publicerat ännu",
-      "Doctors & Pharmacies": "Läkare & apotek",
-      "Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":
-        "Global hälsoupptäckt. Patienter använder HAVKAR gratis. Inga påhittade vårdgivare.",
-      "Medicine encyclopedia": "Läkemedelsencyklopedi",
-      "International medical travel": "Internationell medicinsk resa",
-      "Search providers": "Sök vårdgivare"
-    },
-    fa: {
-      "Transport & Logistics": "حمل‌ونقل و لجستیک",
-      "Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":
-        "دسته‌های پریمیوم HAVKAR. رزرو زندهٔ مشمول مجوز تا زمان توافق با ارائه‌دهنده بسته می‌ماند.",
-      "Local courier & parcels": "پیک محلی و بسته",
-      "Food & grocery courier": "پیک غذا و خرید",
-      "Truck & commercial goods": "کامیون و کالای تجاری",
-      "Bus & passenger routes": "اتوبوس و مسیر مسافری",
-      "Taxi & private transfers": "تاکسی و ترانسفر خصوصی",
-      "Air cargo & flights": "بار هوایی و پرواز",
-      "Maritime & ferry": "دریایی و کشتی",
-      "Transit & forwarding": "ترانزیت و فورواردر",
-      "Operational": "عملیاتی",
-      "Unavailable": "در دسترس نیست",
-      "Verified reviews": "نظرات تأییدشده",
-      "My Reviews": "نظرات من",
-      "Customer Reviews": "نظرات مشتریان",
-      "Public verified": "عمومی تأییدشده",
-      "Search businesses & services": "جستجوی کسب‌وکار و خدمات",
-      "Use my location": "استفاده از موقعیت من",
-      "Map discovery": "کشف روی نقشه",
-      "Map + list": "نقشه + فهرست",
-      "Favorites": "علاقه‌مندی‌ها",
-      "Compare": "مقایسه",
-      "Add to favorites": "افزودن به علاقه‌مندی‌ها",
-      "Remove from favorites": "حذف از علاقه‌مندی‌ها",
-      "Compare stays": "مقایسه اقامتگاه‌ها",
-      "City / destination / address": "شهر / مقصد / آدرس",
-      "No verified accommodation is published yet":
-        "هنوز هیچ اقامتگاه تأییدشده‌ای منتشر نشده است",
-      "Doctors & Pharmacies": "پزشکان و داروخانه‌ها",
-      "Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":
-        "کشف جهانی مراقبت سلامت. بیماران HAVKAR را رایگان استفاده می‌کنند. هیچ ارائه‌دهندهٔ ساختگی نیست.",
-      "Medicine encyclopedia": "دانشنامه دارو",
-      "International medical travel": "سفر درمانی بین‌المللی",
-      "Search providers": "جستجوی ارائه‌دهندگان"
-    },
-    ar: {
-      "Transport & Logistics": "النقل والخدمات اللوجستية",
-      "Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":
-        "فئات HAVKAR المميزة. يبقى الحجز المباشر المنظم مغلقًا حتى تتوفر اتفاقيات المزودين.",
-      "Local courier & parcels": "توصيل محلي وطرود",
-      "Food & grocery courier": "توصيل طعام وبقالة",
-      "Truck & commercial goods": "شاحنات وبضائع تجارية",
-      "Bus & passenger routes": "حافلات ومسارات الركاب",
-      "Taxi & private transfers": "تاكسي ونقل خاص",
-      "Air cargo & flights": "شحن جوي ورحلات",
-      "Maritime & ferry": "بحري وعبارات",
-      "Transit & forwarding": "ترانزيت وشحن دولي",
-      "Operational": "تشغيلي",
-      "Unavailable": "غير متاح",
-      "Verified reviews": "مراجعات موثّقة",
-      "My Reviews": "مراجعاتي",
-      "Customer Reviews": "مراجعات العملاء",
-      "Public verified": "عامة موثّقة",
-      "Search businesses & services": "ابحث عن أعمال وخدمات",
-      "Use my location": "استخدم موقعي",
-      "Map discovery": "اكتشاف الخريطة",
-      "Map + list": "خريطة + قائمة",
-      "Favorites": "المفضلة",
-      "Compare": "مقارنة",
-      "Add to favorites": "أضف إلى المفضلة",
-      "Remove from favorites": "إزالة من المفضلة",
-      "Compare stays": "قارن الإقامات",
-      "City / destination / address": "مدينة / وجهة / عنوان",
-      "No verified accommodation is published yet":
-        "لا توجد إقامة موثّقة منشورة بعد",
-      "Doctors & Pharmacies": "الأطباء والصيدليات",
-      "Medicine encyclopedia": "موسوعة الأدوية",
-      "International medical travel": "السفر الطبي الدولي",
-      "Search providers": "ابحث عن مقدمي الخدمة"
-    },
-    ckb: {
-      "Transport & Logistics": "گواستنەوە و لۆجستیک",
-      "Verified reviews": "پێداچوونەوەی پشتڕاستکراو",
-      "My Reviews": "پێداچوونەوەکانی من",
-      "Customer Reviews": "پێداچوونەوەی کڕیاران",
-      "Use my location": "شوێنی من بەکاربهێنە",
-      "Map discovery": "دۆزینەوەی نەخشە",
-      "Map + list": "نەخشە + لیست",
-      "Favorites": "دڵخوازەکان",
-      "Compare": "بەراورد",
-      "Operational": "چالاک",
-      "Unavailable": "بەردەست نییە",
-      "No verified accommodation is published yet":
-        "هێشتا هیچ شوێنی مانەوەی پشتڕاستکراو بڵاونەکراوەتەوە",
-      "Doctors & Pharmacies": "پزیشکان و دەرمانخانەکان",
-      "Medicine encyclopedia": "ئەنسیکڵۆپیدیای دەرمان",
-      "International medical travel": "گەشتی پزیشکی نێودەوڵەتی",
-      "Search providers": "گەڕان بەدوای دابینکەران"
-    },
-    kmr: {
-      "Transport & Logistics": "Veguheztin û lojîstîk",
-      "Verified reviews": "Nirxandinên pejirandî",
-      "My Reviews": "Nirxandinên min",
-      "Customer Reviews": "Nirxandinên xerîdaran",
-      "Use my location": "Cihê min bikar bîne",
-      "Map discovery": "Keşfa nexşeyê",
-      "Map + list": "Nexşe + lîste",
-      "Favorites": "Bijare",
-      "Compare": "Berawird bike",
-      "Operational": "Çalak",
-      "Unavailable": "Neynê",
-      "No verified accommodation is published yet":
-        "Hîn tu cihê mayînê yê pejirandî nehatiye weşandin",
-      "Doctors & Pharmacies": "Bijîşk û dermanxane",
-      "Medicine encyclopedia": "Ansîklopediya dermanan",
-      "International medical travel": "Rêwîtiya bijîşkî ya navneteweyî",
-      "Search providers": "Pêşkêşkaran bigere"
-    }
-  };
+  var PHRASES = {"it":{"Transport & Logistics":"Trasporti e logistica","Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":"Categorie premium HAVKAR. La prenotazione regolamentata resta bloccata finché non ci sono accordi con i fornitori.","Local courier & parcels":"Corriere locale e pacchi","Food & grocery courier":"Corriere cibo e spesa","Truck & commercial goods":"Camion e merce commerciale","Bus & passenger routes":"Autobus e tratte passeggeri","Taxi & private transfers":"Taxi e trasferimenti privati","Air cargo & flights":"Cargo aereo e voli","Maritime & ferry":"Marittimo e traghetti","Transit & forwarding":"Transito e spedizioni","Operational":"Operativo","Unavailable":"Non disponibile","Verified reviews":"Recensioni verificate","My Reviews":"Le mie recensioni","Customer Reviews":"Recensioni clienti","Public verified":"Pubbliche verificate","Search businesses & services":"Cerca attività e servizi","Use my location":"Usa la mia posizione","Map discovery":"Scoperta sulla mappa","Map + list":"Mappa + elenco","Favorites":"Preferiti","Compare":"Confronta","Add to favorites":"Aggiungi ai preferiti","Remove from favorites":"Rimuovi dai preferiti","Compare stays":"Confronta soggiorni","City / destination / address":"Città / destinazione / indirizzo","No verified accommodation is published yet":"Nessun alloggio verificato è ancora pubblicato","Doctors & Pharmacies":"Medici e farmacie","Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":"Scoperta sanitaria globale. I pazienti usano HAVKAR gratis. Nessun fornitore inventato.","Medicine encyclopedia":"Enciclopedia dei farmaci","International medical travel":"Viaggi medici internazionali","Search providers":"Cerca fornitori"},"de":{"Transport & Logistics":"Transport & Logistik","Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":"Premium-HAVKAR-Kategorien. Regulierte Live-Buchung bleibt gesperrt, bis Anbietervereinbarungen bestehen.","Local courier & parcels":"Lokaler Kurier & Pakete","Food & grocery courier":"Essens- und Lebensmittelkurier","Truck & commercial goods":"LKW & Handelsware","Bus & passenger routes":"Bus- & Passagierstrecken","Taxi & private transfers":"Taxi & private Transfers","Air cargo & flights":"Luftfracht & Flüge","Maritime & ferry":"Schifffahrt & Fähre","Transit & forwarding":"Transit & Spedition","Operational":"Betriebsbereit","Unavailable":"Nicht verfügbar","Verified reviews":"Verifizierte Bewertungen","My Reviews":"Meine Bewertungen","Customer Reviews":"Kundenbewertungen","Public verified":"Öffentlich verifiziert","Search businesses & services":"Unternehmen & Dienste suchen","Use my location":"Meinen Standort verwenden","Map discovery":"Kartenerkundung","Map + list":"Karte + Liste","Favorites":"Favoriten","Compare":"Vergleichen","Add to favorites":"Zu Favoriten hinzufügen","Remove from favorites":"Aus Favoriten entfernen","Compare stays":"Aufenthalte vergleichen","City / destination / address":"Stadt / Ziel / Adresse","No verified accommodation is published yet":"Noch keine verifizierte Unterkunft veröffentlicht","Doctors & Pharmacies":"Ärzte & Apotheken","Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":"Globale Gesundheitsfindung. Patienten nutzen HAVKAR kostenlos. Keine erfundenen Anbieter.","Medicine encyclopedia":"Medikamenten-Enzyklopädie","International medical travel":"Internationale medizinische Reisen","Search providers":"Anbieter suchen"},"fr":{"Transport & Logistics":"Transport et logistique","Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":"Catégories premium HAVKAR. La réservation réglementée reste bloquée tant que les accords fournisseurs n’existent pas.","Local courier & parcels":"Coursier local et colis","Food & grocery courier":"Coursier nourriture et courses","Truck & commercial goods":"Camion et marchandises","Bus & passenger routes":"Bus et lignes passagers","Taxi & private transfers":"Taxi et transferts privés","Air cargo & flights":"Fret aérien et vols","Maritime & ferry":"Maritime et ferry","Transit & forwarding":"Transit et forwarding","Operational":"Opérationnel","Unavailable":"Indisponible","Verified reviews":"Avis vérifiés","My Reviews":"Mes avis","Customer Reviews":"Avis clients","Public verified":"Publics vérifiés","Search businesses & services":"Rechercher entreprises et services","Use my location":"Utiliser ma position","Map discovery":"Découverte carte","Map + list":"Carte + liste","Favorites":"Favoris","Compare":"Comparer","Add to favorites":"Ajouter aux favoris","Remove from favorites":"Retirer des favoris","Compare stays":"Comparer les séjours","City / destination / address":"Ville / destination / adresse","No verified accommodation is published yet":"Aucun hébergement vérifié n’est encore publié","Doctors & Pharmacies":"Médecins et pharmacies","Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":"Découverte santé mondiale. Les patients utilisent HAVKAR gratuitement. Aucun professionnel inventé.","Medicine encyclopedia":"Encyclopédie des médicaments","International medical travel":"Voyage médical international","Search providers":"Rechercher des professionnels"},"es":{"Transport & Logistics":"Transporte y logística","Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":"Categorías premium de HAVKAR. La reserva regulada en vivo permanece bloqueada hasta que existan acuerdos con proveedores.","Local courier & parcels":"Mensajería local y paquetes","Food & grocery courier":"Mensajería de comida y supermercado","Truck & commercial goods":"Camión y mercancías comerciales","Bus & passenger routes":"Autobús y rutas de pasajeros","Taxi & private transfers":"Taxi y traslados privados","Air cargo & flights":"Carga aérea y vuelos","Maritime & ferry":"Marítimo y ferry","Transit & forwarding":"Tránsito y forwarding","Operational":"Operativo","Unavailable":"No disponible","Verified reviews":"Reseñas verificadas","My Reviews":"Mis reseñas","Customer Reviews":"Reseñas de clientes","Public verified":"Públicas verificadas","Search businesses & services":"Buscar negocios y servicios","Use my location":"Usar mi ubicación","Map discovery":"Descubrimiento en mapa","Map + list":"Mapa + lista","Favorites":"Favoritos","Compare":"Comparar","Add to favorites":"Añadir a favoritos","Remove from favorites":"Quitar de favoritos","Compare stays":"Comparar estancias","City / destination / address":"Ciudad / destino / dirección","No verified accommodation is published yet":"Aún no hay alojamiento verificado publicado","Doctors & Pharmacies":"Médicos y farmacias","Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":"Descubrimiento sanitario global. Los pacientes usan HAVKAR gratis. Sin proveedores inventados.","Medicine encyclopedia":"Enciclopedia de medicamentos","International medical travel":"Viaje médico internacional","Search providers":"Buscar proveedores"},"pt":{"Transport & Logistics":"Transportes e logística","Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":"Categorias premium HAVKAR. A reserva regulamentada permanece bloqueada até existirem acordos com fornecedores.","Local courier & parcels":"Estafeta local e encomendas","Food & grocery courier":"Estafeta de comida e mercearia","Truck & commercial goods":"Camião e mercadorias comerciais","Bus & passenger routes":"Autocarro e rotas de passageiros","Taxi & private transfers":"Táxi e transfers privados","Air cargo & flights":"Carga aérea e voos","Maritime & ferry":"Marítimo e ferry","Transit & forwarding":"Trânsito e forwarding","Operational":"Operacional","Unavailable":"Indisponível","Verified reviews":"Avaliações verificadas","My Reviews":"As minhas avaliações","Customer Reviews":"Avaliações de clientes","Public verified":"Públicas verificadas","Search businesses & services":"Pesquisar negócios e serviços","Use my location":"Usar a minha localização","Map discovery":"Descoberta no mapa","Map + list":"Mapa + lista","Favorites":"Favoritos","Compare":"Comparar","Add to favorites":"Adicionar aos favoritos","Remove from favorites":"Remover dos favoritos","Compare stays":"Comparar estadias","City / destination / address":"Cidade / destino / endereço","No verified accommodation is published yet":"Ainda não há alojamento verificado publicado","Doctors & Pharmacies":"Médicos e farmácias","Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":"Descoberta de saúde global. Os pacientes usam o HAVKAR grátis. Sem prestadores inventados.","Medicine encyclopedia":"Enciclopédia de medicamentos","International medical travel":"Viagem médica internacional","Search providers":"Pesquisar prestadores"},"nl":{"Transport & Logistics":"Transport & logistiek","Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":"Premium HAVKAR-categorieën. Geregelde liveboeking blijft geblokkeerd tot er leveranciersovereenkomsten zijn.","Local courier & parcels":"Lokale koerier & pakketten","Food & grocery courier":"Eten- en boodschappenkoerier","Truck & commercial goods":"Vrachtwagen & handelsgoederen","Bus & passenger routes":"Bus- & passagiersroutes","Taxi & private transfers":"Taxi & privétransfers","Air cargo & flights":"Luchtvracht & vluchten","Maritime & ferry":"Maritiem & veerboot","Transit & forwarding":"Transit & expeditie","Operational":"Operationeel","Unavailable":"Niet beschikbaar","Verified reviews":"Geverifieerde beoordelingen","My Reviews":"Mijn beoordelingen","Customer Reviews":"Klantbeoordelingen","Public verified":"Openbaar geverifieerd","Search businesses & services":"Zoek bedrijven & diensten","Use my location":"Mijn locatie gebruiken","Map discovery":"Kaartdetectie","Map + list":"Kaart + lijst","Favorites":"Favorieten","Compare":"Vergelijken","Add to favorites":"Toevoegen aan favorieten","Remove from favorites":"Verwijderen uit favorieten","Compare stays":"Verblijven vergelijken","City / destination / address":"Stad / bestemming / adres","No verified accommodation is published yet":"Er is nog geen geverifieerde accommodatie gepubliceerd","Doctors & Pharmacies":"Artsen & apotheken","Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":"Wereldwijde zorgontdekking. Patiënten gebruiken HAVKAR gratis. Geen verzonnen aanbieders.","Medicine encyclopedia":"Geneesmiddelenencyclopedie","International medical travel":"Internationale medische reis","Search providers":"Aanbieders zoeken"},"sv":{"Transport & Logistics":"Transport och logistik","Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":"Premiumkategorier i HAVKAR. Reglerad livebokning förblir stängd tills leverantörsavtal finns.","Local courier & parcels":"Lokal budservice och paket","Food & grocery courier":"Mat- och livsmedelsbud","Truck & commercial goods":"Lastbil och gods","Bus & passenger routes":"Buss och passagerarlinjer","Taxi & private transfers":"Taxi och privata transfer","Air cargo & flights":"Flygfrakt och flyg","Maritime & ferry":"Sjöfrakt och färja","Transit & forwarding":"Transit och spedition","Operational":"I drift","Unavailable":"Ej tillgänglig","Verified reviews":"Verifierade recensioner","My Reviews":"Mina recensioner","Customer Reviews":"Kundrecensioner","Public verified":"Offentliga verifierade","Search businesses & services":"Sök företag och tjänster","Use my location":"Använd min plats","Map discovery":"Kartupptäckt","Map + list":"Karta + lista","Favorites":"Favoriter","Compare":"Jämför","Add to favorites":"Lägg till i favoriter","Remove from favorites":"Ta bort från favoriter","Compare stays":"Jämför boenden","City / destination / address":"Stad / destination / adress","No verified accommodation is published yet":"Inget verifierat boende är publicerat ännu","Doctors & Pharmacies":"Läkare & apotek","Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":"Global hälsoupptäckt. Patienter använder HAVKAR gratis. Inga påhittade vårdgivare.","Medicine encyclopedia":"Läkemedelsencyklopedi","International medical travel":"Internationell medicinsk resa","Search providers":"Sök vårdgivare"},"pl":{"Transport & Logistics":"Transport i logistyka","Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":"Kategorie premium HAVKAR. Regulowana rezerwacja na żywo pozostaje zablokowana do czasu umów z dostawcami.","Local courier & parcels":"Kurier lokalny i paczki","Food & grocery courier":"Kurier jedzenia i zakupów","Truck & commercial goods":"Ciężarówki i towary handlowe","Bus & passenger routes":"Autobusy i trasy pasażerskie","Taxi & private transfers":"Taxi i transfery prywatne","Air cargo & flights":"Cargo lotnicze i loty","Maritime & ferry":"Morski i prom","Transit & forwarding":"Tranzyt i spedycja","Operational":"Operacyjny","Unavailable":"Niedostępne","Verified reviews":"Zweryfikowane opinie","My Reviews":"Moje opinie","Customer Reviews":"Opinie klientów","Public verified":"Publiczne zweryfikowane","Search businesses & services":"Szukaj firm i usług","Use my location":"Użyj mojej lokalizacji","Map discovery":"Odkrywanie mapy","Map + list":"Mapa + lista","Favorites":"Ulubione","Compare":"Porównaj","Add to favorites":"Dodaj do ulubionych","Remove from favorites":"Usuń z ulubionych","Compare stays":"Porównaj pobyty","City / destination / address":"Miasto / cel / adres","No verified accommodation is published yet":"Nie opublikowano jeszcze zweryfikowanego zakwaterowania","Doctors & Pharmacies":"Lekarze i apteki","Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":"Globalne wyszukiwanie opieki zdrowotnej. Pacjenci używają HAVKAR za darmo. Bez wymyślonych dostawców.","Medicine encyclopedia":"Encyklopedia leków","International medical travel":"Międzynarodowy wyjazd medyczny","Search providers":"Szukaj dostawców"},"id":{"Transport & Logistics":"Transport & logistik","Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":"Kategori premium HAVKAR. Pemesanan langsung teregulasi tetap dikunci hingga perjanjian penyedia ada.","Local courier & parcels":"Kurir lokal & paket","Food & grocery courier":"Kurir makanan & belanja","Truck & commercial goods":"Truk & barang komersial","Bus & passenger routes":"Bus & rute penumpang","Taxi & private transfers":"Taksi & transfer pribadi","Air cargo & flights":"Kargo udara & penerbangan","Maritime & ferry":"Maritim & feri","Transit & forwarding":"Transit & forwarding","Operational":"Operasional","Unavailable":"Tidak tersedia","Verified reviews":"Ulasan terverifikasi","My Reviews":"Ulasan saya","Customer Reviews":"Ulasan pelanggan","Public verified":"Publik terverifikasi","Search businesses & services":"Cari bisnis & layanan","Use my location":"Gunakan lokasi saya","Map discovery":"Penemuan peta","Map + list":"Peta + daftar","Favorites":"Favorit","Compare":"Bandingkan","Add to favorites":"Tambah ke favorit","Remove from favorites":"Hapus dari favorit","Compare stays":"Bandingkan menginap","City / destination / address":"Kota / tujuan / alamat","No verified accommodation is published yet":"Belum ada akomodasi terverifikasi yang dipublikasikan","Doctors & Pharmacies":"Dokter & apotek","Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":"Penemuan kesehatan global. Pasien memakai HAVKAR gratis. Tanpa penyedia fiktif.","Medicine encyclopedia":"Ensiklopedia obat","International medical travel":"Perjalanan medis internasional","Search providers":"Cari penyedia"},"zh":{"Transport & Logistics":"运输与物流","Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":"HAVKAR 高级类别。受监管的实时预订在供应商协议就绪前保持关闭。","Local courier & parcels":"本地快递与包裹","Food & grocery courier":"食品与杂货配送","Truck & commercial goods":"卡车与商业货物","Bus & passenger routes":"巴士与客运线路","Taxi & private transfers":"出租车与私人接送","Air cargo & flights":"航空货运与航班","Maritime & ferry":"海运与渡轮","Transit & forwarding":"中转与货代","Operational":"运营中","Unavailable":"不可用","Verified reviews":"已验证评价","My Reviews":"我的评价","Customer Reviews":"客户评价","Public verified":"公开已验证","Search businesses & services":"搜索商家与服务","Use my location":"使用我的位置","Map discovery":"地图发现","Map + list":"地图 + 列表","Favorites":"收藏","Compare":"对比","Add to favorites":"加入收藏","Remove from favorites":"移出收藏","Compare stays":"对比住宿","City / destination / address":"城市 / 目的地 / 地址","No verified accommodation is published yet":"尚无已验证住宿发布","Doctors & Pharmacies":"医生与药店","Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":"全球医疗发现。患者免费使用 HAVKAR。无虚构服务方。","Medicine encyclopedia":"药品百科","International medical travel":"国际医疗旅行","Search providers":"搜索服务方"},"ja":{"Transport & Logistics":"輸送・物流","Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":"HAVKARプレミアムカテゴリ。規制対象のライブ予約は提供者契約があるまでゲートされます。","Local courier & parcels":"地域宅配・荷物","Food & grocery courier":"食品・食料品宅配","Truck & commercial goods":"トラック・商業貨物","Bus & passenger routes":"バス・旅客路線","Taxi & private transfers":"タクシー・貸切送迎","Air cargo & flights":"航空貨物・フライト","Maritime & ferry":"海上・フェリー","Transit & forwarding":"通過・フォワーディング","Operational":"稼働中","Unavailable":"利用不可","Verified reviews":"確認済みレビュー","My Reviews":"マイレビュー","Customer Reviews":"顧客レビュー","Public verified":"公開・確認済み","Search businesses & services":"店舗・サービスを検索","Use my location":"現在地を使う","Map discovery":"地図で探す","Map + list":"地図 + 一覧","Favorites":"お気に入り","Compare":"比較","Add to favorites":"お気に入りに追加","Remove from favorites":"お気に入りから削除","Compare stays":"滞在を比較","City / destination / address":"都市 / 目的地 / 住所","No verified accommodation is published yet":"確認済みの宿泊施設はまだ公開されていません","Doctors & Pharmacies":"医師と薬局","Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":"世界の医療発見。患者はHAVKARを無料で利用。架空の提供者なし。","Medicine encyclopedia":"医薬品百科","International medical travel":"国際医療渡航","Search providers":"提供者を検索"},"ko":{"Transport & Logistics":"운송 및 물류","Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":"HAVKAR 프리미엄 카테고리. 규제 실시간 예약은 제공자 계약이 있을 때까지 제한됩니다.","Local courier & parcels":"지역 택배 및 소포","Food & grocery courier":"음식 및 장보기 배달","Truck & commercial goods":"트럭 및 상업 화물","Bus & passenger routes":"버스 및 여객 노선","Taxi & private transfers":"택시 및 프라이빗 전송","Air cargo & flights":"항공 화물 및 항공편","Maritime & ferry":"해운 및 페리","Transit & forwarding":"환적 및 포워딩","Operational":"운영 중","Unavailable":"이용 불가","Verified reviews":"인증된 리뷰","My Reviews":"내 리뷰","Customer Reviews":"고객 리뷰","Public verified":"공개 인증","Search businesses & services":"업체 및 서비스 검색","Use my location":"내 위치 사용","Map discovery":"지도 탐색","Map + list":"지도 + 목록","Favorites":"즐겨찾기","Compare":"비교","Add to favorites":"즐겨찾기 추가","Remove from favorites":"즐겨찾기 제거","Compare stays":"숙소 비교","City / destination / address":"도시 / 목적지 / 주소","No verified accommodation is published yet":"아직 인증된 숙소가 게시되지 않았습니다","Doctors & Pharmacies":"의사 및 약국","Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":"글로벌 의료 검색. 환자는 HAVKAR를 무료로 사용. 허구 제공자 없음.","Medicine encyclopedia":"의약품 백과","International medical travel":"국제 의료 여행","Search providers":"제공자 검색"},"hi":{"Transport & Logistics":"परिवहन और लॉजिस्टिक्स","Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":"HAVKAR प्रीमियम श्रेणियाँ। विनियमित लाइव बुकिंग प्रदाता समझौतों तक गेटेड रहती है।","Local courier & parcels":"स्थानीय कूरियर और पार्सल","Food & grocery courier":"खाद्य और किराना कूरियर","Truck & commercial goods":"ट्रक और व्यावसायिक सामान","Bus & passenger routes":"बस और यात्री मार्ग","Taxi & private transfers":"टैक्सी और निजी ट्रांसफर","Air cargo & flights":"एयर कार्गो और उड़ानें","Maritime & ferry":"समुद्री और फेरी","Transit & forwarding":"ट्रांजिट और फॉरवर्डिंग","Operational":"संचालन में","Unavailable":"अनुपलब्ध","Verified reviews":"सत्यापित समीक्षाएँ","My Reviews":"मेरी समीक्षाएँ","Customer Reviews":"ग्राहक समीक्षाएँ","Public verified":"सार्वजनिक सत्यापित","Search businesses & services":"व्यवसाय और सेवाएँ खोजें","Use my location":"मेरी लोकेशन उपयोग करें","Map discovery":"मानचित्र खोज","Map + list":"मानचित्र + सूची","Favorites":"पसंदीदा","Compare":"तुलना करें","Add to favorites":"पसंदीदा में जोड़ें","Remove from favorites":"पसंदीदा से हटाएँ","Compare stays":"ठहर की तुलना करें","City / destination / address":"शहर / गंतव्य / पता","No verified accommodation is published yet":"अभी कोई सत्यापित आवास प्रकाशित नहीं है","Doctors & Pharmacies":"डॉक्टर और फार्मेसी","Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":"वैश्विक स्वास्थ्य खोज। मरीज़ HAVKAR मुफ़्त उपयोग करते हैं। कोई बनावटी प्रदाता नहीं।","Medicine encyclopedia":"दवा विश्वकोश","International medical travel":"अंतरराष्ट्रीय चिकित्सा यात्रा","Search providers":"प्रदाता खोजें"},"ru":{"Transport & Logistics":"Транспорт и логистика","Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":"Премиум-категории HAVKAR. Регулируемое живое бронирование закрыто, пока нет договоров с поставщиками.","Local courier & parcels":"Местный курьер и посылки","Food & grocery courier":"Курьер еды и продуктов","Truck & commercial goods":"Грузовики и коммерческие товары","Bus & passenger routes":"Автобусы и пассажирские маршруты","Taxi & private transfers":"Такси и частные трансферы","Air cargo & flights":"Авиагрузы и рейсы","Maritime & ferry":"Морские перевозки и паромы","Transit & forwarding":"Транзит и экспедирование","Operational":"Работает","Unavailable":"Недоступно","Verified reviews":"Проверенные отзывы","My Reviews":"Мои отзывы","Customer Reviews":"Отзывы клиентов","Public verified":"Публичные проверенные","Search businesses & services":"Поиск компаний и услуг","Use my location":"Использовать моё местоположение","Map discovery":"Поиск на карте","Map + list":"Карта + список","Favorites":"Избранное","Compare":"Сравнить","Add to favorites":"Добавить в избранное","Remove from favorites":"Удалить из избранного","Compare stays":"Сравнить варианты проживания","City / destination / address":"Город / пункт назначения / адрес","No verified accommodation is published yet":"Проверенное жильё ещё не опубликовано","Doctors & Pharmacies":"Врачи и аптеки","Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":"Глобальный поиск здравоохранения. Пациенты используют HAVKAR бесплатно. Без вымышленных специалистов.","Medicine encyclopedia":"Энциклопедия лекарств","International medical travel":"Международный медицинский туризм","Search providers":"Искать специалистов"},"ckb":{"Transport & Logistics":"گواستنەوە و لۆجستیک","Verified reviews":"پێداچوونەوەی پشتڕاستکراو","My Reviews":"پێداچوونەوەکانی من","Customer Reviews":"پێداچوونەوەی کڕیاران","Use my location":"شوێنی من بەکاربهێنە","Map discovery":"دۆزینەوەی نەخشە","Map + list":"نەخشە + لیست","Favorites":"دڵخوازەکان","Compare":"بەراورد","Operational":"چالاک","Unavailable":"بەردەست نییە","No verified accommodation is published yet":"هێشتا هیچ شوێنی مانەوەی پشتڕاستکراو بڵاونەکراوەتەوە","Doctors & Pharmacies":"پزیشکان و دەرمانخانەکان","Medicine encyclopedia":"ئەنسیکڵۆپیدیای دەرمان","International medical travel":"گەشتی پزیشکی نێودەوڵەتی","Search providers":"گەڕان بەدوای دابینکەران","Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":"پۆلە پریمیەمەکانی HAVKAR. حیجزکردنی زیندووی ڕێکخراو تا ڕێککەوتنی دابینکەر داخراو دەمێنێتەوە.","Local courier & parcels":"گەیاندنی ناوخۆیی و پاکێج","Food & grocery courier":"گەیاندنی خۆراک و کڕین","Truck & commercial goods":"بارهەڵگر و کاڵای بازرگانی","Bus & passenger routes":"پاس و ڕێڕەوی سەرنشین","Taxi & private transfers":"تاکسی و گواستنەوەی تایبەت","Air cargo & flights":"باری ئاسمانی و گەشت","Maritime & ferry":"دەریایی و کەشتی","Transit & forwarding":"ترانزیت و فۆرواردینگ","Public verified":"گشتی پشتڕاستکراو","Search businesses & services":"گەڕان بۆ کاروبار و خزمەتگوزاری","Add to favorites":"زیادکردن بۆ دڵخوازەکان","Remove from favorites":"لابردن لە دڵخوازەکان","Compare stays":"بەراوردکردنی مانەوە","City / destination / address":"شار / مەبەست / ناونیشان","Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":"دۆزینەوەی تەندروستی جیهانی. نەخۆشەکان HAVKAR بەخۆڕایی بەکاردەهێنن. هیچ دابینکەری دروستکراو نییە."},"kmr":{"Transport & Logistics":"Veguheztin û lojîstîk","Verified reviews":"Nirxandinên pejirandî","My Reviews":"Nirxandinên min","Customer Reviews":"Nirxandinên xerîdaran","Use my location":"Cihê min bikar bîne","Map discovery":"Keşfa nexşeyê","Map + list":"Nexşe + lîste","Favorites":"Bijare","Compare":"Berawird bike","Operational":"Çalak","Unavailable":"Neynê","No verified accommodation is published yet":"Hîn tu cihê mayînê yê pejirandî nehatiye weşandin","Doctors & Pharmacies":"Bijîşk û dermanxane","Medicine encyclopedia":"Ansîklopediya dermanan","International medical travel":"Rêwîtiya bijîşkî ya navneteweyî","Search providers":"Pêşkêşkaran bigere","Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":"Kategoriyên premium ên HAVKAR. Rezervasyona zindî ya birêkûpêk heta peymanên pêşkêşkaran girtî dimîne.","Local courier & parcels":"Kuryeya herêmî û paket","Food & grocery courier":"Kuryeya xwarin û kirînê","Truck & commercial goods":"Kamyon û malên bazirganî","Bus & passenger routes":"Otobus û rêçên rêwiyan","Taxi & private transfers":"Taksî û veguheztinên taybet","Air cargo & flights":"Barkêşiya hewayî û firrîn","Maritime & ferry":"Deryayî û ferîbot","Transit & forwarding":"Transit û forwarding","Public verified":"Giştî pejirandî","Search businesses & services":"Li karsazî û xizmetan bigere","Add to favorites":"Têxe nav bijareyan","Remove from favorites":"Ji bijareyan rake","Compare stays":"Mayînan berawird bike","City / destination / address":"Bajar / armanc / navnîşan","Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":"Keşfa tenduristiya cîhanî. Nexweş HAVKAR belaş bikar tînin. Bê pêşkêşkarên çêkirî."},"tr":{"Transport & Logistics":"Ulaşım ve lojistik","Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":"HAVKAR premium kategorileri. Düzenlemeli canlı rezervasyon, sağlayıcı anlaşmaları olana kadar kapalı kalır.","Local courier & parcels":"Yerel kurye ve paketler","Food & grocery courier":"Yemek ve market kuryesi","Truck & commercial goods":"Kamyon ve ticari mallar","Bus & passenger routes":"Otobüs ve yolcu hatları","Taxi & private transfers":"Taksi ve özel transferler","Air cargo & flights":"Hava kargo ve uçuşlar","Maritime & ferry":"Denizcilik ve feribot","Transit & forwarding":"Transit ve forwarding","Operational":"Çalışır durumda","Unavailable":"Kullanılamaz","Verified reviews":"Doğrulanmış yorumlar","My Reviews":"Yorumlarım","Customer Reviews":"Müşteri yorumları","Public verified":"Herkese açık doğrulanmış","Search businesses & services":"İşletme ve hizmet ara","Use my location":"Konumumu kullan","Map discovery":"Harita keşfi","Map + list":"Harita + liste","Favorites":"Favoriler","Compare":"Karşılaştır","Add to favorites":"Favorilere ekle","Remove from favorites":"Favorilerden kaldır","Compare stays":"Konaklamaları karşılaştır","City / destination / address":"Şehir / destinasyon / adres","No verified accommodation is published yet":"Henüz doğrulanmış konaklama yayımlanmadı","Doctors & Pharmacies":"Doktorlar ve eczaneler","Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":"Küresel sağlık keşfi. Hastalar HAVKAR’ı ücretsiz kullanır. Uydurma sağlayıcı yok.","Medicine encyclopedia":"İlaç ansiklopedisi","International medical travel":"Uluslararası tıbbi seyahat","Search providers":"Sağlayıcı ara"},"ar":{"Transport & Logistics":"النقل والخدمات اللوجستية","Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":"فئات HAVKAR المميزة. يبقى الحجز المباشر المنظم مغلقًا حتى تتوفر اتفاقيات المزودين.","Local courier & parcels":"توصيل محلي وطرود","Food & grocery courier":"توصيل طعام وبقالة","Truck & commercial goods":"شاحنات وبضائع تجارية","Bus & passenger routes":"حافلات ومسارات الركاب","Taxi & private transfers":"تاكسي ونقل خاص","Air cargo & flights":"شحن جوي ورحلات","Maritime & ferry":"بحري وعبارات","Transit & forwarding":"ترانزيت وشحن دولي","Operational":"تشغيلي","Unavailable":"غير متاح","Verified reviews":"مراجعات موثّقة","My Reviews":"مراجعاتي","Customer Reviews":"مراجعات العملاء","Public verified":"عامة موثّقة","Search businesses & services":"ابحث عن أعمال وخدمات","Use my location":"استخدم موقعي","Map discovery":"اكتشاف الخريطة","Map + list":"خريطة + قائمة","Favorites":"المفضلة","Compare":"مقارنة","Add to favorites":"أضف إلى المفضلة","Remove from favorites":"إزالة من المفضلة","Compare stays":"قارن الإقامات","City / destination / address":"مدينة / وجهة / عنوان","No verified accommodation is published yet":"لا توجد إقامة موثّقة منشورة بعد","Doctors & Pharmacies":"الأطباء والصيدليات","Medicine encyclopedia":"موسوعة الأدوية","International medical travel":"السفر الطبي الدولي","Search providers":"ابحث عن مقدمي الخدمة","Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":"اكتشاف رعاية صحية عالمي. يستخدم المرضى HAVKAR مجانًا. بلا مقدمي خدمة مُختلقين."},"fa":{"Transport & Logistics":"حمل‌ونقل و لجستیک","Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":"دسته‌های پریمیوم HAVKAR. رزرو زندهٔ مشمول مجوز تا زمان توافق با ارائه‌دهنده بسته می‌ماند.","Local courier & parcels":"پیک محلی و بسته","Food & grocery courier":"پیک غذا و خرید","Truck & commercial goods":"کامیون و کالای تجاری","Bus & passenger routes":"اتوبوس و مسیر مسافری","Taxi & private transfers":"تاکسی و ترانسفر خصوصی","Air cargo & flights":"بار هوایی و پرواز","Maritime & ferry":"دریایی و کشتی","Transit & forwarding":"ترانزیت و فورواردر","Operational":"عملیاتی","Unavailable":"در دسترس نیست","Verified reviews":"نظرات تأییدشده","My Reviews":"نظرات من","Customer Reviews":"نظرات مشتریان","Public verified":"عمومی تأییدشده","Search businesses & services":"جستجوی کسب‌وکار و خدمات","Use my location":"استفاده از موقعیت من","Map discovery":"کشف روی نقشه","Map + list":"نقشه + فهرست","Favorites":"علاقه‌مندی‌ها","Compare":"مقایسه","Add to favorites":"افزودن به علاقه‌مندی‌ها","Remove from favorites":"حذف از علاقه‌مندی‌ها","Compare stays":"مقایسه اقامتگاه‌ها","City / destination / address":"شهر / مقصد / آدرس","No verified accommodation is published yet":"هنوز هیچ اقامتگاه تأییدشده‌ای منتشر نشده است","Doctors & Pharmacies":"پزشکان و داروخانه‌ها","Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":"کشف جهانی مراقبت سلامت. بیماران HAVKAR را رایگان استفاده می‌کنند. هیچ ارائه‌دهندهٔ ساختگی نیست.","Medicine encyclopedia":"دانشنامه دارو","International medical travel":"سفر درمانی بین‌المللی","Search providers":"جستجوی ارائه‌دهندگان"},"ur":{"Transport & Logistics":"نقل و حمل اور لاجسٹکس","Premium HAVKAR categories. Live regulated booking stays gated until provider agreements exist.":"HAVKAR پریمیم اقسام۔ ریگولیٹڈ لائیو بکنگ فراہم کنندگان کے معاہدوں تک محدود رہتی ہے۔","Local courier & parcels":"مقامی کورئیر اور پارسل","Food & grocery courier":"کھانے اور گروسری کورئیر","Truck & commercial goods":"ٹرک اور تجارتی سامان","Bus & passenger routes":"بس اور مسافر راستے","Taxi & private transfers":"ٹیکسی اور نجی ٹرانسفر","Air cargo & flights":"ایئر کارگو اور پروازیں","Maritime & ferry":"سمندری اور فیری","Transit & forwarding":"ٹرانزٹ اور فارورڈنگ","Operational":"آپریشنل","Unavailable":"دستیاب نہیں","Verified reviews":"تصدیق شدہ جائزے","My Reviews":"میرے جائزے","Customer Reviews":"گاہک کے جائزے","Public verified":"عوامی تصدیق شدہ","Search businesses & services":"کاروبار اور خدمات تلاش کریں","Use my location":"میری لوکیشن استعمال کریں","Map discovery":"نقشے کی دریافت","Map + list":"نقشہ + فہرست","Favorites":"پسندیدہ","Compare":"موازنہ","Add to favorites":"پسندیدہ میں شامل کریں","Remove from favorites":"پسندیدہ سے ہٹائیں","Compare stays":"قیام کا موازنہ کریں","City / destination / address":"شہر / منزل / پتہ","No verified accommodation is published yet":"ابھی کوئی تصدیق شدہ رہائش شائع نہیں ہوئی","Doctors & Pharmacies":"ڈاکٹرز اور فارمیسیز","Global healthcare discovery. Patients use HAVKAR for free. No invented providers.":"عالمی صحت دریافت۔ مریض HAVKAR مفت استعمال کرتے ہیں۔ کوئی فرضی فراہم کنندہ نہیں۔","Medicine encyclopedia":"ادویات کا انسائیکلوپیڈیا","International medical travel":"بین الاقوامی طبی سفر","Search providers":"فراہم کنندگان تلاش کریں"}};
 
   function lang() {
     try {
@@ -212,10 +26,10 @@
     return PHRASES[code][text] || text;
   }
 
-  function apply(root) {
+  function apply(rootEl) {
     var code = lang();
     if (code === "en" || !PHRASES[code]) return;
-    var scope = root && root.nodeType === 1 ? root : document.body;
+    var scope = rootEl && rootEl.nodeType === 1 ? rootEl : document.body;
     if (!scope) return;
     var walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
     var node;
@@ -235,6 +49,7 @@
 
   root.HAVKAR_PREMIUM_I18N = {
     phrases: PHRASES,
+    selectable: ["en","it","de","fr","es","pt","nl","sv","pl","id","zh","ja","ko","hi","ru","ckb","kmr","tr","ar","fa","ur"],
     t: t,
     apply: apply,
     language: lang
