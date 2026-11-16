@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/havkar-icon-32-20261022-v3.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1b5e20">
+<title>HAVKAR | Health provider registration</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+:root{--g:#1b5e20;--bg:#eef6f0}
+*{box-sizing:border-box}
+body{margin:0;font-family:Georgia,"Iowan Old Style",serif;background:linear-gradient(180deg,#f4faf5,#e6f0e8);color:#123;min-height:100vh;padding-bottom:40px}
+header{background:linear-gradient(135deg,#1b5e20,#2e7d32);color:#fff;padding:calc(14px + env(safe-area-inset-top)) 16px 16px}
+.wrap{max-width:720px;margin:0 auto;padding:14px 16px}
+.card{background:#fff;border:1px solid #d7e6db;border-radius:14px;padding:14px;box-shadow:0 8px 24px rgba(27,94,32,.08)}
+label{display:block;margin:10px 0 4px;font-size:13px}
+input,select,textarea{width:100%;min-height:42px;border:1px solid #cfd;border-radius:10px;padding:8px 10px;font:inherit}
+textarea{min-height:96px}
+button{min-height:44px;border:0;border-radius:10px;background:var(--g);color:#fff;font-weight:700;padding:0 14px;cursor:pointer;margin-top:12px;width:100%}
+.notice{background:#f7fcf7;border:1px solid #cfe0d3;border-radius:12px;padding:12px;color:#456;line-height:1.45;margin:12px 0}
+a{color:var(--g);font-weight:700}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap" style="padding-top:0;padding-bottom:0">
+    <button type="button" id="backButton" style="width:auto;background:rgba(255,255,255,.2)">Back</button>
+    <h1 style="margin:8px 0 0;font-size:1.25rem">Provider registration</h1>
+    <p style="margin:6px 0 0;opacity:.95">License verification required for regulated roles. Live subscription billing is OFF.</p>
+  </div>
+</header>
+<main class="wrap">
+  <p class="notice"><strong>Patients stay free.</strong> Hospitals, clinics, labs, imaging, addiction centers, herbal pharmacies and herbal shops have no mandatory monthly subscription under current Owner policy. Doctor/pharmacy plans are proposed catalog-only until final Owner billing approval.</p>
+  <div class="card">
+    <label for="displayName">Professional / business display name</label>
+    <input id="displayName" type="text" maxlength="200" required>
+    <label for="category">Category</label>
+    <select id="category"></select>
+    <label for="country">Country code</label>
+    <input id="country" type="text" maxlength="2" placeholder="IT">
+    <label for="city">City</label>
+    <input id="city" type="text" maxlength="120">
+    <label for="license">License number</label>
+    <input id="license" type="text" maxlength="120">
+    <label for="jurisdiction">License jurisdiction</label>
+    <input id="jurisdiction" type="text" maxlength="120" placeholder="Italy / Ordine…">
+    <label for="languages">Languages (comma-separated codes)</label>
+    <input id="languages" type="text" placeholder="en, fa, it">
+    <label for="specialties">Specialties (comma-separated)</label>
+    <input id="specialties" type="text">
+    <label for="bio">Public bio (no cure guarantees)</label>
+    <textarea id="bio" maxlength="4000"></textarea>
+    <p class="notice">Self-reported outcome statistics must be labeled as unverified. Subscription payments cannot buy better clinical rankings. Unlicensed herbal retailers are never labeled as verified doctors or pharmacies.</p>
+    <button type="button" id="submitBtn">Submit for verification</button>
+    <p id="status" role="status"></p>
+  </div>
+  <p><a href="health.html">Back to directory</a> · <a href="login.html">Sign in</a></p>
+</main>
+<script src="/supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/havkar-page-back.js"></script>
+<script>
+(function () {
+  var statusEl = document.getElementById("status");
+  var catSel = document.getElementById("category");
+  document.getElementById("backButton").onclick = function () {
+    if (window.havkarNavigateBack) window.havkarNavigateBack();
+    else location.href = "health.html";
+  };
+
+  function setStatus(t) { statusEl.textContent = t || ""; }
+
+  fetch("/api/health", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "health_catalog" })
+  }).then(function (r) { return r.json(); }).then(function (body) {
+    (body.categories || []).forEach(function (c) {
+      if (c.id === "medicine_info") return;
+      var opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.label + (c.subscription_required === false ? " (no mandatory fee)" : "");
+      catSel.appendChild(opt);
+    });
+  }).catch(function () { setStatus("Catalog unavailable"); });
+
+  document.getElementById("submitBtn").onclick = async function () {
+    setStatus("Submitting…");
+    try {
+      var client = window.supabase && window.SUPABASE_URL
+        ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
+        : null;
+      if (!client) {
+        setStatus("Sign in required. Open login, then return here.");
+        return;
+      }
+      var session = (await client.auth.getSession()).data.session;
+      if (!session) {
+        setStatus("Sign in required before provider registration.");
+        location.href = "login.html?next=health-provider-apply.html";
+        return;
+      }
+      var res = await fetch("/api/health", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + session.access_token
+        },
+        body: JSON.stringify({
+          action: "health_provider_register",
+          display_name: document.getElementById("displayName").value,
+          category_id: catSel.value,
+          country_code: document.getElementById("country").value,
+          city: document.getElementById("city").value,
+          license_number: document.getElementById("license").value,
+          license_jurisdiction: document.getElementById("jurisdiction").value,
+          languages: document.getElementById("languages").value.split(",").map(function (s) { return s.trim(); }).filter(Boolean),
+          specialties: document.getElementById("specialties").value.split(",").map(function (s) { return s.trim(); }).filter(Boolean),
+          bio: document.getElementById("bio").value
+        })
+      });
+      var body = await res.json();
+      if (!body.ok) {
+        setStatus((body.error || "Registration failed") + (body.note ? " — " + body.note : ""));
+        return;
+      }
+      setStatus(
+        "Submitted for review. Status: " + body.provider.publication_status +
+          " / license: " + body.provider.license_status +
+          ". Billing charge now: OFF."
+      );
+    } catch (e) {
+      setStatus("Registration request failed");
+    }
+  };
+})();
+</script>
+</body>
+</html>
