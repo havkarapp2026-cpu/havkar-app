@@ -41,5 +41,15 @@ test("ui i18n21 still covers 21 langs with profile/forms/legal", () => {
   assert.ok(fa["Sign out"]);
   assert.ok(fa["Required field"]);
   assert.ok(fa["Company information"]);
+  assert.ok(fa["Book now"]);
+  assert.ok(fa["Health categories"]);
+  assert.ok(fa["Dashboard"]);
+  assert.ok(fa["Reset filters"]);
+  assert.ok(fa["Delivered"]);
   assert.notEqual(api.pack("ckb")["Save"], api.pack("kmr")["Save"]);
+  assert.notEqual(api.pack("ckb")["Book now"], api.pack("kmr")["Book now"]);
+  for (const section of ["hotels", "health", "filters", "admin", "notifications", "delivery"]) {
+    assert.ok(api.glossaries[section], section);
+    assert.equal(Object.keys(api.glossaries[section]).length, 20);
+  }
 });
