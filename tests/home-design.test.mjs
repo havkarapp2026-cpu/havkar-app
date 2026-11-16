@@ -40,10 +40,14 @@ assert.match(home, /assets\/home\/languages\.png/);
 assert.match(home, /assets\/home\/havkar-ai\.png/);
 assert.match(home, /assets\/home\/about\.png/);
 assert.match(home, /assets\/home\/doctors-pharmacies\.png/);
+assert.match(home, /assets\/home\/home-mint-map-bg\.png/);
+assert.match(home, /\.menu-item[\s\S]{0,400}border-radius:\s*22px/);
+assert.match(home, /background-image:[\s\S]{0,280}home-mint-map-bg\.png/);
 for (const name of [
   "header.png", "buy-sell.png", "jobs.png", "services.png", "wallet.png",
   "tickets.png", "accommodation.png", "ads.png", "delivery.png", "events.png",
-  "chat.png", "languages.png", "doctors-pharmacies.png", "support.png", "havkar-ai.png", "about.png"
+  "chat.png", "languages.png", "doctors-pharmacies.png", "support.png", "havkar-ai.png", "about.png",
+  "home-mint-map-bg.png"
 ]) {
   assert.ok(fs.existsSync(path.join(root, "assets/home", name)), name);
 }
