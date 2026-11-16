@@ -78,16 +78,36 @@
     target.appendChild(contacts);
   }
 
+  function isHomePage() {
+    var html = document.documentElement;
+    var body = document.body;
+    if (body && body.getAttribute("data-havkar-home") === "1") return true;
+    if (html && html.getAttribute("data-havkar-entry") === "home") return true;
+    var path = String((location && location.pathname) || "");
+    return path === "/" || path === "" || /\/index\.html$/i.test(path);
+  }
+
   function boot() {
+    /* Never inject operator/legal registration beside Home tiles. */
+    if (isHomePage()) {
+      return;
+    }
     var nodes = document.querySelectorAll("[data-havkar-legal-footer]");
     if (!nodes.length) {
       var fallback = document.createElement("div");
       fallback.setAttribute("data-havkar-legal-footer", "");
-      (document.querySelector("main") || document.body).appendChild(fallback);
+      fallback.style.width = "100%";
+      fallback.style.flexBasis = "100%";
+      fallback.style.maxWidth = "920px";
+      (document.body || document.documentElement).appendChild(fallback);
       mount(fallback);
       return;
     }
-    Array.prototype.forEach.call(nodes, mount);
+    Array.prototype.forEach.call(nodes, function (node) {
+      node.style.width = "100%";
+      node.style.flexBasis = "100%";
+      mount(node);
+    });
   }
 
   if (document.readyState === "loading") {

@@ -88,9 +88,11 @@ body {
     background-repeat: no-repeat, no-repeat;
     background-attachment: scroll, scroll;
 
+    /* Column flex keeps Home full-width centered; never side-by-side with extras. */
     display: flex;
-    justify-content: center;
-    align-items: safe center;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
 
     padding:
         max(12px, env(safe-area-inset-top))
@@ -102,8 +104,9 @@ body {
 .container {
     position: relative;
 
-    width: 100%;
-    max-width: 520px;
+    width: min(100%, 560px);
+    max-width: 560px;
+    flex: 0 1 auto;
 
     padding: 8px 6px 28px;
 
@@ -680,19 +683,38 @@ h1 {
 
 @media (min-width: 768px) {
     .container {
-        max-width: 640px;
-        padding: 12px 10px 32px;
+        width: min(100%, 720px);
+        max-width: 720px;
+        padding: 14px 14px 36px;
         border-radius: 32px;
     }
 
     .menu-grid {
-        gap: 12px;
-        margin: 8px 4px 16px;
+        gap: 14px;
+        margin: 10px 6px 18px;
     }
 
     .menu-item {
         border-radius: 26px;
     }
+}
+
+@media (min-width: 1024px) {
+    .container {
+        width: min(100%, 780px);
+        max-width: 780px;
+        padding: 16px 16px 40px;
+    }
+
+    .menu-grid {
+        gap: 16px;
+    }
+}
+
+/* Home never mounts public operator/legal registration beside the tiles. */
+body[data-havkar-home="1"] .havkar-legal-footer,
+html[data-havkar-entry="home"] .havkar-legal-footer {
+    display: none !important;
 }
 
 @media (max-width: 360px) {
@@ -796,7 +818,7 @@ h1 {
 <script src="/havkar-i18n.js"></script>
 </head>
 
-<body>
+<body data-havkar-home="1">
 
 <main class="container">
 
@@ -956,10 +978,9 @@ h1 {
 
 </main>
 
-<div data-havkar-legal-footer></div>
+<!-- Legal/company registration is intentionally NOT shown on Home.
+     Required disclosures remain on About / Terms / Privacy pages. -->
 <script src="/havkar-supabase-config.js"></script>
-<script src="/havkar-operator-config.js"></script>
-<script src="/havkar-legal-footer.js"></script>
 <script src="/havkar-sw-register.js"></script>
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
