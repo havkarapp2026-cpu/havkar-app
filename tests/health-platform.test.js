@@ -57,7 +57,13 @@ assert.ok(health.FREE_UNDER_POLICY.includes("hospital"));
 assert.ok(i18n.includes('"Doctors & Pharmacies": "پزشکان و داروخانه‌ها"'));
 assert.ok(healthHtml.includes("/api/health"));
 assert.ok(healthHtml.includes("havkar-map.js"));
+assert.ok(healthHtml.includes("havkar-health-i18n.js"));
+assert.ok(fs.existsSync(path.join(root, "havkar-health-i18n.js")));
+assert.ok(reviews.includes("HAVKAR_SUPABASE_CONFIG"));
 assert.ok(vercel.rewrites.some((r) => r.source === "/api/health"));
+const dash = fs.readFileSync(path.join(root, "health-dashboard.html"), "utf8");
+assert.ok(dash.includes("havkar-supabase-config.js"));
+assert.ok(!dash.includes('src="/supabase-config.js"'));
 
 function mockRes() {
   return {

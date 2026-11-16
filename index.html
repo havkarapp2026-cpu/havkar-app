@@ -934,6 +934,14 @@ h1 {
         <a href="login.html" data-i18n="login">Log In</a>
     </div>
 
+    <div class="account-panel" id="signedInPanel" hidden>
+        <p id="signedInEmail"></p>
+        <a class="enter-button" href="profile.html" style="display:inline-flex;text-decoration:none;width:100%;box-sizing:border-box;justify-content:center">
+            <span data-i18n="profile">Profile</span>
+            <span class="enter-arrow" aria-hidden="true">›</span>
+        </a>
+    </div>
+
 
     <!-- =========================
          SECURITY
@@ -961,13 +969,18 @@ const supabase = createClient(
 );
 const guestSignup = document.getElementById("guestSignup");
 const guestLogin = document.getElementById("guestLogin");
+const signedInPanel = document.getElementById("signedInPanel");
+const signedInEmail = document.getElementById("signedInEmail");
 function updateAccount(user) {
   guestSignup.hidden = !!user;
   guestLogin.hidden = !!user;
+  if (signedInPanel) signedInPanel.hidden = !user;
+  if (signedInEmail) signedInEmail.textContent = user && user.email ? user.email : "";
 }
 // Avoid briefly displaying guest actions until the stored session is checked.
 guestSignup.hidden = true;
 guestLogin.hidden = true;
+if (signedInPanel) signedInPanel.hidden = true;
 try {
   const { data, error } = await supabase.auth.getSession();
   if (error) throw error;
@@ -976,6 +989,7 @@ try {
   console.error("HAVKAR session check failed", error);
   guestSignup.hidden = false;
   guestLogin.hidden = false;
+  if (signedInPanel) signedInPanel.hidden = true;
 }
 supabase.auth.onAuthStateChange((_event, session) => updateAccount(session?.user || null));
 </script>
