@@ -28,7 +28,7 @@ assert.deepEqual(tiles, [
   "events.html",
   "chat.html",
   "language.html",
-  "reviews.html",
+  "health.html",
   "support.html",
   "havkar-ai.html",
   "about.html"
@@ -39,10 +39,11 @@ assert.match(home, /assets\/home\/header\.png/);
 assert.match(home, /assets\/home\/languages\.png/);
 assert.match(home, /assets\/home\/havkar-ai\.png/);
 assert.match(home, /assets\/home\/about\.png/);
+assert.match(home, /assets\/home\/doctors-pharmacies\.png/);
 for (const name of [
   "header.png", "buy-sell.png", "jobs.png", "services.png", "wallet.png",
   "tickets.png", "accommodation.png", "ads.png", "delivery.png", "events.png",
-  "chat.png", "languages.png", "reviews.png", "support.png", "havkar-ai.png", "about.png"
+  "chat.png", "languages.png", "doctors-pharmacies.png", "support.png", "havkar-ai.png", "about.png"
 ]) {
   assert.ok(fs.existsSync(path.join(root, "assets/home", name)), name);
 }
@@ -70,7 +71,7 @@ assert.deepEqual(labels.map((match) => match[2]), [
   "Events",
   "Chat",
   "Languages",
-  "Reviews",
+  "Doctors &amp; Pharmacies",
   "Support",
   "HAVKAR AI",
   "About HAVKAR"

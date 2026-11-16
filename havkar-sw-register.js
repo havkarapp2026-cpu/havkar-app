@@ -3,7 +3,7 @@
     return;
   }
 
-  var SW_URL = "/sw.js?v=havkar-sw-20261113-emoji-sticky-tabs-v6";
+  var SW_URL = "/sw.js?v=havkar-sw-20261116-health-platform-v1";
 
   window.addEventListener("load", function () {
     navigator.serviceWorker
