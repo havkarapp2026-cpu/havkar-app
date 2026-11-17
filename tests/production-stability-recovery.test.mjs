@@ -56,3 +56,10 @@ test("service worker cache bumped for stability recovery", () => {
   assert.match(sw, /havkar-sw-20261117-stability-recovery-v1/);
   assert.match(reg, /havkar-sw-20261117-stability-recovery-v1/);
 });
+
+test("tickets bottom nav restores Home without Profile", () => {
+  const html = read("tickets.html");
+  assert.match(html, /href="index\.html"/);
+  assert.match(html, /id="navTransfer"/);
+  assert.doesNotMatch(html, /id="navProfile"/);
+});
