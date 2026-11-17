@@ -70,6 +70,18 @@ test("post-ad no longer clamps listing currency to EUR/USD only", () => {
   assert.match(services, /isAllowedServiceCurrency/);
 });
 
+test("ads listing form mounts shared 133-currency selector", () => {
+  const ads = read("ads.html");
+  assert.match(ads, /id="adCurrencyMount"/);
+  assert.match(ads, /HAVKAR_CURRENCY_SELECT\.mount/);
+  assert.match(ads, /havkar-currency-select\.js/);
+  const mig = read(
+    "supabase/migrations/20261117180000_ads_listing_currency_133.sql"
+  );
+  assert.match(mig, /ads_currency_iso_format/);
+  assert.match(mig, /currency <> 'XLM'/);
+});
+
 test("modules do not keep dead goProfile account helpers", () => {
   for (const file of [
     "buy-sell.html",
