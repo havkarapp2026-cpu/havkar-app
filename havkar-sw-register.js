@@ -3,7 +3,7 @@
     return;
   }
 
-  var SW_URL = "/sw.js?v=havkar-sw-20261117-owner-exec-214-v1";
+  var SW_URL = "/sw.js?v=havkar-sw-20261117-stability-recovery-v1";
 
   window.addEventListener("load", function () {
     navigator.serviceWorker
