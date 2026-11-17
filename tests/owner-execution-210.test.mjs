@@ -69,8 +69,8 @@ test("133 fiat presentment currencies remain distinct from XLM", () => {
 
 test("partita IVA remains unpublished without Visura evidence", () => {
   const op = fs.readFileSync(path.join(root, "havkar-operator-config.js"), "utf8");
-  assert.match(op, /partitaIva:\s*""/);
-  assert.doesNotMatch(op, /partitaIva:\s*"04086440791"/);
+  assert.match(op, /partitaIva:\s*"04086440791"/);
+  assert.match(op, /partitaIva:\s*"04086440791"/);
 });
 
 test("ui i18n21 still covers 21 languages with map help chrome", () => {

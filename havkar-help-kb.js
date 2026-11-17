@@ -213,12 +213,29 @@
       ]
     },
     {
+      id: "calls",
+      name: "Calls",
+      href: "calls.html",
+      summary: "Voice and video calling workspace reserved on Home.",
+      who: "Signed-in users after Owner-authorized calling is armed.",
+      start: "Open Calls to review permissions and readiness. Working call buttons stay disabled until E2E verification.",
+      create: "Not available until signaling, TURN, security, and end-to-end tests pass.",
+      search: "Call history and missed calls remain empty until calling is live.",
+      maps: "Not applicable.",
+      payments: "Calling does not invent charges.",
+      cancel: "Not applicable while blocked.",
+      safety: "No fake working call buttons. Medical telehealth remains gated under Doctors & Pharmacies.",
+      faq: [
+        ["Can I place a call now?", "No. Calls stay BLOCKED until backend, TURN, signaling, security, and E2E verification pass."]
+      ]
+    },
+    {
       id: "support",
       name: "Support",
       href: "support.html",
-      summary: "Official help center, FAQs, tickets and company contacts.",
+      summary: "Official help center, FAQs, tickets and company contacts (Profile → Settings).",
       who: "Everyone.",
-      start: "Search help topics or send a support request.",
+      start: "Open Profile → Settings → Support, or support.html directly.",
       create: "Submit a support ticket and track status with your reference.",
       search: "Searchable FAQs and tile guides.",
       maps: "Not applicable.",
@@ -250,17 +267,34 @@
       id: "about",
       name: "About HAVKAR",
       href: "about.html",
-      summary: "Company information, mission and legal disclosures.",
+      summary: "Company information, mission and legal disclosures (Profile → Settings).",
       who: "Everyone.",
-      start: "Open About for platform overview and legal entity details.",
+      start: "Open Profile → Settings → About HAVKAR for platform overview and legal entity details.",
       create: "Not applicable.",
       search: "Not applicable.",
       maps: "Not applicable.",
       payments: "Not applicable.",
       cancel: "Not applicable.",
-      safety: "Legal entity HAVKAR DI JALILNIA AMIR. Operator Amir Jalilnia. Personal Owner login email is never shown as a public contact.",
+      safety: "Legal entity HAVKAR DI JALILNIA AMIR. Operator Amir Jalilnia. Partita IVA 04086440791. Personal Owner login email is never shown as a public contact.",
       faq: [
-        ["Where is company registration shown?", "On About / legal pages — not as a large Home side panel."]
+        ["Where is company registration shown?", "In Profile → Settings → About / Legal — not as a Home Support/About tile."]
+      ]
+    },
+    {
+      id: "coming-soon",
+      name: "Coming soon",
+      href: "coming-soon.html",
+      summary: "Reserved Home tile for a future Owner-approved service.",
+      who: "Everyone.",
+      start: "This tile is intentionally empty of new product claims.",
+      create: "Not applicable.",
+      search: "Not applicable.",
+      maps: "Not applicable.",
+      payments: "Not applicable.",
+      cancel: "Not applicable.",
+      safety: "No invented service. Tile count remains 15.",
+      faq: [
+        ["What replaced About on Home?", "About and Support moved into Profile → Settings. Home keeps a reserved Coming soon tile."]
       ]
     }
   ];
@@ -276,9 +310,10 @@
       registrationNumber: "KR234170",
       reaNumber: "KR-234170",
       registeredAddress: "Francesco Antonio Lucifero 40, 88900 Crotone, Italy",
-      partitaIvaPublished: false,
+      partitaIvaPublished: true,
+      partitaIva: "04086440791",
       partitaIvaNote:
-        "Partita IVA remains unpublished on public pages until a verified Visura confirms it."
+        "Partita IVA 04086440791 is published from the Owner-confirmed Chamber of Commerce registration."
     },
     byId: function (id) {
       return TILES.find(function (t) {

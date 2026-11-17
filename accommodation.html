@@ -748,8 +748,9 @@
         })
       });
       var body = await res.json();
-      payQuoteRaw.hidden = false;
-      payQuoteRaw.textContent = JSON.stringify(body, null, 2);
+      // Never dump raw API JSON to public UI.
+      payQuoteRaw.hidden = true;
+      payQuoteRaw.textContent = "";
       var rows = [];
       rows.push(["Availability", body.availability_label || body.availability_status || "—"]);
       rows.push(["Method", body.payment_method || method]);
@@ -825,7 +826,25 @@
         headers: headers,
         body: JSON.stringify({ action: "hotels_history" })
       });
-      historyOut.textContent = JSON.stringify(await res.json(), null, 2);
+      var body = await res.json();
+      if (!body || body.ok !== true) {
+        historyOut.textContent =
+          "Booking history is unavailable right now. No sample bookings were invented.";
+        return;
+      }
+      var items = Array.isArray(body.items) ? body.items : Array.isArray(body.history) ? body.history : [];
+      if (!items.length) {
+        historyOut.textContent = "No hotel booking history for this account yet.";
+        return;
+      }
+      historyOut.textContent = items
+        .slice(0, 20)
+        .map(function (row, idx) {
+          var label = row.label || row.hotel_name || row.status || "Entry";
+          var when = row.created_at || row.date || "";
+          return String(idx + 1) + ". " + label + (when ? " · " + when : "");
+        })
+        .join("\n");
     } catch (e) {
       historyOut.textContent = "History request failed";
     }

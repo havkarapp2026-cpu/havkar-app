@@ -1750,7 +1750,7 @@ select:focus-visible{
         </div>
 
         <div class="translation-help">
-            When Auto Translate is on, your message is translated
+            When Auto Translate is on, HAVKAR stores your original message and attaches a separate translation. The original is never overwritten.
             to the selected language before it is sent.
         </div>
 
@@ -3723,7 +3723,7 @@ async function enrichConversations(){
                             supabaseClient
                                 .from("messages")
                                 .select(
-                                    "id,sender_id,message_text,created_at,is_read,delivered_at,read_at"
+                                    "id,sender_id,message_text,translated_text,translation_target_lang,translation_source_lang,created_at,is_read,delivered_at,read_at"
                                 )
                                 .eq(
                                     "conversation_id",
@@ -4639,7 +4639,7 @@ async function loadMessages(
                 supabaseClient
                     .from("messages")
                     .select(
-                        "id,conversation_id,sender_id,message_text,created_at,is_read,delivered_at,read_at"
+                        "id,conversation_id,sender_id,message_text,translated_text,translation_target_lang,translation_source_lang,created_at,is_read,delivered_at,read_at"
                     )
                     .eq(
                         "conversation_id",
@@ -4886,11 +4886,85 @@ function appendMessage(
     text.className =
         "message-text";
 
+    text.setAttribute("dir", "auto");
     text.textContent =
         String(
             message.message_text ||
             ""
         );
+
+    const translated =
+        String(
+            message.translated_text ||
+            ""
+        ).trim();
+
+    if(translated){
+
+        const translationBlock =
+            document.createElement(
+                "div"
+            );
+
+        translationBlock.className =
+            "message-translation";
+
+        translationBlock.setAttribute(
+            "dir",
+            "auto"
+        );
+
+        translationBlock.style.cssText =
+            "margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,.08);font-size:.92em;opacity:.92";
+
+        const label =
+            document.createElement(
+                "div"
+            );
+
+        label.style.cssText =
+            "font-size:.75em;font-weight:700;opacity:.7;margin-bottom:4px";
+
+        label.textContent =
+            "Translation" +
+            (
+                message.translation_target_lang
+                    ? " · " +
+                      String(
+                          message.translation_target_lang
+                      )
+                    : ""
+            );
+
+        const translatedEl =
+            document.createElement(
+                "div"
+            );
+
+        translatedEl.className =
+            "message-text-translated";
+
+        translatedEl.setAttribute(
+            "dir",
+            "auto"
+        );
+
+        translatedEl.textContent =
+            translated;
+
+        translationBlock.appendChild(
+            label
+        );
+
+        translationBlock.appendChild(
+            translatedEl
+        );
+
+        text.appendChild(
+            translationBlock
+        );
+
+    }
 
     const meta =
         document.createElement(
@@ -6110,11 +6184,9 @@ async function sendMessage(
 
     }
 
-    let textToSend =
-        originalText;
-
-    let translationFailed =
-        false;
+    // Always persist the original. Translation is a separate derived field.
+    let translatedText = null;
+    let translationFailed = false;
 
     try{
 
@@ -6144,7 +6216,7 @@ async function sendMessage(
 
             try{
 
-                textToSend =
+                translatedText =
                     await translateOutgoingMessage(
                         originalText
                     );
@@ -6159,7 +6231,8 @@ async function sendMessage(
             }
 
             if(
-                textToSend.length >
+                translatedText &&
+                translatedText.length >
                 MAX_MESSAGE_LENGTH
             ){
 
@@ -6185,18 +6258,27 @@ async function sendMessage(
         const clientMessageId =
             newClientMessageId();
 
+        const rpcPayload = {
+            p_conversation_id:
+                state.currentConversationId,
+            p_message_text:
+                originalText,
+            p_client_message_id:
+                clientMessageId
+        };
+
+        if(translatedText){
+            rpcPayload.p_translated_text =
+                translatedText;
+            rpcPayload.p_translation_target_lang =
+                state.translationTarget || null;
+        }
+
         const result =
             await withTimeout(
                 supabaseClient.rpc(
                     "havkar_send_chat_message",
-                    {
-                        p_conversation_id:
-                            state.currentConversationId,
-                        p_message_text:
-                            textToSend,
-                        p_client_message_id:
-                            clientMessageId
-                    }
+                    rpcPayload
                 ),
                 20000
             );
