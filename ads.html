@@ -1193,6 +1193,8 @@
             id="pageStatus"
         ></div>
 
+        <section id="moduleMapPanel" class="havkar-module-map" aria-label="Ads campaign map" style="margin:12px 0"></section>
+
         <div id="adsContainer">
 
             <div class="loading-state">
@@ -1442,6 +1444,28 @@
                                 placeholder="Milan"
                             >
 
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="adTargetRadiusKm">
+                                Targeting radius (km)
+                            </label>
+                            <input
+                                class="form-control"
+                                id="adTargetRadiusKm"
+                                type="number"
+                                min="1"
+                                max="500"
+                                step="1"
+                                value="25"
+                                placeholder="25"
+                            >
+                            <p style="margin:6px 0 0;font-size:.82rem;color:#567">
+                                Pick a map pin below for geographic targeting. Coordinates are geocoded from City / Location — never invented.
+                            </p>
+                            <div id="adTargetMapPanel" class="havkar-module-map" style="margin-top:8px"></div>
+                            <input type="hidden" id="adLatitude" value="">
+                            <input type="hidden" id="adLongitude" value="">
                         </div>
 
                         <div class="form-group">
@@ -1888,7 +1912,7 @@
                 await supabaseClient
                     .from(ADS_TABLE)
                     .select(
-                        "id,created_at,title,category,price,location,description,user_id,photos,status,listing_surface"
+                        "id,created_at,title,category,price,location,description,user_id,photos,status,listing_surface,latitude,longitude"
                     )
                     .eq(
                         "listing_surface",
@@ -1913,7 +1937,7 @@
                     await supabaseClient
                         .from(ADS_TABLE)
                         .select(
-                            "id,created_at,title,category,price,location,description,user_id,photos,status"
+                            "id,created_at,title,category,price,location,description,user_id,photos,status,latitude,longitude"
                         )
                         .order(
                             "created_at",
@@ -2716,6 +2740,12 @@
 
                     `;
 
+            const locLabel = String(ad.location || "").trim();
+            const latNum = Number(ad.latitude);
+            const lngNum = Number(ad.longitude);
+            const latAttr = Number.isFinite(latNum) ? ` data-lat="${latNum}" data-latitude="${latNum}"` : "";
+            const lngAttr = Number.isFinite(lngNum) ? ` data-lng="${lngNum}" data-longitude="${lngNum}"` : "";
+
             return `
 
                 <article
@@ -2723,6 +2753,10 @@
                     data-ad-id="${escapeAttribute(
                         adId
                     )}"
+                    data-id="${escapeAttribute(adId)}"
+                    data-location="${escapeAttribute(locLabel)}"
+                    data-label="${escapeAttribute(locLabel.slice(0, 80))}"
+                    ${latAttr}${lngAttr}
                 >
 
                     <div class="ad-banner">
@@ -3860,6 +3894,25 @@
 
                 }
 
+                let geoLat = Number((document.getElementById("adLatitude") || {}).value);
+                let geoLng = Number((document.getElementById("adLongitude") || {}).value);
+                if ((!Number.isFinite(geoLat) || !Number.isFinite(geoLng)) && window.HAVKAR_GEO_PINS) {
+                    try {
+                        if (window.__havkarRefreshAdTargetMap) await window.__havkarRefreshAdTargetMap();
+                        geoLat = Number((document.getElementById("adLatitude") || {}).value);
+                        geoLng = Number((document.getElementById("adLongitude") || {}).value);
+                        if ((!Number.isFinite(geoLat) || !Number.isFinite(geoLng)) && location) {
+                            const geo = await window.HAVKAR_GEO_PINS.geocodeAddress(
+                                [location, city, countryCode].filter(Boolean).join(", ")
+                            );
+                            if (geo) {
+                                geoLat = Number(geo.latitude);
+                                geoLng = Number(geo.longitude);
+                            }
+                        }
+                    } catch (_geoErr) {}
+                }
+
                 const newAd = Object.assign(
                     {},
                     validated.payload || {
@@ -3877,6 +3930,10 @@
                         campaign_id: campaignId
                     }
                 );
+                if (Number.isFinite(geoLat) && Number.isFinite(geoLng)) {
+                    newAd.latitude = geoLat;
+                    newAd.longitude = geoLng;
+                }
 
                 let insertPromise =
                     supabaseClient
@@ -3885,7 +3942,7 @@
                             newAd
                         )
                         .select(
-                            "id,created_at,title,category,price,location,description,user_id,photos,status,listing_surface"
+                            "id,created_at,title,category,price,location,description,user_id,photos,status,listing_surface,latitude,longitude"
                         )
                         .single();
 
@@ -3926,7 +3983,7 @@
                                 compatAd
                             )
                             .select(
-                                "id,created_at,title,category,price,location,description,user_id,photos,status,listing_surface"
+                                "id,created_at,title,category,price,location,description,user_id,photos,status,listing_surface,latitude,longitude"
                             )
                             .single();
 
@@ -5123,10 +5180,69 @@
 
     </script>
 
+    <script src="/havkar-map.js"></script>
+    <script src="/havkar-module-map.js"></script>
+    <script src="/havkar-geo-pins.js"></script>
     <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
 
 <script src="/havkar-page-back.js"></script>
+
+<script>
+(function(){
+  if(!window.HAVKAR_MODULE_MAP) return;
+  var el = document.getElementById('moduleMapPanel');
+  if(el){
+    window.HAVKAR_MODULE_MAP.mount({ container: el }).then(function(panel){
+      window.__havkarModuleMapPanel = panel;
+      if(window.HAVKAR_GEO_PINS){
+        window.HAVKAR_GEO_PINS.observeAndPin(document.getElementById('adsContainer') || document.body, {
+          selector: '.ad-card[data-location]',
+          limit: 24
+        });
+      }
+    }).catch(function(){});
+  }
+
+  async function refreshTargetMap(){
+    var host = document.getElementById('adTargetMapPanel');
+    if(!host || !window.HAVKAR_MODULE_MAP) return;
+    if(!window.__havkarAdTargetPanel){
+      try{
+        window.__havkarAdTargetPanel = await window.HAVKAR_MODULE_MAP.mount({ container: host, zoom: 10 });
+      }catch(_e){ return; }
+    }
+    var loc = (document.getElementById('adLocation')||{}).value || '';
+    var city = (document.getElementById('adCity')||{}).value || '';
+    var country = (document.getElementById('adCountry')||{}).value || '';
+    var q = [loc, city, country].filter(Boolean).join(', ');
+    if(!q || !window.HAVKAR_GEO_PINS) return;
+    var geo = await window.HAVKAR_GEO_PINS.geocodeAddress(q);
+    if(!geo) return;
+    var latEl = document.getElementById('adLatitude');
+    var lngEl = document.getElementById('adLongitude');
+    if(latEl) latEl.value = String(geo.latitude);
+    if(lngEl) lngEl.value = String(geo.longitude);
+    var radius = Number((document.getElementById('adTargetRadiusKm')||{}).value) || 25;
+    window.__havkarAdTargetPanel.setItems([{
+      id: 'target',
+      latitude: geo.latitude,
+      longitude: geo.longitude,
+      label: (q + ' · ' + radius + ' km').slice(0, 80)
+    }]);
+    if(window.__havkarAdTargetPanel.api && window.__havkarAdTargetPanel.api.setCenter){
+      window.__havkarAdTargetPanel.api.setCenter(geo.latitude, geo.longitude, 11);
+    }
+  }
+  ['adLocation','adCity','adCountry','adTargetRadiusKm'].forEach(function(id){
+    var node = document.getElementById(id);
+    if(!node) return;
+    node.addEventListener('change', refreshTargetMap);
+    node.addEventListener('blur', refreshTargetMap);
+  });
+  window.__havkarRefreshAdTargetMap = refreshTargetMap;
+})();
+</script>
 
 <!-- HAVKAR contextual help -->
 <p class="havkar-contextual-help" style="margin:10px 0;font-size:.85rem">

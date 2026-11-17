@@ -2768,7 +2768,9 @@ async function fetchListings(
         "created_at",
         "status",
         "listing_surface",
-        "expires_at"
+        "expires_at",
+        "latitude",
+        "longitude"
     ];
 
     let surfaceFilter =
@@ -3086,6 +3088,16 @@ function cardHtml(
             )
             : "";
 
+    const locationRaw =
+        legacyLocation &&
+        legacyLocation !== place
+            ? legacyLocation
+            : (
+                place
+                    ? place
+                    : "Location not specified"
+            );
+
     const location =
         escapeHtml(
             legacyLocation &&
@@ -3097,6 +3109,15 @@ function cardHtml(
                         : "Location not specified"
                 )
         );
+
+    const latAttr =
+        Number.isFinite(Number(ad.latitude))
+            ? ` data-lat="${Number(ad.latitude)}" data-latitude="${Number(ad.latitude)}"`
+            : "";
+    const lngAttr =
+        Number.isFinite(Number(ad.longitude))
+            ? ` data-lng="${Number(ad.longitude)}" data-longitude="${Number(ad.longitude)}"`
+            : "";
 
     const placeHtml =
         place
@@ -3138,6 +3159,10 @@ function cardHtml(
         <article
             class="ad-card"
             data-ad-id="${escapeHtml(ad.id)}"
+            data-id="${escapeHtml(ad.id)}"
+            data-location="${escapeHtml(locationRaw)}"
+            data-label="${escapeHtml(String(locationRaw).slice(0, 80))}"
+            ${latAttr}${lngAttr}
             tabindex="0"
             role="button"
             aria-label="${title}"
@@ -4754,6 +4779,7 @@ document.addEventListener(
 
 <script src="/havkar-map.js"></script>
 <script src="/havkar-module-map.js"></script>
+<script src="/havkar-geo-pins.js"></script>
 <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
 
@@ -4762,24 +4788,16 @@ document.addEventListener(
 <script>
 (function(){
   if(!window.HAVKAR_MODULE_MAP) return;
-  function collectCoords(){
-    var nodes = document.querySelectorAll('[data-lat][data-lng], [data-latitude][data-longitude]');
-    var out = [];
-    nodes.forEach(function(el){
-      var lat = Number(el.getAttribute('data-lat') || el.getAttribute('data-latitude'));
-      var lng = Number(el.getAttribute('data-lng') || el.getAttribute('data-longitude'));
-      if(!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-      out.push({ id: el.getAttribute('data-id') || el.id || null, latitude: lat, longitude: lng, label: (el.getAttribute('data-label') || el.textContent || '').trim().slice(0,80) });
-    });
-    return out;
-  }
   var el = document.getElementById('moduleMapPanel');
   if(!el) return;
   window.HAVKAR_MODULE_MAP.mount({ container: el }).then(function(panel){
     window.__havkarModuleMapPanel = panel;
-    panel.setItems(collectCoords());
-    var mo = new MutationObserver(function(){ panel.setItems(collectCoords()); });
-    mo.observe(document.body, { childList:true, subtree:true });
+    if(window.HAVKAR_GEO_PINS){
+      window.HAVKAR_GEO_PINS.observeAndPin(document.body, {
+        selector: '.ad-card[data-location]',
+        limit: 24
+      });
+    }
   }).catch(function(){});
 })();
 </script>
