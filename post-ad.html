@@ -258,7 +258,7 @@ textarea {
 
   </button>
 
-  <h1>Post New Ad</h1>
+  <h1>Post Buy &amp; Sell listing</h1>
 
 </div>
 
@@ -269,7 +269,14 @@ textarea {
 
   <div class="card">
 
-    <h2>Create Your Ad</h2>
+    <h2>Create a free listing</h2>
+
+    <p id="freeListingNotice" style="margin:-8px 0 18px;color:#2e7d32;font-size:.95rem;line-height:1.45;">
+      Buy &amp; Sell listings are free for every registered HAVKAR user.
+      No payment, business verification, Owner role, or subscription is required.
+      Business advertising belongs on
+      <a href="ads.html" style="color:#1b5e20;font-weight:700;">Business Ads</a>.
+    </p>
 
     <form id="adForm">
 
@@ -1614,9 +1621,13 @@ adForm.addEventListener(
 
       if (!currentUser) {
 
-        throw new Error(
-          "Please login before posting an ad."
-        );
+        window.location.href =
+          "login.html?next=" +
+          encodeURIComponent(
+            "/post-ad.html"
+          );
+
+        return;
 
       }
 
@@ -2268,6 +2279,12 @@ supabaseClient.auth.onAuthStateChange(
         "[HAVKAR] User signed out."
       );
 
+      window.location.href =
+        "login.html?next=" +
+        encodeURIComponent(
+          "/post-ad.html"
+        );
+
     }
 
     if (
@@ -2284,6 +2301,27 @@ supabaseClient.auth.onAuthStateChange(
 
   }
 );
+
+
+(async function requireListingPublisherSession() {
+
+  const currentUser =
+    await getCurrentUser();
+
+  if (currentUser) {
+
+    return;
+
+  }
+
+  window.location.replace(
+    "login.html?next=" +
+    encodeURIComponent(
+      "/post-ad.html"
+    )
+  );
+
+})();
 
 const listingVideoInput = document.getElementById("listingVideo");
 
