@@ -1193,9 +1193,6 @@
             id="pageStatus"
         ></div>
 
-        <link rel="stylesheet" href="/havkar-map-platform.css">
-        <section id="moduleMapPanel" class="havkar-module-map" aria-label="Ads campaign map" style="margin:12px 0;position:relative;z-index:1;isolation:isolate"></section>
-
         <div id="adsContainer">
 
             <div class="loading-state">
@@ -1483,9 +1480,8 @@
                                 placeholder="25"
                             >
                             <p style="margin:6px 0 0;font-size:.82rem;color:#567">
-                                Pick a map pin below for geographic targeting. Coordinates are geocoded from City / Location — never invented.
+                                Coordinates are geocoded from City / Location when you save — never invented. No interactive map on this page.
                             </p>
-                            <div id="adTargetMapPanel" class="havkar-module-map" style="margin-top:8px"></div>
                             <input type="hidden" id="adLatitude" value="">
                             <input type="hidden" id="adLongitude" value="">
                         </div>
@@ -3976,18 +3972,26 @@
 
                 let geoLat = Number((document.getElementById("adLatitude") || {}).value);
                 let geoLng = Number((document.getElementById("adLongitude") || {}).value);
-                if ((!Number.isFinite(geoLat) || !Number.isFinite(geoLng)) && window.HAVKAR_GEO_PINS) {
+                if ((!Number.isFinite(geoLat) || !Number.isFinite(geoLng)) && location) {
                     try {
-                        if (window.__havkarRefreshAdTargetMap) await window.__havkarRefreshAdTargetMap();
+                        if (window.__havkarRefreshAdTargetCoords) await window.__havkarRefreshAdTargetCoords();
                         geoLat = Number((document.getElementById("adLatitude") || {}).value);
                         geoLng = Number((document.getElementById("adLongitude") || {}).value);
-                        if ((!Number.isFinite(geoLat) || !Number.isFinite(geoLng)) && location) {
-                            const geo = await window.HAVKAR_GEO_PINS.geocodeAddress(
-                                [location, city, countryCode].filter(Boolean).join(", ")
-                            );
-                            if (geo) {
-                                geoLat = Number(geo.latitude);
-                                geoLng = Number(geo.longitude);
+                        if ((!Number.isFinite(geoLat) || !Number.isFinite(geoLng))) {
+                            const q = [location, city, countryCode].filter(Boolean).join(", ");
+                            const res = await fetch("/api/hotels", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ action: "hotels_geocode", query: q })
+                            });
+                            const body = await res.json().catch(function () { return null; });
+                            if (body && body.ok && body.primary) {
+                                geoLat = Number(body.primary.latitude);
+                                geoLng = Number(body.primary.longitude);
+                                const latEl = document.getElementById("adLatitude");
+                                const lngEl = document.getElementById("adLongitude");
+                                if (latEl) latEl.value = String(geoLat);
+                                if (lngEl) lngEl.value = String(geoLng);
                             }
                         }
                     } catch (_geoErr) {}
@@ -5294,9 +5298,6 @@
     </script>
 
     <script src="/havkar-countries.js"></script>
-    <script src="/havkar-map.js"></script>
-    <script src="/havkar-module-map.js"></script>
-    <script src="/havkar-geo-pins.js"></script>
     <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
 <script>
@@ -5323,57 +5324,33 @@
 
 <script>
 (function(){
-  if(!window.HAVKAR_MODULE_MAP) return;
-  var el = document.getElementById('moduleMapPanel');
-  if(el){
-    window.HAVKAR_MODULE_MAP.mount({ container: el }).then(function(panel){
-      window.__havkarModuleMapPanel = panel;
-      if(window.HAVKAR_GEO_PINS){
-        window.HAVKAR_GEO_PINS.observeAndPin(document.getElementById('adsContainer') || document.body, {
-          selector: '.ad-card[data-location]',
-          limit: 24
-        });
-      }
-    }).catch(function(){});
-  }
-
-  async function refreshTargetMap(){
-    var host = document.getElementById('adTargetMapPanel');
-    if(!host || !window.HAVKAR_MODULE_MAP) return;
-    if(!window.__havkarAdTargetPanel){
-      try{
-        window.__havkarAdTargetPanel = await window.HAVKAR_MODULE_MAP.mount({ container: host, zoom: 10 });
-      }catch(_e){ return; }
-    }
+  async function refreshTargetCoords(){
     var loc = (document.getElementById('adLocation')||{}).value || '';
     var city = (document.getElementById('adCity')||{}).value || '';
     var country = (document.getElementById('adCountry')||{}).value || '';
     var q = [loc, city, country].filter(Boolean).join(', ');
-    if(!q || !window.HAVKAR_GEO_PINS) return;
-    var geo = await window.HAVKAR_GEO_PINS.geocodeAddress(q);
-    if(!geo) return;
-    var latEl = document.getElementById('adLatitude');
-    var lngEl = document.getElementById('adLongitude');
-    if(latEl) latEl.value = String(geo.latitude);
-    if(lngEl) lngEl.value = String(geo.longitude);
-    var radius = Number((document.getElementById('adTargetRadiusKm')||{}).value) || 25;
-    window.__havkarAdTargetPanel.setItems([{
-      id: 'target',
-      latitude: geo.latitude,
-      longitude: geo.longitude,
-      label: (q + ' · ' + radius + ' km').slice(0, 80)
-    }]);
-    if(window.__havkarAdTargetPanel.api && window.__havkarAdTargetPanel.api.setCenter){
-      window.__havkarAdTargetPanel.api.setCenter(geo.latitude, geo.longitude, 11);
-    }
+    if(!q || q.trim().length < 3) return;
+    try{
+      var res = await fetch('/api/hotels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'hotels_geocode', query: q })
+      });
+      var body = await res.json().catch(function(){ return null; });
+      if(!body || !body.ok || !body.primary) return;
+      var latEl = document.getElementById('adLatitude');
+      var lngEl = document.getElementById('adLongitude');
+      if(latEl) latEl.value = String(body.primary.latitude);
+      if(lngEl) lngEl.value = String(body.primary.longitude);
+    }catch(_e){}
   }
-  ['adLocation','adCity','adCountry','adTargetRadiusKm'].forEach(function(id){
+  ['adLocation','adCity','adCountry'].forEach(function(id){
     var node = document.getElementById(id);
     if(!node) return;
-    node.addEventListener('change', refreshTargetMap);
-    node.addEventListener('blur', refreshTargetMap);
+    node.addEventListener('change', refreshTargetCoords);
+    node.addEventListener('blur', refreshTargetCoords);
   });
-  window.__havkarRefreshAdTargetMap = refreshTargetMap;
+  window.__havkarRefreshAdTargetCoords = refreshTargetCoords;
 })();
 </script>
 

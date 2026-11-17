@@ -29,13 +29,15 @@ test("calls page stays gated without fake working call buttons", () => {
   assert.doesNotMatch(page, /startCall\(/);
 });
 
-test("jobs post modal sits above maps and suppresses map while open", () => {
+test("jobs post modal keeps country/city/address without module map", () => {
   const jobs = read("jobs.html");
   assert.match(jobs, /z-index:5000/);
-  assert.match(jobs, /suppressAllMaps\(true\)/);
   assert.match(jobs, /id="jobCountry"/);
   assert.match(jobs, /id="jobCity"/);
-  assert.match(jobs, /havkar-map-platform\.css/);
+  assert.match(jobs, /id="jobLocation"/);
+  assert.doesNotMatch(jobs, /havkar-module-map\.js/);
+  assert.doesNotMatch(jobs, /suppressAllMaps/);
+  assert.doesNotMatch(jobs, /id="moduleMapPanel"/);
 });
 
 test("shared map platform exposes street/satellite/hybrid and share helpers", () => {
@@ -105,14 +107,15 @@ test("future messenger integration doc exists and is preparation-only", () => {
   assert.match(doc, /does \*\*not\*\* ship/);
 });
 
-test("profile About opens canonical about.html and delivery map is inside the request form", () => {
+test("profile About opens canonical about.html and delivery keeps address fields without map panel", () => {
   const profile = read("profile.html");
   assert.match(profile, /goTo\("about\.html"\)/);
   const delivery = read("delivery.html");
-  const formOpen = delivery.indexOf('id="deliveryForm"');
-  const formClose = delivery.indexOf("</form>", formOpen);
-  const mapIdx = delivery.indexOf('id="moduleMapPanel"');
-  assert.ok(formOpen > 0 && mapIdx > formOpen && mapIdx < formClose);
-  assert.match(delivery, /id="applyMapToPickup"/);
+  assert.match(delivery, /id="deliveryForm"/);
+  assert.match(delivery, /id="pickupAddress"/);
+  assert.match(delivery, /id="deliveryAddress"/);
+  assert.doesNotMatch(delivery, /id="moduleMapPanel"/);
+  assert.doesNotMatch(delivery, /havkar-module-map\.js/);
+  assert.doesNotMatch(delivery, /id="applyMapToPickup"/);
   assert.match(delivery, /z-index:\s*5000/);
 });

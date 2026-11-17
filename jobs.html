@@ -1370,7 +1370,6 @@ a.primary{
 
   </div>
 
-  <section id="moduleMapPanel" class="havkar-module-map" aria-label="Map" style="margin:12px 0;position:relative;z-index:1;isolation:isolate"></section>
 <div id="jobsList"></div>
 
 </main>
@@ -1416,23 +1415,6 @@ a.primary{
   </div>
 
 </nav>
-
-<!-- =======================================================
-     WORKPLACE LOCATION PICKER (separate from discovery map)
-     ======================================================= -->
-<div class="modal" id="jobLocationModal" data-havkar-modal="1">
-  <div class="modal-box">
-    <div class="modal-head">
-      <h2>Workplace location</h2>
-      <button class="close" type="button" onclick="closeModal('jobLocationModal')">×</button>
-    </div>
-    <p class="upload-note">Search or use GPS, then confirm. Discovery map on the jobs list stays hidden while forms are open.</p>
-    <div id="jobLocationPickerPanel" class="havkar-module-map" style="margin:8px 0;position:relative;z-index:1;isolation:isolate"></div>
-    <button type="button" class="primary" onclick="confirmJobLocationPicker()" style="width:100%;margin-top:10px">
-      Use this location
-    </button>
-  </div>
-</div>
 
 <!-- =======================================================
      JOB DETAIL MODAL
@@ -1579,17 +1561,8 @@ a.primary{
         maxlength="160"
         placeholder="Address or workplace (optional detail)"
       >
-      <button
-        type="button"
-        class="secondary"
-        id="openJobLocationPicker"
-        onclick="openJobLocationPicker()"
-        style="margin-top:8px;min-height:42px;border-radius:12px;border:1px solid #1b5e20;background:#fff;color:#1b5e20;font-weight:700;padding:0 12px;cursor:pointer"
-      >
-        Pick workplace on map
-      </button>
       <div class="upload-note">
-        Use Country + City first. The map opens in a separate picker dialog — it never covers this form.
+        Enter Country, City, and workplace address. Map picker is not used on this page.
       </div>
     </div>
 
@@ -2924,85 +2897,7 @@ async function openPostJob(){
   }
 
   resetPostForm();
-  const mapPanel = document.getElementById("moduleMapPanel");
-  if(mapPanel){
-    mapPanel.classList.add("is-suppressed");
-    mapPanel.style.display = "none";
-  }
-  if(window.HAVKAR_MODULE_MAP && window.HAVKAR_MODULE_MAP.suppressAllMaps){
-    window.HAVKAR_MODULE_MAP.suppressAllMaps(true);
-  }
   openModal("postModal");
-}
-
-let __jobLocationPicker = null;
-let __jobLocationDraft = null;
-
-async function openJobLocationPicker(){
-  const discovery = document.getElementById("moduleMapPanel");
-  if(discovery){
-    discovery.classList.add("is-suppressed");
-    discovery.style.display = "none";
-  }
-  const postModal = document.getElementById("postModal");
-  if(postModal){
-    postModal.style.visibility = "hidden";
-  }
-  openModal("jobLocationModal");
-  const jobModal = document.getElementById("jobLocationModal");
-  if(jobModal){
-    jobModal.style.zIndex = "5000";
-  }
-  const host = document.getElementById("jobLocationPickerPanel");
-  if(!host || !window.HAVKAR_MODULE_MAP) return;
-  if(__jobLocationPicker){
-    if(__jobLocationPicker.api && __jobLocationPicker.api.invalidate){
-      __jobLocationPicker.api.invalidate();
-    }
-    return;
-  }
-  try{
-    __jobLocationPicker = await window.HAVKAR_MODULE_MAP.mount({
-      container: host,
-      latitude: 41.9028,
-      longitude: 12.4964,
-      zoom: 11
-    });
-    const country = document.getElementById("jobCountry");
-    const city = document.getElementById("jobCity");
-    if(__jobLocationPicker.setCountryCity){
-      __jobLocationPicker.setCountryCity(
-        country && country.value,
-        city && city.value
-      );
-    }
-  }catch(_e){
-    alert("Map picker could not load.");
-  }
-}
-
-function confirmJobLocationPicker(){
-  const note = __jobLocationPicker && __jobLocationPicker.note
-    ? String(__jobLocationPicker.note.textContent || "").trim()
-    : "";
-  const city = (document.getElementById("jobCity") || {}).value || "";
-  const countryEl = document.getElementById("jobCountry");
-  const countryName = countryEl && countryEl.value
-    ? ((countryEl.selectedOptions[0] && countryEl.selectedOptions[0].textContent) || countryEl.value)
-    : "";
-  const composed = [note && note.indexOf("Map:") === 0 ? "" : note, city, countryName]
-    .filter(Boolean)
-    .join(", ");
-  const loc = document.getElementById("jobLocation");
-  if(loc && composed){
-    loc.value = composed;
-  }
-  __jobLocationDraft = composed;
-  closeModal("jobLocationModal");
-  const postModal = document.getElementById("postModal");
-  if(postModal){
-    postModal.style.visibility = "";
-  }
 }
 
 /* =========================================================
@@ -4417,13 +4312,6 @@ function closeModal(id){
     "show"
   );
 
-  if(id === "jobLocationModal"){
-    const postModal = document.getElementById("postModal");
-    if(postModal){
-      postModal.style.visibility = "";
-    }
-  }
-
   const anyOpen =
     document.querySelector(
       ".modal.show"
@@ -4432,17 +4320,6 @@ function closeModal(id){
   if(!anyOpen){
     document.body.style.overflow =
       "";
-    const mapPanel = document.getElementById("moduleMapPanel");
-    if(mapPanel){
-      mapPanel.classList.remove("is-suppressed");
-      mapPanel.style.display = "";
-    }
-    if(window.HAVKAR_MODULE_MAP && window.HAVKAR_MODULE_MAP.suppressAllMaps){
-      window.HAVKAR_MODULE_MAP.suppressAllMaps(false);
-    }
-    if(window.__havkarModuleMapPanel && window.__havkarModuleMapPanel.api && window.__havkarModuleMapPanel.api.invalidate){
-      window.__havkarModuleMapPanel.api.invalidate();
-    }
   }
 }
 
@@ -4592,12 +4469,8 @@ loadSupabaseJobs();
 
 </script>
 
-<link rel="stylesheet" href="/havkar-map-platform.css">
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-currency-select.js"></script>
-<script src="/havkar-map.js"></script>
-<script src="/havkar-module-map.js"></script>
-<script src="/havkar-geo-pins.js"></script>
 <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
 <script>
@@ -4622,18 +4495,6 @@ loadSupabaseJobs();
   if(window.HAVKAR_COUNTRIES && window.HAVKAR_COUNTRIES.fillCountrySelect){
     window.HAVKAR_COUNTRIES.fillCountrySelect(document.getElementById('jobCountry'), 'Select country');
   }
-  if(!window.HAVKAR_MODULE_MAP) return;
-  var el = document.getElementById('moduleMapPanel');
-  if(!el) return;
-  window.HAVKAR_MODULE_MAP.mount({ container: el }).then(function(panel){
-    window.__havkarModuleMapPanel = panel;
-    if(window.HAVKAR_GEO_PINS){
-      window.HAVKAR_GEO_PINS.observeAndPin(document.body, {
-        selector: '.job-card[data-location]',
-        limit: 24
-      });
-    }
-  }).catch(function(){});
 })();
 </script>
 

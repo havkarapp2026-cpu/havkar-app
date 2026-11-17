@@ -38,7 +38,7 @@ assert.match(hotels, /havkar-premium-i18n/);
 
 const premiumI18n = fs.readFileSync("havkar-premium-i18n.js", "utf8");
 for (const code of ["it", "sv", "fa", "ar", "ckb", "kmr"]) {
-  assert.match(premiumI18n, new RegExp("\\b" + code + "\\s*:"));
+  assert.match(premiumI18n, new RegExp('"' + code + '"\\s*:'));
 }
 assert.match(premiumI18n, /Transport & Logistics/);
 assert.match(premiumI18n, /My Reviews/);
@@ -82,8 +82,8 @@ assert.match(profile, /reviews\.html\?mine=1/);
 
 const events = fs.readFileSync("events.html", "utf8");
 assert.match(events, /event_tickets|QR|check.?in/i);
-assert.match(events, /eventsMap|Map discovery/);
-assert.match(events, /havkar-map\.js/);
+assert.doesNotMatch(events, /eventsMapPanel|id="eventsMap"/);
+assert.doesNotMatch(events, /havkar-map\.js/);
 assert.match(events, /locationFilter/);
 assert.match(events, /data-event-location/);
 assert.match(events, /133 Stripe presentment|checkout-currency\.html/);

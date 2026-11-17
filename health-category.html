@@ -83,11 +83,9 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
         <input id="distanceInput" type="number" min="1" max="500" value="50">
       </div>
     </div>
-    <div id="map" role="application" data-i18n-aria="health.map_aria" aria-label="Health providers map"></div>
     <div class="toolbar">
       <button type="button" id="gpsBtn" data-i18n="health.use_location">Use my location</button>
       <button type="button" id="placeBtn">Search place</button>
-      <button type="button" id="boundsBtn">Search this area</button>
       <button type="button" id="verifiedOnlyBtn" aria-pressed="false" data-i18n="health.verified_only">Verified only</button>
     </div>
     <p id="geoLabel" class="notice" style="margin-top:10px;margin-bottom:0" data-i18n="health.map_empty"></p>
@@ -116,7 +114,6 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
   <a href="health-medicine.html" data-i18n="health.nav_medicines">Medicines</a>
   <a href="health-dashboard.html" data-i18n="health.nav_dashboard">Dashboard</a>
 </nav>
-<script src="/havkar-map.js"></script>
 <script src="/havkar-health-i18n.js"></script>
 <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
@@ -130,7 +127,8 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
   var params = new URLSearchParams(location.search);
   var categoryId = String(params.get("id") || params.get("category") || "").trim();
   var verifiedOnly = false;
-  var mapApi = null;
+  var userLat = null;
+  var userLng = null;
   var catalogCat = null;
   var statusEl = document.getElementById("status");
   var resultsEl = document.getElementById("results");
@@ -175,18 +173,13 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
         var dir = document.createElement("a");
         dir.className = "secondary";
         dir.style.cssText = "display:inline-flex;text-decoration:none;padding:8px 12px";
-        dir.href = (mapApi && mapApi.osmDirectionsUrl)
-          ? mapApi.osmDirectionsUrl(row.latitude, row.longitude)
-          : ("https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=;" +
-            encodeURIComponent(row.latitude + "," + row.longitude));
+        dir.href = "https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=;" +
+          encodeURIComponent(row.latitude + "," + row.longitude);
         dir.textContent = ht("health.directions");
         dir.target = "_blank";
         dir.rel = "noopener";
         actions.appendChild(dir);
       }
-      card.addEventListener("click", function () {
-        if (mapApi && mapApi.highlight && row.id) mapApi.highlight(row.id);
-      });
       resultsEl.appendChild(card);
     });
   }
@@ -205,8 +198,8 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
           country_code: document.getElementById("countryInput").value,
           category_id: categoryId,
           verified_only: verifiedOnly,
-          latitude: mapApi && mapApi.marker ? mapApi.marker.getLatLng().lat : null,
-          longitude: mapApi && mapApi.marker ? mapApi.marker.getLatLng().lng : null
+          latitude: userLat,
+          longitude: userLng
         })
       });
       var body = await res.json();
@@ -216,27 +209,18 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
         return;
       }
       var rows = body.results || [];
-      if (mapApi && mapApi.filterItemsInBounds && window.__havkarBoundsOnly) {
-        rows = mapApi.filterItemsInBounds(rows);
-      }
-      window.__havkarBoundsOnly = false;
-      if (mapApi && mapApi.filterByDistanceKm && mapApi.marker) {
-        var maxKm = Number(document.getElementById("distanceInput").value);
-        var c = mapApi.marker.getLatLng();
-        if (Number.isFinite(maxKm) && maxKm > 0 && c) {
-          rows = mapApi.filterByDistanceKm(rows, c.lat, c.lng, maxKm);
-        }
-      }
-      if (mapApi && mapApi.setMarkers) {
-        mapApi.setMarkers(rows.map(function (r) {
-          return {
-            id: r.id,
-            latitude: r.latitude,
-            longitude: r.longitude,
-            label: (r.display_name || ht("health.provider")) + " · " +
-              (r.license_status === "verified" ? ht("health.verified_tag") : ht("health.unverified_tag"))
-          };
-        }));
+      var maxKm = Number(document.getElementById("distanceInput").value);
+      if (Number.isFinite(userLat) && Number.isFinite(userLng) && Number.isFinite(maxKm) && maxKm > 0) {
+        rows = rows.filter(function (r) {
+          if (r.latitude == null || r.longitude == null) return false;
+          var dLat = (Number(r.latitude) - userLat) * Math.PI / 180;
+          var dLng = (Number(r.longitude) - userLng) * Math.PI / 180;
+          var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(userLat * Math.PI / 180) * Math.cos(Number(r.latitude) * Math.PI / 180) *
+            Math.sin(dLng/2) * Math.sin(dLng/2);
+          var km = 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+          return km <= maxKm;
+        });
       }
       setStatus(ht("health.matches", { n: rows.length }));
       renderProviders(rows);
@@ -292,38 +276,40 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
   });
 
   document.getElementById("placeBtn").addEventListener("click", function () {
-    if (!mapApi || !mapApi.searchPlace) return;
-    mapApi.searchPlace(document.getElementById("placeInput").value).then(function (geo) {
-      if (!geo || !geo.ok) {
+    var q = String(document.getElementById("placeInput").value || "").trim();
+    if (q.length < 2) return;
+    fetch("/api/hotels", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "hotels_geocode", query: q })
+    }).then(function (res) { return res.json(); }).then(function (geo) {
+      if (!geo || geo.ok !== true || !geo.primary) {
         document.getElementById("geoLabel").textContent = ht("health.gps_denied");
         return;
       }
-      document.getElementById("geoLabel").textContent = (geo.primary && geo.primary.label) || ht("health.gps_ok");
+      userLat = Number(geo.primary.latitude);
+      userLng = Number(geo.primary.longitude);
+      document.getElementById("geoLabel").textContent = geo.primary.label || ht("health.gps_ok");
       runSearch();
     }).catch(function () {
       document.getElementById("geoLabel").textContent = ht("health.gps_denied");
     });
   });
-  document.getElementById("boundsBtn").addEventListener("click", function () {
-    window.__havkarBoundsOnly = true;
-    runSearch();
-  });
 
-  if (window.HAVKAR_MAP) {
-    window.HAVKAR_MAP.create("map", { latitude: 41.9, longitude: 12.5, zoom: 5, cluster: true }).then(function (api) {
-      mapApi = api;
-      document.getElementById("gpsBtn").addEventListener("click", function () {
-        api.requestGps().then(function () {
-          document.getElementById("geoLabel").textContent = ht("health.gps_ok");
-          runSearch();
-        }).catch(function () {
-          document.getElementById("geoLabel").textContent = ht("health.gps_denied");
-        });
-      });
-    }).catch(function () {
-      document.getElementById("geoLabel").textContent = ht("health.map_unavailable");
-    });
-  }
+  document.getElementById("gpsBtn").addEventListener("click", function () {
+    if (!navigator.geolocation) {
+      document.getElementById("geoLabel").textContent = ht("health.gps_denied");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      userLat = pos.coords.latitude;
+      userLng = pos.coords.longitude;
+      document.getElementById("geoLabel").textContent = ht("health.gps_ok");
+      runSearch();
+    }, function () {
+      document.getElementById("geoLabel").textContent = ht("health.gps_denied");
+    }, { enableHighAccuracy: true, timeout: 12000 });
+  });
 
   boot();
 })();
