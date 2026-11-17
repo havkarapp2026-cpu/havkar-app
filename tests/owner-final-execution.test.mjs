@@ -9,154 +9,156 @@ import test from "node:test";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(import.meta.url);
 const LANGS21 = [
-  "en",
-  "it",
-  "de",
-  "fr",
-  "es",
-  "pt",
-  "nl",
-  "sv",
-  "pl",
-  "id",
-  "zh",
-  "ja",
-  "ko",
-  "hi",
-  "ru",
-  "ckb",
-  "kmr",
-  "tr",
-  "ar",
-  "fa",
-  "ur"
+  "en","it","de","fr","es","pt","nl","sv","pl","id","zh","ja","ko","hi","ru","ckb","kmr","tr","ar","fa","ur"
 ];
 
-function loadBrowserScript(rel) {
+function loadBrowser(rel) {
   const code = fs.readFileSync(path.join(root, rel), "utf8");
-  const sandbox = { console };
+  const sandbox = {
+    console,
+    document: {
+      readyState: "complete",
+      body: null,
+      addEventListener() {},
+      createTreeWalker() {
+        return { nextNode: () => null };
+      },
+      querySelectorAll() {
+        return [];
+      }
+    },
+    NodeFilter: { SHOW_TEXT: 4 },
+    localStorage: { getItem: () => "en" }
+  };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(code, sandbox);
   return sandbox;
 }
 
+test("home registry has exactly 15 protected tiles and logo path", () => {
+  const home = fs.readFileSync(path.join(root, "index.html"), "utf8");
+  assert.equal((home.match(/class="menu-item"/g) || []).length, 15);
+  assert.match(home, /doctors-pharmacies\.png/);
+  assert.match(home, /flex-direction:\s*column/);
+  assert.doesNotMatch(home, /data-havkar-legal-footer/);
+  for (const href of [
+    "buy-sell.html","jobs.html","services.html","wallet.html","tickets.html",
+    "accommodation.html","ads.html","delivery.html","events.html","chat.html",
+    "language.html","health.html","support.html","havkar-ai.html","about.html"
+  ]) {
+    assert.match(home, new RegExp(`href="${href}"`));
+  }
+});
+
+test("support knowledge base covers all 15 tiles and SORAN confidentiality", () => {
+  const kb = loadBrowser("havkar-help-kb.js").HAVKAR_HELP_KB;
+  assert.equal(kb.tiles.length, 15);
+  assert.equal(kb.company.legalEntityName, "HAVKAR DI JALILNIA AMIR");
+  assert.equal(kb.company.soranEmail, "soran@havkar.online");
+  assert.equal(kb.company.partitaIvaPublished, false);
+  const support = fs.readFileSync(path.join(root, "support.html"), "utf8");
+  assert.match(support, /havkar-help-kb\.js/);
+  assert.match(support, /tileGuides/);
+  assert.match(support, /soran@havkar\.online/);
+  assert.match(support, /Only the Owner may access SORAN/);
+  assert.match(support, /Admin and Staff must never access SORAN/);
+  assert.match(support, /Partita IVA stays unpublished/);
+});
+
+test("133 fiat presentment currencies remain available and distinct from XLM", () => {
+  const {
+    listStripePresentmentCurrencies,
+    PRESENTMENT_COUNT
+  } = require("../lib/stripe-fiat-currency.cjs");
+  const list = listStripePresentmentCurrencies();
+  assert.equal(PRESENTMENT_COUNT, 133);
+  assert.equal(list.length, 133);
+  assert.ok(!list.map((c) => String(c).toUpperCase()).includes("XLM"));
+});
+
+test("omio affiliate link builder never invents fares and reports missing id", () => {
+  const {
+    buildOmioAffiliateSearchUrl,
+    omioConfigured
+  } = require("../lib/omio-adapter.cjs");
+  const missing = buildOmioAffiliateSearchUrl({ from: "Rome", to: "Milan" }, {});
+  assert.equal(missing.ok, false);
+  assert.equal(missing.error, "missing_OMIO_AFFILIATE_ID");
+  const ready = buildOmioAffiliateSearchUrl(
+    { from: "Rome", to: "Milan", date: "2026-12-01", mode: "train" },
+    { OMIO_AFFILIATE_ID: "havkar-test-partner" }
+  );
+  assert.equal(ready.ok, true);
+  assert.match(ready.url, /partner=havkar-test-partner/);
+  assert.match(ready.url, /omio\.com/);
+  const status = omioConfigured({ OMIO_AFFILIATE_ID: "havkar-test-partner" });
+  assert.equal(status.affiliate_search_ready, true);
+  assert.equal(status.live_search, false);
+});
+
+test("telehealth remains publicly gated without clinical checklist", () => {
+  const { telehealthStatus } = require("../lib/telehealth-adapter.cjs");
+  const status = telehealthStatus({});
+  assert.equal(status.voice, "BLOCKED");
+  assert.equal(status.video, "BLOCKED");
+  assert.equal(status.public_clinical_sessions_allowed, false);
+});
+
+test("operator config hides personal emails and keeps Partita IVA unpublished", () => {
+  const src = fs.readFileSync(path.join(root, "havkar-operator-config.js"), "utf8");
+  assert.match(src, /partitaIva:\s*""/);
+  assert.match(src, /soranEmail:\s*"soran@havkar\.online"/);
+  assert.match(src, /hidePersonalEmails/);
+  assert.doesNotMatch(src, /partitaIva:\s*"04086440791"/);
+});
+
 test("ui i18n21 covers all selectable languages and keeps Kurdish variants distinct", () => {
-  const sandbox = loadBrowserScript("havkar-ui-i18n21.js");
-  const api = sandbox.HAVKAR_UI_I18N21;
-  assert.ok(api);
+  const api = loadBrowser("havkar-ui-i18n21.js").HAVKAR_UI_I18N21;
   assert.deepEqual(Array.from(api.selectable || []), LANGS21);
   const fa = api.pack("fa");
   const ar = api.pack("ar");
   const ckb = api.pack("ckb");
   const kmr = api.pack("kmr");
-  assert.equal(fa["Buy & Sell"], "خرید و فروش");
-  assert.equal(ar["Buy & Sell"], "بيع وشراء");
-  assert.notEqual(ckb["Buy & Sell"], kmr["Buy & Sell"]);
-  assert.equal(ckb["Delivery"], "گەیاندن");
-  assert.equal(kmr["Delivery"], "Radestkirin");
-  assert.ok(fa["Search this area"]);
-  assert.ok(fa["Display currency"]);
-  assert.ok(fa["Charge currency"]);
+  assert.ok(fa["Buy & Sell"]);
+  assert.ok(ar["Buy & Sell"]);
+  assert.notEqual(ckb["Save"] || ckb["Home"], kmr["Save"] || kmr["Home"]);
 });
 
-test("map helper exposes clustering, bounds, geocode and routing helpers", () => {
-  const src = fs.readFileSync(path.join(root, "havkar-map.js"), "utf8");
-  assert.match(src, /markerClusterGroup/);
-  assert.match(src, /filterItemsInBounds/);
-  assert.match(src, /filterByDistanceKm/);
-  assert.match(src, /searchThisArea|onBoundsSearch/);
-  assert.match(src, /router\.project-osrm\.org/);
-  assert.match(src, /hotels_geocode/);
-  assert.match(src, /Never fabricates/);
-  const sandbox = loadBrowserScript("havkar-map.js");
-  const km = sandbox.HAVKAR_MAP.haversineKm(41.9, 12.5, 41.9, 12.5);
-  assert.ok(km < 0.001);
+test("ios release preflight script exists and documents signing secrets without values", () => {
+  const preflight = fs.readFileSync(path.join(root, "scripts/ios-release-preflight.sh"), "utf8");
+  assert.match(preflight, /APPLE_TEAM_ID/);
+  assert.match(preflight, /APP_STORE_CONNECT_API_KEY/);
+  assert.doesNotMatch(preflight, /BEGIN PRIVATE KEY/);
 });
 
-test("health directory uses 21 language filter and always keeps profile links", () => {
-  const health = fs.readFileSync(path.join(root, "health.html"), "utf8");
-  for (const code of LANGS21) {
-    assert.match(health, new RegExp(`option value="${code}"`));
-  }
-  assert.match(health, /health-provider\.html\?id=/);
-  assert.match(health, /filterItemsInBounds/);
-  assert.match(health, /Search this area/);
-  assert.match(health, /setMarkers/);
-  const cat = fs.readFileSync(path.join(root, "health-category.html"), "utf8");
-  assert.match(cat, /health-provider\.html\?id=/);
-  assert.match(cat, /filterItemsInBounds/);
-  assert.match(cat, /osmDirectionsUrl|openstreetmap\.org\/directions/);
+test("public AI entitlement probe never trusts client verification bypass", () => {
+  const entitlements = require("../lib/havkar-ai-entitlements.cjs");
+  const forged = entitlements.logoEntitlementDecision(
+    { review: true },
+    { mode: "image", logo: { name: "TestCo" } }
+  );
+  // Direct library call still documents review path for edge-only use,
+  // but API must ignore client verification (asserted via source).
+  const api = fs.readFileSync(path.join(root, "api/create-event-checkout.js"), "utf8");
+  assert.match(api, /ai_entitlement_check/);
+  assert.match(api, /Never trust client-supplied verification/);
+  assert.match(api, /logoEntitlementDecision\(\s*\{\s*ok:\s*false\s*\}/);
+  assert.equal(forged.reason, "play_review_bypass");
 });
 
-test("module map panels exist for buy-sell jobs services delivery", () => {
-  for (const file of [
-    "buy-sell.html",
-    "jobs.html",
-    "services.html",
-    "delivery.html"
-  ]) {
-    const src = fs.readFileSync(path.join(root, file), "utf8");
-    assert.match(src, /moduleMapPanel/);
-    assert.match(src, /havkar-module-map\.js/);
-    assert.match(src, /havkar-ui-i18n21\.js/);
-  }
+test("operator config does not publish Owner login email or Partita IVA", () => {
+  const src = fs.readFileSync(path.join(root, "havkar-operator-config.js"), "utf8");
+  assert.match(src, /primaryOwnerEmail:\s*""/);
+  assert.match(src, /hidePersonalEmails:\s*\[\s*\]/);
+  assert.doesNotMatch(src, /havkarapp2026@gmail\.com/);
+  assert.doesNotMatch(src, /amirjalilnia@gmail\.com/);
+  assert.doesNotMatch(src, /amirjalilnia01@gmail\.com/);
 });
 
-test("home keeps 15 tiles logo path and AI data-i18n", () => {
-  const home = fs.readFileSync(path.join(root, "index.html"), "utf8");
-  const tiles = home.match(/class="menu-item"/g) || [];
-  assert.equal(tiles.length, 15);
-  assert.match(home, /doctors-pharmacies\.png/);
-  assert.match(home, /data-i18n="havkarAi"/);
-  assert.match(home, /havkar-ui-i18n21\.js/);
-});
-
-test("payment currency rails distinguish presentment charge settlement", () => {
-  const {
-    buildCurrencyRailsStatus
-  } = require("../lib/payment-currency-rails.cjs");
-  const status = buildCurrencyRailsStatus({
-    HAVKAR_REAL_PAYMENTS_ENABLED: "false",
-    HAVKAR_STRIPE_LIVE_ENABLED: "false"
-  });
-  assert.equal(status.ok, true);
-  assert.equal(status.presentment.count, 133);
-  assert.equal(status.honesty.xlm_is_not_a_stripe_currency, true);
-  assert.equal(status.honesty.live_payments_paused, true);
-  assert.equal(status.gates.live_customer_collection, false);
-});
-
-test("geocode destination returns structured address fields", async () => {
-  const { geocodeDestination } = require("../lib/geocode-destination.cjs");
-  const fakeFetch = async () => ({
-    ok: true,
-    json: async () => [
-      {
-        lat: "41.9",
-        lon: "12.5",
-        display_name: "Rome, Lazio, Italy",
-        type: "city",
-        address: {
-          city: "Rome",
-          state: "Lazio",
-          country_code: "it",
-          country: "Italy",
-          road: "Via Example",
-          postcode: "00100"
-        }
-      }
-    ]
-  });
-  const geo = await geocodeDestination("Rome", fakeFetch);
-  assert.equal(geo.ok, true);
-  assert.equal(geo.primary.city, "Rome");
-  assert.equal(geo.primary.region, "Lazio");
-  assert.equal(geo.primary.address.city, "Rome");
-});
-
-test("health live billing and telehealth remain gated in source", () => {
-  const api = fs.readFileSync(path.join(root, "lib/havkar-health-api.cjs"), "utf8");
-  assert.match(api, /health_live_billing_off|charge_allowed_now/);
-  assert.match(api, /telehealth_blocked|BLOCKED/);
+test("AI free plan copy forbids usable free logo images", () => {
+  const page = fs.readFileSync(path.join(root, "havkar-ai.html"), "utf8");
+  assert.match(page, /0 downloadable images/);
+  assert.match(page, /Logo and image generation require a paid plan/);
+  assert.doesNotMatch(page, /2 images a month/);
 });

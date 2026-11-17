@@ -317,12 +317,21 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
     document.getElementById("platformNotice").innerHTML =
       "<strong>" + ht("health.platform_role_label") + "</strong> " + notice;
     renderCategories();
+    var flagOn = !!(
+      (body.subscriptions && body.subscriptions.live_billing_enabled) ||
+      body.live_billing_enabled
+    );
+    var chargeAllowed = !!(
+      body.subscriptions && body.subscriptions.charge_allowed_now
+    );
+    var billingLabel = !flagOn
+      ? ht("health.billing_off")
+      : chargeAllowed
+        ? ht("health.billing_on")
+        : "flag ON · charge still OFF";
     setStatus(
       ht("health.billing_status", {
-        status:
-          body.subscriptions && body.subscriptions.live_billing_enabled
-            ? ht("health.billing_on")
-            : ht("health.billing_off")
+        status: billingLabel
       })
     );
   }

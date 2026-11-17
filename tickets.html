@@ -584,6 +584,7 @@ h2{
             <button type="button" class="omio-search-btn" data-omio-mode="train">Search journeys</button>
         </form>
         <div class="pending-note">Partner booking gated. No fabricated journeys or fares.</div>
+        <p><button type="button" class="omio-affiliate-btn" data-omio-mode="train" data-i18n-label="Open Omio affiliate search">Open Omio affiliate search</button></p>
         <div class="omio-results" data-omio-mode="train" role="status"></div>
     </section>
 
@@ -601,6 +602,7 @@ h2{
             <button type="button" class="omio-search-btn" data-omio-mode="bus">Search journeys</button>
         </form>
         <div class="pending-note">Partner booking gated. No fabricated journeys or fares.</div>
+        <p><button type="button" class="omio-affiliate-btn" data-omio-mode="bus" data-i18n-label="Open Omio affiliate search">Open Omio affiliate search</button></p>
         <div class="omio-results" data-omio-mode="bus" role="status"></div>
     </section>
 
@@ -618,6 +620,7 @@ h2{
             <button type="button" class="omio-search-btn" data-omio-mode="ferry">Search journeys</button>
         </form>
         <div class="pending-note">Partner booking gated. No fabricated journeys or fares.</div>
+        <p><button type="button" class="omio-affiliate-btn" data-omio-mode="ferry" data-i18n-label="Open Omio affiliate search">Open Omio affiliate search</button></p>
         <div class="omio-results" data-omio-mode="ferry" role="status"></div>
     </section>
 
@@ -1031,6 +1034,33 @@ h2{
           out.textContent=n?('Found '+n+' journeys'):'No journeys returned by partner';
         })
         .catch(function(err){out.textContent=String(err&&err.message||err);});
+    });
+  });
+
+  document.querySelectorAll('.omio-affiliate-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var mode=btn.getAttribute('data-omio-mode')||'train';
+      var form=document.querySelector('.omio-search-form[data-omio-mode="'+mode+'"]');
+      var out=document.querySelector('.omio-results[data-omio-mode="'+mode+'"]');
+      var payload={
+        action:'omio_affiliate_link',
+        mode:mode,
+        from:form&&form.querySelector('[name="from"]')?form.querySelector('[name="from"]').value:'',
+        to:form&&form.querySelector('[name="to"]')?form.querySelector('[name="to"]').value:'',
+        date:form&&form.querySelector('[name="date"]')?form.querySelector('[name="date"]').value:''
+      };
+      if(out) out.textContent='Preparing affiliate link…';
+      fetch('/api/currency-matrix',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+        .then(function(r){return r.json()})
+        .then(function(body){
+          if(!body||!body.ok||!body.url){
+            if(out) out.textContent=(body&&(body.error||body.note))||'missing_OMIO_AFFILIATE_ID';
+            return;
+          }
+          if(out) out.textContent='Opening Omio affiliate search (tracked).';
+          window.open(body.url,'_blank','noopener');
+        })
+        .catch(function(err){if(out) out.textContent=String(err&&err.message||err);});
     });
   });
 })();

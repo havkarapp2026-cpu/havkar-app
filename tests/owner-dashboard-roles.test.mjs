@@ -38,8 +38,9 @@ assert.match(
   operator,
   /chamberRegistrationStatus:\s*"rea_from_revolut_business_registration_2026-11-09"/
 );
-assert.match(operator, /hidePersonalEmails:\s*\["amirjalilnia@gmail\.com"\]/);
-assert.match(operator, /havkarapp2026@gmail\.com/);
+assert.match(operator, /hidePersonalEmails:\s*\[\s*\]/);
+assert.match(operator, /primaryOwnerEmail:\s*""/);
+assert.doesNotMatch(operator, /havkarapp2026@gmail\.com/);
 assert.doesNotMatch(operator, /partitaIva:\s*"[0-9]/);
 assert.doesNotMatch(operator, /LT16\s*3250|REVOLT21/);
 
