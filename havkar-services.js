@@ -364,6 +364,7 @@
 
   return {
     PRICE_TYPES: PRICE_TYPES,
+    /* Legacy export kept for callers; validation uses isAllowedServiceCurrency (ISO, not XLM). */
     CURRENCIES: ["EUR", "USD", "GBP", "SEK"],
     isAllowedServiceCurrency: isAllowedServiceCurrency,
     SERVICE_STATUSES: SERVICE_STATUSES,
