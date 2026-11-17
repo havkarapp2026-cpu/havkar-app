@@ -2448,15 +2448,48 @@
                     button.innerHTML =
                         '<i class="fas fa-spinner fa-spin"></i>&nbsp; Sending...';
 
-                    const { error } =
+                    const deliveryPayload = {
+                        user_id: currentUser.id,
+                        pickup_address: pickup,
+                        delivery_address: delivery,
+                        package_details: packageDetails
+                    };
+                    try {
+                        if (window.HAVKAR_MAP && window.HAVKAR_MAP.geocode) {
+                            const pickupGeo = await window.HAVKAR_MAP.geocode(pickup);
+                            const dropGeo = await window.HAVKAR_MAP.geocode(delivery);
+                            if (pickupGeo && pickupGeo.ok && pickupGeo.primary) {
+                                deliveryPayload.pickup_latitude = pickupGeo.primary.latitude;
+                                deliveryPayload.pickup_longitude = pickupGeo.primary.longitude;
+                            }
+                            if (dropGeo && dropGeo.ok && dropGeo.primary) {
+                                deliveryPayload.delivery_latitude = dropGeo.primary.latitude;
+                                deliveryPayload.delivery_longitude = dropGeo.primary.longitude;
+                            }
+                        }
+                    } catch (_deliveryGeoErr) {}
+
+                    let { error } =
                         await havkarSupabase
                             .from("delivery_requests")
-                            .insert({
-                                user_id: currentUser.id,
-                                pickup_address: pickup,
-                                delivery_address: delivery,
-                                package_details: packageDetails
-                            });
+                            .insert(deliveryPayload);
+
+                    if (
+                        error &&
+                        /pickup_latitude|delivery_latitude|pickup_longitude|delivery_longitude/i.test(
+                            String(error.message || "")
+                        )
+                    ) {
+                        const compat = {
+                            user_id: currentUser.id,
+                            pickup_address: pickup,
+                            delivery_address: delivery,
+                            package_details: packageDetails
+                        };
+                        ({ error } = await havkarSupabase
+                            .from("delivery_requests")
+                            .insert(compat));
+                    }
 
                     button.disabled = false;
                     button.innerHTML = originalHtml;
@@ -3032,12 +3065,20 @@
         if(!input || !input.value || input.value.trim().length < 3) return;
         var geo = await window.HAVKAR_MAP.geocode(input.value.trim());
         if(geo && geo.ok && geo.primary){
+          input.setAttribute('data-lat', String(geo.primary.latitude));
+          input.setAttribute('data-lng', String(geo.primary.longitude));
           items.push({ id: label, latitude: geo.primary.latitude, longitude: geo.primary.longitude, label: label + ': ' + (geo.primary.label || input.value) });
         }
       }
       await one(pickup, 'Pickup');
       await one(drop, 'Delivery');
       panel.setItems(items);
+      if(items.length >= 2 && panel.api && panel.api.setCenter && panel.api.requestRoute){
+        try {
+          panel.api.setCenter(items[0].latitude, items[0].longitude, 12);
+          panel.api.requestRoute(items[1].latitude, items[1].longitude);
+        } catch(_r) {}
+      }
     }
     ['pickupAddress','deliveryAddress'].forEach(function(id){
       var n = document.getElementById(id);
