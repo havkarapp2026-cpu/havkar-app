@@ -8,20 +8,22 @@
 (function (root) {
   "use strict";
 
-  /* Carto Voyager (OSM data) — clearer land coverage than bare OSM at mid-zoom;
-     OSM raster remains available via opts.streetProvider === "osm". */
-  var STREET_URL =
+  /* Public OSM raster — no API key. Do not default to Carto basemaps that
+     watermark "API KEY REQUIRED" without a licensed key. */
+  var STREET_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+  var STREET_ATTR = "&copy; OpenStreetMap";
+  var STREET_CARTO_URL =
     "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
-  var STREET_ATTR = "&copy; OpenStreetMap, &copy; CARTO";
-  var STREET_OSM_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
-  var STREET_OSM_ATTR = "&copy; OpenStreetMap";
+  var STREET_CARTO_ATTR = "&copy; OpenStreetMap, &copy; CARTO";
   var SAT_URL =
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
   var SAT_ATTR =
     "Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community";
+  /* Esri reference labels for hybrid — avoid Carto key-gated label tiles. */
   var LABELS_URL =
-    "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png";
-  var LABELS_ATTR = "&copy; OpenStreetMap, &copy; CARTO";
+    "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
+  var LABELS_ATTR =
+    "Labels &copy; Esri — Source: Esri, HERE, Garmin, FAO, NOAA, USGS";
 
   function ensurePlatformCss() {
     if (document.getElementById("havkar-map-platform-css")) return;
@@ -271,11 +273,15 @@
             scrollWheelZoom: true,
             tap: true
           }).setView([lat, lng], zoom);
-          var useOsm = String(opts.streetProvider || "").toLowerCase() === "osm";
-          var streetLayer = L.tileLayer(useOsm ? STREET_OSM_URL : STREET_URL, {
-            maxZoom: 19,
-            attribution: useOsm ? STREET_OSM_ATTR : STREET_ATTR
-          });
+          var useCarto =
+            String(opts.streetProvider || "").toLowerCase() === "carto";
+          var streetLayer = L.tileLayer(
+            useCarto ? STREET_CARTO_URL : STREET_URL,
+            {
+              maxZoom: 19,
+              attribution: useCarto ? STREET_CARTO_ATTR : STREET_ATTR
+            }
+          );
           var satLayer = L.tileLayer(SAT_URL, {
             maxZoom: 19,
             attribution: SAT_ATTR

@@ -1240,7 +1240,7 @@ a.primary{
       onclick="openMyJobs()"
       aria-label="My Jobs">
 
-      <i class="fas fa-user"></i>
+      <i class="fas fa-briefcase"></i>
 
     </button>
 
@@ -2919,7 +2919,15 @@ async function openJobLocationPicker(){
     discovery.classList.add("is-suppressed");
     discovery.style.display = "none";
   }
+  const postModal = document.getElementById("postModal");
+  if(postModal){
+    postModal.style.visibility = "hidden";
+  }
   openModal("jobLocationModal");
+  const jobModal = document.getElementById("jobLocationModal");
+  if(jobModal){
+    jobModal.style.zIndex = "5000";
+  }
   const host = document.getElementById("jobLocationPickerPanel");
   if(!host || !window.HAVKAR_MODULE_MAP) return;
   if(__jobLocationPicker){
@@ -2966,6 +2974,10 @@ function confirmJobLocationPicker(){
   }
   __jobLocationDraft = composed;
   closeModal("jobLocationModal");
+  const postModal = document.getElementById("postModal");
+  if(postModal){
+    postModal.style.visibility = "";
+  }
 }
 
 /* =========================================================
@@ -4379,6 +4391,13 @@ function closeModal(id){
   modal.classList.remove(
     "show"
   );
+
+  if(id === "jobLocationModal"){
+    const postModal = document.getElementById("postModal");
+    if(postModal){
+      postModal.style.visibility = "";
+    }
+  }
 
   const anyOpen =
     document.querySelector(

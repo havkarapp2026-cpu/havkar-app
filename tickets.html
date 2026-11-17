@@ -441,6 +441,11 @@ h2{
     <section id="travelMapPanel" class="havkar-module-map panel" aria-label="Travel route map" style="margin:0 0 16px;position:relative;z-index:1;isolation:isolate">
         <div class="kicker"><i class="fas fa-map-location-dot" aria-hidden="true"></i> Travel map</div>
         <p class="lead" style="margin-bottom:10px">Street, satellite and hybrid map for origin/destination. Routes use real geocoding when places resolve; schedules and fares are never invented.</p>
+        <div id="ticketsMapLayers" class="havkar-map-layers" role="group" aria-label="Map base layer" style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px">
+            <button type="button" class="is-active" data-tickets-layer="street">Street map</button>
+            <button type="button" data-tickets-layer="satellite">Satellite</button>
+            <button type="button" data-tickets-layer="hybrid">Hybrid</button>
+        </div>
         <div id="ticketsMapHost" class="havkar-map-host" style="height:min(46vh,380px);min-height:260px;border-radius:14px;border:1px solid var(--border)"></div>
         <p id="ticketsMapNote" class="pending-note" role="status">Search origin and destination to place markers. Illustrative flight connections are geographic lines, not verified airways.</p>
     </section>
@@ -971,15 +976,35 @@ h2{
     return window.HAVKAR_MAP.create(host, {
       latitude: 41.9028,
       longitude: 12.4964,
-      zoom: 5,
+      zoom: 11,
       cluster: false
     }).then(function(api){
       travelMapApi = api;
       if(api.invalidate) setTimeout(function(){ api.invalidate(); }, 200);
+      wireTicketsLayers(api);
       return api;
     }).catch(function(){
       setMapNote('Map could not load. Check network and try again.');
       return null;
+    });
+  }
+
+  function wireTicketsLayers(api){
+    var root = document.getElementById('ticketsMapLayers');
+    if(!root || !api || !api.setBaseLayer) return;
+    var buttons = root.querySelectorAll('[data-tickets-layer]');
+    buttons.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var mode = api.setBaseLayer(btn.getAttribute('data-tickets-layer'));
+        buttons.forEach(function(b){
+          b.classList.toggle('is-active', b.getAttribute('data-tickets-layer') === mode);
+        });
+        setMapNote(
+          mode === 'satellite' || mode === 'hybrid'
+            ? 'Satellite / hybrid · Esri imagery with required attribution'
+            : 'Street map · OpenStreetMap'
+        );
+      });
     });
   }
 

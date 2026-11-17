@@ -47,6 +47,8 @@ test("tickets exposes a visible travel map host", () => {
   const tickets = read("tickets.html");
   assert.match(tickets, /id="travelMapPanel"/);
   assert.match(tickets, /id="ticketsMapHost"/);
+  assert.match(tickets, /data-tickets-layer="satellite"/);
+  assert.match(tickets, /zoom:\s*11/);
   assert.match(tickets, /__havkarTicketsDrawRoute/);
   assert.match(tickets, /havkar-map\.js/);
 });
@@ -65,7 +67,8 @@ test("map defaults avoid blue-ocean low zoom and support hybrid layers", () => {
   const map = read("havkar-map.js");
   assert.match(map, /setBaseLayer/);
   assert.match(map, /World_Imagery/);
-  assert.match(map, /cartocdn\.com\/rastertiles\/voyager/);
+  assert.match(map, /tile\.openstreetmap\.org/);
+  assert.match(map, /World_Imagery/);
 });
 
 test("post-ad and services mount 133-currency selector", () => {
