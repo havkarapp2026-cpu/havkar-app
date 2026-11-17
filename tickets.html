@@ -452,9 +452,11 @@ h2{
             <button type="button" class="is-active" data-tickets-layer="street">Street map</button>
             <button type="button" data-tickets-layer="satellite">Satellite</button>
             <button type="button" data-tickets-layer="hybrid">Hybrid</button>
+            <button type="button" data-tickets-layer="live">Live map</button>
             <button type="button" id="ticketsShareLocationBtn">Share location</button>
             <button type="button" id="ticketsCopyLocationBtn">Copy location link</button>
         </div>
+        <p id="ticketsLiveMeta" class="pending-note" hidden role="status"></p>
         <div id="ticketsMapHost" class="havkar-map-host" style="height:min(46vh,380px);min-height:260px;border-radius:14px;border:1px solid var(--border)"></div>
         <p id="ticketsMapNote" class="pending-note" role="status">Search origin and destination to place markers. Illustrative flight connections are geographic lines, not verified airways. Satellite tiles are static imagery, not a live camera.</p>
     </section>
@@ -1042,19 +1044,61 @@ h2{
 
   function wireTicketsLayers(api){
     var root = document.getElementById('ticketsMapLayers');
+    var liveMetaEl = document.getElementById('ticketsLiveMeta');
     if(!root || !api || !api.setBaseLayer) return;
     var buttons = root.querySelectorAll('[data-tickets-layer]');
+    function markActive(mode){
+      buttons.forEach(function(b){
+        b.classList.toggle('is-active', b.getAttribute('data-tickets-layer') === mode);
+      });
+    }
+    function showLiveMeta(text, show){
+      if(!liveMetaEl) return;
+      liveMetaEl.hidden = !show;
+      liveMetaEl.textContent = text || '';
+    }
     buttons.forEach(function(btn){
       btn.addEventListener('click', function(){
-        var mode = api.setBaseLayer(btn.getAttribute('data-tickets-layer'));
-        buttons.forEach(function(b){
-          b.classList.toggle('is-active', b.getAttribute('data-tickets-layer') === mode);
+        var requested = btn.getAttribute('data-tickets-layer');
+        setMapNote('Loading map layer…');
+        Promise.resolve(api.setBaseLayer(requested)).then(function(result){
+          var mode = (result && result.mode) || requested || 'street';
+          markActive(mode);
+          if(mode === 'live'){
+            var live = result && result.live;
+            if(result && result.available){
+              showLiveMeta(
+                'Source: RainViewer · Product: live precipitation radar · Last frame: ' +
+                  ((live && live.frame_time_utc) || 'unknown') +
+                  ' · Coverage: radar agencies worldwide (empty areas = no live radar). Not a traffic/private camera.',
+                true
+              );
+              setMapNote(result.message || 'Live precipitation radar active.');
+            }else{
+              showLiveMeta(
+                (result && result.message) ||
+                  'Live broadcast is not available in this region.',
+                true
+              );
+              markActive('street');
+              setMapNote(
+                (result && result.message) ||
+                  'Live broadcast is not available in this region.'
+              );
+            }
+            return;
+          }
+          showLiveMeta('', false);
+          setMapNote(
+            mode === 'satellite' || mode === 'hybrid'
+              ? 'Satellite / hybrid · Esri imagery with required attribution (static tiles, not live camera)'
+              : 'Street map · OpenStreetMap'
+          );
+        }).catch(function(){
+          markActive('street');
+          showLiveMeta('Live broadcast is not available right now.', true);
+          setMapNote('Map layer failed. Street map kept.');
         });
-        setMapNote(
-          mode === 'satellite' || mode === 'hybrid'
-            ? 'Satellite / hybrid · Esri imagery with required attribution (static tiles, not live camera)'
-            : 'Street map · OpenStreetMap'
-        );
       });
     });
     var shareBtn = document.getElementById('ticketsShareLocationBtn');

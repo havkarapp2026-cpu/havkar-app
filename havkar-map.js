@@ -1,8 +1,10 @@
 /**
  * Shared HAVKAR map helper (Leaflet + OSM street tiles).
  * Optional satellite/hybrid uses Esri World Imagery with required attribution
- * (commercial ToS still apply to the host). Traffic cameras stay opt-in/disabled
- * until a redistributable public feed is configured.
+ * (commercial ToS still apply to the host).
+ * Independent "live" mode uses RainViewer public precipitation radar tiles
+ * (real time-stamped frames). Traffic cameras stay disabled until a
+ * redistributable licensed camera feed is configured — never simulated.
  * Never fabricates coordinates, routes, distances or availability.
  */
 (function (root) {
@@ -24,6 +26,100 @@
     "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
   var LABELS_ATTR =
     "Labels &copy; Esri — Source: Esri, HERE, Garmin, FAO, NOAA, USGS";
+  var RAINVIEWER_API = "https://api.rainviewer.com/public/weather-maps.json";
+  var LIVE_ATTR =
+    'Live precipitation radar by <a href="https://www.rainviewer.com/" target="_blank" rel="noopener noreferrer">RainViewer</a> (public Weather Maps API)';
+
+  function safeAttributionPrefix(map) {
+    try {
+      if (map && map.attributionControl && map.attributionControl.setPrefix) {
+        /* Keep Leaflet credit as plain text — avoid a homepage hyperlink in the map chrome. */
+        map.attributionControl.setPrefix("Leaflet");
+      }
+    } catch (_e) {}
+  }
+
+  function formatUtc(ts) {
+    var n = Number(ts);
+    if (!Number.isFinite(n) || n <= 0) return "";
+    try {
+      return new Date(n * 1000).toISOString().replace("T", " ").replace(/\.\d+Z$/, " UTC");
+    } catch (_e) {
+      return String(n);
+    }
+  }
+
+  function fetchLiveRadarFrame() {
+    return fetch(RAINVIEWER_API, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      cache: "no-store"
+    })
+      .then(function (res) {
+        if (!res.ok) {
+          throw new Error("live_radar_http_" + res.status);
+        }
+        return res.json();
+      })
+      .then(function (body) {
+        var past =
+          body && body.radar && Array.isArray(body.radar.past) ? body.radar.past : [];
+        var frame = past.length ? past[past.length - 1] : null;
+        if (!frame || !frame.path || !body.host) {
+          return {
+            ok: false,
+            available: false,
+            reason: "no_live_radar_frames",
+            message:
+              "Live broadcast is not available in this region / no radar frames returned.",
+            source: "RainViewer",
+            source_url: "https://www.rainviewer.com/",
+            coverage:
+              "Precipitation radar where meteorological agencies publish feeds (150+ countries). Empty map areas mean no live radar for that place.",
+            terms:
+              "RainViewer public Weather Maps API — personal, educational, and small-scale community use; attribution required."
+          };
+        }
+        var host = String(body.host).replace(/\/$/, "");
+        var path = String(frame.path);
+        /* Free tier: 256px, Universal Blue (2), smooth on, snow on — max zoom 7. */
+        var tileUrl = host + path + "/256/{z}/{x}/{y}/2/1_1.png";
+        var coverageUrl = host + "/v2/coverage/0/256/{z}/{x}/{y}/0/0_0.png";
+        return {
+          ok: true,
+          available: true,
+          host: host,
+          path: path,
+          tileUrl: tileUrl,
+          coverageUrl: coverageUrl,
+          frame_time: frame.time,
+          frame_time_utc: formatUtc(frame.time),
+          generated: body.generated,
+          generated_utc: formatUtc(body.generated),
+          source: "RainViewer",
+          source_url: "https://www.rainviewer.com/",
+          product: "Live precipitation radar (composite reflectivity)",
+          coverage:
+            "Worldwide where radar agencies publish data via RainViewer (not traffic cameras; not private CCTV).",
+          terms:
+            "Public Weather Maps API — personal/educational/small-scale community use; mandatory attribution to RainViewer.",
+          max_zoom: 7,
+          message: ""
+        };
+      })
+      .catch(function (err) {
+        return {
+          ok: false,
+          available: false,
+          reason: "live_radar_network_error",
+          error: String((err && err.message) || err || "network"),
+          message:
+            "Live broadcast is not available right now (network or source error). No simulated live feed is shown.",
+          source: "RainViewer",
+          source_url: "https://www.rainviewer.com/"
+        };
+      });
+  }
 
   function ensurePlatformCss() {
     if (document.getElementById("havkar-map-platform-css")) return;
@@ -273,6 +369,7 @@
             scrollWheelZoom: true,
             tap: true
           }).setView([lat, lng], zoom);
+          safeAttributionPrefix(map);
           var useCarto =
             String(opts.streetProvider || "").toLowerCase() === "carto";
           var streetLayer = L.tileLayer(
@@ -291,6 +388,9 @@
             attribution: LABELS_ATTR,
             opacity: 0.9
           });
+          var liveRadarLayer = null;
+          var liveCoverageLayer = null;
+          var liveMeta = null;
           var activeBase = "street";
           streetLayer.addTo(map);
           var centerMarker = L.marker([lat, lng]).addTo(map);
@@ -303,6 +403,17 @@
             ? opts.onBoundsSearch
             : null;
           var onSelect = typeof opts.onSelect === "function" ? opts.onSelect : null;
+
+          function clearLiveLayers() {
+            if (liveRadarLayer && map.hasLayer(liveRadarLayer)) {
+              map.removeLayer(liveRadarLayer);
+            }
+            if (liveCoverageLayer && map.hasLayer(liveCoverageLayer)) {
+              map.removeLayer(liveCoverageLayer);
+            }
+            liveRadarLayer = null;
+            liveCoverageLayer = null;
+          }
 
           if (clusterReady && L.markerClusterGroup) {
             pinLayer = L.markerClusterGroup({
@@ -327,6 +438,12 @@
             nativeShareLocation: nativeShareLocation,
             setBaseLayer: function (mode) {
               var next = String(mode || "street").toLowerCase();
+              if (next === "live") {
+                /* Async live activation — caller should prefer setLiveLayer(). */
+                return api.setLiveLayer(true);
+              }
+              clearLiveLayers();
+              liveMeta = null;
               map.removeLayer(streetLayer);
               map.removeLayer(satLayer);
               map.removeLayer(labelsLayer);
@@ -341,7 +458,69 @@
                 streetLayer.addTo(map);
                 activeBase = "street";
               }
-              return activeBase;
+              return Promise.resolve({
+                mode: activeBase,
+                live: null
+              });
+            },
+            setLiveLayer: function () {
+              return fetchLiveRadarFrame().then(function (meta) {
+                liveMeta = meta;
+                map.removeLayer(satLayer);
+                map.removeLayer(labelsLayer);
+                if (!map.hasLayer(streetLayer)) {
+                  streetLayer.addTo(map);
+                }
+                clearLiveLayers();
+                if (!meta || !meta.ok || !meta.available || !meta.tileUrl) {
+                  activeBase = "street";
+                  return {
+                    mode: "street",
+                    live: meta,
+                    available: false,
+                    message:
+                      (meta && meta.message) ||
+                      "Live broadcast is not available in this region."
+                  };
+                }
+                liveRadarLayer = L.tileLayer(meta.tileUrl, {
+                  maxZoom: Number(meta.max_zoom) || 7,
+                  opacity: 0.72,
+                  attribution: LIVE_ATTR
+                });
+                liveRadarLayer.addTo(map);
+                if (meta.coverageUrl) {
+                  liveCoverageLayer = L.tileLayer(meta.coverageUrl, {
+                    maxZoom: Number(meta.max_zoom) || 7,
+                    opacity: 0.35,
+                    attribution: LIVE_ATTR
+                  });
+                  /* Coverage mask is informational; keep subtle. */
+                  liveCoverageLayer.addTo(map);
+                }
+                activeBase = "live";
+                return {
+                  mode: "live",
+                  live: meta,
+                  available: true,
+                  message:
+                    meta.product +
+                    " · source " +
+                    meta.source +
+                    " · last frame " +
+                    (meta.frame_time_utc || "unknown") +
+                    ". Empty areas: live radar not available there. Not a traffic camera."
+                };
+              });
+            },
+            getLiveLayerStatus: function () {
+              return liveMeta
+                ? Object.assign({}, liveMeta, { mode: activeBase })
+                : {
+                    available: false,
+                    mode: activeBase,
+                    message: "Live layer not loaded yet."
+                  };
             },
             getBaseLayer: function () {
               return activeBase;
@@ -605,6 +784,8 @@
     osmDirectionsUrl: osmDirectionsUrl,
     mapsSharePayload: mapsSharePayload,
     nativeShareLocation: nativeShareLocation,
-    ensurePlatformCss: ensurePlatformCss
+    ensurePlatformCss: ensurePlatformCss,
+    fetchLiveRadarFrame: fetchLiveRadarFrame,
+    safeAttributionPrefix: safeAttributionPrefix
   };
 })(typeof globalThis !== "undefined" ? globalThis : this);

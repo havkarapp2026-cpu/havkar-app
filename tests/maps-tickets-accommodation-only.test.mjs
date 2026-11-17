@@ -82,7 +82,8 @@ test("buy-sell jobs services ads delivery health omit leaflet discovery maps", (
 test("service worker bumped for maps tickets accommodation only", () => {
   const sw = read("sw.js");
   const reg = read("havkar-sw-register.js");
-  assert.match(sw, /havkar-sw-20261117-maps-tickets-accommodation-only-v1/);
-  assert.match(reg, /havkar-sw-20261117-maps-tickets-accommodation-only-v1/);
+  /* Later live-map release supersedes the maps-only SW tag. */
+  assert.match(sw, /havkar-sw-20261117-live-map-tickets-accommodation-v1/);
+  assert.match(reg, /havkar-sw-20261117-live-map-tickets-accommodation-v1/);
   assert.ok(KEEP.every((f) => fs.existsSync(path.join(root, f))));
 });
