@@ -1119,6 +1119,29 @@
 
                     </div>
 
+                    <link rel="stylesheet" href="/havkar-map-platform.css">
+                    <div class="input-group" style="margin-top:4px">
+                        <label class="input-label" for="moduleMapPanel">
+                            Route map (pick locations)
+                        </label>
+                        <p style="margin:0 0 8px;font-size:.85rem;line-height:1.35;color:#456">
+                            Search or use GPS on the map, then apply the selected place to Pickup or Delivery.
+                        </p>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px">
+                            <button type="button" class="request-btn" id="applyMapToPickup" style="width:auto;padding:10px 14px;font-size:.9rem">
+                                Use map for Pickup
+                            </button>
+                            <button type="button" class="request-btn" id="applyMapToDelivery" style="width:auto;padding:10px 14px;font-size:.9rem;background:#2e7d32">
+                                Use map for Delivery
+                            </button>
+                        </div>
+                        <section
+                            id="moduleMapPanel"
+                            class="havkar-module-map"
+                            aria-label="Delivery route map"
+                            style="margin:0;position:relative;z-index:1;isolation:isolate"
+                        ></section>
+                    </div>
 
                     <div class="input-group">
 
@@ -1150,14 +1173,6 @@
                     </button>
 
                 </form>
-
-                <link rel="stylesheet" href="/havkar-map-platform.css">
-                <section
-                    id="moduleMapPanel"
-                    class="havkar-module-map"
-                    aria-label="Delivery route map"
-                    style="margin:14px 0 0;position:relative;z-index:1;isolation:isolate"
-                ></section>
 
             </div>
 
@@ -1297,32 +1312,7 @@
     ========================== -->
 
     <nav class="bottom-nav">
-
-        <button class="nav-item nav-button" type="button"
-            onclick="window.location.assign('index.html')">
-            <i class="fas fa-home"></i>
-            <span>Home</span>
-        </button>
-
-        <button class="nav-item nav-button active" type="button"
-            onclick="window.location.assign('delivery.html')">
-            <i class="fas fa-shipping-fast"></i>
-            <span>Delivery</span>
-        </button>
-
-        <button class="nav-item nav-button" type="button"
-            onclick="goToDeliveryHistory()">
-            <i class="fas fa-history"></i>
-            <span>History</span>
-        </button>
-
-        <button class="nav-item nav-button" type="button"
-            onclick="window.location.assign('profile.html')">
-            <i class="fas fa-user"></i>
-            <span>Profile</span>
-        </button>
-
-    </nav>
+</nav>
 
 
     <!-- =========================
@@ -3094,6 +3084,37 @@
       n.addEventListener('change', pinAddresses);
       n.addEventListener('blur', pinAddresses);
     });
+    function applyMapPlace(targetId){
+      var input = document.getElementById(targetId);
+      if(!input) return;
+      var label = '';
+      var lat = null;
+      var lng = null;
+      if(panel && panel.note && panel.note.textContent){
+        label = String(panel.note.textContent || '').trim();
+      }
+      if(panel && panel.api && panel.api.map && panel.api.marker){
+        try {
+          var ll = panel.api.marker.getLatLng();
+          lat = ll.lat;
+          lng = ll.lng;
+        } catch(_e) {}
+      }
+      if(label && label.indexOf('Map:') !== 0 && label.toLowerCase().indexOf('no mapped') === -1){
+        input.value = label;
+      } else if(lat != null && lng != null){
+        input.value = Number(lat).toFixed(5) + ', ' + Number(lng).toFixed(5);
+      }
+      if(lat != null && lng != null){
+        input.setAttribute('data-lat', String(lat));
+        input.setAttribute('data-lng', String(lng));
+      }
+      pinAddresses();
+    }
+    var toPickup = document.getElementById('applyMapToPickup');
+    var toDelivery = document.getElementById('applyMapToDelivery');
+    if(toPickup) toPickup.addEventListener('click', function(){ applyMapPlace('pickupAddress'); });
+    if(toDelivery) toDelivery.addEventListener('click', function(){ applyMapPlace('deliveryAddress'); });
   }).catch(function(){});
 })();
 </script>

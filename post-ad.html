@@ -445,13 +445,13 @@ textarea {
       >
 
       <label for="currency">
-        Currency
+        Currency (133 fiat presentation + separate XLM rail)
       </label>
-
-      <select id="currency" required>
-        <option value="EUR">EUR</option>
-        <option value="USD">USD</option>
-      </select>
+      <input type="hidden" id="currency" name="currency" value="EUR" required>
+      <div id="currencySelectMount" data-havkar-currency-mount="1"></div>
+      <p class="hint" style="font-size:.85rem;color:#567;margin:6px 0 0">
+        Display/quotation currency. Live Stripe charging still follows real Stripe capability — not all 133 can be charged.
+      </p>
 
       <label for="expiresAt">
         Listing end (optional)
@@ -602,9 +602,29 @@ textarea {
 
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-countries.js"></script>
+<script src="/havkar-presentment-currencies.js"></script>
+<script src="/havkar-currency-select.js"></script>
 <script src="/havkar-ad-images.js"></script>
 <script src="/havkar-ad-publish.js"></script>
 <script src="/havkar-marketplace.js"></script>
+<script>
+(function(){
+  var mount = document.getElementById('currencySelectMount');
+  var hidden = document.getElementById('currency');
+  if(!mount || !window.HAVKAR_CURRENCY_SELECT || !hidden) return;
+  window.HAVKAR_CURRENCY_SELECT.mount(mount, {
+    initialCurrency: 'eur',
+    onChange: function(sel){
+      if(!sel) return;
+      if(sel.method === 'xlm_mainnet'){
+        hidden.value = 'XLM';
+      } else {
+        hidden.value = String(sel.code || 'EUR').toUpperCase();
+      }
+    }
+  });
+})();
+</script>
 <script>
 
 /* =========================================================

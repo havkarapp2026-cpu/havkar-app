@@ -427,10 +427,7 @@ h2{
         <a class="icon-button" href="notifications.html" aria-label="Notifications">
             <i class="fas fa-bell"></i>
         </a>
-        <a class="icon-button" href="profile.html" aria-label="Profile">
-            <i class="fas fa-user"></i>
-        </a>
-    </div>
+</div>
 </header>
 
 <main class="page">
@@ -439,6 +436,19 @@ h2{
         Event ticketing is a separate product in the Events module — not mixed into travel results.
         Live partner booking stays off until access and Owner authorization are verified. Schedules and prices are never invented.
     </p>
+
+    <link rel="stylesheet" href="/havkar-map-platform.css">
+    <section id="travelMapPanel" class="havkar-module-map panel" aria-label="Travel route map" style="margin:0 0 16px;position:relative;z-index:1;isolation:isolate">
+        <div class="kicker"><i class="fas fa-map-location-dot" aria-hidden="true"></i> Travel map</div>
+        <p class="lead" style="margin-bottom:10px">Street, satellite and hybrid map for origin/destination. Routes use real geocoding when places resolve; schedules and fares are never invented.</p>
+        <div id="ticketsMapLayers" class="havkar-map-layers" role="group" aria-label="Map base layer" style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px">
+            <button type="button" class="is-active" data-tickets-layer="street">Street map</button>
+            <button type="button" data-tickets-layer="satellite">Satellite</button>
+            <button type="button" data-tickets-layer="hybrid">Hybrid</button>
+        </div>
+        <div id="ticketsMapHost" class="havkar-map-host" style="height:min(46vh,380px);min-height:260px;border-radius:14px;border:1px solid var(--border)"></div>
+        <p id="ticketsMapNote" class="pending-note" role="status">Search origin and destination to place markers. Illustrative flight connections are geographic lines, not verified airways.</p>
+    </section>
 
     <div class="ticket-types" role="group" aria-label="Travel modes">
         <button class="ticket-type active" type="button" data-ticket-type="flight" aria-pressed="true"><i class="fas fa-plane" aria-hidden="true"></i><span>Flights</span></button>
@@ -667,26 +677,6 @@ h2{
 </main>
 
 <nav class="bottom-nav" aria-label="HAVKAR">
-    <a class="nav-item" href="index.html">
-        <i class="fas fa-home" aria-hidden="true"></i>
-        <span>Home</span>
-    </a>
-    <a class="nav-item" href="#transfer-booking" id="navTransfer">
-        <i class="fas fa-taxi" aria-hidden="true"></i>
-        <span>Transfer</span>
-    </a>
-    <a class="nav-item active" href="tickets.html" aria-current="page">
-        <i class="fas fa-ticket" aria-hidden="true"></i>
-        <span>Tickets</span>
-    </a>
-    <a class="nav-item" href="notifications.html">
-        <i class="fas fa-bell" aria-hidden="true"></i>
-        <span>Alerts</span>
-    </a>
-    <a class="nav-item" href="profile.html">
-        <i class="fas fa-user" aria-hidden="true"></i>
-        <span>Profile</span>
-    </a>
 </nav>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/havkar-supabase-config.js"></script>
@@ -968,8 +958,138 @@ h2{
     }
 })();
 </script>
+<script src="/havkar-countries.js"></script>
+<script src="/havkar-map.js"></script>
+<script src="/havkar-module-map.js"></script>
 <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
+
+<script>
+(function(){
+  var travelMapApi = null;
+  var mapNote = document.getElementById('ticketsMapNote');
+  function setMapNote(text){ if(mapNote) mapNote.textContent = text; }
+
+  function mountTravelMap(){
+    var host = document.getElementById('ticketsMapHost');
+    if(!host || !window.HAVKAR_MAP) return Promise.resolve(null);
+    return window.HAVKAR_MAP.create(host, {
+      latitude: 41.9028,
+      longitude: 12.4964,
+      zoom: 11,
+      cluster: false
+    }).then(function(api){
+      travelMapApi = api;
+      if(api.invalidate) setTimeout(function(){ api.invalidate(); }, 200);
+      wireTicketsLayers(api);
+      return api;
+    }).catch(function(){
+      setMapNote('Map could not load. Check network and try again.');
+      return null;
+    });
+  }
+
+  function wireTicketsLayers(api){
+    var root = document.getElementById('ticketsMapLayers');
+    if(!root || !api || !api.setBaseLayer) return;
+    var buttons = root.querySelectorAll('[data-tickets-layer]');
+    buttons.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var mode = api.setBaseLayer(btn.getAttribute('data-tickets-layer'));
+        buttons.forEach(function(b){
+          b.classList.toggle('is-active', b.getAttribute('data-tickets-layer') === mode);
+        });
+        setMapNote(
+          mode === 'satellite' || mode === 'hybrid'
+            ? 'Satellite / hybrid · Esri imagery with required attribution'
+            : 'Street map · OpenStreetMap'
+        );
+      });
+    });
+  }
+
+  function geocodePlace(query){
+    if(!window.HAVKAR_MAP || !window.HAVKAR_MAP.geocode){
+      return Promise.resolve(null);
+    }
+    return window.HAVKAR_MAP.geocode(query).then(function(geo){
+      if(!geo || !geo.ok || !geo.primary) return null;
+      return geo.primary;
+    }).catch(function(){ return null; });
+  }
+
+  window.__havkarTicketsDrawRoute = function(fromQuery, toQuery, mode){
+    if(!fromQuery || !toQuery){
+      setMapNote('Enter origin and destination to show the travel map.');
+      return;
+    }
+    setMapNote('Locating ' + fromQuery + ' → ' + toQuery + '…');
+    var ready = travelMapApi ? Promise.resolve(travelMapApi) : mountTravelMap();
+    ready.then(function(api){
+      if(!api) return;
+      return Promise.all([geocodePlace(fromQuery), geocodePlace(toQuery)]).then(function(pair){
+        var a = pair[0], b = pair[1];
+        if(!a || !b){
+          setMapNote('Could not resolve one or both places on the map. No invented coordinates were used.');
+          return;
+        }
+        api.clearPins && api.clearPins();
+        api.clearRoute && api.clearRoute();
+        api.setMarkers([
+          { id:'origin', latitude:a.latitude, longitude:a.longitude, label:'Origin: '+(a.label||fromQuery) },
+          { id:'dest', latitude:b.latitude, longitude:b.longitude, label:'Destination: '+(b.label||toQuery) }
+        ], { fit:true });
+        var profile = (mode === 'flight') ? 'driving' : (mode || 'driving');
+        // Geographic connection for flights is illustrative; OSRM is land routing only.
+        if(mode === 'flight' && api.L && api.map){
+          var line = api.L.polyline([[a.latitude,a.longitude],[b.latitude,b.longitude]], {
+            color:'#1565c0', weight:3, dashArray:'8 8', opacity:0.85
+          }).bindPopup('Illustrative geographic connection — not a verified flight path');
+          api.map.addLayer(line);
+          try { api.map.fitBounds(line.getBounds(), { padding:[36,36] }); } catch(_e){}
+          setMapNote('Airport markers placed. Blue dashed line is an illustrative geographic connection, not a verified airway.');
+          return;
+        }
+        api.setCenter(a.latitude, a.longitude);
+        return api.requestRoute(b.latitude, b.longitude, profile).then(function(route){
+          if(route && route.ok){
+            var km = (route.distance_m/1000).toFixed(1);
+            var mins = Math.round(route.duration_s/60);
+            setMapNote('Route preview ('+profile+'): ~'+km+' km · ~'+mins+' min via OSRM. Not a ticket booking.');
+          } else {
+            setMapNote('Markers placed. Live route geometry unavailable; open external directions if needed.');
+          }
+        });
+      });
+    });
+  };
+
+  mountTravelMap();
+
+  // Draw map when flight form is submitted (alongside existing search handler).
+  var flightForm = document.getElementById('flightSearchForm');
+  if(flightForm){
+    flightForm.addEventListener('submit', function(){
+      var o = String((document.getElementById('flightOrigin')||{}).value||'').trim();
+      var d = String((document.getElementById('flightDestination')||{}).value||'').trim();
+      if(o && d){
+        window.__havkarTicketsDrawRoute(o + ' airport', d + ' airport', 'flight');
+      }
+    });
+  }
+
+  document.querySelectorAll('.omio-search-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var mode=btn.getAttribute('data-omio-mode')||'train';
+      var form=document.querySelector('.omio-search-form[data-omio-mode="'+mode+'"]');
+      if(!form) return;
+      var from=(form.querySelector('[name="from"]')||{}).value||'';
+      var to=(form.querySelector('[name="to"]')||{}).value||'';
+      if(from && to) window.__havkarTicketsDrawRoute(from, to, mode === 'ferry' ? 'driving' : mode);
+    });
+  });
+})();
+</script>
 
 <script>
 (function(){

@@ -57,7 +57,8 @@ assert.match(profile, /Staff permissions do not reveal this button/);
 assert.match(support, /havkar-operator-config\.js/);
 assert.doesNotMatch(support, /amirjalilnia@gmail\.com/);
 assert.match(about, /Amir Jalilnia/);
-assert.match(about, /soran@havkar\.online/);
+assert.doesNotMatch(about, /soran@havkar\.online/);
+assert.match(about, /04086440791/);
 assert.doesNotMatch(about, /amirjalilnia@gmail\.com/);
 
 console.log("OWNER_ADMIN_HARDENING_TEST_OK");
