@@ -58,3 +58,30 @@ test("Android and iOS identities remain online.havkar.app at 1.0.4", () => {
   assert.match(ios, /PRODUCT_BUNDLE_IDENTIFIER = online\.havkar\.app;/);
   assert.match(ios, /MARKETING_VERSION = 1\.0\.4;/);
 });
+
+test("post-ad no longer clamps listing currency to EUR/USD only", () => {
+  const post = read("post-ad.html");
+  assert.match(post, /\/\^\[A-Z\]\{3\}\$/);
+  assert.doesNotMatch(
+    post,
+    /currencyInput && currencyInput\.value === "USD"\s*\?\s*"USD"\s*:\s*"EUR"/
+  );
+  const services = read("havkar-services.js");
+  assert.match(services, /isAllowedServiceCurrency/);
+});
+
+test("modules do not keep dead goProfile account helpers", () => {
+  for (const file of [
+    "buy-sell.html",
+    "jobs.html",
+    "services.html",
+    "ads.html",
+    "events.html",
+    "chat.html"
+  ]) {
+    const html = read(file);
+    assert.doesNotMatch(html, /function goProfile\s*\(/);
+    assert.doesNotMatch(html, /function openProfile\s*\(/);
+    assert.doesNotMatch(html, /window\.openProfile\s*=/);
+  }
+});

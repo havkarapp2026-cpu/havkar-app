@@ -254,7 +254,9 @@
     if (!Number.isFinite(price) || price < 0) {
       return { ok: false, reason: "invalid_price" };
     }
-    if (["EUR", "USD", "GBP", "SEK"].indexOf(currency) === -1) {
+    const settlement = String(currency || "").trim().toUpperCase();
+    /* Agreement quotation may use any ISO fiat; live charge still follows Stripe capability gates. */
+    if (!/^[A-Z]{3}$/.test(settlement) || settlement === "XLM") {
       return { ok: false, reason: "invalid_currency" };
     }
     return {
