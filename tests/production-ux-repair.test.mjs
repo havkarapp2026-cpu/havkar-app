@@ -105,12 +105,14 @@ test("future messenger integration doc exists and is preparation-only", () => {
   assert.match(doc, /does \*\*not\*\* ship/);
 });
 
-test("profile About opens canonical about.html and delivery map is outside the request form", () => {
+test("profile About opens canonical about.html and delivery map is inside the request form", () => {
   const profile = read("profile.html");
   assert.match(profile, /goTo\("about\.html"\)/);
   const delivery = read("delivery.html");
-  const formClose = delivery.indexOf("</form>");
+  const formOpen = delivery.indexOf('id="deliveryForm"');
+  const formClose = delivery.indexOf("</form>", formOpen);
   const mapIdx = delivery.indexOf('id="moduleMapPanel"');
-  assert.ok(formClose > 0 && mapIdx > formClose);
+  assert.ok(formOpen > 0 && mapIdx > formOpen && mapIdx < formClose);
+  assert.match(delivery, /id="applyMapToPickup"/);
   assert.match(delivery, /z-index:\s*5000/);
 });

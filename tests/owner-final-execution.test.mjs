@@ -60,9 +60,9 @@ test("support knowledge base covers all 15 tiles and SORAN confidentiality", () 
   const support = fs.readFileSync(path.join(root, "support.html"), "utf8");
   assert.match(support, /havkar-help-kb\.js/);
   assert.match(support, /tileGuides/);
-  assert.match(support, /soran@havkar\.online/);
-  assert.match(support, /Only the Owner may access SORAN/);
-  assert.match(support, /Admin and Staff must never access SORAN/);
+  assert.doesNotMatch(support, /soran@havkar\.online/);
+  assert.match(support, /confidential Owner investment mailbox is not published/);
+  assert.match(support, /Admin and Staff must never access Owner-only/);
   assert.match(support, /04086440791/);
 });
 

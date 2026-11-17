@@ -3,7 +3,7 @@
     return;
   }
 
-  var SW_URL = "/sw.js?v=havkar-sw-20261116-health-cats-21-v1";
+  var SW_URL = "/sw.js?v=havkar-sw-20261117-owner-final-exec-v1";
 
   window.addEventListener("load", function () {
     navigator.serviceWorker

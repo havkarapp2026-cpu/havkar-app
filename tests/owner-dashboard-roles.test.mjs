@@ -57,14 +57,15 @@ assert.match(profile, /goTo\('admin\.html'\)/);
 assert.match(profile, /goTo\('staff\.html'\)/);
 assert.match(profile, /profileStaffWorkspace/);
 
-assert.match(about, /soran@havkar\.online/);
-assert.match(about, /Owner \/ Investment/);
+assert.doesNotMatch(about, /soran@havkar\.online/);
 assert.match(about, /KR234170/);
 assert.match(about, /KR-234170/);
+assert.match(about, /63\.91\.00/);
 assert.doesNotMatch(about, /amirjalilnia@gmail\.com/);
 assert.doesNotMatch(about, /LT16\s*3250|REVOLT21/);
 assert.match(about, /04086440791/);
 assert.doesNotMatch(support, /amirjalilnia@gmail\.com/);
+assert.doesNotMatch(support, /soran@havkar\.online/);
 assert.doesNotMatch(privacy, /amirjalilnia@gmail\.com/);
 assert.match(support, /support@havkar\.online/);
 assert.match(privacy, /support@havkar\.online/);

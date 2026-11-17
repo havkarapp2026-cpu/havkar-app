@@ -1273,6 +1273,22 @@ select:focus-visible{
     z-index:30;
 }
 
+.message-text,
+.message-text-translated{
+    unicode-bidi:plaintext;
+    white-space:pre-wrap;
+    overflow-wrap:anywhere;
+    word-break:break-word;
+}
+.message-text[dir="rtl"],
+.message-text-translated[dir="rtl"]{
+    text-align:right;
+}
+.message-text[dir="ltr"],
+.message-text-translated[dir="ltr"]{
+    text-align:left;
+}
+
 .translate-btn{
     width:49px;
     height:49px;
@@ -4860,7 +4876,22 @@ function appendMessage(
     text.className =
         "message-text";
 
-    text.setAttribute("dir", "auto");
+    function havkarTextDir(langCode, sample){
+        const code = String(langCode || "").toLowerCase();
+        if(["fa","ar","ckb","he","ur"].includes(code)) return "rtl";
+        if(["en","it","sv","de","fr","es","tr","ku","kmr","nl","pt","pl","ru","zh","ja","ko"].includes(code)) return "ltr";
+        const s = String(sample || "");
+        if(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(s)) return "rtl";
+        return "auto";
+    }
+
+    text.setAttribute(
+        "dir",
+        havkarTextDir(
+            message.translation_source_lang,
+            message.message_text
+        )
+    );
     text.textContent =
         String(
             message.message_text ||
@@ -4885,7 +4916,10 @@ function appendMessage(
 
         translationBlock.setAttribute(
             "dir",
-            "auto"
+            havkarTextDir(
+                message.translation_target_lang,
+                translated
+            )
         );
 
         translationBlock.style.cssText =
@@ -4920,7 +4954,10 @@ function appendMessage(
 
         translatedEl.setAttribute(
             "dir",
-            "auto"
+            havkarTextDir(
+                message.translation_target_lang,
+                translated
+            )
         );
 
         translatedEl.textContent =

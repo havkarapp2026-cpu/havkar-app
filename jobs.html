@@ -1594,6 +1594,10 @@ a.primary{
         maxlength="100"
         placeholder="Example: €1,800/month"
       >
+      <label for="jobCurrency" style="margin-top:10px;display:block">Display currency</label>
+      <input type="hidden" id="jobCurrency" value="EUR">
+      <div id="jobCurrencyMount" data-havkar-currency-mount="1"></div>
+      <p style="margin:6px 0 0;font-size:.82rem;color:#567">133 fiat display codes + separate XLM. Display currency is not a payment guarantee.</p>
     </div>
 
     <div class="form-group">
@@ -4573,11 +4577,26 @@ loadSupabaseJobs();
 
 <link rel="stylesheet" href="/havkar-map-platform.css">
 <script src="/havkar-countries.js"></script>
+<script src="/havkar-currency-select.js"></script>
 <script src="/havkar-map.js"></script>
 <script src="/havkar-module-map.js"></script>
 <script src="/havkar-geo-pins.js"></script>
 <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
+<script>
+(function(){
+  var mount = document.getElementById('jobCurrencyMount');
+  var hidden = document.getElementById('jobCurrency');
+  if(!mount || !hidden || !window.HAVKAR_CURRENCY_SELECT) return;
+  window.HAVKAR_CURRENCY_SELECT.mount(mount, {
+    initialCurrency: hidden.value || 'EUR',
+    includeXlm: true,
+    onChange: function(sel){
+      if(sel && sel.currency) hidden.value = String(sel.currency).toUpperCase();
+    }
+  });
+})();
+</script>
 
 <script src="/havkar-page-back.js"></script>
 

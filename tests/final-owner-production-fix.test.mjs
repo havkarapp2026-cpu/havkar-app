@@ -80,3 +80,27 @@ test("post-ad and services mount 133-currency selector", () => {
   assert.match(services, /editServiceCurrencyMount/);
   assert.match(services, /havkar-currency-select\.js/);
 });
+
+test("about publishes Visura ATECO without public Owner email", () => {
+  const about = read("about.html");
+  assert.match(about, /04086440791/);
+  assert.match(about, /KR-234170/);
+  assert.match(about, /03\/11\/2026/);
+  assert.match(about, /63\.91\.00/);
+  assert.match(about, /47\.91\.10/);
+  assert.match(about, /info@havkar\.online/);
+  assert.match(about, /support@havkar\.online/);
+  assert.doesNotMatch(about, /soran@havkar\.online/);
+  assert.match(about, /havkar\.online/);
+});
+
+test("jobs post form mounts currency selector and chat preserves plaintext bidi", () => {
+  const jobs = read("jobs.html");
+  assert.match(jobs, /jobCurrencyMount/);
+  assert.match(jobs, /havkar-currency-select\.js/);
+  const chat = read("chat.html");
+  assert.match(chat, /unicode-bidi:\s*plaintext/);
+  assert.match(chat, /havkarTextDir/);
+  assert.match(chat, /message_text/);
+  assert.match(chat, /translated_text/);
+});
