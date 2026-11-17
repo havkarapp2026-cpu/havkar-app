@@ -437,6 +437,13 @@ h2{
         Live partner booking stays off until access and Owner authorization are verified. Schedules and prices are never invented.
     </p>
 
+    <section class="panel" aria-label="Travel display currency" style="margin:0 0 14px">
+        <div class="kicker"><i class="fas fa-coins" aria-hidden="true"></i> Display currency</div>
+        <p class="lead" style="margin-bottom:8px">Choose how amounts are presented. Partner offers still quote in provider currencies. Live charging stays Owner-gated. XLM is a separate crypto option.</p>
+        <input type="hidden" id="ticketsDisplayCurrency" value="EUR">
+        <div id="ticketsCurrencyMount" data-havkar-currency-mount="1"></div>
+    </section>
+
     <link rel="stylesheet" href="/havkar-map-platform.css">
     <section id="travelMapPanel" class="havkar-module-map panel" aria-label="Travel route map" style="margin:0 0 16px;position:relative;z-index:1;isolation:isolate">
         <div class="kicker"><i class="fas fa-map-location-dot" aria-hidden="true"></i> Travel map</div>
@@ -959,7 +966,27 @@ h2{
 })();
 </script>
 <script src="/havkar-countries.js"></script>
+<script src="/havkar-currency-select.js"></script>
 <script src="/havkar-map.js"></script>
+<script>
+(function(){
+  var mount = document.getElementById('ticketsCurrencyMount');
+  var hidden = document.getElementById('ticketsDisplayCurrency');
+  if(!mount || !hidden || !window.HAVKAR_CURRENCY_SELECT) return;
+  window.HAVKAR_CURRENCY_SELECT.mount(mount, {
+    initialCurrency: hidden.value || 'EUR',
+    includeXlm: true,
+    onChange: function(sel){
+      if(sel && sel.currency) hidden.value = String(sel.currency).toUpperCase();
+      try { localStorage.setItem('havkar_tickets_display_currency', hidden.value); } catch(_e){}
+    }
+  });
+  try {
+    var saved = localStorage.getItem('havkar_tickets_display_currency');
+    if(saved && /^[A-Z]{3}$/i.test(saved)) hidden.value = saved.toUpperCase();
+  } catch(_e){}
+})();
+</script>
 <script src="/havkar-module-map.js"></script>
 <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
