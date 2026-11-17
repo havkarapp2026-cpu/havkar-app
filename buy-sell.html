@@ -1091,7 +1091,48 @@ aria-label="Post a new ad"
 
 </button>
 
-<nav class="bottom-nav">
+<nav class="bottom-nav" aria-label="Buy and Sell navigation">
+
+<div
+    class="nav-item active"
+    id="navHome"
+    role="button"
+    tabindex="0"
+>
+    <i class="fas fa-house"></i>
+    <span>Home</span>
+</div>
+
+<div
+    class="nav-item"
+    id="navSearch"
+    role="button"
+    tabindex="0"
+>
+    <i class="fas fa-magnifying-glass"></i>
+    <span>Search</span>
+</div>
+
+<div
+    class="nav-item"
+    id="navSaved"
+    role="button"
+    tabindex="0"
+>
+    <i class="fas fa-heart"></i>
+    <span>Saved</span>
+</div>
+
+<div
+    class="nav-item"
+    id="navMessages"
+    role="button"
+    tabindex="0"
+>
+    <i class="fas fa-comment"></i>
+    <span>Messages</span>
+</div>
+
 </nav>
 
 <div
@@ -2152,14 +2193,13 @@ async function showSavedListings(){
     state.search =
         "";
 
-    $("searchInput")
-        .value =
-        "";
+    if($("searchInput")){
+        $("searchInput").value = "";
+    }
 
-    $("clearSearch")
-        .classList.remove(
-            "visible"
-        );
+    if($("clearSearch")){
+        $("clearSearch").classList.remove("visible");
+    }
 
     setActiveNav(
         "navSaved"
@@ -2922,10 +2962,20 @@ function getErrorMessage(
 
     }
 
+    if(
+        /addEventListener|Cannot read properties of null/i.test(
+            message
+        )
+    ){
+
+        return "Buy & Sell page controls failed to start. Listings were not requested. Please reload the page.";
+
+    }
+
     if(message){
 
         return (
-            "Supabase error: " +
+            "Listings error: " +
             message
         );
 
@@ -4142,130 +4192,62 @@ function applyShotModeFromQuery(){
 }
 
 
+function onClick(id, handler){
+    const node = $(id);
+    if(!node || typeof handler !== "function"){
+        return;
+    }
+    node.addEventListener("click", handler);
+}
+
 function setupNavigation(){
 
-    $("backButton")
-        .addEventListener(
-            "click",
-            () => {
+    /* Defensive binds: missing chrome must not abort listing boot. */
+    onClick("backButton", () => {
+        if(window.havkarNavigateBack){
+            window.havkarNavigateBack();
+            return;
+        }
+        goAppHome();
+    });
 
-                if(
-                    window.havkarNavigateBack
-                ){
+    onClick("addButton", () => {
+        window.location.href = "post-ad.html";
+    });
 
-                    window.havkarNavigateBack();
+    onClick("notificationButton", () => {
+        window.location.href = "notifications.html";
+    });
 
-                    return;
+    /* Home returns to the real HAVKAR home (index), not a Profile shortcut. */
+    onClick("navHome", goAppHome);
 
+    onClick("navSearch", () => {
+        state.savedOnly = false;
+        state.exploreMode = true;
+        setActiveNav("navSearch");
+        updateListingLayout();
+        applyFilters();
+        if($("searchInput")){
+            $("searchInput").focus();
+        }
+        window.scrollTo({ top:0, behavior:"smooth" });
+    });
+
+    onClick("navSaved", showSavedListings);
+
+    onClick("navMessages", goMessages);
+
+    document
+        .querySelectorAll(".nav-item")
+        .forEach(item => {
+            item.addEventListener("keydown", event => {
+                if(event.key === "Enter" || event.key === " "){
+                    event.preventDefault();
+                    item.click();
                 }
-
-                goAppHome();
-
-            }
-        );
-
-    $("addButton")
-        .addEventListener(
-            "click",
-            () => {
-
-                window.location.href =
-                    "post-ad.html";
-
-            }
-        );
-
-                $("notificationButton")
-        .addEventListener(
-            "click",
-            () => {
-
-                window.location.href =
-                    "notifications.html";
-
-            }
-        );
-
-    $("navHome")
-        .addEventListener(
-            "click",
-            () => {
-
-                goMarketplaceHome();
-
-            }
-        );
-
-    $("navSearch")
-        .addEventListener(
-            "click",
-            () => {
-
-                state.savedOnly =
-                    false;
-
-                state.exploreMode =
-                    true;
-
-                setActiveNav(
-                    "navSearch"
-                );
-
-                updateListingLayout();
-
-                applyFilters();
-
-                $("searchInput")
-                    .focus();
-
-                window.scrollTo(
-                    {
-                        top:0,
-                        behavior:"smooth"
-                    }
-                );
-
-            }
-        );
-
-    $("navSaved")
-        .addEventListener(
-            "click",
-            showSavedListings
-        );
-
-    $("navMessages")
-        .addEventListener(
-            "click",
-            goMessages
-        );
-document
-        .querySelectorAll(
-            ".nav-item"
-        )
-        .forEach(
-            item => {
-
-                item.addEventListener(
-                    "keydown",
-                    event => {
-
-                        if(
-                            event.key === "Enter" ||
-                            event.key === " "
-                        ){
-
-                            event.preventDefault();
-
-                            item.click();
-
-                        }
-
-                    }
-                );
-
-            }
-        );
+            });
+        });
 
 }
 
@@ -4513,17 +4495,8 @@ async function loadMoreListings(){
 
 function setupRetry(){
 
-    $("retryButton")
-        .addEventListener(
-            "click",
-            loadListings
-        );
-
-    $("loadMoreListings")
-        .addEventListener(
-            "click",
-            loadMoreListings
-        );
+    onClick("retryButton", loadListings);
+    onClick("loadMoreListings", loadMoreListings);
 
 }
 
