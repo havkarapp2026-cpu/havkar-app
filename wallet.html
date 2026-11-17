@@ -1461,19 +1461,15 @@ select:focus{
     class="currency-select"  
     onchange="changeDisplayCurrency()"  
     translate="no"  
-    data-i18n-ignore>  
-
-    <option value="EUR">EUR — Euro — €</option>  
-    <option value="USD">USD — US Dollar — $</option>  
-    <option value="GBP">GBP — British Pound — £</option>  
-    <option value="CHF">CHF — Swiss Franc — CHF</option>  
-    <option value="SEK">SEK — Swedish Krona — kr</option>  
-    <option value="CNY">CNY — Chinese Yuan — ¥</option>  
-    <option value="JPY">JPY — Japanese Yen — ¥</option>  
-    <option value="AED">AED — UAE Dirham — AED</option>  
-    <option value="RUB">RUB — Russian Ruble — ₽</option>  
-
+    data-i18n-ignore
+    hidden
+    aria-hidden="true">  
+    <option value="EUR">EUR</option>
 </select>
+<div id="walletDisplayCurrencyMount" data-havkar-currency-mount="1"></div>
+<p class="portfolio-label" style="margin-top:8px;font-size:.82rem;line-height:1.35;color:#456">
+  Display currency only (133 fiat presentment codes). Withdrawal / settlement rails below stay EUR or USD until Owner-approved payment rails expand. XLM is a separate crypto rail.
+</p>
 
 </div>  <!-- =========================================================  
      WALLETS  
@@ -1710,11 +1706,12 @@ select:focus{
     <label>Amount</label>  
     <input id="withdrawAmount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00">  
 
-    <label>Currency</label>  
-    <select id="withdrawCurrency">  
-        <option value="EUR">EUR</option>  
-        <option value="USD">USD</option>  
-    </select>  
+    <label>Settlement currency (supported payout rails)</label>  
+    <select id="withdrawCurrency" aria-label="Supported settlement currency">  
+        <option value="EUR">EUR — Euro settlement</option>  
+        <option value="USD">USD — US Dollar settlement</option>  
+    </select>
+    <p style="margin:6px 0 0;font-size:.82rem;color:#567">Not all display currencies can be withdrawn. Only EUR/USD settlement is enabled here.</p>  
 
     <label>IBAN</label>  
     <input id="withdrawIban" type="text" autocomplete="off" spellcheck="false" placeholder="IBAN">  
@@ -5974,8 +5971,34 @@ startWallet();
   
 </script>
 
+<script src="/havkar-currency-select.js"></script>
 <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
+<script>
+(function(){
+  var mount = document.getElementById("walletDisplayCurrencyMount");
+  var hidden = document.getElementById("displayCurrency");
+  if(!mount || !hidden || !window.HAVKAR_CURRENCY_SELECT) return;
+  window.HAVKAR_CURRENCY_SELECT.mount(mount, {
+    initialCurrency: hidden.value || "EUR",
+    includeXlm: true,
+    onChange: function(sel){
+      if(!sel) return;
+      if(sel.method === "xlm_mainnet"){
+        // Display helper only — wallet settlement remains fiat-gated.
+        if(typeof showStatus === "function"){
+          try{ showStatus("walletStatus", "XLM selected as crypto rail preference. Fiat wallet display unchanged until Owner-authorized XLM settlement.", "info"); }catch(_e){}
+        }
+        return;
+      }
+      if(sel.currency){
+        hidden.value = String(sel.currency).toUpperCase();
+        if(typeof changeDisplayCurrency === "function") changeDisplayCurrency();
+      }
+    }
+  });
+})();
+</script>
 
 <script src="/havkar-page-back.js"></script>
 

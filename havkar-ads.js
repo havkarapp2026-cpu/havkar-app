@@ -64,6 +64,14 @@
       if (!Number.isFinite(price) || price < 0) errors.push("price");
     }
 
+    const rawCurrency = String(input && input.currency || "EUR")
+      .trim()
+      .toUpperCase();
+    const currency =
+      /^[A-Z]{3}$/.test(rawCurrency) && rawCurrency !== "XLM"
+        ? rawCurrency
+        : "EUR";
+
     let startsAt = null;
     let expiresAt = null;
     if (input && input.starts_at) {
@@ -87,6 +95,7 @@
         location: location,
         description: description,
         price: price,
+        currency: currency,
         country_code: country || null,
         city: city || null,
         target_audience: audience || null,

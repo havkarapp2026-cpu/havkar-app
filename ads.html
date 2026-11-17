@@ -1345,6 +1345,36 @@
 
                         </div>
 
+                        <div class="form-group" style="grid-column:1 / -1">
+
+                            <label
+                                class="form-label"
+                                for="adCurrency"
+                            >
+                                Currency (133 fiat presentation + separate XLM rail)
+                            </label>
+
+                            <input
+                                type="hidden"
+                                id="adCurrency"
+                                name="currency"
+                                value="EUR"
+                            >
+
+                            <div
+                                id="adCurrencyMount"
+                                data-havkar-currency-mount="1"
+                            ></div>
+
+                            <p
+                                class="form-hint"
+                                style="font-size:.85rem;color:#567;margin:6px 0 0"
+                            >
+                                Display/quotation currency for this offer. Live Stripe charging still follows real Stripe capability — not all 133 can be charged.
+                            </p>
+
+                        </div>
+
                         <div class="form-group">
 
                             <label
@@ -1601,6 +1631,8 @@
     ></div>
 
     <script src="/havkar-supabase-config.js"></script>
+    <script src="/havkar-presentment-currencies.js"></script>
+    <script src="/havkar-currency-select.js"></script>
     <script src="/havkar-ad-images.js"></script>
     <script src="/havkar-ads.js"></script>
     <script src="/havkar-ad-publish.js"></script>
@@ -1865,7 +1897,7 @@
                 await supabaseClient
                     .from(ADS_TABLE)
                     .select(
-                        "id,created_at,title,category,price,location,description,user_id,photos,status,listing_surface,latitude,longitude"
+                        "id,created_at,title,category,price,currency,location,description,user_id,photos,status,listing_surface,latitude,longitude"
                     )
                     .eq(
                         "listing_surface",
@@ -1890,7 +1922,7 @@
                     await supabaseClient
                         .from(ADS_TABLE)
                         .select(
-                            "id,created_at,title,category,price,location,description,user_id,photos,status,latitude,longitude"
+                            "id,created_at,title,category,price,currency,location,description,user_id,photos,status,latitude,longitude"
                         )
                         .order(
                             "created_at",
@@ -2650,7 +2682,8 @@
 
                             ${escapeHTML(
                                 formatPrice(
-                                    ad.price
+                                    ad.price,
+                                    ad.currency
                                 )
                             )}
 
@@ -3018,7 +3051,7 @@
                 String(
                     ad.price
                 ).trim() !== ""
-                    ? `Price / Offer: ${formatPrice(ad.price)}`
+                    ? `Price / Offer: ${formatPrice(ad.price, ad.currency)}`
                     : ""
 
             ]
@@ -3084,13 +3117,25 @@
         }
 
         function formatPrice(
-            value
+            value,
+            currencyCode
         ) {
 
             const number =
                 Number(
                     value
                 );
+            const currency =
+                String(
+                    currencyCode || "EUR"
+                )
+                    .trim()
+                    .toUpperCase();
+            const code =
+                /^[A-Z]{3}$/.test(currency) &&
+                currency !== "XLM"
+                    ? currency
+                    : "EUR";
 
             if (
                 Number.isFinite(
@@ -3098,17 +3143,33 @@
                 )
             ) {
 
-                return new Intl.NumberFormat(
-                    "en-IE",
-                    {
-                        minimumFractionDigits:
-                            0,
-                        maximumFractionDigits:
-                            2
-                    }
-                ).format(
-                    number
-                ) + " €";
+                try {
+
+                    return new Intl.NumberFormat(
+                        "en-IE",
+                        {
+                            style: "currency",
+                            currency: code,
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 2
+                        }
+                    ).format(
+                        number
+                    );
+
+                } catch (_formatError) {
+
+                    return new Intl.NumberFormat(
+                        "en-IE",
+                        {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 2
+                        }
+                    ).format(
+                        number
+                    ) + " " + code;
+
+                }
 
             }
 
@@ -3521,6 +3582,21 @@
                     .value
                     .trim();
 
+            const currencyInput =
+                document.getElementById(
+                    "adCurrency"
+                );
+            const currency =
+                String(
+                    (
+                        currencyInput &&
+                        currencyInput.value
+                    ) ||
+                    "EUR"
+                )
+                    .trim()
+                    .toUpperCase();
+
             const location =
                 document
                     .getElementById(
@@ -3604,6 +3680,7 @@
                         title: title,
                         category: category,
                         price: priceInput,
+                        currency: currency,
                         location: location,
                         description: description,
                         country_code: countryCode,
@@ -3643,6 +3720,17 @@
                 validated.payload
                     ? validated.payload.price
                     : null;
+
+            const listingCurrency =
+                validated.payload &&
+                validated.payload.currency
+                    ? validated.payload.currency
+                    : (
+                        /^[A-Z]{3}$/.test(currency) &&
+                        currency !== "XLM"
+                            ? currency
+                            : "EUR"
+                    );
 
             const preview =
                 document.getElementById(
@@ -3872,6 +3960,7 @@
                         title: title,
                         category: category,
                         price: price,
+                        currency: listingCurrency,
                         location: location,
                         description: description,
                         listing_surface: "advertising",
@@ -3880,7 +3969,8 @@
                     {
                         user_id: currentUserId,
                         photos: photos,
-                        campaign_id: campaignId
+                        campaign_id: campaignId,
+                        currency: listingCurrency
                     }
                 );
                 if (Number.isFinite(geoLat) && Number.isFinite(geoLng)) {
@@ -3895,12 +3985,48 @@
                             newAd
                         )
                         .select(
-                            "id,created_at,title,category,price,location,description,user_id,photos,status,listing_surface,latitude,longitude"
+                            "id,created_at,title,category,price,currency,location,description,user_id,photos,status,listing_surface,latitude,longitude"
                         )
                         .single();
 
                 let insertedProbe =
                     await insertPromise;
+
+                if (
+                    insertedProbe.error &&
+                    window.HAVKAR_MARKETPLACE &&
+                    typeof window.HAVKAR_MARKETPLACE.omitMissingColumn === "function"
+                ) {
+                    let payload =
+                        newAd;
+                    for (
+                        let attempt = 0;
+                        attempt < 6 &&
+                        insertedProbe.error;
+                        attempt += 1
+                    ) {
+                        const next =
+                            window.HAVKAR_MARKETPLACE.omitMissingColumn(
+                                payload,
+                                insertedProbe.error
+                            );
+                        if (!next) {
+                            break;
+                        }
+                        payload =
+                            next;
+                        insertedProbe =
+                            await supabaseClient
+                                .from(ADS_TABLE)
+                                .insert(
+                                    payload
+                                )
+                                .select(
+                                    "id,created_at,title,category,price,currency,location,description,user_id,photos,status,listing_surface,latitude,longitude"
+                                )
+                                .single();
+                    }
+                }
 
                 /*
                  * Compatibility fallback for older schemas that lack
@@ -3921,6 +4047,7 @@
                         title: title,
                         category: category,
                         price: price,
+                        currency: listingCurrency,
                         location: location,
                         description: description,
                         user_id: currentUserId,
@@ -3936,7 +4063,7 @@
                                 compatAd
                             )
                             .select(
-                                "id,created_at,title,category,price,location,description,user_id,photos,status,listing_surface,latitude,longitude"
+                                "id,created_at,title,category,price,currency,location,description,user_id,photos,status,listing_surface,latitude,longitude"
                             )
                             .single();
 
@@ -4814,13 +4941,7 @@
 
         }
 
-        function goProfile() {
-
-            window.location.href =
-                "profile.html";
-
-        }
-
+        
         function showAdPublishMessage(
             message
         ) {
@@ -5139,6 +5260,25 @@
     <script src="/havkar-geo-pins.js"></script>
     <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
+<script>
+(function(){
+  var mount = document.getElementById("adCurrencyMount");
+  var hidden = document.getElementById("adCurrency");
+  if(!mount || !hidden || !window.HAVKAR_CURRENCY_SELECT) return;
+  window.HAVKAR_CURRENCY_SELECT.mount(mount, {
+    idPrefix: "adCur",
+    initialCurrency: String(hidden.value || "eur").toLowerCase(),
+    onChange: function(sel){
+      if(!sel) return;
+      if(sel.method === "xlm_mainnet"){
+        hidden.value = "XLM";
+      } else {
+        hidden.value = String(sel.currency || "eur").toUpperCase();
+      }
+    }
+  });
+})();
+</script>
 
 <script src="/havkar-page-back.js"></script>
 

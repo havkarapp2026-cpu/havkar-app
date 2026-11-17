@@ -38,6 +38,27 @@ test("ads helpers validate payload and keep advertising surface", () => {
   assert.equal(good.payload.listing_surface, "advertising");
   assert.equal(good.payload.status, "pending_review");
   assert.equal(good.payload.country_code, "IT");
+  assert.equal(good.payload.currency, "EUR");
+
+  const sek = adsHelpers.validateCreatePayload({
+    title: "Lunch deal",
+    category: "restaurant",
+    location: "Stockholm",
+    description: "20% off",
+    currency: "sek"
+  });
+  assert.equal(sek.ok, true);
+  assert.equal(sek.payload.currency, "SEK");
+
+  const xlm = adsHelpers.validateCreatePayload({
+    title: "Lunch deal",
+    category: "restaurant",
+    location: "Milan",
+    description: "20% off",
+    currency: "XLM"
+  });
+  assert.equal(xlm.ok, true);
+  assert.equal(xlm.payload.currency, "EUR");
 });
 
 test("ads production files keep Buy & Sell / AI separation and Stripe test gates", () => {
@@ -64,6 +85,9 @@ test("ads production files keep Buy & Sell / AI separation and Stripe test gates
   assert.match(adsHtml, /ad-view\.html/);
   assert.match(adsHtml, /pending_review|adPreviewBox/);
   assert.match(adsHtml, /status:\s*"pending_review"/);
+  assert.match(adsHtml, /adCurrencyMount/);
+  assert.match(adsHtml, /havkar-currency-select\.js/);
+  assert.match(adsHtml, /HAVKAR_CURRENCY_SELECT\.mount/);
   assert.doesNotMatch(
     adsHtml,
     /status:\s*"active",\s*\n\s*listing_surface:\s*"advertising"/
