@@ -162,3 +162,18 @@ test("AI free plan copy forbids usable free logo images", () => {
   assert.match(page, /Logo and image generation require a paid plan/);
   assert.doesNotMatch(page, /2 images a month/);
 });
+
+test("major tiles link to Support knowledge base guides", () => {
+  for (const [page, tile] of [
+    ["buy-sell.html", "buy-sell"],
+    ["jobs.html", "jobs"],
+    ["services.html", "services"],
+    ["wallet.html", "wallet"],
+    ["tickets.html", "tickets"],
+    ["health.html", "health"],
+    ["havkar-ai.html", "havkar-ai"]
+  ]) {
+    const html = fs.readFileSync(path.join(root, page), "utf8");
+    assert.match(html, new RegExp(`support\.html\\?tile=${tile}`));
+  }
+});
