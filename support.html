@@ -1183,7 +1183,17 @@ textarea:focus-visible{
                 <p class="official-contact-text">
                     Business phone:
                     <a href="tel:+393342632863">+39 334 263 2863</a>.
-                    Stored support requests are sent to info@havkar.online.
+                    Public contacts:
+                    <a href="mailto:info@havkar.online">info@havkar.online</a>
+                    (commercial),
+                    <a href="mailto:support@havkar.online">support@havkar.online</a>
+                    (user assistance).
+                </p>
+
+                <p class="official-contact-text">
+                    Confidential ownership / investment / partnership mailbox:
+                    <a href="mailto:soran@havkar.online">soran@havkar.online</a>.
+                    Only the Owner may access SORAN correspondence. Admin and Staff must never access SORAN mail. The Owner personal login email is never shown as a public contact.
                 </p>
 
                 <p class="official-contact-text">
@@ -1199,6 +1209,33 @@ textarea:focus-visible{
 
         </div>
 
+    </section>
+
+    <section class="official-contact" id="company-information" style="margin-top:14px">
+        <div class="official-contact-row">
+            <div class="official-contact-icon"><i class="fas fa-building"></i></div>
+            <div class="official-contact-content">
+                <div class="official-contact-title">Company information</div>
+                <div class="official-contact-text" id="companyLegalBlock">
+                    Legal entity: HAVKAR DI JALILNIA AMIR · Operator: Amir Jalilnia · Registration: KR234170 · REA: KR-234170 · Address: Francesco Antonio Lucifero 40, 88900 Crotone, Italy. Partita IVA stays unpublished until a verified Visura confirms it. Bank details are never shown on public pages.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-header" style="margin-top:18px">
+        <h2 class="section-title">Guides for all 15 HAVKAR tiles</h2>
+    </div>
+    <section class="support-card" id="tileGuides">
+        <label for="kbSearch" class="official-contact-title">Search help</label>
+        <input id="kbSearch" type="search" placeholder="Search Buy & Sell, Jobs, Health, Wallet…" style="width:100%;min-height:44px;margin:8px 0 12px;padding:10px 12px;border:1px solid var(--border);border-radius:12px">
+        <div id="kbList" role="list"></div>
+        <p class="official-contact-text" style="margin-top:10px">
+            Full FAQ:
+            <a href="faq.html">faq.html</a>.
+            Contextual help links use anchors such as
+            <code>support.html#tile-health</code>.
+        </p>
     </section>
 
     <form id="supportForm" class="support-form" novalidate>
@@ -1222,12 +1259,26 @@ textarea:focus-visible{
         <label for="supportLanguage">Language</label>
         <select id="supportLanguage" name="language">
             <option value="en">English</option>
-            <option value="fa">Persian</option>
             <option value="it">Italian</option>
+            <option value="de">German</option>
+            <option value="fr">French</option>
+            <option value="es">Spanish</option>
+            <option value="pt">Portuguese</option>
+            <option value="nl">Dutch</option>
             <option value="sv">Swedish</option>
+            <option value="pl">Polish</option>
+            <option value="id">Indonesian</option>
+            <option value="zh">Chinese</option>
+            <option value="ja">Japanese</option>
+            <option value="ko">Korean</option>
+            <option value="hi">Hindi</option>
+            <option value="ru">Russian</option>
             <option value="ckb">Kurdish Sorani</option>
             <option value="kmr">Kurdish Kurmanji</option>
+            <option value="tr">Turkish</option>
             <option value="ar">Arabic</option>
+            <option value="fa">Persian</option>
+            <option value="ur">Urdu</option>
         </select>
         <label for="supportMessage">Message</label>
         <textarea id="supportMessage" name="message" maxlength="4000" required></textarea>
@@ -2532,6 +2583,143 @@ document.addEventListener(
 );
 </script>
 
+<script src="/havkar-help-kb.js"></script>
+<script>
+(function () {
+  var kb = window.HAVKAR_HELP_KB;
+  if (!kb) return;
+  var company = kb.company || {};
+  var block = document.getElementById("companyLegalBlock");
+  if (block) {
+    block.textContent =
+      "Legal entity: " +
+      company.legalEntityName +
+      " · Operator: " +
+      company.operator +
+      " · Registration: " +
+      (company.registrationNumber || "KR234170") +
+      " · REA: " +
+      (company.reaNumber || "KR-234170") +
+      " · Address: " +
+      company.registeredAddress +
+      ". " +
+      company.partitaIvaNote +
+      " Bank details are never shown on public pages.";
+  }
+
+  function render(filter) {
+    var list = document.getElementById("kbList");
+    if (!list) return;
+    var q = String(filter || "").trim().toLowerCase();
+    list.innerHTML = "";
+    kb.tiles.forEach(function (tile, index) {
+      var blob = [
+        tile.name,
+        tile.summary,
+        tile.who,
+        tile.start,
+        tile.create,
+        tile.search,
+        tile.maps,
+        tile.payments,
+        tile.cancel,
+        tile.safety
+      ]
+        .join(" ")
+        .toLowerCase();
+      if (q && blob.indexOf(q) === -1) return;
+      var details = document.createElement("details");
+      details.id = "tile-" + tile.id;
+      details.setAttribute("role", "listitem");
+      details.style.margin = "0 0 10px";
+      details.style.border = "1px solid #e7ebe5";
+      details.style.borderRadius = "12px";
+      details.style.padding = "10px 12px";
+      details.style.background = "#fff";
+      var summary = document.createElement("summary");
+      summary.style.cursor = "pointer";
+      summary.style.fontWeight = "700";
+      summary.textContent = index + 1 + ". " + tile.name;
+      details.appendChild(summary);
+      var body = document.createElement("div");
+      body.style.marginTop = "8px";
+      body.style.lineHeight = "1.45";
+      body.style.fontSize = "14px";
+      body.innerHTML =
+        "<p><strong>What it does:</strong> " +
+        tile.summary +
+        "</p>" +
+        "<p><strong>Who can use it:</strong> " +
+        tile.who +
+        "</p>" +
+        "<p><strong>Get started:</strong> " +
+        tile.start +
+        "</p>" +
+        "<p><strong>Create / publish:</strong> " +
+        tile.create +
+        "</p>" +
+        "<p><strong>Search &amp; filters:</strong> " +
+        tile.search +
+        "</p>" +
+        "<p><strong>Maps / GPS:</strong> " +
+        tile.maps +
+        "</p>" +
+        "<p><strong>Payments &amp; fees:</strong> " +
+        tile.payments +
+        "</p>" +
+        "<p><strong>Cancellations:</strong> " +
+        tile.cancel +
+        "</p>" +
+        "<p><strong>Safety:</strong> " +
+        tile.safety +
+        "</p>" +
+        '<p><a href="' +
+        tile.href +
+        '">Open ' +
+        tile.name +
+        "</a></p>";
+      if (tile.faq && tile.faq.length) {
+        tile.faq.forEach(function (pair) {
+          var p = document.createElement("p");
+          p.innerHTML = "<strong>Q:</strong> " + pair[0] + "<br><strong>A:</strong> " + pair[1];
+          body.appendChild(p);
+        });
+      }
+      details.appendChild(body);
+      list.appendChild(details);
+    });
+    if (!list.children.length) {
+      list.textContent = "No matching guides.";
+    }
+  }
+
+  var search = document.getElementById("kbSearch");
+  if (search) {
+    search.addEventListener("input", function () {
+      render(search.value);
+    });
+  }
+  var params = new URLSearchParams(location.search || "");
+  var tileParam = String(params.get("tile") || "").trim();
+  if (tileParam && search) {
+    var tileMeta = kb.byId(tileParam);
+    search.value = tileMeta ? tileMeta.name : tileParam;
+  }
+  render(search && search.value ? search.value : "");
+
+  function openGuide(hashOrId) {
+    var id = String(hashOrId || "").replace(/^#/, "");
+    if (!id) return;
+    var target = document.getElementById(id.indexOf("tile-") === 0 ? id : "tile-" + id);
+    if (target && target.tagName === "DETAILS") {
+      target.open = true;
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+  if (location.hash && location.hash.indexOf("#tile-") === 0) openGuide(location.hash);
+  else if (tileParam) openGuide("tile-" + tileParam);
+})();
+</script>
 <script src="/havkar-page-back.js"></script>
 </body>
               </html>

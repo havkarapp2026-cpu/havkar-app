@@ -1632,15 +1632,17 @@ export default async function handler(req, res) {
       if (action === "ai_entitlement_check") {
         const entitlements = require("../lib/havkar-ai-entitlements.cjs");
         const body = req.body || {};
+        /* Never trust client-supplied verification / review bypass. */
         const decision = entitlements.logoEntitlementDecision(
-          body.verification || { ok: false },
+          { ok: false },
           body.request || body,
-          body.now || Date.now()
+          Date.now()
         );
         return res.status(decision.status || 200).json({
           ok: decision.allowed === true,
           ...decision,
-          live_collection: false
+          live_collection: false,
+          note: "Public entitlement probe never grants paid logo/image output; edge assistant enforces DB entitlements."
         });
       }
       return res.status(200).json(moduleCatalog());
@@ -1727,6 +1729,17 @@ export default async function handler(req, res) {
         const { searchOmioJourneys } = require("../lib/omio-adapter.cjs");
         const out = await searchOmioJourneys(req.body || {}, process.env);
         return res.status(out.ok ? 200 : 409).json(out);
+      }
+      if (action === "omio_affiliate_link") {
+        const {
+          buildOmioAffiliateSearchUrl,
+          omioConfigured
+        } = require("../lib/omio-adapter.cjs");
+        const link = buildOmioAffiliateSearchUrl(req.body || {}, process.env);
+        return res.status(link.ok ? 200 : 409).json({
+          ...link,
+          status: omioConfigured(process.env)
+        });
       }
       if (action === "omio_booking_create") {
         const { createOmioBooking } = require("../lib/omio-adapter.cjs");

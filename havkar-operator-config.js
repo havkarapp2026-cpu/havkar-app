@@ -8,7 +8,8 @@ window.HAVKAR_OPERATOR = {
   legalName: "Amir Jalilnia",
   legalForm: "impresa_individuale",
   primaryOwnerUserId: "9b34b0bb-271a-49ee-aeb7-a9d28be06a06",
-  primaryOwnerEmail: "havkarapp2026@gmail.com",
+  /* Owner login email is never published on client pages. */
+  primaryOwnerEmail: "",
   infoEmail: "info@havkar.online",
   supportEmail: "support@havkar.online",
   soranEmail: "soran@havkar.online",
@@ -24,5 +25,6 @@ window.HAVKAR_OPERATOR = {
   partitaIva: "",
   reaNumber: "KR-234170",
   chamberRegistrationStatus: "rea_from_revolut_business_registration_2026-11-09",
-  hidePersonalEmails: ["amirjalilnia@gmail.com"]
+  /* Personal Owner Gmail addresses are never listed in public client config. */
+  hidePersonalEmails: []
 };

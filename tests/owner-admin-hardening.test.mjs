@@ -38,7 +38,7 @@ assert.match(operator, /support@havkar\.online/);
 assert.match(operator, /soran@havkar\.online/);
 assert.match(operator, /\+39 334 263 2863/);
 assert.match(operator, /9b34b0bb-271a-49ee-aeb7-a9d28be06a06/);
-assert.match(operator, /hidePersonalEmails:\s*\["amirjalilnia@gmail\.com"\]/);
+assert.match(operator, /hidePersonalEmails:\s*\[\s*\]/);
 
 assert.match(admin, /havkar_owner_dashboard_overview/);
 assert.match(admin, /havkar_owner_assign_role/);
