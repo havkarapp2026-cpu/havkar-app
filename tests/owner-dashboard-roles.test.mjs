@@ -36,12 +36,12 @@ assert.match(operator, /reaNumber:\s*"KR-234170"/);
 assert.match(operator, /registeredAddress:\s*"Francesco Antonio Lucifero 40, 88900 Crotone, Italy"/);
 assert.match(
   operator,
-  /chamberRegistrationStatus:\s*"rea_from_revolut_business_registration_2026-11-09"/
+  /chamberRegistrationStatus:\s*"rea_and_partita_iva_owner_confirmed_2026-11-17"/
 );
 assert.match(operator, /hidePersonalEmails:\s*\[\s*\]/);
 assert.match(operator, /primaryOwnerEmail:\s*""/);
 assert.doesNotMatch(operator, /havkarapp2026@gmail\.com/);
-assert.doesNotMatch(operator, /partitaIva:\s*"[0-9]/);
+assert.match(operator, /partitaIva:\s*"04086440791"/);
 assert.doesNotMatch(operator, /LT16\s*3250|REVOLT21/);
 
 assert.match(admin, /havkar_owner_dashboard_overview/);
@@ -63,7 +63,7 @@ assert.match(about, /KR234170/);
 assert.match(about, /KR-234170/);
 assert.doesNotMatch(about, /amirjalilnia@gmail\.com/);
 assert.doesNotMatch(about, /LT16\s*3250|REVOLT21/);
-assert.doesNotMatch(about, /04086440791/);
+assert.match(about, /04086440791/);
 assert.doesNotMatch(support, /amirjalilnia@gmail\.com/);
 assert.doesNotMatch(privacy, /amirjalilnia@gmail\.com/);
 assert.match(support, /support@havkar\.online/);

@@ -64,8 +64,8 @@ test("omio still refuses inventing affiliate tracking from Impact catalog ids", 
 
 test("partita IVA remains unpublished without Visura", () => {
   const op = fs.readFileSync(path.join(root, "havkar-operator-config.js"), "utf8");
-  assert.match(op, /partitaIva:\s*""/);
-  assert.doesNotMatch(op, /04086440791/);
+  assert.match(op, /partitaIva:\s*"04086440791"/);
+  assert.match(op, /04086440791/);
 });
 
 test("global release preflight script passes without printing secrets", () => {

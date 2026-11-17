@@ -16,15 +16,15 @@ window.HAVKAR_OPERATOR = {
   soranEmailStatus: "configured_public_contact",
   businessPhone: "+39 334 263 2863",
   businessPhoneTel: "+393342632863",
-  /* From Owner-provided Revolut Business document dated 9 November 2026.
-     Registration number matches Camera di Commercio Crotone REA form KR-234170.
-     Partita IVA is separate and stays empty until Visura confirms it. */
+  /* From Owner-confirmed Camera di Commercio / Revolut Business registration.
+     Registration number matches REA KR-234170. Partita IVA published from the
+     official Chamber of Commerce registration document (Owner directive 17 Nov 2026). */
   registrationNumber: "KR234170",
   registeredAddress: "Francesco Antonio Lucifero 40, 88900 Crotone, Italy",
   registeredCountry: "IT",
-  partitaIva: "",
+  partitaIva: "04086440791",
   reaNumber: "KR-234170",
-  chamberRegistrationStatus: "rea_from_revolut_business_registration_2026-11-09",
+  chamberRegistrationStatus: "rea_and_partita_iva_owner_confirmed_2026-11-17",
   /* Personal Owner Gmail addresses are never listed in public client config. */
   hidePersonalEmails: []
 };

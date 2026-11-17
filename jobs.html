@@ -625,7 +625,8 @@ body{
   justify-content:center;
   background:
     rgba(0,0,0,.56);
-  z-index:200;
+  /* Above Leaflet panes (default ~200–700) so the map never covers the form. */
+  z-index:5000;
   padding:0;
 }
 
@@ -1369,7 +1370,7 @@ a.primary{
 
   </div>
 
-  <section id="moduleMapPanel" class="havkar-module-map" aria-label="Map" style="margin:12px 0"></section>
+  <section id="moduleMapPanel" class="havkar-module-map" aria-label="Map" style="margin:12px 0;position:relative;z-index:1;isolation:isolate"></section>
 <div id="jobsList"></div>
 
 </main>
@@ -1542,13 +1543,33 @@ a.primary{
     </div>
 
     <div class="form-group">
-      <label>Location *</label>
+      <label>Country</label>
+      <select id="jobCountry" aria-label="Country">
+        <option value="">Select country</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>City</label>
+      <input
+        id="jobCity"
+        type="text"
+        maxlength="120"
+        placeholder="City"
+      >
+    </div>
+
+    <div class="form-group">
+      <label>Workplace location *</label>
       <input
         id="jobLocation"
         type="text"
-        maxlength="120"
-        placeholder="City, country"
+        maxlength="160"
+        placeholder="Address or workplace (optional detail)"
       >
+      <div class="upload-note">
+        Use Country + City for structured location. Map pins open in the list map, not over this form.
+      </div>
     </div>
 
     <div class="form-group">
@@ -2878,6 +2899,12 @@ async function openPostJob(){
   }
 
   resetPostForm();
+  if(window.HAVKAR_MODULE_MAP && window.HAVKAR_MODULE_MAP.suppressAllMaps){
+    window.HAVKAR_MODULE_MAP.suppressAllMaps(true);
+  }else{
+    const mapPanel = document.getElementById("moduleMapPanel");
+    if(mapPanel) mapPanel.classList.add("is-suppressed");
+  }
   openModal("postModal");
 }
 
@@ -2890,6 +2917,8 @@ function resetPostForm(){
   const fields = [
     "jobTitle",
     "jobCompany",
+    "jobCountry",
+    "jobCity",
     "jobLocation",
     "jobSalary",
     "jobSkills",
@@ -3434,7 +3463,15 @@ async function submitJob(){
 
   const title = document.getElementById("jobTitle").value.trim();
   const company = document.getElementById("jobCompany").value.trim();
-  const location = document.getElementById("jobLocation").value.trim();
+  const countryEl = document.getElementById("jobCountry");
+  const city = (document.getElementById("jobCity") || {}).value
+    ? document.getElementById("jobCity").value.trim()
+    : "";
+  const workplace = document.getElementById("jobLocation").value.trim();
+  const countryName = countryEl && countryEl.value
+    ? ((countryEl.selectedOptions[0] && countryEl.selectedOptions[0].textContent) || countryEl.value)
+    : "";
+  const location = [workplace, city, countryName].filter(Boolean).join(", ");
   const type = document.getElementById("jobType").value;
   const salary = document.getElementById("jobSalary").value.trim();
   const skills = document.getElementById("jobSkills").value
@@ -3445,6 +3482,15 @@ async function submitJob(){
   const requirements = document.getElementById("jobRequirements").value.trim();
   const applicationUrl = document.getElementById("jobApplicationUrl").value.trim();
   const contact = document.getElementById("jobContact").value.trim();
+
+  if(!title || !company){
+    alert("Job title and company are required.");
+    return;
+  }
+  if(!location && type !== "Remote"){
+    alert("Select Country and City, or enter a workplace location. Remote jobs may omit a pin.");
+    return;
+  }
 
   if(!window.HAVKAR_JOBS){
     alert("Jobs tools could not be loaded.");
@@ -4282,6 +4328,15 @@ function closeModal(id){
   if(!anyOpen){
     document.body.style.overflow =
       "";
+    if(window.HAVKAR_MODULE_MAP && window.HAVKAR_MODULE_MAP.suppressAllMaps){
+      window.HAVKAR_MODULE_MAP.suppressAllMaps(false);
+    }else{
+      const mapPanel = document.getElementById("moduleMapPanel");
+      if(mapPanel) mapPanel.classList.remove("is-suppressed");
+      if(window.__havkarModuleMapPanel && window.__havkarModuleMapPanel.api && window.__havkarModuleMapPanel.api.invalidate){
+        window.__havkarModuleMapPanel.api.invalidate();
+      }
+    }
   }
 }
 
@@ -4435,6 +4490,8 @@ loadSupabaseJobs();
 
 </script>
 
+<link rel="stylesheet" href="/havkar-map-platform.css">
+<script src="/havkar-countries.js"></script>
 <script src="/havkar-map.js"></script>
 <script src="/havkar-module-map.js"></script>
 <script src="/havkar-geo-pins.js"></script>
@@ -4445,6 +4502,9 @@ loadSupabaseJobs();
 
 <script>
 (function(){
+  if(window.HAVKAR_COUNTRIES && window.HAVKAR_COUNTRIES.fillCountrySelect){
+    window.HAVKAR_COUNTRIES.fillCountrySelect(document.getElementById('jobCountry'), 'Select country');
+  }
   if(!window.HAVKAR_MODULE_MAP) return;
   var el = document.getElementById('moduleMapPanel');
   if(!el) return;

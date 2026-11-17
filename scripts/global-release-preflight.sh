@@ -40,7 +40,7 @@ info "Play Console Closed testing / production publish remains Owner Console act
 echo "=== Web gates (honest) ==="
 grep -q 'missing_OMIO_AFFILIATE_ID\|OMIO_AFFILIATE_ID' lib/omio-adapter.cjs && pass "Omio affiliate honesty" || fail "Omio adapter"
 grep -q 'HAVKAR_TURN_' lib/telehealth-adapter.cjs && pass "Telehealth TURN secret names documented" || fail "Telehealth TURN docs"
-grep -q 'partitaIva: ""' havkar-operator-config.js && pass "Partita IVA unpublished" || fail "Partita IVA guard"
+grep -q 'partitaIva: "04086440791"' havkar-operator-config.js && pass "Partita IVA published" || fail "Partita IVA guard"
 
 if [[ "$FAIL" -eq 0 ]]; then
   echo "RESULT: global release preflight PASS (signed store uploads still depend on Owner secrets/console)"

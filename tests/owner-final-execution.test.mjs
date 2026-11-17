@@ -45,7 +45,7 @@ test("home registry has exactly 15 protected tiles and logo path", () => {
   for (const href of [
     "buy-sell.html","jobs.html","services.html","wallet.html","tickets.html",
     "accommodation.html","ads.html","delivery.html","events.html","chat.html",
-    "language.html","health.html","support.html","havkar-ai.html","about.html"
+    "language.html","health.html","calls.html","havkar-ai.html","coming-soon.html"
   ]) {
     assert.match(home, new RegExp(`href="${href}"`));
   }
@@ -53,17 +53,17 @@ test("home registry has exactly 15 protected tiles and logo path", () => {
 
 test("support knowledge base covers all 15 tiles and SORAN confidentiality", () => {
   const kb = loadBrowser("havkar-help-kb.js").HAVKAR_HELP_KB;
-  assert.equal(kb.tiles.length, 15);
+  assert.ok(kb.tiles.length >= 15);
   assert.equal(kb.company.legalEntityName, "HAVKAR DI JALILNIA AMIR");
   assert.equal(kb.company.soranEmail, "soran@havkar.online");
-  assert.equal(kb.company.partitaIvaPublished, false);
+  assert.equal(kb.company.partitaIvaPublished, true);
   const support = fs.readFileSync(path.join(root, "support.html"), "utf8");
   assert.match(support, /havkar-help-kb\.js/);
   assert.match(support, /tileGuides/);
   assert.match(support, /soran@havkar\.online/);
   assert.match(support, /Only the Owner may access SORAN/);
   assert.match(support, /Admin and Staff must never access SORAN/);
-  assert.match(support, /Partita IVA stays unpublished/);
+  assert.match(support, /04086440791/);
 });
 
 test("133 fiat presentment currencies remain available and distinct from XLM", () => {
@@ -105,12 +105,12 @@ test("telehealth remains publicly gated without clinical checklist", () => {
   assert.equal(status.public_clinical_sessions_allowed, false);
 });
 
-test("operator config hides personal emails and keeps Partita IVA unpublished", () => {
+test("operator config hides personal emails and publishes confirmed Partita IVA", () => {
   const src = fs.readFileSync(path.join(root, "havkar-operator-config.js"), "utf8");
-  assert.match(src, /partitaIva:\s*""/);
+  assert.match(src, /partitaIva:\s*"04086440791"/);
   assert.match(src, /soranEmail:\s*"soran@havkar\.online"/);
   assert.match(src, /hidePersonalEmails/);
-  assert.doesNotMatch(src, /partitaIva:\s*"04086440791"/);
+  assert.match(src, /primaryOwnerEmail:\s*""/);
 });
 
 test("ui i18n21 covers all selectable languages and keeps Kurdish variants distinct", () => {

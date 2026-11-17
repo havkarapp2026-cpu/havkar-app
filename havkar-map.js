@@ -1,12 +1,31 @@
 /**
- * Shared HAVKAR map helper (Leaflet + OSM tiles).
- * Supports clustering, bounds filtering, Nominatim geocode (via /api/hotels),
- * OSRM routing links, distance helpers, and map/list sync.
- * Google Maps is used only when a licensed client key is provided by the host page.
+ * Shared HAVKAR map helper (Leaflet + OSM street tiles).
+ * Optional satellite/hybrid uses Esri World Imagery with required attribution
+ * (commercial ToS still apply to the host). Traffic cameras stay opt-in/disabled
+ * until a redistributable public feed is configured.
  * Never fabricates coordinates, routes, distances or availability.
  */
 (function (root) {
   "use strict";
+
+  var STREET_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+  var STREET_ATTR = "&copy; OpenStreetMap";
+  var SAT_URL =
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+  var SAT_ATTR =
+    "Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community";
+  var LABELS_URL =
+    "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png";
+  var LABELS_ATTR = "&copy; OpenStreetMap, &copy; CARTO";
+
+  function ensurePlatformCss() {
+    if (document.getElementById("havkar-map-platform-css")) return;
+    var link = document.createElement("link");
+    link.id = "havkar-map-platform-css";
+    link.rel = "stylesheet";
+    link.href = "/havkar-map-platform.css";
+    document.head.appendChild(link);
+  }
 
   function ensureLeaflet(cb) {
     if (root.L) {
@@ -101,9 +120,15 @@
     );
   }
 
-  function osrmRouteUrl(fromLat, fromLng, toLat, toLng) {
+  function osrmRouteUrl(fromLat, fromLng, toLat, toLng, profile) {
+    var mode = String(profile || "driving").toLowerCase();
+    if (mode !== "walking" && mode !== "cycling" && mode !== "driving") {
+      mode = "driving";
+    }
     return (
-      "https://router.project-osrm.org/route/v1/driving/" +
+      "https://router.project-osrm.org/route/v1/" +
+      mode +
+      "/" +
       Number(fromLng) +
       "," +
       Number(fromLat) +
@@ -111,8 +136,76 @@
       Number(toLng) +
       "," +
       Number(toLat) +
-      "?overview=false"
+      "?overview=full&geometries=geojson"
     );
+  }
+
+  function mapsSharePayload(lat, lng, label) {
+    var la = Number(lat);
+    var ln = Number(lng);
+    if (!Number.isFinite(la) || !Number.isFinite(ln)) {
+      return { ok: false, error: "invalid_coordinates" };
+    }
+    var title = String(label || "HAVKAR location").trim() || "HAVKAR location";
+    var geo = "geo:" + la + "," + ln;
+    var osm =
+      "https://www.openstreetmap.org/?mlat=" +
+      encodeURIComponent(la) +
+      "&mlon=" +
+      encodeURIComponent(ln) +
+      "#map=16/" +
+      encodeURIComponent(la) +
+      "/" +
+      encodeURIComponent(ln);
+    var apple =
+      "https://maps.apple.com/?ll=" +
+      encodeURIComponent(la) +
+      "," +
+      encodeURIComponent(ln) +
+      "&q=" +
+      encodeURIComponent(title);
+    var google =
+      "https://www.google.com/maps/search/?api=1&query=" +
+      encodeURIComponent(la + "," + ln);
+    var text = title + "\n" + la.toFixed(6) + ", " + ln.toFixed(6) + "\n" + osm;
+    return {
+      ok: true,
+      latitude: la,
+      longitude: ln,
+      title: title,
+      text: text,
+      url: osm,
+      geo: geo,
+      external: { osm: osm, apple: apple, google: google },
+      note:
+        "Native share sheet when supported. Instagram location sharing is not claimed."
+    };
+  }
+
+  async function nativeShareLocation(lat, lng, label) {
+    var payload = mapsSharePayload(lat, lng, label);
+    if (!payload.ok) return payload;
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: payload.title,
+          text: payload.text,
+          url: payload.url
+        });
+        return Object.assign({ shared: true, method: "navigator.share" }, payload);
+      } catch (err) {
+        if (err && err.name === "AbortError") {
+          return Object.assign({ shared: false, method: "cancelled" }, payload);
+        }
+      }
+    }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(payload.text);
+        return Object.assign({ shared: true, method: "clipboard" }, payload);
+      }
+    } catch (_e) {}
+    return Object.assign({ shared: false, method: "manual_copy" }, payload);
   }
 
   async function geocodeQuery(query) {
@@ -164,16 +257,34 @@
         }
 
         function finish(clusterReady) {
+          ensurePlatformCss();
+          if (el && el.classList) {
+            el.classList.add("havkar-map-host");
+            el.setAttribute("data-havkar-map", "1");
+          }
           var map = L.map(el, {
             scrollWheelZoom: true,
             tap: true
           }).setView([lat, lng], zoom);
-          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            maxZoom: 18,
-            attribution: "&copy; OpenStreetMap"
-          }).addTo(map);
+          var streetLayer = L.tileLayer(STREET_URL, {
+            maxZoom: 19,
+            attribution: STREET_ATTR
+          });
+          var satLayer = L.tileLayer(SAT_URL, {
+            maxZoom: 19,
+            attribution: SAT_ATTR
+          });
+          var labelsLayer = L.tileLayer(LABELS_URL, {
+            maxZoom: 19,
+            attribution: LABELS_ATTR,
+            opacity: 0.9
+          });
+          var activeBase = "street";
+          streetLayer.addTo(map);
           var centerMarker = L.marker([lat, lng]).addTo(map);
           var pinLayer = null;
+          var routeLayer = L.layerGroup().addTo(map);
+          var trafficLayer = L.layerGroup();
           var pinIndex = Object.create(null);
           var selectedId = null;
           var onBoundsSearch = typeof opts.onBoundsSearch === "function"
@@ -200,6 +311,40 @@
             haversineKm: haversineKm,
             geocode: geocodeQuery,
             osmDirectionsUrl: osmDirectionsUrl,
+            mapsSharePayload: mapsSharePayload,
+            nativeShareLocation: nativeShareLocation,
+            setBaseLayer: function (mode) {
+              var next = String(mode || "street").toLowerCase();
+              map.removeLayer(streetLayer);
+              map.removeLayer(satLayer);
+              map.removeLayer(labelsLayer);
+              if (next === "satellite") {
+                satLayer.addTo(map);
+                activeBase = "satellite";
+              } else if (next === "hybrid") {
+                satLayer.addTo(map);
+                labelsLayer.addTo(map);
+                activeBase = "hybrid";
+              } else {
+                streetLayer.addTo(map);
+                activeBase = "street";
+              }
+              return activeBase;
+            },
+            getBaseLayer: function () {
+              return activeBase;
+            },
+            trafficCamerasStatus: function () {
+              return {
+                enabled: false,
+                reason:
+                  "No authorized redistributable public traffic-camera feed is configured. Feature stays disabled.",
+                layer_available: false
+              };
+            },
+            setTrafficCamerasEnabled: function () {
+              return api.trafficCamerasStatus();
+            },
             setCenter: function (nextLat, nextLng, nextZoom) {
               var ll = [Number(nextLat), Number(nextLng)];
               centerMarker.setLatLng(ll);
@@ -322,9 +467,10 @@
               if (onBoundsSearch) onBoundsSearch(bounds);
               return bounds;
             },
-            requestRoute: async function (toLat, toLng) {
+            requestRoute: async function (toLat, toLng, profile) {
               var from = centerMarker.getLatLng();
-              var url = osrmRouteUrl(from.lat, from.lng, toLat, toLng);
+              var mode = String(profile || "driving").toLowerCase();
+              var url = osrmRouteUrl(from.lat, from.lng, toLat, toLng, mode);
               try {
                 var res = await fetch(url, {
                   headers: { Accept: "application/json" }
@@ -335,12 +481,29 @@
                   return {
                     ok: false,
                     error: "route_unavailable",
+                    profile: mode,
                     directions_url: osmDirectionsUrl(toLat, toLng)
                   };
+                }
+                routeLayer.clearLayers();
+                if (route.geometry && route.geometry.coordinates) {
+                  var latlngs = route.geometry.coordinates.map(function (c) {
+                    return [c[1], c[0]];
+                  });
+                  var line = L.polyline(latlngs, {
+                    color: "#1b5e20",
+                    weight: 5,
+                    opacity: 0.85
+                  });
+                  routeLayer.addLayer(line);
+                  try {
+                    map.fitBounds(line.getBounds(), { padding: [28, 28] });
+                  } catch (_fit) {}
                 }
                 return {
                   ok: true,
                   provider: "osrm",
+                  profile: mode,
                   distance_m: route.distance,
                   duration_s: route.duration,
                   directions_url: osmDirectionsUrl(toLat, toLng)
@@ -349,9 +512,13 @@
                 return {
                   ok: false,
                   error: "route_network_error",
+                  profile: mode,
                   directions_url: osmDirectionsUrl(toLat, toLng)
                 };
               }
+            },
+            clearRoute: function () {
+              routeLayer.clearLayers();
             },
             requestGps: function () {
               return new Promise(function (res, rej) {
@@ -423,6 +590,9 @@
     ensureLeaflet: ensureLeaflet,
     geocode: geocodeQuery,
     haversineKm: haversineKm,
-    osmDirectionsUrl: osmDirectionsUrl
+    osmDirectionsUrl: osmDirectionsUrl,
+    mapsSharePayload: mapsSharePayload,
+    nativeShareLocation: nativeShareLocation,
+    ensurePlatformCss: ensurePlatformCss
   };
 })(typeof globalThis !== "undefined" ? globalThis : this);
