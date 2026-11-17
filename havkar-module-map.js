@@ -203,12 +203,14 @@
 
       [streetBtn, satBtn, hybridBtn].forEach(function (b) {
         b.addEventListener("click", function () {
-          var mode = api.setBaseLayer(b.dataset.layer);
-          markLayer(mode);
-          note.textContent =
-            mode === "satellite" || mode === "hybrid"
-              ? t("Satellite") + " · Esri attribution required"
-              : t("Street map");
+          Promise.resolve(api.setBaseLayer(b.dataset.layer)).then(function (result) {
+            var mode = (result && result.mode) || b.dataset.layer || "street";
+            markLayer(mode);
+            note.textContent =
+              mode === "satellite" || mode === "hybrid"
+                ? t("Satellite") + " · Esri attribution required"
+                : t("Street map");
+          });
         });
       });
 

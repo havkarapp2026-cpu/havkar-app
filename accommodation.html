@@ -98,9 +98,11 @@
       <button type="button" id="accLayerStreet" class="active" data-acc-layer="street" aria-pressed="true">Street map</button>
       <button type="button" id="accLayerSatellite" data-acc-layer="satellite" aria-pressed="false">Satellite</button>
       <button type="button" id="accLayerHybrid" data-acc-layer="hybrid" aria-pressed="false">Hybrid</button>
+      <button type="button" id="accLayerLive" data-acc-layer="live" aria-pressed="false">Live map</button>
       <button type="button" id="accShareLocationBtn">Share location</button>
       <button type="button" id="accCopyLocationBtn">Copy location link</button>
     </div>
+    <p id="accLiveMeta" class="provider-note" hidden role="status"></p>
     <div class="map-toolbar" role="group" aria-label="Map controls">
       <button type="button" id="useGpsBtn" aria-label="Use my location">Use my location</button>
       <button type="button" id="hotelsBoundsBtn">Search this area</button>
@@ -334,11 +336,91 @@
   var streetLayer = null;
   var satelliteLayer = null;
   var hybridLabelsLayer = null;
+  var liveRadarLayer = null;
+  var liveCoverageLayer = null;
   var activeAccBase = "street";
 
+  function markAccLayer(next) {
+    document.querySelectorAll("[data-acc-layer]").forEach(function (btn) {
+      var on = btn.getAttribute("data-acc-layer") === next;
+      btn.classList.toggle("active", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+  }
+
+  function clearAccLiveLayers() {
+    if (liveRadarLayer && map && map.hasLayer(liveRadarLayer)) map.removeLayer(liveRadarLayer);
+    if (liveCoverageLayer && map && map.hasLayer(liveCoverageLayer)) map.removeLayer(liveCoverageLayer);
+    liveRadarLayer = null;
+    liveCoverageLayer = null;
+  }
+
+  function showAccLiveMeta(text, show) {
+    var el = document.getElementById("accLiveMeta");
+    if (!el) return;
+    el.hidden = !show;
+    el.textContent = text || "";
+  }
+
   function setAccommodationBaseLayer(mode) {
-    if (!map || !streetLayer || !satelliteLayer) return "street";
-    var next = mode === "satellite" || mode === "hybrid" ? mode : "street";
+    if (!map || !streetLayer || !satelliteLayer) return Promise.resolve("street");
+    var requested = String(mode || "street").toLowerCase();
+    if (requested === "live") {
+      if (!window.HAVKAR_MAP || typeof window.HAVKAR_MAP.fetchLiveRadarFrame !== "function") {
+        showAccLiveMeta("Live broadcast is not available right now.", true);
+        return setAccommodationBaseLayer("street");
+      }
+      if (geoLabel) geoLabel.textContent = "Loading live precipitation radar…";
+      return window.HAVKAR_MAP.fetchLiveRadarFrame().then(function (meta) {
+        if (map.hasLayer(satelliteLayer)) map.removeLayer(satelliteLayer);
+        if (hybridLabelsLayer && map.hasLayer(hybridLabelsLayer)) map.removeLayer(hybridLabelsLayer);
+        if (!map.hasLayer(streetLayer)) streetLayer.addTo(map);
+        clearAccLiveLayers();
+        if (!meta || !meta.ok || !meta.available || !meta.tileUrl) {
+          activeAccBase = "street";
+          markAccLayer("street");
+          showAccLiveMeta(
+            (meta && meta.message) || "Live broadcast is not available in this region.",
+            true
+          );
+          if (geoLabel) {
+            geoLabel.textContent =
+              (meta && meta.message) || "Live broadcast is not available in this region.";
+          }
+          return "street";
+        }
+        liveRadarLayer = L.tileLayer(meta.tileUrl, {
+          maxZoom: Number(meta.max_zoom) || 7,
+          opacity: 0.72,
+          attribution:
+            'Live precipitation radar by <a href="https://www.rainviewer.com/" target="_blank" rel="noopener noreferrer">RainViewer</a>'
+        });
+        liveRadarLayer.addTo(map);
+        if (meta.coverageUrl) {
+          liveCoverageLayer = L.tileLayer(meta.coverageUrl, {
+            maxZoom: Number(meta.max_zoom) || 7,
+            opacity: 0.35
+          });
+          liveCoverageLayer.addTo(map);
+        }
+        activeAccBase = "live";
+        markAccLayer("live");
+        showAccLiveMeta(
+          "Source: RainViewer · Live precipitation radar · Last frame: " +
+            (meta.frame_time_utc || "unknown") +
+            " · Coverage: radar agencies worldwide. Empty areas = no live radar. Not a traffic/private camera.",
+          true
+        );
+        if (geoLabel) {
+          geoLabel.textContent =
+            "Live map · RainViewer precipitation radar · " + (meta.frame_time_utc || "");
+        }
+        return "live";
+      });
+    }
+    clearAccLiveLayers();
+    showAccLiveMeta("", false);
+    var next = requested === "satellite" || requested === "hybrid" ? requested : "street";
     if (map.hasLayer(streetLayer)) map.removeLayer(streetLayer);
     if (map.hasLayer(satelliteLayer)) map.removeLayer(satelliteLayer);
     if (hybridLabelsLayer && map.hasLayer(hybridLabelsLayer)) map.removeLayer(hybridLabelsLayer);
@@ -352,18 +434,14 @@
       next = "street";
     }
     activeAccBase = next;
-    document.querySelectorAll("[data-acc-layer]").forEach(function (btn) {
-      var on = btn.getAttribute("data-acc-layer") === next;
-      btn.classList.toggle("active", on);
-      btn.setAttribute("aria-pressed", on ? "true" : "false");
-    });
+    markAccLayer(next);
     if (geoLabel) {
       geoLabel.textContent =
         next === "street"
           ? "Street map · OpenStreetMap"
           : "Satellite / hybrid · Esri imagery (static tiles, not a live camera)";
     }
-    return next;
+    return Promise.resolve(next);
   }
 
   function accommodationLocationLink() {
@@ -376,6 +454,11 @@
   function initMap() {
     if (!window.L || map) return;
     map = L.map("map").setView([selectedGeo.latitude, selectedGeo.longitude], 11);
+    if (window.HAVKAR_MAP && window.HAVKAR_MAP.safeAttributionPrefix) {
+      window.HAVKAR_MAP.safeAttributionPrefix(map);
+    } else if (map.attributionControl && map.attributionControl.setPrefix) {
+      map.attributionControl.setPrefix("Leaflet");
+    }
     streetLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 18,
       attribution: "&copy; OpenStreetMap"
@@ -412,7 +495,10 @@
     });
     document.querySelectorAll("[data-acc-layer]").forEach(function (btn) {
       btn.addEventListener("click", function () {
-        setAccommodationBaseLayer(btn.getAttribute("data-acc-layer"));
+        setAccommodationBaseLayer(btn.getAttribute("data-acc-layer")).catch(function () {
+          showAccLiveMeta("Live broadcast is not available right now.", true);
+          setAccommodationBaseLayer("street");
+        });
       });
     });
     var copyBtn = document.getElementById("accCopyLocationBtn");
