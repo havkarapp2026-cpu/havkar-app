@@ -3,7 +3,7 @@
     return;
   }
 
-  var SW_URL = "/sw.js?v=havkar-sw-20261117-stability-recovery-v1";
+  var SW_URL = "/sw.js?v=havkar-sw-20261117-maps-tickets-accommodation-only-v1";
 
   window.addEventListener("load", function () {
     navigator.serviceWorker

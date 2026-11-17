@@ -16,18 +16,20 @@ test("geo pins helper never invents coordinates and skips remote jobs", () => {
   assert.match(code, /geocodeLabel/);
 });
 
-test("buy-sell jobs services ads wire geo pins and location attributes", () => {
+test("buy-sell jobs services ads keep location attributes without module maps", () => {
   for (const file of ["buy-sell.html", "jobs.html", "services.html", "ads.html"]) {
     const html = fs.readFileSync(path.join(root, file), "utf8");
-    assert.match(html, /havkar-geo-pins\.js/);
-    assert.match(html, /HAVKAR_GEO_PINS/);
-    assert.match(html, /moduleMapPanel|adTargetMapPanel/);
+    assert.doesNotMatch(html, /havkar-module-map\.js/);
+    assert.doesNotMatch(html, /id=["']moduleMapPanel["']/);
   }
   const jobs = fs.readFileSync(path.join(root, "jobs.html"), "utf8");
   assert.match(jobs, /data-remote=/);
+  assert.match(jobs, /id="jobCountry"/);
+  assert.match(jobs, /id="jobCity"/);
   const ads = fs.readFileSync(path.join(root, "ads.html"), "utf8");
   assert.match(ads, /adTargetRadiusKm/);
   assert.match(ads, /adLatitude/);
+  assert.doesNotMatch(ads, /adTargetMapPanel/);
 });
 
 test("marketplace geo migration and telehealth migration files exist", () => {
@@ -88,7 +90,8 @@ test("delivery persists geocoded pickup/drop coords when schema allows", () => {
   const page = fs.readFileSync(path.join(root, "delivery.html"), "utf8");
   assert.match(page, /pickup_latitude/);
   assert.match(page, /delivery_longitude/);
-  assert.match(page, /requestRoute/);
+  assert.match(page, /hotels_geocode|lightGeocode/);
+  assert.doesNotMatch(page, /havkar-module-map\.js|requestRoute/);
 });
 
 test("ios preflight still documents signing secrets without inventing values", () => {

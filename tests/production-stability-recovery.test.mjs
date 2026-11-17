@@ -50,11 +50,12 @@ test("module bottom navs restore Home without duplicate Profile icons", () => {
   assert.doesNotMatch(events, /onclick="openProfile\(\)"/);
 });
 
-test("service worker cache bumped for stability recovery", () => {
+test("service worker cache bumped after stability recovery", () => {
   const sw = read("sw.js");
   const reg = read("havkar-sw-register.js");
-  assert.match(sw, /havkar-sw-20261117-stability-recovery-v1/);
-  assert.match(reg, /havkar-sw-20261117-stability-recovery-v1/);
+  /* Later map-scope release supersedes the recovery-only SW tag. */
+  assert.match(sw, /havkar-sw-20261117-maps-tickets-accommodation-only-v1/);
+  assert.match(reg, /havkar-sw-20261117-maps-tickets-accommodation-only-v1/);
 });
 
 test("tickets bottom nav restores Home without Profile", () => {

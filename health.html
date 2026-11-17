@@ -27,7 +27,6 @@ input,select,button{font:inherit}
 input[type=search],input[type=text],select{width:100%;min-height:44px;border:1px solid #cfd;border-radius:10px;padding:0 10px;background:#fff}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 @media(max-width:700px){.grid2{grid-template-columns:1fr}}
-#map{height:min(42vh,340px);min-height:220px;border-radius:12px;margin-top:10px;border:1px solid #d7e6db}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .toolbar button,.primary,.secondary{min-height:42px;border-radius:10px;padding:0 12px;font-weight:700;cursor:pointer}
 .toolbar button,.secondary{border:1px solid var(--g);background:#fff;color:var(--g)}
@@ -133,18 +132,16 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
         </select>
       </div>
     </div>
-    <div id="map" role="application" data-i18n-aria="health.map_aria" aria-label="Health providers map"></div>
     <div class="toolbar">
       <button type="button" id="gpsBtn" data-i18n="health.use_location">Use my location</button>
       <button type="button" id="placeBtn">Search place</button>
-      <button type="button" id="boundsBtn">Search this area</button>
       <button type="button" id="verifiedOnlyBtn" aria-pressed="false" data-i18n="health.verified_only">Verified only</button>
       <button type="button" id="insuranceBtn" aria-pressed="false" data-i18n="health.insurance">Insurance listed</button>
       <button type="button" id="accessBtn" aria-pressed="false" data-i18n="health.accessibility">Accessibility notes</button>
       <button type="button" id="slotsBtn" aria-pressed="false" data-i18n="health.open_slots">Open slots</button>
       <button type="button" id="clearCatBtn" data-i18n="health.all_categories">All categories</button>
     </div>
-    <p id="geoLabel" class="notice" style="margin-top:10px;margin-bottom:0" data-i18n="health.map_empty">Map stays available with an honest empty state when no verified providers are published.</p>
+    <p id="geoLabel" class="notice" style="margin-top:10px;margin-bottom:0" data-i18n="health.map_empty">Search by country, city, or use GPS. Provider list stays available without a map.</p>
     <button class="primary" type="button" id="searchBtn" data-i18n="health.search">Search providers</button>
     <p id="status" role="status"></p>
   </section>
@@ -175,7 +172,6 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
   <a href="health-medicine.html" data-i18n="health.nav_medicines">Medicines</a>
   <a href="health-dashboard.html" data-i18n="health.nav_dashboard">Dashboard</a>
 </nav>
-<script src="/havkar-map.js"></script>
 <script src="/havkar-health-i18n.js"></script>
 <script src="/havkar-premium-i18n.js"></script>
 <script src="/havkar-ui-i18n21.js"></script>
@@ -205,7 +201,8 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
   var insuranceOnly = false;
   var accessOnly = false;
   var openSlotsOnly = false;
-  var mapApi = null;
+  var userLat = null;
+  var userLng = null;
   var categories = [];
   var statusEl = document.getElementById("status");
   var resultsEl = document.getElementById("results");
@@ -282,18 +279,13 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
         var dir = document.createElement("a");
         dir.className = "secondary";
         dir.style.cssText = "display:inline-flex;align-items:center;text-decoration:none;padding:8px 12px";
-        dir.href = (mapApi && mapApi.osmDirectionsUrl)
-          ? mapApi.osmDirectionsUrl(row.latitude, row.longitude)
-          : ("https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=;" +
-            encodeURIComponent(row.latitude + "," + row.longitude));
+        dir.href = "https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=;" +
+          encodeURIComponent(row.latitude + "," + row.longitude);
         dir.textContent = ht("health.directions");
         dir.target = "_blank";
         dir.rel = "noopener";
         actions.appendChild(dir);
       }
-      card.addEventListener("click", function () {
-        if (mapApi && mapApi.highlight && row.id) mapApi.highlight(row.id);
-      });
       resultsEl.appendChild(card);
     });
   }
@@ -356,8 +348,8 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
           accessibility_required: accessOnly,
           has_open_slots: openSlotsOnly,
           distance_km: document.getElementById("distanceInput").value,
-          latitude: mapApi && mapApi.marker ? mapApi.marker.getLatLng().lat : null,
-          longitude: mapApi && mapApi.marker ? mapApi.marker.getLatLng().lng : null
+          latitude: userLat,
+          longitude: userLng
         })
       });
       var body = await res.json();
@@ -367,22 +359,6 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
         return;
       }
       var rows = body.results || [];
-      if (mapApi && mapApi.filterItemsInBounds && window.__havkarBoundsOnly) {
-        rows = mapApi.filterItemsInBounds(rows);
-      }
-      window.__havkarBoundsOnly = false;
-      if (mapApi && mapApi.setMarkers) {
-        mapApi.setMarkers(rows.map(function (r) {
-          return {
-            id: r.id,
-            latitude: r.latitude,
-            longitude: r.longitude,
-            label: (r.display_name || ht("health.provider")) +
-              " · " +
-              (r.license_status === "verified" ? ht("health.verified_tag") : ht("health.unverified_tag"))
-          };
-        }));
-      }
       setStatus(ht("health.matches", { n: rows.length }));
       renderProviders(rows);
     } catch (e) {
@@ -425,14 +401,21 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
   });
 
   document.getElementById("placeBtn").addEventListener("click", function () {
-    if (!mapApi || !mapApi.searchPlace) return;
-    mapApi.searchPlace(document.getElementById("placeInput").value).then(function (geo) {
-      if (!geo || !geo.ok) {
+    var q = String(document.getElementById("placeInput").value || "").trim();
+    if (q.length < 2) return;
+    fetch("/api/hotels", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "hotels_geocode", query: q })
+    }).then(function (res) { return res.json(); }).then(function (geo) {
+      if (!geo || geo.ok !== true || !geo.primary) {
         document.getElementById("geoLabel").textContent = ht("health.gps_denied");
         return;
       }
-      document.getElementById("geoLabel").textContent = (geo.primary && geo.primary.label) || ht("health.gps_ok");
-      if (geo.primary && geo.primary.address && geo.primary.address.city) {
+      userLat = Number(geo.primary.latitude);
+      userLng = Number(geo.primary.longitude);
+      document.getElementById("geoLabel").textContent = geo.primary.label || ht("health.gps_ok");
+      if (geo.primary.address && geo.primary.address.city) {
         document.getElementById("cityInput").value = geo.primary.address.city;
       }
       runSearch();
@@ -440,37 +423,21 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
       document.getElementById("geoLabel").textContent = ht("health.gps_denied");
     });
   });
-  document.getElementById("boundsBtn").addEventListener("click", function () {
-    window.__havkarBoundsOnly = true;
-    runSearch();
-  });
 
-  if (window.HAVKAR_MAP) {
-    window.HAVKAR_MAP.create("map", {
-      latitude: 41.9,
-      longitude: 12.5,
-      zoom: 5,
-      cluster: true,
-      onSelect: function (info) {
-        if (info && info.id) {
-          var card = resultsEl.querySelector('a[href*="id=' + encodeURIComponent(info.id) + '"]');
-          if (card && card.scrollIntoView) card.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-      }
-    }).then(function (api) {
-      mapApi = api;
-      document.getElementById("gpsBtn").addEventListener("click", function () {
-        api.requestGps().then(function () {
-          document.getElementById("geoLabel").textContent = ht("health.gps_ok");
-          runSearch();
-        }).catch(function () {
-          document.getElementById("geoLabel").textContent = ht("health.gps_denied");
-        });
-      });
-    }).catch(function () {
-      document.getElementById("geoLabel").textContent = ht("health.map_unavailable");
-    });
-  }
+  document.getElementById("gpsBtn").addEventListener("click", function () {
+    if (!navigator.geolocation) {
+      document.getElementById("geoLabel").textContent = ht("health.gps_denied");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      userLat = pos.coords.latitude;
+      userLng = pos.coords.longitude;
+      document.getElementById("geoLabel").textContent = ht("health.gps_ok");
+      runSearch();
+    }, function () {
+      document.getElementById("geoLabel").textContent = ht("health.gps_denied");
+    }, { enableHighAccuracy: true, timeout: 12000 });
+  });
 
   if (I18N) {
     I18N.apply(document.body);
