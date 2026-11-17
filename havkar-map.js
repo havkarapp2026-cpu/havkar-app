@@ -8,8 +8,13 @@
 (function (root) {
   "use strict";
 
-  var STREET_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
-  var STREET_ATTR = "&copy; OpenStreetMap";
+  /* Carto Voyager (OSM data) — clearer land coverage than bare OSM at mid-zoom;
+     OSM raster remains available via opts.streetProvider === "osm". */
+  var STREET_URL =
+    "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+  var STREET_ATTR = "&copy; OpenStreetMap, &copy; CARTO";
+  var STREET_OSM_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+  var STREET_OSM_ATTR = "&copy; OpenStreetMap";
   var SAT_URL =
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
   var SAT_ATTR =
@@ -266,9 +271,10 @@
             scrollWheelZoom: true,
             tap: true
           }).setView([lat, lng], zoom);
-          var streetLayer = L.tileLayer(STREET_URL, {
+          var useOsm = String(opts.streetProvider || "").toLowerCase() === "osm";
+          var streetLayer = L.tileLayer(useOsm ? STREET_OSM_URL : STREET_URL, {
             maxZoom: 19,
-            attribution: STREET_ATTR
+            attribution: useOsm ? STREET_OSM_ATTR : STREET_ATTR
           });
           var satLayer = L.tileLayer(SAT_URL, {
             maxZoom: 19,

@@ -173,11 +173,16 @@
     }
 
     return root.HAVKAR_MAP.create(mapEl, {
-      latitude: opts.latitude || 41.9,
-      longitude: opts.longitude || 12.5,
-      zoom: opts.zoom || 5,
+      /* Land-centered Rome default — zoom 5 over water reads as a "blue only" map. */
+      latitude: opts.latitude || 41.9028,
+      longitude: opts.longitude || 12.4964,
+      zoom: opts.zoom || 11,
       cluster: true
     }).then(function (api) {
+      if (api && api.invalidate) {
+        setTimeout(function () { api.invalidate(); }, 120);
+        setTimeout(function () { api.invalidate(); }, 600);
+      }
       var lastItems = [];
       var lastCenter = {
         latitude: opts.latitude || 41.9,

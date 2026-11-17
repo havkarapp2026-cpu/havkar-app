@@ -1343,18 +1343,7 @@ textarea.form-control {
                 style="display:none"></span>
 
         </button>
-
-        <button
-            class="header-icon"
-            type="button"
-            onclick="goProfile()"
-            aria-label="Profile">
-
-            <i class="fas fa-user"></i>
-
-        </button>
-
-    </div>
+</div>
 
 </header>
 
@@ -1548,74 +1537,6 @@ textarea.form-control {
 ========================================================= -->
 
 <nav class="bottom-nav">
-
-    <button
-        class="nav-item"
-        type="button"
-        onclick="goHome()">
-
-        <i class="fas fa-home"></i>
-
-        <span>
-            Home
-        </span>
-
-    </button>
-
-    <button
-        class="nav-item active"
-        id="navSearch"
-        type="button"
-        onclick="focusSearch()">
-
-        <i class="fas fa-search"></i>
-
-        <span>
-            Search
-        </span>
-
-    </button>
-
-    <button
-        class="nav-item"
-        id="navSaved"
-        type="button"
-        onclick="showSavedServices()">
-
-        <i class="fas fa-bookmark"></i>
-
-        <span>
-            Saved
-        </span>
-
-    </button>
-
-    <button
-        class="nav-item"
-        type="button"
-        onclick="goMessages()">
-
-        <i class="fas fa-comment"></i>
-
-        <span>
-            Messages
-        </span>
-
-    </button>
-
-    <button
-        class="nav-item"
-        type="button"
-        onclick="goProfile()">
-
-        <i class="fas fa-user"></i>
-
-        <span>
-            Profile
-        </span>
-
-    </button>
-
 </nav>
 
 
@@ -2242,15 +2163,13 @@ textarea.form-control {
             <div class="form-group">
 
                 <label class="form-label" for="editServiceCurrency">
-                    Currency
+                    Currency (133 fiat + separate XLM)
                 </label>
-
-                <select id="editServiceCurrency" class="form-control" required>
-                    <option value="EUR">EUR</option>
-                    <option value="USD">USD</option>
-                    <option value="GBP">GBP</option>
-                    <option value="SEK">SEK</option>
-                </select>
+                <input type="hidden" id="editServiceCurrency" value="EUR" required>
+                <div id="editServiceCurrencyMount"></div>
+                <p class="form-hint" style="font-size:.85rem;color:#567;margin-top:6px">
+                  Quotation/display currency. Stripe live charging follows real capability — not all 133 are chargeable.
+                </p>
 
             </div>
 
@@ -3806,7 +3725,7 @@ function serviceDraftMessage(reason) {
     }
 
     if (reason === "invalid_currency") {
-        return "Choose EUR, USD, GBP, or SEK.";
+        return "Choose a supported display/quotation currency from the 133-fiat catalogue (or XLM).";
     }
 
     if (reason === "blocked_transition") {
@@ -4426,11 +4345,29 @@ function escapeHtml(text) {
 
 <link rel="stylesheet" href="/havkar-map-platform.css">
 <script src="/havkar-countries.js"></script>
+<script src="/havkar-presentment-currencies.js"></script>
+<script src="/havkar-currency-select.js"></script>
 <script src="/havkar-map.js"></script>
 <script src="/havkar-module-map.js"></script>
 <script src="/havkar-geo-pins.js"></script>
 <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
+<script>
+(function(){
+  var mount = document.getElementById('editServiceCurrencyMount');
+  var hidden = document.getElementById('editServiceCurrency');
+  if(!mount || !hidden || !window.HAVKAR_CURRENCY_SELECT) return;
+  window.HAVKAR_CURRENCY_SELECT.mount(mount, {
+    initialCurrency: String(hidden.value || 'eur').toLowerCase(),
+    onChange: function(sel){
+      if(!sel) return;
+      hidden.value = sel.method === 'xlm_mainnet'
+        ? 'XLM'
+        : String(sel.code || 'EUR').toUpperCase();
+    }
+  });
+})();
+</script>
 
 <script src="/havkar-page-back.js"></script>
 
