@@ -9,16 +9,16 @@ Re-verified 10 November 2026 against production `https://havkar.online/api/payme
 | Fact | Evidence |
 | --- | --- |
 | Package | `online.havkar.app` |
-| versionCode / versionName | `2` / `1.0.0` |
+| versionCode / versionName | `4` / `1.0.4` |
 | targetSdk / compileSdk | 36 |
-| Android permissions | `INTERNET` only (`AndroidManifest.xml`) |
+| Android permissions | `INTERNET`, `POST_NOTIFICATIONS`, `RECORD_AUDIO`, `VIBRATE`, `CAMERA` (optional), `ACCESS_COARSE_LOCATION` / `ACCESS_FINE_LOCATION` (optional; feature-not-required) |
 | Advertising ID | Not requested |
 | Analytics SDK | None in native project |
 | WebView shell | Loads canonical `https://havkar.online/` |
-| Card / Pi live collection | Off (`HAVKAR_REAL_PAYMENTS_ENABLED=false`, `HAVKAR_STRIPE_LIVE_ENABLED=false`) |
-| Stellar Mainnet one-time XLM | **Armed** in Production (`HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED=true`; wallet UI still defaults to Testnet) |
-| Paid AI billing / Play Billing / IAP | Not armed (`billingUnavailable` in `havkar-ai.html`) |
-| Duffel | Authenticated search + TEST MODE order API; live booking blocked server-side |
+| Card / Pi live collection | Owner-armed Stripe rails where Production flags are true; Health live billing stays OFF |
+| Stellar Mainnet one-time XLM | **Armed** in Production when Owner flags are true |
+| Paid AI billing / Play Billing / IAP | Logo/image entitlements server-enforced; usable free logos forbidden |
+| Duffel / Hotels | Search/probe may be available; public live hotel booking remains gated |
 
 ## Data collected (account / app)
 
