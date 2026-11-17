@@ -94,6 +94,13 @@
       </div>
     </div>
     <div id="map" role="application" aria-label="Destination map"></div>
+    <div class="map-toolbar" role="group" aria-label="Map layer modes" style="margin-bottom:6px">
+      <button type="button" id="accLayerStreet" class="active" data-acc-layer="street" aria-pressed="true">Street map</button>
+      <button type="button" id="accLayerSatellite" data-acc-layer="satellite" aria-pressed="false">Satellite</button>
+      <button type="button" id="accLayerHybrid" data-acc-layer="hybrid" aria-pressed="false">Hybrid</button>
+      <button type="button" id="accShareLocationBtn">Share location</button>
+      <button type="button" id="accCopyLocationBtn">Copy location link</button>
+    </div>
     <div class="map-toolbar" role="group" aria-label="Map controls">
       <button type="button" id="useGpsBtn" aria-label="Use my location">Use my location</button>
       <button type="button" id="hotelsBoundsBtn">Search this area</button>
@@ -103,7 +110,7 @@
       <button type="button" id="favoritesOnlyBtn" aria-pressed="false">Favorites</button>
       <button type="button" id="openCompareBtn" aria-pressed="false">Compare</button>
     </div>
-    <p id="geoLabel" class="provider-note">Map stays available even when no verified stay is published. Choose a destination or use GPS.</p>
+    <p id="geoLabel" class="provider-note">Street / satellite / hybrid map for destinations. Satellite is static imagery, not a live camera. Choose a destination or use GPS.</p>
     <div class="search-grid">
       <div>
         <label for="checkInInput">Check-in</label>
@@ -324,13 +331,71 @@
     });
   }
 
+  var streetLayer = null;
+  var satelliteLayer = null;
+  var hybridLabelsLayer = null;
+  var activeAccBase = "street";
+
+  function setAccommodationBaseLayer(mode) {
+    if (!map || !streetLayer || !satelliteLayer) return "street";
+    var next = mode === "satellite" || mode === "hybrid" ? mode : "street";
+    if (map.hasLayer(streetLayer)) map.removeLayer(streetLayer);
+    if (map.hasLayer(satelliteLayer)) map.removeLayer(satelliteLayer);
+    if (hybridLabelsLayer && map.hasLayer(hybridLabelsLayer)) map.removeLayer(hybridLabelsLayer);
+    if (next === "satellite") {
+      satelliteLayer.addTo(map);
+    } else if (next === "hybrid") {
+      satelliteLayer.addTo(map);
+      if (hybridLabelsLayer) hybridLabelsLayer.addTo(map);
+    } else {
+      streetLayer.addTo(map);
+      next = "street";
+    }
+    activeAccBase = next;
+    document.querySelectorAll("[data-acc-layer]").forEach(function (btn) {
+      var on = btn.getAttribute("data-acc-layer") === next;
+      btn.classList.toggle("active", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    if (geoLabel) {
+      geoLabel.textContent =
+        next === "street"
+          ? "Street map · OpenStreetMap"
+          : "Satellite / hybrid · Esri imagery (static tiles, not a live camera)";
+    }
+    return next;
+  }
+
+  function accommodationLocationLink() {
+    var lat = Number(selectedGeo && selectedGeo.latitude);
+    var lng = Number(selectedGeo && selectedGeo.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return "";
+    return "https://www.openstreetmap.org/?mlat=" + lat + "&mlon=" + lng + "#map=14/" + lat + "/" + lng;
+  }
+
   function initMap() {
     if (!window.L || map) return;
     map = L.map("map").setView([selectedGeo.latitude, selectedGeo.longitude], 11);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    streetLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 18,
       attribution: "&copy; OpenStreetMap"
-    }).addTo(map);
+    });
+    satelliteLayer = L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      {
+        maxZoom: 18,
+        attribution:
+          "Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
+      }
+    );
+    hybridLabelsLayer = L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+      {
+        maxZoom: 18,
+        attribution: "Labels &copy; Esri — Source: Esri, HERE, Garmin, FAO, NOAA, USGS"
+      }
+    );
+    streetLayer.addTo(map);
     marker = L.marker([selectedGeo.latitude, selectedGeo.longitude]).addTo(map);
     pinLayer = (L.markerClusterGroup
       ? L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 48 })
@@ -345,6 +410,59 @@
       marker.setLatLng(ev.latlng);
       geoLabel.textContent = "Map pin: " + selectedGeo.label;
     });
+    document.querySelectorAll("[data-acc-layer]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        setAccommodationBaseLayer(btn.getAttribute("data-acc-layer"));
+      });
+    });
+    var copyBtn = document.getElementById("accCopyLocationBtn");
+    if (copyBtn) {
+      copyBtn.addEventListener("click", async function () {
+        var link = accommodationLocationLink();
+        if (!link) {
+          setStatus("Select a map location first.");
+          return;
+        }
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(link);
+            setStatus("Location link copied.");
+          } else {
+            setStatus(link);
+          }
+        } catch (_e) {
+          setStatus(link);
+        }
+      });
+    }
+    var shareBtn = document.getElementById("accShareLocationBtn");
+    if (shareBtn) {
+      shareBtn.addEventListener("click", async function () {
+        var link = accommodationLocationLink();
+        if (!link) {
+          setStatus("Select a map location first.");
+          return;
+        }
+        var payload = {
+          title: "HAVKAR accommodation location",
+          text: selectedGeo.label || "Selected stay location",
+          url: link
+        };
+        try {
+          if (navigator.share) {
+            await navigator.share(payload);
+            setStatus("Location shared.");
+          } else if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(link);
+            setStatus("Share unavailable — location link copied instead.");
+          } else {
+            setStatus(link);
+          }
+        } catch (_e) {
+          setStatus("Share cancelled or unavailable.");
+        }
+      });
+    }
     setTimeout(function () { if (map) map.invalidateSize(); }, 80);
   }
 

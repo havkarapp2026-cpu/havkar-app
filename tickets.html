@@ -452,9 +452,11 @@ h2{
             <button type="button" class="is-active" data-tickets-layer="street">Street map</button>
             <button type="button" data-tickets-layer="satellite">Satellite</button>
             <button type="button" data-tickets-layer="hybrid">Hybrid</button>
+            <button type="button" id="ticketsShareLocationBtn">Share location</button>
+            <button type="button" id="ticketsCopyLocationBtn">Copy location link</button>
         </div>
         <div id="ticketsMapHost" class="havkar-map-host" style="height:min(46vh,380px);min-height:260px;border-radius:14px;border:1px solid var(--border)"></div>
-        <p id="ticketsMapNote" class="pending-note" role="status">Search origin and destination to place markers. Illustrative flight connections are geographic lines, not verified airways.</p>
+        <p id="ticketsMapNote" class="pending-note" role="status">Search origin and destination to place markers. Illustrative flight connections are geographic lines, not verified airways. Satellite tiles are static imagery, not a live camera.</p>
     </section>
 
     <div class="ticket-types" role="group" aria-label="Travel modes">
@@ -1028,6 +1030,16 @@ h2{
     });
   }
 
+  function ticketsMapCenter(api){
+    try{
+      if(api && api.map && api.map.getCenter){
+        var c = api.map.getCenter();
+        return { latitude: c.lat, longitude: c.lng, label: 'Travel map center' };
+      }
+    }catch(_e){}
+    return { latitude: 41.9028, longitude: 12.4964, label: 'Travel map' };
+  }
+
   function wireTicketsLayers(api){
     var root = document.getElementById('ticketsMapLayers');
     if(!root || !api || !api.setBaseLayer) return;
@@ -1040,11 +1052,35 @@ h2{
         });
         setMapNote(
           mode === 'satellite' || mode === 'hybrid'
-            ? 'Satellite / hybrid · Esri imagery with required attribution'
+            ? 'Satellite / hybrid · Esri imagery with required attribution (static tiles, not live camera)'
             : 'Street map · OpenStreetMap'
         );
       });
     });
+    var shareBtn = document.getElementById('ticketsShareLocationBtn');
+    var copyBtn = document.getElementById('ticketsCopyLocationBtn');
+    if(shareBtn && window.HAVKAR_MAP && window.HAVKAR_MAP.nativeShareLocation){
+      shareBtn.addEventListener('click', function(){
+        var c = ticketsMapCenter(api);
+        window.HAVKAR_MAP.nativeShareLocation(c.latitude, c.longitude, c.label).then(function(res){
+          setMapNote(res && res.shared ? 'Location shared.' : (res && res.url ? ('Share link: ' + res.url) : 'Share unavailable.'));
+        }).catch(function(){ setMapNote('Share cancelled or unavailable.'); });
+      });
+    }
+    if(copyBtn && window.HAVKAR_MAP && window.HAVKAR_MAP.mapsSharePayload){
+      copyBtn.addEventListener('click', function(){
+        var c = ticketsMapCenter(api);
+        var payload = window.HAVKAR_MAP.mapsSharePayload(c.latitude, c.longitude, c.label);
+        var text = (payload && (payload.url || payload.text)) || '';
+        if(navigator.clipboard && navigator.clipboard.writeText && text){
+          navigator.clipboard.writeText(text).then(function(){
+            setMapNote('Location link copied.');
+          }).catch(function(){ setMapNote(text || 'Copy unavailable.'); });
+        }else{
+          setMapNote(text || 'Copy unavailable.');
+        }
+      });
+    }
   }
 
   function geocodePlace(query){

@@ -22,11 +22,18 @@ test("tickets and accommodation still reference map / leaflet / module-map", () 
   assert.match(tickets, /havkar-map\.js/);
   assert.match(tickets, /havkar-module-map\.js/);
   assert.match(tickets, /travelMapPanel|ticketsMapHost|HAVKAR_MAP/);
+  assert.match(tickets, /data-tickets-layer="satellite"/);
+  assert.match(tickets, /ticketsShareLocationBtn/);
+  assert.match(tickets, /ticketsCopyLocationBtn/);
 
   const hotels = read("accommodation.html");
   assert.match(hotels, /havkar-map\.js/);
   assert.match(hotels, /leaflet@1\.9\.4/);
   assert.match(hotels, /L\.map\(/);
+  assert.match(hotels, /data-acc-layer="satellite"/);
+  assert.match(hotels, /data-acc-layer="hybrid"/);
+  assert.match(hotels, /accShareLocationBtn/);
+  assert.match(hotels, /accCopyLocationBtn/);
 });
 
 test("non-travel modules do not load module-map or mount moduleMapPanel", () => {
