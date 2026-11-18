@@ -16,14 +16,14 @@ test("pro toolbar exists and wires tickets + accommodation", () => {
   assert.match(hotels, /havkar-map-pro-toolbar\.js/);
   assert.match(tickets, /ticketsProToolbarHost/);
   assert.match(hotels, /accProToolbarHost/);
-  assert.match(read("havkar-map-pro-toolbar.js"), /Fullscreen/);
-  assert.match(read("havkar-map-pro-toolbar.js"), /My location/);
-  assert.match(read("havkar-map-pro-toolbar.js"), /Use as origin/);
+  assert.match(read("havkar-map-pro-toolbar.js"), /maps\.fullscreen|Fullscreen/);
+  assert.match(read("havkar-map-pro-toolbar.js"), /maps\.my_location|My location/);
+  assert.match(read("havkar-map-pro-toolbar.js"), /maps\.use_as_origin|Use as origin/);
   assert.match(read("havkar-map-pro-toolbar.js"), /map-tomtom-routing/);
-  assert.match(read("havkar-map-pro-toolbar.js"), /sales OFF/);
+  assert.match(read("havkar-map-pro-toolbar.js"), /maps\.badge_plus_off|sales OFF|sales-off/);
   assert.match(read("havkar-map-pro-toolbar.js"), /navigator\.geolocation\.getCurrentPosition/);
   assert.match(read("havkar-map-pro-toolbar.js"), /typeahead=true/);
-  assert.match(read("havkar-map-pro-toolbar.js"), /View surroundings/);
+  assert.match(read("havkar-map-pro-toolbar.js"), /maps\.view_surroundings|View surroundings/);
 });
 
 test("Maps Plus scaffold is sales-disabled", () => {

@@ -76,7 +76,7 @@
         var panel = el("section", {
           id: "havkarTripPlanner",
           className: "havkar-trip-planner",
-          "aria-label": "Trip planner"
+          "aria-label": mt("maps.trip_title")
         });
         var anchor =
           document.getElementById(opts.insertBeforeId || "") ||
@@ -97,19 +97,21 @@
 
     function render() {
       host.innerHTML = "";
-      host.appendChild(el("h2", { className: "havkar-trip-title" }, "Trip planner"));
+      host.setAttribute("dir", mapDir());
+      host.setAttribute("lang", (root.HAVKAR_MAP_I18N && root.HAVKAR_MAP_I18N.lang && root.HAVKAR_MAP_I18N.lang()) || "en");
+      host.appendChild(el("h2", { className: "havkar-trip-title", "data-i18n-map": "maps.trip_title" }, mt("maps.trip_title")));
       host.appendChild(
         el(
           "p",
-          { className: "havkar-trip-note" },
-          "Multi-stop routes use real TomTom travel times when available. Plans save on this device only. Sharing never includes live GPS or ticket codes."
+          { className: "havkar-trip-note", "data-i18n-map": "maps.trip_note" },
+          mt("maps.trip_note")
         )
       );
 
       var list = el("ol", { className: "havkar-trip-stops", "data-trip": "list" });
       if (!plan.stops.length) {
         list.appendChild(
-          el("li", { className: "havkar-trip-empty" }, "No stops yet. Add a stay, event, or place.")
+          el("li", { className: "havkar-trip-empty", "data-i18n-map": "maps.trip_empty" }, mt("maps.trip_empty"))
         );
       } else {
         plan.stops.forEach(function (stop, idx) {
@@ -129,7 +131,7 @@
             )
           );
           var row = el("div", { className: "havkar-trip-stop-actions" });
-          var up = el("button", { type: "button" }, "Up");
+          var up = el("button", { type: "button" }, mt("maps.up"));
           up.disabled = idx === 0;
           up.addEventListener("click", function () {
             if (idx === 0) return;
@@ -138,8 +140,13 @@
             plan.stops[idx] = tmp;
             savePlan(plan);
             render();
+    function onLang() { render(); }
+    document.addEventListener("havkar:i18n-ready", onLang);
+    document.addEventListener("havkar:language-changed", onLang);
+    if (root.HAVKAR_MAP_I18N && root.HAVKAR_MAP_I18N.onChange) root.HAVKAR_MAP_I18N.onChange(onLang);
+
           });
-          var down = el("button", { type: "button" }, "Down");
+          var down = el("button", { type: "button" }, mt("maps.down"));
           down.disabled = idx === plan.stops.length - 1;
           down.addEventListener("click", function () {
             if (idx >= plan.stops.length - 1) return;
@@ -149,7 +156,7 @@
             savePlan(plan);
             render();
           });
-          var rm = el("button", { type: "button" }, "Remove");
+          var rm = el("button", { type: "button" }, mt("maps.remove"));
           rm.addEventListener("click", function () {
             plan.stops.splice(idx, 1);
             savePlan(plan);
@@ -167,23 +174,23 @@
       var tools = el("div", { className: "havkar-trip-tools" });
       var mode = el("select", { "aria-label": "Travel mode", "data-trip": "mode" });
       [
-        ["driving", "Driving"],
-        ["walking", "Walking"],
-        ["cycling", "Cycling"]
+        ["driving", mt("maps.driving")],
+        ["walking", mt("maps.walking")],
+        ["cycling", mt("maps.cycling")]
       ].forEach(function (pair) {
         mode.appendChild(el("option", { value: pair[0] }, pair[1]));
       });
       tools.appendChild(mode);
 
       var status = el("p", { className: "havkar-trip-status", role: "status", "data-trip": "status" }, "");
-      var routeBtn = el("button", { type: "button", className: "primary" }, "Calculate route");
+      var routeBtn = el("button", { type: "button", className: "primary" }, mt("maps.calculate_route"));
       routeBtn.disabled = plan.stops.length < 2;
       routeBtn.addEventListener("click", function () {
         calculate(mode.value, status, resultBox);
       });
       tools.appendChild(routeBtn);
 
-      var clearBtn = el("button", { type: "button" }, "Clear plan");
+      var clearBtn = el("button", { type: "button" }, mt("maps.clear_plan"));
       clearBtn.addEventListener("click", function () {
         plan = { stops: [], updated_at: null };
         lastRoute = null;
@@ -192,7 +199,7 @@
       });
       tools.appendChild(clearBtn);
 
-      var shareBtn = el("button", { type: "button" }, "Copy share text");
+      var shareBtn = el("button", { type: "button" }, mt("maps.copy_share"));
       shareBtn.addEventListener("click", function () {
         var labels = plan.stops.map(function (s, i) {
           return i + 1 + ". " + (s.label || "Stop");
@@ -206,7 +213,7 @@
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(text).then(
             function () {
-              status.textContent = "Share text copied (labels only).";
+              status.textContent = mt("maps.msg_share_copied");
             },
             function () {
               status.textContent = text;
@@ -283,7 +290,7 @@
       }
       host.appendChild(resultBox);
 
-      var plus = el("p", { className: "havkar-trip-plus" }, "Loading Travel Plus status…");
+      var plus = el("p", { className: "havkar-trip-plus" }, mt("maps.travel_plus_loading"));
       host.appendChild(plus);
       fetch("/api/map-travel-plus-status")
         .then(function (r) {
@@ -292,7 +299,7 @@
         .then(function (j) {
           plus.textContent =
             (j && j.message) ||
-            "HAVKAR Travel Plus proposed €4.99/mo — sales OFF.";
+            mt("maps.travel_plus_off");
         })
         .catch(function () {
           plus.textContent = "Travel Plus status unavailable · sales remain OFF.";
@@ -301,10 +308,10 @@
 
     function calculate(profile, statusEl, _resultBox) {
       if (plan.stops.length < 2) {
-        statusEl.textContent = "Add at least two stops.";
+        statusEl.textContent = mt("maps.msg_add_two_stops");
         return;
       }
-      statusEl.textContent = "Calculating TomTom multi-stop route…";
+      statusEl.textContent = mt("maps.msg_calc_route");
       fetch("/api/map-trip-plan", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -333,12 +340,12 @@
             return;
           }
           lastRoute = j;
-          statusEl.textContent = "Route ready.";
+          statusEl.textContent = mt("maps.msg_route_ready");
           render();
         })
         .catch(function () {
           lastRoute = null;
-          statusEl.textContent = "Network error while calculating route.";
+          statusEl.textContent = mt("maps.msg_network_route");
           render();
         });
     }

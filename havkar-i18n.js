@@ -2457,6 +2457,24 @@
 
 
         /*
+         * Notify map / module i18n listeners before reload
+         * so same-document UIs can refresh immediately.
+         */
+        try {
+            document.dispatchEvent(
+                new CustomEvent(
+                    "havkar:language-changed",
+                    {
+                        detail: {
+                            language: safeLanguage,
+                            direction: safeDirection
+                        }
+                    }
+                )
+            );
+        } catch (_e) {}
+
+        /*
          * Reload is intentional.
          *
          * The original English DOM is loaded

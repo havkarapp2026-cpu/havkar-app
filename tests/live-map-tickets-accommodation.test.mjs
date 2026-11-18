@@ -32,18 +32,21 @@ test("tickets and accommodation use eight-option live layer menu", () => {
   assert.doesNotMatch(hotels, /data-acc-layer=/);
 
   const layers = read("havkar-map-live-layers.js");
-  for (const label of [
-    "Street map",
-    "Satellite",
-    "Hybrid",
-    "Live map",
-    "Rain radar",
-    "Live cameras",
-    "Intersection cameras",
-    "Traffic status"
+  for (const key of [
+    "maps.layer_street",
+    "maps.layer_satellite",
+    "maps.layer_hybrid",
+    "maps.layer_live",
+    "maps.layer_rain",
+    "maps.layer_live_cams",
+    "maps.layer_intersection",
+    "maps.layer_traffic"
   ]) {
-    assert.match(layers, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.match(layers, new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
+  assert.match(layers, /data-havkar-layer/);
+  assert.match(layers, /\["street", "maps\.layer_street"\]/);
+  assert.match(layers, /\["traffic", "maps\.layer_traffic"\]/);
   assert.match(layers, /data-rain="play"/);
   assert.match(layers, /data-rain="pause"/);
   assert.match(layers, /\/api\/map-rain-radar/);
@@ -70,6 +73,6 @@ test("non-travel modules still do not load map stacks", () => {
 test("service worker bumped for map layers release", () => {
   const sw = read("sw.js");
   const reg = read("havkar-sw-register.js");
-  assert.match(sw, /havkar-sw-20261118-hotel-streetview-mapillary-v1/);
-  assert.match(reg, /havkar-sw-20261118-hotel-streetview-mapillary-v1/);
+  assert.match(sw, /havkar-sw-20261118-map-i18n-complete-v1|hotel-streetview-mapillary-v1|map-surroundings-bari-v1/);
+  assert.match(reg, /havkar-sw-20261118-map-i18n-complete-v1|hotel-streetview-mapillary-v1|map-surroundings-bari-v1/);
 });

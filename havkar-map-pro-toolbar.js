@@ -5,6 +5,24 @@
 (function (root) {
   "use strict";
 
+  function mt(key, vars) {
+    try {
+      if (root.HAVKAR_MAP_I18N && typeof root.HAVKAR_MAP_I18N.t === "function") {
+        return root.HAVKAR_MAP_I18N.t(key, vars);
+      }
+    } catch (_e) {}
+    return key;
+  }
+
+  function mapDir() {
+    try {
+      if (root.HAVKAR_MAP_I18N && typeof root.HAVKAR_MAP_I18N.dir === "function") {
+        return root.HAVKAR_MAP_I18N.dir();
+      }
+    } catch (_e) {}
+    return "ltr";
+  }
+
   function el(tag, attrs, text) {
     var node = document.createElement(tag);
     if (attrs) {
@@ -71,12 +89,15 @@
 
     host.innerHTML = "";
     host.classList.add("havkar-map-pro");
+    host.setAttribute("dir", mapDir());
+    host.setAttribute("lang", (root.HAVKAR_MAP_I18N && root.HAVKAR_MAP_I18N.lang && root.HAVKAR_MAP_I18N.lang()) || "en");
 
     var badges = el("div", { className: "havkar-map-pro-badges" });
-    badges.appendChild(el("span", { className: "havkar-map-pro-badge", "data-kind": "free" }, "Maps free for all users"));
-    var trafficBadge = el("span", { className: "havkar-map-pro-badge", "data-kind": "traffic" }, "Traffic: checking…");
+    var freeBadge = el("span", { className: "havkar-map-pro-badge", "data-kind": "free", "data-i18n-map": "maps.badge_free" }, mt("maps.badge_free"));
+    badges.appendChild(freeBadge);
+    var trafficBadge = el("span", { className: "havkar-map-pro-badge", "data-kind": "traffic" }, mt("maps.badge_traffic_checking"));
     badges.appendChild(trafficBadge);
-    var plusBadge = el("span", { className: "havkar-map-pro-badge", "data-kind": "plus" }, "Maps Plus €4.99 · sales OFF");
+    var plusBadge = el("span", { className: "havkar-map-pro-badge", "data-kind": "plus", "data-i18n-map": "maps.badge_plus_off" }, mt("maps.badge_plus_off"));
     badges.appendChild(plusBadge);
     host.appendChild(badges);
 
@@ -84,11 +105,13 @@
     var placeInput = el("input", {
       type: "search",
       "data-pro": "place",
-      placeholder: "Search hotel, street, city or address worldwide",
+      placeholder: mt("maps.search_placeholder"),
+      "data-i18n-map-placeholder": "maps.search_placeholder",
       autocomplete: "off",
-      "aria-label": "Search place or address"
+      "aria-label": mt("maps.search_place"),
+      "data-i18n-map-aria": "maps.search_place"
     });
-    var placeBtn = el("button", { type: "button", className: "primary", "data-pro": "place-go" }, "Search place");
+    var placeBtn = el("button", { type: "button", className: "primary", "data-pro": "place-go", "data-i18n-map": "maps.search_place" }, mt("maps.search_place"));
     searchRow.appendChild(placeInput);
     searchRow.appendChild(placeBtn);
     host.appendChild(searchRow);
@@ -97,23 +120,23 @@
       "data-pro": "suggest",
       hidden: "hidden",
       role: "listbox",
-      "aria-label": "Place suggestions"
+      "aria-label": mt("maps.search_place")
     });
     host.appendChild(suggestBox);
 
     var nearRow = el("div", { className: "havkar-map-pro-near" });
-    var radiusLabel = el("label", null, "Nearby radius ");
-    var radiusSel = el("select", { "data-pro": "radius", "aria-label": "Nearby search radius" });
+    var radiusLabel = el("label", null, mt("maps.nearby_radius") + " ");
+    var radiusSel = el("select", { "data-pro": "radius", "aria-label": mt("maps.nearby_radius") });
     [1, 2, 3, 5, 10, 15].forEach(function (n) {
       var o = el("option", { value: String(n) }, String(n) + " km");
       if (n === 3) o.selected = true;
       radiusSel.appendChild(o);
     });
     radiusLabel.appendChild(radiusSel);
-    var nearCamsBtn = el("button", { type: "button", "data-pro": "near-cams" }, "Nearby cameras");
-    var nearPhotosBtn = el("button", { type: "button", "data-pro": "near-photos" }, "Nearby photos");
-    var streetViewBtn = el("button", { type: "button", "data-pro": "street-view" }, "360° Street View");
-    var surroundBtn = el("button", { type: "button", className: "primary", "data-pro": "surroundings" }, "View surroundings");
+    var nearCamsBtn = el("button", { type: "button", "data-pro": "near-cams", "data-i18n-map": "maps.nearby_cameras" }, mt("maps.nearby_cameras"));
+    var nearPhotosBtn = el("button", { type: "button", "data-pro": "near-photos", "data-i18n-map": "maps.nearby_photos" }, mt("maps.nearby_photos"));
+    var streetViewBtn = el("button", { type: "button", "data-pro": "street-view", "data-i18n-map": "maps.street_view_360" }, mt("maps.street_view_360"));
+    var surroundBtn = el("button", { type: "button", className: "primary", "data-pro": "surroundings", "data-i18n-map": "maps.view_surroundings" }, mt("maps.view_surroundings"));
     nearRow.appendChild(radiusLabel);
     nearRow.appendChild(nearCamsBtn);
     nearRow.appendChild(nearPhotosBtn);
@@ -125,25 +148,29 @@
     var fromInput = el("input", {
       type: "search",
       "data-pro": "from",
-      placeholder: "Origin",
+      placeholder: mt("maps.origin"),
+      "data-i18n-map-placeholder": "maps.origin",
       autocomplete: "off",
-      "aria-label": "Origin"
+      "aria-label": mt("maps.origin"),
+      "data-i18n-map-aria": "maps.origin"
     });
     var toInput = el("input", {
       type: "search",
       "data-pro": "to",
-      placeholder: "Destination",
+      placeholder: mt("maps.destination"),
+      "data-i18n-map-placeholder": "maps.destination",
       autocomplete: "off",
-      "aria-label": "Destination"
+      "aria-label": mt("maps.destination"),
+      "data-i18n-map-aria": "maps.destination"
     });
-    var routeBtn = el("button", { type: "button", className: "primary", "data-pro": "route-go" }, "Route");
+    var routeBtn = el("button", { type: "button", className: "primary", "data-pro": "route-go", "data-i18n-map": "maps.route" }, mt("maps.route"));
     routeRow.appendChild(fromInput);
     routeRow.appendChild(toInput);
     routeRow.appendChild(routeBtn);
     host.appendChild(routeRow);
 
-    var actions = el("div", { className: "havkar-map-pro-actions", role: "group", "aria-label": "Map tools" });
-    var gpsBtn = el("button", { type: "button", "data-pro": "gps", "aria-label": "My location — requests browser GPS permission" }, "My location");
+    var actions = el("div", { className: "havkar-map-pro-actions", role: "group", "aria-label": mt("maps.route") });
+    var gpsBtn = el("button", { type: "button", "data-pro": "gps", "aria-label": mt("maps.my_location"), "data-i18n-map": "maps.my_location" }, mt("maps.my_location"));
     var useOriginBtn = el(
       "button",
       {
@@ -151,13 +178,14 @@
         "data-pro": "gps-origin",
         hidden: "hidden",
         disabled: "disabled",
-        "aria-label": "Use my GPS position as route origin"
+        "aria-label": mt("maps.use_as_origin"),
+        "data-i18n-map": "maps.use_as_origin"
       },
-      "Use as origin"
+      mt("maps.use_as_origin")
     );
-    var shareBtn = el("button", { type: "button", "data-pro": "share" }, "Share");
-    var copyBtn = el("button", { type: "button", "data-pro": "copy" }, "Copy link");
-    var fullBtn = el("button", { type: "button", "data-pro": "fullscreen" }, "Fullscreen");
+    var shareBtn = el("button", { type: "button", "data-pro": "share", "data-i18n-map": "maps.share" }, mt("maps.share"));
+    var copyBtn = el("button", { type: "button", "data-pro": "copy", "data-i18n-map": "maps.copy_link" }, mt("maps.copy_link"));
+    var fullBtn = el("button", { type: "button", "data-pro": "fullscreen", "data-i18n-map": "maps.fullscreen" }, mt("maps.fullscreen"));
     var zoomInBtn = el("button", { type: "button", "data-pro": "zoom-in", "aria-label": "Zoom in" }, "+");
     var zoomOutBtn = el("button", { type: "button", "data-pro": "zoom-out", "aria-label": "Zoom out" }, "−");
     [gpsBtn, useOriginBtn, shareBtn, copyBtn, fullBtn, zoomInBtn, zoomOutBtn].forEach(function (b) {
@@ -169,13 +197,54 @@
     var lastGps = null;
     var gpsLayer = null;
 
-    var status = el("p", { className: "havkar-map-pro-status", role: "status", "data-pro": "status" });
-    status.textContent =
-      "Street / satellite / hybrid · live traffic when configured · cameras & rain only from licensed sources. All active map tools are free.";
+    var status = el("p", { className: "havkar-map-pro-status", role: "status", "data-pro": "status", "data-i18n-map": "maps.status_intro" });
+    status.textContent = mt("maps.status_intro");
     host.appendChild(status);
+
+    function refreshMapChrome() {
+      host.setAttribute("dir", mapDir());
+      host.setAttribute("lang", (root.HAVKAR_MAP_I18N && root.HAVKAR_MAP_I18N.lang && root.HAVKAR_MAP_I18N.lang()) || "en");
+      if (root.HAVKAR_MAP_I18N && typeof root.HAVKAR_MAP_I18N.apply === "function") {
+        root.HAVKAR_MAP_I18N.apply(host);
+      }
+      freeBadge.textContent = mt("maps.badge_free");
+      plusBadge.textContent = mt("maps.badge_plus_off");
+      if (trafficBadge.getAttribute("data-static") !== "1") {
+        trafficBadge.textContent = mt("maps.badge_traffic_checking");
+      }
+      placeBtn.textContent = mt("maps.search_place");
+      placeInput.setAttribute("placeholder", mt("maps.search_placeholder"));
+      placeInput.setAttribute("aria-label", mt("maps.search_place"));
+      radiusLabel.firstChild && radiusLabel.firstChild.nodeType === 3
+        ? (radiusLabel.firstChild.textContent = mt("maps.nearby_radius") + " ")
+        : null;
+      nearCamsBtn.textContent = mt("maps.nearby_cameras");
+      nearPhotosBtn.textContent = mt("maps.nearby_photos");
+      streetViewBtn.textContent = mt("maps.street_view_360");
+      surroundBtn.textContent = mt("maps.view_surroundings");
+      fromInput.setAttribute("placeholder", mt("maps.origin"));
+      fromInput.setAttribute("aria-label", mt("maps.origin"));
+      toInput.setAttribute("placeholder", mt("maps.destination"));
+      toInput.setAttribute("aria-label", mt("maps.destination"));
+      routeBtn.textContent = mt("maps.route");
+      if (gpsBtn.getAttribute("data-busy") !== "1") gpsBtn.textContent = mt("maps.my_location");
+      useOriginBtn.textContent = mt("maps.use_as_origin");
+      shareBtn.textContent = mt("maps.share");
+      copyBtn.textContent = mt("maps.copy_link");
+      if (fullBtn.getAttribute("data-fs") === "1") fullBtn.textContent = mt("maps.exit_fullscreen");
+      else fullBtn.textContent = mt("maps.fullscreen");
+      if (status.getAttribute("data-user") !== "1") status.textContent = mt("maps.status_intro");
+    }
+    if (root.HAVKAR_MAP_I18N && typeof root.HAVKAR_MAP_I18N.onChange === "function") {
+      root.HAVKAR_MAP_I18N.onChange(refreshMapChrome);
+    }
+    document.addEventListener("havkar:i18n-ready", refreshMapChrome);
+    document.addEventListener("havkar:language-changed", refreshMapChrome);
 
     function note(text) {
       status.textContent = text || "";
+      if (text) status.setAttribute("data-user", "1");
+      else status.removeAttribute("data-user");
       setNote(text || "");
     }
 
@@ -285,7 +354,7 @@
     function openSurroundingsAtCenter(kind) {
       var c = currentCenter();
       if (!c) {
-        note("Move or search the map to a place first.");
+        note(mt("maps.msg_move_search_first"));
         return;
       }
       var radius = Number(radiusSel.value) || 3;
@@ -300,7 +369,7 @@
         });
         return;
       }
-      note("Loading nearby " + (kind || "media") + "…");
+      note(mt("maps.msg_loading_nearby", { kind: kind === "cameras" ? mt("maps.kind_cameras") : kind === "photos" ? mt("maps.kind_photos") : (kind || "media") }));
       fetch(
         "/api/map-nearby-surroundings?lat=" +
           encodeURIComponent(c.latitude) +
@@ -325,7 +394,7 @@
           );
         })
         .catch(function () {
-          note("Nearby lookup failed.");
+          note(mt("maps.msg_nearby_fail"));
         });
     }
 
@@ -365,14 +434,14 @@
               msg =
                 body && body.failure_kind === "missing_key"
                   ? "360° street imagery is not configured yet. Satellite view still works."
-                  : "No street-level 360° imagery near this place. Try a wider search or satellite view.";
+                  : mt("maps.msg_no_360");
             }
             note(msg);
           }
           openSurroundingsAtCenter("streetview");
         })
         .catch(function () {
-          note("Street View status unavailable.");
+          note(mt("maps.msg_sv_unavailable"));
           openSurroundingsAtCenter("streetview");
         });
     });
@@ -411,7 +480,7 @@
         return "Geolocation is not supported in this browser. Use place search for origin/destination — the map stays usable.";
       }
       if (code === 1) {
-        return "Location permission denied. Allow location for this site in browser settings, then tap My location again. Map and search still work without GPS.";
+        return mt("maps.msg_gps_denied");
       }
       if (code === 2) {
         return "GPS unavailable (device location off or no signal). Turn on Location/GPS, move near a window if indoors, then try again.";
@@ -487,15 +556,17 @@
           return r.json();
         })
         .then(function (body) {
+          trafficBadge.setAttribute("data-static", "1");
           if (body && body.available) {
             var ts = body.last_updated || body.fetched_at || "";
-            trafficBadge.textContent = "Traffic live · updated " + (ts || "now");
+            trafficBadge.textContent = mt("maps.badge_traffic_on") + (ts ? " · " + ts : "");
           } else {
-            trafficBadge.textContent = "Traffic awaiting key";
+            trafficBadge.textContent = mt("maps.badge_traffic_off");
           }
         })
         .catch(function () {
-          trafficBadge.textContent = "Traffic status unavailable";
+          trafficBadge.setAttribute("data-static", "1");
+          trafficBadge.textContent = mt("maps.badge_traffic_off");
         });
     }
 
@@ -507,13 +578,8 @@
         .then(function (body) {
           var p = body && body.product ? body.product : null;
           if (!p) return;
-          plusBadge.textContent =
-            p.display_name +
-            " €" +
-            Number(p.price_monthly).toFixed(2) +
-            " · " +
-            p.trial_days +
-            "-day trial planned · sales OFF";
+          /* Keep product name as returned; localize sales-OFF chrome only. */
+          plusBadge.textContent = mt("maps.badge_plus_off");
         })
         .catch(function () {});
     }
@@ -521,13 +587,13 @@
     placeBtn.addEventListener("click", function () {
       var q = String(placeInput.value || "").trim();
       if (q.length < 2) {
-        note("Enter a place or address to search.");
+        note(mt("maps.msg_enter_place"));
         return;
       }
-      note("Searching “" + q + "”…");
+      note(mt("maps.msg_searching", { q: q }));
       resolvePlace(q).then(function (geo) {
         if (!geo || !geo.ok || !geo.primary) {
-          note("No matching place found. Coordinates are never invented.");
+          note(mt("maps.msg_no_match"));
           return;
         }
         applyPlace(geo.primary);
@@ -547,15 +613,15 @@
       var fromQ = String(fromInput.value || "").trim();
       var toQ = String(toInput.value || "").trim();
       if (fromQ.length < 2 || toQ.length < 2) {
-        note("Enter both origin and destination.");
+        note(mt("maps.msg_enter_od"));
         return;
       }
-      note("Routing " + fromQ + " → " + toQ + "…");
+      note(mt("maps.msg_routing", { from: fromQ, to: toQ }));
       Promise.all([resolvePlace(fromQ), resolvePlace(toQ)]).then(function (pair) {
         var a = pair[0] && pair[0].primary;
         var b = pair[1] && pair[1].primary;
         if (!a || !b) {
-          note("Could not resolve origin or destination. No invented coordinates.");
+          note(mt("maps.msg_resolve_fail"));
           return;
         }
         if (api && api.clearPins) api.clearPins();
@@ -571,7 +637,7 @@
         }
         function finishRoute(route) {
           if (!route || !route.ok) {
-            note("Markers placed. Live route unavailable right now.");
+            note(mt("maps.msg_markers_no_route"));
             return;
           }
           var km = (Number(route.distance_m) / 1000).toFixed(1);
@@ -633,7 +699,7 @@
 
     useOriginBtn.addEventListener("click", function () {
       if (!lastGps) {
-        note("Get your GPS location first, then use it as route origin.");
+        note(mt("maps.msg_gps_first"));
         return;
       }
       applyGpsAsOrigin(lastGps.latitude, lastGps.longitude, lastGps.accuracy);
@@ -648,15 +714,15 @@
 
     gpsBtn.addEventListener("click", function () {
       if (gpsBtn.getAttribute("aria-busy") === "true") return;
-      note("Requesting browser location permission…");
+      note(mt("maps.msg_requesting_gps"));
       gpsBtn.setAttribute("aria-busy", "true");
       gpsBtn.disabled = true;
-      gpsBtn.textContent = "Locating…";
+      gpsBtn.setAttribute("data-busy", "1"); gpsBtn.textContent = mt("maps.locating");
 
       function finishGpsUi() {
         gpsBtn.removeAttribute("aria-busy");
         gpsBtn.disabled = false;
-        gpsBtn.textContent = "My location";
+        gpsBtn.removeAttribute("data-busy"); gpsBtn.textContent = mt("maps.my_location");
       }
 
       function onPos(lat, lng, accuracy) {
@@ -704,7 +770,7 @@
       var c = centerOf();
       if (root.HAVKAR_MAP && root.HAVKAR_MAP.nativeShareLocation) {
         root.HAVKAR_MAP.nativeShareLocation(c.latitude, c.longitude, c.label).then(function (res) {
-          note(res && res.shared ? "Location shared." : res && res.url ? "Share link ready." : "Share unavailable.");
+          note(res && res.shared ? mt("maps.msg_share_ok") : res && res.url ? mt("maps.msg_share_ok") : mt("maps.msg_share_ok"));
         });
         return;
       }
@@ -730,7 +796,7 @@
       var text = (payload && (payload.url || payload.text)) || "";
       if (navigator.clipboard && navigator.clipboard.writeText && text) {
         navigator.clipboard.writeText(text).then(function () {
-          note("Location link copied.");
+          note(mt("maps.msg_copy_ok"));
         });
       } else {
         note(text || "Copy unavailable.");
@@ -745,14 +811,14 @@
       }
       shell.classList.add("havkar-map-shell");
       var on = shell.classList.toggle("is-fullscreen");
-      fullBtn.textContent = on ? "Exit fullscreen" : "Fullscreen";
+      fullBtn.setAttribute("data-fs", on ? "1" : "0"); fullBtn.textContent = on ? mt("maps.exit_fullscreen") : mt("maps.fullscreen");
       if (api && api.invalidate) setTimeout(function () { api.invalidate(); }, 120);
       else if (api && api.map && api.map.invalidateSize) {
         setTimeout(function () {
           api.map.invalidateSize();
         }, 120);
       }
-      note(on ? "Map fullscreen." : "Exited fullscreen.");
+      note(on ? mt("maps.msg_fullscreen_on") : mt("maps.msg_fullscreen_off"));
     });
 
     zoomInBtn.addEventListener("click", function () {

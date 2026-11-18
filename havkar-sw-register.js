@@ -3,7 +3,7 @@
     return;
   }
 
-  var SW_URL = "/sw.js?v=havkar-sw-20261118-hotel-streetview-mapillary-v1";
+  var SW_URL = "/sw.js?v=havkar-sw-20261118-map-i18n-complete-v1";
 
   window.addEventListener("load", function () {
     navigator.serviceWorker
