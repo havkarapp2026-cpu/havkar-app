@@ -1076,6 +1076,13 @@
                     Request Delivery
                 </div>
 
+                <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+                <link rel="stylesheet" href="/havkar-map-platform.css">
+                <div id="deliveryMapShell" class="havkar-map-shell" style="margin:0 0 12px">
+                    <div id="deliveryMapHost" role="application" aria-label="Delivery route map" style="height:min(42vh,320px);min-height:220px;border-radius:14px;border:1px solid #d7e6db"></div>
+                </div>
+                <p id="deliveryMapNote" class="provider-note" role="status" style="font-size:13px;color:#456;margin:0 0 12px">Enter pickup and drop-off to show the route. Live driver position appears only with real authorized telemetry — never simulated.</p>
+
                 <form id="deliveryForm">
 
                     <div class="input-group">
@@ -1667,6 +1674,8 @@
     <script src="/havkar-page-back.js"></script>
     <script src="/stellar-wallet-bundle.js"></script>
     <script src="/havkar-xlm-checkout.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="/havkar-map.js"></script>
 <script>
 /* =========================
    APPROVED DRIVER JOBS
@@ -3044,6 +3053,102 @@
                 }
             }
         );
+
+        /* Interactive delivery map: pickup/drop-off markers + route. No fake courier GPS. */
+        (function initDeliveryMap() {
+            var mapApi = null;
+            var mapNote = document.getElementById("deliveryMapNote");
+            var pickupInput = document.getElementById("pickupAddress");
+            var dropInput = document.getElementById("deliveryAddress");
+            function setMapNote(text) {
+                if (mapNote) mapNote.textContent = text || "";
+            }
+            function geocode(query) {
+                return fetch("/api/hotels", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "hotels_geocode", query: query })
+                }).then(function (res) { return res.json(); }).then(function (body) {
+                    return body && body.ok && body.primary ? body.primary : null;
+                }).catch(function () { return null; });
+            }
+            function previewRoute() {
+                var pickup = String((pickupInput && pickupInput.value) || "").trim();
+                var drop = String((dropInput && dropInput.value) || "").trim();
+                if (!pickup || !drop || pickup.length < 3 || drop.length < 3) {
+                    return;
+                }
+                setMapNote(havkarDeliveryT("Locating pickup and drop-off…") || "Locating pickup and drop-off…");
+                var ready = mapApi
+                    ? Promise.resolve(mapApi)
+                    : (window.HAVKAR_MAP && window.HAVKAR_MAP.create
+                        ? window.HAVKAR_MAP.create(document.getElementById("deliveryMapHost"), {
+                            latitude: 41.9028,
+                            longitude: 12.4964,
+                            zoom: 11,
+                            cluster: false
+                        })
+                        : Promise.resolve(null));
+                ready.then(function (api) {
+                    if (!api) {
+                        setMapNote("Map could not load. Check network and try again.");
+                        return;
+                    }
+                    mapApi = api;
+                    return Promise.all([geocode(pickup), geocode(drop)]).then(function (pair) {
+                        var a = pair[0];
+                        var b = pair[1];
+                        if (!a || !b) {
+                            setMapNote("Could not resolve one or both addresses. No invented coordinates were used.");
+                            return;
+                        }
+                        if (api.clearPins) api.clearPins();
+                        if (api.clearRoute) api.clearRoute();
+                        if (api.setMarkers) {
+                            api.setMarkers([
+                                { id: "pickup", latitude: a.latitude, longitude: a.longitude, label: "Pickup" },
+                                { id: "drop", latitude: b.latitude, longitude: b.longitude, label: "Drop-off" }
+                            ], { fit: true });
+                        }
+                        if (!api.requestRoute) {
+                            setMapNote("Markers placed. Route geometry unavailable.");
+                            return;
+                        }
+                        return api.requestRoute(b.latitude, b.longitude, "driving").then(function (route) {
+                            if (route && route.ok) {
+                                var km = (route.distance_m / 1000).toFixed(1);
+                                var mins = Math.round(route.duration_s / 60);
+                                setMapNote("Route preview: ~" + km + " km · ~" + mins + " min. Live courier tracking stays off until real telemetry exists.");
+                            } else {
+                                setMapNote("Markers placed. Live route unavailable from the map provider.");
+                            }
+                        });
+                    });
+                }).catch(function () {
+                    setMapNote("Map preview failed. Delivery request can still be submitted.");
+                });
+            }
+            var debounceTimer = null;
+            function schedulePreview() {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(previewRoute, 700);
+            }
+            if (pickupInput) pickupInput.addEventListener("change", schedulePreview);
+            if (dropInput) dropInput.addEventListener("change", schedulePreview);
+            if (pickupInput) pickupInput.addEventListener("blur", schedulePreview);
+            if (dropInput) dropInput.addEventListener("blur", schedulePreview);
+            if (window.HAVKAR_MAP && window.HAVKAR_MAP.create && document.getElementById("deliveryMapHost")) {
+                window.HAVKAR_MAP.create(document.getElementById("deliveryMapHost"), {
+                    latitude: 41.9028,
+                    longitude: 12.4964,
+                    zoom: 11,
+                    cluster: false
+                }).then(function (api) {
+                    mapApi = api;
+                    if (api && api.invalidate) setTimeout(function () { api.invalidate(); }, 200);
+                }).catch(function () {});
+            }
+        })();
 
     </script>
 

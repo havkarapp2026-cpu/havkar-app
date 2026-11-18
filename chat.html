@@ -948,25 +948,83 @@ select:focus-visible{
 }
 
 .message-checks{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:14px;
+    min-height:14px;
     font-size:11px;
     letter-spacing:-2px;
     color:rgba(232,245,233,.88);
+    line-height:1;
 }
 
+/* One check = server accepted (not device delivery). */
 .message-checks.delivered{
-    color:#e8f5e9;
-    letter-spacing:-1px;
+    letter-spacing:0;
+    color:transparent;
+    width:14px;
+    height:14px;
+    border-radius:50%;
+    border:1.5px solid rgba(129, 199, 132, 0.95);
+    box-shadow:
+        0 0 4px rgba(76, 175, 80, 0.55),
+        inset 0 0 3px rgba(200, 230, 201, 0.45);
+    background:
+        radial-gradient(circle at 35% 30%, rgba(232,245,233,.35), transparent 55%);
 }
 
+/*
+ * Read receipt: Owner-approved small hollow glossy green ring,
+ * golden-yellow dots on the circumference, empty center, no checkmark/photo.
+ */
 .message-checks.read{
-    color:#e8f5e9;
-    letter-spacing:-1px;
-    font-weight:800;
-    text-shadow:
-        0 0 4px rgba(255, 213, 79, 0.95),
-        0 0 8px rgba(255, 193, 7, 0.75),
-        0 1px 0 rgba(11, 61, 20, 0.55);
-    filter: drop-shadow(0 0 2px rgba(255, 215, 64, 0.9));
+    position:relative;
+    letter-spacing:0;
+    color:transparent;
+    width:15px;
+    height:15px;
+    border-radius:50%;
+    border:1.7px solid rgba(102, 187, 106, 0.98);
+    background:
+        radial-gradient(circle at 32% 28%, rgba(232,245,233,.42), transparent 52%),
+        transparent;
+    box-shadow:
+        0 0 6px rgba(76, 175, 80, 0.65),
+        0 0 10px rgba(255, 213, 79, 0.28),
+        inset 0 0 4px rgba(200, 230, 201, 0.4);
+    font-weight:400;
+    text-shadow:none;
+    filter:none;
+}
+.message-checks.read::before,
+.message-checks.read::after{
+    content:"";
+    position:absolute;
+    width:2.2px;
+    height:2.2px;
+    border-radius:50%;
+    background:#ffd54f;
+    box-shadow:
+        0 0 3px rgba(255, 213, 79, 0.95),
+        5.2px 0 0 #ffd54f,
+        -5.2px 0 0 #ffd54f,
+        0 5.2px 0 #ffd54f,
+        0 -5.2px 0 #ffd54f,
+        3.7px 3.7px 0 #ffca28,
+        -3.7px 3.7px 0 #ffca28,
+        3.7px -3.7px 0 #ffca28,
+        -3.7px -3.7px 0 #ffca28;
+    top:50%;
+    left:50%;
+    transform:translate(-50%, -50%);
+    pointer-events:none;
+}
+.message-checks.read::after{
+    width:0;
+    height:0;
+    background:transparent;
+    box-shadow:none;
 }
 
 /* =========================================================
@@ -6205,6 +6263,34 @@ async function sendMessage(
 
     }
 
+    /* Offline outbox: queue locally when offline; never mark delivered/read here. */
+    try {
+        if (typeof navigator !== "undefined" && navigator.onLine === false) {
+            var outboxKey = "havkar_chat_outbox_v1";
+            var outbox = [];
+            try {
+                outbox = JSON.parse(localStorage.getItem(outboxKey) || "[]");
+            } catch (_parseOutbox) {
+                outbox = [];
+            }
+            if (!Array.isArray(outbox)) outbox = [];
+            outbox.push({
+                conversationId: state.currentConversationId,
+                text: originalText,
+                queuedAt: new Date().toISOString()
+            });
+            localStorage.setItem(outboxKey, JSON.stringify(outbox.slice(-50)));
+            input.value = "";
+            showToast("Offline — message queued on this device.", "info");
+            state.sending = false;
+            state.pendingDraft = "";
+            input.disabled = false;
+            button.disabled = false;
+            if (translationButton) translationButton.disabled = false;
+            return;
+        }
+    } catch (_offlineQueue) {}
+
     // Always persist the original. Translation is a separate derived field.
     let translatedText = null;
     let translationFailed = false;
@@ -6516,16 +6602,20 @@ function applyMessageChecks(element, message){
         "delivered",
         "read"
     );
+    /* Never claim delivered/read without server timestamps. */
     if(receipt === "read"){
         element.classList.add("read");
-        element.textContent = "✓✓";
+        element.textContent = "";
+        element.setAttribute("aria-label", "Read");
         element.title = "Read";
     }else if(receipt === "delivered"){
         element.classList.add("delivered");
-        element.textContent = "✓✓";
+        element.textContent = "";
+        element.setAttribute("aria-label", "Delivered to recipient device");
         element.title = "Delivered";
     }else{
         element.textContent = "✓";
+        element.setAttribute("aria-label", "Sent — server accepted");
         element.title = "Sent";
     }
 }
@@ -8219,6 +8309,65 @@ window.addEventListener("pageshow", function (event) {
 
 
 /* =========================================================
+   OFFLINE OUTBOX FLUSH
+========================================================= */
+
+async function flushChatOutbox(){
+    if(
+        !state.currentUser ||
+        !supabaseClient ||
+        (typeof navigator !== "undefined" && navigator.onLine === false)
+    ){
+        return;
+    }
+    let outbox = [];
+    try{
+        outbox = JSON.parse(
+            localStorage.getItem("havkar_chat_outbox_v1") || "[]"
+        );
+    }catch(_e){
+        outbox = [];
+    }
+    if(!Array.isArray(outbox) || !outbox.length){
+        return;
+    }
+    const remaining = [];
+    for(const item of outbox){
+        if(
+            !item ||
+            !item.conversationId ||
+            !item.text
+        ){
+            continue;
+        }
+        try{
+            state.currentConversationId =
+                item.conversationId;
+            await sendMessage({
+                forceText: item.text
+            });
+        }catch(_sendErr){
+            remaining.push(item);
+        }
+    }
+    try{
+        localStorage.setItem(
+            "havkar_chat_outbox_v1",
+            JSON.stringify(remaining.slice(-50))
+        );
+    }catch(_storeErr){}
+}
+
+if(typeof window !== "undefined"){
+    window.addEventListener(
+        "online",
+        function(){
+            flushChatOutbox();
+        }
+    );
+}
+
+/* =========================================================
    DOM READY
 ========================================================= */
 
@@ -8234,6 +8383,7 @@ if(
             if(supabaseClient){
 
                 startPage();
+                setTimeout(flushChatOutbox, 1200);
 
             }
 
@@ -8248,6 +8398,7 @@ if(
     if(supabaseClient){
 
         startPage();
+        setTimeout(flushChatOutbox, 1200);
 
     }
 
