@@ -6,6 +6,23 @@
 (function (root) {
   "use strict";
 
+  function mt(key, vars) {
+    try {
+      if (root.HAVKAR_MAP_I18N && typeof root.HAVKAR_MAP_I18N.t === "function") {
+        return root.HAVKAR_MAP_I18N.t(key, vars);
+      }
+    } catch (_e) {}
+    return key;
+  }
+  function mapDir() {
+    try {
+      if (root.HAVKAR_MAP_I18N && typeof root.HAVKAR_MAP_I18N.dir === "function") {
+        return root.HAVKAR_MAP_I18N.dir();
+      }
+    } catch (_e) {}
+    return "ltr";
+  }
+
   function el(tag, attrs, text) {
     var node = document.createElement(tag);
     if (attrs) {
@@ -39,14 +56,14 @@
     host.classList.add("havkar-live-layer-menu");
 
     var modes = [
-      ["street", "Street map"],
-      ["satellite", "Satellite"],
-      ["hybrid", "Hybrid"],
-      ["live", "Live map"],
-      ["rain", "Rain radar"],
-      ["cameras", "Live cameras"],
-      ["intersection", "Intersection cameras"],
-      ["traffic", "Traffic status"]
+      ["street", "maps.layer_street"],
+      ["satellite", "maps.layer_satellite"],
+      ["hybrid", "maps.layer_hybrid"],
+      ["live", "maps.layer_live"],
+      ["rain", "maps.layer_rain"],
+      ["cameras", "maps.layer_live_cams"],
+      ["intersection", "maps.layer_intersection"],
+      ["traffic", "maps.layer_traffic"]
     ];
 
     var btnRow = el("div", {
@@ -56,11 +73,13 @@
     });
     btnRow.style.cssText = "display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px";
     var buttons = {};
+    host.setAttribute("dir", mapDir());
     modes.forEach(function (pair) {
       var b = el("button", {
         type: "button",
-        "data-havkar-layer": pair[0]
-      }, pair[1]);
+        "data-havkar-layer": pair[0],
+        "data-i18n-map": pair[1]
+      }, mt(pair[1]));
       b.style.cssText =
         "min-height:40px;border-radius:10px;border:1px solid #1b5e20;background:#fff;color:#1b5e20;font-weight:600;padding:0 12px;cursor:pointer";
       if (pair[0] === "street") {
@@ -72,6 +91,16 @@
       buttons[pair[0]] = b;
     });
     host.appendChild(btnRow);
+
+    function refreshLayerChrome() {
+      host.setAttribute("dir", mapDir());
+      modes.forEach(function (pair) {
+        if (buttons[pair[0]]) buttons[pair[0]].textContent = mt(pair[1]);
+      });
+    }
+    if (root.HAVKAR_MAP_I18N && root.HAVKAR_MAP_I18N.onChange) root.HAVKAR_MAP_I18N.onChange(refreshLayerChrome);
+    document.addEventListener("havkar:i18n-ready", refreshLayerChrome);
+    document.addEventListener("havkar:language-changed", refreshLayerChrome);
 
     var meta = el("p", { className: "pending-note", role: "status" });
     meta.style.margin = "0 0 8px";
@@ -274,7 +303,7 @@
             markToggle("rain", false);
             setMeta(
               (body && body.message) ||
-                "Rain radar is not available right now."
+                mt("maps.msg_rain_unavailable")
             );
             return false;
           }
@@ -315,7 +344,7 @@
           return true;
         })
         .catch(function () {
-          setMeta("Rain radar is not available right now (network error).");
+          setMeta(mt("maps.msg_rain_unavailable"));
           return false;
         });
     }
@@ -375,7 +404,7 @@
           status.textContent = "This camera has no valid YouTube id.";
           return;
         }
-        status.textContent = "Checking live status before playback…";
+        status.textContent = mt("maps.checking_live");
         var center = map.getCenter && map.getCenter();
         var validateUrl =
           "/api/map-live-videos?validate=" +
@@ -403,7 +432,7 @@
                 watchUrl;
               if (/^https:\/\//i.test(official)) {
                 watch.href = official;
-                watch.textContent = "Open official YouTube source";
+                watch.textContent = mt("maps.open_youtube");
               }
             }
             if (body && body.live && body.camera && body.camera.embed_url) {
@@ -457,7 +486,7 @@
             if (alt) {
               var btn = document.createElement("button");
               btn.type = "button";
-              btn.textContent = "Play nearest live camera";
+              btn.textContent = mt("maps.play_nearest_live");
               btn.style.cssText =
                 "margin-top:8px;min-height:40px;border-radius:10px;border:0;background:#1b5e20;color:#fff;font-weight:700;padding:0 12px;cursor:pointer";
               btn.addEventListener("click", function () {
@@ -555,7 +584,7 @@
         );
       });
       if (!rows.length) {
-        list.textContent = "No licensed cameras match this filter / area.";
+        list.textContent = mt("maps.no_cams_filter");
         return;
       }
       list.innerHTML = "";
@@ -829,7 +858,7 @@
           return true;
         })
         .catch(function () {
-          setMeta("Traffic status is not available right now.");
+          setMeta(mt("maps.msg_traffic_unavailable"));
           return false;
         });
     }
@@ -879,8 +908,8 @@
           setBase(key).then(function () {
             setMeta(
               key === "street"
-                ? "Street map · OpenStreetMap"
-                : "Satellite / hybrid · Esri static imagery (not a live camera)"
+                ? mt("maps.basemap_street")
+                : mt("maps.basemap_sat")
             );
           });
           return;
@@ -895,7 +924,7 @@
             state.rainOn = false;
             markToggle("rain", false);
             rainPanel.hidden = true;
-            setMeta("Rain radar off.");
+            setMeta(mt("maps.rain_off"));
           } else {
             loadRain();
           }
@@ -926,7 +955,7 @@
               map.removeLayer(state.cameraLayer);
             }
             cameraPanel.hidden = true;
-            setMeta("Intersection snapshots off.");
+            setMeta(mt("maps.intersection_off"));
             closeCameraViewer();
             return;
           }
@@ -945,7 +974,7 @@
             }
             state.trafficOn = false;
             markToggle("traffic", false);
-            setMeta("Traffic status off.");
+            setMeta(mt("maps.traffic_off"));
             return;
           }
           loadTraffic();

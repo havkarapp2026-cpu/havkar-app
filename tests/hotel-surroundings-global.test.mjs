@@ -14,7 +14,7 @@ test("hotel surroundings UI wires Accommodation listings", () => {
   assert.match(hotels, /havkar-hotel-surroundings\.js/);
   assert.match(hotels, /HAVKAR_HOTEL_SURROUNDINGS/);
   assert.match(hotels, /View surroundings|attachListingButton/);
-  assert.match(read("havkar-hotel-surroundings.js"), /View surroundings/);
+  assert.match(read("havkar-hotel-surroundings.js"), /maps\.view_surroundings|View surroundings/);
   assert.match(read("havkar-hotel-surroundings.js"), /map-nearby-surroundings/);
   assert.match(read("havkar-hotel-surroundings.js"), /street_view|map-street-view/);
   assert.match(read("havkar-hotel-surroundings.js"), /mapillary/);
@@ -263,11 +263,11 @@ test("pro toolbar autocomplete + nearby tools stay free; Maps Plus sales OFF; 15
   assert.match(toolbar, /typeahead=true/);
   assert.match(toolbar, /near-cams/);
   assert.match(toolbar, /street-view/);
-  assert.match(toolbar, /View surroundings/);
+  assert.match(toolbar, /maps\.view_surroundings|View surroundings/);
   assert.match(toolbar, /radius_m=50/);
   assert.match(read("lib/havkar-maps-plus.cjs"), /sales_enabled:\s*false/);
   assert.equal((read("index.html").match(/class="tile-label"/g) || []).length, 15);
-  assert.match(read("sw.js"), /map-surroundings-bari-v1|smart-travel-health-v1|hotel-streetview-mapillary-v1/);
+  assert.match(read("sw.js"), /map-i18n-complete-v1|map-i18n-complete-v1|map-surroundings-bari-v1|smart-travel-health-v1|hotel-streetview-mapillary-v1/);
 });
 
 test("nearby surroundings handler returns structured payload for Rome", async () => {

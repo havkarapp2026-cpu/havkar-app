@@ -9,7 +9,7 @@ const read = (rel) => fs.readFileSync(path.join(root, rel), "utf8");
 
 test("public UI never prints Mapillary/Google secret env names", () => {
   assert.doesNotMatch(read("havkar-hotel-surroundings.js"), /Add free HAVKAR_MAPILLARY/);
-  assert.match(read("havkar-hotel-surroundings.js"), /Widen 360/);
+  assert.match(read("havkar-hotel-surroundings.js"), /maps\.widen_360|Widen 360/);
   assert.match(read("havkar-hotel-surroundings.js"), /nearest_live_camera/);
   assert.match(read("havkar-hotel-surroundings.js"), /user_message/);
   assert.doesNotMatch(read("havkar-map-pro-toolbar.js"), /Add free HAVKAR_MAPILLARY/);
@@ -80,5 +80,5 @@ test("health page keeps shared POI link and no interactive map", () => {
   assert.match(health, /map-nearby-pois|healthNearBtn/);
   assert.doesNotMatch(health, /leaflet\.js|havkar-map-shell/i);
   assert.equal((read("index.html").match(/class="tile-label"/g) || []).length, 15);
-  assert.match(read("sw.js"), /map-surroundings-bari-v1/);
+  assert.match(read("sw.js"), /map-i18n-complete-v1|map-surroundings-bari-v1/);
 });
