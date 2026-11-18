@@ -70,6 +70,6 @@ test("non-travel modules still do not load map stacks", () => {
 test("service worker bumped for map layers release", () => {
   const sw = read("sw.js");
   const reg = read("havkar-sw-register.js");
-  assert.match(sw, /havkar-sw-20261118-map-layers-rain-cameras-traffic-v1/);
-  assert.match(reg, /havkar-sw-20261118-map-layers-rain-cameras-traffic-v1/);
+  assert.match(sw, /havkar-sw-20261118-emergency-camera-overlay-fix-v1/);
+  assert.match(reg, /havkar-sw-20261118-emergency-camera-overlay-fix-v1/);
 });

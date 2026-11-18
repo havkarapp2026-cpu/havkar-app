@@ -102,20 +102,46 @@
 
     var viewer = el("div", {
       className: "havkar-camera-viewer",
-      hidden: "hidden",
       role: "dialog",
-      "aria-label": "Camera viewer"
+      "aria-modal": "true",
+      "aria-label": "Camera viewer",
+      "aria-hidden": "true"
     });
+    /* CRITICAL: never leave display:flex while "closed". Inline display:flex
+       overrides the HTML hidden attribute and locks tickets/accommodation taps. */
     viewer.style.cssText =
-      "position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px";
+      "position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:16px;pointer-events:none";
     viewer.innerHTML =
-      '<div style="background:#fff;border-radius:14px;max-width:min(920px,96vw);width:100%;padding:12px;position:relative">' +
-      '<button type="button" data-cam="close" style="position:absolute;right:10px;top:8px">Close</button>' +
+      '<div data-cam="card" style="background:#fff;border-radius:14px;max-width:min(920px,96vw);width:100%;padding:12px;position:relative;pointer-events:auto">' +
+      '<button type="button" data-cam="close" style="position:absolute;right:10px;top:8px;min-height:40px;min-width:64px;z-index:1">Close</button>' +
       '<h3 data-cam="title" style="margin:0 36px 8px 0;color:#1b5e20"></h3>' +
       '<p data-cam="attr" style="margin:0 0 8px;font-size:.8rem;color:#555"></p>' +
       '<img data-cam="img" alt="Public camera frame" style="width:100%;max-height:70vh;object-fit:contain;background:#111;border-radius:8px">' +
       '<p data-cam="status" style="margin:8px 0 0;font-size:.8rem"></p></div>';
     document.body.appendChild(viewer);
+
+    function closeCameraViewer() {
+      viewer.style.display = "none";
+      viewer.style.pointerEvents = "none";
+      viewer.setAttribute("aria-hidden", "true");
+      viewer.hidden = true;
+      var img = viewer.querySelector('[data-cam="img"]');
+      if (img) {
+        img.onload = null;
+        img.onerror = null;
+        img.removeAttribute("src");
+        img.alt = "Public camera frame";
+      }
+      var status = viewer.querySelector('[data-cam="status"]');
+      if (status) status.textContent = "";
+    }
+
+    function openCameraViewerShell() {
+      viewer.hidden = false;
+      viewer.setAttribute("aria-hidden", "false");
+      viewer.style.pointerEvents = "auto";
+      viewer.style.display = "flex";
+    }
 
     var state = {
       base: "street",
@@ -257,7 +283,11 @@
     }
 
     function openCamera(cam) {
-      viewer.hidden = false;
+      if (!cam) {
+        closeCameraViewer();
+        return;
+      }
+      openCameraViewerShell();
       viewer.querySelector('[data-cam="title"]').textContent = cam.name || cam.id;
       viewer.querySelector('[data-cam="attr"]').textContent =
         (cam.attribution || "") +
@@ -265,6 +295,12 @@
         (cam.updated_at ? " · updated " + cam.updated_at : "");
       var img = viewer.querySelector('[data-cam="img"]');
       var status = viewer.querySelector('[data-cam="status"]');
+      var url = cam.image_url || cam.frame_proxy || "";
+      if (!/^https:\/\//i.test(url)) {
+        status.textContent = "This camera frame is unavailable right now.";
+        img.removeAttribute("src");
+        return;
+      }
       status.textContent = "Loading frame…";
       img.onload = function () {
         status.textContent = "Public licensed snapshot (not a private/police camera).";
@@ -273,7 +309,7 @@
         status.textContent = "This camera frame is unavailable right now.";
       };
       /* Prefer original HTTPS image URL returned by our allowlisted API only. */
-      img.src = cam.image_url || cam.frame_proxy || "";
+      img.src = url;
     }
 
     function fillCameraFilters() {
@@ -614,10 +650,20 @@
         renderCameraList();
       });
     });
-    viewer.querySelector('[data-cam="close"]').addEventListener("click", function () {
-      viewer.hidden = true;
-      viewer.querySelector('[data-cam="img"]').removeAttribute("src");
+    viewer.querySelector('[data-cam="close"]').addEventListener("click", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeCameraViewer();
     });
+    viewer.addEventListener("click", function (event) {
+      if (event.target === viewer) closeCameraViewer();
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && viewer.style.display === "flex") {
+        closeCameraViewer();
+      }
+    });
+    closeCameraViewer();
 
     map.on("moveend", function () {
       if (state.camerasOn) loadCameras("live");

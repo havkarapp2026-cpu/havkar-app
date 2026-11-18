@@ -1,5 +1,5 @@
 /* HAVKAR service worker — versioned install + web push display. */
-var HAVKAR_SW_VERSION = "havkar-sw-20261118-map-layers-rain-cameras-traffic-v1";
+var HAVKAR_SW_VERSION = "havkar-sw-20261118-emergency-camera-overlay-fix-v1";
 
 self.addEventListener("install", function (event) {
   self.skipWaiting();

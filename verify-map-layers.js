@@ -55,7 +55,7 @@ function mainStatic() {
   ok("rain scrub control", layers.includes('data-rain="scrub"'));
   ok("camera country filter", layers.includes('data-cam="country"'));
   ok("never accepts arbitrary stream injection", layers.includes("allowlisted API only"));
-  ok("SW bumped for map layers", sw.includes("map-layers-rain-cameras-traffic-v1"));
+  ok("SW bumped for map layers", sw.includes("emergency-camera-overlay-fix-v1") || sw.includes("map-layers-rain-cameras-traffic-v1"));
 
   ok("lib rain exists", fs.existsSync(path.join(ROOT, "lib/map-rain-radar.mjs")));
   ok("lib cameras exists", fs.existsSync(path.join(ROOT, "lib/map-public-cameras.mjs")));
