@@ -77,24 +77,33 @@ test("133 fiat presentment currencies remain available and distinct from XLM", (
   assert.ok(!list.map((c) => String(c).toUpperCase()).includes("XLM"));
 });
 
-test("omio affiliate link builder never invents fares and reports missing id", () => {
+test("omio affiliate link builder never invents fares; tracks Impact media partner", () => {
   const {
     buildOmioAffiliateSearchUrl,
     omioConfigured
   } = require("../lib/omio-adapter.cjs");
-  const missing = buildOmioAffiliateSearchUrl({ from: "Rome", to: "Milan" }, {});
-  assert.equal(missing.ok, false);
-  assert.equal(missing.error, "missing_OMIO_AFFILIATE_ID");
+  const untracked = buildOmioAffiliateSearchUrl({ from: "Rome", to: "Milan" }, {});
+  assert.equal(untracked.ok, true);
+  assert.equal(untracked.tracked, false);
+  assert.doesNotMatch(untracked.url || "", /partner=/);
   const ready = buildOmioAffiliateSearchUrl(
     { from: "Rome", to: "Milan", date: "2026-12-01", mode: "train" },
-    { OMIO_AFFILIATE_ID: "havkar-test-partner" }
+    { OMIO_AFFILIATE_ID: "7763968" }
   );
   assert.equal(ready.ok, true);
-  assert.match(ready.url, /partner=havkar-test-partner/);
+  assert.equal(ready.tracked, true);
+  assert.match(ready.url, /partner=7763968/);
   assert.match(ready.url, /omio\.com/);
-  const status = omioConfigured({ OMIO_AFFILIATE_ID: "havkar-test-partner" });
+  const status = omioConfigured({ OMIO_AFFILIATE_ID: "7763968" });
   assert.equal(status.affiliate_search_ready, true);
+  assert.equal(status.affiliate_tracked, true);
+  assert.equal(status.impact_partner_program.media_partner_match, true);
   assert.equal(status.live_search, false);
+  const forgedCatalog = buildOmioAffiliateSearchUrl(
+    { from: "Rome", to: "Milan" },
+    { OMIO_AFFILIATE_ID: "463493" }
+  );
+  assert.equal(forgedCatalog.tracked, false);
 });
 
 test("telehealth remains publicly gated without clinical checklist", () => {

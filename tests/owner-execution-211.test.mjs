@@ -55,11 +55,16 @@ test("telehealth documents exact TURN secret names and stays gated", () => {
 });
 
 test("omio still refuses inventing affiliate tracking from Impact catalog ids", () => {
-  const { omioConfigured } = require("../lib/omio-adapter.cjs");
+  const { omioConfigured, buildOmioAffiliateSearchUrl } = require("../lib/omio-adapter.cjs");
   const status = omioConfigured({});
   assert.equal(status.impact_partner_program.advertiser_id, "463493");
-  assert.equal(status.affiliate_search_ready, false);
+  assert.equal(status.affiliate_tracked, false);
   assert.match(status.external_actions_required.join(" "), /OMIO_AFFILIATE_ID/);
+  const forgedProgram = buildOmioAffiliateSearchUrl(
+    { from: "Rome", to: "Milan" },
+    { OMIO_AFFILIATE_ID: "7385" }
+  );
+  assert.equal(forgedProgram.tracked, false);
 });
 
 test("partita IVA remains unpublished without Visura", () => {

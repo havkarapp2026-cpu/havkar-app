@@ -96,8 +96,10 @@
       '<select data-cam="country" aria-label="Country"><option value="all">All countries</option></select>' +
       '<select data-cam="city" aria-label="City"><option value="all">All cities</option></select>' +
       '<select data-cam="type" aria-label="Category"><option value="all">All categories</option>' +
-      '<option value="street">Streets</option><option value="square">Squares</option>' +
+      '<option value="street">Streets</option><option value="market">Markets</option>' +
+      '<option value="square">Squares</option><option value="highway">Roads / highways</option>' +
       '<option value="tourism">Tourism</option><option value="coast">Coasts / ports</option>' +
+      '<option value="airport">Airports / stations</option><option value="weather">Weather</option>' +
       '<option value="intersection">Intersections (JPEG)</option></select>' +
       '</div>' +
       '<p data-cam="honesty" style="margin:0 0 6px;font-size:.8rem;color:#555"></p>' +

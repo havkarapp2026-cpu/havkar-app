@@ -429,8 +429,18 @@ html[dir="rtl"] .omio-search-form label{
     text-align:right;
 }
 html[dir="rtl"] .omio-results,
-html[dir="rtl"] .flight-card{
+html[dir="rtl"] .flight-card,
+html[dir="rtl"] .pending-note,
+html[dir="rtl"] .lead,
+html[dir="rtl"] .intro{
     text-align:right;
+}
+html[dir="rtl"] .ticket-types,
+html[dir="rtl"] .havkar-map-layers{
+    direction:rtl;
+}
+.omio-results .partner-link{
+    margin-inline-end:8px;
 }
 @media (min-width:700px) and (max-width:1100px){
     .ticket-types{grid-template-columns:repeat(4, minmax(0, 1fr))}
@@ -673,7 +683,7 @@ html[dir="rtl"] .flight-card{
             <button type="button" id="hotelAccBtn" class="partner-link">Open HAVKAR Accommodation</button>
             <button type="button" id="hotelBookingBtn" class="partner-link" style="background:#fff;color:#1b5e20">Search on Booking.com</button>
         </form>
-        <div class="pending-note">Direct hotel inventory API remains contract-gated. Partner redirect does not invent rooms or prices.</div>
+        <div class="pending-note">Direct hotel inventory API remains contract-gated. Booking.com opens in the browser (no forced app install). Commission tracking needs a Booking affiliate id if Owner binds one — none is invented here.</div>
     </section>
 
     <div id="moreTransfers" class="more-transfers" hidden>
@@ -1371,14 +1381,20 @@ html[dir="rtl"] .flight-card{
       document.querySelectorAll('.omio-panel .status-badge').forEach(function(el){
         if(omio.live_search){
           el.innerHTML='<i class="fas fa-check" aria-hidden="true"></i> Live API search ready';
+        }else if(omio.affiliate_tracked || (omio.impact_partner_program&&omio.impact_partner_program.media_partner_match)){
+          el.innerHTML='<i class="fas fa-link" aria-hidden="true"></i> Omio Impact tracked redirect';
         }else{
           el.innerHTML='<i class="fas fa-external-link-alt" aria-hidden="true"></i> Official Omio redirect';
         }
       });
       document.querySelectorAll('.omio-panel .pending-note').forEach(function(el){
-        el.textContent=omio.live_search
-          ? 'Direct Omio API search is enabled. Booking still follows Owner payment gates.'
-          : 'Direct Omio API is not live. Search opens the official Omio website — no invented fares.';
+        if(omio.live_search){
+          el.textContent='Direct Omio API search is enabled. Booking still follows Owner payment gates.';
+        }else if(omio.affiliate_tracked){
+          el.textContent='Omio affiliate tracking is on (Impact media partner). This is not in-app ticket API sales — booking continues on Omio.';
+        }else{
+          el.textContent='Direct Omio API is not live. Search opens the official Omio website — no invented fares.';
+        }
       });
     }).catch(function(){});
 
