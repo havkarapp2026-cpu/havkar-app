@@ -336,23 +336,38 @@
       openSurroundingsAtCenter("photos");
     });
     streetViewBtn.addEventListener("click", function () {
-      fetch("/api/map-street-view", { headers: { Accept: "application/json" } })
+      var c = map && map.getCenter && map.getCenter();
+      var qs =
+        c && Number.isFinite(c.lat) && Number.isFinite(c.lng)
+          ? "?lat=" +
+            encodeURIComponent(c.lat) +
+            "&lng=" +
+            encodeURIComponent(c.lng) +
+            "&radius_m=50&provider=auto"
+          : "";
+      fetch("/api/map-street-view" + qs, { headers: { Accept: "application/json" } })
         .then(function (r) {
           return r.json();
         })
         .then(function (body) {
           if (body && body.interactive_360) {
-            note("Interactive 360° Street View is available.");
-            return;
+            note(
+              "Interactive 360° via " +
+                (body.provider || "provider") +
+                (body.distance_m != null ? " · " + body.distance_m + " m" : "") +
+                " · rotate + move when coverage exists."
+            );
+          } else {
+            note(
+              (body && body.reason) ||
+                "360° unavailable. Add free HAVKAR_MAPILLARY_ACCESS_TOKEN or Owner-approved Google Embed key — no fake panoramas."
+            );
           }
-          note(
-            (body && body.reason) ||
-              "360° Street View is not configured. Use satellite / hybrid or nearby licensed photos — no fake panoramas."
-          );
           openSurroundingsAtCenter("streetview");
         })
         .catch(function () {
           note("Street View status unavailable.");
+          openSurroundingsAtCenter("streetview");
         });
     });
     surroundBtn.addEventListener("click", function () {
