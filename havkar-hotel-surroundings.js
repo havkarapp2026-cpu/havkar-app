@@ -177,26 +177,47 @@
       }
     }
 
-    function renderCameras(cameras) {
+    function renderCameras(cameras, meta) {
       camsBox.innerHTML = "";
+      meta = meta || {};
       if (!cameras || !cameras.length) {
-        camsBox.appendChild(
-          el(
-            "p",
-            { className: "havkar-surroundings-empty" },
-            "No licensed public cameras within this radius. Coverage is not worldwide — this is not an error."
-          )
-        );
+        var nearest = meta.nearest_live_camera;
+        var emptyMsg =
+          "No licensed public cameras within this radius. Coverage is not worldwide — this is not an app error.";
+        if (nearest && nearest.distance_km != null && nearest.status === "live") {
+          emptyMsg =
+            "No licensed LIVE camera within this radius. Nearest verified LIVE camera is about " +
+            nearest.distance_km +
+            " km away" +
+            (nearest.name ? " (“" + nearest.name + "”)" : "") +
+            ".";
+        }
+        camsBox.appendChild(el("p", { className: "havkar-surroundings-empty" }, emptyMsg));
+        if (nearest && nearest.live_stream && nearest.status === "live" && !nearest.within_radius) {
+          var far = el("article", { className: "havkar-surroundings-card" });
+          far.appendChild(
+            el(
+              "strong",
+              null,
+              (nearest.name || "Nearest LIVE camera") + " · " + nearest.distance_km + " km"
+            )
+          );
+          far.appendChild(
+            el("p", null, "Outside selected radius · verified LIVE only · not invented coverage")
+          );
+          camsBox.appendChild(far);
+        }
         return;
       }
       cameras.forEach(function (cam) {
+        var isLive = cam.live_stream && cam.status === "live";
         var card = el("article", { className: "havkar-surroundings-card" });
         card.appendChild(
           el(
             "strong",
             null,
             (cam.name || cam.id) +
-              (cam.live_stream ? " · LIVE" : " · snapshot") +
+              (isLive ? " · LIVE" : cam.live_stream ? " · unchecked" : " · snapshot") +
               (cam.distance_km != null ? " · " + cam.distance_km + " km" : "")
           )
         );
@@ -205,15 +226,26 @@
             "p",
             null,
             [cam.city, cam.country].filter(Boolean).join(", ") +
-              (cam.attribution ? " · " + cam.attribution : "") +
-              (cam.status ? " · status " + cam.status : "")
+              (cam.attribution ? " · " + cam.attribution : "")
           )
         );
-        var open = el("button", { type: "button" }, cam.live_stream ? "Play live" : "View snapshot");
+        if (!isLive && cam.live_stream) {
+          card.appendChild(
+            el(
+              "p",
+              { className: "havkar-surroundings-meta" },
+              "Playback not confirmed LIVE yet — open official source only."
+            )
+          );
+        }
+        var open = el("button", { type: "button" }, isLive ? "Play live" : "View");
         open.addEventListener("click", function () {
+          if (!isLive && cam.live_stream) {
+            setStatus("This stream is not confirmed LIVE yet. Opening official source.");
+          }
           if (root.HAVKAR_MAP_LIVE_LAYERS && typeof root.HAVKAR_MAP_LIVE_LAYERS.openCamera === "function") {
             root.HAVKAR_MAP_LIVE_LAYERS.openCamera(cam);
-          } else if (cam.embed_url) {
+          } else if (cam.embed_url || cam.watch_url) {
             window.open(cam.watch_url || cam.embed_url, "_blank", "noopener,noreferrer");
           } else if (cam.image_url) {
             window.open(cam.image_url, "_blank", "noopener,noreferrer");
@@ -226,14 +258,14 @@
           api._surrCamLayer.addLayer(
             api.L.circleMarker([cam.latitude, cam.longitude], {
               radius: 7,
-              color: cam.live_stream ? "#1b5e20" : "#e65100",
-              fillColor: cam.live_stream ? "#66bb6a" : "#ff9800",
+              color: isLive ? "#1b5e20" : "#e65100",
+              fillColor: isLive ? "#66bb6a" : "#ff9800",
               fillOpacity: 0.9,
               weight: 2
             }).bindTooltip(
               (cam.name || cam.id) +
                 (cam.distance_km != null ? " · " + cam.distance_km + " km" : "") +
-                (cam.live_stream ? " · LIVE" : " · snapshot")
+                (isLive ? " · LIVE" : " · snapshot")
             )
           );
         }
@@ -442,33 +474,24 @@
     }
 
     function renderStreetViewFallbacks(sv) {
-      svBox.appendChild(
-        el(
-          "p",
-          { className: "havkar-surroundings-empty" },
-          (sv && sv.reason) ||
-            "Interactive 360° is unavailable here. Add free HAVKAR_MAPILLARY_ACCESS_TOKEN for Mapillary, or Owner-approved HAVKAR_GOOGLE_MAPS_EMBED_API_KEY for Google Embed. No fake panoramas."
-        )
-      );
-      if (sv && Array.isArray(sv.required_secrets) && sv.required_secrets.length) {
-        var keys = el("ul", { className: "havkar-surroundings-keys" });
-        sv.required_secrets.forEach(function (sec) {
-          keys.appendChild(
-            el(
-              "li",
-              null,
-              sec.name +
-                " · " +
-                (sec.cost || "") +
-                (sec.payment_account_required ? " · billing account required to mint key" : " · no payment account")
-            )
-          );
-        });
-        svBox.appendChild(keys);
+      var kind = (sv && sv.failure_kind) || "no_coverage";
+      var msg =
+        (sv && (sv.user_message || sv.reason)) ||
+        "Interactive 360° is unavailable near this stay. Try widening the search or use satellite view. No fake panoramas.";
+      if (/HAVKAR_|MAPILLARY_ACCESS|GOOGLE_MAPS/i.test(msg)) {
+        msg =
+          kind === "missing_key"
+            ? "360° street imagery is not configured yet. Satellite and licensed photos may still help."
+            : "No street-level 360° imagery near these coordinates. Try a wider radius or satellite view.";
       }
+      svBox.appendChild(el("p", { className: "havkar-surroundings-empty" }, msg));
       var fb = el("div", { className: "havkar-surroundings-fallbacks" });
+      fb.appendChild(el("button", { type: "button", "data-fb": "expand360" }, "Widen 360° search"));
       fb.appendChild(el("button", { type: "button", "data-fb": "satellite" }, "Open satellite"));
       fb.appendChild(el("button", { type: "button", "data-fb": "photos" }, "Show nearby photos"));
+      fb.querySelector('[data-fb="expand360"]').addEventListener("click", function () {
+        expandStreetViewSearch();
+      });
       fb.querySelector('[data-fb="satellite"]').addEventListener("click", function () {
         setBase("satellite");
       });
@@ -476,6 +499,40 @@
         renderPhotos(state.payload && state.payload.photos);
       });
       svBox.appendChild(fb);
+    }
+
+    function expandStreetViewSearch() {
+      if (!state.place) return;
+      var next = Math.min(1000, Math.max(250, Number((state.svRadiusM || 50) * 2) || 250));
+      state.svRadiusM = next;
+      setStatus("Widening 360° search to " + next + " m…");
+      fetch(
+        "/api/map-street-view?lat=" +
+          encodeURIComponent(state.place.latitude) +
+          "&lng=" +
+          encodeURIComponent(state.place.longitude) +
+          "&radius_m=" +
+          encodeURIComponent(next) +
+          "&expand=1&provider=auto&limit=12",
+        { headers: { Accept: "application/json" }, cache: "no-store" }
+      )
+        .then(function (r) {
+          return r.json();
+        })
+        .then(function (sv) {
+          if (state.payload) state.payload.street_view = sv;
+          renderStreetView(sv);
+          setStatus(
+            sv && sv.interactive_360
+              ? "360° found · " +
+                  (sv.distance_m != null ? sv.distance_m + " m from stay" : "") +
+                  (sv.radius_m != null ? " · search " + sv.radius_m + " m" : "")
+              : (sv && sv.user_message) || "Still no 360° coverage in the widened search."
+          );
+        })
+        .catch(function () {
+          setStatus("360° lookup failed. Satellite view still works.");
+        });
     }
 
     function mountMapillaryViewer(sv) {
@@ -573,7 +630,7 @@
           encodeURIComponent(state.place.latitude) +
           "&lng=" +
           encodeURIComponent(state.place.longitude) +
-          "&radius_m=50&provider=auto&limit=12",
+          "&radius_m=50&expand=1&provider=auto&limit=12",
         { headers: { Accept: "application/json" }, cache: "no-store" }
       )
         .then(function (r) {
@@ -625,25 +682,29 @@
         })
         .then(function (body) {
           state.payload = body;
-          renderCameras(body && body.cameras);
+          renderCameras(body && body.cameras, body);
           renderPhotos(body && body.photos);
           renderPois(body && body.pois);
           renderStreetView(body && body.street_view);
           loadSmartGuide();
-          setStatus(
-            "Surroundings · " +
-              state.place.label +
-              " · cameras " +
-              ((body && body.camera_count) || 0) +
-              " · photos " +
-              ((body && body.photo_count) || 0) +
-              " · places " +
-              ((body && body.pois && body.pois.count) || 0) +
-              " · 360° " +
-              (body && body.street_view && body.street_view.interactive_360 ? "ON" : "unavailable") +
-              " · free · " +
-              (state.place.source || "coords")
-          );
+          var nearest = body && body.nearest_live_camera;
+          var parts = [
+            "Surroundings · " + state.place.label,
+            "places " + ((body && body.pois && body.pois.count) || 0),
+            "cameras in radius " + ((body && body.camera_count) || 0),
+            "photos " + ((body && body.photo_count) || 0),
+            "360° " +
+              (body && body.street_view && body.street_view.interactive_360
+                ? "ON" +
+                  (body.street_view.distance_m != null
+                    ? " · " + body.street_view.distance_m + " m"
+                    : "")
+                : "not nearby")
+          ];
+          if ((!body || !body.camera_count) && nearest && nearest.distance_km != null) {
+            parts.push("nearest LIVE " + nearest.distance_km + " km");
+          }
+          setStatus(parts.join(" · "));
         })
         .catch(function () {
           setStatus("Surroundings lookup failed. Map and satellite still work.");
