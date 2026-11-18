@@ -771,22 +771,61 @@
             requestGps: function () {
               return new Promise(function (res, rej) {
                 if (!navigator.geolocation) {
-                  rej(new Error("geolocation_unavailable"));
+                  rej(Object.assign(new Error("geolocation_unavailable"), { code: 0 }));
                   return;
                 }
+                /* Device GPS only — coordinates stay in-browser; never posted to HAVKAR. */
                 navigator.geolocation.getCurrentPosition(
                   function (pos) {
-                    api.setCenter(pos.coords.latitude, pos.coords.longitude, 13);
+                    var plat = pos.coords.latitude;
+                    var plng = pos.coords.longitude;
+                    var accuracy = pos.coords.accuracy;
+                    try {
+                      if (!api._userGpsLayer) {
+                        api._userGpsLayer = L.layerGroup().addTo(map);
+                      } else {
+                        api._userGpsLayer.clearLayers();
+                      }
+                      var gpsIcon = L.divIcon({
+                        className: "havkar-gps-marker",
+                        html: '<span class="havkar-gps-dot" title="Your GPS location"></span>',
+                        iconSize: [22, 22],
+                        iconAnchor: [11, 11]
+                      });
+                      api._userGpsLayer.addLayer(
+                        L.marker([plat, plng], { icon: gpsIcon, zIndexOffset: 1200 }).bindPopup(
+                          "Your location" +
+                            (Number.isFinite(accuracy)
+                              ? "<br>Accuracy ≈ " + Math.round(accuracy) + " m"
+                              : "") +
+                            "<br><small>Not uploaded to HAVKAR servers.</small>"
+                        )
+                      );
+                      if (Number.isFinite(accuracy) && accuracy > 0) {
+                        api._userGpsLayer.addLayer(
+                          L.circle([plat, plng], {
+                            radius: Math.min(Math.max(accuracy, 10), 2500),
+                            color: "#1b5e20",
+                            weight: 2,
+                            fillColor: "#66bb6a",
+                            fillOpacity: 0.18,
+                            interactive: false
+                          })
+                        );
+                      }
+                    } catch (_markerErr) {}
+                    map.setView([plat, plng], Math.max(map.getZoom() || 14, 15));
                     res({
-                      latitude: pos.coords.latitude,
-                      longitude: pos.coords.longitude,
-                      accuracy: pos.coords.accuracy
+                      latitude: plat,
+                      longitude: plng,
+                      accuracy: accuracy,
+                      shared_with_server: false
                     });
                   },
                   function (geoErr) {
-                    rej(geoErr || new Error("geolocation_denied"));
+                    rej(geoErr || Object.assign(new Error("geolocation_denied"), { code: 1 }));
                   },
-                  { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+                  { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
                 );
               });
             },
