@@ -47,15 +47,39 @@
 
   function panelHost() {
     var host = document.getElementById("havkarSurroundingsPanel");
-    if (host) return host;
+    if (host) {
+      host.classList.add("havkar-surroundings");
+      return host;
+    }
     host = el("aside", {
       id: "havkarSurroundingsPanel",
       className: "havkar-surroundings",
       hidden: "hidden",
       "aria-live": "polite"
     });
-    document.body.appendChild(host);
+    var after =
+      document.getElementById("havkarTripPlanner") ||
+      document.getElementById("ticketsMapShell") ||
+      document.getElementById("accMapShell") ||
+      document.querySelector(".havkar-map-shell");
+    if (after && after.parentNode) {
+      if (after.nextSibling) after.parentNode.insertBefore(host, after.nextSibling);
+      else after.parentNode.appendChild(host);
+    } else {
+      document.body.appendChild(host);
+    }
     return host;
+  }
+
+  function publicSafeText(text, fallback) {
+    var msg = String(text || "").trim();
+    if (!msg) return fallback || "";
+    if (/HAVKAR_|MAPILLARY_|GOOGLE_MAPS|TOMTOM_API|YOUTUBE_API|process\.env|undefined|null\b/i.test(msg)) {
+      return fallback || mt("maps.msg_no_360");
+    }
+    /* Strip raw ISO timestamps from public copy. */
+    msg = msg.replace(/\d{4}-\d{2}-\d{2}T[\d:.]+Z?/g, "").replace(/\s{2,}/g, " ").trim();
+    return msg || fallback || "";
   }
 
   function geocode(q) {
@@ -105,18 +129,50 @@
     radiusKm = Math.min(Math.max(radiusKm, 0.5), 25);
     var host = panelHost();
     host.hidden = false;
+    host.classList.remove("is-collapsed");
     host.innerHTML = "";
     host.setAttribute("dir", mapDir());
     host.setAttribute("lang", (root.HAVKAR_MAP_I18N && root.HAVKAR_MAP_I18N.lang && root.HAVKAR_MAP_I18N.lang()) || "en");
-    var titleEl = el("h2", { className: "havkar-surroundings-title", "data-i18n-map": "maps.surr_title" }, mt("maps.surr_title"));
-    host.appendChild(titleEl);
-    var status = el("p", { className: "havkar-surroundings-status", "data-surr": "status" }, mt("maps.surr_locating"));
-    host.appendChild(status);
-    var close = el("button", { type: "button", className: "havkar-surroundings-close", "aria-label": "Close" }, "×");
-    close.addEventListener("click", function () {
-      host.hidden = true;
+
+    var summaryBtn = el("button", {
+      type: "button",
+      className: "havkar-surroundings-summary",
+      "data-surr": "toggle",
+      "aria-expanded": "true"
     });
-    host.appendChild(close);
+    var summaryLabel = el(
+      "span",
+      { className: "havkar-surroundings-summary-label", "data-i18n-map": "maps.surr_title" },
+      mt("maps.surr_title")
+    );
+    var chevron = el("span", { className: "havkar-surroundings-chevron", "aria-hidden": "true" }, "▾");
+    summaryBtn.appendChild(summaryLabel);
+    summaryBtn.appendChild(chevron);
+    summaryBtn.addEventListener("click", function () {
+      var collapsed = host.classList.toggle("is-collapsed");
+      summaryBtn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      chevron.textContent = collapsed ? "▸" : "▾";
+    });
+    host.appendChild(summaryBtn);
+
+    var body = el("div", { className: "havkar-surroundings-body", "data-surr": "body" });
+    host.appendChild(body);
+
+    var titleEl = el("h2", { className: "havkar-surroundings-title", "data-i18n-map": "maps.surr_title" }, mt("maps.surr_title"));
+    body.appendChild(titleEl);
+    var status = el("p", { className: "havkar-surroundings-status", "data-surr": "status" }, mt("maps.surr_locating"));
+    body.appendChild(status);
+    var close = el("button", {
+      type: "button",
+      className: "havkar-surroundings-close",
+      "aria-label": mt("maps.collapse_surroundings")
+    }, "×");
+    close.addEventListener("click", function () {
+      host.classList.add("is-collapsed");
+      summaryBtn.setAttribute("aria-expanded", "false");
+      chevron.textContent = "▸";
+    });
+    body.appendChild(close);
 
     var tools = el("div", { className: "havkar-surroundings-tools" });
     var radiusLabel = el("label", null, mt("maps.radius_km") + " ");
@@ -141,7 +197,7 @@
     [satBtn, hybridBtn, streetBtn, camsBtn, photosBtn, svBtn, poisBtn, guideBtn, tripBtn, routeBtn].forEach(function (b) {
       tools.appendChild(b);
     });
-    host.appendChild(tools);
+    body.appendChild(tools);
 
     var camsBox = el("div", { className: "havkar-surroundings-list", "data-surr": "cams-list" });
     var photosBox = el("div", { className: "havkar-surroundings-list", "data-surr": "photos-list" });
@@ -153,19 +209,20 @@
     var hCams = el("h3", { "data-i18n-map": "maps.cameras_near" }, mt("maps.cameras_near"));
     var hPhotos = el("h3", { "data-i18n-map": "maps.photos_nearby" }, mt("maps.photos_nearby"));
     /* Cameras first so empty-radius nearest LIVE + Play stay above the fold. */
-    host.appendChild(hCams);
-    host.appendChild(camsBox);
-    host.appendChild(svBox);
-    host.appendChild(hPlaces);
-    host.appendChild(poisBox);
-    host.appendChild(hGuide);
-    host.appendChild(guideBox);
-    host.appendChild(hPhotos);
-    host.appendChild(photosBox);
+    body.appendChild(hCams);
+    body.appendChild(camsBox);
+    body.appendChild(svBox);
+    body.appendChild(hPlaces);
+    body.appendChild(poisBox);
+    body.appendChild(hGuide);
+    body.appendChild(guideBox);
+    body.appendChild(hPhotos);
+    body.appendChild(photosBox);
 
     function refreshSurrChrome() {
       host.setAttribute("dir", mapDir());
       titleEl.textContent = mt("maps.surr_title");
+      summaryLabel.textContent = mt("maps.surr_title");
       satBtn.textContent = mt("maps.layer_satellite");
       hybridBtn.textContent = mt("maps.layer_hybrid");
       streetBtn.textContent = mt("maps.layer_street");
@@ -189,8 +246,38 @@
     var state = { place: null, payload: null, focus: opts.focus || "all" };
 
     function setStatus(msg) {
-      status.textContent = msg || "";
-      if (typeof opts.setNote === "function") opts.setNote(msg || "");
+      var safe = publicSafeText(msg, msg || "");
+      status.textContent = safe || "";
+      if (typeof opts.setNote === "function") opts.setNote(safe || "");
+    }
+
+    function confirmTripAdd(label) {
+      var name = String(label || mt("maps.map_center")).slice(0, 80);
+      var ok =
+        root.HAVKAR_TRIP_PLANNER &&
+        root._havkarTripApi &&
+        root._havkarTripApi.addStop({
+          lat: state.place && state.place.latitude,
+          lng: state.place && state.place.longitude,
+          label: name,
+          kind: "destination"
+        });
+      if (!ok) {
+        setStatus(mt("maps.msg_trip_not_ready"));
+        return false;
+      }
+      setStatus(mt("maps.msg_trip_stop_saved", { label: name }));
+      try {
+        var tripHost = document.getElementById("havkarTripPlanner");
+        if (tripHost) {
+          tripHost.classList.add("havkar-trip-flash");
+          tripHost.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          setTimeout(function () {
+            tripHost.classList.remove("havkar-trip-flash");
+          }, 1800);
+        }
+      } catch (_e) {}
+      return true;
     }
 
     function centerMap(place, zoom) {
@@ -433,8 +520,10 @@
           el(
             "p",
             { className: "havkar-surroundings-empty" },
-            (poisPayload && poisPayload.honesty) ||
-              "No TomTom POIs in this radius. Coverage is not worldwide — empty is honest."
+            publicSafeText(
+              (poisPayload && poisPayload.honesty) || "",
+              mt("maps.msg_no_pois_radius")
+            )
           )
         );
         return;
@@ -451,20 +540,27 @@
               null,
               (p.distance_m != null ? p.distance_m + " m · " : "") +
                 (p.address || "") +
-                " · TomTom · " +
-                (p.fetched_at || "")
+                " · TomTom"
             )
           );
           var add = el("button", { type: "button" }, mt("maps.add_to_trip"));
           add.addEventListener("click", function () {
-            if (root.HAVKAR_TRIP_PLANNER && root._havkarTripApi) {
-              root._havkarTripApi.addStop({
-                lat: p.latitude,
-                lng: p.longitude,
-                label: p.name,
-                kind: p.category_id || "poi"
-              });
-              setStatus("Added “" + (p.name || "place") + "” to trip planner.");
+            if (!(root.HAVKAR_TRIP_PLANNER && root._havkarTripApi)) {
+              setStatus(mt("maps.msg_trip_not_ready"));
+              return;
+            }
+            var added = root._havkarTripApi.addStop({
+              lat: p.latitude,
+              lng: p.longitude,
+              label: p.name,
+              kind: p.category_id || "poi"
+            });
+            if (added) {
+              setStatus(mt("maps.msg_trip_stop_saved", { label: p.name || g.label }));
+              try {
+                var tripHost = document.getElementById("havkarTripPlanner");
+                if (tripHost) tripHost.scrollIntoView({ behavior: "smooth", block: "nearest" });
+              } catch (_e) {}
             } else {
               setStatus(mt("maps.msg_trip_not_ready"));
             }
@@ -482,30 +578,33 @@
           el(
             "p",
             { className: "havkar-surroundings-empty" },
-            "Smart notes unavailable. No invented safety or hotel-quality claims."
+            mt("maps.msg_guide_unavailable")
           )
         );
         return;
       }
       (guide.insights || []).forEach(function (ins) {
         var card = el("article", { className: "havkar-surroundings-card" });
-        card.appendChild(el("strong", null, ins.title || "Note"));
-        card.appendChild(el("p", null, ins.detail || ""));
-        card.appendChild(
-          el(
-            "p",
-            { className: "havkar-surroundings-meta" },
-            "Source: " +
-              (ins.source || "havkar") +
-              (ins.fetched_at ? " · " + ins.fetched_at : "") +
-              (ins.confidence ? " · " + ins.confidence : "")
-          )
-        );
+        card.appendChild(el("strong", null, ins.title || mt("maps.smart_notes")));
+        card.appendChild(el("p", null, publicSafeText(ins.detail || "", "")));
+        if (ins.source) {
+          card.appendChild(
+            el(
+              "p",
+              { className: "havkar-surroundings-meta" },
+              mt("maps.source_label", { source: String(ins.source).slice(0, 40) })
+            )
+          );
+        }
         guideBox.appendChild(card);
       });
       (guide.limits || []).forEach(function (lim) {
         guideBox.appendChild(
-          el("p", { className: "havkar-surroundings-empty" }, lim.detail || lim.id || "")
+          el(
+            "p",
+            { className: "havkar-surroundings-empty" },
+            publicSafeText(lim.detail || "", mt("maps.msg_guide_unavailable"))
+          )
         );
       });
     }
@@ -589,15 +688,11 @@
 
     function renderStreetViewFallbacks(sv) {
       var kind = (sv && sv.failure_kind) || "no_coverage";
-      var msg =
-        (sv && (sv.user_message || sv.reason)) ||
-        "Interactive 360° is unavailable near this stay. Try widening the search or use satellite view. No fake panoramas.";
-      if (/HAVKAR_|MAPILLARY_ACCESS|GOOGLE_MAPS/i.test(msg)) {
-        msg =
-          kind === "missing_key"
-            ? "360° street imagery is not configured yet. Satellite and licensed photos may still help."
-            : mt("maps.msg_no_360");
-      }
+      var raw = (sv && (sv.user_message || sv.reason)) || "";
+      var msg = publicSafeText(
+        raw,
+        kind === "missing_key" ? mt("maps.msg_360_not_configured") : mt("maps.msg_no_360")
+      );
       svBox.appendChild(el("p", { className: "havkar-surroundings-empty" }, msg));
       var fb = el("div", { className: "havkar-surroundings-fallbacks" });
       fb.appendChild(el("button", { type: "button", "data-fb": "expand360" }, mt("maps.widen_360")));
@@ -869,29 +964,28 @@
     });
     tripBtn.addEventListener("click", function () {
       if (!state.place) return;
-      if (root.HAVKAR_TRIP_PLANNER && root._havkarTripApi) {
-        var ok = root._havkarTripApi.addStop({
-          lat: state.place.latitude,
-          lng: state.place.longitude,
-          label: state.place.label || "Stay",
-          kind: "stay"
-        });
-        setStatus(ok ? mt("maps.msg_stay_added") : mt("maps.msg_trip_not_ready"));
-      } else {
-        setStatus(mt("maps.msg_trip_not_ready"));
-      }
+      confirmTripAdd(state.place.label || mt("maps.map_center"));
     });
     svBtn.addEventListener("click", function () {
       setStatus(mt("maps.msg_loading_street"));
       fetchStreetViewForPlace().then(function (sv) {
         if (state.payload) state.payload.street_view = sv;
         renderStreetView(sv);
-        setStatus(
-          "360° · " +
-            ((sv && sv.provider) || "none") +
-            (sv && sv.interactive_360 ? " · interactive ON" : " · unavailable") +
-            (sv && sv.distance_m != null ? " · " + sv.distance_m + " m" : "")
-        );
+        if (sv && sv.interactive_360) {
+          setStatus(
+            mt("maps.msg_interactive_360", {
+              provider: sv.provider || "360",
+              distance: sv.distance_m != null ? " · " + sv.distance_m + " m" : ""
+            })
+          );
+        } else {
+          setStatus(
+            publicSafeText(
+              (sv && (sv.user_message || sv.reason)) || "",
+              mt("maps.msg_no_360")
+            )
+          );
+        }
         try {
           svBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
         } catch (_e) {}
@@ -925,6 +1019,10 @@
       centerMap(place, 16);
       setBase("hybrid");
       return loadNearby().then(function () {
+        try {
+          /* Docked under the map — never covers the map canvas. */
+          host.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        } catch (_scroll) {}
         return { ok: true, place: place };
       });
     });

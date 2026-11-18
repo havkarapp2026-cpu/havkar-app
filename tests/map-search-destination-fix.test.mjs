@@ -59,8 +59,8 @@ test("surroundings status and 360 titles are localized", () => {
 });
 
 test("service worker bumped after live-cameras restore", () => {
-  assert.match(read("sw.js"), /live-cameras-restore-v1/);
-  assert.match(read("havkar-sw-register.js"), /live-cameras-restore-v1/);
+  assert.match(read("sw.js"), /map-final-dock-v1|live-cameras-restore-v1/);
+  assert.match(read("havkar-sw-register.js"), /map-final-dock-v1|live-cameras-restore-v1/);
 });
 
 test("TomTom search returns real coords for Rome, Bari, and non-EU sample", async () => {

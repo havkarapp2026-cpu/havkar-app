@@ -86,7 +86,7 @@ assert.match(surr, /mt\("maps\.msg_no_cams_radius"\)/);
 assert.match(surr, /havkar:language-changed/);
 
 assert.match(i18nCore, /havkar:language-changed/);
-assert.match(sw, /live-cameras-restore-v1|map-search-destination-v1|map-i18n-complete-v1/);
+assert.match(sw, /map-final-dock-v1|live-cameras-restore-v1|map-search-destination-v1|map-i18n-complete-v1/);
 
 // Hardcoded chrome leftovers that must not remain as sole English UI labels
 for (const [file, src, banned] of [

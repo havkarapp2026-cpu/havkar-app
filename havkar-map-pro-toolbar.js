@@ -662,6 +662,17 @@
       useOriginBtn.classList.add("primary");
     }
 
+    function formatPublicClock(iso) {
+      if (!iso) return "";
+      try {
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) return "";
+        return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+      } catch (_e) {
+        return "";
+      }
+    }
+
     function refreshTrafficBadge() {
       return fetch("/api/map-traffic", { headers: { Accept: "application/json" }, cache: "no-store" })
         .then(function (r) {
@@ -670,8 +681,9 @@
         .then(function (body) {
           trafficBadge.setAttribute("data-static", "1");
           if (body && body.available) {
-            var ts = body.last_updated || body.fetched_at || "";
-            trafficBadge.textContent = mt("maps.badge_traffic_on") + (ts ? " · " + ts : "");
+            var clock = formatPublicClock(body.last_updated || body.fetched_at || "");
+            trafficBadge.textContent =
+              mt("maps.badge_traffic_on") + (clock ? " · " + clock : "");
           } else {
             trafficBadge.textContent = mt("maps.badge_traffic_off");
           }
@@ -782,7 +794,9 @@
               mins +
               " min" +
               delayTxt +
-              (route.last_updated ? " · updated " + route.last_updated : "") +
+              (route.last_updated
+                ? " · " + (formatPublicClock(route.last_updated) || "")
+                : "") +
               " · free · not a ticket booking"
           );
         }
@@ -892,40 +906,86 @@
       }
     });
 
-    shareBtn.addEventListener("click", function () {
-      var c = centerOf();
-      if (root.HAVKAR_MAP && root.HAVKAR_MAP.nativeShareLocation) {
-        root.HAVKAR_MAP.nativeShareLocation(c.latitude, c.longitude, c.label).then(function (res) {
-          note(res && res.shared ? mt("maps.msg_share_ok") : res && res.url ? mt("maps.msg_share_ok") : mt("maps.msg_share_ok"));
-        });
-        return;
-      }
-      note("Share unavailable on this device.");
-    });
-
-    copyBtn.addEventListener("click", function () {
-      var c = centerOf();
+    function buildShareUrl(c) {
       var payload =
         root.HAVKAR_MAP && root.HAVKAR_MAP.mapsSharePayload
           ? root.HAVKAR_MAP.mapsSharePayload(c.latitude, c.longitude, c.label)
-          : {
-              url:
-                "https://www.openstreetmap.org/?mlat=" +
-                c.latitude +
-                "&mlon=" +
-                c.longitude +
-                "#map=14/" +
-                c.latitude +
-                "/" +
-                c.longitude
-            };
-      var text = (payload && (payload.url || payload.text)) || "";
-      if (navigator.clipboard && navigator.clipboard.writeText && text) {
-        navigator.clipboard.writeText(text).then(function () {
+          : null;
+      if (payload && (payload.url || payload.text)) return payload.url || payload.text;
+      return (
+        "https://www.openstreetmap.org/?mlat=" +
+        c.latitude +
+        "&mlon=" +
+        c.longitude +
+        "#map=14/" +
+        c.latitude +
+        "/" +
+        c.longitude
+      );
+    }
+
+    shareBtn.addEventListener("click", function () {
+      var c = currentCenter() || { latitude: 0, longitude: 0, label: mt("maps.map_center") };
+      if (!Number.isFinite(c.latitude)) {
+        note(mt("maps.msg_move_search_first"));
+        return;
+      }
+      var url = buildShareUrl(c);
+      if (root.HAVKAR_MAP && root.HAVKAR_MAP.nativeShareLocation) {
+        root.HAVKAR_MAP.nativeShareLocation(c.latitude, c.longitude, c.label).then(function (res) {
+          note(mt("maps.msg_share_ok"));
+          if (!(res && (res.shared || res.url)) && navigator.clipboard && url) {
+            navigator.clipboard.writeText(url).then(function () {
+              note(mt("maps.msg_copy_ok"));
+            });
+          }
+        });
+        return;
+      }
+      if (navigator.share) {
+        navigator
+          .share({ title: "HAVKAR", text: c.label || "Map", url: url })
+          .then(function () {
+            note(mt("maps.msg_share_ok"));
+          })
+          .catch(function () {
+            if (navigator.clipboard && url) {
+              navigator.clipboard.writeText(url).then(function () {
+                note(mt("maps.msg_copy_ok"));
+              });
+            } else {
+              note(mt("maps.msg_copy_ok"));
+            }
+          });
+        return;
+      }
+      if (navigator.clipboard && url) {
+        navigator.clipboard.writeText(url).then(function () {
           note(mt("maps.msg_copy_ok"));
         });
+        return;
+      }
+      note(url || mt("maps.msg_copy_ok"));
+    });
+
+    copyBtn.addEventListener("click", function () {
+      var c = currentCenter();
+      if (!c || !Number.isFinite(c.latitude)) {
+        note(mt("maps.msg_move_search_first"));
+        return;
+      }
+      var text = buildShareUrl(c);
+      if (navigator.clipboard && navigator.clipboard.writeText && text) {
+        navigator.clipboard.writeText(text).then(
+          function () {
+            note(mt("maps.msg_copy_ok"));
+          },
+          function () {
+            note(text);
+          }
+        );
       } else {
-        note(text || "Copy unavailable.");
+        note(text || mt("maps.msg_copy_ok"));
       }
     });
 

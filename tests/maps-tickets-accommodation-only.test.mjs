@@ -84,7 +84,7 @@ test("service worker bumped for maps tickets accommodation only", () => {
   const sw = read("sw.js");
   const reg = read("havkar-sw-register.js");
   /* Later rain/cameras/traffic release supersedes the live-map-only SW tag. */
-  assert.match(sw, /live-cameras-restore-v1|emergency-camera-overlay-fix-v1|havkar-sw-20261118/);
-  assert.match(reg, /live-cameras-restore-v1|emergency-camera-overlay-fix-v1|havkar-sw-20261118/);
+  assert.match(sw, /map-final-dock-v1|live-cameras-restore-v1|emergency-camera-overlay-fix-v1|havkar-sw-20261118/);
+  assert.match(reg, /map-final-dock-v1|live-cameras-restore-v1|emergency-camera-overlay-fix-v1|havkar-sw-20261118/);
   assert.ok(KEEP.every((f) => fs.existsSync(path.join(root, f))));
 });

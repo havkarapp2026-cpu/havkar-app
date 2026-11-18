@@ -6,8 +6,27 @@
 (function (global) {
   "use strict";
 
+  var root = global;
   var STORAGE_KEY = "havkar_trip_plan_v1";
   var MAX_STOPS = 8;
+
+  function mt(key, vars) {
+    try {
+      if (root.HAVKAR_MAP_I18N && typeof root.HAVKAR_MAP_I18N.t === "function") {
+        return root.HAVKAR_MAP_I18N.t(key, vars);
+      }
+    } catch (_e) {}
+    return key;
+  }
+
+  function mapDir() {
+    try {
+      if (root.HAVKAR_MAP_I18N && typeof root.HAVKAR_MAP_I18N.dir === "function") {
+        return root.HAVKAR_MAP_I18N.dir();
+      }
+    } catch (_e2) {}
+    return "ltr";
+  }
 
   function el(tag, attrs, text) {
     var node = document.createElement(tag);
@@ -56,6 +75,17 @@
   function formatKm(meters) {
     if (!Number.isFinite(meters)) return "—";
     return (meters / 1000).toFixed(1) + " km";
+  }
+
+  function formatPublicClock(iso) {
+    if (!iso) return "";
+    try {
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return "";
+      return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    } catch (_e) {
+      return "";
+    }
   }
 
   function ensureCss() {
@@ -140,11 +170,6 @@
             plan.stops[idx] = tmp;
             savePlan(plan);
             render();
-    function onLang() { render(); }
-    document.addEventListener("havkar:i18n-ready", onLang);
-    document.addEventListener("havkar:language-changed", onLang);
-    if (root.HAVKAR_MAP_I18N && root.HAVKAR_MAP_I18N.onChange) root.HAVKAR_MAP_I18N.onChange(onLang);
-
           });
           var down = el("button", { type: "button" }, mt("maps.down"));
           down.disabled = idx === plan.stops.length - 1;
@@ -248,8 +273,14 @@
               "p",
               { className: "havkar-trip-alert" },
               lastRoute.traffic_alert.message +
-                " · updated " +
-                (lastRoute.traffic_alert.last_updated || lastRoute.last_updated || "")
+                (formatPublicClock(
+                  lastRoute.traffic_alert.last_updated || lastRoute.last_updated || ""
+                )
+                  ? " · " +
+                    formatPublicClock(
+                      lastRoute.traffic_alert.last_updated || lastRoute.last_updated || ""
+                    )
+                  : "")
             )
           );
         }
@@ -275,7 +306,10 @@
           el(
             "p",
             { className: "havkar-trip-meta" },
-            "Source: TomTom Routing · " + (lastRoute.last_updated || "")
+            "TomTom" +
+              (formatPublicClock(lastRoute.last_updated)
+                ? " · " + formatPublicClock(lastRoute.last_updated)
+                : "")
           )
         );
         if (opts.mapApi && lastRoute.geometry && Array.isArray(lastRoute.geometry.coordinates)) {
@@ -350,6 +384,15 @@
         });
     }
 
+    function onLang() {
+      render();
+    }
+    document.addEventListener("havkar:i18n-ready", onLang);
+    document.addEventListener("havkar:language-changed", onLang);
+    if (root.HAVKAR_MAP_I18N && root.HAVKAR_MAP_I18N.onChange) {
+      root.HAVKAR_MAP_I18N.onChange(onLang);
+    }
+
     render();
 
     return {
@@ -359,14 +402,36 @@
         var lng = Number(stop.lng != null ? stop.lng : stop.longitude);
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
         if (plan.stops.length >= MAX_STOPS) return false;
+        var label = String(stop.label || stop.name || mt("maps.map_center")).slice(0, 120);
         plan.stops.push({
           lat: lat,
           lng: lng,
-          label: String(stop.label || stop.name || "Stop").slice(0, 120),
+          label: label,
           kind: String(stop.kind || stop.type || "place").slice(0, 40)
         });
         savePlan(plan);
         render();
+        var statusEl = host.querySelector('[data-trip="status"]');
+        var signedIn = false;
+        try {
+          signedIn = !!(
+            global.__HAVKAR_SESSION_USER ||
+            (global.HAVKAR_AUTH && global.HAVKAR_AUTH.user) ||
+            global.localStorage.getItem("havkar_user_id")
+          );
+        } catch (_auth) {}
+        if (statusEl) {
+          statusEl.textContent = signedIn
+            ? mt("maps.msg_trip_stop_saved", { label: label })
+            : mt("maps.msg_trip_saved_device", { label: label });
+        }
+        try {
+          host.classList.add("havkar-trip-flash");
+          host.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          setTimeout(function () {
+            host.classList.remove("havkar-trip-flash");
+          }, 1800);
+        } catch (_e) {}
         return true;
       },
       getStops: function () {

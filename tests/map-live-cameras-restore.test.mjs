@@ -97,8 +97,8 @@ test("three camera honesty states are localized in all packs", () => {
 });
 
 test("service worker cache bumped for live-cameras restore", () => {
-  assert.match(read("sw.js"), /live-cameras-restore-v1/);
-  assert.match(read("havkar-sw-register.js"), /live-cameras-restore-v1/);
+  assert.match(read("sw.js"), /map-final-dock-v1|live-cameras-restore-v1/);
+  assert.match(read("havkar-sw-register.js"), /map-final-dock-v1|live-cameras-restore-v1/);
 });
 
 test("destination search + Mapillary + TomTom + payments-off preserved", () => {
@@ -161,8 +161,8 @@ test("nearby surroundings keeps nearest_live_camera when radius empty", async ()
 
 test("surroundings source ships cameras section before 360 and Play on nearest", () => {
   const surr = read("havkar-hotel-surroundings.js");
-  const camsIdx = surr.indexOf('host.appendChild(hCams)');
-  const svIdx = surr.indexOf('host.appendChild(svBox)');
+  const camsIdx = Math.max(surr.indexOf("body.appendChild(hCams)"), surr.indexOf("host.appendChild(hCams)"));
+  const svIdx = Math.max(surr.indexOf("body.appendChild(svBox)"), surr.indexOf("host.appendChild(svBox)"));
   assert.ok(camsIdx > 0 && svIdx > camsIdx, "cameras block before street-view block");
   assert.match(surr, /state\.focus === "cameras"/);
   assert.match(read("lib/map-nearby-surroundings.mjs"), /embed_url:\s*nearestLive\.embed_url/);
