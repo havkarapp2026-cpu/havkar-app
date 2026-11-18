@@ -155,6 +155,18 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
     <span data-i18n="health.empty_body">HAVKAR never invents doctors, pharmacies, prices or availability. Licensed professionals can register for verification.</span>
   </div>
 
+  <section class="search-panel" id="healthNearPanel" aria-label="Nearby health places" style="margin-top:14px">
+    <h2 style="margin:0 0 8px;color:var(--g);font-size:1.1rem">Nearby hospitals &amp; pharmacies (map data)</h2>
+    <p class="notice" style="margin:0 0 10px">Uses the shared TomTom POI service around your search place or GPS. This is not a HAVKAR verified-provider badge and is not an interactive map tile. For map layers open Accommodation or Tickets.</p>
+    <div class="toolbar">
+      <button type="button" id="healthNearBtn">Find nearby health POIs</button>
+      <a class="secondary" style="display:inline-flex;align-items:center;text-decoration:none;padding:8px 12px" href="accommodation.html">Open Accommodation map</a>
+      <a class="secondary" style="display:inline-flex;align-items:center;text-decoration:none;padding:8px 12px" href="tickets.html">Open Tickets map</a>
+    </div>
+    <p id="healthNearStatus" role="status"></p>
+    <div id="healthNearResults"></div>
+  </section>
+
   <div class="links">
     <a href="health-provider-apply.html" data-i18n="health.link_register">Register as a doctor or pharmacy</a>
     <a href="health-dashboard.html" data-i18n="health.link_dashboard">Provider dashboard</a>
@@ -437,6 +449,78 @@ nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:70
     }, function () {
       document.getElementById("geoLabel").textContent = ht("health.gps_denied");
     }, { enableHighAccuracy: true, timeout: 12000 });
+  });
+
+  function renderNearPois(body) {
+    var box = document.getElementById("healthNearResults");
+    var st = document.getElementById("healthNearStatus");
+    box.innerHTML = "";
+    if (!body || body.ok !== true) {
+      st.textContent = (body && (body.message || body.error)) || "Nearby POI lookup failed.";
+      return;
+    }
+    var groups = (body.groups || []).filter(function (g) {
+      return g.id === "hospital" || g.id === "pharmacy";
+    });
+    var count = 0;
+    groups.forEach(function (g) {
+      count += (g.places || []).length;
+      (g.places || []).slice(0, 5).forEach(function (p) {
+        var card = document.createElement("article");
+        card.className = "card";
+        card.innerHTML = "<h2></h2><p></p><p class=\"notice\" style=\"margin:0\"></p>";
+        card.querySelector("h2").textContent = p.name || g.label;
+        card.querySelector("p").textContent =
+          (g.label || "") +
+          (p.distance_m != null ? " · " + p.distance_m + " m" : "") +
+          (p.address ? " · " + p.address : "");
+        card.querySelector(".notice").textContent =
+          "Source: TomTom POI · " +
+          (p.fetched_at || body.last_updated || "") +
+          " · not a HAVKAR license verification";
+        var a = document.createElement("a");
+        a.className = "secondary";
+        a.style.cssText = "display:inline-flex;margin-top:8px;text-decoration:none;padding:8px 12px";
+        a.href =
+          "tickets.html#travelMapPanel";
+        a.textContent = "Open shared travel map";
+        card.appendChild(a);
+        box.appendChild(card);
+      });
+    });
+    st.textContent =
+      count > 0
+        ? count + " TomTom health POIs near coordinates (radius " + (body.radius_m || "") + " m)."
+        : (body.message ||
+            "No TomTom hospital/pharmacy POIs in radius. Empty coverage is reported honestly.");
+  }
+
+  document.getElementById("healthNearBtn").addEventListener("click", function () {
+    var st = document.getElementById("healthNearStatus");
+    if (userLat == null || userLng == null) {
+      st.textContent = "Set a place or allow GPS first — HAVKAR will not invent a location.";
+      return;
+    }
+    st.textContent = "Loading TomTom hospital/pharmacy POIs…";
+    var radiusKm = Number(document.getElementById("distanceInput").value) || 5;
+    var radiusM = Math.min(Math.max(Math.round(radiusKm * 1000), 500), 20000);
+    fetch(
+      "/api/map-nearby-pois?lat=" +
+        encodeURIComponent(userLat) +
+        "&lng=" +
+        encodeURIComponent(userLng) +
+        "&radius_m=" +
+        encodeURIComponent(radiusM) +
+        "&limit=5&category=all",
+      { headers: { Accept: "application/json" }, cache: "no-store" }
+    )
+      .then(function (r) {
+        return r.json();
+      })
+      .then(renderNearPois)
+      .catch(function () {
+        st.textContent = "Nearby POI network error.";
+      });
   });
 
   if (I18N) {

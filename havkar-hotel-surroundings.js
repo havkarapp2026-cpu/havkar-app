@@ -114,16 +114,25 @@
     var camsBtn = el("button", { type: "button", className: "primary", "data-surr": "cams" }, "Nearby cameras");
     var photosBtn = el("button", { type: "button", "data-surr": "photos" }, "Nearby photos");
     var svBtn = el("button", { type: "button", "data-surr": "streetview" }, "360° Street View");
+    var poisBtn = el("button", { type: "button", "data-surr": "pois" }, "Nearby places");
+    var guideBtn = el("button", { type: "button", "data-surr": "guide" }, "Smart notes");
+    var tripBtn = el("button", { type: "button", "data-surr": "trip" }, "Add to trip");
     var routeBtn = el("button", { type: "button", "data-surr": "route-origin" }, "Route from here");
-    [satBtn, hybridBtn, streetBtn, camsBtn, photosBtn, svBtn, routeBtn].forEach(function (b) {
+    [satBtn, hybridBtn, streetBtn, camsBtn, photosBtn, svBtn, poisBtn, guideBtn, tripBtn, routeBtn].forEach(function (b) {
       tools.appendChild(b);
     });
     host.appendChild(tools);
 
     var camsBox = el("div", { className: "havkar-surroundings-list", "data-surr": "cams-list" });
     var photosBox = el("div", { className: "havkar-surroundings-list", "data-surr": "photos-list" });
+    var poisBox = el("div", { className: "havkar-surroundings-list", "data-surr": "pois-list" });
+    var guideBox = el("div", { className: "havkar-surroundings-guide", "data-surr": "guide" });
     var svBox = el("div", { className: "havkar-surroundings-sv", "data-surr": "sv" });
     host.appendChild(svBox);
+    host.appendChild(el("h3", null, "Places nearby (TomTom)"));
+    host.appendChild(poisBox);
+    host.appendChild(el("h3", null, "Smart location notes"));
+    host.appendChild(guideBox);
     host.appendChild(el("h3", null, "Cameras near stay"));
     host.appendChild(camsBox);
     host.appendChild(el("h3", null, "Licensed photos nearby"));
@@ -267,6 +276,119 @@
         card.appendChild(a);
         photosBox.appendChild(card);
       });
+    }
+
+    function renderPois(poisPayload) {
+      poisBox.innerHTML = "";
+      var groups = (poisPayload && poisPayload.groups) || [];
+      var places = (poisPayload && poisPayload.places) || [];
+      if (!places.length) {
+        poisBox.appendChild(
+          el(
+            "p",
+            { className: "havkar-surroundings-empty" },
+            (poisPayload && poisPayload.honesty) ||
+              "No TomTom POIs in this radius. Coverage is not worldwide — empty is honest."
+          )
+        );
+        return;
+      }
+      groups.forEach(function (g) {
+        if (!g.places || !g.places.length) return;
+        poisBox.appendChild(el("h4", null, g.label + " (" + g.places.length + ")"));
+        g.places.slice(0, 4).forEach(function (p) {
+          var card = el("article", { className: "havkar-surroundings-card" });
+          card.appendChild(el("strong", null, p.name || g.label));
+          card.appendChild(
+            el(
+              "p",
+              null,
+              (p.distance_m != null ? p.distance_m + " m · " : "") +
+                (p.address || "") +
+                " · TomTom · " +
+                (p.fetched_at || "")
+            )
+          );
+          var add = el("button", { type: "button" }, "Add to trip");
+          add.addEventListener("click", function () {
+            if (root.HAVKAR_TRIP_PLANNER && root._havkarTripApi) {
+              root._havkarTripApi.addStop({
+                lat: p.latitude,
+                lng: p.longitude,
+                label: p.name,
+                kind: p.category_id || "poi"
+              });
+              setStatus("Added “" + (p.name || "place") + "” to trip planner.");
+            } else {
+              setStatus("Trip planner is not mounted on this page.");
+            }
+          });
+          card.appendChild(add);
+          poisBox.appendChild(card);
+        });
+      });
+    }
+
+    function renderGuide(guide) {
+      guideBox.innerHTML = "";
+      if (!guide || !guide.ok) {
+        guideBox.appendChild(
+          el(
+            "p",
+            { className: "havkar-surroundings-empty" },
+            "Smart notes unavailable. No invented safety or hotel-quality claims."
+          )
+        );
+        return;
+      }
+      (guide.insights || []).forEach(function (ins) {
+        var card = el("article", { className: "havkar-surroundings-card" });
+        card.appendChild(el("strong", null, ins.title || "Note"));
+        card.appendChild(el("p", null, ins.detail || ""));
+        card.appendChild(
+          el(
+            "p",
+            { className: "havkar-surroundings-meta" },
+            "Source: " +
+              (ins.source || "havkar") +
+              (ins.fetched_at ? " · " + ins.fetched_at : "") +
+              (ins.confidence ? " · " + ins.confidence : "")
+          )
+        );
+        guideBox.appendChild(card);
+      });
+      (guide.limits || []).forEach(function (lim) {
+        guideBox.appendChild(
+          el("p", { className: "havkar-surroundings-empty" }, lim.detail || lim.id || "")
+        );
+      });
+    }
+
+    function loadSmartGuide() {
+      if (!state.place) return Promise.resolve(null);
+      var r = Number(radius.value) || radiusKm;
+      return fetch(
+        "/api/map-smart-guide?lat=" +
+          encodeURIComponent(state.place.latitude) +
+          "&lng=" +
+          encodeURIComponent(state.place.longitude) +
+          "&radius_m=" +
+          encodeURIComponent(Math.round(r * 1000)) +
+          "&context=stay",
+        { headers: { Accept: "application/json" }, cache: "no-store" }
+      )
+        .then(function (res) {
+          return res.json();
+        })
+        .then(function (body) {
+          state.guide = body;
+          renderGuide(body);
+          return body;
+        })
+        .catch(function () {
+          renderGuide(null);
+          return null;
+        });
     }
 
     var mlyViewer = null;
@@ -505,7 +627,9 @@
           state.payload = body;
           renderCameras(body && body.cameras);
           renderPhotos(body && body.photos);
+          renderPois(body && body.pois);
           renderStreetView(body && body.street_view);
+          loadSmartGuide();
           setStatus(
             "Surroundings · " +
               state.place.label +
@@ -513,6 +637,8 @@
               ((body && body.camera_count) || 0) +
               " · photos " +
               ((body && body.photo_count) || 0) +
+              " · places " +
+              ((body && body.pois && body.pois.count) || 0) +
               " · 360° " +
               (body && body.street_view && body.street_view.interactive_360 ? "ON" : "unavailable") +
               " · free · " +
@@ -536,6 +662,33 @@
     camsBtn.addEventListener("click", loadNearby);
     photosBtn.addEventListener("click", function () {
       renderPhotos(state.payload && state.payload.photos);
+    });
+    poisBtn.addEventListener("click", function () {
+      renderPois(state.payload && state.payload.pois);
+      try {
+        poisBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      } catch (_e) {}
+    });
+    guideBtn.addEventListener("click", function () {
+      loadSmartGuide().then(function () {
+        try {
+          guideBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        } catch (_e) {}
+      });
+    });
+    tripBtn.addEventListener("click", function () {
+      if (!state.place) return;
+      if (root.HAVKAR_TRIP_PLANNER && root._havkarTripApi) {
+        var ok = root._havkarTripApi.addStop({
+          lat: state.place.latitude,
+          lng: state.place.longitude,
+          label: state.place.label || "Stay",
+          kind: "stay"
+        });
+        setStatus(ok ? "Stay added to trip planner." : "Could not add stay (missing coords or plan full).");
+      } else {
+        setStatus("Trip planner is not mounted on this page.");
+      }
     });
     svBtn.addEventListener("click", function () {
       setStatus("Loading real street-level coverage near stay…");
@@ -611,6 +764,37 @@
     });
     var actions = card.querySelector(".card-actions") || card;
     actions.appendChild(btn);
+    if (!card.querySelector('[data-trip-add="1"]')) {
+      var trip = el(
+        "button",
+        {
+          type: "button",
+          className: "havkar-surroundings-cta",
+          "data-trip-add": "1"
+        },
+        "Add to trip"
+      );
+      trip.addEventListener("click", function () {
+        if (!root._havkarTripApi) {
+          if (setNote) setNote("Trip planner is not ready on this page.");
+          return;
+        }
+        var lat = Number(row.latitude);
+        var lng = Number(row.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+          if (setNote) setNote("This listing has no verified coordinates — not added.");
+          return;
+        }
+        root._havkarTripApi.addStop({
+          lat: lat,
+          lng: lng,
+          label: row.title || "Stay",
+          kind: "stay"
+        });
+        if (setNote) setNote("Added to trip planner (device-local).");
+      });
+      actions.appendChild(trip);
+    }
   }
 
   root.HAVKAR_HOTEL_SURROUNDINGS = {

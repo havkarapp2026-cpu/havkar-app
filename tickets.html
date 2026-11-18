@@ -487,6 +487,8 @@ html[dir="rtl"] .havkar-map-layers{
         <div id="ticketsMapShell" class="havkar-map-shell">
           <div id="ticketsMapHost" class="havkar-map-host" style="height:min(52vh,420px);min-height:280px;border-radius:14px;border:0"></div>
         </div>
+        <div id="havkarTripPlanner" class="havkar-trip-planner" aria-label="Trip planner"></div>
+        <div id="havkarSurroundingsPanel" class="havkar-surroundings" hidden aria-live="polite"></div>
         <p id="ticketsMapNote" class="pending-note" role="status">Search origin and destination to place markers. Illustrative flight connections are geographic lines, not verified airways. Satellite tiles are static imagery, not a live camera. Live video cams use curated YouTube Live embeds; intersection layer is licensed JPEG snapshots only. Rain/cameras only from licensed public sources.</p>
         <!-- Legacy ids kept for compatibility; pro toolbar owns share/copy UX -->
         <button type="button" id="ticketsShareLocationBtn" hidden aria-hidden="true">Share location</button>
@@ -1133,6 +1135,7 @@ html[dir="rtl"] .havkar-map-layers{
 <script src="/havkar-module-map.js"></script>
 <script src="/havkar-map-live-layers.js"></script>
 <script src="/havkar-map-pro-toolbar.js"></script>
+<script src="/havkar-trip-planner.js"></script>
 <script src="/havkar-hotel-surroundings.js"></script>
 <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
@@ -1180,6 +1183,12 @@ html[dir="rtl"] .havkar-map-layers{
         mapHost: 'ticketsMapHost',
         api: api,
         setNote: setMapNote
+      });
+    }
+    if(window.HAVKAR_TRIP_PLANNER && window.HAVKAR_TRIP_PLANNER.mount){
+      window._havkarTripApi = window.HAVKAR_TRIP_PLANNER.mount({
+        hostId: 'havkarTripPlanner',
+        mapApi: api
       });
     }
     if(window.HAVKAR_MAP_LIVE_LAYERS && window.HAVKAR_MAP_LIVE_LAYERS.attachLayerMenu){

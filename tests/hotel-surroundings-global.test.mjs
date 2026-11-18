@@ -252,7 +252,7 @@ test("pro toolbar autocomplete + nearby tools stay free; Maps Plus sales OFF; 15
   assert.match(toolbar, /radius_m=50/);
   assert.match(read("lib/havkar-maps-plus.cjs"), /sales_enabled:\s*false/);
   assert.equal((read("index.html").match(/class="tile-label"/g) || []).length, 15);
-  assert.match(read("sw.js"), /hotel-streetview-mapillary-v1/);
+  assert.match(read("sw.js"), /smart-travel-health-v1|hotel-streetview-mapillary-v1/);
 });
 
 test("nearby surroundings handler returns structured payload for Rome", async () => {
@@ -278,6 +278,8 @@ test("nearby surroundings handler returns structured payload for Rome", async ()
   assert.ok(Array.isArray(out.body.cameras));
   assert.ok(Array.isArray(out.body.photos));
   assert.ok(out.body.street_view);
+  assert.ok(out.body.pois);
   assert.equal(typeof out.body.camera_count, "number");
   assert.match(String(out.body.coverage && out.body.coverage.street_view), /Mapillary|GOOGLE|Embed/i);
+  assert.match(String(out.body.coverage && out.body.coverage.pois), /TomTom/i);
 });
