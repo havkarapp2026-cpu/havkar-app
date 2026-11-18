@@ -148,17 +148,18 @@
     var poisBox = el("div", { className: "havkar-surroundings-list", "data-surr": "pois-list" });
     var guideBox = el("div", { className: "havkar-surroundings-guide", "data-surr": "guide" });
     var svBox = el("div", { className: "havkar-surroundings-sv", "data-surr": "sv" });
-    host.appendChild(svBox);
     var hPlaces = el("h3", { "data-i18n-map": "maps.places_nearby" }, mt("maps.places_nearby") + " (TomTom)");
     var hGuide = el("h3", { "data-i18n-map": "maps.smart_notes" }, mt("maps.smart_notes"));
     var hCams = el("h3", { "data-i18n-map": "maps.cameras_near" }, mt("maps.cameras_near"));
     var hPhotos = el("h3", { "data-i18n-map": "maps.photos_nearby" }, mt("maps.photos_nearby"));
+    /* Cameras first so empty-radius nearest LIVE + Play stay above the fold. */
+    host.appendChild(hCams);
+    host.appendChild(camsBox);
+    host.appendChild(svBox);
     host.appendChild(hPlaces);
     host.appendChild(poisBox);
     host.appendChild(hGuide);
     host.appendChild(guideBox);
-    host.appendChild(hCams);
-    host.appendChild(camsBox);
     host.appendChild(hPhotos);
     host.appendChild(photosBox);
 
@@ -185,7 +186,7 @@
     document.addEventListener("havkar:i18n-ready", refreshSurrChrome);
     document.addEventListener("havkar:language-changed", refreshSurrChrome);
 
-    var state = { place: null, payload: null };
+    var state = { place: null, payload: null, focus: opts.focus || "all" };
 
     function setStatus(msg) {
       status.textContent = msg || "";
@@ -819,6 +820,11 @@
               " · " + mt("maps.msg_nearest_live", { km: nearest.distance_km });
           }
           setStatus(statusMsg);
+          if (state.focus === "cameras" || state.focus === "all") {
+            try {
+              hCams.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            } catch (_scroll) {}
+          }
         })
         .catch(function () {
           setStatus(mt("maps.msg_surr_fail"));

@@ -150,3 +150,13 @@ test("nearby surroundings keeps nearest_live_camera when radius empty", async ()
     assert.ok(Number.isFinite(Number(body.nearest_live_camera.distance_km)));
   }
 });
+
+test("surroundings source ships cameras section before 360 and Play on nearest", () => {
+  const surr = read("havkar-hotel-surroundings.js");
+  const camsIdx = surr.indexOf('host.appendChild(hCams)');
+  const svIdx = surr.indexOf('host.appendChild(svBox)');
+  assert.ok(camsIdx > 0 && svIdx > camsIdx, "cameras block before street-view block");
+  assert.match(surr, /state\.focus === "cameras"/);
+  assert.match(read("lib/map-nearby-surroundings.mjs"), /embed_url:\s*nearestLive\.embed_url/);
+  assert.match(read("lib/map-nearby-surroundings.mjs"), /watch_url:\s*nearestLive\.watch_url/);
+});
