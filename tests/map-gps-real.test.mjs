@@ -44,8 +44,8 @@ test("GPS marker CSS uses HAVKAR green pulse", () => {
 });
 
 test("service worker bumped for GPS release and fifteen tiles unchanged", () => {
-  assert.match(read("sw.js"), /live-cameras-restore-v1|map-gps-real-v1|havkar-sw-20261118/);
-  assert.match(read("havkar-sw-register.js"), /live-cameras-restore-v1|map-gps-real-v1|havkar-sw-20261118/);
+  assert.match(read("sw.js"), /map-final-dock-v1|live-cameras-restore-v1|map-gps-real-v1|havkar-sw-20261118/);
+  assert.match(read("havkar-sw-register.js"), /map-final-dock-v1|live-cameras-restore-v1|map-gps-real-v1|havkar-sw-20261118/);
   const tiles = (read("index.html").match(/class="tile-label"/g) || []).length;
   assert.equal(tiles, 15);
   assert.match(read("tickets.html"), /havkar-map-pro-toolbar\.js/);

@@ -376,7 +376,7 @@
       viewer.querySelector('[data-cam="attr"]').textContent =
         (cam.attribution || "") +
         (cam.license ? " · " + cam.license : "") +
-        (cam.probed_at ? " · probed " + cam.probed_at : "") +
+        "" +
         (cam.updated_at ? " · " + cam.updated_at : "");
       var img = viewer.querySelector('[data-cam="img"]');
       var yt = viewer.querySelector('[data-cam="yt"]');
@@ -448,11 +448,7 @@
             }
             /* UNKNOWN (bot-check): never label as verified LIVE; keep official link */
             if (availability === "unknown" || (body && body.probe && body.probe.status === "unknown")) {
-              status.textContent =
-                "Status UNKNOWN (YouTube bot-check or inconclusive probe) — not labeled as verified LIVE. Use the official YouTube link. " +
-                (body && body.official_api_configured === false
-                  ? "Owner can add HAVKAR_YOUTUBE_API_KEY for official Data API confirmation."
-                  : "");
+              status.textContent = mt("maps.cam_state_exists_no_play");
               var altU =
                 (body && body.alternatives && body.alternatives[0]) ||
                 suggestAlternativeLive(cam);
@@ -828,10 +824,7 @@
           if (!body || !body.available || !body.tile_url_template) {
             state.trafficOn = false;
             markToggle("traffic", false);
-            setMeta(
-              (body && body.message) ||
-                "Live traffic flow is not enabled (HAVKAR_TOMTOM_API_KEY required)."
-            );
+            setMeta((body && body.message) || mt("maps.msg_traffic_unavailable"));
             return false;
           }
           state.trafficLayer = L.tileLayer(body.tile_url_template, {
@@ -850,11 +843,7 @@
           }
           state.trafficOn = true;
           markToggle("traffic", true);
-          var updated = body.last_updated || body.fetched_at || "";
-          setMeta(
-            (body.message || "Live TomTom traffic enabled.") +
-              (updated ? " · updated " + updated : "")
-          );
+          setMeta(body.message || mt("maps.layer_traffic"));
           return true;
         })
         .catch(function () {

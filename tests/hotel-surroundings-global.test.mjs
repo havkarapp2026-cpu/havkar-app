@@ -267,7 +267,7 @@ test("pro toolbar autocomplete + nearby tools stay free; Maps Plus sales OFF; 15
   assert.match(toolbar, /radius_m=50/);
   assert.match(read("lib/havkar-maps-plus.cjs"), /sales_enabled:\s*false/);
   assert.equal((read("index.html").match(/class="tile-label"/g) || []).length, 15);
-  assert.match(read("sw.js"), /live-cameras-restore-v1|map-search-destination-v1|map-i18n-complete-v1|map-surroundings-bari-v1|smart-travel-health-v1|hotel-streetview-mapillary-v1/);
+  assert.match(read("sw.js"), /map-final-dock-v1|live-cameras-restore-v1|map-search-destination-v1|map-i18n-complete-v1|map-surroundings-bari-v1|smart-travel-health-v1|hotel-streetview-mapillary-v1/);
 });
 
 test("nearby surroundings handler returns structured payload for Rome", async () => {
