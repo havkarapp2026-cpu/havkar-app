@@ -39,6 +39,7 @@
 .filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .filter-row select{min-height:42px;border-radius:10px;border:1px solid #cfd;padding:0 10px;font:inherit;flex:1}
 .fav-btn,.cmp-btn{min-height:36px;border-radius:10px;border:1px solid #1b5e20;background:#fff;color:#1b5e20;font-weight:700;padding:0 10px;cursor:pointer;margin-top:8px;margin-right:6px}
+.havkar-surroundings-cta{display:inline-flex;align-items:center}
 .fav-btn.active{background:#e53935;border-color:#e53935;color:#fff}
 #compareTray{position:sticky;bottom:64px;z-index:30;background:#fff;border:1px solid #cfe0d3;border-radius:14px;padding:10px;margin:12px 0;box-shadow:0 8px 20px rgba(0,0,0,.08)}
 #compareTray[hidden]{display:none!important}
@@ -220,6 +221,7 @@ html[dir="rtl"] .havkar-camera-viewer [data-cam="card"]{text-align:right}
 <script src="/havkar-map.js"></script>
 <script src="/havkar-map-live-layers.js"></script>
 <script src="/havkar-map-pro-toolbar.js"></script>
+<script src="/havkar-hotel-surroundings.js"></script>
 <script>
 (function () {
   var currencySelect = document.getElementById("currencySelect");
@@ -236,6 +238,7 @@ html[dir="rtl"] .havkar-camera-viewer [data-cam="card"]{text-align:right}
   var payQuoteRaw = document.getElementById("payQuoteRaw");
   var selectedGeo = { latitude: 41.8933203, longitude: 12.4829321, label: "Roma, Italia" };
   var map = null;
+  var accMapApi = null;
   var marker = null;
   var pinLayer = null;
   var lastListingPins = [];
@@ -423,7 +426,7 @@ html[dir="rtl"] .havkar-camera-viewer [data-cam="card"]{text-align:right}
       marker.setLatLng(ev.latlng);
       geoLabel.textContent = "Map pin: " + selectedGeo.label;
     });
-    var accMapApi = {
+    accMapApi = {
       map: map,
       L: L,
       setBaseLayer: setAccommodationBaseLayer,
@@ -651,9 +654,14 @@ html[dir="rtl"] .havkar-camera-viewer [data-cam="card"]{text-align:right}
     results.forEach(function (row) {
       var btn = document.createElement("button");
       btn.type = "button";
-      btn.textContent = row.label;
+      var cityCountry = [row.city, row.country || (row.address && row.address.country)]
+        .filter(Boolean)
+        .join(", ");
+      btn.textContent =
+        row.label +
+        (cityCountry && String(row.label).indexOf(cityCountry) === -1 ? " · " + cityCountry : "");
       btn.addEventListener("click", function () {
-        document.getElementById("cityInput").value = row.label.split(",")[0];
+        document.getElementById("cityInput").value = row.label;
         setGeo(row);
         geoSuggest.hidden = true;
       });
@@ -832,6 +840,16 @@ html[dir="rtl"] .havkar-camera-viewer [data-cam="card"]{text-align:right}
         cmp.addEventListener("click", function () { toggleCompare(Object.assign({}, row, { id: rid })); });
         actions.appendChild(fav);
         actions.appendChild(cmp);
+        if (window.HAVKAR_HOTEL_SURROUNDINGS && window.HAVKAR_HOTEL_SURROUNDINGS.attachListingButton) {
+          window.HAVKAR_HOTEL_SURROUNDINGS.attachListingButton(
+            card,
+            Object.assign({}, row, { id: rid }),
+            accMapApi || null,
+            function (text) {
+              if (geoLabel) geoLabel.textContent = text || "";
+            }
+          );
+        }
         if (row.latitude != null && row.longitude != null) {
           pins.push({
             id: rid,

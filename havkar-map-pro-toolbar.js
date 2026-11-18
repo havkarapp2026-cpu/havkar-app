@@ -84,7 +84,7 @@
     var placeInput = el("input", {
       type: "search",
       "data-pro": "place",
-      placeholder: "Search place or address worldwide",
+      placeholder: "Search hotel, street, city or address worldwide",
       autocomplete: "off",
       "aria-label": "Search place or address"
     });
@@ -92,6 +92,34 @@
     searchRow.appendChild(placeInput);
     searchRow.appendChild(placeBtn);
     host.appendChild(searchRow);
+    var suggestBox = el("div", {
+      className: "havkar-map-pro-suggest",
+      "data-pro": "suggest",
+      hidden: "hidden",
+      role: "listbox",
+      "aria-label": "Place suggestions"
+    });
+    host.appendChild(suggestBox);
+
+    var nearRow = el("div", { className: "havkar-map-pro-near" });
+    var radiusLabel = el("label", null, "Nearby radius ");
+    var radiusSel = el("select", { "data-pro": "radius", "aria-label": "Nearby search radius" });
+    [1, 2, 3, 5, 10, 15].forEach(function (n) {
+      var o = el("option", { value: String(n) }, String(n) + " km");
+      if (n === 3) o.selected = true;
+      radiusSel.appendChild(o);
+    });
+    radiusLabel.appendChild(radiusSel);
+    var nearCamsBtn = el("button", { type: "button", "data-pro": "near-cams" }, "Nearby cameras");
+    var nearPhotosBtn = el("button", { type: "button", "data-pro": "near-photos" }, "Nearby photos");
+    var streetViewBtn = el("button", { type: "button", "data-pro": "street-view" }, "360° Street View");
+    var surroundBtn = el("button", { type: "button", className: "primary", "data-pro": "surroundings" }, "View surroundings");
+    nearRow.appendChild(radiusLabel);
+    nearRow.appendChild(nearCamsBtn);
+    nearRow.appendChild(nearPhotosBtn);
+    nearRow.appendChild(streetViewBtn);
+    nearRow.appendChild(surroundBtn);
+    host.appendChild(nearRow);
 
     var routeRow = el("div", { className: "havkar-map-pro-route" });
     var fromInput = el("input", {
@@ -161,17 +189,175 @@
       return { latitude: 41.9028, longitude: 12.4964, label: "Map" };
     }
 
-    function geocode(q) {
-      if (root.HAVKAR_MAP && root.HAVKAR_MAP.geocode) {
+    function geocode(q, typeahead) {
+      var url =
+        "/api/map-tomtom-search?q=" +
+        encodeURIComponent(q) +
+        "&limit=" +
+        (typeahead ? "8" : "5") +
+        (typeahead ? "&typeahead=true" : "");
+      if (!typeahead && root.HAVKAR_MAP && root.HAVKAR_MAP.geocode) {
         return root.HAVKAR_MAP.geocode(q);
       }
-      return fetch("/api/map-tomtom-search?q=" + encodeURIComponent(q) + "&limit=5", {
+      return fetch(url, {
         headers: { Accept: "application/json" },
         cache: "no-store"
       }).then(function (r) {
         return r.json();
       });
     }
+
+    function currentCenter() {
+      try {
+        if (api && api.map && api.map.getCenter) {
+          var c = api.map.getCenter();
+          return { latitude: c.lat, longitude: c.lng };
+        }
+      } catch (_e) {}
+      return null;
+    }
+
+    function applyPlace(primary) {
+      if (!primary) return;
+      if (api && api.setCenter) {
+        api.setCenter(primary.latitude, primary.longitude, 14);
+      } else if (api && api.map) {
+        api.map.setView([primary.latitude, primary.longitude], 14);
+      }
+      if (api && api.setMarkers) {
+        api.setMarkers(
+          [
+            {
+              id: "place",
+              latitude: primary.latitude,
+              longitude: primary.longitude,
+              label: primary.label || "Place"
+            }
+          ],
+          { fit: true }
+        );
+      }
+      placeInput.value = primary.label || placeInput.value;
+      suggestBox.hidden = true;
+      suggestBox.innerHTML = "";
+    }
+
+    var suggestTimer = null;
+    placeInput.addEventListener("input", function () {
+      var q = String(placeInput.value || "").trim();
+      clearTimeout(suggestTimer);
+      if (q.length < 2) {
+        suggestBox.hidden = true;
+        suggestBox.innerHTML = "";
+        return;
+      }
+      suggestTimer = setTimeout(function () {
+        geocode(q, true).then(function (geo) {
+          suggestBox.innerHTML = "";
+          var rows = (geo && geo.results) || [];
+          if (!rows.length) {
+            suggestBox.hidden = true;
+            return;
+          }
+          rows.forEach(function (row) {
+            var btn = el("button", { type: "button", role: "option" });
+            var cityCountry = [row.city, row.country || (row.address && row.address.country)]
+              .filter(Boolean)
+              .join(", ");
+            btn.textContent = row.label + (cityCountry && String(row.label).indexOf(cityCountry) === -1 ? " · " + cityCountry : "");
+            btn.addEventListener("click", function () {
+              applyPlace(row);
+              note(
+                "Place: " +
+                  (row.label || "") +
+                  (row.city ? " · " + row.city : "") +
+                  (row.country ? ", " + row.country : "") +
+                  " · TomTom autocomplete"
+              );
+            });
+            suggestBox.appendChild(btn);
+          });
+          suggestBox.hidden = false;
+        });
+      }, 280);
+    });
+
+    function openSurroundingsAtCenter(kind) {
+      var c = currentCenter();
+      if (!c) {
+        note("Move or search the map to a place first.");
+        return;
+      }
+      var radius = Number(radiusSel.value) || 3;
+      if (root.HAVKAR_HOTEL_SURROUNDINGS && root.HAVKAR_HOTEL_SURROUNDINGS.open) {
+        root.HAVKAR_HOTEL_SURROUNDINGS.open({
+          api: api,
+          setNote: note,
+          latitude: c.latitude,
+          longitude: c.longitude,
+          label: "Map center",
+          radius_km: radius
+        });
+        return;
+      }
+      note("Loading nearby " + (kind || "media") + "…");
+      fetch(
+        "/api/map-nearby-surroundings?lat=" +
+          encodeURIComponent(c.latitude) +
+          "&lng=" +
+          encodeURIComponent(c.longitude) +
+          "&radius_km=" +
+          encodeURIComponent(radius),
+        { headers: { Accept: "application/json" }, cache: "no-store" }
+      )
+        .then(function (r) {
+          return r.json();
+        })
+        .then(function (body) {
+          note(
+            "Nearby · cameras " +
+              ((body && body.camera_count) || 0) +
+              " · photos " +
+              ((body && body.photo_count) || 0) +
+              " · 360° " +
+              (body && body.street_view && body.street_view.interactive_360 ? "ON" : "unavailable") +
+              (body && body.message ? " · " + body.message : "")
+          );
+        })
+        .catch(function () {
+          note("Nearby lookup failed.");
+        });
+    }
+
+    nearCamsBtn.addEventListener("click", function () {
+      openSurroundingsAtCenter("cameras");
+    });
+    nearPhotosBtn.addEventListener("click", function () {
+      openSurroundingsAtCenter("photos");
+    });
+    streetViewBtn.addEventListener("click", function () {
+      fetch("/api/map-street-view", { headers: { Accept: "application/json" } })
+        .then(function (r) {
+          return r.json();
+        })
+        .then(function (body) {
+          if (body && body.interactive_360) {
+            note("Interactive 360° Street View is available.");
+            return;
+          }
+          note(
+            (body && body.reason) ||
+              "360° Street View is not configured. Use satellite / hybrid or nearby licensed photos — no fake panoramas."
+          );
+          openSurroundingsAtCenter("streetview");
+        })
+        .catch(function () {
+          note("Street View status unavailable.");
+        });
+    });
+    surroundBtn.addEventListener("click", function () {
+      openSurroundingsAtCenter("all");
+    });
 
     function parseLatLngQuery(q) {
       var raw = String(q || "").trim();
@@ -323,27 +509,12 @@
           note("No matching place found. Coordinates are never invented.");
           return;
         }
-        if (api && api.setCenter) {
-          api.setCenter(geo.primary.latitude, geo.primary.longitude, 13);
-        } else if (api && api.map) {
-          api.map.setView([geo.primary.latitude, geo.primary.longitude], 13);
-        }
-        if (api && api.setMarkers) {
-          api.setMarkers(
-            [
-              {
-                id: "place",
-                latitude: geo.primary.latitude,
-                longitude: geo.primary.longitude,
-                label: geo.primary.label || q
-              }
-            ],
-            { fit: true }
-          );
-        }
+        applyPlace(geo.primary);
         note(
           "Place: " +
             (geo.primary.label || q) +
+            (geo.primary.city ? " · " + geo.primary.city : "") +
+            (geo.primary.country ? ", " + geo.primary.country : "") +
             " · provider " +
             (geo.provider || "search") +
             (geo.last_updated ? " · " + geo.last_updated : "")
