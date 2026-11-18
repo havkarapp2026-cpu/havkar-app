@@ -44,8 +44,8 @@
       ["hybrid", "Hybrid"],
       ["live", "Live map"],
       ["rain", "Rain radar"],
-      ["cameras", "Live cameras"],
-      ["intersection", "Intersection cameras"],
+      ["cameras", "Live video cams"],
+      ["intersection", "Intersection snapshots"],
       ["traffic", "Traffic status"]
     ];
 
@@ -95,9 +95,13 @@
       '<input type="search" data-cam="q" placeholder="Search name / city / country" style="flex:1;min-width:160px">' +
       '<select data-cam="country" aria-label="Country"><option value="all">All countries</option></select>' +
       '<select data-cam="city" aria-label="City"><option value="all">All cities</option></select>' +
-      '<select data-cam="type"><option value="all">All types</option><option value="public_live">Public live</option><option value="intersection">Intersections</option></select>' +
+      '<select data-cam="type" aria-label="Category"><option value="all">All categories</option>' +
+      '<option value="street">Streets</option><option value="square">Squares</option>' +
+      '<option value="tourism">Tourism</option><option value="coast">Coasts / ports</option>' +
+      '<option value="intersection">Intersections (JPEG)</option></select>' +
       '</div>' +
-      '<div data-cam="list" style="max-height:160px;overflow:auto;font-size:.85rem"></div>';
+      '<p data-cam="honesty" style="margin:0 0 6px;font-size:.8rem;color:#555"></p>' +
+      '<div data-cam="list" style="max-height:180px;overflow:auto;font-size:.85rem"></div>';
     host.appendChild(cameraPanel);
 
     var viewer = el("div", {
@@ -112,15 +116,41 @@
     viewer.style.cssText =
       "position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:16px;pointer-events:none";
     viewer.innerHTML =
-      '<div data-cam="card" style="background:#fff;border-radius:14px;max-width:min(920px,96vw);width:100%;padding:12px;position:relative;pointer-events:auto">' +
-      '<button type="button" data-cam="close" style="position:absolute;right:10px;top:8px;min-height:40px;min-width:64px;z-index:1">Close</button>' +
-      '<h3 data-cam="title" style="margin:0 36px 8px 0;color:#1b5e20"></h3>' +
+      '<div data-cam="card" style="background:#fff;border-radius:14px;max-width:min(960px,96vw);width:100%;padding:12px;position:relative;pointer-events:auto">' +
+      '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin:0 0 8px">' +
+      '<button type="button" data-cam="play" style="min-height:40px">Play</button>' +
+      '<button type="button" data-cam="pause" style="min-height:40px">Pause</button>' +
+      '<button type="button" data-cam="fullscreen" style="min-height:40px">Fullscreen</button>' +
+      '<button type="button" data-cam="close" style="min-height:40px;min-width:64px">Close</button></div>' +
+      '<h3 data-cam="title" style="margin:0 0 6px;color:#1b5e20"></h3>' +
+      '<p data-cam="place" style="margin:0 0 4px;font-size:.9rem"></p>' +
       '<p data-cam="attr" style="margin:0 0 8px;font-size:.8rem;color:#555"></p>' +
-      '<img data-cam="img" alt="Public camera frame" style="width:100%;max-height:70vh;object-fit:contain;background:#111;border-radius:8px">' +
-      '<p data-cam="status" style="margin:8px 0 0;font-size:.8rem"></p></div>';
+      '<div data-cam="media" style="width:100%;aspect-ratio:16/9;background:#111;border-radius:8px;overflow:hidden;position:relative">' +
+      '<iframe data-cam="yt" title="Live public webcam" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen style="display:none;width:100%;height:100%;border:0"></iframe>' +
+      '<img data-cam="img" alt="Public camera frame" style="display:none;width:100%;height:100%;object-fit:contain">' +
+      '</div>' +
+      '<p data-cam="status" style="margin:8px 0 0;font-size:.8rem"></p>' +
+      '<p style="margin:8px 0 0"><a data-cam="watch" href="#" target="_blank" rel="noopener noreferrer">Open official source</a></p></div>';
     document.body.appendChild(viewer);
 
+    function ytCommand(command) {
+      var frame = viewer.querySelector('[data-cam="yt"]');
+      if (!frame || !frame.contentWindow || frame.style.display === "none") return;
+      try {
+        frame.contentWindow.postMessage(
+          JSON.stringify({ event: "command", func: command, args: [] }),
+          "*"
+        );
+      } catch (_e) {}
+    }
+
     function closeCameraViewer() {
+      if (document.fullscreenElement) {
+        try {
+          document.exitFullscreen();
+        } catch (_e) {}
+      }
+      ytCommand("pauseVideo");
       viewer.style.display = "none";
       viewer.style.pointerEvents = "none";
       viewer.setAttribute("aria-hidden", "true");
@@ -130,7 +160,12 @@
         img.onload = null;
         img.onerror = null;
         img.removeAttribute("src");
-        img.alt = "Public camera frame";
+        img.style.display = "none";
+      }
+      var yt = viewer.querySelector('[data-cam="yt"]');
+      if (yt) {
+        yt.removeAttribute("src");
+        yt.style.display = "none";
       }
       var status = viewer.querySelector('[data-cam="status"]');
       if (status) status.textContent = "";
@@ -289,26 +324,60 @@
       }
       openCameraViewerShell();
       viewer.querySelector('[data-cam="title"]').textContent = cam.name || cam.id;
+      viewer.querySelector('[data-cam="place"]').textContent =
+        (cam.place || cam.city || "") +
+        (cam.country ? " · " + cam.country : "") +
+        (cam.category ? " · " + cam.category : "");
       viewer.querySelector('[data-cam="attr"]').textContent =
         (cam.attribution || "") +
         (cam.license ? " · " + cam.license : "") +
-        (cam.updated_at ? " · updated " + cam.updated_at : "");
+        (cam.updated_at ? " · " + cam.updated_at : "");
       var img = viewer.querySelector('[data-cam="img"]');
+      var yt = viewer.querySelector('[data-cam="yt"]');
       var status = viewer.querySelector('[data-cam="status"]');
-      var url = cam.image_url || cam.frame_proxy || "";
-      if (!/^https:\/\//i.test(url)) {
-        status.textContent = "This camera frame is unavailable right now.";
-        img.removeAttribute("src");
+      var watch = viewer.querySelector('[data-cam="watch"]');
+      var watchUrl = cam.watch_url || cam.source_url || cam.image_url || "";
+      if (watch) {
+        watch.href = /^https:\/\//i.test(watchUrl) ? watchUrl : "#";
+        watch.textContent = cam.live_stream
+          ? "Open official live source"
+          : "Open official snapshot source";
+      }
+
+      img.style.display = "none";
+      yt.style.display = "none";
+      img.removeAttribute("src");
+      yt.removeAttribute("src");
+
+      if (cam.live_stream && cam.youtube_id && /^[\w-]{11}$/.test(cam.youtube_id)) {
+        status.textContent = "Loading official YouTube live player…";
+        yt.style.display = "block";
+        yt.src =
+          "https://www.youtube-nocookie.com/embed/" +
+          encodeURIComponent(cam.youtube_id) +
+          "?playsinline=1&rel=0&modestbranding=1&enablejsapi=1&autoplay=1";
+        status.textContent =
+          "LIVE VIDEO via official YouTube embed · " +
+          (cam.status === "unavailable" ? "source may be offline" : "curated public webcam");
         return;
       }
-      status.textContent = "Loading frame…";
+
+      var url = cam.image_url || cam.frame_proxy || "";
+      if (!/^https:\/\//i.test(url)) {
+        status.textContent =
+          "No playable feed here. Use the official source link if available.";
+        return;
+      }
+      status.textContent = "Loading periodic snapshot (not a live video)…";
+      img.style.display = "block";
       img.onload = function () {
-        status.textContent = "Public licensed snapshot (not a private/police camera).";
+        status.textContent =
+          "Periodic public snapshot — NOT live video. Source: " +
+          (cam.attribution || "licensed feed");
       };
       img.onerror = function () {
-        status.textContent = "This camera frame is unavailable right now.";
+        status.textContent = "This snapshot is unavailable right now.";
       };
-      /* Prefer original HTTPS image URL returned by our allowlisted API only. */
       img.src = url;
     }
 
@@ -355,7 +424,10 @@
       var cityFilter =
         (cameraPanel.querySelector('[data-cam="city"]') || {}).value || "all";
       var rows = state.cameras.filter(function (c) {
-        if (typeFilter && typeFilter !== "all" && c.kind !== typeFilter) return false;
+        if (typeFilter && typeFilter !== "all") {
+          var cat = String(c.category || c.kind || "");
+          if (cat !== typeFilter && c.kind !== typeFilter) return false;
+        }
         if (countryFilter !== "all" && String(c.country || "") !== countryFilter) {
           return false;
         }
@@ -365,6 +437,8 @@
           String(c.name || "").toLowerCase().indexOf(q) >= 0 ||
           String(c.city || "").toLowerCase().indexOf(q) >= 0 ||
           String(c.country || "").toLowerCase().indexOf(q) >= 0 ||
+          String(c.place || "").toLowerCase().indexOf(q) >= 0 ||
+          String(c.category || "").toLowerCase().indexOf(q) >= 0 ||
           String(c.source || "").toLowerCase().indexOf(q) >= 0
         );
       });
@@ -376,16 +450,17 @@
       rows.slice(0, 40).forEach(function (cam) {
         var row = el("button", { type: "button" });
         row.style.cssText =
-          "display:block;width:100%;text-align:left;margin:0 0 6px;padding:8px;border:1px solid #c8e6c9;border-radius:8px;background:#f1f8e9;cursor:pointer;color:#1b5e20";
+          "display:block;width:100%;text-align:start;margin:0 0 6px;padding:10px;min-height:44px;border:1px solid #c8e6c9;border-radius:8px;background:#f1f8e9;cursor:pointer;color:#1b5e20";
         var feedLabel =
           cam.feed_type === "jpeg_periodic" || cam.live_stream === false
-            ? "periodic"
-            : "live";
+            ? "periodic snapshot"
+            : "LIVE video";
         row.textContent =
-          (cam.kind === "intersection" ? "[X] " : "[*] ") +
+          (cam.live_stream ? "[LIVE] " : "[JPEG] ") +
           (cam.name || cam.id) +
           " · " +
-          (cam.city || cam.country || "") +
+          (cam.place || cam.city || "") +
+          (cam.country ? ", " + cam.country : "") +
           " · " +
           feedLabel +
           (cam.attribution ? " · " + cam.attribution : "");
@@ -400,23 +475,32 @@
     }
 
     function loadCameras(kind) {
+      var mode = kind === "intersection" ? "intersection" : "live";
       var b = map.getBounds();
-      if (!b) {
-        setMeta("Map bounds unavailable.");
-        return Promise.resolve(false);
+      var bbox = "";
+      if (b) {
+        bbox =
+          b.getWest() + "," + b.getSouth() + "," + b.getEast() + "," + b.getNorth();
       }
-      var bbox =
-        b.getWest() + "," + b.getSouth() + "," + b.getEast() + "," + b.getNorth();
-      setMeta("Loading licensed public cameras…");
+      setMeta(
+        mode === "intersection"
+          ? "Loading licensed intersection snapshots…"
+          : "Loading curated live video webcams…"
+      );
       cameraPanel.hidden = false;
-      return fetch(
-        "/api/map-public-cameras?bbox=" +
-          encodeURIComponent(bbox) +
-          "&kind=" +
-          encodeURIComponent(kind || "all") +
-          "&limit=50",
-        { headers: { Accept: "application/json" } }
-      )
+      var honesty = cameraPanel.querySelector('[data-cam="honesty"]');
+      if (honesty) {
+        honesty.textContent =
+          mode === "intersection"
+            ? "Intersection layer: licensed JPEG snapshots only — never labeled as live video."
+            : "Live video layer: curated official YouTube Live public webcams (embed). JPEG traffic cams stay on the intersection layer.";
+      }
+      var endpoint =
+        mode === "intersection"
+          ? "/api/map-public-cameras?kind=intersection&limit=50" +
+            (bbox ? "&bbox=" + encodeURIComponent(bbox) : "")
+          : "/api/map-live-videos?limit=40";
+      return fetch(endpoint, { headers: { Accept: "application/json" } })
         .then(function (r) {
           return r.json();
         })
@@ -427,21 +511,33 @@
           state.cameraLayer = L.layerGroup();
           state.cameras = (body && body.cameras) || [];
           state.cameras.forEach(function (cam) {
-            var marker = L.circleMarker([cam.latitude, cam.longitude], {
-              radius: 7,
-              color: cam.kind === "intersection" ? "#e65100" : "#1b5e20",
-              fillColor: cam.kind === "intersection" ? "#ff9800" : "#66bb6a",
-              fillOpacity: 0.9,
+            var lat = Number(cam.latitude);
+            var lon = Number(cam.longitude);
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+            var marker = L.circleMarker([lat, lon], {
+              radius: 8,
+              color: mode === "intersection" ? "#e65100" : "#1b5e20",
+              fillColor: mode === "intersection" ? "#ff9800" : "#66bb6a",
+              fillOpacity: 0.95,
               weight: 2
             });
+            marker.bindTooltip(
+              (cam.name || cam.id) +
+                (cam.live_stream ? " · LIVE" : " · snapshot")
+            );
             marker.bindPopup(
               "<strong>" +
                 String(cam.name || cam.id).replace(/[<>&]/g, "") +
                 "</strong><br>" +
+                String(cam.city || "").replace(/[<>&]/g, "") +
+                (cam.country ? ", " + String(cam.country).replace(/[<>&]/g, "") : "") +
+                "<br>" +
                 String(cam.attribution || "").replace(/[<>&]/g, "") +
                 "<br><button type='button' data-open-cam='" +
                 String(cam.id).replace(/'/g, "") +
-                "'>View</button>"
+                "'>" +
+                (cam.live_stream ? "Play live video" : "View snapshot") +
+                "</button>"
             );
             marker.on("popupopen", function () {
               var btn = document.querySelector('[data-open-cam="' + cam.id + '"]');
@@ -451,6 +547,9 @@
                 });
               }
             });
+            marker.on("click", function () {
+              openCamera(cam);
+            });
             state.cameraLayer.addLayer(marker);
           });
           state.cameraLayer.addTo(map);
@@ -459,16 +558,26 @@
           var ok = state.cameras.length > 0;
           setMeta(
             ok
-              ? "Public cameras · " +
+              ? mode === "intersection"
+                ? "Intersection snapshots · " +
                   state.cameras.length +
-                  " licensed feeds in view · sources: Singapore LTA + commercialOk Datumfeed registries"
+                  " licensed JPEG feeds · Singapore LTA + commercialOk Datumfeed"
+                : "Live video cams · " +
+                  state.cameras.length +
+                  " curated YouTube Live embeds · not JPEG snapshots"
               : (body && body.message) ||
-                  "No licensed public cameras are available in this map area."
+                  (mode === "intersection"
+                    ? "No licensed intersection cameras in this map area."
+                    : "No curated live video cams available.")
           );
           return ok;
         })
         .catch(function () {
-          setMeta("Public camera directory is not available right now.");
+          setMeta(
+            mode === "intersection"
+              ? "Intersection camera directory is not available right now."
+              : "Live video directory is not available right now."
+          );
           return false;
         });
     }
@@ -525,13 +634,15 @@
         state.base = mode === "live" ? "live" : applied;
         markBase(state.base === "live" ? "live" : applied);
         if (mode === "live") {
+          state.camerasOn = true;
+          markToggle("cameras", true);
           return loadRain().then(function (rainOk) {
-            return loadCameras("all").then(function (camOk) {
+            return loadCameras("live").then(function (camOk) {
               setMeta(
                 "Live map · rain " +
                   (rainOk ? "on" : "unavailable") +
-                  " · cameras " +
-                  (camOk ? "on" : "none in view") +
+                  " · live video cams " +
+                  (camOk ? "on" : "none") +
                   " · satellite imagery is never labeled live"
               );
               return "live";
@@ -582,9 +693,12 @@
               map.removeLayer(state.cameraLayer);
             }
             cameraPanel.hidden = true;
-            setMeta("Live cameras off.");
+            setMeta("Live video cams off.");
+            closeCameraViewer();
             return;
           }
+          state.intersectionOn = false;
+          markToggle("intersection", false);
           loadCameras("live");
           return;
         }
@@ -596,9 +710,12 @@
               map.removeLayer(state.cameraLayer);
             }
             cameraPanel.hidden = true;
-            setMeta("Intersection cameras off.");
+            setMeta("Intersection snapshots off.");
+            closeCameraViewer();
             return;
           }
+          state.camerasOn = false;
+          markToggle("cameras", false);
           loadCameras("intersection");
           return;
         }
@@ -655,6 +772,35 @@
       event.stopPropagation();
       closeCameraViewer();
     });
+    var playBtn = viewer.querySelector('[data-cam="play"]');
+    var pauseBtn = viewer.querySelector('[data-cam="pause"]');
+    var fsBtn = viewer.querySelector('[data-cam="fullscreen"]');
+    if (playBtn) {
+      playBtn.addEventListener("click", function (event) {
+        event.preventDefault();
+        ytCommand("playVideo");
+      });
+    }
+    if (pauseBtn) {
+      pauseBtn.addEventListener("click", function (event) {
+        event.preventDefault();
+        ytCommand("pauseVideo");
+      });
+    }
+    if (fsBtn) {
+      fsBtn.addEventListener("click", function (event) {
+        event.preventDefault();
+        var media = viewer.querySelector('[data-cam="media"]');
+        if (!media) return;
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(function () {});
+          return;
+        }
+        if (media.requestFullscreen) {
+          media.requestFullscreen().catch(function () {});
+        }
+      });
+    }
     viewer.addEventListener("click", function (event) {
       if (event.target === viewer) closeCameraViewer();
     });
@@ -666,8 +812,9 @@
     closeCameraViewer();
 
     map.on("moveend", function () {
-      if (state.camerasOn) loadCameras("live");
-      else if (state.intersectionOn) loadCameras("intersection");
+      /* Live video list is curated globally — do not refetch on every pan.
+         Intersection JPEG feeds are bbox-scoped. */
+      if (state.intersectionOn) loadCameras("intersection");
     });
 
     return {
