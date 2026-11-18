@@ -313,6 +313,15 @@ function mapLayersAction(req) {
   if (action === "mapMapsPlusStatus" || url.indexOf("/api/map-maps-plus-status") !== -1) {
     return "maps_plus_status";
   }
+  if (action === "mapStreetView" || url.indexOf("/api/map-street-view") !== -1) {
+    return "street_view";
+  }
+  if (
+    action === "mapNearbySurroundings" ||
+    url.indexOf("/api/map-nearby-surroundings") !== -1
+  ) {
+    return "nearby_surroundings";
+  }
   return "";
 }
 
@@ -1583,6 +1592,14 @@ export default async function handler(req, res) {
         const mod = await import("../lib/map-maps-plus-status.mjs");
         return await mod.default(req, res);
       }
+      if (kind === "street_view") {
+        const mod = await import("../lib/map-street-view.mjs");
+        return await mod.default(req, res);
+      }
+      if (kind === "nearby_surroundings") {
+        const mod = await import("../lib/map-nearby-surroundings.mjs");
+        return await mod.default(req, res);
+      }
       const mod = await import("../lib/map-traffic.mjs");
       return await mod.default(req, res);
     } catch (error) {
@@ -2099,6 +2116,36 @@ export default async function handler(req, res) {
           }
           const loaded = await query;
           direct = (loaded && loaded.data) || [];
+          const propertyIds = direct
+            .map(function (row) {
+              return row.property_id;
+            })
+            .filter(Boolean);
+          if (propertyIds.length) {
+            const addrRes = await admin
+              .from("accommodation_addresses")
+              .select(
+                "property_id,latitude,longitude,city,country_code,street,street_number"
+              )
+              .in("property_id", propertyIds);
+            const byProp = Object.create(null);
+            ((addrRes && addrRes.data) || []).forEach(function (a) {
+              byProp[String(a.property_id)] = a;
+            });
+            direct = direct.map(function (row) {
+              const a = byProp[String(row.property_id)] || null;
+              if (!a) return row;
+              return Object.assign({}, row, {
+                latitude: a.latitude != null ? Number(a.latitude) : null,
+                longitude: a.longitude != null ? Number(a.longitude) : null,
+                address_city: a.city || null,
+                address_country: a.country_code || null,
+                address_line: [a.street_number, a.street, a.city]
+                  .filter(Boolean)
+                  .join(" ")
+              });
+            });
+          }
         } catch (_error) {
           direct = [];
         }
@@ -2155,6 +2202,17 @@ export default async function handler(req, res) {
               property_id: row.property_id,
               title: row.title,
               summary: row.summary,
+              latitude:
+                row.latitude != null && Number.isFinite(Number(row.latitude))
+                  ? Number(row.latitude)
+                  : null,
+              longitude:
+                row.longitude != null && Number.isFinite(Number(row.longitude))
+                  ? Number(row.longitude)
+                  : null,
+              address_line: row.address_line || null,
+              address_city: row.address_city || null,
+              address_country: row.address_country || null,
               bookable: false,
               reason:
                 "Guest booking checkout stays gated until Owner enables accommodation booking + verified payments."

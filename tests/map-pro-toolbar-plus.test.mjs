@@ -22,6 +22,8 @@ test("pro toolbar exists and wires tickets + accommodation", () => {
   assert.match(read("havkar-map-pro-toolbar.js"), /map-tomtom-routing/);
   assert.match(read("havkar-map-pro-toolbar.js"), /sales OFF/);
   assert.match(read("havkar-map-pro-toolbar.js"), /navigator\.geolocation\.getCurrentPosition/);
+  assert.match(read("havkar-map-pro-toolbar.js"), /typeahead=true/);
+  assert.match(read("havkar-map-pro-toolbar.js"), /View surroundings/);
 });
 
 test("Maps Plus scaffold is sales-disabled", () => {

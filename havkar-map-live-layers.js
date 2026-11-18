@@ -516,11 +516,22 @@
             ? "Intersection layer: licensed JPEG snapshots only — never labeled as live video."
             : "Live video layer: curated official YouTube Live public webcams (embed). JPEG traffic cams stay on the intersection layer.";
       }
+      var center = map.getCenter && map.getCenter();
+      var nearQs = "";
+      if (center && Number.isFinite(center.lat) && Number.isFinite(center.lng)) {
+        nearQs =
+          "&lat=" +
+          encodeURIComponent(center.lat) +
+          "&lng=" +
+          encodeURIComponent(center.lng) +
+          "&radius_km=8";
+      }
       var endpoint =
         mode === "intersection"
           ? "/api/map-public-cameras?kind=intersection&limit=50" +
-            (bbox ? "&bbox=" + encodeURIComponent(bbox) : "")
-          : "/api/map-live-videos?limit=40";
+            (bbox ? "&bbox=" + encodeURIComponent(bbox) : "") +
+            nearQs
+          : "/api/map-live-videos?limit=40" + nearQs;
       return fetch(endpoint, { headers: { Accept: "application/json" } })
         .then(function (r) {
           return r.json();
@@ -531,6 +542,18 @@
           }
           state.cameraLayer = L.layerGroup();
           state.cameras = (body && body.cameras) || [];
+          if (center && Number.isFinite(center.lat)) {
+            state.cameras = state.cameras
+              .slice()
+              .sort(function (a, b) {
+                var da = Number(a.distance_km);
+                var db = Number(b.distance_km);
+                if (Number.isFinite(da) && Number.isFinite(db)) return da - db;
+                if (Number.isFinite(da)) return -1;
+                if (Number.isFinite(db)) return 1;
+                return 0;
+              });
+          }
           state.cameras.forEach(function (cam) {
             var lat = Number(cam.latitude);
             var lon = Number(cam.longitude);
@@ -544,6 +567,7 @@
             });
             marker.bindTooltip(
               (cam.name || cam.id) +
+                (cam.distance_km != null ? " · " + cam.distance_km + " km" : "") +
                 (cam.live_stream ? " · LIVE" : " · snapshot")
             );
             marker.bindPopup(
@@ -552,8 +576,12 @@
                 "</strong><br>" +
                 String(cam.city || "").replace(/[<>&]/g, "") +
                 (cam.country ? ", " + String(cam.country).replace(/[<>&]/g, "") : "") +
+                (cam.distance_km != null
+                  ? "<br>" + String(cam.distance_km) + " km from map center"
+                  : "") +
                 "<br>" +
                 String(cam.attribution || "").replace(/[<>&]/g, "") +
+                (cam.status ? "<br>status: " + String(cam.status).replace(/[<>&]/g, "") : "") +
                 "<br><button type='button' data-open-cam='" +
                 String(cam.id).replace(/'/g, "") +
                 "'>" +
@@ -856,11 +884,14 @@
       if (state.intersectionOn) loadCameras("intersection");
     });
 
+    root.HAVKAR_MAP_LIVE_LAYERS.openCamera = openCamera;
+
     return {
       ok: true,
       state: state,
       reloadCameras: loadCameras,
-      reloadRain: loadRain
+      reloadRain: loadRain,
+      openCamera: openCamera
     };
   }
 

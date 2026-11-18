@@ -3,7 +3,7 @@
     return;
   }
 
-  var SW_URL = "/sw.js?v=havkar-sw-20261118-map-gps-real-v1";
+  var SW_URL = "/sw.js?v=havkar-sw-20261118-hotel-surroundings-v1";
 
   window.addEventListener("load", function () {
     navigator.serviceWorker
