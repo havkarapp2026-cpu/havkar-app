@@ -50,14 +50,18 @@ test("omio impact catalog ids are documented and not used as affiliate tracking 
   const status = omioConfigured({});
   assert.equal(status.impact_partner_program.advertiser_id, "463493");
   assert.equal(status.impact_partner_program.program_id, "7385");
-  assert.equal(status.affiliate_search_ready, false);
+  assert.equal(status.impact_partner_program.media_partner_id_expected, "7763968");
+  assert.equal(status.affiliate_tracked, false);
+  assert.equal(status.affiliate_search_ready, true);
   const forged = buildOmioAffiliateSearchUrl(
     { from: "Rome", to: "Milan" },
     { OMIO_AFFILIATE_ID: "463493" }
   );
-  // Builder accepts any configured string, but status docs forbid treating catalog ids as tracking proof.
+  /* Catalog advertiser id is rejected as tracking token. */
   assert.equal(forged.ok, true);
-  assert.match(status.external_actions_required.join(" "), /do not use advertiser 463493/);
+  assert.equal(forged.tracked, false);
+  assert.doesNotMatch(forged.url || "", /partner=463493/);
+  assert.match(status.external_actions_required.join(" "), /7763968/);
 });
 
 test("133 fiat presentment currencies remain distinct from XLM", () => {
