@@ -1274,7 +1274,9 @@ html[dir="rtl"] .havkar-map-layers{
             var mins = Math.round(route.duration_s/60);
             var delay = Number(route.traffic_delay_s);
             var delayTxt = Number.isFinite(delay) && delay > 0 ? (' · traffic delay ~'+Math.round(delay/60)+' min') : '';
-            setMapNote('Route preview ('+(route.provider||profile)+'): ~'+km+' km · ~'+mins+' min'+delayTxt+(route.last_updated ? (' · updated '+route.last_updated) : '')+'. Free map tool — not a ticket booking.');
+            var updatedClock='';
+            try{ if(route.last_updated){ var ud=new Date(route.last_updated); if(!isNaN(ud.getTime())) updatedClock=ud.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}); } }catch(_u){}
+            setMapNote('Route preview ('+(route.provider||profile)+'): ~'+km+' km · ~'+mins+' min'+delayTxt+(updatedClock ? (' · '+updatedClock) : '')+'. Free map tool — not a ticket booking.');
           } else {
             setMapNote('Markers placed. Live route geometry unavailable; open external directions if needed.');
           }

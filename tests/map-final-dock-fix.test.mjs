@@ -65,6 +65,16 @@ test("live layers do not print secret env names in traffic/camera status", () =>
   assert.match(layers, /maps\.cam_state_exists_no_play/);
 });
 
+test("traffic badge formats clock instead of raw ISO", () => {
+  const toolbar = read("havkar-map-pro-toolbar.js");
+  assert.match(toolbar, /function formatPublicClock/);
+  assert.match(toolbar, /toLocaleTimeString/);
+  assert.doesNotMatch(
+    toolbar,
+    /badge_traffic_on"\) \+ \(ts \? " · " \+ ts/
+  );
+});
+
 test("Maps Plus / payments remain OFF", () => {
   const plus = read("lib/havkar-maps-plus.cjs");
   assert.match(plus, /sales_enabled:\s*false/);

@@ -77,6 +77,17 @@
     return (meters / 1000).toFixed(1) + " km";
   }
 
+  function formatPublicClock(iso) {
+    if (!iso) return "";
+    try {
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return "";
+      return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    } catch (_e) {
+      return "";
+    }
+  }
+
   function ensureCss() {
     if (document.getElementById("havkar-trip-planner-css")) return;
     var link = document.createElement("link");
@@ -262,8 +273,14 @@
               "p",
               { className: "havkar-trip-alert" },
               lastRoute.traffic_alert.message +
-                " · updated " +
-                (lastRoute.traffic_alert.last_updated || lastRoute.last_updated || "")
+                (formatPublicClock(
+                  lastRoute.traffic_alert.last_updated || lastRoute.last_updated || ""
+                )
+                  ? " · " +
+                    formatPublicClock(
+                      lastRoute.traffic_alert.last_updated || lastRoute.last_updated || ""
+                    )
+                  : "")
             )
           );
         }
@@ -289,7 +306,10 @@
           el(
             "p",
             { className: "havkar-trip-meta" },
-            "Source: TomTom Routing · " + (lastRoute.last_updated || "")
+            "TomTom" +
+              (formatPublicClock(lastRoute.last_updated)
+                ? " · " + formatPublicClock(lastRoute.last_updated)
+                : "")
           )
         );
         if (opts.mapApi && lastRoute.geometry && Array.isArray(lastRoute.geometry.coordinates)) {
