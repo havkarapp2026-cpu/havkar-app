@@ -44,8 +44,8 @@
       ["hybrid", "Hybrid"],
       ["live", "Live map"],
       ["rain", "Rain radar"],
-      ["cameras", "Live video cams"],
-      ["intersection", "Intersection snapshots"],
+      ["cameras", "Live cameras"],
+      ["intersection", "Intersection cameras"],
       ["traffic", "Traffic status"]
     ];
 
@@ -359,7 +359,9 @@
         watch.textContent =
           cam.live_stream && cam.status === "live"
             ? "Open official live source"
-            : "Open official snapshot source";
+            : cam.kind === "live_video" || cam.feed_type === "youtube_live"
+              ? "Open official YouTube source"
+              : "Open official snapshot source";
       }
 
       img.style.display = "none";
@@ -390,6 +392,20 @@
             return r.json();
           })
           .then(function (body) {
+            var availability =
+              (body && body.availability) ||
+              (body && body.probe && body.probe.availability) ||
+              "";
+            if (watch) {
+              var official =
+                (body && body.camera && body.camera.watch_url) ||
+                (body && body.probe && body.probe.watch_url) ||
+                watchUrl;
+              if (/^https:\/\//i.test(official)) {
+                watch.href = official;
+                watch.textContent = "Open official YouTube source";
+              }
+            }
             if (body && body.live && body.camera && body.camera.embed_url) {
               yt.style.display = "block";
               yt.src =
@@ -397,19 +413,41 @@
                 (body.camera.embed_url.indexOf("autoplay=") === -1
                   ? (body.camera.embed_url.indexOf("?") >= 0 ? "&" : "?") + "autoplay=1"
                   : "");
-              if (watch && body.camera.watch_url) {
-                watch.href = body.camera.watch_url;
-                watch.textContent = "Open official live source";
-              }
               status.textContent =
                 "LIVE VIDEO confirmed · official YouTube embed · not a recording";
+              return;
+            }
+            /* UNKNOWN (bot-check): never label as verified LIVE; keep official link */
+            if (availability === "unknown" || (body && body.probe && body.probe.status === "unknown")) {
+              status.textContent =
+                "Status UNKNOWN (YouTube bot-check or inconclusive probe) — not labeled as verified LIVE. Use the official YouTube link. " +
+                (body && body.official_api_configured === false
+                  ? "Owner can add HAVKAR_YOUTUBE_API_KEY for official Data API confirmation."
+                  : "");
+              var altU =
+                (body && body.alternatives && body.alternatives[0]) ||
+                suggestAlternativeLive(cam);
+              if (altU) {
+                status.appendChild(document.createElement("br"));
+                var btnU = document.createElement("button");
+                btnU.type = "button";
+                btnU.textContent =
+                  "Play nearest verified LIVE camera" +
+                  (altU.distance_km != null ? " (" + altU.distance_km + " km)" : "");
+                btnU.style.cssText =
+                  "margin-top:8px;min-height:40px;border-radius:10px;border:0;background:#1b5e20;color:#fff;font-weight:700;padding:0 12px;cursor:pointer";
+                btnU.addEventListener("click", function () {
+                  openCamera(altU);
+                });
+                status.appendChild(btnU);
+              }
               return;
             }
             var alt =
               (body && body.alternatives && body.alternatives[0]) ||
               suggestAlternativeLive(cam);
             status.textContent =
-              "This camera is offline, ended, or unavailable (not shown as live). " +
+              "This camera is offline, ended, or unavailable (not shown as live). Official YouTube link stays available. " +
               (alt
                 ? "Suggested nearest live camera: " +
                   (alt.name || alt.id) +
@@ -431,7 +469,7 @@
           })
           .catch(function () {
             status.textContent =
-              "Could not verify live status. Playback blocked to avoid showing a recording as live.";
+              "Could not verify live status (treated as UNKNOWN, not offline). Playback of unverified embed blocked — open the official YouTube source.";
           });
         return;
       }
@@ -526,13 +564,24 @@
         row.style.cssText =
           "display:block;width:100%;text-align:start;margin:0 0 6px;padding:10px;min-height:44px;border:1px solid #c8e6c9;border-radius:8px;background:#f1f8e9;cursor:pointer;color:#1b5e20";
         var isLiveNow = cam.live_stream === true && cam.status === "live";
+        var isUnknown =
+          !isLiveNow &&
+          (cam.availability === "unknown" || cam.status === "unknown");
         var feedLabel = isLiveNow
           ? "LIVE video (verified)"
-          : cam.feed_type === "jpeg_periodic" || cam.kind === "intersection"
-            ? "periodic snapshot"
-            : "offline / not live";
+          : isUnknown
+            ? "UNKNOWN status — open official source"
+            : cam.feed_type === "jpeg_periodic" || cam.kind === "intersection"
+              ? "periodic snapshot"
+              : "offline / not live";
         row.textContent =
-          (isLiveNow ? "[LIVE] " : cam.kind === "live_video" ? "[OFFLINE] " : "[JPEG] ") +
+          (isLiveNow
+            ? "[LIVE] "
+            : isUnknown
+              ? "[UNKNOWN] "
+              : cam.kind === "live_video"
+                ? "[OFFLINE] "
+                : "[JPEG] ") +
           (cam.name || cam.id) +
           (cam.distance_km != null ? " · " + cam.distance_km + " km" : "") +
           " · " +
@@ -587,8 +636,8 @@
       if (honesty) {
         honesty.textContent =
           mode === "intersection"
-            ? "Intersection layer: licensed JPEG snapshots only — never labeled as live video."
-            : "Live video layer: only YouTube broadcasts confirmed live right now. Ended/deleted links are hidden. Sorted by distance to map center.";
+            ? "Intersection layer: licensed JPEG snapshots (Singapore, Finland Digitraffic, Calgary, Datumfeed commercialOk) — never labeled as live video."
+            : "Live video layer: verified LIVE embeds + UNKNOWN (bot-check) with official YouTube link only. UNKNOWN is never labeled LIVE. Sorted by distance.";
       }
       var center = map.getCenter && map.getCenter();
       var nearQs = "";
@@ -607,7 +656,7 @@
           ? "/api/map-public-cameras?kind=intersection&limit=50" +
             (bbox ? "&bbox=" + encodeURIComponent(bbox) : "") +
             nearQs
-          : "/api/map-live-videos?active=1&limit=40" + nearQs;
+          : "/api/map-live-videos?active=1&include_unknown=1&limit=40" + nearQs;
       return fetch(endpoint, { headers: { Accept: "application/json" } })
         .then(function (r) {
           return r.json();
@@ -642,10 +691,19 @@
               weight: 2
             });
             var isLiveNow = cam.live_stream === true && cam.status === "live";
+            var isUnknown =
+              !isLiveNow &&
+              (cam.availability === "unknown" || cam.status === "unknown");
             marker.bindTooltip(
               (cam.name || cam.id) +
                 (cam.distance_km != null ? " · " + cam.distance_km + " km" : "") +
-                (isLiveNow ? " · LIVE" : mode === "intersection" ? " · snapshot" : " · offline")
+                (isLiveNow
+                  ? " · LIVE"
+                  : isUnknown
+                    ? " · UNKNOWN"
+                    : mode === "intersection"
+                      ? " · snapshot"
+                      : " · offline")
             );
             marker.bindPopup(
               "<strong>" +
@@ -658,11 +716,17 @@
                   : "") +
                 "<br>" +
                 String(cam.attribution || "").replace(/[<>&]/g, "") +
-                (cam.status ? "<br>status: " + String(cam.status).replace(/[<>&]/g, "") : "") +
+                (cam.status
+                  ? "<br>status: " + String(cam.status).replace(/[<>&]/g, "")
+                  : "") +
                 "<br><button type='button' data-open-cam='" +
                 String(cam.id).replace(/'/g, "") +
                 "'>" +
-                (isLiveNow ? "Play live video" : "View snapshot") +
+                (isLiveNow
+                  ? "Play live video"
+                  : isUnknown
+                    ? "Open / check official source"
+                    : "View snapshot") +
                 "</button>"
             );
             marker.on("popupopen", function () {
@@ -688,10 +752,18 @@
                 ? "Intersection snapshots · " +
                   state.cameras.length +
                   " licensed JPEG feeds · Singapore LTA + commercialOk Datumfeed"
-                : "Confirmed LIVE cams · " +
+                : "Cameras · " +
                   state.cameras.length +
+                  " (LIVE " +
+                  ((body && body.active_count) ||
+                    state.cameras.filter(function (c) {
+                      return c.live_stream && c.status === "live";
+                    }).length) +
+                  " · UNKNOWN " +
+                  ((body && body.unknown_count) || 0) +
+                  ")" +
                   (body && body.expanded_beyond_radius
-                    ? " · nearest online (none inside radius)"
+                    ? " · nearest (none inside radius)"
                     : " · distance sorted") +
                   " · ended links hidden"
               : (body && body.message) ||

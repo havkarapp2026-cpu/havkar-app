@@ -3,7 +3,7 @@
     return;
   }
 
-  var SW_URL = "/sw.js?v=havkar-sw-20261118-live-cameras-probe-v1";
+  var SW_URL = "/sw.js?v=havkar-sw-20261118-live-cameras-global-v1";
 
   window.addEventListener("load", function () {
     navigator.serviceWorker
