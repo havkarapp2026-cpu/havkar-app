@@ -47,7 +47,8 @@ test("tickets exposes a visible travel map host", () => {
   const tickets = read("tickets.html");
   assert.match(tickets, /id="travelMapPanel"/);
   assert.match(tickets, /id="ticketsMapHost"/);
-  assert.match(tickets, /data-tickets-layer="satellite"/);
+  assert.match(tickets, /ticketsLayerMenuHost/);
+  assert.match(tickets, /havkar-map-live-layers\.js/);
   assert.match(tickets, /zoom:\s*11/);
   assert.match(tickets, /__havkarTicketsDrawRoute/);
   assert.match(tickets, /havkar-map\.js/);

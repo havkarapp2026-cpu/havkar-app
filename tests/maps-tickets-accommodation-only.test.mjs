@@ -22,7 +22,8 @@ test("tickets and accommodation still reference map / leaflet / module-map", () 
   assert.match(tickets, /havkar-map\.js/);
   assert.match(tickets, /havkar-module-map\.js/);
   assert.match(tickets, /travelMapPanel|ticketsMapHost|HAVKAR_MAP/);
-  assert.match(tickets, /data-tickets-layer="satellite"/);
+  assert.match(tickets, /havkar-map-live-layers\.js/);
+  assert.match(tickets, /ticketsLayerMenuHost/);
   assert.match(tickets, /ticketsShareLocationBtn/);
   assert.match(tickets, /ticketsCopyLocationBtn/);
 
@@ -30,8 +31,8 @@ test("tickets and accommodation still reference map / leaflet / module-map", () 
   assert.match(hotels, /havkar-map\.js/);
   assert.match(hotels, /leaflet@1\.9\.4/);
   assert.match(hotels, /L\.map\(/);
-  assert.match(hotels, /data-acc-layer="satellite"/);
-  assert.match(hotels, /data-acc-layer="hybrid"/);
+  assert.match(hotels, /havkar-map-live-layers\.js/);
+  assert.match(hotels, /accLayerMenuHost/);
   assert.match(hotels, /accShareLocationBtn/);
   assert.match(hotels, /accCopyLocationBtn/);
 });
@@ -82,8 +83,8 @@ test("buy-sell jobs services ads delivery health omit leaflet discovery maps", (
 test("service worker bumped for maps tickets accommodation only", () => {
   const sw = read("sw.js");
   const reg = read("havkar-sw-register.js");
-  /* Later live-map release supersedes the maps-only SW tag. */
-  assert.match(sw, /havkar-sw-20261117-live-map-tickets-accommodation-v1/);
-  assert.match(reg, /havkar-sw-20261117-live-map-tickets-accommodation-v1/);
+  /* Later rain/cameras/traffic release supersedes the live-map-only SW tag. */
+  assert.match(sw, /havkar-sw-20261118-map-layers-rain-cameras-traffic-v1/);
+  assert.match(reg, /havkar-sw-20261118-map-layers-rain-cameras-traffic-v1/);
   assert.ok(KEEP.every((f) => fs.existsSync(path.join(root, f))));
 });
