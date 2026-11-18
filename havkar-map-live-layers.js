@@ -479,8 +479,26 @@
       var b = map.getBounds();
       var bbox = "";
       if (b) {
-        bbox =
-          b.getWest() + "," + b.getSouth() + "," + b.getEast() + "," + b.getNorth();
+        var west = b.getWest();
+        var south = b.getSouth();
+        var east = b.getEast();
+        var north = b.getNorth();
+        var spanLon = Math.abs(east - west);
+        var spanLat = Math.abs(north - south);
+        /* Public camera API rejects spans > 25°. Ask user to zoom instead of raw error. */
+        if (mode === "intersection" && (spanLon > 24.5 || spanLat > 24.5)) {
+          cameraPanel.hidden = false;
+          var honestyWide = cameraPanel.querySelector('[data-cam="honesty"]');
+          if (honestyWide) {
+            honestyWide.textContent =
+              "Intersection snapshots need a closer map view (max ~25° span). Zoom into a city, then reopen this layer.";
+          }
+          setMeta(
+            "Zoom in on the map to load licensed intersection snapshots (bbox max ~25°). No cameras invented."
+          );
+          return Promise.resolve(false);
+        }
+        bbox = west + "," + south + "," + east + "," + north;
       }
       setMeta(
         mode === "intersection"
