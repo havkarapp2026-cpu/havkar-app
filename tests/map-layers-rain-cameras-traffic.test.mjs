@@ -30,7 +30,7 @@ function mockRes() {
 }
 
 test("licensed camera API rejects client stream injection and commercialOk=false", () => {
-  const src = read("api/map-public-cameras.js");
+  const src = read("lib/map-public-cameras.mjs");
   assert.match(src, /Never accepts client-supplied stream URLs/);
   assert.match(src, /commercialOk !== true/);
   assert.match(src, /singapore-lta/);
@@ -39,14 +39,30 @@ test("licensed camera API rejects client stream injection and commercialOk=false
 });
 
 test("traffic API never returns TomTom key to client", () => {
-  const src = read("api/map-traffic.js");
+  const src = read("lib/map-traffic.mjs");
   assert.match(src, /never returned to the browser/);
   assert.match(src, /TOMTOM_API_KEY/);
   assert.doesNotMatch(src, /tile_url_template:.*key=/);
 });
 
+test("map layer routes stay under Hobby function limit via create-event-checkout", () => {
+  const vercel = read("vercel.json");
+  const checkout = read("api/create-event-checkout.js");
+  assert.match(vercel, /\/api\/map-rain-radar/);
+  assert.match(vercel, /havkarAction=mapRainRadar/);
+  assert.match(vercel, /\/api\/map-public-cameras/);
+  assert.match(vercel, /havkarAction=mapPublicCameras/);
+  assert.match(vercel, /\/api\/map-traffic/);
+  assert.match(vercel, /havkarAction=mapTraffic/);
+  assert.match(checkout, /isMapLayersRequest/);
+  assert.match(checkout, /map-rain-radar\.mjs/);
+  assert.equal(fs.existsSync(path.join(root, "api/map-rain-radar.js")), false);
+  assert.equal(fs.existsSync(path.join(root, "api/map-public-cameras.js")), false);
+  assert.equal(fs.existsSync(path.join(root, "api/map-traffic.js")), false);
+});
+
 test("rain radar API returns frames and legend from RainViewer", async () => {
-  const { default: handler } = await import("../api/map-rain-radar.js");
+  const { default: handler } = await import("../lib/map-rain-radar.mjs");
   const res = mockRes();
   await handler({ method: "GET", query: {} }, res);
   assert.equal(res.out.statusCode, 200);
@@ -58,7 +74,7 @@ test("rain radar API returns frames and legend from RainViewer", async () => {
 });
 
 test("public cameras return Singapore LTA feeds inside SG bbox", async () => {
-  const { default: handler } = await import("../api/map-public-cameras.js");
+  const { default: handler } = await import("../lib/map-public-cameras.mjs");
   const res = mockRes();
   await handler(
     { method: "GET", query: { bbox: "103.6,1.2,104.1,1.5", kind: "intersection", limit: "20" } },
@@ -77,7 +93,7 @@ test("traffic status is gated without TOMTOM_API_KEY", async () => {
   const prev = process.env.TOMTOM_API_KEY;
   delete process.env.TOMTOM_API_KEY;
   try {
-    const { default: handler } = await import("../api/map-traffic.js");
+    const { default: handler } = await import("../lib/map-traffic.mjs");
     const res = mockRes();
     await handler({ method: "GET", query: {} }, res);
     assert.equal(res.out.statusCode, 200);

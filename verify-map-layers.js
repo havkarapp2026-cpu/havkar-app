@@ -57,18 +57,24 @@ function mainStatic() {
   ok("never accepts arbitrary stream injection", layers.includes("allowlisted API only"));
   ok("SW bumped for map layers", sw.includes("map-layers-rain-cameras-traffic-v1"));
 
-  ok("api rain exists", fs.existsSync(path.join(ROOT, "api/map-rain-radar.js")));
-  ok("api cameras exists", fs.existsSync(path.join(ROOT, "api/map-public-cameras.js")));
-  ok("api traffic exists", fs.existsSync(path.join(ROOT, "api/map-traffic.js")));
+  ok("lib rain exists", fs.existsSync(path.join(ROOT, "lib/map-rain-radar.mjs")));
+  ok("lib cameras exists", fs.existsSync(path.join(ROOT, "lib/map-public-cameras.mjs")));
+  ok("lib traffic exists", fs.existsSync(path.join(ROOT, "lib/map-traffic.mjs")));
+  ok("no extra Hobby functions for map APIs", !fs.existsSync(path.join(ROOT, "api/map-rain-radar.js")));
 
-  const cams = read("api/map-public-cameras.js");
+  const cams = read("lib/map-public-cameras.mjs");
   ok("cameras reject client stream URLs", cams.includes("Never accepts client-supplied stream URLs"));
   ok("cameras require commercialOk", cams.includes("commercialOk !== true"));
   ok("Caltrans excluded note", cams.includes("Caltrans"));
 
-  const traffic = read("api/map-traffic.js");
+  const traffic = read("lib/map-traffic.mjs");
   ok("traffic key stays server-side", traffic.includes("never returned to the browser"));
   ok("traffic gates without key", traffic.includes("TOMTOM_API_KEY"));
+
+  const vercel = read("vercel.json");
+  ok("vercel rewrite rain", vercel.includes("mapRainRadar"));
+  ok("vercel rewrite cameras", vercel.includes("mapPublicCameras"));
+  ok("vercel rewrite traffic", vercel.includes("mapTraffic"));
 }
 
 async function mainLive() {
@@ -107,9 +113,9 @@ async function mainLive() {
   }
 
   /* Exercise handler logic for Singapore bbox without Vercel. */
-  const { default: camerasHandler } = await import("./api/map-public-cameras.js");
-  const { default: rainHandler } = await import("./api/map-rain-radar.js");
-  const { default: trafficHandler } = await import("./api/map-traffic.js");
+  const { default: camerasHandler } = await import("./lib/map-public-cameras.mjs");
+  const { default: rainHandler } = await import("./lib/map-rain-radar.mjs");
+  const { default: trafficHandler } = await import("./lib/map-traffic.mjs");
 
   function mockRes() {
     const out = { statusCode: 0, body: null, headers: {} };

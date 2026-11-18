@@ -283,6 +283,28 @@ function isHotelsRequest(req) {
   );
 }
 
+function mapLayersAction(req) {
+  const url = String((req && req.url) || "");
+  const action = String((req && req.query && req.query.havkarAction) || "");
+  if (action === "mapRainRadar" || url.indexOf("/api/map-rain-radar") !== -1) {
+    return "rain";
+  }
+  if (
+    action === "mapPublicCameras" ||
+    url.indexOf("/api/map-public-cameras") !== -1
+  ) {
+    return "cameras";
+  }
+  if (action === "mapTraffic" || url.indexOf("/api/map-traffic") !== -1) {
+    return "traffic";
+  }
+  return "";
+}
+
+function isMapLayersRequest(req) {
+  return Boolean(mapLayersAction(req));
+}
+
 
 async function readXlmInvoice(req) {
   const intentId = String(
@@ -1514,6 +1536,29 @@ async function fulfillSettledXlmIntent(admin, userId, intentId) {
 }
 
 export default async function handler(req, res) {
+  if (isMapLayersRequest(req)) {
+    if (req.method !== "GET") {
+      res.setHeader("Allow", "GET");
+      return sendError(res, 405, "Method not allowed");
+    }
+    try {
+      const kind = mapLayersAction(req);
+      if (kind === "rain") {
+        const mod = await import("../lib/map-rain-radar.mjs");
+        return await mod.default(req, res);
+      }
+      if (kind === "cameras") {
+        const mod = await import("../lib/map-public-cameras.mjs");
+        return await mod.default(req, res);
+      }
+      const mod = await import("../lib/map-traffic.mjs");
+      return await mod.default(req, res);
+    } catch (error) {
+      console.error("HAVKAR map layers API error:", error && error.message);
+      return sendError(res, 500, "Map layers API failed");
+    }
+  }
+
   if (isFinanceApiRequest(req)) {
     if (req.method !== "GET" && req.method !== "POST") {
       res.setHeader("Allow", "GET, POST");
