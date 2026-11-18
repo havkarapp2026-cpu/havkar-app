@@ -448,17 +448,13 @@ h2{
     <section id="travelMapPanel" class="havkar-module-map panel" aria-label="Travel route map" style="margin:0 0 16px;position:relative;z-index:1;isolation:isolate">
         <div class="kicker"><i class="fas fa-map-location-dot" aria-hidden="true"></i> Travel map</div>
         <p class="lead" style="margin-bottom:10px">Street, satellite and hybrid map for origin/destination. Routes use real geocoding when places resolve; schedules and fares are never invented.</p>
-        <div id="ticketsMapLayers" class="havkar-map-layers" role="group" aria-label="Map base layer" style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px">
-            <button type="button" class="is-active" data-tickets-layer="street">Street map</button>
-            <button type="button" data-tickets-layer="satellite">Satellite</button>
-            <button type="button" data-tickets-layer="hybrid">Hybrid</button>
-            <button type="button" data-tickets-layer="live">Live map</button>
+        <div id="ticketsLayerMenuHost" style="margin:0 0 10px"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px">
             <button type="button" id="ticketsShareLocationBtn">Share location</button>
             <button type="button" id="ticketsCopyLocationBtn">Copy location link</button>
         </div>
-        <p id="ticketsLiveMeta" class="pending-note" hidden role="status"></p>
         <div id="ticketsMapHost" class="havkar-map-host" style="height:min(46vh,380px);min-height:260px;border-radius:14px;border:1px solid var(--border)"></div>
-        <p id="ticketsMapNote" class="pending-note" role="status">Search origin and destination to place markers. Illustrative flight connections are geographic lines, not verified airways. Satellite tiles are static imagery, not a live camera.</p>
+        <p id="ticketsMapNote" class="pending-note" role="status">Search origin and destination to place markers. Illustrative flight connections are geographic lines, not verified airways. Satellite tiles are static imagery, not a live camera. Live cameras use only licensed public feeds.</p>
     </section>
 
     <div class="ticket-types" role="group" aria-label="Travel modes">
@@ -1004,6 +1000,7 @@ h2{
 })();
 </script>
 <script src="/havkar-module-map.js"></script>
+<script src="/havkar-map-live-layers.js"></script>
 <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
 
@@ -1043,64 +1040,13 @@ h2{
   }
 
   function wireTicketsLayers(api){
-    var root = document.getElementById('ticketsMapLayers');
-    var liveMetaEl = document.getElementById('ticketsLiveMeta');
-    if(!root || !api || !api.setBaseLayer) return;
-    var buttons = root.querySelectorAll('[data-tickets-layer]');
-    function markActive(mode){
-      buttons.forEach(function(b){
-        b.classList.toggle('is-active', b.getAttribute('data-tickets-layer') === mode);
+    if(window.HAVKAR_MAP_LIVE_LAYERS && window.HAVKAR_MAP_LIVE_LAYERS.attachLayerMenu){
+      window.HAVKAR_MAP_LIVE_LAYERS.attachLayerMenu({
+        container: 'ticketsLayerMenuHost',
+        api: api,
+        setNote: setMapNote
       });
     }
-    function showLiveMeta(text, show){
-      if(!liveMetaEl) return;
-      liveMetaEl.hidden = !show;
-      liveMetaEl.textContent = text || '';
-    }
-    buttons.forEach(function(btn){
-      btn.addEventListener('click', function(){
-        var requested = btn.getAttribute('data-tickets-layer');
-        setMapNote('Loading map layer…');
-        Promise.resolve(api.setBaseLayer(requested)).then(function(result){
-          var mode = (result && result.mode) || requested || 'street';
-          markActive(mode);
-          if(mode === 'live'){
-            var live = result && result.live;
-            if(result && result.available){
-              showLiveMeta(
-                'Source: RainViewer · Product: live precipitation radar · Last frame: ' +
-                  ((live && live.frame_time_utc) || 'unknown') +
-                  ' · Coverage: radar agencies worldwide (empty areas = no live radar). Not a traffic/private camera.',
-                true
-              );
-              setMapNote(result.message || 'Live precipitation radar active.');
-            }else{
-              showLiveMeta(
-                (result && result.message) ||
-                  'Live broadcast is not available in this region.',
-                true
-              );
-              markActive('street');
-              setMapNote(
-                (result && result.message) ||
-                  'Live broadcast is not available in this region.'
-              );
-            }
-            return;
-          }
-          showLiveMeta('', false);
-          setMapNote(
-            mode === 'satellite' || mode === 'hybrid'
-              ? 'Satellite / hybrid · Esri imagery with required attribution (static tiles, not live camera)'
-              : 'Street map · OpenStreetMap'
-          );
-        }).catch(function(){
-          markActive('street');
-          showLiveMeta('Live broadcast is not available right now.', true);
-          setMapNote('Map layer failed. Street map kept.');
-        });
-      });
-    });
     var shareBtn = document.getElementById('ticketsShareLocationBtn');
     var copyBtn = document.getElementById('ticketsCopyLocationBtn');
     if(shareBtn && window.HAVKAR_MAP && window.HAVKAR_MAP.nativeShareLocation){

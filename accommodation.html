@@ -94,15 +94,11 @@
       </div>
     </div>
     <div id="map" role="application" aria-label="Destination map"></div>
-    <div class="map-toolbar" role="group" aria-label="Map layer modes" style="margin-bottom:6px">
-      <button type="button" id="accLayerStreet" class="active" data-acc-layer="street" aria-pressed="true">Street map</button>
-      <button type="button" id="accLayerSatellite" data-acc-layer="satellite" aria-pressed="false">Satellite</button>
-      <button type="button" id="accLayerHybrid" data-acc-layer="hybrid" aria-pressed="false">Hybrid</button>
-      <button type="button" id="accLayerLive" data-acc-layer="live" aria-pressed="false">Live map</button>
+    <div id="accLayerMenuHost" style="margin:8px 0"></div>
+    <div class="map-toolbar" role="group" aria-label="Location share" style="margin-bottom:6px">
       <button type="button" id="accShareLocationBtn">Share location</button>
       <button type="button" id="accCopyLocationBtn">Copy location link</button>
     </div>
-    <p id="accLiveMeta" class="provider-note" hidden role="status"></p>
     <div class="map-toolbar" role="group" aria-label="Map controls">
       <button type="button" id="useGpsBtn" aria-label="Use my location">Use my location</button>
       <button type="button" id="hotelsBoundsBtn">Search this area</button>
@@ -112,7 +108,7 @@
       <button type="button" id="favoritesOnlyBtn" aria-pressed="false">Favorites</button>
       <button type="button" id="openCompareBtn" aria-pressed="false">Compare</button>
     </div>
-    <p id="geoLabel" class="provider-note">Street / satellite / hybrid map for destinations. Satellite is static imagery, not a live camera. Choose a destination or use GPS.</p>
+    <p id="geoLabel" class="provider-note">Street / satellite / hybrid / live layers for destinations. Satellite is static imagery, not a live camera. Live cameras use only licensed public feeds. Choose a destination or use GPS.</p>
     <div class="search-grid">
       <div>
         <label for="checkInInput">Check-in</label>
@@ -215,6 +211,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
 <script src="/havkar-map.js"></script>
+<script src="/havkar-map-live-layers.js"></script>
 <script>
 (function () {
   var currencySelect = document.getElementById("currencySelect");
@@ -336,94 +333,20 @@
   var streetLayer = null;
   var satelliteLayer = null;
   var hybridLabelsLayer = null;
-  var liveRadarLayer = null;
-  var liveCoverageLayer = null;
   var activeAccBase = "street";
 
-  function markAccLayer(next) {
-    document.querySelectorAll("[data-acc-layer]").forEach(function (btn) {
-      var on = btn.getAttribute("data-acc-layer") === next;
-      btn.classList.toggle("active", on);
-      btn.setAttribute("aria-pressed", on ? "true" : "false");
-    });
-  }
-
-  function clearAccLiveLayers() {
-    if (liveRadarLayer && map && map.hasLayer(liveRadarLayer)) map.removeLayer(liveRadarLayer);
-    if (liveCoverageLayer && map && map.hasLayer(liveCoverageLayer)) map.removeLayer(liveCoverageLayer);
-    liveRadarLayer = null;
-    liveCoverageLayer = null;
-  }
-
-  function showAccLiveMeta(text, show) {
-    var el = document.getElementById("accLiveMeta");
-    if (!el) return;
-    el.hidden = !show;
-    el.textContent = text || "";
-  }
-
   function setAccommodationBaseLayer(mode) {
-    if (!map || !streetLayer || !satelliteLayer) return Promise.resolve("street");
-    var requested = String(mode || "street").toLowerCase();
-    if (requested === "live") {
-      if (!window.HAVKAR_MAP || typeof window.HAVKAR_MAP.fetchLiveRadarFrame !== "function") {
-        showAccLiveMeta("Live broadcast is not available right now.", true);
-        return setAccommodationBaseLayer("street");
-      }
-      if (geoLabel) geoLabel.textContent = "Loading live precipitation radar…";
-      return window.HAVKAR_MAP.fetchLiveRadarFrame().then(function (meta) {
-        if (map.hasLayer(satelliteLayer)) map.removeLayer(satelliteLayer);
-        if (hybridLabelsLayer && map.hasLayer(hybridLabelsLayer)) map.removeLayer(hybridLabelsLayer);
-        if (!map.hasLayer(streetLayer)) streetLayer.addTo(map);
-        clearAccLiveLayers();
-        if (!meta || !meta.ok || !meta.available || !meta.tileUrl) {
-          activeAccBase = "street";
-          markAccLayer("street");
-          showAccLiveMeta(
-            (meta && meta.message) || "Live broadcast is not available in this region.",
-            true
-          );
-          if (geoLabel) {
-            geoLabel.textContent =
-              (meta && meta.message) || "Live broadcast is not available in this region.";
-          }
-          return "street";
-        }
-        liveRadarLayer = L.tileLayer(meta.tileUrl, {
-          maxZoom: Number(meta.max_zoom) || 7,
-          opacity: 0.72,
-          attribution:
-            'Live precipitation radar by <a href="https://www.rainviewer.com/" target="_blank" rel="noopener noreferrer">RainViewer</a>'
-        });
-        liveRadarLayer.addTo(map);
-        if (meta.coverageUrl) {
-          liveCoverageLayer = L.tileLayer(meta.coverageUrl, {
-            maxZoom: Number(meta.max_zoom) || 7,
-            opacity: 0.35
-          });
-          liveCoverageLayer.addTo(map);
-        }
-        activeAccBase = "live";
-        markAccLayer("live");
-        showAccLiveMeta(
-          "Source: RainViewer · Live precipitation radar · Last frame: " +
-            (meta.frame_time_utc || "unknown") +
-            " · Coverage: radar agencies worldwide. Empty areas = no live radar. Not a traffic/private camera.",
-          true
-        );
-        if (geoLabel) {
-          geoLabel.textContent =
-            "Live map · RainViewer precipitation radar · " + (meta.frame_time_utc || "");
-        }
-        return "live";
-      });
+    if (!map || !streetLayer || !satelliteLayer) {
+      return Promise.resolve({ mode: "street" });
     }
-    clearAccLiveLayers();
-    showAccLiveMeta("", false);
-    var next = requested === "satellite" || requested === "hybrid" ? requested : "street";
+    var requested = String(mode || "street").toLowerCase();
+    var next =
+      requested === "satellite" || requested === "hybrid" ? requested : "street";
     if (map.hasLayer(streetLayer)) map.removeLayer(streetLayer);
     if (map.hasLayer(satelliteLayer)) map.removeLayer(satelliteLayer);
-    if (hybridLabelsLayer && map.hasLayer(hybridLabelsLayer)) map.removeLayer(hybridLabelsLayer);
+    if (hybridLabelsLayer && map.hasLayer(hybridLabelsLayer)) {
+      map.removeLayer(hybridLabelsLayer);
+    }
     if (next === "satellite") {
       satelliteLayer.addTo(map);
     } else if (next === "hybrid") {
@@ -434,14 +357,13 @@
       next = "street";
     }
     activeAccBase = next;
-    markAccLayer(next);
     if (geoLabel) {
       geoLabel.textContent =
         next === "street"
           ? "Street map · OpenStreetMap"
           : "Satellite / hybrid · Esri imagery (static tiles, not a live camera)";
     }
-    return Promise.resolve(next);
+    return Promise.resolve({ mode: next });
   }
 
   function accommodationLocationLink() {
@@ -493,14 +415,21 @@
       marker.setLatLng(ev.latlng);
       geoLabel.textContent = "Map pin: " + selectedGeo.label;
     });
-    document.querySelectorAll("[data-acc-layer]").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        setAccommodationBaseLayer(btn.getAttribute("data-acc-layer")).catch(function () {
-          showAccLiveMeta("Live broadcast is not available right now.", true);
-          setAccommodationBaseLayer("street");
-        });
+    if (window.HAVKAR_MAP_LIVE_LAYERS && window.HAVKAR_MAP_LIVE_LAYERS.attachLayerMenu) {
+      window.HAVKAR_MAP_LIVE_LAYERS.attachLayerMenu({
+        container: "accLayerMenuHost",
+        map: map,
+        L: L,
+        api: {
+          map: map,
+          L: L,
+          setBaseLayer: setAccommodationBaseLayer
+        },
+        setNote: function (text) {
+          if (geoLabel) geoLabel.textContent = text || "";
+        }
       });
-    });
+    }
     var copyBtn = document.getElementById("accCopyLocationBtn");
     if (copyBtn) {
       copyBtn.addEventListener("click", async function () {
