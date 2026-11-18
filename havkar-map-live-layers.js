@@ -1065,18 +1065,36 @@
       if (state.intersectionOn) loadCameras("intersection");
     });
 
+    function enableLiveCameras() {
+      state.camerasOn = true;
+      markToggle("cameras", true);
+      state.intersectionOn = false;
+      markToggle("intersection", false);
+      cameraPanel.hidden = false;
+      return loadCameras("live");
+    }
+
+    /* Keep playback APIs on the shared export — never wipe on re-assign. */
     root.HAVKAR_MAP_LIVE_LAYERS.openCamera = openCamera;
+    root.HAVKAR_MAP_LIVE_LAYERS.enableLiveCameras = enableLiveCameras;
+    root.HAVKAR_MAP_LIVE_LAYERS._viewerReady = true;
 
     return {
       ok: true,
       state: state,
       reloadCameras: loadCameras,
       reloadRain: loadRain,
-      openCamera: openCamera
+      openCamera: openCamera,
+      enableLiveCameras: enableLiveCameras
     };
   }
 
-  root.HAVKAR_MAP_LIVE_LAYERS = {
-    attachLayerMenu: attachLayerMenu
-  };
+  root.HAVKAR_MAP_LIVE_LAYERS = root.HAVKAR_MAP_LIVE_LAYERS || {};
+  root.HAVKAR_MAP_LIVE_LAYERS.attachLayerMenu = attachLayerMenu;
+  /* Do NOT stub openCamera with a no-op — surroundings Play must fall back to
+     official watch/embed URLs until attachLayerMenu wires the real viewer. */
+  root.HAVKAR_MAP_LIVE_LAYERS.enableLiveCameras =
+    typeof root.HAVKAR_MAP_LIVE_LAYERS.enableLiveCameras === "function"
+      ? root.HAVKAR_MAP_LIVE_LAYERS.enableLiveCameras
+      : function () {};
 })(typeof globalThis !== "undefined" ? globalThis : this);

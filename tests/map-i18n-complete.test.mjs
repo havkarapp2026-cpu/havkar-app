@@ -86,7 +86,7 @@ assert.match(surr, /mt\("maps\.msg_no_cams_radius"\)/);
 assert.match(surr, /havkar:language-changed/);
 
 assert.match(i18nCore, /havkar:language-changed/);
-assert.match(sw, /map-search-destination-v1|map-i18n-complete-v1/);
+assert.match(sw, /live-cameras-restore-v1|map-search-destination-v1|map-i18n-complete-v1/);
 
 // Hardcoded chrome leftovers that must not remain as sole English UI labels
 for (const [file, src, banned] of [
@@ -159,6 +159,11 @@ const REQUIRED_KEYS = [
   "maps.msg_no_360",
   "maps.msg_no_cams_radius",
   "maps.msg_nearest_live",
+  "maps.cam_state_no_live_here",
+  "maps.cam_state_exists_no_play",
+  "maps.cam_feature_available",
+  "maps.cam_outside_radius",
+  "maps.msg_using_map_center",
   "maps.badge_plus_off",
   "maps.travel_plus_off"
 ];

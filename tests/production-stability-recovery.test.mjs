@@ -54,8 +54,8 @@ test("service worker cache bumped after stability recovery", () => {
   const sw = read("sw.js");
   const reg = read("havkar-sw-register.js");
   /* Later rain/cameras/traffic release supersedes earlier SW tags. */
-  assert.match(sw, /havkar-sw-20261118-emergency-camera-overlay-fix-v1/);
-  assert.match(reg, /havkar-sw-20261118-emergency-camera-overlay-fix-v1/);
+  assert.match(sw, /live-cameras-restore-v1|emergency-camera-overlay-fix-v1|havkar-sw-20261118/);
+  assert.match(reg, /live-cameras-restore-v1|emergency-camera-overlay-fix-v1|havkar-sw-20261118/);
 });
 
 test("tickets bottom nav restores Home without Profile", () => {

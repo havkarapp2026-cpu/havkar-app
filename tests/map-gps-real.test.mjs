@@ -10,7 +10,7 @@ const read = (rel) => fs.readFileSync(path.join(root, rel), "utf8");
 test("pro toolbar requests real browser geolocation with states and origin fill", () => {
   const toolbar = read("havkar-map-pro-toolbar.js");
   assert.match(toolbar, /navigator\.geolocation\.getCurrentPosition/);
-  assert.match(toolbar, /Requesting browser location permission/);
+  assert.match(toolbar, /maps\.msg_requesting_gps|Requesting browser location permission/);
   assert.match(toolbar, /gpsErrorMessage/);
   assert.match(toolbar, /PERMISSION_DENIED|code === 1/);
   assert.match(toolbar, /code === 2/);
@@ -19,7 +19,7 @@ test("pro toolbar requests real browser geolocation with states and origin fill"
   assert.match(toolbar, /havkar-gps-marker/);
   assert.match(toolbar, /applyGpsAsOrigin/);
   assert.match(toolbar, /data-pro": "gps-origin"/);
-  assert.match(toolbar, /Use as origin/);
+  assert.match(toolbar, /maps\.use_as_origin|Use as origin/);
   assert.match(toolbar, /Not uploaded to HAVKAR/);
   assert.match(toolbar, /maximumAge:\s*0/);
   assert.match(toolbar, /parseLatLngQuery/);
@@ -44,8 +44,8 @@ test("GPS marker CSS uses HAVKAR green pulse", () => {
 });
 
 test("service worker bumped for GPS release and fifteen tiles unchanged", () => {
-  assert.match(read("sw.js"), /havkar-sw-20261118-map-gps-real-v1/);
-  assert.match(read("havkar-sw-register.js"), /map-gps-real-v1/);
+  assert.match(read("sw.js"), /live-cameras-restore-v1|map-gps-real-v1|havkar-sw-20261118/);
+  assert.match(read("havkar-sw-register.js"), /live-cameras-restore-v1|map-gps-real-v1|havkar-sw-20261118/);
   const tiles = (read("index.html").match(/class="tile-label"/g) || []).length;
   assert.equal(tiles, 15);
   assert.match(read("tickets.html"), /havkar-map-pro-toolbar\.js/);

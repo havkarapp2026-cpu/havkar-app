@@ -148,17 +148,18 @@
     var poisBox = el("div", { className: "havkar-surroundings-list", "data-surr": "pois-list" });
     var guideBox = el("div", { className: "havkar-surroundings-guide", "data-surr": "guide" });
     var svBox = el("div", { className: "havkar-surroundings-sv", "data-surr": "sv" });
-    host.appendChild(svBox);
     var hPlaces = el("h3", { "data-i18n-map": "maps.places_nearby" }, mt("maps.places_nearby") + " (TomTom)");
     var hGuide = el("h3", { "data-i18n-map": "maps.smart_notes" }, mt("maps.smart_notes"));
     var hCams = el("h3", { "data-i18n-map": "maps.cameras_near" }, mt("maps.cameras_near"));
     var hPhotos = el("h3", { "data-i18n-map": "maps.photos_nearby" }, mt("maps.photos_nearby"));
+    /* Cameras first so empty-radius nearest LIVE + Play stay above the fold. */
+    host.appendChild(hCams);
+    host.appendChild(camsBox);
+    host.appendChild(svBox);
     host.appendChild(hPlaces);
     host.appendChild(poisBox);
     host.appendChild(hGuide);
     host.appendChild(guideBox);
-    host.appendChild(hCams);
-    host.appendChild(camsBox);
     host.appendChild(hPhotos);
     host.appendChild(photosBox);
 
@@ -185,7 +186,7 @@
     document.addEventListener("havkar:i18n-ready", refreshSurrChrome);
     document.addEventListener("havkar:language-changed", refreshSurrChrome);
 
-    var state = { place: null, payload: null };
+    var state = { place: null, payload: null, focus: opts.focus || "all" };
 
     function setStatus(msg) {
       status.textContent = msg || "";
@@ -229,96 +230,160 @@
       }
     }
 
+    function playCamera(cam, isLive) {
+      if (!isLive && cam && cam.live_stream) {
+        setStatus(mt("maps.cam_state_exists_no_play"));
+      }
+      var layers = root.HAVKAR_MAP_LIVE_LAYERS;
+      var opener = layers && layers.openCamera;
+      /* Real viewer only after attachLayerMenu sets _viewerReady. */
+      if (layers && layers._viewerReady === true && typeof opener === "function") {
+        opener(cam);
+        return;
+      }
+      var watch =
+        (cam && (cam.watch_url || cam.embed_url)) ||
+        (cam &&
+          cam.youtube_id &&
+          "https://www.youtube.com/watch?v=" + encodeURIComponent(cam.youtube_id));
+      if (watch && /^https:\/\//i.test(watch)) {
+        window.open(watch, "_blank", "noopener,noreferrer");
+        return;
+      }
+      if (cam && cam.image_url) {
+        window.open(cam.image_url, "_blank", "noopener,noreferrer");
+      } else {
+        setStatus(mt("maps.cam_state_exists_no_play"));
+      }
+    }
+
+    function appendCameraCard(cam, opts) {
+      opts = opts || {};
+      var isLive = !!(cam.live_stream && cam.status === "live");
+      var isUnknown =
+        !isLive &&
+        (cam.availability === "unknown" || cam.status === "unknown" || (cam.live_stream && !isLive));
+      var card = el("article", {
+        className: "havkar-surroundings-card",
+        "data-cam-card": String(cam.id || cam.name || "cam"),
+        "data-cam-live": isLive ? "1" : "0"
+      });
+      card.appendChild(
+        el(
+          "strong",
+          null,
+          (cam.name || cam.id) +
+            (isLive ? " · LIVE" : isUnknown ? " · UNKNOWN" : cam.live_stream ? " · offline" : " · snapshot") +
+            (cam.distance_km != null ? " · " + cam.distance_km + " km" : "")
+        )
+      );
+      card.appendChild(
+        el(
+          "p",
+          null,
+          [cam.city, cam.country].filter(Boolean).join(", ") +
+            (cam.attribution ? " · " + cam.attribution : "") +
+            (opts.outsideRadius ? " · " + mt("maps.cam_outside_radius") : "")
+        )
+      );
+      if (!isLive && cam.live_stream) {
+        card.appendChild(
+          el("p", { className: "havkar-surroundings-meta" }, mt("maps.cam_state_exists_no_play"))
+        );
+      }
+      var open = el(
+        "button",
+        {
+          type: "button",
+          "data-cam-play": isLive ? "live" : isUnknown ? "unknown" : "view"
+        },
+        isLive ? mt("maps.play_live") : isUnknown ? mt("maps.open_youtube") : mt("maps.view")
+      );
+      open.addEventListener("click", function () {
+        playCamera(cam, isLive);
+      });
+      card.appendChild(open);
+      camsBox.appendChild(card);
+      if (api && api.L && api.map && Number.isFinite(Number(cam.latitude))) {
+        if (!api._surrCamLayer) api._surrCamLayer = api.L.layerGroup().addTo(api.map);
+        api._surrCamLayer.addLayer(
+          api.L.circleMarker([cam.latitude, cam.longitude], {
+            radius: 7,
+            color: isLive ? "#1b5e20" : "#e65100",
+            fillColor: isLive ? "#66bb6a" : "#ff9800",
+            fillOpacity: 0.9,
+            weight: 2
+          }).bindTooltip(
+            (cam.name || cam.id) +
+              (cam.distance_km != null ? " · " + cam.distance_km + " km" : "") +
+              (isLive ? " · LIVE" : " · snapshot")
+          )
+        );
+      }
+    }
+
     function renderCameras(cameras, meta) {
       camsBox.innerHTML = "";
       meta = meta || {};
-      if (!cameras || !cameras.length) {
-        var nearest = meta.nearest_live_camera;
-        var emptyMsg =
-          mt("maps.msg_no_cams_radius");
+      var nearest = meta.nearest_live_camera;
+      var list = Array.isArray(cameras) ? cameras.slice() : [];
+      list.sort(function (a, b) {
+        var da = Number(a && a.distance_km);
+        var db = Number(b && b.distance_km);
+        if (Number.isFinite(da) && Number.isFinite(db)) return da - db;
+        if (Number.isFinite(da)) return -1;
+        if (Number.isFinite(db)) return 1;
+        return 0;
+      });
+
+      /* State 3: no LIVE in selected radius — keep feature visible with nearest Play. */
+      if (!list.length) {
+        var emptyMsg = mt("maps.cam_state_no_live_here");
         if (nearest && nearest.distance_km != null && nearest.status === "live") {
           emptyMsg =
             mt("maps.msg_nearest_live", { km: nearest.distance_km }) +
             (nearest.name ? " (“" + nearest.name + "”)" : "");
+        } else {
+          emptyMsg = mt("maps.msg_no_cams_radius");
         }
-        camsBox.appendChild(el("p", { className: "havkar-surroundings-empty" }, emptyMsg));
-        if (nearest && nearest.live_stream && nearest.status === "live" && !nearest.within_radius) {
-          var far = el("article", { className: "havkar-surroundings-card" });
-          far.appendChild(
+        camsBox.appendChild(
+          el("p", { className: "havkar-surroundings-empty", "data-cam-state": "no_live_here" }, emptyMsg)
+        );
+        if (nearest && nearest.live_stream && nearest.status === "live") {
+          appendCameraCard(nearest, { outsideRadius: !nearest.within_radius });
+        } else {
+          camsBox.appendChild(
             el(
-              "strong",
-              null,
-              (nearest.name || "Nearest LIVE camera") + " · " + nearest.distance_km + " km"
+              "p",
+              { className: "havkar-surroundings-meta", "data-cam-state": "feature_available" },
+              mt("maps.cam_feature_available")
             )
           );
-          far.appendChild(
-            el("p", null, "Outside selected radius · verified LIVE only · not invented coverage")
-          );
-          camsBox.appendChild(far);
         }
         return;
       }
-      cameras.forEach(function (cam) {
-        var isLive = cam.live_stream && cam.status === "live";
-        var card = el("article", { className: "havkar-surroundings-card" });
-        card.appendChild(
-          el(
-            "strong",
-            null,
-            (cam.name || cam.id) +
-              (isLive ? " · LIVE" : cam.live_stream ? " · unchecked" : " · snapshot") +
-              (cam.distance_km != null ? " · " + cam.distance_km + " km" : "")
-          )
-        );
-        card.appendChild(
-          el(
-            "p",
-            null,
-            [cam.city, cam.country].filter(Boolean).join(", ") +
-              (cam.attribution ? " · " + cam.attribution : "")
-          )
-        );
-        if (!isLive && cam.live_stream) {
-          card.appendChild(
-            el(
-              "p",
-              { className: "havkar-surroundings-meta" },
-              "Playback not confirmed LIVE yet — open official source only."
-            )
-          );
-        }
-        var open = el("button", { type: "button" }, isLive ? mt("maps.play_live") : mt("maps.view"));
-        open.addEventListener("click", function () {
-          if (!isLive && cam.live_stream) {
-            setStatus("This stream is not confirmed LIVE yet. Opening official source.");
-          }
-          if (root.HAVKAR_MAP_LIVE_LAYERS && typeof root.HAVKAR_MAP_LIVE_LAYERS.openCamera === "function") {
-            root.HAVKAR_MAP_LIVE_LAYERS.openCamera(cam);
-          } else if (cam.embed_url || cam.watch_url) {
-            window.open(cam.watch_url || cam.embed_url, "_blank", "noopener,noreferrer");
-          } else if (cam.image_url) {
-            window.open(cam.image_url, "_blank", "noopener,noreferrer");
-          }
-        });
-        card.appendChild(open);
-        camsBox.appendChild(card);
-        if (api && api.L && api.map && Number.isFinite(Number(cam.latitude))) {
-          if (!api._surrCamLayer) api._surrCamLayer = api.L.layerGroup().addTo(api.map);
-          api._surrCamLayer.addLayer(
-            api.L.circleMarker([cam.latitude, cam.longitude], {
-              radius: 7,
-              color: isLive ? "#1b5e20" : "#e65100",
-              fillColor: isLive ? "#66bb6a" : "#ff9800",
-              fillOpacity: 0.9,
-              weight: 2
-            }).bindTooltip(
-              (cam.name || cam.id) +
-                (cam.distance_km != null ? " · " + cam.distance_km + " km" : "") +
-                (isLive ? " · LIVE" : " · snapshot")
-            )
-          );
-        }
+
+      list.forEach(function (cam) {
+        appendCameraCard(cam, {});
       });
+      /* If radius has only snapshots/offline, still surface nearest verified LIVE. */
+      var hasLiveInList = list.some(function (c) {
+        return c && c.live_stream && c.status === "live";
+      });
+      if (
+        !hasLiveInList &&
+        nearest &&
+        nearest.live_stream &&
+        nearest.status === "live" &&
+        !list.some(function (c) {
+          return c && nearest && String(c.id) === String(nearest.id);
+        })
+      ) {
+        camsBox.appendChild(
+          el("p", { className: "havkar-surroundings-meta", "data-cam-state": "no_live_here" }, mt("maps.cam_state_no_live_here"))
+        );
+        appendCameraCard(nearest, { outsideRadius: true });
+      }
     }
 
     function renderPhotos(photos) {
@@ -765,6 +830,11 @@
               " · " + mt("maps.msg_nearest_live", { km: nearest.distance_km });
           }
           setStatus(statusMsg);
+          if (state.focus === "cameras" || state.focus === "all") {
+            try {
+              hCams.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            } catch (_scroll) {}
+          }
         })
         .catch(function () {
           setStatus(mt("maps.msg_surr_fail"));
