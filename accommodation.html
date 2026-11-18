@@ -647,11 +647,11 @@ html[dir="rtl"] .havkar-camera-viewer [data-cam="card"]{text-align:right}
   }
 
   async function geocode(query) {
-    var res = await fetch("/api/hotels", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "hotels_geocode", query: query })
-    });
+    /* Same TomTom search proxy as Tickets map toolbar — real coords only. */
+    var res = await fetch(
+      "/api/map-tomtom-search?q=" + encodeURIComponent(query) + "&limit=8",
+      { headers: { Accept: "application/json" }, cache: "no-store" }
+    );
     return res.json();
   }
 

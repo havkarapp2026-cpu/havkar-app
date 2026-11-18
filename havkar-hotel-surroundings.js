@@ -218,9 +218,14 @@
     function setBase(mode) {
       if (api && typeof api.setBaseLayer === "function") {
         api.setBaseLayer(mode);
-        setStatus(mode + " basemap · surroundings of “" + (state.place && state.place.label) + "”");
+        setStatus(
+          mt("maps.layer_" + (mode === "street" ? "street" : mode === "hybrid" ? "hybrid" : "satellite")) +
+            " · “" +
+            (state.place && state.place.label) +
+            "”"
+        );
       } else {
-        setStatus("Basemap control unavailable on this page.");
+        setStatus(mt("maps.msg_surr_fail"));
       }
     }
 
@@ -568,14 +573,15 @@
           renderStreetView(sv);
           setStatus(
             sv && sv.interactive_360
-              ? "360° found · " +
-                  (sv.distance_m != null ? sv.distance_m + " m from stay" : "") +
-                  (sv.radius_m != null ? " · search " + sv.radius_m + " m" : "")
+              ? mt("maps.msg_360_found", {
+                  distance: sv.distance_m != null ? sv.distance_m + " m" : "",
+                  radius: sv.radius_m != null ? sv.radius_m + " m" : ""
+                })
               : (sv && sv.user_message) || mt("maps.msg_still_no360")
           );
         })
         .catch(function () {
-          setStatus("360° lookup failed. Satellite view still works.");
+          setStatus(mt("maps.msg_360_lookup_fail"));
         });
     }
 
@@ -592,16 +598,23 @@
       var mount = el("div", {
         id: "havkarMlyViewer",
         className: "havkar-surroundings-mly",
-        "aria-label": "Mapillary street view"
+        "aria-label": mt("maps.sv_title_mapillary")
       });
       svBox.appendChild(mount);
       svBox.appendChild(
         el(
+          "h3",
+          { "data-i18n-map": "maps.sv_title_mapillary" },
+          mt("maps.sv_title_mapillary")
+        )
+      );
+      svBox.appendChild(
+        el(
           "p",
           { className: "havkar-surroundings-sv-meta" },
-          "Mapillary · rotate with drag · move along sequence when coverage exists · " +
-            (sv.distance_m != null ? sv.distance_m + " m from stay · " : "") +
-            (sv.attribution || "")
+          mt("maps.sv_help_mapillary") +
+            (sv.distance_m != null ? " · " + sv.distance_m + " m" : "") +
+            (sv.attribution ? " · " + sv.attribution : "")
         )
       );
       if (sv.official_open_url) {
@@ -614,7 +627,7 @@
               rel: "noopener noreferrer",
               className: "havkar-surroundings-official"
             },
-            "Open official Mapillary source"
+            mt("maps.open_mapillary")
           )
         );
       }
@@ -625,7 +638,7 @@
         .then(function () {
           var Viewer = root.mapillary && root.mapillary.Viewer;
           if (!Viewer) {
-            mount.textContent = "Mapillary viewer failed to load.";
+            mount.textContent = mt("maps.msg_360_lookup_fail");
             return;
           }
           mlyViewer = new Viewer({
@@ -636,8 +649,7 @@
           });
         })
         .catch(function () {
-          mount.textContent =
-            "Could not load Mapillary viewer. Use the official Mapillary link or satellite fallback.";
+          mount.textContent = mt("maps.msg_360_lookup_fail");
         });
     }
 
@@ -647,9 +659,12 @@
         renderStreetViewFallbacks(sv);
         return;
       }
+      svBox.appendChild(
+        el("h3", { "data-i18n-map": "maps.sv_title_google" }, mt("maps.sv_title_google"))
+      );
       var frame = el("iframe", {
         className: "havkar-surroundings-gembed",
-        title: "Google Street View near stay",
+        title: mt("maps.sv_title_google"),
         src: url,
         allowfullscreen: "true",
         loading: "lazy",
@@ -661,8 +676,7 @@
         el(
           "p",
           { className: "havkar-surroundings-sv-meta" },
-          "Google Maps Embed Street View · rotate and move when Google coverage exists · usage $0 · " +
-            (sv.attribution || "")
+          mt("maps.sv_help_google") + (sv.attribution ? " · " + sv.attribution : "")
         )
       );
     }
@@ -732,23 +746,25 @@
           renderStreetView(body && body.street_view);
           loadSmartGuide();
           var nearest = body && body.nearest_live_camera;
-          var parts = [
-            "Surroundings · " + state.place.label,
-            "places " + ((body && body.pois && body.pois.count) || 0),
-            "cameras in radius " + ((body && body.camera_count) || 0),
-            "photos " + ((body && body.photo_count) || 0),
-            "360° " +
-              (body && body.street_view && body.street_view.interactive_360
-                ? "ON" +
-                  (body.street_view.distance_m != null
-                    ? " · " + body.street_view.distance_m + " m"
-                    : "")
-                : "not nearby")
-          ];
+          var svTxt =
+            body && body.street_view && body.street_view.interactive_360
+              ? mt("maps.sv_on") +
+                (body.street_view.distance_m != null
+                  ? " · " + body.street_view.distance_m + " m"
+                  : "")
+              : mt("maps.sv_off_near");
+          var statusMsg = mt("maps.surr_status", {
+            label: state.place.label,
+            places: (body && body.pois && body.pois.count) || 0,
+            cams: (body && body.camera_count) || 0,
+            photos: (body && body.photo_count) || 0,
+            sv: svTxt
+          });
           if ((!body || !body.camera_count) && nearest && nearest.distance_km != null) {
-            parts.push("nearest LIVE " + nearest.distance_km + " km");
+            statusMsg +=
+              " · " + mt("maps.msg_nearest_live", { km: nearest.distance_km });
           }
-          setStatus(parts.join(" · "));
+          setStatus(statusMsg);
         })
         .catch(function () {
           setStatus(mt("maps.msg_surr_fail"));

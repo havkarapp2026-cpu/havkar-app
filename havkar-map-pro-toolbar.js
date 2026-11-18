@@ -248,26 +248,35 @@
       setNote(text || "");
     }
 
-    function centerOf() {
-      try {
-        if (api && api.map && api.map.getCenter) {
-          var c = api.map.getCenter();
-          return { latitude: c.lat, longitude: c.lng, label: "Map center" };
-        }
-      } catch (_e) {}
-      return { latitude: 41.9028, longitude: 12.4964, label: "Map" };
+    /* Locked destination from search/suggestion — never silently invent coords. */
+    var lastDestination = null;
+    var destMarker = null;
+
+    function normalizePlace(row) {
+      if (!row || typeof row !== "object") return null;
+      var lat = Number(row.latitude != null ? row.latitude : row.lat);
+      var lng = Number(row.longitude != null ? row.longitude : row.lng != null ? row.lng : row.lon);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+      if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+      return {
+        latitude: lat,
+        longitude: lng,
+        label: row.label || row.name || row.display_name || placeInput.value || mt("maps.destination"),
+        city: row.city || (row.address && row.address.city) || null,
+        country: row.country || (row.address && row.address.country) || null,
+        type: row.type || null,
+        provider: row.provider || null
+      };
     }
 
     function geocode(q, typeahead) {
+      /* Always use TomTom search proxy for map destination — never invent coords. */
       var url =
         "/api/map-tomtom-search?q=" +
         encodeURIComponent(q) +
         "&limit=" +
-        (typeahead ? "8" : "5") +
+        (typeahead ? "8" : "8") +
         (typeahead ? "&typeahead=true" : "");
-      if (!typeahead && root.HAVKAR_MAP && root.HAVKAR_MAP.geocode) {
-        return root.HAVKAR_MAP.geocode(q);
-      }
       return fetch(url, {
         headers: { Accept: "application/json" },
         cache: "no-store"
@@ -286,29 +295,163 @@
       return null;
     }
 
-    function applyPlace(primary) {
-      if (!primary) return;
-      if (api && api.setCenter) {
-        api.setCenter(primary.latitude, primary.longitude, 14);
-      } else if (api && api.map) {
-        api.map.setView([primary.latitude, primary.longitude], 14);
+    function placeDestinationMarker(place) {
+      if (!place || !api || !api.map || !api.L) return;
+      var L = api.L;
+      try {
+        if (destMarker) {
+          api.map.removeLayer(destMarker);
+          destMarker = null;
+        }
+      } catch (_e) {}
+      try {
+        destMarker = L.marker([place.latitude, place.longitude], {
+          title: place.label || mt("maps.destination"),
+          zIndexOffset: 800
+        }).bindPopup(String(place.label || mt("maps.destination")));
+        destMarker.addTo(api.map);
+        try {
+          destMarker.openPopup();
+        } catch (_p) {}
+      } catch (_m) {}
+    }
+
+    function applyPlace(raw, opts) {
+      var options = opts || {};
+      var primary = normalizePlace(raw);
+      if (!primary) return false;
+      lastDestination = primary;
+      if (api && typeof api.setCenter === "function") {
+        api.setCenter(primary.latitude, primary.longitude, 15);
+      } else if (api && api.map && api.map.setView) {
+        api.map.setView([primary.latitude, primary.longitude], 15);
       }
-      if (api && api.setMarkers) {
+      if (api && typeof api.setMarkers === "function") {
         api.setMarkers(
           [
             {
-              id: "place",
+              id: "destination",
               latitude: primary.latitude,
               longitude: primary.longitude,
-              label: primary.label || "Place"
+              label: primary.label
             }
           ],
           { fit: true }
         );
       }
+      placeDestinationMarker(primary);
+      try {
+        if (api && typeof api.invalidate === "function") api.invalidate();
+        else if (api && api.map && api.map.invalidateSize) api.map.invalidateSize();
+      } catch (_inv) {}
       placeInput.value = primary.label || placeInput.value;
-      suggestBox.hidden = true;
+      if (!options.keepSuggest) {
+        suggestBox.hidden = true;
+        suggestBox.innerHTML = "";
+      }
+      /* Prefill route destination with the locked search result. */
+      if (!String(toInput.value || "").trim()) {
+        toInput.value = primary.label;
+      }
+      toInput.setAttribute("data-havkar-dest-lat", String(primary.latitude));
+      toInput.setAttribute("data-havkar-dest-lng", String(primary.longitude));
+      return true;
+    }
+
+    function renderSuggestions(rows, q) {
       suggestBox.innerHTML = "";
+      var list = (rows || []).map(normalizePlace).filter(Boolean);
+      if (!list.length) {
+        suggestBox.hidden = true;
+        return [];
+      }
+      list.forEach(function (row) {
+        var btn = el("button", { type: "button", role: "option" });
+        var cityCountry = [row.city, row.country].filter(Boolean).join(", ");
+        btn.textContent =
+          row.label +
+          (cityCountry && String(row.label).indexOf(cityCountry) === -1 ? " · " + cityCountry : "");
+        btn.addEventListener("click", function () {
+          if (applyPlace(row)) {
+            note(mt("maps.msg_place_ready", { label: row.label }));
+            refreshDestinationTools("all");
+          }
+        });
+        suggestBox.appendChild(btn);
+      });
+      suggestBox.hidden = false;
+      return list;
+    }
+
+    function requireDestination(kind) {
+      if (lastDestination && Number.isFinite(lastDestination.latitude)) {
+        return lastDestination;
+      }
+      note(mt("maps.msg_move_search_first"));
+      return null;
+    }
+
+    function openSurroundingsAtDestination(kind) {
+      var dest = requireDestination(kind);
+      if (!dest) return;
+      var radius = Number(radiusSel.value) || 3;
+      if (root.HAVKAR_HOTEL_SURROUNDINGS && root.HAVKAR_HOTEL_SURROUNDINGS.open) {
+        root.HAVKAR_HOTEL_SURROUNDINGS.open({
+          api: api,
+          setNote: note,
+          latitude: dest.latitude,
+          longitude: dest.longitude,
+          label: dest.label,
+          radius_km: radius
+        });
+        return;
+      }
+      note(
+        mt("maps.msg_loading_nearby", {
+          kind:
+            kind === "cameras"
+              ? mt("maps.kind_cameras")
+              : kind === "photos"
+                ? mt("maps.kind_photos")
+                : kind || "media"
+        })
+      );
+      fetch(
+        "/api/map-nearby-surroundings?lat=" +
+          encodeURIComponent(dest.latitude) +
+          "&lng=" +
+          encodeURIComponent(dest.longitude) +
+          "&radius_km=" +
+          encodeURIComponent(radius),
+        { headers: { Accept: "application/json" }, cache: "no-store" }
+      )
+        .then(function (r) {
+          return r.json();
+        })
+        .then(function (body) {
+          note(
+            mt("maps.msg_nearby_summary", {
+              cams: (body && body.camera_count) || 0,
+              photos: (body && body.photo_count) || 0,
+              sv:
+                body && body.street_view && body.street_view.interactive_360
+                  ? mt("maps.sv_on")
+                  : mt("maps.sv_off_near")
+            })
+          );
+        })
+        .catch(function () {
+          note(mt("maps.msg_nearby_fail"));
+        });
+    }
+
+    function refreshDestinationTools(kind) {
+      /* After a new destination is locked, nearby/360/routing origin from that place. */
+      if (!lastDestination) return;
+      if (kind === "streetview" || kind === "all") {
+        /* Surroundings panel loads 360 + cameras + POIs together. */
+        openSurroundingsAtDestination(kind || "all");
+      }
     }
 
     var suggestTimer = null;
@@ -321,99 +464,35 @@
         return;
       }
       suggestTimer = setTimeout(function () {
-        geocode(q, true).then(function (geo) {
-          suggestBox.innerHTML = "";
-          var rows = (geo && geo.results) || [];
-          if (!rows.length) {
-            suggestBox.hidden = true;
-            return;
-          }
-          rows.forEach(function (row) {
-            var btn = el("button", { type: "button", role: "option" });
-            var cityCountry = [row.city, row.country || (row.address && row.address.country)]
-              .filter(Boolean)
-              .join(", ");
-            btn.textContent = row.label + (cityCountry && String(row.label).indexOf(cityCountry) === -1 ? " · " + cityCountry : "");
-            btn.addEventListener("click", function () {
-              applyPlace(row);
-              note(
-                "Place: " +
-                  (row.label || "") +
-                  (row.city ? " · " + row.city : "") +
-                  (row.country ? ", " + row.country : "") +
-                  " · TomTom autocomplete"
-              );
-            });
-            suggestBox.appendChild(btn);
+        geocode(q, true)
+          .then(function (geo) {
+            if (geo && geo.error === "tomtom_not_configured") {
+              note(mt("maps.msg_tomtom_unavailable"));
+              return;
+            }
+            renderSuggestions((geo && geo.results) || [], q);
+          })
+          .catch(function () {
+            note(mt("maps.msg_search_failed"));
           });
-          suggestBox.hidden = false;
-        });
       }, 280);
     });
 
-    function openSurroundingsAtCenter(kind) {
-      var c = currentCenter();
-      if (!c) {
-        note(mt("maps.msg_move_search_first"));
-        return;
-      }
-      var radius = Number(radiusSel.value) || 3;
-      if (root.HAVKAR_HOTEL_SURROUNDINGS && root.HAVKAR_HOTEL_SURROUNDINGS.open) {
-        root.HAVKAR_HOTEL_SURROUNDINGS.open({
-          api: api,
-          setNote: note,
-          latitude: c.latitude,
-          longitude: c.longitude,
-          label: "Map center",
-          radius_km: radius
-        });
-        return;
-      }
-      note(mt("maps.msg_loading_nearby", { kind: kind === "cameras" ? mt("maps.kind_cameras") : kind === "photos" ? mt("maps.kind_photos") : (kind || "media") }));
-      fetch(
-        "/api/map-nearby-surroundings?lat=" +
-          encodeURIComponent(c.latitude) +
-          "&lng=" +
-          encodeURIComponent(c.longitude) +
-          "&radius_km=" +
-          encodeURIComponent(radius),
-        { headers: { Accept: "application/json" }, cache: "no-store" }
-      )
-        .then(function (r) {
-          return r.json();
-        })
-        .then(function (body) {
-          note(
-            "Nearby · cameras " +
-              ((body && body.camera_count) || 0) +
-              " · photos " +
-              ((body && body.photo_count) || 0) +
-              " · 360° " +
-              (body && body.street_view && body.street_view.interactive_360 ? "ON" : "unavailable") +
-              (body && body.message ? " · " + body.message : "")
-          );
-        })
-        .catch(function () {
-          note(mt("maps.msg_nearby_fail"));
-        });
-    }
-
     nearCamsBtn.addEventListener("click", function () {
-      openSurroundingsAtCenter("cameras");
+      openSurroundingsAtDestination("cameras");
     });
     nearPhotosBtn.addEventListener("click", function () {
-      openSurroundingsAtCenter("photos");
+      openSurroundingsAtDestination("photos");
     });
     streetViewBtn.addEventListener("click", function () {
-      var c = map && map.getCenter && map.getCenter();
+      var dest = requireDestination("streetview");
+      if (!dest) return;
       var qs =
-        c && Number.isFinite(c.lat) && Number.isFinite(c.lng)
-          ? "?lat=" +
-            encodeURIComponent(c.lat) +
-            "&lng=" +
-            encodeURIComponent(c.lng) +
-            "&radius_m=50&expand=1&provider=auto"
-          : "";
+        "?lat=" +
+        encodeURIComponent(dest.latitude) +
+        "&lng=" +
+        encodeURIComponent(dest.longitude) +
+        "&radius_m=50&expand=1&provider=auto";
       fetch("/api/map-street-view" + qs, { headers: { Accept: "application/json" } })
         .then(function (r) {
           return r.json();
@@ -421,32 +500,29 @@
         .then(function (body) {
           if (body && body.interactive_360) {
             note(
-              "Interactive 360° via " +
-                (body.provider || "provider") +
-                (body.distance_m != null ? " · " + body.distance_m + " m from place" : "") +
-                " · rotate + move when coverage exists."
+              mt("maps.msg_interactive_360", {
+                provider: body.provider || "provider",
+                distance:
+                  body.distance_m != null ? " · " + body.distance_m + " m" : ""
+              })
             );
           } else {
             var msg =
-              (body && (body.user_message || body.reason)) ||
-              "360° street imagery is unavailable near this place. Try satellite view.";
+              (body && (body.user_message || body.reason)) || mt("maps.msg_no_360");
             if (/HAVKAR_|MAPILLARY_ACCESS|GOOGLE_MAPS/i.test(String(msg))) {
-              msg =
-                body && body.failure_kind === "missing_key"
-                  ? "360° street imagery is not configured yet. Satellite view still works."
-                  : mt("maps.msg_no_360");
+              msg = mt("maps.msg_no_360");
             }
             note(msg);
           }
-          openSurroundingsAtCenter("streetview");
+          openSurroundingsAtDestination("streetview");
         })
         .catch(function () {
           note(mt("maps.msg_sv_unavailable"));
-          openSurroundingsAtCenter("streetview");
+          openSurroundingsAtDestination("streetview");
         });
     });
     surroundBtn.addEventListener("click", function () {
-      openSurroundingsAtCenter("all");
+      openSurroundingsAtDestination("all");
     });
 
     function parseLatLngQuery(q) {
@@ -471,7 +547,7 @@
     function resolvePlace(q) {
       var local = parseLatLngQuery(q);
       if (local) return Promise.resolve(local);
-      return geocode(q);
+      return geocode(q, false);
     }
 
     function gpsErrorMessage(err) {
@@ -591,22 +667,36 @@
         return;
       }
       note(mt("maps.msg_searching", { q: q }));
-      resolvePlace(q).then(function (geo) {
-        if (!geo || !geo.ok || !geo.primary) {
-          note(mt("maps.msg_no_match"));
-          return;
-        }
-        applyPlace(geo.primary);
-        note(
-          "Place: " +
-            (geo.primary.label || q) +
-            (geo.primary.city ? " · " + geo.primary.city : "") +
-            (geo.primary.country ? ", " + geo.primary.country : "") +
-            " · provider " +
-            (geo.provider || "search") +
-            (geo.last_updated ? " · " + geo.last_updated : "")
-        );
-      });
+      resolvePlace(q)
+        .then(function (geo) {
+          if (geo && geo.error === "tomtom_not_configured") {
+            note(mt("maps.msg_tomtom_unavailable"));
+            return;
+          }
+          if (!geo || !geo.ok || !geo.primary) {
+            renderSuggestions((geo && geo.results) || [], q);
+            note(mt("maps.msg_no_match"));
+            return;
+          }
+          var rows = (geo.results && geo.results.length ? geo.results : [geo.primary])
+            .map(normalizePlace)
+            .filter(Boolean);
+          if (!rows.length) {
+            note(mt("maps.msg_no_match"));
+            return;
+          }
+          applyPlace(rows[0], { keepSuggest: rows.length > 1 });
+          if (rows.length > 1) {
+            renderSuggestions(rows, q);
+            note(mt("maps.msg_multi_matches"));
+          } else {
+            note(mt("maps.msg_place_ready", { label: rows[0].label }));
+          }
+          refreshDestinationTools("all");
+        })
+        .catch(function () {
+          note(mt("maps.msg_search_failed"));
+        });
     });
 
     routeBtn.addEventListener("click", function () {

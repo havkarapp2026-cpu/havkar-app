@@ -50,7 +50,7 @@ test("trip planner UI wires Accommodation and Tickets; Health has no interactive
   assert.match(health, /healthNearBtn/);
   assert.doesNotMatch(health, /havkar-map-shell|leaflet\.js/i);
   assert.equal((read("index.html").match(/class="tile-label"/g) || []).length, 15);
-  assert.match(read("sw.js"), /map-i18n-complete-v1|map-surroundings-bari-v1|smart-travel-health-v1/);
+  assert.match(read("sw.js"), /map-search-destination-v1|map-i18n-complete-v1|map-surroundings-bari-v1|smart-travel-health-v1/);
 });
 
 test("hotel surroundings consumes POIs + smart guide + trip add", () => {
