@@ -295,6 +295,12 @@ function mapLayersAction(req) {
   ) {
     return "cameras";
   }
+  if (
+    action === "mapLiveVideos" ||
+    url.indexOf("/api/map-live-videos") !== -1
+  ) {
+    return "live_videos";
+  }
   if (action === "mapTraffic" || url.indexOf("/api/map-traffic") !== -1) {
     return "traffic";
   }
@@ -1549,6 +1555,10 @@ export default async function handler(req, res) {
       }
       if (kind === "cameras") {
         const mod = await import("../lib/map-public-cameras.mjs");
+        return await mod.default(req, res);
+      }
+      if (kind === "live_videos") {
+        const mod = await import("../lib/map-live-videos.mjs");
         return await mod.default(req, res);
       }
       const mod = await import("../lib/map-traffic.mjs");
