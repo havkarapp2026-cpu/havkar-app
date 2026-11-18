@@ -3,7 +3,7 @@
     return;
   }
 
-  var SW_URL = "/sw.js?v=havkar-sw-20261118-intersection-bbox-hint-v1";
+  var SW_URL = "/sw.js?v=havkar-sw-20261118-tickets-global-travel-v1";
 
   window.addEventListener("load", function () {
     navigator.serviceWorker

@@ -455,9 +455,9 @@ html[dir="rtl"] .flight-card{
 
 <main class="page">
     <p class="intro">
-        Search travel options for flights, trains, buses, ferries, linked hotels, transfers and taxi when authorized.
-        Event ticketing is a separate product in the Events module — not mixed into travel results.
-        Live partner booking stays off until access and Owner authorization are verified. Schedules and prices are never invented.
+        Worldwide travel search: any city or country for trains, buses, ferries, combined routes, hotels, transfers and taxi via official partners.
+        Flights stay independent while partnership confirmation is pending. Event ticketing remains in the Events module.
+        A search form is not live ticket sales — schedules and prices are never invented inside HAVKAR.
     </p>
 
     <section class="panel" aria-label="Travel display currency" style="margin:0 0 14px">
@@ -482,6 +482,7 @@ html[dir="rtl"] .flight-card{
 
     <div class="ticket-types" role="group" aria-label="Travel modes">
         <button class="ticket-type active" type="button" data-ticket-type="flight" aria-pressed="true"><i class="fas fa-plane" aria-hidden="true"></i><span>Flights</span></button>
+        <button class="ticket-type" type="button" data-ticket-type="combined" aria-pressed="false"><i class="fas fa-route" aria-hidden="true"></i><span>Combined</span></button>
         <button class="ticket-type" type="button" data-ticket-type="train" aria-pressed="false"><i class="fas fa-train" aria-hidden="true"></i><span>Trains</span></button>
         <button class="ticket-type" type="button" data-ticket-type="bus" aria-pressed="false"><i class="fas fa-bus" aria-hidden="true"></i><span>Buses</span></button>
         <button class="ticket-type" type="button" data-ticket-type="ferry" aria-pressed="false"><i class="fas fa-ship" aria-hidden="true"></i><span>Ferries</span></button>
@@ -495,9 +496,9 @@ html[dir="rtl"] .flight-card{
         <div class="kicker"><i class="fas fa-plane" aria-hidden="true"></i> Flights</div>
         <h2 id="flightTitle">Flights</h2>
         <div class="status-row">
-            <span class="status-badge"><i class="fas fa-plane-departure" aria-hidden="true"></i> Live partner search</span>
+            <span class="status-badge"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Awaiting partnership response</span>
         </div>
-        <p class="lead">Search real flight offers after signing in. Results come from the server-side Duffel API. Paid production booking stays off until the owner enables real payments; test orders are labeled as Duffel test mode only.</p>
+        <p class="lead">Flights stay independent while partnership confirmation is pending. Existing Duffel search (sign-in) and Google Flights redirect remain available. Paid live booking inside HAVKAR stays off until the owner authorizes it. No sample fares are invented.</p>
         <form id="flightSearchForm" class="flight-form" novalidate>
             <label>Origin IATA
                 <input id="flightOrigin" name="origin" maxlength="3" placeholder="MXP" autocomplete="off" required>
@@ -569,21 +570,40 @@ html[dir="rtl"] .flight-card{
         </div>
     </section>
 
+    <section id="ticket-combined" class="panel omio-panel" data-ticket-panel="combined" hidden aria-labelledby="combinedTitle">
+        <div class="kicker"><i class="fas fa-route" aria-hidden="true"></i> Combined worldwide travel</div>
+        <h2 id="combinedTitle">Combined routes</h2>
+        <div class="status-row">
+            <span class="status-badge"><i class="fas fa-globe" aria-hidden="true"></i> Global partner redirect</span>
+        </div>
+        <p class="lead">Search any city or country worldwide. For intercontinental trips (for example Crotone → USA), HAVKAR opens official Omio and Rome2Rio pages so partners can show real train, bus, ferry, and combined options when they exist. HAVKAR never invents a multimodal itinerary or price.</p>
+        <form class="omio-search-form flight-form" data-omio-mode="all" onsubmit="return false;">
+            <label>From (city / country) <input name="from" autocomplete="off" placeholder="Tokyo, Japan" required></label>
+            <label>To (city / country) <input name="to" autocomplete="off" placeholder="New York, USA" required></label>
+            <label>Departure date <input name="date" type="date"></label>
+            <label>Passengers <input name="adults" type="number" min="1" max="9" value="1"></label>
+            <button type="button" class="omio-search-btn partner-link" data-omio-mode="all">Search worldwide partners</button>
+        </form>
+        <div class="pending-note">A search form is not live ticket sales. Booking continues only on the partner site when that partner lists a real service.</div>
+        <div class="omio-results" data-omio-mode="all" role="status"></div>
+        <div id="travelCoverageBox" class="pending-note" style="margin-top:12px" hidden></div>
+    </section>
+
     <section id="ticket-train" class="panel omio-panel" data-ticket-panel="train" hidden aria-labelledby="trainTitle">
         <div class="kicker"><i class="fas fa-train" aria-hidden="true"></i> Trains</div>
         <h2 id="trainTitle">Trains</h2>
         <div class="status-row">
-            <span class="status-badge"><i class="fas fa-external-link-alt" aria-hidden="true"></i> Official Omio search</span>
+            <span class="status-badge"><i class="fas fa-globe" aria-hidden="true"></i> Global Omio redirect</span>
         </div>
-        <p class="lead">Search origin and destination, then open the official Omio results page. HAVKAR never invents schedules or fares. In-app journey lists need an Omio API contract.</p>
+        <p class="lead">Enter any city or country worldwide. Official Omio train results open when Omio covers that corridor. In-app inventory needs an Omio API contract. No invented schedules or fares.</p>
         <form class="omio-search-form flight-form" data-omio-mode="train" onsubmit="return false;">
-            <label>From <input name="from" autocomplete="off" placeholder="Crotone" required></label>
-            <label>To <input name="to" autocomplete="off" placeholder="Milan" required></label>
+            <label>From (city / country) <input name="from" autocomplete="off" placeholder="Berlin, Germany" required></label>
+            <label>To (city / country) <input name="to" autocomplete="off" placeholder="Paris, France" required></label>
             <label>Departure date <input name="date" type="date"></label>
             <label>Passengers <input name="adults" type="number" min="1" max="9" value="1"></label>
-            <button type="button" class="omio-search-btn partner-link" data-omio-mode="train">Search on Omio</button>
+            <button type="button" class="omio-search-btn partner-link" data-omio-mode="train">Search trains worldwide</button>
         </form>
-        <div class="pending-note">Results open on Omio.com (partner site). No fabricated prices inside HAVKAR.</div>
+        <div class="pending-note">Results open on Omio.com. Empty partner results mean no covered train — nothing is fabricated inside HAVKAR.</div>
         <div class="omio-results" data-omio-mode="train" role="status"></div>
     </section>
 
@@ -591,15 +611,15 @@ html[dir="rtl"] .flight-card{
         <div class="kicker"><i class="fas fa-bus" aria-hidden="true"></i> Buses</div>
         <h2 id="busTitle">Buses</h2>
         <div class="status-row">
-            <span class="status-badge"><i class="fas fa-external-link-alt" aria-hidden="true"></i> Official Omio search</span>
+            <span class="status-badge"><i class="fas fa-globe" aria-hidden="true"></i> Global Omio redirect</span>
         </div>
-        <p class="lead">Bus search opens the official Omio bus results for your route. No invented fares.</p>
+        <p class="lead">Worldwide bus search via official Omio. Coverage follows Omio’s network — HAVKAR does not invent routes.</p>
         <form class="omio-search-form flight-form" data-omio-mode="bus" onsubmit="return false;">
-            <label>From <input name="from" autocomplete="off" placeholder="Crotone" required></label>
-            <label>To <input name="to" autocomplete="off" placeholder="Milan" required></label>
+            <label>From (city / country) <input name="from" autocomplete="off" placeholder="Cairo, Egypt" required></label>
+            <label>To (city / country) <input name="to" autocomplete="off" placeholder="Alexandria, Egypt" required></label>
             <label>Departure date <input name="date" type="date"></label>
             <label>Passengers <input name="adults" type="number" min="1" max="9" value="1"></label>
-            <button type="button" class="omio-search-btn partner-link" data-omio-mode="bus">Search buses on Omio</button>
+            <button type="button" class="omio-search-btn partner-link" data-omio-mode="bus">Search buses worldwide</button>
         </form>
         <div class="pending-note">Partner site booking. Direct API inventory needs Owner contract.</div>
         <div class="omio-results" data-omio-mode="bus" role="status"></div>
@@ -607,17 +627,17 @@ html[dir="rtl"] .flight-card{
 
     <section id="ticket-ferry" class="panel omio-panel" data-ticket-panel="ferry" hidden aria-labelledby="ferryTitle">
         <div class="kicker"><i class="fas fa-ship" aria-hidden="true"></i> Ferries</div>
-        <h2 id="ferryTitle">Ferries</h2>
+        <h2 id="ferryTitle">Ferries &amp; passenger ships</h2>
         <div class="status-row">
-            <span class="status-badge"><i class="fas fa-external-link-alt" aria-hidden="true"></i> Official Omio search</span>
+            <span class="status-badge"><i class="fas fa-globe" aria-hidden="true"></i> Global Omio redirect</span>
         </div>
-        <p class="lead">Ferry / ship search opens official Omio ferry results. No invented sailings.</p>
+        <p class="lead">Ferry and passenger-ship search opens official Omio ferry results for ports Omio covers worldwide. No invented sailings.</p>
         <form class="omio-search-form flight-form" data-omio-mode="ferry" onsubmit="return false;">
-            <label>From <input name="from" autocomplete="off" placeholder="Naples" required></label>
-            <label>To <input name="to" autocomplete="off" placeholder="Palermo" required></label>
+            <label>From (port / city) <input name="from" autocomplete="off" placeholder="Helsinki, Finland" required></label>
+            <label>To (port / city) <input name="to" autocomplete="off" placeholder="Tallinn, Estonia" required></label>
             <label>Departure date <input name="date" type="date"></label>
             <label>Passengers <input name="adults" type="number" min="1" max="9" value="1"></label>
-            <button type="button" class="omio-search-btn partner-link" data-omio-mode="ferry">Search ferries on Omio</button>
+            <button type="button" class="omio-search-btn partner-link" data-omio-mode="ferry">Search ferries worldwide</button>
         </form>
         <div class="pending-note">Partner site booking. Direct API inventory needs Owner contract.</div>
         <div class="omio-results" data-omio-mode="ferry" role="status"></div>
@@ -627,14 +647,15 @@ html[dir="rtl"] .flight-card{
         <div class="kicker"><i class="fas fa-taxi" aria-hidden="true"></i> <span id="rideKicker">Taxi</span></div>
         <h2 id="taxiTitle">Taxi</h2>
         <p class="lead">
-            HAVKAR does not sell taxi rides or invent fares. Use the form to open official Google Maps directions
-            (and optionally a public ride-hail search). In-app taxi booking needs a partner contract.
+            Worldwide taxi / transfer: HAVKAR does not sell rides or invent fares. Open official Google Maps directions
+            or an Uber estimate for any city. In-app taxi booking needs a partner contract.
         </p>
         <form id="taxiSearchForm" class="flight-form" onsubmit="return false;">
-            <label>From <input id="taxiFrom" name="from" autocomplete="off" placeholder="Crotone station" required></label>
-            <label>To <input id="taxiTo" name="to" autocomplete="off" placeholder="Milan Centrale" required></label>
+            <label>From <input id="taxiFrom" name="from" autocomplete="off" placeholder="Tokyo Station, Japan" required></label>
+            <label>To <input id="taxiTo" name="to" autocomplete="off" placeholder="Narita Airport, Japan" required></label>
             <button type="button" id="taxiMapsBtn" class="partner-link">Open Google Maps directions</button>
             <button type="button" id="taxiUberBtn" class="partner-link" style="background:#fff;color:#1b5e20">Open Uber estimate (partner site)</button>
+            <button type="button" id="taxiRome2RioBtn" class="partner-link" style="background:#fff;color:#1b5e20">Open Rome2Rio transfer options</button>
         </form>
         <div id="transfer-booking" class="pending-note">
             No HAVKAR fare is shown. Directions and partner estimates open on their official sites.
@@ -646,7 +667,7 @@ html[dir="rtl"] .flight-card{
         <h2 id="hotelTitle">Hotels</h2>
         <p class="lead">Travel-linked stays: open HAVKAR Accommodation (map + live layers) or search the official Booking.com site. No sample hotel prices are invented here.</p>
         <form id="hotelPartnerForm" class="flight-form" onsubmit="return false;">
-            <label>City / area <input id="hotelCity" name="city" autocomplete="off" placeholder="Milan" required></label>
+            <label>City / area <input id="hotelCity" name="city" autocomplete="off" placeholder="São Paulo, Brazil" required></label>
             <label>Check-in <input id="hotelCheckin" name="checkin" type="date"></label>
             <label>Check-out <input id="hotelCheckout" name="checkout" type="date"></label>
             <button type="button" id="hotelAccBtn" class="partner-link">Open HAVKAR Accommodation</button>
@@ -1255,6 +1276,45 @@ html[dir="rtl"] .flight-card{
 
 <script>
 (function(){
+  function renderPartnerLinks(out, body, from, to){
+    if(!out) return;
+    out.innerHTML='';
+    var honesty=document.createElement('p');
+    honesty.textContent=(body&&body.honesty)||
+      'Official partner search only. A search form is not live HAVKAR ticket sales. No invented fares.';
+    out.appendChild(honesty);
+    var route=document.createElement('p');
+    route.className='pending-note';
+    route.textContent='Route: '+from+' → '+to+' (worldwide free-text; partner decides real coverage).';
+    out.appendChild(route);
+    var links=(body&&body.partner_links)||[];
+    if((!links||!links.length) && body&&body.url){
+      links=[{id:'omio',label:'Continue on Omio',url:body.url}];
+    }
+    if(!links.length){
+      var empty=document.createElement('p');
+      empty.textContent='Could not build partner URLs. No schedules or prices were invented.';
+      out.appendChild(empty);
+      return;
+    }
+    links.forEach(function(link){
+      var a=document.createElement('a');
+      a.className='partner-link';
+      a.href=link.url;
+      a.target='_blank';
+      a.rel='noopener noreferrer';
+      a.textContent=link.label||('Open '+link.id);
+      a.style.display='inline-block';
+      a.style.margin='8px 8px 0 0';
+      out.appendChild(a);
+    });
+    var warn=document.createElement('p');
+    warn.className='pending-note';
+    warn.style.marginTop='10px';
+    warn.textContent='If a partner shows no trips for this corridor, that means no listed service — HAVKAR will not invent one.';
+    out.appendChild(warn);
+  }
+
   function openOmioPartnerSearch(mode, form, out){
     if(!form) return;
     var from=String((form.querySelector('[name="from"]')||{}).value||'').trim();
@@ -1262,12 +1322,12 @@ html[dir="rtl"] .flight-card{
     var date=String((form.querySelector('[name="date"]')||{}).value||'').trim();
     var adults=String((form.querySelector('[name="adults"]')||{}).value||'1').trim();
     if(!from||!to){
-      if(out) out.textContent='Enter origin and destination first.';
+      if(out) out.textContent='Enter any worldwide origin and destination first.';
       return;
     }
-    if(out) out.textContent='Opening official Omio search…';
+    if(out) out.textContent='Building official worldwide partner links…';
     var payload={
-      action:'omio_affiliate_link',
+      action:'travel_partner_links',
       mode:mode,
       from:from,
       to:to,
@@ -1277,29 +1337,28 @@ html[dir="rtl"] .flight-card{
     fetch('/api/currency-matrix',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
       .then(function(r){return r.json()})
       .then(function(body){
-        if(!body||!body.ok||!body.url){
-          if(out) out.textContent='Could not build Omio search URL. No schedules or prices were invented.';
+        if(!body||!body.ok||!(body.links&&body.links.length)){
+          if(out) out.textContent='Could not build partner search URLs. No schedules or prices were invented.';
           return;
         }
-        var note=body.tracked
-          ? 'Opening tracked Omio affiliate search (partner site).'
-          : 'Opening official Omio public search (untracked). Affiliate tracking needs OMIO_AFFILIATE_ID.';
-        if(out){
-          out.innerHTML='';
-          var p=document.createElement('p');
-          p.textContent=note;
-          out.appendChild(p);
-          var a=document.createElement('a');
-          a.className='partner-link';
-          a.href=body.url;
-          a.target='_blank';
-          a.rel='noopener noreferrer';
-          a.textContent='Continue booking on Omio';
-          a.style.display='inline-block';
-          a.style.marginTop='8px';
-          out.appendChild(a);
+        renderPartnerLinks(out, {
+          honesty: body.honesty,
+          partner_links: body.links
+        }, from, to);
+        var coverageBox=document.getElementById('travelCoverageBox');
+        if(coverageBox && body.coverage){
+          coverageBox.hidden=false;
+          coverageBox.textContent=
+            'Coverage: Omio redirect '+
+            (body.coverage.surface_redirect&&body.coverage.surface_redirect.status)+
+            ' · Rome2Rio '+
+            (body.coverage.multimodal_redirect&&body.coverage.multimodal_redirect.status)+
+            ' · In-app ticket sales: '+
+            (body.coverage.in_app_ticket_sales?'yes':'no')+
+            '.';
         }
-        window.open(body.url,'_blank','noopener');
+        /* Open primary Omio (or first) link for immediate partner search */
+        window.open(body.links[0].url,'_blank','noopener');
       })
       .catch(function(err){if(out) out.textContent=String(err&&err.message||err);});
   }
@@ -1397,6 +1456,30 @@ html[dir="rtl"] .flight-card{
       if(to) url+='&dropoff[formatted_address]='+encodeURIComponent(to);
       if(note) note.textContent='Opening Uber partner deep link (estimate on their site).';
       window.open(url,'_blank','noopener');
+    });
+  }
+  var taxiRome2RioBtn=document.getElementById('taxiRome2RioBtn');
+  if(taxiRome2RioBtn){
+    taxiRome2RioBtn.addEventListener('click', function(){
+      var from=String((document.getElementById('taxiFrom')||{}).value||'').trim();
+      var to=String((document.getElementById('taxiTo')||{}).value||'').trim();
+      var note=document.getElementById('transfer-booking');
+      if(!from||!to){
+        if(note) note.textContent='Enter from and to for Rome2Rio transfer options.';
+        return;
+      }
+      fetch('/api/currency-matrix',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'travel_partner_links',mode:'all',from:from,to:to})})
+        .then(function(r){return r.json()})
+        .then(function(body){
+          var r2r=(body.links||[]).find(function(l){return l.id==='rome2rio';});
+          if(!r2r||!r2r.url){
+            if(note) note.textContent='Could not build Rome2Rio URL. No fare invented.';
+            return;
+          }
+          if(note) note.textContent='Opening Rome2Rio official transfer / combined options.';
+          window.open(r2r.url,'_blank','noopener');
+        })
+        .catch(function(){ if(note) note.textContent='Rome2Rio request failed.'; });
     });
   }
 

@@ -1788,12 +1788,31 @@ export default async function handler(req, res) {
       if (action === "omio_affiliate_link") {
         const {
           buildOmioAffiliateSearchUrl,
+          buildGlobalTravelPartnerLinks,
           omioConfigured
         } = require("../lib/omio-adapter.cjs");
         const link = buildOmioAffiliateSearchUrl(req.body || {}, process.env);
+        const bundle = buildGlobalTravelPartnerLinks(req.body || {}, process.env);
         return res.status(link.ok ? 200 : 409).json({
           ...link,
+          partner_links: bundle.links || [],
+          coverage: bundle.coverage,
           status: omioConfigured(process.env)
+        });
+      }
+      if (action === "travel_partner_links") {
+        const {
+          buildGlobalTravelPartnerLinks
+        } = require("../lib/omio-adapter.cjs");
+        const out = buildGlobalTravelPartnerLinks(req.body || {}, process.env);
+        return res.status(out.ok ? 200 : 409).json(out);
+      }
+      if (action === "travel_coverage_report") {
+        const { travelCoverageReport } = require("../lib/omio-adapter.cjs");
+        return res.status(200).json({
+          ok: true,
+          action: "travel_coverage_report",
+          coverage: travelCoverageReport(process.env)
         });
       }
       if (action === "omio_booking_create") {
