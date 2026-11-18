@@ -310,6 +310,9 @@ function mapLayersAction(req) {
   if (action === "mapTomTomRouting" || url.indexOf("/api/map-tomtom-routing") !== -1) {
     return "tomtom_routing";
   }
+  if (action === "mapMapsPlusStatus" || url.indexOf("/api/map-maps-plus-status") !== -1) {
+    return "maps_plus_status";
+  }
   return "";
 }
 
@@ -1574,6 +1577,10 @@ export default async function handler(req, res) {
       }
       if (kind === "tomtom_routing") {
         const mod = await import("../lib/map-tomtom-routing.mjs");
+        return await mod.default(req, res);
+      }
+      if (kind === "maps_plus_status") {
+        const mod = await import("../lib/map-maps-plus-status.mjs");
         return await mod.default(req, res);
       }
       const mod = await import("../lib/map-traffic.mjs");

@@ -12,6 +12,8 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <link rel="stylesheet" href="/havkar-accommodation.css">
+<link rel="stylesheet" href="/havkar-map-platform.css">
+<link rel="stylesheet" href="/havkar-map-pro.css">
 <style>
 .search-panel{background:#fff;border-radius:14px;padding:14px;margin:12px 0;box-shadow:0 6px 18px rgba(0,0,0,.06)}
 .search-panel label{display:block;font-size:13px;margin:8px 0 4px;color:#456}
@@ -95,14 +97,17 @@ html[dir="rtl"] .havkar-camera-viewer [data-cam="card"]{text-align:right}
         </select>
       </div>
     </div>
-    <div id="map" role="application" aria-label="Destination map"></div>
+    <div id="accProToolbarHost"></div>
     <div id="accLayerMenuHost" style="margin:8px 0"></div>
-    <div class="map-toolbar" role="group" aria-label="Location share" style="margin-bottom:6px">
+    <div id="accMapShell" class="havkar-map-shell">
+      <div id="map" role="application" aria-label="Destination map"></div>
+    </div>
+    <div class="map-toolbar" role="group" aria-label="Location share" style="margin:8px 0 6px" hidden>
       <button type="button" id="accShareLocationBtn">Share location</button>
       <button type="button" id="accCopyLocationBtn">Copy location link</button>
     </div>
     <div class="map-toolbar" role="group" aria-label="Map controls">
-      <button type="button" id="useGpsBtn" aria-label="Use my location">Use my location</button>
+      <button type="button" id="useGpsBtn" aria-label="Use my location" hidden>Use my location</button>
       <button type="button" id="hotelsBoundsBtn">Search this area</button>
       <button type="button" id="viewBothBtn" class="active" aria-pressed="true">Map + list</button>
       <button type="button" id="viewMapBtn" aria-pressed="false">Map</button>
@@ -110,7 +115,7 @@ html[dir="rtl"] .havkar-camera-viewer [data-cam="card"]{text-align:right}
       <button type="button" id="favoritesOnlyBtn" aria-pressed="false">Favorites</button>
       <button type="button" id="openCompareBtn" aria-pressed="false">Compare</button>
     </div>
-    <p id="geoLabel" class="provider-note">Street / satellite / hybrid / live layers for destinations. Satellite is static imagery, not a live camera. Live cameras use only licensed public feeds. Choose a destination or use GPS.</p>
+    <p id="geoLabel" class="provider-note">Professional HAVKAR map for Accommodation: street / satellite / hybrid, live traffic, place search, GPS, routing. Satellite is static imagery, not a live camera. Cameras/rain only from licensed public sources. All active map tools are free.</p>
     <div class="search-grid">
       <div>
         <label for="checkInInput">Check-in</label>
@@ -214,6 +219,7 @@ html[dir="rtl"] .havkar-camera-viewer [data-cam="card"]{text-align:right}
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
 <script src="/havkar-map.js"></script>
 <script src="/havkar-map-live-layers.js"></script>
+<script src="/havkar-map-pro-toolbar.js"></script>
 <script>
 (function () {
   var currencySelect = document.getElementById("currencySelect");
@@ -417,16 +423,60 @@ html[dir="rtl"] .havkar-camera-viewer [data-cam="card"]{text-align:right}
       marker.setLatLng(ev.latlng);
       geoLabel.textContent = "Map pin: " + selectedGeo.label;
     });
+    var accMapApi = {
+      map: map,
+      L: L,
+      setBaseLayer: setAccommodationBaseLayer,
+      setCenter: function (lat, lng, zoom) {
+        map.setView([lat, lng], zoom || map.getZoom());
+        if (marker) marker.setLatLng([lat, lng]);
+        selectedGeo = {
+          latitude: lat,
+          longitude: lng,
+          label: Number(lat).toFixed(5) + ", " + Number(lng).toFixed(5)
+        };
+      },
+      setMarkers: function (items) {
+        if (!pinLayer) return;
+        pinLayer.clearLayers();
+        (items || []).forEach(function (item) {
+          var lat = Number(item.latitude);
+          var lng = Number(item.longitude);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+          var m = L.marker([lat, lng]).bindPopup(String(item.label || "Place"));
+          pinLayer.addLayer(m);
+        });
+      },
+      clearPins: function () {
+        if (pinLayer) pinLayer.clearLayers();
+      },
+      clearRoute: function () {
+        if (accMapApi._proRouteLayer) accMapApi._proRouteLayer.clearLayers();
+      },
+      invalidate: function () {
+        setTimeout(function () {
+          map.invalidateSize();
+        }, 50);
+      },
+      geocode: window.HAVKAR_MAP && window.HAVKAR_MAP.geocode
+    };
+    if (window.HAVKAR_MAP_PRO && window.HAVKAR_MAP_PRO.attach) {
+      window.HAVKAR_MAP_PRO.attach({
+        container: "accProToolbarHost",
+        mapShell: "accMapShell",
+        mapHost: "map",
+        api: accMapApi,
+        setNote: function (text) {
+          if (geoLabel) geoLabel.textContent = text || "";
+        }
+      });
+    }
     if (window.HAVKAR_MAP_LIVE_LAYERS && window.HAVKAR_MAP_LIVE_LAYERS.attachLayerMenu) {
       window.HAVKAR_MAP_LIVE_LAYERS.attachLayerMenu({
         container: "accLayerMenuHost",
         map: map,
         L: L,
-        api: {
-          map: map,
-          L: L,
-          setBaseLayer: setAccommodationBaseLayer
-        },
+        api: accMapApi,
         setNote: function (text) {
           if (geoLabel) geoLabel.textContent = text || "";
         }
