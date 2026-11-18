@@ -16,12 +16,13 @@ test("toolbar locks destination and never uses undefined map for street view", (
   const toolbar = read("havkar-map-pro-toolbar.js");
   assert.match(toolbar, /var lastDestination = null/);
   assert.match(toolbar, /function normalizePlace/);
-  assert.match(toolbar, /function requireDestination/);
+  assert.match(toolbar, /function resolveWorkingPoint/);
   assert.match(toolbar, /function openSurroundingsAtDestination/);
   assert.match(toolbar, /function placeDestinationMarker/);
   assert.match(toolbar, /api\/map-tomtom-search/);
   assert.doesNotMatch(toolbar, /var c = map && map\.getCenter/);
-  assert.match(toolbar, /requireDestination\("streetview"\)/);
+  assert.match(toolbar, /resolveWorkingPoint\(\)/);
+  assert.match(toolbar, /maps\.msg_using_map_center/);
   assert.match(toolbar, /maps\.msg_move_search_first/);
   assert.match(toolbar, /maps\.msg_multi_matches/);
   assert.match(toolbar, /maps\.msg_place_ready/);
@@ -57,9 +58,9 @@ test("surroundings status and 360 titles are localized", () => {
   );
 });
 
-test("service worker bumped for destination search fix", () => {
-  assert.match(read("sw.js"), /map-search-destination-v1/);
-  assert.match(read("havkar-sw-register.js"), /map-search-destination-v1/);
+test("service worker bumped after live-cameras restore", () => {
+  assert.match(read("sw.js"), /live-cameras-restore-v1/);
+  assert.match(read("havkar-sw-register.js"), /live-cameras-restore-v1/);
 });
 
 test("TomTom search returns real coords for Rome, Bari, and non-EU sample", async () => {

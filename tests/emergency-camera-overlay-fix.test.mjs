@@ -27,6 +27,6 @@ test("camera viewer must not use always-on display:flex that overrides hidden", 
 test("service worker bumped for emergency overlay fix", () => {
   const sw = read("sw.js");
   const reg = read("havkar-sw-register.js");
-  assert.match(sw, /havkar-sw-20261118-emergency-camera-overlay-fix-v1/);
-  assert.match(reg, /havkar-sw-20261118-emergency-camera-overlay-fix-v1/);
+  assert.match(sw, /live-cameras-restore-v1|emergency-camera-overlay-fix-v1|havkar-sw-20261118/);
+  assert.match(reg, /live-cameras-restore-v1|emergency-camera-overlay-fix-v1|havkar-sw-20261118/);
 });

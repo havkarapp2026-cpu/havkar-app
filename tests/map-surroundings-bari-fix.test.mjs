@@ -80,5 +80,5 @@ test("health page keeps shared POI link and no interactive map", () => {
   assert.match(health, /map-nearby-pois|healthNearBtn/);
   assert.doesNotMatch(health, /leaflet\.js|havkar-map-shell/i);
   assert.equal((read("index.html").match(/class="tile-label"/g) || []).length, 15);
-  assert.match(read("sw.js"), /map-search-destination-v1|map-i18n-complete-v1|map-surroundings-bari-v1/);
+  assert.match(read("sw.js"), /live-cameras-restore-v1|map-search-destination-v1|map-i18n-complete-v1|map-surroundings-bari-v1/);
 });

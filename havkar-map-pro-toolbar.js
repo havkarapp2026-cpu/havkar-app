@@ -383,17 +383,39 @@
       return list;
     }
 
-    function requireDestination(kind) {
+    /**
+     * Prefer locked search destination; otherwise use real map center with an
+     * explicit notice — never invent Rome/default coords silently.
+     */
+    function resolveWorkingPoint(opts) {
+      var options = opts || {};
       if (lastDestination && Number.isFinite(lastDestination.latitude)) {
-        return lastDestination;
+        return {
+          place: lastDestination,
+          source: "destination"
+        };
+      }
+      var c = currentCenter();
+      if (c && Number.isFinite(c.latitude) && Number.isFinite(c.longitude)) {
+        if (!options.silent) note(mt("maps.msg_using_map_center"));
+        return {
+          place: {
+            latitude: c.latitude,
+            longitude: c.longitude,
+            label: mt("maps.map_center"),
+            from_map_center: true
+          },
+          source: "map_center"
+        };
       }
       note(mt("maps.msg_move_search_first"));
       return null;
     }
 
     function openSurroundingsAtDestination(kind) {
-      var dest = requireDestination(kind);
-      if (!dest) return;
+      var resolved = resolveWorkingPoint({ silent: kind === "all" && !!lastDestination });
+      if (!resolved || !resolved.place) return;
+      var dest = resolved.place;
       var radius = Number(radiusSel.value) || 3;
       if (root.HAVKAR_HOTEL_SURROUNDINGS && root.HAVKAR_HOTEL_SURROUNDINGS.open) {
         root.HAVKAR_HOTEL_SURROUNDINGS.open({
@@ -402,7 +424,8 @@
           latitude: dest.latitude,
           longitude: dest.longitude,
           label: dest.label,
-          radius_km: radius
+          radius_km: radius,
+          focus: kind || "all"
         });
         return;
       }
@@ -445,11 +468,21 @@
         });
     }
 
+    function openLiveCamerasLayer() {
+      try {
+        if (
+          root.HAVKAR_MAP_LIVE_LAYERS &&
+          typeof root.HAVKAR_MAP_LIVE_LAYERS.enableLiveCameras === "function"
+        ) {
+          root.HAVKAR_MAP_LIVE_LAYERS.enableLiveCameras();
+        }
+      } catch (_e) {}
+    }
+
     function refreshDestinationTools(kind) {
       /* After a new destination is locked, nearby/360/routing origin from that place. */
       if (!lastDestination) return;
       if (kind === "streetview" || kind === "all") {
-        /* Surroundings panel loads 360 + cameras + POIs together. */
         openSurroundingsAtDestination(kind || "all");
       }
     }
@@ -479,14 +512,17 @@
     });
 
     nearCamsBtn.addEventListener("click", function () {
+      /* Keep nearby + global live-camera capability reachable without a prior search. */
       openSurroundingsAtDestination("cameras");
+      openLiveCamerasLayer();
     });
     nearPhotosBtn.addEventListener("click", function () {
       openSurroundingsAtDestination("photos");
     });
     streetViewBtn.addEventListener("click", function () {
-      var dest = requireDestination("streetview");
-      if (!dest) return;
+      var resolved = resolveWorkingPoint();
+      if (!resolved || !resolved.place) return;
+      var dest = resolved.place;
       var qs =
         "?lat=" +
         encodeURIComponent(dest.latitude) +

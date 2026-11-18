@@ -73,6 +73,6 @@ test("non-travel modules still do not load map stacks", () => {
 test("service worker bumped for map layers release", () => {
   const sw = read("sw.js");
   const reg = read("havkar-sw-register.js");
-  assert.match(sw, /havkar-sw-20261118-map-search-destination-v1|map-i18n-complete-v1|hotel-streetview-mapillary-v1|map-surroundings-bari-v1/);
-  assert.match(reg, /havkar-sw-20261118-map-search-destination-v1|map-i18n-complete-v1|hotel-streetview-mapillary-v1|map-surroundings-bari-v1/);
+  assert.match(sw, /live-cameras-restore-v1|map-search-destination-v1|map-i18n-complete-v1|hotel-streetview-mapillary-v1|map-surroundings-bari-v1/);
+  assert.match(reg, /live-cameras-restore-v1|map-search-destination-v1|map-i18n-complete-v1|hotel-streetview-mapillary-v1|map-surroundings-bari-v1/);
 });
