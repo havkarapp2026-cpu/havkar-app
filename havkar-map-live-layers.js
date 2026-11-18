@@ -824,7 +824,7 @@
           if (!body || !body.available || !body.tile_url_template) {
             state.trafficOn = false;
             markToggle("traffic", false);
-            setMeta((body && body.message) || mt("maps.msg_traffic_unavailable"));
+            setMeta(mt("maps.msg_traffic_unavailable"));
             return false;
           }
           state.trafficLayer = L.tileLayer(body.tile_url_template, {
@@ -843,7 +843,13 @@
           }
           state.trafficOn = true;
           markToggle("traffic", true);
-          setMeta(body.message || mt("maps.layer_traffic"));
+          var trafficMsg = String((body && body.message) || mt("maps.layer_traffic"));
+          trafficMsg = trafficMsg
+            .replace(/\d{4}-\d{2}-\d{2}T[\d:.]+Z?/g, "")
+            .replace(/\s{2,}/g, " ")
+            .replace(/\s·\s*$/g, "")
+            .trim();
+          setMeta(trafficMsg || mt("maps.layer_traffic"));
           return true;
         })
         .catch(function () {

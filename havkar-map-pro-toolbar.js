@@ -925,7 +925,11 @@
     }
 
     shareBtn.addEventListener("click", function () {
-      var c = centerOf();
+      var c = currentCenter() || { latitude: 0, longitude: 0, label: mt("maps.map_center") };
+      if (!Number.isFinite(c.latitude)) {
+        note(mt("maps.msg_move_search_first"));
+        return;
+      }
       var url = buildShareUrl(c);
       if (root.HAVKAR_MAP && root.HAVKAR_MAP.nativeShareLocation) {
         root.HAVKAR_MAP.nativeShareLocation(c.latitude, c.longitude, c.label).then(function (res) {
@@ -965,7 +969,11 @@
     });
 
     copyBtn.addEventListener("click", function () {
-      var c = centerOf();
+      var c = currentCenter();
+      if (!c || !Number.isFinite(c.latitude)) {
+        note(mt("maps.msg_move_search_first"));
+        return;
+      }
       var text = buildShareUrl(c);
       if (navigator.clipboard && navigator.clipboard.writeText && text) {
         navigator.clipboard.writeText(text).then(
