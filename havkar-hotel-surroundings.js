@@ -269,20 +269,81 @@
       });
     }
 
-    function renderStreetView(sv) {
-      svBox.innerHTML = "";
-      if (sv && sv.interactive_360 === true && sv.available) {
-        svBox.appendChild(el("p", null, "Interactive 360° is available."));
-        return;
+    var mlyViewer = null;
+
+    function destroyMlyViewer() {
+      if (mlyViewer && typeof mlyViewer.remove === "function") {
+        try {
+          mlyViewer.remove();
+        } catch (_e) {}
       }
+      mlyViewer = null;
+    }
+
+    function loadScriptOnce(src, id) {
+      return new Promise(function (resolve, reject) {
+        if (id && document.getElementById(id)) {
+          resolve();
+          return;
+        }
+        var existing = document.querySelector('script[src="' + src + '"]');
+        if (existing) {
+          existing.addEventListener("load", function () {
+            resolve();
+          });
+          if (existing.dataset.loaded === "1") resolve();
+          return;
+        }
+        var s = document.createElement("script");
+        if (id) s.id = id;
+        s.src = src;
+        s.async = true;
+        s.onload = function () {
+          s.dataset.loaded = "1";
+          resolve();
+        };
+        s.onerror = function () {
+          reject(new Error("script_load_failed"));
+        };
+        document.head.appendChild(s);
+      });
+    }
+
+    function loadCssOnce(href, id) {
+      if (id && document.getElementById(id)) return;
+      if (document.querySelector('link[href="' + href + '"]')) return;
+      var link = document.createElement("link");
+      if (id) link.id = id;
+      link.rel = "stylesheet";
+      link.href = href;
+      document.head.appendChild(link);
+    }
+
+    function renderStreetViewFallbacks(sv) {
       svBox.appendChild(
         el(
           "p",
           { className: "havkar-surroundings-empty" },
           (sv && sv.reason) ||
-            "Interactive 360° Street View is not configured (Google / Mapillary key + Owner commercial approval required). No fake panoramas are shown."
+            "Interactive 360° is unavailable here. Add free HAVKAR_MAPILLARY_ACCESS_TOKEN for Mapillary, or Owner-approved HAVKAR_GOOGLE_MAPS_EMBED_API_KEY for Google Embed. No fake panoramas."
         )
       );
+      if (sv && Array.isArray(sv.required_secrets) && sv.required_secrets.length) {
+        var keys = el("ul", { className: "havkar-surroundings-keys" });
+        sv.required_secrets.forEach(function (sec) {
+          keys.appendChild(
+            el(
+              "li",
+              null,
+              sec.name +
+                " · " +
+                (sec.cost || "") +
+                (sec.payment_account_required ? " · billing account required to mint key" : " · no payment account")
+            )
+          );
+        });
+        svBox.appendChild(keys);
+      }
       var fb = el("div", { className: "havkar-surroundings-fallbacks" });
       fb.appendChild(el("button", { type: "button", "data-fb": "satellite" }, "Open satellite"));
       fb.appendChild(el("button", { type: "button", "data-fb": "photos" }, "Show nearby photos"));
@@ -293,6 +354,132 @@
         renderPhotos(state.payload && state.payload.photos);
       });
       svBox.appendChild(fb);
+    }
+
+    function mountMapillaryViewer(sv) {
+      destroyMlyViewer();
+      var viewerCfg = sv.viewer || {};
+      var token = sv.client_token;
+      var imageId = viewerCfg.initial_image_id || sv.initial_image_id;
+      if (!token || !imageId) {
+        renderStreetViewFallbacks(sv);
+        return;
+      }
+      loadCssOnce(viewerCfg.cdn_css || "https://unpkg.com/mapillary-js@4.1.2/dist/mapillary.css", "mly-css");
+      var mount = el("div", {
+        id: "havkarMlyViewer",
+        className: "havkar-surroundings-mly",
+        "aria-label": "Mapillary street view"
+      });
+      svBox.appendChild(mount);
+      svBox.appendChild(
+        el(
+          "p",
+          { className: "havkar-surroundings-sv-meta" },
+          "Mapillary · rotate with drag · move along sequence when coverage exists · " +
+            (sv.distance_m != null ? sv.distance_m + " m from stay · " : "") +
+            (sv.attribution || "")
+        )
+      );
+      if (sv.official_open_url) {
+        svBox.appendChild(
+          el(
+            "a",
+            {
+              href: sv.official_open_url,
+              target: "_blank",
+              rel: "noopener noreferrer",
+              className: "havkar-surroundings-official"
+            },
+            "Open official Mapillary source"
+          )
+        );
+      }
+      loadScriptOnce(
+        viewerCfg.cdn_js || "https://unpkg.com/mapillary-js@4.1.2/dist/mapillary.js",
+        "mly-js"
+      )
+        .then(function () {
+          var Viewer = root.mapillary && root.mapillary.Viewer;
+          if (!Viewer) {
+            mount.textContent = "Mapillary viewer failed to load.";
+            return;
+          }
+          mlyViewer = new Viewer({
+            accessToken: token,
+            container: mount,
+            imageId: imageId,
+            component: { sequence: true, cover: false }
+          });
+        })
+        .catch(function () {
+          mount.textContent =
+            "Could not load Mapillary viewer. Use the official Mapillary link or satellite fallback.";
+        });
+    }
+
+    function mountGoogleEmbed(sv) {
+      var url = (sv.viewer && sv.viewer.embed_url) || sv.embed_url;
+      if (!url || !/^https:\/\/www\.google\.com\/maps\/embed\//i.test(url)) {
+        renderStreetViewFallbacks(sv);
+        return;
+      }
+      var frame = el("iframe", {
+        className: "havkar-surroundings-gembed",
+        title: "Google Street View near stay",
+        src: url,
+        allowfullscreen: "true",
+        loading: "lazy",
+        referrerpolicy: "strict-origin-when-cross-origin"
+      });
+      frame.setAttribute("allowfullscreen", "");
+      svBox.appendChild(frame);
+      svBox.appendChild(
+        el(
+          "p",
+          { className: "havkar-surroundings-sv-meta" },
+          "Google Maps Embed Street View · rotate and move when Google coverage exists · usage $0 · " +
+            (sv.attribution || "")
+        )
+      );
+    }
+
+    function fetchStreetViewForPlace() {
+      if (!state.place) return Promise.resolve(null);
+      return fetch(
+        "/api/map-street-view?lat=" +
+          encodeURIComponent(state.place.latitude) +
+          "&lng=" +
+          encodeURIComponent(state.place.longitude) +
+          "&radius_m=50&provider=auto&limit=12",
+        { headers: { Accept: "application/json" }, cache: "no-store" }
+      )
+        .then(function (r) {
+          return r.json();
+        })
+        .catch(function () {
+          return null;
+        });
+    }
+
+    function renderStreetView(sv) {
+      destroyMlyViewer();
+      svBox.innerHTML = "";
+      svBox.appendChild(el("h3", null, "360° street view near stay"));
+      if (sv && sv.interactive_360 === true && sv.available) {
+        if (sv.provider === "mapillary" || (sv.viewer && sv.viewer.type === "mapillary_js")) {
+          mountMapillaryViewer(sv);
+          return;
+        }
+        if (
+          sv.provider === "google_maps_embed_streetview" ||
+          (sv.viewer && sv.viewer.type === "google_embed_iframe")
+        ) {
+          mountGoogleEmbed(sv);
+          return;
+        }
+      }
+      renderStreetViewFallbacks(sv || {});
     }
 
     function loadNearby() {
@@ -351,10 +538,20 @@
       renderPhotos(state.payload && state.payload.photos);
     });
     svBtn.addEventListener("click", function () {
-      renderStreetView(state.payload && state.payload.street_view);
-      try {
-        svBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      } catch (_e) {}
+      setStatus("Loading real street-level coverage near stay…");
+      fetchStreetViewForPlace().then(function (sv) {
+        if (state.payload) state.payload.street_view = sv;
+        renderStreetView(sv);
+        setStatus(
+          "360° · " +
+            ((sv && sv.provider) || "none") +
+            (sv && sv.interactive_360 ? " · interactive ON" : " · unavailable") +
+            (sv && sv.distance_m != null ? " · " + sv.distance_m + " m" : "")
+        );
+        try {
+          svBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        } catch (_e) {}
+      });
     });
     routeBtn.addEventListener("click", function () {
       if (!state.place) return;

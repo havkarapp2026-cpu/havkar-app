@@ -220,6 +220,6 @@ test("UI distinguishes LIVE / UNKNOWN / OFFLINE and re-validates before playback
   assert.match(layers, /\[UNKNOWN\]/);
   assert.match(layers, /Status UNKNOWN/);
   assert.doesNotMatch(layers, /curated public webcam"\);/);
-  assert.match(read("sw.js"), /live-cameras-global-v1/);
+  assert.match(read("sw.js"), /hotel-streetview-mapillary-v1|live-cameras-global-v1/);
   assert.match(read("lib/map-camera-sources.cjs"), /digitraffic-finland/);
 });
