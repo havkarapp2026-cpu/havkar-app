@@ -64,23 +64,38 @@ test("street view handler stays honest without keys and names required secrets",
     assert.equal(out.body.ok, true);
     assert.equal(out.body.interactive_360, false);
     assert.equal(out.body.available, false);
-    assert.match(String(out.body.reason || ""), /Mapillary|GOOGLE|token|key/i);
-    assert.ok(Array.isArray(out.body.required_secrets));
+    assert.equal(out.body.failure_kind, "missing_key");
+    assert.match(String(out.body.user_message || out.body.reason || ""), /not configured|unavailable|satellite/i);
+    assert.doesNotMatch(String(out.body.user_message || ""), /HAVKAR_MAPILLARY|GOOGLE_MAPS_EMBED/);
+    assert.equal(out.body.required_secrets, undefined);
+    const outDbg = { statusCode: 0, body: null };
+    const resDbg = {
+      setHeader() {},
+      status(code) {
+        outDbg.statusCode = code;
+        return this;
+      },
+      json(body) {
+        outDbg.body = body;
+      }
+    };
+    await handler({ method: "GET", query: { lat: "41.9028", lng: "12.4964", debug: "1" } }, resDbg);
+    assert.ok(Array.isArray(outDbg.body.required_secrets));
     assert.ok(
-      out.body.required_secrets.some(function (s) {
+      outDbg.body.required_secrets.some(function (s) {
         return s.name === "HAVKAR_MAPILLARY_ACCESS_TOKEN";
       })
     );
     assert.ok(
-      out.body.required_secrets.some(function (s) {
+      outDbg.body.required_secrets.some(function (s) {
         return s.name === "HAVKAR_GOOGLE_MAPS_EMBED_API_KEY";
       })
     );
-    const mly = out.body.required_secrets.find(function (s) {
+    const mly = outDbg.body.required_secrets.find(function (s) {
       return s.name === "HAVKAR_MAPILLARY_ACCESS_TOKEN";
     });
     assert.equal(mly.payment_account_required, false);
-    const g = out.body.required_secrets.find(function (s) {
+    const g = outDbg.body.required_secrets.find(function (s) {
       return s.name === "HAVKAR_GOOGLE_MAPS_EMBED_API_KEY";
     });
     assert.equal(g.payment_account_required, true);
@@ -252,7 +267,7 @@ test("pro toolbar autocomplete + nearby tools stay free; Maps Plus sales OFF; 15
   assert.match(toolbar, /radius_m=50/);
   assert.match(read("lib/havkar-maps-plus.cjs"), /sales_enabled:\s*false/);
   assert.equal((read("index.html").match(/class="tile-label"/g) || []).length, 15);
-  assert.match(read("sw.js"), /smart-travel-health-v1|hotel-streetview-mapillary-v1/);
+  assert.match(read("sw.js"), /map-surroundings-bari-v1|smart-travel-health-v1|hotel-streetview-mapillary-v1/);
 });
 
 test("nearby surroundings handler returns structured payload for Rome", async () => {
@@ -280,6 +295,8 @@ test("nearby surroundings handler returns structured payload for Rome", async ()
   assert.ok(out.body.street_view);
   assert.ok(out.body.pois);
   assert.equal(typeof out.body.camera_count, "number");
+  assert.ok(out.body.diagnosis);
   assert.match(String(out.body.coverage && out.body.coverage.street_view), /Mapillary|GOOGLE|Embed/i);
   assert.match(String(out.body.coverage && out.body.coverage.pois), /TomTom/i);
+  assert.doesNotMatch(String(out.body.user_message || out.body.message || ""), /HAVKAR_MAPILLARY|GOOGLE_MAPS_EMBED/);
 });
