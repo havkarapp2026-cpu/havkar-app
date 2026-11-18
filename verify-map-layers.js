@@ -69,7 +69,7 @@ function mainStatic() {
 
   const traffic = read("lib/map-traffic.mjs");
   ok("traffic key stays server-side", traffic.includes("never returned to the browser"));
-  ok("traffic gates without key", traffic.includes("TOMTOM_API_KEY"));
+  ok("traffic gates without key", traffic.includes("HAVKAR_TOMTOM_API_KEY"));
 
   const vercel = read("vercel.json");
   ok("vercel rewrite rain", vercel.includes("mapRainRadar"));
@@ -175,13 +175,15 @@ async function mainLive() {
   const trafficMock = mockRes();
   await trafficHandler({ method: "GET", query: {} }, trafficMock);
   ok("map-traffic handler responds", trafficMock.out.statusCode === 200 && trafficMock.out.body && trafficMock.out.body.ok);
-  const hasKey = Boolean(String(process.env.TOMTOM_API_KEY || "").trim());
+  const hasKey = Boolean(
+    String(process.env.HAVKAR_TOMTOM_API_KEY || process.env.TOMTOM_API_KEY || "").trim()
+  );
   ok(
     "map-traffic honest gate without invented tiles",
     hasKey
       ? trafficMock.out.body.available === true
       : trafficMock.out.body.available === false &&
-          String(trafficMock.out.body.message || "").includes("TOMTOM_API_KEY")
+          String(trafficMock.out.body.message || "").includes("HAVKAR_TOMTOM_API_KEY")
   );
 }
 

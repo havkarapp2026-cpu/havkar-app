@@ -304,6 +304,12 @@ function mapLayersAction(req) {
   if (action === "mapTraffic" || url.indexOf("/api/map-traffic") !== -1) {
     return "traffic";
   }
+  if (action === "mapTomTomSearch" || url.indexOf("/api/map-tomtom-search") !== -1) {
+    return "tomtom_search";
+  }
+  if (action === "mapTomTomRouting" || url.indexOf("/api/map-tomtom-routing") !== -1) {
+    return "tomtom_routing";
+  }
   return "";
 }
 
@@ -1543,12 +1549,13 @@ async function fulfillSettledXlmIntent(admin, userId, intentId) {
 
 export default async function handler(req, res) {
   if (isMapLayersRequest(req)) {
-    if (req.method !== "GET") {
-      res.setHeader("Allow", "GET");
+    const kind = mapLayersAction(req);
+    const allowsPost = kind === "tomtom_search" || kind === "tomtom_routing";
+    if (req.method !== "GET" && !(allowsPost && req.method === "POST")) {
+      res.setHeader("Allow", allowsPost ? "GET, POST" : "GET");
       return sendError(res, 405, "Method not allowed");
     }
     try {
-      const kind = mapLayersAction(req);
       if (kind === "rain") {
         const mod = await import("../lib/map-rain-radar.mjs");
         return await mod.default(req, res);
@@ -1559,6 +1566,14 @@ export default async function handler(req, res) {
       }
       if (kind === "live_videos") {
         const mod = await import("../lib/map-live-videos.mjs");
+        return await mod.default(req, res);
+      }
+      if (kind === "tomtom_search") {
+        const mod = await import("../lib/map-tomtom-search.mjs");
+        return await mod.default(req, res);
+      }
+      if (kind === "tomtom_routing") {
+        const mod = await import("../lib/map-tomtom-routing.mjs");
         return await mod.default(req, res);
       }
       const mod = await import("../lib/map-traffic.mjs");
