@@ -3,7 +3,7 @@
     return;
   }
 
-  var SW_URL = "/sw.js?v=havkar-sw-20261118-tomtom-havkar-key-v1";
+  var SW_URL = "/sw.js?v=havkar-sw-20261118-map-pro-toolbar-v1";
 
   window.addEventListener("load", function () {
     navigator.serviceWorker

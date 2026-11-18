@@ -478,16 +478,19 @@ html[dir="rtl"] .havkar-map-layers{
     </section>
 
     <link rel="stylesheet" href="/havkar-map-platform.css">
+    <link rel="stylesheet" href="/havkar-map-pro.css">
     <section id="travelMapPanel" class="havkar-module-map panel" aria-label="Travel route map" style="margin:0 0 16px;position:relative;z-index:1;isolation:isolate">
         <div class="kicker"><i class="fas fa-map-location-dot" aria-hidden="true"></i> Travel map</div>
-        <p class="lead" style="margin-bottom:10px">Street, satellite and hybrid map for origin/destination. Routes use real geocoding when places resolve; schedules and fares are never invented.</p>
+        <p class="lead" style="margin-bottom:10px">Professional HAVKAR map for Tickets: street / satellite / hybrid, live traffic, place search, GPS, routing. Schedules and fares are never invented. All active map tools are free.</p>
+        <div id="ticketsProToolbarHost"></div>
         <div id="ticketsLayerMenuHost" style="margin:0 0 10px"></div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px">
-            <button type="button" id="ticketsShareLocationBtn">Share location</button>
-            <button type="button" id="ticketsCopyLocationBtn">Copy location link</button>
+        <div id="ticketsMapShell" class="havkar-map-shell">
+          <div id="ticketsMapHost" class="havkar-map-host" style="height:min(52vh,420px);min-height:280px;border-radius:14px;border:0"></div>
         </div>
-        <div id="ticketsMapHost" class="havkar-map-host" style="height:min(46vh,380px);min-height:260px;border-radius:14px;border:1px solid var(--border)"></div>
-        <p id="ticketsMapNote" class="pending-note" role="status">Search origin and destination to place markers. Illustrative flight connections are geographic lines, not verified airways. Satellite tiles are static imagery, not a live camera. Live video cams use curated YouTube Live embeds; intersection layer is licensed JPEG snapshots only.</p>
+        <p id="ticketsMapNote" class="pending-note" role="status">Search origin and destination to place markers. Illustrative flight connections are geographic lines, not verified airways. Satellite tiles are static imagery, not a live camera. Live video cams use curated YouTube Live embeds; intersection layer is licensed JPEG snapshots only. Rain/cameras only from licensed public sources.</p>
+        <!-- Legacy ids kept for compatibility; pro toolbar owns share/copy UX -->
+        <button type="button" id="ticketsShareLocationBtn" hidden aria-hidden="true">Share location</button>
+        <button type="button" id="ticketsCopyLocationBtn" hidden aria-hidden="true">Copy location link</button>
     </section>
 
     <div class="ticket-types" role="group" aria-label="Travel modes">
@@ -1129,6 +1132,7 @@ html[dir="rtl"] .havkar-map-layers{
 </script>
 <script src="/havkar-module-map.js"></script>
 <script src="/havkar-map-live-layers.js"></script>
+<script src="/havkar-map-pro-toolbar.js"></script>
 <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
 
@@ -1168,6 +1172,15 @@ html[dir="rtl"] .havkar-map-layers{
   }
 
   function wireTicketsLayers(api){
+    if(window.HAVKAR_MAP_PRO && window.HAVKAR_MAP_PRO.attach){
+      window.HAVKAR_MAP_PRO.attach({
+        container: 'ticketsProToolbarHost',
+        mapShell: 'ticketsMapShell',
+        mapHost: 'ticketsMapHost',
+        api: api,
+        setNote: setMapNote
+      });
+    }
     if(window.HAVKAR_MAP_LIVE_LAYERS && window.HAVKAR_MAP_LIVE_LAYERS.attachLayerMenu){
       window.HAVKAR_MAP_LIVE_LAYERS.attachLayerMenu({
         container: 'ticketsLayerMenuHost',
@@ -1248,7 +1261,9 @@ html[dir="rtl"] .havkar-map-layers{
           if(route && route.ok){
             var km = (route.distance_m/1000).toFixed(1);
             var mins = Math.round(route.duration_s/60);
-            setMapNote('Route preview ('+profile+'): ~'+km+' km · ~'+mins+' min via OSRM. Not a ticket booking.');
+            var delay = Number(route.traffic_delay_s);
+            var delayTxt = Number.isFinite(delay) && delay > 0 ? (' · traffic delay ~'+Math.round(delay/60)+' min') : '';
+            setMapNote('Route preview ('+(route.provider||profile)+'): ~'+km+' km · ~'+mins+' min'+delayTxt+(route.last_updated ? (' · updated '+route.last_updated) : '')+'. Free map tool — not a ticket booking.');
           } else {
             setMapNote('Markers placed. Live route geometry unavailable; open external directions if needed.');
           }
