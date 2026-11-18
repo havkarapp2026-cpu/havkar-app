@@ -3,7 +3,7 @@
     return;
   }
 
-  var SW_URL = "/sw.js?v=havkar-sw-20261118-map-layers-rain-cameras-traffic-v1";
+  var SW_URL = "/sw.js?v=havkar-sw-20261118-emergency-camera-overlay-fix-v1";
 
   window.addEventListener("load", function () {
     navigator.serviceWorker
