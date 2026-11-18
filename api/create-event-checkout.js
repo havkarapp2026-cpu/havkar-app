@@ -322,6 +322,21 @@ function mapLayersAction(req) {
   ) {
     return "nearby_surroundings";
   }
+  if (action === "mapNearbyPois" || url.indexOf("/api/map-nearby-pois") !== -1) {
+    return "nearby_pois";
+  }
+  if (action === "mapTripPlan" || url.indexOf("/api/map-trip-plan") !== -1) {
+    return "trip_plan";
+  }
+  if (
+    action === "mapTravelPlusStatus" ||
+    url.indexOf("/api/map-travel-plus-status") !== -1
+  ) {
+    return "travel_plus_status";
+  }
+  if (action === "mapSmartGuide" || url.indexOf("/api/map-smart-guide") !== -1) {
+    return "smart_guide";
+  }
   return "";
 }
 
@@ -1562,7 +1577,11 @@ async function fulfillSettledXlmIntent(admin, userId, intentId) {
 export default async function handler(req, res) {
   if (isMapLayersRequest(req)) {
     const kind = mapLayersAction(req);
-    const allowsPost = kind === "tomtom_search" || kind === "tomtom_routing";
+    const allowsPost =
+      kind === "tomtom_search" ||
+      kind === "tomtom_routing" ||
+      kind === "trip_plan" ||
+      kind === "smart_guide";
     if (req.method !== "GET" && !(allowsPost && req.method === "POST")) {
       res.setHeader("Allow", allowsPost ? "GET, POST" : "GET");
       return sendError(res, 405, "Method not allowed");
@@ -1598,6 +1617,22 @@ export default async function handler(req, res) {
       }
       if (kind === "nearby_surroundings") {
         const mod = await import("../lib/map-nearby-surroundings.mjs");
+        return await mod.default(req, res);
+      }
+      if (kind === "nearby_pois") {
+        const mod = await import("../lib/map-nearby-pois.mjs");
+        return await mod.default(req, res);
+      }
+      if (kind === "trip_plan") {
+        const mod = await import("../lib/map-trip-plan.mjs");
+        return await mod.default(req, res);
+      }
+      if (kind === "travel_plus_status") {
+        const mod = await import("../lib/map-travel-plus-status.mjs");
+        return await mod.default(req, res);
+      }
+      if (kind === "smart_guide") {
+        const mod = await import("../lib/map-smart-guide.mjs");
         return await mod.default(req, res);
       }
       const mod = await import("../lib/map-traffic.mjs");

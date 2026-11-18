@@ -23,7 +23,10 @@ const LANGS21 = [
 assert.equal(health.HEALTH_CATEGORIES.length, 27);
 assert.match(healthHtml, /health-category\.html\?id=/);
 assert.match(categoryHtml, /category_id:\s*categoryId/);
-assert.match(categoryHtml, /havkar-map\.js/);
+/* Owner policy: interactive map stays on Tickets + Accommodation only. */
+assert.doesNotMatch(categoryHtml, /havkar-map\.js/);
+assert.doesNotMatch(healthHtml, /havkar-map\.js|leaflet\.js/i);
+assert.match(healthHtml, /map-nearby-pois|healthNearBtn/);
 assert.match(categoryHtml, /health\.empty_title/);
 assert.match(ownerHtml, /health_owner_queue/);
 assert.match(ownerHtml, /health_owner_verify_license/);

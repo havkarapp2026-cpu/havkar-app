@@ -103,6 +103,8 @@ html[dir="rtl"] .havkar-camera-viewer [data-cam="card"]{text-align:right}
     <div id="accMapShell" class="havkar-map-shell">
       <div id="map" role="application" aria-label="Destination map"></div>
     </div>
+    <div id="havkarTripPlanner" class="havkar-trip-planner" aria-label="Trip planner"></div>
+    <div id="havkarSurroundingsPanel" class="havkar-surroundings" hidden aria-live="polite"></div>
     <div class="map-toolbar" role="group" aria-label="Location share" style="margin:8px 0 6px" hidden>
       <button type="button" id="accShareLocationBtn">Share location</button>
       <button type="button" id="accCopyLocationBtn">Copy location link</button>
@@ -221,6 +223,7 @@ html[dir="rtl"] .havkar-camera-viewer [data-cam="card"]{text-align:right}
 <script src="/havkar-map.js"></script>
 <script src="/havkar-map-live-layers.js"></script>
 <script src="/havkar-map-pro-toolbar.js"></script>
+<script src="/havkar-trip-planner.js"></script>
 <script src="/havkar-hotel-surroundings.js"></script>
 <script>
 (function () {
@@ -472,6 +475,12 @@ html[dir="rtl"] .havkar-camera-viewer [data-cam="card"]{text-align:right}
         setNote: function (text) {
           if (geoLabel) geoLabel.textContent = text || "";
         }
+      });
+    }
+    if (window.HAVKAR_TRIP_PLANNER && window.HAVKAR_TRIP_PLANNER.mount) {
+      window._havkarTripApi = window.HAVKAR_TRIP_PLANNER.mount({
+        hostId: "havkarTripPlanner",
+        mapApi: accMapApi
       });
     }
     if (window.HAVKAR_MAP_LIVE_LAYERS && window.HAVKAR_MAP_LIVE_LAYERS.attachLayerMenu) {
