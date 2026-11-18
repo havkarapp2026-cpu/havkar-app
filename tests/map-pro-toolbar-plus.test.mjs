@@ -18,8 +18,10 @@ test("pro toolbar exists and wires tickets + accommodation", () => {
   assert.match(hotels, /accProToolbarHost/);
   assert.match(read("havkar-map-pro-toolbar.js"), /Fullscreen/);
   assert.match(read("havkar-map-pro-toolbar.js"), /My location/);
+  assert.match(read("havkar-map-pro-toolbar.js"), /Use as origin/);
   assert.match(read("havkar-map-pro-toolbar.js"), /map-tomtom-routing/);
   assert.match(read("havkar-map-pro-toolbar.js"), /sales OFF/);
+  assert.match(read("havkar-map-pro-toolbar.js"), /navigator\.geolocation\.getCurrentPosition/);
 });
 
 test("Maps Plus scaffold is sales-disabled", () => {

@@ -115,16 +115,31 @@
     host.appendChild(routeRow);
 
     var actions = el("div", { className: "havkar-map-pro-actions", role: "group", "aria-label": "Map tools" });
-    var gpsBtn = el("button", { type: "button", "data-pro": "gps" }, "My location");
+    var gpsBtn = el("button", { type: "button", "data-pro": "gps", "aria-label": "My location — requests browser GPS permission" }, "My location");
+    var useOriginBtn = el(
+      "button",
+      {
+        type: "button",
+        "data-pro": "gps-origin",
+        hidden: "hidden",
+        disabled: "disabled",
+        "aria-label": "Use my GPS position as route origin"
+      },
+      "Use as origin"
+    );
     var shareBtn = el("button", { type: "button", "data-pro": "share" }, "Share");
     var copyBtn = el("button", { type: "button", "data-pro": "copy" }, "Copy link");
     var fullBtn = el("button", { type: "button", "data-pro": "fullscreen" }, "Fullscreen");
     var zoomInBtn = el("button", { type: "button", "data-pro": "zoom-in", "aria-label": "Zoom in" }, "+");
     var zoomOutBtn = el("button", { type: "button", "data-pro": "zoom-out", "aria-label": "Zoom out" }, "−");
-    [gpsBtn, shareBtn, copyBtn, fullBtn, zoomInBtn, zoomOutBtn].forEach(function (b) {
+    [gpsBtn, useOriginBtn, shareBtn, copyBtn, fullBtn, zoomInBtn, zoomOutBtn].forEach(function (b) {
       actions.appendChild(b);
     });
     host.appendChild(actions);
+
+    /* Device GPS only — never POST/upload coordinates to HAVKAR without consent. */
+    var lastGps = null;
+    var gpsLayer = null;
 
     var status = el("p", { className: "havkar-map-pro-status", role: "status", "data-pro": "status" });
     status.textContent =
@@ -156,6 +171,107 @@
       }).then(function (r) {
         return r.json();
       });
+    }
+
+    function parseLatLngQuery(q) {
+      var raw = String(q || "").trim();
+      var m = raw.match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
+      if (!m) return null;
+      var lat = Number(m[1]);
+      var lng = Number(m[2]);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+      if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+      return {
+        ok: true,
+        provider: "device_gps",
+        primary: {
+          latitude: lat,
+          longitude: lng,
+          label: "My GPS (" + lat.toFixed(5) + ", " + lng.toFixed(5) + ")"
+        }
+      };
+    }
+
+    function resolvePlace(q) {
+      var local = parseLatLngQuery(q);
+      if (local) return Promise.resolve(local);
+      return geocode(q);
+    }
+
+    function gpsErrorMessage(err) {
+      var code = err && typeof err.code === "number" ? err.code : null;
+      if (!navigator.geolocation) {
+        return "Geolocation is not supported in this browser. Use place search for origin/destination — the map stays usable.";
+      }
+      if (code === 1) {
+        return "Location permission denied. Allow location for this site in browser settings, then tap My location again. Map and search still work without GPS.";
+      }
+      if (code === 2) {
+        return "GPS unavailable (device location off or no signal). Turn on Location/GPS, move near a window if indoors, then try again.";
+      }
+      if (code === 3) {
+        return "Location request timed out. Wait for a GPS lock outdoors, then try My location again.";
+      }
+      return "Could not read your location. Check permission and GPS, then try again. The app continues without GPS.";
+    }
+
+    function placeGpsOnMap(lat, lng, accuracy) {
+      if (!api || !api.map || !api.L) return;
+      var L = api.L;
+      if (!gpsLayer) {
+        gpsLayer = L.layerGroup().addTo(api.map);
+      } else {
+        gpsLayer.clearLayers();
+      }
+      var accTxt = Number.isFinite(accuracy)
+        ? "<br>Accuracy ≈ " + Math.round(accuracy) + " m"
+        : "";
+      var icon = L.divIcon({
+        className: "havkar-gps-marker",
+        html: '<span class="havkar-gps-dot" title="Your GPS location"></span>',
+        iconSize: [22, 22],
+        iconAnchor: [11, 11]
+      });
+      var marker = L.marker([lat, lng], { icon: icon, zIndexOffset: 1200, keyboard: true }).bindPopup(
+        "<strong>Your location</strong>" +
+          accTxt +
+          "<br><small>Shown only on your device. Not uploaded to HAVKAR servers.</small>"
+      );
+      gpsLayer.addLayer(marker);
+      if (Number.isFinite(accuracy) && accuracy > 0) {
+        gpsLayer.addLayer(
+          L.circle([lat, lng], {
+            radius: Math.min(Math.max(accuracy, 10), 2500),
+            color: "#1b5e20",
+            weight: 2,
+            fillColor: "#66bb6a",
+            fillOpacity: 0.18,
+            interactive: false
+          })
+        );
+      }
+      var zoom = 15;
+      try {
+        zoom = Math.max(api.map.getZoom() || 14, 15);
+      } catch (_z) {}
+      api.map.setView([lat, lng], zoom);
+      try {
+        marker.openPopup();
+      } catch (_p) {}
+    }
+
+    function applyGpsAsOrigin(lat, lng, accuracy) {
+      lastGps = {
+        latitude: lat,
+        longitude: lng,
+        accuracy: accuracy,
+        label: "My GPS (" + Number(lat).toFixed(5) + ", " + Number(lng).toFixed(5) + ")"
+      };
+      fromInput.value = Number(lat).toFixed(6) + ", " + Number(lng).toFixed(6);
+      fromInput.setAttribute("data-havkar-gps-origin", "1");
+      useOriginBtn.hidden = false;
+      useOriginBtn.disabled = false;
+      useOriginBtn.classList.add("primary");
     }
 
     function refreshTrafficBadge() {
@@ -202,7 +318,7 @@
         return;
       }
       note("Searching “" + q + "”…");
-      geocode(q).then(function (geo) {
+      resolvePlace(q).then(function (geo) {
         if (!geo || !geo.ok || !geo.primary) {
           note("No matching place found. Coordinates are never invented.");
           return;
@@ -243,7 +359,7 @@
         return;
       }
       note("Routing " + fromQ + " → " + toQ + "…");
-      Promise.all([geocode(fromQ), geocode(toQ)]).then(function (pair) {
+      Promise.all([resolvePlace(fromQ), resolvePlace(toQ)]).then(function (pair) {
         var a = pair[0] && pair[0].primary;
         var b = pair[1] && pair[1].primary;
         if (!a || !b) {
@@ -323,41 +439,73 @@
       });
     });
 
+    useOriginBtn.addEventListener("click", function () {
+      if (!lastGps) {
+        note("Get your GPS location first, then use it as route origin.");
+        return;
+      }
+      applyGpsAsOrigin(lastGps.latitude, lastGps.longitude, lastGps.accuracy);
+      note(
+        "Origin set to your GPS position (" +
+          Number(lastGps.latitude).toFixed(5) +
+          ", " +
+          Number(lastGps.longitude).toFixed(5) +
+          "). Enter a destination and tap Route."
+      );
+    });
+
     gpsBtn.addEventListener("click", function () {
-      note("Requesting your location…");
+      if (gpsBtn.getAttribute("aria-busy") === "true") return;
+      note("Requesting browser location permission…");
+      gpsBtn.setAttribute("aria-busy", "true");
+      gpsBtn.disabled = true;
+      gpsBtn.textContent = "Locating…";
+
+      function finishGpsUi() {
+        gpsBtn.removeAttribute("aria-busy");
+        gpsBtn.disabled = false;
+        gpsBtn.textContent = "My location";
+      }
+
       function onPos(lat, lng, accuracy) {
-        if (api && api.setCenter) api.setCenter(lat, lng, 14);
-        else if (api && api.map) api.map.setView([lat, lng], 14);
+        placeGpsOnMap(lat, lng, accuracy);
+        applyGpsAsOrigin(lat, lng, accuracy);
         note(
-          "GPS location set" +
-            (Number.isFinite(accuracy) ? " · accuracy ~" + Math.round(accuracy) + " m" : "") +
-            ". Permission was granted by you."
+          "GPS ready · " +
+            Number(lat).toFixed(5) +
+            ", " +
+            Number(lng).toFixed(5) +
+            (Number.isFinite(accuracy) ? " · accuracy ≈ " + Math.round(accuracy) + " m" : "") +
+            ". Origin filled — tap Use as origin anytime. Location stays on your device (not uploaded to HAVKAR)."
         );
       }
-      if (api && typeof api.requestGps === "function") {
-        api
-          .requestGps()
-          .then(function (pos) {
-            onPos(pos.latitude, pos.longitude, pos.accuracy);
-          })
-          .catch(function () {
-            note("Location permission denied or unavailable.");
-          });
-        return;
-      }
+
       if (!navigator.geolocation) {
-        note("Geolocation is not available on this device.");
+        note(gpsErrorMessage(null));
+        finishGpsUi();
         return;
       }
-      navigator.geolocation.getCurrentPosition(
-        function (pos) {
-          onPos(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
-        },
-        function () {
-          note("Location permission denied or unavailable.");
-        },
-        { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
-      );
+
+      try {
+        navigator.geolocation.getCurrentPosition(
+          function (pos) {
+            try {
+              onPos(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+            } catch (_e) {
+              note("Location received but the map could not update. You can still type an origin.");
+            }
+            finishGpsUi();
+          },
+          function (err) {
+            note(gpsErrorMessage(err));
+            finishGpsUi();
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+      } catch (_callErr) {
+        note(gpsErrorMessage(null));
+        finishGpsUi();
+      }
     });
 
     shareBtn.addEventListener("click", function () {
@@ -448,7 +596,10 @@
     return {
       ok: true,
       note: note,
-      inputs: { place: placeInput, from: fromInput, to: toInput }
+      inputs: { place: placeInput, from: fromInput, to: toInput },
+      getLastGps: function () {
+        return lastGps ? Object.assign({}, lastGps) : null;
+      }
     };
   }
 
