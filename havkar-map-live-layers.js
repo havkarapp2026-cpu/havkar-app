@@ -1077,6 +1077,7 @@
     /* Keep playback APIs on the shared export — never wipe on re-assign. */
     root.HAVKAR_MAP_LIVE_LAYERS.openCamera = openCamera;
     root.HAVKAR_MAP_LIVE_LAYERS.enableLiveCameras = enableLiveCameras;
+    root.HAVKAR_MAP_LIVE_LAYERS._viewerReady = true;
 
     return {
       ok: true,
@@ -1090,10 +1091,10 @@
 
   root.HAVKAR_MAP_LIVE_LAYERS = root.HAVKAR_MAP_LIVE_LAYERS || {};
   root.HAVKAR_MAP_LIVE_LAYERS.attachLayerMenu = attachLayerMenu;
-  if (typeof root.HAVKAR_MAP_LIVE_LAYERS.openCamera !== "function") {
-    root.HAVKAR_MAP_LIVE_LAYERS.openCamera = function () {};
-  }
-  if (typeof root.HAVKAR_MAP_LIVE_LAYERS.enableLiveCameras !== "function") {
-    root.HAVKAR_MAP_LIVE_LAYERS.enableLiveCameras = function () {};
-  }
+  /* Do NOT stub openCamera with a no-op — surroundings Play must fall back to
+     official watch/embed URLs until attachLayerMenu wires the real viewer. */
+  root.HAVKAR_MAP_LIVE_LAYERS.enableLiveCameras =
+    typeof root.HAVKAR_MAP_LIVE_LAYERS.enableLiveCameras === "function"
+      ? root.HAVKAR_MAP_LIVE_LAYERS.enableLiveCameras
+      : function () {};
 })(typeof globalThis !== "undefined" ? globalThis : this);

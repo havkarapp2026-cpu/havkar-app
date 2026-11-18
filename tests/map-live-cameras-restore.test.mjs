@@ -30,11 +30,17 @@ test("live layers expose durable openCamera + enableLiveCameras APIs", () => {
   assert.match(layers, /function enableLiveCameras/);
   assert.match(layers, /root\.HAVKAR_MAP_LIVE_LAYERS\.openCamera = openCamera/);
   assert.match(layers, /root\.HAVKAR_MAP_LIVE_LAYERS\.enableLiveCameras = enableLiveCameras/);
+  assert.match(layers, /root\.HAVKAR_MAP_LIVE_LAYERS\._viewerReady = true/);
   assert.match(layers, /root\.HAVKAR_MAP_LIVE_LAYERS\.attachLayerMenu = attachLayerMenu/);
   /* Must not wipe the export object to attach-only. */
   assert.doesNotMatch(
     layers,
     /root\.HAVKAR_MAP_LIVE_LAYERS = \{\s*attachLayerMenu:\s*attachLayerMenu\s*\}/
+  );
+  /* Must not ship a no-op openCamera stub that swallows Play clicks. */
+  assert.doesNotMatch(
+    layers,
+    /openCamera\s*=\s*function\s*\(\s*\)\s*\{\s*\}/
   );
   assert.match(layers, /loadCameras\("live"\)/);
   assert.match(layers, /Play live video|maps\.play_live|openCamera\(cam\)/);
@@ -58,7 +64,9 @@ test("surroundings keeps cameras feature when radius is empty + Play on nearest 
   assert.match(surr, /distance_km/);
   /* Empty list must still append nearest LIVE card with play path. */
   assert.match(surr, /appendCameraCard\(nearest/);
-  assert.match(surr, /HAVKAR_MAP_LIVE_LAYERS\.openCamera/);
+  assert.match(surr, /_viewerReady/);
+  assert.match(surr, /layers\.openCamera|openCamera/);
+  assert.match(surr, /watch_url|youtube_id/);
 });
 
 test("Tickets and Accommodation keep live-camera entry points", () => {

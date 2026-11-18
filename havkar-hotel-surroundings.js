@@ -234,16 +234,26 @@
       if (!isLive && cam && cam.live_stream) {
         setStatus(mt("maps.cam_state_exists_no_play"));
       }
-      if (root.HAVKAR_MAP_LIVE_LAYERS && typeof root.HAVKAR_MAP_LIVE_LAYERS.openCamera === "function") {
-        root.HAVKAR_MAP_LIVE_LAYERS.openCamera(cam);
+      var layers = root.HAVKAR_MAP_LIVE_LAYERS;
+      var opener = layers && layers.openCamera;
+      /* Real viewer only after attachLayerMenu sets _viewerReady. */
+      if (layers && layers._viewerReady === true && typeof opener === "function") {
+        opener(cam);
         return;
       }
-      if (cam && (cam.embed_url || cam.watch_url)) {
-        window.open(cam.watch_url || cam.embed_url, "_blank", "noopener,noreferrer");
+      var watch =
+        (cam && (cam.watch_url || cam.embed_url)) ||
+        (cam &&
+          cam.youtube_id &&
+          "https://www.youtube.com/watch?v=" + encodeURIComponent(cam.youtube_id));
+      if (watch && /^https:\/\//i.test(watch)) {
+        window.open(watch, "_blank", "noopener,noreferrer");
         return;
       }
       if (cam && cam.image_url) {
         window.open(cam.image_url, "_blank", "noopener,noreferrer");
+      } else {
+        setStatus(mt("maps.cam_state_exists_no_play"));
       }
     }
 
