@@ -1,5 +1,5 @@
 /* HAVKAR service worker — versioned install + web push display. */
-var HAVKAR_SW_VERSION = "havkar-sw-20261118-map-i18n-complete-v1";
+var HAVKAR_SW_VERSION = "havkar-sw-20261118-map-search-destination-v1";
 
 self.addEventListener("install", function (event) {
   self.skipWaiting();
