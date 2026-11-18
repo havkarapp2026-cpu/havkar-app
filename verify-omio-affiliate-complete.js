@@ -64,7 +64,16 @@ async function prod(base) {
   const rain = await fetch(root + "/api/map-rain-radar").then((r) => r.json());
   assert(rain.ok, "rain");
   const traf = await fetch(root + "/api/map-traffic").then((r) => r.json());
-  assert(traf.ok && traf.available === false, "traffic honestly off");
+  assert(traf.ok, "traffic status ok");
+  if (traf.available) {
+    assert(traf.tile_url_template, "traffic tiles when available");
+    assert(!/key=/.test(String(traf.tile_url_template || "")), "no key in tile url");
+  } else {
+    assert(
+      String(traf.requires_owner_secret || "").includes("TOMTOM"),
+      "traffic honestly gated when off"
+    );
+  }
   const home = await fetch(root + "/").then((r) => r.text());
   const tiles = (home.match(/class="tile-label"/g) || []).length;
   assert(tiles === 15, "15 tiles got " + tiles);

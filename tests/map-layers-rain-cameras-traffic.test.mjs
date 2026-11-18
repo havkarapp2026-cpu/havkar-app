@@ -41,7 +41,7 @@ test("licensed camera API rejects client stream injection and commercialOk=false
 test("traffic API never returns TomTom key to client", () => {
   const src = read("lib/map-traffic.mjs");
   assert.match(src, /never returned to the browser/);
-  assert.match(src, /TOMTOM_API_KEY/);
+  assert.match(src, /HAVKAR_TOMTOM_API_KEY/);
   assert.doesNotMatch(src, /tile_url_template:.*key=/);
 });
 
@@ -89,18 +89,22 @@ test("public cameras return Singapore LTA feeds inside SG bbox", async () => {
   );
 });
 
-test("traffic status is gated without TOMTOM_API_KEY", async () => {
+test("traffic status is gated without TomTom owner key", async () => {
   const prev = process.env.TOMTOM_API_KEY;
+  const prevH = process.env.HAVKAR_TOMTOM_API_KEY;
   delete process.env.TOMTOM_API_KEY;
+  delete process.env.HAVKAR_TOMTOM_API_KEY;
   try {
-    const { default: handler } = await import("../lib/map-traffic.mjs");
+    const { default: handler } = await import("../lib/map-traffic.mjs?" + Date.now());
     const res = mockRes();
     await handler({ method: "GET", query: {} }, res);
     assert.equal(res.out.statusCode, 200);
     assert.equal(res.out.body.available, false);
-    assert.match(String(res.out.body.message || ""), /TOMTOM_API_KEY/);
+    assert.match(String(res.out.body.message || ""), /HAVKAR_TOMTOM_API_KEY/);
   } finally {
     if (prev != null) process.env.TOMTOM_API_KEY = prev;
     else delete process.env.TOMTOM_API_KEY;
+    if (prevH != null) process.env.HAVKAR_TOMTOM_API_KEY = prevH;
+    else delete process.env.HAVKAR_TOMTOM_API_KEY;
   }
 });

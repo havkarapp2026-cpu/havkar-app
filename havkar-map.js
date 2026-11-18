@@ -316,6 +316,19 @@
     if (q.length < 2) {
       return { ok: false, error: "query_too_short" };
     }
+    /* Prefer server-side TomTom search when Owner key is configured. */
+    try {
+      var ttRes = await fetch(
+        "/api/map-tomtom-search?q=" + encodeURIComponent(q) + "&limit=6",
+        { headers: { Accept: "application/json" }, cache: "no-store" }
+      );
+      var ttBody = await ttRes.json().catch(function () {
+        return null;
+      });
+      if (ttBody && ttBody.ok === true && ttBody.primary) {
+        return ttBody;
+      }
+    } catch (_tt) {}
     var res = await fetch("/api/hotels", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -661,6 +674,62 @@
             requestRoute: async function (toLat, toLng, profile) {
               var from = centerMarker.getLatLng();
               var mode = String(profile || "driving").toLowerCase();
+              function drawCoords(coordinates) {
+                routeLayer.clearLayers();
+                if (!coordinates || !coordinates.length) return null;
+                var latlngs = coordinates.map(function (c) {
+                  return [c[1], c[0]];
+                });
+                var line = L.polyline(latlngs, {
+                  color: "#1b5e20",
+                  weight: 5,
+                  opacity: 0.85
+                });
+                routeLayer.addLayer(line);
+                try {
+                  map.fitBounds(line.getBounds(), { padding: [28, 28] });
+                } catch (_fit) {}
+                return line;
+              }
+              /* Prefer TomTom traffic-aware routing when Owner key is configured. */
+              try {
+                var ttUrl =
+                  "/api/map-tomtom-routing?fromLat=" +
+                  encodeURIComponent(from.lat) +
+                  "&fromLng=" +
+                  encodeURIComponent(from.lng) +
+                  "&toLat=" +
+                  encodeURIComponent(toLat) +
+                  "&toLng=" +
+                  encodeURIComponent(toLng) +
+                  "&profile=" +
+                  encodeURIComponent(mode);
+                var ttRes = await fetch(ttUrl, {
+                  headers: { Accept: "application/json" },
+                  cache: "no-store"
+                });
+                var ttBody = await ttRes.json().catch(function () {
+                  return null;
+                });
+                if (
+                  ttBody &&
+                  ttBody.ok === true &&
+                  ttBody.geometry &&
+                  ttBody.geometry.coordinates
+                ) {
+                  drawCoords(ttBody.geometry.coordinates);
+                  return {
+                    ok: true,
+                    provider: "tomtom_routing",
+                    profile: ttBody.profile || mode,
+                    distance_m: ttBody.distance_m,
+                    duration_s: ttBody.duration_s,
+                    traffic_delay_s: ttBody.traffic_delay_s,
+                    last_updated: ttBody.last_updated || ttBody.fetched_at,
+                    directions_url: osmDirectionsUrl(toLat, toLng)
+                  };
+                }
+              } catch (_tt) {}
               var url = osrmRouteUrl(from.lat, from.lng, toLat, toLng, mode);
               try {
                 var res = await fetch(url, {
@@ -676,20 +745,8 @@
                     directions_url: osmDirectionsUrl(toLat, toLng)
                   };
                 }
-                routeLayer.clearLayers();
                 if (route.geometry && route.geometry.coordinates) {
-                  var latlngs = route.geometry.coordinates.map(function (c) {
-                    return [c[1], c[0]];
-                  });
-                  var line = L.polyline(latlngs, {
-                    color: "#1b5e20",
-                    weight: 5,
-                    opacity: 0.85
-                  });
-                  routeLayer.addLayer(line);
-                  try {
-                    map.fitBounds(line.getBounds(), { padding: [28, 28] });
-                  } catch (_fit) {}
+                  drawCoords(route.geometry.coordinates);
                 }
                 return {
                   ok: true,

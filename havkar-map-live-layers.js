@@ -193,6 +193,7 @@
       coverageLayer: null,
       cameraLayer: null,
       trafficLayer: null,
+      incidentLayer: null,
       cameras: [],
       rainMeta: null
     };
@@ -612,24 +613,39 @@
           if (state.trafficLayer && map.hasLayer(state.trafficLayer)) {
             map.removeLayer(state.trafficLayer);
           }
+          if (state.incidentLayer && map.hasLayer(state.incidentLayer)) {
+            map.removeLayer(state.incidentLayer);
+          }
           if (!body || !body.available || !body.tile_url_template) {
             state.trafficOn = false;
             markToggle("traffic", false);
             setMeta(
               (body && body.message) ||
-                "Live traffic flow is not enabled (TOMTOM_API_KEY required)."
+                "Live traffic flow is not enabled (HAVKAR_TOMTOM_API_KEY required)."
             );
             return false;
           }
           state.trafficLayer = L.tileLayer(body.tile_url_template, {
             maxZoom: body.max_zoom || 22,
             opacity: 0.75,
-            attribution: body.attribution || "Traffic"
+            attribution: body.attribution || "Traffic © TomTom"
           });
           state.trafficLayer.addTo(map);
+          if (body.incidents_tile_url_template) {
+            state.incidentLayer = L.tileLayer(body.incidents_tile_url_template, {
+              maxZoom: body.max_zoom || 22,
+              opacity: 0.9,
+              attribution: body.attribution || "Traffic © TomTom"
+            });
+            state.incidentLayer.addTo(map);
+          }
           state.trafficOn = true;
           markToggle("traffic", true);
-          setMeta(body.message || "Live traffic flow enabled.");
+          var updated = body.last_updated || body.fetched_at || "";
+          setMeta(
+            (body.message || "Live TomTom traffic enabled.") +
+              (updated ? " · updated " + updated : "")
+          );
           return true;
         })
         .catch(function () {
@@ -743,6 +759,9 @@
           if (state.trafficOn) {
             if (state.trafficLayer && map.hasLayer(state.trafficLayer)) {
               map.removeLayer(state.trafficLayer);
+            }
+            if (state.incidentLayer && map.hasLayer(state.incidentLayer)) {
+              map.removeLayer(state.incidentLayer);
             }
             state.trafficOn = false;
             markToggle("traffic", false);

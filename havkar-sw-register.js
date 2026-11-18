@@ -3,7 +3,7 @@
     return;
   }
 
-  var SW_URL = "/sw.js?v=havkar-sw-20261118-omio-affiliate-complete-v1";
+  var SW_URL = "/sw.js?v=havkar-sw-20261118-tomtom-havkar-key-v1";
 
   window.addEventListener("load", function () {
     navigator.serviceWorker
