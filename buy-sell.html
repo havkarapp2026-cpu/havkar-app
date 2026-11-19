@@ -943,6 +943,26 @@ Publishing a listing is free. At checkout the buyer fee is <strong>2%</strong> a
 Buy &amp; Sell stays distinct from paid Ads.
 </p>
 </details>
+<details id="sellerPayoutTools" class="buysell-tools" style="margin:8px 0 0;border:1px solid #c5d9ef;border-radius:12px;padding:8px 10px;background:#f5f9fd" open>
+<summary style="cursor:pointer;font-weight:700;color:#0d47a1;list-style:none">Seller payouts — Stripe Connect &amp; XLM</summary>
+<p id="sellerPayoutStatus" style="margin:8px 0 0;font-size:.88rem;color:#244;line-height:1.45">
+Sign in to see Connect and XLM receive readiness. Live card checkout stays blocked until Connect charges and payouts are enabled for your seller account.
+</p>
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
+<button id="sellerConnectStartBtn" type="button" style="border:0;border-radius:10px;padding:8px 12px;background:#1565c0;color:#fff;font-weight:700;cursor:pointer">
+Start / continue Stripe Connect
+</button>
+<button id="sellerConnectRefreshBtn" type="button" style="border:0;border-radius:10px;padding:8px 12px;background:#e3f2fd;color:#0d47a1;font-weight:700;cursor:pointer">
+Refresh status
+</button>
+<a href="wallet.html#stellarReceiveRegister" style="align-self:center;font-size:.88rem;font-weight:700;color:#0d47a1">
+Register XLM receive key in Wallet
+</a>
+</div>
+<p style="margin:8px 0 0;font-size:.8rem;color:#466;line-height:1.4">
+Buyer fee 2% + seller fee 3% (5% application fee on destination charge). Stripe processing, tax, shipping, and Stellar network fees are separate. HAVKAR never asks for a Stellar secret key.
+</p>
+</details>
 <details class="buysell-tools" style="margin:8px 0 0;border:1px solid #d7e6db;border-radius:12px;padding:8px 10px;background:#f7fbf7">
 <summary style="cursor:pointer;font-weight:700;color:#1b5e20;list-style:none">Filters &amp; categories</summary>
 <div class="country-filter" style="margin-top:8px">
@@ -4874,6 +4894,163 @@ async function handleInitialHash(){
    BOOT
    ========================================================= */
 
+function setSellerPayoutStatusText(text){
+    const el = document.getElementById("sellerPayoutStatus");
+    if(el){
+        el.textContent = text;
+    }
+}
+
+async function getBuySellAccessToken(){
+    if(!supabaseClient){
+        return null;
+    }
+    try{
+        const sessionResult = await supabaseClient.auth.getSession();
+        return (
+            sessionResult &&
+            sessionResult.data &&
+            sessionResult.data.session &&
+            sessionResult.data.session.access_token
+        ) || null;
+    }catch(_error){
+        return null;
+    }
+}
+
+function formatSellerConnectStatus(body){
+    if(!body || !body.ok){
+        return "Could not load seller payout status.";
+    }
+    const account = body.account || null;
+    const gate = body.gate || {};
+    const stellar = body.stellar_receive || {};
+    const live = body.live_collection === "armed" ? "armed" : "paused";
+    const lines = [];
+    if(!account || !account.stripe_account_id){
+        lines.push("Stripe Connect: not started.");
+    }else{
+        lines.push(
+            "Stripe Connect: " +
+            (account.onboarding_status || "pending") +
+            " · charges=" +
+            (account.charges_enabled === true ? "on" : "off") +
+            " · payouts=" +
+            (account.payouts_enabled === true ? "on" : "off") +
+            "."
+        );
+    }
+    lines.push(
+        gate.live_card_eligible
+            ? "Live card checkout to this seller: allowed (when platform collection is armed)."
+            : ("Live card checkout to this seller: blocked — " +
+                (gate.message || gate.code || "Connect incomplete") +
+                ".")
+    );
+    lines.push(
+        stellar.registered
+            ? "XLM receive key: registered."
+            : "XLM receive key: not registered (open Wallet → Marketplace receive public key)."
+    );
+    lines.push("Platform card collection: " + live + ".");
+    return lines.join(" ");
+}
+
+async function refreshSellerConnectStatus(){
+    const token = await getBuySellAccessToken();
+    if(!token){
+        setSellerPayoutStatusText(
+            "Sign in to see Connect and XLM receive readiness. Live card checkout stays blocked until Connect charges and payouts are enabled."
+        );
+        return null;
+    }
+    setSellerPayoutStatusText("Refreshing seller payout status…");
+    try{
+        const res = await fetch("/api/create-event-checkout", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + token
+            },
+            body: JSON.stringify({ action: "marketplace_connect_status" })
+        });
+        const body = await res.json().catch(function(){ return null; });
+        if(!res.ok){
+            setSellerPayoutStatusText(
+                (body && (body.error || body.message)) ||
+                "Could not refresh Connect status."
+            );
+            return null;
+        }
+        setSellerPayoutStatusText(formatSellerConnectStatus(body));
+        return body;
+    }catch(_error){
+        setSellerPayoutStatusText("Network error while refreshing Connect status.");
+        return null;
+    }
+}
+
+async function startSellerConnectOnboarding(){
+    const token = await getBuySellAccessToken();
+    if(!token){
+        setSellerPayoutStatusText("Sign in before starting Stripe Connect onboarding.");
+        return;
+    }
+    const startBtn = document.getElementById("sellerConnectStartBtn");
+    if(startBtn){
+        startBtn.disabled = true;
+    }
+    setSellerPayoutStatusText("Starting Stripe Connect onboarding…");
+    try{
+        const res = await fetch("/api/create-event-checkout", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + token
+            },
+            body: JSON.stringify({ action: "marketplace_connect_onboard" })
+        });
+        const body = await res.json().catch(function(){ return null; });
+        if(!res.ok){
+            setSellerPayoutStatusText(
+                (body && (body.error || body.message)) ||
+                "Connect onboarding could not be started."
+            );
+            return;
+        }
+        if(body && body.onboarding_url){
+            window.location.href = body.onboarding_url;
+            return;
+        }
+        setSellerPayoutStatusText(
+            formatSellerConnectStatus(body) +
+            " Onboarding URL was not returned — refresh status or try again."
+        );
+    }catch(_error){
+        setSellerPayoutStatusText("Network error while starting Connect onboarding.");
+    }finally{
+        if(startBtn){
+            startBtn.disabled = false;
+        }
+    }
+}
+
+function setupSellerPayoutTools(){
+    const startBtn = document.getElementById("sellerConnectStartBtn");
+    const refreshBtn = document.getElementById("sellerConnectRefreshBtn");
+    if(startBtn){
+        startBtn.addEventListener("click", function(){
+            startSellerConnectOnboarding();
+        });
+    }
+    if(refreshBtn){
+        refreshBtn.addEventListener("click", function(){
+            refreshSellerConnectStatus();
+        });
+    }
+    refreshSellerConnectStatus();
+}
+
 function applyConnectReturnFromQuery(){
     try{
         const params = new URLSearchParams(window.location.search || "");
@@ -4881,30 +5058,33 @@ function applyConnectReturnFromQuery(){
         const payment = String(params.get("payment") || "").trim().toLowerCase();
         let message = "";
         if(connect === "return"){
-            message = "Stripe Connect return received. Seller onboarding status will refresh after account review.";
+            message = "Stripe Connect return received. Refreshing seller onboarding status from Stripe…";
         }else if(connect === "refresh"){
-            message = "Stripe Connect onboarding needs to be continued. Open Connect again when ready.";
+            message = "Stripe Connect onboarding needs to be continued. Use Start / continue Stripe Connect.";
         }else if(payment === "success"){
-            message = "Payment return received. Live charges stay Owner-gated.";
+            message = "Payment return received. Settlement still requires verified Connect / XLM rails.";
         }else if(payment === "cancelled"){
             message = "Payment was cancelled. No charge was completed.";
         }
-        if(!message) return;
-        const host = document.getElementById("statusMessage")
-            || document.getElementById("message")
-            || document.querySelector("[data-status], .status, .banner");
-        if(host){
-            host.hidden = false;
-            host.textContent = message;
-            host.setAttribute("role", "status");
-        }else if(typeof window.alert === "function"){
-            window.alert(message);
+        if(message){
+            const host = document.getElementById("sellerPayoutStatus")
+                || document.getElementById("statusMessage")
+                || document.getElementById("message")
+                || document.querySelector("[data-status], .status, .banner");
+            if(host){
+                host.hidden = false;
+                host.textContent = message;
+                host.setAttribute("role", "status");
+            }
         }
         params.delete("connect");
         params.delete("payment");
         const next = params.toString();
         const clean = window.location.pathname + (next ? ("?" + next) : "") + (window.location.hash || "");
         window.history.replaceState({}, "", clean);
+        if(connect === "return" || connect === "refresh"){
+            refreshSellerConnectStatus();
+        }
     }catch(_e){}
 }
 
@@ -4921,6 +5101,8 @@ async function boot(){
          */
 
         await resolveCurrentUser();
+
+        setupSellerPayoutTools();
 
         renderCategories();
 

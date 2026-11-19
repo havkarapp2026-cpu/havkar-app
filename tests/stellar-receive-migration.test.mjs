@@ -22,7 +22,15 @@ assert.match(sql, /never store seeds/i);
 const wallet = fs.readFileSync("wallet.html", "utf8");
 assert.match(wallet, /saveHAVKARStellarReceiveKey/);
 assert.match(wallet, /loadHAVKARStellarReceiveKey/);
+assert.match(wallet, /probeStellarMainnetAccount/);
+assert.match(wallet, /horizon\.stellar\.org\/accounts/);
 assert.match(wallet, /stellar_receive_accounts/);
 assert.doesNotMatch(wallet, /secret key value|paste your seed/i);
+assert.doesNotMatch(wallet, /S[A-Z2-7]{55}/);
+
+const buySell = fs.readFileSync("buy-sell.html", "utf8");
+assert.match(buySell, /sellerConnectStartBtn/);
+assert.match(buySell, /marketplace_connect_onboard/);
+assert.match(buySell, /marketplace_connect_status/);
 
 console.log("STELLAR_RECEIVE_MIGRATION_TEST_OK");

@@ -1252,6 +1252,13 @@ button:focus-visible{
                 Your listing
             </div>
 
+            <p
+                id="ownerPayoutReadiness"
+                style="margin:0 0 10px;font-size:.86rem;color:#244;line-height:1.4"
+            >
+                Checking payout readiness…
+            </p>
+
             <div class="owner-actions">
 
                 <button
@@ -1262,6 +1269,26 @@ button:focus-visible{
                     <i class="fas fa-pen"></i>
                     <span>Edit</span>
                 </button>
+
+                <a
+                    id="ownerConnectLink"
+                    class="owner-button edit"
+                    href="buy-sell.html#sellerPayoutTools"
+                    style="text-decoration:none;display:inline-flex;align-items:center;gap:6px"
+                >
+                    <i class="fas fa-link"></i>
+                    <span>Seller Connect</span>
+                </a>
+
+                <a
+                    id="ownerXlmReceiveLink"
+                    class="owner-button edit"
+                    href="wallet.html#stellarReceiveRegister"
+                    style="text-decoration:none;display:inline-flex;align-items:center;gap:6px"
+                >
+                    <i class="fas fa-wallet"></i>
+                    <span>XLM receive</span>
+                </a>
 
                 <button
                     id="pauseButton"
@@ -3901,6 +3928,66 @@ async function openSellerMessage(){
    OWNER EDIT / DELETE
    ========================================================= */
 
+async function refreshOwnerPayoutReadiness(){
+    const host = $("ownerPayoutReadiness");
+    if(!host){
+        return;
+    }
+    if(!state.isOwnListing || !state.currentUserId){
+        host.textContent = "";
+        return;
+    }
+    host.textContent = "Checking payout readiness…";
+    try{
+        const session = await supabaseClient.auth.getSession();
+        const accessToken =
+            session &&
+            session.data &&
+            session.data.session &&
+            session.data.session.access_token;
+        if(!accessToken){
+            host.textContent =
+                "Sign in to manage Stripe Connect and XLM receive for this listing.";
+            return;
+        }
+        const res = await fetch("/api/create-event-checkout", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + accessToken
+            },
+            body: JSON.stringify({ action: "marketplace_connect_status" })
+        });
+        const body = await res.json().catch(function(){ return null; });
+        if(!res.ok || !body){
+            host.textContent =
+                "Payout status unavailable. Open Buy & Sell → Seller payouts to continue Connect.";
+            return;
+        }
+        const account = body.account || null;
+        const gate = body.gate || {};
+        const stellar = body.stellar_receive || {};
+        const connectOk = gate.live_card_eligible === true;
+        const xlmOk = stellar.registered === true;
+        host.textContent =
+            (connectOk
+                ? "Card payouts: Connect ready."
+                : ("Card payouts blocked: " +
+                    (gate.message || gate.code || "complete Stripe Connect") +
+                    ".")) +
+            " " +
+            (xlmOk
+                ? "XLM receive key registered."
+                : "XLM receive key missing — register a funded Mainnet G… key in Wallet.") +
+            (account && account.stripe_account_id
+                ? " Connect status: " + (account.onboarding_status || "pending") + "."
+                : "");
+    }catch(_error){
+        host.textContent =
+            "Could not refresh payout readiness. Use Seller Connect on Buy & Sell.";
+    }
+}
+
 function updateOwnerTools(){
 
     const tools =
@@ -3929,6 +4016,15 @@ function updateOwnerTools(){
         closeEditForm();
 
         closeDeleteDialog();
+
+        const readiness = $("ownerPayoutReadiness");
+        if(readiness){
+            readiness.textContent = "";
+        }
+
+    }else{
+
+        refreshOwnerPayoutReadiness();
 
     }
 
