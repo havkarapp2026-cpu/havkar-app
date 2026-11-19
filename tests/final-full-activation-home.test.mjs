@@ -44,3 +44,11 @@ test("accommodation discovery feed precedes map tools", () => {
   assert.ok(feedIdx > 0 && mapToolsIdx > 0 && feedIdx < mapToolsIdx);
   assert.ok(/acc-feed/.test(accommodationHtml));
 });
+
+test("jobs ordinary plans are labeled 30-day prepaid not monthly subscription", () => {
+  const jobsHtml = readFileSync(new URL("../jobs.html", import.meta.url), "utf8");
+  assert.ok(/30-day prepaid listing plan/.test(jobsHtml));
+  assert.ok(/€9\.99 \/ 30 days/.test(jobsHtml));
+  assert.ok(!/Choose a monthly publishing plan/.test(jobsHtml));
+  assert.ok(/action:\s*"jobs_quote"|\"jobs_quote\"/.test(jobsHtml));
+});
