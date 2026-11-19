@@ -17,6 +17,16 @@
           sv:"Samtal", pl:"Połączenia", id:"Panggilan", zh:"通话", ja:"通話", ko:"통화", hi:"कॉल",
           ru:"Звонки", ckb:"پەیوەندییەکان", kmr:"Telefon", tr:"Aramalar", ar:"المكالمات", fa:"تماس‌ها", ur:"کالز"
         },
+        Messenger: {
+          it:"Messenger", de:"Messenger", fr:"Messagerie", es:"Mensajería", pt:"Messenger", nl:"Messenger",
+          sv:"Messenger", pl:"Messenger", id:"Messenger", zh:"消息", ja:"メッセンジャー", ko:"메신저", hi:"मैसेंजर",
+          ru:"Мессенджер", ckb:"مەسنجەر", kmr:"Messenger", tr:"Messenger", ar:"المراسلة", fa:"پیام‌رسان", ur:"میسنجر"
+        },
+        Chat: {
+          it:"Messenger", de:"Messenger", fr:"Messagerie", es:"Mensajería", pt:"Messenger", nl:"Messenger",
+          sv:"Messenger", pl:"Messenger", id:"Messenger", zh:"消息", ja:"メッセンジャー", ko:"메신저", hi:"मैसेंजर",
+          ru:"Мессенджер", ckb:"مەسنجەر", kmr:"Messenger", tr:"Messenger", ar:"المراسلة", fa:"پیام‌رسان", ur:"میسنجر"
+        },
         "Coming soon": {
           it:"Prossimamente", de:"Demnächst", fr:"Bientôt", es:"Próximamente", pt:"Em breve", nl:"Binnenkort",
           sv:"Kommer snart", pl:"Wkrótce", id:"Segera hadir", zh:"即将推出", ja:"近日公開", ko:"곧 제공", hi:"जल्द आ रहा है",

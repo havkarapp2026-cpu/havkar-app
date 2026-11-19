@@ -1505,6 +1505,7 @@ button:focus-visible{
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-ad-publish.js"></script>
 <script src="/havkar-marketplace.js"></script>
+<script src="/havkar-messenger-share.js"></script>
 <script src="/stellar-wallet-bundle.js"></script>
 <script src="/havkar-xlm-checkout.js"></script>
 <script>
@@ -3370,6 +3371,71 @@ async function shareCurrentListing(){
 
         return;
 
+    }
+
+    const listingUrl =
+        window.location.href.split("#")[0];
+    const title =
+        String(
+            state.ad.title ||
+            state.ad.name ||
+            "HAVKAR listing"
+        );
+    const description =
+        String(
+            state.ad.description ||
+            state.ad.summary ||
+            ""
+        ).slice(0, 280);
+    const thumb =
+        state.ad.image_url ||
+        state.ad.cover_url ||
+        "";
+
+    if(
+        window.HAVKAR_MESSENGER_SHARE &&
+        typeof HAVKAR_MESSENGER_SHARE.openShareComposer === "function"
+    ){
+        HAVKAR_MESSENGER_SHARE.openShareComposer(
+            {
+                url: listingUrl,
+                title: title,
+                description: description,
+                thumb: thumb,
+                type: "listing"
+            },
+            {
+                onSend: async function(encoded, item){
+                    try{
+                        sessionStorage.setItem(
+                            "havkar_pending_messenger_share",
+                            encoded
+                        );
+                    }catch(_e){}
+                    window.location.href =
+                        "chat.html?share=1";
+                },
+                onCopied: function(ok){
+                    showToast(
+                        ok
+                            ? "Listing link copied."
+                            : "Could not copy listing link."
+                    );
+                },
+                onNative: function(res){
+                    if(res && res.ok){
+                        showToast("Listing shared.");
+                    }
+                },
+                onError: function(msg){
+                    showToast(
+                        msg ||
+                        "This listing cannot be shared."
+                    );
+                }
+            }
+        );
+        return;
     }
 
     const result =

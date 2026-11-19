@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="/manifest.json">
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/havkar-icon-32-20261022-v3.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/havkar-icon-16-20261022-v3.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/havkar-icon-180-20261022-v3.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/messenger/messenger-32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="/assets/icons/messenger/messenger-48.png">
+<link rel="apple-touch-icon" sizes="256x256" href="/assets/icons/messenger/apple-touch-messenger.png">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#2e7d32">
-<meta name="description" content="HAVKAR Messages and Chat">
-<title>HAVKAR — Messages</title>
+<meta name="theme-color" content="#0b1f12">
+<meta name="description" content="HAVKAR Messenger — secure conversations and content sharing">
+<title>HAVKAR — Messenger</title>
 
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="stylesheet"
@@ -959,6 +959,16 @@ select:focus-visible{
     line-height:1;
 }
 
+.message-checks.sending{
+    letter-spacing:0;
+    color:#90a4ae;
+    font-size:.78rem;
+}
+.message-checks.failed{
+    letter-spacing:0;
+    color:#c62828;
+    font-size:.78rem;
+}
 /* One check = server accepted (not device delivery). */
 .message-checks.delivered{
     letter-spacing:0;
@@ -1686,7 +1696,7 @@ select:focus-visible{
 
     <div id="noResults" class="no-results">
 
-        <i class="fas fa-comments"></i>
+        <img src="/assets/icons/messenger/messenger-96.png" alt="" width="72" height="72" style="margin:0 auto 10px;display:block;border-radius:16px">
 
         <h3>No conversations found</h3>
 
@@ -1702,8 +1712,8 @@ select:focus-visible{
         </button>
 
         <button id="navMessages" class="nav-item active" type="button">
-            <i class="fas fa-comment"></i>
-            <span>Messages</span>
+            <img src="/assets/icons/messenger/messenger-32.png" alt="" width="22" height="22" style="border-radius:6px">
+            <span>Messenger</span>
         </button>
 
         <button id="navNotifications" class="nav-item" type="button">
@@ -1869,6 +1879,15 @@ select:focus-visible{
             aria-label="Open emoji picker"
             aria-expanded="false">
             🙂
+        </button>
+
+        <button
+            id="shareContentButton"
+            class="emoji-btn"
+            type="button"
+            aria-label="Share HAVKAR content"
+            title="Share">
+            <i class="fas fa-share-nodes" aria-hidden="true"></i>
         </button>
 
         <textarea
@@ -4960,11 +4979,22 @@ function appendMessage(
             message.message_text
         )
     );
-    text.textContent =
+    const rawMessageText =
         String(
             message.message_text ||
             ""
         );
+    const shareRendered =
+        globalThis.HAVKAR_MESSENGER_SHARE &&
+        typeof HAVKAR_MESSENGER_SHARE.renderIntoMessageText === "function" &&
+        HAVKAR_MESSENGER_SHARE.renderIntoMessageText(
+            text,
+            rawMessageText,
+            { openLabel: "Open" }
+        );
+    if(!shareRendered){
+        text.textContent = rawMessageText;
+    }
 
     const translated =
         String(
@@ -4972,7 +5002,7 @@ function appendMessage(
             ""
         ).trim();
 
-    if(translated){
+    if(translated && !shareRendered){
 
         const translationBlock =
             document.createElement(
@@ -6583,6 +6613,12 @@ function messageReceiptState(message){
     if(!message){
         return "sent";
     }
+    if(message._local_failed === true || message.send_status === "failed"){
+        return "failed";
+    }
+    if(message._local_sending === true || message.send_status === "sending"){
+        return "sending";
+    }
     if(message.read_at || message.is_read === true){
         return "read";
     }
@@ -6600,7 +6636,9 @@ function applyMessageChecks(element, message){
         messageReceiptState(message);
     element.classList.remove(
         "delivered",
-        "read"
+        "read",
+        "sending",
+        "failed"
     );
     /* Never claim delivered/read without server timestamps. */
     if(receipt === "read"){
@@ -6613,6 +6651,16 @@ function applyMessageChecks(element, message){
         element.textContent = "";
         element.setAttribute("aria-label", "Delivered to recipient device");
         element.title = "Delivered";
+    }else if(receipt === "sending"){
+        element.classList.add("sending");
+        element.textContent = "…";
+        element.setAttribute("aria-label", "Sending");
+        element.title = "Sending";
+    }else if(receipt === "failed"){
+        element.classList.add("failed");
+        element.textContent = "!";
+        element.setAttribute("aria-label", "Failed to send");
+        element.title = "Failed";
     }else{
         element.textContent = "✓";
         element.setAttribute("aria-label", "Sent — server accepted");
@@ -6673,6 +6721,21 @@ async function markMessagesDelivered(
 
 }
 
+function readReceiptsEnabledForMe(){
+    try{
+        const raw =
+            localStorage.getItem(
+                "havkar_read_receipts_enabled"
+            );
+        if(raw == null || raw === ""){
+            return true;
+        }
+        return raw === "1" || raw === "true";
+    }catch(_e){
+        return true;
+    }
+}
+
 async function markMessagesRead(
     conversationId
 ){
@@ -6681,6 +6744,11 @@ async function markMessagesRead(
         !state.currentUser ||
         !conversationId
     ){
+        return;
+    }
+
+    /* Privacy: do not mark peer messages read when the user disabled receipts. */
+    if(!readReceiptsEnabledForMe()){
         return;
     }
 
@@ -8001,6 +8069,47 @@ $("chatBackButton")
             autoSizeMessageInput
         );
 
+    $("shareContentButton")
+        ?.addEventListener(
+            "click",
+            event => {
+                event.stopPropagation();
+                if(
+                    !globalThis.HAVKAR_MESSENGER_SHARE ||
+                    typeof HAVKAR_MESSENGER_SHARE.openShareComposer !== "function"
+                ){
+                    showToast("Sharing is unavailable.", "error");
+                    return;
+                }
+                HAVKAR_MESSENGER_SHARE.openShareComposer(
+                    {
+                        url: location.origin + "/",
+                        title: "HAVKAR",
+                        description: ""
+                    },
+                    {
+                        onSend: async function(encoded){
+                            await sendMessage({ forceText: encoded });
+                        },
+                        onCopied: function(ok){
+                            showToast(
+                                ok ? "Link copied." : "Could not copy link.",
+                                ok ? "info" : "error"
+                            );
+                        },
+                        onNative: function(res){
+                            if(res && res.ok){
+                                showToast("Shared on device.", "info");
+                            }
+                        },
+                        onError: function(msg){
+                            showToast(msg || "Share blocked.", "error");
+                        }
+                    }
+                );
+            }
+        );
+
     $("emojiPickerButton")
         ?.addEventListener(
             "click",
@@ -8205,6 +8314,74 @@ $("chatBackButton")
    PAGE START
 ========================================================= */
 
+function consumePendingMessengerShare(){
+    try{
+        const params =
+            new URLSearchParams(
+                location.search || ""
+            );
+        if(params.get("share") !== "1"){
+            return;
+        }
+        const pending =
+            sessionStorage.getItem(
+                "havkar_pending_messenger_share"
+            );
+        if(!pending){
+            return;
+        }
+        sessionStorage.removeItem(
+            "havkar_pending_messenger_share"
+        );
+        const parsed =
+            HAVKAR_MESSENGER_SHARE &&
+            HAVKAR_MESSENGER_SHARE.parseSharePayload(
+                pending
+            );
+        if(!parsed){
+            return;
+        }
+        setTimeout(function(){
+            if(
+                !HAVKAR_MESSENGER_SHARE ||
+                typeof HAVKAR_MESSENGER_SHARE.openShareComposer !== "function"
+            ){
+                return;
+            }
+            HAVKAR_MESSENGER_SHARE.openShareComposer(
+                parsed,
+                {
+                    onSend: async function(encoded){
+                        if(!state.currentConversationId){
+                            try{
+                                sessionStorage.setItem(
+                                    "havkar_pending_messenger_share",
+                                    encoded
+                                );
+                            }catch(_e){}
+                            showToast(
+                                "Open a conversation, then tap Share to send this content.",
+                                "info"
+                            );
+                            return;
+                        }
+                        await sendMessage({ forceText: encoded });
+                    },
+                    onCopied: function(ok){
+                        showToast(
+                            ok ? "Link copied." : "Could not copy link.",
+                            ok ? "info" : "error"
+                        );
+                    },
+                    onError: function(msg){
+                        showToast(msg || "Share blocked.", "error");
+                    }
+                }
+            );
+        }, 500);
+    }catch(_e){}
+}
+
 async function startPage(){
 
     if(state.pageStarted){
@@ -8276,12 +8453,14 @@ async function startPage(){
 
         // Refresh inbox list without replacing the active verified thread.
         loadConversations();
+        consumePendingMessengerShare();
 
         return;
 
     }
 
     await loadConversations();
+    consumePendingMessengerShare();
 
 }
 
@@ -8422,6 +8601,7 @@ window.addEventListener(
 
 </script>
 
+<script src="/havkar-messenger-share.js"></script>
 <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
 
