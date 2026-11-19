@@ -3948,10 +3948,42 @@ function openAd(
 
 
 function goAppHome(){
-
-    window.location.href =
-        "index.html";
-
+    /* Seed language so Home does not bounce to language.html. */
+    try{
+        const keys = [
+            "havkar_language",
+            "selectedLanguage",
+            "language"
+        ];
+        const supported = {
+            en:1,it:1,de:1,fr:1,es:1,pt:1,nl:1,sv:1,pl:1,id:1,
+            zh:1,ja:1,ko:1,hi:1,tr:1,ru:1,uk:1,fa:1,ar:1,ur:1,
+            ckb:1,kmr:1
+        };
+        let have = "";
+        for(let i=0;i<keys.length;i++){
+            const v = String(localStorage.getItem(keys[i]) || "").trim().toLowerCase();
+            if(v && supported[v]){
+                have = v;
+                break;
+            }
+        }
+        if(!have){
+            have = "en";
+        }
+        localStorage.setItem("havkar_language", have);
+        localStorage.setItem("selectedLanguage", have);
+        localStorage.setItem("language", have);
+        try{
+            localStorage.setItem(
+                "havkar_language_dir",
+                (have === "fa" || have === "ar" || have === "ur" || have === "ckb")
+                    ? "rtl"
+                    : "ltr"
+            );
+        }catch(_d){}
+    }catch(_e){}
+    window.location.href = "index.html";
 }
 
 
@@ -4643,6 +4675,10 @@ applyShotModeFromQuery();
          */
 
         await handleInitialHash();
+
+        try{
+            refreshTranslatedLabels();
+        }catch(_i18n){}
 
     }catch(error){
 

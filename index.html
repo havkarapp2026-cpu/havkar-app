@@ -960,7 +960,8 @@ html[data-havkar-entry="home"] .havkar-legal-footer {
     </div>
 
     <div class="account-panel" id="signedInPanel" hidden>
-        <p id="signedInEmail"></p>
+        <!-- Never display private account emails on the public Home surface. -->
+        <p id="signedInLabel" data-i18n-ignore="false">Signed in</p>
         <a class="enter-button" href="profile.html" style="display:inline-flex;text-decoration:none;width:100%;box-sizing:border-box;justify-content:center">
             <span data-i18n="settings">Settings</span>
             <span class="enter-arrow" aria-hidden="true">›</span>
@@ -994,12 +995,13 @@ const supabase = createClient(
 const guestSignup = document.getElementById("guestSignup");
 const guestLogin = document.getElementById("guestLogin");
 const signedInPanel = document.getElementById("signedInPanel");
-const signedInEmail = document.getElementById("signedInEmail");
+const signedInLabel = document.getElementById("signedInLabel");
 function updateAccount(user) {
   guestSignup.hidden = !!user;
   guestLogin.hidden = !!user;
   if (signedInPanel) signedInPanel.hidden = !user;
-  if (signedInEmail) signedInEmail.textContent = user && user.email ? user.email : "";
+  // Public Home must never render personal emails (Gmail or otherwise).
+  if (signedInLabel) signedInLabel.textContent = user ? "Signed in" : "";
 }
 // Avoid briefly displaying guest actions until the stored session is checked.
 guestSignup.hidden = true;
