@@ -20,9 +20,50 @@ test("home restores Support and About within 15 tiles", () => {
 test("tickets categories precede map panel and taxi shortcut removed from bottom nav", () => {
   const typesIdx = ticketsHtml.indexOf('class="ticket-types"');
   const mapIdx = ticketsHtml.indexOf('id="travelMapPanel"');
+  const introDetailsIdx = ticketsHtml.indexOf('aria-label="About travel search"');
   assert.ok(typesIdx > 0 && mapIdx > typesIdx);
+  assert.ok(introDetailsIdx > typesIdx, "category strip must appear before collapsible intro");
+  assert.ok(/Choose a travel category/.test(ticketsHtml));
+  assert.ok(/data-ticket-type="flight"/.test(ticketsHtml));
+  assert.ok(/data-ticket-type="bus"/.test(ticketsHtml));
+  assert.ok(/data-ticket-type="train"/.test(ticketsHtml));
+  assert.ok(/data-ticket-type="ferry"/.test(ticketsHtml));
+  assert.ok(/data-ticket-type="taxi"/.test(ticketsHtml));
+  assert.ok(/data-ticket-type="transfer"/.test(ticketsHtml));
   assert.ok(!/id="navTransfer"/.test(ticketsHtml));
   assert.ok(/id="navChat"/.test(ticketsHtml));
+});
+
+test("events module supports create, checkout, QR and organizer check-in", () => {
+  const eventsHtml = readFileSync(new URL("../events.html", import.meta.url), "utf8");
+  assert.ok(/id="createEventForm"/.test(eventsHtml));
+  assert.ok(/\/api\/create-event-checkout/.test(eventsHtml));
+  assert.ok(/havkar_check_in_event_ticket/.test(eventsHtml));
+  assert.ok(/ticket_code/.test(eventsHtml));
+});
+
+test("ads create currency matrix is collapsible and ads stay isolated from marketplace", () => {
+  const adsHtml = readFileSync(new URL("../ads.html", import.meta.url), "utf8");
+  assert.ok(/Currency \(133 fiat \+ XLM\) — tap to expand/.test(adsHtml));
+  assert.ok(/id="adCurrencyMount"/.test(adsHtml));
+  assert.ok(!/buy-sell\.html.*inject|injectAdvertisement/i.test(adsHtml));
+});
+
+test("health and calls stay honest about TURN / telehealth gates", () => {
+  const healthHtml = readFileSync(new URL("../health.html", import.meta.url), "utf8");
+  const callsHtml = readFileSync(new URL("../calls.html", import.meta.url), "utf8");
+  assert.ok(/calls\.html/.test(healthHtml));
+  assert.ok(/health-provider-apply\.html/.test(healthHtml));
+  assert.ok(/BLOCKED/.test(callsHtml));
+  assert.ok(/TURN/.test(callsHtml));
+  assert.ok(/health_telehealth_status/.test(callsHtml));
+});
+
+test("HAVKAR AI keeps New Idea separate from Business Ideas", () => {
+  const aiHtml = readFileSync(new URL("../havkar-ai.html", import.meta.url), "utf8");
+  assert.ok(/data-tool-button="new_idea"/.test(aiHtml));
+  assert.ok(/data-tool-button="ideas"/.test(aiHtml));
+  assert.ok(/Business Ideas stays separate from New Idea/.test(aiHtml));
 });
 
 test("chat read receipt uses hollow ring classes without checkmark text for read", () => {
