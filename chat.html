@@ -119,6 +119,51 @@ select:focus-visible{
     font-size:18px;
 }
 
+.header-text-cta{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    min-height:40px;
+    max-width:46vw;
+    border:0;
+    border-radius:999px;
+    padding:0 12px;
+    background:rgba(255,255,255,.2);
+    color:#fff;
+    font-weight:800;
+    font-size:.82rem;
+    cursor:pointer;
+    white-space:nowrap;
+}
+.header-text-cta i{font-size:.95rem}
+.messenger-action-strip{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    padding:10px 12px 4px;
+    background:#f3faf4;
+    border-bottom:1px solid #d7e6db;
+}
+.messenger-action-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    min-height:40px;
+    border:1px solid #cfe0d3;
+    border-radius:12px;
+    padding:0 12px;
+    background:#fff;
+    color:#1b5e20;
+    font-weight:800;
+    font-size:.8rem;
+    cursor:pointer;
+}
+.messenger-action-btn.primary{
+    background:#2e7d32;
+    border-color:#2e7d32;
+    color:#fff;
+}
+
 .back-btn:active,
 .icon-btn:active{
     transform:scale(.94);
@@ -1688,11 +1733,12 @@ select:focus-visible{
 
         <button
             id="newConversationButton"
-            class="icon-btn"
+            class="header-text-cta"
             type="button"
             aria-label="New conversation"
             title="New conversation">
             <i class="fas fa-pen-to-square" aria-hidden="true"></i>
+            <span data-i18n="newConversation">New conversation</span>
         </button>
 
         <button
@@ -1718,6 +1764,11 @@ select:focus-visible{
                 <span>Block user</span>
             </button>
 
+            <button id="reportConversationButton" type="button">
+                <i class="fas fa-flag"></i>
+                <span>Report</span>
+            </button>
+
         </div>
 
     </header>
@@ -1739,6 +1790,29 @@ select:focus-visible{
 
         </div>
 
+    </div>
+
+    <div class="messenger-action-strip" role="toolbar" aria-label="Messenger actions">
+        <button type="button" id="actionNewDm" class="messenger-action-btn primary">
+            <i class="fas fa-comments" aria-hidden="true"></i>
+            <span data-i18n="newConversation">New conversation</span>
+        </button>
+        <button type="button" id="actionShare" class="messenger-action-btn">
+            <i class="fas fa-share-nodes" aria-hidden="true"></i>
+            <span>Share</span>
+        </button>
+        <button type="button" id="actionGroup" class="messenger-action-btn">
+            <i class="fas fa-user-group" aria-hidden="true"></i>
+            <span>Group</span>
+        </button>
+        <button type="button" id="actionVoice" class="messenger-action-btn">
+            <i class="fas fa-phone" aria-hidden="true"></i>
+            <span data-i18n="voiceCall">Voice call</span>
+        </button>
+        <button type="button" id="actionVideo" class="messenger-action-btn">
+            <i class="fas fa-video" aria-hidden="true"></i>
+            <span data-i18n="videoCall">Video call</span>
+        </button>
     </div>
 
     <div class="section-header">
@@ -1763,6 +1837,11 @@ select:focus-visible{
             <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
 
             <p data-i18n="checkingSignIn">Checking sign-in...</p>
+            <p style="margin-top:8px;font-size:.85rem;color:#567">If this stays longer than a few seconds, use New conversation or Sign in below.</p>
+            <div class="messenger-cta-row">
+                <button type="button" class="messenger-cta" id="bootNewConversationBtn">New conversation</button>
+                <button type="button" class="messenger-cta secondary" id="bootLoginBtn">Sign in</button>
+            </div>
 
         </div>
 
@@ -4632,7 +4711,7 @@ function createConversationElement(
 
         preview.textContent =
             prefix +
-            String(
+            formatMessagePreviewText(
                 conversation.lastMessage.message_text ||
                 ""
             );
@@ -4718,6 +4797,64 @@ function createConversationElement(
 /* =========================================================
    ROLE
 ========================================================= */
+
+function formatMessagePreviewText(raw){
+    const text = String(raw || "").trim();
+    if(!text){
+        return "";
+    }
+    if(
+        globalThis.HAVKAR_MESSENGER_RICH &&
+        HAVKAR_MESSENGER_RICH.isDeleted(text)
+    ){
+        return "Message deleted";
+    }
+    if(
+        globalThis.HAVKAR_MESSENGER_RICH &&
+        HAVKAR_MESSENGER_RICH.parseLocation(text)
+    ){
+        const loc =
+            HAVKAR_MESSENGER_RICH.parseLocation(
+                text
+            );
+        return (
+            (loc.live ? "Live location" : "Location") +
+            (loc.name ? ": " + loc.name : "")
+        );
+    }
+    if(
+        globalThis.HAVKAR_MESSENGER_RICH &&
+        HAVKAR_MESSENGER_RICH.parseMedia(text)
+    ){
+        const media =
+            HAVKAR_MESSENGER_RICH.parseMedia(
+                text
+            );
+        return (
+            (media.kind || "File") +
+            (media.name ? ": " + media.name : "")
+        );
+    }
+    if(
+        globalThis.HAVKAR_MESSENGER_SHARE &&
+        typeof HAVKAR_MESSENGER_SHARE.parseSharePayload ===
+            "function"
+    ){
+        const share =
+            HAVKAR_MESSENGER_SHARE.parseSharePayload(
+                text
+            );
+        if(share){
+            return (
+                "Shared: " +
+                (share.title || share.url || "HAVKAR content")
+            );
+        }
+    }
+    return text.length > 120
+        ? text.slice(0, 117) + "..."
+        : text;
+}
 
 function getConversationRole(
     conversation
@@ -8409,6 +8546,56 @@ async function probeMessengerCallReadiness(){
     }
 }
 
+function openHonestCapabilityGate(title, body){
+    const existing =
+        document.getElementById(
+            "messengerCapabilityGate"
+        );
+    if(existing){
+        existing.remove();
+    }
+    const backdrop =
+        document.createElement(
+            "div"
+        );
+    backdrop.id =
+        "messengerCapabilityGate";
+    backdrop.className =
+        "messenger-new-modal-backdrop";
+    backdrop.innerHTML =
+        '<div class="messenger-new-modal" role="dialog" aria-modal="true">' +
+        "<h3>" +
+        escapeHtml(title) +
+        "</h3>" +
+        '<div class="havkar-call-blocked">' +
+        escapeHtml(body) +
+        "</div>" +
+        '<div class="messenger-cta-row">' +
+        '<button type="button" class="messenger-cta" id="capabilityGateClose">Close</button>' +
+        "</div></div>";
+    document.body.appendChild(
+        backdrop
+    );
+    if(globalThis.HAVKAR_MESSENGER_RICH){
+        HAVKAR_MESSENGER_RICH.ensureStyles();
+    }
+    backdrop.addEventListener(
+        "click",
+        function(ev){
+            if(ev.target === backdrop){
+                backdrop.remove();
+            }
+        }
+    );
+    $("capabilityGateClose")
+        ?.addEventListener(
+            "click",
+            function(){
+                backdrop.remove();
+            }
+        );
+}
+
 async function openMessengerCallGate(kind){
     const readiness = await probeMessengerCallReadiness();
     const title = kind === "video" ? "Video call" : "Voice call";
@@ -8716,6 +8903,104 @@ function setupEvents(){
             openNewConversationModal
         );
 
+    $("actionNewDm")
+        ?.addEventListener(
+            "click",
+            openNewConversationModal
+        );
+
+    $("bootNewConversationBtn")
+        ?.addEventListener(
+            "click",
+            openNewConversationModal
+        );
+
+    $("bootLoginBtn")
+        ?.addEventListener(
+            "click",
+            function(){
+                window.location.href =
+                    "login.html?next=" +
+                    encodeURIComponent(
+                        "chat.html"
+                    );
+            }
+        );
+
+    $("actionShare")
+        ?.addEventListener(
+            "click",
+            function(){
+                if(
+                    !globalThis.HAVKAR_MESSENGER_SHARE ||
+                    typeof HAVKAR_MESSENGER_SHARE.openShareComposer !==
+                        "function"
+                ){
+                    showToast(
+                        "Sharing is unavailable.",
+                        "error"
+                    );
+                    return;
+                }
+                HAVKAR_MESSENGER_SHARE.openShareComposer(
+                    {
+                        url: location.origin + "/",
+                        title: "HAVKAR",
+                        description: ""
+                    },
+                    {
+                        onSend: async function(encoded){
+                            await openMultiSharePicker(
+                                encoded
+                            );
+                        },
+                        onCopied: function(ok){
+                            showToast(
+                                ok
+                                    ? "Link copied."
+                                    : "Could not copy link.",
+                                ok ? "info" : "error"
+                            );
+                        },
+                        onError: function(msg){
+                            showToast(
+                                msg ||
+                                "Share blocked.",
+                                "error"
+                            );
+                        }
+                    }
+                );
+            }
+        );
+
+    $("actionGroup")
+        ?.addEventListener(
+            "click",
+            function(){
+                openHonestCapabilityGate(
+                    "Group chats",
+                    "HAVKAR conversations are currently 1:1 (buyer/seller) in the live database. Multi-member group rooms need an Owner-approved schema migration (conversation_participants). Until then, use Share → send to multiple conversations."
+                );
+            }
+        );
+
+    $("actionVoice")
+        ?.addEventListener(
+            "click",
+            function(){
+                openMessengerCallGate("voice");
+            }
+        );
+
+    $("actionVideo")
+        ?.addEventListener(
+            "click",
+            function(){
+                openMessengerCallGate("video");
+            }
+        );
+
     $("chatVoiceCallButton")
         ?.addEventListener(
             "click",
@@ -8807,6 +9092,71 @@ function setupEvents(){
                 const file = ev.target.files && ev.target.files[0];
                 ev.target.value = "";
                 if(file) pickAndSendMedia(file, "audio");
+            }
+        );
+
+    $("reportConversationButton")
+        ?.addEventListener(
+            "click",
+            async () => {
+                closeHeaderMenu();
+                if(!state.currentUser){
+                    redirectToLogin();
+                    return;
+                }
+                const reason =
+                    window.prompt(
+                        "Report this conversation to HAVKAR Support. Describe the issue (required):",
+                        ""
+                    );
+                if(
+                    !reason ||
+                    !String(reason).trim()
+                ){
+                    return;
+                }
+                try{
+                    const inserted =
+                        await withTimeout(
+                            supabaseClient
+                                .from(
+                                    "notifications"
+                                )
+                                .insert({
+                                    user_id:
+                                        state.currentUser.id,
+                                    type:
+                                        "moderation_report",
+                                    title:
+                                        "Messenger report submitted",
+                                    message:
+                                        String(
+                                            reason
+                                        ).slice(
+                                            0,
+                                            500
+                                        ),
+                                    is_read:
+                                        false,
+                                    action_url:
+                                        "support.html?tile=chat#account-messenger-help"
+                                })
+                        );
+                    if(
+                        inserted.error
+                    ){
+                        throw inserted.error;
+                    }
+                    showToast(
+                        "Report recorded. Support can follow up via support@havkar.online.",
+                        "info"
+                    );
+                }catch(err){
+                    showToast(
+                        "Could not store report in-app. Email support@havkar.online instead.",
+                        "error"
+                    );
+                }
             }
         );
 
@@ -9279,6 +9629,10 @@ async function startPage(){
     }
 
     if(!supabaseClient){
+        showLoginGate(
+            "Messenger unavailable",
+            "Supabase client failed to start. Check network and reload."
+        );
         return;
     }
 
@@ -9295,12 +9649,42 @@ async function startPage(){
 
     loadEmojiCatalogDeferred();
 
+    /* Never leave the first paint spinner forever. */
+    const bootFailSafe =
+        window.setTimeout(
+            function(){
+                const boot =
+                    $("authBootState");
+                if(
+                    boot &&
+                    boot.isConnected &&
+                    !state.currentUser
+                ){
+                    showLoginGate(
+                        "Sign in to use Messenger",
+                        "Conversation loading did not finish. Sign in again or tap New conversation after login."
+                    );
+                }else if(
+                    boot &&
+                    boot.isConnected &&
+                    state.currentUser &&
+                    !state.conversations.length
+                ){
+                    showEmptyState(
+                        "No conversations yet",
+                        "Your HAVKAR conversations will appear here."
+                    );
+                }
+            },
+            12000
+        );
+
     try{
         const stamp = document.createElement("meta");
         stamp.name = "havkar-chat-build";
-        stamp.content = HAVKAR_CHAT_BUILD;
+        stamp.content = HAVKAR_CHAT_BUILD + "-owner-fix-240";
         document.head.appendChild(stamp);
-        console.info("[HAVKAR] chat build", HAVKAR_CHAT_BUILD);
+        console.info("[HAVKAR] chat build", HAVKAR_CHAT_BUILD, "owner-fix-240");
     }catch(_e){}
 
     try{
@@ -9315,6 +9699,12 @@ async function startPage(){
             error
         );
 
+        try{
+            window.clearTimeout(
+                bootFailSafe
+            );
+        }catch(_e){}
+
         showFatalError(
             "HAVKAR connection error",
             "The authentication service could not be reached. Please try again."
@@ -9323,6 +9713,12 @@ async function startPage(){
         return;
 
     }
+
+    try{
+        window.clearTimeout(
+            bootFailSafe
+        );
+    }catch(_e){}
 
     if(!state.currentUser){
 

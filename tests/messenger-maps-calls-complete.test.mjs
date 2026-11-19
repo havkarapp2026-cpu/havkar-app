@@ -24,7 +24,23 @@ test("chat wires call gates, attach tray, and rich location module", () => {
   assert.ok(/openMessengerCallGate/.test(chat));
   assert.ok(/openMultiSharePicker/.test(chat));
   assert.ok(/HAVKAR_TURN_/.test(chat));
+  assert.ok(/id="actionNewDm"/.test(chat));
+  assert.ok(/id="actionGroup"/.test(chat));
+  assert.ok(/messenger-action-strip/.test(chat));
+  assert.ok(/formatMessagePreviewText/.test(chat));
+  assert.ok(/owner-fix-240/.test(chat));
   const script = chat.match(/<script(?![^>]*src=)[^>]*>([\s\S]*?)<\/script>/)?.[1] || "";
+  assert.doesNotThrow(() => new Function(script));
+});
+
+test("production regression: chat inline script must parse (no premature setupEvents close)", () => {
+  const chat = read("../chat.html");
+  const script = chat.match(/<script(?![^>]*src=)[^>]*>([\s\S]*?)<\/script>/)?.[1] || "";
+  // The historic Production bug was an extra `}` after notificationsButton that aborted parse.
+  assert.doesNotMatch(
+    script,
+    /goNotifications\(\);\s*\n\s*\}\s*\n\s*\)\s*;\s*\n\s*\$\("blockUserButton"\)/
+  );
   assert.doesNotThrow(() => new Function(script));
 });
 
