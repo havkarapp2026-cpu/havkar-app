@@ -3799,7 +3799,7 @@ async function loadConversations(){
                 supabaseClient
                     .from("conversations")
                     .select(
-                        "id,ad_id,buyer_id,seller_id,created_at,updated_at"
+                        "id,ad_id,buyer_id,seller_id,created_at,updated_at,is_group,title"
                     )
                     .or(
                         "buyer_id.eq." +
@@ -3824,6 +3824,75 @@ async function loadConversations(){
             Array.isArray(result.data)
                 ? result.data
                 : [];
+
+        /* Also include group rooms where the user is only a participant. */
+        try{
+            const part =
+                await withTimeout(
+                    supabaseClient
+                        .from(
+                            "conversation_participants"
+                        )
+                        .select(
+                            "conversation_id"
+                        )
+                        .eq(
+                            "user_id",
+                            userId
+                        )
+                );
+            if(
+                !part.error &&
+                Array.isArray(part.data) &&
+                part.data.length
+            ){
+                const known =
+                    {};
+                state.conversations.forEach(
+                    function(row){
+                        known[String(row.id)] =
+                            true;
+                    }
+                );
+                const missing =
+                    part.data
+                        .map(function(row){
+                            return row.conversation_id;
+                        })
+                        .filter(function(id){
+                            return id && !known[String(id)];
+                        });
+                if(missing.length){
+                    const extra =
+                        await withTimeout(
+                            supabaseClient
+                                .from(
+                                    "conversations"
+                                )
+                                .select(
+                                    "id,ad_id,buyer_id,seller_id,created_at,updated_at,is_group,title"
+                                )
+                                .in(
+                                    "id",
+                                    missing
+                                )
+                        );
+                    if(
+                        !extra.error &&
+                        Array.isArray(
+                            extra.data
+                        )
+                    ){
+                        state.conversations =
+                            state.conversations.concat(
+                                extra.data
+                            );
+                    }
+                }
+            }
+        }catch(_partErr){
+            /* participants table may be unavailable on older previews */
+        }
 
         try{
             const blocked =
@@ -4912,6 +4981,17 @@ function formatMessagePreviewText(raw){
 function getConversationRole(
     conversation
 ){
+
+    if(
+        conversation &&
+        (conversation.is_group ||
+            conversation.title)
+    ){
+        return (
+            conversation.title ||
+            "Group"
+        );
+    }
 
     if(!state.currentUser){
         return "HAVKAR Member";
@@ -8599,6 +8679,312 @@ async function probeMessengerCallReadiness(){
     }
 }
 
+function openCreateGroupModal(){
+    if(!state.currentUser){
+        redirectToLogin();
+        return;
+    }
+    const existing =
+        document.getElementById(
+            "messengerGroupModal"
+        );
+    if(existing){
+        existing.remove();
+    }
+    const backdrop =
+        document.createElement(
+            "div"
+        );
+    backdrop.id =
+        "messengerGroupModal";
+    backdrop.className =
+        "messenger-new-modal-backdrop";
+    backdrop.innerHTML =
+        '<div class="messenger-new-modal" role="dialog" aria-modal="true">' +
+        "<h3>New group</h3>" +
+        "<p>Pick listing sellers as members. Group schema uses conversation_participants with RLS.</p>" +
+        '<input type="text" id="groupTitleInput" maxlength="80" placeholder="Group title" />' +
+        '<input type="search" id="groupSearchInput" placeholder="Search public listings..." autocomplete="off" />' +
+        '<div id="groupSearchHits" style="max-height:220px;overflow:auto;margin:8px 0"></div>' +
+        '<div class="messenger-cta-row">' +
+        '<button type="button" class="messenger-cta" id="groupCreateBtn">Create group</button>' +
+        '<button type="button" class="messenger-cta secondary" id="groupCancelBtn">Cancel</button>' +
+        "</div></div>";
+    document.body.appendChild(
+        backdrop
+    );
+    const selected =
+        {};
+    async function runSearch(){
+        const q =
+            String(
+                $("groupSearchInput")
+                    ?.value ||
+                ""
+            ).trim();
+        const hits =
+            $("groupSearchHits");
+        if(!hits){
+            return;
+        }
+        hits.innerHTML =
+            '<div class="loading"><i class="fas fa-circle-notch fa-spin"></i></div>';
+        try{
+            let query =
+                supabaseClient
+                    .from(
+                        "ads"
+                    )
+                    .select(
+                        "id,title,user_id,status"
+                    )
+                    .eq(
+                        "status",
+                        "active"
+                    )
+                    .limit(
+                        20
+                    );
+            if(q){
+                query =
+                    query.ilike(
+                        "title",
+                        "%" +
+                        q +
+                        "%"
+                    );
+            }
+            const result =
+                await withTimeout(
+                    query
+                );
+            if(result.error){
+                throw result.error;
+            }
+            const rows =
+                (result.data ||
+                    []).filter(
+                    function(ad){
+                        return (
+                            String(
+                                ad.user_id
+                            ) !==
+                            String(
+                                state.currentUser.id
+                            )
+                        );
+                    }
+                );
+            if(!rows.length){
+                hits.innerHTML =
+                    "<p>No listings found.</p>";
+                return;
+            }
+            hits.innerHTML =
+                "";
+            rows.forEach(
+                function(ad){
+                    const btn =
+                        document.createElement(
+                            "button"
+                        );
+                    btn.type =
+                        "button";
+                    btn.className =
+                        "messenger-user-hit";
+                    const key =
+                        String(
+                            ad.user_id
+                        );
+                    btn.innerHTML =
+                        "<strong>" +
+                        escapeHtml(
+                            ad.title ||
+                            "Listing"
+                        ) +
+                        "</strong><span>" +
+                        (selected[key]
+                            ? "Selected"
+                            : "Tap to add seller") +
+                        "</span>";
+                    btn.addEventListener(
+                        "click",
+                        function(){
+                            if(
+                                selected[key]
+                            ){
+                                delete selected[key];
+                            }else{
+                                selected[key] =
+                                    ad;
+                            }
+                            runSearch();
+                        }
+                    );
+                    hits.appendChild(
+                        btn
+                    );
+                }
+            );
+        }catch(err){
+            hits.innerHTML =
+                "<p>Search failed.</p>";
+        }
+    }
+    $("groupSearchInput")
+        ?.addEventListener(
+            "input",
+            function(){
+                window.clearTimeout(
+                    openCreateGroupModal._t
+                );
+                openCreateGroupModal._t =
+                    window.setTimeout(
+                        runSearch,
+                        280
+                    );
+            }
+        );
+    $("groupCancelBtn")
+        ?.addEventListener(
+            "click",
+            function(){
+                backdrop.remove();
+            }
+        );
+    $("groupCreateBtn")
+        ?.addEventListener(
+            "click",
+            async function(){
+                const memberIds =
+                    Object.keys(
+                        selected
+                    );
+                if(
+                    memberIds.length <
+                    1
+                ){
+                    showToast(
+                        "Select at least one member.",
+                        "error"
+                    );
+                    return;
+                }
+                const title =
+                    String(
+                        $("groupTitleInput")
+                            ?.value ||
+                        ""
+                    ).trim() ||
+                    "HAVKAR group";
+                try{
+                    const first =
+                        memberIds[0];
+                    const inserted =
+                        await withTimeout(
+                            supabaseClient
+                                .from(
+                                    "conversations"
+                                )
+                                .insert({
+                                    buyer_id:
+                                        state.currentUser.id,
+                                    seller_id:
+                                        first,
+                                    ad_id:
+                                        selected[first]
+                                            ?.id ||
+                                        null,
+                                    is_group:
+                                        true,
+                                    title:
+                                        title
+                                })
+                                .select(
+                                    "id,ad_id,buyer_id,seller_id,created_at,updated_at,is_group,title"
+                                )
+                                .single()
+                        );
+                    if(
+                        inserted.error
+                    ){
+                        throw inserted.error;
+                    }
+                    const conv =
+                        inserted.data;
+                    const rows =
+                        [
+                            {
+                                conversation_id:
+                                    conv.id,
+                                user_id:
+                                    state.currentUser.id,
+                                role:
+                                    "owner"
+                            }
+                        ].concat(
+                            memberIds.map(
+                                function(uid){
+                                    return {
+                                        conversation_id:
+                                            conv.id,
+                                        user_id:
+                                            uid,
+                                        role:
+                                            "member"
+                                    };
+                                }
+                            )
+                        );
+                    const part =
+                        await withTimeout(
+                            supabaseClient
+                                .from(
+                                    "conversation_participants"
+                                )
+                                .upsert(
+                                    rows,
+                                    {
+                                        onConflict:
+                                            "conversation_id,user_id"
+                                    }
+                                )
+                        );
+                    if(
+                        part.error
+                    ){
+                        throw part.error;
+                    }
+                    backdrop.remove();
+                    showToast(
+                        "Group created.",
+                        "info"
+                    );
+                    await loadConversations();
+                    await openConversation(
+                        conv
+                    );
+                }catch(err){
+                    showToast(
+                        (err &&
+                            err.message) ||
+                        "Could not create group.",
+                        "error"
+                    );
+                }
+            }
+        );
+    backdrop.addEventListener(
+        "click",
+        function(ev){
+            if(ev.target === backdrop){
+                backdrop.remove();
+            }
+        }
+    );
+    runSearch();
+}
+
 function openHonestCapabilityGate(title, body){
     const existing =
         document.getElementById(
@@ -9028,12 +9414,7 @@ function setupEvents(){
     $("actionGroup")
         ?.addEventListener(
             "click",
-            function(){
-                openHonestCapabilityGate(
-                    "Group chats",
-                    "HAVKAR conversations are currently 1:1 (buyer/seller) in the live database. Multi-member group rooms need an Owner-approved schema migration (conversation_participants). Until then, use Share → send to multiple conversations."
-                );
-            }
+            openCreateGroupModal
         );
 
     $("actionVoice")
