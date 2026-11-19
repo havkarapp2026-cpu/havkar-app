@@ -169,3 +169,15 @@ test("payment-currency-rails exposes Jobs and Services live scopes", () => {
   assert.equal(status.module_scopes.services_payments.provider_commission_bps, 1000);
   assert.equal(status.module_scopes.services_payments.effective, "armed");
 });
+
+test("Settings alias redirects to profile Settings chrome", () => {
+  const settingsHtml = readFileSync(new URL("../settings.html", import.meta.url), "utf8");
+  const vercel = readFileSync(new URL("../vercel.json", import.meta.url), "utf8");
+  const profileHtml = readFileSync(new URL("../profile.html", import.meta.url), "utf8");
+  assert.ok(/profile\.html/.test(settingsHtml));
+  assert.ok(/location\.replace\("profile\.html"/.test(settingsHtml));
+  assert.ok(/"source":\s*"\/settings\.html"/.test(vercel));
+  assert.ok(/"destination":\s*"\/profile\.html"/.test(vercel));
+  assert.ok(/<title>HAVKAR - Settings</.test(profileHtml));
+  assert.ok(/data-i18n="settings"/.test(profileHtml));
+});
