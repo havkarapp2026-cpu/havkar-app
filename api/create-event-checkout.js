@@ -3165,6 +3165,31 @@ export default async function handler(req, res) {
             ? sellerConnect.data.stripe_account_id
             : null;
 
+        /* Owner rule: never live-charge marketplace without seller settlement rail. */
+        if (liveArmed && !connectedAccountId) {
+          return res.status(409).json({
+            ok: false,
+            charged: false,
+            code: "SELLER_CONNECT_REQUIRED",
+            message:
+              "Live card checkout stays blocked until this seller completes Stripe Connect with charges enabled. Quote remains available; funds would not have an operational payout path to the seller.",
+            receipt: {
+              ...receipt,
+              seller_connect: sellerConnect.data
+                ? {
+                    onboarding_status:
+                      sellerConnect.data.onboarding_status || null,
+                    charges_enabled: !!sellerConnect.data.charges_enabled,
+                    payouts_enabled: !!sellerConnect.data.payouts_enabled
+                  }
+                : null
+            },
+            split,
+            currency_quote: currencyQuote,
+            checkout_url: null
+          });
+        }
+
         const origin = allowedCheckoutOrigin(req);
         const successUrl =
           origin +
