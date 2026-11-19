@@ -115,3 +115,17 @@ test("buy-sell surfaces buyer 2% and seller 3% fee honesty", () => {
   assert.ok(/seller fee is <strong>3%<\/strong>/.test(buySellHtml));
   assert.ok(/havkar-marketplace\.js/.test(buySellHtml));
 });
+
+test("i18n21 packs activation phrases for fa/ckb/sv", async () => {
+  const vm = await import("node:vm");
+  const { createContext, runInContext } = vm;
+  const src = readFileSync(new URL("../havkar-ui-i18n21.js", import.meta.url), "utf8");
+  const ctx = {};
+  createContext(ctx);
+  runInContext(src, ctx);
+  const api = ctx.HAVKAR_UI_I18N21;
+  assert.equal(api.pack("fa")["Choose a travel category"], "یک دستهٔ سفر را انتخاب کنید");
+  assert.ok(api.pack("ckb")["Fees & marketplace rules"]);
+  assert.equal(api.pack("sv")["Ferries / Ships"], "Färjor / Fartyg");
+  assert.equal(api.pack("en")["Choose a travel category"], undefined);
+});
