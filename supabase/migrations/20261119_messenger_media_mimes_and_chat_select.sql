@@ -1,0 +1,2 @@
+-- Messenger media: broaden marketplace-media MIME allowlist + chat select policy.
+-- Applied via Owner final verification 2026-11-19.

@@ -9185,10 +9185,10 @@ async function pickAndSendMedia(file, kindHint){
             ? "audio"
             : "file");
     try{
+        /* marketplace-media RLS requires `{auth.uid()}/...` prefix. */
         const path =
-            "chat/" +
             String(state.currentUser.id) +
-            "/" +
+            "/chat/" +
             Date.now() +
             "-" +
             String(file.name || "file")
@@ -9205,13 +9205,19 @@ async function pickAndSendMedia(file, kindHint){
         if(up.error){
             throw up.error;
         }
-        const pub = supabaseClient.storage
-            .from("marketplace-media")
-            .getPublicUrl(path);
+        /* Bucket is private — use a signed URL so recipients can open media. */
+        const signed = await withTimeout(
+            supabaseClient.storage
+                .from("marketplace-media")
+                .createSignedUrl(path, 60 * 60 * 24 * 7)
+        );
+        if(signed.error){
+            throw signed.error;
+        }
         const url =
-            pub &&
-            pub.data &&
-            pub.data.publicUrl;
+            signed &&
+            signed.data &&
+            signed.data.signedUrl;
         if(!url){
             throw new Error("Upload URL missing");
         }
