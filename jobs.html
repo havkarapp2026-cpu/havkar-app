@@ -1645,7 +1645,7 @@ a.primary{
     </div>
 
     <div class="plan-title">
-      Choose a monthly publishing plan
+      Choose a 30-day prepaid listing plan
     </div>
 
     <div class="plans">
@@ -1656,10 +1656,10 @@ a.primary{
         data-plan="Basic"
         onclick="selectPlan(this)">
 
-        <strong>Basic — €9.99 / month</strong>
+        <strong>Basic — €9.99 / 30 days</strong>
 
         <span>
-          For small businesses and one active job.
+          For small businesses and one active job. One-time prepaid listing window.
         </span>
 
       </div>
@@ -1670,10 +1670,10 @@ a.primary{
         data-plan="Professional"
         onclick="selectPlan(this)">
 
-        <strong>Professional — €19.99 / month</strong>
+        <strong>Professional — €19.99 / 30 days</strong>
 
         <span>
-          More visibility and multiple active jobs.
+          More visibility and multiple active jobs. One-time prepaid listing window.
         </span>
 
       </div>
@@ -1684,10 +1684,10 @@ a.primary{
         data-plan="Business"
         onclick="selectPlan(this)">
 
-        <strong>Business — €39.99 / month</strong>
+        <strong>Business — €39.99 / 30 days</strong>
 
         <span>
-          For businesses with regular recruitment.
+          For businesses with regular recruitment. One-time prepaid listing window.
         </span>
 
       </div>
@@ -1697,7 +1697,7 @@ a.primary{
     <div class="summary">
 
       <strong>
-        Monthly publishing fee
+        30-day prepaid listing fee
       </strong>
 
       <br>
@@ -1715,7 +1715,7 @@ a.primary{
     <div class="notice">
       Your job will remain
       <strong>Pending payment</strong>
-      until a real payment provider confirms the subscription.
+      until a real payment provider confirms the prepaid listing fee. This is not an automatic monthly subscription.
     </div>
 
     <button
@@ -3597,7 +3597,7 @@ function showPaymentScreen(job){
       <div class="detail-row">
 
         <span class="detail-label">
-          Monthly plan
+          Prepaid plan
         </span>
 
         <span class="detail-value">
@@ -3609,7 +3609,7 @@ function showPaymentScreen(job){
       <div class="detail-row">
 
         <span class="detail-label">
-          Monthly fee
+          30-day listing fee
         </span>
 
         <span class="detail-value">
@@ -3630,7 +3630,7 @@ function showPaymentScreen(job){
       <strong>pending payment</strong>.
 
       It will not be treated as an active paid advertisement
-      until the real payment provider confirms the transaction.
+      until the real payment provider confirms the prepaid 30-day fee.
 
     </div>
 
@@ -3647,7 +3647,7 @@ function showPaymentScreen(job){
 
       Pay €${Number(
         job.monthly_fee
-      ).toFixed(2)} / month
+      ).toFixed(2)} (30 days)
 
     </button>
 
@@ -3661,7 +3661,7 @@ function showPaymentScreen(job){
         )
       ">
 
-      XLM cannot start this monthly plan
+      Quote XLM for prepaid listing
 
     </button>
 
@@ -3687,14 +3687,12 @@ function showPaymentScreen(job){
    PAYMENT
    ========================================================= */
 
-function startRealPayment(jobId){
+async function startRealPayment(jobId){
 
   /*
     IMPORTANT:
     No fake payment confirmation.
-
-    A real payment provider/backend
-    must be connected before activation.
+    Ask the server for jobs_quote honesty before any charge attempt.
   */
 
   const job =
@@ -3706,10 +3704,42 @@ function startRealPayment(jobId){
 
   if(!job) return;
 
-  alert(
-    "The payment gateway is not connected yet. " +
-    "Your advertisement has NOT been activated."
-  );
+  try{
+    /* jobs_quote is handled on create-event-checkout; /api/global-payments catalog would swallow it. */
+    const res = await fetch("/api/create-event-checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "jobs_quote",
+        plan: job.plan || "Basic",
+        method: "stripe"
+      })
+    });
+    const body = await res.json().catch(function(){ return null; });
+    if(
+      body &&
+      body.ok === true &&
+      body.charge_allowed_now === true
+    ){
+      alert(
+        "Card collection is Owner-armed for Jobs quotes, but checkout session creation is not started from this button yet. " +
+        "Your advertisement has NOT been activated. No charge was created."
+      );
+      return;
+    }
+    const reason =
+      (body && (body.availability_reason || body.error || body.availability_label)) ||
+      "Jobs live payments are not armed (HAVKAR_JOB_PAYMENTS_ENABLED).";
+    alert(
+      "Jobs card payment is not available now: " +
+      reason +
+      " Your advertisement has NOT been activated. No charge was created."
+    );
+  }catch(_err){
+    alert(
+      "Could not verify Jobs payment readiness. Your advertisement has NOT been activated. No charge was created."
+    );
+  }
 }
 
 async function quoteJobXlm(jobId, fee){

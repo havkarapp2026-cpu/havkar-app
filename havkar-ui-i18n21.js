@@ -51,4 +51,64 @@
       return out;
     }
   };
+
+  // Activation strings: Tickets category-first + Buy&Sell fee honesty (21 langs).
+  (function augmentActivationPhrases(){
+    try {
+      var extra = {
+        "Choose a travel category": {
+          it:"Scegli una categoria di viaggio", de:"Reisekategorie wählen", fr:"Choisissez une catégorie de voyage",
+          es:"Elige una categoría de viaje", pt:"Escolha uma categoria de viagem", nl:"Kies een reiscategorie",
+          sv:"Välj en rese kategori", pl:"Wybierz kategorię podróży", id:"Pilih kategori perjalanan",
+          zh:"选择出行类别", ja:"旅行カテゴリを選択", ko:"여행 카테고리 선택", hi:"यात्रा श्रेणी चुनें",
+          ru:"Выберите категорию поездки", ckb:"پۆلی گەشت هەڵبژێرە", kmr:"Kategoriyeke rêwîtiyê hilbijêre",
+          tr:"Bir seyahat kategorisi seçin", ar:"اختر فئة السفر", fa:"یک دستهٔ سفر را انتخاب کنید", ur:"سفر کی قسم منتخب کریں"
+        },
+        "About this search": {
+          it:"Informazioni su questa ricerca", de:"Über diese Suche", fr:"À propos de cette recherche",
+          es:"Acerca de esta búsqueda", pt:"Sobre esta pesquisa", nl:"Over deze zoekopdracht",
+          sv:"Om denna sökning", pl:"O tym wyszukiwaniu", id:"Tentang pencarian ini",
+          zh:"关于此搜索", ja:"この検索について", ko:"이 검색 정보", hi:"इस खोज के बारे में",
+          ru:"Об этом поиске", ckb:"دەربارەی ئەم گەڕانە", kmr:"Der barê vê lêgerînê",
+          tr:"Bu arama hakkında", ar:"حول هذا البحث", fa:"دربارهٔ این جستجو", ur:"اس تلاش کے بارے میں"
+        },
+        "Ferries / Ships": {
+          it:"Traghetti / Navi", de:"Fähren / Schiffe", fr:"Ferries / Navires",
+          es:"Ferris / Barcos", pt:"Ferries / Navios", nl:"Ferries / Schepen",
+          sv:"Färjor / Fartyg", pl:"Promy / Statki", id:"Feri / Kapal",
+          zh:"渡轮 / 船舶", ja:"フェリー / 船舶", ko:"페리 / 선박", hi:"फेरी / जहाज़",
+          ru:"Паромы / Суда", ckb:"کەشتی / کەشتی گەورە", kmr:"Ferîbot / Keştî",
+          tr:"Feribotlar / Gemiler", ar:"العبارات / السفن", fa:"فری / کشتی‌ها", ur:"فیری / جہاز"
+        },
+        "Fees & marketplace rules": {
+          it:"Commissioni e regole del marketplace", de:"Gebühren & Marktplatzregeln", fr:"Frais et règles du marketplace",
+          es:"Tarifas y reglas del marketplace", pt:"Taxas e regras do marketplace", nl:"Kosten en marktplaatsregels",
+          sv:"Avgifter och marknadsplatsregler", pl:"Opłaty i zasady marketplace", id:"Biaya & aturan marketplace",
+          zh:"费用与市场规则", ja:"手数料とマーケットルール", ko:"수수료 및 마켓 규칙", hi:"शुल्क और मार्केट नियम",
+          ru:"Комиссии и правила маркетплейса", ckb:"کرێ و یاساکانی بازاڕ", kmr:"Xerc û rêzikên bazarê",
+          tr:"Ücretler ve pazar kuralları", ar:"الرسوم وقواعد السوق", fa:"کارمزد و قوانین بازار", ur:"فیس اور مارکیٹ پلیس قواعد"
+        },
+        "Filters & categories": {
+          it:"Filtri e categorie", de:"Filter & Kategorien", fr:"Filtres et catégories",
+          es:"Filtros y categorías", pt:"Filtros e categorias", nl:"Filters en categorieën",
+          sv:"Filter och kategorier", pl:"Filtry i kategorie", id:"Filter & kategori",
+          zh:"筛选与分类", ja:"フィルターとカテゴリ", ko:"필터 및 카테고리", hi:"फ़िल्टर और श्रेणियाँ",
+          ru:"Фильтры и категории", ckb:"فلتەر و پۆلەکان", kmr:"Parzûn û kategorî",
+          tr:"Filtreler ve kategoriler", ar:" عوامل التصفية والفئات", fa:"فیلترها و دسته‌ها", ur:"فلٹرز اور اقسام"
+        }
+      };
+      var api = root.HAVKAR_UI_I18N21;
+      if(!api || !api.pack) return;
+      var orig = api.pack.bind(api);
+      api.pack = function(lang){
+        var base = orig(lang) || {};
+        var code = String(lang||'en');
+        Object.keys(extra).forEach(function(en){
+          if(!base[en] && extra[en][code]) base[en] = extra[en][code];
+        });
+        return base;
+      };
+    } catch(_e){}
+  })();
+
 })(typeof globalThis !== "undefined" ? globalThis : this);

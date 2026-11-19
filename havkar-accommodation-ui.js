@@ -21,10 +21,12 @@ async function sessionUser(supabase) {
 }
 
 async function loadPublic(supabase) {
-    const { data, error } = await supabase
+    let query = await supabase
         .from("accommodation_listings")
         .select("id,title,summary,publication_status")
         .eq("publication_status", "published");
+    let data = query.data;
+    let error = query.error;
     const list = document.getElementById("listings");
 
     if (error) {
@@ -39,15 +41,16 @@ async function loadPublic(supabase) {
     }
 
     document.getElementById("empty").hidden = true;
+    // Visual discovery cards. Evidence bucket is private — never invent photos.
     list.innerHTML = data.map(function (listing) {
-        const title = document.createElement("h2");
-        title.textContent = listing.title || "";
-        const summary = document.createElement("p");
-        summary.textContent = listing.summary || "";
-        const card = document.createElement("article");
-        card.className = "card listing";
-        card.append(title, summary);
-        return card.outerHTML;
+        const title = String(listing.title || "").replace(/</g, "&lt;");
+        const summary = String(listing.summary || "").replace(/</g, "&lt;");
+        return (
+            '<article class="card listing">' +
+            '<div class="acc-photo acc-photo-fallback" aria-hidden="true"><i class="fas fa-hotel"></i></div>' +
+            '<div class="acc-body"><h2>' + title + "</h2><p>" + summary + "</p></div>" +
+            "</article>"
+        );
     }).join("");
 }
 

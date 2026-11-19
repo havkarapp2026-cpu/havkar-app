@@ -1696,7 +1696,14 @@ export default async function handler(req, res) {
 
   // Global catalog covers marketplace, jobs, services, AI, ads, events, etc.
   // Live charging stays Owner-gated via refuseLiveCheckout — quotes only by default.
-  if (isGlobalPaymentsRequest(req)) {
+  const globalBodyAction = String((req.body && req.body.action) || "");
+  const isJobsServicesPaymentAction =
+    req.method === "POST" &&
+    (globalBodyAction === "jobs_payment_methods" ||
+      globalBodyAction === "services_payment_methods" ||
+      globalBodyAction === "jobs_quote" ||
+      globalBodyAction === "services_quote");
+  if (isGlobalPaymentsRequest(req) && !isJobsServicesPaymentAction) {
     if (req.method !== "GET" && req.method !== "POST") {
       res.setHeader("Allow", "GET, POST");
       return sendError(res, 405, "Method not allowed");
