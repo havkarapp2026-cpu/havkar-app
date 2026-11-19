@@ -5936,11 +5936,42 @@ window.addEventListener("havkar-stellar-error",function(event){
    START  
    ========================================================= */  
   
+async function refreshCurrencyRailsHonesty(){
+    try{
+        const res=await fetch("/api/payment-status",{cache:"no-store"});
+        const body=await res.json().catch(function(){return null;});
+        const xlmLive=body&&body.stellar_mainnet_customer_live==="armed";
+        const cardLive=body&&body.customer_facing_collection==="armed";
+        window.HAVKAR_XLM_MAINNET_LIVE_COLLECTION=xlmLive===true;
+        const notice=document.getElementById("currencyRailsNotice");
+        if(notice){
+            notice.textContent=xlmLive||cardLive
+                ?"Display · Charge · Settlement are separate. Owner-armed collection rails are active for verified flows only. Peer wallet Mainnet sends still require your wallet approval; HAVKAR never invents balances."
+                :"Display · Charge · Settlement are separate. XLM rail separate. Live customer collection is paused until Owner arms it.";
+        }
+        const orig=window.havkarGetStellarNetwork;
+        if(typeof orig==="function"&&!window.__havkarStellarNetworkPatched){
+            window.__havkarStellarNetworkPatched=true;
+            window.havkarGetStellarNetwork=function(){
+                const n=orig();
+                if(n&&n.id==="PUBLIC"&&window.HAVKAR_XLM_MAINNET_LIVE_COLLECTION!==true){
+                    return Object.assign({},n,{paymentsEnabled:false});
+                }
+                return n;
+            };
+        }
+    }catch(_e){
+        window.HAVKAR_XLM_MAINNET_LIVE_COLLECTION=false;
+    }
+}
+
 async function startWallet(){  
   
     clearError();  
   
     applySavedDisplayCurrency();  
+
+    await refreshCurrencyRailsHonesty();
   
     renderStellarNetwork();  
   

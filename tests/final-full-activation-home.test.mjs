@@ -52,3 +52,10 @@ test("jobs ordinary plans are labeled 30-day prepaid not monthly subscription", 
   assert.ok(!/Choose a monthly publishing plan/.test(jobsHtml));
   assert.ok(/action:\s*"jobs_quote"|\"jobs_quote\"/.test(jobsHtml));
 });
+
+test("wallet gates Mainnet peer send on payment-status live collection", () => {
+  const walletHtml = readFileSync(new URL("../wallet.html", import.meta.url), "utf8");
+  assert.ok(/refreshCurrencyRailsHonesty/.test(walletHtml));
+  assert.ok(/HAVKAR_XLM_MAINNET_LIVE_COLLECTION/.test(walletHtml));
+  assert.ok(/\/api\/payment-status/.test(walletHtml));
+});
