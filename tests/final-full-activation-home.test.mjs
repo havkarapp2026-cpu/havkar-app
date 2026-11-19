@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
 
 const indexHtml = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const ticketsHtml = readFileSync(new URL("../tickets.html", import.meta.url), "utf8");
@@ -150,4 +152,20 @@ test("chat outbox never marks delivered or read offline", () => {
   assert.ok(/havkar_mark_messages_delivered/.test(chatHtml) || /havkar_mark_messages_read/.test(chatHtml));
   assert.ok(/\.message-checks\.read\{/.test(chatHtml));
   assert.doesNotMatch(chatHtml, /markReadLocallyOnly|fakeDelivered|simulateReadReceipt/i);
+});
+
+
+test("payment-currency-rails exposes Jobs and Services live scopes", () => {
+  const { buildCurrencyRailsStatus } = require("../lib/payment-currency-rails.cjs");
+  const status = buildCurrencyRailsStatus({
+    HAVKAR_REAL_PAYMENTS_ENABLED: "true",
+    HAVKAR_STRIPE_LIVE_ENABLED: "true",
+    HAVKAR_JOB_PAYMENTS_ENABLED: "true",
+    HAVKAR_SERVICE_PAYMENTS_ENABLED: "true"
+  });
+  assert.equal(status.gates.HAVKAR_JOB_PAYMENTS_ENABLED, true);
+  assert.equal(status.gates.HAVKAR_SERVICE_PAYMENTS_ENABLED, true);
+  assert.equal(status.module_scopes.jobs_listing_payments.effective, "armed");
+  assert.equal(status.module_scopes.services_payments.provider_commission_bps, 1000);
+  assert.equal(status.module_scopes.services_payments.effective, "armed");
 });
