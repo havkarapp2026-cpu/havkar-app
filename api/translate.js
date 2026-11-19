@@ -937,8 +937,9 @@ async function handler(req, res) {
        */
       if (action === "languages") {
         if (!credentialsReady()) {
-          return sendJSON(res, 500, {
+          return sendJSON(res, 503, {
             ok: false,
+            disabled: true,
             error:
               "Google Translation credentials are not configured."
           });
@@ -1019,24 +1020,27 @@ async function handler(req, res) {
     ----------------------------------------------------- */
 
     if (!PROJECT_ID) {
-      return sendJSON(res, 500, {
+      return sendJSON(res, 503, {
         ok: false,
+        disabled: true,
         error:
           "Google Cloud project ID is not configured."
       });
     }
 
     if (!CLIENT_EMAIL) {
-      return sendJSON(res, 500, {
+      return sendJSON(res, 503, {
         ok: false,
+        disabled: true,
         error:
           "Google Translation service account email is not configured."
       });
     }
 
     if (!PRIVATE_KEY) {
-      return sendJSON(res, 500, {
+      return sendJSON(res, 503, {
         ok: false,
+        disabled: true,
         error:
           "Google Translation private key is not configured."
       });
