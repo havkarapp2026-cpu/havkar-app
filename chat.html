@@ -5064,9 +5064,16 @@ function conversationMatchesRoute(conversation, route){
 function readChatRouteParams(){
     const params = new URLSearchParams(window.location.search || "");
     return {
-        conversationId: params.get("conversation_id"),
-        adId: params.get("ad_id"),
-        sellerId: params.get("seller_id")
+        /* Accept both conversation and conversation_id deep links. */
+        conversationId:
+            params.get("conversation_id") ||
+            params.get("conversation"),
+        adId:
+            params.get("ad_id") ||
+            params.get("ad"),
+        sellerId:
+            params.get("seller_id") ||
+            params.get("seller")
     };
 }
 
