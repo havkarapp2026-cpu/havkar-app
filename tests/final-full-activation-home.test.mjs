@@ -107,3 +107,11 @@ test("wallet gates Mainnet peer send on payment-status live collection", () => {
   assert.ok(/HAVKAR_XLM_MAINNET_LIVE_COLLECTION/.test(walletHtml));
   assert.ok(/\/api\/payment-status/.test(walletHtml));
 });
+
+test("buy-sell surfaces buyer 2% and seller 3% fee honesty", () => {
+  const buySellHtml = readFileSync(new URL("../buy-sell.html", import.meta.url), "utf8");
+  assert.ok(/Fees &amp; marketplace rules/.test(buySellHtml));
+  assert.ok(/buyer fee is <strong>2%<\/strong>/.test(buySellHtml));
+  assert.ok(/seller fee is <strong>3%<\/strong>/.test(buySellHtml));
+  assert.ok(/havkar-marketplace\.js/.test(buySellHtml));
+});
