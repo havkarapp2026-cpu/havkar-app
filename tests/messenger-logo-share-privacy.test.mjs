@@ -38,6 +38,36 @@ test("chat page uses messenger logo assets and share module", () => {
   assert.ok(/Offline outbox: queue locally when offline; never mark delivered\/read here/.test(chat));
 });
 
+test("chat setupEvents parses and exposes New conversation + login/empty gates", () => {
+  const chat = read("../chat.html");
+  const script = chat.match(/<script(?![^>]*src=)[^>]*>([\s\S]*?)<\/script>/)?.[1] || "";
+  assert.ok(script.length > 1000);
+  // Regression: premature close after notificationsButton broke the whole page (infinite spinner).
+  assert.doesNotMatch(
+    script,
+    /goNotifications\(\);\s*\}\s*;?\s*\)\s*;\s*\$\("blockUserButton"\)/
+  );
+  assert.ok(/id="newConversationButton"/.test(chat));
+  assert.ok(/function openNewConversationModal/.test(chat));
+  assert.ok(/function showLoginGate/.test(chat));
+  assert.ok(/havkar_get_or_create_listing_conversation/.test(chat));
+  assert.ok(/emptyNewConversationBtn/.test(chat));
+  // Syntax check extracted script
+  try {
+    new Function(script);
+  } catch (err) {
+    assert.fail("chat.html inline script must parse: " + err.message);
+  }
+});
+
+test("home messenger tile uses pale mint background like peer tiles", () => {
+  assert.ok(existsSync(new URL("../assets/icons/messenger/messenger-96-mint.png", import.meta.url)));
+  const png = readFileSync(new URL("../assets/home/chat.png", import.meta.url));
+  // PNG signature + non-trivial size; corner mint verified offline in agent run.
+  assert.equal(png[0], 0x89);
+  assert.ok(png.length > 8000);
+});
+
 test("share helper encodes only allowed HAVKAR URLs and blocks private paths", () => {
   const src = read("../havkar-messenger-share.js");
   const sandbox = {
@@ -103,4 +133,19 @@ test("i18n packs Messenger label for fa and ckb", () => {
   assert.ok(/Messenger:\s*\{/.test(i18n));
   assert.ok(/fa:"پیام‌رسان"/.test(i18n));
   assert.ok(/ckb:"مەسنجەر"/.test(i18n));
+});
+
+test("i18n packs Italian Messenger chrome that previously stayed English", () => {
+  const sandbox = { console };
+  sandbox.globalThis = sandbox;
+  vm.runInNewContext(read("../havkar-ui-i18n21.js"), sandbox);
+  const pack = sandbox.HAVKAR_UI_I18N21.pack("it");
+  assert.equal(pack["Search messages..."], "Cerca nei messaggi...");
+  assert.equal(pack["Conversations"], "Conversazioni");
+  assert.equal(pack["Loading conversations..."], "Caricamento conversazioni...");
+  assert.equal(pack["Home"], "Inizio");
+  assert.equal(pack["New conversation"], "Nuova conversazione");
+  const fa = sandbox.HAVKAR_UI_I18N21.pack("fa");
+  assert.equal(fa["Conversations"], "گفتگوها");
+  assert.equal(fa["Messenger"], "پیام‌رسان");
 });

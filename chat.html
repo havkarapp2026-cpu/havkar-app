@@ -414,6 +414,69 @@ select:focus-visible{
     line-height:1.5;
 }
 
+.messenger-cta-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    justify-content:center;
+    margin-top:14px;
+}
+.messenger-cta{
+    min-height:44px;
+    border:0;
+    border-radius:12px;
+    padding:0 14px;
+    font-weight:800;
+    cursor:pointer;
+    background:#2e7d32;
+    color:#fff;
+}
+.messenger-cta.secondary{
+    background:#e8f5e9;
+    color:#1b5e20;
+}
+.messenger-new-modal-backdrop{
+    position:fixed;
+    inset:0;
+    z-index:13000;
+    background:rgba(0,0,0,.45);
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    padding:16px;
+}
+.messenger-new-modal{
+    width:min(560px,100%);
+    max-height:85vh;
+    overflow:auto;
+    background:#fff;
+    border-radius:18px 18px 12px 12px;
+    padding:16px;
+    box-shadow:0 18px 40px rgba(0,0,0,.28);
+}
+.messenger-new-modal h3{margin:0 0 8px;font-size:1.05rem}
+.messenger-new-modal p{margin:0 0 10px;color:#456;font-size:.9rem;line-height:1.4}
+.messenger-new-modal input[type="search"]{
+    width:100%;
+    min-height:44px;
+    border:1px solid #cfd;border-radius:12px;padding:0 12px;font:inherit;margin-bottom:10px
+}
+.messenger-user-hit{
+    width:100%;
+    text-align:left;
+    border:1px solid #d7e6db;
+    background:#f7fbf7;
+    border-radius:12px;
+    padding:10px 12px;
+    margin:0 0 8px;
+    cursor:pointer;
+}
+.messenger-user-hit strong{display:block;color:#1b5e20}
+.messenger-user-hit span{display:block;font-size:.82rem;color:#567}
+@media (min-width:768px){
+  .messenger-new-modal-backdrop{align-items:center}
+  .messenger-new-modal{border-radius:18px}
+}
 .retry-button{
     margin-top:18px;
     padding:12px 22px;
@@ -1619,9 +1682,18 @@ select:focus-visible{
 
             </button>
 
-            <h1>Messages</h1>
+            <h1 data-i18n="messengerTitle">Messenger</h1>
 
         </div>
+
+        <button
+            id="newConversationButton"
+            class="icon-btn"
+            type="button"
+            aria-label="New conversation"
+            title="New conversation">
+            <i class="fas fa-pen-to-square" aria-hidden="true"></i>
+        </button>
 
         <button
             id="headerMenuButton"
@@ -1661,6 +1733,7 @@ select:focus-visible{
                 class="search-input"
                 type="search"
                 placeholder="Search messages..."
+                data-i18n-placeholder="searchMessages"
                 autocomplete="off"
                 enterkeyhint="search">
 
@@ -1670,13 +1743,14 @@ select:focus-visible{
 
     <div class="section-header">
 
-        <div class="section-title">
+        <div class="section-title" data-i18n="conversations">
             Conversations
         </div>
 
         <div
             id="messageCount"
-            class="message-count">
+            class="message-count"
+            data-i18n="zeroChats">
             0 chats
         </div>
 
@@ -1684,11 +1758,11 @@ select:focus-visible{
 
     <div id="conversationList" class="content">
 
-        <div class="loading">
+        <div class="loading" id="authBootState">
 
-            <i class="fas fa-circle-notch fa-spin"></i>
+            <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
 
-            <p>Loading conversations...</p>
+            <p data-i18n="checkingSignIn">Checking sign-in...</p>
 
         </div>
 
@@ -1696,11 +1770,11 @@ select:focus-visible{
 
     <div id="noResults" class="no-results">
 
-        <img src="/assets/icons/messenger/messenger-96.png" alt="" width="72" height="72" style="margin:0 auto 10px;display:block;border-radius:16px">
+        <img src="/assets/icons/messenger/messenger-96-mint.png" alt="" width="72" height="72" style="margin:0 auto 10px;display:block;border-radius:16px">
 
-        <h3>No conversations found</h3>
+        <h3 data-i18n="noConversationsFound">No conversations found</h3>
 
-        <p>Try another name or keyword.</p>
+        <p data-i18n="tryAnotherKeyword">Try another name or keyword.</p>
 
     </div>
 
@@ -1708,17 +1782,17 @@ select:focus-visible{
 
         <button id="navHome" class="nav-item" type="button">
             <i class="fas fa-house"></i>
-            <span>Home</span>
+            <span data-i18n="home">Home</span>
         </button>
 
         <button id="navMessages" class="nav-item active" type="button">
             <img src="/assets/icons/messenger/messenger-32.png" alt="" width="22" height="22" style="border-radius:6px">
-            <span>Messenger</span>
+            <span data-i18n="messengerNav">Messenger</span>
         </button>
 
         <button id="navNotifications" class="nav-item" type="button">
             <i class="fas fa-bell"></i>
-            <span>Notifications</span>
+            <span data-i18n="notifications">Notifications</span>
         </button>
 
     </nav>
@@ -3434,8 +3508,57 @@ async function loadCurrentUser(){
 
 function redirectToLogin(){
 
-    window.location.href =
-        "login.html";
+    showLoginGate(
+        "Sign in to use Messenger",
+        "Your conversations stay private to your HAVKAR account."
+    );
+
+    window.setTimeout(
+        function(){
+            window.location.href =
+                "login.html?next=" +
+                encodeURIComponent(
+                    "chat.html" +
+                    (location.search || "")
+                );
+        },
+        1200
+    );
+
+}
+
+function showLoginGate(title, text){
+
+    const list =
+        $("conversationList");
+
+    if(!list){
+        return;
+    }
+
+    list.innerHTML = `
+        <div class="empty-state">
+            <img src="/assets/icons/messenger/messenger-96-mint.png" alt="" width="72" height="72" style="margin:0 auto 10px;display:block;border-radius:16px">
+            <h3>${escapeHtml(title)}</h3>
+            <p>${escapeHtml(text)}</p>
+            <div class="messenger-cta-row">
+                <button type="button" class="messenger-cta" id="messengerLoginBtn">Sign in</button>
+                <a class="messenger-cta secondary" href="index.html" style="display:inline-flex;align-items:center;text-decoration:none">Home</a>
+            </div>
+        </div>
+    `;
+
+    $("messengerLoginBtn")
+        ?.addEventListener(
+            "click",
+            function(){
+                window.location.href =
+                    "login.html?next=" +
+                    encodeURIComponent(
+                        "chat.html"
+                    );
+            }
+        );
 
 }
 
@@ -3469,10 +3592,29 @@ async function loadConversations(){
 
     list.innerHTML = `
         <div class="loading">
-            <i class="fas fa-circle-notch fa-spin"></i>
-            <p>Loading conversations...</p>
+            <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
+            <p data-i18n="loadingConversations">Loading conversations...</p>
         </div>
     `;
+
+    /* Hard stop: never leave an infinite spinner if a request hangs beyond withTimeout. */
+    const bootWatch =
+        window.setTimeout(
+            function(){
+                if(
+                    state.loadingConversations &&
+                    list.querySelector(".loading")
+                ){
+                    state.loadingConversations =
+                        false;
+                    showErrorState(
+                        "Messages are taking too long",
+                        "HAVKAR could not finish loading conversations. Retry or sign in again."
+                    );
+                }
+            },
+            REQUEST_TIMEOUT + 2500
+        );
 
     try{
 
@@ -3638,6 +3780,12 @@ async function loadConversations(){
         );
 
     }finally{
+
+        try{
+            window.clearTimeout(
+                bootWatch
+            );
+        }catch(_e){}
 
         state.loadingConversations =
             false;
@@ -4030,14 +4178,316 @@ function showEmptyState(
     list.innerHTML = `
         <div class="empty-state">
 
-            <i class="fas fa-comments"></i>
+            <img src="/assets/icons/messenger/messenger-96-mint.png" alt="" width="72" height="72" style="margin:0 auto 10px;display:block;border-radius:16px">
 
             <h3>${escapeHtml(title)}</h3>
 
             <p>${escapeHtml(text)}</p>
 
+            <div class="messenger-cta-row">
+                <button type="button" class="messenger-cta" id="emptyNewConversationBtn">New conversation</button>
+                <a class="messenger-cta secondary" href="buy-sell.html" style="display:inline-flex;align-items:center;text-decoration:none">Browse listings</a>
+            </div>
+
         </div>
     `;
+
+    $("emptyNewConversationBtn")
+        ?.addEventListener(
+            "click",
+            openNewConversationModal
+        );
+
+}
+
+function openNewConversationModal(){
+
+    if(!state.currentUser){
+        redirectToLogin();
+        return;
+    }
+
+    const existing =
+        document.getElementById(
+            "messengerNewModalBackdrop"
+        );
+
+    if(existing){
+        existing.remove();
+    }
+
+    const backdrop =
+        document.createElement(
+            "div"
+        );
+
+    backdrop.id =
+        "messengerNewModalBackdrop";
+    backdrop.className =
+        "messenger-new-modal-backdrop";
+    backdrop.innerHTML = `
+        <div class="messenger-new-modal" role="dialog" aria-modal="true" aria-label="New conversation">
+            <h3>New conversation</h3>
+            <p>Find HAVKAR members through their public listings, then start a secure chat. Private emails are never shown.</p>
+            <input id="messengerUserSearch" type="search" placeholder="Search public listings or sellers..." autocomplete="off">
+            <div id="messengerUserHits" aria-live="polite"></div>
+            <div class="messenger-cta-row">
+                <button type="button" class="messenger-cta secondary" id="messengerNewClose">Close</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(
+        backdrop
+    );
+
+    const close =
+        function(){
+            backdrop.remove();
+        };
+
+    backdrop.addEventListener(
+        "click",
+        function(ev){
+            if(ev.target === backdrop){
+                close();
+            }
+        }
+    );
+
+    $("messengerNewClose")
+        ?.addEventListener(
+            "click",
+            close
+        );
+
+    const input =
+        $("messengerUserSearch");
+
+    const hits =
+        $("messengerUserHits");
+
+    let timer =
+        null;
+
+    async function runSearch(q){
+
+        if(!hits){
+            return;
+        }
+
+        const term =
+            String(q || "").trim();
+
+        if(term.length < 2){
+            hits.innerHTML =
+                "<p style=\"color:#567;font-size:.9rem\">Type at least 2 characters to search public listings.</p>";
+            return;
+        }
+
+        hits.innerHTML =
+            "<p style=\"color:#567;font-size:.9rem\">Searching...</p>";
+
+        try{
+
+            const result =
+                await withTimeout(
+                    supabaseClient
+                        .from("ads")
+                        .select(
+                            "id,title,location,user_id,category"
+                        )
+                        .or(
+                            "title.ilike.%" +
+                            term.replace(
+                                /[%(),]/g,
+                                " "
+                            ) +
+                            "%,location.ilike.%" +
+                            term.replace(
+                                /[%(),]/g,
+                                " "
+                            ) +
+                            "%"
+                        )
+                        .order(
+                            "created_at",
+                            {
+                                ascending:false
+                            }
+                        )
+                        .limit(20)
+                );
+
+            if(result.error){
+                throw result.error;
+            }
+
+            const rows =
+                Array.isArray(result.data)
+                    ? result.data
+                    : [];
+
+            const me =
+                String(
+                    state.currentUser.id
+                );
+
+            const usable =
+                rows.filter(
+                    function(row){
+                        return (
+                            row &&
+                            row.user_id &&
+                            String(row.user_id) !== me
+                        );
+                    }
+                );
+
+            if(!usable.length){
+                hits.innerHTML =
+                    "<p style=\"color:#567;font-size:.9rem\">No public listings matched. Try another keyword or open Buy &amp; Sell.</p>";
+                return;
+            }
+
+            hits.innerHTML = "";
+
+            usable.forEach(
+                function(row){
+
+                    const btn =
+                        document.createElement(
+                            "button"
+                        );
+
+                    btn.type =
+                        "button";
+                    btn.className =
+                        "messenger-user-hit";
+                    btn.innerHTML =
+                        "<strong>" +
+                        escapeHtml(
+                            row.title ||
+                            "Listing"
+                        ) +
+                        "</strong><span>" +
+                        escapeHtml(
+                            [
+                                row.category,
+                                row.location
+                            ]
+                            .filter(Boolean)
+                            .join(" · ")
+                        ) +
+                        "</span>";
+
+                    btn.addEventListener(
+                        "click",
+                        async function(){
+
+                            btn.disabled =
+                                true;
+
+                            try{
+
+                                const created =
+                                    await withTimeout(
+                                        supabaseClient.rpc(
+                                            "havkar_get_or_create_listing_conversation",
+                                            {
+                                                p_ad_id:
+                                                    Number(
+                                                        row.id
+                                                    )
+                                            }
+                                        )
+                                    );
+
+                                if(
+                                    created.error
+                                ){
+                                    throw created.error;
+                                }
+
+                                const rowOut =
+                                    Array.isArray(
+                                        created.data
+                                    )
+                                        ? created.data[0]
+                                        : created.data;
+
+                                close();
+
+                                if(
+                                    rowOut &&
+                                    rowOut.id
+                                ){
+
+                                    await openConversation(
+                                        rowOut
+                                    );
+
+                                }else{
+
+                                    await loadConversations();
+
+                                }
+
+                            }catch(err){
+
+                                showToast(
+                                    err?.message ||
+                                    "Could not start conversation.",
+                                    "error"
+                                );
+
+                                btn.disabled =
+                                    false;
+
+                            }
+
+                        }
+                    );
+
+                    hits.appendChild(
+                        btn
+                    );
+
+                }
+            );
+
+        }catch(err){
+
+            hits.innerHTML =
+                "<p style=\"color:#c62828;font-size:.9rem\">Search failed. Check your connection and retry.</p>";
+
+        }
+
+    }
+
+    input
+        ?.addEventListener(
+            "input",
+            function(){
+
+                clearTimeout(
+                    timer
+                );
+
+                timer =
+                    setTimeout(
+                        function(){
+                            runSearch(
+                                input.value
+                            );
+                        },
+                        280
+                    );
+
+            }
+        );
+
+    input?.focus();
 
 }
 
@@ -7928,7 +8378,11 @@ function setupEvents(){
 
             }
         );
-}
+
+    $("newConversationButton")
+        ?.addEventListener(
+            "click",
+            openNewConversationModal
         );
 
     $("blockUserButton")
