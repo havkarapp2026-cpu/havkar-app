@@ -129,3 +129,17 @@ test("i18n21 packs activation phrases for fa/ckb/sv", async () => {
   assert.equal(api.pack("sv")["Ferries / Ships"], "Färjor / Fartyg");
   assert.equal(api.pack("en")["Choose a travel category"], undefined);
 });
+
+
+test("verification badges use check/star/diamond shapes from CSS", () => {
+  const css = readFileSync(new URL("../havkar-verification-badges.css", import.meta.url), "utf8");
+  assert.ok(/\.havkar-badge\.personal \.icon::before/.test(css));
+  assert.ok(/content: "✓"/.test(css));
+  assert.ok(/\.havkar-badge\.business \.icon/.test(css));
+  assert.ok(/clip-path: polygon\(50% 0%, 61% 35%/.test(css)); // star
+  assert.ok(/\.havkar-badge\.company \.icon/.test(css));
+  assert.ok(/clip-path: polygon\(50% 0%, 100% 50%, 50% 100%, 0% 50%\)/.test(css)); // diamond
+  const js = readFileSync(new URL("../havkar-verification.js", import.meta.url), "utf8");
+  assert.ok(/havkar_public_verification_badges/.test(js));
+  assert.ok(/server state only|Verified badges come from server/i.test(js));
+});
