@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="/manifest.json">
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/havkar-icon-32-20261022-v3.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/havkar-icon-16-20261022-v3.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/havkar-icon-180-20261022-v3.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/messenger/messenger-32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="/assets/icons/messenger/messenger-48.png">
+<link rel="apple-touch-icon" sizes="256x256" href="/assets/icons/messenger/apple-touch-messenger.png">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#2e7d32">
-<meta name="description" content="HAVKAR Messages and Chat">
-<title>HAVKAR — Messages</title>
+<meta name="theme-color" content="#0b1f12">
+<meta name="description" content="HAVKAR Messenger — secure conversations and content sharing">
+<title>HAVKAR — Messenger</title>
 
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="stylesheet"
@@ -117,6 +117,51 @@ select:focus-visible{
 .icon-btn{
     background:rgba(255,255,255,.16);
     font-size:18px;
+}
+
+.header-text-cta{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    min-height:40px;
+    max-width:46vw;
+    border:0;
+    border-radius:999px;
+    padding:0 12px;
+    background:rgba(255,255,255,.2);
+    color:#fff;
+    font-weight:800;
+    font-size:.82rem;
+    cursor:pointer;
+    white-space:nowrap;
+}
+.header-text-cta i{font-size:.95rem}
+.messenger-action-strip{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    padding:10px 12px 4px;
+    background:#f3faf4;
+    border-bottom:1px solid #d7e6db;
+}
+.messenger-action-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    min-height:40px;
+    border:1px solid #cfe0d3;
+    border-radius:12px;
+    padding:0 12px;
+    background:#fff;
+    color:#1b5e20;
+    font-weight:800;
+    font-size:.8rem;
+    cursor:pointer;
+}
+.messenger-action-btn.primary{
+    background:#2e7d32;
+    border-color:#2e7d32;
+    color:#fff;
 }
 
 .back-btn:active,
@@ -414,6 +459,69 @@ select:focus-visible{
     line-height:1.5;
 }
 
+.messenger-cta-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    justify-content:center;
+    margin-top:14px;
+}
+.messenger-cta{
+    min-height:44px;
+    border:0;
+    border-radius:12px;
+    padding:0 14px;
+    font-weight:800;
+    cursor:pointer;
+    background:#2e7d32;
+    color:#fff;
+}
+.messenger-cta.secondary{
+    background:#e8f5e9;
+    color:#1b5e20;
+}
+.messenger-new-modal-backdrop{
+    position:fixed;
+    inset:0;
+    z-index:13000;
+    background:rgba(0,0,0,.45);
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    padding:16px;
+}
+.messenger-new-modal{
+    width:min(560px,100%);
+    max-height:85vh;
+    overflow:auto;
+    background:#fff;
+    border-radius:18px 18px 12px 12px;
+    padding:16px;
+    box-shadow:0 18px 40px rgba(0,0,0,.28);
+}
+.messenger-new-modal h3{margin:0 0 8px;font-size:1.05rem}
+.messenger-new-modal p{margin:0 0 10px;color:#456;font-size:.9rem;line-height:1.4}
+.messenger-new-modal input[type="search"]{
+    width:100%;
+    min-height:44px;
+    border:1px solid #cfd;border-radius:12px;padding:0 12px;font:inherit;margin-bottom:10px
+}
+.messenger-user-hit{
+    width:100%;
+    text-align:left;
+    border:1px solid #d7e6db;
+    background:#f7fbf7;
+    border-radius:12px;
+    padding:10px 12px;
+    margin:0 0 8px;
+    cursor:pointer;
+}
+.messenger-user-hit strong{display:block;color:#1b5e20}
+.messenger-user-hit span{display:block;font-size:.82rem;color:#567}
+@media (min-width:768px){
+  .messenger-new-modal-backdrop{align-items:center}
+  .messenger-new-modal{border-radius:18px}
+}
 .retry-button{
     margin-top:18px;
     padding:12px 22px;
@@ -959,6 +1067,16 @@ select:focus-visible{
     line-height:1;
 }
 
+.message-checks.sending{
+    letter-spacing:0;
+    color:#90a4ae;
+    font-size:.78rem;
+}
+.message-checks.failed{
+    letter-spacing:0;
+    color:#c62828;
+    font-size:.78rem;
+}
 /* One check = server accepted (not device delivery). */
 .message-checks.delivered{
     letter-spacing:0;
@@ -1609,9 +1727,19 @@ select:focus-visible{
 
             </button>
 
-            <h1>Messages</h1>
+            <h1 data-i18n="messengerTitle">Messenger</h1>
 
         </div>
+
+        <button
+            id="newConversationButton"
+            class="header-text-cta"
+            type="button"
+            aria-label="New conversation"
+            title="New conversation">
+            <i class="fas fa-pen-to-square" aria-hidden="true"></i>
+            <span data-i18n="newConversation">New conversation</span>
+        </button>
 
         <button
             id="headerMenuButton"
@@ -1636,6 +1764,11 @@ select:focus-visible{
                 <span>Block user</span>
             </button>
 
+            <button id="reportConversationButton" type="button">
+                <i class="fas fa-flag"></i>
+                <span>Report</span>
+            </button>
+
         </div>
 
     </header>
@@ -1651,6 +1784,7 @@ select:focus-visible{
                 class="search-input"
                 type="search"
                 placeholder="Search messages..."
+                data-i18n-placeholder="searchMessages"
                 autocomplete="off"
                 enterkeyhint="search">
 
@@ -1658,15 +1792,39 @@ select:focus-visible{
 
     </div>
 
+    <div class="messenger-action-strip" role="toolbar" aria-label="Messenger actions">
+        <button type="button" id="actionNewDm" class="messenger-action-btn primary">
+            <i class="fas fa-comments" aria-hidden="true"></i>
+            <span data-i18n="newConversation">New conversation</span>
+        </button>
+        <button type="button" id="actionShare" class="messenger-action-btn">
+            <i class="fas fa-share-nodes" aria-hidden="true"></i>
+            <span>Share</span>
+        </button>
+        <button type="button" id="actionGroup" class="messenger-action-btn">
+            <i class="fas fa-user-group" aria-hidden="true"></i>
+            <span>Group</span>
+        </button>
+        <button type="button" id="actionVoice" class="messenger-action-btn">
+            <i class="fas fa-phone" aria-hidden="true"></i>
+            <span data-i18n="voiceCall">Voice call</span>
+        </button>
+        <button type="button" id="actionVideo" class="messenger-action-btn">
+            <i class="fas fa-video" aria-hidden="true"></i>
+            <span data-i18n="videoCall">Video call</span>
+        </button>
+    </div>
+
     <div class="section-header">
 
-        <div class="section-title">
+        <div class="section-title" data-i18n="conversations">
             Conversations
         </div>
 
         <div
             id="messageCount"
-            class="message-count">
+            class="message-count"
+            data-i18n="zeroChats">
             0 chats
         </div>
 
@@ -1674,11 +1832,16 @@ select:focus-visible{
 
     <div id="conversationList" class="content">
 
-        <div class="loading">
+        <div class="loading" id="authBootState">
 
-            <i class="fas fa-circle-notch fa-spin"></i>
+            <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
 
-            <p>Loading conversations...</p>
+            <p data-i18n="checkingSignIn">Checking sign-in...</p>
+            <p style="margin-top:8px;font-size:.85rem;color:#567">If this stays longer than a few seconds, use New conversation or Sign in below.</p>
+            <div class="messenger-cta-row">
+                <button type="button" class="messenger-cta" id="bootNewConversationBtn">New conversation</button>
+                <button type="button" class="messenger-cta secondary" id="bootLoginBtn">Sign in</button>
+            </div>
 
         </div>
 
@@ -1686,11 +1849,11 @@ select:focus-visible{
 
     <div id="noResults" class="no-results">
 
-        <i class="fas fa-comments"></i>
+        <img src="/assets/icons/messenger/messenger-96-mint.png" alt="" width="72" height="72" style="margin:0 auto 10px;display:block;border-radius:16px">
 
-        <h3>No conversations found</h3>
+        <h3 data-i18n="noConversationsFound">No conversations found</h3>
 
-        <p>Try another name or keyword.</p>
+        <p data-i18n="tryAnotherKeyword">Try another name or keyword.</p>
 
     </div>
 
@@ -1698,17 +1861,17 @@ select:focus-visible{
 
         <button id="navHome" class="nav-item" type="button">
             <i class="fas fa-house"></i>
-            <span>Home</span>
+            <span data-i18n="home">Home</span>
         </button>
 
         <button id="navMessages" class="nav-item active" type="button">
-            <i class="fas fa-comment"></i>
-            <span>Messages</span>
+            <img src="/assets/icons/messenger/messenger-32.png" alt="" width="22" height="22" style="border-radius:6px">
+            <span data-i18n="messengerNav">Messenger</span>
         </button>
 
         <button id="navNotifications" class="nav-item" type="button">
             <i class="fas fa-bell"></i>
-            <span>Notifications</span>
+            <span data-i18n="notifications">Notifications</span>
         </button>
 
     </nav>
@@ -1744,6 +1907,24 @@ select:focus-visible{
             </div>
 
         </div>
+
+        <button
+            id="chatVoiceCallButton"
+            class="chat-header-action"
+            type="button"
+            aria-label="Voice call"
+            title="Voice call">
+            <i class="fas fa-phone" aria-hidden="true"></i>
+        </button>
+
+        <button
+            id="chatVideoCallButton"
+            class="chat-header-action"
+            type="button"
+            aria-label="Video call"
+            title="Video call">
+            <i class="fas fa-video" aria-hidden="true"></i>
+        </button>
 
         <button
             id="chatInfoButton"
@@ -1849,6 +2030,22 @@ select:focus-visible{
 
     </main>
 
+    <div id="attachTray" class="havkar-attach-tray" hidden>
+        <button type="button" id="attachLocationBtn">Location</button>
+        <button type="button" id="attachLiveLocationBtn">Live location</button>
+        <button type="button" id="attachImageBtn">Photo</button>
+        <button type="button" id="attachFileBtn">File</button>
+        <button type="button" id="attachAudioBtn">Voice note</button>
+        <input id="attachImageInput" type="file" accept="image/*" hidden>
+        <input id="attachFileInput" type="file" accept="*/*" hidden>
+        <input id="attachAudioInput" type="file" accept="audio/*" capture hidden>
+    </div>
+
+    <div id="liveLocationBar" class="havkar-live-bar" hidden>
+        <span id="liveLocationBarText">Live location active</span>
+        <button type="button" id="stopLiveLocationBtn">Stop sharing</button>
+    </div>
+
     <div class="message-input-area">
 
         <button
@@ -1869,6 +2066,25 @@ select:focus-visible{
             aria-label="Open emoji picker"
             aria-expanded="false">
             🙂
+        </button>
+
+        <button
+            id="shareContentButton"
+            class="emoji-btn"
+            type="button"
+            aria-label="Share HAVKAR content"
+            title="Share">
+            <i class="fas fa-share-nodes" aria-hidden="true"></i>
+        </button>
+
+        <button
+            id="attachMenuButton"
+            class="emoji-btn"
+            type="button"
+            aria-label="Attachments"
+            aria-expanded="false"
+            title="Attach">
+            <i class="fas fa-paperclip" aria-hidden="true"></i>
         </button>
 
         <textarea
@@ -2146,7 +2362,9 @@ const state = {
     pushConfigured:false,
 
     /* Prevent duplicate reaction writes while a save is in-flight. */
-    reactionInFlight:{}
+    reactionInFlight:{},
+
+    liveShare:null
 
 };
 
@@ -3269,9 +3487,62 @@ function showToast(
 ========================================================= */
 
 function goHome(){
+    /* Always land on the 15-tile home. If language was never saved,
+       seed a safe default so havkar-i18n does not bounce to language.html. */
+    try{
+        const keys = [
+            "havkar_language",
+            "selectedLanguage",
+            "language"
+        ];
+        const supported = {
+            en:1,it:1,de:1,fr:1,es:1,pt:1,nl:1,sv:1,pl:1,id:1,
+            zh:1,ja:1,ko:1,hi:1,ru:1,ku:1,tr:1,ar:1,fa:1,ur:1
+        };
+        let saved = null;
+        for(const key of keys){
+            const value =
+                String(
+                    localStorage.getItem(
+                        key
+                    ) ||
+                    ""
+                ).toLowerCase();
+            if(supported[value]){
+                saved = value;
+                break;
+            }
+        }
+        if(!saved){
+            const fallback =
+                String(
+                    document.documentElement.lang ||
+                    "en"
+                )
+                    .toLowerCase()
+                    .slice(0, 2);
+            saved =
+                supported[fallback]
+                    ? fallback
+                    : "en";
+            localStorage.setItem(
+                "havkar_language",
+                saved
+            );
+            localStorage.setItem(
+                "selectedLanguage",
+                saved
+            );
+            localStorage.setItem(
+                "language",
+                saved
+            );
+        }
+    }catch(_error){}
 
-    window.location.href =
-        "index.html";
+    window.location.assign(
+        "index.html"
+    );
 
 }
 
@@ -3415,8 +3686,57 @@ async function loadCurrentUser(){
 
 function redirectToLogin(){
 
-    window.location.href =
-        "login.html";
+    showLoginGate(
+        "Sign in to use Messenger",
+        "Your conversations stay private to your HAVKAR account."
+    );
+
+    window.setTimeout(
+        function(){
+            window.location.href =
+                "login.html?next=" +
+                encodeURIComponent(
+                    "chat.html" +
+                    (location.search || "")
+                );
+        },
+        1200
+    );
+
+}
+
+function showLoginGate(title, text){
+
+    const list =
+        $("conversationList");
+
+    if(!list){
+        return;
+    }
+
+    list.innerHTML = `
+        <div class="empty-state">
+            <img src="/assets/icons/messenger/messenger-96-mint.png" alt="" width="72" height="72" style="margin:0 auto 10px;display:block;border-radius:16px">
+            <h3>${escapeHtml(title)}</h3>
+            <p>${escapeHtml(text)}</p>
+            <div class="messenger-cta-row">
+                <button type="button" class="messenger-cta" id="messengerLoginBtn">Sign in</button>
+                <a class="messenger-cta secondary" href="index.html" style="display:inline-flex;align-items:center;text-decoration:none">Home</a>
+            </div>
+        </div>
+    `;
+
+    $("messengerLoginBtn")
+        ?.addEventListener(
+            "click",
+            function(){
+                window.location.href =
+                    "login.html?next=" +
+                    encodeURIComponent(
+                        "chat.html"
+                    );
+            }
+        );
 
 }
 
@@ -3450,10 +3770,29 @@ async function loadConversations(){
 
     list.innerHTML = `
         <div class="loading">
-            <i class="fas fa-circle-notch fa-spin"></i>
-            <p>Loading conversations...</p>
+            <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
+            <p data-i18n="loadingConversations">Loading conversations...</p>
         </div>
     `;
+
+    /* Hard stop: never leave an infinite spinner if a request hangs beyond withTimeout. */
+    const bootWatch =
+        window.setTimeout(
+            function(){
+                if(
+                    state.loadingConversations &&
+                    list.querySelector(".loading")
+                ){
+                    state.loadingConversations =
+                        false;
+                    showErrorState(
+                        "Messages are taking too long",
+                        "HAVKAR could not finish loading conversations. Retry or sign in again."
+                    );
+                }
+            },
+            REQUEST_TIMEOUT + 2500
+        );
 
     try{
 
@@ -3467,7 +3806,7 @@ async function loadConversations(){
                 supabaseClient
                     .from("conversations")
                     .select(
-                        "id,ad_id,buyer_id,seller_id,created_at,updated_at"
+                        "id,ad_id,buyer_id,seller_id,created_at,updated_at,is_group,title"
                     )
                     .or(
                         "buyer_id.eq." +
@@ -3492,6 +3831,75 @@ async function loadConversations(){
             Array.isArray(result.data)
                 ? result.data
                 : [];
+
+        /* Also include group rooms where the user is only a participant. */
+        try{
+            const part =
+                await withTimeout(
+                    supabaseClient
+                        .from(
+                            "conversation_participants"
+                        )
+                        .select(
+                            "conversation_id"
+                        )
+                        .eq(
+                            "user_id",
+                            userId
+                        )
+                );
+            if(
+                !part.error &&
+                Array.isArray(part.data) &&
+                part.data.length
+            ){
+                const known =
+                    {};
+                state.conversations.forEach(
+                    function(row){
+                        known[String(row.id)] =
+                            true;
+                    }
+                );
+                const missing =
+                    part.data
+                        .map(function(row){
+                            return row.conversation_id;
+                        })
+                        .filter(function(id){
+                            return id && !known[String(id)];
+                        });
+                if(missing.length){
+                    const extra =
+                        await withTimeout(
+                            supabaseClient
+                                .from(
+                                    "conversations"
+                                )
+                                .select(
+                                    "id,ad_id,buyer_id,seller_id,created_at,updated_at,is_group,title"
+                                )
+                                .in(
+                                    "id",
+                                    missing
+                                )
+                        );
+                    if(
+                        !extra.error &&
+                        Array.isArray(
+                            extra.data
+                        )
+                    ){
+                        state.conversations =
+                            state.conversations.concat(
+                                extra.data
+                            );
+                    }
+                }
+            }
+        }catch(_partErr){
+            /* participants table may be unavailable on older previews */
+        }
 
         try{
             const blocked =
@@ -3619,6 +4027,12 @@ async function loadConversations(){
         );
 
     }finally{
+
+        try{
+            window.clearTimeout(
+                bootWatch
+            );
+        }catch(_e){}
 
         state.loadingConversations =
             false;
@@ -4011,14 +4425,316 @@ function showEmptyState(
     list.innerHTML = `
         <div class="empty-state">
 
-            <i class="fas fa-comments"></i>
+            <img src="/assets/icons/messenger/messenger-96-mint.png" alt="" width="72" height="72" style="margin:0 auto 10px;display:block;border-radius:16px">
 
             <h3>${escapeHtml(title)}</h3>
 
             <p>${escapeHtml(text)}</p>
 
+            <div class="messenger-cta-row">
+                <button type="button" class="messenger-cta" id="emptyNewConversationBtn">New conversation</button>
+                <a class="messenger-cta secondary" href="buy-sell.html" style="display:inline-flex;align-items:center;text-decoration:none">Browse listings</a>
+            </div>
+
         </div>
     `;
+
+    $("emptyNewConversationBtn")
+        ?.addEventListener(
+            "click",
+            openNewConversationModal
+        );
+
+}
+
+function openNewConversationModal(){
+
+    if(!state.currentUser){
+        redirectToLogin();
+        return;
+    }
+
+    const existing =
+        document.getElementById(
+            "messengerNewModalBackdrop"
+        );
+
+    if(existing){
+        existing.remove();
+    }
+
+    const backdrop =
+        document.createElement(
+            "div"
+        );
+
+    backdrop.id =
+        "messengerNewModalBackdrop";
+    backdrop.className =
+        "messenger-new-modal-backdrop";
+    backdrop.innerHTML = `
+        <div class="messenger-new-modal" role="dialog" aria-modal="true" aria-label="New conversation">
+            <h3>New conversation</h3>
+            <p>Find HAVKAR members through their public listings, then start a secure chat. Private emails are never shown.</p>
+            <input id="messengerUserSearch" type="search" placeholder="Search public listings or sellers..." autocomplete="off">
+            <div id="messengerUserHits" aria-live="polite"></div>
+            <div class="messenger-cta-row">
+                <button type="button" class="messenger-cta secondary" id="messengerNewClose">Close</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(
+        backdrop
+    );
+
+    const close =
+        function(){
+            backdrop.remove();
+        };
+
+    backdrop.addEventListener(
+        "click",
+        function(ev){
+            if(ev.target === backdrop){
+                close();
+            }
+        }
+    );
+
+    $("messengerNewClose")
+        ?.addEventListener(
+            "click",
+            close
+        );
+
+    const input =
+        $("messengerUserSearch");
+
+    const hits =
+        $("messengerUserHits");
+
+    let timer =
+        null;
+
+    async function runSearch(q){
+
+        if(!hits){
+            return;
+        }
+
+        const term =
+            String(q || "").trim();
+
+        if(term.length < 2){
+            hits.innerHTML =
+                "<p style=\"color:#567;font-size:.9rem\">Type at least 2 characters to search public listings.</p>";
+            return;
+        }
+
+        hits.innerHTML =
+            "<p style=\"color:#567;font-size:.9rem\">Searching...</p>";
+
+        try{
+
+            const result =
+                await withTimeout(
+                    supabaseClient
+                        .from("ads")
+                        .select(
+                            "id,title,location,user_id,category"
+                        )
+                        .or(
+                            "title.ilike.%" +
+                            term.replace(
+                                /[%(),]/g,
+                                " "
+                            ) +
+                            "%,location.ilike.%" +
+                            term.replace(
+                                /[%(),]/g,
+                                " "
+                            ) +
+                            "%"
+                        )
+                        .order(
+                            "created_at",
+                            {
+                                ascending:false
+                            }
+                        )
+                        .limit(20)
+                );
+
+            if(result.error){
+                throw result.error;
+            }
+
+            const rows =
+                Array.isArray(result.data)
+                    ? result.data
+                    : [];
+
+            const me =
+                String(
+                    state.currentUser.id
+                );
+
+            const usable =
+                rows.filter(
+                    function(row){
+                        return (
+                            row &&
+                            row.user_id &&
+                            String(row.user_id) !== me
+                        );
+                    }
+                );
+
+            if(!usable.length){
+                hits.innerHTML =
+                    "<p style=\"color:#567;font-size:.9rem\">No public listings matched. Try another keyword or open Buy &amp; Sell.</p>";
+                return;
+            }
+
+            hits.innerHTML = "";
+
+            usable.forEach(
+                function(row){
+
+                    const btn =
+                        document.createElement(
+                            "button"
+                        );
+
+                    btn.type =
+                        "button";
+                    btn.className =
+                        "messenger-user-hit";
+                    btn.innerHTML =
+                        "<strong>" +
+                        escapeHtml(
+                            row.title ||
+                            "Listing"
+                        ) +
+                        "</strong><span>" +
+                        escapeHtml(
+                            [
+                                row.category,
+                                row.location
+                            ]
+                            .filter(Boolean)
+                            .join(" · ")
+                        ) +
+                        "</span>";
+
+                    btn.addEventListener(
+                        "click",
+                        async function(){
+
+                            btn.disabled =
+                                true;
+
+                            try{
+
+                                const created =
+                                    await withTimeout(
+                                        supabaseClient.rpc(
+                                            "havkar_get_or_create_listing_conversation",
+                                            {
+                                                p_ad_id:
+                                                    Number(
+                                                        row.id
+                                                    )
+                                            }
+                                        )
+                                    );
+
+                                if(
+                                    created.error
+                                ){
+                                    throw created.error;
+                                }
+
+                                const rowOut =
+                                    Array.isArray(
+                                        created.data
+                                    )
+                                        ? created.data[0]
+                                        : created.data;
+
+                                close();
+
+                                if(
+                                    rowOut &&
+                                    rowOut.id
+                                ){
+
+                                    await openConversation(
+                                        rowOut
+                                    );
+
+                                }else{
+
+                                    await loadConversations();
+
+                                }
+
+                            }catch(err){
+
+                                showToast(
+                                    err?.message ||
+                                    "Could not start conversation.",
+                                    "error"
+                                );
+
+                                btn.disabled =
+                                    false;
+
+                            }
+
+                        }
+                    );
+
+                    hits.appendChild(
+                        btn
+                    );
+
+                }
+            );
+
+        }catch(err){
+
+            hits.innerHTML =
+                "<p style=\"color:#c62828;font-size:.9rem\">Search failed. Check your connection and retry.</p>";
+
+        }
+
+    }
+
+    input
+        ?.addEventListener(
+            "input",
+            function(){
+
+                clearTimeout(
+                    timer
+                );
+
+                timer =
+                    setTimeout(
+                        function(){
+                            runSearch(
+                                input.value
+                            );
+                        },
+                        280
+                    );
+
+            }
+        );
+
+    input?.focus();
 
 }
 
@@ -4124,7 +4840,7 @@ function createConversationElement(
 
         preview.textContent =
             prefix +
-            String(
+            formatMessagePreviewText(
                 conversation.lastMessage.message_text ||
                 ""
             );
@@ -4211,9 +4927,78 @@ function createConversationElement(
    ROLE
 ========================================================= */
 
+function formatMessagePreviewText(raw){
+    const text = String(raw || "").trim();
+    if(!text){
+        return "";
+    }
+    if(
+        globalThis.HAVKAR_MESSENGER_RICH &&
+        HAVKAR_MESSENGER_RICH.isDeleted(text)
+    ){
+        return "Message deleted";
+    }
+    if(
+        globalThis.HAVKAR_MESSENGER_RICH &&
+        HAVKAR_MESSENGER_RICH.parseLocation(text)
+    ){
+        const loc =
+            HAVKAR_MESSENGER_RICH.parseLocation(
+                text
+            );
+        return (
+            (loc.live ? "Live location" : "Location") +
+            (loc.name ? ": " + loc.name : "")
+        );
+    }
+    if(
+        globalThis.HAVKAR_MESSENGER_RICH &&
+        HAVKAR_MESSENGER_RICH.parseMedia(text)
+    ){
+        const media =
+            HAVKAR_MESSENGER_RICH.parseMedia(
+                text
+            );
+        return (
+            (media.kind || "File") +
+            (media.name ? ": " + media.name : "")
+        );
+    }
+    if(
+        globalThis.HAVKAR_MESSENGER_SHARE &&
+        typeof HAVKAR_MESSENGER_SHARE.parseSharePayload ===
+            "function"
+    ){
+        const share =
+            HAVKAR_MESSENGER_SHARE.parseSharePayload(
+                text
+            );
+        if(share){
+            return (
+                "Shared: " +
+                (share.title || share.url || "HAVKAR content")
+            );
+        }
+    }
+    return text.length > 120
+        ? text.slice(0, 117) + "..."
+        : text;
+}
+
 function getConversationRole(
     conversation
 ){
+
+    if(
+        conversation &&
+        (conversation.is_group ||
+            conversation.title)
+    ){
+        return (
+            conversation.title ||
+            "Group"
+        );
+    }
 
     if(!state.currentUser){
         return "HAVKAR Member";
@@ -4286,9 +5071,16 @@ function conversationMatchesRoute(conversation, route){
 function readChatRouteParams(){
     const params = new URLSearchParams(window.location.search || "");
     return {
-        conversationId: params.get("conversation_id"),
-        adId: params.get("ad_id"),
-        sellerId: params.get("seller_id")
+        /* Accept both conversation and conversation_id deep links. */
+        conversationId:
+            params.get("conversation_id") ||
+            params.get("conversation"),
+        adId:
+            params.get("ad_id") ||
+            params.get("ad"),
+        sellerId:
+            params.get("seller_id") ||
+            params.get("seller")
     };
 }
 
@@ -4960,11 +5752,30 @@ function appendMessage(
             message.message_text
         )
     );
-    text.textContent =
+    const rawMessageText =
         String(
             message.message_text ||
             ""
         );
+    const shareRendered =
+        globalThis.HAVKAR_MESSENGER_SHARE &&
+        typeof HAVKAR_MESSENGER_SHARE.renderIntoMessageText === "function" &&
+        HAVKAR_MESSENGER_SHARE.renderIntoMessageText(
+            text,
+            rawMessageText,
+            { openLabel: "Open" }
+        );
+    const richRendered =
+        !shareRendered &&
+        globalThis.HAVKAR_MESSENGER_RICH &&
+        typeof HAVKAR_MESSENGER_RICH.renderIntoMessageText === "function" &&
+        HAVKAR_MESSENGER_RICH.renderIntoMessageText(
+            text,
+            rawMessageText
+        );
+    if(!shareRendered && !richRendered){
+        text.textContent = rawMessageText;
+    }
 
     const translated =
         String(
@@ -4972,7 +5783,7 @@ function appendMessage(
             ""
         ).trim();
 
-    if(translated){
+    if(translated && !shareRendered){
 
         const translationBlock =
             document.createElement(
@@ -6583,6 +7394,12 @@ function messageReceiptState(message){
     if(!message){
         return "sent";
     }
+    if(message._local_failed === true || message.send_status === "failed"){
+        return "failed";
+    }
+    if(message._local_sending === true || message.send_status === "sending"){
+        return "sending";
+    }
     if(message.read_at || message.is_read === true){
         return "read";
     }
@@ -6600,7 +7417,9 @@ function applyMessageChecks(element, message){
         messageReceiptState(message);
     element.classList.remove(
         "delivered",
-        "read"
+        "read",
+        "sending",
+        "failed"
     );
     /* Never claim delivered/read without server timestamps. */
     if(receipt === "read"){
@@ -6613,6 +7432,16 @@ function applyMessageChecks(element, message){
         element.textContent = "";
         element.setAttribute("aria-label", "Delivered to recipient device");
         element.title = "Delivered";
+    }else if(receipt === "sending"){
+        element.classList.add("sending");
+        element.textContent = "…";
+        element.setAttribute("aria-label", "Sending");
+        element.title = "Sending";
+    }else if(receipt === "failed"){
+        element.classList.add("failed");
+        element.textContent = "!";
+        element.setAttribute("aria-label", "Failed to send");
+        element.title = "Failed";
     }else{
         element.textContent = "✓";
         element.setAttribute("aria-label", "Sent — server accepted");
@@ -6673,6 +7502,21 @@ async function markMessagesDelivered(
 
 }
 
+function readReceiptsEnabledForMe(){
+    try{
+        const raw =
+            localStorage.getItem(
+                "havkar_read_receipts_enabled"
+            );
+        if(raw == null || raw === ""){
+            return true;
+        }
+        return raw === "1" || raw === "true";
+    }catch(_e){
+        return true;
+    }
+}
+
 async function markMessagesRead(
     conversationId
 ){
@@ -6681,6 +7525,11 @@ async function markMessagesRead(
         !state.currentUser ||
         !conversationId
     ){
+        return;
+    }
+
+    /* Privacy: do not mark peer messages read when the user disabled receipts. */
+    if(!readReceiptsEnabledForMe()){
         return;
     }
 
@@ -7368,6 +8217,12 @@ function updateRenderedMessage(
 
 function closeChat(){
 
+    if(state.liveShare){
+        stopLiveLocationShare(
+            "Live sharing ended because the chat was closed."
+        );
+    }
+
     removeRealtimeSubscription();
 
     removeReactionSubscription();
@@ -7820,6 +8675,854 @@ function setupAuthListener(){
 
 
 /* =========================================================
+   CALLS (honest gate — no fake TURN)
+========================================================= */
+
+async function probeMessengerCallReadiness(){
+    try{
+        const res = await fetch("/api/health", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "health_telehealth_status" })
+        });
+        const body = await res.json();
+        const ice = body && body.readiness && body.readiness.ice;
+        return {
+            turnConfigured: !!(ice && ice.turn_configured),
+            note: (ice && ice.note) || "Public STUN only until HAVKAR_TURN_* secrets are bound."
+        };
+    }catch(_e){
+        return {
+            turnConfigured: false,
+            note: "Call readiness status unavailable."
+        };
+    }
+}
+
+function openCreateGroupModal(){
+    if(!state.currentUser){
+        redirectToLogin();
+        return;
+    }
+    const existing =
+        document.getElementById(
+            "messengerGroupModal"
+        );
+    if(existing){
+        existing.remove();
+    }
+    const backdrop =
+        document.createElement(
+            "div"
+        );
+    backdrop.id =
+        "messengerGroupModal";
+    backdrop.className =
+        "messenger-new-modal-backdrop";
+    backdrop.innerHTML =
+        '<div class="messenger-new-modal" role="dialog" aria-modal="true">' +
+        "<h3>New group</h3>" +
+        "<p>Pick listing sellers as members. Group schema uses conversation_participants with RLS.</p>" +
+        '<input type="text" id="groupTitleInput" maxlength="80" placeholder="Group title" />' +
+        '<input type="search" id="groupSearchInput" placeholder="Search public listings..." autocomplete="off" />' +
+        '<div id="groupSearchHits" style="max-height:220px;overflow:auto;margin:8px 0"></div>' +
+        '<div class="messenger-cta-row">' +
+        '<button type="button" class="messenger-cta" id="groupCreateBtn">Create group</button>' +
+        '<button type="button" class="messenger-cta secondary" id="groupCancelBtn">Cancel</button>' +
+        "</div></div>";
+    document.body.appendChild(
+        backdrop
+    );
+    const selected =
+        {};
+    async function runSearch(){
+        const q =
+            String(
+                $("groupSearchInput")
+                    ?.value ||
+                ""
+            ).trim();
+        const hits =
+            $("groupSearchHits");
+        if(!hits){
+            return;
+        }
+        hits.innerHTML =
+            '<div class="loading"><i class="fas fa-circle-notch fa-spin"></i></div>';
+        try{
+            let query =
+                supabaseClient
+                    .from(
+                        "ads"
+                    )
+                    .select(
+                        "id,title,user_id,status"
+                    )
+                    .eq(
+                        "status",
+                        "active"
+                    )
+                    .limit(
+                        20
+                    );
+            if(q){
+                query =
+                    query.ilike(
+                        "title",
+                        "%" +
+                        q +
+                        "%"
+                    );
+            }
+            const result =
+                await withTimeout(
+                    query
+                );
+            if(result.error){
+                throw result.error;
+            }
+            const rows =
+                (result.data ||
+                    []).filter(
+                    function(ad){
+                        return (
+                            String(
+                                ad.user_id
+                            ) !==
+                            String(
+                                state.currentUser.id
+                            )
+                        );
+                    }
+                );
+            if(!rows.length){
+                hits.innerHTML =
+                    "<p>No listings found.</p>";
+                return;
+            }
+            hits.innerHTML =
+                "";
+            rows.forEach(
+                function(ad){
+                    const btn =
+                        document.createElement(
+                            "button"
+                        );
+                    btn.type =
+                        "button";
+                    btn.className =
+                        "messenger-user-hit";
+                    const key =
+                        String(
+                            ad.user_id
+                        );
+                    btn.innerHTML =
+                        "<strong>" +
+                        escapeHtml(
+                            ad.title ||
+                            "Listing"
+                        ) +
+                        "</strong><span>" +
+                        (selected[key]
+                            ? "Selected"
+                            : "Tap to add seller") +
+                        "</span>";
+                    btn.addEventListener(
+                        "click",
+                        function(){
+                            if(
+                                selected[key]
+                            ){
+                                delete selected[key];
+                            }else{
+                                selected[key] =
+                                    ad;
+                            }
+                            runSearch();
+                        }
+                    );
+                    hits.appendChild(
+                        btn
+                    );
+                }
+            );
+        }catch(err){
+            hits.innerHTML =
+                "<p>Search failed.</p>";
+        }
+    }
+    $("groupSearchInput")
+        ?.addEventListener(
+            "input",
+            function(){
+                window.clearTimeout(
+                    openCreateGroupModal._t
+                );
+                openCreateGroupModal._t =
+                    window.setTimeout(
+                        runSearch,
+                        280
+                    );
+            }
+        );
+    $("groupCancelBtn")
+        ?.addEventListener(
+            "click",
+            function(){
+                backdrop.remove();
+            }
+        );
+    $("groupCreateBtn")
+        ?.addEventListener(
+            "click",
+            async function(){
+                const memberIds =
+                    Object.keys(
+                        selected
+                    );
+                if(
+                    memberIds.length <
+                    1
+                ){
+                    showToast(
+                        "Select at least one member.",
+                        "error"
+                    );
+                    return;
+                }
+                const title =
+                    String(
+                        $("groupTitleInput")
+                            ?.value ||
+                        ""
+                    ).trim() ||
+                    "HAVKAR group";
+                try{
+                    const first =
+                        memberIds[0];
+                    /* Groups must not reuse listing ad_id or they collide with
+                       conversations_ad_buyer_seller_uidx on existing 1:1 threads. */
+                    const inserted =
+                        await withTimeout(
+                            supabaseClient
+                                .from(
+                                    "conversations"
+                                )
+                                .insert({
+                                    buyer_id:
+                                        state.currentUser.id,
+                                    seller_id:
+                                        first,
+                                    ad_id:
+                                        null,
+                                    is_group:
+                                        true,
+                                    title:
+                                        title
+                                })
+                                .select(
+                                    "id,ad_id,buyer_id,seller_id,created_at,updated_at,is_group,title"
+                                )
+                                .single()
+                        );
+                    if(
+                        inserted.error
+                    ){
+                        throw inserted.error;
+                    }
+                    const conv =
+                        inserted.data;
+                    const rows =
+                        [
+                            {
+                                conversation_id:
+                                    conv.id,
+                                user_id:
+                                    state.currentUser.id,
+                                role:
+                                    "owner"
+                            }
+                        ].concat(
+                            memberIds.map(
+                                function(uid){
+                                    return {
+                                        conversation_id:
+                                            conv.id,
+                                        user_id:
+                                            uid,
+                                        role:
+                                            "member"
+                                    };
+                                }
+                            )
+                        );
+                    const part =
+                        await withTimeout(
+                            supabaseClient
+                                .from(
+                                    "conversation_participants"
+                                )
+                                .upsert(
+                                    rows,
+                                    {
+                                        onConflict:
+                                            "conversation_id,user_id"
+                                    }
+                                )
+                        );
+                    if(
+                        part.error
+                    ){
+                        throw part.error;
+                    }
+                    backdrop.remove();
+                    showToast(
+                        "Group created.",
+                        "info"
+                    );
+                    await loadConversations();
+                    await openConversation(
+                        conv
+                    );
+                }catch(err){
+                    showToast(
+                        (err &&
+                            err.message) ||
+                        "Could not create group.",
+                        "error"
+                    );
+                }
+            }
+        );
+    backdrop.addEventListener(
+        "click",
+        function(ev){
+            if(ev.target === backdrop){
+                backdrop.remove();
+            }
+        }
+    );
+    runSearch();
+}
+
+function openHonestCapabilityGate(title, body){
+    const existing =
+        document.getElementById(
+            "messengerCapabilityGate"
+        );
+    if(existing){
+        existing.remove();
+    }
+    const backdrop =
+        document.createElement(
+            "div"
+        );
+    backdrop.id =
+        "messengerCapabilityGate";
+    backdrop.className =
+        "messenger-new-modal-backdrop";
+    backdrop.innerHTML =
+        '<div class="messenger-new-modal" role="dialog" aria-modal="true">' +
+        "<h3>" +
+        escapeHtml(title) +
+        "</h3>" +
+        '<div class="havkar-call-blocked">' +
+        escapeHtml(body) +
+        "</div>" +
+        '<div class="messenger-cta-row">' +
+        '<button type="button" class="messenger-cta" id="capabilityGateClose">Close</button>' +
+        "</div></div>";
+    document.body.appendChild(
+        backdrop
+    );
+    if(globalThis.HAVKAR_MESSENGER_RICH){
+        HAVKAR_MESSENGER_RICH.ensureStyles();
+    }
+    backdrop.addEventListener(
+        "click",
+        function(ev){
+            if(ev.target === backdrop){
+                backdrop.remove();
+            }
+        }
+    );
+    $("capabilityGateClose")
+        ?.addEventListener(
+            "click",
+            function(){
+                backdrop.remove();
+            }
+        );
+}
+
+async function openMessengerCallGate(kind){
+    const readiness = await probeMessengerCallReadiness();
+    const title = kind === "video" ? "Video call" : "Voice call";
+    const existing = document.getElementById("messengerCallGate");
+    if(existing) existing.remove();
+    const backdrop = document.createElement("div");
+    backdrop.id = "messengerCallGate";
+    backdrop.className = "messenger-new-modal-backdrop";
+    backdrop.innerHTML =
+        '<div class="messenger-new-modal" role="dialog" aria-modal="true">' +
+        "<h3>" + title + "</h3>" +
+        '<div class="havkar-call-blocked">' +
+        (readiness.turnConfigured
+            ? "TURN appears configured, but Messenger calling stays Owner-gated until signaling, device E2E, and Owner authorization pass. No simulated call is started."
+            : "Calling is blocked: HAVKAR_TURN_URL / HAVKAR_TURN_USERNAME / HAVKAR_TURN_CREDENTIAL are not bound. HAVKAR will not invent TURN credentials or pretend a call works.") +
+        "</div>" +
+        "<p style=\"margin:10px 0;color:#456;font-size:.9rem\">" +
+        String(readiness.note || "") +
+        "</p>" +
+        '<div class="messenger-cta-row">' +
+        '<a class="messenger-cta secondary" href="calls.html" style="display:inline-flex;align-items:center;text-decoration:none">Open Calls status</a>' +
+        '<button type="button" class="messenger-cta" id="messengerCallGateClose">Close</button>' +
+        "</div></div>";
+    document.body.appendChild(backdrop);
+    if(globalThis.HAVKAR_MESSENGER_RICH) HAVKAR_MESSENGER_RICH.ensureStyles();
+    backdrop.addEventListener("click", function(ev){
+        if(ev.target === backdrop) backdrop.remove();
+    });
+    $("messengerCallGateClose")?.addEventListener("click", function(){
+        backdrop.remove();
+    });
+}
+
+/* =========================================================
+   ATTACHMENTS / LOCATION
+========================================================= */
+
+function toggleAttachTray(force){
+    const tray = $("attachTray");
+    const btn = $("attachMenuButton");
+    if(!tray || !btn) return;
+    const open = typeof force === "boolean" ? force : tray.hasAttribute("hidden");
+    if(open){
+        tray.removeAttribute("hidden");
+        btn.setAttribute("aria-expanded", "true");
+        if(globalThis.HAVKAR_MESSENGER_RICH) HAVKAR_MESSENGER_RICH.ensureStyles();
+    }else{
+        tray.setAttribute("hidden", "");
+        btn.setAttribute("aria-expanded", "false");
+    }
+}
+
+async function sendEncodedMessengerPayload(encoded){
+    if(!state.currentConversationId){
+        showToast("Open a conversation first.", "error");
+        return;
+    }
+    await sendMessage({ forceText: encoded });
+}
+
+function updateLiveLocationBar(){
+    const bar = $("liveLocationBar");
+    const text = $("liveLocationBarText");
+    if(!bar || !text){
+        return;
+    }
+    const share = state.liveShare;
+    if(!share){
+        bar.setAttribute("hidden", "");
+        return;
+    }
+    const ms =
+        Math.max(
+            0,
+            share.expiresAtMs - Date.now()
+        );
+    const mins =
+        Math.ceil(
+            ms / 60000
+        );
+    text.textContent =
+        "Live location on · stops in ~" +
+        mins +
+        " min (or tap Stop)";
+    bar.removeAttribute("hidden");
+}
+
+async function stopLiveLocationShare(reason){
+    const share = state.liveShare;
+    if(!share){
+        updateLiveLocationBar();
+        return;
+    }
+    try{
+        if(
+            share.watchId != null &&
+            navigator.geolocation
+        ){
+            navigator.geolocation.clearWatch(
+                share.watchId
+            );
+        }
+    }catch(_e){}
+    try{
+        if(share.timerId){
+            window.clearInterval(
+                share.timerId
+            );
+        }
+    }catch(_e){}
+    state.liveShare =
+        null;
+    updateLiveLocationBar();
+    try{
+        if(
+            state.currentConversationId &&
+            HAVKAR_MESSENGER_RICH
+        ){
+            await sendEncodedMessengerPayload(
+                HAVKAR_MESSENGER_RICH.encodeLocation({
+                    lat: share.lastLat,
+                    lng: share.lastLng,
+                    name: "Live location stopped",
+                    address: "",
+                    note:
+                        reason ||
+                        "Sender stopped live sharing."
+                })
+            );
+        }
+    }catch(_sendErr){}
+    showToast(
+        "Live location stopped.",
+        "info"
+    );
+}
+
+async function shareCurrentLocation(live){
+    if(!navigator.geolocation){
+        showToast("Location is not available on this device.", "error");
+        return;
+    }
+    if(!state.currentUser){
+        redirectToLogin();
+        return;
+    }
+    if(!state.currentConversationId){
+        showToast("Open a conversation first.", "error");
+        return;
+    }
+    if(
+        live &&
+        state.liveShare
+    ){
+        showToast(
+            "Live location is already active. Stop it first.",
+            "info"
+        );
+        updateLiveLocationBar();
+        return;
+    }
+    const consent = window.confirm(
+        live
+            ? "Share your live location for up to 15 minutes with an on-screen Stop control? HAVKAR asks for consent every time and will not share without confirmation."
+            : "Share your current location in this conversation? Coordinates are sent only to participants in this chat."
+    );
+    if(!consent){
+        return;
+    }
+    showToast("Getting location…", "info");
+    navigator.geolocation.getCurrentPosition(
+        async function(pos){
+            try{
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                if(!live){
+                    const encoded =
+                        HAVKAR_MESSENGER_RICH.encodeLocation({
+                            lat: lat,
+                            lng: lng,
+                            name: "Shared location",
+                            address: "",
+                            note: ""
+                        });
+                    await sendEncodedMessengerPayload(
+                        encoded
+                    );
+                    toggleAttachTray(
+                        false
+                    );
+                    return;
+                }
+                const expiresAtMs =
+                    Date.now() +
+                    15 * 60 * 1000;
+                const expires =
+                    new Date(
+                        expiresAtMs
+                    ).toISOString();
+                const sessionId =
+                    "live-" +
+                    String(
+                        state.currentConversationId
+                    ) +
+                    "-" +
+                    Date.now();
+                const encoded =
+                    HAVKAR_MESSENGER_RICH.encodeLiveLocation({
+                        lat: lat,
+                        lng: lng,
+                        name: "Live location",
+                        address: "",
+                        note: "Updates every ~45s until Stop or expiry. Open Walk/Drive/Bike for routing.",
+                        expiresAt: expires,
+                        sessionId: sessionId
+                    });
+                await sendEncodedMessengerPayload(
+                    encoded
+                );
+                toggleAttachTray(
+                    false
+                );
+                let lastSent =
+                    Date.now();
+                const watchId =
+                    navigator.geolocation.watchPosition(
+                        async function(next){
+                            if(
+                                !state.liveShare
+                            ){
+                                return;
+                            }
+                            state.liveShare.lastLat =
+                                next.coords.latitude;
+                            state.liveShare.lastLng =
+                                next.coords.longitude;
+                            if(
+                                Date.now() -
+                                lastSent <
+                                45000
+                            ){
+                                return;
+                            }
+                            if(
+                                Date.now() >=
+                                state.liveShare.expiresAtMs
+                            ){
+                                await stopLiveLocationShare(
+                                    "Live location expired."
+                                );
+                                return;
+                            }
+                            lastSent =
+                                Date.now();
+                            try{
+                                await sendEncodedMessengerPayload(
+                                    HAVKAR_MESSENGER_RICH.encodeLiveLocation({
+                                        lat: next.coords.latitude,
+                                        lng: next.coords.longitude,
+                                        name: "Live location update",
+                                        address: "",
+                                        note: "Auto update",
+                                        expiresAt: state.liveShare.expiresIso,
+                                        sessionId: state.liveShare.sessionId
+                                    })
+                                );
+                            }catch(_upd){}
+                        },
+                        function(){},
+                        {
+                            enableHighAccuracy: true,
+                            maximumAge: 15000,
+                            timeout: 20000
+                        }
+                    );
+                const timerId =
+                    window.setInterval(
+                        function(){
+                            if(
+                                !state.liveShare
+                            ){
+                                return;
+                            }
+                            if(
+                                Date.now() >=
+                                state.liveShare.expiresAtMs
+                            ){
+                                stopLiveLocationShare(
+                                    "Live location expired."
+                                );
+                                return;
+                            }
+                            updateLiveLocationBar();
+                        },
+                        15000
+                    );
+                state.liveShare = {
+                    watchId: watchId,
+                    timerId: timerId,
+                    expiresAtMs: expiresAtMs,
+                    expiresIso: expires,
+                    sessionId: sessionId,
+                    lastLat: lat,
+                    lastLng: lng
+                };
+                updateLiveLocationBar();
+                showToast(
+                    "Live location sharing started (15 min). Use Stop anytime.",
+                    "info"
+                );
+            }catch(err){
+                showToast(err?.message || "Could not share location.", "error");
+            }
+        },
+        function(err){
+            showToast(
+                err && err.code === 1
+                    ? "Location permission denied."
+                    : "Could not read GPS location.",
+                "error"
+            );
+        },
+        { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 }
+    );
+}
+
+async function pickAndSendMedia(file, kindHint){
+    if(!file || !state.currentUser || !supabaseClient){
+        showToast("Sign in to send media.", "error");
+        return;
+    }
+    if(file.size > 8 * 1024 * 1024){
+        showToast("File too large (max 8 MB in this Preview path).", "error");
+        return;
+    }
+    const kind =
+        kindHint ||
+        (file.type.indexOf("image/") === 0
+            ? "image"
+            : file.type.indexOf("video/") === 0
+            ? "video"
+            : file.type.indexOf("audio/") === 0
+            ? "audio"
+            : "file");
+    try{
+        /* marketplace-media RLS requires `{auth.uid()}/...` prefix. */
+        const path =
+            String(state.currentUser.id) +
+            "/chat/" +
+            Date.now() +
+            "-" +
+            String(file.name || "file")
+                .replace(/[^\w.\-]+/g, "_")
+                .slice(0, 80);
+        const up = await withTimeout(
+            supabaseClient.storage
+                .from("marketplace-media")
+                .upload(path, file, {
+                    upsert: false,
+                    contentType: file.type || undefined
+                })
+        );
+        if(up.error){
+            throw up.error;
+        }
+        /* Bucket is private — use a signed URL so recipients can open media. */
+        const signed = await withTimeout(
+            supabaseClient.storage
+                .from("marketplace-media")
+                .createSignedUrl(path, 60 * 60 * 24 * 7)
+        );
+        if(signed.error){
+            throw signed.error;
+        }
+        const url =
+            signed &&
+            signed.data &&
+            signed.data.signedUrl;
+        if(!url){
+            throw new Error("Upload URL missing");
+        }
+        const encoded = HAVKAR_MESSENGER_RICH.encodeMedia({
+            kind: kind,
+            url: url,
+            name: file.name || kind,
+            mime: file.type || ""
+        });
+        await sendEncodedMessengerPayload(encoded);
+        toggleAttachTray(false);
+    }catch(err){
+        showToast(
+            (err && err.message) ||
+            "Media upload blocked by storage permissions. Text and location still work.",
+            "error"
+        );
+    }
+}
+
+async function openMultiSharePicker(encoded){
+    if(!state.conversations || !state.conversations.length){
+        await loadConversations();
+    }
+    const rows = Array.isArray(state.conversations)
+        ? state.conversations.slice(0, 40)
+        : [];
+    if(!rows.length){
+        showToast("No conversations yet. Start one first.", "info");
+        return;
+    }
+    const backdrop = document.createElement("div");
+    backdrop.className = "messenger-new-modal-backdrop";
+    backdrop.innerHTML =
+        '<div class="messenger-new-modal" role="dialog" aria-modal="true">' +
+        "<h3>Send to conversations</h3>" +
+        "<p>Select one or more chats. Private emails are never shown.</p>" +
+        '<div id="multiShareHits"></div>' +
+        '<div class="messenger-cta-row">' +
+        '<button type="button" class="messenger-cta" id="multiShareSend">Send</button>' +
+        '<button type="button" class="messenger-cta secondary" id="multiShareClose">Close</button>' +
+        "</div></div>";
+    document.body.appendChild(backdrop);
+    const hits = backdrop.querySelector("#multiShareHits");
+    rows.forEach(function(row){
+        const id = String(row.id);
+        const label =
+            (row.ad && row.ad.title) ||
+            getConversationRole(row) ||
+            "Conversation";
+        const wrap = document.createElement("label");
+        wrap.className = "messenger-user-hit";
+        wrap.style.display = "flex";
+        wrap.style.gap = "8px";
+        wrap.style.alignItems = "center";
+        wrap.innerHTML =
+            '<input type="checkbox" data-cid="' +
+            id.replace(/"/g, "") +
+            '"> <strong>' +
+            escapeHtml(label) +
+            "</strong>";
+        hits.appendChild(wrap);
+    });
+    backdrop.querySelector("#multiShareClose").onclick = function(){
+        backdrop.remove();
+    };
+    backdrop.querySelector("#multiShareSend").onclick = async function(){
+        const selected = [
+            ...backdrop.querySelectorAll("input[type=checkbox]:checked")
+        ].map(function(el){
+            return el.getAttribute("data-cid");
+        });
+        if(!selected.length){
+            showToast("Select at least one conversation.", "info");
+            return;
+        }
+        const current = state.currentConversationId;
+        for(const cid of selected){
+            try{
+                state.currentConversationId = cid;
+                await sendMessage({ forceText: encoded });
+            }catch(_e){}
+        }
+        state.currentConversationId = current;
+        backdrop.remove();
+        showToast("Shared to " + selected.length + " chat(s).", "info");
+    };
+}
+
+/* =========================================================
    EVENTS
 ========================================================= */
 
@@ -7829,10 +9532,8 @@ function setupEvents(){
         ?.addEventListener(
             "click",
             function () {
-                if (window.havkarNavigateBack) {
-                    window.havkarNavigateBack();
-                    return;
-                }
+                /* Owner requirement: Home/back from Messenger must open
+                   the 15-tile HAVKAR home, not language.html or history. */
                 goHome();
             }
         );
@@ -7860,7 +9561,273 @@ function setupEvents(){
 
             }
         );
-}
+
+    $("newConversationButton")
+        ?.addEventListener(
+            "click",
+            openNewConversationModal
+        );
+
+    $("actionNewDm")
+        ?.addEventListener(
+            "click",
+            openNewConversationModal
+        );
+
+    $("bootNewConversationBtn")
+        ?.addEventListener(
+            "click",
+            openNewConversationModal
+        );
+
+    $("bootLoginBtn")
+        ?.addEventListener(
+            "click",
+            function(){
+                window.location.href =
+                    "login.html?next=" +
+                    encodeURIComponent(
+                        "chat.html"
+                    );
+            }
+        );
+
+    $("actionShare")
+        ?.addEventListener(
+            "click",
+            function(){
+                if(
+                    !globalThis.HAVKAR_MESSENGER_SHARE ||
+                    typeof HAVKAR_MESSENGER_SHARE.openShareComposer !==
+                        "function"
+                ){
+                    showToast(
+                        "Sharing is unavailable.",
+                        "error"
+                    );
+                    return;
+                }
+                HAVKAR_MESSENGER_SHARE.openShareComposer(
+                    {
+                        url: location.origin + "/",
+                        title: "HAVKAR",
+                        description: ""
+                    },
+                    {
+                        onSend: async function(encoded){
+                            await openMultiSharePicker(
+                                encoded
+                            );
+                        },
+                        onCopied: function(ok){
+                            showToast(
+                                ok
+                                    ? "Link copied."
+                                    : "Could not copy link.",
+                                ok ? "info" : "error"
+                            );
+                        },
+                        onError: function(msg){
+                            showToast(
+                                msg ||
+                                "Share blocked.",
+                                "error"
+                            );
+                        }
+                    }
+                );
+            }
+        );
+
+    $("actionGroup")
+        ?.addEventListener(
+            "click",
+            openCreateGroupModal
+        );
+
+    $("actionVoice")
+        ?.addEventListener(
+            "click",
+            function(){
+                openMessengerCallGate("voice");
+            }
+        );
+
+    $("actionVideo")
+        ?.addEventListener(
+            "click",
+            function(){
+                openMessengerCallGate("video");
+            }
+        );
+
+    $("chatVoiceCallButton")
+        ?.addEventListener(
+            "click",
+            function(){
+                openMessengerCallGate("voice");
+            }
+        );
+
+    $("chatVideoCallButton")
+        ?.addEventListener(
+            "click",
+            function(){
+                openMessengerCallGate("video");
+            }
+        );
+
+    $("attachMenuButton")
+        ?.addEventListener(
+            "click",
+            function(){
+                toggleAttachTray();
+            }
+        );
+
+    $("attachLocationBtn")
+        ?.addEventListener(
+            "click",
+            function(){
+                shareCurrentLocation(false);
+            }
+        );
+
+    $("attachLiveLocationBtn")
+        ?.addEventListener(
+            "click",
+            function(){
+                shareCurrentLocation(true);
+            }
+        );
+
+    $("stopLiveLocationBtn")
+        ?.addEventListener(
+            "click",
+            function(){
+                stopLiveLocationShare(
+                    "Sender stopped live sharing."
+                );
+            }
+        );
+
+    $("attachImageBtn")
+        ?.addEventListener(
+            "click",
+            function(){
+                $("attachImageInput")?.click();
+            }
+        );
+
+    $("attachFileBtn")
+        ?.addEventListener(
+            "click",
+            function(){
+                $("attachFileInput")?.click();
+            }
+        );
+
+    $("attachAudioBtn")
+        ?.addEventListener(
+            "click",
+            function(){
+                $("attachAudioInput")?.click();
+            }
+        );
+
+    $("attachImageInput")
+        ?.addEventListener(
+            "change",
+            function(ev){
+                const file = ev.target.files && ev.target.files[0];
+                ev.target.value = "";
+                if(file) pickAndSendMedia(file, "image");
+            }
+        );
+
+    $("attachFileInput")
+        ?.addEventListener(
+            "change",
+            function(ev){
+                const file = ev.target.files && ev.target.files[0];
+                ev.target.value = "";
+                if(file) pickAndSendMedia(file, "file");
+            }
+        );
+
+    $("attachAudioInput")
+        ?.addEventListener(
+            "change",
+            function(ev){
+                const file = ev.target.files && ev.target.files[0];
+                ev.target.value = "";
+                if(file) pickAndSendMedia(file, "audio");
+            }
+        );
+
+    $("reportConversationButton")
+        ?.addEventListener(
+            "click",
+            async () => {
+                closeHeaderMenu();
+                if(!state.currentUser){
+                    redirectToLogin();
+                    return;
+                }
+                const reason =
+                    window.prompt(
+                        "Report this conversation to HAVKAR Support. Describe the issue (required):",
+                        ""
+                    );
+                if(
+                    !reason ||
+                    !String(reason).trim()
+                ){
+                    return;
+                }
+                try{
+                    const inserted =
+                        await withTimeout(
+                            supabaseClient
+                                .from(
+                                    "notifications"
+                                )
+                                .insert({
+                                    user_id:
+                                        state.currentUser.id,
+                                    type:
+                                        "moderation_report",
+                                    title:
+                                        "Messenger report submitted",
+                                    message:
+                                        String(
+                                            reason
+                                        ).slice(
+                                            0,
+                                            500
+                                        ),
+                                    is_read:
+                                        false,
+                                    action_url:
+                                        "support.html?tile=chat#account-messenger-help"
+                                })
+                        );
+                    if(
+                        inserted.error
+                    ){
+                        throw inserted.error;
+                    }
+                    showToast(
+                        "Report recorded. Support can follow up via support@havkar.online.",
+                        "info"
+                    );
+                }catch(err){
+                    showToast(
+                        "Could not store report in-app. Email support@havkar.online instead.",
+                        "error"
+                    );
+                }
+            }
         );
 
     $("blockUserButton")
@@ -7999,6 +9966,58 @@ $("chatBackButton")
         ?.addEventListener(
             "input",
             autoSizeMessageInput
+        );
+
+    $("shareContentButton")
+        ?.addEventListener(
+            "click",
+            event => {
+                event.stopPropagation();
+                if(
+                    !globalThis.HAVKAR_MESSENGER_SHARE ||
+                    typeof HAVKAR_MESSENGER_SHARE.openShareComposer !== "function"
+                ){
+                    showToast("Sharing is unavailable.", "error");
+                    return;
+                }
+                HAVKAR_MESSENGER_SHARE.openShareComposer(
+                    {
+                        url: location.origin + "/",
+                        title: "HAVKAR",
+                        description: ""
+                    },
+                    {
+                        onSend: async function(encoded){
+                            if(state.currentConversationId){
+                                const multi = window.confirm(
+                                    "Send to multiple conversations?"
+                                );
+                                if(multi){
+                                    await openMultiSharePicker(encoded);
+                                    return;
+                                }
+                                await sendMessage({ forceText: encoded });
+                                return;
+                            }
+                            await openMultiSharePicker(encoded);
+                        },
+                        onCopied: function(ok){
+                            showToast(
+                                ok ? "Link copied." : "Could not copy link.",
+                                ok ? "info" : "error"
+                            );
+                        },
+                        onNative: function(res){
+                            if(res && res.ok){
+                                showToast("Shared on device.", "info");
+                            }
+                        },
+                        onError: function(msg){
+                            showToast(msg || "Share blocked.", "error");
+                        }
+                    }
+                );
+            }
         );
 
     $("emojiPickerButton")
@@ -8205,6 +10224,74 @@ $("chatBackButton")
    PAGE START
 ========================================================= */
 
+function consumePendingMessengerShare(){
+    try{
+        const params =
+            new URLSearchParams(
+                location.search || ""
+            );
+        if(params.get("share") !== "1"){
+            return;
+        }
+        const pending =
+            sessionStorage.getItem(
+                "havkar_pending_messenger_share"
+            );
+        if(!pending){
+            return;
+        }
+        sessionStorage.removeItem(
+            "havkar_pending_messenger_share"
+        );
+        const parsed =
+            HAVKAR_MESSENGER_SHARE &&
+            HAVKAR_MESSENGER_SHARE.parseSharePayload(
+                pending
+            );
+        if(!parsed){
+            return;
+        }
+        setTimeout(function(){
+            if(
+                !HAVKAR_MESSENGER_SHARE ||
+                typeof HAVKAR_MESSENGER_SHARE.openShareComposer !== "function"
+            ){
+                return;
+            }
+            HAVKAR_MESSENGER_SHARE.openShareComposer(
+                parsed,
+                {
+                    onSend: async function(encoded){
+                        if(!state.currentConversationId){
+                            try{
+                                sessionStorage.setItem(
+                                    "havkar_pending_messenger_share",
+                                    encoded
+                                );
+                            }catch(_e){}
+                            showToast(
+                                "Open a conversation, then tap Share to send this content.",
+                                "info"
+                            );
+                            return;
+                        }
+                        await sendMessage({ forceText: encoded });
+                    },
+                    onCopied: function(ok){
+                        showToast(
+                            ok ? "Link copied." : "Could not copy link.",
+                            ok ? "info" : "error"
+                        );
+                    },
+                    onError: function(msg){
+                        showToast(msg || "Share blocked.", "error");
+                    }
+                }
+            );
+        }, 500);
+    }catch(_e){}
+}
+
 async function startPage(){
 
     if(state.pageStarted){
@@ -8212,6 +10299,10 @@ async function startPage(){
     }
 
     if(!supabaseClient){
+        showLoginGate(
+            "Messenger unavailable",
+            "Supabase client failed to start. Check network and reload."
+        );
         return;
     }
 
@@ -8228,12 +10319,42 @@ async function startPage(){
 
     loadEmojiCatalogDeferred();
 
+    /* Never leave the first paint spinner forever. */
+    const bootFailSafe =
+        window.setTimeout(
+            function(){
+                const boot =
+                    $("authBootState");
+                if(
+                    boot &&
+                    boot.isConnected &&
+                    !state.currentUser
+                ){
+                    showLoginGate(
+                        "Sign in to use Messenger",
+                        "Conversation loading did not finish. Sign in again or tap New conversation after login."
+                    );
+                }else if(
+                    boot &&
+                    boot.isConnected &&
+                    state.currentUser &&
+                    !state.conversations.length
+                ){
+                    showEmptyState(
+                        "No conversations yet",
+                        "Your HAVKAR conversations will appear here."
+                    );
+                }
+            },
+            12000
+        );
+
     try{
         const stamp = document.createElement("meta");
         stamp.name = "havkar-chat-build";
-        stamp.content = HAVKAR_CHAT_BUILD;
+        stamp.content = HAVKAR_CHAT_BUILD + "-owner-fix-240";
         document.head.appendChild(stamp);
-        console.info("[HAVKAR] chat build", HAVKAR_CHAT_BUILD);
+        console.info("[HAVKAR] chat build", HAVKAR_CHAT_BUILD, "owner-fix-240");
     }catch(_e){}
 
     try{
@@ -8248,6 +10369,12 @@ async function startPage(){
             error
         );
 
+        try{
+            window.clearTimeout(
+                bootFailSafe
+            );
+        }catch(_e){}
+
         showFatalError(
             "HAVKAR connection error",
             "The authentication service could not be reached. Please try again."
@@ -8256,6 +10383,12 @@ async function startPage(){
         return;
 
     }
+
+    try{
+        window.clearTimeout(
+            bootFailSafe
+        );
+    }catch(_e){}
 
     if(!state.currentUser){
 
@@ -8276,12 +10409,14 @@ async function startPage(){
 
         // Refresh inbox list without replacing the active verified thread.
         loadConversations();
+        consumePendingMessengerShare();
 
         return;
 
     }
 
     await loadConversations();
+    consumePendingMessengerShare();
 
 }
 
@@ -8422,6 +10557,8 @@ window.addEventListener(
 
 </script>
 
+<script src="/havkar-messenger-share.js"></script>
+<script src="/havkar-messenger-rich.js"></script>
 <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
 

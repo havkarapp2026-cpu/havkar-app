@@ -292,6 +292,9 @@ button{
     height:118px;
 
     margin:0 auto 16px;
+    overflow:visible;
+    /* Keep change-photo button positioned against this box only. */
+    isolation:isolate;
 }
 
 .avatar{
@@ -333,14 +336,25 @@ button{
     display:block;
 }
 
+.avatar-wrapper{
+    /* keep absolute edit control clipped to avatar area */
+    overflow:visible;
+}
+
 .avatar-edit{
     position:absolute;
 
-    right:-2px;
+    right:0;
     bottom:0;
+    left:auto;
+    top:auto;
 
-    width:40px;
-    height:40px;
+    width:36px;
+    height:36px;
+    min-width:36px;
+    max-width:36px;
+    min-height:36px;
+    max-height:36px;
 
     border:3px solid white;
 
@@ -355,9 +369,21 @@ button{
     justify-content:center;
 
     cursor:pointer;
+    z-index:2;
+    padding:0;
+    margin:0;
+    overflow:hidden;
+    font-size:0; /* icon-only; never float a text label over Settings */
+    line-height:0;
+    transform:none;
 
     box-shadow:
         0 3px 9px rgba(0,0,0,.2);
+}
+
+.avatar-edit i{
+    font-size:16px;
+    line-height:1;
 }
 
 .avatar-edit:active{
@@ -1698,6 +1724,17 @@ body.dark-mode .account-type-badge{
         font-size:40px;
     }
 
+    .avatar-edit{
+        width:32px;
+        height:32px;
+        min-width:32px;
+        max-width:32px;
+        min-height:32px;
+        max-height:32px;
+        right:0;
+        bottom:0;
+    }
+
     .profile-name{
         font-size:22px;
     }
@@ -1895,9 +1932,9 @@ input:focus-visible{
         </div>
 
 
-        <!-- EMAIL -->
+        <!-- EMAIL (private account management — masked by default) -->
 
-        <div class="info-row">
+        <div class="info-row" id="accountEmailRow">
 
             <div class="info-icon">
 
@@ -1909,16 +1946,26 @@ input:focus-visible{
             <div class="info-content">
 
                 <div class="info-label">
-                    Email
+                    Account email (private)
                 </div>
 
                 <div
                     id="userEmail"
-                    class="info-value">
+                    class="info-value"
+                    data-email-masked="1">
 
                     -
 
                 </div>
+
+                <button
+                    type="button"
+                    id="toggleAccountEmail"
+                    class="copy-btn"
+                    style="margin-top:8px"
+                    aria-label="Show or hide account email">
+                    Show
+                </button>
 
             </div>
 
@@ -2128,37 +2175,7 @@ input:focus-visible{
         </button>
 
 
-        <!-- SUPPORT -->
-
-        <button
-            class="action"
-            type="button"
-            onclick="goTo('support.html')">
-
-            <div class="action-icon">
-
-                <i class="fas fa-headset"></i>
-
-            </div>
-
-            <div class="action-content">
-
-                <div class="action-title">
-                    Support
-                </div>
-
-                <div class="action-subtitle">
-                    Get help from HAVKAR
-                </div>
-
-            </div>
-
-            <div class="action-arrow">
-                <i class="fas fa-chevron-right"></i>
-            </div>
-
-        </button>
-
+        <!-- Support hub lives under Settings → Support and support.html (no duplicate here). -->
 
         <!-- STAFF WORKSPACE: internal section 16; not on public home grid. -->
 
@@ -2688,11 +2705,11 @@ input:focus-visible{
             <div class="setting-content">
 
                 <div class="setting-title">
-                    Messages & Chat
+                    Messages & Messenger
                 </div>
 
                 <div class="setting-description">
-                    Open your HAVKAR conversations.
+                    Open Messenger and read-receipt privacy. Support help is in Support.
                 </div>
 
             </div>
@@ -4071,6 +4088,21 @@ function showSettingsPanel(
    ESCAPE HTML
 ========================================================= */
 
+function maskEmailForDisplay(email){
+    const raw = String(email || "").trim();
+    if(!raw || raw.indexOf("@") < 0){
+        return "Private account";
+    }
+    const parts = raw.split("@");
+    const local = parts[0] || "";
+    const domain = parts.slice(1).join("@");
+    const visible =
+        local.length <= 2
+            ? (local[0] || "*")
+            : local.slice(0, 2);
+    return visible + "***@" + domain;
+}
+
 function escapeHtml(
     value
 ){
@@ -4691,24 +4723,24 @@ async function(){
                         </div>
 
 
+                        <button
+                            id="changePhotoBtn"
+                            class="avatar-edit"
+                            type="button"
+                            onclick="openAvatarPicker()"
+                            aria-label="Change photo"
+                            title="Change photo"
+                        >
+                            <i class="fas fa-camera" aria-hidden="true"></i>
+                        </button>
+                        <input
+                            id="avatarInput"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            onchange="handleAvatarSelected(event)"
+                        >
+
                     </div>
-
-
-                    <button
-                        id="changePhotoBtn"
-                        class="avatar-edit"
-                        type="button"
-                        onclick="openAvatarPicker()"
-                    >
-                        <i class="fas fa-camera"></i>
-                        Change Photo
-                    </button>
-                    <input
-                        id="avatarInput"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onchange="handleAvatarSelected(event)"
-                    >
 
 
                     <div class="profile-name">
@@ -4733,9 +4765,9 @@ async function(){
                     }
 
 
-                    <div class="profile-email">
+                    <div class="profile-email" data-private-account="1" title="Account email stays private">
 
-                        ${escapeHtml(email)}
+                        ${escapeHtml(maskEmailForDisplay(email))}
 
                     </div>
 
@@ -4791,8 +4823,53 @@ async function(){
 
         if(userEmail){
 
+            userEmail.dataset.fullEmail =
+                email || "";
+            userEmail.dataset.emailMasked =
+                "1";
             userEmail.textContent =
-                email;
+                maskEmailForDisplay(email);
+
+        }
+
+        const toggleEmailBtn =
+            document.getElementById(
+                "toggleAccountEmail"
+            );
+
+        if(toggleEmailBtn && userEmail){
+
+            toggleEmailBtn.onclick =
+                function(){
+
+                    const masked =
+                        userEmail.dataset.emailMasked !==
+                        "0";
+
+                    if(masked){
+
+                        userEmail.textContent =
+                            userEmail.dataset.fullEmail ||
+                            "-";
+                        userEmail.dataset.emailMasked =
+                            "0";
+                        toggleEmailBtn.textContent =
+                            "Hide";
+
+                    }else{
+
+                        userEmail.textContent =
+                            maskEmailForDisplay(
+                                userEmail.dataset.fullEmail
+                            );
+                        userEmail.dataset.emailMasked =
+                            "1";
+                        toggleEmailBtn.textContent =
+                            "Show";
+
+                    }
+
+                };
 
         }
 
@@ -5841,14 +5918,26 @@ function(){
 window.openChatSettings =
 function(){
 
+    let receiptsOn = true;
+    try{
+        const raw =
+            localStorage.getItem(
+                "havkar_read_receipts_enabled"
+            );
+        if(raw === "0" || raw === "false"){
+            receiptsOn = false;
+        }
+    }catch(_e){}
+
     showSettingsPanel(
 
-        "Messages & Chat",
+        "Messages & Messenger",
 
         "fas fa-comments",
 
         `
-        Open your HAVKAR conversations.
+        Open HAVKAR Messenger and control read-receipt privacy.
+        Help and support contacts live in Support.
         `,
 
         [
@@ -5858,15 +5947,71 @@ function(){
                 class="panel-button"
                 onclick="goTo('chat.html')">
 
-                <i class="fas fa-comments"></i>
+                <img src="/assets/icons/messenger/messenger-32.png" alt="" width="18" height="18" style="border-radius:4px;vertical-align:middle;margin-inline-end:6px">
+                Open Messenger
+            </button>
+            `,
+            `
+            <button
+                type="button"
+                class="panel-button"
+                id="toggleReadReceiptsBtn">
 
-                Open Chat
+                <i class="fas fa-eye"></i>
+                Read receipts: ${receiptsOn ? "On" : "Off"}
+            </button>
+            `,
+            `
+            <button
+                type="button"
+                class="panel-button"
+                onclick="goTo('support.html#account-messenger-help')">
 
+                <i class="fas fa-headset"></i>
+                Messenger help in Support
             </button>
             `
         ]
 
     );
+
+    setTimeout(function(){
+        const btn =
+            document.getElementById(
+                "toggleReadReceiptsBtn"
+            );
+        if(!btn){
+            return;
+        }
+        btn.onclick = function(){
+            let on = true;
+            try{
+                const raw =
+                    localStorage.getItem(
+                        "havkar_read_receipts_enabled"
+                    );
+                if(raw === "0" || raw === "false"){
+                    on = false;
+                }
+            }catch(_e){}
+            on = !on;
+            try{
+                localStorage.setItem(
+                    "havkar_read_receipts_enabled",
+                    on ? "1" : "0"
+                );
+            }catch(_e2){}
+            btn.innerHTML =
+                '<i class="fas fa-eye"></i> Read receipts: ' +
+                (on ? "On" : "Off");
+            showMessage(
+                on
+                    ? "Read receipts enabled for your account on this device."
+                    : "Read receipts disabled on this device. Messages you open will not mark peers as read.",
+                "success"
+            );
+        };
+    }, 0);
 
 };
 
@@ -6066,12 +6211,13 @@ function(){
 
         <br><br>
 
-        Account:
-        ${escapeHtml(email)}
+        Account email (private, masked):
+        ${escapeHtml(maskEmailForDisplay(email))}
 
         <br><br>
 
-        Change password sends a reset link to this email.
+        Change password sends a reset link to your signed-in email.
+        The full address is not shown on public pages.
         You choose the new password from that link on the login page.
 
         <br><br>
@@ -7410,10 +7556,7 @@ async function(
             true;
 
         button.innerHTML =
-            `
-            <i class="fas fa-spinner fa-spin"></i>
-            Uploading...
-            `;
+            `<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>`;
 
     }
 
@@ -7575,10 +7718,7 @@ async function(
                 false;
 
             button.innerHTML =
-                `
-                <i class="fas fa-camera"></i>
-                Change Photo
-                `;
+                `<i class="fas fa-camera" aria-hidden="true"></i>`;
 
         }
 

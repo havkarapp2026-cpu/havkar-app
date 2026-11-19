@@ -17,6 +17,16 @@
           sv:"Samtal", pl:"Połączenia", id:"Panggilan", zh:"通话", ja:"通話", ko:"통화", hi:"कॉल",
           ru:"Звонки", ckb:"پەیوەندییەکان", kmr:"Telefon", tr:"Aramalar", ar:"المكالمات", fa:"تماس‌ها", ur:"کالز"
         },
+        Messenger: {
+          it:"Messenger", de:"Messenger", fr:"Messagerie", es:"Mensajería", pt:"Messenger", nl:"Messenger",
+          sv:"Messenger", pl:"Messenger", id:"Messenger", zh:"消息", ja:"メッセンジャー", ko:"메신저", hi:"मैसेंजर",
+          ru:"Мессенджер", ckb:"مەسنجەر", kmr:"Messenger", tr:"Messenger", ar:"المراسلة", fa:"پیام‌رسان", ur:"میسنجر"
+        },
+        Chat: {
+          it:"Messenger", de:"Messenger", fr:"Messagerie", es:"Mensajería", pt:"Messenger", nl:"Messenger",
+          sv:"Messenger", pl:"Messenger", id:"Messenger", zh:"消息", ja:"メッセンジャー", ko:"메신저", hi:"मैसेंजर",
+          ru:"Мессенджер", ckb:"مەسنجەر", kmr:"Messenger", tr:"Messenger", ar:"المراسلة", fa:"پیام‌رسان", ur:"میسنجر"
+        },
         "Coming soon": {
           it:"Prossimamente", de:"Demnächst", fr:"Bientôt", es:"Próximamente", pt:"Em breve", nl:"Binnenkort",
           sv:"Kommer snart", pl:"Wkrótce", id:"Segera hadir", zh:"即将推出", ja:"近日公開", ko:"곧 제공", hi:"जल्द आ रहा है",
@@ -105,6 +115,271 @@
         var code = String(lang||'en');
         Object.keys(extra).forEach(function(en){
           if(!base[en] && extra[en][code]) base[en] = extra[en][code];
+        });
+        return base;
+      };
+    } catch(_e){}
+  })();
+
+  // Messenger chrome (chat.html list + nav) — all 21 langs; force-merge so IT/FA are not left in English.
+  (function augmentMessengerPhrases(){
+    try {
+      var extra = {
+        "Messenger": {
+          it:"Messenger", de:"Messenger", fr:"Messagerie", es:"Mensajería", pt:"Messenger", nl:"Messenger",
+          sv:"Messenger", pl:"Messenger", id:"Messenger", zh:"即时通讯", ja:"メッセンジャー", ko:"메신저",
+          hi:"मैसेंजर", ru:"Мессенджер", ckb:"مەسنجەر", kmr:"Messenger", tr:"Messenger",
+          ar:"المراسلة", fa:"پیام‌رسان", ur:"میسنجر"
+        },
+        "Search messages...": {
+          it:"Cerca nei messaggi...", de:"Nachrichten suchen...", fr:"Rechercher des messages...",
+          es:"Buscar mensajes...", pt:"Pesquisar mensagens...", nl:"Berichten zoeken...",
+          sv:"Sök meddelanden...", pl:"Szukaj wiadomości...", id:"Cari pesan...",
+          zh:"搜索消息...", ja:"メッセージを検索...", ko:"메시지 검색...", hi:"संदेश खोजें...",
+          ru:"Поиск сообщений...", ckb:"گەڕان لە پەیامەکان...", kmr:"Di peyaman de bigere...",
+          tr:"Mesajlarda ara...", ar:"البحث في الرسائل...", fa:"جستجوی پیام‌ها...", ur:"پیغامات تلاش کریں..."
+        },
+        "Conversations": {
+          it:"Conversazioni", de:"Unterhaltungen", fr:"Conversations", es:"Conversaciones",
+          pt:"Conversas", nl:"Gesprekken", sv:"Konversationer", pl:"Rozmowy", id:"Percakapan",
+          zh:"会话", ja:"会話", ko:"대화", hi:"बातचीत", ru:"Чаты", ckb:"گفتوگۆکان",
+          kmr:"Axaftin", tr:"Sohbetler", ar:"المحادثات", fa:"گفتگوها", ur:"بات چیت"
+        },
+        "Loading conversations...": {
+          it:"Caricamento conversazioni...", de:"Unterhaltungen werden geladen...",
+          fr:"Chargement des conversations...", es:"Cargando conversaciones...",
+          pt:"A carregar conversas...", nl:"Gesprekken laden...", sv:"Laddar konversationer...",
+          pl:"Ładowanie rozmów...", id:"Memuat percakapan...", zh:"正在加载会话...",
+          ja:"会話を読み込み中...", ko:"대화 불러오는 중...", hi:"बातचीत लोड हो रही है...",
+          ru:"Загрузка чатов...", ckb:"بارکردنی گفتوگۆکان...", kmr:"Axaftin têne barkirin...",
+          tr:"Sohbetler yükleniyor...", ar:"جارٍ تحميل المحادثات...", fa:"در حال بارگذاری گفتگوها...",
+          ur:"بات چیت لوڈ ہو رہی ہے..."
+        },
+        "Checking sign-in...": {
+          it:"Verifica accesso...", de:"Anmeldung wird geprüft...", fr:"Vérification de la connexion...",
+          es:"Comprobando inicio de sesión...", pt:"A verificar sessão...", nl:"Aanmelding controleren...",
+          sv:"Kontrollerar inloggning...", pl:"Sprawdzanie logowania...", id:"Memeriksa masuk...",
+          zh:"正在检查登录...", ja:"ログインを確認中...", ko:"로그인 확인 중...", hi:"साइन-इन जाँच...",
+          ru:"Проверка входа...", ckb:"پشکنینی چوونەژوورەوە...", kmr:"Têketin tê kontrolkirin...",
+          tr:"Oturum kontrol ediliyor...", ar:"جارٍ التحقق من تسجيل الدخول...", fa:"در حال بررسی ورود...",
+          ur:"سائن اِن چیک ہو رہا ہے..."
+        },
+        "New conversation": {
+          it:"Nuova conversazione", de:"Neue Unterhaltung", fr:"Nouvelle conversation",
+          es:"Nueva conversación", pt:"Nova conversa", nl:"Nieuw gesprek", sv:"Ny konversation",
+          pl:"Nowa rozmowa", id:"Percakapan baru", zh:"新会话", ja:"新しい会話", ko:"새 대화",
+          hi:"नई बातचीत", ru:"Новый чат", ckb:"گفتوگۆی نوێ", kmr:"Axaftina nû",
+          tr:"Yeni sohbet", ar:"محادثة جديدة", fa:"گفتگوی جدید", ur:"نئی بات چیت"
+        },
+        "No conversations found": {
+          it:"Nessuna conversazione trovata", de:"Keine Unterhaltungen gefunden",
+          fr:"Aucune conversation trouvée", es:"No se encontraron conversaciones",
+          pt:"Nenhuma conversa encontrada", nl:"Geen gesprekken gevonden", sv:"Inga konversationer hittades",
+          pl:"Nie znaleziono rozmów", id:"Percakapan tidak ditemukan", zh:"未找到会话",
+          ja:"会話が見つかりません", ko:"대화를 찾을 수 없음", hi:"कोई बातचीत नहीं मिली",
+          ru:"Чаты не найдены", ckb:"هیچ گفتوگۆیەک نەدۆزرایەوە", kmr:"Axaftin nehatin dîtin",
+          tr:"Sohbet bulunamadı", ar:"لم يتم العثور على محادثات", fa:"گفتگویی یافت نشد",
+          ur:"کوئی بات چیت نہیں ملی"
+        },
+        "No conversations yet": {
+          it:"Ancora nessuna conversazione", de:"Noch keine Unterhaltungen",
+          fr:"Pas encore de conversations", es:"Aún no hay conversaciones",
+          pt:"Ainda sem conversas", nl:"Nog geen gesprekken", sv:"Inga konversationer än",
+          pl:"Brak rozmów", id:"Belum ada percakapan", zh:"还没有会话",
+          ja:"まだ会話がありません", ko:"아직 대화가 없습니다", hi:"अभी कोई बातचीت नहीं",
+          ru:"Пока нет чатов", ckb:"هێشتا گفتوگۆ نییە", kmr:"Hê axaftin tune",
+          tr:"Henüz sohbet yok", ar:"لا محادثات بعد", fa:"هنوز گفتگویی نیست",
+          ur:"ابھی کوئی بات چیت نہیں"
+        },
+        "Your HAVKAR conversations will appear here.": {
+          it:"Le tue conversazioni HAVKAR appariranno qui.",
+          de:"Deine HAVKAR-Unterhaltungen erscheinen hier.",
+          fr:"Vos conversations HAVKAR apparaîtront ici.",
+          es:"Tus conversaciones de HAVKAR aparecerán aquí.",
+          pt:"As suas conversas HAVKAR aparecerão aqui.",
+          nl:"Je HAVKAR-gesprekken verschijnen hier.",
+          sv:"Dina HAVKAR-konversationer visas här.",
+          pl:"Twoje rozmowy HAVKAR pojawią się tutaj.",
+          id:"Percakapan HAVKAR Anda akan muncul di sini.",
+          zh:"您的 HAVKAR 会话将显示在这里。",
+          ja:"HAVKAR の会話がここに表示されます。",
+          ko:"HAVKAR 대화가 여기에 표시됩니다.",
+          hi:"आपकी HAVKAR बातचीत यहाँ दिखेगी।",
+          ru:"Ваши чаты HAVKAR появятся здесь.",
+          ckb:"گفتوگۆکانی HAVKAR لێرە دەردەکەون.",
+          kmr:"Axaftinên HAVKAR ê li vir xuya dibin.",
+          tr:"HAVKAR sohbetleriniz burada görünür.",
+          ar:"ستظهر محادثات HAVKAR هنا.",
+          fa:"گفتگوهای HAVKAR شما اینجا نمایش داده می‌شوند.",
+          ur:"آپ کی HAVKAR بات چیت یہاں ظاہر ہوگی۔"
+        },
+        "Try another name or keyword.": {
+          it:"Prova un altro nome o parola chiave.", de:"Versuche einen anderen Namen oder Begriff.",
+          fr:"Essayez un autre nom ou mot-clé.", es:"Prueba otro nombre o palabra clave.",
+          pt:"Tente outro nome ou palavra-chave.", nl:"Probeer een andere naam of trefwoord.",
+          sv:"Prova ett annat namn eller nyckelord.", pl:"Spróbuj innej nazwy lub słowa kluczowego.",
+          id:"Coba nama atau kata kunci lain.", zh:"请尝试其他名称或关键词。",
+          ja:"別の名前やキーワードを試してください。", ko:"다른 이름이나 키워드를 시도하세요.",
+          hi:"दूसरा नाम या कीवर्ड आज़माएँ।", ru:"Попробуйте другое имя или ключевое слово.",
+          ckb:"ناو یان وشەیەکی دیکە تاقی بکەوە.", kmr:"Nav an peyveke din biceribîne.",
+          tr:"Başka bir ad veya anahtar sözcük deneyin.", ar:"جرّب اسمًا أو كلمة مفتاحية أخرى.",
+          fa:"نام یا کلیدواژهٔ دیگری را امتحان کنید.", ur:"کوئی اور نام یا کلیدی لفظ آزمائیں۔"
+        },
+        "0 chats": {
+          it:"0 chat", de:"0 Chats", fr:"0 discussions", es:"0 chats", pt:"0 conversas",
+          nl:"0 chats", sv:"0 chattar", pl:"0 czatów", id:"0 obrolan", zh:"0 个会话",
+          ja:"0 件のチャット", ko:"채팅 0개", hi:"0 चैट", ru:"0 чатов", ckb:"٠ گفتوگۆ",
+          kmr:"0 axaftin", tr:"0 sohbet", ar:"٠ محادثات", fa:"۰ گفتگو", ur:"۰ بات چیت"
+        },
+        "Sign in to use Messenger": {
+          it:"Accedi per usare Messenger", de:"Melde dich an, um Messenger zu nutzen",
+          fr:"Connectez-vous pour utiliser la messagerie", es:"Inicia sesión para usar Mensajería",
+          pt:"Inicie sessão para usar o Messenger", nl:"Log in om Messenger te gebruiken",
+          sv:"Logga in för att använda Messenger", pl:"Zaloguj się, aby użyć Messengera",
+          id:"Masuk untuk memakai Messenger", zh:"登录以使用即时通讯", ja:"メッセンジャーを使うにはログイン",
+          ko:"메신저를 사용하려면 로그인하세요", hi:"मैसेंजर इस्तेमाल करने के लिए साइन इन करें",
+          ru:"Войдите, чтобы пользоваться мессенджером", ckb:"بۆ بەکارهێنانی مەسنجەر بچۆ ژوورەوە",
+          kmr:"Ji bo Messengerê têkeve", tr:"Messenger için oturum açın",
+          ar:"سجّل الدخول لاستخدام المراسلة", fa:"برای استفاده از پیام‌رسان وارد شوید",
+          ur:"میسنجر استعمال کرنے کے لیے سائن اِن کریں"
+        },
+        "Your conversations stay private to your HAVKAR account.": {
+          it:"Le conversazioni restano private sul tuo account HAVKAR.",
+          de:"Deine Unterhaltungen bleiben privat in deinem HAVKAR-Konto.",
+          fr:"Vos conversations restent privées sur votre compte HAVKAR.",
+          es:"Tus conversaciones permanecen privadas en tu cuenta HAVKAR.",
+          pt:"As suas conversas ficam privadas na sua conta HAVKAR.",
+          nl:"Je gesprekken blijven privé bij je HAVKAR-account.",
+          sv:"Dina konversationer förblir privata i ditt HAVKAR-konto.",
+          pl:"Twoje rozmowy pozostają prywatne na koncie HAVKAR.",
+          id:"Percakapan Anda tetap pribadi di akun HAVKAR.",
+          zh:"您的会话仅对您的 HAVKAR 账户可见。",
+          ja:"会話は HAVKAR アカウント内で非公開のままです。",
+          ko:"대화는 HAVKAR 계정에만 비공개로 유지됩니다.",
+          hi:"आपकी बातचीत आपके HAVKAR खाते में निजी रहती है।",
+          ru:"Ваши чаты остаются приватными в аккаунте HAVKAR.",
+          ckb:"گفتوگۆکانت لە هەژماری HAVKAR تایبەت دەمێننەوە.",
+          kmr:"Axaftinên te di hesabê HAVKAR de taybet dimînin.",
+          tr:"Sohbetleriniz HAVKAR hesabınızda gizli kalır.",
+          ar:"تبقى محادثاتك خاصة في حساب HAVKAR.",
+          fa:"گفتگوهای شما فقط در حساب HAVKAR شما خصوصی می‌مانند.",
+          ur:"آپ کی بات چیت آپ کے HAVKAR اکاؤنٹ میں نجی رہتی ہے۔"
+        },
+        "Browse listings": {
+          it:"Sfoglia gli annunci", de:"Anzeigen durchsuchen", fr:"Parcourir les annonces",
+          es:"Explorar anuncios", pt:"Ver anúncios", nl:"Advertenties bekijken",
+          sv:"Bläddra bland annonser", pl:"Przeglądaj ogłoszenia", id:"Jelajahi listing",
+          zh:"浏览商品", ja:"出品を見る", ko:"목록 찾아보기", hi:"लिस्टिंग देखें",
+          ru:"Смотреть объявления", ckb:"گەڕان لە ڕیکلامەکان", kmr:"Reklaman bigere",
+          tr:"İlanlara göz at", ar:"تصفح الإعلانات", fa:"مشاهده آگهی‌ها", ur:"فہرستیں دیکھیں"
+        },
+        "Try Again": {
+          it:"Riprova", de:"Erneut versuchen", fr:"Réessayer", es:"Reintentar", pt:"Tentar novamente",
+          nl:"Opnieuw proberen", sv:"Försök igen", pl:"Spróbuj ponownie", id:"Coba lagi",
+          zh:"重试", ja:"再試行", ko:"다시 시도", hi:"फिर से कोशिश करें", ru:"Повторить",
+          ckb:"دووبارە هەوڵبدە", kmr:"Dîsa biceribîne", tr:"Tekrar dene",
+          ar:"أعد المحاولة", fa:"تلاش دوباره", ur:"دوبارہ کوشش کریں"
+        },
+        "Sign in": {
+          it:"Accedi", de:"Anmelden", fr:"Connexion", es:"Iniciar sesión", pt:"Iniciar sessão",
+          nl:"Inloggen", sv:"Logga in", pl:"Zaloguj się", id:"Masuk", zh:"登录",
+          ja:"ログイン", ko:"로그인", hi:"साइन इन", ru:"Войти", ckb:"چوونەژوورەوە",
+          kmr:"Têkeve", tr:"Giriş yap", ar:"تسجيل الدخول", fa:"ورود", ur:"سائن اِن"
+        },
+        "Home": {
+          it:"Inizio", de:"Start", fr:"Accueil", es:"Inicio", pt:"Início", nl:"Home",
+          sv:"Hem", pl:"Start", id:"Beranda", zh:"首页", ja:"ホーム", ko:"홈",
+          hi:"होम", ru:"Главная", ckb:"سەرەکی", kmr:"Mal", tr:"Ana sayfa",
+          ar:"الرئيسية", fa:"خانه", ur:"ہوم"
+        },
+        "Find HAVKAR members through their public listings, then start a secure chat. Private emails are never shown.": {
+          it:"Trova membri HAVKAR tramite i loro annunci pubblici, poi avvia una chat sicura. Le email private non vengono mai mostrate.",
+          de:"Finde HAVKAR-Mitglieder über öffentliche Anzeigen und starte einen sicheren Chat. Private E-Mails werden nie angezeigt.",
+          fr:"Trouvez des membres HAVKAR via leurs annonces publiques, puis démarrez une discussion sécurisée. Les e-mails privés ne sont jamais affichés.",
+          es:"Encuentra miembros de HAVKAR por sus anuncios públicos y empieza un chat seguro. Nunca se muestran correos privados.",
+          pt:"Encontre membros HAVKAR pelos anúncios públicos e inicie um chat seguro. E-mails privados nunca são mostrados.",
+          nl:"Vind HAVKAR-leden via openbare advertenties en start een veilige chat. Privé-e-mails worden nooit getoond.",
+          sv:"Hitta HAVKAR-medlemmar via offentliga annonser och starta en säker chatt. Privata e-postadresser visas aldrig.",
+          pl:"Znajdź członków HAVKAR przez publiczne ogłoszenia i rozpocznij bezpieczny czat. Prywatne e-maile nigdy nie są pokazywane.",
+          id:"Temukan anggota HAVKAR lewat listing publik, lalu mulai chat aman. Email pribadi tidak pernah ditampilkan.",
+          zh:"通过公开商品找到 HAVKAR 用户并开启安全聊天。绝不显示私人邮箱。",
+          ja:"公開出品から HAVKAR メンバーを見つけて安全なチャットを開始。メールアドレスは表示されません。",
+          ko:"공개 목록으로 HAVKAR 회원을 찾아 안전한 채팅을 시작하세요. 개인 이메일은 절대 표시되지 않습니다.",
+          hi:"सार्वजनिक लिस्टिंग से HAVKAR सदस्य ढूँढें और सुरक्षित चैट शुरू करें। निजी ईमेल कभी नहीं दिखते।",
+          ru:"Найдите участников HAVKAR по публичным объявлениям и начните безопасный чат. Личные email никогда не показываются.",
+          ckb:"ئەندامانی HAVKAR لە ڕێگەی ڕیکلامی گشتی بدۆزەرەوە و چاتی پارێزراو دەست پێ بکە. ئیمەیڵی تایبەت هەرگیز پیشان نادرێت.",
+          kmr:"Endamên HAVKAR bi reklamên giştî bibîne û chatê ewle dest pê bike. E-nameyên taybet qet nayên nîşandan.",
+          tr:"Herkese açık ilanlardan HAVKAR üyelerini bulun ve güvenli sohbet başlatın. Özel e-postalar asla gösterilmez.",
+          ar:"اعثر على أعضاء HAVKAR عبر إعلاناتهم العامة ثم ابدأ محادثة آمنة. لا تُعرض رسائل البريد الخاصة أبدًا.",
+          fa:"اعضای HAVKAR را از طریق آگهی‌های عمومی پیدا کنید و گفتگوی امن را شروع کنید. ایمیل خصوصی هرگز نمایش داده نمی‌شود.",
+          ur:"عوامی فہرستوں سے HAVKAR ممبران تلاش کریں اور محفوظ چیٹ شروع کریں۔ نجی ای میل کبھی نہیں دکھائی جاتی۔"
+        },
+        "Search public listings or sellers...": {
+          it:"Cerca annunci pubblici o venditori...", de:"Öffentliche Anzeigen oder Verkäufer suchen...",
+          fr:"Rechercher des annonces publiques ou des vendeurs...", es:"Buscar anuncios públicos o vendedores...",
+          pt:"Pesquisar anúncios públicos ou vendedores...", nl:"Zoek openbare advertenties of verkopers...",
+          sv:"Sök offentliga annonser eller säljare...", pl:"Szukaj publicznych ogłoszeń lub sprzedawców...",
+          id:"Cari listing publik atau penjual...", zh:"搜索公开商品或卖家...",
+          ja:"公開出品や出品者を検索...", ko:"공개 목록 또는 판매자 검색...",
+          hi:"सार्वजनिक लिस्टिंग या विक्रेता खोजें...", ru:"Поиск публичных объявлений или продавцов...",
+          ckb:"گەڕان لە ڕیکلامی گشتی یان فرۆشیار...", kmr:"Reklamên giştî an firoşkaran bigere...",
+          tr:"Herkese açık ilan veya satıcı ara...", ar:"ابحث عن إعلانات عامة أو بائعين...",
+          fa:"جستجوی آگهی‌های عمومی یا فروشندگان...", ur:"عوامی فہرستیں یا فروخت کنندگان تلاش کریں..."
+        },
+        "Close": {
+          it:"Chiudi", de:"Schließen", fr:"Fermer", es:"Cerrar", pt:"Fechar", nl:"Sluiten",
+          sv:"Stäng", pl:"Zamknij", id:"Tutup", zh:"关闭", ja:"閉じる", ko:"닫기",
+          hi:"बंद करें", ru:"Закрыть", ckb:"داخستن", kmr:"Bigire", tr:"Kapat",
+          ar:"إغلاق", fa:"بستن", ur:"بند کریں"
+        },
+        "Location": {
+          it:"Posizione", de:"Standort", fr:"Position", es:"Ubicación", pt:"Localização",
+          nl:"Locatie", sv:"Plats", pl:"Lokalizacja", id:"Lokasi", zh:"位置",
+          ja:"位置情報", ko:"위치", hi:"स्थान", ru:"Геолокация", ckb:"شوێن",
+          kmr:"Cih", tr:"Konum", ar:"الموقع", fa:"موقعیت مکانی", ur:"مقام"
+        },
+        "Live location": {
+          it:"Posizione in tempo reale", de:"Live-Standort", fr:"Position en direct",
+          es:"Ubicación en vivo", pt:"Localização ao vivo", nl:"Live locatie",
+          sv:"Liveplats", pl:"Lokalizacja na żywo", id:"Lokasi langsung", zh:"实时位置",
+          ja:"ライブ位置情報", ko:"실시간 위치", hi:"लाइव स्थान", ru:"Геолокация в реальном времени",
+          ckb:"شوێنی ڕاستەوخۆ", kmr:"Cihê zindî", tr:"Canlı konum", ar:"موقع مباشر",
+          fa:"موقعیت زنده", ur:"لائیو مقام"
+        },
+        "Voice call": {
+          it:"Chiamata vocale", de:"Sprachanruf", fr:"Appel vocal", es:"Llamada de voz",
+          pt:"Chamada de voz", nl:"Spraakoproep", sv:"Röstsamtal", pl:"Połączenie głosowe",
+          id:"Panggilan suara", zh:"语音通话", ja:"音声通話", ko:"음성 통화",
+          hi:"वॉइस कॉल", ru:"Голосовой звонок", ckb:"پەیوەندی دەنگی", kmr:"Bangê deng",
+          tr:"Sesli arama", ar:"مكالمة صوتية", fa:"تماس صوتی", ur:"صوتی کال"
+        },
+        "Video call": {
+          it:"Videochiamata", de:"Videoanruf", fr:"Appel vidéo", es:"Videollamada",
+          pt:"Chamada de vídeo", nl:"Video-oproep", sv:"Videosamtal", pl:"Połączenie wideo",
+          id:"Panggilan video", zh:"视频通话", ja:"ビデオ通話", ko:"영상 통화",
+          hi:"वीडियो कॉल", ru:"Видеозвонок", ckb:"پەیوەندی ڤیدیۆیی", kmr:"Bangê vîdyoyê",
+          tr:"Görüntülü arama", ar:"مكالمة فيديو", fa:"تماس تصویری", ur:"ویڈیو کال"
+        },
+        "This message was deleted.": {
+          it:"Questo messaggio è stato eliminato.", de:"Diese Nachricht wurde gelöscht.",
+          fr:"Ce message a été supprimé.", es:"Este mensaje fue eliminado.",
+          pt:"Esta mensagem foi eliminada.", nl:"Dit bericht is verwijderd.",
+          sv:"Detta meddelande har raderats.", pl:"Ta wiadomość została usunięta.",
+          id:"Pesan ini telah dihapus.", zh:"此消息已删除。", ja:"このメッセージは削除されました。",
+          ko:"이 메시지는 삭제되었습니다.", hi:"यह संदेश हटा दिया गया।",
+          ru:"Это сообщение удалено.", ckb:"ئەم پەیامە سڕایەوە.", kmr:"Ev peyam hate jêbirin.",
+          tr:"Bu mesaj silindi.", ar:"تم حذف هذه الرسالة.", fa:"این پیام حذف شد.",
+          ur:"یہ پیغام حذف کر دیا گیا۔"
+        }
+      };
+      var api = root.HAVKAR_UI_I18N21;
+      if(!api || !api.pack) return;
+      var orig = api.pack.bind(api);
+      api.pack = function(lang){
+        var base = orig(lang) || {};
+        var code = String(lang||'en');
+        Object.keys(extra).forEach(function(en){
+          if(extra[en][code]) base[en] = extra[en][code];
         });
         return base;
       };

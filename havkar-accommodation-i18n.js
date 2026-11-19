@@ -190,11 +190,68 @@
         "Back": "Indietro"
     };
 
+
+    var FA_PHRASES = {
+        "Accommodation": "اقامت",
+        "Search published HAVKAR stays + eligible suppliers. Live booking stays Owner-gated.": "جستجوی اقامتگاه‌های منتشرشده هاوکار و تأمین‌کنندگان واجد شرایط. رزرو زنده همچنان تحت کنترل مالک است.",
+        "No verified accommodation is published yet": "هنوز اقامتگاه تأییدشده‌ای منتشر نشده است",
+        "The interactive map above still works for destination search and GPS. HAVKAR never invents hotel inventory, prices, or availability. Property owners can apply via “List a property”.": "نقشه تعاملی بالا همچنان برای جستجوی مقصد و GPS کار می‌کند. هاوکار اقامتگاه، قیمت یا موجودی ساختگی نمی‌سازد. مالکان می‌توانند از «ثبت ملک» اقدام کنند.",
+        "City / destination": "شهر / مقصد",
+        "City / destination / address": "شهر / مقصد / آدرس",
+        "Category": "دسته",
+        "All types": "همه انواع",
+        "Hotel": "هتل",
+        "Apartment": "آپارتمان",
+        "Guesthouse": "مهمان‌خانه",
+        "Other": "سایر",
+        "Use my location": "از موقعیت من استفاده کن",
+        "Search this area": "جستجو در این محدوده",
+        "Map": "نقشه",
+        "List": "فهرست",
+        "Map + list": "نقشه + فهرست",
+        "Destination map": "نقشه مقصد",
+        "Favorites": "علاقه‌مندی‌ها",
+        "Compare": "مقایسه",
+        "Share location": "اشتراک‌گذاری موقعیت",
+        "Copy location link": "کپی لینک موقعیت",
+        "Check-in": "ورود",
+        "Check-out": "خروج",
+        "Adults": "بزرگسال",
+        "Children": "کودک",
+        "Rooms": "اتاق",
+        "Display / charge currency": "ارز نمایش / پرداخت",
+        "Currency": "ارز",
+        "Search stays": "جستجوی اقامت",
+        "Payment methods": "روش‌های پرداخت",
+        "Two separate rails. XLM is not a Stripe currency. Live hotel charges stay OFF.": "دو مسیر جدا. XLM ارز Stripe نیست. شارژ زنده هتل خاموش است.",
+        "Pay by card / supported currencies": "پرداخت با کارت / ارزهای پشتیبانی‌شده",
+        "Pay with XLM wallet": "پرداخت با کیف‌پول XLM",
+        "Sample list price (EUR)": "قیمت نمونه فهرست (یورو)",
+        "Stripe fee quote (no charge)": "پیش‌فاکتور کارمزد Stripe (بدون شارژ)",
+        "XLM quote (no charge)": "پیش‌فاکتور XLM (بدون شارژ)",
+        "My booking history": "تاریخچه رزروهای من",
+        "Owner tools": "ابزارهای مالک",
+        "Currency matrix": "ماتریس ارز",
+        "List a property": "ثبت ملک",
+        "Case status": "وضعیت پرونده",
+        "Hotel search": "جستجوی هتل",
+        "Calls": "تماس‌ها",
+        "Log In": "ورود",
+        "Create New Account": "ایجاد حساب جدید",
+        "Home": "خانه",
+        "Listings": "آگهی‌ها",
+        "Back": "بازگشت",
+        "Help for this section": "راهنمای این بخش",
+        "Professional HAVKAR map for Accommodation: street / satellite / hybrid, live traffic, place search, GPS, routing. Satellite is static imagery, not a live camera. Cameras/rain only from licensed public sources. All active map tools are free.": "نقشه حرفه‌ای هاوکار برای اقامت: خیابان / ماهواره / ترکیبی، ترافیک زنده، جستجوی مکان، GPS و مسیریابی. ماهواره تصویر ثابت است نه دوربین زنده. دوربین/باران فقط از منابع عمومی مجاز. همه ابزارهای فعال نقشه رایگان‌اند."
+    };
+
     var applying = false;
 
     function phraseMap() {
         var lang = language();
         if (lang === "it") return PHRASES;
+        if (lang === "fa") return Object.assign({}, packFor(lang), FA_PHRASES);
+        if (lang === "ar" || lang === "ckb") return Object.assign({}, packFor(lang), FA_PHRASES);
         return Object.assign({}, packFor(lang));
     }
 
@@ -213,6 +270,12 @@
 
         try {
             document.documentElement.lang = lang;
+            try {
+                document.documentElement.dir =
+                    (lang === "fa" || lang === "ar" || lang === "ur" || lang === "ckb")
+                        ? "rtl"
+                        : "ltr";
+            } catch (_d) {}
             var phrases = phraseMap();
             var scope = root && root.nodeType === 1 ? root : document.body;
             var walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);

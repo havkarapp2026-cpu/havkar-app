@@ -710,6 +710,7 @@ button:focus-visible{
 }
 
 .owner-actions{
+    flex-wrap:wrap;
     display:grid;
     grid-template-columns:1fr 1fr;
     gap:10px;
@@ -1068,6 +1069,16 @@ button:focus-visible{
         </div>
 
         <button
+            id="retryListingButton"
+            class="back-market"
+            type="button"
+            style="margin-bottom:10px;"
+        >
+            <i class="fas fa-rotate-right"></i>
+            &nbsp; Try again
+        </button>
+
+        <button
             id="backMarketButton"
             class="back-market"
             type="button"
@@ -1253,6 +1264,26 @@ button:focus-visible{
                 </button>
 
                 <button
+                    id="pauseButton"
+                    class="owner-button edit"
+                    type="button"
+                    hidden
+                >
+                    <i class="fas fa-pause"></i>
+                    <span>Pause listing</span>
+                </button>
+
+                <button
+                    id="republishButton"
+                    class="owner-button edit"
+                    type="button"
+                    hidden
+                >
+                    <i class="fas fa-rotate-right"></i>
+                    <span>Publish again</span>
+                </button>
+
+                <button
                     id="deleteButton"
                     class="owner-button delete"
                     type="button"
@@ -1262,6 +1293,7 @@ button:focus-visible{
                 </button>
 
             </div>
+            <p id="ownerStatusNote" class="edit-note" hidden></p>
 
             <form
                 id="editForm"
@@ -1440,13 +1472,64 @@ button:focus-visible{
                 </span>
             </button>
 
+            <button
+                id="reportButton"
+                class="action-button secondary"
+                type="button"
+            >
+                <i class="fas fa-flag"></i>
+                <span>
+                    Report
+                </span>
+            </button>
+
+        </div>
+
+        <div id="reportDialog" class="delete-dialog" hidden role="dialog" aria-modal="true">
+            <div class="delete-dialog-card">
+                <h2>Report this listing?</h2>
+                <p>Tell HAVKAR why this marketplace listing should be reviewed. Ads/advertising stays separate.</p>
+                <label for="reportReason">Reason</label>
+                <select id="reportReason">
+                    <option value="spam">Spam or misleading</option>
+                    <option value="prohibited">Prohibited item</option>
+                    <option value="fraud">Suspected fraud</option>
+                    <option value="other">Other</option>
+                </select>
+                <label for="reportDetails">Details (optional)</label>
+                <textarea id="reportDetails" maxlength="500" rows="3"></textarea>
+                <div class="delete-dialog-actions">
+                    <button id="cancelReportButton" class="owner-button edit" type="button">Cancel</button>
+                    <button id="confirmReportButton" class="owner-button delete" type="button">Submit report</button>
+                </div>
+            </div>
         </div>
 
     </section>
 
 </main>
 
-<nav class="bottom-nav">
+<nav class="bottom-nav" aria-label="Buy and Sell navigation">
+    <div class="nav-item" id="navHome" role="button" tabindex="0">
+        <i class="fas fa-house"></i>
+        <span>Home</span>
+    </div>
+    <div class="nav-item active" id="navSearch" role="button" tabindex="0">
+        <i class="fas fa-magnifying-glass"></i>
+        <span>Search</span>
+    </div>
+    <div class="nav-item" id="navSaved" role="button" tabindex="0">
+        <i class="fas fa-heart"></i>
+        <span>Saved</span>
+    </div>
+    <div class="nav-item" id="navMessages" role="button" tabindex="0">
+        <i class="fas fa-comment"></i>
+        <span>Messages</span>
+    </div>
+    <div class="nav-item" id="navProfile" role="button" tabindex="0">
+        <i class="fas fa-user"></i>
+        <span>Settings</span>
+    </div>
 </nav>
 
 <div
@@ -1504,7 +1587,9 @@ button:focus-visible{
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-ad-publish.js"></script>
+<script src="/havkar-presentment-currencies.js"></script>
 <script src="/havkar-marketplace.js"></script>
+<script src="/havkar-messenger-share.js"></script>
 <script src="/stellar-wallet-bundle.js"></script>
 <script src="/havkar-xlm-checkout.js"></script>
 <script>
@@ -1557,6 +1642,15 @@ const state = {
 
 const $ = id =>
     document.getElementById(id);
+
+function on(id, eventName, handler){
+    const node = typeof id === "string" ? $(id) : id;
+    if(!node || typeof node.addEventListener !== "function"){
+        return false;
+    }
+    node.addEventListener(eventName, handler);
+    return true;
+}
 
 
 /* =========================================================
@@ -1770,20 +1864,33 @@ function formatPrice(value, currencyCode){
 
     if(Number.isFinite(numeric)){
 
+        const rawCurrency =
+            String(currencyCode || "EUR").trim().toUpperCase();
         const currency =
-            currencyCode === "USD"
-                ? "USD"
+            /^[A-Z]{3}$/.test(rawCurrency) && rawCurrency !== "XLM"
+                ? rawCurrency
                 : "EUR";
+        let decimals = 2;
+        if(
+            window.HAVKAR_MARKETPLACE &&
+            typeof window.HAVKAR_MARKETPLACE.currencyMeta === "function"
+        ){
+            decimals = window.HAVKAR_MARKETPLACE.currencyMeta(currency).decimals;
+        }
 
-        return new Intl.NumberFormat(
-            "en-US",
-            {
-                style: "currency",
-                currency: currency,
-                minimumFractionDigits:0,
-                maximumFractionDigits:2
-            }
-        ).format(numeric);
+        try{
+            return new Intl.NumberFormat(
+                "en-US",
+                {
+                    style: "currency",
+                    currency: currency,
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals
+                }
+            ).format(numeric);
+        }catch(_e){
+            return String(numeric) + " " + currency;
+        }
 
     }
 
@@ -3314,42 +3421,28 @@ function renderGallery(){
    ========================================================= */
 
 function showContent(){
-
-    $("loading").style.display =
-        "none";
-
-    $("errorBox")
-        .classList.remove(
-            "visible"
-        );
-
-    $("content")
-        .classList.add(
-            "visible"
-        );
-
+    const loading = $("loading");
+    const errorBox = $("errorBox");
+    const content = $("content");
+    if(loading){ loading.style.display = "none"; }
+    if(errorBox){ errorBox.classList.remove("visible"); }
+    if(content){ content.classList.add("visible"); }
 }
 
 
 function showError(message){
-
-    $("loading").style.display =
-        "none";
-
-    $("content")
-        .classList.remove(
-            "visible"
-        );
-
-    $("errorText").textContent =
-        message ||
-        "This listing could not be loaded.";
-
-    $("errorBox")
-        .classList.add(
-            "visible"
-        );
-
+    const loading = $("loading");
+    const content = $("content");
+    const errorText = $("errorText");
+    const errorBox = $("errorBox");
+    if(loading){ loading.style.display = "none"; }
+    if(content){ content.classList.remove("visible"); }
+    if(errorText){
+        errorText.textContent =
+            message ||
+            "This listing could not be loaded.";
+    }
+    if(errorBox){ errorBox.classList.add("visible"); }
 }
 
 
@@ -3370,6 +3463,71 @@ async function shareCurrentListing(){
 
         return;
 
+    }
+
+    const listingUrl =
+        window.location.href.split("#")[0];
+    const title =
+        String(
+            state.ad.title ||
+            state.ad.name ||
+            "HAVKAR listing"
+        );
+    const description =
+        String(
+            state.ad.description ||
+            state.ad.summary ||
+            ""
+        ).slice(0, 280);
+    const thumb =
+        state.ad.image_url ||
+        state.ad.cover_url ||
+        "";
+
+    if(
+        window.HAVKAR_MESSENGER_SHARE &&
+        typeof HAVKAR_MESSENGER_SHARE.openShareComposer === "function"
+    ){
+        HAVKAR_MESSENGER_SHARE.openShareComposer(
+            {
+                url: listingUrl,
+                title: title,
+                description: description,
+                thumb: thumb,
+                type: "listing"
+            },
+            {
+                onSend: async function(encoded, item){
+                    try{
+                        sessionStorage.setItem(
+                            "havkar_pending_messenger_share",
+                            encoded
+                        );
+                    }catch(_e){}
+                    window.location.href =
+                        "chat.html?share=1";
+                },
+                onCopied: function(ok){
+                    showToast(
+                        ok
+                            ? "Listing link copied."
+                            : "Could not copy listing link."
+                    );
+                },
+                onNative: function(res){
+                    if(res && res.ok){
+                        showToast("Listing shared.");
+                    }
+                },
+                onError: function(msg){
+                    showToast(
+                        msg ||
+                        "This listing cannot be shared."
+                    );
+                }
+            }
+        );
+        return;
     }
 
     const result =
@@ -3418,10 +3576,28 @@ function goBuySell(){
 
 
 function goHome(){
-
-    window.location.href =
-        "index.html";
-
+    try{
+        const keys = ["havkar_language","selectedLanguage","language"];
+        const supported = {
+            en:1,it:1,de:1,fr:1,es:1,pt:1,nl:1,sv:1,pl:1,id:1,
+            zh:1,ja:1,ko:1,hi:1,tr:1,ru:1,uk:1,fa:1,ar:1,ur:1,
+            ckb:1,kmr:1
+        };
+        let have = "";
+        for(let i=0;i<keys.length;i++){
+            const v = String(localStorage.getItem(keys[i]) || "").trim().toLowerCase();
+            if(v && supported[v]){ have = v; break; }
+        }
+        if(!have){ have = "en"; }
+        localStorage.setItem("havkar_language", have);
+        localStorage.setItem("selectedLanguage", have);
+        localStorage.setItem("language", have);
+        localStorage.setItem(
+            "havkar_language_dir",
+            (have === "fa" || have === "ar" || have === "ur" || have === "ckb") ? "rtl" : "ltr"
+        );
+    }catch(_e){}
+    window.location.href = "index.html";
 }
 
 
@@ -3755,6 +3931,8 @@ function updateOwnerTools(){
         closeDeleteDialog();
 
     }
+
+    syncOwnerLifecycleButtons();
 
 }
 
@@ -4110,6 +4288,7 @@ async function saveOwnerEdit(event){
             result.data;
 
         renderListing();
+        syncOwnerLifecycleButtons();
 
         renderGallery();
 
@@ -4315,55 +4494,120 @@ async function confirmOwnerDelete(){
 }
 
 
+
+function marketplaceListingStatus(ad){
+    const raw = ad && ad.status;
+    if(raw === null || raw === undefined || String(raw).trim() === ""){
+        return "active";
+    }
+    return String(raw).trim().toLowerCase();
+}
+
+function syncOwnerLifecycleButtons(){
+    const pauseBtn = $("pauseButton");
+    const republishBtn = $("republishButton");
+    const note = $("ownerStatusNote");
+    if(!state.isOwnListing || !state.ad){
+        if(pauseBtn){ pauseBtn.hidden = true; }
+        if(republishBtn){ republishBtn.hidden = true; }
+        if(note){ note.hidden = true; note.textContent = ""; }
+        return;
+    }
+    const status = marketplaceListingStatus(state.ad);
+    // DB trigger allows marketplace draft|active only. Pause = draft (not public).
+    if(pauseBtn){
+        pauseBtn.hidden = status !== "active";
+    }
+    if(republishBtn){
+        republishBtn.hidden = status !== "draft";
+    }
+    if(note){
+        if(status === "draft"){
+            note.hidden = false;
+            note.textContent = "This listing is paused (draft). It is not shown publicly until you publish again.";
+        }else if(status === "active"){
+            note.hidden = false;
+            note.textContent = "This listing is live. Pause hides it from Buy & Sell without deleting it.";
+        }else{
+            note.hidden = false;
+            note.textContent = "Listing status: " + status;
+        }
+    }
+}
+
+async function setOwnListingStatus(nextStatus){
+    if(
+        !state.isOwnListing ||
+        !state.ad ||
+        !state.currentUserId ||
+        state.ownerOperation
+    ){
+        return;
+    }
+    const allowed = nextStatus === "draft" || nextStatus === "active";
+    if(!allowed){
+        showToast("Marketplace listings can only be draft or active.");
+        return;
+    }
+    const pauseBtn = $("pauseButton");
+    const republishBtn = $("republishButton");
+    state.ownerOperation = true;
+    if(pauseBtn){ pauseBtn.disabled = true; }
+    if(republishBtn){ republishBtn.disabled = true; }
+    try{
+        initializeSupabase();
+        const result = await supabaseClient
+            .from("ads")
+            .update({ status: nextStatus })
+            .eq("id", state.ad.id)
+            .eq("user_id", state.currentUserId)
+            .eq("listing_surface", "marketplace")
+            .select("id,title,category,price,currency,location,country_code,city,description,user_id,created_at,photos,status,listing_surface,expires_at,video_path")
+            .maybeSingle();
+        if(result.error){
+            throw result.error;
+        }
+        if(!result.data){
+            throw new Error("This listing status was not changed. Only the owner can pause or publish it.");
+        }
+        state.ad = Object.assign({}, state.ad, result.data);
+        syncOwnerLifecycleButtons();
+        renderListing();
+        showToast(
+            nextStatus === "draft"
+                ? "Listing paused. It is hidden from public Buy & Sell."
+                : "Listing published again."
+        );
+    }catch(error){
+        console.error("[HAVKAR] Listing status update failed:", error);
+        showToast(
+            (error && error.message) ||
+            "Could not update listing status."
+        );
+    }finally{
+        state.ownerOperation = false;
+        if(pauseBtn){ pauseBtn.disabled = false; }
+        if(republishBtn){ republishBtn.disabled = false; }
+    }
+}
+
 function setupOwnerActions(){
-
-    $("editButton")
-        .addEventListener(
-            "click",
-            openEditForm
-        );
-
-    $("cancelEditButton")
-        .addEventListener(
-            "click",
-            closeEditForm
-        );
-
-    $("editForm")
-        .addEventListener(
-            "submit",
-            saveOwnerEdit
-        );
-
-    $("deleteButton")
-        .addEventListener(
-            "click",
-            () => {
-
-                if(!state.isOwnListing){
-
-                    return;
-
-                }
-
-                $("deleteDialog").hidden =
-                    false;
-
-            }
-        );
-
-    $("cancelDeleteButton")
-        .addEventListener(
-            "click",
-            closeDeleteDialog
-        );
-
-    $("confirmDeleteButton")
-        .addEventListener(
-            "click",
-            confirmOwnerDelete
-        );
-
+    on("editButton", "click", openEditForm);
+    on("cancelEditButton", "click", closeEditForm);
+    on("editForm", "submit", saveOwnerEdit);
+    on("pauseButton", "click", () => setOwnListingStatus("draft"));
+    on("republishButton", "click", () => setOwnListingStatus("active"));
+    on("deleteButton", "click", () => {
+        if(!state.isOwnListing){
+            return;
+        }
+        const dialog = $("deleteDialog");
+        if(dialog){
+            dialog.hidden = false;
+        }
+    });
+    on("cancelDeleteButton", "click", closeDeleteDialog);
+    on("confirmDeleteButton", "click", confirmOwnerDelete);
 }
 
 
@@ -4478,7 +4722,13 @@ function renderBuyCurrencyList(filter){
             btn.innerHTML = "<span></span><span></span>";
             btn.children[0].textContent =
                 String(c.code || "").toUpperCase() + " — " + (c.name || "");
-            btn.children[1].textContent = c.symbol || "";
+            btn.children[1].textContent =
+                (c.symbol || "") +
+                (c.checkout_allowed === false
+                    ? " · display/quote only"
+                    : (buyCheckoutState.liveCollection === "paused"
+                        ? " · charge paused"
+                        : " · charge-capable"));
             btn.addEventListener("click", function () {
                 buyCheckoutState.selected = c;
                 renderBuyCurrencyList(
@@ -4490,30 +4740,54 @@ function renderBuyCurrencyList(filter){
         });
 }
 
-function listingPriceEurGuess(){
+async function listingPriceEurGuess(){
     const ad = state.ad;
     const amount = Number(ad && ad.price);
     if(!Number.isFinite(amount) || amount <= 0){
-        return 0;
+        return { ok:false, eur:0 };
     }
     const currency = String((ad && ad.currency) || "EUR").toUpperCase();
     if(currency === "EUR" || !currency){
-        return amount;
+        return { ok:true, eur:amount, currency:"EUR", fx_source:"identity" };
     }
-    // Quote API converts presentment from EUR list; for non-EUR listings
-    // send the listed major as EUR-equivalent until FX reverse is available client-side.
-    return amount;
+    try{
+        const res = await fetch("/api/currency-matrix");
+        const body = await res.json();
+        const rates = (body.fx && body.fx.rates) || body.rates || null;
+        if(
+            window.HAVKAR_MARKETPLACE &&
+            typeof window.HAVKAR_MARKETPLACE.listingPriceToEur === "function"
+        ){
+            const converted = window.HAVKAR_MARKETPLACE.listingPriceToEur(ad, rates || {});
+            if(converted && converted.ok){
+                return {
+                    ok:true,
+                    eur: converted.eur,
+                    currency: currency,
+                    fx_rate: converted.rate,
+                    fx_source: body.fx_source || (body.fx && body.fx.source) || null,
+                    fx_date: body.fx_date || (body.fx && body.fx.date) || null
+                };
+            }
+        }
+    }catch(_e){}
+    return { ok:false, eur:0, currency:currency, error:"fx_unavailable" };
 }
 
 async function refreshBuyQuote(){
     const totals = $("buyTotals");
     const cardBtn = $("buyCardButton");
-    const amountEur = listingPriceEurGuess();
+    const priced = await listingPriceEurGuess();
+    const amountEur = priced && priced.ok ? Number(priced.eur) : 0;
     const currency =
         (buyCheckoutState.selected && buyCheckoutState.selected.code) || "eur";
+    const selected = buyCheckoutState.selected || {};
+    const chargeable = selected.checkout_allowed !== false;
     if(!(amountEur > 0)){
         if(totals){
-            totals.textContent = "No purchasable price on this listing.";
+            totals.textContent = priced && priced.error === "fx_unavailable"
+                ? "FX rate for this listing currency is unavailable right now."
+                : "No purchasable price on this listing.";
         }
         if(cardBtn){
             cardBtn.disabled = true;
@@ -4574,21 +4848,37 @@ async function refreshBuyQuote(){
                 "</div>";
         }
         if(cardBtn){
-            cardBtn.disabled = false;
-            cardBtn.textContent =
-                buyCheckoutState.liveCollection === "armed"
-                    ? "Pay with card (Stripe) — " +
-                      q.buyer_pays +
-                      " " +
-                      q.currency
-                    : "Get card checkout quote — live collection paused";
+            const canCharge =
+                chargeable &&
+                buyCheckoutState.liveCollection === "armed";
+            cardBtn.disabled = !canCharge;
+            if(!chargeable){
+                cardBtn.textContent =
+                    "Card charge unavailable for " +
+                    String(q.currency || "").toUpperCase() +
+                    " (display/quote only)";
+            }else if(buyCheckoutState.liveCollection === "armed"){
+                cardBtn.textContent =
+                    "Pay with card (Stripe) — " +
+                    q.buyer_pays +
+                    " " +
+                    q.currency;
+            }else{
+                cardBtn.textContent =
+                    "Card quote ready — live collection paused (Owner gate)";
+                /* Quote path still allowed via startBuyCardCheckout when paused. */
+                cardBtn.disabled = false;
+            }
         }
         const note = $("buyGateNote");
         if(note){
             note.textContent =
                 "Live collection: " +
                 buyCheckoutState.liveCollection +
-                ". Public live payments stay OFF without Owner authorization.";
+                (chargeable
+                    ? ". Selected currency is Stripe-charge-capable when Owner arms live payments."
+                    : ". Selected currency is display/quote only — not offered as a live charge currency.") +
+                " Public live payments stay OFF without Owner authorization.";
         }
     }catch(err){
         if(totals){
@@ -4719,6 +5009,67 @@ async function quoteListingXlm(){
 
     }
 
+    /* Convert listing presentment currency → EUR before XLM quote. */
+    const priced = await listingPriceEurGuess();
+    const amountEur =
+        priced && priced.ok ? Number(priced.eur) : NaN;
+    if(!(amountEur > 0)){
+        showToast(
+            (priced && priced.error === "fx_unavailable")
+                ? "FX unavailable for this listing currency — cannot quote XLM."
+                : "No EUR amount available for XLM quote."
+        );
+        return;
+    }
+
+    let netInfo = null;
+    if(typeof window.HAVKAR_XLM.describeNetworkAvailability === "function"){
+        try{
+            netInfo = await window.HAVKAR_XLM.describeNetworkAvailability();
+        }catch(_netErr){
+            netInfo = null;
+        }
+    }
+    const liveMainnetOff =
+        !netInfo ||
+        netInfo.preferred !== "mainnet";
+
+    /* Dry-run / Owner-gated path: quote only — never sign or transfer real XLM. */
+    if(liveMainnetOff){
+        const quoted = await window.HAVKAR_XLM.quote({
+            flow: "marketplace",
+            price: amountEur,
+            subjectId: String(ad.id),
+            accessToken: accessToken,
+            network: "testnet"
+        });
+        const result = quoted && quoted.result;
+        const receipt = $("buyReceipt");
+        if(receipt){
+            receipt.hidden = false;
+            receipt.textContent = JSON.stringify(
+                {
+                    mode: "xlm_dry_run_quote",
+                    listing_currency: (ad && ad.currency) || null,
+                    listing_price: amount,
+                    listing_price_eur: amountEur,
+                    fx_source: priced && priced.fx_source,
+                    fx_date: priced && priced.fx_date,
+                    network_fee_separate: true,
+                    live_transfer: false,
+                    quote: result
+                },
+                null,
+                2
+            );
+        }
+        showToast(
+            (window.HAVKAR_XLM.describe(result) || "XLM dry-run quote ready.") +
+                " Live XLM transfer stays OFF without Owner authorization."
+        );
+        return;
+    }
+
     if (typeof window.havkarConnectStellarWallet === "function") {
         try {
             await window.havkarConnectStellarWallet();
@@ -4734,7 +5085,7 @@ async function quoteListingXlm(){
     const settled =
         await window.HAVKAR_XLM.payAndVerify({
             flow: "marketplace",
-            price: amount,
+            price: amountEur,
             subjectId: String(ad.id),
             accessToken: accessToken
         });
@@ -4776,144 +5127,91 @@ async function quoteListingXlm(){
 }
 
 
-function setupNavigation(){
 
-    $("backButton")
-        .addEventListener(
-            "click",
-            goBuySell
-        );
-
-    $("backMarketButton")
-        .addEventListener(
-            "click",
-            goBuySell
-        );
-
-    $("headerSave")
-        .addEventListener(
-            "click",
-            toggleSaved
-        );
-
-    $("gallerySave")
-        .addEventListener(
-            "click",
-            toggleSaved
-        );
-
-    $("galleryShare")
-        .addEventListener(
-            "click",
-            shareCurrentListing
-        );
-
-    const buyXlmButton =
-        $("buyXlmButton");
-
-    if(buyXlmButton){
-
-        buyXlmButton.addEventListener(
-            "click",
-            quoteListingXlm
-        );
-
+async function submitListingReport(){
+    if(!state.ad || !state.ad.id){
+        showToast("This listing cannot be reported.");
+        return;
     }
-
-    const buyCardButton =
-        $("buyCardButton");
-
-    if(buyCardButton){
-        buyCardButton.addEventListener(
-            "click",
-            startBuyCardCheckout
-        );
+    if(!state.currentUserId){
+        showToast("Please sign in to report a listing.");
+        window.setTimeout(() => { window.location.href = "login.html"; }, 900);
+        return;
     }
-
-    const buyCurrencySearch =
-        $("buyCurrencySearch");
-
-    if(buyCurrencySearch){
-        buyCurrencySearch.addEventListener(
-            "input",
-            function () {
-                renderBuyCurrencyList(this.value);
+    if(state.isOwnListing){
+        showToast("You cannot report your own listing.");
+        return;
+    }
+    const reason = (($("reportReason") && $("reportReason").value) || "other").trim();
+    const details = (($("reportDetails") && $("reportDetails").value) || "").trim();
+    const btn = $("confirmReportButton");
+    if(btn){ btn.disabled = true; }
+    try{
+        initializeSupabase();
+        let result = await supabaseClient.rpc(
+            "create_marketplace_listing_report",
+            { p_ad_id: Number(state.ad.id), p_reason: reason, p_details: details || null }
+        );
+        if(result.error){
+            // Honest fallback: advertising-only RPC must not silently claim success for marketplace.
+            const msg = String(result.error.message || result.error.code || "");
+            if(/function|schema cache|does not exist|404/i.test(msg)){
+                showToast("Marketplace reporting is not armed on this database yet. Ads reporting stays separate.");
+            }else{
+                showToast(msg || "Report could not be sent.");
             }
-        );
+            return;
+        }
+        const dialog = $("reportDialog");
+        if(dialog){ dialog.hidden = true; }
+        showToast("Report submitted. Thank you.");
+    }catch(err){
+        showToast((err && err.message) || "Report could not be sent.");
+    }finally{
+        if(btn){ btn.disabled = false; }
     }
+}
 
-    $("saveButton")
-        .addEventListener(
-            "click",
-            toggleSaved
-        );
-
-    $("messageButton")
-        .addEventListener(
-            "click",
-            openSellerMessage
-        );
-
+function setupNavigation(){
+    on("backButton", "click", goBuySell);
+    on("backMarketButton", "click", goBuySell);
+    on("retryListingButton", "click", () => { window.location.reload(); });
+    on("reportButton", "click", () => {
+        const dialog = $("reportDialog");
+        if(dialog){ dialog.hidden = false; }
+    });
+    on("cancelReportButton", "click", () => {
+        const dialog = $("reportDialog");
+        if(dialog){ dialog.hidden = true; }
+    });
+    on("confirmReportButton", "click", submitListingReport);
+    on("headerSave", "click", toggleSaved);
+    on("gallerySave", "click", toggleSaved);
+    on("galleryShare", "click", shareCurrentListing);
+    on("buyXlmButton", "click", quoteListingXlm);
+    on("buyCardButton", "click", startBuyCardCheckout);
+    on("buyCurrencySearch", "input", function () {
+        renderBuyCurrencyList(this.value);
+    });
+    on("saveButton", "click", toggleSaved);
+    on("messageButton", "click", openSellerMessage);
     setupOwnerActions();
-
-    $("navHome")
-        .addEventListener(
-            "click",
-            goHome
-        );
-
-    $("navSearch")
-        .addEventListener(
-            "click",
-            goBuySell
-        );
-
-    $("navSaved")
-        .addEventListener(
-            "click",
-            goSaved
-        );
-
-    $("navMessages")
-        .addEventListener(
-            "click",
-            goMessages
-        );
-
-    $("navProfile")
-        .addEventListener(
-            "click",
-            goProfile
-        );
+    on("navHome", "click", goHome);
+    on("navSearch", "click", goBuySell);
+    on("navSaved", "click", goSaved);
+    on("navMessages", "click", goMessages);
+    on("navProfile", "click", goProfile);
 
     document
-        .querySelectorAll(
-            ".nav-item"
-        )
-        .forEach(
-            item => {
-
-                item.addEventListener(
-                    "keydown",
-                    event => {
-
-                        if(
-                            event.key === "Enter" ||
-                            event.key === " "
-                        ){
-
-                            event.preventDefault();
-
-                            item.click();
-
-                        }
-
-                    }
-                );
-
-            }
-        );
-
+        .querySelectorAll(".nav-item")
+        .forEach(item => {
+            item.addEventListener("keydown", event => {
+                if(event.key === "Enter" || event.key === " "){
+                    event.preventDefault();
+                    item.click();
+                }
+            });
+        });
 }
 
 
@@ -5223,5 +5521,7 @@ document.addEventListener(
 
 </script>
 
+<script src="/havkar-ui-i18n21.js"></script>
+<script src="/havkar-i18n.js"></script>
 </body>
     </html>

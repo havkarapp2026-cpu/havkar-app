@@ -32,6 +32,14 @@ assert.match(migration, /ADD TABLE public\.conversations/);
 assert.match(notifyApi, /notify_message/);
 assert.match(notifyApi, /HAVKAR_VAPID_PUBLIC_KEY/);
 assert.match(notifyApi, /guaranteed: false/);
+assert.match(notifyApi, /NEXT_PUBLIC_SUPABASE_URL/);
+assert.match(notifyApi, /supabase_config_missing/);
+assert.match(notifyApi, /configured: false/);
+assert.doesNotMatch(
+  notifyApi,
+  /return send\(res, 500, \{ error: "supabase_config_missing" \}\)/
+);
+
 
 assert.match(sw, /addEventListener\("push"/);
 assert.match(sw, /notificationclick/);
