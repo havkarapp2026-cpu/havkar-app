@@ -331,6 +331,45 @@
           sv:"Stäng", pl:"Zamknij", id:"Tutup", zh:"关闭", ja:"閉じる", ko:"닫기",
           hi:"बंद करें", ru:"Закрыть", ckb:"داخستن", kmr:"Bigire", tr:"Kapat",
           ar:"إغلاق", fa:"بستن", ur:"بند کریں"
+        },
+        "Location": {
+          it:"Posizione", de:"Standort", fr:"Position", es:"Ubicación", pt:"Localização",
+          nl:"Locatie", sv:"Plats", pl:"Lokalizacja", id:"Lokasi", zh:"位置",
+          ja:"位置情報", ko:"위치", hi:"स्थान", ru:"Геолокация", ckb:"شوێن",
+          kmr:"Cih", tr:"Konum", ar:"الموقع", fa:"موقعیت مکانی", ur:"مقام"
+        },
+        "Live location": {
+          it:"Posizione in tempo reale", de:"Live-Standort", fr:"Position en direct",
+          es:"Ubicación en vivo", pt:"Localização ao vivo", nl:"Live locatie",
+          sv:"Liveplats", pl:"Lokalizacja na żywo", id:"Lokasi langsung", zh:"实时位置",
+          ja:"ライブ位置情報", ko:"실시간 위치", hi:"लाइव स्थान", ru:"Геолокация в реальном времени",
+          ckb:"شوێنی ڕاستەوخۆ", kmr:"Cihê zindî", tr:"Canlı konum", ar:"موقع مباشر",
+          fa:"موقعیت زنده", ur:"لائیو مقام"
+        },
+        "Voice call": {
+          it:"Chiamata vocale", de:"Sprachanruf", fr:"Appel vocal", es:"Llamada de voz",
+          pt:"Chamada de voz", nl:"Spraakoproep", sv:"Röstsamtal", pl:"Połączenie głosowe",
+          id:"Panggilan suara", zh:"语音通话", ja:"音声通話", ko:"음성 통화",
+          hi:"वॉइस कॉल", ru:"Голосовой звонок", ckb:"پەیوەندی دەنگی", kmr:"Bangê deng",
+          tr:"Sesli arama", ar:"مكالمة صوتية", fa:"تماس صوتی", ur:"صوتی کال"
+        },
+        "Video call": {
+          it:"Videochiamata", de:"Videoanruf", fr:"Appel vidéo", es:"Videollamada",
+          pt:"Chamada de vídeo", nl:"Video-oproep", sv:"Videosamtal", pl:"Połączenie wideo",
+          id:"Panggilan video", zh:"视频通话", ja:"ビデオ通話", ko:"영상 통화",
+          hi:"वीडियो कॉल", ru:"Видеозвонок", ckb:"پەیوەندی ڤیدیۆیی", kmr:"Bangê vîdyoyê",
+          tr:"Görüntülü arama", ar:"مكالمة فيديو", fa:"تماس تصویری", ur:"ویڈیو کال"
+        },
+        "This message was deleted.": {
+          it:"Questo messaggio è stato eliminato.", de:"Diese Nachricht wurde gelöscht.",
+          fr:"Ce message a été supprimé.", es:"Este mensaje fue eliminado.",
+          pt:"Esta mensagem foi eliminada.", nl:"Dit bericht is verwijderd.",
+          sv:"Detta meddelande har raderats.", pl:"Ta wiadomość została usunięta.",
+          id:"Pesan ini telah dihapus.", zh:"此消息已删除。", ja:"このメッセージは削除されました。",
+          ko:"이 메시지는 삭제되었습니다.", hi:"यह संदेश हटा दिया गया।",
+          ru:"Это сообщение удалено.", ckb:"ئەم پەیامە سڕایەوە.", kmr:"Ev peyam hate jêbirin.",
+          tr:"Bu mesaj silindi.", ar:"تم حذف هذه الرسالة.", fa:"این پیام حذف شد.",
+          ur:"یہ پیغام حذف کر دیا گیا۔"
         }
       };
       var api = root.HAVKAR_UI_I18N21;

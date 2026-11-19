@@ -1830,6 +1830,24 @@ select:focus-visible{
         </div>
 
         <button
+            id="chatVoiceCallButton"
+            class="chat-header-action"
+            type="button"
+            aria-label="Voice call"
+            title="Voice call">
+            <i class="fas fa-phone" aria-hidden="true"></i>
+        </button>
+
+        <button
+            id="chatVideoCallButton"
+            class="chat-header-action"
+            type="button"
+            aria-label="Video call"
+            title="Video call">
+            <i class="fas fa-video" aria-hidden="true"></i>
+        </button>
+
+        <button
             id="chatInfoButton"
             class="chat-header-action"
             type="button"
@@ -1933,6 +1951,17 @@ select:focus-visible{
 
     </main>
 
+    <div id="attachTray" class="havkar-attach-tray" hidden>
+        <button type="button" id="attachLocationBtn">Location</button>
+        <button type="button" id="attachLiveLocationBtn">Live location</button>
+        <button type="button" id="attachImageBtn">Photo</button>
+        <button type="button" id="attachFileBtn">File</button>
+        <button type="button" id="attachAudioBtn">Voice note</button>
+        <input id="attachImageInput" type="file" accept="image/*" hidden>
+        <input id="attachFileInput" type="file" accept="*/*" hidden>
+        <input id="attachAudioInput" type="file" accept="audio/*" capture hidden>
+    </div>
+
     <div class="message-input-area">
 
         <button
@@ -1962,6 +1991,16 @@ select:focus-visible{
             aria-label="Share HAVKAR content"
             title="Share">
             <i class="fas fa-share-nodes" aria-hidden="true"></i>
+        </button>
+
+        <button
+            id="attachMenuButton"
+            class="emoji-btn"
+            type="button"
+            aria-label="Attachments"
+            aria-expanded="false"
+            title="Attach">
+            <i class="fas fa-paperclip" aria-hidden="true"></i>
         </button>
 
         <textarea
@@ -5442,7 +5481,15 @@ function appendMessage(
             rawMessageText,
             { openLabel: "Open" }
         );
-    if(!shareRendered){
+    const richRendered =
+        !shareRendered &&
+        globalThis.HAVKAR_MESSENGER_RICH &&
+        typeof HAVKAR_MESSENGER_RICH.renderIntoMessageText === "function" &&
+        HAVKAR_MESSENGER_RICH.renderIntoMessageText(
+            text,
+            rawMessageText
+        );
+    if(!shareRendered && !richRendered){
         text.textContent = rawMessageText;
     }
 
@@ -8338,6 +8385,290 @@ function setupAuthListener(){
 
 
 /* =========================================================
+   CALLS (honest gate — no fake TURN)
+========================================================= */
+
+async function probeMessengerCallReadiness(){
+    try{
+        const res = await fetch("/api/health", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "health_telehealth_status" })
+        });
+        const body = await res.json();
+        const ice = body && body.readiness && body.readiness.ice;
+        return {
+            turnConfigured: !!(ice && ice.turn_configured),
+            note: (ice && ice.note) || "Public STUN only until HAVKAR_TURN_* secrets are bound."
+        };
+    }catch(_e){
+        return {
+            turnConfigured: false,
+            note: "Call readiness status unavailable."
+        };
+    }
+}
+
+async function openMessengerCallGate(kind){
+    const readiness = await probeMessengerCallReadiness();
+    const title = kind === "video" ? "Video call" : "Voice call";
+    const existing = document.getElementById("messengerCallGate");
+    if(existing) existing.remove();
+    const backdrop = document.createElement("div");
+    backdrop.id = "messengerCallGate";
+    backdrop.className = "messenger-new-modal-backdrop";
+    backdrop.innerHTML =
+        '<div class="messenger-new-modal" role="dialog" aria-modal="true">' +
+        "<h3>" + title + "</h3>" +
+        '<div class="havkar-call-blocked">' +
+        (readiness.turnConfigured
+            ? "TURN appears configured, but Messenger calling stays Owner-gated until signaling, device E2E, and Owner authorization pass. No simulated call is started."
+            : "Calling is blocked: HAVKAR_TURN_URL / HAVKAR_TURN_USERNAME / HAVKAR_TURN_CREDENTIAL are not bound. HAVKAR will not invent TURN credentials or pretend a call works.") +
+        "</div>" +
+        "<p style=\"margin:10px 0;color:#456;font-size:.9rem\">" +
+        String(readiness.note || "") +
+        "</p>" +
+        '<div class="messenger-cta-row">' +
+        '<a class="messenger-cta secondary" href="calls.html" style="display:inline-flex;align-items:center;text-decoration:none">Open Calls status</a>' +
+        '<button type="button" class="messenger-cta" id="messengerCallGateClose">Close</button>' +
+        "</div></div>";
+    document.body.appendChild(backdrop);
+    if(globalThis.HAVKAR_MESSENGER_RICH) HAVKAR_MESSENGER_RICH.ensureStyles();
+    backdrop.addEventListener("click", function(ev){
+        if(ev.target === backdrop) backdrop.remove();
+    });
+    $("messengerCallGateClose")?.addEventListener("click", function(){
+        backdrop.remove();
+    });
+}
+
+/* =========================================================
+   ATTACHMENTS / LOCATION
+========================================================= */
+
+function toggleAttachTray(force){
+    const tray = $("attachTray");
+    const btn = $("attachMenuButton");
+    if(!tray || !btn) return;
+    const open = typeof force === "boolean" ? force : tray.hasAttribute("hidden");
+    if(open){
+        tray.removeAttribute("hidden");
+        btn.setAttribute("aria-expanded", "true");
+        if(globalThis.HAVKAR_MESSENGER_RICH) HAVKAR_MESSENGER_RICH.ensureStyles();
+    }else{
+        tray.setAttribute("hidden", "");
+        btn.setAttribute("aria-expanded", "false");
+    }
+}
+
+async function sendEncodedMessengerPayload(encoded){
+    if(!state.currentConversationId){
+        showToast("Open a conversation first.", "error");
+        return;
+    }
+    await sendMessage({ forceText: encoded });
+}
+
+async function shareCurrentLocation(live){
+    if(!navigator.geolocation){
+        showToast("Location is not available on this device.", "error");
+        return;
+    }
+    if(!state.currentUser){
+        redirectToLogin();
+        return;
+    }
+    const consent = window.confirm(
+        live
+            ? "Share your live location for up to 15 minutes? You can stop anytime by closing this chat session. HAVKAR will not share location without this confirmation."
+            : "Share your current location in this conversation? Coordinates are sent only to participants in this chat."
+    );
+    if(!consent) return;
+    showToast("Getting location…", "info");
+    navigator.geolocation.getCurrentPosition(
+        async function(pos){
+            try{
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                let encoded;
+                if(live){
+                    const expires = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+                    encoded = HAVKAR_MESSENGER_RICH.encodeLiveLocation({
+                        lat: lat,
+                        lng: lng,
+                        name: "Live location",
+                        address: "",
+                        note: "Recipient can open the map. Updates are not continuous until TURN/realtime live-share is Owner-armed.",
+                        expiresAt: expires,
+                        sessionId: String(state.currentConversationId || "")
+                    });
+                    showToast(
+                        "Live location marker sent for 15 minutes. Continuous streaming stays pending Owner TURN/realtime arming.",
+                        "info"
+                    );
+                }else{
+                    encoded = HAVKAR_MESSENGER_RICH.encodeLocation({
+                        lat: lat,
+                        lng: lng,
+                        name: "Shared location",
+                        address: "",
+                        note: ""
+                    });
+                }
+                await sendEncodedMessengerPayload(encoded);
+                toggleAttachTray(false);
+            }catch(err){
+                showToast(err?.message || "Could not share location.", "error");
+            }
+        },
+        function(err){
+            showToast(
+                err && err.code === 1
+                    ? "Location permission denied."
+                    : "Could not read GPS location.",
+                "error"
+            );
+        },
+        { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 }
+    );
+}
+
+async function pickAndSendMedia(file, kindHint){
+    if(!file || !state.currentUser || !supabaseClient){
+        showToast("Sign in to send media.", "error");
+        return;
+    }
+    if(file.size > 8 * 1024 * 1024){
+        showToast("File too large (max 8 MB in this Preview path).", "error");
+        return;
+    }
+    const kind =
+        kindHint ||
+        (file.type.indexOf("image/") === 0
+            ? "image"
+            : file.type.indexOf("video/") === 0
+            ? "video"
+            : file.type.indexOf("audio/") === 0
+            ? "audio"
+            : "file");
+    try{
+        const path =
+            "chat/" +
+            String(state.currentUser.id) +
+            "/" +
+            Date.now() +
+            "-" +
+            String(file.name || "file")
+                .replace(/[^\w.\-]+/g, "_")
+                .slice(0, 80);
+        const up = await withTimeout(
+            supabaseClient.storage
+                .from("marketplace-media")
+                .upload(path, file, {
+                    upsert: false,
+                    contentType: file.type || undefined
+                })
+        );
+        if(up.error){
+            throw up.error;
+        }
+        const pub = supabaseClient.storage
+            .from("marketplace-media")
+            .getPublicUrl(path);
+        const url =
+            pub &&
+            pub.data &&
+            pub.data.publicUrl;
+        if(!url){
+            throw new Error("Upload URL missing");
+        }
+        const encoded = HAVKAR_MESSENGER_RICH.encodeMedia({
+            kind: kind,
+            url: url,
+            name: file.name || kind,
+            mime: file.type || ""
+        });
+        await sendEncodedMessengerPayload(encoded);
+        toggleAttachTray(false);
+    }catch(err){
+        showToast(
+            (err && err.message) ||
+            "Media upload blocked by storage permissions. Text and location still work.",
+            "error"
+        );
+    }
+}
+
+async function openMultiSharePicker(encoded){
+    if(!state.conversations || !state.conversations.length){
+        await loadConversations();
+    }
+    const rows = Array.isArray(state.conversations)
+        ? state.conversations.slice(0, 40)
+        : [];
+    if(!rows.length){
+        showToast("No conversations yet. Start one first.", "info");
+        return;
+    }
+    const backdrop = document.createElement("div");
+    backdrop.className = "messenger-new-modal-backdrop";
+    backdrop.innerHTML =
+        '<div class="messenger-new-modal" role="dialog" aria-modal="true">' +
+        "<h3>Send to conversations</h3>" +
+        "<p>Select one or more chats. Private emails are never shown.</p>" +
+        '<div id="multiShareHits"></div>' +
+        '<div class="messenger-cta-row">' +
+        '<button type="button" class="messenger-cta" id="multiShareSend">Send</button>' +
+        '<button type="button" class="messenger-cta secondary" id="multiShareClose">Close</button>' +
+        "</div></div>";
+    document.body.appendChild(backdrop);
+    const hits = backdrop.querySelector("#multiShareHits");
+    rows.forEach(function(row){
+        const id = String(row.id);
+        const label =
+            (row.ad && row.ad.title) ||
+            getConversationRole(row) ||
+            "Conversation";
+        const wrap = document.createElement("label");
+        wrap.className = "messenger-user-hit";
+        wrap.style.display = "flex";
+        wrap.style.gap = "8px";
+        wrap.style.alignItems = "center";
+        wrap.innerHTML =
+            '<input type="checkbox" data-cid="' +
+            id.replace(/"/g, "") +
+            '"> <strong>' +
+            escapeHtml(label) +
+            "</strong>";
+        hits.appendChild(wrap);
+    });
+    backdrop.querySelector("#multiShareClose").onclick = function(){
+        backdrop.remove();
+    };
+    backdrop.querySelector("#multiShareSend").onclick = async function(){
+        const selected = [
+            ...backdrop.querySelectorAll("input[type=checkbox]:checked")
+        ].map(function(el){
+            return el.getAttribute("data-cid");
+        });
+        if(!selected.length){
+            showToast("Select at least one conversation.", "info");
+            return;
+        }
+        const current = state.currentConversationId;
+        for(const cid of selected){
+            try{
+                state.currentConversationId = cid;
+                await sendMessage({ forceText: encoded });
+            }catch(_e){}
+        }
+        state.currentConversationId = current;
+        backdrop.remove();
+        showToast("Shared to " + selected.length + " chat(s).", "info");
+    };
+}
+
+/* =========================================================
    EVENTS
 ========================================================= */
 
@@ -8383,6 +8714,100 @@ function setupEvents(){
         ?.addEventListener(
             "click",
             openNewConversationModal
+        );
+
+    $("chatVoiceCallButton")
+        ?.addEventListener(
+            "click",
+            function(){
+                openMessengerCallGate("voice");
+            }
+        );
+
+    $("chatVideoCallButton")
+        ?.addEventListener(
+            "click",
+            function(){
+                openMessengerCallGate("video");
+            }
+        );
+
+    $("attachMenuButton")
+        ?.addEventListener(
+            "click",
+            function(){
+                toggleAttachTray();
+            }
+        );
+
+    $("attachLocationBtn")
+        ?.addEventListener(
+            "click",
+            function(){
+                shareCurrentLocation(false);
+            }
+        );
+
+    $("attachLiveLocationBtn")
+        ?.addEventListener(
+            "click",
+            function(){
+                shareCurrentLocation(true);
+            }
+        );
+
+    $("attachImageBtn")
+        ?.addEventListener(
+            "click",
+            function(){
+                $("attachImageInput")?.click();
+            }
+        );
+
+    $("attachFileBtn")
+        ?.addEventListener(
+            "click",
+            function(){
+                $("attachFileInput")?.click();
+            }
+        );
+
+    $("attachAudioBtn")
+        ?.addEventListener(
+            "click",
+            function(){
+                $("attachAudioInput")?.click();
+            }
+        );
+
+    $("attachImageInput")
+        ?.addEventListener(
+            "change",
+            function(ev){
+                const file = ev.target.files && ev.target.files[0];
+                ev.target.value = "";
+                if(file) pickAndSendMedia(file, "image");
+            }
+        );
+
+    $("attachFileInput")
+        ?.addEventListener(
+            "change",
+            function(ev){
+                const file = ev.target.files && ev.target.files[0];
+                ev.target.value = "";
+                if(file) pickAndSendMedia(file, "file");
+            }
+        );
+
+    $("attachAudioInput")
+        ?.addEventListener(
+            "change",
+            function(ev){
+                const file = ev.target.files && ev.target.files[0];
+                ev.target.value = "";
+                if(file) pickAndSendMedia(file, "audio");
+            }
         );
 
     $("blockUserButton")
@@ -8543,7 +8968,18 @@ $("chatBackButton")
                     },
                     {
                         onSend: async function(encoded){
-                            await sendMessage({ forceText: encoded });
+                            if(state.currentConversationId){
+                                const multi = window.confirm(
+                                    "Send to multiple conversations?"
+                                );
+                                if(multi){
+                                    await openMultiSharePicker(encoded);
+                                    return;
+                                }
+                                await sendMessage({ forceText: encoded });
+                                return;
+                            }
+                            await openMultiSharePicker(encoded);
                         },
                         onCopied: function(ok){
                             showToast(
@@ -9056,6 +9492,7 @@ window.addEventListener(
 </script>
 
 <script src="/havkar-messenger-share.js"></script>
+<script src="/havkar-messenger-rich.js"></script>
 <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
 
