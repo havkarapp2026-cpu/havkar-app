@@ -52,6 +52,8 @@ test("buy-sell explore keeps 3-column grid and real video overlay", () => {
 test("marketplace listing report RPC keeps advertising create_ad_report untouched", () => {
   assert.match(migration, /create_marketplace_listing_report/);
   assert.match(migration, /listing_surface = 'marketplace'/);
+  assert.match(migration, /cannot report own listing/);
+  assert.match(migration, /SET search_path = ''/);
   // Comment may mention advertising create_ad_report(); the function body must not redefine it.
   assert.doesNotMatch(
     migration,
