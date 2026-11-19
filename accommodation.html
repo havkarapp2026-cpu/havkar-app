@@ -92,35 +92,25 @@ html[dir="rtl"] .havkar-camera-viewer [data-cam="card"]{text-align:right}
     .acc-feed .acc-body{padding:10px 12px 12px}
     .acc-feed .acc-body h2{margin:0 0 4px;font-size:1rem;line-height:1.25;color:#1b5e20}
     .acc-feed .acc-body p{margin:0;font-size:.86rem;color:#456;line-height:1.35}
-    .acc-feed-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
-    .acc-feed-toolbar input[type="search"]{flex:1;min-width:160px;min-height:44px;border:1px solid #cfd;border-radius:12px;padding:0 12px;font:inherit}
   </style>
-  <section class="acc-discovery" aria-label="Accommodation discovery">
-    <div class="acc-feed-toolbar">
-      <input id="cityInput" type="search" placeholder="Search city, region, stay…" autocomplete="off" aria-label="Search accommodation">
-      <select id="categoryFilter" aria-label="Accommodation category">
-        <option value="">All types</option>
-        <option value="hotel">Hotel</option>
-        <option value="apartment">Apartment</option>
-        <option value="guesthouse">Guesthouse</option>
-        <option value="other">Other</option>
-      </select>
-      <button class="primary" type="button" id="searchHotelsBtn" style="width:auto;min-width:120px;margin:0">Search</button>
-    </div>
-    <div id="geoSuggest" class="suggest" hidden></div>
-    <p id="searchStatus" class="provider-note" role="status"></p>
-    <div id="empty" class="empty" hidden>
-      <strong>No verified accommodation is published yet</strong>
-      Real photos appear when property owners publish verified inventory. HAVKAR never invents hotels or prices.
-    </div>
-    <div id="listings" class="acc-feed" aria-live="polite"></div>
-    <div id="searchResults"></div>
-  </section>
 
-  <details class="search-panel" id="accMapToolsPanel" open aria-label="Map and booking tools" style="margin:12px 0">
-    <summary style="cursor:pointer;font-weight:700;color:#1b5e20;list-style:none"><i class="fas fa-map-location-dot" aria-hidden="true"></i> Map, dates &amp; booking tools</summary>
-    <div class="filter-row" style="margin-top:10px">
-      <p class="provider-note">Advanced destination map, stay dates, guests, currency and payment tools. Discovery feed stays above.</p>
+  <section class="search-panel" aria-label="Hotel search">
+    <div class="filter-row">
+      <div style="flex:1.4">
+        <label for="cityInput">City / destination / address</label>
+        <input id="cityInput" type="search" placeholder="Rome, Milan, Paris…" autocomplete="off">
+        <div id="geoSuggest" class="suggest" hidden></div>
+      </div>
+      <div>
+        <label for="categoryFilter">Category</label>
+        <select id="categoryFilter" aria-label="Accommodation category">
+          <option value="">All types</option>
+          <option value="hotel">Hotel</option>
+          <option value="apartment">Apartment</option>
+          <option value="guesthouse">Guesthouse</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
     </div>
     <div id="accProToolbarHost"></div>
     <div id="accLayerMenuHost" style="margin:8px 0"></div>
@@ -205,15 +195,23 @@ html[dir="rtl"] .havkar-camera-viewer [data-cam="card"]{text-align:right}
       </div>
     </section>
 
+    <button class="primary" type="button" id="searchHotelsBtn">Search stays</button>
     <button class="secondary" type="button" id="historyBtn">My booking history</button>
+    <p id="searchStatus" class="provider-note" role="status"></p>
     <pre id="historyOut" hidden></pre>
-  </details>
+  </section>
 
   <p class="links" id="authLinks">
     <a href="login.html">Log In</a>
     <a href="signup.html">Create New Account</a>
   </p>
   <p id="message" class="error" role="status"></p>
+  <div id="empty" class="empty" hidden>
+    <strong>No verified accommodation is published yet</strong>
+    The interactive map above still works for destination search and GPS. HAVKAR never invents hotel inventory, prices, or availability. Property owners can apply via “List a property”.
+  </div>
+  <div id="listings" class="acc-feed" aria-live="polite"></div>
+  <div id="searchResults"></div>
   <div class="links">
     <a href="accommodation-apply.html">List a property</a>
     <a href="accommodation-status.html">Case status</a>
@@ -1171,12 +1169,5 @@ document.getElementById("backButton").addEventListener("click", function () {
 <p class="havkar-contextual-help" style="margin:10px 0;font-size:.85rem">
   <a href="support.html?tile=accommodation#tile-accommodation">Help for this section</a>
 </p>
-<script>
-/* HAVKAR map panel boot: keep Accommodation map visible beside listings */
-(function(){
-  var panel=document.getElementById('accMapToolsPanel');
-  if(panel) panel.open = true;
-})();
-</script>
 </body>
 </html>
