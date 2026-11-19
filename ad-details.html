@@ -710,6 +710,7 @@ button:focus-visible{
 }
 
 .owner-actions{
+    flex-wrap:wrap;
     display:grid;
     grid-template-columns:1fr 1fr;
     gap:10px;
@@ -1263,6 +1264,26 @@ button:focus-visible{
                 </button>
 
                 <button
+                    id="pauseButton"
+                    class="owner-button edit"
+                    type="button"
+                    hidden
+                >
+                    <i class="fas fa-pause"></i>
+                    <span>Pause listing</span>
+                </button>
+
+                <button
+                    id="republishButton"
+                    class="owner-button edit"
+                    type="button"
+                    hidden
+                >
+                    <i class="fas fa-rotate-right"></i>
+                    <span>Publish again</span>
+                </button>
+
+                <button
                     id="deleteButton"
                     class="owner-button delete"
                     type="button"
@@ -1272,6 +1293,7 @@ button:focus-visible{
                 </button>
 
             </div>
+            <p id="ownerStatusNote" class="edit-note" hidden></p>
 
             <form
                 id="editForm"
@@ -4250,6 +4272,7 @@ async function saveOwnerEdit(event){
             result.data;
 
         renderListing();
+        syncOwnerLifecycleButtons();
 
         renderGallery();
 
@@ -4455,10 +4478,109 @@ async function confirmOwnerDelete(){
 }
 
 
+
+function marketplaceListingStatus(ad){
+    const raw = ad && ad.status;
+    if(raw === null || raw === undefined || String(raw).trim() === ""){
+        return "active";
+    }
+    return String(raw).trim().toLowerCase();
+}
+
+function syncOwnerLifecycleButtons(){
+    const pauseBtn = $("pauseButton");
+    const republishBtn = $("republishButton");
+    const note = $("ownerStatusNote");
+    if(!state.isOwnListing || !state.ad){
+        if(pauseBtn){ pauseBtn.hidden = true; }
+        if(republishBtn){ republishBtn.hidden = true; }
+        if(note){ note.hidden = true; note.textContent = ""; }
+        return;
+    }
+    const status = marketplaceListingStatus(state.ad);
+    // DB trigger allows marketplace draft|active only. Pause = draft (not public).
+    if(pauseBtn){
+        pauseBtn.hidden = status !== "active";
+    }
+    if(republishBtn){
+        republishBtn.hidden = status !== "draft";
+    }
+    if(note){
+        if(status === "draft"){
+            note.hidden = false;
+            note.textContent = "This listing is paused (draft). It is not shown publicly until you publish again.";
+        }else if(status === "active"){
+            note.hidden = false;
+            note.textContent = "This listing is live. Pause hides it from Buy & Sell without deleting it.";
+        }else{
+            note.hidden = false;
+            note.textContent = "Listing status: " + status;
+        }
+    }
+}
+
+async function setOwnListingStatus(nextStatus){
+    if(
+        !state.isOwnListing ||
+        !state.ad ||
+        !state.currentUserId ||
+        state.ownerOperation
+    ){
+        return;
+    }
+    const allowed = nextStatus === "draft" || nextStatus === "active";
+    if(!allowed){
+        showToast("Marketplace listings can only be draft or active.");
+        return;
+    }
+    const pauseBtn = $("pauseButton");
+    const republishBtn = $("republishButton");
+    state.ownerOperation = true;
+    if(pauseBtn){ pauseBtn.disabled = true; }
+    if(republishBtn){ republishBtn.disabled = true; }
+    try{
+        initializeSupabase();
+        const result = await supabaseClient
+            .from("ads")
+            .update({ status: nextStatus })
+            .eq("id", state.ad.id)
+            .eq("user_id", state.currentUserId)
+            .eq("listing_surface", "marketplace")
+            .select("id,title,category,price,currency,location,country_code,city,description,user_id,created_at,photos,status,listing_surface,expires_at,video_path")
+            .maybeSingle();
+        if(result.error){
+            throw result.error;
+        }
+        if(!result.data){
+            throw new Error("This listing status was not changed. Only the owner can pause or publish it.");
+        }
+        state.ad = Object.assign({}, state.ad, result.data);
+        syncOwnerLifecycleButtons();
+        renderListing();
+        showToast(
+            nextStatus === "draft"
+                ? "Listing paused. It is hidden from public Buy & Sell."
+                : "Listing published again."
+        );
+    }catch(error){
+        console.error("[HAVKAR] Listing status update failed:", error);
+        showToast(
+            (error && error.message) ||
+            "Could not update listing status."
+        );
+    }finally{
+        state.ownerOperation = false;
+        if(pauseBtn){ pauseBtn.disabled = false; }
+        if(republishBtn){ republishBtn.disabled = false; }
+    }
+}
+
 function setupOwnerActions(){
     on("editButton", "click", openEditForm);
     on("cancelEditButton", "click", closeEditForm);
     on("editForm", "submit", saveOwnerEdit);
+    on("pauseButton", "click", () => setOwnListingStatus("draft"));
+    on("republishButton", "click", () => setOwnListingStatus("active"));
     on("deleteButton", "click", () => {
         if(!state.isOwnListing){
             return;

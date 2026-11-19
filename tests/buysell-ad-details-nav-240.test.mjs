@@ -41,6 +41,14 @@ test("ad-details error UI has Try again and Report path", () => {
   assert.match(details, /Marketplace reporting is not armed/);
 });
 
+test("ad-details owner pause/republish uses draft/active (DB-safe)", () => {
+  assert.match(details, /id="pauseButton"/);
+  assert.match(details, /id="republishButton"/);
+  assert.match(details, /setOwnListingStatus\("draft"\)/);
+  assert.match(details, /setOwnListingStatus\("active"\)/);
+  assert.match(details, /function syncOwnerLifecycleButtons/);
+});
+
 test("buy-sell explore keeps 3-column grid and real video overlay", () => {
   assert.match(buySell, /repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(buySell, /id="exploreVideoOverlay"/);
