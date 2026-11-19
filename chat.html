@@ -2041,6 +2041,11 @@ select:focus-visible{
         <input id="attachAudioInput" type="file" accept="audio/*" capture hidden>
     </div>
 
+    <div id="liveLocationBar" class="havkar-live-bar" hidden>
+        <span id="liveLocationBarText">Live location active</span>
+        <button type="button" id="stopLiveLocationBtn">Stop sharing</button>
+    </div>
+
     <div class="message-input-area">
 
         <button
@@ -2357,7 +2362,9 @@ const state = {
     pushConfigured:false,
 
     /* Prevent duplicate reaction writes while a save is in-flight. */
-    reactionInFlight:{}
+    reactionInFlight:{},
+
+    liveShare:null
 
 };
 
@@ -8210,6 +8217,12 @@ function updateRenderedMessage(
 
 function closeChat(){
 
+    if(state.liveShare){
+        stopLiveLocationShare(
+            "Live sharing ended because the chat was closed."
+        );
+    }
+
     removeRealtimeSubscription();
 
     removeReactionSubscription();
@@ -9102,6 +9115,83 @@ async function sendEncodedMessengerPayload(encoded){
     await sendMessage({ forceText: encoded });
 }
 
+function updateLiveLocationBar(){
+    const bar = $("liveLocationBar");
+    const text = $("liveLocationBarText");
+    if(!bar || !text){
+        return;
+    }
+    const share = state.liveShare;
+    if(!share){
+        bar.setAttribute("hidden", "");
+        return;
+    }
+    const ms =
+        Math.max(
+            0,
+            share.expiresAtMs - Date.now()
+        );
+    const mins =
+        Math.ceil(
+            ms / 60000
+        );
+    text.textContent =
+        "Live location on · stops in ~" +
+        mins +
+        " min (or tap Stop)";
+    bar.removeAttribute("hidden");
+}
+
+async function stopLiveLocationShare(reason){
+    const share = state.liveShare;
+    if(!share){
+        updateLiveLocationBar();
+        return;
+    }
+    try{
+        if(
+            share.watchId != null &&
+            navigator.geolocation
+        ){
+            navigator.geolocation.clearWatch(
+                share.watchId
+            );
+        }
+    }catch(_e){}
+    try{
+        if(share.timerId){
+            window.clearInterval(
+                share.timerId
+            );
+        }
+    }catch(_e){}
+    state.liveShare =
+        null;
+    updateLiveLocationBar();
+    try{
+        if(
+            state.currentConversationId &&
+            HAVKAR_MESSENGER_RICH
+        ){
+            await sendEncodedMessengerPayload(
+                HAVKAR_MESSENGER_RICH.encodeLocation({
+                    lat: share.lastLat,
+                    lng: share.lastLng,
+                    name: "Live location stopped",
+                    address: "",
+                    note:
+                        reason ||
+                        "Sender stopped live sharing."
+                })
+            );
+        }
+    }catch(_sendErr){}
+    showToast(
+        "Live location stopped.",
+        "info"
+    );
+}
+
 async function shareCurrentLocation(live){
     if(!navigator.geolocation){
         showToast("Location is not available on this device.", "error");
@@ -9111,45 +9201,170 @@ async function shareCurrentLocation(live){
         redirectToLogin();
         return;
     }
+    if(!state.currentConversationId){
+        showToast("Open a conversation first.", "error");
+        return;
+    }
+    if(
+        live &&
+        state.liveShare
+    ){
+        showToast(
+            "Live location is already active. Stop it first.",
+            "info"
+        );
+        updateLiveLocationBar();
+        return;
+    }
     const consent = window.confirm(
         live
-            ? "Share your live location for up to 15 minutes? You can stop anytime by closing this chat session. HAVKAR will not share location without this confirmation."
+            ? "Share your live location for up to 15 minutes with an on-screen Stop control? HAVKAR asks for consent every time and will not share without confirmation."
             : "Share your current location in this conversation? Coordinates are sent only to participants in this chat."
     );
-    if(!consent) return;
+    if(!consent){
+        return;
+    }
     showToast("Getting location…", "info");
     navigator.geolocation.getCurrentPosition(
         async function(pos){
             try{
                 const lat = pos.coords.latitude;
                 const lng = pos.coords.longitude;
-                let encoded;
-                if(live){
-                    const expires = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-                    encoded = HAVKAR_MESSENGER_RICH.encodeLiveLocation({
+                if(!live){
+                    const encoded =
+                        HAVKAR_MESSENGER_RICH.encodeLocation({
+                            lat: lat,
+                            lng: lng,
+                            name: "Shared location",
+                            address: "",
+                            note: ""
+                        });
+                    await sendEncodedMessengerPayload(
+                        encoded
+                    );
+                    toggleAttachTray(
+                        false
+                    );
+                    return;
+                }
+                const expiresAtMs =
+                    Date.now() +
+                    15 * 60 * 1000;
+                const expires =
+                    new Date(
+                        expiresAtMs
+                    ).toISOString();
+                const sessionId =
+                    "live-" +
+                    String(
+                        state.currentConversationId
+                    ) +
+                    "-" +
+                    Date.now();
+                const encoded =
+                    HAVKAR_MESSENGER_RICH.encodeLiveLocation({
                         lat: lat,
                         lng: lng,
                         name: "Live location",
                         address: "",
-                        note: "Recipient can open the map. Updates are not continuous until TURN/realtime live-share is Owner-armed.",
+                        note: "Updates every ~45s until Stop or expiry. Open Walk/Drive/Bike for routing.",
                         expiresAt: expires,
-                        sessionId: String(state.currentConversationId || "")
+                        sessionId: sessionId
                     });
-                    showToast(
-                        "Live location marker sent for 15 minutes. Continuous streaming stays pending Owner TURN/realtime arming.",
-                        "info"
+                await sendEncodedMessengerPayload(
+                    encoded
+                );
+                toggleAttachTray(
+                    false
+                );
+                let lastSent =
+                    Date.now();
+                const watchId =
+                    navigator.geolocation.watchPosition(
+                        async function(next){
+                            if(
+                                !state.liveShare
+                            ){
+                                return;
+                            }
+                            state.liveShare.lastLat =
+                                next.coords.latitude;
+                            state.liveShare.lastLng =
+                                next.coords.longitude;
+                            if(
+                                Date.now() -
+                                lastSent <
+                                45000
+                            ){
+                                return;
+                            }
+                            if(
+                                Date.now() >=
+                                state.liveShare.expiresAtMs
+                            ){
+                                await stopLiveLocationShare(
+                                    "Live location expired."
+                                );
+                                return;
+                            }
+                            lastSent =
+                                Date.now();
+                            try{
+                                await sendEncodedMessengerPayload(
+                                    HAVKAR_MESSENGER_RICH.encodeLiveLocation({
+                                        lat: next.coords.latitude,
+                                        lng: next.coords.longitude,
+                                        name: "Live location update",
+                                        address: "",
+                                        note: "Auto update",
+                                        expiresAt: state.liveShare.expiresIso,
+                                        sessionId: state.liveShare.sessionId
+                                    })
+                                );
+                            }catch(_upd){}
+                        },
+                        function(){},
+                        {
+                            enableHighAccuracy: true,
+                            maximumAge: 15000,
+                            timeout: 20000
+                        }
                     );
-                }else{
-                    encoded = HAVKAR_MESSENGER_RICH.encodeLocation({
-                        lat: lat,
-                        lng: lng,
-                        name: "Shared location",
-                        address: "",
-                        note: ""
-                    });
-                }
-                await sendEncodedMessengerPayload(encoded);
-                toggleAttachTray(false);
+                const timerId =
+                    window.setInterval(
+                        function(){
+                            if(
+                                !state.liveShare
+                            ){
+                                return;
+                            }
+                            if(
+                                Date.now() >=
+                                state.liveShare.expiresAtMs
+                            ){
+                                stopLiveLocationShare(
+                                    "Live location expired."
+                                );
+                                return;
+                            }
+                            updateLiveLocationBar();
+                        },
+                        15000
+                    );
+                state.liveShare = {
+                    watchId: watchId,
+                    timerId: timerId,
+                    expiresAtMs: expiresAtMs,
+                    expiresIso: expires,
+                    sessionId: sessionId,
+                    lastLat: lat,
+                    lastLng: lng
+                };
+                updateLiveLocationBar();
+                showToast(
+                    "Live location sharing started (15 min). Use Stop anytime.",
+                    "info"
+                );
             }catch(err){
                 showToast(err?.message || "Could not share location.", "error");
             }
@@ -9483,6 +9698,16 @@ function setupEvents(){
             "click",
             function(){
                 shareCurrentLocation(true);
+            }
+        );
+
+    $("stopLiveLocationBtn")
+        ?.addEventListener(
+            "click",
+            function(){
+                stopLiveLocationShare(
+                    "Sender stopped live sharing."
+                );
             }
         );
 

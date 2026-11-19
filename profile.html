@@ -333,14 +333,21 @@ button{
     display:block;
 }
 
+.avatar-wrapper{
+    /* keep absolute edit control clipped to avatar area */
+    overflow:visible;
+}
+
 .avatar-edit{
     position:absolute;
 
-    right:-2px;
+    right:0;
     bottom:0;
 
     width:40px;
     height:40px;
+    min-width:40px;
+    max-width:40px;
 
     border:3px solid white;
 
@@ -355,9 +362,19 @@ button{
     justify-content:center;
 
     cursor:pointer;
+    z-index:2;
+    padding:0;
+    overflow:hidden;
+    font-size:0; /* hide any leftover label text; icon keeps size via .fa */
+    line-height:0;
 
     box-shadow:
         0 3px 9px rgba(0,0,0,.2);
+}
+
+.avatar-edit i{
+    font-size:16px;
+    line-height:1;
 }
 
 .avatar-edit:active{
@@ -4686,24 +4703,24 @@ async function(){
                         </div>
 
 
+                        <button
+                            id="changePhotoBtn"
+                            class="avatar-edit"
+                            type="button"
+                            onclick="openAvatarPicker()"
+                            aria-label="Change photo"
+                            title="Change photo"
+                        >
+                            <i class="fas fa-camera" aria-hidden="true"></i>
+                        </button>
+                        <input
+                            id="avatarInput"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            onchange="handleAvatarSelected(event)"
+                        >
+
                     </div>
-
-
-                    <button
-                        id="changePhotoBtn"
-                        class="avatar-edit"
-                        type="button"
-                        onclick="openAvatarPicker()"
-                    >
-                        <i class="fas fa-camera"></i>
-                        Change Photo
-                    </button>
-                    <input
-                        id="avatarInput"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onchange="handleAvatarSelected(event)"
-                    >
 
 
                     <div class="profile-name">
@@ -7519,10 +7536,7 @@ async function(
             true;
 
         button.innerHTML =
-            `
-            <i class="fas fa-spinner fa-spin"></i>
-            Uploading...
-            `;
+            `<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>`;
 
     }
 
@@ -7684,10 +7698,7 @@ async function(
                 false;
 
             button.innerHTML =
-                `
-                <i class="fas fa-camera"></i>
-                Change Photo
-                `;
+                `<i class="fas fa-camera" aria-hidden="true"></i>`;
 
         }
 

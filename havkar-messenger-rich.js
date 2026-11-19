@@ -159,7 +159,11 @@
       ".havkar-deleted-msg{font-style:italic;color:#789;opacity:.85}" +
       ".havkar-attach-tray{display:flex;flex-wrap:wrap;gap:8px;padding:8px 10px;background:#f3faf4;border-top:1px solid #d7e6db}" +
       ".havkar-attach-tray button{min-height:40px;border-radius:10px;border:1px solid #cfe0d3;background:#fff;color:#1b5e20;font-weight:700;padding:0 12px;cursor:pointer}" +
-      ".havkar-call-blocked{padding:14px;border-radius:14px;background:#fff8e1;border:1px solid #ffe082;color:#e65100;line-height:1.45;font-size:.9rem}";
+      ".havkar-call-blocked{padding:14px;border-radius:14px;background:#fff8e1;border:1px solid #ffe082;color:#e65100;line-height:1.45;font-size:.9rem}" +
+      ".havkar-live-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:#e8f5e9;border-top:1px solid #c8e6c9;color:#1b5e20;font-weight:700;font-size:.82rem}" +
+      ".havkar-live-bar[hidden]{display:none!important}" +
+      ".havkar-live-bar button{min-height:36px;border:0;border-radius:10px;background:#c62828;color:#fff;font-weight:800;padding:0 12px;cursor:pointer}" +
+      ".havkar-loc-card.is-expired{opacity:.72;filter:grayscale(.15)}";
     document.head.appendChild(style);
   }
 
@@ -193,8 +197,16 @@
     }
     if (loc.live && loc.expiresAt) {
       var exp = document.createElement("span");
-      exp.textContent = "Live until " + String(loc.expiresAt);
+      var expired =
+        Date.parse(String(loc.expiresAt)) &&
+        Date.parse(String(loc.expiresAt)) < Date.now();
+      exp.textContent = expired
+        ? "Live sharing ended · expired " + String(loc.expiresAt)
+        : "Live until " + String(loc.expiresAt);
       meta.appendChild(exp);
+      if (expired) {
+        card.classList.add("is-expired");
+      }
     }
     card.appendChild(meta);
     var actions = document.createElement("div");
