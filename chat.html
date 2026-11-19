@@ -8880,6 +8880,8 @@ function openCreateGroupModal(){
                 try{
                     const first =
                         memberIds[0];
+                    /* Groups must not reuse listing ad_id or they collide with
+                       conversations_ad_buyer_seller_uidx on existing 1:1 threads. */
                     const inserted =
                         await withTimeout(
                             supabaseClient
@@ -8892,8 +8894,6 @@ function openCreateGroupModal(){
                                     seller_id:
                                         first,
                                     ad_id:
-                                        selected[first]
-                                            ?.id ||
                                         null,
                                     is_group:
                                         true,
