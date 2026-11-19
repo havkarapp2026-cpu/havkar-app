@@ -3480,9 +3480,62 @@ function showToast(
 ========================================================= */
 
 function goHome(){
+    /* Always land on the 15-tile home. If language was never saved,
+       seed a safe default so havkar-i18n does not bounce to language.html. */
+    try{
+        const keys = [
+            "havkar_language",
+            "selectedLanguage",
+            "language"
+        ];
+        const supported = {
+            en:1,it:1,de:1,fr:1,es:1,pt:1,nl:1,sv:1,pl:1,id:1,
+            zh:1,ja:1,ko:1,hi:1,ru:1,ku:1,tr:1,ar:1,fa:1,ur:1
+        };
+        let saved = null;
+        for(const key of keys){
+            const value =
+                String(
+                    localStorage.getItem(
+                        key
+                    ) ||
+                    ""
+                ).toLowerCase();
+            if(supported[value]){
+                saved = value;
+                break;
+            }
+        }
+        if(!saved){
+            const fallback =
+                String(
+                    document.documentElement.lang ||
+                    "en"
+                )
+                    .toLowerCase()
+                    .slice(0, 2);
+            saved =
+                supported[fallback]
+                    ? fallback
+                    : "en";
+            localStorage.setItem(
+                "havkar_language",
+                saved
+            );
+            localStorage.setItem(
+                "selectedLanguage",
+                saved
+            );
+            localStorage.setItem(
+                "language",
+                saved
+            );
+        }
+    }catch(_error){}
 
-    window.location.href =
-        "index.html";
+    window.location.assign(
+        "index.html"
+    );
 
 }
 
@@ -8865,10 +8918,8 @@ function setupEvents(){
         ?.addEventListener(
             "click",
             function () {
-                if (window.havkarNavigateBack) {
-                    window.havkarNavigateBack();
-                    return;
-                }
+                /* Owner requirement: Home/back from Messenger must open
+                   the 15-tile HAVKAR home, not language.html or history. */
                 goHome();
             }
         );
