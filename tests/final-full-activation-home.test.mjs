@@ -51,6 +51,13 @@ test("jobs ordinary plans are labeled 30-day prepaid not monthly subscription", 
   assert.ok(/€9\.99 \/ 30 days/.test(jobsHtml));
   assert.ok(!/Choose a monthly publishing plan/.test(jobsHtml));
   assert.ok(/action:\s*"jobs_quote"|\"jobs_quote\"/.test(jobsHtml));
+  assert.ok(/\/api\/create-event-checkout/.test(jobsHtml));
+});
+
+test("global-payments catalog does not swallow jobs_quote actions", () => {
+  const api = readFileSync(new URL("../api/create-event-checkout.js", import.meta.url), "utf8");
+  assert.ok(/isJobsServicesPaymentAction/.test(api));
+  assert.ok(/isGlobalPaymentsRequest\(req\) && !isJobsServicesPaymentAction/.test(api));
 });
 
 test("wallet gates Mainnet peer send on payment-status live collection", () => {
