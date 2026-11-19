@@ -1138,7 +1138,8 @@ select:focus{
 .stellar-address{display:none;margin-bottom:14px;padding:12px;border-radius:10px;background:#f3f4f6;color:#374151;font-size:12px;font-weight:700;word-break:break-all;}  
 .stellar-connect-button,.stellar-disconnect-button{width:100%;border:0;border-radius:11px;padding:14px;color:#fff;font-size:16px;font-weight:800;}  
 .stellar-connect-button{background:linear-gradient(135deg,#111827,#374151);}  
-.stellar-disconnect-button{display:none;margin-top:10px;background:#c62828;}  
+.stellar-disconnect-button{display:none;margin-top:10px;background:#c62828;}
+.stellar-secondary-button{display:block;width:100%;margin-top:10px;border:0;border-radius:11px;padding:14px;background:#37474f;color:#fff;font-size:16px;font-weight:800;}  
 .stellar-status{display:none;margin-top:12px;padding:11px;border-radius:10px;font-size:13px;line-height:1.5;word-break:break-word;}  
 .stellar-status.success{display:block;background:#e8f5e9;color:#2e7d32;}  
 .stellar-status.error{display:block;background:#ffebee;color:#c62828;}  
@@ -1360,13 +1361,16 @@ select:focus{
     </div>
     <div id="stellarReceiveRegister" class="stellar-send" style="margin-top:14px">
         <label class="stellar-label" for="stellarReceivePublicKey">Marketplace / services receive public key</label>
-        <p class="stellar-note">Register the G… account that should receive buyer XLM under direct-split settlement. HAVKAR never asks for a secret key.</p>
+        <p class="stellar-note">Register the G… account that should receive buyer XLM under direct-split settlement. HAVKAR never asks for a secret key. The Mainnet account must already exist and be funded; unfunded keys are blocked from receiving payments.</p>
         <input id="stellarReceivePublicKey" class="stellar-input" type="text" autocomplete="off" spellcheck="false" placeholder="G...">
         <button id="stellarReceiveSaveButton" class="stellar-send-button" type="button" onclick="saveHAVKARStellarReceiveKey()">
             Save receive key
         </button>
-        <button id="stellarReceiveUseConnectedButton" class="stellar-disconnect-button" type="button" onclick="useConnectedAsStellarReceiveKey()">
+        <button id="stellarReceiveUseConnectedButton" class="stellar-secondary-button" type="button" onclick="useConnectedAsStellarReceiveKey()">
             Use connected wallet
+        </button>
+        <button id="stellarReceiveCheckButton" class="stellar-secondary-button" type="button" onclick="checkHAVKARStellarReceiveKey()">
+            Check Mainnet funding
         </button>
     </div>
     <div id="stellarStatus" class="stellar-status"></div>  
@@ -5831,6 +5835,69 @@ function useConnectedAsStellarReceiveKey(){
     setStellarStatus("Connected public key copied into the receive field. Save to register it.","info");
 }
 
+async function probeStellarMainnetAccount(publicKey){
+    const key=String(publicKey||"").trim();
+    if(!/^G[A-Z2-7]{55}$/.test(key)){
+        return {
+            ok:false,
+            code:"INVALID_PUBLIC_KEY",
+            message:"Enter a valid Stellar public key (G…). Never paste a secret key."
+        };
+    }
+    try{
+        const response=await fetch(
+            "https://horizon.stellar.org/accounts/"+encodeURIComponent(key),
+            {
+                method:"GET",
+                headers:{ Accept:"application/json" }
+            }
+        );
+        if(response.status===404){
+            return {
+                ok:false,
+                code:"MAINNET_UNFUNDED",
+                message:"This public key has no funded Mainnet account yet. Create/fund it on Stellar Public before buyers can pay XLM."
+            };
+        }
+        if(!response.ok){
+            return {
+                ok:false,
+                code:"HORIZON_UNAVAILABLE",
+                message:"Horizon Mainnet could not verify this account right now. Try again shortly."
+            };
+        }
+        const body=await response.json().catch(function(){ return null; });
+        const balances=Array.isArray(body&&body.balances)?body.balances:[];
+        const native=balances.find(function(row){
+            return row&&String(row.asset_type||"")==="native";
+        });
+        const xlm=native?Number(native.balance):NaN;
+        return {
+            ok:true,
+            code:"MAINNET_FUNDED",
+            message: Number.isFinite(xlm)
+                ? ("Mainnet account is active (native balance visible). Ready to register for XLM receive.")
+                : "Mainnet account exists and is active.",
+            balance_xlm: Number.isFinite(xlm)?xlm:null
+        };
+    }catch(_error){
+        return {
+            ok:false,
+            code:"HORIZON_UNAVAILABLE",
+            message:"Could not reach Horizon Mainnet to verify the receive account."
+        };
+    }
+}
+
+async function checkHAVKARStellarReceiveKey(){
+    const input=document.getElementById("stellarReceivePublicKey");
+    const key=String(input?.value||"").trim();
+    setStellarStatus("Checking Mainnet funding on Horizon…","info");
+    const probe=await probeStellarMainnetAccount(key);
+    setStellarStatus(probe.message, probe.ok?"success":"error");
+    return probe;
+}
+
 async function saveHAVKARStellarReceiveKey(){
     const input=document.getElementById("stellarReceivePublicKey");
     const button=document.getElementById("stellarReceiveSaveButton");
@@ -5849,6 +5916,12 @@ async function saveHAVKARStellarReceiveKey(){
         const user=session?.data?.session?.user;
         if(!user?.id){
             setStellarStatus("Sign in before saving a marketplace receive key.","error");
+            return;
+        }
+        setStellarStatus("Verifying Mainnet account before save…","info");
+        const probe=await probeStellarMainnetAccount(key);
+        if(!probe.ok){
+            setStellarStatus(probe.message,"error");
             return;
         }
         const saved=await supabaseClient
@@ -5871,7 +5944,10 @@ async function saveHAVKARStellarReceiveKey(){
             );
             return;
         }
-        setStellarStatus("Receive public key saved for direct-split XLM settlement.","success");
+        setStellarStatus(
+            "Receive public key saved for direct-split XLM settlement. Mainnet account verified active. HAVKAR never stored a secret key.",
+            "success"
+        );
     }catch(error){
         setStellarStatus(error?.message||"Could not save receive key.","error");
     }finally{

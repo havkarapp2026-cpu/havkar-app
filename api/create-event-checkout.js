@@ -13,7 +13,10 @@ import {
   marketplaceCardSplit,
   buildMarketplaceDestinationCheckoutParams,
   createRecipientAccountV2,
-  createRecipientAccountOnboardingLink
+  createRecipientAccountOnboardingLink,
+  syncSellerConnectAccountRow,
+  describeSellerConnectGate,
+  connectAccountFlagsFromV2
 } from "../lib/marketplace-connect.cjs";
 import { REQUIRED_WEBHOOK_EVENTS } from "../lib/stripe-webhook-processor.cjs";
 import {
@@ -172,7 +175,8 @@ function isMarketplaceConnectRequest(req) {
       action === "marketplace_connect_onboard" ||
       action === "marketplace_connect_status" ||
       action === "marketplace_connect_quote" ||
-      action === "marketplace_buy_checkout"
+      action === "marketplace_buy_checkout" ||
+      action === "stellar_receive_validate"
   );
 }
 
@@ -3159,10 +3163,26 @@ export default async function handler(req, res) {
           )
           .eq("user_id", ad.user_id)
           .maybeSingle();
+        let connectRow = sellerConnect.data || null;
+        if (connectRow && connectRow.stripe_account_id && liveArmed) {
+          try {
+            const synced = await syncSellerConnectAccountRow(
+              getSupabaseAdmin(),
+              getStripe(),
+              ad.user_id,
+              connectRow.stripe_account_id
+            );
+            if (synced.ok && synced.account) {
+              connectRow = synced.account;
+            }
+          } catch (_syncErr) {
+            // Keep DB snapshot if Stripe sync fails; still gate on stored flags.
+          }
+        }
+        const connectGate = describeSellerConnectGate(connectRow);
         const connectedAccountId =
-          sellerConnect.data &&
-          sellerConnect.data.charges_enabled === true
-            ? sellerConnect.data.stripe_account_id
+          connectGate.live_card_eligible && connectRow
+            ? connectRow.stripe_account_id
             : null;
 
         /* Owner rule: never live-charge marketplace without seller settlement rail. */
@@ -3170,17 +3190,17 @@ export default async function handler(req, res) {
           return res.status(409).json({
             ok: false,
             charged: false,
-            code: "SELLER_CONNECT_REQUIRED",
+            code: connectGate.code || "SELLER_CONNECT_REQUIRED",
             message:
-              "Live card checkout stays blocked until this seller completes Stripe Connect with charges enabled. Quote remains available; funds would not have an operational payout path to the seller.",
+              connectGate.message ||
+              "Live card checkout stays blocked until this seller completes Stripe Connect with charges and payouts enabled.",
             receipt: {
               ...receipt,
-              seller_connect: sellerConnect.data
+              seller_connect: connectRow
                 ? {
-                    onboarding_status:
-                      sellerConnect.data.onboarding_status || null,
-                    charges_enabled: !!sellerConnect.data.charges_enabled,
-                    payouts_enabled: !!sellerConnect.data.payouts_enabled
+                    onboarding_status: connectRow.onboarding_status || null,
+                    charges_enabled: !!connectRow.charges_enabled,
+                    payouts_enabled: !!connectRow.payouts_enabled
                   }
                 : null
             },
@@ -3296,6 +3316,49 @@ export default async function handler(req, res) {
       return sendError(res, 401, auth.error || "Authentication required");
     }
 
+    if (action === "stellar_receive_validate") {
+      const {
+        assertMainnetDestinationFunded,
+        isPublicKey
+      } = require("../lib/stellar-mainnet.cjs");
+      const publicKey = String(
+        (req.body && (req.body.public_key || req.body.publicKey)) || ""
+      ).trim();
+      if (/^S[A-Z2-7]{55}$/.test(publicKey)) {
+        return res.status(400).json({
+          ok: false,
+          code: "SECRET_KEY_REJECTED",
+          message:
+            "Secret keys are rejected. Only public G… keys may be registered."
+        });
+      }
+      if (!isPublicKey(publicKey)) {
+        return res.status(400).json({
+          ok: false,
+          code: "INVALID_PUBLIC_KEY",
+          message:
+            "Provide a valid Stellar public key (G…). HAVKAR never accepts secret keys."
+        });
+      }
+      const funded = await assertMainnetDestinationFunded(publicKey);
+      if (!funded.ok) {
+        return res.status(funded.status || 409).json({
+          ok: false,
+          code: funded.code || "MAINNET_UNFUNDED",
+          message:
+            funded.error ||
+            "Mainnet account is not funded; XLM receive stays blocked."
+        });
+      }
+      return res.status(200).json({
+        ok: true,
+        code: "MAINNET_FUNDED",
+        public_key_prefix: publicKey.slice(0, 4) + "…",
+        message:
+          "Mainnet receive account exists. Register it from Wallet; payments still require Horizon settlement verification."
+      });
+    }
+
     if (action === "marketplace_connect_status") {
       const { data, error } = await getSupabaseAdmin()
         .from("marketplace_seller_connect_accounts")
@@ -3307,10 +3370,58 @@ export default async function handler(req, res) {
       if (error) {
         return sendError(res, 500, "Could not load Connect status");
       }
+      let account = data || null;
+      let sync = null;
+      if (account && account.stripe_account_id) {
+        try {
+          sync = await syncSellerConnectAccountRow(
+            getSupabaseAdmin(),
+            getStripe(),
+            auth.user.id,
+            account.stripe_account_id
+          );
+          if (sync.ok && sync.account) {
+            account = sync.account;
+          }
+        } catch (syncError) {
+          sync = {
+            ok: false,
+            error: syncError && syncError.message
+          };
+        }
+      }
+      const gate = describeSellerConnectGate(account);
+      let stellarReceive = null;
+      try {
+        const recv = await getSupabaseAdmin()
+          .from("stellar_receive_accounts")
+          .select("public_key,updated_at")
+          .eq("user_id", auth.user.id)
+          .maybeSingle();
+        stellarReceive = recv.data || null;
+      } catch (_recvErr) {
+        stellarReceive = null;
+      }
       return res.status(200).json({
         ok: true,
         live_collection: cardPaymentsAllowed() ? "armed" : "paused",
-        account: data || null
+        account,
+        gate,
+        sync,
+        stellar_receive: stellarReceive
+          ? {
+              registered: true,
+              public_key_prefix:
+                String(stellarReceive.public_key || "").slice(0, 4) + "…",
+              updated_at: stellarReceive.updated_at || null
+            }
+          : { registered: false },
+        fees: {
+          buyer_fee_rate: 0.02,
+          seller_fee_rate: 0.03,
+          note:
+            "Buyer +2% and seller −3% are HAVKAR marketplace fees. Stripe processing, tax, shipping, and Stellar network fees are separate."
+        }
       });
     }
 
@@ -3341,14 +3452,25 @@ export default async function handler(req, res) {
             "HAVKAR seller"
         });
         accountId = created.id;
+        const flags = connectAccountFlagsFromV2(created);
         await getSupabaseAdmin()
           .from("marketplace_seller_connect_accounts")
           .upsert({
             user_id: auth.user.id,
             stripe_account_id: accountId,
+            charges_enabled: flags.charges_enabled,
+            payouts_enabled: flags.payouts_enabled,
+            details_submitted: flags.details_submitted,
             onboarding_status: "pending",
             updated_at: new Date().toISOString()
           });
+      } else {
+        await syncSellerConnectAccountRow(
+          getSupabaseAdmin(),
+          stripe,
+          auth.user.id,
+          accountId
+        );
       }
 
       const origin = allowedCheckoutOrigin(req);
@@ -3358,7 +3480,7 @@ export default async function handler(req, res) {
         returnUrl: `${origin}/buy-sell.html?connect=return`
       });
 
-      // Example destination Checkout params (not charged unless Owner arms collection).
+      // Example destination Checkout params (not charged unless seller Connect ready).
       const demoSplit = marketplaceCardSplit(100);
       const exampleCheckout = buildMarketplaceDestinationCheckoutParams({
         split: demoSplit,
@@ -3370,11 +3492,21 @@ export default async function handler(req, res) {
         customerEmail: auth.user.email
       });
 
+      const statusAfter = await getSupabaseAdmin()
+        .from("marketplace_seller_connect_accounts")
+        .select(
+          "stripe_account_id,charges_enabled,payouts_enabled,details_submitted,onboarding_status,updated_at"
+        )
+        .eq("user_id", auth.user.id)
+        .maybeSingle();
+
       return res.status(200).json({
         ok: true,
         live_collection: cardPaymentsAllowed() ? "armed" : "paused",
         stripe_account_id: accountId,
         onboarding_url: accountLink.url || accountLink.link || null,
+        account: statusAfter.data || null,
+        gate: describeSellerConnectGate(statusAfter.data || null),
         fee_example_eur_100: demoSplit,
         destination_checkout_example: exampleCheckout
       });

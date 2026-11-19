@@ -7,7 +7,9 @@ const {
   marketplaceCardSplit,
   buildRecipientAccountV2CreateBody,
   buildMarketplaceDestinationCheckoutParams,
-  connectAccountFlagsFromV2
+  connectAccountFlagsFromV2,
+  describeSellerConnectGate,
+  syncSellerConnectAccountRow
 } = require("../lib/marketplace-connect.cjs");
 
 test("marketplace 2% buyer + 3% seller routes 5% application fee on destination charge", () => {
@@ -70,4 +72,80 @@ test("destination Checkout params keep fee routing server-side", () => {
     "acct_test_seller"
   );
   assert.equal(params.metadata.havkar_flow, "marketplace");
+});
+
+test("describeSellerConnectGate blocks until charges and payouts are enabled", () => {
+  assert.equal(describeSellerConnectGate(null).code, "CONNECT_NOT_STARTED");
+  assert.equal(
+    describeSellerConnectGate({
+      stripe_account_id: "acct_x",
+      charges_enabled: false,
+      payouts_enabled: false
+    }).live_card_eligible,
+    false
+  );
+  assert.equal(
+    describeSellerConnectGate({
+      stripe_account_id: "acct_x",
+      charges_enabled: true,
+      payouts_enabled: true
+    }).code,
+    "CONNECT_READY"
+  );
+});
+
+test("syncSellerConnectAccountRow upserts flags from Stripe retrieve", async () => {
+  const calls = [];
+  const admin = {
+    from(table) {
+      assert.equal(table, "marketplace_seller_connect_accounts");
+      return {
+        upsert(row) {
+          calls.push(row);
+          return {
+            select() {
+              return {
+                async maybeSingle() {
+                  return { data: row, error: null };
+                }
+              };
+            }
+          };
+        }
+      };
+    }
+  };
+  const stripe = {
+    v2: {
+      core: {
+        accounts: {
+          async retrieve() {
+            return {
+              id: "acct_sync",
+              configuration: {
+                recipient: {
+                  capabilities: {
+                    stripe_balance: {
+                      stripe_transfers: { status: "active" }
+                    }
+                  }
+                }
+              }
+            };
+          }
+        }
+      }
+    }
+  };
+  const result = await syncSellerConnectAccountRow(
+    admin,
+    stripe,
+    "user-1",
+    "acct_sync"
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.live_checkout_eligible, true);
+  assert.equal(calls[0].charges_enabled, true);
+  assert.equal(calls[0].payouts_enabled, true);
+  assert.equal(calls[0].onboarding_status, "complete");
 });
