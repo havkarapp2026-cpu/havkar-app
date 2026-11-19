@@ -1068,6 +1068,16 @@ button:focus-visible{
         </div>
 
         <button
+            id="retryListingButton"
+            class="back-market"
+            type="button"
+            style="margin-bottom:10px;"
+        >
+            <i class="fas fa-rotate-right"></i>
+            &nbsp; Try again
+        </button>
+
+        <button
             id="backMarketButton"
             class="back-market"
             type="button"
@@ -1440,13 +1450,64 @@ button:focus-visible{
                 </span>
             </button>
 
+            <button
+                id="reportButton"
+                class="action-button secondary"
+                type="button"
+            >
+                <i class="fas fa-flag"></i>
+                <span>
+                    Report
+                </span>
+            </button>
+
+        </div>
+
+        <div id="reportDialog" class="delete-dialog" hidden role="dialog" aria-modal="true">
+            <div class="delete-dialog-card">
+                <h2>Report this listing?</h2>
+                <p>Tell HAVKAR why this marketplace listing should be reviewed. Ads/advertising stays separate.</p>
+                <label for="reportReason">Reason</label>
+                <select id="reportReason">
+                    <option value="spam">Spam or misleading</option>
+                    <option value="prohibited">Prohibited item</option>
+                    <option value="fraud">Suspected fraud</option>
+                    <option value="other">Other</option>
+                </select>
+                <label for="reportDetails">Details (optional)</label>
+                <textarea id="reportDetails" maxlength="500" rows="3"></textarea>
+                <div class="delete-dialog-actions">
+                    <button id="cancelReportButton" class="owner-button edit" type="button">Cancel</button>
+                    <button id="confirmReportButton" class="owner-button delete" type="button">Submit report</button>
+                </div>
+            </div>
         </div>
 
     </section>
 
 </main>
 
-<nav class="bottom-nav">
+<nav class="bottom-nav" aria-label="Buy and Sell navigation">
+    <div class="nav-item" id="navHome" role="button" tabindex="0">
+        <i class="fas fa-house"></i>
+        <span>Home</span>
+    </div>
+    <div class="nav-item active" id="navSearch" role="button" tabindex="0">
+        <i class="fas fa-magnifying-glass"></i>
+        <span>Search</span>
+    </div>
+    <div class="nav-item" id="navSaved" role="button" tabindex="0">
+        <i class="fas fa-heart"></i>
+        <span>Saved</span>
+    </div>
+    <div class="nav-item" id="navMessages" role="button" tabindex="0">
+        <i class="fas fa-comment"></i>
+        <span>Messages</span>
+    </div>
+    <div class="nav-item" id="navProfile" role="button" tabindex="0">
+        <i class="fas fa-user"></i>
+        <span>Settings</span>
+    </div>
 </nav>
 
 <div
@@ -1558,6 +1619,15 @@ const state = {
 
 const $ = id =>
     document.getElementById(id);
+
+function on(id, eventName, handler){
+    const node = typeof id === "string" ? $(id) : id;
+    if(!node || typeof node.addEventListener !== "function"){
+        return false;
+    }
+    node.addEventListener(eventName, handler);
+    return true;
+}
 
 
 /* =========================================================
@@ -3315,42 +3385,28 @@ function renderGallery(){
    ========================================================= */
 
 function showContent(){
-
-    $("loading").style.display =
-        "none";
-
-    $("errorBox")
-        .classList.remove(
-            "visible"
-        );
-
-    $("content")
-        .classList.add(
-            "visible"
-        );
-
+    const loading = $("loading");
+    const errorBox = $("errorBox");
+    const content = $("content");
+    if(loading){ loading.style.display = "none"; }
+    if(errorBox){ errorBox.classList.remove("visible"); }
+    if(content){ content.classList.add("visible"); }
 }
 
 
 function showError(message){
-
-    $("loading").style.display =
-        "none";
-
-    $("content")
-        .classList.remove(
-            "visible"
-        );
-
-    $("errorText").textContent =
-        message ||
-        "This listing could not be loaded.";
-
-    $("errorBox")
-        .classList.add(
-            "visible"
-        );
-
+    const loading = $("loading");
+    const content = $("content");
+    const errorText = $("errorText");
+    const errorBox = $("errorBox");
+    if(loading){ loading.style.display = "none"; }
+    if(content){ content.classList.remove("visible"); }
+    if(errorText){
+        errorText.textContent =
+            message ||
+            "This listing could not be loaded.";
+    }
+    if(errorBox){ errorBox.classList.add("visible"); }
 }
 
 
@@ -3484,10 +3540,28 @@ function goBuySell(){
 
 
 function goHome(){
-
-    window.location.href =
-        "index.html";
-
+    try{
+        const keys = ["havkar_language","selectedLanguage","language"];
+        const supported = {
+            en:1,it:1,de:1,fr:1,es:1,pt:1,nl:1,sv:1,pl:1,id:1,
+            zh:1,ja:1,ko:1,hi:1,tr:1,ru:1,uk:1,fa:1,ar:1,ur:1,
+            ckb:1,kmr:1
+        };
+        let have = "";
+        for(let i=0;i<keys.length;i++){
+            const v = String(localStorage.getItem(keys[i]) || "").trim().toLowerCase();
+            if(v && supported[v]){ have = v; break; }
+        }
+        if(!have){ have = "en"; }
+        localStorage.setItem("havkar_language", have);
+        localStorage.setItem("selectedLanguage", have);
+        localStorage.setItem("language", have);
+        localStorage.setItem(
+            "havkar_language_dir",
+            (have === "fa" || have === "ar" || have === "ur" || have === "ckb") ? "rtl" : "ltr"
+        );
+    }catch(_e){}
+    window.location.href = "index.html";
 }
 
 
@@ -4382,54 +4456,20 @@ async function confirmOwnerDelete(){
 
 
 function setupOwnerActions(){
-
-    $("editButton")
-        .addEventListener(
-            "click",
-            openEditForm
-        );
-
-    $("cancelEditButton")
-        .addEventListener(
-            "click",
-            closeEditForm
-        );
-
-    $("editForm")
-        .addEventListener(
-            "submit",
-            saveOwnerEdit
-        );
-
-    $("deleteButton")
-        .addEventListener(
-            "click",
-            () => {
-
-                if(!state.isOwnListing){
-
-                    return;
-
-                }
-
-                $("deleteDialog").hidden =
-                    false;
-
-            }
-        );
-
-    $("cancelDeleteButton")
-        .addEventListener(
-            "click",
-            closeDeleteDialog
-        );
-
-    $("confirmDeleteButton")
-        .addEventListener(
-            "click",
-            confirmOwnerDelete
-        );
-
+    on("editButton", "click", openEditForm);
+    on("cancelEditButton", "click", closeEditForm);
+    on("editForm", "submit", saveOwnerEdit);
+    on("deleteButton", "click", () => {
+        if(!state.isOwnListing){
+            return;
+        }
+        const dialog = $("deleteDialog");
+        if(dialog){
+            dialog.hidden = false;
+        }
+    });
+    on("cancelDeleteButton", "click", closeDeleteDialog);
+    on("confirmDeleteButton", "click", confirmOwnerDelete);
 }
 
 
@@ -4842,144 +4882,91 @@ async function quoteListingXlm(){
 }
 
 
-function setupNavigation(){
 
-    $("backButton")
-        .addEventListener(
-            "click",
-            goBuySell
-        );
-
-    $("backMarketButton")
-        .addEventListener(
-            "click",
-            goBuySell
-        );
-
-    $("headerSave")
-        .addEventListener(
-            "click",
-            toggleSaved
-        );
-
-    $("gallerySave")
-        .addEventListener(
-            "click",
-            toggleSaved
-        );
-
-    $("galleryShare")
-        .addEventListener(
-            "click",
-            shareCurrentListing
-        );
-
-    const buyXlmButton =
-        $("buyXlmButton");
-
-    if(buyXlmButton){
-
-        buyXlmButton.addEventListener(
-            "click",
-            quoteListingXlm
-        );
-
+async function submitListingReport(){
+    if(!state.ad || !state.ad.id){
+        showToast("This listing cannot be reported.");
+        return;
     }
-
-    const buyCardButton =
-        $("buyCardButton");
-
-    if(buyCardButton){
-        buyCardButton.addEventListener(
-            "click",
-            startBuyCardCheckout
-        );
+    if(!state.currentUserId){
+        showToast("Please sign in to report a listing.");
+        window.setTimeout(() => { window.location.href = "login.html"; }, 900);
+        return;
     }
-
-    const buyCurrencySearch =
-        $("buyCurrencySearch");
-
-    if(buyCurrencySearch){
-        buyCurrencySearch.addEventListener(
-            "input",
-            function () {
-                renderBuyCurrencyList(this.value);
+    if(state.isOwnListing){
+        showToast("You cannot report your own listing.");
+        return;
+    }
+    const reason = (($("reportReason") && $("reportReason").value) || "other").trim();
+    const details = (($("reportDetails") && $("reportDetails").value) || "").trim();
+    const btn = $("confirmReportButton");
+    if(btn){ btn.disabled = true; }
+    try{
+        initializeSupabase();
+        let result = await supabaseClient.rpc(
+            "create_marketplace_listing_report",
+            { p_ad_id: Number(state.ad.id), p_reason: reason, p_details: details || null }
+        );
+        if(result.error){
+            // Honest fallback: advertising-only RPC must not silently claim success for marketplace.
+            const msg = String(result.error.message || result.error.code || "");
+            if(/function|schema cache|does not exist|404/i.test(msg)){
+                showToast("Marketplace reporting is not armed on this database yet. Ads reporting stays separate.");
+            }else{
+                showToast(msg || "Report could not be sent.");
             }
-        );
+            return;
+        }
+        const dialog = $("reportDialog");
+        if(dialog){ dialog.hidden = true; }
+        showToast("Report submitted. Thank you.");
+    }catch(err){
+        showToast((err && err.message) || "Report could not be sent.");
+    }finally{
+        if(btn){ btn.disabled = false; }
     }
+}
 
-    $("saveButton")
-        .addEventListener(
-            "click",
-            toggleSaved
-        );
-
-    $("messageButton")
-        .addEventListener(
-            "click",
-            openSellerMessage
-        );
-
+function setupNavigation(){
+    on("backButton", "click", goBuySell);
+    on("backMarketButton", "click", goBuySell);
+    on("retryListingButton", "click", () => { window.location.reload(); });
+    on("reportButton", "click", () => {
+        const dialog = $("reportDialog");
+        if(dialog){ dialog.hidden = false; }
+    });
+    on("cancelReportButton", "click", () => {
+        const dialog = $("reportDialog");
+        if(dialog){ dialog.hidden = true; }
+    });
+    on("confirmReportButton", "click", submitListingReport);
+    on("headerSave", "click", toggleSaved);
+    on("gallerySave", "click", toggleSaved);
+    on("galleryShare", "click", shareCurrentListing);
+    on("buyXlmButton", "click", quoteListingXlm);
+    on("buyCardButton", "click", startBuyCardCheckout);
+    on("buyCurrencySearch", "input", function () {
+        renderBuyCurrencyList(this.value);
+    });
+    on("saveButton", "click", toggleSaved);
+    on("messageButton", "click", openSellerMessage);
     setupOwnerActions();
-
-    $("navHome")
-        .addEventListener(
-            "click",
-            goHome
-        );
-
-    $("navSearch")
-        .addEventListener(
-            "click",
-            goBuySell
-        );
-
-    $("navSaved")
-        .addEventListener(
-            "click",
-            goSaved
-        );
-
-    $("navMessages")
-        .addEventListener(
-            "click",
-            goMessages
-        );
-
-    $("navProfile")
-        .addEventListener(
-            "click",
-            goProfile
-        );
+    on("navHome", "click", goHome);
+    on("navSearch", "click", goBuySell);
+    on("navSaved", "click", goSaved);
+    on("navMessages", "click", goMessages);
+    on("navProfile", "click", goProfile);
 
     document
-        .querySelectorAll(
-            ".nav-item"
-        )
-        .forEach(
-            item => {
-
-                item.addEventListener(
-                    "keydown",
-                    event => {
-
-                        if(
-                            event.key === "Enter" ||
-                            event.key === " "
-                        ){
-
-                            event.preventDefault();
-
-                            item.click();
-
-                        }
-
-                    }
-                );
-
-            }
-        );
-
+        .querySelectorAll(".nav-item")
+        .forEach(item => {
+            item.addEventListener("keydown", event => {
+                if(event.key === "Enter" || event.key === " "){
+                    event.preventDefault();
+                    item.click();
+                }
+            });
+        });
 }
 
 
@@ -5289,5 +5276,7 @@ document.addEventListener(
 
 </script>
 
+<script src="/havkar-ui-i18n21.js"></script>
+<script src="/havkar-i18n.js"></script>
 </body>
     </html>

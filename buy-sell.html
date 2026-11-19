@@ -847,6 +847,24 @@ input:focus-visible{
     }
 
 }
+
+.explore-video-overlay{
+  position:fixed; inset:0; z-index:1200; background:rgba(0,0,0,.92);
+  display:flex; align-items:center; justify-content:center; padding:12px;
+}
+.explore-video-overlay[hidden]{ display:none !important; }
+.explore-video-shell{ width:min(100%,720px); display:flex; flex-direction:column; gap:10px; }
+.explore-video-shell video{ width:100%; max-height:70vh; background:#000; border-radius:12px; }
+.explore-video-bar{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+.explore-video-bar button{
+  border:0; border-radius:999px; padding:10px 14px; font-weight:700;
+  background:#1f8f4e; color:#fff;
+}
+.ad-card .video-badge{
+  position:absolute; left:10px; bottom:10px; z-index:2;
+  background:rgba(0,0,0,.65); color:#fff; border-radius:999px;
+  padding:4px 8px; font-size:11px; font-weight:700;
+}
 </style>
 
 </head>
@@ -1144,6 +1162,20 @@ aria-label="Post a new ad"
 
 </nav>
 
+
+<div id="exploreVideoOverlay" class="explore-video-overlay" hidden>
+  <div class="explore-video-shell">
+    <video id="exploreVideoEl" playsinline controls></video>
+    <div class="explore-video-bar">
+      <button type="button" id="exploreVideoMute" aria-label="Mute">Mute</button>
+      <button type="button" id="exploreVideoPause" aria-label="Pause">Pause</button>
+      <button type="button" id="exploreVideoSave" aria-label="Save">Save</button>
+      <button type="button" id="exploreVideoShare" aria-label="Share">Share</button>
+      <button type="button" id="exploreVideoOpen" aria-label="Open listing">Open</button>
+      <button type="button" id="exploreVideoClose" aria-label="Close">Close</button>
+    </div>
+  </div>
+</div>
 <div
     id="toast"
     class="toast"
@@ -2761,7 +2793,8 @@ async function fetchListings(
         "listing_surface",
         "expires_at",
         "latitude",
-        "longitude"
+        "longitude",
+        "video_path"
     ];
 
     let surfaceFilter =
@@ -3161,6 +3194,7 @@ function cardHtml(
             class="ad-card"
             data-ad-id="${escapeHtml(ad.id)}"
             data-id="${escapeHtml(ad.id)}"
+            data-video-path="${escapeHtml(ad.video_path || "")}"
             data-location="${escapeHtml(locationRaw)}"
             data-label="${escapeHtml(String(locationRaw).slice(0, 80))}"
             ${latAttr}${lngAttr}
@@ -3212,6 +3246,12 @@ function cardHtml(
                 <span class="condition-badge">
                     ${category}
                 </span>
+
+                ${
+                    ad.video_path
+                        ? `<span class="video-badge"><i class="fas fa-play"></i> Video</span>`
+                        : ""
+                }
 
                 <img
                     alt="${title}"
@@ -3527,10 +3567,15 @@ function renderAds(
         card => {
 
             const open =
-                () =>
-                    openAd(
-                        card.dataset.adId
-                    );
+                () => {
+                    const id = card.dataset.adId;
+                    const videoPath = String(card.dataset.videoPath || "").trim();
+                    if(state.exploreMode && videoPath){
+                        openExploreVideo(id, videoPath);
+                        return;
+                    }
+                    openAd(id);
+                };
 
             const shareButton =
                 card.querySelector(
@@ -3927,6 +3972,99 @@ async function loadListings(){
 /* =========================================================
    NAVIGATION
    ========================================================= */
+
+
+const exploreVideoState = { adId: null, muted: false };
+
+function closeExploreVideo(){
+    const overlay = $("exploreVideoOverlay");
+    const video = $("exploreVideoEl");
+    if(video){
+        try{ video.pause(); video.removeAttribute("src"); video.load(); }catch(_e){}
+    }
+    if(overlay){ overlay.hidden = true; }
+    exploreVideoState.adId = null;
+}
+
+async function openExploreVideo(adId, videoPath){
+    if(!adId){ return; }
+    if(!videoPath || !window.HAVKAR_MARKETPLACE || typeof window.HAVKAR_MARKETPLACE.signedListingVideoUrl !== "function"){
+        openAd(adId);
+        return;
+    }
+    const overlay = $("exploreVideoOverlay");
+    const video = $("exploreVideoEl");
+    if(!overlay || !video){
+        openAd(adId);
+        return;
+    }
+    exploreVideoState.adId = String(adId);
+    overlay.hidden = false;
+    try{
+        const signed = await window.HAVKAR_MARKETPLACE.signedListingVideoUrl(
+            initializeSupabase(),
+            videoPath
+        );
+        if(!signed || !signed.ok || !signed.url){
+            showToast("This video is not available.");
+            closeExploreVideo();
+            openAd(adId);
+            return;
+        }
+        video.src = signed.url;
+        video.muted = exploreVideoState.muted;
+        await video.play().catch(function(){});
+    }catch(err){
+        showToast((err && err.message) || "Video could not be played.");
+        closeExploreVideo();
+        openAd(adId);
+    }
+}
+
+function setupExploreVideoControls(){
+    onClick("exploreVideoClose", closeExploreVideo);
+    onClick("exploreVideoOpen", function(){
+        const id = exploreVideoState.adId;
+        closeExploreVideo();
+        if(id){ openAd(id); }
+    });
+    onClick("exploreVideoMute", function(){
+        const video = $("exploreVideoEl");
+        const btn = $("exploreVideoMute");
+        if(!video){ return; }
+        video.muted = !video.muted;
+        exploreVideoState.muted = video.muted;
+        if(btn){ btn.textContent = video.muted ? "Unmute" : "Mute"; }
+    });
+    onClick("exploreVideoPause", function(){
+        const video = $("exploreVideoEl");
+        const btn = $("exploreVideoPause");
+        if(!video){ return; }
+        if(video.paused){
+            video.play().catch(function(){});
+            if(btn){ btn.textContent = "Pause"; }
+        }else{
+            video.pause();
+            if(btn){ btn.textContent = "Play"; }
+        }
+    });
+    onClick("exploreVideoSave", function(event){
+        if(exploreVideoState.adId){
+            toggleSaved(exploreVideoState.adId, event);
+        }
+    });
+    onClick("exploreVideoShare", function(event){
+        if(exploreVideoState.adId){
+            shareCard(exploreVideoState.adId, event);
+        }
+    });
+    const overlay = $("exploreVideoOverlay");
+    if(overlay){
+        overlay.addEventListener("click", function(e){
+            if(e.target === overlay){ closeExploreVideo(); }
+        });
+    }
+}
 
 function openAd(
     id
