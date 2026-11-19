@@ -143,3 +143,11 @@ test("verification badges use check/star/diamond shapes from CSS", () => {
   assert.ok(/havkar_public_verification_badges/.test(js));
   assert.ok(/server state only|Verified badges come from server/i.test(js));
 });
+
+
+test("chat outbox never marks delivered or read offline", () => {
+  assert.ok(/Offline outbox: queue locally when offline; never mark delivered\/read here/.test(chatHtml));
+  assert.ok(/havkar_mark_messages_delivered/.test(chatHtml) || /havkar_mark_messages_read/.test(chatHtml));
+  assert.ok(/\.message-checks\.read\{/.test(chatHtml));
+  assert.doesNotMatch(chatHtml, /markReadLocallyOnly|fakeDelivered|simulateReadReceipt/i);
+});
