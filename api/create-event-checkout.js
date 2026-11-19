@@ -3531,13 +3531,26 @@ export default async function handler(req, res) {
     }
   }
 
+  const isXlmPaymentRequest =
+    String((req.body && req.body.payment_method) || "").toLowerCase() ===
+      "xlm" ||
+    String((req.query && req.query.payment_method) || "").toLowerCase() ===
+      "xlm";
+
+  /* XLM is a separate Stellar rail — do not require Stripe secrets for quotes/verify. */
   if (
-    !process.env.STRIPE_SECRET_KEY ||
     !process.env.SUPABASE_URL ||
-    !process.env.SUPABASE_SERVICE_ROLE_KEY
+    !process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    (!isXlmPaymentRequest && !process.env.STRIPE_SECRET_KEY)
   ) {
     console.error(
-      "Missing required server environment variables"
+      "Missing required server environment variables",
+      {
+        has_supabase_url: Boolean(process.env.SUPABASE_URL),
+        has_service_role: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+        has_stripe_secret: Boolean(process.env.STRIPE_SECRET_KEY),
+        xlm_request: isXlmPaymentRequest
+      }
     );
 
     return sendError(
