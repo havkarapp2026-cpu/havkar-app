@@ -1587,6 +1587,7 @@ button:focus-visible{
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-ad-publish.js"></script>
+<script src="/havkar-presentment-currencies.js"></script>
 <script src="/havkar-marketplace.js"></script>
 <script src="/havkar-messenger-share.js"></script>
 <script src="/stellar-wallet-bundle.js"></script>
@@ -1863,20 +1864,33 @@ function formatPrice(value, currencyCode){
 
     if(Number.isFinite(numeric)){
 
+        const rawCurrency =
+            String(currencyCode || "EUR").trim().toUpperCase();
         const currency =
-            currencyCode === "USD"
-                ? "USD"
+            /^[A-Z]{3}$/.test(rawCurrency) && rawCurrency !== "XLM"
+                ? rawCurrency
                 : "EUR";
+        let decimals = 2;
+        if(
+            window.HAVKAR_MARKETPLACE &&
+            typeof window.HAVKAR_MARKETPLACE.currencyMeta === "function"
+        ){
+            decimals = window.HAVKAR_MARKETPLACE.currencyMeta(currency).decimals;
+        }
 
-        return new Intl.NumberFormat(
-            "en-US",
-            {
-                style: "currency",
-                currency: currency,
-                minimumFractionDigits:0,
-                maximumFractionDigits:2
-            }
-        ).format(numeric);
+        try{
+            return new Intl.NumberFormat(
+                "en-US",
+                {
+                    style: "currency",
+                    currency: currency,
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals
+                }
+            ).format(numeric);
+        }catch(_e){
+            return String(numeric) + " " + currency;
+        }
 
     }
 
@@ -4708,7 +4722,13 @@ function renderBuyCurrencyList(filter){
             btn.innerHTML = "<span></span><span></span>";
             btn.children[0].textContent =
                 String(c.code || "").toUpperCase() + " — " + (c.name || "");
-            btn.children[1].textContent = c.symbol || "";
+            btn.children[1].textContent =
+                (c.symbol || "") +
+                (c.checkout_allowed === false
+                    ? " · display/quote only"
+                    : (buyCheckoutState.liveCollection === "paused"
+                        ? " · charge paused"
+                        : " · charge-capable"));
             btn.addEventListener("click", function () {
                 buyCheckoutState.selected = c;
                 renderBuyCurrencyList(
@@ -4720,30 +4740,54 @@ function renderBuyCurrencyList(filter){
         });
 }
 
-function listingPriceEurGuess(){
+async function listingPriceEurGuess(){
     const ad = state.ad;
     const amount = Number(ad && ad.price);
     if(!Number.isFinite(amount) || amount <= 0){
-        return 0;
+        return { ok:false, eur:0 };
     }
     const currency = String((ad && ad.currency) || "EUR").toUpperCase();
     if(currency === "EUR" || !currency){
-        return amount;
+        return { ok:true, eur:amount, currency:"EUR", fx_source:"identity" };
     }
-    // Quote API converts presentment from EUR list; for non-EUR listings
-    // send the listed major as EUR-equivalent until FX reverse is available client-side.
-    return amount;
+    try{
+        const res = await fetch("/api/currency-matrix");
+        const body = await res.json();
+        const rates = (body.fx && body.fx.rates) || body.rates || null;
+        if(
+            window.HAVKAR_MARKETPLACE &&
+            typeof window.HAVKAR_MARKETPLACE.listingPriceToEur === "function"
+        ){
+            const converted = window.HAVKAR_MARKETPLACE.listingPriceToEur(ad, rates || {});
+            if(converted && converted.ok){
+                return {
+                    ok:true,
+                    eur: converted.eur,
+                    currency: currency,
+                    fx_rate: converted.rate,
+                    fx_source: body.fx_source || (body.fx && body.fx.source) || null,
+                    fx_date: body.fx_date || (body.fx && body.fx.date) || null
+                };
+            }
+        }
+    }catch(_e){}
+    return { ok:false, eur:0, currency:currency, error:"fx_unavailable" };
 }
 
 async function refreshBuyQuote(){
     const totals = $("buyTotals");
     const cardBtn = $("buyCardButton");
-    const amountEur = listingPriceEurGuess();
+    const priced = await listingPriceEurGuess();
+    const amountEur = priced && priced.ok ? Number(priced.eur) : 0;
     const currency =
         (buyCheckoutState.selected && buyCheckoutState.selected.code) || "eur";
+    const selected = buyCheckoutState.selected || {};
+    const chargeable = selected.checkout_allowed !== false;
     if(!(amountEur > 0)){
         if(totals){
-            totals.textContent = "No purchasable price on this listing.";
+            totals.textContent = priced && priced.error === "fx_unavailable"
+                ? "FX rate for this listing currency is unavailable right now."
+                : "No purchasable price on this listing.";
         }
         if(cardBtn){
             cardBtn.disabled = true;
@@ -4804,21 +4848,37 @@ async function refreshBuyQuote(){
                 "</div>";
         }
         if(cardBtn){
-            cardBtn.disabled = false;
-            cardBtn.textContent =
-                buyCheckoutState.liveCollection === "armed"
-                    ? "Pay with card (Stripe) — " +
-                      q.buyer_pays +
-                      " " +
-                      q.currency
-                    : "Get card checkout quote — live collection paused";
+            const canCharge =
+                chargeable &&
+                buyCheckoutState.liveCollection === "armed";
+            cardBtn.disabled = !canCharge;
+            if(!chargeable){
+                cardBtn.textContent =
+                    "Card charge unavailable for " +
+                    String(q.currency || "").toUpperCase() +
+                    " (display/quote only)";
+            }else if(buyCheckoutState.liveCollection === "armed"){
+                cardBtn.textContent =
+                    "Pay with card (Stripe) — " +
+                    q.buyer_pays +
+                    " " +
+                    q.currency;
+            }else{
+                cardBtn.textContent =
+                    "Card quote ready — live collection paused (Owner gate)";
+                /* Quote path still allowed via startBuyCardCheckout when paused. */
+                cardBtn.disabled = false;
+            }
         }
         const note = $("buyGateNote");
         if(note){
             note.textContent =
                 "Live collection: " +
                 buyCheckoutState.liveCollection +
-                ". Public live payments stay OFF without Owner authorization.";
+                (chargeable
+                    ? ". Selected currency is Stripe-charge-capable when Owner arms live payments."
+                    : ". Selected currency is display/quote only — not offered as a live charge currency.") +
+                " Public live payments stay OFF without Owner authorization.";
         }
     }catch(err){
         if(totals){
@@ -4949,6 +5009,67 @@ async function quoteListingXlm(){
 
     }
 
+    /* Convert listing presentment currency → EUR before XLM quote. */
+    const priced = await listingPriceEurGuess();
+    const amountEur =
+        priced && priced.ok ? Number(priced.eur) : NaN;
+    if(!(amountEur > 0)){
+        showToast(
+            (priced && priced.error === "fx_unavailable")
+                ? "FX unavailable for this listing currency — cannot quote XLM."
+                : "No EUR amount available for XLM quote."
+        );
+        return;
+    }
+
+    let netInfo = null;
+    if(typeof window.HAVKAR_XLM.describeNetworkAvailability === "function"){
+        try{
+            netInfo = await window.HAVKAR_XLM.describeNetworkAvailability();
+        }catch(_netErr){
+            netInfo = null;
+        }
+    }
+    const liveMainnetOff =
+        !netInfo ||
+        netInfo.preferred !== "mainnet";
+
+    /* Dry-run / Owner-gated path: quote only — never sign or transfer real XLM. */
+    if(liveMainnetOff){
+        const quoted = await window.HAVKAR_XLM.quote({
+            flow: "marketplace",
+            price: amountEur,
+            subjectId: String(ad.id),
+            accessToken: accessToken,
+            network: "testnet"
+        });
+        const result = quoted && quoted.result;
+        const receipt = $("buyReceipt");
+        if(receipt){
+            receipt.hidden = false;
+            receipt.textContent = JSON.stringify(
+                {
+                    mode: "xlm_dry_run_quote",
+                    listing_currency: (ad && ad.currency) || null,
+                    listing_price: amount,
+                    listing_price_eur: amountEur,
+                    fx_source: priced && priced.fx_source,
+                    fx_date: priced && priced.fx_date,
+                    network_fee_separate: true,
+                    live_transfer: false,
+                    quote: result
+                },
+                null,
+                2
+            );
+        }
+        showToast(
+            (window.HAVKAR_XLM.describe(result) || "XLM dry-run quote ready.") +
+                " Live XLM transfer stays OFF without Owner authorization."
+        );
+        return;
+    }
+
     if (typeof window.havkarConnectStellarWallet === "function") {
         try {
             await window.havkarConnectStellarWallet();
@@ -4964,7 +5085,7 @@ async function quoteListingXlm(){
     const settled =
         await window.HAVKAR_XLM.payAndVerify({
             flow: "marketplace",
-            price: amount,
+            price: amountEur,
             subjectId: String(ad.id),
             accessToken: accessToken
         });

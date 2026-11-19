@@ -25,7 +25,8 @@ import {
   buildXlmQuote,
   verifyStellarSettlement,
   saveUnpaidIntent,
-  xlmFromEur
+  xlmFromEur,
+  quoteFeesForFlow
 } from "../lib/stellar-checkout.cjs";
 let stripeClient = null;
 let supabaseAdminClient = null;
@@ -1102,7 +1103,7 @@ async function validateXlmQuoteSubject(admin, userId, decision) {
 
     const loaded = await admin
       .from("ads")
-      .select("id,user_id,price,status,listing_surface")
+      .select("id,user_id,price,currency,status,listing_surface")
       .eq("id", listingId)
       .maybeSingle();
 
@@ -1170,24 +1171,96 @@ async function validateXlmQuoteSubject(admin, userId, decision) {
       };
     }
 
-    if (Number(decision.fees.price) !== listed) {
+    /* XLM settlement is EUR-denominated. Convert listing presentment → EUR. */
+    const listingCurrency = String(ad.currency || "EUR")
+      .trim()
+      .toUpperCase();
+    let listedEur = listed;
+    let fxMeta = {
+      source: "identity",
+      rate: 1,
+      date: null
+    };
+
+    if (listingCurrency && listingCurrency !== "EUR") {
+      if (listingCurrency === "XLM") {
+        return {
+          ok: false,
+          status: 409,
+          code: "LISTING_CURRENCY_INVALID",
+          error: "Listing quotation currency cannot be XLM.",
+          paid: false,
+          order_paid: false,
+          payable: false
+        };
+      }
+      try {
+        const { fetchEurRates } = require("../lib/havkar-fx-rates.cjs");
+        const fx = await fetchEurRates();
+        const rate = fx && fx.rates ? Number(fx.rates[listingCurrency]) : NaN;
+        if (!Number.isFinite(rate) || rate <= 0) {
+          return {
+            ok: false,
+            status: 409,
+            code: "FX_UNAVAILABLE",
+            error:
+              "No verified FX rate to convert " +
+              listingCurrency +
+              " listing price to EUR for XLM quote.",
+            paid: false,
+            order_paid: false,
+            payable: false
+          };
+        }
+        listedEur = Math.round((listed / rate) * 100) / 100;
+        fxMeta = {
+          source: fx.source || null,
+          source_url: fx.source_url || null,
+          rate: rate,
+          date: fx.date || null,
+          fetched_at: fx.fetched_at || null
+        };
+      } catch (_fxErr) {
+        return {
+          ok: false,
+          status: 503,
+          code: "FX_PROVIDER_ERROR",
+          error: "FX provider failed while converting listing price for XLM.",
+          paid: false,
+          order_paid: false,
+          payable: false
+        };
+      }
+    }
+
+    const eurFees = quoteFeesForFlow("marketplace", listedEur);
+    if (!eurFees) {
       return {
         ok: false,
         status: 409,
-        code: "PRICE_MISMATCH",
-        error: "Quoted price does not match the current listing price.",
+        code: "LISTING_PRICE_INVALID",
+        error: "Could not quote marketplace fees for the EUR listing amount.",
         paid: false,
         order_paid: false,
         payable: false
       };
     }
 
+    /* Server-authoritative EUR fees — ignore client-sent listing-currency price. */
+    decision.fees = eurFees;
+    decision.listing_currency = listingCurrency;
+    decision.listing_price = listed;
+    decision.listing_price_eur = listedEur;
+    decision.listing_fx = fxMeta;
+
     const merchantKey = await loadMerchantStellarReceive(admin, ad.user_id);
 
     return {
       ok: true,
       listing: ad,
-      merchant_stellar_receive: merchantKey
+      merchant_stellar_receive: merchantKey,
+      listing_price_eur: listedEur,
+      listing_fx: fxMeta
     };
   }
 
@@ -1906,11 +1979,33 @@ export default async function handler(req, res) {
         const out = await cancelOmioBooking(req.body || {}, process.env);
         return res.status(out.ok ? 200 : 409).json(out);
       }
+      const fx = await fetchEurRates();
+      const matrix = describeCurrencyMatrix();
+      const coverage = require("../lib/havkar-fx-rates.cjs").coverageAgainstPresentment(
+        (matrix.currencies || []).map(function (row) {
+          return row.code;
+        }),
+        fx
+      );
       return res.status(200).json({
         ok: true,
         live_collection: cardPaymentsAllowed() ? "armed" : "paused",
         real_payments_enabled: realPaymentsEnabled(),
-        matrix: describeCurrencyMatrix(),
+        matrix: matrix,
+        fx: {
+          base: fx.base || "EUR",
+          date: fx.date || null,
+          source: fx.source || null,
+          source_url: fx.source_url || null,
+          fetched_at: fx.fetched_at || null,
+          expires_at: fx.expires_at || null,
+          rates: fx.rates || {},
+          coverage: coverage
+        },
+        fx_date: fx.date || null,
+        fx_source: fx.source || null,
+        fx_fetched_at: fx.fetched_at || null,
+        fx_expires_at: fx.expires_at || null,
         rails: require("../lib/payment-currency-rails.cjs").buildCurrencyRailsStatus(
           process.env
         )

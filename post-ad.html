@@ -449,6 +449,7 @@ textarea {
       </label>
       <input type="hidden" id="currency" name="currency" value="EUR" required>
       <div id="currencySelectMount" data-havkar-currency-mount="1"></div>
+      <p id="currencyPaymentNote" class="photo-info" style="margin-top:6px">Quotation currency for this listing (133 presentment codes). XLM is a separate crypto rail.</p>
       <p class="hint" style="font-size:.85rem;color:#567;margin:6px 0 0">
         Display/quotation currency. Live Stripe charging still follows real Stripe capability — not all 133 can be charged.
       </p>
@@ -616,10 +617,27 @@ textarea {
     initialCurrency: 'eur',
     onChange: function(sel){
       if(!sel) return;
+      // Listing quotation currency is fiat-only (DB forbids XLM on ads.currency).
+      // XLM is a separate payment rail preference, not a listing price currency.
       if(sel.method === 'xlm_mainnet'){
-        hidden.value = 'XLM';
+        if(!hidden.value || String(hidden.value).toUpperCase() === 'XLM'){
+          hidden.value = 'EUR';
+        }
+        mount.setAttribute('data-preferred-payment', 'xlm');
+        var note = document.getElementById('currencyPaymentNote');
+        if(note){
+          note.textContent = 'Listing price stays in ' + String(hidden.value).toUpperCase() + '. Preferred checkout rail: XLM (Stellar). Live XLM collection stays Owner-gated.';
+        }
       } else {
-        hidden.value = String(sel.code || 'EUR').toUpperCase();
+        hidden.value = String(sel.code || sel.currency || 'EUR').toUpperCase();
+        mount.setAttribute('data-preferred-payment', 'stripe');
+        var note2 = document.getElementById('currencyPaymentNote');
+        if(note2){
+          var meta = sel.meta || {};
+          note2.textContent = 'Quotation currency: ' + hidden.value +
+            (meta.zero_decimal ? ' (zero-decimal)' : '') +
+            '. Live card chargeability is provider-gated and may differ from display.';
+        }
       }
     }
   });

@@ -1005,6 +1005,21 @@ Buy &amp; Sell stays distinct from paid Ads.
         aria-label="Maximum price"
     >
 
+    <label class="visually-hidden" for="currencyFilter">
+        Listing currency
+    </label>
+    <select id="currencyFilter" aria-label="Filter by listing currency">
+        <option value="">All currencies</option>
+    </select>
+
+    <label class="visually-hidden" for="priceCurrency">
+        Price filter currency
+    </label>
+    <select id="priceCurrency" aria-label="Currency for min/max price">
+        <option value="EUR">Price unit: EUR</option>
+    </select>
+    <p id="fxStatus" class="photo-info" style="margin:6px 0 0;font-size:12px;color:#456"></p>
+
 </div>
 
 <div class="filters-wrapper">
@@ -1186,6 +1201,7 @@ aria-label="Post a new ad"
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-ad-publish.js"></script>
+<script src="/havkar-presentment-currencies.js"></script>
 <script src="/havkar-marketplace.js"></script>
 <script>
 "use strict";
@@ -1251,6 +1267,10 @@ const state = {
     minPrice: "",
 
     maxPrice: "",
+    currencyFilter: "",
+    priceCurrency: "EUR",
+    fxRates: null,
+    fxMeta: null,
 
     listingPage: 0,
 
@@ -1719,19 +1739,26 @@ function formatPrice(value, currencyCode){
     ){
 
         const rawCurrency =
-            String(arguments[1] || "EUR").trim().toUpperCase();
+            String(currencyCode || "EUR").trim().toUpperCase();
         const currency =
             /^[A-Z]{3}$/.test(rawCurrency) && rawCurrency !== "XLM"
                 ? rawCurrency
                 : "EUR";
+        let decimals = 2;
+        if(
+            window.HAVKAR_MARKETPLACE &&
+            typeof window.HAVKAR_MARKETPLACE.currencyMeta === "function"
+        ){
+            decimals = window.HAVKAR_MARKETPLACE.currencyMeta(currency).decimals;
+        }
 
         return new Intl.NumberFormat(
             "en-US",
             {
                 style: "currency",
                 currency: currency,
-                minimumFractionDigits:0,
-                maximumFractionDigits:2
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
             }
         ).format(
             numeric
@@ -3654,6 +3681,72 @@ function renderAds(
    FILTERS
    ========================================================= */
 
+
+async function ensureFxRates(){
+    if(state.fxRates){
+        return state.fxRates;
+    }
+    try{
+        const res = await fetch("/api/currency-matrix");
+        const body = await res.json();
+        if(!res.ok){
+            throw new Error((body && body.error) || "currency_matrix_failed");
+        }
+        const rates = (body.fx && body.fx.rates) || body.rates || null;
+        state.fxRates = rates;
+        state.fxMeta = {
+            date: body.fx_date || (body.fx && body.fx.date) || null,
+            source: body.fx_source || (body.fx && body.fx.source) || null,
+            fetched_at: body.fx_fetched_at || (body.fx && body.fx.fetched_at) || null,
+            live_collection: body.live_collection || "paused",
+            count: (body.matrix && body.matrix.currencies && body.matrix.currencies.length) || 0
+        };
+        const note = $("fxStatus");
+        if(note){
+            note.textContent =
+                "FX: " +
+                (state.fxMeta.source || "provider") +
+                (state.fxMeta.date ? (" · " + state.fxMeta.date) : "") +
+                " · live card collection " +
+                state.fxMeta.live_collection +
+                " · " +
+                (state.fxMeta.count || 133) +
+                " presentment currencies";
+        }
+        return state.fxRates;
+    }catch(err){
+        const note = $("fxStatus");
+        if(note){
+            note.textContent = "FX rates unavailable; price filter uses listing currency only.";
+        }
+        return null;
+    }
+}
+
+function populateCurrencyFilters(){
+    const listingSel = $("currencyFilter");
+    const priceSel = $("priceCurrency");
+    const bag = window.HAVKAR_PRESENTMENT_CURRENCIES;
+    const list = bag && Array.isArray(bag.list) ? bag.list.slice() : [];
+    if(listingSel && listingSel.options.length <= 1){
+        list.forEach(function(c){
+            const opt = document.createElement("option");
+            opt.value = String(c.code || "").toUpperCase();
+            opt.textContent = String(c.code || "").toUpperCase() + " — " + (c.name || "");
+            listingSel.appendChild(opt);
+        });
+    }
+    if(priceSel && priceSel.options.length <= 1){
+        list.forEach(function(c){
+            const opt = document.createElement("option");
+            opt.value = String(c.code || "").toUpperCase();
+            opt.textContent = "Price unit: " + String(c.code || "").toUpperCase();
+            priceSel.appendChild(opt);
+        });
+        priceSel.value = state.priceCurrency || "EUR";
+    }
+}
+
 function applyFilters(){
 
     const search =
@@ -3726,7 +3819,10 @@ function applyFilters(){
                         {
                             city: state.city,
                             minPrice: state.minPrice,
-                            maxPrice: state.maxPrice
+                            maxPrice: state.maxPrice,
+                            currency: state.currencyFilter || "",
+                            priceCurrency: state.priceCurrency || "EUR",
+                            rates: state.fxRates || null
                         }
                     )
                 ){
@@ -4547,6 +4643,54 @@ function setupSearch(){
 
     }
 
+    const currencyFilter =
+        $("currencyFilter");
+
+    if(currencyFilter){
+
+        currencyFilter.addEventListener(
+            "change",
+            () => {
+
+                state.currencyFilter =
+                    currencyFilter.value ||
+                    "";
+
+                state.savedOnly =
+                    false;
+
+                applyFilters();
+
+            }
+        );
+
+    }
+
+    const priceCurrency =
+        $("priceCurrency");
+
+    if(priceCurrency){
+
+        priceCurrency.addEventListener(
+            "change",
+            async () => {
+
+                state.priceCurrency =
+                    priceCurrency.value ||
+                    "EUR";
+
+                state.savedOnly =
+                    false;
+
+                await ensureFxRates();
+
+                applyFilters();
+
+            }
+        );
+
+    }
+
 }
 
 
@@ -4782,9 +4926,14 @@ async function boot(){
 
         renderCountryFilter();
 
-        setupNavigation();
+                setupNavigation();
 
-applyShotModeFromQuery();
+        populateCurrencyFilters();
+        ensureFxRates().then(function () {
+            applyFilters();
+        }).catch(function () {});
+
+        applyShotModeFromQuery();
 
         setupSearch();
 
