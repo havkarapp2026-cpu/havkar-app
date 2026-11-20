@@ -3214,17 +3214,29 @@ function applySellerPublicFields(seller, missingReason){
         );
 
     const label =
-        (seller && seller.display_name) ||
-        (
-            hasPublic
-                ? null
-                : null
-        );
+        seller && seller.display_name
+            ? String(seller.display_name)
+            : null;
+
+    const reason =
+        missingReason
+            ? String(missingReason)
+            : "";
+
+    const isResolving =
+        /resolving|loading/i.test(reason);
 
     if(sellerName){
-        sellerName.textContent =
-            label ||
-            "Public name not set";
+        if(label){
+            sellerName.textContent =
+                label;
+        }else if(isResolving){
+            sellerName.textContent =
+                "Loading seller…";
+        }else{
+            sellerName.textContent =
+                "Public name not set";
+        }
     }
 
     if(sellerNote){
@@ -3239,21 +3251,28 @@ function applySellerPublicFields(seller, missingReason){
         }else if(hasPublic && label){
             sellerNote.textContent =
                 "Public seller profile";
+        }else if(isResolving){
+            sellerNote.textContent =
+                reason;
         }else{
             sellerNote.textContent =
-                missingReason ||
+                reason ||
                 "This seller has not set a public display name or avatar.";
         }
     }
 
     if(sellerStatus){
-        sellerStatus.textContent =
-            hasPublic && label
-                ? "Public profile"
-                : (
-                    missingReason ||
-                    "No public profile on this account"
-                );
+        if(hasPublic && label){
+            sellerStatus.textContent =
+                "Public profile";
+        }else if(isResolving){
+            sellerStatus.textContent =
+                "Resolving…";
+        }else{
+            sellerStatus.textContent =
+                reason ||
+                "No public profile on this account";
+        }
     }
 
     setSellerAvatar(
