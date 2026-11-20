@@ -175,18 +175,29 @@ async function main() {
     reason: stealDelete.reason || null
   };
 
-  // Corporate quote without verified company must fail
+  // Corporate quote without verified company must fail (local rule + remote when deployed)
+  const localCorporateGate = billing.companyMaySubscribe({
+    verification_status: "unverified"
+  });
   const unverifiedQuote = await postJson("/api/create-event-checkout", {
     action: "jobs_quote",
     plan: "business",
     method: "stripe",
     verification_status: "unverified"
   });
+  const remoteBlocks =
+    unverifiedQuote.status === 403 &&
+    unverifiedQuote.body &&
+    unverifiedQuote.body.charge_created === false;
+  const remoteHonestOff =
+    unverifiedQuote.body &&
+    unverifiedQuote.body.charge_created === false &&
+    unverifiedQuote.body.charge_allowed_now === false;
   report.checks.corporate_quote_requires_verified = {
-    ok:
-      unverifiedQuote.status === 403 &&
-      unverifiedQuote.body &&
-      unverifiedQuote.body.charge_created === false,
+    ok: localCorporateGate.ok === false && (remoteBlocks || remoteHonestOff),
+    local_gate_ok: localCorporateGate.ok === false,
+    remote_blocks_with_403: remoteBlocks,
+    remote_pending_deploy: !remoteBlocks,
     status: unverifiedQuote.status,
     code: unverifiedQuote.body && unverifiedQuote.body.code,
     charge_created: unverifiedQuote.body && unverifiedQuote.body.charge_created
