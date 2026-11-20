@@ -22,6 +22,15 @@ test("7 EUR marketplace split matches Owner fee arithmetic", () => {
   assert.equal(split.platform_commission_eur, 0.35);
 });
 
+test("1 EUR marketplace split is buyer 1.02 / seller 0.97 / platform 0.05", () => {
+  const split = marketplaceCardSplit(1);
+  assert.equal(split.buyer_pays_eur, 1.02);
+  assert.equal(split.seller_receives_eur, 0.97);
+  assert.equal(split.platform_commission_eur, 0.05);
+  assert.equal(split.buyer_pays_cents, 102);
+  assert.equal(split.application_fee_cents, 5);
+});
+
 test("public seller payload never includes email or phone", () => {
   const payload = buildMarketplaceSellerPublicPayload({
     listingId: 30,
@@ -92,4 +101,6 @@ test("ad-details uses safe buy status UI without raw JSON dumps", () => {
     html,
     /Card checkout unavailable \(Owner authorization required\)/
   );
+  assert.match(html, /id="sellerConnectButton"/);
+  assert.match(html, /startSellerConnectOnboard/);
 });

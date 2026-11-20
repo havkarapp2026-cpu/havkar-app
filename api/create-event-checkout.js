@@ -3310,12 +3310,14 @@ export default async function handler(req, res) {
             customerEmail: authBuy.user.email,
             metadata: {
               listing_id: String(ad.id),
+              seller_id: String(ad.user_id),
               havkar_user_id: String(authBuy.user.id),
               havkar_currency: normalized.currencyUpper,
               list_price_eur: String(listPriceEur)
             }
           });
-        } else {
+        } else if (testAllowed) {
+          /* Sandbox/test only: platform-collect Checkout without Connect. */
           sessionParams = {
             mode: "payment",
             customer_email: authBuy.user.email || undefined,
@@ -3328,29 +3330,48 @@ export default async function handler(req, res) {
                   product_data: {
                     name: ad.title || "HAVKAR marketplace purchase",
                     description:
-                      "Includes HAVKAR buyer fee (2%). Seller Connect pending — platform collects."
+                      "TEST MODE. Includes HAVKAR buyer fee (2%). Not a live destination charge."
                   }
                 }
               }
             ],
             metadata: {
               listing_id: String(ad.id),
+              seller_id: String(ad.user_id),
               havkar_user_id: String(authBuy.user.id),
               havkar_currency: normalized.currencyUpper,
               havkar_flow: "marketplace",
-              list_price_eur: String(listPriceEur)
+              list_price_eur: String(listPriceEur),
+              test_mode: "true",
+              havkar_test_mode: "true"
             },
             payment_intent_data: {
               metadata: {
                 listing_id: String(ad.id),
+                seller_id: String(ad.user_id),
                 havkar_user_id: String(authBuy.user.id),
                 havkar_currency: normalized.currencyUpper,
-                havkar_flow: "marketplace"
+                havkar_flow: "marketplace",
+                test_mode: "true"
               }
             },
             success_url: successUrl,
             cancel_url: cancelUrl
           };
+        } else {
+          return res.status(409).json({
+            ok: false,
+            charged: false,
+            code: "SELLER_CONNECT_REQUIRED",
+            message:
+              "Live card checkout stays blocked until this seller completes Stripe Connect with charges enabled.",
+            customer_message:
+              "This seller is not ready to receive card payments yet. No charge was started.",
+            receipt,
+            split,
+            currency_quote: currencyQuote,
+            checkout_url: null
+          });
         }
         if (testAllowed) {
           sessionParams.metadata = {

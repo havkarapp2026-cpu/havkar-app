@@ -235,3 +235,58 @@ test("Stripe signature helper constructs verifiable test header", () => {
   const event = stripe.webhooks.constructEvent(payload, header, secret);
   assert.equal(event.id, "evt_sig");
 });
+
+test("marketplace checkout.session.completed ends listing via store; unpaid is ignored", async () => {
+  const store = memoryStore();
+  const calls = [];
+  store.fulfillMarketplaceListing = async (row) => {
+    calls.push(row);
+    return { applied: true, fulfillment: "marketplace_listing_ended" };
+  };
+  const unpaid = await processStripeEvent(
+    {
+      id: "evt_mkt_unpaid",
+      type: "checkout.session.completed",
+      livemode: true,
+      data: {
+        object: {
+          id: "cs_mkt_u",
+          payment_status: "unpaid",
+          metadata: { havkar_flow: "marketplace", listing_id: "51" }
+        }
+      }
+    },
+    store
+  );
+  assert.equal(unpaid.applied, false);
+  assert.equal(unpaid.reason, "payment_not_paid");
+  assert.equal(calls.length, 0);
+
+  const paid = await processStripeEvent(
+    {
+      id: "evt_mkt_paid",
+      type: "checkout.session.completed",
+      livemode: true,
+      data: {
+        object: {
+          id: "cs_mkt_1",
+          payment_status: "paid",
+          amount_total: 102,
+          currency: "eur",
+          metadata: {
+            havkar_flow: "marketplace",
+            listing_id: "51",
+            havkar_user_id: "buyer-1",
+            seller_id: "seller-1"
+          }
+        }
+      }
+    },
+    store
+  );
+  assert.equal(paid.applied, true);
+  assert.equal(paid.kind, "marketplace");
+  assert.equal(paid.fulfillment, "marketplace_listing_ended");
+  assert.equal(calls[0].listingId, 51);
+  assert.equal(calls[0].sessionId, "cs_mkt_1");
+});

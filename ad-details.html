@@ -1332,7 +1332,17 @@ button:focus-visible{
                     <span>Delete</span>
                 </button>
 
+                <button
+                    id="sellerConnectButton"
+                    class="owner-button edit"
+                    type="button"
+                >
+                    <i class="fas fa-university"></i>
+                    <span>Stripe Connect payouts</span>
+                </button>
+
             </div>
+            <p id="sellerConnectNote" class="edit-note" hidden></p>
             <p id="ownerStatusNote" class="edit-note" hidden></p>
 
             <form
@@ -4077,10 +4087,135 @@ function updateOwnerTools(){
 
         closeDeleteDialog();
 
+        const connectNote = $("sellerConnectNote");
+        if(connectNote){
+            connectNote.hidden = true;
+        }
+
     }
 
     syncOwnerLifecycleButtons();
+    if(owns){
+        refreshSellerConnectStatus();
+    }
 
+}
+
+async function refreshSellerConnectStatus(){
+    const note = $("sellerConnectNote");
+    const btn = $("sellerConnectButton");
+    if(!state.isOwnListing || !state.currentUserId){
+        return;
+    }
+    try{
+        const session = await supabaseClient.auth.getSession();
+        const accessToken =
+            session &&
+            session.data &&
+            session.data.session &&
+            session.data.session.access_token;
+        if(!accessToken){
+            if(note){
+                note.hidden = false;
+                note.textContent =
+                    "Sign in to manage Stripe Connect payouts for this listing.";
+            }
+            return;
+        }
+        const res = await fetch("/api/create-event-checkout", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + accessToken,
+                Accept: "application/json"
+            },
+            body: JSON.stringify({ action: "marketplace_connect_status" })
+        });
+        const body = await res.json().catch(function(){ return null; });
+        if(!res.ok || !body || body.ok !== true){
+            if(note){
+                note.hidden = false;
+                note.textContent =
+                    (body && (body.customer_message || body.error || body.message)) ||
+                    "Connect status unavailable.";
+            }
+            return;
+        }
+        const account = body.account;
+        if(note){
+            note.hidden = false;
+            if(!account){
+                note.textContent =
+                    "Stripe Connect: not started. Complete legal onboarding before buyers can pay by card.";
+            }else if(account.charges_enabled === true){
+                note.textContent =
+                    "Stripe Connect: charges enabled. Card destination payouts can reach this seller when Owner opens public live payments.";
+            }else{
+                note.textContent =
+                    "Stripe Connect: " +
+                    (account.onboarding_status || "pending") +
+                    ". Finish Stripe verification until charges are enabled.";
+            }
+        }
+        if(btn){
+            btn.querySelector("span").textContent =
+                account && account.charges_enabled
+                    ? "Refresh Stripe Connect"
+                    : "Start / continue Stripe Connect";
+        }
+    }catch(_err){
+        if(note){
+            note.hidden = false;
+            note.textContent = "Connect status check failed.";
+        }
+    }
+}
+
+async function startSellerConnectOnboard(){
+    if(!state.isOwnListing){
+        showToast("Only the listing owner can open Stripe Connect.");
+        return;
+    }
+    const btn = $("sellerConnectButton");
+    if(btn){
+        btn.disabled = true;
+    }
+    try{
+        const session = await supabaseClient.auth.getSession();
+        const accessToken =
+            session &&
+            session.data &&
+            session.data.session &&
+            session.data.session.access_token;
+        if(!accessToken){
+            showToast("Sign in before starting Stripe Connect.");
+            return;
+        }
+        const res = await fetch("/api/create-event-checkout", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + accessToken,
+                Accept: "application/json"
+            },
+            body: JSON.stringify({ action: "marketplace_connect_onboard" })
+        });
+        const body = await res.json().catch(function(){ return null; });
+        if(!res.ok || !body || !body.onboarding_url){
+            showToast(
+                (body && (body.error || body.message)) ||
+                    "Connect onboarding could not be started."
+            );
+            return;
+        }
+        window.location.href = body.onboarding_url;
+    }catch(err){
+        showToast((err && err.message) || "Connect onboarding failed.");
+    }finally{
+        if(btn){
+            btn.disabled = false;
+        }
+    }
 }
 
 
@@ -4755,6 +4890,7 @@ function setupOwnerActions(){
     });
     on("cancelDeleteButton", "click", closeDeleteDialog);
     on("confirmDeleteButton", "click", confirmOwnerDelete);
+    on("sellerConnectButton", "click", startSellerConnectOnboard);
 }
 
 
