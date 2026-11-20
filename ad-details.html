@@ -1462,7 +1462,12 @@ button:focus-visible{
 
         </section>
 
-        <section class="seller-card">
+        <section
+            class="seller-card notranslate"
+            translate="no"
+            data-i18n-ignore="true"
+            data-seller-resolved=""
+        >
 
             <div class="section-title">
                 Seller
@@ -1470,7 +1475,11 @@ button:focus-visible{
 
             <div class="seller-row">
 
-                <div class="seller-avatar">
+                <div
+                    class="seller-avatar notranslate"
+                    translate="no"
+                    data-i18n-ignore="true"
+                >
                     <i class="fas fa-user"></i>
                 </div>
 
@@ -1478,16 +1487,26 @@ button:focus-visible{
 
                     <div
                         id="sellerName"
-                        class="seller-name"
+                        class="seller-name notranslate"
+                        translate="no"
+                        data-i18n-ignore="true"
                     >
                         Loading seller…
                     </div>
 
-                    <div class="seller-note">
+                    <div
+                        class="seller-note notranslate"
+                        translate="no"
+                        data-i18n-ignore="true"
+                    >
                         Public seller profile
                     </div>
 
-                    <div class="seller-status">
+                    <div
+                        class="seller-status notranslate"
+                        translate="no"
+                        data-i18n-ignore="true"
+                    >
                         <span>
                             Resolving…
                         </span>
@@ -1689,7 +1708,11 @@ const state = {
 
     saving:false,
 
-    ownerOperation:false
+    ownerOperation:false,
+
+    sellerPublic:null,
+
+    sellerMissingReason:null
 
 };
 
@@ -3181,14 +3204,45 @@ function setSellerAvatar(avatarUrl){
         return;
     }
 
+    const safe =
+        safeUrl.replace(/"/g, "");
     avatar.innerHTML =
-        '<img src="' +
-        safeUrl.replace(/"/g, "") +
-        '" alt="" width="52" height="52" loading="lazy" referrerpolicy="no-referrer">';
+        '<img class="notranslate" src="' +
+        safe +
+        '" alt="" width="52" height="52" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-i18n-ignore="true" translate="no">';
+    const img =
+        avatar.querySelector("img");
+    if(img){
+        img.onerror = function(){
+            if(img.getAttribute("data-avatar-retried") === "1"){
+                avatar.innerHTML =
+                    '<i class="fas fa-user" aria-hidden="true"></i>';
+                return;
+            }
+            img.setAttribute(
+                "data-avatar-retried",
+                "1"
+            );
+            img.src =
+                safe +
+                (safe.indexOf("?") >= 0 ? "&" : "?") +
+                "havkar_avatar_retry=1";
+        };
+    }
 
 }
 
 function applySellerPublicFields(seller, missingReason){
+
+    state.sellerPublic =
+        seller || null;
+    state.sellerMissingReason =
+        missingReason || null;
+
+    const sellerCard =
+        document.querySelector(
+            ".seller-card"
+        );
 
     const sellerName =
         $("sellerName");
@@ -3237,6 +3291,21 @@ function applySellerPublicFields(seller, missingReason){
             sellerName.textContent =
                 "Public name not set";
         }
+        sellerName.setAttribute(
+            "data-seller-name",
+            label || ""
+        );
+        sellerName.classList.add(
+            "notranslate"
+        );
+        sellerName.setAttribute(
+            "translate",
+            "no"
+        );
+        sellerName.setAttribute(
+            "data-i18n-ignore",
+            "true"
+        );
     }
 
     if(sellerNote){
@@ -3259,6 +3328,17 @@ function applySellerPublicFields(seller, missingReason){
                 reason ||
                 "This seller has not set a public display name or avatar.";
         }
+        sellerNote.classList.add(
+            "notranslate"
+        );
+        sellerNote.setAttribute(
+            "translate",
+            "no"
+        );
+        sellerNote.setAttribute(
+            "data-i18n-ignore",
+            "true"
+        );
     }
 
     if(sellerStatus){
@@ -3273,6 +3353,35 @@ function applySellerPublicFields(seller, missingReason){
                 reason ||
                 "No public profile on this account";
         }
+        sellerStatus.classList.add(
+            "notranslate"
+        );
+        sellerStatus.setAttribute(
+            "translate",
+            "no"
+        );
+        sellerStatus.setAttribute(
+            "data-i18n-ignore",
+            "true"
+        );
+    }
+
+    if(sellerCard){
+        sellerCard.setAttribute(
+            "data-seller-resolved",
+            label || (isResolving ? "resolving" : "missing")
+        );
+        sellerCard.classList.add(
+            "notranslate"
+        );
+        sellerCard.setAttribute(
+            "translate",
+            "no"
+        );
+        sellerCard.setAttribute(
+            "data-i18n-ignore",
+            "true"
+        );
     }
 
     setSellerAvatar(
@@ -3322,6 +3431,28 @@ function sellerFromAuthUser(user){
     };
 }
 
+async function authHeadersForSellerFetch(){
+    const headers = {
+        Accept: "application/json"
+    };
+    try{
+        initializeSupabase();
+        const sessionBundle =
+            await supabaseClient.auth.getSession();
+        const token =
+            sessionBundle &&
+            sessionBundle.data &&
+            sessionBundle.data.session &&
+            sessionBundle.data.session.access_token;
+        if(token){
+            headers.Authorization = "Bearer " + token;
+        }
+    }catch(_sessionErr){
+        /* visitor path */
+    }
+    return headers;
+}
+
 async function fetchSellerPublicProfile(listingId){
 
     if(!listingId){
@@ -3347,31 +3478,41 @@ async function fetchSellerPublicProfile(listingId){
         /* fall through */
     }
 
+    /* Public GET route — visible in Network as marketplace_seller_public. */
     try{
-        const headers = {
-            "Content-Type": "application/json",
-            Accept: "application/json"
-        };
-        try{
-            const sessionBundle =
-                await supabaseClient.auth.getSession();
-            const token =
-                sessionBundle &&
-                sessionBundle.data &&
-                sessionBundle.data.session &&
-                sessionBundle.data.session.access_token;
-            if(token){
-                headers.Authorization = "Bearer " + token;
-            }
-        }catch(_sessionErr){
-            /* visitor path */
+        const headers =
+            await authHeadersForSellerFetch();
+        const res =
+            await fetch(
+                "/api/marketplace_seller_public?listing_id=" +
+                    encodeURIComponent(String(listingId)),
+                {
+                    method: "GET",
+                    headers: headers,
+                    cache: "no-store"
+                }
+            );
+        const body =
+            await res.json().catch(function(){ return null; });
+        if(res.ok && body && body.ok === true && body.seller){
+            return body;
         }
+    }catch(_getErr){
+        /* fall through */
+    }
+
+    try{
+        const headers =
+            await authHeadersForSellerFetch();
+        headers["Content-Type"] =
+            "application/json";
         const res =
             await fetch(
                 "/api/create-event-checkout",
                 {
                     method: "POST",
                     headers: headers,
+                    cache: "no-store",
                     body: JSON.stringify({
                         action: "marketplace_seller_public",
                         listing_id: String(listingId)
@@ -6031,6 +6172,35 @@ async function boot(){
 document.addEventListener(
     "DOMContentLoaded",
     boot
+);
+
+/* Re-apply after i18n so TreeWalker cannot leave a stale placeholder. */
+document.addEventListener(
+    "havkar:i18n-ready",
+    function(){
+        if(state.sellerPublic){
+            applySellerPublicFields(
+                state.sellerPublic,
+                state.sellerMissingReason
+            );
+            return;
+        }
+        if(state.ad && state.ad.id){
+            updateSellerUI();
+        }
+    }
+);
+
+document.addEventListener(
+    "havkar:language-changed",
+    function(){
+        if(state.sellerPublic){
+            applySellerPublicFields(
+                state.sellerPublic,
+                state.sellerMissingReason
+            );
+        }
+    }
 );
 
 </script>

@@ -14,6 +14,8 @@ const { marketplaceCardSplit } = require("../lib/marketplace-connect.cjs");
 
 const html = fs.readFileSync("ad-details.html", "utf8");
 const api = fs.readFileSync("api/create-event-checkout.js", "utf8");
+const sellerApi = fs.readFileSync("api/marketplace_seller_public.js", "utf8");
+const buySell = fs.readFileSync("buy-sell.html", "utf8");
 
 test("7 EUR marketplace split matches Owner fee arithmetic", () => {
   const split = marketplaceCardSplit(7);
@@ -100,6 +102,24 @@ test("API exposes marketplace_seller_public and marketplace public live gate", (
   assert.match(api, /HAVKAR_MARKETPLACE_PUBLIC_LIVE_PAYMENTS/);
   assert.match(api, /MARKETPLACE_PUBLIC_LIVE_OFF/);
   assert.match(api, /customer_message/);
+});
+
+test("dedicated public seller GET API exists and stays read-only", () => {
+  assert.match(sellerApi, /buildMarketplaceSellerPublicPayload/);
+  assert.match(sellerApi, /listing_id is required/);
+  assert.match(sellerApi, /Cache-Control[\s\S]{0,40}no-store/);
+  assert.doesNotMatch(sellerApi, /STRIPE_SECRET_KEY/);
+  assert.doesNotMatch(sellerApi, /checkout\.sessions\.create/);
+});
+
+test("ad-details seller identity is notranslate and multi-path", () => {
+  assert.match(html, /id="sellerName"/);
+  assert.match(html, /class="seller-name notranslate"/);
+  assert.match(html, /\/api\/marketplace_seller_public\?listing_id=/);
+  assert.match(html, /get_marketplace_seller_public/);
+  assert.match(html, /havkar:i18n-ready/);
+  assert.doesNotMatch(html, /HAVKAR Member/);
+  assert.match(buySell, /ad-seller-name notranslate/);
 });
 
 test("ad-details uses safe buy status UI without raw JSON dumps", () => {
