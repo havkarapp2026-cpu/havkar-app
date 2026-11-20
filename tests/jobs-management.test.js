@@ -331,14 +331,72 @@ function savedRow(payload, id) {
   assert.ok(page.includes("filterJobs"));
   assert.ok(page.includes('id="locationInput"'));
   assert.ok(page.includes("pending_payment"));
-  assert.ok(page.includes("The payment gateway is not connected yet."));
   assert.ok(page.includes("Your advertisement has NOT been activated."));
+  assert.ok(page.includes("Jobs card payment is not available now"));
+  assert.ok(page.includes("30-day prepaid listing"));
+  assert.ok(page.includes("Verified company — monthly subscription"));
+  assert.ok(page.includes("Business Plus — €99.99 / month"));
+  assert.ok(page.includes("Enterprise — €199.99 / month"));
+  assert.ok(page.includes("mine") || page.includes('params.get("mine")'));
+  assert.ok(page.includes("submitInAppApplication"));
+  assert.ok(page.includes("quoteCorporateSubscription"));
   assert.ok(!page.includes("Application started for"));
   assert.ok(!page.includes('status:"active"'));
   assert.ok(!page.includes("status: \"active\""));
   assert.ok(!moduleSource.includes('status:"active"'));
   assert.ok(!moduleSource.includes("status: \"active\""));
   assert.ok(moduleSource.includes('payload.status = "pending_payment"'));
+  assert.ok(moduleSource.includes("CORPORATE_PLANS"));
+  assert.ok(moduleSource.includes("companyMayUseCorporate"));
+  assert.ok(moduleSource.includes("submitJobApplication"));
+
+  assert.strictEqual(jobs.CORPORATE_PLANS.business.eur, 49.99);
+  assert.strictEqual(jobs.CORPORATE_PLANS.business_plus.eur, 99.99);
+  assert.strictEqual(jobs.CORPORATE_PLANS.enterprise.eur, 199.99);
+  assert.strictEqual(jobs.CORPORATE_PLANS.business.activeAdvertisementLimit, 10);
+  assert.strictEqual(jobs.CORPORATE_PLANS.business_plus.activeAdvertisementLimit, 30);
+  assert.strictEqual(jobs.CORPORATE_PLANS.enterprise.activeAdvertisementLimit, 100);
+  assert.strictEqual(jobs.companyMayUseCorporate({ verification_status: "unverified" }).ok, false);
+  assert.strictEqual(jobs.companyMayUseCorporate({ verification_status: "verified" }).ok, true);
+  assert.strictEqual(
+    jobs.buildCorporateSubscriptionQuote({ verification_status: "unverified" }, "business", false).ok,
+    false
+  );
+  const corpQuote = jobs.buildCorporateSubscriptionQuote(
+    { verification_status: "verified" },
+    "business_plus",
+    false
+  );
+  assert.strictEqual(corpQuote.ok, true);
+  assert.strictEqual(corpQuote.charge_allowed_now, false);
+  assert.strictEqual(corpQuote.plan.eur, 99.99);
+
+  const appBuilt = jobs.buildApplicationInsert({
+    job: { id: 9, user_id: "other", status: "active", expires_at: null },
+    applicantId: ownerId,
+    cover_letter: "I cook pizza every day in Crotone."
+  });
+  assert.strictEqual(appBuilt.ok, true);
+  assert.strictEqual(appBuilt.payload.status, "submitted");
+  assert.strictEqual(
+    jobs.buildApplicationInsert({
+      job: { id: 9, user_id: ownerId, status: "active", expires_at: null },
+      applicantId: ownerId,
+      cover_letter: "I cook pizza every day in Crotone."
+    }).reason,
+    "application_self"
+  );
+  assert.strictEqual(jobs.formatCurrencyLabel("XLM").includes("Stellar"), true);
+  assert.strictEqual(jobs.formatCurrencyLabel("EUR", { EUR: { name: "Euro" } }), "EUR — Euro");
+
+  const withCurrency = jobs.buildJobInsert(
+    draft({ currency: "USD" }),
+    ownerId,
+    { name: "Basic", price: 9.99 }
+  );
+  assert.strictEqual(withCurrency.ok, true);
+  assert.strictEqual(withCurrency.payload.currency, "USD");
+  assert.strictEqual(withCurrency.payload.employer_kind, "ordinary");
 
   const services = fs.readFileSync(path.join(__dirname, "../services.html"), "utf8");
   assert.ok(!services.includes("havkar-jobs.js"));

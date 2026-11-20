@@ -17,7 +17,7 @@
 
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
 
-  const JOB_COLUMNS = "id,created_at,user_id,title,company,location,job_type,salary,description,requirements,contact,status,expires_at,application_url,remote,category,language,experience_level,education_level,skills,currency,salary_min,salary_max,type,image,plan,monthly_fee";
+  const JOB_COLUMNS = "id,created_at,user_id,title,company,location,job_type,salary,description,requirements,contact,status,expires_at,application_url,remote,category,language,experience_level,education_level,skills,currency,salary_min,salary_max,type,image,plan,monthly_fee,employer_kind,company_id";
 
   const JOB_TYPES = [
     "Full-time",
@@ -27,11 +27,46 @@
     "Contract"
   ];
 
+  /* Ordinary employer: approved one-time 30-day prepaid fees (not invented). */
   const PLANS = {
     Basic: 9.99,
     Professional: 19.99,
     Business: 39.99
   };
+
+  /* Verified company: approved monthly Stripe subscriptions with auto-renew. */
+  const CORPORATE_PLANS = {
+    business: {
+      id: "business",
+      label: "Business",
+      eur: 49.99,
+      cents: 4999,
+      interval: "month",
+      activeAdvertisementLimit: 10,
+      autoRenew: true
+    },
+    business_plus: {
+      id: "business_plus",
+      label: "Business Plus",
+      eur: 99.99,
+      cents: 9999,
+      interval: "month",
+      activeAdvertisementLimit: 30,
+      autoRenew: true
+    },
+    enterprise: {
+      id: "enterprise",
+      label: "Enterprise",
+      eur: 199.99,
+      cents: 19999,
+      interval: "month",
+      activeAdvertisementLimit: 100,
+      autoRenew: true
+    }
+  };
+
+  const APPLICATION_COLUMNS =
+    "id,job_id,applicant_id,cover_letter,resume_path,status,conversation_id,employer_notes,interview_at,applicant_consent_at,withdrawn_at,created_at,updated_at";
 
   const BLOCKED_UPDATE_FIELDS = [
     "status",
@@ -39,7 +74,9 @@
     "monthly_fee",
     "user_id",
     "id",
-    "created_at"
+    "created_at",
+    "employer_kind",
+    "company_id"
   ];
 
   const MESSAGES = {
@@ -55,7 +92,12 @@
     rejected: "The server rejected this change.",
     not_confirmed: "The server did not confirm this change.",
     blocked_fields: "This change is not available.",
-    payment_required: "The job stays inactive until a real payment provider confirms it."
+    payment_required: "The job stays inactive until a real payment provider confirms it.",
+    company_not_verified: "Corporate subscriptions and company listings require a verified company. Verification is set by HAVKAR staff only.",
+    corporate_payments_off: "Corporate subscription checkout stays disabled while Jobs payments are off. No charge was created.",
+    application_inactive: "This listing is not open for applications.",
+    application_self: "You cannot apply to your own job listing.",
+    application_short: "Add a short cover note before applying."
   };
 
   function clean(value) {
@@ -349,7 +391,104 @@
     if (!Object.prototype.hasOwnProperty.call(PLANS, name)) return null;
     const price = Number(plan.price);
     if (price !== PLANS[name]) return null;
-    return { name: name, price: price };
+    return { name: name, price: price, billing: "one_time_prepaid", periodDays: 30 };
+  }
+
+  function normalizeCorporatePlan(planCode) {
+    const code = clean(planCode).toLowerCase().replace(/[\s-]+/g, "_");
+    return CORPORATE_PLANS[code] || null;
+  }
+
+  function normalizeCurrencyCode(value) {
+    const raw = clean(value).toUpperCase();
+    if (!raw) return "EUR";
+    if (raw === "XLM" || raw === "STELLAR" || raw === "✦") return "XLM";
+    if (!/^[A-Z]{3}$/.test(raw)) return null;
+    return raw;
+  }
+
+  function formatCurrencyLabel(code, currencyMeta) {
+    const normalized = normalizeCurrencyCode(code) || "EUR";
+    if (normalized === "XLM") {
+      return "XLM — Stellar Lumens (crypto, not a Stripe fiat currency)";
+    }
+    const meta = currencyMeta && (
+      currencyMeta[normalized] ||
+      currencyMeta[normalized.toLowerCase()] ||
+      (Array.isArray(currencyMeta)
+        ? currencyMeta.find(function (row) {
+          return String(row.code || "").toUpperCase() === normalized;
+        })
+        : null)
+    );
+    const name = meta && (meta.name || meta.currency_name);
+    if (name) return normalized + " — " + name;
+    return normalized;
+  }
+
+  function companyIsVerified(company) {
+    return Boolean(company) && company.verification_status === "verified";
+  }
+
+  function companyMayUseCorporate(company) {
+    if (!companyIsVerified(company)) {
+      return {
+        ok: false,
+        reason: "company_not_verified",
+        message: MESSAGES.company_not_verified
+      };
+    }
+    return { ok: true };
+  }
+
+  function buildCorporateSubscriptionQuote(company, planCode, paymentsLive) {
+    const gate = companyMayUseCorporate(company);
+    if (!gate.ok) return gate;
+    const plan = normalizeCorporatePlan(planCode);
+    if (!plan) {
+      return { ok: false, reason: "invalid_plan", message: MESSAGES.invalid_plan };
+    }
+    return {
+      ok: true,
+      plan: plan,
+      billing: "stripe_subscription_monthly",
+      auto_renew: true,
+      xlm_supported: false,
+      charge_allowed_now: paymentsLive === true,
+      charge_created: false,
+      message: paymentsLive === true
+        ? "Corporate subscription is Owner-armed but this UI does not create a live Checkout session yet."
+        : MESSAGES.corporate_payments_off
+    };
+  }
+
+  function buildApplicationInsert(input) {
+    const source = input || {};
+    const job = source.job;
+    const applicantId = source.applicantId;
+    const cover = clean(source.cover_letter || source.coverLetter);
+    if (!job || !applicantId) {
+      return { ok: false, reason: "missing", message: MESSAGES.missing };
+    }
+    if (!isPublicListing(job, source.now)) {
+      return { ok: false, reason: "application_inactive", message: MESSAGES.application_inactive };
+    }
+    if (String(job.user_id || "") === String(applicantId)) {
+      return { ok: false, reason: "application_self", message: MESSAGES.application_self };
+    }
+    if (cover.length < 8 || cover.length > 4000) {
+      return { ok: false, reason: "application_short", message: MESSAGES.application_short };
+    }
+    return {
+      ok: true,
+      payload: {
+        job_id: job.id,
+        applicant_id: applicantId,
+        cover_letter: cover,
+        status: "submitted",
+        applicant_consent_at: new Date().toISOString()
+      }
+    };
   }
 
   function buildJobInsert(draft, userId, plan) {
@@ -365,12 +504,32 @@
     if (!image.ok) {
       return { ok: false, reason: image.reason, message: MESSAGES.invalid_image };
     }
+    const currency = normalizeCurrencyCode(draft && draft.currency);
+    if (!currency) {
+      return { ok: false, reason: "required_fields", message: MESSAGES.required_fields };
+    }
+    const employerKind = clean((draft && draft.employer_kind) || "ordinary") || "ordinary";
+    if (employerKind !== "ordinary" && employerKind !== "company") {
+      return { ok: false, reason: "required_fields", message: MESSAGES.required_fields };
+    }
+    if (employerKind === "company") {
+      const gate = companyMayUseCorporate(draft && draft.company_record);
+      if (!gate.ok) return gate;
+      if (!(draft && draft.company_id)) {
+        return { ok: false, reason: "company_not_verified", message: MESSAGES.company_not_verified };
+      }
+    }
     const payload = contentPayload(validation.value);
     payload.user_id = userId;
     payload.image = image.image;
     payload.status = "pending_payment";
     payload.plan = chosen.name;
     payload.monthly_fee = chosen.price;
+    payload.currency = currency;
+    payload.employer_kind = employerKind;
+    if (employerKind === "company" && draft && draft.company_id) {
+      payload.company_id = draft.company_id;
+    }
     if (payload.status !== "pending_payment") {
       return { ok: false, reason: "payment_required", message: MESSAGES.payment_required };
     }
@@ -448,9 +607,96 @@
     return confirmed(result);
   }
 
+  async function submitJobApplication(client, input) {
+    const built = buildApplicationInsert(input);
+    if (!built.ok) return built;
+    if (!client) {
+      return { ok: false, reason: "missing", message: MESSAGES.missing };
+    }
+    const result = await client
+      .from("job_applications")
+      .insert(built.payload)
+      .select(APPLICATION_COLUMNS)
+      .single();
+    return confirmed(result);
+  }
+
+  async function listApplicationsForJob(client, input) {
+    const source = input || {};
+    if (!client || !source.jobId || !source.userId) {
+      return { ok: false, reason: "missing", message: MESSAGES.missing };
+    }
+    const owned = await client
+      .from("jobs")
+      .select("id,user_id")
+      .eq("id", source.jobId)
+      .eq("user_id", source.userId)
+      .maybeSingle();
+    if (owned.error || !owned.data) {
+      return { ok: false, reason: "rejected", message: MESSAGES.rejected };
+    }
+    const result = await client
+      .from("job_applications")
+      .select(APPLICATION_COLUMNS)
+      .eq("job_id", source.jobId)
+      .order("created_at", { ascending: false });
+    if (result.error) {
+      return { ok: false, reason: "rejected", message: result.error.message || MESSAGES.rejected };
+    }
+    return { ok: true, rows: result.data || [] };
+  }
+
+  async function loadOwnCompanies(client, userId) {
+    if (!client || !userId) {
+      return { ok: false, reason: "missing", message: MESSAGES.missing };
+    }
+    const result = await client
+      .from("job_companies")
+      .select("id,legal_name,verification_status,owner_user_id,created_at")
+      .eq("owner_user_id", userId)
+      .order("created_at", { ascending: false });
+    if (result.error) {
+      return { ok: false, reason: "rejected", message: result.error.message || MESSAGES.rejected };
+    }
+    return { ok: true, rows: result.data || [] };
+  }
+
+  async function registerCompany(client, input) {
+    const source = input || {};
+    const legalName = clean(source.legal_name || source.legalName);
+    if (!client || !source.userId) {
+      return { ok: false, reason: "missing", message: MESSAGES.missing };
+    }
+    if (legalName.length < 2 || legalName.length > 200) {
+      return { ok: false, reason: "company_short", message: MESSAGES.company_short };
+    }
+    const result = await client
+      .from("job_companies")
+      .insert({
+        owner_user_id: source.userId,
+        legal_name: legalName,
+        verification_status: "unverified"
+      })
+      .select("id,legal_name,verification_status,owner_user_id,created_at")
+      .single();
+    const done = confirmed(result);
+    if (!done.ok) return done;
+    if (done.row.verification_status === "verified") {
+      return {
+        ok: false,
+        reason: "company_not_verified",
+        message: "Server returned verified status on insert; refusing to trust self-verification."
+      };
+    }
+    return done;
+  }
+
   return {
     JOB_COLUMNS: JOB_COLUMNS,
     JOB_TYPES: JOB_TYPES,
+    PLANS: PLANS,
+    CORPORATE_PLANS: CORPORATE_PLANS,
+    APPLICATION_COLUMNS: APPLICATION_COLUMNS,
     BLOCKED_UPDATE_FIELDS: BLOCKED_UPDATE_FIELDS,
     isExpired: isExpired,
     isPublicListing: isPublicListing,
@@ -464,9 +710,21 @@
     validateJobDraft: validateJobDraft,
     buildJobUpdate: buildJobUpdate,
     buildJobInsert: buildJobInsert,
+    normalizePlan: normalizePlan,
+    normalizeCorporatePlan: normalizeCorporatePlan,
+    normalizeCurrencyCode: normalizeCurrencyCode,
+    formatCurrencyLabel: formatCurrencyLabel,
+    companyIsVerified: companyIsVerified,
+    companyMayUseCorporate: companyMayUseCorporate,
+    buildCorporateSubscriptionQuote: buildCorporateSubscriptionQuote,
+    buildApplicationInsert: buildApplicationInsert,
     createOwnJob: createOwnJob,
     updateOwnJob: updateOwnJob,
-    deleteOwnJob: deleteOwnJob
+    deleteOwnJob: deleteOwnJob,
+    submitJobApplication: submitJobApplication,
+    listApplicationsForJob: listApplicationsForJob,
+    loadOwnCompanies: loadOwnCompanies,
+    registerCompany: registerCompany
   };
 
 });

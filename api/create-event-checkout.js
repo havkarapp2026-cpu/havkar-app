@@ -2888,6 +2888,31 @@ export default async function handler(req, res) {
               corporate_plans: Object.keys(jobBilling.COMPANY_PLANS)
             });
           }
+          if (corporate) {
+            const verificationStatus = String(
+              (req.body && req.body.verification_status) || ""
+            ).toLowerCase();
+            const companyGate = jobBilling.companyMaySubscribe({
+              verification_status: verificationStatus || "unverified"
+            });
+            if (!companyGate.ok) {
+              return res.status(403).json({
+                ok: false,
+                action: "jobs_quote",
+                plan: planName,
+                billing: "stripe_subscription_monthly",
+                auto_renew: true,
+                list_price_eur: listEur,
+                active_listing_limit: corporate.activeAdvertisementLimit,
+                charge_allowed_now: false,
+                charge_created: false,
+                code: companyGate.code,
+                error: companyGate.error,
+                availability_status: "not_yet_available",
+                availability_label: "Not yet available"
+              });
+            }
+          }
           const catalog = jobsPaymentMethods(process.env);
           const chargeAllowed = Boolean(
             catalog.live_flag_armed &&
@@ -2929,6 +2954,9 @@ export default async function handler(req, res) {
               : "stripe_subscription_monthly",
             period_days: ordinary ? ordinary.durationDays : null,
             auto_renew: Boolean(corporate),
+            active_listing_limit: corporate
+              ? corporate.activeAdvertisementLimit
+              : null,
             stripe_presentment_count: catalog.stripe_presentment_count,
             xlm_is_not_a_stripe_currency: true,
             xlm_display: xlmDisplay,
