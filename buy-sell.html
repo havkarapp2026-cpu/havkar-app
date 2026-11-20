@@ -9,7 +9,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b5e20">
 <meta name="description" content="HAVKAR Buy & Sell marketplace">
+<meta name="havkar-buysell-ui" content="20261120-unify-v1">
 <title>HAVKAR — Buy & Sell</title>
+<script>
+window.HAVKAR_BUYSELL_UI = "20261120-unify-v1";
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -328,28 +332,29 @@ input:focus-visible{
 .ads-grid,
 .skeleton-grid{
     display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:13px;
+    /* Unified public grid: every visitor gets the same 3-column marketplace. */
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:8px;
+}
+
+.ads-grid .ad-card,
+.skeleton-grid .skeleton-card{
+    border-radius:10px;
+}
+
+.ads-grid .ad-meta,
+.ads-grid .ad-actions{
+    display:none;
+}
+
+.ads-grid .ad-image{
+    aspect-ratio:1 / 1;
 }
 
 .ads-grid.is-explore,
 .skeleton-grid.is-explore{
     grid-template-columns:repeat(3,minmax(0,1fr));
     gap:8px;
-}
-
-.ads-grid.is-explore .ad-card,
-.skeleton-grid.is-explore .skeleton-card{
-    border-radius:10px;
-}
-
-.ads-grid.is-explore .ad-meta,
-.ads-grid.is-explore .ad-actions{
-    display:none;
-}
-
-.ads-grid.is-explore .ad-image{
-    aspect-ratio:1 / 1;
 }
 
 /* CARD */
@@ -1053,6 +1058,19 @@ Buy &amp; Sell stays distinct from paid Ads.
         Loading...
     </div>
 
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 10px">
+    <button
+        id="clearListingFilters"
+        type="button"
+        style="border:1px solid #c5d6c8;border-radius:999px;padding:6px 12px;background:#fff;color:#1b5e20;font-weight:700;font-size:.8rem;cursor:pointer"
+    >
+        Clear filters
+    </button>
+    <span
+        id="buysellUiVersion"
+        style="font-size:.72rem;color:#6a7a6e"
+    ></span>
 </div>
 
 <div
@@ -4475,6 +4493,45 @@ function onClick(id, handler){
     node.addEventListener("click", handler);
 }
 
+function clearListingFilters(){
+    state.savedOnly = false;
+    state.exploreMode = false;
+    state.search = "";
+    state.country = "";
+    state.city = "";
+    state.minPrice = "";
+    state.maxPrice = "";
+    state.category = "All";
+    state.currencyFilter = "";
+    if($("searchInput")){
+        $("searchInput").value = "";
+    }
+    if($("clearSearch")){
+        $("clearSearch").classList.remove("visible");
+    }
+    if($("countryFilter")){
+        $("countryFilter").value = "";
+    }
+    if($("cityFilter")){
+        $("cityFilter").value = "";
+    }
+    if($("minPrice")){
+        $("minPrice").value = "";
+    }
+    if($("maxPrice")){
+        $("maxPrice").value = "";
+    }
+    if($("currencyFilter")){
+        $("currencyFilter").value = "";
+    }
+    document.querySelectorAll(".filter-button").forEach(function(btn){
+        btn.classList.toggle("active", btn.dataset.category === "All" || btn.textContent.trim() === "All");
+    });
+    setActiveNav("navHome");
+    updateListingLayout();
+    applyFilters();
+}
+
 function setupNavigation(){
 
     /* Defensive binds: missing chrome must not abort listing boot. */
@@ -4498,16 +4555,15 @@ function setupNavigation(){
     onClick("navHome", goAppHome);
 
     onClick("navSearch", () => {
-        state.savedOnly = false;
-        state.exploreMode = true;
-        setActiveNav("navSearch");
-        updateListingLayout();
-        applyFilters();
-        if($("searchInput")){
-            $("searchInput").focus();
-        }
-        window.scrollTo({ top:0, behavior:"smooth" });
+        /* Open the shared Search hub — never leave users on an alternate old search UI. */
+        const q = String(($("searchInput") && $("searchInput").value) || state.search || "").trim();
+        const target =
+            "search.html?scope=buy-sell" +
+            (q ? ("&q=" + encodeURIComponent(q)) : "");
+        window.location.href = target;
     });
+
+    onClick("clearListingFilters", clearListingFilters);
 
     onClick("navSaved", showSavedListings);
 
@@ -4922,6 +4978,12 @@ async function boot(){
 
         await resolveCurrentUser();
 
+        const versionNode = $("buysellUiVersion");
+        if(versionNode){
+            versionNode.textContent =
+                "UI " + (window.HAVKAR_BUYSELL_UI || "unknown");
+        }
+
         renderCategories();
 
         renderCountryFilter();
@@ -4940,6 +5002,7 @@ async function boot(){
         setupRetry();
 
         renderSkeletons();
+        updateListingLayout();
 
         /*
          * Listen for future login/logout/session changes.
@@ -5010,6 +5073,7 @@ document.addEventListener(
 <script src="/havkar-i18n.js"></script>
 
 <script src="/havkar-page-back.js"></script>
+<script src="/havkar-sw-register.js"></script>
 
 
 <!-- HAVKAR contextual help -->
