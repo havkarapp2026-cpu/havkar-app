@@ -393,6 +393,7 @@ input:focus-visible{
     height:100%;
     display:block;
     object-fit:cover;
+    image-orientation:from-image;
     opacity:0;
     transition:opacity .25s,transform .35s;
 }
@@ -671,6 +672,26 @@ input:focus-visible{
     color:#d32f2f;
     background:#fff;
 }
+.own-delete-button{
+    position:absolute;
+    top:12px;
+    left:12px;
+    z-index:3;
+    width:38px;
+    height:38px;
+    border:0;
+    border-radius:50%;
+    background:rgba(140,30,30,.92);
+    color:#fff;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+}
+.own-delete-button:hover{
+    background:#a31f1f;
+}
+
 
 .save-button i{
     font-size:1.1rem;
@@ -1220,6 +1241,7 @@ aria-label="Post a new ad"
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-ad-publish.js"></script>
 <script src="/havkar-presentment-currencies.js"></script>
+<script src="/havkar-ad-images.js"></script>
 <script src="/havkar-marketplace.js"></script>
 <script>
 "use strict";
@@ -3234,6 +3256,11 @@ function cardHtml(
             ad.id
         );
 
+    const ownsListing =
+        state.currentUserId &&
+        String(ad.user_id || "") ===
+        String(state.currentUserId);
+
     return `
         <article
             class="ad-card"
@@ -3247,6 +3274,21 @@ function cardHtml(
             role="button"
             aria-label="${title}"
         >
+
+            ${
+                ownsListing
+                    ? `
+                        <button
+                            class="own-delete-button"
+                            type="button"
+                            aria-label="Delete your listing"
+                            data-delete-id="${escapeHtml(ad.id)}"
+                        >
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    `
+                    : ""
+            }
 
             <button
                 class="share-button"
@@ -3565,6 +3607,75 @@ async function loadCardImage(
    RENDER ADS
    ========================================================= */
 
+
+async function confirmAndDeleteOwnListing(adId){
+    const id = Number(adId);
+    if(!Number.isSafeInteger(id) || id <= 0){
+        return;
+    }
+    if(!state.currentUserId){
+        showToast("Sign in to delete your listing.");
+        return;
+    }
+    const ad = (state.ads || []).find(function(row){
+        return Number(row.id) === id;
+    });
+    if(!ad || String(ad.user_id || "") !== String(state.currentUserId)){
+        showToast("You can delete only your own listings.");
+        return;
+    }
+    const ok = window.confirm(
+        "Delete this listing permanently? Related saves/comments on it are cleared. This cannot be undone."
+    );
+    if(!ok){
+        return;
+    }
+    try{
+        initializeSupabase();
+        const result = await supabaseClient.rpc(
+            "delete_own_marketplace_listing",
+            { p_ad_id: id }
+        );
+        if(result.error){
+            throw new Error(result.error.message || "Delete failed.");
+        }
+        const payload = result.data;
+        if(!payload || payload.ok !== true){
+            throw new Error("Delete failed.");
+        }
+        if(
+            window.HAVKAR_AD_IMAGES &&
+            typeof window.HAVKAR_AD_IMAGES.deleteOwnAdvertisementImages === "function"
+        ){
+            const cleaned = await window.HAVKAR_AD_IMAGES.deleteOwnAdvertisementImages(
+                supabaseClient,
+                state.currentUserId,
+                Array.isArray(payload.photos) ? payload.photos : (ad.photos || [])
+            );
+            if(!cleaned.ok){
+                showToast("Listing deleted. Some images could not be removed from storage.");
+            }
+        }
+        if(
+            payload.video_path &&
+            window.HAVKAR_MARKETPLACE &&
+            typeof window.HAVKAR_MARKETPLACE.deleteListingVideo === "function"
+        ){
+            await window.HAVKAR_MARKETPLACE.deleteListingVideo(
+                supabaseClient,
+                payload.video_path
+            );
+        }
+        state.ads = (state.ads || []).filter(function(row){
+            return Number(row.id) !== id;
+        });
+        applyFilters();
+        showToast("Listing deleted.");
+    }catch(error){
+        showToast((error && error.message) || "This listing was not deleted.");
+    }
+}
+
 function renderAds(
     list
 ){
@@ -3657,6 +3768,28 @@ function renderAds(
                         toggleSaved(
                             saveButton.dataset.saveId,
                             event
+                        );
+
+                    }
+                );
+
+            }
+
+            const deleteButton =
+                card.querySelector(
+                    ".own-delete-button"
+                );
+
+            if(deleteButton){
+
+                deleteButton.addEventListener(
+                    "click",
+                    event => {
+
+                        event.preventDefault();
+                        event.stopPropagation();
+                        confirmAndDeleteOwnListing(
+                            deleteButton.dataset.deleteId
                         );
 
                     }

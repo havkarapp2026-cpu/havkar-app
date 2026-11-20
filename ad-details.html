@@ -250,6 +250,7 @@ button:focus-visible{
     height:100%;
     display:block;
     object-fit:cover;
+    image-orientation:from-image;
 }
 
 .image-placeholder{
@@ -1605,9 +1606,9 @@ button:focus-visible{
         </h2>
 
         <p>
-            This removes only your advertisement.
-            Conversations, messages, and other people's records are not removed.
-            If anything still depends on this listing, deletion stops.
+            This permanently deletes your advertisement.
+            Related saves, comments, and reactions on this listing are cleared.
+            Messages stay, but the listing link is removed. This cannot be undone.
         </p>
 
         <div class="delete-dialog-actions">
@@ -1638,6 +1639,7 @@ button:focus-visible{
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-ad-publish.js"></script>
 <script src="/havkar-presentment-currencies.js"></script>
+<script src="/havkar-ad-images.js"></script>
 <script src="/havkar-marketplace.js"></script>
 <script src="/havkar-messenger-share.js"></script>
 <script src="/stellar-wallet-bundle.js"></script>
@@ -3275,41 +3277,15 @@ async function fetchSellerPublicProfile(listingId){
 
 async function updateSellerUI(){
 
-    const sellerName =
-        $("sellerName");
-
-    const sellerNote =
-        document.querySelector(
-            ".seller-note"
-        );
-
-    const sellerStatus =
-        document.querySelector(
-            ".seller-status"
-        );
-
     const messageButton =
         $("messageButton");
 
+    applySellerPublicFields(
+        null,
+        "HAVKAR Member"
+    );
+
     if(state.isOwnListing){
-
-        if(sellerName){
-            sellerName.textContent =
-                "Your listing";
-        }
-
-        if(sellerNote){
-            sellerNote.textContent =
-                "Listed by you";
-        }
-
-        if(sellerStatus){
-            sellerStatus.textContent =
-                "Your listing";
-        }
-
-        setSellerAvatar(null);
-
         if(messageButton){
             messageButton.disabled =
                 true;
@@ -3326,18 +3302,7 @@ async function updateSellerUI(){
                     <span>Your Listing</span>
                 `;
         }
-
-        updateOwnerTools();
-        return;
-
-    }
-
-    applySellerPublicFields(
-        null,
-        "HAVKAR Member"
-    );
-
-    if(messageButton){
+    }else if(messageButton){
         messageButton.disabled =
             false;
         messageButton.classList.remove(
@@ -3369,6 +3334,48 @@ async function updateSellerUI(){
             publicProfile.fallback_label ||
                 "HAVKAR Member"
         );
+        if(state.isOwnListing){
+            const sellerNote =
+                document.querySelector(
+                    ".seller-note"
+                );
+            const sellerStatus =
+                document.querySelector(
+                    ".seller-status"
+                );
+            if(sellerNote){
+                sellerNote.textContent =
+                    "Your public seller profile";
+            }
+            if(sellerStatus){
+                sellerStatus.textContent =
+                    "Your listing";
+            }
+        }
+    }else if(state.isOwnListing){
+        const sellerName =
+            $("sellerName");
+        const sellerNote =
+            document.querySelector(
+                ".seller-note"
+            );
+        const sellerStatus =
+            document.querySelector(
+                ".seller-status"
+            );
+        if(sellerName){
+            sellerName.textContent =
+                "HAVKAR Member";
+        }
+        if(sellerNote){
+            sellerNote.textContent =
+                "Your listing · add a public display name in profile";
+        }
+        if(sellerStatus){
+            sellerStatus.textContent =
+                "Your listing";
+        }
+        setSellerAvatar(null);
     }
 
     updateOwnerTools();
@@ -4663,83 +4670,86 @@ async function confirmOwnerDelete(){
 
         initializeSupabase();
 
-        const dependency =
-            await supabaseClient
-                .rpc(
-                    "ad_has_blocking_dependencies",
-                    {
-                        target_ad_id:
-                            state.ad.id
-                    }
-                );
-
-        if(dependency.error){
-
-            throw new Error(
-                "Deletion was stopped because related records could not be checked. Nothing was deleted."
-            );
-
-        }
-
-        if(dependency.data !== false){
-
-            closeDeleteDialog();
-
-            showToast(
-                "This listing was not deleted. Related saves, comments, reactions, or conversations still depend on it."
-            );
-
-            return;
-
-        }
+        const photosSnapshot =
+            Array.isArray(state.ad.photos)
+                ? state.ad.photos.slice()
+                : [];
+        const videoPath =
+            state.ad.video_path || null;
 
         const result =
-            await supabaseClient
-                .from("ads")
-                .delete()
-                .eq(
-                    "id",
-                    state.ad.id
-                )
-                .eq(
-                    "user_id",
-                    state.currentUserId
-                )
-                .select(
-                    "id"
-                );
+            await supabaseClient.rpc(
+                "delete_own_marketplace_listing",
+                {
+                    p_ad_id: Number(state.ad.id)
+                }
+            );
 
         if(result.error){
+            const msg = String(result.error.message || result.error.code || "");
+            if(/not_owner_or_missing|42501|permission/i.test(msg)){
+                throw new Error(
+                    "You can delete only your own listings. Nothing was deleted."
+                );
+            }
+            throw new Error(
+                msg || "This listing was not deleted."
+            );
+        }
 
-            throw result.error;
+        const payload =
+            result.data && typeof result.data === "object"
+                ? result.data
+                : null;
 
+        if(!payload || payload.ok !== true){
+            throw new Error(
+                "This listing was not deleted."
+            );
+        }
+
+        const photoUrls =
+            Array.isArray(payload.photos)
+                ? payload.photos
+                : photosSnapshot;
+
+        if(
+            window.HAVKAR_AD_IMAGES &&
+            typeof window.HAVKAR_AD_IMAGES.deleteOwnAdvertisementImages === "function"
+        ){
+            const cleaned =
+                await window.HAVKAR_AD_IMAGES.deleteOwnAdvertisementImages(
+                    supabaseClient,
+                    state.currentUserId,
+                    photoUrls
+                );
+            if(!cleaned.ok){
+                console.warn(
+                    "[HAVKAR] Listing row deleted; image cleanup incomplete:",
+                    cleaned.error || cleaned.failed
+                );
+                showToast(
+                    "Listing deleted. Some images could not be removed from storage."
+                );
+            }
         }
 
         if(
-            !Array.isArray(result.data) ||
-            result.data.length !== 1
+            (payload.video_path || videoPath) &&
+            window.HAVKAR_MARKETPLACE &&
+            typeof window.HAVKAR_MARKETPLACE.deleteListingVideo === "function"
         ){
-
-            closeDeleteDialog();
-
-            showToast(
-                "This listing was not deleted. Related records still depend on it, or you are not the owner."
-            );
-
-            return;
-
-        }
-
-        if(
-            state.ad.video_path &&
-            window.HAVKAR_MARKETPLACE
-        ){
-
-            await window.HAVKAR_MARKETPLACE.deleteListingVideo(
-                supabaseClient,
-                state.ad.video_path
-            );
-
+            const videoClean =
+                await window.HAVKAR_MARKETPLACE.deleteListingVideo(
+                    supabaseClient,
+                    payload.video_path || videoPath
+                );
+            if(videoClean && videoClean.ok === false){
+                console.warn(
+                    "[HAVKAR] Listing deleted; video cleanup failed:",
+                    videoClean.error
+                );
+            }
         }
 
         window.location.href =

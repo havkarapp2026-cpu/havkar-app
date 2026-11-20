@@ -85,7 +85,20 @@ async function main() {
     "utf8"
   );
   assert.equal(source.includes("service_role"), false);
-  assert.equal(source.includes(".remove("), false);
+  const uploadStart = source.indexOf("async function uploadAdvertisementImages");
+  const deleteStart = source.indexOf("async function deleteOwnAdvertisementImages");
+  assert.equal(uploadStart > 0, true);
+  assert.equal(deleteStart > 0, true);
+  const uploadEnd = source.indexOf("\n  async function ", uploadStart + 10);
+  const uploadBody = source.slice(
+    uploadStart,
+    uploadEnd > uploadStart ? uploadEnd : uploadStart + 2500
+  );
+  assert.equal(uploadBody.includes(".remove("), false);
+  assert.equal(
+    source.slice(deleteStart, deleteStart + 2500).includes(".remove("),
+    true
+  );
   assert.equal(source.includes("upsert: true"), false);
   assert.equal(source.includes("data:image"), false);
   assert.equal(postAd.includes("service_role"), false);
@@ -447,8 +460,69 @@ async function main() {
   assert.equal(submitAdBlock.includes("insertUncertain"), true);
   assert.equal(submitAdBlock.indexOf("beginPublish") < submitAdBlock.indexOf(".insert("), true);
 
+  // Owner-only image delete paths
+  {
+    const ownerPath = OWNER.toLowerCase() + "/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.jpg";
+    const otherPath = OTHER.toLowerCase() + "/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb.jpg";
+    const ownerUrl =
+      "https://project.supabase.co/storage/v1/object/public/ad-images/" + ownerPath;
+    const otherUrl =
+      "https://project.supabase.co/storage/v1/object/public/ad-images/" + otherPath;
+    assert.equal(
+      images.objectPathFromPublicUrl(ownerUrl, OWNER),
+      ownerPath
+    );
+    assert.equal(
+      images.objectPathFromPublicUrl(otherUrl, OWNER),
+      ""
+    );
+    const removed = [];
+    const client = {
+      storage: {
+        from(bucket) {
+          assert.equal(bucket, "ad-images");
+          return {
+            async remove(paths) {
+              removed.push(...paths);
+              return { data: paths.map((p) => ({ name: p })), error: null };
+            }
+          };
+        }
+      }
+    };
+    const ok = await images.deleteOwnAdvertisementImages(client, OWNER, [
+      ownerUrl,
+      otherUrl,
+      "https://evil.example/x.jpg"
+    ]);
+    assert.equal(ok.ok, true);
+    assert.deepEqual(ok.deleted, [ownerPath]);
+    assert.deepEqual(removed, [ownerPath]);
+  }
+
+  {
+    const ownerPath = OWNER.toLowerCase() + "/cccccccc-cccc-4ccc-8ccc-cccccccccccc.jpg";
+    const ownerUrl =
+      "https://project.supabase.co/storage/v1/object/public/ad-images/" + ownerPath;
+    const client = {
+      storage: {
+        from() {
+          return {
+            async remove() {
+              return { data: null, error: { message: "denied" } };
+            }
+          };
+        }
+      }
+    };
+    const fail = await images.deleteOwnAdvertisementImages(client, OWNER, [ownerUrl]);
+    assert.equal(fail.ok, false);
+    assert.equal(fail.failed.length, 1);
+  }
+
   console.log("AD_IMAGE_UPLOAD_TEST_OK");
 }
+
 
 main().catch(error => {
   console.error(error);
