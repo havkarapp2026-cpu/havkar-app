@@ -605,6 +605,15 @@ button:focus-visible{
     background:var(--green-100);
     color:var(--green-700);
     font-size:1.2rem;
+    overflow:hidden;
+}
+
+.seller-avatar img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+    border-radius:50%;
 }
 
 .seller-name{
@@ -629,6 +638,30 @@ button:focus-visible{
 
 .seller-status i{
     font-size:.7rem;
+}
+
+.buy-status{
+    margin:10px 0 0;
+    padding:10px 12px;
+    border-radius:10px;
+    background:#f7fbf7;
+    border:1px solid #d7e8d9;
+    color:var(--green-900);
+    font-size:.82rem;
+    line-height:1.45;
+    white-space:pre-wrap;
+    word-break:break-word;
+}
+
+.buy-status.is-error{
+    background:#fff6f5;
+    border-color:#f0c7c2;
+    color:#7a2e28;
+}
+
+.buy-status.is-ok{
+    background:#f3faf4;
+    border-color:#cfe8d3;
 }
 
 /* ACTIONS — in-flow under seller only; never sticky/floating over pay UI */
@@ -1198,7 +1231,13 @@ button:focus-visible{
                         Pay with XLM wallet
                     </button>
                 </div>
-                <pre id="buyReceipt" hidden style="white-space:pre-wrap;word-break:break-word;font-size:12px;background:#f7fbf7;padding:10px;border-radius:10px;margin:10px 0 0;"></pre>
+                <div
+                    id="buyStatus"
+                    class="buy-status"
+                    hidden
+                    role="status"
+                    aria-live="polite"
+                ></div>
             </section>
 
             <div class="meta-list">
@@ -3106,7 +3145,125 @@ function renderListing(){
    SELLER UI
    ========================================================= */
 
-function updateSellerUI(){
+function setSellerAvatar(avatarUrl){
+
+    const avatar =
+        document.querySelector(
+            ".seller-avatar"
+        );
+
+    if(!avatar){
+        return;
+    }
+
+    const safeUrl =
+        typeof avatarUrl === "string" &&
+        /^https:\/\//i.test(avatarUrl.trim())
+            ? avatarUrl.trim()
+            : "";
+
+    if(!safeUrl){
+        avatar.innerHTML =
+            '<i class="fas fa-user" aria-hidden="true"></i>';
+        return;
+    }
+
+    avatar.innerHTML =
+        '<img src="' +
+        safeUrl.replace(/"/g, "") +
+        '" alt="" width="52" height="52" loading="lazy" referrerpolicy="no-referrer">';
+
+}
+
+function applySellerPublicFields(seller, fallbackLabel){
+
+    const sellerName =
+        $("sellerName");
+
+    const sellerNote =
+        document.querySelector(
+            ".seller-note"
+        );
+
+    const sellerStatus =
+        document.querySelector(
+            ".seller-status"
+        );
+
+    const label =
+        (seller && seller.display_name) ||
+        fallbackLabel ||
+        "HAVKAR Member";
+
+    if(sellerName){
+        sellerName.textContent =
+            label;
+    }
+
+    if(sellerNote){
+        const placeBits =
+            [
+                seller && seller.city,
+                seller && seller.country
+            ].filter(Boolean);
+        sellerNote.textContent =
+            placeBits.length
+                ? placeBits.join(", ")
+                : (
+                    seller && seller.has_public_profile
+                        ? "HAVKAR seller"
+                        : "HAVKAR member"
+                );
+    }
+
+    if(sellerStatus){
+        sellerStatus.textContent =
+            seller && seller.has_public_profile
+                ? "Verified public profile"
+                : (fallbackLabel || "HAVKAR Member");
+    }
+
+    setSellerAvatar(
+        seller && seller.avatar_url
+    );
+
+}
+
+async function fetchSellerPublicProfile(listingId){
+
+    if(!listingId){
+        return null;
+    }
+
+    try{
+        const res =
+            await fetch(
+                "/api/create-event-checkout",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Accept: "application/json"
+                    },
+                    body: JSON.stringify({
+                        action: "marketplace_seller_public",
+                        listing_id: String(listingId)
+                    })
+                }
+            );
+        const body =
+            await res.json().catch(function(){ return null; });
+        if(!res.ok || !body || body.ok !== true){
+            return null;
+        }
+        return body;
+    }catch(_err){
+        return null;
+    }
+
+}
+
+async function updateSellerUI(){
 
     const sellerName =
         $("sellerName");
@@ -3127,92 +3284,81 @@ function updateSellerUI(){
     if(state.isOwnListing){
 
         if(sellerName){
-
             sellerName.textContent =
                 "Your listing";
-
         }
 
         if(sellerNote){
-
             sellerNote.textContent =
                 "Listed by you";
-
         }
 
         if(sellerStatus){
-
             sellerStatus.textContent =
                 "Your listing";
-
         }
 
-        if(messageButton){
+        setSellerAvatar(null);
 
+        if(messageButton){
             messageButton.disabled =
                 true;
-
             messageButton.classList.add(
                 "disabled"
             );
-
             messageButton.setAttribute(
                 "aria-disabled",
                 "true"
             );
-
             messageButton.innerHTML =
                 `
                     <i class="fas fa-user-check"></i>
                     <span>Your Listing</span>
                 `;
-
         }
 
-    }else{
+        updateOwnerTools();
+        return;
 
-        if(sellerName){
+    }
 
-            sellerName.textContent =
-                "HAVKAR Member";
+    applySellerPublicFields(
+        null,
+        "HAVKAR Member"
+    );
 
-        }
+    if(messageButton){
+        messageButton.disabled =
+            false;
+        messageButton.classList.remove(
+            "disabled"
+        );
+        messageButton.removeAttribute(
+            "aria-disabled"
+        );
+        messageButton.innerHTML =
+            `
+                <i class="fas fa-comment"></i>
+                <span>Message Seller</span>
+            `;
+    }
 
-        if(sellerNote){
+    const listingId =
+        state.ad && state.ad.id;
+    const publicProfile =
+        await fetchSellerPublicProfile(
+            listingId
+        );
 
-            sellerNote.textContent =
-                "HAVKAR member";
-
-        }
-
-        if(sellerStatus){
-
-            sellerStatus.textContent =
-                "HAVKAR Member";
-
-        }
-
-        if(messageButton){
-
-            messageButton.disabled =
-                false;
-
-            messageButton.classList.remove(
-                "disabled"
-            );
-
-            messageButton.removeAttribute(
-                "aria-disabled"
-            );
-
-            messageButton.innerHTML =
-                `
-                    <i class="fas fa-comment"></i>
-                    <span>Message Seller</span>
-                `;
-
-        }
-
+    if(
+        publicProfile &&
+        publicProfile.seller
+    ){
+        applySellerPublicFields(
+            publicProfile.seller,
+            publicProfile.fallback_label ||
+                "HAVKAR Member"
+        );
     }
 
     updateOwnerTools();
@@ -4638,7 +4784,11 @@ function syncBuyNowPanel(visible){
         loadBuyCurrencyMatrix().catch(function (err) {
             const note = $("buyGateNote");
             if(note){
-                note.textContent = (err && err.message) || "Could not load currencies.";
+                const raw = String((err && err.message) || "");
+                note.textContent =
+                    /Unexpected token|<!DOCTYPE|is not valid JSON/i.test(raw)
+                        ? "Payment quotes are temporarily unavailable. No charge was started."
+                        : (raw || "Could not load currencies.");
             }
         });
     }else{
@@ -4849,16 +4999,46 @@ async function refreshBuyQuote(){
                 "</div>";
         }
         if(cardBtn){
+            /*
+             * Fail closed for customers: quoting is allowed; live charge stays OFF
+             * until Owner sets HAVKAR_MARKETPLACE_PUBLIC_LIVE_PAYMENTS and seller Connect is ready.
+             * Do not enable the button from live_collection=armed alone.
+             */
+            let marketplacePublicLive = false;
+            try{
+                const gateRes = await fetch("/api/create-event-checkout", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Accept: "application/json"
+                    },
+                    body: JSON.stringify({
+                        action: "marketplace_connect_quote",
+                        list_price_eur: amountEur,
+                        currency: currency
+                    })
+                });
+                const gateBody = await gateRes.json().catch(function(){ return null; });
+                marketplacePublicLive =
+                    !!(gateBody && gateBody.public_live_payments === true);
+                if(gateBody && gateBody.live_collection){
+                    buyCheckoutState.liveCollection = gateBody.live_collection;
+                }
+            }catch(_gateErr){
+                marketplacePublicLive = false;
+            }
+            buyCheckoutState.publicLivePayments = marketplacePublicLive;
             const canCharge =
                 chargeable &&
-                buyCheckoutState.liveCollection === "armed";
+                buyCheckoutState.liveCollection === "armed" &&
+                marketplacePublicLive === true;
             cardBtn.disabled = !canCharge;
             if(!chargeable){
                 cardBtn.textContent =
                     "Card charge unavailable for " +
                     String(q.currency || "").toUpperCase() +
                     " (display/quote only)";
-            }else if(buyCheckoutState.liveCollection === "armed"){
+            }else if(canCharge){
                 cardBtn.textContent =
                     "Pay with card (Stripe) — " +
                     q.buyer_pays +
@@ -4866,9 +5046,7 @@ async function refreshBuyQuote(){
                     q.currency;
             }else{
                 cardBtn.textContent =
-                    "Card quote ready — live collection paused (Owner gate)";
-                /* Quote path still allowed via startBuyCardCheckout when paused. */
-                cardBtn.disabled = false;
+                    "Card checkout unavailable (Owner authorization required)";
             }
         }
         const note = $("buyGateNote");
@@ -4876,10 +5054,12 @@ async function refreshBuyQuote(){
             note.textContent =
                 "Live collection: " +
                 buyCheckoutState.liveCollection +
+                " · public live: " +
+                (buyCheckoutState.publicLivePayments ? "ON" : "OFF") +
                 (chargeable
-                    ? ". Selected currency is Stripe-charge-capable when Owner arms live payments."
-                    : ". Selected currency is display/quote only — not offered as a live charge currency.") +
-                " Public live payments stay OFF without Owner authorization.";
+                    ? ". Selected currency can quote Stripe amounts."
+                    : ". Selected currency is display/quote only.") +
+                " Real card charges stay OFF without Owner authorization.";
         }
     }catch(err){
         if(totals){
@@ -4889,6 +5069,53 @@ async function refreshBuyQuote(){
             cardBtn.disabled = true;
         }
     }
+}
+
+function setBuyStatus(message, tone){
+    const el = $("buyStatus");
+    if(!el){
+        return;
+    }
+    const text = String(message || "").trim();
+    if(!text){
+        el.hidden = true;
+        el.textContent = "";
+        el.classList.remove("is-error", "is-ok");
+        return;
+    }
+    el.hidden = false;
+    el.textContent = text;
+    el.classList.toggle("is-error", tone === "error");
+    el.classList.toggle("is-ok", tone === "ok");
+}
+
+function marketplaceCheckoutCustomerMessage(body, resOk){
+    if(!body || typeof body !== "object"){
+        return "Checkout could not be completed. No payment was taken.";
+    }
+    if(body.customer_message){
+        return String(body.customer_message);
+    }
+    const code = String(body.code || "");
+    if(code === "MARKETPLACE_PUBLIC_LIVE_OFF"){
+        return "Card checkout is temporarily unavailable for marketplace purchases. No payment was taken.";
+    }
+    if(code === "SELLER_CONNECT_REQUIRED"){
+        return "This seller is not ready to receive card payments yet. No charge was started.";
+    }
+    if(code === "LIVE_COLLECTION_PAUSED"){
+        return "Card checkout is paused. No payment was taken.";
+    }
+    if(body.message){
+        return String(body.message);
+    }
+    if(body.error){
+        return String(body.error);
+    }
+    if(resOk){
+        return "Checkout quote ready. Live card collection stays off until Owner authorization.";
+    }
+    return "Checkout could not be completed. No payment was taken.";
 }
 
 async function startBuyCardCheckout(){
@@ -4910,6 +5137,7 @@ async function startBuyCardCheckout(){
     if(cardBtn){
         cardBtn.disabled = true;
     }
+    setBuyStatus("Preparing secure card checkout…", "ok");
     try{
         const res = await fetch("/api/create-event-checkout", {
             method: "POST",
@@ -4926,32 +5154,25 @@ async function startBuyCardCheckout(){
                     "eur"
             })
         });
-        const body = await res.json();
-        const receipt = $("buyReceipt");
-        if(receipt){
-            receipt.hidden = false;
-            receipt.textContent = JSON.stringify(
-                body.receipt || body,
-                null,
-                2
-            );
-        }
-        if(!res.ok){
-            throw new Error((body && body.error) || "checkout_failed");
-        }
-        if(body.checkout_url){
+        const body = await res.json().catch(function(){ return null; });
+        if(body && body.checkout_url && res.ok){
+            setBuyStatus("Redirecting to secure Stripe Checkout…", "ok");
             window.location.href = body.checkout_url;
             return;
         }
-        showToast(
-            body.message ||
-                "Quote ready. Live card collection is paused until Owner authorization."
-        );
+        const message = marketplaceCheckoutCustomerMessage(body, res.ok);
+        setBuyStatus(message, "error");
+        showToast(message);
     }catch(err){
-        showToast((err && err.message) || "Buy Now checkout failed.");
+        const message =
+            (err && err.message) ||
+            "Buy Now checkout failed. No payment was taken.";
+        setBuyStatus(message, "error");
+        showToast(message);
     }finally{
         if(cardBtn){
-            cardBtn.disabled = false;
+            cardBtn.disabled =
+                buyCheckoutState.publicLivePayments !== true;
         }
     }
 }
@@ -5037,37 +5258,40 @@ async function quoteListingXlm(){
 
     /* Dry-run / Owner-gated path: quote only — never sign or transfer real XLM. */
     if(liveMainnetOff){
-        const quoted = await window.HAVKAR_XLM.quote({
+        const dryRun = await window.HAVKAR_XLM.quote({
             flow: "marketplace",
             price: amountEur,
             subjectId: String(ad.id),
             accessToken: accessToken,
             network: "testnet"
         });
-        const result = quoted && quoted.result;
-        const receipt = $("buyReceipt");
-        if(receipt){
-            receipt.hidden = false;
-            receipt.textContent = JSON.stringify(
-                {
-                    mode: "xlm_dry_run_quote",
-                    listing_currency: (ad && ad.currency) || null,
-                    listing_price: amount,
-                    listing_price_eur: amountEur,
-                    fx_source: priced && priced.fx_source,
-                    fx_date: priced && priced.fx_date,
-                    network_fee_separate: true,
-                    live_transfer: false,
-                    quote: result
-                },
-                null,
-                2
-            );
-        }
-        showToast(
+        const result = dryRun && dryRun.result;
+        const quoteText =
             (window.HAVKAR_XLM.describe(result) || "XLM dry-run quote ready.") +
-                " Live XLM transfer stays OFF without Owner authorization."
-        );
+            " Live XLM transfer stays OFF without Owner authorization. No Mainnet payment was sent.";
+        setBuyStatus(quoteText, dryRun && dryRun.ok ? "ok" : "error");
+        showToast(quoteText);
+        return;
+    }
+
+    /* Live Mainnet path: quote first; never treat Albedo/wallet UI success as paid. */
+    setBuyStatus("Requesting secure XLM quote…", "ok");
+    const preQuote = await window.HAVKAR_XLM.quote({
+        flow: "marketplace",
+        price: amountEur,
+        subjectId: String(ad.id),
+        accessToken: accessToken,
+        network: "mainnet"
+    });
+    const preResult = preQuote && preQuote.result;
+    if(!preQuote || !preQuote.ok || !preResult || preResult.payable !== true){
+        const blocked =
+            (window.HAVKAR_XLM.describe(preResult) ||
+                (preResult && preResult.error) ||
+                "Live XLM checkout is not available for this listing.") +
+            " No payment was marked paid on HAVKAR.";
+        setBuyStatus(blocked, "error");
+        showToast(blocked);
         return;
     }
 
@@ -5075,39 +5299,36 @@ async function quoteListingXlm(){
         try {
             await window.havkarConnectStellarWallet();
         } catch (connectError) {
-            showToast(
+            const connectMsg =
                 (connectError && connectError.message) ||
-                    "Connect a Stellar wallet first. HAVKAR never asks for a recovery phrase."
-            );
+                "Connect a Stellar wallet first. HAVKAR never asks for a recovery phrase.";
+            setBuyStatus(connectMsg, "error");
+            showToast(connectMsg);
             return;
         }
     }
+
+    setBuyStatus(
+        "Confirm the payment in your wallet. HAVKAR marks the order paid only after Horizon verification.",
+        "ok"
+    );
 
     const settled =
         await window.HAVKAR_XLM.payAndVerify({
             flow: "marketplace",
             price: amountEur,
             subjectId: String(ad.id),
-            accessToken: accessToken
+            accessToken: accessToken,
+            network: "mainnet"
         });
 
     const result =
         settled && settled.result;
 
-    if(
-        result &&
-        result.payable === true &&
-        result.order_paid !== true
-    ){
-        window.HAVKAR_XLM.stageWalletPayment(
-            result
-        );
-    }
-
     let message =
         window.HAVKAR_XLM.describe(
             result
-        );
+        ) || "XLM payment was not settled.";
 
     if(
         result &&
@@ -5121,9 +5342,20 @@ async function quoteListingXlm(){
         }
     }
 
-    showToast(
-        message
-    );
+    if(!(result && result.order_paid === true)){
+        message +=
+            " Wallet authorization alone does not confirm a HAVKAR order.";
+        setBuyStatus(message, "error");
+    }else{
+        const hash =
+            result.tx_hash || result.txHash || "";
+        if(hash){
+            message += " Tx: " + String(hash).slice(0, 12) + "…";
+        }
+        setBuyStatus(message, "ok");
+    }
+
+    showToast(message);
 
 }
 

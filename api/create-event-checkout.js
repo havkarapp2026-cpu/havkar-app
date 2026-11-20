@@ -172,8 +172,15 @@ function isMarketplaceConnectRequest(req) {
       action === "marketplace_connect_onboard" ||
       action === "marketplace_connect_status" ||
       action === "marketplace_connect_quote" ||
-      action === "marketplace_buy_checkout"
+      action === "marketplace_buy_checkout" ||
+      action === "marketplace_seller_public"
   );
+}
+
+/** Customer-facing marketplace live checkout stays OFF until Owner sets this exact flag. */
+function marketplacePublicLivePaymentsAllowed(env) {
+  const source = env || process.env;
+  return source.HAVKAR_MARKETPLACE_PUBLIC_LIVE_PAYMENTS === "true";
 }
 
 function eventCardCheckoutAllowed(body) {
@@ -2999,6 +3006,68 @@ export default async function handler(req, res) {
     }
 
     const action = String((req.body && req.body.action) || "");
+
+    if (action === "marketplace_seller_public") {
+      try {
+        const {
+          buildMarketplaceSellerPublicPayload
+        } = require("../lib/marketplace-seller-public.cjs");
+        const listingId = String(
+          (req.body && req.body.listing_id) ||
+            (req.query && req.query.listing_id) ||
+            ""
+        ).trim();
+        if (!listingId) {
+          return sendError(res, 400, "listing_id is required");
+        }
+        const { data: ad, error: adError } = await getSupabaseAdmin()
+          .from("ads")
+          .select("id,user_id,status")
+          .eq("id", listingId)
+          .maybeSingle();
+        if (adError) {
+          return sendError(res, 500, "Could not load listing for seller profile");
+        }
+        if (!ad || !ad.user_id) {
+          return sendError(res, 404, "Listing not found");
+        }
+        const publicStatuses = new Set(["active", "published", "reserved"]);
+        if (ad.status && !publicStatuses.has(String(ad.status))) {
+          return sendError(res, 404, "Listing not found");
+        }
+
+        const { data: profile } = await getSupabaseAdmin()
+          .from("profiles")
+          .select("full_name,avatar_url,country,city,created_at")
+          .eq("id", ad.user_id)
+          .maybeSingle();
+
+        let authUser = null;
+        try {
+          const loaded = await getSupabaseAdmin().auth.admin.getUserById(
+            ad.user_id
+          );
+          authUser = loaded && loaded.data && loaded.data.user;
+        } catch (_authErr) {
+          authUser = null;
+        }
+
+        const payload = buildMarketplaceSellerPublicPayload({
+          listingId: ad.id,
+          sellerUserId: ad.user_id,
+          profile: profile || null,
+          authUser: authUser || null
+        });
+        return res.status(200).json(payload);
+      } catch (error) {
+        console.error(
+          "marketplace_seller_public failed",
+          error && error.message
+        );
+        return sendError(res, 500, "Seller public profile unavailable");
+      }
+    }
+
     if (action === "marketplace_connect_quote") {
       const listPrice = Number((req.body && req.body.list_price_eur) || 0);
       const split = marketplaceCardSplit(listPrice);
@@ -3026,7 +3095,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         ok: true,
         live_collection: cardPaymentsAllowed() ? "armed" : "paused",
-        public_live_payments: false,
+        public_live_payments: marketplacePublicLivePaymentsAllowed(),
         split,
         currency_quote: currencyQuote
       });
@@ -3120,6 +3189,7 @@ export default async function handler(req, res) {
         }
         const split = marketplaceCardSplit(listPriceEur);
         const liveArmed = cardPaymentsAllowed();
+        const publicLive = marketplacePublicLivePaymentsAllowed();
         const testAllowed =
           stripeTestCheckoutAllowed() &&
           req.body &&
@@ -3135,16 +3205,35 @@ export default async function handler(req, res) {
           fx_rate: currencyQuote.fx_rate,
           fx_date: fx.date,
           live_collection: liveArmed ? "armed" : "paused",
-          public_live_payments: false
+          public_live_payments: publicLive
         };
 
+        /* Fail closed for customers: env may arm Stripe, but marketplace public live stays OFF until Owner sets HAVKAR_MARKETPLACE_PUBLIC_LIVE_PAYMENTS=true. */
+        if (!publicLive && !testAllowed) {
+          return res.status(409).json({
+            ok: false,
+            charged: false,
+            code: "MARKETPLACE_PUBLIC_LIVE_OFF",
+            message:
+              "Card checkout for this listing is not available yet. Live marketplace collection stays closed until Owner authorization. No charge was started.",
+            customer_message:
+              "Card checkout is temporarily unavailable for marketplace purchases. No payment was taken.",
+            receipt,
+            split,
+            currency_quote: currencyQuote,
+            checkout_url: null
+          });
+        }
+
         if (!liveArmed && !testAllowed) {
-          return res.status(200).json({
-            ok: true,
+          return res.status(409).json({
+            ok: false,
             charged: false,
             code: "LIVE_COLLECTION_PAUSED",
             message:
-              "Checkout quote ready. Public live card collection stays OFF without Owner authorization.",
+              "Checkout quote ready. Public live card collection stays OFF without Owner authorization. No charge was started.",
+            customer_message:
+              "Card checkout is paused. No payment was taken.",
             receipt,
             split,
             currency_quote: currencyQuote,
@@ -3173,6 +3262,8 @@ export default async function handler(req, res) {
             code: "SELLER_CONNECT_REQUIRED",
             message:
               "Live card checkout stays blocked until this seller completes Stripe Connect with charges enabled. Quote remains available; funds would not have an operational payout path to the seller.",
+            customer_message:
+              "This seller is not ready to receive card payments yet. No charge was started.",
             receipt: {
               ...receipt,
               seller_connect: sellerConnect.data
@@ -3280,7 +3371,7 @@ export default async function handler(req, res) {
           currency_quote: currencyQuote,
           destination_charge: Boolean(connectedAccountId),
           live_collection: liveArmed ? "armed" : "paused",
-          public_live_payments: false
+          public_live_payments: publicLive
         });
       } catch (error) {
         console.error(
