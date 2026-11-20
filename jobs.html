@@ -1645,7 +1645,7 @@ a.primary{
     </div>
 
     <div class="plan-title">
-      Choose a 30-day prepaid listing plan
+      Ordinary employer — choose a 30-day prepaid listing plan
     </div>
 
     <div class="plans">
@@ -1654,12 +1654,13 @@ a.primary{
         class="plan selected"
         data-price="9.99"
         data-plan="Basic"
+        data-billing="one_time_prepaid"
         onclick="selectPlan(this)">
 
         <strong>Basic — €9.99 / 30 days</strong>
 
         <span>
-          For small businesses and one active job. One-time prepaid listing window.
+          Ordinary employer. One-time prepaid listing for 30 days. No auto-renew.
         </span>
 
       </div>
@@ -1668,12 +1669,13 @@ a.primary{
         class="plan"
         data-price="19.99"
         data-plan="Professional"
+        data-billing="one_time_prepaid"
         onclick="selectPlan(this)">
 
         <strong>Professional — €19.99 / 30 days</strong>
 
         <span>
-          More visibility and multiple active jobs. One-time prepaid listing window.
+          Ordinary employer. One-time prepaid listing for 30 days. No auto-renew.
         </span>
 
       </div>
@@ -1682,17 +1684,52 @@ a.primary{
         class="plan"
         data-price="39.99"
         data-plan="Business"
+        data-billing="one_time_prepaid"
         onclick="selectPlan(this)">
 
-        <strong>Business — €39.99 / 30 days</strong>
+        <strong>Business (ordinary) — €39.99 / 30 days</strong>
 
         <span>
-          For businesses with regular recruitment. One-time prepaid listing window.
+          Ordinary employer prepaid listing. Not the corporate Business monthly subscription.
         </span>
 
       </div>
 
     </div>
+
+    <div class="plan-title" style="margin-top:18px">
+      Verified company — monthly subscription (auto-renew)
+    </div>
+    <p class="upload-note" id="companyVerificationNote">
+      Corporate plans require a real verified company. Self-registration stays unverified until HAVKAR staff confirms it. Live subscription charges stay OFF.
+    </p>
+    <div id="companyStatusPanel" class="notice" style="margin-bottom:12px">
+      Sign in to load your company verification status.
+    </div>
+    <div class="field">
+      <label for="companyLegalName">Register company legal name</label>
+      <input id="companyLegalName" type="text" maxlength="200" autocomplete="organization" placeholder="Legal company name">
+      <button class="secondary" type="button" onclick="registerJobCompany()" style="margin-top:8px">
+        Submit company for verification
+      </button>
+    </div>
+    <div class="plans" id="corporatePlans">
+      <div class="plan" data-corporate="business" data-price="49.99" onclick="selectCorporatePlan(this)">
+        <strong>Business — €49.99 / month</strong>
+        <span>Verified company. Auto-renew monthly. Up to 10 active job ads.</span>
+      </div>
+      <div class="plan" data-corporate="business_plus" data-price="99.99" onclick="selectCorporatePlan(this)">
+        <strong>Business Plus — €99.99 / month</strong>
+        <span>Verified company. Auto-renew monthly. Up to 30 active job ads.</span>
+      </div>
+      <div class="plan" data-corporate="enterprise" data-price="199.99" onclick="selectCorporatePlan(this)">
+        <strong>Enterprise — €199.99 / month</strong>
+        <span>Verified company. Auto-renew monthly. Up to 100 active job ads.</span>
+      </div>
+    </div>
+    <button class="secondary" type="button" onclick="quoteCorporateSubscription()" style="margin-top:10px">
+      Quote corporate subscription (no charge)
+    </button>
 
     <div class="summary">
 
@@ -1715,7 +1752,7 @@ a.primary{
     <div class="notice">
       Your job will remain
       <strong>Pending payment</strong>
-      until a real payment provider confirms the prepaid listing fee. This is not an automatic monthly subscription.
+      until a real payment provider confirms the prepaid listing fee. This is not an automatic monthly subscription. Card and Stellar live payments stay OFF.
     </div>
 
     <button
@@ -1743,7 +1780,7 @@ a.primary{
     <div class="modal-head">
 
       <h2>
-        Monthly subscription
+        30-day prepaid listing
       </h2>
 
       <button
@@ -2063,7 +2100,7 @@ async function loadSupabaseJobs(){
   const { data, error } =
     await supabaseClient
       .from("jobs")
-      .select("id,created_at,user_id,title,company,location,job_type,salary,description,requirements,contact,status,expires_at,application_url,remote,category,language,experience_level,education_level,skills,currency,salary_min,salary_max,type,image,plan,monthly_fee,latitude,longitude")
+      .select("id,created_at,user_id,title,company,location,job_type,salary,description,requirements,contact,status,expires_at,application_url,remote,category,language,experience_level,education_level,skills,currency,salary_min,salary_max,type,image,plan,monthly_fee,employer_kind,company_id,latitude,longitude")
       .order("created_at", { ascending:false });
 
   if(error){
@@ -2372,8 +2409,7 @@ function renderJobs(){
             <div class="salary">
 
               ${escapeHTML(
-                job.salary ||
-                "Negotiable"
+                formatJobSalaryDisplay(job)
               )}
 
             </div>
@@ -2626,10 +2662,31 @@ function openJob(id){
         <span class="detail-value">
 
           ${escapeHTML(
-            job.salary ||
-            "Negotiable"
+            formatJobSalaryDisplay(job)
           )}
 
+        </span>
+
+      </div>
+
+      <div class="detail-row">
+
+        <span class="detail-label">
+          Display currency
+        </span>
+
+        <span class="detail-value">
+          ${escapeHTML(
+            window.HAVKAR_JOBS
+              ? window.HAVKAR_JOBS.formatCurrencyLabel(
+                  job.currency || "EUR",
+                  window.HAVKAR_PRESENTMENT_CURRENCIES &&
+                    (window.HAVKAR_PRESENTMENT_CURRENCIES.byCode ||
+                      window.HAVKAR_PRESENTMENT_CURRENCIES.currencies ||
+                      window.HAVKAR_PRESENTMENT_CURRENCIES)
+                )
+              : String(job.currency || "EUR")
+          )}
         </span>
 
       </div>
@@ -2757,6 +2814,21 @@ function openJob(id){
 
           </button>
 
+          <button
+            class="secondary"
+            type="button"
+            onclick="
+              viewJobApplications(
+                '${escapeJS(job.id)}'
+              )
+            ">
+
+            <i class="fas fa-inbox"></i>
+
+            View applications
+
+          </button>
+
         `
 
         : renderApplicationAction(job)
@@ -2843,11 +2915,34 @@ function renderApplicationAction(job){
           label:"Application contact is not available."
         };
 
+  const inAppApply =
+    action.available
+      ? `
+        <div class="field" style="margin-top:14px">
+          <label for="inAppCoverLetter">Apply on HAVKAR</label>
+          <textarea
+            id="inAppCoverLetter"
+            rows="4"
+            maxlength="4000"
+            placeholder="Short cover note for the employer"
+          ></textarea>
+          <button
+            class="primary"
+            type="button"
+            style="margin-top:8px"
+            onclick="submitInAppApplication('${escapeJS(job.id)}')">
+            Submit application
+          </button>
+        </div>
+      `
+      : "";
+
   if(!action.available){
     return `
       <p class="notice">
         ${escapeHTML(action.label)}
       </p>
+      ${inAppApply}
     `;
   }
 
@@ -2858,6 +2953,7 @@ function renderApplicationAction(job){
         <br>
         ${escapeHTML(action.text)}
       </div>
+      ${inAppApply}
     `;
   }
 
@@ -2879,6 +2975,7 @@ function renderApplicationAction(job){
       ${escapeHTML(action.label)}
     </a>
     ${detail}
+    ${inAppApply}
   `;
 }
 
@@ -2897,7 +2994,27 @@ async function openPostJob(){
   }
 
   resetPostForm();
+  await refreshCompanyStatusPanel();
   openModal("postModal");
+}
+
+function formatJobSalaryDisplay(job){
+  const salary = String((job && job.salary) || "Negotiable");
+  const code = job && job.currency
+    ? String(job.currency).toUpperCase()
+    : "";
+  if(!code || !window.HAVKAR_JOBS || !window.HAVKAR_JOBS.formatCurrencyLabel){
+    return salary;
+  }
+  const bag = window.HAVKAR_PRESENTMENT_CURRENCIES &&
+    (window.HAVKAR_PRESENTMENT_CURRENCIES.byCode ||
+      window.HAVKAR_PRESENTMENT_CURRENCIES.currencies ||
+      window.HAVKAR_PRESENTMENT_CURRENCIES);
+  const label = window.HAVKAR_JOBS.formatCurrencyLabel(code, bag);
+  if(salary.indexOf(code) !== -1 || salary.indexOf("XLM") !== -1){
+    return salary + " · " + label;
+  }
+  return salary + " · " + label;
 }
 
 /* =========================================================
@@ -3497,6 +3614,9 @@ async function submitJob(){
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
   }
 
+  const currencyEl = document.getElementById("jobCurrency");
+  const currency = currencyEl ? String(currencyEl.value || "EUR").toUpperCase() : "EUR";
+
   const result = await window.HAVKAR_JOBS.createOwnJob(
     supabaseClient,
     {
@@ -3513,7 +3633,9 @@ async function submitJob(){
         requirements,
         application_url:applicationUrl,
         contact,
-        image:selectedJobImage || null
+        image:selectedJobImage || null,
+        currency: currency,
+        employer_kind: "ordinary"
       }
     }
   );
@@ -4486,16 +4608,192 @@ function escapeJS(value){
 }
 
 /* =========================================================
+   COMPANY VERIFICATION + CORPORATE QUOTES
+   ========================================================= */
+
+let selectedCorporatePlanCode = null;
+let cachedOwnCompanies = [];
+
+async function refreshCompanyStatusPanel(){
+  const panel = document.getElementById("companyStatusPanel");
+  if(!panel || !window.HAVKAR_JOBS) return;
+  await refreshCurrentUser();
+  if(!currentUser){
+    panel.textContent = "Sign in to load your company verification status.";
+    cachedOwnCompanies = [];
+    return;
+  }
+  const result = await window.HAVKAR_JOBS.loadOwnCompanies(supabaseClient, currentUser.id);
+  if(!result.ok){
+    panel.textContent = result.message || "Could not load company status.";
+    cachedOwnCompanies = [];
+    return;
+  }
+  cachedOwnCompanies = result.rows || [];
+  if(!cachedOwnCompanies.length){
+    panel.innerHTML = "No company registered yet. Submit a legal name below. Status will stay <strong>unverified</strong> until HAVKAR staff verifies it.";
+    return;
+  }
+  panel.innerHTML = cachedOwnCompanies.map(function(row){
+    const verified = window.HAVKAR_JOBS.companyIsVerified(row);
+    return "<div><strong>" + escapeHTML(row.legal_name) + "</strong> — " +
+      (verified ? "verified" : "unverified") +
+      "</div>";
+  }).join("");
+}
+
+async function registerJobCompany(){
+  await refreshCurrentUser();
+  if(!currentUser){
+    alert("Please sign in before registering a company.");
+    return;
+  }
+  const input = document.getElementById("companyLegalName");
+  const legalName = input ? input.value.trim() : "";
+  const result = await window.HAVKAR_JOBS.registerCompany(supabaseClient, {
+    userId: currentUser.id,
+    legal_name: legalName
+  });
+  if(!result.ok){
+    alert(result.message || "Company could not be registered.");
+    return;
+  }
+  if(input) input.value = "";
+  alert("Company submitted as unverified. Corporate subscriptions stay blocked until HAVKAR verifies the company. No payment was created.");
+  await refreshCompanyStatusPanel();
+}
+
+function selectCorporatePlan(element){
+  selectedCorporatePlanCode = element && element.dataset
+    ? element.dataset.corporate
+    : null;
+  document.querySelectorAll("#corporatePlans .plan").forEach(function(plan){
+    plan.classList.remove("selected");
+  });
+  if(element) element.classList.add("selected");
+}
+
+async function quoteCorporateSubscription(){
+  await refreshCurrentUser();
+  if(!currentUser){
+    alert("Please sign in before quoting a corporate plan.");
+    return;
+  }
+  if(!selectedCorporatePlanCode){
+    alert("Select Business, Business Plus, or Enterprise first.");
+    return;
+  }
+  const company = (cachedOwnCompanies || []).find(function(row){
+    return window.HAVKAR_JOBS.companyIsVerified(row);
+  }) || (cachedOwnCompanies || [])[0] || null;
+  const localQuote = window.HAVKAR_JOBS.buildCorporateSubscriptionQuote(
+    company,
+    selectedCorporatePlanCode,
+    false
+  );
+  if(!localQuote.ok){
+    alert(localQuote.message || "Corporate quote refused.");
+    return;
+  }
+  try{
+    const res = await fetch("/api/create-event-checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "jobs_quote",
+        plan: selectedCorporatePlanCode,
+        method: "stripe",
+        company_id: company && company.id,
+        verification_status: company && company.verification_status
+      })
+    });
+    const body = await res.json().catch(function(){ return null; });
+    if(body && body.ok && body.charge_allowed_now === true){
+      alert(
+        "Corporate quote is Owner-armed on the server, but this page does not start a live subscription Checkout. No charge was created. Plan " +
+        selectedCorporatePlanCode + " = €" + Number(localQuote.plan.eur).toFixed(2) + "/month."
+      );
+      return;
+    }
+    alert(
+      (body && (body.error || body.availability_reason || body.availability_label)) ||
+      localQuote.message
+    );
+  }catch(_err){
+    alert(localQuote.message);
+  }
+}
+
+async function submitInAppApplication(jobId){
+  await refreshCurrentUser();
+  if(!currentUser){
+    alert("Please sign in before applying.");
+    window.location.href = "profile.html";
+    return;
+  }
+  const job = jobs.find(function(item){ return String(item.id) === String(jobId); });
+  const coverEl = document.getElementById("inAppCoverLetter");
+  const cover = coverEl ? coverEl.value : "";
+  const result = await window.HAVKAR_JOBS.submitJobApplication(supabaseClient, {
+    job: job,
+    applicantId: currentUser.id,
+    cover_letter: cover
+  });
+  if(!result.ok){
+    alert(result.message || "Application could not be saved.");
+    return;
+  }
+  alert("Application submitted. The employer can review it in View applications.");
+  if(coverEl) coverEl.value = "";
+}
+
+async function viewJobApplications(jobId){
+  await refreshCurrentUser();
+  if(!currentUser){
+    alert("Please sign in.");
+    return;
+  }
+  const result = await window.HAVKAR_JOBS.listApplicationsForJob(supabaseClient, {
+    jobId: jobId,
+    userId: currentUser.id
+  });
+  if(!result.ok){
+    alert(result.message || "Could not load applications.");
+    return;
+  }
+  const rows = result.rows || [];
+  if(!rows.length){
+    alert("No applications yet for this listing.");
+    return;
+  }
+  const summary = rows.map(function(row, index){
+    return (index + 1) + ". " + String(row.status || "submitted") +
+      " — " + String(row.cover_letter || "").slice(0, 80);
+  }).join("\n");
+  alert("Applications (" + rows.length + "):\n" + summary);
+}
+
+/* =========================================================
    INITIALIZE
    ========================================================= */
 
 supabaseClient.auth.onAuthStateChange(
   async (_event, session) => {
     currentUser = session?.user || null;
+    refreshCompanyStatusPanel();
   }
 );
 
-loadSupabaseJobs();
+(async function bootJobsPage(){
+  await loadSupabaseJobs();
+  await refreshCompanyStatusPanel();
+  try{
+    const params = new URLSearchParams(window.location.search);
+    if(String(params.get("mine") || "") === "1"){
+      await openMyJobs();
+    }
+  }catch(_err){}
+})();
 
 </script>
 
