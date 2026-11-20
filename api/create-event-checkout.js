@@ -163,8 +163,16 @@ function isXlmInvoiceRequest(req) {
   );
 }
 
+function marketplaceConnectAction(req) {
+  return String(
+    (req && req.body && req.body.action) ||
+      (req && req.query && req.query.action) ||
+      ""
+  );
+}
+
 function isMarketplaceConnectRequest(req) {
-  const action = String((req && req.body && req.body.action) || "");
+  const action = marketplaceConnectAction(req);
   const url = String((req && req.url) || "");
   return Boolean(
     (req && req.query && req.query.havkarAction === "marketplaceConnect") ||
@@ -3005,7 +3013,7 @@ export default async function handler(req, res) {
       return sendError(res, 405, "Method not allowed");
     }
 
-    const action = String((req.body && req.body.action) || "");
+    const action = marketplaceConnectAction(req);
 
     if (action === "marketplace_seller_public") {
       try {
