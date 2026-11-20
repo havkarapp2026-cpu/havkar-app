@@ -52,10 +52,26 @@ test("public seller payload never includes email or phone", () => {
   assert.equal(payload.seller.display_name, "Sorsn2024sss");
   assert.match(payload.seller.avatar_url, /^https:\/\//);
   assert.equal(payload.seller.has_public_profile, true);
+  assert.equal(payload.fallback_label, null);
+  assert.equal(payload.missing_reason, null);
   assert.doesNotMatch(json, /secret@example\.com/);
   assert.doesNotMatch(json, /\+390000/);
   assert.doesNotMatch(json, /"email"/);
   assert.doesNotMatch(json, /"phone"/);
+});
+
+test("missing public profile reports reason instead of fake name", () => {
+  const payload = buildMarketplaceSellerPublicPayload({
+    listingId: 46,
+    sellerUserId: "11845ff0-9f33-4869-95fa-a32bd2dd2d5e",
+    profile: { full_name: null, avatar_url: null },
+    authUser: { user_metadata: {} }
+  });
+  assert.equal(payload.seller.display_name, null);
+  assert.equal(payload.seller.avatar_url, null);
+  assert.equal(payload.seller.has_public_profile, false);
+  assert.equal(payload.fallback_label, null);
+  assert.match(payload.missing_reason, /not set a public display name/i);
 });
 
 test("email-shaped names are rejected as public display names", () => {

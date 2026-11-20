@@ -31,8 +31,11 @@ test("own listings still load public seller profile fields", () => {
   assert.match(details, /fetchSellerPublicProfile/);
   assert.match(details, /get_marketplace_seller_public/);
   assert.match(details, /sellerFromAuthUser/);
+  assert.match(details, /Public name not set/);
+  assert.match(details, /missing_reason/);
   assert.match(buySell, /get_marketplace_sellers_public/);
   assert.match(buySell, /ad-seller-row/);
+  assert.match(buySell, /Public name not set/);
   assert.match(sellerMigration, /get_marketplace_seller_public/);
   assert.match(sellerMigration, /_havkar_sanitize_public_display_name/);
 });

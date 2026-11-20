@@ -1480,16 +1480,16 @@ button:focus-visible{
                         id="sellerName"
                         class="seller-name"
                     >
-                        HAVKAR Member
+                        Loading seller…
                     </div>
 
                     <div class="seller-note">
-                        HAVKAR member
+                        Public seller profile
                     </div>
 
                     <div class="seller-status">
                         <span>
-                            HAVKAR Member
+                            Resolving…
                         </span>
                     </div>
 
@@ -3188,7 +3188,7 @@ function setSellerAvatar(avatarUrl){
 
 }
 
-function applySellerPublicFields(seller, fallbackLabel){
+function applySellerPublicFields(seller, missingReason){
 
     const sellerName =
         $("sellerName");
@@ -3203,14 +3203,28 @@ function applySellerPublicFields(seller, fallbackLabel){
             ".seller-status"
         );
 
+    const hasPublic =
+        Boolean(
+            seller &&
+            (
+                seller.has_public_profile ||
+                seller.display_name ||
+                seller.avatar_url
+            )
+        );
+
     const label =
         (seller && seller.display_name) ||
-        fallbackLabel ||
-        "HAVKAR Member";
+        (
+            hasPublic
+                ? null
+                : null
+        );
 
     if(sellerName){
         sellerName.textContent =
-            label;
+            label ||
+            "Public name not set";
     }
 
     if(sellerNote){
@@ -3219,21 +3233,27 @@ function applySellerPublicFields(seller, fallbackLabel){
                 seller && seller.city,
                 seller && seller.country
             ].filter(Boolean);
-        sellerNote.textContent =
-            placeBits.length
-                ? placeBits.join(", ")
-                : (
-                    seller && seller.has_public_profile
-                        ? "HAVKAR seller"
-                        : "HAVKAR member"
-                );
+        if(placeBits.length){
+            sellerNote.textContent =
+                placeBits.join(", ");
+        }else if(hasPublic && label){
+            sellerNote.textContent =
+                "Public seller profile";
+        }else{
+            sellerNote.textContent =
+                missingReason ||
+                "This seller has not set a public display name or avatar.";
+        }
     }
 
     if(sellerStatus){
         sellerStatus.textContent =
-            seller && seller.has_public_profile
-                ? "Verified public profile"
-                : (fallbackLabel || "HAVKAR Member");
+            hasPublic && label
+                ? "Public profile"
+                : (
+                    missingReason ||
+                    "No public profile on this account"
+                );
     }
 
     setSellerAvatar(
@@ -3358,7 +3378,7 @@ async function updateSellerUI(){
 
     applySellerPublicFields(
         null,
-        "HAVKAR Member"
+        "Resolving public seller profile…"
     );
 
     if(state.isOwnListing){
@@ -3420,7 +3440,7 @@ async function updateSellerUI(){
                 publicProfile = {
                     ok: true,
                     seller: seller,
-                    fallback_label: "HAVKAR Member"
+                    missing_reason: null
                 };
             }
         }catch(_ownErr){
@@ -3428,14 +3448,10 @@ async function updateSellerUI(){
         }
     }
 
-    if(
-        publicProfile &&
-        publicProfile.seller
-    ){
+    if(publicProfile && publicProfile.seller){
         applySellerPublicFields(
             publicProfile.seller,
-            publicProfile.fallback_label ||
-                "HAVKAR Member"
+            publicProfile.missing_reason || null
         );
         if(state.isOwnListing){
             const sellerNote =
@@ -3446,9 +3462,18 @@ async function updateSellerUI(){
                 document.querySelector(
                     ".seller-status"
                 );
+            const hasName =
+                Boolean(
+                    publicProfile.seller.display_name
+                );
             if(sellerNote){
                 sellerNote.textContent =
-                    "Your public seller profile";
+                    hasName
+                        ? "Your public seller profile"
+                        : (
+                            publicProfile.missing_reason ||
+                            "Add a public display name in Profile settings."
+                        );
             }
             if(sellerStatus){
                 sellerStatus.textContent =
@@ -3456,29 +3481,15 @@ async function updateSellerUI(){
             }
         }
     }else if(state.isOwnListing){
-        const sellerName =
-            $("sellerName");
-        const sellerNote =
-            document.querySelector(
-                ".seller-note"
-            );
-        const sellerStatus =
-            document.querySelector(
-                ".seller-status"
-            );
-        if(sellerName){
-            sellerName.textContent =
-                "HAVKAR Member";
-        }
-        if(sellerNote){
-            sellerNote.textContent =
-                "Your listing · add a public display name in profile";
-        }
-        if(sellerStatus){
-            sellerStatus.textContent =
-                "Your listing";
-        }
-        setSellerAvatar(null);
+        applySellerPublicFields(
+            null,
+            "Your listing · add a public display name and avatar in Profile settings."
+        );
+    }else{
+        applySellerPublicFields(
+            null,
+            "Public seller profile could not be loaded for this listing."
+        );
     }
 
     updateOwnerTools();

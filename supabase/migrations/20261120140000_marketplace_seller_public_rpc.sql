@@ -152,7 +152,12 @@ BEGIN
     'listing_id', v_ad.id::text,
     'seller_user_id', v_ad.user_id::text,
     'seller', v_seller,
-    'fallback_label', 'HAVKAR Member'
+    'fallback_label', NULL,
+    'missing_reason', CASE
+      WHEN coalesce((v_seller->>'has_public_profile')::boolean, false)
+        THEN NULL
+      ELSE 'This seller has not set a public display name or avatar.'
+    END
   );
 END;
 $$;
@@ -211,7 +216,12 @@ BEGIN
         'listing_id', v_ad.id::text,
         'seller_user_id', v_ad.user_id::text,
         'seller', v_seller,
-        'fallback_label', 'HAVKAR Member'
+        'fallback_label', NULL,
+        'missing_reason', CASE
+          WHEN coalesce((v_seller->>'has_public_profile')::boolean, false)
+            THEN NULL
+          ELSE 'This seller has not set a public display name or avatar.'
+        END
       )
     );
   END LOOP;
