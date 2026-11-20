@@ -3844,8 +3844,8 @@ async function startRealPayment(jobId){
       body.charge_allowed_now === true
     ){
       alert(
-        "Card collection is Owner-armed for Jobs quotes, but checkout session creation is not started from this button yet. " +
-        "Your advertisement has NOT been activated. No charge was created."
+        "Jobs card collection flag may be armed, but this page intentionally does NOT create a Stripe Checkout session. " +
+        "No subscription and no one-time charge was created. Your advertisement stays pending payment until Owner-approved live Jobs checkout is implemented and enabled."
       );
       return;
     }
@@ -4710,8 +4710,9 @@ async function quoteCorporateSubscription(){
     const body = await res.json().catch(function(){ return null; });
     if(body && body.ok && body.charge_allowed_now === true){
       alert(
-        "Corporate quote is Owner-armed on the server, but this page does not start a live subscription Checkout. No charge was created. Plan " +
-        selectedCorporatePlanCode + " = €" + Number(localQuote.plan.eur).toFixed(2) + "/month."
+        "Corporate plan " + selectedCorporatePlanCode +
+        " quotes €" + Number(localQuote.plan.eur).toFixed(2) +
+        "/month, but this page intentionally does NOT create a Stripe Subscription Checkout. No charge and no auto-renew was started."
       );
       return;
     }
