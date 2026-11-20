@@ -2329,6 +2329,10 @@ input:focus-visible{
         Personal Information
     </div>
 
+    <p class="note" style="margin:0 0 12px;color:#4d5b53;font-size:.92rem;line-height:1.45;">
+        Your full name and profile photo are your public seller identity on Buy &amp; Sell listings. Email and phone stay private.
+    </p>
+
 
     <div class="edit-form">
 
@@ -4992,6 +4996,97 @@ async function(){
 
 
 /* =========================================================
+   PUBLIC MARKETPLACE PROFILE SYNC
+   Keeps profiles.full_name / profiles.avatar_url aligned with
+   the signed-in user's public identity (never email/phone).
+========================================================= */
+
+function sanitizePublicProfileName(raw){
+    const text =
+        String(raw || "")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 80);
+    if(!text || /@/.test(text)){
+        return null;
+    }
+    return text;
+}
+
+function sanitizePublicAvatarUrl(raw){
+    const text =
+        String(raw || "").trim();
+    if(!text || !/^https:\/\//i.test(text) || text.length > 2048){
+        return null;
+    }
+    return text;
+}
+
+async function syncPublicMarketplaceProfile(fields){
+    if(!supabase || !currentUser || !currentUser.id){
+        return { ok:false, error:"Sign in required." };
+    }
+
+    const nextName =
+        Object.prototype.hasOwnProperty.call(fields || {}, "full_name")
+            ? sanitizePublicProfileName(fields.full_name)
+            : sanitizePublicProfileName(
+                (
+                    currentUser.user_metadata &&
+                    (
+                        currentUser.user_metadata.full_name ||
+                        currentUser.user_metadata.name
+                    )
+                ) || ""
+            );
+
+    const nextAvatar =
+        Object.prototype.hasOwnProperty.call(fields || {}, "avatar_url")
+            ? sanitizePublicAvatarUrl(fields.avatar_url)
+            : sanitizePublicAvatarUrl(
+                (
+                    currentUser.user_metadata &&
+                    (
+                        currentUser.user_metadata.avatar_url ||
+                        currentUser.user_metadata.picture
+                    )
+                ) || ""
+            );
+
+    const payload = {
+        id: currentUser.id,
+        full_name: nextName,
+        avatar_url: nextAvatar
+    };
+
+    const result =
+        await supabase
+            .from("profiles")
+            .upsert(
+                payload,
+                { onConflict: "id" }
+            )
+            .select("id,full_name,avatar_url")
+            .maybeSingle();
+
+    if(result.error){
+        return {
+            ok:false,
+            error: result.error.message || "Could not sync public profile."
+        };
+    }
+
+    return {
+        ok:true,
+        profile: result.data || payload
+    };
+}
+
+window.syncPublicMarketplaceProfile =
+    syncPublicMarketplaceProfile;
+
+
+/* =========================================================
    SAVE PERSONAL INFORMATION
 ========================================================= */
 
@@ -5055,6 +5150,17 @@ async function(){
 
     }
 
+    if(/@/.test(fullName)){
+
+        showMessage(
+            "Public name cannot be an email address.",
+            "error"
+        );
+
+        return;
+
+    }
+
 
     if(button){
 
@@ -5085,6 +5191,9 @@ async function(){
                 full_name:
                     fullName,
 
+                name:
+                    fullName,
+
                 username:
                     username
 
@@ -5110,46 +5219,16 @@ async function(){
 
         }
 
-        /* Keep public marketplace seller fields in sync (never write email/phone here). */
-        try{
-            const avatarUrl =
-                (
-                    currentUser &&
-                    currentUser.user_metadata &&
-                    (
-                        currentUser.user_metadata.avatar_url ||
-                        currentUser.user_metadata.picture
-                    )
-                ) || null;
-            const safeAvatar =
-                typeof avatarUrl === "string" &&
-                /^https:\/\//i.test(avatarUrl.trim())
-                    ? avatarUrl.trim()
-                    : null;
-            const safeName =
-                String(fullName || "")
-                    .replace(/\s+/g, " ")
-                    .trim()
-                    .slice(0, 80);
-            if(
-                currentUser &&
-                currentUser.id &&
-                safeName &&
-                !/@/.test(safeName)
-            ){
-                await supabase
-                    .from("profiles")
-                    .upsert(
-                        {
-                            id: currentUser.id,
-                            full_name: safeName,
-                            avatar_url: safeAvatar
-                        },
-                        { onConflict: "id" }
-                    );
-            }
-        }catch(_profileSyncErr){
-            /* auth metadata already saved; marketplace RPC still falls back to auth */
+        const synced =
+            await syncPublicMarketplaceProfile({
+                full_name: fullName
+            });
+
+        if(!synced.ok){
+            throw new Error(
+                synced.error ||
+                "Public profile could not be saved."
+            );
         }
 
 
@@ -5160,7 +5239,7 @@ async function(){
 
 
         showMessage(
-            "Personal information saved successfully.",
+            "Personal information saved. Your public name will appear on your Buy & Sell listings.",
             "success"
         );
 
@@ -7720,12 +7799,24 @@ async function(
 
         }
 
+        const synced =
+            await syncPublicMarketplaceProfile({
+                avatar_url: publicUrl
+            });
+
+        if(!synced.ok){
+            throw new Error(
+                synced.error ||
+                "Public profile photo could not be saved."
+            );
+        }
+
 
         await loadProfile();
 
 
         showMessage(
-            "Profile photo updated successfully.",
+            "Profile photo updated. It will appear on your Buy & Sell listings.",
             "success"
         );
 
@@ -7874,12 +7965,24 @@ async function(){
 
         }
 
+        const synced =
+            await syncPublicMarketplaceProfile({
+                avatar_url: null
+            });
+
+        if(!synced.ok){
+            throw new Error(
+                synced.error ||
+                "Public profile photo could not be cleared."
+            );
+        }
+
 
         await loadProfile();
 
 
         showMessage(
-            "Profile photo removed.",
+            "Profile photo removed from your account and listings.",
             "success"
         );
 
