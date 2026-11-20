@@ -615,6 +615,7 @@ button:focus-visible{
     object-fit:cover;
     display:block;
     border-radius:50%;
+    image-orientation:from-image;
 }
 
 .seller-name{
@@ -3241,22 +3242,97 @@ function applySellerPublicFields(seller, fallbackLabel){
 
 }
 
+function sanitizePublicDisplayName(raw){
+    const text = String(raw || "").replace(/\s+/g, " ").trim();
+    if(!text || text.length > 80 || /@/.test(text)){
+        return null;
+    }
+    return text;
+}
+
+function publicAvatarFromUrl(raw){
+    const text = String(raw || "").trim();
+    return /^https:\/\//i.test(text) ? text : null;
+}
+
+function sellerFromAuthUser(user){
+    if(!user){
+        return null;
+    }
+    const meta = user.user_metadata || {};
+    const displayName =
+        sanitizePublicDisplayName(meta.full_name) ||
+        sanitizePublicDisplayName(meta.name) ||
+        sanitizePublicDisplayName(
+            [meta.first_name, meta.last_name].filter(Boolean).join(" ")
+        ) ||
+        sanitizePublicDisplayName(meta.username);
+    const avatarUrl =
+        publicAvatarFromUrl(meta.avatar_url) ||
+        publicAvatarFromUrl(meta.picture);
+    if(!displayName && !avatarUrl){
+        return null;
+    }
+    return {
+        display_name: displayName,
+        avatar_url: avatarUrl,
+        country: null,
+        city: null,
+        member_since: user.created_at || null,
+        has_public_profile: true
+    };
+}
+
 async function fetchSellerPublicProfile(listingId){
 
     if(!listingId){
         return null;
     }
 
+    /* Prefer DB SECURITY DEFINER RPC — works for visitors without Vercel auth gates. */
     try{
+        initializeSupabase();
+        const rpc = await supabaseClient.rpc(
+            "get_marketplace_seller_public",
+            { p_ad_id: Number(listingId) }
+        );
+        if(
+            !rpc.error &&
+            rpc.data &&
+            rpc.data.ok === true &&
+            rpc.data.seller
+        ){
+            return rpc.data;
+        }
+    }catch(_rpcErr){
+        /* fall through */
+    }
+
+    try{
+        const headers = {
+            "Content-Type": "application/json",
+            Accept: "application/json"
+        };
+        try{
+            const sessionBundle =
+                await supabaseClient.auth.getSession();
+            const token =
+                sessionBundle &&
+                sessionBundle.data &&
+                sessionBundle.data.session &&
+                sessionBundle.data.session.access_token;
+            if(token){
+                headers.Authorization = "Bearer " + token;
+            }
+        }catch(_sessionErr){
+            /* visitor path */
+        }
         const res =
             await fetch(
                 "/api/create-event-checkout",
                 {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Accept: "application/json"
-                    },
+                    headers: headers,
                     body: JSON.stringify({
                         action: "marketplace_seller_public",
                         listing_id: String(listingId)
@@ -3320,10 +3396,37 @@ async function updateSellerUI(){
 
     const listingId =
         state.ad && state.ad.id;
-    const publicProfile =
+    let publicProfile =
         await fetchSellerPublicProfile(
             listingId
         );
+
+    /* Own listing fallback from signed-in session public metadata only (never email). */
+    if(
+        (!publicProfile || !publicProfile.seller) &&
+        state.isOwnListing
+    ){
+        try{
+            const sessionBundle =
+                await supabaseClient.auth.getSession();
+            const user =
+                sessionBundle &&
+                sessionBundle.data &&
+                sessionBundle.data.session &&
+                sessionBundle.data.session.user;
+            const seller =
+                sellerFromAuthUser(user);
+            if(seller){
+                publicProfile = {
+                    ok: true,
+                    seller: seller,
+                    fallback_label: "HAVKAR Member"
+                };
+            }
+        }catch(_ownErr){
+            /* keep null */
+        }
+    }
 
     if(
         publicProfile &&

@@ -3022,7 +3022,7 @@ export default async function handler(req, res) {
         }
         const { data: ad, error: adError } = await getSupabaseAdmin()
           .from("ads")
-          .select("id,user_id,status")
+          .select("id,user_id,status,listing_surface")
           .eq("id", listingId)
           .maybeSingle();
         if (adError) {
@@ -3031,9 +3031,24 @@ export default async function handler(req, res) {
         if (!ad || !ad.user_id) {
           return sendError(res, 404, "Listing not found");
         }
-        const publicStatuses = new Set(["active", "published", "reserved"]);
-        if (ad.status && !publicStatuses.has(String(ad.status))) {
+        if (
+          ad.listing_surface &&
+          String(ad.listing_surface).toLowerCase() !== "marketplace"
+        ) {
           return sendError(res, 404, "Listing not found");
+        }
+        const status = String(ad.status || "active")
+          .trim()
+          .toLowerCase() || "active";
+        const publicStatuses = new Set(["active", "published", "reserved"]);
+        if (!publicStatuses.has(status)) {
+          /* Draft/paused: only the owner may resolve public seller identity. */
+          const auth = await authenticateUser(req);
+          const requesterId =
+            auth && auth.user && auth.user.id ? String(auth.user.id) : "";
+          if (!requesterId || requesterId !== String(ad.user_id)) {
+            return sendError(res, 404, "Listing not found");
+          }
         }
 
         const { data: profile } = await getSupabaseAdmin()

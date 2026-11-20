@@ -398,6 +398,43 @@ input:focus-visible{
     transition:opacity .25s,transform .35s;
 }
 
+.ad-seller-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-top:8px;
+    min-width:0;
+}
+
+.ad-seller-avatar,
+.ad-seller-avatar-fallback{
+    width:24px;
+    height:24px;
+    border-radius:50%;
+    flex:0 0 auto;
+    overflow:hidden;
+    background:#dfe7e1;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    color:#6b776f;
+    font-size:.7rem;
+}
+
+.ad-seller-avatar{
+    object-fit:cover;
+    image-orientation:from-image;
+}
+
+.ad-seller-name{
+    font-size:.82rem;
+    font-weight:600;
+    color:#243028;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
 .ad-image img.loaded{
     opacity:1;
 }
@@ -1293,6 +1330,8 @@ const state = {
     savedIds: new Set(),
 
     currentUserId: null,
+
+    sellersByAdId: {},
 
     authReady: false,
 
@@ -3261,6 +3300,37 @@ function cardHtml(
         String(ad.user_id || "") ===
         String(state.currentUserId);
 
+    const sellerBag =
+        (state.sellersByAdId &&
+            state.sellersByAdId[String(ad.id)]) ||
+        null;
+    const seller =
+        sellerBag && sellerBag.seller
+            ? sellerBag.seller
+            : null;
+    const sellerLabel =
+        escapeHtml(
+            (seller && seller.display_name) ||
+            (sellerBag && sellerBag.fallback_label) ||
+            "HAVKAR Member"
+        );
+    const sellerAvatar =
+        seller &&
+        typeof seller.avatar_url === "string" &&
+        /^https:\/\//i.test(seller.avatar_url)
+            ? escapeHtml(seller.avatar_url.trim())
+            : "";
+    const sellerHtml = `
+        <div class="ad-seller-row" aria-label="Seller">
+            ${
+                sellerAvatar
+                    ? `<img class="ad-seller-avatar" src="${sellerAvatar}" alt="" width="24" height="24" loading="lazy" referrerpolicy="no-referrer">`
+                    : `<span class="ad-seller-avatar-fallback" aria-hidden="true"><i class="fas fa-user"></i></span>`
+            }
+            <span class="ad-seller-name">${sellerLabel}</span>
+        </div>
+    `;
+
     return `
         <article
             class="ad-card"
@@ -3356,6 +3426,8 @@ function cardHtml(
                 <div class="ad-price">
                     ${formatPrice(ad.price, ad.currency)}
                 </div>
+
+                ${sellerHtml}
 
                 ${placeHtml}
 
@@ -4068,6 +4140,51 @@ function applyFilters(){
 
 
 /* =========================================================
+   PUBLIC SELLER PROFILES (no private PII)
+   ========================================================= */
+
+async function loadSellerPublicProfilesForAds(ads){
+    const rows = Array.isArray(ads) ? ads : [];
+    const ids = [];
+    const seen = new Set();
+    rows.forEach(function(ad){
+        const id = Number(ad && ad.id);
+        if(!Number.isSafeInteger(id) || id <= 0){
+            return;
+        }
+        const key = String(id);
+        if(seen.has(key)){
+            return;
+        }
+        if(state.sellersByAdId && state.sellersByAdId[key]){
+            return;
+        }
+        seen.add(key);
+        ids.push(id);
+    });
+    if(!ids.length){
+        return;
+    }
+    try{
+        initializeSupabase();
+        const result = await supabaseClient.rpc(
+            "get_marketplace_sellers_public",
+            { p_ad_ids: ids }
+        );
+        if(result.error || !result.data || typeof result.data !== "object"){
+            return;
+        }
+        state.sellersByAdId = Object.assign(
+            {},
+            state.sellersByAdId || {},
+            result.data
+        );
+    }catch(_err){
+        /* keep cards usable without seller chips */
+    }
+}
+
+/* =========================================================
    LOAD LISTINGS
    ========================================================= */
 
@@ -4143,6 +4260,8 @@ async function loadListings(){
                 new Set();
 
         }
+
+        await loadSellerPublicProfilesForAds(state.ads);
 
         applyFilters();
 
@@ -4968,6 +5087,8 @@ async function loadMoreListings(){
                     ? window.HAVKAR_MARKETPLACE.LISTING_PAGE_SIZE
                     : 24
             );
+
+        await loadSellerPublicProfilesForAds(ads);
 
         applyFilters();
 

@@ -5110,6 +5110,48 @@ async function(){
 
         }
 
+        /* Keep public marketplace seller fields in sync (never write email/phone here). */
+        try{
+            const avatarUrl =
+                (
+                    currentUser &&
+                    currentUser.user_metadata &&
+                    (
+                        currentUser.user_metadata.avatar_url ||
+                        currentUser.user_metadata.picture
+                    )
+                ) || null;
+            const safeAvatar =
+                typeof avatarUrl === "string" &&
+                /^https:\/\//i.test(avatarUrl.trim())
+                    ? avatarUrl.trim()
+                    : null;
+            const safeName =
+                String(fullName || "")
+                    .replace(/\s+/g, " ")
+                    .trim()
+                    .slice(0, 80);
+            if(
+                currentUser &&
+                currentUser.id &&
+                safeName &&
+                !/@/.test(safeName)
+            ){
+                await supabase
+                    .from("profiles")
+                    .upsert(
+                        {
+                            id: currentUser.id,
+                            full_name: safeName,
+                            avatar_url: safeAvatar
+                        },
+                        { onConflict: "id" }
+                    );
+            }
+        }catch(_profileSyncErr){
+            /* auth metadata already saved; marketplace RPC still falls back to auth */
+        }
+
 
         await loadProfile();
 

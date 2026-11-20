@@ -10,6 +10,11 @@ const migration = fs.readFileSync(
   "supabase/migrations/20261120120000_delete_own_marketplace_listing.sql",
   "utf8"
 );
+const sellerMigration = fs.readFileSync(
+  "supabase/migrations/20261120140000_marketplace_seller_public_rpc.sql",
+  "utf8"
+);
+const api = fs.readFileSync("api/create-event-checkout.js", "utf8");
 
 test("post-ad compressImage uses EXIF-aware createImageBitmap orientation", () => {
   assert.match(postAd, /createImageBitmap/);
@@ -24,16 +29,12 @@ test("listing galleries request from-image orientation", () => {
 test("own listings still load public seller profile fields", () => {
   assert.match(details, /Your public seller profile/);
   assert.match(details, /fetchSellerPublicProfile/);
-  const sellerFn = details.match(
-    /async function updateSellerUI\(\)\{[\s\S]*?\n\}/
-  );
-  assert.ok(sellerFn, "updateSellerUI present");
-  assert.match(sellerFn[0], /fetchSellerPublicProfile/);
-  assert.match(sellerFn[0], /applySellerPublicFields/);
-  assert.doesNotMatch(
-    sellerFn[0],
-    /if\(state\.isOwnListing\)\{[\s\S]{0,180}updateOwnerTools\(\);\s*return;/
-  );
+  assert.match(details, /get_marketplace_seller_public/);
+  assert.match(details, /sellerFromAuthUser/);
+  assert.match(buySell, /get_marketplace_sellers_public/);
+  assert.match(buySell, /ad-seller-row/);
+  assert.match(sellerMigration, /get_marketplace_seller_public/);
+  assert.match(sellerMigration, /_havkar_sanitize_public_display_name/);
 });
 
 test("owner delete uses server RPC and own-folder image cleanup", () => {
@@ -45,4 +46,9 @@ test("owner delete uses server RPC and own-folder image cleanup", () => {
   assert.match(migration, /delete_own_marketplace_listing/);
   assert.match(migration, /ad_images_delete_own_directory/);
   assert.match(migration, /user_id = v_uid/);
+});
+
+test("draft seller public API is owner-gated", () => {
+  assert.match(api, /Draft\/paused: only the owner/);
+  assert.match(api, /authenticateUser\(req\)/);
 });
