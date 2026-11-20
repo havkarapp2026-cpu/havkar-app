@@ -43,12 +43,27 @@ test("own listings still load public seller profile fields", () => {
 test("owner delete uses server RPC and own-folder image cleanup", () => {
   assert.match(details, /delete_own_marketplace_listing/);
   assert.match(details, /deleteOwnAdvertisementImages/);
+  assert.match(details, /Delete did not complete/);
   assert.match(buySell, /own-delete-button/);
   assert.match(buySell, /confirmAndDeleteOwnListing/);
+  assert.match(buySell, /Paused · not public/);
+  assert.match(buySell, /Server still returns this listing/);
   assert.match(images, /deleteOwnAdvertisementImages/);
   assert.match(migration, /delete_own_marketplace_listing/);
   assert.match(migration, /ad_images_delete_own_directory/);
   assert.match(migration, /user_id = v_uid/);
+  const hardened = fs.readFileSync(
+    "supabase/migrations/20261120210000_delete_own_listing_clears_saves.sql",
+    "utf8"
+  );
+  assert.match(hardened, /GET DIAGNOSTICS v_saves_deleted/);
+  assert.match(hardened, /'cleared'/);
+  const adView = fs.readFileSync("ad-view.html", "utf8");
+  assert.match(adView, /delete_own_marketplace_listing/);
+  assert.doesNotMatch(
+    adView,
+    /from\("ads"\)\.delete\(\)\.eq\("id", ad\.id\)/
+  );
 });
 
 test("draft seller public API is owner-gated", () => {

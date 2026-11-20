@@ -5026,8 +5026,34 @@ async function confirmOwnerDelete(){
             }
         }
 
+        /* Prove the row is gone before leaving details. */
+        try{
+            const verify =
+                await supabaseClient
+                    .from("ads")
+                    .select("id")
+                    .eq("id", Number(state.ad.id))
+                    .maybeSingle();
+            if(verify && verify.data && verify.data.id){
+                throw new Error(
+                    "Server still returns this listing. Delete did not complete."
+                );
+            }
+        }catch(verifyErr){
+            if(
+                verifyErr &&
+                /Delete did not complete/i.test(
+                    String(verifyErr.message || "")
+                )
+            ){
+                throw verifyErr;
+            }
+            /* network verify failure: still navigate after RPC ok */
+        }
+
         window.location.href =
-            "buy-sell.html";
+            "buy-sell.html?deleted=" +
+            encodeURIComponent(String(payload.id || state.ad.id));
 
     }catch(error){
 
