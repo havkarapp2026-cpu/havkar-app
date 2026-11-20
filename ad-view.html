@@ -404,9 +404,15 @@ textarea{min-height:90px;resize:vertical}
   });
 
   document.getElementById("btnDelete").addEventListener("click", async function () {
-    const deleted = await supabase.from("ads").delete().eq("id", ad.id).eq("user_id", currentUser.id);
-    if (deleted.error) {
-      setStatus(deleted.error.message || "Delete blocked while saves/comments/chats exist.", true);
+    const deleted = await supabase.rpc("delete_own_marketplace_listing", {
+      p_ad_id: Number(ad.id)
+    });
+    if (deleted.error || !deleted.data || deleted.data.ok !== true) {
+      setStatus(
+        (deleted.error && deleted.error.message) ||
+          "Delete blocked or you are not the owner. Nothing was deleted.",
+        true
+      );
       return;
     }
     location.href = "ads.html";

@@ -147,6 +147,77 @@ function createWebhookStore(supabase) {
       }
       return { updated: Boolean(data && data.stripe_account_id) };
     },
+    async fulfillMarketplaceListing({
+      listingId,
+      sessionId,
+      buyerUserId,
+      paidAt
+    }) {
+      const { data: existing, error: loadError } = await supabase
+        .from("ads")
+        .select("id,status,user_id,listing_surface")
+        .eq("id", listingId)
+        .maybeSingle();
+      if (loadError) throw loadError;
+      if (!existing) {
+        return { applied: false, reason: "listing_not_found" };
+      }
+      if (String(existing.status) === "ended") {
+        return {
+          applied: false,
+          duplicate: true,
+          reason: "already_ended",
+          listing_id: listingId,
+          session_id: sessionId
+        };
+      }
+      if (String(existing.status) !== "active") {
+        return {
+          applied: false,
+          reason: "listing_not_active",
+          status: existing.status
+        };
+      }
+      let query = supabase
+        .from("ads")
+        .update({ status: "ended" })
+        .eq("id", listingId)
+        .eq("status", "active");
+      if (existing.listing_surface) {
+        query = query.eq("listing_surface", existing.listing_surface);
+      }
+      const { data: updated, error: updateError } = await query
+        .select("id,status")
+        .maybeSingle();
+      if (updateError) throw updateError;
+      if (!updated || String(updated.status) !== "ended") {
+        return {
+          applied: false,
+          reason: "listing_end_failed",
+          listing_id: listingId
+        };
+      }
+      try {
+        await supabase.from("ad_audit_events").insert({
+          ad_id: listingId,
+          actor_id: buyerUserId || null,
+          action: "marketplace_card_paid",
+          meta: {
+            stripe_session_id: sessionId,
+            paid_at: paidAt || null,
+            source: "stripe_webhook"
+          }
+        });
+      } catch (_auditErr) {
+        // Audit insert is best-effort; Stripe payment already settled.
+      }
+      return {
+        applied: true,
+        fulfillment: "marketplace_listing_ended",
+        listing_id: listingId,
+        session_id: sessionId
+      };
+    },
     async postFinanceJournal(built) {
       const {
         postJournalEntry

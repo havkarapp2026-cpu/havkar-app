@@ -250,6 +250,7 @@ button:focus-visible{
     height:100%;
     display:block;
     object-fit:cover;
+    image-orientation:from-image;
 }
 
 .image-placeholder{
@@ -605,6 +606,16 @@ button:focus-visible{
     background:var(--green-100);
     color:var(--green-700);
     font-size:1.2rem;
+    overflow:hidden;
+}
+
+.seller-avatar img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+    border-radius:50%;
+    image-orientation:from-image;
 }
 
 .seller-name{
@@ -631,21 +642,45 @@ button:focus-visible{
     font-size:.7rem;
 }
 
-/* ACTIONS */
+.buy-status{
+    margin:10px 0 0;
+    padding:10px 12px;
+    border-radius:10px;
+    background:#f7fbf7;
+    border:1px solid #d7e8d9;
+    color:var(--green-900);
+    font-size:.82rem;
+    line-height:1.45;
+    white-space:pre-wrap;
+    word-break:break-word;
+}
+
+.buy-status.is-error{
+    background:#fff6f5;
+    border-color:#f0c7c2;
+    color:#7a2e28;
+}
+
+.buy-status.is-ok{
+    background:#f3faf4;
+    border-color:#cfe8d3;
+}
+
+/* ACTIONS — in-flow under seller only; never sticky/floating over pay UI */
 
 .actions{
-    position:sticky;
-    bottom:calc(var(--bottom) + env(safe-area-inset-bottom));
-    z-index:100;
+    position:static;
+    z-index:auto;
     display:grid;
-    grid-template-columns:1fr 1fr;
+    grid-template-columns:1fr 1fr 1fr;
     gap:10px;
     margin-top:15px;
+    margin-bottom:8px;
     padding:12px;
-    background:rgba(247,250,247,.95);
-    backdrop-filter:blur(15px);
+    background:#fff;
+    border:1px solid var(--border);
     border-radius:18px;
-    box-shadow:0 5px 20px rgba(0,0,0,.04);
+    box-shadow:var(--shadow);
 }
 
 .action-button{
@@ -989,6 +1024,7 @@ button:focus-visible{
 
     .action-button{
         min-height:46px;
+        font-size:.82rem;
     }
 }
 
@@ -1197,7 +1233,13 @@ button:focus-visible{
                         Pay with XLM wallet
                     </button>
                 </div>
-                <pre id="buyReceipt" hidden style="white-space:pre-wrap;word-break:break-word;font-size:12px;background:#f7fbf7;padding:10px;border-radius:10px;margin:10px 0 0;"></pre>
+                <div
+                    id="buyStatus"
+                    class="buy-status"
+                    hidden
+                    role="status"
+                    aria-live="polite"
+                ></div>
             </section>
 
             <div class="meta-list">
@@ -1292,7 +1334,17 @@ button:focus-visible{
                     <span>Delete</span>
                 </button>
 
+                <button
+                    id="sellerConnectButton"
+                    class="owner-button edit"
+                    type="button"
+                >
+                    <i class="fas fa-university"></i>
+                    <span>Stripe Connect payouts</span>
+                </button>
+
             </div>
+            <p id="sellerConnectNote" class="edit-note" hidden></p>
             <p id="ownerStatusNote" class="edit-note" hidden></p>
 
             <form
@@ -1410,7 +1462,12 @@ button:focus-visible{
 
         </section>
 
-        <section class="seller-card">
+        <section
+            class="seller-card notranslate"
+            translate="no"
+            data-i18n-ignore="true"
+            data-seller-resolved=""
+        >
 
             <div class="section-title">
                 Seller
@@ -1418,7 +1475,11 @@ button:focus-visible{
 
             <div class="seller-row">
 
-                <div class="seller-avatar">
+                <div
+                    class="seller-avatar notranslate"
+                    translate="no"
+                    data-i18n-ignore="true"
+                >
                     <i class="fas fa-user"></i>
                 </div>
 
@@ -1426,18 +1487,28 @@ button:focus-visible{
 
                     <div
                         id="sellerName"
-                        class="seller-name"
+                        class="seller-name notranslate"
+                        translate="no"
+                        data-i18n-ignore="true"
                     >
-                        HAVKAR Member
+                        Loading seller…
                     </div>
 
-                    <div class="seller-note">
-                        HAVKAR member
+                    <div
+                        class="seller-note notranslate"
+                        translate="no"
+                        data-i18n-ignore="true"
+                    >
+                        Public seller profile
                     </div>
 
-                    <div class="seller-status">
+                    <div
+                        class="seller-status notranslate"
+                        translate="no"
+                        data-i18n-ignore="true"
+                    >
                         <span>
-                            HAVKAR Member
+                            Resolving…
                         </span>
                     </div>
 
@@ -1555,9 +1626,9 @@ button:focus-visible{
         </h2>
 
         <p>
-            This removes only your advertisement.
-            Conversations, messages, and other people's records are not removed.
-            If anything still depends on this listing, deletion stops.
+            This permanently deletes your advertisement.
+            Related saves, comments, and reactions on this listing are cleared.
+            Messages stay, but the listing link is removed. This cannot be undone.
         </p>
 
         <div class="delete-dialog-actions">
@@ -1588,6 +1659,7 @@ button:focus-visible{
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-ad-publish.js"></script>
 <script src="/havkar-presentment-currencies.js"></script>
+<script src="/havkar-ad-images.js"></script>
 <script src="/havkar-marketplace.js"></script>
 <script src="/havkar-messenger-share.js"></script>
 <script src="/stellar-wallet-bundle.js"></script>
@@ -1636,7 +1708,11 @@ const state = {
 
     saving:false,
 
-    ownerOperation:false
+    ownerOperation:false,
+
+    sellerPublic:null,
+
+    sellerMissingReason:null
 
 };
 
@@ -3105,7 +3181,68 @@ function renderListing(){
    SELLER UI
    ========================================================= */
 
-function updateSellerUI(){
+function setSellerAvatar(avatarUrl){
+
+    const avatar =
+        document.querySelector(
+            ".seller-avatar"
+        );
+
+    if(!avatar){
+        return;
+    }
+
+    const safeUrl =
+        typeof avatarUrl === "string" &&
+        /^https:\/\//i.test(avatarUrl.trim())
+            ? avatarUrl.trim()
+            : "";
+
+    if(!safeUrl){
+        avatar.innerHTML =
+            '<i class="fas fa-user" aria-hidden="true"></i>';
+        return;
+    }
+
+    const safe =
+        safeUrl.replace(/"/g, "");
+    avatar.innerHTML =
+        '<img class="notranslate" src="' +
+        safe +
+        '" alt="" width="52" height="52" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-i18n-ignore="true" translate="no">';
+    const img =
+        avatar.querySelector("img");
+    if(img){
+        img.onerror = function(){
+            if(img.getAttribute("data-avatar-retried") === "1"){
+                avatar.innerHTML =
+                    '<i class="fas fa-user" aria-hidden="true"></i>';
+                return;
+            }
+            img.setAttribute(
+                "data-avatar-retried",
+                "1"
+            );
+            img.src =
+                safe +
+                (safe.indexOf("?") >= 0 ? "&" : "?") +
+                "havkar_avatar_retry=1";
+        };
+    }
+
+}
+
+function applySellerPublicFields(seller, missingReason){
+
+    state.sellerPublic =
+        seller || null;
+    state.sellerMissingReason =
+        missingReason || null;
+
+    const sellerCard =
+        document.querySelector(
+            ".seller-card"
+        );
 
     const sellerName =
         $("sellerName");
@@ -3120,98 +3257,399 @@ function updateSellerUI(){
             ".seller-status"
         );
 
+    const hasPublic =
+        Boolean(
+            seller &&
+            (
+                seller.has_public_profile ||
+                seller.display_name ||
+                seller.avatar_url
+            )
+        );
+
+    const label =
+        seller && seller.display_name
+            ? String(seller.display_name)
+            : null;
+
+    const reason =
+        missingReason
+            ? String(missingReason)
+            : "";
+
+    const isResolving =
+        /resolving|loading/i.test(reason);
+
+    if(sellerName){
+        if(label){
+            sellerName.textContent =
+                label;
+        }else if(isResolving){
+            sellerName.textContent =
+                "Loading seller…";
+        }else{
+            sellerName.textContent =
+                "Public name not set";
+        }
+        sellerName.setAttribute(
+            "data-seller-name",
+            label || ""
+        );
+        sellerName.classList.add(
+            "notranslate"
+        );
+        sellerName.setAttribute(
+            "translate",
+            "no"
+        );
+        sellerName.setAttribute(
+            "data-i18n-ignore",
+            "true"
+        );
+    }
+
+    if(sellerNote){
+        const placeBits =
+            [
+                seller && seller.city,
+                seller && seller.country
+            ].filter(Boolean);
+        if(placeBits.length){
+            sellerNote.textContent =
+                placeBits.join(", ");
+        }else if(hasPublic && label){
+            sellerNote.textContent =
+                "Public seller profile";
+        }else if(isResolving){
+            sellerNote.textContent =
+                reason;
+        }else{
+            sellerNote.textContent =
+                reason ||
+                "This seller has not set a public display name or avatar.";
+        }
+        sellerNote.classList.add(
+            "notranslate"
+        );
+        sellerNote.setAttribute(
+            "translate",
+            "no"
+        );
+        sellerNote.setAttribute(
+            "data-i18n-ignore",
+            "true"
+        );
+    }
+
+    if(sellerStatus){
+        if(hasPublic && label){
+            sellerStatus.textContent =
+                "Public profile";
+        }else if(isResolving){
+            sellerStatus.textContent =
+                "Resolving…";
+        }else{
+            sellerStatus.textContent =
+                reason ||
+                "No public profile on this account";
+        }
+        sellerStatus.classList.add(
+            "notranslate"
+        );
+        sellerStatus.setAttribute(
+            "translate",
+            "no"
+        );
+        sellerStatus.setAttribute(
+            "data-i18n-ignore",
+            "true"
+        );
+    }
+
+    if(sellerCard){
+        sellerCard.setAttribute(
+            "data-seller-resolved",
+            label || (isResolving ? "resolving" : "missing")
+        );
+        sellerCard.classList.add(
+            "notranslate"
+        );
+        sellerCard.setAttribute(
+            "translate",
+            "no"
+        );
+        sellerCard.setAttribute(
+            "data-i18n-ignore",
+            "true"
+        );
+    }
+
+    setSellerAvatar(
+        seller && seller.avatar_url
+    );
+
+}
+
+function sanitizePublicDisplayName(raw){
+    const text = String(raw || "").replace(/\s+/g, " ").trim();
+    if(!text || text.length > 80 || /@/.test(text)){
+        return null;
+    }
+    return text;
+}
+
+function publicAvatarFromUrl(raw){
+    const text = String(raw || "").trim();
+    return /^https:\/\//i.test(text) ? text : null;
+}
+
+function sellerFromAuthUser(user){
+    if(!user){
+        return null;
+    }
+    const meta = user.user_metadata || {};
+    const displayName =
+        sanitizePublicDisplayName(meta.full_name) ||
+        sanitizePublicDisplayName(meta.name) ||
+        sanitizePublicDisplayName(
+            [meta.first_name, meta.last_name].filter(Boolean).join(" ")
+        ) ||
+        sanitizePublicDisplayName(meta.username);
+    const avatarUrl =
+        publicAvatarFromUrl(meta.avatar_url) ||
+        publicAvatarFromUrl(meta.picture);
+    if(!displayName && !avatarUrl){
+        return null;
+    }
+    return {
+        display_name: displayName,
+        avatar_url: avatarUrl,
+        country: null,
+        city: null,
+        member_since: user.created_at || null,
+        has_public_profile: true
+    };
+}
+
+async function authHeadersForSellerFetch(){
+    const headers = {
+        Accept: "application/json"
+    };
+    try{
+        initializeSupabase();
+        const sessionBundle =
+            await supabaseClient.auth.getSession();
+        const token =
+            sessionBundle &&
+            sessionBundle.data &&
+            sessionBundle.data.session &&
+            sessionBundle.data.session.access_token;
+        if(token){
+            headers.Authorization = "Bearer " + token;
+        }
+    }catch(_sessionErr){
+        /* visitor path */
+    }
+    return headers;
+}
+
+async function fetchSellerPublicProfile(listingId){
+
+    if(!listingId){
+        return null;
+    }
+
+    /* Prefer DB SECURITY DEFINER RPC — works for visitors without Vercel auth gates. */
+    try{
+        initializeSupabase();
+        const rpc = await supabaseClient.rpc(
+            "get_marketplace_seller_public",
+            { p_ad_id: Number(listingId) }
+        );
+        if(
+            !rpc.error &&
+            rpc.data &&
+            rpc.data.ok === true &&
+            rpc.data.seller
+        ){
+            return rpc.data;
+        }
+    }catch(_rpcErr){
+        /* fall through */
+    }
+
+    /* Public GET on existing checkout function — no extra Hobby serverless slot. */
+    try{
+        const headers =
+            await authHeadersForSellerFetch();
+        const res =
+            await fetch(
+                "/api/create-event-checkout?havkarAction=marketplaceConnect&action=marketplace_seller_public&listing_id=" +
+                    encodeURIComponent(String(listingId)),
+                {
+                    method: "GET",
+                    headers: headers,
+                    cache: "no-store"
+                }
+            );
+        const body =
+            await res.json().catch(function(){ return null; });
+        if(res.ok && body && body.ok === true && body.seller){
+            return body;
+        }
+    }catch(_getErr){
+        /* fall through */
+    }
+
+    try{
+        const headers =
+            await authHeadersForSellerFetch();
+        headers["Content-Type"] =
+            "application/json";
+        const res =
+            await fetch(
+                "/api/create-event-checkout",
+                {
+                    method: "POST",
+                    headers: headers,
+                    cache: "no-store",
+                    body: JSON.stringify({
+                        action: "marketplace_seller_public",
+                        listing_id: String(listingId)
+                    })
+                }
+            );
+        const body =
+            await res.json().catch(function(){ return null; });
+        if(!res.ok || !body || body.ok !== true){
+            return null;
+        }
+        return body;
+    }catch(_err){
+        return null;
+    }
+
+}
+
+async function updateSellerUI(){
+
     const messageButton =
         $("messageButton");
 
+    applySellerPublicFields(
+        null,
+        "Resolving public seller profile…"
+    );
+
     if(state.isOwnListing){
-
-        if(sellerName){
-
-            sellerName.textContent =
-                "Your listing";
-
-        }
-
-        if(sellerNote){
-
-            sellerNote.textContent =
-                "Listed by you";
-
-        }
-
-        if(sellerStatus){
-
-            sellerStatus.textContent =
-                "Your listing";
-
-        }
-
         if(messageButton){
-
             messageButton.disabled =
                 true;
-
             messageButton.classList.add(
                 "disabled"
             );
-
             messageButton.setAttribute(
                 "aria-disabled",
                 "true"
             );
-
             messageButton.innerHTML =
                 `
                     <i class="fas fa-user-check"></i>
                     <span>Your Listing</span>
                 `;
-
         }
+    }else if(messageButton){
+        messageButton.disabled =
+            false;
+        messageButton.classList.remove(
+            "disabled"
+        );
+        messageButton.removeAttribute(
+            "aria-disabled"
+        );
+        messageButton.innerHTML =
+            `
+                <i class="fas fa-comment"></i>
+                <span>Message Seller</span>
+            `;
+    }
 
+    const listingId =
+        state.ad && state.ad.id;
+    let publicProfile =
+        await fetchSellerPublicProfile(
+            listingId
+        );
+
+    /* Own listing fallback from signed-in session public metadata only (never email). */
+    if(
+        (!publicProfile || !publicProfile.seller) &&
+        state.isOwnListing
+    ){
+        try{
+            const sessionBundle =
+                await supabaseClient.auth.getSession();
+            const user =
+                sessionBundle &&
+                sessionBundle.data &&
+                sessionBundle.data.session &&
+                sessionBundle.data.session.user;
+            const seller =
+                sellerFromAuthUser(user);
+            if(seller){
+                publicProfile = {
+                    ok: true,
+                    seller: seller,
+                    missing_reason: null
+                };
+            }
+        }catch(_ownErr){
+            /* keep null */
+        }
+    }
+
+    if(publicProfile && publicProfile.seller){
+        applySellerPublicFields(
+            publicProfile.seller,
+            publicProfile.missing_reason || null
+        );
+        if(state.isOwnListing){
+            const sellerNote =
+                document.querySelector(
+                    ".seller-note"
+                );
+            const sellerStatus =
+                document.querySelector(
+                    ".seller-status"
+                );
+            const hasName =
+                Boolean(
+                    publicProfile.seller.display_name
+                );
+            if(sellerNote){
+                sellerNote.textContent =
+                    hasName
+                        ? "Your public seller profile"
+                        : (
+                            publicProfile.missing_reason ||
+                            "Add a public display name in Profile settings."
+                        );
+            }
+            if(sellerStatus){
+                sellerStatus.textContent =
+                    "Your listing";
+            }
+        }
+    }else if(state.isOwnListing){
+        applySellerPublicFields(
+            null,
+            "Your listing · add a public display name and avatar in Profile settings."
+        );
     }else{
-
-        if(sellerName){
-
-            sellerName.textContent =
-                "HAVKAR Member";
-
-        }
-
-        if(sellerNote){
-
-            sellerNote.textContent =
-                "HAVKAR member";
-
-        }
-
-        if(sellerStatus){
-
-            sellerStatus.textContent =
-                "HAVKAR Member";
-
-        }
-
-        if(messageButton){
-
-            messageButton.disabled =
-                false;
-
-            messageButton.classList.remove(
-                "disabled"
-            );
-
-            messageButton.removeAttribute(
-                "aria-disabled"
-            );
-
-            messageButton.innerHTML =
-                `
-                    <i class="fas fa-comment"></i>
-                    <span>Message Seller</span>
-                `;
-
-        }
-
+        applySellerPublicFields(
+            null,
+            "Public seller profile could not be loaded for this listing."
+        );
     }
 
     updateOwnerTools();
@@ -3930,10 +4368,135 @@ function updateOwnerTools(){
 
         closeDeleteDialog();
 
+        const connectNote = $("sellerConnectNote");
+        if(connectNote){
+            connectNote.hidden = true;
+        }
+
     }
 
     syncOwnerLifecycleButtons();
+    if(owns){
+        refreshSellerConnectStatus();
+    }
 
+}
+
+async function refreshSellerConnectStatus(){
+    const note = $("sellerConnectNote");
+    const btn = $("sellerConnectButton");
+    if(!state.isOwnListing || !state.currentUserId){
+        return;
+    }
+    try{
+        const session = await supabaseClient.auth.getSession();
+        const accessToken =
+            session &&
+            session.data &&
+            session.data.session &&
+            session.data.session.access_token;
+        if(!accessToken){
+            if(note){
+                note.hidden = false;
+                note.textContent =
+                    "Sign in to manage Stripe Connect payouts for this listing.";
+            }
+            return;
+        }
+        const res = await fetch("/api/create-event-checkout", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + accessToken,
+                Accept: "application/json"
+            },
+            body: JSON.stringify({ action: "marketplace_connect_status" })
+        });
+        const body = await res.json().catch(function(){ return null; });
+        if(!res.ok || !body || body.ok !== true){
+            if(note){
+                note.hidden = false;
+                note.textContent =
+                    (body && (body.customer_message || body.error || body.message)) ||
+                    "Connect status unavailable.";
+            }
+            return;
+        }
+        const account = body.account;
+        if(note){
+            note.hidden = false;
+            if(!account){
+                note.textContent =
+                    "Stripe Connect: not started. Complete legal onboarding before buyers can pay by card.";
+            }else if(account.charges_enabled === true){
+                note.textContent =
+                    "Stripe Connect: charges enabled. Card destination payouts can reach this seller when Owner opens public live payments.";
+            }else{
+                note.textContent =
+                    "Stripe Connect: " +
+                    (account.onboarding_status || "pending") +
+                    ". Finish Stripe verification until charges are enabled.";
+            }
+        }
+        if(btn){
+            btn.querySelector("span").textContent =
+                account && account.charges_enabled
+                    ? "Refresh Stripe Connect"
+                    : "Start / continue Stripe Connect";
+        }
+    }catch(_err){
+        if(note){
+            note.hidden = false;
+            note.textContent = "Connect status check failed.";
+        }
+    }
+}
+
+async function startSellerConnectOnboard(){
+    if(!state.isOwnListing){
+        showToast("Only the listing owner can open Stripe Connect.");
+        return;
+    }
+    const btn = $("sellerConnectButton");
+    if(btn){
+        btn.disabled = true;
+    }
+    try{
+        const session = await supabaseClient.auth.getSession();
+        const accessToken =
+            session &&
+            session.data &&
+            session.data.session &&
+            session.data.session.access_token;
+        if(!accessToken){
+            showToast("Sign in before starting Stripe Connect.");
+            return;
+        }
+        const res = await fetch("/api/create-event-checkout", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + accessToken,
+                Accept: "application/json"
+            },
+            body: JSON.stringify({ action: "marketplace_connect_onboard" })
+        });
+        const body = await res.json().catch(function(){ return null; });
+        if(!res.ok || !body || !body.onboarding_url){
+            showToast(
+                (body && (body.error || body.message)) ||
+                    "Connect onboarding could not be started."
+            );
+            return;
+        }
+        window.location.href = body.onboarding_url;
+    }catch(err){
+        showToast((err && err.message) || "Connect onboarding failed.");
+    }finally{
+        if(btn){
+            btn.disabled = false;
+        }
+    }
 }
 
 
@@ -4381,87 +4944,116 @@ async function confirmOwnerDelete(){
 
         initializeSupabase();
 
-        const dependency =
-            await supabaseClient
-                .rpc(
-                    "ad_has_blocking_dependencies",
-                    {
-                        target_ad_id:
-                            state.ad.id
-                    }
-                );
-
-        if(dependency.error){
-
-            throw new Error(
-                "Deletion was stopped because related records could not be checked. Nothing was deleted."
-            );
-
-        }
-
-        if(dependency.data !== false){
-
-            closeDeleteDialog();
-
-            showToast(
-                "This listing was not deleted. Related saves, comments, reactions, or conversations still depend on it."
-            );
-
-            return;
-
-        }
+        const photosSnapshot =
+            Array.isArray(state.ad.photos)
+                ? state.ad.photos.slice()
+                : [];
+        const videoPath =
+            state.ad.video_path || null;
 
         const result =
-            await supabaseClient
-                .from("ads")
-                .delete()
-                .eq(
-                    "id",
-                    state.ad.id
-                )
-                .eq(
-                    "user_id",
-                    state.currentUserId
-                )
-                .select(
-                    "id"
-                );
+            await supabaseClient.rpc(
+                "delete_own_marketplace_listing",
+                {
+                    p_ad_id: Number(state.ad.id)
+                }
+            );
 
         if(result.error){
+            const msg = String(result.error.message || result.error.code || "");
+            if(/not_owner_or_missing|42501|permission/i.test(msg)){
+                throw new Error(
+                    "You can delete only your own listings. Nothing was deleted."
+                );
+            }
+            throw new Error(
+                msg || "This listing was not deleted."
+            );
+        }
 
-            throw result.error;
+        const payload =
+            result.data && typeof result.data === "object"
+                ? result.data
+                : null;
 
+        if(!payload || payload.ok !== true){
+            throw new Error(
+                "This listing was not deleted."
+            );
+        }
+
+        const photoUrls =
+            Array.isArray(payload.photos)
+                ? payload.photos
+                : photosSnapshot;
+
+        if(
+            window.HAVKAR_AD_IMAGES &&
+            typeof window.HAVKAR_AD_IMAGES.deleteOwnAdvertisementImages === "function"
+        ){
+            const cleaned =
+                await window.HAVKAR_AD_IMAGES.deleteOwnAdvertisementImages(
+                    supabaseClient,
+                    state.currentUserId,
+                    photoUrls
+                );
+            if(!cleaned.ok){
+                console.warn(
+                    "[HAVKAR] Listing row deleted; image cleanup incomplete:",
+                    cleaned.error || cleaned.failed
+                );
+                showToast(
+                    "Listing deleted. Some images could not be removed from storage."
+                );
+            }
         }
 
         if(
-            !Array.isArray(result.data) ||
-            result.data.length !== 1
+            (payload.video_path || videoPath) &&
+            window.HAVKAR_MARKETPLACE &&
+            typeof window.HAVKAR_MARKETPLACE.deleteListingVideo === "function"
         ){
-
-            closeDeleteDialog();
-
-            showToast(
-                "This listing was not deleted. Related records still depend on it, or you are not the owner."
-            );
-
-            return;
-
+            const videoClean =
+                await window.HAVKAR_MARKETPLACE.deleteListingVideo(
+                    supabaseClient,
+                    payload.video_path || videoPath
+                );
+            if(videoClean && videoClean.ok === false){
+                console.warn(
+                    "[HAVKAR] Listing deleted; video cleanup failed:",
+                    videoClean.error
+                );
+            }
         }
 
-        if(
-            state.ad.video_path &&
-            window.HAVKAR_MARKETPLACE
-        ){
-
-            await window.HAVKAR_MARKETPLACE.deleteListingVideo(
-                supabaseClient,
-                state.ad.video_path
-            );
-
+        /* Prove the row is gone before leaving details. */
+        try{
+            const verify =
+                await supabaseClient
+                    .from("ads")
+                    .select("id")
+                    .eq("id", Number(state.ad.id))
+                    .maybeSingle();
+            if(verify && verify.data && verify.data.id){
+                throw new Error(
+                    "Server still returns this listing. Delete did not complete."
+                );
+            }
+        }catch(verifyErr){
+            if(
+                verifyErr &&
+                /Delete did not complete/i.test(
+                    String(verifyErr.message || "")
+                )
+            ){
+                throw verifyErr;
+            }
+            /* network verify failure: still navigate after RPC ok */
         }
 
         window.location.href =
-            "buy-sell.html";
+            "buy-sell.html?deleted=" +
+            encodeURIComponent(String(payload.id || state.ad.id));
 
     }catch(error){
 
@@ -4608,6 +5200,7 @@ function setupOwnerActions(){
     });
     on("cancelDeleteButton", "click", closeDeleteDialog);
     on("confirmDeleteButton", "click", confirmOwnerDelete);
+    on("sellerConnectButton", "click", startSellerConnectOnboard);
 }
 
 
@@ -4637,7 +5230,11 @@ function syncBuyNowPanel(visible){
         loadBuyCurrencyMatrix().catch(function (err) {
             const note = $("buyGateNote");
             if(note){
-                note.textContent = (err && err.message) || "Could not load currencies.";
+                const raw = String((err && err.message) || "");
+                note.textContent =
+                    /Unexpected token|<!DOCTYPE|is not valid JSON/i.test(raw)
+                        ? "Payment quotes are temporarily unavailable. No charge was started."
+                        : (raw || "Could not load currencies.");
             }
         });
     }else{
@@ -4848,16 +5445,46 @@ async function refreshBuyQuote(){
                 "</div>";
         }
         if(cardBtn){
+            /*
+             * Fail closed for customers: quoting is allowed; live charge stays OFF
+             * until Owner sets HAVKAR_MARKETPLACE_PUBLIC_LIVE_PAYMENTS and seller Connect is ready.
+             * Do not enable the button from live_collection=armed alone.
+             */
+            let marketplacePublicLive = false;
+            try{
+                const gateRes = await fetch("/api/create-event-checkout", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Accept: "application/json"
+                    },
+                    body: JSON.stringify({
+                        action: "marketplace_connect_quote",
+                        list_price_eur: amountEur,
+                        currency: currency
+                    })
+                });
+                const gateBody = await gateRes.json().catch(function(){ return null; });
+                marketplacePublicLive =
+                    !!(gateBody && gateBody.public_live_payments === true);
+                if(gateBody && gateBody.live_collection){
+                    buyCheckoutState.liveCollection = gateBody.live_collection;
+                }
+            }catch(_gateErr){
+                marketplacePublicLive = false;
+            }
+            buyCheckoutState.publicLivePayments = marketplacePublicLive;
             const canCharge =
                 chargeable &&
-                buyCheckoutState.liveCollection === "armed";
+                buyCheckoutState.liveCollection === "armed" &&
+                marketplacePublicLive === true;
             cardBtn.disabled = !canCharge;
             if(!chargeable){
                 cardBtn.textContent =
                     "Card charge unavailable for " +
                     String(q.currency || "").toUpperCase() +
                     " (display/quote only)";
-            }else if(buyCheckoutState.liveCollection === "armed"){
+            }else if(canCharge){
                 cardBtn.textContent =
                     "Pay with card (Stripe) — " +
                     q.buyer_pays +
@@ -4865,9 +5492,7 @@ async function refreshBuyQuote(){
                     q.currency;
             }else{
                 cardBtn.textContent =
-                    "Card quote ready — live collection paused (Owner gate)";
-                /* Quote path still allowed via startBuyCardCheckout when paused. */
-                cardBtn.disabled = false;
+                    "Card checkout unavailable (Owner authorization required)";
             }
         }
         const note = $("buyGateNote");
@@ -4875,10 +5500,12 @@ async function refreshBuyQuote(){
             note.textContent =
                 "Live collection: " +
                 buyCheckoutState.liveCollection +
+                " · public live: " +
+                (buyCheckoutState.publicLivePayments ? "ON" : "OFF") +
                 (chargeable
-                    ? ". Selected currency is Stripe-charge-capable when Owner arms live payments."
-                    : ". Selected currency is display/quote only — not offered as a live charge currency.") +
-                " Public live payments stay OFF without Owner authorization.";
+                    ? ". Selected currency can quote Stripe amounts."
+                    : ". Selected currency is display/quote only.") +
+                " Real card charges stay OFF without Owner authorization.";
         }
     }catch(err){
         if(totals){
@@ -4888,6 +5515,53 @@ async function refreshBuyQuote(){
             cardBtn.disabled = true;
         }
     }
+}
+
+function setBuyStatus(message, tone){
+    const el = $("buyStatus");
+    if(!el){
+        return;
+    }
+    const text = String(message || "").trim();
+    if(!text){
+        el.hidden = true;
+        el.textContent = "";
+        el.classList.remove("is-error", "is-ok");
+        return;
+    }
+    el.hidden = false;
+    el.textContent = text;
+    el.classList.toggle("is-error", tone === "error");
+    el.classList.toggle("is-ok", tone === "ok");
+}
+
+function marketplaceCheckoutCustomerMessage(body, resOk){
+    if(!body || typeof body !== "object"){
+        return "Checkout could not be completed. No payment was taken.";
+    }
+    if(body.customer_message){
+        return String(body.customer_message);
+    }
+    const code = String(body.code || "");
+    if(code === "MARKETPLACE_PUBLIC_LIVE_OFF"){
+        return "Card checkout is temporarily unavailable for marketplace purchases. No payment was taken.";
+    }
+    if(code === "SELLER_CONNECT_REQUIRED"){
+        return "This seller is not ready to receive card payments yet. No charge was started.";
+    }
+    if(code === "LIVE_COLLECTION_PAUSED"){
+        return "Card checkout is paused. No payment was taken.";
+    }
+    if(body.message){
+        return String(body.message);
+    }
+    if(body.error){
+        return String(body.error);
+    }
+    if(resOk){
+        return "Checkout quote ready. Live card collection stays off until Owner authorization.";
+    }
+    return "Checkout could not be completed. No payment was taken.";
 }
 
 async function startBuyCardCheckout(){
@@ -4909,6 +5583,7 @@ async function startBuyCardCheckout(){
     if(cardBtn){
         cardBtn.disabled = true;
     }
+    setBuyStatus("Preparing secure card checkout…", "ok");
     try{
         const res = await fetch("/api/create-event-checkout", {
             method: "POST",
@@ -4925,32 +5600,25 @@ async function startBuyCardCheckout(){
                     "eur"
             })
         });
-        const body = await res.json();
-        const receipt = $("buyReceipt");
-        if(receipt){
-            receipt.hidden = false;
-            receipt.textContent = JSON.stringify(
-                body.receipt || body,
-                null,
-                2
-            );
-        }
-        if(!res.ok){
-            throw new Error((body && body.error) || "checkout_failed");
-        }
-        if(body.checkout_url){
+        const body = await res.json().catch(function(){ return null; });
+        if(body && body.checkout_url && res.ok){
+            setBuyStatus("Redirecting to secure Stripe Checkout…", "ok");
             window.location.href = body.checkout_url;
             return;
         }
-        showToast(
-            body.message ||
-                "Quote ready. Live card collection is paused until Owner authorization."
-        );
+        const message = marketplaceCheckoutCustomerMessage(body, res.ok);
+        setBuyStatus(message, "error");
+        showToast(message);
     }catch(err){
-        showToast((err && err.message) || "Buy Now checkout failed.");
+        const message =
+            (err && err.message) ||
+            "Buy Now checkout failed. No payment was taken.";
+        setBuyStatus(message, "error");
+        showToast(message);
     }finally{
         if(cardBtn){
-            cardBtn.disabled = false;
+            cardBtn.disabled =
+                buyCheckoutState.publicLivePayments !== true;
         }
     }
 }
@@ -5036,37 +5704,40 @@ async function quoteListingXlm(){
 
     /* Dry-run / Owner-gated path: quote only — never sign or transfer real XLM. */
     if(liveMainnetOff){
-        const quoted = await window.HAVKAR_XLM.quote({
+        const dryRun = await window.HAVKAR_XLM.quote({
             flow: "marketplace",
             price: amountEur,
             subjectId: String(ad.id),
             accessToken: accessToken,
             network: "testnet"
         });
-        const result = quoted && quoted.result;
-        const receipt = $("buyReceipt");
-        if(receipt){
-            receipt.hidden = false;
-            receipt.textContent = JSON.stringify(
-                {
-                    mode: "xlm_dry_run_quote",
-                    listing_currency: (ad && ad.currency) || null,
-                    listing_price: amount,
-                    listing_price_eur: amountEur,
-                    fx_source: priced && priced.fx_source,
-                    fx_date: priced && priced.fx_date,
-                    network_fee_separate: true,
-                    live_transfer: false,
-                    quote: result
-                },
-                null,
-                2
-            );
-        }
-        showToast(
+        const result = dryRun && dryRun.result;
+        const quoteText =
             (window.HAVKAR_XLM.describe(result) || "XLM dry-run quote ready.") +
-                " Live XLM transfer stays OFF without Owner authorization."
-        );
+            " Live XLM transfer stays OFF without Owner authorization. No Mainnet payment was sent.";
+        setBuyStatus(quoteText, dryRun && dryRun.ok ? "ok" : "error");
+        showToast(quoteText);
+        return;
+    }
+
+    /* Live Mainnet path: quote first; never treat Albedo/wallet UI success as paid. */
+    setBuyStatus("Requesting secure XLM quote…", "ok");
+    const preQuote = await window.HAVKAR_XLM.quote({
+        flow: "marketplace",
+        price: amountEur,
+        subjectId: String(ad.id),
+        accessToken: accessToken,
+        network: "mainnet"
+    });
+    const preResult = preQuote && preQuote.result;
+    if(!preQuote || !preQuote.ok || !preResult || preResult.payable !== true){
+        const blocked =
+            (window.HAVKAR_XLM.describe(preResult) ||
+                (preResult && preResult.error) ||
+                "Live XLM checkout is not available for this listing.") +
+            " No payment was marked paid on HAVKAR.";
+        setBuyStatus(blocked, "error");
+        showToast(blocked);
         return;
     }
 
@@ -5074,39 +5745,36 @@ async function quoteListingXlm(){
         try {
             await window.havkarConnectStellarWallet();
         } catch (connectError) {
-            showToast(
+            const connectMsg =
                 (connectError && connectError.message) ||
-                    "Connect a Stellar wallet first. HAVKAR never asks for a recovery phrase."
-            );
+                "Connect a Stellar wallet first. HAVKAR never asks for a recovery phrase.";
+            setBuyStatus(connectMsg, "error");
+            showToast(connectMsg);
             return;
         }
     }
+
+    setBuyStatus(
+        "Confirm the payment in your wallet. HAVKAR marks the order paid only after Horizon verification.",
+        "ok"
+    );
 
     const settled =
         await window.HAVKAR_XLM.payAndVerify({
             flow: "marketplace",
             price: amountEur,
             subjectId: String(ad.id),
-            accessToken: accessToken
+            accessToken: accessToken,
+            network: "mainnet"
         });
 
     const result =
         settled && settled.result;
 
-    if(
-        result &&
-        result.payable === true &&
-        result.order_paid !== true
-    ){
-        window.HAVKAR_XLM.stageWalletPayment(
-            result
-        );
-    }
-
     let message =
         window.HAVKAR_XLM.describe(
             result
-        );
+        ) || "XLM payment was not settled.";
 
     if(
         result &&
@@ -5120,9 +5788,20 @@ async function quoteListingXlm(){
         }
     }
 
-    showToast(
-        message
-    );
+    if(!(result && result.order_paid === true)){
+        message +=
+            " Wallet authorization alone does not confirm a HAVKAR order.";
+        setBuyStatus(message, "error");
+    }else{
+        const hash =
+            result.tx_hash || result.txHash || "";
+        if(hash){
+            message += " Tx: " + String(hash).slice(0, 12) + "…";
+        }
+        setBuyStatus(message, "ok");
+    }
+
+    showToast(message);
 
 }
 
@@ -5519,6 +6198,35 @@ async function boot(){
 document.addEventListener(
     "DOMContentLoaded",
     boot
+);
+
+/* Re-apply after i18n so TreeWalker cannot leave a stale placeholder. */
+document.addEventListener(
+    "havkar:i18n-ready",
+    function(){
+        if(state.sellerPublic){
+            applySellerPublicFields(
+                state.sellerPublic,
+                state.sellerMissingReason
+            );
+            return;
+        }
+        if(state.ad && state.ad.id){
+            updateSellerUI();
+        }
+    }
+);
+
+document.addEventListener(
+    "havkar:language-changed",
+    function(){
+        if(state.sellerPublic){
+            applySellerPublicFields(
+                state.sellerPublic,
+                state.sellerMissingReason
+            );
+        }
+    }
 );
 
 </script>

@@ -27,6 +27,10 @@
       return "Stellar Mainnet customer collection is armed but not live until Owner final approval. Use Testnet or wait for live collection.";
     }
 
+    if (result.code === "MERCHANT_RECEIVE_KEY_REQUIRED") {
+      return "This seller has not registered a Stellar receive address yet. Live XLM checkout stays blocked. Nothing was marked paid.";
+    }
+
     if (result.settlement === "pending") {
       return "Horizon has not confirmed this transaction yet. The order stays unpaid. Retry verify after the ledger includes it.";
     }
