@@ -75,7 +75,11 @@ test("v1 Express fallback body requests card_payments + transfers", () => {
     displayName: "Seller",
     extraMetadata: { havkar_primary_owner: "true" }
   });
-  assert.equal(body.type, "express");
+  assert.equal(body.type, undefined);
+  assert.equal(body.controller.stripe_dashboard.type, "express");
+  assert.equal(body.controller.fees.payer, "application");
+  assert.equal(body.controller.losses.payments, "stripe");
+  assert.equal(body.controller.requirement_collection, "stripe");
   assert.equal(body.country, "IT");
   assert.equal(body.capabilities.card_payments.requested, true);
   assert.equal(body.capabilities.transfers.requested, true);
@@ -107,8 +111,10 @@ test("createMarketplaceConnectAccount falls back to v1 when v2 permission denied
     },
     accounts: {
       create: async (body) => {
-        assert.equal(body.type, "express");
-        return { id: "acct_v1_express_test", type: "express" };
+        assert.equal(body.type, undefined);
+        assert.equal(body.controller.stripe_dashboard.type, "express");
+        assert.equal(body.controller.losses.payments, "stripe");
+        return { id: "acct_v1_express_test", controller: body.controller };
       }
     }
   };
