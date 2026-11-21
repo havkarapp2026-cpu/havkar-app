@@ -12,7 +12,7 @@
 <meta name="havkar-buysell-ui" content="20261120-unify-v1">
 <title>HAVKAR — Buy & Sell</title>
 <script>
-window.HAVKAR_BUYSELL_UI = "20261120-unify-v1";
+window.HAVKAR_BUYSELL_UI = "20261121-connect-payout-v1";
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1016,8 +1016,31 @@ input:focus-visible{
 <summary style="cursor:pointer;font-weight:700;color:#1b5e20;list-style:none">Fees &amp; marketplace rules</summary>
 <p style="margin:8px 0 0;font-size:.88rem;color:#355;line-height:1.45">
 Publishing a listing is free. At checkout the buyer fee is <strong>2%</strong> and the seller fee is <strong>3%</strong>
-(verified by <code>havkar-marketplace.js</code> / listing checkout). Taxes, shipping and processor fees are separate when applicable.
-Buy &amp; Sell stays distinct from paid Ads.
+(server-enforced). Example: list €100 → buyer pays €102, seller receives €97, HAVKAR commission €5.
+Taxes, shipping and card-processor fees are separate when applicable.
+Refunds and disputes for card payments are recorded by Stripe webhooks; XLM direct-split refunds require the seller (merchant) to send funds back.
+See <a href="terms.html#marketplace-fees">Terms draft — marketplace fees</a>.
+Buy &amp; Sell stays distinct from paid Ads. Public live charges stay Owner-gated.
+</p>
+</details>
+<details class="buysell-tools" id="sellerPayoutPanel" style="margin:8px 0 0;border:1px solid #d7e6db;border-radius:12px;padding:8px 10px;background:#f7fbf7">
+<summary style="cursor:pointer;font-weight:700;color:#1b5e20;list-style:none">Seller payout setup (Stripe Connect + XLM)</summary>
+<p id="sellerPayoutStatus" style="margin:8px 0;font-size:.88rem;color:#355;line-height:1.45">
+Sign in to see your Stripe Connect and Stellar receive status. No bank details are invented by HAVKAR.
+</p>
+<ol style="margin:0 0 8px 18px;font-size:.88rem;color:#355;line-height:1.45">
+<li>Create or open your marketplace listing as the owner.</li>
+<li>Start Stripe Connect Express onboarding (legal identity + bank account in Stripe).</li>
+<li>Wait until Stripe reports <strong>charges_enabled</strong> (and preferably payouts_enabled).</li>
+<li>Optional for XLM: register a Stellar receive public key (never a seed) for direct-split settlement.</li>
+<li>Owner must enable public live marketplace payments before buyers can complete a real card charge.</li>
+</ol>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<button id="sellerConnectHomeButton" type="button" class="chip" style="cursor:pointer">Start / continue Stripe Connect</button>
+<button id="sellerConnectRefreshButton" type="button" class="chip" style="cursor:pointer">Refresh Connect status</button>
+</div>
+<p style="margin:8px 0 0;font-size:.82rem;color:#567">
+Connect return URLs use <code>buy-sell.html?connect=return|refresh</code>. Onboarding opens Stripe-hosted pages; HAVKAR does not store bank account numbers.
 </p>
 </details>
 <details class="buysell-tools" style="margin:8px 0 0;border:1px solid #d7e6db;border-radius:12px;padding:8px 10px;background:#f7fbf7">
@@ -5249,7 +5272,8 @@ function applyConnectReturnFromQuery(){
             message = "Payment was cancelled. No charge was completed.";
         }
         if(!message) return;
-        const host = document.getElementById("statusMessage")
+        const host = document.getElementById("sellerPayoutStatus")
+            || document.getElementById("statusMessage")
             || document.getElementById("message")
             || document.querySelector("[data-status], .status, .banner");
         if(host){
@@ -5267,6 +5291,137 @@ function applyConnectReturnFromQuery(){
     }catch(_e){}
 }
 
+async function getBuysellAccessToken(){
+    try{
+        if(!supabaseClient || !supabaseClient.auth){
+            return null;
+        }
+        const session = await supabaseClient.auth.getSession();
+        return (
+            session &&
+            session.data &&
+            session.data.session &&
+            session.data.session.access_token
+        ) || null;
+    }catch(_e){
+        return null;
+    }
+}
+
+async function refreshSellerPayoutPanel(){
+    const note = document.getElementById("sellerPayoutStatus");
+    if(!note){
+        return;
+    }
+    const token = await getBuysellAccessToken();
+    if(!token){
+        note.textContent =
+            "Sign in to see your Stripe Connect and Stellar receive status. No bank details are invented by HAVKAR.";
+        return;
+    }
+    try{
+        const res = await fetch("/api/create-event-checkout", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + token,
+                Accept: "application/json"
+            },
+            body: JSON.stringify({ action: "marketplace_connect_status" })
+        });
+        const body = await res.json().catch(function(){ return null; });
+        if(!res.ok || !body || body.ok !== true){
+            note.textContent =
+                (body && (body.customer_message || body.error || body.message)) ||
+                "Connect status unavailable.";
+            return;
+        }
+        const account = body.account;
+        const live = body.live_collection === "armed" ? "armed" : "paused";
+        let connectLine = "Stripe Connect: not started.";
+        if(account){
+            if(account.charges_enabled === true){
+                connectLine =
+                    "Stripe Connect: charges_enabled=true" +
+                    (account.payouts_enabled === true ? ", payouts_enabled=true" : ", payouts_enabled=false") +
+                    " · account " + String(account.stripe_account_id || "").slice(0, 14) + "…";
+            }else{
+                connectLine =
+                    "Stripe Connect: " +
+                    (account.onboarding_status || "pending") +
+                    " · charges_enabled=false · finish Stripe KYC/KYB.";
+            }
+        }
+        note.textContent =
+            connectLine +
+            " Public live collection: " +
+            live +
+            ". Register XLM receive key in Wallet if you accept Stellar. Seller fees remain 3% of list price.";
+    }catch(_err){
+        note.textContent = "Connect status check failed.";
+    }
+}
+
+async function startSellerConnectFromHome(){
+    const note = document.getElementById("sellerPayoutStatus");
+    const btn = document.getElementById("sellerConnectHomeButton");
+    if(btn){
+        btn.disabled = true;
+    }
+    try{
+        const token = await getBuysellAccessToken();
+        if(!token){
+            if(note){
+                note.textContent = "Sign in before starting Stripe Connect.";
+            }
+            return;
+        }
+        const res = await fetch("/api/create-event-checkout", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + token,
+                Accept: "application/json"
+            },
+            body: JSON.stringify({ action: "marketplace_connect_onboard" })
+        });
+        const body = await res.json().catch(function(){ return null; });
+        if(!res.ok || !body || !body.onboarding_url){
+            if(note){
+                note.textContent =
+                    (body && (body.error || body.message || body.customer_message)) ||
+                    "Connect onboarding could not be started. Owner may need Stripe test or live collection enabled first.";
+            }
+            return;
+        }
+        window.location.href = body.onboarding_url;
+    }catch(err){
+        if(note){
+            note.textContent = (err && err.message) || "Connect onboarding failed.";
+        }
+    }finally{
+        if(btn){
+            btn.disabled = false;
+        }
+    }
+}
+
+function setupSellerPayoutPanel(){
+    const startBtn = document.getElementById("sellerConnectHomeButton");
+    const refreshBtn = document.getElementById("sellerConnectRefreshButton");
+    if(startBtn){
+        startBtn.addEventListener("click", function(){
+            startSellerConnectFromHome();
+        });
+    }
+    if(refreshBtn){
+        refreshBtn.addEventListener("click", function(){
+            refreshSellerPayoutPanel();
+        });
+    }
+    refreshSellerPayoutPanel();
+}
+
 async function boot(){
 
     try{
@@ -5280,6 +5435,8 @@ async function boot(){
          */
 
         await resolveCurrentUser();
+
+        setupSellerPayoutPanel();
 
         const versionNode = $("buysellUiVersion");
         if(versionNode){

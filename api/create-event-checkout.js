@@ -3545,12 +3545,14 @@ export default async function handler(req, res) {
       });
     }
 
-    // marketplace_connect_onboard
-    if (!cardPaymentsAllowed() && !stripeTestCheckoutAllowed()) {
-      return res.status(403).json({
+    // marketplace_connect_onboard — Account Links do not charge buyers.
+    // Allow when a Stripe secret is configured (test or live). Live *charges*
+    // remain gated by cardPaymentsAllowed + marketplace public flag elsewhere.
+    if (!String(process.env.STRIPE_SECRET_KEY || "").trim()) {
+      return res.status(503).json({
         ok: false,
-        error: "Connect onboarding is paused until Stripe test or live collection is enabled.",
-        code: "REAL_PAYMENTS_PAUSED"
+        error: "Stripe is not configured. Owner must set STRIPE_SECRET_KEY before Connect onboarding.",
+        code: "STRIPE_NOT_CONFIGURED"
       });
     }
 
