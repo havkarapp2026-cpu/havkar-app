@@ -1183,14 +1183,30 @@ async function login() {
          * login button press.
          *
          * It does NOT affect Forgot Password.
+         * Honor ?next=/buy-sell.html (and other safe paths) so Connect
+         * can return the Owner to Buy & Sell after re-login.
          */
 
         window.setTimeout(
             function(){
 
-                window.location.replace(
-                    "index.html"
-                );
+                const nextPath = window.HAVKAR_CANONICAL
+                    ? window.HAVKAR_CANONICAL.safeNextPath(
+                        new URLSearchParams(window.location.search).get("next")
+                      )
+                    : "";
+
+                // Same-origin only (Preview stays on Preview; no cross-host token move).
+                const target =
+                    nextPath &&
+                    window.HAVKAR_CANONICAL &&
+                    typeof window.HAVKAR_CANONICAL.sameOriginPathUrl === "function"
+                        ? window.HAVKAR_CANONICAL.sameOriginPathUrl(nextPath)
+                        : (nextPath
+                            ? new URL(nextPath, window.location.origin).href
+                            : new URL("index.html", window.location.origin).href);
+
+                window.location.replace(target);
 
             },
             700
@@ -1922,7 +1938,12 @@ function authCallbackMessage(){
                 : "";
 
             if (nextPath) {
-                window.location.replace(nextPath);
+                const target =
+                    window.HAVKAR_CANONICAL &&
+                    typeof window.HAVKAR_CANONICAL.sameOriginPathUrl === "function"
+                        ? window.HAVKAR_CANONICAL.sameOriginPathUrl(nextPath)
+                        : new URL(nextPath, window.location.origin).href;
+                window.location.replace(target);
                 return;
             }
 

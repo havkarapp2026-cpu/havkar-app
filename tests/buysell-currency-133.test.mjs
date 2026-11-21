@@ -98,8 +98,12 @@ test("post-ad never assigns XLM into listing currency hidden field", () => {
 test("buy-sell exposes currency filters and loads FX from currency-matrix", () => {
   assert.match(buySell, /id="currencyFilter"/);
   assert.match(buySell, /id="priceCurrency"/);
+  assert.match(buySell, /id="currencyRailNote"/);
+  assert.match(buySell, /133 Stripe presentment currencies/);
+  assert.match(buySell, /XLM \(Stellar\) is a separate checkout rail/);
   assert.match(buySell, /ensureFxRates/);
   assert.match(buySell, /havkar-presentment-currencies\.js/);
+  assert.match(buySell, /data-presentment-count/);
 });
 
 test("currency-matrix GET includes frankfurter FX payload for filters", () => {

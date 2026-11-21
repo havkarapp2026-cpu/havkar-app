@@ -546,6 +546,21 @@
             gap: 9px;
         }
 
+        .ad-actions.has-owner-delete {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .ad-actions .action-btn.danger {
+            grid-column: 1 / -1;
+            border-color: #c62828;
+            color: #b71c1c;
+            background: #fff5f5;
+        }
+
+        .ad-actions .action-btn.danger:hover {
+            background: #ffebee;
+        }
+
         .action-btn {
             min-height: 43px;
             border-radius: 11px;
@@ -2939,7 +2954,13 @@
 
                         </div>
 
-                        <div class="ad-actions">
+                        <div class="ad-actions${
+                            currentUserId &&
+                            ad.user_id &&
+                            String(ad.user_id) === String(currentUserId)
+                                ? " has-owner-delete"
+                                : ""
+                        }">
 
                             <button
                                 class="action-btn primary"
@@ -2989,6 +3010,30 @@
 
                             </button>
 
+                            ${
+                                currentUserId &&
+                                ad.user_id &&
+                                String(ad.user_id) === String(currentUserId)
+                                    ? `
+                            <button
+                                class="action-btn danger"
+                                type="button"
+                                aria-label="Delete your advertisement"
+                                onclick="
+                                    confirmAndDeleteOwnAdvertisement(
+                                        '${escapeJS(
+                                            adId
+                                        )}'
+                                    )
+                                "
+                            >
+                                <i class="fas fa-trash"></i>
+                                Delete
+                            </button>
+                                    `
+                                    : ""
+                            }
+
                         </div>
 
                     </div>
@@ -3008,6 +3053,80 @@
             );
 
         }
+
+        async function confirmAndDeleteOwnAdvertisement(adId) {
+            const id = Number(adId);
+            if (!Number.isSafeInteger(id) || id <= 0) {
+                return;
+            }
+            if (!currentUserId) {
+                showToast(
+                    "Sign in to delete your advertisement."
+                );
+                return;
+            }
+            const ad = adsData.find(function (row) {
+                return Number(row.id) === id;
+            });
+            if (
+                !ad ||
+                String(ad.user_id || "") !== String(currentUserId)
+            ) {
+                showToast(
+                    "You can delete only your own advertisements."
+                );
+                return;
+            }
+            const ok = window.confirm(
+                "Delete this advertisement permanently? This cannot be undone."
+            );
+            if (!ok) {
+                return;
+            }
+            try {
+                const result = await supabaseClient.rpc(
+                    "delete_own_marketplace_listing",
+                    { p_ad_id: id }
+                );
+                if (result.error) {
+                    throw new Error(
+                        result.error.message || "Delete failed."
+                    );
+                }
+                const payload = result.data;
+                if (!payload || payload.ok !== true) {
+                    throw new Error("Delete failed.");
+                }
+                if (
+                    window.HAVKAR_AD_IMAGES &&
+                    typeof window.HAVKAR_AD_IMAGES
+                        .deleteOwnAdvertisementImages === "function"
+                ) {
+                    await window.HAVKAR_AD_IMAGES.deleteOwnAdvertisementImages(
+                        supabaseClient,
+                        currentUserId,
+                        Array.isArray(payload.photos)
+                            ? payload.photos
+                            : ad.photos || []
+                    );
+                }
+                adsData = adsData.filter(function (row) {
+                    return Number(row.id) !== id;
+                });
+                savedAdIds.delete(String(id));
+                renderAds();
+                showToast("Advertisement deleted.");
+            } catch (err) {
+                console.error("[HAVKAR] delete advertisement", err);
+                showToast(
+                    (err && err.message) ||
+                        "Could not delete advertisement."
+                );
+            }
+        }
+
+        window.confirmAndDeleteOwnAdvertisement =
+            confirmAndDeleteOwnAdvertisement;
 
         function openAdInfo(
             id
