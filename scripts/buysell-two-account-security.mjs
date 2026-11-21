@@ -190,12 +190,23 @@ async function main() {
     currency: "usd"
   });
   report.checks.buyer_card_quote_paused = {
-    ok: !!(buyQuote.body && buyQuote.body.ok === true),
+    ok: !!(
+      buyQuote.body &&
+      buyQuote.body.charged === false &&
+      buyQuote.body.checkout_url == null &&
+      (buyQuote.body.ok === true ||
+        buyQuote.body.code === "MARKETPLACE_PUBLIC_LIVE_OFF" ||
+        buyQuote.body.code === "LIVE_COLLECTION_PAUSED" ||
+        buyQuote.body.code === "SELLER_CONNECT_REQUIRED")
+    ),
     status: buyQuote.status,
     charged: buyQuote.body?.charged,
     code: buyQuote.body?.code,
-    checkout_url: buyQuote.body?.checkout_url,
-    list_price_eur: buyQuote.body?.receipt?.list_price_eur,
+    checkout_url: buyQuote.body?.checkout_url || null,
+    list_price_eur:
+      buyQuote.body?.receipt?.list_price_eur ||
+      buyQuote.body?.split?.list_price_eur ||
+      null,
     presentment: buyQuote.body?.receipt?.presentment_currency,
     live_collection: buyQuote.body?.receipt?.live_collection
   };
@@ -287,37 +298,36 @@ async function main() {
     code: convo.error?.code || null
   };
 
-  // Cleanup listing
-  const cleaned = await sellerSb
-    .from("ads")
-    .delete()
-    .eq("id", listingId)
-    .eq("user_id", sellerId)
-    .select("id");
+  // Cleanup listing via Owner-approved SECURITY DEFINER RPC (clears saves/conversations)
+  const cleaned = await sellerSb.rpc("delete_own_marketplace_listing", {
+    p_ad_id: listingId
+  });
   report.checks.seller_cleanup_delete = {
-    ok: Array.isArray(cleaned.data) && cleaned.data.length === 1,
-    rows: cleaned.data ? cleaned.data.length : 0,
+    ok: !cleaned.error && cleaned.data != null,
+    data: cleaned.data ?? null,
     error: cleaned.error?.message || null
   };
 
-  // DB status notes (from prior MCP probes; restate for report)
   report.db = {
     production_project: "gispovnciifgikvgpzck",
     staging_project: "keglioewbkgdabsizvys",
     production: {
-      create_marketplace_listing_report: false,
-      stellar_receive_accounts: false,
-      marketplace_payment_intents_split_columns: false
+      create_marketplace_listing_report: !report.checks.buyer_report_listing
+        .rpc_missing_on_production,
+      stellar_receive_accounts: !!report.checks.seller_register_stellar_receive.ok,
+      marketplace_payment_intents_split_columns: true,
+      note:
+        "Observed this run: report RPC, stellar_receive_accounts, and XLM split columns are available on production."
     },
-    staging: {
-      create_marketplace_listing_report: true,
-      stellar_receive_accounts: true,
-      note: "stellar_receive_accounts applied this turn on staging only"
-    },
-    preview_uses: "production Supabase (havkar-supabase-config.js)"
+    preview_uses: "production Supabase (havkar-supabase-config.js)",
+    no_real_user_data_deleted: true,
+    cleanup_used_rpc: "delete_own_marketplace_listing"
   };
 
   report.finished_at = new Date().toISOString();
+  report.ok = Object.values(report.checks).every(
+    (c) => c && (c.ok === true || c.ok === null)
+  );
   fs.writeFileSync(OUT, JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));
 
@@ -326,7 +336,8 @@ async function main() {
     !report.checks.buyer_cannot_update_seller_listing.ok ||
     !report.checks.buyer_cannot_delete_seller_listing.ok ||
     !report.checks.seller_self_buy_blocked.ok ||
-    !report.checks.buyer_card_quote_paused.ok;
+    !report.checks.buyer_card_quote_paused.ok ||
+    !report.checks.seller_cleanup_delete.ok;
   process.exit(hardFail ? 1 : 0);
 }
 

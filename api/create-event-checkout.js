@@ -181,7 +181,8 @@ function isMarketplaceConnectRequest(req) {
       action === "marketplace_connect_status" ||
       action === "marketplace_connect_quote" ||
       action === "marketplace_buy_checkout" ||
-      action === "marketplace_seller_public"
+      action === "marketplace_seller_public" ||
+      action === "marketplace_public_readiness"
   );
 }
 
@@ -3015,6 +3016,71 @@ export default async function handler(req, res) {
 
     const action = marketplaceConnectAction(req);
 
+    if (action === "marketplace_public_readiness") {
+      try {
+        const {
+          buildMarketplacePublicReadiness
+        } = require("../lib/marketplace-public-readiness.cjs");
+        let extras = {};
+        try {
+          const admin = getSupabaseAdmin();
+          const [connect, ads, intents] = await Promise.all([
+            admin
+              .from("marketplace_seller_connect_accounts")
+              .select("charges_enabled", { count: "exact", head: false }),
+            admin
+              .from("ads")
+              .select("id,status,title,listing_surface", {
+                count: "exact",
+                head: false
+              })
+              .limit(500),
+            admin
+              .from("marketplace_payment_intents")
+              .select("id", { count: "exact", head: true })
+          ]);
+          const connectRows = connect.data || [];
+          const adRows = ads.data || [];
+          extras = {
+            connect_sellers: connectRows.length,
+            connect_sellers_ready: connectRows.filter(
+              (row) => row && row.charges_enabled === true
+            ).length,
+            marketplace_ads: adRows.filter((row) => {
+              const surface = String(
+                (row && row.listing_surface) || "marketplace"
+              ).toLowerCase();
+              return (
+                surface === "marketplace" ||
+                surface === "buy_sell" ||
+                surface === "buysell"
+              );
+            }).length,
+            active_ads: adRows.filter(
+              (row) => String((row && row.status) || "") === "active"
+            ).length,
+            xlm_intents: intents.count || 0,
+            likely_test_listings: adRows.filter((row) =>
+              /e2e|test|debug|formaggio|stabilize/i.test(
+                String((row && row.title) || "")
+              )
+            ).length
+          };
+        } catch (_obsErr) {
+          extras = {};
+        }
+        return res.status(200).json(
+          buildMarketplacePublicReadiness(process.env, extras)
+        );
+      } catch (error) {
+        console.error(
+          "marketplace_public_readiness failed",
+          error && error.message
+        );
+        return sendError(res, 500, "Marketplace readiness could not be built");
+      }
+    }
+
     if (action === "marketplace_seller_public") {
       try {
         const {
@@ -3404,18 +3470,48 @@ export default async function handler(req, res) {
           };
         }
 
-        const session = await getStripe().checkout.sessions.create(sessionParams);
+        const clientIdempotency = String(
+          (req.body && (req.body.idempotency_key || req.body.idempotencyKey)) ||
+            ""
+        )
+          .trim()
+          .slice(0, 120);
+        const idempotencyKey =
+          (clientIdempotency
+            ? "mkt_" +
+              String(ad.id) +
+              "_" +
+              String(authBuy.user.id) +
+              "_" +
+              clientIdempotency
+            : "mkt_" +
+              String(ad.id) +
+              "_" +
+              String(authBuy.user.id) +
+              "_" +
+              String(normalized.currencyUpper) +
+              "_" +
+              String(buyerMinor.amount_minor) +
+              (testAllowed ? "_test" : "_live")
+          ).slice(0, 255);
+
+        const session = await getStripe().checkout.sessions.create(
+          sessionParams,
+          { idempotencyKey }
+        );
         return res.status(200).json({
           ok: true,
           charged: false,
           checkout_url: session.url,
           session_id: session.id,
+          idempotency_key: idempotencyKey,
           receipt,
           split,
           currency_quote: currencyQuote,
           destination_charge: Boolean(connectedAccountId),
           live_collection: liveArmed ? "armed" : "paused",
-          public_live_payments: publicLive
+          public_live_payments: publicLive,
+          test_mode: Boolean(testAllowed)
         });
       } catch (error) {
         console.error(
