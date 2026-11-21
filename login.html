@@ -1183,13 +1183,21 @@ async function login() {
          * login button press.
          *
          * It does NOT affect Forgot Password.
+         * Honor ?next=/buy-sell.html (and other safe paths) so Connect
+         * can return the Owner to Buy & Sell after re-login.
          */
 
         window.setTimeout(
             function(){
 
+                const nextPath = window.HAVKAR_CANONICAL
+                    ? window.HAVKAR_CANONICAL.safeNextPath(
+                        new URLSearchParams(window.location.search).get("next")
+                      )
+                    : "";
+
                 window.location.replace(
-                    "index.html"
+                    nextPath || "index.html"
                 );
 
             },

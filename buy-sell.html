@@ -12,7 +12,7 @@
 <meta name="havkar-buysell-ui" content="20261120-unify-v1">
 <title>HAVKAR — Buy & Sell</title>
 <script>
-window.HAVKAR_BUYSELL_UI = "20261121-owner-connect-v4";
+window.HAVKAR_BUYSELL_UI = "20261121-owner-connect-v5";
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -967,6 +967,27 @@ input:focus-visible{
     color:#1b5e20;
     border:1px solid #1b5e20;
 }
+.seller-payout-card .seller-payout-alert{
+    margin:8px 0 0;
+    padding:10px 12px;
+    border-radius:12px;
+    border:1px solid #c62828;
+    background:#ffebee;
+    color:#7f1d1d;
+    font-size:.88rem;
+    line-height:1.45;
+    font-weight:600;
+}
+.seller-payout-card .seller-payout-alert[hidden]{ display:none !important; }
+.seller-payout-card .seller-payout-alert a{
+    color:#1b5e20;
+    font-weight:800;
+    text-decoration:underline;
+}
+.seller-payout-card .seller-payout-actions button:disabled{
+    opacity:.65;
+    cursor:wait;
+}
 .header-connect-btn{
     display:none;
     align-items:center;
@@ -1053,6 +1074,12 @@ input:focus-visible{
     <p id="sellerPayoutStatus" style="margin:0;font-size:.88rem;color:#355;line-height:1.45">
         Sign in to see your Stripe Connect and Stellar receive status. No bank details are invented by HAVKAR.
     </p>
+    <div
+        id="sellerPayoutAlert"
+        class="seller-payout-alert"
+        role="alert"
+        hidden
+    ></div>
     <ol style="margin:8px 0 0 18px;font-size:.88rem;color:#355;line-height:1.45">
         <li>Sign in with your HAVKAR seller account (Owner: havkarapp2026@gmail.com).</li>
         <li>Tap <strong>Start / continue Stripe Connect</strong> — KYC and bank details stay on Stripe-hosted pages.</li>
@@ -1062,6 +1089,7 @@ input:focus-visible{
     <div class="seller-payout-actions">
         <button id="sellerConnectHomeButton" type="button">Start / continue Stripe Connect</button>
         <button id="sellerConnectRefreshButton" type="button" class="secondary">Refresh Connect status</button>
+        <button id="sellerConnectLoginButton" type="button" class="secondary" hidden>Sign in again</button>
     </div>
     <p style="margin:10px 0 0;font-size:.78rem;color:#567">
         Location: Buy &amp; Sell → directly under the green header (above Search).
@@ -5374,20 +5402,119 @@ function applyConnectReturnFromQuery(){
     }catch(_e){}
 }
 
+function buysellLoginUrl(){
+    const next = "/buy-sell.html";
+    return "login.html?next=" + encodeURIComponent(next);
+}
+
+function clearSellerPayoutAlert(){
+    const alertBox = document.getElementById("sellerPayoutAlert");
+    const loginBtn = document.getElementById("sellerConnectLoginButton");
+    if(alertBox){
+        alertBox.hidden = true;
+        alertBox.innerHTML = "";
+    }
+    if(loginBtn){
+        loginBtn.hidden = true;
+    }
+}
+
+function showSellerPayoutAlert(message, options){
+    const opts = options || {};
+    const note = document.getElementById("sellerPayoutStatus");
+    const alertBox = document.getElementById("sellerPayoutAlert");
+    const loginBtn = document.getElementById("sellerConnectLoginButton");
+    const panel = document.getElementById("sellerPayoutPanel");
+    const text = String(message || "Stripe Connect could not continue.");
+    if(note){
+        note.textContent = text;
+    }
+    if(alertBox){
+        alertBox.hidden = false;
+        if(opts.needLogin){
+            alertBox.innerHTML =
+                text +
+                " <a id=\"sellerPayoutLoginLink\" href=\"" +
+                buysellLoginUrl() +
+                "\">Open login → then return here</a>";
+        }else{
+            alertBox.textContent = text;
+        }
+    }
+    if(loginBtn){
+        loginBtn.hidden = !opts.needLogin;
+    }
+    if(typeof showToast === "function"){
+        showToast(text);
+    }
+    if(panel && typeof panel.scrollIntoView === "function"){
+        panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    try{
+        console.error("[HAVKAR Buy&Sell Connect]", text, opts.detail || null);
+    }catch(_e){}
+}
+
 async function getBuysellAccessToken(){
     try{
+        initializeSupabase();
         if(!supabaseClient || !supabaseClient.auth){
             return null;
         }
-        const session = await supabaseClient.auth.getSession();
-        return (
-            session &&
-            session.data &&
-            session.data.session &&
-            session.data.session.access_token
-        ) || null;
+        let sessionResult = await supabaseClient.auth.getSession();
+        let session =
+            sessionResult &&
+            sessionResult.data &&
+            sessionResult.data.session;
+        if(session && session.expires_at){
+            const expiresAtMs = Number(session.expires_at) * 1000;
+            if(Number.isFinite(expiresAtMs) && expiresAtMs < Date.now() + 30000){
+                const refreshed = await supabaseClient.auth.refreshSession();
+                session =
+                    refreshed &&
+                    refreshed.data &&
+                    refreshed.data.session;
+            }
+        }
+        if(!session || !session.access_token){
+            const refreshed = await supabaseClient.auth.refreshSession();
+            session =
+                refreshed &&
+                refreshed.data &&
+                refreshed.data.session;
+        }
+        return (session && session.access_token) || null;
     }catch(_e){
         return null;
+    }
+}
+
+function openStripeConnectUrl(url){
+    const target = String(url || "").trim();
+    if(!target){
+        return false;
+    }
+    try{
+        if(
+            window.Capacitor &&
+            window.Capacitor.Plugins &&
+            window.Capacitor.Plugins.Browser &&
+            typeof window.Capacitor.Plugins.Browser.open === "function"
+        ){
+            window.Capacitor.Plugins.Browser.open({ url: target });
+            return true;
+        }
+    }catch(_e){}
+    try{
+        window.location.assign(target);
+        return true;
+    }catch(_e2){
+        try{
+            window.location.href = target;
+            return true;
+        }catch(_e3){
+            return false;
+        }
     }
 }
 
@@ -5396,10 +5523,16 @@ async function refreshSellerPayoutPanel(){
     if(!note){
         return;
     }
+    clearSellerPayoutAlert();
     const token = await getBuysellAccessToken();
     if(!token){
         note.textContent =
-            "Sign in to see your Stripe Connect and Stellar receive status. No bank details are invented by HAVKAR.";
+            "Session required. Sign in again to load Stripe Connect status.";
+        showSellerPayoutAlert(
+            "Your HAVKAR session is missing or expired on this Preview. Sign in again, then tap Start / continue Stripe Connect.",
+            { needLogin: true }
+        );
+        syncHeaderConnectButton();
         return;
     }
     try{
@@ -5413,12 +5546,27 @@ async function refreshSellerPayoutPanel(){
             body: JSON.stringify({ action: "marketplace_connect_status" })
         });
         const body = await res.json().catch(function(){ return null; });
-        if(!res.ok || !body || body.ok !== true){
-            note.textContent =
-                (body && (body.customer_message || body.error || body.message)) ||
-                "Connect status unavailable.";
+        if(res.status === 401 || res.status === 403){
+            showSellerPayoutAlert(
+                "Session expired or invalid (" +
+                    res.status +
+                    "). Sign in again, then retry Connect.",
+                {
+                    needLogin: true,
+                    detail: body
+                }
+            );
             return;
         }
+        if(!res.ok || !body || body.ok !== true){
+            showSellerPayoutAlert(
+                (body && (body.customer_message || body.error || body.message)) ||
+                    ("Connect status unavailable (HTTP " + res.status + ")."),
+                { detail: body }
+            );
+            return;
+        }
+        clearSellerPayoutAlert();
         const account = body.account;
         const live = body.live_collection === "armed" ? "armed" : "paused";
         let connectLine = "Stripe Connect: not started.";
@@ -5450,8 +5598,9 @@ async function refreshSellerPayoutPanel(){
             live +
             ". Register XLM receive key in Wallet if you accept Stellar. Seller fees remain 3% of list price." +
             ownerLine;
+        syncHeaderConnectButton();
     }catch(_err){
-        note.textContent = "Connect status check failed.";
+        showSellerPayoutAlert("Connect status check failed. Check network and retry.");
     }
 }
 
@@ -5460,14 +5609,20 @@ async function startSellerConnectFromHome(){
     const btn = document.getElementById("sellerConnectHomeButton");
     if(btn){
         btn.disabled = true;
+        btn.textContent = "Starting Stripe…";
     }
+    clearSellerPayoutAlert();
     try{
         const token = await getBuysellAccessToken();
         if(!token){
-            if(note){
-                note.textContent = "Sign in before starting Stripe Connect.";
-            }
+            showSellerPayoutAlert(
+                "No active Owner session on this Preview. Sign in again, then tap Start / continue Stripe Connect.",
+                { needLogin: true }
+            );
             return;
+        }
+        if(note){
+            note.textContent = "Contacting HAVKAR Connect API…";
         }
         const res = await fetch("/api/create-event-checkout", {
             method: "POST",
@@ -5479,22 +5634,49 @@ async function startSellerConnectFromHome(){
             body: JSON.stringify({ action: "marketplace_connect_onboard" })
         });
         const body = await res.json().catch(function(){ return null; });
-        if(!res.ok || !body || !body.onboarding_url){
-            if(note){
-                note.textContent =
-                    (body && (body.error || body.message || body.customer_message)) ||
-                    "Connect onboarding could not be started. Owner may need Stripe test or live collection enabled first.";
-            }
+        if(res.status === 401 || res.status === 403){
+            showSellerPayoutAlert(
+                "Session expired while starting Connect (HTTP " +
+                    res.status +
+                    "). Sign in again, then retry.",
+                { needLogin: true, detail: body }
+            );
             return;
         }
-        window.location.href = body.onboarding_url;
-    }catch(err){
-        if(note){
-            note.textContent = (err && err.message) || "Connect onboarding failed.";
+        if(!res.ok || !body || !body.onboarding_url){
+            showSellerPayoutAlert(
+                (body && (body.error || body.message || body.customer_message)) ||
+                    ("Connect onboarding failed (HTTP " + res.status + ")."),
+                { detail: body }
+            );
+            return;
         }
+        if(note){
+            note.textContent =
+                "Opening official Stripe Connect page (no charge). If nothing opens, allow redirects/popups for this site.";
+        }
+        showToast("Opening Stripe Connect…");
+        const opened = openStripeConnectUrl(body.onboarding_url);
+        if(!opened){
+            const alertBox = document.getElementById("sellerPayoutAlert");
+            if(alertBox){
+                alertBox.hidden = false;
+                alertBox.innerHTML =
+                    "Stripe URL received but navigation was blocked. " +
+                    "<a href=\"" +
+                    String(body.onboarding_url).replace(/"/g, "&quot;") +
+                    "\" rel=\"noopener noreferrer\">Open official Stripe Connect page</a>";
+            }
+            showToast("Open the Stripe link shown in the red alert.");
+        }
+    }catch(err){
+        showSellerPayoutAlert(
+            (err && err.message) || "Connect onboarding failed."
+        );
     }finally{
         if(btn){
             btn.disabled = false;
+            btn.textContent = "Start / continue Stripe Connect";
         }
     }
 }
@@ -5526,17 +5708,35 @@ function setupSellerPayoutPanel(){
     const panel = document.getElementById("sellerPayoutPanel");
     const startBtn = document.getElementById("sellerConnectHomeButton");
     const refreshBtn = document.getElementById("sellerConnectRefreshButton");
+    const loginBtn = document.getElementById("sellerConnectLoginButton");
     if(panel){
         panel.hidden = false;
     }
-    if(startBtn){
-        startBtn.addEventListener("click", function(){
+    if(startBtn && !startBtn.dataset.wired){
+        startBtn.dataset.wired = "1";
+        startBtn.addEventListener("click", function(ev){
+            if(ev && typeof ev.preventDefault === "function"){
+                ev.preventDefault();
+            }
             startSellerConnectFromHome();
         });
     }
-    if(refreshBtn){
-        refreshBtn.addEventListener("click", function(){
+    if(refreshBtn && !refreshBtn.dataset.wired){
+        refreshBtn.dataset.wired = "1";
+        refreshBtn.addEventListener("click", function(ev){
+            if(ev && typeof ev.preventDefault === "function"){
+                ev.preventDefault();
+            }
             refreshSellerPayoutPanel();
+        });
+    }
+    if(loginBtn && !loginBtn.dataset.wired){
+        loginBtn.dataset.wired = "1";
+        loginBtn.addEventListener("click", function(ev){
+            if(ev && typeof ev.preventDefault === "function"){
+                ev.preventDefault();
+            }
+            window.location.assign(buysellLoginUrl());
         });
     }
     syncHeaderConnectButton();
