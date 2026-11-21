@@ -249,13 +249,22 @@
     const mode = options && options.mode;
     const title = clean(source.title);
     const company = clean(source.company);
-    const location = clean(source.location);
-    const description = clean(source.description);
     const type = clean(source.type || source.job_type);
+    let location = clean(source.location);
+    /* Remote listings may omit a workplace pin; store an explicit Remote label. */
+    if (!location && type === "Remote") {
+      location = "Remote";
+    }
+    const description = clean(source.description);
     const salary = clean(source.salary);
     const skills = skillsText(source.skills);
     const requirements = clean(source.requirements);
     const contact = clean(source.contact);
+    const currencyRaw = clean(source.currency).toUpperCase();
+    const currency =
+      /^[A-Z]{3}$/.test(currencyRaw) || currencyRaw === "XLM"
+        ? currencyRaw
+        : "";
 
     if (!title || !company || !location || !description) {
       return { ok: false, reason: "required_fields", message: MESSAGES.required_fields };
@@ -296,6 +305,9 @@
       contact: contact,
       application_url: urlResult.url
     };
+    if (currency) {
+      value.currency = currency;
+    }
 
     if (Object.prototype.hasOwnProperty.call(source, "image")) {
       const image = normalizeImage(source.image);
@@ -309,7 +321,7 @@
   }
 
   function contentPayload(value) {
-    return {
+    const payload = {
       title: value.title,
       company: value.company,
       location: value.location,
@@ -323,6 +335,10 @@
       application_url: value.application_url,
       remote: value.type === "Remote"
     };
+    if (value.currency) {
+      payload.currency = value.currency;
+    }
+    return payload;
   }
 
   function payloadIsSafe(payload) {

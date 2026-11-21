@@ -1743,7 +1743,7 @@ a.primary{
     <div class="modal-head">
 
       <h2>
-        Monthly subscription
+        Prepaid listing (30 days)
       </h2>
 
       <button
@@ -3483,6 +3483,10 @@ async function submitJob(){
     alert("Select Country and City, or enter a workplace location. Remote jobs may omit a pin.");
     return;
   }
+  if(!description || description.length < 10){
+    alert("Please provide a more detailed job description (at least 10 characters).");
+    return;
+  }
 
   if(!window.HAVKAR_JOBS){
     alert("Jobs tools could not be loaded.");
@@ -3497,6 +3501,11 @@ async function submitJob(){
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
   }
 
+  const currencyEl = document.getElementById("jobCurrency");
+  const currency = currencyEl && currencyEl.value
+    ? String(currencyEl.value).trim().toUpperCase()
+    : "EUR";
+
   const result = await window.HAVKAR_JOBS.createOwnJob(
     supabaseClient,
     {
@@ -3505,7 +3514,7 @@ async function submitJob(){
       draft:{
         title,
         company,
-        location,
+        location: location || (type === "Remote" ? "Remote" : location),
         type,
         salary,
         skills,
@@ -3513,6 +3522,7 @@ async function submitJob(){
         requirements,
         application_url:applicationUrl,
         contact,
+        currency: currency,
         image:selectedJobImage || null
       }
     }
@@ -3647,7 +3657,7 @@ function showPaymentScreen(job){
 
       Pay €${Number(
         job.monthly_fee
-      ).toFixed(2)} (30 days)
+      ).toFixed(2)} prepaid (30 days)
 
     </button>
 
@@ -3655,13 +3665,13 @@ function showPaymentScreen(job){
       class="secondary"
       type="button"
       onclick="
-        quoteJobXlm(
+        payJobWithXlm(
           '${escapeJS(job.id)}',
           '${escapeJS(String(job.monthly_fee))}'
         )
       ">
 
-      Quote XLM for prepaid listing
+      Pay with XLM (prepaid listing)
 
     </button>
 
@@ -3692,7 +3702,8 @@ async function startRealPayment(jobId){
   /*
     IMPORTANT:
     No fake payment confirmation.
-    Ask the server for jobs_quote honesty before any charge attempt.
+    Creates a real Stripe Checkout Session only when Jobs live payments are armed.
+    Activation happens only after Stripe webhook confirms payment.
   */
 
   const job =
@@ -3705,44 +3716,53 @@ async function startRealPayment(jobId){
   if(!job) return;
 
   try{
-    /* jobs_quote is handled on create-event-checkout; /api/global-payments catalog would swallow it. */
+    const session =
+      await supabaseClient.auth.getSession();
+    const accessToken =
+      session &&
+      session.data &&
+      session.data.session &&
+      session.data.session.access_token;
+    if(!accessToken){
+      alert("Please sign in before payment. Your advertisement has NOT been activated.");
+      window.location.href = "profile.html";
+      return;
+    }
+
     const res = await fetch("/api/create-event-checkout", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + accessToken,
+        Accept: "application/json"
+      },
       body: JSON.stringify({
-        action: "jobs_quote",
+        action: "jobs_checkout",
+        job_id: String(job.id),
         plan: job.plan || "Basic",
         method: "stripe"
       })
     });
     const body = await res.json().catch(function(){ return null; });
-    if(
-      body &&
-      body.ok === true &&
-      body.charge_allowed_now === true
-    ){
-      alert(
-        "Card collection is Owner-armed for Jobs quotes, but checkout session creation is not started from this button yet. " +
-        "Your advertisement has NOT been activated. No charge was created."
-      );
+    if(body && body.ok === true && body.checkout_url){
+      window.location.href = body.checkout_url;
       return;
     }
     const reason =
-      (body && (body.availability_reason || body.error || body.availability_label)) ||
-      "Jobs live payments are not armed (HAVKAR_JOB_PAYMENTS_ENABLED).";
+      (body && (body.error || body.code || body.availability_reason)) ||
+      "Jobs Checkout could not be started.";
     alert(
-      "Jobs card payment is not available now: " +
       reason +
       " Your advertisement has NOT been activated. No charge was created."
     );
   }catch(_err){
     alert(
-      "Could not verify Jobs payment readiness. Your advertisement has NOT been activated. No charge was created."
+      "Could not start Jobs Checkout. Your advertisement has NOT been activated. No charge was created."
     );
   }
 }
 
-async function quoteJobXlm(jobId, fee){
+async function payJobWithXlm(jobId, fee){
 
   const session =
     await supabaseClient.auth.getSession();
@@ -3753,11 +3773,39 @@ async function quoteJobXlm(jobId, fee){
     session.data.session.access_token;
 
   if(!accessToken || !window.HAVKAR_XLM){
-    alert("Sign in before checking XLM. The job was not activated.");
+    alert("Sign in before paying with XLM. The job was not activated.");
     return;
   }
 
   // Prepaid one-time jobs_listing only — XLM cannot start automatic renewals.
+  if(
+    typeof window.HAVKAR_XLM.payAndVerify === "function"
+  ){
+    const paid = await window.HAVKAR_XLM.payAndVerify({
+      flow: "jobs_listing",
+      price: fee,
+      subjectId: String(jobId),
+      accessToken: accessToken
+    });
+    if(paid && paid.ok){
+      alert(
+        (window.HAVKAR_XLM.describe && window.HAVKAR_XLM.describe(paid.result)) ||
+        "XLM settlement submitted. Refresh My Jobs after confirmation."
+      );
+      await loadSupabaseJobs();
+      renderJobs();
+      await openMyJobs();
+      return;
+    }
+    alert(
+      ((paid && window.HAVKAR_XLM.describe && window.HAVKAR_XLM.describe(paid.result)) ||
+        (paid && paid.error) ||
+        "XLM payment could not complete.") +
+      " The job was not activated."
+    );
+    return;
+  }
+
   const quoted =
     await window.HAVKAR_XLM.quote({
       flow: "jobs_listing",
@@ -3766,12 +3814,32 @@ async function quoteJobXlm(jobId, fee){
       accessToken: accessToken
     });
 
-  alert(window.HAVKAR_XLM.describe(quoted.result) + " The job was not activated.");
+  alert(
+    window.HAVKAR_XLM.describe(quoted.result) +
+    " Complete wallet settlement when prompted. The job stays inactive until settlement is verified."
+  );
+}
+
+/* Keep older onclick name working if cached markup remains. */
+async function quoteJobXlm(jobId, fee){
+  return payJobWithXlm(jobId, fee);
 }
 
 /* =========================================================
    MY JOBS
    ========================================================= */
+
+function resumeJobPayment(jobId){
+  const job = jobs.find(function(item){
+    return String(item.id) === String(jobId);
+  });
+  if(!job){
+    alert("Job listing was not found.");
+    return;
+  }
+  closeModal("myJobsModal");
+  showPaymentScreen(job);
+}
 
 async function openMyJobs(){
 
@@ -3902,10 +3970,26 @@ async function openMyJobs(){
                 <span>
                   €${Number(
                     job.monthly_fee || 0
-                  ).toFixed(2)}/month
+                  ).toFixed(2)} prepaid / 30 days
                 </span>
 
               </div>
+
+              ${
+                String(job.status) === "pending_payment"
+                  ? `
+              <button
+                class="primary"
+                type="button"
+                onclick="
+                  event.stopPropagation();
+                  resumeJobPayment('${escapeJS(job.id)}')
+                ">
+                Continue payment
+              </button>
+              `
+                  : ""
+              }
 
               <button
                 class="secondary"
@@ -4492,10 +4576,37 @@ function escapeJS(value){
 supabaseClient.auth.onAuthStateChange(
   async (_event, session) => {
     currentUser = session?.user || null;
+    /* Reload after auth settles so owner pending_payment listings appear. */
+    await loadSupabaseJobs();
+    renderJobs();
   }
 );
 
-loadSupabaseJobs();
+(async function bootJobsPage(){
+  try{
+    const params = new URLSearchParams(window.location.search);
+    const mine = String(params.get("mine") || "") === "1";
+    const openId = String(params.get("id") || params.get("job") || "").trim();
+    const jobPaid = String(params.get("job_paid") || "");
+    await loadSupabaseJobs();
+    renderJobs();
+    if(jobPaid === "1"){
+      alert(
+        "Stripe Checkout returned successfully. Your listing activates after Stripe confirms payment (usually within seconds). Open My Jobs to refresh status."
+      );
+      await openMyJobs();
+    }else if(jobPaid === "0"){
+      alert("Checkout was cancelled. Your listing stays pending payment and was NOT activated.");
+      await openMyJobs();
+    }else if(mine){
+      await openMyJobs();
+    }else if(openId){
+      openJob(openId);
+    }
+  }catch(_bootErr){
+    loadSupabaseJobs();
+  }
+})();
 
 </script>
 
