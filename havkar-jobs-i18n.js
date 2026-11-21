@@ -39,7 +39,7 @@
         "One-time prepaid public listing for 30 days. Activates only after confirmed payment. No auto-renew.",
       corpTitle: "Verified company subscriptions",
       corpNote:
-        "Corporate monthly plans are managed in the Companies panel. Ordinary listings use the prepaid plans above.",
+        "Corporate monthly plans are managed in the Companies panel. Ordinary listings use the prepaid plans below.",
       reviewSummary: "Review your listing",
       feeLabel: "Publishing fee (EUR)",
       salaryCurrencyNote:
@@ -49,7 +49,19 @@
       partTime: "Part-time",
       remote: "Remote",
       freelance: "Freelance",
-      contract: "Contract"
+      contract: "Contract",
+      lblTitle: "Job title *",
+      lblCompany: "Employer / Company *",
+      lblCountry: "Country",
+      lblCity: "City",
+      lblLocation: "Workplace location *",
+      lblType: "Employment type",
+      lblSalary: "Salary / Payment",
+      lblSkills: "Skills",
+      lblDesc: "Job description *",
+      lblReq: "Hiring requirements",
+      lblApplyUrl: "Application link",
+      lblContact: "Contact email or phone",
     },
     fa: {
       pageTitle: "کار و استخدام",
@@ -84,7 +96,7 @@
         "آگهی عمومی ۳۰روزه با پرداخت یک‌باره. فقط پس از تأیید قطعی پرداخت منتشر می‌شود. تمدید خودکار ندارد.",
       corpTitle: "اشتراک شرکت‌های تأییدشده",
       corpNote:
-        "تعرفه‌های ماهانه شرکتی در پنل شرکت‌ها مدیریت می‌شوند. آگهی عادی فقط از تعرفه‌های پیش‌پرداخت بالا استفاده می‌کند.",
+        "تعرفه‌های ماهانه شرکتی در پنل شرکت‌ها مدیریت می‌شوند. آگهی عادی فقط از تعرفه‌های پیش‌پرداخت زیر استفاده می‌کند.",
       reviewSummary: "خلاصه آگهی",
       feeLabel: "هزینه انتشار (یورو)",
       salaryCurrencyNote:
@@ -94,7 +106,19 @@
       partTime: "پاره‌وقت",
       remote: "دورکاری",
       freelance: "آزادکاری",
-      contract: "قراردادی"
+      contract: "قراردادی",
+      lblTitle: "عنوان شغل *",
+      lblCompany: "نام کارفرما / شرکت *",
+      lblCountry: "کشور",
+      lblCity: "شهر",
+      lblLocation: "محل کار *",
+      lblType: "نوع همکاری",
+      lblSalary: "حقوق / پرداخت",
+      lblSkills: "مهارت‌ها",
+      lblDesc: "شرح وظایف *",
+      lblReq: "شرایط استخدام",
+      lblApplyUrl: "لینک درخواست",
+      lblContact: "ایمیل یا تلفن تماس",
     },
     it: {
       pageTitle: "Lavoro",
@@ -327,6 +351,10 @@
     });
     document.querySelectorAll("[data-jobs-plan-feat]").forEach(function (el) {
       el.textContent = t("planFeat");
+    });
+    document.querySelectorAll("[data-jobs-i18n]").forEach(function (el) {
+      var key = el.getAttribute("data-jobs-i18n");
+      if (key) el.textContent = t(key);
     });
     var box = document.getElementById("postModal");
     if (box) {
