@@ -464,14 +464,31 @@
         return String(stored).replace(/"/g, "").trim().toLowerCase() || "en";
     }
 
+    function mergedPack(code) {
+        const base = packs[code] || {};
+        let ui21 = {};
+        try {
+            if (
+                globalThis.HAVKAR_UI_I18N21 &&
+                typeof globalThis.HAVKAR_UI_I18N21.pack === "function"
+            ) {
+                ui21 = globalThis.HAVKAR_UI_I18N21.pack(code) || {};
+            }
+        } catch (_e) {
+            ui21 = {};
+        }
+        return Object.assign({}, ui21, base);
+    }
+
     function apply() {
         const code = language();
-        const pack = packs[code] || null;
+        const pack = code === "en" ? null : mergedPack(code);
+        const hasOfflineAbout = Boolean(packs[code]);
 
-        document.documentElement.lang = pack ? code : "en";
+        document.documentElement.lang = code || "en";
         document.documentElement.dir = RTL[code] ? "rtl" : "ltr";
 
-        if (!pack) {
+        if (!pack || (!hasOfflineAbout && !Object.keys(pack).length)) {
             return;
         }
 

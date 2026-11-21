@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/havkar-icon-32-20261022-v3.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1b5e20">
+<title>HAVKAR | Telehealth</title>
+<script src="/havkar-health-i18n.js"></script>
+<script src="/havkar-ui-i18n21.js"></script>
+<script src="/havkar-i18n.js"></script>
+<script src="/havkar-telehealth.js"></script>
+<script src="/havkar-page-back.js"></script>
+<style>
+:root{--g:#1b5e20}
+*{box-sizing:border-box}
+body{margin:0;font-family:Georgia,"Iowan Old Style",serif;background:linear-gradient(180deg,#f4faf5,#e6f0e8);color:#123;min-height:100vh}
+header{background:linear-gradient(135deg,#1b5e20,#2e7d32);color:#fff;padding:calc(14px + env(safe-area-inset-top)) 16px 16px}
+.wrap{max-width:980px;margin:0 auto;padding:14px 16px}
+.card{background:#fff;border:1px solid #d7e6db;border-radius:14px;padding:14px;margin:12px 0}
+.notice{background:#fff8e1;border:1px solid #ffe082;border-radius:12px;padding:12px;line-height:1.45}
+.blocked{background:#ffebee;border-color:#ef9a9a}
+label{display:block;margin:8px 0 4px;font-size:13px}
+input,select,button{font:inherit;width:100%;min-height:42px;border-radius:10px;padding:8px 10px}
+input,select{border:1px solid #cfd}
+button{border:0;background:var(--g);color:#fff;font-weight:700;cursor:pointer;margin-top:8px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:720px){.grid{grid-template-columns:1fr}}
+.stage{position:relative;background:#0b1a10;border-radius:16px;overflow:hidden;min-height:280px}
+video{width:100%;height:100%;object-fit:cover;background:#000;display:block;min-height:280px}
+#localVideo{position:absolute;right:12px;bottom:12px;width:28%;min-height:90px;border-radius:12px;border:2px solid #fff;z-index:2}
+.controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.controls button{flex:1 1 120px;margin-top:0}
+.waiting{padding:24px;text-align:center;color:#e8f5e9}
+a{color:var(--g);font-weight:700}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap" style="padding-top:0;padding-bottom:0">
+    <h1 style="margin:0;font-size:1.25rem" data-i18n-tele="Telehealth consultation">Telehealth consultation</h1>
+    <p style="margin:6px 0 0;opacity:.95" data-i18n-tele="Secure appointment-linked voice and video">Secure appointment-linked voice and video</p>
+  </div>
+</header>
+<main class="wrap">
+  <p id="gateNotice" class="notice blocked" role="status">Public clinical voice/video remains gated until clinical contract, licensing, privacy safeguards and Owner authorization are verified. Infrastructure and controls are ready.</p>
+  <div class="card">
+    <h2 style="margin:0 0 8px;color:var(--g);font-size:1.05rem" data-i18n-tele="Session setup">Session setup</h2>
+    <div class="grid">
+      <div>
+        <label for="appointmentId" data-i18n-tele="Appointment ID">Appointment ID</label>
+        <input id="appointmentId" autocomplete="off">
+      </div>
+      <div>
+        <label for="providerId" data-i18n-tele="Provider ID">Provider ID</label>
+        <input id="providerId" autocomplete="off">
+      </div>
+    </div>
+    <label for="modality" data-i18n-tele="Modality">Modality</label>
+    <select id="modality">
+      <option value="video">Video</option>
+      <option value="voice">Voice</option>
+    </select>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:10px">
+      <input id="consent" type="checkbox" style="width:auto;min-height:auto">
+      <span data-i18n-tele="I consent to a secure telehealth session. This is not for emergencies.">I consent to a secure telehealth session. This is not for emergencies.</span>
+    </label>
+    <button type="button" id="createBtn" data-i18n-tele="Enter waiting room">Enter waiting room</button>
+    <p id="setupStatus" role="status"></p>
+  </div>
+  <div class="card" id="callCard" hidden>
+    <div class="stage">
+      <div id="waitingRoom" class="waiting" data-i18n-tele="Waiting room — waiting for admission">Waiting room — waiting for admission</div>
+      <video id="remoteVideo" playsinline autoplay></video>
+      <video id="localVideo" playsinline autoplay muted></video>
+    </div>
+    <div class="controls">
+      <button type="button" id="admitBtn" data-i18n-tele="Admit / start media">Admit / start media</button>
+      <button type="button" id="muteBtn" data-i18n-tele="Mute">Mute</button>
+      <button type="button" id="camBtn" data-i18n-tele="Camera off">Camera off</button>
+      <button type="button" id="switchBtn" data-i18n-tele="Switch camera">Switch camera</button>
+      <button type="button" id="endBtn" style="background:#b71c1c" data-i18n-tele="End call">End call</button>
+    </div>
+    <p id="callStatus" role="status"></p>
+  </div>
+  <p><a href="health-dashboard.html">Provider dashboard</a> · <a href="health.html">Health directory</a></p>
+</main>
+<script>
+(function(){
+  var sessionPayload=null;
+  var TH=window.HAVKAR_TELEHEALTH;
+  var UI=window.HAVKAR_UI_I18N21;
+
+  function lang(){
+    try{return String(localStorage.getItem('havkar_language')||'en').toLowerCase();}catch(e){return 'en';}
+  }
+  function applyI18n(){
+    if(!UI||!UI.pack) return;
+    var pack=UI.pack(lang())||{};
+    document.querySelectorAll('[data-i18n-tele]').forEach(function(el){
+      var key=el.getAttribute('data-i18n-tele');
+      if(pack[key]) el.textContent=pack[key];
+    });
+  }
+  applyI18n();
+
+  function authHeaders(){
+    var token='';
+    try{token=localStorage.getItem('havkar_access_token')||'';}catch(e){}
+    var h={'Content-Type':'application/json'};
+    if(token) h.Authorization='Bearer '+token;
+    return h;
+  }
+
+  async function refreshGate(){
+    try{
+      var res=await fetch('/api/health',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'health_telehealth_status'})});
+      var body=await res.json();
+      var notice=document.getElementById('gateNotice');
+      if(body&&body.public_clinical_sessions_allowed){
+        notice.className='notice';
+        notice.textContent='Clinical telehealth sessions are Owner-authorized for production.';
+      }else if(body&&body.authorized_test_sessions_allowed){
+        notice.className='notice';
+        notice.textContent='Authorized test mode only. Public clinical sessions remain gated.';
+      }else{
+        notice.className='notice blocked';
+        var missing=(body&&body.readiness&&body.readiness.missing_requirements)||[];
+        notice.textContent='Public clinical voice/video gated. Missing: '+(missing.join(', ')||'Owner clinical authorization checklist');
+      }
+    }catch(e){}
+  }
+  refreshGate();
+
+  document.getElementById('createBtn').addEventListener('click', async function(){
+    var status=document.getElementById('setupStatus');
+    status.textContent='Requesting session…';
+    var payload={
+      action:'health_telehealth_session_create',
+      appointment_id:document.getElementById('appointmentId').value.trim(),
+      provider_id:document.getElementById('providerId').value.trim(),
+      modality:document.getElementById('modality').value,
+      consent_acknowledged:document.getElementById('consent').checked
+    };
+    try{
+      var res=await fetch('/api/health',{method:'POST',headers:authHeaders(),body:JSON.stringify(payload)});
+      var body=await res.json();
+      if(!body||!body.ok){
+        status.textContent=(body&&(body.error||body.reason))||('HTTP '+res.status);
+        return;
+      }
+      sessionPayload=body;
+      document.getElementById('callCard').hidden=false;
+      document.getElementById('waitingRoom').hidden=false;
+      status.textContent='Waiting room ready. Session mode: '+(body.session&&body.session.mode||'');
+      document.getElementById('callStatus').textContent='In waiting room. Admit to start media.';
+    }catch(err){
+      status.textContent=String(err&&err.message||err);
+    }
+  });
+
+  document.getElementById('admitBtn').addEventListener('click', async function(){
+    if(!sessionPayload||!sessionPayload.session||!TH){
+      document.getElementById('callStatus').textContent='No authorized session.';
+      return;
+    }
+    try{
+      document.getElementById('waitingRoom').hidden=true;
+      await TH.startPeer(sessionPayload.session,{
+        onLocalStream:function(stream){document.getElementById('localVideo').srcObject=stream;},
+        onRemoteStream:function(stream){document.getElementById('remoteVideo').srcObject=stream;},
+        onConnectionState:function(s){document.getElementById('callStatus').textContent='Connection: '+s;},
+        onIceState:function(s){document.getElementById('callStatus').textContent='ICE: '+s;}
+      });
+      await TH.createOffer();
+      document.getElementById('callStatus').textContent='Local media started. Signaling exchange uses authorized session token only.';
+    }catch(err){
+      document.getElementById('callStatus').textContent=String(err&&err.message||err);
+    }
+  });
+
+  document.getElementById('muteBtn').addEventListener('click', function(){
+    if(!TH) return;
+    var muted=TH.toggleMute();
+    this.textContent=muted?'Unmute':'Mute';
+  });
+  document.getElementById('camBtn').addEventListener('click', function(){
+    if(!TH) return;
+    var off=TH.toggleCamera();
+    this.textContent=off?'Camera on':'Camera off';
+  });
+  document.getElementById('switchBtn').addEventListener('click', async function(){
+    if(!TH) return;
+    try{await TH.switchCamera();}catch(e){}
+  });
+  document.getElementById('endBtn').addEventListener('click', async function(){
+    if(TH) await TH.endCall();
+    if(sessionPayload&&sessionPayload.session){
+      try{
+        await fetch('/api/health',{method:'POST',headers:authHeaders(),body:JSON.stringify({action:'health_telehealth_session_end',session_id:sessionPayload.session.id})});
+      }catch(e){}
+    }
+    sessionPayload=null;
+    document.getElementById('callCard').hidden=true;
+    document.getElementById('setupStatus').textContent='Call ended. Media was not recorded.';
+  });
+})();
+</script>
+</body>
+</html>

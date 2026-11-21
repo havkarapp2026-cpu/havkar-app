@@ -20,8 +20,10 @@ const chat = read("chat.html");
 const translate = read("translate.html");
 const i18n = read("havkar-i18n.js");
 
-assert.ok(chat.includes('value="ckb"'));
-assert.ok(chat.includes('value="kmr"'));
+assert.ok(chat.includes('code:"ckb"') || chat.includes("code:\"ckb\""));
+assert.ok(chat.includes('code:"kmr"') || chat.includes("code:\"kmr\""));
+assert.ok(chat.includes("Kurdish (Sorani)"));
+assert.ok(chat.includes("Kurdish (Kurmanji)"));
 assert.ok(!chat.includes('value="ku"'));
 assert.ok(chat.includes('savedTarget === "ku"'));
 

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/havkar-icon-32-20261022-v3.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1b5e20">
+<title>HAVKAR | International medical travel</title>
+<style>
+:root{--g:#1b5e20}
+*{box-sizing:border-box}
+body{margin:0;font-family:Georgia,"Iowan Old Style",serif;background:linear-gradient(180deg,#f4faf5,#e6f0e8);color:#123}
+header{background:linear-gradient(135deg,#1b5e20,#2e7d32);color:#fff;padding:calc(14px + env(safe-area-inset-top)) 16px 16px}
+.wrap{max-width:900px;margin:0 auto;padding:14px 16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:700px){.grid{grid-template-columns:1fr}}
+input,select,button{font:inherit;min-height:44px;border-radius:10px}
+input,select{width:100%;border:1px solid #cfd;padding:0 10px}
+button{border:0;background:var(--g);color:#fff;font-weight:700;padding:0 14px;cursor:pointer;width:100%;margin-top:10px}
+.notice,.empty{border-radius:12px;padding:12px;line-height:1.45;margin:12px 0}
+.notice{background:#f7fcf7;border:1px solid #cfe0d3;color:#456}
+.empty{background:#fff8e1;border:1px dashed #ffcc80}
+.card{background:#fff;border:1px solid #d7e6db;border-radius:14px;padding:12px;margin-top:10px}
+a{color:var(--g);font-weight:700}
+</style>
+<script src="/havkar-health-i18n.js"></script>
+<script src="/havkar-ui-i18n21.js"></script>
+<script src="/havkar-i18n.js"></script>
+<script src="/havkar-page-back.js"></script>
+</head>
+<body>
+<header>
+  <div class="wrap" style="padding-top:0;padding-bottom:0">
+    <h1 style="margin:0;font-size:1.25rem">International medical travel</h1>
+    <p style="margin:6px 0 0;opacity:.95">Verified providers only when published. No fabricated prices, visas or guarantees.</p>
+  </div>
+</header>
+<main class="wrap">
+  <p class="notice">HAVKAR connects patients with independent licensed professionals abroad. Treatment outcomes, visas and travel logistics are not invented by HAVKAR. Patients pay no HAVKAR platform fee.</p>
+  <div class="grid">
+    <div>
+      <label for="dest">Destination country</label>
+      <input id="dest" type="text" maxlength="2" placeholder="IT">
+    </div>
+    <div>
+      <label for="spec">Specialty / procedure</label>
+      <input id="spec" type="search" placeholder="Fertility, cardiac…">
+    </div>
+  </div>
+  <button type="button" id="searchBtn">Search medical travel providers</button>
+  <p id="status" role="status"></p>
+  <div id="results"></div>
+  <div class="empty" id="empty">
+    No published medical-travel providers match this search. HAVKAR will not invent destinations, costs or credentials.
+  </div>
+  <p><a href="health.html">Health directory</a> · <a href="health-provider-apply.html">Register a provider</a></p>
+</main>
+<script>
+(function () {
+  var results = document.getElementById("results");
+  var empty = document.getElementById("empty");
+  var statusEl = document.getElementById("status");
+  async function run() {
+    statusEl.textContent = "Searching…";
+    results.innerHTML = "";
+    try {
+      var res = await fetch("/api/health", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "health_travel_search",
+          destination_country: document.getElementById("dest").value,
+          specialty: document.getElementById("spec").value,
+          verified_only: true
+        })
+      });
+      var body = await res.json();
+      if (!body.ok) {
+        statusEl.textContent = body.error || "Search failed";
+        empty.hidden = false;
+        return;
+      }
+      var rows = body.results || [];
+      statusEl.textContent = rows.length + " published match(es). " + (body.note || "");
+      empty.hidden = rows.length > 0;
+      rows.forEach(function (r) {
+        var card = document.createElement("article");
+        card.className = "card";
+        card.innerHTML = "<h2></h2><p></p><p></p>";
+        card.querySelector("h2").textContent = r.display_name;
+        card.querySelectorAll("p")[0].textContent =
+          [r.city, r.country_code, r.license_status].filter(Boolean).join(" · ");
+        card.querySelectorAll("p")[1].textContent =
+          "Languages: " + ((r.languages || []).join(", ") || "not listed") +
+          ". Provider-reported costs appear only when the provider publishes them — never invented.";
+        results.appendChild(card);
+      });
+    } catch (e) {
+      statusEl.textContent = "Request failed";
+      empty.hidden = false;
+    }
+  }
+  document.getElementById("searchBtn").onclick = run;
+  run();
+})();
+</script>
+</body>
+</html>

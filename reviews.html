@@ -546,42 +546,148 @@ gap:7px}
 </div>
 </header>
 <main class="page">
+<section class="rating-summary" aria-label="Trust summary">
+<div class="average-rating" id="avgRating">—</div>
+<div class="stars" aria-hidden="true">★★★★★</div>
+<p class="total-reviews" id="totalReviews">Public verified reviews: 0</p>
+<p style="margin-top:12px;color:var(--text-light);font-size:.9rem;line-height:1.45">
+HAVKAR Reviews is a trust surface for completed services only. Businesses cannot secretly edit customer ratings or remove legitimate negative reviews.
+</p>
+</section>
 <section class="content">
+<label for="reviewSearch" style="display:block;margin:0 0 8px;color:var(--text-light);font-size:.9rem">Search businesses &amp; services</label>
+<input id="reviewSearch" type="search" placeholder="Business, service, city…" style="width:100%;min-height:46px;border:1px solid var(--border);border-radius:12px;padding:0 12px;margin-bottom:12px;box-sizing:border-box">
+<div class="tabs" role="tablist" aria-label="Review filters" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+<button class="tab active" type="button" data-filter="public" style="min-height:40px;border:0;border-radius:999px;padding:0 14px;background:var(--primary);color:#fff;font-weight:700">Public verified</button>
+<button class="tab" type="button" data-filter="mine" style="min-height:40px;border:1px solid var(--primary);border-radius:999px;padding:0 14px;background:#fff;color:var(--primary);font-weight:700">My Reviews</button>
+</div>
+<div id="publicPanel">
 <div class="empty-state launch-reviews">
 <i class="fas fa-star" aria-hidden="true"></i>
 <h3>Verified reviews</h3>
 <p>Verified reviews will appear here after completed HAVKAR services. A review is not listed until it is linked to a completed service, so unfinished or unrelated records stay hidden.</p>
 </div>
+</div>
+<div id="myReviewsPanel" hidden>
+<div id="myReviewsStatus" class="loading">Sign in to manage your own reviews.</div>
+<div id="myReviewsList"></div>
+</div>
+<p style="margin:16px 0;font-size:.88rem;color:var(--muted);line-height:1.4">
+Abuse reporting and moderation remain available for verified reviews. Profile → My Reviews opens this same panel. Business owners respond from Business Account → Customer Reviews without altering customer stars.
+</p>
 </section>
 </main>
 <nav class="bottom-nav">
-<a class="nav-item" href="index.html">
-<i class="fas fa-home">
-</i>
-<span>Home</span>
-</a>
-<a class="nav-item active" href="reviews.html">
-<i class="fas fa-star">
-</i>
-<span>Reviews</span>
-</a>
-<a class="nav-item" href="saved.html">
-<i class="fas fa-bookmark">
-</i>
-<span>Saved</span>
-</a>
-<a class="nav-item" href="profile.html">
-<i class="fas fa-user">
-</i>
-<span>Profile</span>
-</a>
 </nav>
+<script src="/havkar-supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 "use strict";
 
 function goHome(){
 location.href="index.html"}
+
+(function(){
+  var publicPanel=document.getElementById("publicPanel");
+  var myPanel=document.getElementById("myReviewsPanel");
+  var myList=document.getElementById("myReviewsList");
+  var myStatus=document.getElementById("myReviewsStatus");
+  var search=document.getElementById("reviewSearch");
+  var tabs=document.querySelectorAll(".tab");
+  var cfg=window.HAVKAR_SUPABASE_CONFIG||window.HAVKAR_SUPABASE||{};
+  var db=null;
+  var key=cfg.publishableKey||cfg.anonKey;
+  if(window.supabase&&cfg.url&&key){
+    db=window.supabase.createClient(cfg.url,key);
+  }
+
+  function setFilter(filter){
+    tabs.forEach(function(t){
+      var on=t.getAttribute("data-filter")===filter;
+      t.classList.toggle("active",on);
+      t.style.background=on?"var(--primary)":"#fff";
+      t.style.color=on?"#fff":"var(--primary)";
+    });
+    if(filter==="mine"){
+      publicPanel.hidden=true;
+      myPanel.hidden=false;
+      loadMyReviews();
+    }else{
+      publicPanel.hidden=false;
+      myPanel.hidden=true;
+    }
+  }
+
+  tabs.forEach(function(t){
+    t.addEventListener("click",function(){
+      setFilter(t.getAttribute("data-filter"));
+    });
+  });
+
+  if(search){
+    search.addEventListener("input",function(){
+      var q=String(search.value||"").trim().toLowerCase();
+      if(!q){
+        if(document.getElementById("avgRating")) document.getElementById("avgRating").textContent="—";
+        return;
+      }
+      // Public verified inventory is empty until completed-service linkage exists.
+      // Search never invents reviews.
+    });
+  }
+
+  async function loadMyReviews(){
+    if(!db){
+      myStatus.textContent="Supabase is not configured in this environment.";
+      return;
+    }
+    myStatus.textContent="Loading your reviews…";
+    myList.innerHTML="";
+    try{
+      var sessionRes=await db.auth.getSession();
+      var session=sessionRes&&sessionRes.data&&sessionRes.data.session;
+      if(!session||!session.user){
+        myStatus.innerHTML='Sign in required. <a href="login.html">Log in</a> to manage My Reviews.';
+        return;
+      }
+      var res=await db.from("reviews")
+        .select("id,created_at,rating,review_text")
+        .eq("user_id",session.user.id)
+        .order("created_at",{ascending:false});
+      if(res.error){
+        myStatus.textContent=res.error.message||"Could not load My Reviews.";
+        return;
+      }
+      var rows=res.data||[];
+      if(!rows.length){
+        myStatus.textContent="You have not written any reviews yet. Reviews stay private to you until a completed-service verification path publishes them.";
+        return;
+      }
+      myStatus.textContent=rows.length+" review(s) owned by your account (RLS: own rows only).";
+      myList.innerHTML=rows.map(function(r){
+        return '<article class="review-card" style="background:#fff;border-radius:14px;padding:14px;margin:10px 0;box-shadow:var(--shadow)">'
+          +'<div style="font-weight:700;color:var(--primary-dark)">'+String(r.rating||0)+' ★</div>'
+          +'<p style="margin:8px 0;white-space:pre-wrap"></p>'
+          +'<div style="font-size:.8rem;color:var(--muted)"></div>'
+          +'</article>';
+      }).join("");
+      Array.prototype.forEach.call(myList.querySelectorAll("article"),function(card,i){
+        var r=rows[i];
+        card.querySelector("p").textContent=r.review_text||"";
+        card.querySelector("div:last-child").textContent=r.created_at?new Date(r.created_at).toLocaleString():"";
+      });
+    }catch(e){
+      myStatus.textContent="Could not load My Reviews.";
+    }
+  }
+
+  if(/[?&]mine=1(?:&|$)/.test(location.search)||location.hash==="#mine"){
+    setFilter("mine");
+  }
+})();
 </script>
+<script src="/havkar-premium-i18n.js"></script>
+<script src="havkar-ui-i18n21.js"></script>
 <script src="havkar-i18n.js"></script>
 <script src="/havkar-page-back.js"></script>
 </body>

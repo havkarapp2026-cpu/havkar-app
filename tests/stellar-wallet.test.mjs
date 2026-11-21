@@ -219,7 +219,8 @@ window.havkarSetStellarNetwork("PUBLIC");
 const mainnet = window.havkarGetStellarNetwork();
 assert.equal(mainnet.id, "PUBLIC");
 assert.equal(mainnet.horizon, "https://horizon.stellar.org");
-assert.equal(mainnet.paymentsEnabled, false);
+// Client capability is Owner-armed; server still requires LIVE_COLLECTION for payable quotes.
+assert.equal(mainnet.paymentsEnabled, true);
 assert.equal(signCalls, 0, "switching to mainnet made no signature request");
 window.havkarSetStellarNetwork("TESTNET");
 
