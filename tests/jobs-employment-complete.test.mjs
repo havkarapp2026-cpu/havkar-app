@@ -82,5 +82,8 @@ assert.match(page, /havkar-jobs-i18n\.js/);
 assert.match(page, /havkar-presentment-currencies\.js/);
 assert.match(page, /includeXlm:\s*false/);
 assert.match(page, /JOBS_DRAFT_KEY|havkar_jobs_post_draft/);
+assert.match(page, /jobsPaymentReceipt|payReceiptTitle/);
+assert.match(page, /function jobsAlert/);
+assert.match(page, /برای ثبت آگهی ابتدا وارد حساب هاوکار شوید/);
 
 console.log("JOBS_EMPLOYMENT_COMPLETE_TEST_OK");

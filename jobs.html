@@ -1721,7 +1721,7 @@ body.jobs-rtl .section-header{direction:rtl;text-align:right}
     <div class="jobs-wizard-pane" id="jobsWizardStep3" data-step="3">
       <h3 id="jobsReviewTitle" style="margin:0 0 8px;font-size:16px">Review your listing</h3>
       <div id="jobsReviewCard" class="jobs-review-card"></div>
-      <div class="notice">
+      <div class="notice" id="jobsStep3Notice">
         Your job stays <strong>Pending payment</strong> until Stripe or XLM confirms the prepaid fee on the server. Duplicate charges are blocked.
       </div>
     </div>
@@ -1797,7 +1797,7 @@ body.jobs-rtl .section-header{direction:rtl;text-align:right}
 
     <div class="modal-head">
 
-      <h2>
+      <h2 id="paymentModalTitle">
         Prepaid listing (30 days)
       </h2>
 
@@ -2981,6 +2981,19 @@ function renderApplicationAction(job){
    3-STEP POST WIZARD + LOCAL DRAFT
    ========================================================= */
 
+function jobsT(key, fallback){
+  try{
+    if(window.HAVKAR_JOBS_I18N && typeof window.HAVKAR_JOBS_I18N.t === "function"){
+      var v = window.HAVKAR_JOBS_I18N.t(key);
+      if(v && v !== key) return v;
+    }
+  }catch(_e){}
+  return fallback != null ? fallback : key;
+}
+function jobsAlert(key, fallback){
+  alert(jobsT(key, fallback));
+}
+
 let jobsWizardStep = 1;
 const JOBS_DRAFT_KEY = "havkar_jobs_post_draft_v1";
 
@@ -3000,7 +3013,7 @@ function jobsWizardSetStep(step){
   if(next){
     var t = (window.HAVKAR_JOBS_I18N && window.HAVKAR_JOBS_I18N.t) ? window.HAVKAR_JOBS_I18N.t.bind(window.HAVKAR_JOBS_I18N) : function(k){return k;};
     if(jobsWizardStep >= 3){
-      next.innerHTML = '<i class="fas fa-lock"></i> ' + (t("payStripe") === "payStripe" ? "Continue to payment" : t("next") + " →");
+      next.innerHTML = '<i class="fas fa-lock"></i> ' + jobsT("continuePay", "Continue to payment");
       next.setAttribute("data-mode", "submit");
     }else{
       next.innerHTML = '<i class="fas fa-arrow-right"></i> ' + (t("next") || "Continue");
@@ -3088,7 +3101,7 @@ function saveJobsLocalDraft(){
     var msg = (window.HAVKAR_JOBS_I18N && window.HAVKAR_JOBS_I18N.t("draftSaved")) || "Draft saved on this device.";
     alert(msg);
   }catch(e){
-    alert("Could not save draft on this device.");
+    jobsAlert("draftFail", "Could not save draft on this device.");
   }
 }
 
@@ -3162,7 +3175,7 @@ function jobsWizardNext(){
   }
   if(jobsWizardStep === 2){
     if(!selectedPlan || !selectedPlan.name){
-      alert("Please choose a publishing plan.");
+      jobsAlert("choosePlan", "Please choose a publishing plan.");
       return;
     }
     saveJobsLocalDraft();
@@ -3202,7 +3215,7 @@ async function openPostJob(event){
   await refreshCurrentUser();
 
   if(!currentUser){
-    alert("Please sign in to your HAVKAR account before posting a job.");
+    jobsAlert("signInPost", "Please sign in to your HAVKAR account before posting a job.");
     window.location.href = "profile.html";
     return;
   }
@@ -3668,7 +3681,7 @@ async function openEditJob(id){
   const job = ownJob(id);
 
   if(!currentUser || !job || job.owner !== true){
-    alert("You can only edit your own job listings.");
+    jobsAlert("ownOnlyEdit", "You can only edit your own job listings.");
     return;
   }
 
@@ -3716,7 +3729,7 @@ async function saveJobEdit(){
   const job = ownJob(editingJobId);
 
   if(!currentUser || !job || job.owner !== true || !window.HAVKAR_JOBS){
-    alert("You can only edit your own job listings.");
+    jobsAlert("ownOnlyEdit", "You can only edit your own job listings.");
     return;
   }
 
@@ -3782,11 +3795,11 @@ async function deleteJobListing(id){
   const job = ownJob(id);
 
   if(!currentUser || !job || job.owner !== true || !window.HAVKAR_JOBS){
-    alert("You can only delete your own job listings.");
+    jobsAlert("ownOnlyDelete", "You can only delete your own job listings.");
     return;
   }
 
-  if(!confirm("Delete this job listing? This cannot be undone.")){
+  if(!confirm(jobsT("deleteConfirm", "Delete this job listing? This cannot be undone."))){
     return;
   }
 
@@ -3828,7 +3841,7 @@ async function submitJob(){
   await refreshCurrentUser();
 
   if(!currentUser){
-    alert("Please sign in before posting a job.");
+    jobsAlert("signInPost", "Please sign in before posting a job.");
     window.location.href = "profile.html";
     return;
   }
@@ -3856,20 +3869,20 @@ async function submitJob(){
   const contact = document.getElementById("jobContact").value.trim();
 
   if(!title || !company){
-    alert("Job title and company are required.");
+    jobsAlert("titleCompanyRequired", "Job title and company are required.");
     return;
   }
   if(!location && type !== "Remote"){
-    alert("Select Country and City, or enter a workplace location. Remote jobs may omit a pin.");
+    jobsAlert("locationRequired", "Select Country and City, or enter a workplace location. Remote jobs may omit a pin.");
     return;
   }
   if(!description || description.length < 10){
-    alert("Please provide a more detailed job description (at least 10 characters).");
+    jobsAlert("descRequired", "Please provide a more detailed job description (at least 10 characters).");
     return;
   }
 
   if(!window.HAVKAR_JOBS){
-    alert("Jobs tools could not be loaded.");
+    jobsAlert("toolsMissing", "Jobs tools could not be loaded.");
     return;
   }
 
@@ -3878,7 +3891,7 @@ async function submitJob(){
 
   if(submitButton){
     submitButton.disabled = true;
-    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + jobsT("saving", "Saving...");
   }
 
   const currencyEl = document.getElementById("jobCurrency");
@@ -3915,13 +3928,13 @@ async function submitJob(){
 
   if(!result.ok){
     console.error("HAVKAR: Job insert failed.", result);
-    alert(result.message || "The job could not be saved.");
+    alert(result.message || jobsT("saveFail", "The job could not be saved."));
     return;
   }
 
   if(result.row.status !== "pending_payment"){
     if(submitButton) submitButton.disabled = true;
-    alert("The server has not confirmed that this job stayed unpaid. Do not submit it again. Check My Jobs before posting again.");
+    jobsAlert("unpaidGate", "The server has not confirmed that this job stayed unpaid. Do not submit it again. Check My Jobs before posting again.");
     return;
   }
 
@@ -3953,125 +3966,89 @@ function showPaymentScreen(job){
       `
       : "";
 
+  const fee = Number(job.monthly_fee).toFixed(2);
+  const statusKind = (window.HAVKAR_JOBS && window.HAVKAR_JOBS.jobStatusKind)
+    ? window.HAVKAR_JOBS.jobStatusKind(job)
+    : String(job.status || "pending_payment");
+  const receiptLabel = statusKind === "active"
+    ? jobsT("payReceiptActive", "Payment confirmed — listing active")
+    : jobsT("payReceiptPending", "Awaiting confirmed payment");
+  const receiptClass = statusKind === "active" ? "notice" : "notice";
+
   document.getElementById(
     "paymentContent"
   ).innerHTML = `
 
     ${imageHTML}
 
+    <div class="jobs-review-card ${receiptClass}" id="jobsPaymentReceipt">
+      <dt>${escapeHTML(jobsT("payReceiptTitle", "Payment status"))}</dt>
+      <dd><strong>${escapeHTML(receiptLabel)}</strong></dd>
+      <dt>${escapeHTML(jobsT("payReceiptId", "Reference"))}</dt>
+      <dd>${escapeHTML(String(job.id || "—"))}</dd>
+      <dt>Status</dt>
+      <dd>${escapeHTML(String(job.status || "pending_payment"))}</dd>
+    </div>
+
     <div class="summary">
 
       <div class="detail-row">
-
-        <span class="detail-label">
-          Job
-        </span>
-
-        <span class="detail-value">
-          ${escapeHTML(job.title)}
-        </span>
-
+        <span class="detail-label">${escapeHTML(jobsT("payJob", "Job"))}</span>
+        <span class="detail-value">${escapeHTML(job.title)}</span>
       </div>
 
       <div class="detail-row">
-
-        <span class="detail-label">
-          Company
-        </span>
-
-        <span class="detail-value">
-          ${escapeHTML(job.company)}
-        </span>
-
+        <span class="detail-label">${escapeHTML(jobsT("payCompany", "Company"))}</span>
+        <span class="detail-value">${escapeHTML(job.company)}</span>
       </div>
 
       <div class="detail-row">
-
-        <span class="detail-label">
-          Prepaid plan
-        </span>
-
-        <span class="detail-value">
-          ${escapeHTML(job.plan)}
-        </span>
-
+        <span class="detail-label">${escapeHTML(jobsT("payPlan", "Prepaid plan"))}</span>
+        <span class="detail-value">${escapeHTML(job.plan)}</span>
       </div>
 
       <div class="detail-row">
-
-        <span class="detail-label">
-          30-day listing fee
-        </span>
-
-        <span class="detail-value">
-
-          €${Number(
-            job.monthly_fee
-          ).toFixed(2)}
-
-        </span>
-
+        <span class="detail-label">${escapeHTML(jobsT("payFee", "30-day listing fee"))}</span>
+        <span class="detail-value">€${fee}</span>
       </div>
 
     </div>
 
     <div class="notice">
-
-      Your advertisement is currently
-      <strong>pending payment</strong>.
-
-      It will not be treated as an active paid advertisement
-      until the real payment provider confirms the prepaid 30-day fee.
-
+      ${escapeHTML(jobsT("payPendingNotice", "Your advertisement is pending payment. It activates only after Stripe or XLM confirms the fee on the server."))}
     </div>
 
     <button
       class="primary"
       type="button"
-      onclick="
-        startRealPayment(
-          '${escapeJS(job.id)}'
-        )
-      ">
-
+      style="min-height:48px"
+      onclick="startRealPayment('${escapeJS(job.id)}')">
       <i class="fas fa-credit-card"></i>
-
-      Pay €${Number(
-        job.monthly_fee
-      ).toFixed(2)} prepaid (30 days)
-
+      ${escapeHTML(jobsT("payPrepaid", "Pay €{amount} prepaid (30 days)").replace("{amount}", fee))}
     </button>
 
     <button
       class="secondary"
       type="button"
-      onclick="
-        payJobWithXlm(
-          '${escapeJS(job.id)}',
-          '${escapeJS(String(job.monthly_fee))}'
-        )
-      ">
-
-      Pay with XLM (prepaid listing)
-
+      style="min-height:48px;margin-top:8px;width:100%"
+      onclick="payJobWithXlm('${escapeJS(job.id)}', '${escapeJS(String(job.monthly_fee))}')">
+      ${escapeHTML(jobsT("payXlmBtn", "Pay with XLM (prepaid listing)"))}
     </button>
 
     <button
       class="secondary"
       type="button"
-      onclick="
-        closeModal('paymentModal')
-      ">
-
-      Pay later
-
+      style="min-height:48px;margin-top:8px;width:100%"
+      onclick="closeModal('paymentModal')">
+      ${escapeHTML(jobsT("payLater", "Pay later"))}
     </button>
 
   `;
 
-  openModal(
-    "paymentModal"
-  );
+  const payTitle = document.getElementById("paymentModalTitle");
+  if(payTitle) payTitle.textContent = jobsT("payTitle", "Prepaid listing (30 days)");
+
+  openModal("paymentModal");
 }
 
 /* =========================================================
@@ -4105,7 +4082,7 @@ async function startRealPayment(jobId){
       session.data.session &&
       session.data.session.access_token;
     if(!accessToken){
-      alert("Please sign in before payment. Your advertisement has NOT been activated.");
+      jobsAlert("signInPay", "Please sign in before payment. Your advertisement has NOT been activated.");
       window.location.href = "profile.html";
       return;
     }
@@ -4137,9 +4114,7 @@ async function startRealPayment(jobId){
       " Your advertisement has NOT been activated. No charge was created."
     );
   }catch(_err){
-    alert(
-      "Could not start Jobs Checkout. Your advertisement has NOT been activated. No charge was created."
-    );
+    jobsAlert("checkoutStartFail", "Could not start Jobs Checkout. Your advertisement has NOT been activated. No charge was created.");
   }
 }
 
@@ -4154,7 +4129,7 @@ async function payJobWithXlm(jobId, fee){
     session.data.session.access_token;
 
   if(!accessToken || !window.HAVKAR_XLM){
-    alert("Sign in before paying with XLM. The job was not activated.");
+    jobsAlert("signInXlm", "Sign in before paying with XLM. The job was not activated.");
     return;
   }
 
@@ -4171,7 +4146,7 @@ async function payJobWithXlm(jobId, fee){
     if(paid && paid.ok){
       alert(
         (window.HAVKAR_XLM.describe && window.HAVKAR_XLM.describe(paid.result)) ||
-        "XLM settlement submitted. Refresh My Jobs after confirmation."
+        jobsT("xlmSubmitted", "XLM settlement submitted. Refresh My Jobs after confirmation.")
       );
       await loadSupabaseJobs();
       renderJobs();
@@ -4227,7 +4202,7 @@ async function openMyJobs(){
   await refreshCurrentUser();
 
   if(!currentUser){
-    alert("Please sign in to view your jobs.");
+    jobsAlert("signInMyJobs", "Please sign in to view your jobs.");
     window.location.href = "profile.html";
     return;
   }
@@ -4981,7 +4956,7 @@ async function refreshCompanyStatusPanel(){
   if(!panel || !window.HAVKAR_JOBS) return;
   await refreshCurrentUser();
   if(!currentUser){
-    panel.textContent = "Sign in to load your company verification status.";
+    panel.textContent = jobsT("companyStatusGuest", "Sign in to load your company verification status.");
     cachedOwnCompanies = [];
     return;
   }
@@ -5007,7 +4982,7 @@ async function refreshCompanyStatusPanel(){
 async function registerJobCompany(){
   await refreshCurrentUser();
   if(!currentUser){
-    alert("Please sign in before registering a company.");
+    jobsAlert("signInCompany", "Please sign in before registering a company.");
     return;
   }
   const input = document.getElementById("companyLegalName");
@@ -5021,7 +4996,7 @@ async function registerJobCompany(){
     return;
   }
   if(input) input.value = "";
-  alert("Company submitted as unverified. Corporate subscriptions stay blocked until HAVKAR verifies the company. No payment was created.");
+  jobsAlert("companySubmitted", "Company submitted as unverified. Corporate subscriptions stay blocked until HAVKAR verifies the company. No payment was created.");
   await refreshCompanyStatusPanel();
 }
 
@@ -5038,11 +5013,11 @@ function selectCorporatePlan(element){
 async function quoteCorporateSubscription(){
   await refreshCurrentUser();
   if(!currentUser){
-    alert("Please sign in before quoting a corporate plan.");
+    jobsAlert("signInCorpQuote", "Please sign in before quoting a corporate plan.");
     return;
   }
   if(!selectedCorporatePlanCode){
-    alert("Select Business, Business Plus, or Enterprise first.");
+    jobsAlert("selectCorpPlan", "Select Business, Business Plus, or Enterprise first.");
     return;
   }
   const company = (cachedOwnCompanies || []).find(function(row){
@@ -5081,12 +5056,12 @@ async function quoteCorporateSubscription(){
 async function startCorporateSubscriptionCheckout(){
   await refreshCurrentUser();
   if(!currentUser){
-    alert("Please sign in before starting a corporate subscription.");
+    jobsAlert("signInCorpPay", "Please sign in before starting a corporate subscription.");
     window.location.href = "profile.html";
     return;
   }
   if(!selectedCorporatePlanCode){
-    alert("Select Business, Business Plus, or Enterprise first.");
+    jobsAlert("selectCorpPlan", "Select Business, Business Plus, or Enterprise first.");
     return;
   }
   const company = (cachedOwnCompanies || []).find(function(row){
@@ -5176,14 +5151,14 @@ async function viewJobApplications(jobId){
     panel.id = "jobApplicationsModal";
     panel.innerHTML =
       '<div class="modal-box">' +
-      '<div class="modal-head"><h2>Applications</h2>' +
+      '<div class="modal-head"><h2>' + jobsT("applicationsTitle", "Applications") + '</h2>' +
       '<button class="close" type="button" onclick="closeModal(\'jobApplicationsModal\')">×</button></div>' +
       '<div id="jobApplicationsContent"></div></div>';
     document.body.appendChild(panel);
   }
   const content = document.getElementById("jobApplicationsContent");
   if(!rows.length){
-    content.innerHTML = '<div class="empty"><strong>No applications yet</strong><p>Applicants will appear here after they apply.</p></div>';
+    content.innerHTML = '<div class="empty"><strong>' + jobsT("noApplications", "No applications yet") + '</strong><p>' + jobsT("noApplicationsHint", "Applicants will appear here after they apply.") + '</p></div>';
   }else{
     content.innerHTML = rows.map(function(row){
       return '<div class="jobs-review-card">' +
@@ -5235,18 +5210,19 @@ if(document.readyState === "loading"){
     renderJobs();
     await refreshCompanyStatusPanel();
     if(jobPaid === "1"){
-      alert(
-        "Stripe Checkout returned successfully. Your listing activates after Stripe confirms payment (usually within seconds). Open My Jobs to refresh status."
+      jobsAlert(
+        "stripeReturnOk",
+        "Stripe Checkout returned successfully. Your listing activates after Stripe confirms payment. Open My Jobs to refresh status."
       );
       await openMyJobs();
     }else if(jobPaid === "0"){
-      alert("Checkout was cancelled. Your listing stays pending payment and was NOT activated.");
+      jobsAlert("stripeReturnCancel", "Checkout was cancelled. Your listing stays pending payment and was NOT activated.");
       await openMyJobs();
     }else if(jobSub === "1"){
-      alert("Corporate subscription Checkout returned. Active renewals appear after Stripe confirms invoice.paid. Listings stay gated by subscription status.");
+      jobsAlert("corpSubOk", "Corporate subscription Checkout returned. Renewals appear after Stripe confirms invoice.paid.");
       await refreshCompanyStatusPanel();
     }else if(jobSub === "0"){
-      alert("Corporate subscription Checkout was cancelled. No auto-renew started.");
+      jobsAlert("corpSubCancel", "Corporate subscription Checkout was cancelled. No auto-renew started.");
     }else if(mine){
       await openMyJobs();
     }else if(openId){
