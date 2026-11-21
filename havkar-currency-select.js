@@ -27,12 +27,19 @@
     var shell = document.createElement("div");
     shell.className = "havkar-currency-select";
     shell.setAttribute("data-havkar-currency-select", "1");
+    var includeXlm = opts.includeXlm !== false && opts.includeXlm !== 0;
+    var compact = opts.compact === true;
+    shell.setAttribute("translate", "no");
+    shell.classList.add("notranslate");
+    if (compact) shell.classList.add("hcs-compact");
     shell.innerHTML =
       '<div class="hcs-featured" role="listbox" aria-label="Featured currencies"></div>' +
-      '<button type="button" class="hcs-xlm" data-method="xlm_mainnet" aria-pressed="false">' +
-      '<span class="hcs-xlm-mark" aria-hidden="true">✦</span> XLM — Stellar Lumens' +
-      '<span class="hcs-xlm-note">Cryptocurrency · not a Stripe fiat currency</span>' +
-      "</button>" +
+      (includeXlm
+        ? '<button type="button" class="hcs-xlm" data-method="xlm_mainnet" aria-pressed="false">' +
+          '<span class="hcs-xlm-mark" aria-hidden="true">✦</span> XLM — Stellar Lumens' +
+          '<span class="hcs-xlm-note">Cryptocurrency · not a Stripe fiat currency</span>' +
+          "</button>"
+        : "") +
       '<button type="button" class="hcs-toggle" aria-expanded="false">View all 133 currencies</button>' +
       '<div class="hcs-all" hidden>' +
       '<label class="hcs-search-label" for="' +
@@ -40,11 +47,12 @@
       'Search">Search by name or ISO code</label>' +
       '<input id="' +
       idPrefix +
-      'Search" class="hcs-search" type="search" autocomplete="off" placeholder="EUR, Yen, Brazil…">' +
+      'Search" class="hcs-search" type="search" autocomplete="off" placeholder="EUR, CNY, Yen…">' +
       '<div class="hcs-list" role="listbox" aria-label="All 133 currencies"></div>' +
       "</div>" +
       '<p class="hcs-status" role="status"></p>';
     mount.appendChild(shell);
+    shell.__includeXlm = includeXlm;
     return shell;
   }
 
@@ -69,7 +77,7 @@
       ".hcs-opt{display:flex;justify-content:space-between;gap:8px;width:100%;border:0;border-bottom:1px solid #eef5ef;background:#fff;padding:10px 12px;text-align:left}" +
       ".hcs-opt:hover{background:#f4faf5}" +
       ".hcs-status{margin:0;font-size:13px;color:#456}" +
-      ".hcs-search-label{display:block;font-size:13px;margin:4px 0;color:#456}";
+      ".hcs-search-label{display:block;font-size:13px;margin:4px 0;color:#456}.hcs-compact .hcs-featured{grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px}.hcs-compact .hcs-card{min-height:52px;padding:8px 10px}.hcs-compact .hcs-list{max-height:180px}";
     document.head.appendChild(style);
   }
 
@@ -137,6 +145,8 @@
             ? " active"
             : "");
         btn.setAttribute("role", "option");
+        btn.setAttribute("translate", "no");
+        btn.classList.add("notranslate");
         btn.setAttribute(
           "aria-selected",
           selectedMethod === "stripe" && normalizeCode(row.code) === selectedCode
@@ -208,7 +218,7 @@
       }
     }
 
-    if (xlmBtn) {
+    if (xlmBtn && shell.__includeXlm !== false) {
       xlmBtn.addEventListener("click", function () {
         selectedMethod = "xlm_mainnet";
         paint();

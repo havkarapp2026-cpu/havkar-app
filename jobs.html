@@ -1217,6 +1217,85 @@ a.primary{
   }
 }
 
+
+/* ===== Jobs professional wizard ===== */
+.jobs-wizard-steps{
+  display:flex;
+  gap:8px;
+  margin:0 0 16px;
+  padding:0;
+  list-style:none;
+}
+.jobs-wizard-steps li{
+  flex:1;
+  text-align:center;
+  font-size:12px;
+  font-weight:700;
+  color:#6a7a6e;
+  padding:10px 6px;
+  border-radius:12px;
+  background:#f3f6f4;
+  border:1px solid #e0ebe2;
+}
+.jobs-wizard-steps li.active{
+  color:#1b5e20;
+  background:linear-gradient(180deg,#f3faf4,#e8f5e9);
+  border-color:rgba(46,125,50,.35);
+}
+.jobs-wizard-steps li.done{
+  color:#2e7d32;
+  border-color:#a5d6a7;
+}
+.jobs-wizard-pane{display:none}
+.jobs-wizard-pane.active{display:block}
+.jobs-wizard-nav{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:16px;
+}
+.jobs-wizard-nav .primary,
+.jobs-wizard-nav .secondary{
+  flex:1 1 140px;
+  min-height:48px;
+  font-size:16px;
+}
+.jobs-filter-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin:10px 0 0;
+}
+.jobs-filter-row input,
+.jobs-filter-row select{
+  width:100%;
+  min-height:44px;
+  border:1px solid #cfd8d1;
+  border-radius:12px;
+  padding:0 12px;
+  box-sizing:border-box;
+  font:inherit;
+}
+.jobs-review-card{
+  border:1px solid #d7e6db;
+  border-radius:14px;
+  background:#f8fbf8;
+  padding:12px 14px;
+  margin:10px 0;
+  font-size:14px;
+  line-height:1.45;
+}
+.jobs-review-card dt{color:#567;font-size:12px;margin-top:8px}
+.jobs-review-card dd{margin:2px 0 0;font-weight:600;color:#123}
+body.jobs-rtl .modal-box,
+body.jobs-rtl .hero-inner,
+body.jobs-rtl .section-header{direction:rtl;text-align:right}
+@media (max-width:768px){
+  .jobs-filter-row{grid-template-columns:1fr}
+  .plans{grid-template-columns:1fr !important}
+  .modal-box{max-width:100%;width:100%;margin:0;border-radius:16px 16px 0 0}
+}
+
 </style>
 </head>
 
@@ -1240,7 +1319,7 @@ a.primary{
 
     </button>
 
-    <h1>Jobs</h1>
+    <h1 id="jobsPageTitle">Jobs</h1>
 
   </div>
 
@@ -1259,8 +1338,18 @@ a.primary{
     <button
       class="icon-btn"
       type="button"
+      onclick="openCompaniesPanel()"
+      aria-label="Companies"
+      title="Companies">
+      <i class="fas fa-building"></i>
+    </button>
+
+    <button
+      class="icon-btn"
+      type="button"
       onclick="openMyJobs()"
-      aria-label="My Jobs">
+      aria-label="My Jobs"
+      id="myJobsHeaderBtn">
 
       <i class="fas fa-briefcase"></i>
 
@@ -1334,6 +1423,11 @@ a.primary{
 
       </button>
 
+    </div>
+
+    <div class="jobs-filter-row">
+      <input id="filterCountry" type="search" autocomplete="country-name" placeholder="Country" aria-label="Filter by country">
+      <input id="filterCity" type="search" autocomplete="address-level2" placeholder="City" aria-label="Filter by city">
     </div>
 
   </div>
@@ -1477,7 +1571,7 @@ a.primary{
 </div>
 
 <!-- =======================================================
-     POST JOB MODAL
+     POST JOB MODAL — 3-step wizard
      ======================================================= -->
 
 <div class="modal" id="postModal">
@@ -1485,250 +1579,175 @@ a.primary{
   <div class="modal-box">
 
     <div class="modal-head">
-
-      <h2>
-        Post a Job
-      </h2>
-
-      <button
-        class="close"
-        type="button"
-        onclick="closeModal('postModal')">
-        ×
-      </button>
-
+      <h2 id="postModalTitle">Post a job</h2>
+      <button class="close" type="button" onclick="closeModal('postModal')">×</button>
     </div>
 
+    <ol class="jobs-wizard-steps" aria-label="Posting steps">
+      <li id="jobsStepLabel1" class="active" data-step="1">Listing details</li>
+      <li id="jobsStepLabel2" data-step="2">Choose plan</li>
+      <li id="jobsStepLabel3" data-step="3">Review &amp; pay</li>
+    </ol>
+
+    <!-- STEP 1 -->
+    <div class="jobs-wizard-pane active" id="jobsWizardStep1" data-step="1">
+
     <div class="form-group">
-
-      <label>
-        Advertisement image / Company logo
-      </label>
-
-      <div
-        class="image-upload"
-        onclick="document.getElementById('jobImage').click()">
-
+      <label>Advertisement image / Company logo</label>
+      <div class="image-upload" onclick="document.getElementById('jobImage').click()">
         <i class="fas fa-cloud-arrow-up"></i>
-
-        <strong>
-          Add an image
-        </strong>
-
-        <span>
-          Upload a professional image for your advertisement
-        </span>
-
+        <strong>Add an image</strong>
+        <span>Upload a professional image for your advertisement</span>
       </div>
-
       <input id="jobImage" type="file" accept="image/*">
-
       <div id="imagePreview" class="image-preview">
-
-        <img
-          id="imagePreviewImg"
-          src=""
-          alt="Advertisement preview"
-        >
-
-        <button
-          type="button"
-          class="remove-image"
-          onclick="removeJobImage(event)">
-          ×
-        </button>
-
+        <img id="imagePreviewImg" src="" alt="Advertisement preview">
+        <button type="button" class="remove-image" onclick="removeJobImage(event)">×</button>
       </div>
-
-      <div class="upload-note">
-        Recommended: company logo, workplace photo
-        or professional advertisement image.
-      </div>
-
+      <div class="upload-note">Recommended: company logo, workplace photo or professional advertisement image.</div>
     </div>
 
     <div class="form-group">
-      <label>Job title *</label>
-      <input
-        id="jobTitle"
-        type="text"
-        maxlength="120"
-        placeholder="Example: Pizza Chef"
-      >
+      <label for="jobTitle">Job title *</label>
+      <input id="jobTitle" type="text" maxlength="120" placeholder="Example: Pizza Chef">
     </div>
 
     <div class="form-group">
-      <label>Company / Business *</label>
-      <input
-        id="jobCompany"
-        type="text"
-        maxlength="120"
-        placeholder="Company name"
-      >
+      <label for="jobCompany">Employer / Company *</label>
+      <input id="jobCompany" type="text" maxlength="120" placeholder="Company name">
     </div>
 
     <div class="form-group">
-      <label>Country</label>
+      <label for="jobCountry">Country</label>
       <select id="jobCountry" aria-label="Country">
         <option value="">Select country</option>
       </select>
     </div>
 
     <div class="form-group">
-      <label>City</label>
-      <input
-        id="jobCity"
-        type="text"
-        maxlength="120"
-        placeholder="City"
-      >
+      <label for="jobCity">City</label>
+      <input id="jobCity" type="text" maxlength="120" placeholder="City">
     </div>
 
     <div class="form-group">
-      <label>Workplace location *</label>
-      <input
-        id="jobLocation"
-        type="text"
-        maxlength="160"
-        placeholder="Address or workplace (optional detail)"
-      >
-      <div class="upload-note">
-        Enter Country, City, and workplace address. Map picker is not used on this page.
-      </div>
+      <label for="jobLocation">Workplace location *</label>
+      <input id="jobLocation" type="text" maxlength="160" placeholder="Address or workplace (optional detail)">
+      <div class="upload-note">Enter Country, City, and workplace address.</div>
     </div>
 
     <div class="form-group">
-
-      <label>Job type</label>
-
+      <label for="jobType">Employment type</label>
       <select id="jobType">
         <option value="Full-time">Full-time</option>
         <option value="Part-time">Part-time</option>
         <option value="Remote">Remote</option>
-        <option value="Freelance">Freelance</option>
         <option value="Contract">Contract</option>
+        <option value="Freelance">Freelance</option>
       </select>
-
     </div>
 
     <div class="form-group">
-      <label>Salary / Payment</label>
-      <input
-        id="jobSalary"
-        type="text"
-        maxlength="100"
-        placeholder="Example: €1,800/month"
-      >
-      <label for="jobCurrency" style="margin-top:10px;display:block">Display currency</label>
+      <label for="jobSalary">Salary / Payment</label>
+      <input id="jobSalary" type="text" maxlength="100" placeholder="Example: €1,800/month">
+      <label for="jobCurrency" style="margin-top:10px;display:block">Salary currency (display only)</label>
       <input type="hidden" id="jobCurrency" value="EUR">
-      <div id="jobCurrencyMount" data-havkar-currency-mount="1"></div>
-      <p style="margin:6px 0 0;font-size:.82rem;color:#567">133 fiat display codes + separate XLM. Display currency is not a payment guarantee.</p>
+      <div id="jobCurrencyMount" class="notranslate" translate="no" data-havkar-currency-mount="1" data-i18n-ignore="1"></div>
+      <p id="salaryCurrencyNote" class="upload-note">Salary currency is for display only. The publishing fee is paid in EUR (Stripe) or XLM.</p>
     </div>
 
     <div class="form-group">
-      <label>Skills</label>
-      <input
-        id="jobSkills"
-        type="text"
-        maxlength="250"
-        placeholder="Pizza, Cooking, Italian"
-      >
+      <label for="jobSkills">Skills</label>
+      <input id="jobSkills" type="text" maxlength="250" placeholder="Pizza, Cooking, Italian">
     </div>
 
     <div class="form-group">
-      <label>Job description *</label>
-      <textarea
-        id="jobDescription"
-        maxlength="3000"
-        placeholder="Describe the job, requirements and conditions..."
-      ></textarea>
+      <label for="jobDescription">Job description *</label>
+      <textarea id="jobDescription" maxlength="3000" placeholder="Describe the job, requirements and conditions..."></textarea>
     </div>
 
     <div class="form-group">
-      <label>Requirements</label>
-      <textarea
-        id="jobRequirements"
-        maxlength="3000"
-        placeholder="Experience, language, or schedule"
-      ></textarea>
+      <label for="jobRequirements">Hiring requirements</label>
+      <textarea id="jobRequirements" maxlength="3000" placeholder="Experience, language, or schedule"></textarea>
     </div>
 
     <div class="form-group">
-      <label>Application link</label>
-      <input
-        id="jobApplicationUrl"
-        type="url"
-        maxlength="500"
-        placeholder="https://example.com/apply"
-        autocomplete="off"
-      >
+      <label for="jobApplicationUrl">Application link</label>
+      <input id="jobApplicationUrl" type="url" maxlength="500" placeholder="https://example.com/apply" autocomplete="off">
     </div>
 
     <div class="form-group">
-      <label>Contact email or phone</label>
-      <input
-        id="jobContact"
-        type="text"
-        maxlength="200"
-        placeholder="name@company.com or phone number"
-        autocomplete="off"
-      >
+      <label for="jobContact">Contact email or phone</label>
+      <input id="jobContact" type="text" maxlength="200" placeholder="name@company.com or phone number" autocomplete="off">
     </div>
 
-    <div class="plan-title">
-      Choose a 30-day prepaid listing plan
     </div>
+
+    <!-- STEP 2 -->
+    <div class="jobs-wizard-pane" id="jobsWizardStep2" data-step="2">
+
+    <div class="plan-title">Choose a 30-day prepaid listing plan</div>
+    <p class="upload-note" id="jobsCorpNote">Corporate monthly plans are managed in the Companies panel. Ordinary listings use the prepaid plans below.</p>
 
     <div class="plans">
-
-      <div
-        class="plan selected"
-        data-price="9.99"
-        data-plan="Basic"
-        data-billing="one_time_prepaid"
-        onclick="selectPlan(this)">
-
-        <strong>Basic — €9.99 / 30 days</strong>
-        <span>
-          Ordinary employer. One-time prepaid listing for 30 days. No auto-renew.
-        </span>
-
+      <div class="plan selected" data-price="9.99" data-plan="Basic" data-billing="one_time_prepaid" onclick="selectPlan(this)">
+        <strong id="planBasicTitle">Basic — €9.99 / 30 days</strong>
+        <span data-jobs-plan-feat="1">One-time prepaid public listing for 30 days. Activates only after confirmed payment. No auto-renew.</span>
       </div>
-
-      <div
-        class="plan"
-        data-price="19.99"
-        data-plan="Professional"
-        data-billing="one_time_prepaid"
-        onclick="selectPlan(this)">
-
-        <strong>Professional — €19.99 / 30 days</strong>
-        <span>
-          Ordinary employer. One-time prepaid listing for 30 days. No auto-renew.
-        </span>
-
+      <div class="plan" data-price="19.99" data-plan="Professional" data-billing="one_time_prepaid" onclick="selectPlan(this)">
+        <strong id="planProTitle">Professional — €19.99 / 30 days</strong>
+        <span data-jobs-plan-feat="1">One-time prepaid public listing for 30 days. Activates only after confirmed payment. No auto-renew.</span>
       </div>
-
-      <div
-        class="plan"
-        data-price="39.99"
-        data-plan="Business"
-        data-billing="one_time_prepaid"
-        onclick="selectPlan(this)">
-
-        <strong>Business (ordinary) — €39.99 / 30 days</strong>
-        <span>
-          Ordinary employer prepaid listing. Not the corporate Business monthly subscription.
-        </span>
-
+      <div class="plan" data-price="39.99" data-plan="Business" data-billing="one_time_prepaid" onclick="selectPlan(this)">
+        <strong id="planBizTitle">Business (ordinary) — €39.99 / 30 days</strong>
+        <span data-jobs-plan-feat="1">One-time prepaid public listing for 30 days. Activates only after confirmed payment. No auto-renew.</span>
       </div>
+    </div>
+
+    <div class="summary">
+      <strong id="jobsFeeLabel">Publishing fee (EUR)</strong><br>
+      Plan: <span id="selectedPlanName">Basic</span><br>
+      Amount: €<span id="selectedPlanPrice">9.99</span>
+    </div>
+
+    <p class="upload-note">
+      <button type="button" class="secondary" onclick="openCompaniesPanel()" style="min-height:44px">
+        <i class="fas fa-building"></i> Open Companies panel (verified monthly plans)
+      </button>
+    </p>
 
     </div>
 
-
-    <div class="plan-title" style="margin-top:18px" data-i18n="jobs.corporateTitle">
-      Verified company — monthly subscription (auto-renew)
+    <!-- STEP 3 -->
+    <div class="jobs-wizard-pane" id="jobsWizardStep3" data-step="3">
+      <h3 id="jobsReviewTitle" style="margin:0 0 8px;font-size:16px">Review your listing</h3>
+      <div id="jobsReviewCard" class="jobs-review-card"></div>
+      <div class="notice">
+        Your job stays <strong>Pending payment</strong> until Stripe or XLM confirms the prepaid fee on the server. Duplicate charges are blocked.
+      </div>
     </div>
+
+    <div class="jobs-wizard-nav">
+      <button id="jobsWizardBack" class="secondary" type="button" onclick="jobsWizardBack()" hidden>Back</button>
+      <button id="jobsSaveDraftBtn" class="secondary" type="button" onclick="saveJobsLocalDraft()">Save draft</button>
+      <button id="jobsWizardNext" class="primary" type="button" onclick="jobsWizardNext()">
+        <i class="fas fa-arrow-right"></i> Continue
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- =======================================================
+     COMPANIES PANEL (separate from ordinary posting)
+     ======================================================= -->
+
+<div class="modal" id="companiesModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2 id="companiesModalTitle">Companies</h2>
+      <button class="close" type="button" onclick="closeModal('companiesModal')">×</button>
+    </div>
+
     <p class="upload-note" id="companyVerificationNote">
       Corporate plans require a verified company. Self-registration stays unverified until HAVKAR Owner/staff confirms it.
       Auto-renew is Stripe Subscription only (XLM cannot renew monthly).
@@ -1739,10 +1758,12 @@ a.primary{
     <div class="field">
       <label for="companyLegalName">Register company legal name</label>
       <input id="companyLegalName" type="text" maxlength="200" autocomplete="organization" placeholder="Legal company name">
-      <button class="secondary" type="button" onclick="registerJobCompany()" style="margin-top:8px">
+      <button class="secondary" type="button" onclick="registerJobCompany()" style="margin-top:8px;min-height:44px">
         Submit company for verification
       </button>
     </div>
+
+    <div class="plan-title" style="margin-top:18px">Verified company — monthly subscription</div>
     <div class="plans" id="corporatePlans">
       <div class="plan" data-corporate="business" data-price="49.99" onclick="selectCorporatePlan(this)">
         <strong>Business — €49.99 / month</strong>
@@ -1757,49 +1778,13 @@ a.primary{
         <span>Verified company. Auto-renew monthly. Up to 100 active job ads.</span>
       </div>
     </div>
-    <button class="secondary" type="button" onclick="quoteCorporateSubscription()" style="margin-top:10px">
+    <button class="secondary" type="button" onclick="quoteCorporateSubscription()" style="margin-top:10px;min-height:44px;width:100%">
       Quote corporate subscription
     </button>
-    <button class="primary" type="button" onclick="startCorporateSubscriptionCheckout()" style="margin-top:8px">
+    <button class="primary" type="button" onclick="startCorporateSubscriptionCheckout()" style="margin-top:8px;min-height:48px;width:100%">
       Start corporate Stripe subscription
     </button>
-
-    <div class="summary">
-
-      <strong>
-        30-day prepaid listing fee
-      </strong>
-
-      <br>
-
-      Plan:
-      <span id="selectedPlanName">Basic</span>
-
-      <br>
-
-      Amount:
-      €<span id="selectedPlanPrice">9.99</span>
-
-    </div>
-
-    <div class="notice">
-      Your job will remain
-      <strong>Pending payment</strong>
-      until a real payment provider confirms the prepaid listing fee. This is not an automatic monthly subscription.
-    </div>
-
-    <button
-      class="primary"
-      type="button"
-      onclick="submitJob()">
-
-      <i class="fas fa-arrow-right"></i>
-      Continue to payment
-
-    </button>
-
   </div>
-
 </div>
 
 <!-- =======================================================
@@ -1870,9 +1855,7 @@ a.primary{
 
     <div class="modal-head">
 
-      <h2>
-        My Jobs
-      </h2>
+      <h2 id="myJobsTitle">My Jobs</h2>
 
       <button
         class="close"
@@ -2335,12 +2318,19 @@ function renderJobs(){
       ? locationInput.value.trim()
       : "";
 
+  const countryFilter =
+    ((document.getElementById("filterCountry") || {}).value || "").trim();
+  const cityFilter =
+    ((document.getElementById("filterCity") || {}).value || "").trim();
+
   const filtered =
     window.HAVKAR_JOBS
       ? window.HAVKAR_JOBS.filterJobs(jobs, {
           filter: selectedFilter,
           query: search,
-          location: location
+          location: location,
+          country: countryFilter,
+          city: cityFilter
         })
       : jobs.filter(job =>
           selectedFilter === "All" ||
@@ -2986,6 +2976,220 @@ function renderApplicationAction(job){
    OPEN POST JOB
    ========================================================= */
 
+
+/* =========================================================
+   3-STEP POST WIZARD + LOCAL DRAFT
+   ========================================================= */
+
+let jobsWizardStep = 1;
+const JOBS_DRAFT_KEY = "havkar_jobs_post_draft_v1";
+
+function jobsWizardSetStep(step){
+  jobsWizardStep = Math.max(1, Math.min(3, Number(step) || 1));
+  document.querySelectorAll(".jobs-wizard-pane").forEach(function(pane){
+    pane.classList.toggle("active", Number(pane.getAttribute("data-step")) === jobsWizardStep);
+  });
+  document.querySelectorAll(".jobs-wizard-steps li").forEach(function(li){
+    var n = Number(li.getAttribute("data-step"));
+    li.classList.toggle("active", n === jobsWizardStep);
+    li.classList.toggle("done", n < jobsWizardStep);
+  });
+  var back = document.getElementById("jobsWizardBack");
+  var next = document.getElementById("jobsWizardNext");
+  if(back) back.hidden = jobsWizardStep <= 1;
+  if(next){
+    var t = (window.HAVKAR_JOBS_I18N && window.HAVKAR_JOBS_I18N.t) ? window.HAVKAR_JOBS_I18N.t.bind(window.HAVKAR_JOBS_I18N) : function(k){return k;};
+    if(jobsWizardStep >= 3){
+      next.innerHTML = '<i class="fas fa-lock"></i> ' + (t("payStripe") === "payStripe" ? "Continue to payment" : t("next") + " →");
+      next.setAttribute("data-mode", "submit");
+    }else{
+      next.innerHTML = '<i class="fas fa-arrow-right"></i> ' + (t("next") || "Continue");
+      next.setAttribute("data-mode", "next");
+    }
+  }
+  if(jobsWizardStep === 3){
+    renderJobsReviewCard();
+  }
+  try{
+    if(window.HAVKAR_JOBS_I18N) window.HAVKAR_JOBS_I18N.applyJobsChrome();
+  }catch(_e){}
+}
+
+function collectJobsWizardDraft(){
+  var countryEl = document.getElementById("jobCountry");
+  return {
+    title: (document.getElementById("jobTitle") || {}).value || "",
+    company: (document.getElementById("jobCompany") || {}).value || "",
+    country: countryEl ? countryEl.value : "",
+    city: (document.getElementById("jobCity") || {}).value || "",
+    location: (document.getElementById("jobLocation") || {}).value || "",
+    type: (document.getElementById("jobType") || {}).value || "Full-time",
+    salary: (document.getElementById("jobSalary") || {}).value || "",
+    currency: (document.getElementById("jobCurrency") || {}).value || "EUR",
+    skills: (document.getElementById("jobSkills") || {}).value || "",
+    description: (document.getElementById("jobDescription") || {}).value || "",
+    requirements: (document.getElementById("jobRequirements") || {}).value || "",
+    application_url: (document.getElementById("jobApplicationUrl") || {}).value || "",
+    contact: (document.getElementById("jobContact") || {}).value || "",
+    plan: (selectedPlan && selectedPlan.name) || "Basic",
+    price: (selectedPlan && selectedPlan.price) || 9.99,
+    image: selectedJobImage || "",
+    savedAt: Date.now()
+  };
+}
+
+function applyJobsWizardDraft(draft){
+  if(!draft || typeof draft !== "object") return;
+  var set = function(id, val){
+    var el = document.getElementById(id);
+    if(el && val != null) el.value = val;
+  };
+  set("jobTitle", draft.title);
+  set("jobCompany", draft.company);
+  set("jobCountry", draft.country);
+  set("jobCity", draft.city);
+  set("jobLocation", draft.location);
+  set("jobType", draft.type);
+  set("jobSalary", draft.salary);
+  set("jobCurrency", draft.currency || "EUR");
+  set("jobSkills", draft.skills);
+  set("jobDescription", draft.description);
+  set("jobRequirements", draft.requirements);
+  set("jobApplicationUrl", draft.application_url);
+  set("jobContact", draft.contact);
+  if(draft.plan){
+    selectedPlan = { name: draft.plan, price: Number(draft.price) || 9.99 };
+    var planEl = document.querySelector('.plan[data-plan="' + draft.plan + '"]');
+    if(planEl) selectPlan(planEl);
+    else {
+      var nameEl = document.getElementById("selectedPlanName");
+      var priceEl = document.getElementById("selectedPlanPrice");
+      if(nameEl) nameEl.textContent = selectedPlan.name;
+      if(priceEl) priceEl.textContent = String(selectedPlan.price);
+    }
+  }
+  if(draft.image){
+    selectedJobImage = draft.image;
+    var prev = document.getElementById("imagePreview");
+    var img = document.getElementById("imagePreviewImg");
+    if(prev && img){
+      img.src = draft.image;
+      prev.classList.add("show");
+    }
+  }
+  if(draft.currency && window.__jobsSalaryCurrencySelect && window.__jobsSalaryCurrencySelect.setCurrency){
+    window.__jobsSalaryCurrencySelect.setCurrency(draft.currency);
+  }
+}
+
+function saveJobsLocalDraft(){
+  try{
+    localStorage.setItem(JOBS_DRAFT_KEY, JSON.stringify(collectJobsWizardDraft()));
+    var msg = (window.HAVKAR_JOBS_I18N && window.HAVKAR_JOBS_I18N.t("draftSaved")) || "Draft saved on this device.";
+    alert(msg);
+  }catch(e){
+    alert("Could not save draft on this device.");
+  }
+}
+
+function loadJobsLocalDraft(){
+  try{
+    var raw = localStorage.getItem(JOBS_DRAFT_KEY);
+    if(!raw) return null;
+    return JSON.parse(raw);
+  }catch(_e){
+    return null;
+  }
+}
+
+function clearJobsLocalDraft(){
+  try{ localStorage.removeItem(JOBS_DRAFT_KEY); }catch(_e){}
+}
+
+function validateJobsWizardStep1(){
+  var title = (document.getElementById("jobTitle") || {}).value.trim();
+  var company = (document.getElementById("jobCompany") || {}).value.trim();
+  var type = (document.getElementById("jobType") || {}).value;
+  var countryEl = document.getElementById("jobCountry");
+  var city = ((document.getElementById("jobCity") || {}).value || "").trim();
+  var workplace = ((document.getElementById("jobLocation") || {}).value || "").trim();
+  var countryName = countryEl && countryEl.value
+    ? ((countryEl.selectedOptions[0] && countryEl.selectedOptions[0].textContent) || countryEl.value)
+    : "";
+  var location = [workplace, city, countryName].filter(Boolean).join(", ");
+  var description = ((document.getElementById("jobDescription") || {}).value || "").trim();
+  var t = (window.HAVKAR_JOBS_I18N && window.HAVKAR_JOBS_I18N.t) ? window.HAVKAR_JOBS_I18N.t.bind(window.HAVKAR_JOBS_I18N) : function(k){return k;};
+  if(!title || !company){
+    alert(t("required"));
+    return false;
+  }
+  if(!location && type !== "Remote"){
+    alert(t("required"));
+    return false;
+  }
+  if(!description || description.length < 10){
+    alert(t("required"));
+    return false;
+  }
+  return true;
+}
+
+function renderJobsReviewCard(){
+  var d = collectJobsWizardDraft();
+  var card = document.getElementById("jobsReviewCard");
+  if(!card) return;
+  var rows = [
+    ["Title", d.title],
+    ["Employer", d.company],
+    ["Location", [d.location, d.city, d.country].filter(Boolean).join(", ") || "—"],
+    ["Type", d.type],
+    ["Salary", (d.salary || "—") + (d.currency ? " (" + d.currency + ")" : "")],
+    ["Skills", d.skills || "—"],
+    ["Contact", d.contact || d.application_url || "—"],
+    ["Plan", d.plan + " — €" + d.price]
+  ];
+  card.innerHTML = rows.map(function(r){
+    return "<dt>" + escapeHTML(r[0]) + "</dt><dd>" + escapeHTML(String(r[1] || "—")) + "</dd>";
+  }).join("");
+}
+
+function jobsWizardNext(){
+  if(jobsWizardStep === 1){
+    if(!validateJobsWizardStep1()) return;
+    saveJobsLocalDraft();
+    jobsWizardSetStep(2);
+    return;
+  }
+  if(jobsWizardStep === 2){
+    if(!selectedPlan || !selectedPlan.name){
+      alert("Please choose a publishing plan.");
+      return;
+    }
+    saveJobsLocalDraft();
+    jobsWizardSetStep(3);
+    return;
+  }
+  submitJob();
+}
+
+function jobsWizardBack(){
+  if(jobsWizardStep <= 1) return;
+  jobsWizardSetStep(jobsWizardStep - 1);
+}
+
+async function openCompaniesPanel(){
+  await refreshCurrentUser();
+  if(!currentUser){
+    alert((window.HAVKAR_JOBS_I18N && window.HAVKAR_JOBS_I18N.t("signInPost")) || "Please sign in first.");
+    window.location.href = "profile.html";
+    return;
+  }
+  openModal("companiesModal");
+  if(typeof refreshCompanyStatusPanel === "function"){
+    refreshCompanyStatusPanel();
+  }
+}
+
 async function openPostJob(event){
   /* exposed for FAB / legacy handlers */
   if(event){
@@ -3004,10 +3208,15 @@ async function openPostJob(event){
   }
 
   resetPostForm();
-  openModal("postModal");
-  if(typeof refreshCompanyStatusPanel === "function"){
-    refreshCompanyStatusPanel();
+  jobsWizardSetStep(1);
+  var draft = loadJobsLocalDraft();
+  if(draft){
+    applyJobsWizardDraft(draft);
   }
+  openModal("postModal");
+  try{
+    if(window.HAVKAR_JOBS_I18N) window.HAVKAR_JOBS_I18N.applyJobsChrome();
+  }catch(_e){}
 }
 
 function bindJobsPostFab(){
@@ -3664,7 +3873,7 @@ async function submitJob(){
     return;
   }
 
-  const submitButton = document.querySelector('#postModal button.primary');
+  const submitButton = document.getElementById('jobsWizardNext') || document.querySelector('#postModal button.primary');
   const originalButtonHTML = submitButton ? submitButton.innerHTML : "";
 
   if(submitButton){
@@ -3719,6 +3928,7 @@ async function submitJob(){
   const newJob = normalizeJob(result.row);
   jobs = [newJob, ...jobs.filter(job => String(job.id) !== String(newJob.id))];
 
+  clearJobsLocalDraft();
   closeModal("postModal");
   renderJobs();
   showPaymentScreen(newJob);
@@ -4543,6 +4753,13 @@ if(locationInput){
   );
 }
 
+
+["filterCountry","filterCity"].forEach(function(id){
+  var el = document.getElementById(id);
+  if(!el) return;
+  el.addEventListener("input", function(){ renderJobs(); });
+});
+
 function clearLocationFilter(){
 
   const input =
@@ -4952,15 +5169,31 @@ async function viewJobApplications(jobId){
     return;
   }
   const rows = result.rows || [];
-  if(!rows.length){
-    alert("No applications yet for this listing.");
-    return;
+  let panel = document.getElementById("jobApplicationsModal");
+  if(!panel){
+    panel = document.createElement("div");
+    panel.className = "modal";
+    panel.id = "jobApplicationsModal";
+    panel.innerHTML =
+      '<div class="modal-box">' +
+      '<div class="modal-head"><h2>Applications</h2>' +
+      '<button class="close" type="button" onclick="closeModal(\'jobApplicationsModal\')">×</button></div>' +
+      '<div id="jobApplicationsContent"></div></div>';
+    document.body.appendChild(panel);
   }
-  const summary = rows.map(function(row, index){
-    return (index + 1) + ". " + String(row.status || "submitted") +
-      " — " + String(row.cover_letter || "").slice(0, 80);
-  }).join("\n");
-  alert("Applications (" + rows.length + "):\n" + summary);
+  const content = document.getElementById("jobApplicationsContent");
+  if(!rows.length){
+    content.innerHTML = '<div class="empty"><strong>No applications yet</strong><p>Applicants will appear here after they apply.</p></div>';
+  }else{
+    content.innerHTML = rows.map(function(row){
+      return '<div class="jobs-review-card">' +
+        '<dt>Status</dt><dd>' + escapeHTML(String(row.status || "submitted")) + '</dd>' +
+        '<dt>Cover note</dt><dd>' + escapeHTML(String(row.cover_letter || "—")) + '</dd>' +
+        '<dt>Submitted</dt><dd>' + escapeHTML(String(row.created_at || "—")) + '</dd>' +
+        '</div>';
+    }).join("");
+  }
+  openModal("jobApplicationsModal");
 }
 
 window.openPostJob = openPostJob;
@@ -5027,7 +5260,9 @@ if(document.readyState === "loading"){
 </script>
 
 <script src="/havkar-countries.js"></script>
+<script src="/havkar-presentment-currencies.js"></script>
 <script src="/havkar-currency-select.js"></script>
+<script src="/havkar-jobs-i18n.js"></script>
 <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
 <script>
@@ -5035,13 +5270,31 @@ if(document.readyState === "loading"){
   var mount = document.getElementById('jobCurrencyMount');
   var hidden = document.getElementById('jobCurrency');
   if(!mount || !hidden || !window.HAVKAR_CURRENCY_SELECT) return;
-  window.HAVKAR_CURRENCY_SELECT.mount(mount, {
+  /* Salary display currency only — publishing fee stays EUR Stripe / XLM separate. */
+  window.__jobsSalaryCurrencySelect = window.HAVKAR_CURRENCY_SELECT.mount(mount, {
     initialCurrency: hidden.value || 'EUR',
-    includeXlm: true,
+    includeXlm: false,
+    compact: true,
+    idPrefix: 'jobsSalaryCur',
     onChange: function(sel){
       if(sel && sel.currency) hidden.value = String(sel.currency).toUpperCase();
     }
   });
+  function applyChrome(){
+    try{
+      if(window.HAVKAR_JOBS_I18N) window.HAVKAR_JOBS_I18N.applyJobsChrome();
+      if(typeof applyJobsPublishTipLanguage === 'function') applyJobsPublishTipLanguage();
+    }catch(_e){}
+  }
+  applyChrome();
+  if(window.HAVKAR_I18N && typeof window.HAVKAR_I18N.setLanguage === 'function'){
+    var __set = window.HAVKAR_I18N.setLanguage.bind(window.HAVKAR_I18N);
+    window.HAVKAR_I18N.setLanguage = function(){
+      var out = __set.apply(null, arguments);
+      applyChrome();
+      return out;
+    };
+  }
 })();
 </script>
 

@@ -166,9 +166,18 @@
     const settings = options || {};
     const query = clean(settings.query).toLowerCase();
     const location = clean(settings.location).toLowerCase();
+    const country = clean(settings.country).toLowerCase();
+    const city = clean(settings.city).toLowerCase();
     return (list || []).filter(function (job) {
       if (!jobMatchesType(job, settings.filter)) return false;
-      if (location && !String(job.location || "").toLowerCase().includes(location)) {
+      const locBlob = String(job.location || "").toLowerCase();
+      if (location && !locBlob.includes(location)) {
+        return false;
+      }
+      if (country && !locBlob.includes(country) && !String(job.country || "").toLowerCase().includes(country)) {
+        return false;
+      }
+      if (city && !locBlob.includes(city) && !String(job.city || "").toLowerCase().includes(city)) {
         return false;
       }
       if (query && !jobSearchHaystack(job).includes(query)) return false;

@@ -74,4 +74,13 @@ const webhook = fs.readFileSync("api/stripe-webhook.js", "utf8");
 assert.match(webhook, /isJobBillingEvent/);
 assert.match(webhook, /applyVerifiedCheckoutSession/);
 
+assert.match(page, /jobsWizardStep1/);
+assert.match(page, /jobsWizardNext/);
+assert.match(page, /companiesModal/);
+assert.match(page, /openCompaniesPanel/);
+assert.match(page, /havkar-jobs-i18n\.js/);
+assert.match(page, /havkar-presentment-currencies\.js/);
+assert.match(page, /includeXlm:\s*false/);
+assert.match(page, /JOBS_DRAFT_KEY|havkar_jobs_post_draft/);
+
 console.log("JOBS_EMPLOYMENT_COMPLETE_TEST_OK");
