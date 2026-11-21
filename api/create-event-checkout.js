@@ -3410,6 +3410,9 @@ export default async function handler(req, res) {
                 }
               },
               {
+                // Include a refresh token so expired/incomplete Checkout links
+                // can be replaced with a new unpaid session. Do not reuse a
+                // forever-stable key that pins an old Stripe Session URL.
                 idempotencyKey: (
                   "job_ad_" +
                   String(jobRow.id) +
@@ -3418,10 +3421,30 @@ export default async function handler(req, res) {
                   "_" +
                   planName +
                   "_" +
-                  ordinary.cents
+                  ordinary.cents +
+                  "_" +
+                  String(
+                    (req.body &&
+                      (req.body.checkout_refresh ||
+                        req.body.refresh_token ||
+                        req.body.idempotency_key)) ||
+                      Date.now()
+                  )
+                    .replace(/[^A-Za-z0-9_-]/g, "")
+                    .slice(0, 40)
                 ).slice(0, 255)
               }
             );
+            try {
+              await getSupabaseAdmin()
+                .from("jobs")
+                .update({ last_stripe_session_id: session.id })
+                .eq("id", jobRow.id)
+                .eq("user_id", authJobs.user.id)
+                .eq("status", "pending_payment");
+            } catch (_sessionSaveErr) {
+              // Non-fatal: Checkout URL is still returned to the client.
+            }
             return res.status(200).json({
               ok: true,
               charged: false,
