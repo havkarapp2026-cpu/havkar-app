@@ -228,7 +228,8 @@ function ownerSellerPrepSteps(origin) {
         id: 3,
         title: "Open Buy & Sell Seller payout setup",
         url: base + "/buy-sell.html",
-        detail: "Expand Seller payout setup → Start / continue Stripe Connect."
+        detail:
+          "Under the green Buy & Sell header (above Search), tap Start / continue Stripe Connect. Signed-in shortcut: header Connect chip left of the bell."
       },
       {
         id: 4,

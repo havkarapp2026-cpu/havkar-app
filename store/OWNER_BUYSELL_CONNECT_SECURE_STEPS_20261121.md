@@ -22,22 +22,26 @@ https://dashboard.stripe.com/webhooks
 ```
 
 3. Sign in to HAVKAR as `havkarapp2026@gmail.com`.
-4. Open Buy & Sell and start Connect:
-
-```
-https://havkar.online/buy-sell.html
-```
-
-Preview (after secrets bound):
+4. Open Buy & Sell Preview (UI marker `20261121-owner-connect-v3`):
 
 ```
 https://havkar-app-git-cursor-buyse-abdee9-havkarapp2026-4055s-projects.vercel.app/buy-sell.html
 ```
 
-5. Click **Start / continue Stripe Connect**. Stripe opens a **hosted** onboarding URL (Account Link). Enter KYC + bank **only there**.
-6. Return to `buy-sell.html?connect=return` and Refresh until `charges_enabled=true`.
-7. Optional XLM: Wallet → save receive **public** key only.
-8. **Stop.** Do not enable `HAVKAR_MARKETPLACE_PUBLIC_LIVE_PAYMENTS` or take a real buyer charge until a separate Owner approval message.
+Production (after merge — not this step):
+
+```
+https://havkar.online/buy-sell.html
+```
+
+5. **Exact button location (Preview, UI `20261121-owner-connect-v4`):**
+   - Banner **Seller payout setup (Stripe Connect + XLM)** sits **directly under the green Buy & Sell header**, **above** the Search bar (not at page bottom; not inside Fees/Filters).
+   - Primary button: **Start / continue Stripe Connect** inside that banner.
+   - Shortcut when signed in: header chip **Connect** (left of the bell) scrolls to the same banner.
+6. Click **Start / continue Stripe Connect**. Stripe opens a **hosted** onboarding URL (Account Link). Enter KYC + bank **only there**.
+7. Return to `buy-sell.html?connect=return` and Refresh until `charges_enabled=true`.
+8. Optional XLM: Wallet → save receive **public** key only.
+9. **Stop.** Do not enable `HAVKAR_MARKETPLACE_PUBLIC_LIVE_PAYMENTS` or take a real buyer charge until a separate Owner approval message.
 
 ## API helpers (authenticated Owner session)
 - `marketplace_connect_status` — includes `is_primary_owner` + `owner_prep`
