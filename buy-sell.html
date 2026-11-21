@@ -5405,11 +5405,16 @@ function applyConnectReturnFromQuery(){
         const payment = String(params.get("payment") || "").trim().toLowerCase();
         let message = "";
         if(connect === "return"){
-            message = "Stripe Connect return received. Seller onboarding status will refresh after account review.";
+            message = "Stripe Connect return received. Syncing seller payout status from Stripe now…";
+            window.setTimeout(function(){
+                if(typeof refreshSellerPayoutPanel === "function"){
+                    refreshSellerPayoutPanel();
+                }
+            }, 400);
         }else if(connect === "refresh"){
             message = "Stripe Connect onboarding needs to be continued. Open Connect again when ready.";
         }else if(payment === "success"){
-            message = "Payment return received. Live charges stay Owner-gated.";
+            message = "Payment return received. Checking settlement status…";
         }else if(payment === "cancelled"){
             message = "Payment was cancelled. No charge was completed.";
         }
@@ -5593,7 +5598,10 @@ async function refreshSellerPayoutPanel(){
                 Authorization: "Bearer " + token,
                 Accept: "application/json"
             },
-            body: JSON.stringify({ action: "marketplace_connect_status" })
+            body: JSON.stringify({
+                action: "marketplace_connect_status",
+                sync: true
+            })
         });
         const body = await res.json().catch(function(){ return null; });
         if(res.status === 401 || res.status === 403){
@@ -5619,6 +5627,8 @@ async function refreshSellerPayoutPanel(){
         clearSellerPayoutAlert();
         const account = body.account;
         const live = body.live_collection === "armed" ? "armed" : "paused";
+        const publicLive =
+            body.public_live_payments === true ? "ON" : "OFF";
         let connectLine = "Stripe Connect: not started.";
         if(account){
             if(account.charges_enabled === true){
@@ -5636,16 +5646,21 @@ async function refreshSellerPayoutPanel(){
         let ownerLine = "";
         if(body.is_primary_owner === true){
             ownerLine =
-                " Signed in as Primary Owner (havkarapp2026@gmail.com). Use Start / continue Stripe Connect — KYC/bank only on Stripe-hosted pages.";
+                " Signed in as Primary Owner. Use Start / continue Stripe Connect — KYC/bank only on Stripe-hosted pages.";
             if(body.stripe_secret_configured === false){
                 ownerLine +=
                     " Blocker: Stripe secret is not configured on this environment (Owner must bind it in Vercel).";
             }
         }
+        if(body.next_action){
+            ownerLine += " Next: " + String(body.next_action);
+        }
         note.textContent =
             connectLine +
             " Public live collection: " +
             live +
+            " · marketplace public live: " +
+            publicLive +
             ". Register XLM receive key in Wallet if you accept Stellar. Seller fees remain 3% of list price." +
             ownerLine;
         syncHeaderConnectButton();

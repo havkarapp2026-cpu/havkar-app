@@ -13,7 +13,8 @@ import {
   marketplaceCardSplit,
   buildMarketplaceDestinationCheckoutParams,
   createRecipientAccountV2,
-  createRecipientAccountOnboardingLink
+  createRecipientAccountOnboardingLink,
+  connectAccountFlagsFromV2
 } from "../lib/marketplace-connect.cjs";
 import { REQUIRED_WEBHOOK_EVENTS } from "../lib/stripe-webhook-processor.cjs";
 import {
@@ -222,7 +223,7 @@ function ownerSellerPrepSteps(origin) {
         id: 2,
         title: "Confirm Stripe secrets on the target Vercel environment",
         detail:
-          "Preview currently reports STRIPE_SECRET_KEY absent. Bind the live or test key in Vercel Project Settings → Environment Variables before Connect onboard can start."
+          "STRIPE_SECRET_KEY must be bound on Production (and Preview if testing there). If stripe_secret_configured=false in Connect status, bind the key in Vercel then redeploy."
       },
       {
         id: 3,
@@ -252,9 +253,9 @@ function ownerSellerPrepSteps(origin) {
       },
       {
         id: 7,
-        title: "Owner-only live activation (separate approval)",
+        title: "Marketplace public live payments",
         detail:
-          "Do not set HAVKAR_MARKETPLACE_PUBLIC_LIVE_PAYMENTS=true or charge real cards until Owner explicitly approves."
+          "HAVKAR_MARKETPLACE_PUBLIC_LIVE_PAYMENTS=true arms public Buy & Sell card checkout after seller Connect is charges_enabled. Seller KYC still required per seller."
       }
     ],
     stripe_dashboard_connect:
@@ -3606,7 +3607,7 @@ export default async function handler(req, res) {
     }
 
     if (action === "marketplace_connect_status") {
-      const { data, error } = await getSupabaseAdmin()
+      let { data, error } = await getSupabaseAdmin()
         .from("marketplace_seller_connect_accounts")
         .select(
           "stripe_account_id,charges_enabled,payouts_enabled,details_submitted,onboarding_status,updated_at"
@@ -3616,18 +3617,96 @@ export default async function handler(req, res) {
       if (error) {
         return sendError(res, 500, "Could not load Connect status");
       }
+
+      /* Live-refresh from Stripe so return from KYC updates charges_enabled without waiting for webhook. */
+      const syncRequested =
+        String((req.body && req.body.sync) || "").toLowerCase() === "true" ||
+        String((req.body && req.body.sync) || "") === "1" ||
+        String((req.query && req.query.sync) || "").toLowerCase() === "true";
+      if (
+        data &&
+        data.stripe_account_id &&
+        String(process.env.STRIPE_SECRET_KEY || "").trim() &&
+        (syncRequested || data.charges_enabled !== true)
+      ) {
+        try {
+          const stripe = getStripe();
+          let remote = null;
+          if (
+            stripe.v2 &&
+            stripe.v2.core &&
+            stripe.v2.core.accounts &&
+            typeof stripe.v2.core.accounts.retrieve === "function"
+          ) {
+            remote = await stripe.v2.core.accounts.retrieve(
+              data.stripe_account_id
+            );
+          } else {
+            remote = await stripe.accounts.retrieve(data.stripe_account_id);
+          }
+          const flags = connectAccountFlagsFromV2(remote || {});
+          let onboardingStatus = "pending";
+          if (
+            remote &&
+            remote.requirements &&
+            remote.requirements.disabled_reason
+          ) {
+            onboardingStatus = "restricted";
+          } else if (flags.charges_enabled && flags.details_submitted) {
+            onboardingStatus = "complete";
+          } else if (flags.details_submitted) {
+            onboardingStatus = "submitted";
+          }
+          const patch = {
+            charges_enabled: flags.charges_enabled === true,
+            payouts_enabled: flags.payouts_enabled === true,
+            details_submitted: flags.details_submitted === true,
+            onboarding_status: onboardingStatus,
+            updated_at: new Date().toISOString()
+          };
+          const updated = await getSupabaseAdmin()
+            .from("marketplace_seller_connect_accounts")
+            .update(patch)
+            .eq("user_id", auth.user.id)
+            .eq("stripe_account_id", data.stripe_account_id)
+            .select(
+              "stripe_account_id,charges_enabled,payouts_enabled,details_submitted,onboarding_status,updated_at"
+            )
+            .maybeSingle();
+          if (!updated.error && updated.data) {
+            data = updated.data;
+          } else {
+            data = Object.assign({}, data, patch);
+          }
+        } catch (syncErr) {
+          console.warn(
+            "marketplace connect status sync skipped",
+            syncErr && syncErr.message
+          );
+        }
+      }
+
       const primaryOwner = await isPrimaryHavkarOwner(auth.user.id);
       const origin = allowedCheckoutOrigin(req);
       return res.status(200).json({
         ok: true,
         live_collection: cardPaymentsAllowed() ? "armed" : "paused",
+        public_live_payments: marketplacePublicLivePaymentsAllowed(),
         stripe_secret_mode: stripeSecretMode(),
         stripe_secret_configured: Boolean(
           String(process.env.STRIPE_SECRET_KEY || "").trim()
         ),
         is_primary_owner: primaryOwner,
         account: data || null,
-        owner_prep: primaryOwner ? ownerSellerPrepSteps(origin) : null
+        owner_prep: primaryOwner ? ownerSellerPrepSteps(origin) : null,
+        next_action:
+          data && data.charges_enabled === true
+            ? marketplacePublicLivePaymentsAllowed()
+              ? "Seller Connect is ready. Marketplace live card checkout is enabled."
+              : "Seller Connect is ready. Set HAVKAR_MARKETPLACE_PUBLIC_LIVE_PAYMENTS=true for public live card checkout."
+            : data
+              ? "Continue Stripe Connect KYC until charges_enabled=true."
+              : "Start Stripe Connect from Buy & Sell to create your seller payout account."
       });
     }
 
