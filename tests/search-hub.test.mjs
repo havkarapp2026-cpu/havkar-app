@@ -8,6 +8,17 @@ assert.match(search, /services\.html\?q=/);
 assert.match(search, /jobs\.html\?q=/);
 assert.match(search, /ads\.html\?q=/);
 assert.match(search, /events\.html\?q=/);
+assert.match(search, /HAVKAR_SEARCH_UI/);
+assert.match(search, /20261121-search-live-v1/);
+assert.match(search, /havkar-i18n\.js/);
+assert.match(search, /havkar-marketplace\.js/);
+assert.match(search, /from\("ads"\)/);
+assert.match(search, /from\("services"\)/);
+assert.match(search, /from\("jobs"\)/);
+assert.match(search, /from\("events"\)/);
+assert.match(search, /This page never invents results/);
+assert.match(search, /data-scope="all"/);
+assert.doesNotMatch(search, /fakeResults|mockResults|demoResults|lorem ipsum/i);
 
 for (const file of ["buy-sell.html", "services.html", "jobs.html", "ads.html", "events.html"]) {
   const body = fs.readFileSync(file, "utf8");

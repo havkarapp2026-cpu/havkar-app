@@ -22,7 +22,7 @@ https://dashboard.stripe.com/webhooks
 ```
 
 3. Sign in on the **same Preview host** as `havkarapp2026@gmail.com` (do not use `havkar.online` for this Connect Preview test).
-4. Open Buy & Sell Preview (UI marker `20261121-owner-connect-v6`):
+4. Open Buy & Sell Preview (UI marker `20261121-owner-connect-v7`):
 
 ```
 https://havkar-app-git-cursor-buyse-abdee9-havkarapp2026-4055s-projects.vercel.app/buy-sell.html
@@ -40,7 +40,7 @@ Production (after merge — not this step):
 https://havkar.online/buy-sell.html
 ```
 
-5. **Exact button location (Preview, UI `20261121-owner-connect-v6`):**
+5. **Exact button location (Preview, UI `20261121-owner-connect-v7`):**
    - Banner **Seller payout setup (Stripe Connect + XLM)** sits **directly under the green Buy & Sell header**, **above** the Search bar.
    - Primary button: **Start / continue Stripe Connect** inside that banner.
    - Shortcut when signed in: header chip **Connect** (left of the bell) scrolls to the same banner.

@@ -2,81 +2,255 @@
 <html lang="en">
 <head>
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/havkar-icon-180-20261022-v3.png">
-
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/havkar-icon-32-20261022-v3.png">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1b4332">
-<meta name="havkar-search-ui" content="20261120-unify-v1">
+<meta name="theme-color" content="#1b5e20">
+<meta name="havkar-search-ui" content="20261121-search-live-v1">
+<meta name="description" content="HAVKAR Search — Buy & Sell, Services, Jobs, Ads, Events">
 <title>HAVKAR — Search</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<script>
+window.HAVKAR_SEARCH_UI = "20261121-search-live-v1";
+</script>
 <style>
-:root{--bg:#eef3ef;--card:#fff;--ink:#14231a;--muted:#5f6f66;--brand:#1b4332;--line:#d7e0da}
+:root{
+  --green-950:#0b3d16;
+  --green-900:#12551b;
+  --green-800:#1b5e20;
+  --green-700:#2e7d32;
+  --green-100:#e8f5e9;
+  --bg:#eef6ef;
+  --card:#fff;
+  --ink:#1a261d;
+  --muted:#5a6b60;
+  --line:#d5e3d8;
+  --danger:#b71c1c;
+}
 *{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(180deg,#eef3ef,#e7eee9);color:var(--ink);padding-bottom:88px}
-header{background:linear-gradient(135deg,var(--brand),#2d6a4f);color:#f5fff8;padding:calc(16px + env(safe-area-inset-top,0px)) 16px 16px}
-header h1{margin:0 0 6px;font-size:1.35rem}
-header p{margin:0;opacity:.92;font-size:.92rem}
-main{max-width:720px;margin:0 auto;padding:16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:0 0 12px}
-label{display:block;font-size:.85rem;color:var(--muted);margin:0 0 6px}
-input,select,button{font:inherit;width:100%;min-height:46px;border-radius:12px;border:1px solid #b7c6bc;padding:10px 12px;background:#fff}
-button{border:0;background:var(--brand);color:#fff;font-weight:700;cursor:pointer}
-.links{display:grid;gap:8px;margin-top:12px}
-.links a{display:block;text-decoration:none;color:var(--brand);background:#e7f1eb;border-radius:12px;padding:12px 14px;font-weight:650}
-.note{color:var(--muted);font-size:.9rem;margin:8px 0 0}
-nav.bottom{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:space-around;background:#fff;height:calc(64px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -3px 14px rgba(0,0,0,.08)}
-nav.bottom a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px;font-weight:700}
+html,body{margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:
+    radial-gradient(1200px 420px at 10% -10%, rgba(67,160,71,.18), transparent 55%),
+    linear-gradient(180deg,#eef8ec 0%, #e7f0e8 40%, #f4f7f4 100%);
+  color:var(--ink);
+  min-height:100vh;
+  padding-bottom:calc(84px + env(safe-area-inset-bottom,0px));
+}
+[dir="rtl"] body{font-family:Tahoma,"Segoe UI",sans-serif}
+.topbar{
+  position:sticky;top:0;z-index:40;
+  background:linear-gradient(135deg,var(--green-950),var(--green-800) 55%,var(--green-700));
+  color:#f4fff6;
+  padding:calc(12px + env(safe-area-inset-top,0px)) 14px 14px;
+  box-shadow:0 8px 24px rgba(11,61,22,.22);
+}
+.topbar-row{display:flex;align-items:center;gap:10px}
+.back-btn,.icon-chip{
+  width:42px;height:42px;border-radius:999px;border:0;
+  background:rgba(255,255,255,.16);color:#fff;display:inline-flex;
+  align-items:center;justify-content:center;text-decoration:none;cursor:pointer;
+}
+.topbar h1{margin:0;font-size:1.2rem;font-weight:800;letter-spacing:.2px;flex:1}
+.topbar p{margin:8px 0 0;opacity:.92;font-size:.86rem;line-height:1.4}
+.wrap{max-width:820px;margin:0 auto;padding:14px 14px 0}
+.search-card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:14px;
+  box-shadow:0 10px 28px rgba(18,85,27,.08);
+}
+.search-box{
+  display:flex;align-items:center;gap:8px;
+  border:1.5px solid #b9cebf;border-radius:999px;padding:8px 10px 8px 14px;
+  background:#fbfffb;
+}
+.search-box:focus-within{border-color:var(--green-700);box-shadow:0 0 0 3px rgba(46,125,50,.15)}
+.search-box i{color:var(--green-800);opacity:.85}
+.search-box input{
+  flex:1;border:0;outline:0;background:transparent;font:inherit;min-width:0;
+  min-height:36px;color:var(--ink);
+}
+.search-box button.clear{
+  border:0;background:transparent;color:var(--muted);width:36px;height:36px;
+  border-radius:999px;cursor:pointer;
+}
+.scopes{
+  display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0;
+}
+.scopes button{
+  border:1px solid #c5d8c9;background:#fff;color:var(--green-900);
+  border-radius:999px;padding:8px 12px;font-weight:700;font-size:.82rem;cursor:pointer;
+}
+.scopes button[aria-pressed="true"]{
+  background:var(--green-800);border-color:var(--green-800);color:#fff;
+}
+.actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.actions .primary,.actions .ghost{
+  border-radius:999px;min-height:44px;padding:0 16px;font-weight:800;cursor:pointer;border:0;
+}
+.actions .primary{background:var(--green-800);color:#fff;flex:1}
+.actions .ghost{background:#eef6ef;color:var(--green-900);border:1px solid #c9dbcdd0}
+.status-line{
+  margin:12px 0 0;font-size:.86rem;color:var(--muted);min-height:1.2em;
+}
+.status-line.error{color:var(--danger);font-weight:700}
+.results{margin-top:14px;display:grid;gap:10px}
+.group-title{
+  margin:6px 2px 0;font-size:.78rem;font-weight:800;color:var(--green-900);
+  text-transform:uppercase;letter-spacing:.04em;
+}
+.result{
+  display:block;text-decoration:none;color:inherit;
+  background:var(--card);border:1px solid var(--line);border-radius:16px;
+  padding:12px 14px;box-shadow:0 6px 16px rgba(18,85,27,.05);
+}
+.result:active{transform:scale(.995)}
+.result .eyebrow{font-size:.72rem;font-weight:800;color:var(--green-700);margin:0 0 4px}
+.result h3{margin:0;font-size:1rem;line-height:1.35}
+.result p{margin:4px 0 0;font-size:.86rem;color:var(--muted);line-height:1.4}
+.empty{
+  background:#fff;border:1px dashed #b9ceb9;border-radius:16px;padding:18px 14px;
+  text-align:center;color:var(--muted);
+}
+.empty strong{display:block;color:var(--ink);margin-bottom:6px}
+.quick{
+  margin-top:16px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;
+}
+.quick a{
+  text-decoration:none;color:var(--green-900);background:#e9f4eb;border:1px solid #cfe0d3;
+  border-radius:14px;padding:12px;font-weight:700;font-size:.88rem;
+  display:flex;align-items:center;gap:8px;
+}
+.quick a i{width:18px;text-align:center}
+.note{margin:10px 2px 0;font-size:.78rem;color:var(--muted);line-height:1.45}
+.version{margin:8px 2px 0;font-size:.7rem;color:#7a8a7e}
+nav.bottom{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;
+  display:flex;justify-content:space-around;align-items:center;
+  background:#fff;height:calc(64px + env(safe-area-inset-bottom,0px));
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  box-shadow:0 -4px 18px rgba(0,0,0,.08);border-top:1px solid #e4ece6;
+}
+nav.bottom a{
+  color:#607d8b;text-decoration:none;font-size:.72rem;font-weight:800;
+  display:flex;flex-direction:column;align-items:center;gap:3px;min-width:56px;
+}
+nav.bottom a.active{color:var(--green-800)}
+nav.bottom a i{font-size:1.05rem}
+@media (min-width:720px){
+  .wrap{padding-top:18px}
+  .quick{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-width:380px){
+  .scopes button{font-size:.75rem;padding:7px 10px}
+  .actions .primary,.actions .ghost{width:100%}
+}
 </style>
 </head>
 <body>
-<header>
-  <h1>Search HAVKAR</h1>
-  <p>Find listings, services, jobs, ads, and events. Search opens the matching module with your query.</p>
+<header class="topbar">
+  <div class="topbar-row">
+    <a class="back-btn" href="index.html" aria-label="Go back"><i class="fas fa-arrow-right" data-havkar-back-icon></i></a>
+    <h1>Search</h1>
+    <button type="button" class="icon-chip" id="langHint" aria-label="Language" title="Language follows your HAVKAR setting">
+      <i class="fas fa-language"></i>
+    </button>
+  </div>
+  <p>Find listings across Buy &amp; Sell, Services, Jobs, Business Ads, and Events. Results come from live HAVKAR data only.</p>
 </header>
-<main>
-  <section class="card">
-    <label for="q">Search query</label>
-    <input id="q" type="search" enterkeyhint="search" autocomplete="off" placeholder="What are you looking for?">
-    <label for="scope" style="margin-top:12px">Search in</label>
-    <select id="scope">
-      <option value="buy-sell">Buy &amp; Sell</option>
-      <option value="services">Services</option>
-      <option value="jobs">Jobs</option>
-      <option value="ads">Business Ads</option>
-      <option value="events">Events</option>
-    </select>
-    <button id="go" type="button" style="margin-top:12px">Search</button>
-    <p class="note">This hub does not invent results. It forwards your query to the live module that already owns search/filter UI.</p>
-  </section>
-  <section class="card">
-    <strong>Quick links</strong>
-    <div class="links">
-      <a href="buy-sell.html">Buy &amp; Sell marketplace</a>
-      <a href="services.html">Services</a>
-      <a href="jobs.html">Jobs</a>
-      <a href="ads.html">Business Ads</a>
-      <a href="events.html">Events</a>
-      <a href="delivery.html">Delivery</a>
+
+<main class="wrap">
+  <section class="search-card" aria-label="HAVKAR search">
+    <div class="search-box">
+      <i class="fas fa-search" aria-hidden="true"></i>
+      <input id="q" type="search" enterkeyhint="search" autocomplete="off" placeholder="Search products, services...">
+      <button type="button" class="clear" id="clearQ" aria-label="Clear search" hidden><i class="fas fa-xmark"></i></button>
     </div>
+
+    <div class="scopes" id="scopes" role="group" aria-label="Search in">
+      <button type="button" data-scope="all" aria-pressed="true">All</button>
+      <button type="button" data-scope="buy-sell" aria-pressed="false">Buy &amp; Sell</button>
+      <button type="button" data-scope="services" aria-pressed="false">Services</button>
+      <button type="button" data-scope="jobs" aria-pressed="false">Jobs</button>
+      <button type="button" data-scope="ads" aria-pressed="false">Business Ads</button>
+      <button type="button" data-scope="events" aria-pressed="false">Events</button>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="primary" id="go">Search</button>
+      <button type="button" class="ghost" id="openModule">Open full module</button>
+    </div>
+    <p class="status-line" id="status" role="status"></p>
+    <p class="note">This page never invents results. Empty means nothing matched in the loaded live data.</p>
+    <p class="version" id="uiVersion"></p>
+  </section>
+
+  <section class="results" id="results" aria-live="polite"></section>
+
+  <section class="quick" aria-label="Quick links">
+    <a href="buy-sell.html"><i class="fas fa-store"></i><span>Buy &amp; Sell</span></a>
+    <a href="services.html"><i class="fas fa-handshake"></i><span>Services</span></a>
+    <a href="jobs.html"><i class="fas fa-briefcase"></i><span>Jobs</span></a>
+    <a href="ads.html"><i class="fas fa-bullhorn"></i><span>Business Ads</span></a>
+    <a href="events.html"><i class="fas fa-calendar"></i><span>Events</span></a>
+    <a href="delivery.html"><i class="fas fa-motorcycle"></i><span>Delivery</span></a>
   </section>
 </main>
-<nav class="bottom">
-  <a href="index.html">Home</a>
-  <a href="buy-sell.html">Buy &amp; Sell</a>
-  <a href="search.html?scope=buy-sell">Search</a>
-  <a href="chat.html">Chat</a>
-  </nav>
+
+<nav class="bottom" aria-label="Primary">
+  <a href="index.html"><i class="fas fa-home"></i><span>Home</span></a>
+  <a href="buy-sell.html"><i class="fas fa-store"></i><span>Buy &amp; Sell</span></a>
+  <a class="active" href="search.html?scope=all"><i class="fas fa-search"></i><span>Search</span></a>
+  <a href="chat.html"><i class="fas fa-comments"></i><span>Messages</span></a>
+</nav>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-marketplace.js"></script>
+<script src="/havkar-page-back.js"></script>
+<script src="/havkar-i18n.js"></script>
 <script>
 (function () {
+  var SCOPES = ["all", "buy-sell", "services", "jobs", "ads", "events"];
   var params = new URLSearchParams(location.search);
-  var initial = String(params.get("q") || "").trim();
-  var scope = String(params.get("scope") || "buy-sell").trim();
-  var q = document.getElementById("q");
-  var scopeEl = document.getElementById("scope");
-  if (initial) q.value = initial;
-  if (["buy-sell","services","jobs","ads","events"].indexOf(scope) !== -1) {
-    scopeEl.value = scope;
+  var qEl = document.getElementById("q");
+  var clearBtn = document.getElementById("clearQ");
+  var statusEl = document.getElementById("status");
+  var resultsEl = document.getElementById("results");
+  var goBtn = document.getElementById("go");
+  var openModuleBtn = document.getElementById("openModule");
+  var scopesEl = document.getElementById("scopes");
+  var uiVersion = document.getElementById("uiVersion");
+  var selectedScope = "all";
+  var db = null;
+  var searchTimer = null;
+  var lastQuery = "";
+
+  if (uiVersion) {
+    uiVersion.textContent = "UI " + (window.HAVKAR_SEARCH_UI || "unknown");
+  }
+
+  function setStatus(text, isError) {
+    statusEl.textContent = text || "";
+    statusEl.classList.toggle("error", !!isError);
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function haystack(parts) {
+    return parts
+      .map(function (p) { return String(p || "").toLowerCase(); })
+      .join(" ");
   }
 
   function targetFor(selected, query) {
@@ -85,26 +259,331 @@ nav.bottom a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px
     if (selected === "jobs") return "jobs.html?q=" + encoded;
     if (selected === "ads") return "ads.html?q=" + encoded;
     if (selected === "events") return "events.html?q=" + encoded;
+    if (selected === "all") return "search.html?q=" + encoded + "&scope=all";
     return "buy-sell.html?q=" + encoded;
   }
 
-  function run() {
-    var query = String(q.value || "").trim();
-    var selected = scopeEl.value;
-    if (!query) {
-      q.focus();
-      return;
+  function setScope(scope) {
+    if (SCOPES.indexOf(scope) === -1) scope = "all";
+    selectedScope = scope;
+    var buttons = scopesEl.querySelectorAll("button[data-scope]");
+    for (var i = 0; i < buttons.length; i++) {
+      var pressed = buttons[i].getAttribute("data-scope") === scope;
+      buttons[i].setAttribute("aria-pressed", pressed ? "true" : "false");
     }
-    location.href = targetFor(selected, query);
   }
 
-  document.getElementById("go").addEventListener("click", run);
-  q.addEventListener("keydown", function (event) {
+  function initDb() {
+    if (db) return db;
+    if (!window.HAVKAR_SUPABASE_CONFIG || !window.supabase || !window.supabase.createClient) {
+      throw new Error("Supabase is not available.");
+    }
+    db = window.supabase.createClient(
+      window.HAVKAR_SUPABASE_CONFIG.url,
+      window.HAVKAR_SUPABASE_CONFIG.publishableKey
+    );
+    return db;
+  }
+
+  function matchNeedle(text, needle) {
+    return String(text || "").indexOf(needle) !== -1;
+  }
+
+  async function fetchBuySell(needle) {
+    var client = initDb();
+    var res = await client
+      .from("ads")
+      .select("id,title,category,location,city,country,description,price,status,listing_surface,created_at")
+      .order("created_at", { ascending: false })
+      .limit(80);
+    if (res.error) throw res.error;
+    var rows = Array.isArray(res.data) ? res.data : [];
+    var out = [];
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      if (window.HAVKAR_MARKETPLACE && !window.HAVKAR_MARKETPLACE.isMarketplaceRow(row)) continue;
+      var st = String(row.status || "").toLowerCase();
+      if (["sold", "deleted", "archived", "draft", "inactive"].indexOf(st) !== -1) continue;
+      var pack = haystack([row.title, row.category, row.location, row.city, row.country, row.description, row.price]);
+      if (!matchNeedle(pack, needle)) continue;
+      out.push({
+        surface: "buy-sell",
+        label: "Buy & Sell",
+        id: row.id,
+        title: row.title || ("Listing #" + row.id),
+        subtitle: [row.category, row.city || row.location, row.price != null ? String(row.price) : ""]
+          .filter(Boolean)
+          .join(" · "),
+        href: "ad-details.html?id=" + encodeURIComponent(row.id)
+      });
+      if (out.length >= 12) break;
+    }
+    return out;
+  }
+
+  async function fetchAds(needle) {
+    var client = initDb();
+    var res = await client
+      .from("ads")
+      .select("id,title,category,location,description,status,listing_surface,created_at")
+      .order("created_at", { ascending: false })
+      .limit(80);
+    if (res.error) throw res.error;
+    var rows = Array.isArray(res.data) ? res.data : [];
+    var out = [];
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      if (window.HAVKAR_MARKETPLACE && !window.HAVKAR_MARKETPLACE.isAdvertisingRow(row)) continue;
+      var pack = haystack([row.title, row.category, row.location, row.description, row.status]);
+      if (!matchNeedle(pack, needle)) continue;
+      out.push({
+        surface: "ads",
+        label: "Business Ads",
+        id: row.id,
+        title: row.title || ("Ad #" + row.id),
+        subtitle: [row.category, row.location].filter(Boolean).join(" · "),
+        href: "ad-details.html?id=" + encodeURIComponent(row.id)
+      });
+      if (out.length >= 12) break;
+    }
+    return out;
+  }
+
+  async function fetchServices(needle) {
+    var client = initDb();
+    var res = await client
+      .from("services")
+      .select("id,title,category,description,location,status,created_at")
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(80);
+    if (res.error) throw res.error;
+    var rows = Array.isArray(res.data) ? res.data : [];
+    var out = [];
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      var pack = haystack([row.title, row.category, row.description, row.location]);
+      if (!matchNeedle(pack, needle)) continue;
+      out.push({
+        surface: "services",
+        label: "Services",
+        id: row.id,
+        title: row.title || ("Service #" + row.id),
+        subtitle: [row.category, row.location].filter(Boolean).join(" · "),
+        href: "services.html?q=" + encodeURIComponent(row.title || needle)
+      });
+      if (out.length >= 12) break;
+    }
+    return out;
+  }
+
+  async function fetchJobs(needle) {
+    var client = initDb();
+    var res = await client
+      .from("jobs")
+      .select("id,title,company,location,job_type,description,skills,status,created_at")
+      .order("created_at", { ascending: false })
+      .limit(80);
+    if (res.error) throw res.error;
+    var rows = Array.isArray(res.data) ? res.data : [];
+    var out = [];
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      if (row.status && String(row.status).toLowerCase() === "closed") continue;
+      var pack = haystack([row.title, row.company, row.location, row.job_type, row.description, row.skills]);
+      if (!matchNeedle(pack, needle)) continue;
+      out.push({
+        surface: "jobs",
+        label: "Jobs",
+        id: row.id,
+        title: row.title || ("Job #" + row.id),
+        subtitle: [row.company, row.location, row.job_type].filter(Boolean).join(" · "),
+        href: "jobs.html?q=" + encodeURIComponent(row.title || needle)
+      });
+      if (out.length >= 12) break;
+    }
+    return out;
+  }
+
+  async function fetchEvents(needle) {
+    var client = initDb();
+    var res = await client
+      .from("events")
+      .select("id,title,location,organizer,description,category,status,visibility,created_at")
+      .order("created_at", { ascending: false })
+      .limit(80);
+    if (res.error) throw res.error;
+    var rows = Array.isArray(res.data) ? res.data : [];
+    var out = [];
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      var status = String(row.status || "").toLowerCase();
+      if (status && status !== "active" && status !== "published" && status !== "public") {
+        if (["cancelled", "deleted", "draft"].indexOf(status) !== -1) continue;
+      }
+      var pack = haystack([row.title, row.location, row.organizer, row.description, row.category]);
+      if (!matchNeedle(pack, needle)) continue;
+      out.push({
+        surface: "events",
+        label: "Events",
+        id: row.id,
+        title: row.title || ("Event #" + row.id),
+        subtitle: [row.category, row.location, row.organizer].filter(Boolean).join(" · "),
+        href: "events.html?q=" + encodeURIComponent(row.title || needle)
+      });
+      if (out.length >= 12) break;
+    }
+    return out;
+  }
+
+  function renderResults(groups) {
+    resultsEl.innerHTML = "";
+    var total = 0;
+    var order = ["buy-sell", "services", "jobs", "ads", "events"];
+    for (var i = 0; i < order.length; i++) {
+      var key = order[i];
+      var items = groups[key] || [];
+      if (!items.length) continue;
+      total += items.length;
+      var title = document.createElement("div");
+      title.className = "group-title";
+      title.textContent = items[0].label + " · " + items.length;
+      resultsEl.appendChild(title);
+      for (var j = 0; j < items.length; j++) {
+        var item = items[j];
+        var a = document.createElement("a");
+        a.className = "result";
+        a.href = item.href;
+        a.innerHTML =
+          '<div class="eyebrow">' + escapeHtml(item.label) + "</div>" +
+          "<h3>" + escapeHtml(item.title) + "</h3>" +
+          (item.subtitle ? "<p>" + escapeHtml(item.subtitle) + "</p>" : "");
+        resultsEl.appendChild(a);
+      }
+    }
+    if (!total) {
+      resultsEl.innerHTML =
+        '<div class="empty"><strong>No listings found</strong>' +
+        "<span>There are no listings matching your search or category.</span></div>";
+    }
+    if (window.HAVKAR_I18N && typeof window.HAVKAR_I18N.translatePage === "function") {
+      window.HAVKAR_I18N.translatePage().catch(function () {});
+    }
+    return total;
+  }
+
+  async function runLiveSearch(options) {
+    var opts = options || {};
+    var query = String(qEl.value || "").trim();
+    clearBtn.hidden = !query;
+    if (!query) {
+      resultsEl.innerHTML = "";
+      setStatus("Enter a search query.");
+      if (!opts.silentEmpty) qEl.focus();
+      return;
+    }
+    lastQuery = query;
+    var needle = query.toLowerCase();
+    setStatus("Loading...");
+    goBtn.disabled = true;
+    try {
+      initDb();
+      var tasks = [];
+      var wantAll = selectedScope === "all";
+      if (wantAll || selectedScope === "buy-sell") tasks.push(fetchBuySell(needle).then(function (r) { return ["buy-sell", r]; }));
+      if (wantAll || selectedScope === "services") tasks.push(fetchServices(needle).then(function (r) { return ["services", r]; }));
+      if (wantAll || selectedScope === "jobs") tasks.push(fetchJobs(needle).then(function (r) { return ["jobs", r]; }));
+      if (wantAll || selectedScope === "ads") tasks.push(fetchAds(needle).then(function (r) { return ["ads", r]; }));
+      if (wantAll || selectedScope === "events") tasks.push(fetchEvents(needle).then(function (r) { return ["events", r]; }));
+
+      var settled = await Promise.allSettled(tasks);
+      var groups = {};
+      var errors = [];
+      for (var i = 0; i < settled.length; i++) {
+        if (settled[i].status === "fulfilled") {
+          groups[settled[i].value[0]] = settled[i].value[1];
+        } else {
+          errors.push(settled[i].reason && settled[i].reason.message ? settled[i].reason.message : "search failed");
+        }
+      }
+      var total = renderResults(groups);
+      if (errors.length && !total) {
+        setStatus("Could not load listings. " + errors[0], true);
+      } else if (errors.length) {
+        setStatus("Search results · some sources failed (" + errors.length + ").");
+      } else {
+        setStatus(total ? ("Search results · " + total) : "No listings found");
+      }
+    } catch (err) {
+      resultsEl.innerHTML =
+        '<div class="empty"><strong>Could not load listings</strong><span>' +
+        escapeHtml((err && err.message) || "Search failed.") +
+        "</span></div>";
+      setStatus((err && err.message) || "Search failed.", true);
+    } finally {
+      goBtn.disabled = false;
+    }
+  }
+
+  function openFullModule() {
+    var query = String(qEl.value || "").trim();
+    if (!query) {
+      qEl.focus();
+      setStatus("Enter a search query.");
+      return;
+    }
+    var scope = selectedScope === "all" ? "buy-sell" : selectedScope;
+    location.href = targetFor(scope, query);
+  }
+
+  // Init from querystring
+  var initialQ = String(params.get("q") || "").trim();
+  var initialScope = String(params.get("scope") || "all").trim();
+  if (SCOPES.indexOf(initialScope) === -1) initialScope = "all";
+  setScope(initialScope);
+  if (initialQ) qEl.value = initialQ;
+
+  scopesEl.addEventListener("click", function (event) {
+    var btn = event.target.closest("button[data-scope]");
+    if (!btn) return;
+    setScope(btn.getAttribute("data-scope"));
+    if (String(qEl.value || "").trim()) runLiveSearch({ silentEmpty: true });
+  });
+
+  goBtn.addEventListener("click", function () { runLiveSearch(); });
+  openModuleBtn.addEventListener("click", openFullModule);
+  clearBtn.addEventListener("click", function () {
+    qEl.value = "";
+    clearBtn.hidden = true;
+    resultsEl.innerHTML = "";
+    setStatus("");
+    qEl.focus();
+  });
+  qEl.addEventListener("keydown", function (event) {
     if (event.key === "Enter") {
       event.preventDefault();
-      run();
+      runLiveSearch();
     }
   });
+  qEl.addEventListener("input", function () {
+    clearBtn.hidden = !String(qEl.value || "").trim();
+    window.clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(function () {
+      if (String(qEl.value || "").trim().length >= 2) runLiveSearch({ silentEmpty: true });
+    }, 380);
+  });
+
+  // Fix back icon for LTR/RTL after i18n sets dir
+  function syncBackIcon() {
+    var icon = document.querySelector("[data-havkar-back-icon]");
+    if (!icon) return;
+    var rtl = document.documentElement.getAttribute("dir") === "rtl";
+    icon.className = rtl ? "fas fa-arrow-right" : "fas fa-arrow-left";
+  }
+  syncBackIcon();
+  window.setTimeout(syncBackIcon, 800);
+
+  if (initialQ) runLiveSearch({ silentEmpty: true });
 })();
 </script>
 <script src="/havkar-sw-register.js"></script>
