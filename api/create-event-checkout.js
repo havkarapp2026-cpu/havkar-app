@@ -3768,11 +3768,13 @@ export default async function handler(req, res) {
         .eq("user_id", auth.user.id)
         .maybeSingle();
 
+      const origin = allowedCheckoutOrigin(req);
       let accountId = existing.data && existing.data.stripe_account_id;
       let accountApi = existing.data && existing.data.stripe_account_id
         ? "existing"
         : null;
-      if (!accountId) {
+
+      async function createFreshConnectAccount() {
         // Prefer Accounts v2 recipient; fall back to v1 Express when the
         // Production secret lacks Accounts v2 permission (observed live error).
         // Prefill only email/display name. Bank + government ID stay on Stripe-hosted KYC.
@@ -3795,18 +3797,53 @@ export default async function handler(req, res) {
             user_id: auth.user.id,
             stripe_account_id: accountId,
             onboarding_status: "pending",
+            charges_enabled: false,
+            payouts_enabled: false,
+            details_submitted: false,
             updated_at: new Date().toISOString()
           });
+        return created;
       }
 
-      const origin = allowedCheckoutOrigin(req);
+      if (!accountId) {
+        await createFreshConnectAccount();
+      }
+
       const preferV1Links = accountApi === "v1_express";
-      const accountLink = await createRecipientAccountOnboardingLink(stripe, {
-        accountId,
-        refreshUrl: `${origin}/buy-sell.html?connect=refresh`,
-        returnUrl: `${origin}/buy-sell.html?connect=return`,
-        preferV1: preferV1Links
-      });
+      let accountLink = null;
+      try {
+        accountLink = await createRecipientAccountOnboardingLink(stripe, {
+          accountId,
+          refreshUrl: `${origin}/buy-sell.html?connect=refresh`,
+          returnUrl: `${origin}/buy-sell.html?connect=return`,
+          preferV1: preferV1Links
+        });
+      } catch (linkError) {
+        const linkMsg = String((linkError && linkError.message) || "").toLowerCase();
+        const staleAccount =
+          linkMsg.indexOf("not connected to your platform") !== -1 ||
+          linkMsg.indexOf("does not exist") !== -1;
+        if (!staleAccount) {
+          throw linkError;
+        }
+        /* Stale row from another Stripe mode/platform (common: Preview sk_test acct on Live). */
+        console.warn(
+          "marketplace connect stale account; recreating",
+          accountId,
+          linkError && linkError.message
+        );
+        await getSupabaseAdmin()
+          .from("marketplace_seller_connect_accounts")
+          .delete()
+          .eq("user_id", auth.user.id);
+        await createFreshConnectAccount();
+        accountLink = await createRecipientAccountOnboardingLink(stripe, {
+          accountId,
+          refreshUrl: `${origin}/buy-sell.html?connect=refresh`,
+          returnUrl: `${origin}/buy-sell.html?connect=return`,
+          preferV1: accountApi === "v1_express"
+        });
+      }
 
       // Example destination Checkout params (not charged unless Owner arms collection).
       const demoSplit = marketplaceCardSplit(100);
