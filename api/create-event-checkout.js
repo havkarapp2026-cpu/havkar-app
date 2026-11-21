@@ -14,8 +14,11 @@ import {
   buildMarketplaceDestinationCheckoutParams,
   createRecipientAccountV2,
   createMarketplaceConnectAccount,
+  retrieveMarketplaceConnectAccount,
   createRecipientAccountOnboardingLink,
-  connectAccountFlagsFromV2
+  connectAccountFlagsFromV2,
+  connectOnboardingStatusFromAccount,
+  sanitizeConnectRequirements
 } from "../lib/marketplace-connect.cjs";
 import { REQUIRED_WEBHOOK_EVENTS } from "../lib/stripe-webhook-processor.cjs";
 import {
@@ -3632,32 +3635,16 @@ export default async function handler(req, res) {
       ) {
         try {
           const stripe = getStripe();
-          let remote = null;
-          if (
-            stripe.v2 &&
-            stripe.v2.core &&
-            stripe.v2.core.accounts &&
-            typeof stripe.v2.core.accounts.retrieve === "function"
-          ) {
-            remote = await stripe.v2.core.accounts.retrieve(
-              data.stripe_account_id
-            );
-          } else {
-            remote = await stripe.accounts.retrieve(data.stripe_account_id);
-          }
+          const retrieved = await retrieveMarketplaceConnectAccount(
+            stripe,
+            data.stripe_account_id
+          );
+          const remote = retrieved.account;
           const flags = connectAccountFlagsFromV2(remote || {});
-          let onboardingStatus = "pending";
-          if (
-            remote &&
-            remote.requirements &&
-            remote.requirements.disabled_reason
-          ) {
-            onboardingStatus = "restricted";
-          } else if (flags.charges_enabled && flags.details_submitted) {
-            onboardingStatus = "complete";
-          } else if (flags.details_submitted) {
-            onboardingStatus = "submitted";
-          }
+          const onboardingStatus = connectOnboardingStatusFromAccount(
+            remote || {},
+            flags
+          );
           const patch = {
             charges_enabled: flags.charges_enabled === true,
             payouts_enabled: flags.payouts_enabled === true,
@@ -3679,6 +3666,10 @@ export default async function handler(req, res) {
           } else {
             data = Object.assign({}, data, patch);
           }
+          data = Object.assign({}, data, {
+            stripe_sync_api: retrieved.api,
+            stripe_requirements: sanitizeConnectRequirements(remote || {})
+          });
         } catch (syncErr) {
           console.warn(
             "marketplace connect status sync skipped",
@@ -3689,6 +3680,16 @@ export default async function handler(req, res) {
 
       const primaryOwner = await isPrimaryHavkarOwner(auth.user.id);
       const origin = allowedCheckoutOrigin(req);
+      const nextAction =
+        data && data.charges_enabled === true
+          ? data.payouts_enabled === true
+            ? marketplacePublicLivePaymentsAllowed()
+              ? "Seller Connect is ready for charges and payouts. Marketplace live card checkout is enabled."
+              : "Seller Connect is ready. Set HAVKAR_MARKETPLACE_PUBLIC_LIVE_PAYMENTS=true for public live card checkout."
+            : "Stripe accepted seller details and charges_enabled=true. Payouts wait for Stripe review (pending_verification). No further HAVKAR form is required."
+          : data
+            ? "Continue Stripe Connect KYC until charges_enabled=true."
+            : "Start Stripe Connect from Buy & Sell to create your seller payout account.";
       return res.status(200).json({
         ok: true,
         live_collection: cardPaymentsAllowed() ? "armed" : "paused",
@@ -3700,14 +3701,7 @@ export default async function handler(req, res) {
         is_primary_owner: primaryOwner,
         account: data || null,
         owner_prep: primaryOwner ? ownerSellerPrepSteps(origin) : null,
-        next_action:
-          data && data.charges_enabled === true
-            ? marketplacePublicLivePaymentsAllowed()
-              ? "Seller Connect is ready. Marketplace live card checkout is enabled."
-              : "Seller Connect is ready. Set HAVKAR_MARKETPLACE_PUBLIC_LIVE_PAYMENTS=true for public live card checkout."
-            : data
-              ? "Continue Stripe Connect KYC until charges_enabled=true."
-              : "Start Stripe Connect from Buy & Sell to create your seller payout account."
+        next_action: nextAction
       });
     }
 

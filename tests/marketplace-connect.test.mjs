@@ -94,6 +94,62 @@ test("v1 Express fallback body requests card_payments + transfers", () => {
   );
 });
 
+test("retrieveMarketplaceConnectAccount falls back to v1 when v2 permission denied", async () => {
+  const { retrieveMarketplaceConnectAccount, connectOnboardingStatusFromAccount, sanitizeConnectRequirements } =
+    require("../lib/marketplace-connect.cjs");
+  const stripe = {
+    v2: {
+      core: {
+        accounts: {
+          retrieve: async () => {
+            throw new Error(
+              "Permission denied. This key lacks access to Accounts v2."
+            );
+          }
+        }
+      }
+    },
+    accounts: {
+      retrieve: async (id) => {
+        assert.equal(id, "acct_owner_live");
+        return {
+          id,
+          charges_enabled: true,
+          payouts_enabled: false,
+          details_submitted: true,
+          capabilities: { card_payments: "active", transfers: "active" },
+          requirements: {
+            currently_due: [],
+            pending_verification: ["interv_x.sanctions_review.support"],
+            disabled_reason: "other"
+          },
+          future_requirements: { currently_due: [] }
+        };
+      }
+    }
+  };
+  const retrieved = await retrieveMarketplaceConnectAccount(
+    stripe,
+    "acct_owner_live"
+  );
+  assert.equal(retrieved.api, "v1");
+  assert.equal(retrieved.account.charges_enabled, true);
+  const flags = {
+    charges_enabled: true,
+    payouts_enabled: false,
+    details_submitted: true
+  };
+  assert.equal(
+    connectOnboardingStatusFromAccount(retrieved.account, flags),
+    "pending_verification"
+  );
+  const safe = sanitizeConnectRequirements(retrieved.account);
+  assert.deepEqual(safe.pending_verification, ["sanctions_review.support"]);
+  assert.equal(safe.disabled_reason, "other");
+  assert.equal(safe.charges_enabled, true);
+  assert.equal(safe.payouts_enabled, false);
+});
+
 test("createMarketplaceConnectAccount falls back to v1 when v2 permission denied", async () => {
   const { createMarketplaceConnectAccount } = require("../lib/marketplace-connect.cjs");
   const stripe = {
