@@ -12,7 +12,7 @@
 <meta name="havkar-buysell-ui" content="20261120-unify-v1">
 <title>HAVKAR — Buy & Sell</title>
 <script>
-window.HAVKAR_BUYSELL_UI = "20261121-owner-connect-v5";
+window.HAVKAR_BUYSELL_UI = "20261121-owner-connect-v6";
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1408,6 +1408,7 @@ aria-label="Post a new ad"
     aria-live="polite"
 ></div>
 
+<script src="/havkar-canonical-origin.js"></script>
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-ad-publish.js"></script>
@@ -5404,7 +5405,26 @@ function applyConnectReturnFromQuery(){
 
 function buysellLoginUrl(){
     const next = "/buy-sell.html";
-    return "login.html?next=" + encodeURIComponent(next);
+    /*
+     * Stay on the current Preview/production host.
+     * Never bounce Preview → havkar.online (that dropped Owner out of Preview).
+     * Absolute same-origin URL only — no cross-domain token handoff.
+     */
+    try{
+        if(
+            window.HAVKAR_CANONICAL &&
+            typeof window.HAVKAR_CANONICAL.sameOriginPathUrl === "function"
+        ){
+            return window.HAVKAR_CANONICAL.sameOriginPathUrl(
+                "/login.html?next=" + encodeURIComponent(next)
+            );
+        }
+        const u = new URL("/login.html", window.location.origin);
+        u.searchParams.set("next", next);
+        return u.href;
+    }catch(_e){
+        return "login.html?next=" + encodeURIComponent(next);
+    }
 }
 
 function clearSellerPayoutAlert(){
@@ -5436,7 +5456,7 @@ function showSellerPayoutAlert(message, options){
                 text +
                 " <a id=\"sellerPayoutLoginLink\" href=\"" +
                 buysellLoginUrl() +
-                "\">Open login → then return here</a>";
+                "\">Open Preview login → return to this Buy &amp; Sell</a>";
         }else{
             alertBox.textContent = text;
         }

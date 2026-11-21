@@ -20,6 +20,18 @@ assert.equal(
   api.authRedirectUrl("login.html?next=%2Fowner-eur1-checkout.html", "https://havkar.online/"),
   "https://havkar.online/login.html?next=%2Fowner-eur1-checkout.html"
 );
+const previewHost =
+  "https://havkar-app-git-cursor-buyse-abdee9-havkarapp2026-4055s-projects.vercel.app";
+assert.equal(api.isVercelPreviewHost(new URL(previewHost).hostname), true);
+assert.equal(api.canonicalOrigin(previewHost + "/buy-sell.html"), previewHost);
+assert.equal(
+  api.authRedirectUrl("login.html", previewHost + "/buy-sell.html"),
+  previewHost + "/login.html"
+);
+assert.equal(
+  api.sameOriginPathUrl("/login.html?next=%2Fbuy-sell.html", previewHost + "/"),
+  previewHost + "/login.html?next=%2Fbuy-sell.html"
+);
 assert.equal(api.safeNextPath("/owner-eur1-checkout.html"), "/owner-eur1-checkout.html");
 assert.equal(api.safeNextPath("https://evil.example/"), "");
 assert.equal(api.safeNextPath("//evil.example"), "");

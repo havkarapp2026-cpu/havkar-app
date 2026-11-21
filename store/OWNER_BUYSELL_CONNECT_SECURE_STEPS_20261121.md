@@ -21,11 +21,17 @@
 https://dashboard.stripe.com/webhooks
 ```
 
-3. Sign in to HAVKAR as `havkarapp2026@gmail.com`.
-4. Open Buy & Sell Preview (UI marker `20261121-owner-connect-v3`):
+3. Sign in on the **same Preview host** as `havkarapp2026@gmail.com` (do not use `havkar.online` for this Connect Preview test).
+4. Open Buy & Sell Preview (UI marker `20261121-owner-connect-v6`):
 
 ```
 https://havkar-app-git-cursor-buyse-abdee9-havkarapp2026-4055s-projects.vercel.app/buy-sell.html
+```
+
+Direct Preview login (returns to Buy & Sell on the same host):
+
+```
+https://havkar-app-git-cursor-buyse-abdee9-havkarapp2026-4055s-projects.vercel.app/login.html?next=%2Fbuy-sell.html
 ```
 
 Production (after merge — not this step):
@@ -34,13 +40,14 @@ Production (after merge — not this step):
 https://havkar.online/buy-sell.html
 ```
 
-5. **Exact button location (Preview, UI `20261121-owner-connect-v5`):**
+5. **Exact button location (Preview, UI `20261121-owner-connect-v6`):**
    - Banner **Seller payout setup (Stripe Connect + XLM)** sits **directly under the green Buy & Sell header**, **above** the Search bar.
    - Primary button: **Start / continue Stripe Connect** inside that banner.
    - Shortcut when signed in: header chip **Connect** (left of the bell) scrolls to the same banner.
 6. Click **Start / continue Stripe Connect**.
-   - If the Preview session expired, a **red alert** appears with **Sign in again** → `login.html?next=/buy-sell.html` (errors are not silent).
-   - After a valid session, the official Stripe Account Link opens (`connect.stripe.com`). Enter KYC + bank **only there**. No charge from this step.
+   - If the Preview session expired, a **red alert** appears with **Sign in again** / **Open login** staying on the Preview host (`…vercel.app/login.html?next=/buy-sell.html`) — not `havkar.online`.
+   - After a valid Preview session, the official Stripe Account Link opens (`connect.stripe.com`). Enter KYC + bank **only there**. No charge from this step.
+   - Google OAuth on Preview also redirects back to the same Preview origin (Supabase Redirect URLs must allow that Preview host). Password login stores the session only on that origin (no cross-domain token copy).
 7. Return to `buy-sell.html?connect=return` and Refresh until `charges_enabled=true`.
 8. Optional XLM: Wallet → save receive **public** key only.
 9. **Stop.** Do not enable `HAVKAR_MARKETPLACE_PUBLIC_LIVE_PAYMENTS` or take a real buyer charge until a separate Owner approval message.
