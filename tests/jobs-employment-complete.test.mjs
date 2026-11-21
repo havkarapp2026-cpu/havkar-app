@@ -43,8 +43,21 @@ assert.match(page, /startCorporateSubscriptionCheckout/);
 assert.match(page, /jobsPublishTip/);
 assert.match(page, /jobs-publish-tip/);
 assert.match(page, /id="jobsPostFab"/);
+assert.match(page, /onclick="openPostJob\(event\)"/);
 assert.match(page, /bindJobsPostFab/);
 assert.match(page, /z-index:220/);
+assert.match(
+  page,
+  /\.plan\[data-plan="Basic"\]\[data-billing="one_time_prepaid"\]/
+);
+assert.doesNotMatch(
+  page,
+  /\.plan\[data-plan="Basic"\s*\n\s*data-billing/
+);
+assert.match(
+  page,
+  /انتشار آگهی استخدام پس از پرداخت هزینه و تأیید تراکنش انجام می‌شود/
+);
 assert.doesNotMatch(page, /jobsPayoutHonesty/);
 assert.doesNotMatch(page, /Seller Connect bank payout/);
 assert.match(page, /submitInAppApplication/);

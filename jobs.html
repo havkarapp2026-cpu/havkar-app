@@ -1412,7 +1412,8 @@ a.primary{
   class="fab"
   id="jobsPostFab"
   type="button"
-  aria-label="Post a job">
+  aria-label="Post a job"
+  onclick="openPostJob(event)">
 
   <i class="fas fa-plus" aria-hidden="true"></i>
 
@@ -3124,8 +3125,7 @@ function resetPostForm(){
 
   const basic =
     document.querySelector(
-      '.plan[data-plan="Basic"
-        data-billing="one_time_prepaid"]'
+      '.plan[data-plan="Basic"][data-billing="one_time_prepaid"]'
     );
 
   if(basic){
@@ -4965,6 +4965,14 @@ async function viewJobApplications(jobId){
 
 window.openPostJob = openPostJob;
 window.bindJobsPostFab = bindJobsPostFab;
+window.applyJobsPublishTipLanguage = applyJobsPublishTipLanguage;
+try{
+  if(window.HAVKAR_I18N && typeof window.HAVKAR_I18N.onLanguageChange === "function"){
+    window.HAVKAR_I18N.onLanguageChange(function(){ applyJobsPublishTipLanguage(); });
+  }
+}catch(_e){}
+setTimeout(function(){ try{ applyJobsPublishTipLanguage(); }catch(_e){} }, 800);
+
 if(document.readyState === "loading"){
   document.addEventListener("DOMContentLoaded", function(){
     bindJobsPostFab();
