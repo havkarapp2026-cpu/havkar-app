@@ -17,6 +17,7 @@ import {
   configErrorResponse,
   stagingIsolationFailure
 } from "../lib/stripe-runtime.cjs";
+import jobBilling from "../havkar-job-billing.js";
 
 export const config = {
   api: {
@@ -465,6 +466,52 @@ export default async function handler(req, res) {
     ) {
       const result = await processAdsBoostEvent(event, process.env);
       return res.status(200).json(result);
+    }
+
+    /* Ordinary Jobs prepaid Checkout + subscription billing events. */
+    if (jobBilling.isJobBillingEvent(event)) {
+      if (
+        !cardPaymentsAllowed() &&
+        event.livemode === true &&
+        event.type === "checkout.session.completed"
+      ) {
+        return res.status(403).json({
+          ok: false,
+          error: REAL_PAYMENTS_PAUSED_MESSAGE,
+          code: REAL_PAYMENTS_PAUSED_CODE,
+          received_event: event.type
+        });
+      }
+      if (
+        String(process.env.HAVKAR_JOB_PAYMENTS_ENABLED || "") !== "true" &&
+        event.type === "checkout.session.completed" &&
+        event.livemode === true
+      ) {
+        return res.status(403).json({
+          ok: false,
+          code: "JOBS_PAYMENTS_OFF",
+          error: "Jobs live payments are not armed.",
+          received_event: event.type
+        });
+      }
+      let jobOutcome = null;
+      if (event.type === "checkout.session.completed") {
+        jobOutcome = await jobBilling.applyVerifiedCheckoutSession({
+          supabase: supabaseRuntime.client,
+          event: event,
+          session: event.data.object
+        });
+      } else {
+        jobOutcome = await jobBilling.applyVerifiedBillingEvent({
+          supabase: supabaseRuntime.client,
+          event: event
+        });
+      }
+      return res.status(200).json({
+        received: true,
+        jobs_billing: true,
+        ...jobOutcome
+      });
     }
 
     let financeGates = null;

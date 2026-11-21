@@ -331,8 +331,10 @@ function savedRow(payload, id) {
   assert.ok(page.includes("filterJobs"));
   assert.ok(page.includes('id="locationInput"'));
   assert.ok(page.includes("pending_payment"));
-  assert.ok(page.includes("The payment gateway is not connected yet."));
+  assert.ok(page.includes("jobs_checkout"));
   assert.ok(page.includes("Your advertisement has NOT been activated."));
+  assert.ok(page.includes("resumeJobPayment"));
+  assert.ok(page.includes("mine=1") || page.includes('params.get("mine")'));
   assert.ok(!page.includes("Application started for"));
   assert.ok(!page.includes('status:"active"'));
   assert.ok(!page.includes("status: \"active\""));

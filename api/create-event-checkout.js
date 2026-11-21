@@ -1541,6 +1541,125 @@ async function validateXlmQuoteSubject(admin, userId, decision) {
     return { ok: true, event: event };
   }
 
+  if (flow === "jobs_listing") {
+    const jobId = String(subjectId || "").trim();
+    if (!jobId) {
+      return {
+        ok: false,
+        status: 400,
+        code: "SUBJECT_INVALID",
+        error: "jobs_listing subject_id must be a job id.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+    const loaded = await admin
+      .from("jobs")
+      .select(
+        "id,user_id,status,plan,monthly_fee,employer_kind,title"
+      )
+      .eq("id", jobId)
+      .maybeSingle();
+    const job = loaded && loaded.data;
+    if (!job) {
+      return {
+        ok: false,
+        status: 404,
+        code: "JOB_NOT_FOUND",
+        error: "Job listing was not found for XLM checkout.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+    if (String(job.user_id) !== String(userId)) {
+      return {
+        ok: false,
+        status: 403,
+        code: "JOB_OWNER_REQUIRED",
+        error: "Only the listing owner can pay for Jobs publication with XLM.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+    if (String(job.employer_kind || "ordinary") === "company") {
+      return {
+        ok: false,
+        status: 400,
+        code: "CORPORATE_XLM_UNSUPPORTED",
+        error:
+          "Corporate monthly Jobs subscriptions renew on Stripe only. XLM cannot start automatic renewals.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+    if (String(job.status) !== "pending_payment") {
+      return {
+        ok: false,
+        status: 409,
+        code: "JOB_NOT_PENDING_PAYMENT",
+        error: "Only pending_payment ordinary listings can be paid with XLM.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+    const listed = Number(job.monthly_fee);
+    const billingModXlm = await loadJobBilling();
+    const jobBillingXlm = billingModXlm.default || billingModXlm;
+    const ordinaryPlan =
+      jobBillingXlm.ORDINARY_PLANS &&
+      jobBillingXlm.ORDINARY_PLANS[String(job.plan || "")];
+    const expectedCents = ordinaryPlan
+      ? ordinaryPlan.cents
+      : jobBillingXlm.ordinaryAmountCents
+        ? jobBillingXlm.ordinaryAmountCents(job.plan)
+        : null;
+    if (
+      expectedCents == null ||
+      !Number.isFinite(listed) ||
+      Math.round(listed * 100) !== Number(expectedCents)
+    ) {
+      return {
+        ok: false,
+        status: 409,
+        code: "JOB_PRICE_INVALID",
+        error:
+          "Jobs XLM amount must match an approved ordinary prepaid plan (Basic/Professional/Business).",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+    if (Number(decision.fees.price) !== listed) {
+      return {
+        ok: false,
+        status: 409,
+        code: "PRICE_MISMATCH",
+        error: "Quoted price does not match the current Jobs listing fee.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+    if (String(process.env.HAVKAR_JOB_PAYMENTS_ENABLED || "") !== "true") {
+      return {
+        ok: false,
+        status: 403,
+        code: "JOBS_PAYMENTS_OFF",
+        error:
+          "Jobs live payments are not armed. Advertisement NOT activated.",
+        paid: false,
+        order_paid: false,
+        payable: false
+      };
+    }
+    return { ok: true, job: job };
+  }
+
   return {
     ok: false,
     status: 400,
@@ -1617,6 +1736,57 @@ async function fulfillSettledXlmIntent(admin, userId, intentId) {
       service_id: intent.subject_id || null,
       payment_reference: intent.tx_hash || null,
       network: intent.network || null,
+      error: null
+    };
+  }
+
+  if (flow === "jobs_listing") {
+    const jobId = String(intent.subject_id || "").trim();
+    if (!jobId) {
+      return {
+        ticket_id: null,
+        fulfillment: null,
+        error: "Jobs subject is missing on the settled quote."
+      };
+    }
+    const billingMod = await loadJobBilling();
+    const jobBilling = billingMod.default || billingMod;
+    const expiry = jobBilling.nextOrdinaryExpiry
+      ? jobBilling.nextOrdinaryExpiry(Date.now(), null)
+      : { ok: true, expiresAt: new Date(Date.now() + 30 * 86400000).toISOString() };
+    if (!expiry.ok) {
+      return {
+        ticket_id: null,
+        fulfillment: "jobs_listing_intent",
+        job_id: jobId,
+        error: "Could not compute Jobs listing expiry after XLM settlement."
+      };
+    }
+    const updated = await admin
+      .from("jobs")
+      .update({
+        status: "active",
+        expires_at: expiry.expiresAt
+      })
+      .eq("id", jobId)
+      .eq("user_id", userId)
+      .eq("status", "pending_payment")
+      .select("id,status,expires_at")
+      .maybeSingle();
+    if (!updated.data || String(updated.data.status) !== "active") {
+      return {
+        ticket_id: null,
+        fulfillment: "jobs_listing_intent",
+        job_id: jobId,
+        error:
+          "XLM settlement verified. Listing could not be activated (already active or unavailable)."
+      };
+    }
+    return {
+      ticket_id: null,
+      fulfillment: "jobs_listing_activated",
+      job_id: jobId,
+      expires_at: updated.data.expires_at,
       error: null
     };
   }
@@ -1874,6 +2044,9 @@ export default async function handler(req, res) {
     (globalBodyAction === "jobs_payment_methods" ||
       globalBodyAction === "services_payment_methods" ||
       globalBodyAction === "jobs_quote" ||
+      globalBodyAction === "jobs_checkout" ||
+      globalBodyAction === "jobs_subscription_checkout" ||
+      globalBodyAction === "jobs_company_verify" ||
       globalBodyAction === "services_quote");
   if (isGlobalPaymentsRequest(req) && !isJobsServicesPaymentAction) {
     if (req.method !== "GET" && req.method !== "POST") {
@@ -2930,6 +3103,9 @@ export default async function handler(req, res) {
       (bodyActionEarly === "jobs_payment_methods" ||
         bodyActionEarly === "services_payment_methods" ||
         bodyActionEarly === "jobs_quote" ||
+        bodyActionEarly === "jobs_checkout" ||
+        bodyActionEarly === "jobs_subscription_checkout" ||
+        bodyActionEarly === "jobs_company_verify" ||
         bodyActionEarly === "services_quote")
     ) {
       try {
@@ -3002,6 +3178,40 @@ export default async function handler(req, res) {
             }
             xlmDisplay = await fetchDisplayXlmFromEur(listEur);
           }
+          let corporateGate = null;
+          let corporateChargeAllowed = chargeAllowed;
+          if (corporate) {
+            const companyId = String(
+              (req.body && req.body.company_id) || ""
+            ).trim();
+            if (!companyId) {
+              corporateGate = {
+                ok: false,
+                code: "company_required",
+                error:
+                  "Corporate quote requires company_id for a verified company."
+              };
+              corporateChargeAllowed = false;
+            } else {
+              const companyLoaded = await getSupabaseAdmin()
+                .from("job_companies")
+                .select("id,verification_status,owner_user_id,legal_name")
+                .eq("id", companyId)
+                .maybeSingle();
+              const company = companyLoaded.data;
+              const may = jobBilling.companyMaySubscribe(company);
+              if (!may.ok) {
+                corporateGate = may;
+                corporateChargeAllowed = false;
+              } else {
+                corporateGate = {
+                  ok: true,
+                  verification_status: company.verification_status,
+                  active_listing_limit: corporate.activeAdvertisementLimit
+                };
+              }
+            }
+          }
           return res.status(200).json({
             ok: true,
             action: "jobs_quote",
@@ -3013,6 +3223,12 @@ export default async function handler(req, res) {
               : "stripe_subscription_monthly",
             period_days: ordinary ? ordinary.durationDays : null,
             auto_renew: Boolean(corporate),
+            active_listing_limit: corporate
+              ? corporate.activeAdvertisementLimit
+              : null,
+            payout_model: "platform_listing_fee_only",
+            payout_note:
+              "Jobs fees are HAVKAR listing fees. This is not a wage payout to a worker bank account. Marketplace Connect payout limits are separate.",
             stripe_presentment_count: catalog.stripe_presentment_count,
             xlm_is_not_a_stripe_currency: true,
             xlm_display: xlmDisplay,
@@ -3021,16 +3237,459 @@ export default async function handler(req, res) {
             rate_as_of: xlmDisplay && xlmDisplay.rate_as_of,
             rate_source: xlmDisplay && xlmDisplay.rate_source,
             network_fee_xlm: xlmDisplay && xlmDisplay.network_fee_xlm,
-            charge_allowed_now: chargeAllowed,
+            charge_allowed_now: corporate
+              ? corporateChargeAllowed
+              : chargeAllowed,
             charge_created: false,
-            availability_status: chargeAllowed
-              ? "available"
-              : "not_yet_available",
-            availability_label: chargeAllowed
-              ? "Available"
-              : "Not yet available",
-            availability_reason: catalog.gate && catalog.gate.message
+            corporate_gate: corporateGate,
+            availability_status:
+              (corporate ? corporateChargeAllowed : chargeAllowed)
+                ? "available"
+                : "not_yet_available",
+            availability_label:
+              (corporate ? corporateChargeAllowed : chargeAllowed)
+                ? "Available"
+                : "Not yet available",
+            availability_reason:
+              (corporateGate && corporateGate.error) ||
+              (catalog.gate && catalog.gate.message),
+            error: corporateGate && corporateGate.error ? corporateGate.error : undefined
           });
+        }
+
+        if (bodyActionEarly === "jobs_checkout") {
+          const authJobs = await authenticateUser(req);
+          if (!authJobs.user) {
+            return sendError(
+              res,
+              401,
+              authJobs.error || "Authentication required"
+            );
+          }
+          if (!String(process.env.STRIPE_SECRET_KEY || "").trim()) {
+            return res.status(503).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              code: "STRIPE_NOT_CONFIGURED",
+              error:
+                "Stripe is not configured. Job advertisement was NOT activated."
+            });
+          }
+          const catalog = jobsPaymentMethods(process.env);
+          const stripeMethod = catalog.methods.find((m) => m.id === "stripe");
+          if (
+            !catalog.live_flag_armed ||
+            !(stripeMethod && stripeMethod.charge_allowed_now)
+          ) {
+            return res.status(403).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              code: "JOBS_PAYMENTS_OFF",
+              error:
+                (catalog.gate && catalog.gate.message) ||
+                "Jobs live payments are not armed. Advertisement NOT activated."
+            });
+          }
+          const jobId = String((req.body && req.body.job_id) || "").trim();
+          if (!jobId) {
+            return res.status(400).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              error: "job_id is required."
+            });
+          }
+          const loadedJob = await getSupabaseAdmin()
+            .from("jobs")
+            .select(
+              "id,user_id,title,status,plan,monthly_fee,employer_kind,last_stripe_session_id"
+            )
+            .eq("id", jobId)
+            .eq("user_id", authJobs.user.id)
+            .maybeSingle();
+          if (loadedJob.error || !loadedJob.data) {
+            return res.status(404).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              error: "Job listing was not found for this account."
+            });
+          }
+          const jobRow = loadedJob.data;
+          if (String(jobRow.employer_kind || "ordinary") === "company") {
+            return res.status(400).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              code: "CORPORATE_USE_SUBSCRIPTION",
+              error:
+                "Corporate Jobs use Stripe subscriptions after company verification. This Checkout is for ordinary prepaid listings only."
+            });
+          }
+          if (String(jobRow.status) !== "pending_payment") {
+            return res.status(409).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              code: "JOB_NOT_PENDING_PAYMENT",
+              error:
+                "Only pending_payment ordinary listings can start Checkout. Status: " +
+                String(jobRow.status || "")
+            });
+          }
+          const planName = String(jobRow.plan || "Basic");
+          const ordinary = jobBilling.ORDINARY_PLANS[planName];
+          if (!ordinary) {
+            return res.status(400).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              error: "Unknown ordinary Jobs plan on this listing."
+            });
+          }
+          const expectedFee = Number(jobRow.monthly_fee);
+          if (
+            !Number.isFinite(expectedFee) ||
+            Math.round(expectedFee * 100) !== ordinary.cents
+          ) {
+            return res.status(409).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              code: "PLAN_AMOUNT_MISMATCH",
+              error:
+                "Stored listing fee does not match the approved ordinary plan amount."
+            });
+          }
+          const origin = allowedCheckoutOrigin(req);
+          const successUrl =
+            origin +
+            "/jobs.html?job_paid=1&session_id={CHECKOUT_SESSION_ID}";
+          const cancelUrl = origin + "/jobs.html?job_paid=0&mine=1";
+          try {
+            const session = await getStripe().checkout.sessions.create(
+              {
+                mode: "payment",
+                customer_email: authJobs.user.email || undefined,
+                line_items: [
+                  {
+                    quantity: 1,
+                    price_data: {
+                      currency: "eur",
+                      unit_amount: ordinary.cents,
+                      product_data: {
+                        name:
+                          "HAVKAR Jobs listing — " +
+                          planName +
+                          " (30 days prepaid)",
+                        description: String(jobRow.title || "Job advertisement")
+                          .slice(0, 200)
+                      }
+                    }
+                  }
+                ],
+                success_url: successUrl,
+                cancel_url: cancelUrl,
+                metadata: {
+                  havkar_purpose: "job_advertisement",
+                  havkar_flow: "jobs",
+                  job_id: String(jobRow.id),
+                  user_id: String(authJobs.user.id),
+                  plan: planName
+                },
+                payment_intent_data: {
+                  metadata: {
+                    havkar_purpose: "job_advertisement",
+                    havkar_flow: "jobs",
+                    job_id: String(jobRow.id),
+                    user_id: String(authJobs.user.id),
+                    plan: planName
+                  }
+                }
+              },
+              {
+                idempotencyKey: (
+                  "job_ad_" +
+                  String(jobRow.id) +
+                  "_" +
+                  String(authJobs.user.id) +
+                  "_" +
+                  planName +
+                  "_" +
+                  ordinary.cents
+                ).slice(0, 255)
+              }
+            );
+            return res.status(200).json({
+              ok: true,
+              charged: false,
+              activated: false,
+              checkout_url: session.url,
+              session_id: session.id,
+              job_id: String(jobRow.id),
+              plan: planName,
+              list_price_eur: ordinary.eur,
+              period_days: ordinary.durationDays,
+              billing: "one_time_prepaid",
+              payout_model: "platform_listing_fee_only",
+              payout_note:
+                "Listing fee to HAVKAR only. Not a wage transfer to a worker bank account."
+            });
+          } catch (checkoutErr) {
+            console.error(
+              "jobs_checkout failed",
+              checkoutErr && checkoutErr.message
+            );
+            return res.status(500).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              error:
+                "Jobs Checkout could not be started. Advertisement NOT activated."
+            });
+          }
+        }
+
+        if (bodyActionEarly === "jobs_company_verify") {
+          const authOwner = await authenticateUser(req);
+          if (!authOwner.user) {
+            return sendError(
+              res,
+              401,
+              authOwner.error || "Authentication required"
+            );
+          }
+          const primaryOwner = await isPrimaryHavkarOwner(authOwner.user.id);
+          if (!primaryOwner) {
+            return res.status(403).json({
+              ok: false,
+              code: "OWNER_ONLY",
+              error: "Only the primary HAVKAR Owner can verify job companies."
+            });
+          }
+          const companyId = String(
+            (req.body && req.body.company_id) || ""
+          ).trim();
+          const nextStatus = String(
+            (req.body && req.body.verification_status) || "verified"
+          );
+          if (!companyId) {
+            return res.status(400).json({
+              ok: false,
+              error: "company_id is required."
+            });
+          }
+          if (nextStatus !== "verified" && nextStatus !== "unverified") {
+            return res.status(400).json({
+              ok: false,
+              error: "verification_status must be verified or unverified."
+            });
+          }
+          const updated = await getSupabaseAdmin()
+            .from("job_companies")
+            .update({
+              verification_status: nextStatus,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", companyId)
+            .select("id,legal_name,verification_status,owner_user_id")
+            .maybeSingle();
+          if (updated.error || !updated.data) {
+            return res.status(404).json({
+              ok: false,
+              error: "Company was not found or could not be updated."
+            });
+          }
+          return res.status(200).json({
+            ok: true,
+            charged: false,
+            company: updated.data
+          });
+        }
+
+        if (bodyActionEarly === "jobs_subscription_checkout") {
+          const authSub = await authenticateUser(req);
+          if (!authSub.user) {
+            return sendError(
+              res,
+              401,
+              authSub.error || "Authentication required"
+            );
+          }
+          if (!String(process.env.STRIPE_SECRET_KEY || "").trim()) {
+            return res.status(503).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              code: "STRIPE_NOT_CONFIGURED",
+              error:
+                "Stripe is not configured. Corporate subscription was NOT started."
+            });
+          }
+          const catalog = jobsPaymentMethods(process.env);
+          const stripeMethod = catalog.methods.find((m) => m.id === "stripe");
+          if (
+            !catalog.live_flag_armed ||
+            !(stripeMethod && stripeMethod.charge_allowed_now)
+          ) {
+            return res.status(403).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              code: "JOBS_PAYMENTS_OFF",
+              error:
+                (catalog.gate && catalog.gate.message) ||
+                "Jobs live payments are not armed. No subscription started."
+            });
+          }
+          const planCode = String(
+            (req.body && (req.body.plan_code || req.body.plan)) || ""
+          )
+            .trim()
+            .toLowerCase()
+            .replace(/[\s-]+/g, "_");
+          const companyPlan = jobBilling.companyPlan(planCode);
+          if (!companyPlan) {
+            return res.status(400).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              error:
+                "Unknown corporate plan. Use business, business_plus, or enterprise."
+            });
+          }
+          const companyId = String(
+            (req.body && req.body.company_id) || ""
+          ).trim();
+          if (!companyId) {
+            return res.status(400).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              error: "company_id is required."
+            });
+          }
+          const companyLoaded = await getSupabaseAdmin()
+            .from("job_companies")
+            .select("id,legal_name,verification_status,owner_user_id")
+            .eq("id", companyId)
+            .maybeSingle();
+          const company = companyLoaded.data;
+          if (!company) {
+            return res.status(404).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              error: "Company was not found."
+            });
+          }
+          if (String(company.owner_user_id) !== String(authSub.user.id)) {
+            return res.status(403).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              code: "COMPANY_OWNER_REQUIRED",
+              error: "Only the company owner can start this subscription."
+            });
+          }
+          const may = jobBilling.companyMaySubscribe(company);
+          if (!may.ok) {
+            return res.status(may.status || 403).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              code: may.code || "company_not_verified",
+              error: may.error
+            });
+          }
+          const origin = allowedCheckoutOrigin(req);
+          try {
+            const session = await getStripe().checkout.sessions.create(
+              {
+                mode: "subscription",
+                customer_email: authSub.user.email || undefined,
+                line_items: [
+                  {
+                    quantity: 1,
+                    price_data: {
+                      currency: "eur",
+                      unit_amount: companyPlan.cents,
+                      recurring: { interval: "month" },
+                      product_data: {
+                        name:
+                          "HAVKAR Jobs " +
+                          planCode +
+                          " (monthly, auto-renew)",
+                        description:
+                          "Up to " +
+                          companyPlan.activeAdvertisementLimit +
+                          " active job ads. Verified company subscription."
+                      }
+                    }
+                  }
+                ],
+                success_url:
+                  origin +
+                  "/jobs.html?job_sub=1&session_id={CHECKOUT_SESSION_ID}",
+                cancel_url: origin + "/jobs.html?job_sub=0",
+                metadata: {
+                  havkar_purpose: "job_subscription",
+                  havkar_flow: "jobs",
+                  company_id: String(company.id),
+                  plan_code: planCode,
+                  user_id: String(authSub.user.id)
+                },
+                subscription_data: {
+                  metadata: {
+                    havkar_purpose: "job_subscription",
+                    havkar_flow: "jobs",
+                    company_id: String(company.id),
+                    plan_code: planCode,
+                    user_id: String(authSub.user.id)
+                  }
+                }
+              },
+              {
+                idempotencyKey: (
+                  "job_sub_" +
+                  String(company.id) +
+                  "_" +
+                  planCode +
+                  "_" +
+                  companyPlan.cents
+                ).slice(0, 255)
+              }
+            );
+            return res.status(200).json({
+              ok: true,
+              charged: false,
+              activated: false,
+              checkout_url: session.url,
+              session_id: session.id,
+              plan_code: planCode,
+              list_price_eur: companyPlan.eur,
+              interval: companyPlan.interval,
+              auto_renew: true,
+              active_listing_limit: companyPlan.activeAdvertisementLimit,
+              billing: "stripe_subscription_monthly",
+              payout_model: "platform_listing_fee_only",
+              xlm_supported: false
+            });
+          } catch (subErr) {
+            console.error(
+              "jobs_subscription_checkout failed",
+              subErr && subErr.message
+            );
+            return res.status(500).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              error:
+                "Corporate subscription Checkout could not be started. No charge was created."
+            });
+          }
         }
 
         if (bodyActionEarly === "services_quote") {
