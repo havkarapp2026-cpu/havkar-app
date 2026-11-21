@@ -12,7 +12,7 @@
 <meta name="havkar-buysell-ui" content="20261120-unify-v1">
 <title>HAVKAR — Buy & Sell</title>
 <script>
-window.HAVKAR_BUYSELL_UI = "20261121-owner-connect-v2";
+window.HAVKAR_BUYSELL_UI = "20261121-owner-connect-v3";
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -930,6 +930,58 @@ input:focus-visible{
   display:flex; align-items:center; justify-content:center; padding:12px;
 }
 .explore-video-overlay[hidden]{ display:none !important; }
+
+/* Seller Connect: outside sticky search so it stays findable */
+.seller-payout-card{
+    margin:12px 0 14px;
+    border:2px solid #1b5e20;
+    border-radius:16px;
+    padding:14px 14px 12px;
+    background:linear-gradient(180deg,#f3faf4 0%,#ffffff 70%);
+    box-shadow:0 8px 20px rgba(27,94,32,.08);
+}
+.seller-payout-card[hidden]{ display:none !important; }
+.seller-payout-card h2{
+    margin:0 0 6px;
+    font-size:1.05rem;
+    color:#1b5e20;
+}
+.seller-payout-card .seller-payout-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:10px;
+}
+.seller-payout-card .seller-payout-actions button{
+    border:0;
+    border-radius:999px;
+    padding:10px 14px;
+    font-weight:700;
+    cursor:pointer;
+    background:#1b5e20;
+    color:#fff;
+}
+.seller-payout-card .seller-payout-actions button.secondary{
+    background:#fff;
+    color:#1b5e20;
+    border:1px solid #1b5e20;
+}
+.header-connect-btn{
+    display:none;
+    align-items:center;
+    justify-content:center;
+    min-width:41px;
+    height:41px;
+    padding:0 10px;
+    border-radius:999px;
+    border:0;
+    background:rgba(255,255,255,.22);
+    color:#fff;
+    font-size:.72rem;
+    font-weight:800;
+    cursor:pointer;
+}
+.header-connect-btn.visible{ display:inline-flex; }
 .explore-video-shell{ width:min(100%,720px); display:flex; flex-direction:column; gap:10px; }
 .explore-video-shell video{ width:100%; max-height:70vh; background:#000; border-radius:12px; }
 .explore-video-bar{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
@@ -968,6 +1020,16 @@ input:focus-visible{
 </div>
 
 <div class="header-right">
+
+    <button
+        id="headerConnectButton"
+        class="header-connect-btn"
+        type="button"
+        aria-label="Open Stripe Connect seller payouts"
+        title="Stripe Connect"
+    >
+        Connect
+    </button>
 
     <button
         id="notificationButton"
@@ -1012,8 +1074,8 @@ input:focus-visible{
 
 </div>
 
-<details class="buysell-tools" style="margin:8px 0 0;border:1px solid #d7e6db;border-radius:12px;padding:8px 10px;background:#f7fbf7">
-<summary style="cursor:pointer;font-weight:700;color:#1b5e20;list-style:none">Fees &amp; marketplace rules</summary>
+<details class="buysell-tools" style="margin:8px 12px 0;border:1px solid #d7e6db;border-radius:12px;padding:8px 10px;background:#f7fbf7">
+<summary style="cursor:pointer;font-weight:700;color:#1b5e20">▸ Fees &amp; marketplace rules</summary>
 <p style="margin:8px 0 0;font-size:.88rem;color:#355;line-height:1.45">
 Publishing a listing is free. At checkout the buyer fee is <strong>2%</strong> and the seller fee is <strong>3%</strong>
 (server-enforced). Example: list €100 → buyer pays €102, seller receives €97, HAVKAR commission €5.
@@ -1023,28 +1085,8 @@ See <a href="terms.html#marketplace-fees">Terms draft — marketplace fees</a>.
 Buy &amp; Sell stays distinct from paid Ads. Public live charges stay Owner-gated.
 </p>
 </details>
-<details class="buysell-tools" id="sellerPayoutPanel" style="margin:8px 0 0;border:1px solid #d7e6db;border-radius:12px;padding:8px 10px;background:#f7fbf7">
-<summary style="cursor:pointer;font-weight:700;color:#1b5e20;list-style:none">Seller payout setup (Stripe Connect + XLM)</summary>
-<p id="sellerPayoutStatus" style="margin:8px 0;font-size:.88rem;color:#355;line-height:1.45">
-Sign in to see your Stripe Connect and Stellar receive status. No bank details are invented by HAVKAR.
-</p>
-<ol style="margin:0 0 8px 18px;font-size:.88rem;color:#355;line-height:1.45">
-<li>Create or open your marketplace listing as the owner.</li>
-<li>Start Stripe Connect Express onboarding (legal identity + bank account in Stripe).</li>
-<li>Wait until Stripe reports <strong>charges_enabled</strong> (and preferably payouts_enabled).</li>
-<li>Optional for XLM: register a Stellar receive public key (never a seed) for direct-split settlement.</li>
-<li>Owner must enable public live marketplace payments before buyers can complete a real card charge.</li>
-</ol>
-<div style="display:flex;flex-wrap:wrap;gap:8px">
-<button id="sellerConnectHomeButton" type="button" class="chip" style="cursor:pointer">Start / continue Stripe Connect</button>
-<button id="sellerConnectRefreshButton" type="button" class="chip" style="cursor:pointer">Refresh Connect status</button>
-</div>
-<p style="margin:8px 0 0;font-size:.82rem;color:#567">
-Connect return URLs use <code>buy-sell.html?connect=return|refresh</code>. Onboarding opens Stripe-hosted pages; HAVKAR does not store bank account numbers.
-</p>
-</details>
-<details class="buysell-tools" style="margin:8px 0 0;border:1px solid #d7e6db;border-radius:12px;padding:8px 10px;background:#f7fbf7">
-<summary style="cursor:pointer;font-weight:700;color:#1b5e20;list-style:none">Filters &amp; categories</summary>
+<details class="buysell-tools" style="margin:8px 12px 0;border:1px solid #d7e6db;border-radius:12px;padding:8px 10px;background:#f7fbf7">
+<summary style="cursor:pointer;font-weight:700;color:#1b5e20">▸ Filters &amp; categories</summary>
 <div class="country-filter" style="margin-top:8px">
 
     <label class="visually-hidden" for="countryFilter">
@@ -1136,6 +1178,32 @@ Connect return URLs use <code>buy-sell.html?connect=return|refresh</code>. Onboa
 </section>
 
 <main class="main">
+
+<section
+    id="sellerPayoutPanel"
+    class="seller-payout-card"
+    aria-label="Seller payout setup Stripe Connect"
+>
+    <h2>Seller payout setup (Stripe Connect + XLM)</h2>
+    <p id="sellerPayoutStatus" style="margin:0;font-size:.88rem;color:#355;line-height:1.45">
+        Sign in to see your Stripe Connect and Stellar receive status. No bank details are invented by HAVKAR.
+    </p>
+    <ol style="margin:8px 0 0 18px;font-size:.88rem;color:#355;line-height:1.45">
+        <li>Sign in with your HAVKAR seller account (Owner: havkarapp2026@gmail.com).</li>
+        <li>Tap <strong>Start / continue Stripe Connect</strong> — KYC and bank details stay on Stripe-hosted pages.</li>
+        <li>Return here until status shows <strong>charges_enabled=true</strong>.</li>
+        <li>Optional XLM: register a receive public key in Wallet (never a seed).</li>
+    </ol>
+    <div class="seller-payout-actions">
+        <button id="sellerConnectHomeButton" type="button">Start / continue Stripe Connect</button>
+        <button id="sellerConnectRefreshButton" type="button" class="secondary">Refresh Connect status</button>
+    </div>
+    <p style="margin:10px 0 0;font-size:.78rem;color:#567">
+        Location: Buy &amp; Sell → top of main content, immediately above “Latest listings”.
+        When signed in, header shows a white <strong>Connect</strong> chip (left of the bell) that scrolls here.
+        No live charge from this panel.
+    </p>
+</section>
 
 <div class="results-bar">
 
@@ -2487,6 +2555,13 @@ function setupAuthListener(){
 
                     }
 
+                    if(typeof syncHeaderConnectButton === "function"){
+                        syncHeaderConnectButton();
+                    }
+                    if(typeof refreshSellerPayoutPanel === "function"){
+                        refreshSellerPayoutPanel();
+                    }
+
                     return;
 
                 }
@@ -2539,6 +2614,13 @@ function setupAuthListener(){
                                 }
                             );
 
+                    }
+
+                    if(typeof syncHeaderConnectButton === "function"){
+                        syncHeaderConnectButton();
+                    }
+                    if(typeof refreshSellerPayoutPanel === "function"){
+                        refreshSellerPayoutPanel();
                     }
 
                 }
@@ -5416,9 +5498,36 @@ async function startSellerConnectFromHome(){
     }
 }
 
+function syncHeaderConnectButton(){
+    const headerBtn = document.getElementById("headerConnectButton");
+    const panel = document.getElementById("sellerPayoutPanel");
+    if(!headerBtn){
+        return;
+    }
+    const signedIn = !!(state && state.currentUserId);
+    headerBtn.classList.toggle("visible", signedIn);
+    if(!headerBtn.dataset.wired){
+        headerBtn.dataset.wired = "1";
+        headerBtn.addEventListener("click", function(){
+            if(panel){
+                panel.hidden = false;
+                panel.scrollIntoView({ behavior: "smooth", block: "start" });
+                panel.style.outline = "3px solid #f9a825";
+                window.setTimeout(function(){
+                    panel.style.outline = "";
+                }, 2200);
+            }
+        });
+    }
+}
+
 function setupSellerPayoutPanel(){
+    const panel = document.getElementById("sellerPayoutPanel");
     const startBtn = document.getElementById("sellerConnectHomeButton");
     const refreshBtn = document.getElementById("sellerConnectRefreshButton");
+    if(panel){
+        panel.hidden = false;
+    }
     if(startBtn){
         startBtn.addEventListener("click", function(){
             startSellerConnectFromHome();
@@ -5429,6 +5538,7 @@ function setupSellerPayoutPanel(){
             refreshSellerPayoutPanel();
         });
     }
+    syncHeaderConnectButton();
     refreshSellerPayoutPanel();
 }
 
