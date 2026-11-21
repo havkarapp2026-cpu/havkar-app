@@ -7,12 +7,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1b5e20">
-<meta name="havkar-search-ui" content="20261121-search-live-v1">
+<meta name="havkar-search-ui" content="20261121-search-i18n-v2">
 <meta name="description" content="HAVKAR Search — Buy & Sell, Services, Jobs, Ads, Events">
 <title>HAVKAR — Search</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <script>
-window.HAVKAR_SEARCH_UI = "20261121-search-live-v1";
+window.HAVKAR_SEARCH_UI = "20261121-search-i18n-v2";
 </script>
 <style>
 :root{
@@ -212,10 +212,70 @@ nav.bottom a i{font-size:1.05rem}
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-marketplace.js"></script>
 <script src="/havkar-page-back.js"></script>
+<script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
 <script>
 (function () {
   var SCOPES = ["all", "buy-sell", "services", "jobs", "ads", "events"];
+  var SCOPE_LABELS_EN = {
+    all: "All",
+    "buy-sell": "Buy & Sell",
+    services: "Services",
+    jobs: "Jobs",
+    ads: "Business Ads",
+    events: "Events"
+  };
+  /* Hard fallback so chips never stay English when language is set. */
+  var SCOPE_LABELS_BY_LANG = {
+    it: {
+      all: "Tutti",
+      "buy-sell": "Compra e vendi",
+      services: "Servizi",
+      jobs: "Lavori",
+      ads: "Annunci aziendali",
+      events: "Eventi",
+      openModule: "Apri il modulo completo",
+      searchBtn: "Cerca",
+      subtitle: "Cerca annunci in Compra e vendi, Servizi, Lavori, Annunci aziendali ed Eventi. I risultati arrivano solo da dati live HAVKAR.",
+      searchIn: "Cerca in"
+    },
+    fa: {
+      all: "همه",
+      "buy-sell": "خرید و فروش",
+      services: "خدمات",
+      jobs: "کار",
+      ads: "تبلیغات کسب‌وکار",
+      events: "رویدادها",
+      openModule: "باز کردن بخش کامل",
+      searchBtn: "جستجو",
+      subtitle: "جستجو در خریدوفروش، خدمات، کار، تبلیغات و رویدادها. نتایج فقط از داده زنده هاوکار هستند.",
+      searchIn: "جستجو در"
+    },
+    sv: {
+      all: "Alla",
+      "buy-sell": "Köp & sälj",
+      services: "Tjänster",
+      jobs: "Jobb",
+      ads: "Företagsannonser",
+      events: "Evenemang",
+      openModule: "Öppna hela modulen",
+      searchBtn: "Sök",
+      subtitle: "Hitta annonser i Köp & sälj, Tjänster, Jobb, Företagsannonser och Evenemang. Resultat kommer endast från live HAVKAR-data.",
+      searchIn: "Sök i"
+    },
+    ar: {
+      all: "الكل",
+      "buy-sell": "بيع وشراء",
+      services: "خدمات",
+      jobs: "وظائف",
+      ads: "إعلانات الأعمال",
+      events: "فعاليات",
+      openModule: "افتح الوحدة كاملة",
+      searchBtn: "بحث",
+      subtitle: "ابحث في البيع والشراء والخدمات والوظائف وإعلانات الأعمال والفعاليات. النتائج من بيانات هاوكار الحية فقط.",
+      searchIn: "البحث في"
+    }
+  };
   var params = new URLSearchParams(location.search);
   var qEl = document.getElementById("q");
   var clearBtn = document.getElementById("clearQ");
@@ -232,6 +292,102 @@ nav.bottom a i{font-size:1.05rem}
 
   if (uiVersion) {
     uiVersion.textContent = "UI " + (window.HAVKAR_SEARCH_UI || "unknown");
+  }
+
+  function currentLang() {
+    try {
+      var qp = new URLSearchParams(location.search).get("lang");
+      if (qp) return String(qp).trim().toLowerCase();
+    } catch (e0) { /* ignore */ }
+    try {
+      var stored =
+        localStorage.getItem("havkar_language") ||
+        localStorage.getItem("selectedLanguage") ||
+        localStorage.getItem("language");
+      if (stored) return String(stored).trim().toLowerCase();
+    } catch (e1) { /* ignore */ }
+    try {
+      if (window.HAVKAR_I18N && typeof window.HAVKAR_I18N.getLanguage === "function") {
+        return String(window.HAVKAR_I18N.getLanguage() || "en").toLowerCase();
+      }
+    } catch (e) { /* ignore */ }
+    return String(document.documentElement.getAttribute("lang") || "en").toLowerCase();
+  }
+
+  function surfaceLabel(surface) {
+    var lang = currentLang();
+    var pack = SCOPE_LABELS_BY_LANG[lang];
+    if (pack && pack[surface]) return pack[surface];
+    return SCOPE_LABELS_EN[surface] || surface;
+  }
+
+  function applyStaticSearchLabels() {
+    var lang = currentLang();
+    var pack = SCOPE_LABELS_BY_LANG[lang] || null;
+    var buttons = scopesEl.querySelectorAll("button[data-scope]");
+    for (var i = 0; i < buttons.length; i++) {
+      var scope = buttons[i].getAttribute("data-scope");
+      var en = SCOPE_LABELS_EN[scope] || scope;
+      buttons[i].textContent = pack && pack[scope] ? pack[scope] : en;
+    }
+    if (openModuleBtn) {
+      openModuleBtn.textContent = pack && pack.openModule ? pack.openModule : "Open full module";
+    }
+    if (goBtn) {
+      goBtn.textContent = pack && pack.searchBtn ? pack.searchBtn : "Search";
+    }
+    var sub = document.querySelector(".topbar p");
+    if (sub && pack && pack.subtitle) {
+      sub.textContent = pack.subtitle;
+    }
+    if (scopesEl && pack && pack.searchIn) {
+      scopesEl.setAttribute("aria-label", pack.searchIn);
+    }
+    var h1 = document.querySelector(".topbar h1");
+    if (h1) {
+      if (lang === "it") h1.textContent = "Cerca";
+      else if (lang === "fa") h1.textContent = "جستجو";
+      else if (lang === "sv") h1.textContent = "Sök";
+      else if (lang === "ar") h1.textContent = "بحث";
+      else h1.textContent = "Search";
+    }
+    var quick = document.querySelectorAll(".quick a span");
+    for (var q = 0; q < quick.length; q++) {
+      var enLabel = String(quick[q].getAttribute("data-en") || quick[q].textContent || "").trim();
+      if (!quick[q].getAttribute("data-en")) {
+        quick[q].setAttribute("data-en", enLabel);
+      }
+      var mapped = null;
+      if (enLabel === "Buy & Sell" || enLabel === "Buy &amp; Sell") mapped = pack && pack["buy-sell"];
+      else if (enLabel === "Services") mapped = pack && pack.services;
+      else if (enLabel === "Jobs") mapped = pack && pack.jobs;
+      else if (enLabel === "Business Ads") mapped = pack && pack.ads;
+      else if (enLabel === "Events") mapped = pack && pack.events;
+      else if (enLabel === "Delivery") {
+        mapped =
+          lang === "it" ? "Consegne" :
+          lang === "fa" ? "ارسال" :
+          lang === "sv" ? "Leverans" :
+          lang === "ar" ? "توصيل" : null;
+      }
+      if (mapped) quick[q].textContent = mapped;
+      else quick[q].textContent = quick[q].getAttribute("data-en") || enLabel;
+    }
+    var navSpans = document.querySelectorAll("nav.bottom a span");
+    for (var n = 0; n < navSpans.length; n++) {
+      var nEn = String(navSpans[n].getAttribute("data-en") || navSpans[n].textContent || "").trim();
+      if (!navSpans[n].getAttribute("data-en")) navSpans[n].setAttribute("data-en", nEn);
+      var nMapped = null;
+      if (nEn === "Home") {
+        nMapped = lang === "it" ? "Home" : lang === "fa" ? "خانه" : lang === "sv" ? "Hem" : lang === "ar" ? "الرئيسية" : null;
+      } else if (nEn === "Buy & Sell" || nEn === "Buy &amp; Sell") nMapped = pack && pack["buy-sell"];
+      else if (nEn === "Search") nMapped = pack && pack.searchBtn;
+      else if (nEn === "Messages") {
+        nMapped = lang === "it" ? "Messaggi" : lang === "fa" ? "پیام‌ها" : lang === "sv" ? "Meddelanden" : lang === "ar" ? "رسائل" : null;
+      }
+      if (nMapped) navSpans[n].textContent = nMapped;
+      else navSpans[n].textContent = navSpans[n].getAttribute("data-en") || nEn;
+    }
   }
 
   function setStatus(text, isError) {
@@ -308,7 +464,7 @@ nav.bottom a i{font-size:1.05rem}
       if (!matchNeedle(pack, needle)) continue;
       out.push({
         surface: "buy-sell",
-        label: "Buy & Sell",
+        label: surfaceLabel("buy-sell"),
         id: row.id,
         title: row.title || ("Listing #" + row.id),
         subtitle: [row.category, row.city || row.location, row.price != null ? String(row.price) : ""]
@@ -338,7 +494,7 @@ nav.bottom a i{font-size:1.05rem}
       if (!matchNeedle(pack, needle)) continue;
       out.push({
         surface: "ads",
-        label: "Business Ads",
+        label: surfaceLabel("ads"),
         id: row.id,
         title: row.title || ("Ad #" + row.id),
         subtitle: [row.category, row.location].filter(Boolean).join(" · "),
@@ -366,7 +522,7 @@ nav.bottom a i{font-size:1.05rem}
       if (!matchNeedle(pack, needle)) continue;
       out.push({
         surface: "services",
-        label: "Services",
+        label: surfaceLabel("services"),
         id: row.id,
         title: row.title || ("Service #" + row.id),
         subtitle: [row.category, row.location].filter(Boolean).join(" · "),
@@ -394,7 +550,7 @@ nav.bottom a i{font-size:1.05rem}
       if (!matchNeedle(pack, needle)) continue;
       out.push({
         surface: "jobs",
-        label: "Jobs",
+        label: surfaceLabel("jobs"),
         id: row.id,
         title: row.title || ("Job #" + row.id),
         subtitle: [row.company, row.location, row.job_type].filter(Boolean).join(" · "),
@@ -423,7 +579,7 @@ nav.bottom a i{font-size:1.05rem}
       if (!matchNeedle(pack, needle)) continue;
       out.push({
         surface: "events",
-        label: "Events",
+        label: surfaceLabel("events"),
         id: row.id,
         title: row.title || ("Event #" + row.id),
         subtitle: [row.category, row.location, row.organizer].filter(Boolean).join(" · "),
@@ -578,8 +734,32 @@ nav.bottom a i{font-size:1.05rem}
     var rtl = document.documentElement.getAttribute("dir") === "rtl";
     icon.className = rtl ? "fas fa-arrow-right" : "fas fa-arrow-left";
   }
+
+  function refreshI18nChrome() {
+    applyStaticSearchLabels();
+    syncBackIcon();
+    if (window.HAVKAR_I18N && typeof window.HAVKAR_I18N.translatePage === "function") {
+      window.HAVKAR_I18N.translatePage().catch(function () {});
+    }
+  }
+
+  applyStaticSearchLabels();
   syncBackIcon();
-  window.setTimeout(syncBackIcon, 800);
+  window.setTimeout(refreshI18nChrome, 200);
+  window.setTimeout(refreshI18nChrome, 900);
+  document.addEventListener("havkar:language-changed", refreshI18nChrome);
+  window.addEventListener("havkar:language-changed", refreshI18nChrome);
+  window.addEventListener("storage", function (ev) {
+    if (
+      ev &&
+      (ev.key === "havkar_language" ||
+        ev.key === "HAVKAR_LANGUAGE" ||
+        ev.key === "selectedLanguage" ||
+        ev.key === "language")
+    ) {
+      refreshI18nChrome();
+    }
+  });
 
   if (initialQ) runLiveSearch({ silentEmpty: true });
 })();

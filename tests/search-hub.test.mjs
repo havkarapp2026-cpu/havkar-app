@@ -9,9 +9,14 @@ assert.match(search, /jobs\.html\?q=/);
 assert.match(search, /ads\.html\?q=/);
 assert.match(search, /events\.html\?q=/);
 assert.match(search, /HAVKAR_SEARCH_UI/);
-assert.match(search, /20261121-search-live-v1/);
+assert.match(search, /20261121-search-i18n-v2/);
 assert.match(search, /havkar-i18n\.js/);
+assert.match(search, /havkar-ui-i18n21\.js/);
 assert.match(search, /havkar-marketplace\.js/);
+assert.match(search, /SCOPE_LABELS_BY_LANG/);
+assert.match(search, /Annunci aziendali/);
+assert.match(search, /Apri il modulo completo/);
+assert.match(search, /applyStaticSearchLabels/);
 assert.match(search, /from\("ads"\)/);
 assert.match(search, /from\("services"\)/);
 assert.match(search, /from\("jobs"\)/);
@@ -19,6 +24,15 @@ assert.match(search, /from\("events"\)/);
 assert.match(search, /This page never invents results/);
 assert.match(search, /data-scope="all"/);
 assert.doesNotMatch(search, /fakeResults|mockResults|demoResults|lorem ipsum/i);
+
+const i18n = fs.readFileSync("havkar-i18n.js", "utf8");
+assert.match(i18n, /"Business Ads":\s*"Annunci aziendali"/);
+assert.match(i18n, /"Open full module":\s*"Apri il modulo completo"/);
+assert.match(i18n, /"Services":\s*"Servizi"/);
+
+const adsPage = fs.readFileSync("ads.html", "utf8");
+assert.match(adsPage, /confirmAndDeleteOwnAdvertisement/);
+assert.match(adsPage, /delete_own_marketplace_listing/);
 
 for (const file of ["buy-sell.html", "services.html", "jobs.html", "ads.html", "events.html"]) {
   const body = fs.readFileSync(file, "utf8");

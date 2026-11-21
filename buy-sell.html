@@ -1215,6 +1215,9 @@ Buy &amp; Sell stays distinct from paid Ads. Public live charges stay Owner-gate
     <select id="priceCurrency" aria-label="Currency for min/max price">
         <option value="EUR">Price unit: EUR</option>
     </select>
+    <p id="currencyRailNote" class="photo-info" style="margin:6px 0 0;font-size:12px;color:#1b5e20;font-weight:700">
+        133 Stripe presentment currencies active · XLM (Stellar) is a separate checkout rail on listing details
+    </p>
     <p id="fxStatus" class="photo-info" style="margin:6px 0 0;font-size:12px;color:#456"></p>
 
 </div>
@@ -4135,6 +4138,13 @@ function populateCurrencyFilters(){
     const priceSel = $("priceCurrency");
     const bag = window.HAVKAR_PRESENTMENT_CURRENCIES;
     const list = bag && Array.isArray(bag.list) ? bag.list.slice() : [];
+    const count = list.length || (bag && bag.count) || 0;
+    const note = $("currencyRailNote");
+    if(note){
+        note.textContent =
+            (count || 133) +
+            " Stripe presentment currencies active · XLM (Stellar) is a separate checkout rail on listing details";
+    }
     if(listingSel && listingSel.options.length <= 1){
         list.forEach(function(c){
             const opt = document.createElement("option");
@@ -4142,15 +4152,35 @@ function populateCurrencyFilters(){
             opt.textContent = String(c.code || "").toUpperCase() + " — " + (c.name || "");
             listingSel.appendChild(opt);
         });
+        if(listingSel.options.length > 1){
+            listingSel.setAttribute(
+                "data-presentment-count",
+                String(listingSel.options.length - 1)
+            );
+        }
     }
     if(priceSel && priceSel.options.length <= 1){
+        /* Keep EUR as first seeded option; rebuild full 133 list. */
+        while(priceSel.options.length > 0){
+            priceSel.remove(0);
+        }
         list.forEach(function(c){
             const opt = document.createElement("option");
             opt.value = String(c.code || "").toUpperCase();
             opt.textContent = "Price unit: " + String(c.code || "").toUpperCase();
             priceSel.appendChild(opt);
         });
+        if(!list.length){
+            const fallback = document.createElement("option");
+            fallback.value = "EUR";
+            fallback.textContent = "Price unit: EUR";
+            priceSel.appendChild(fallback);
+        }
         priceSel.value = state.priceCurrency || "EUR";
+        priceSel.setAttribute(
+            "data-presentment-count",
+            String(priceSel.options.length)
+        );
     }
 }
 
