@@ -84,6 +84,10 @@ assert.match(page, /includeXlm:\s*false/);
 assert.match(page, /JOBS_DRAFT_KEY|havkar_jobs_post_draft/);
 assert.match(page, /jobsPaymentReceipt|payReceiptTitle/);
 assert.match(page, /function jobsAlert/);
-assert.match(page, /برای ثبت آگهی ابتدا وارد حساب هاوکار شوید/);
+
+const jobsI18n = fs.readFileSync("havkar-jobs-i18n.js", "utf8");
+assert.match(jobsI18n, /برای ثبت آگهی ابتدا وارد حساب هاوکار شوید/);
+assert.match(jobsI18n, /payReceiptPending/);
+assert.match(jobsI18n, /signInPay/);
 
 console.log("JOBS_EMPLOYMENT_COMPLETE_TEST_OK");
