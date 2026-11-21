@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/havkar-icon-32-20261022-v3.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/havkar-icon-180-20261022-v3.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1b5e20">
+<title>HAVKAR | Doctors &amp; Pharmacies</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+:root{--g:#1b5e20;--g2:#2e7d32;--g3:#66bb6a;--bg:#eef6f0;--card:#fff;--text:#123;--muted:#567;--warn:#8a4b08}
+*{box-sizing:border-box}
+body{margin:0;font-family:Georgia,"Iowan Old Style","Palatino Linotype",serif;background:radial-gradient(1200px 600px at 10% -10%,#dcedc8 0%,transparent 55%),linear-gradient(180deg,#f4faf5,#e6f0e8 45%,#dfe8e1);color:var(--text);min-height:100vh;padding-bottom:84px}
+header{background:linear-gradient(135deg,var(--g),var(--g2) 55%,#388e3c);color:#fff;padding:calc(14px + env(safe-area-inset-top)) 16px 16px;box-shadow:0 10px 28px rgba(27,94,32,.22)}
+.header-inner{max-width:1100px;margin:0 auto;display:flex;gap:12px;align-items:center}
+.back{width:42px;height:42px;border:0;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;cursor:pointer}
+h1{margin:0;font-size:1.35rem}
+.subtitle{margin:4px 0 0;opacity:.95;font-size:.92rem;line-height:1.35}
+main{max-width:1100px;margin:0 auto;padding:14px 16px}
+.notice{background:linear-gradient(180deg,#fff,#f7fcf7);border:1px solid #cfe0d3;border-radius:14px;padding:12px 14px;color:var(--muted);line-height:1.45;margin-bottom:12px}
+.notice strong{color:var(--g)}
+.search-panel{background:var(--card);border-radius:16px;padding:14px;box-shadow:0 10px 28px rgba(27,94,32,.08);border:1px solid #d7e6db}
+label{display:block;font-size:13px;margin:8px 0 4px;color:#456}
+input,select,button{font:inherit}
+input[type=search],input[type=text],select{width:100%;min-height:44px;border:1px solid #cfd;border-radius:10px;padding:0 10px;background:#fff}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:700px){.grid2{grid-template-columns:1fr}}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.toolbar button,.primary,.secondary{min-height:42px;border-radius:10px;padding:0 12px;font-weight:700;cursor:pointer}
+.toolbar button,.secondary{border:1px solid var(--g);background:#fff;color:var(--g)}
+.primary{border:0;background:var(--g);color:#fff;width:100%;margin-top:10px}
+.cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin:14px 0}
+.cat{border:1px solid #d7e6db;border-radius:14px;background:linear-gradient(180deg,#fff,#f4faf5);padding:12px;text-align:start;cursor:pointer;min-height:88px}
+.cat.active{outline:2px solid var(--g);background:#e8f5e9}
+.cat small{display:block;margin-top:6px;color:var(--muted);font-size:12px}
+.badge{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:3px 8px;margin-top:6px}
+.badge.reg{background:#e8f5e9;color:var(--g)}
+.badge.free{background:#e3f2fd;color:#1565c0}
+.badge.warn{background:#fff8e1;color:var(--warn)}
+#results{display:grid;gap:10px;margin-top:12px}
+.card{background:#fff;border:1px solid #d7e6db;border-radius:14px;padding:12px;box-shadow:0 6px 18px rgba(0,0,0,.05)}
+.card h2{margin:0 0 6px;font-size:1.05rem;color:var(--g)}
+.empty{background:#f4faf5;border:1px dashed #9ccc65;border-radius:12px;padding:14px;color:#345;line-height:1.45}
+.links{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}
+.links a{color:var(--g);font-weight:700}
+nav.bottom{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #d7e6db;display:flex;justify-content:space-around;padding:10px 8px calc(10px + env(safe-area-inset-bottom));z-index:30}
+nav.bottom a{color:var(--g);text-decoration:none;font-size:.82rem;font-weight:700;text-align:center}
+</style>
+</head>
+<body data-health-page="directory">
+<header>
+  <div class="header-inner">
+    <button class="back" type="button" id="backButton" data-i18n-aria="health.back" aria-label="Back"><i class="fas fa-arrow-left"></i></button>
+    <div>
+      <h1 data-i18n="health.title">Doctors &amp; Pharmacies</h1>
+      <p class="subtitle" data-i18n="health.subtitle">Global healthcare discovery. Patients use HAVKAR for free. No invented providers.</p>
+    </div>
+  </div>
+</header>
+<main>
+  <p class="notice" id="platformNotice">
+    <strong data-i18n="health.platform_role_label">Platform role:</strong>
+    <span data-i18n="health.platform_notice">HAVKAR connects patients with independent licensed professionals. HAVKAR does not provide medical treatment, diagnosis, prescriptions or emergency care. For emergencies, contact local emergency services.</span>
+  </p>
+
+  <section class="search-panel" data-i18n-aria="health.search_aria" aria-label="Health search">
+    <div class="grid2">
+      <div>
+        <label for="qInput" data-i18n="health.q_label">Specialty / treatment / procedure</label>
+        <input id="qInput" type="search" data-i18n-placeholder="health.q_placeholder" placeholder="Cardiology, MRI, pharmacy…" autocomplete="off">
+      </div>
+      <div>
+        <label for="langFilter" data-i18n="health.lang_label">Provider language</label>
+        <select id="langFilter">
+          <option value="" data-i18n="health.any_language">Any language</option>
+          <option value="en">English</option>
+          <option value="it">Italiano</option>
+          <option value="de">Deutsch</option>
+          <option value="fr">Français</option>
+          <option value="es">Español</option>
+          <option value="pt">Português</option>
+          <option value="nl">Nederlands</option>
+          <option value="sv">Svenska</option>
+          <option value="pl">Polski</option>
+          <option value="id">Bahasa Indonesia</option>
+          <option value="zh">中文</option>
+          <option value="ja">日本語</option>
+          <option value="ko">한국어</option>
+          <option value="hi">हिन्दी</option>
+          <option value="ru">Русский</option>
+          <option value="ckb">کوردی سۆرانی</option>
+          <option value="kmr">Kurmancî</option>
+          <option value="tr">Türkçe</option>
+          <option value="ar">العربية</option>
+          <option value="fa">فارسی</option>
+          <option value="ur">اردو</option>
+        </select>
+      </div>
+      <div>
+        <label for="placeInput">Search place</label>
+        <input id="placeInput" type="search" placeholder="Country, region, city, address…" autocomplete="off">
+      </div>
+      <div>
+        <label for="countryInput" data-i18n="health.country">Country</label>
+        <input id="countryInput" type="text" placeholder="IT, SE, IR…" maxlength="2">
+      </div>
+      <div>
+        <label for="regionInput" data-i18n="health.region">Region / province</label>
+        <input id="regionInput" type="search" placeholder="Lazio, Skåne…" autocomplete="off">
+      </div>
+      <div>
+        <label for="cityInput" data-i18n="health.city">City</label>
+        <input id="cityInput" type="search" placeholder="Rome, Stockholm…" autocomplete="off">
+      </div>
+      <div>
+        <label for="distanceInput" data-i18n="health.distance">Distance km (with GPS)</label>
+        <input id="distanceInput" type="number" min="1" max="500" value="50">
+      </div>
+      <div>
+        <label for="groupFilter" data-i18n="health.group_label">Category group</label>
+        <select id="groupFilter">
+          <option value="" data-i18n="health.all_groups">All groups</option>
+          <option value="doctors" data-i18n-group="doctors">Doctors</option>
+          <option value="pharmacy" data-i18n-group="pharmacy">Pharmacies</option>
+          <option value="facilities" data-i18n-group="facilities">Hospitals &amp; clinics</option>
+          <option value="diagnostics" data-i18n-group="diagnostics">Labs &amp; imaging</option>
+          <option value="care" data-i18n-group="care">Rehab / mental health / addiction</option>
+          <option value="herbal" data-i18n-group="herbal">Herbal</option>
+          <option value="travel" data-i18n-group="travel">Medical travel</option>
+        </select>
+      </div>
+    </div>
+    <div class="toolbar">
+      <button type="button" id="gpsBtn" data-i18n="health.use_location">Use my location</button>
+      <button type="button" id="placeBtn">Search place</button>
+      <button type="button" id="verifiedOnlyBtn" aria-pressed="false" data-i18n="health.verified_only">Verified only</button>
+      <button type="button" id="insuranceBtn" aria-pressed="false" data-i18n="health.insurance">Insurance listed</button>
+      <button type="button" id="accessBtn" aria-pressed="false" data-i18n="health.accessibility">Accessibility notes</button>
+      <button type="button" id="slotsBtn" aria-pressed="false" data-i18n="health.open_slots">Open slots</button>
+      <button type="button" id="clearCatBtn" data-i18n="health.all_categories">All categories</button>
+    </div>
+    <p id="geoLabel" class="notice" style="margin-top:10px;margin-bottom:0" data-i18n="health.map_empty">Search by country, city, or use GPS. Provider list stays available without a map.</p>
+    <button class="primary" type="button" id="searchBtn" data-i18n="health.search">Search providers</button>
+    <p id="status" role="status"></p>
+  </section>
+
+  <h2 style="margin:16px 0 8px;color:var(--g);font-size:1.1rem" data-i18n="health.categories">Categories</h2>
+  <div class="cats" id="categoryGrid" data-i18n-aria="health.categories" aria-label="Health categories"></div>
+
+  <div id="results" aria-live="polite"></div>
+  <div id="empty" class="empty">
+    <strong data-i18n="health.empty_title">No published health providers match this search.</strong>
+    <span data-i18n="health.empty_body">HAVKAR never invents doctors, pharmacies, prices or availability. Licensed professionals can register for verification.</span>
+  </div>
+
+  <section class="search-panel" id="healthNearPanel" aria-label="Nearby health places" style="margin-top:14px">
+    <h2 style="margin:0 0 8px;color:var(--g);font-size:1.1rem">Nearby hospitals &amp; pharmacies (map data)</h2>
+    <p class="notice" style="margin:0 0 10px">Uses the shared TomTom POI service around your search place or GPS. This is not a HAVKAR verified-provider badge and is not an interactive map tile. For map layers open Accommodation or Tickets.</p>
+    <div class="toolbar">
+      <button type="button" id="healthNearBtn">Find nearby health POIs</button>
+      <a class="secondary" style="display:inline-flex;align-items:center;text-decoration:none;padding:8px 12px" href="accommodation.html">Open Accommodation map</a>
+      <a class="secondary" style="display:inline-flex;align-items:center;text-decoration:none;padding:8px 12px" href="tickets.html">Open Tickets map</a>
+    </div>
+    <p id="healthNearStatus" role="status"></p>
+    <div id="healthNearResults"></div>
+  </section>
+
+  <div class="links">
+    <a href="calls.html">Calls (voice/video — requires TURN)</a>
+    <a href="health-telehealth.html">Telehealth</a>
+    <a href="health-provider-apply.html" data-i18n="health.link_register">Register as a doctor or pharmacy</a>
+    <a href="health-dashboard.html" data-i18n="health.link_dashboard">Provider dashboard</a>
+    <a href="health-medicine.html" data-i18n="health.link_medicine">Medicine encyclopedia</a>
+    <a href="health-herbal.html" data-i18n="health.link_herbal">Herbal directory</a>
+    <a href="health-travel.html" data-i18n="health.link_travel">International medical travel</a>
+    <a href="health-rankings.html" data-i18n="health.link_rankings">Professional rankings</a>
+    <a href="reviews.html?mine=1" data-i18n="health.link_reviews">My Reviews</a>
+    <a href="index.html" data-i18n="health.home">Home</a>
+  </div>
+</main>
+<nav class="bottom" data-i18n-aria="health.title" aria-label="Health">
+  <a href="index.html" data-i18n="health.home">Home</a>
+  <a href="health.html" data-i18n="health.nav_directory">Directory</a>
+  <a href="health-medicine.html" data-i18n="health.nav_medicines">Medicines</a>
+  <a href="health-dashboard.html" data-i18n="health.nav_dashboard">Dashboard</a>
+</nav>
+<script src="/havkar-health-i18n.js"></script>
+<script src="/havkar-premium-i18n.js"></script>
+<script src="/havkar-ui-i18n21.js"></script>
+<script src="/havkar-i18n.js"></script>
+<script src="/havkar-page-back.js"></script>
+<script>
+(function () {
+  var I18N = window.HAVKAR_HEALTH_I18N;
+  function ht(key, vars) {
+    return I18N && I18N.t ? I18N.t(key, vars) : key;
+  }
+  function catLabel(id, fallback) {
+    return I18N && I18N.categoryLabel ? I18N.categoryLabel(id, fallback) : (fallback || id);
+  }
+  function grpLabel(id, fallback) {
+    return I18N && I18N.groupLabel ? I18N.groupLabel(id, fallback) : (fallback || id);
+  }
+  function localizeStaticGroups() {
+    document.querySelectorAll("[data-i18n-group]").forEach(function (el) {
+      var id = el.getAttribute("data-i18n-group");
+      el.textContent = grpLabel(id, el.textContent);
+    });
+  }
+
+  var selectedCategory = "";
+  var verifiedOnly = false;
+  var insuranceOnly = false;
+  var accessOnly = false;
+  var openSlotsOnly = false;
+  var userLat = null;
+  var userLng = null;
+  var categories = [];
+  var statusEl = document.getElementById("status");
+  var resultsEl = document.getElementById("results");
+  var emptyEl = document.getElementById("empty");
+
+  function setStatus(t) { statusEl.textContent = t || ""; }
+
+  function renderCategories() {
+    var grid = document.getElementById("categoryGrid");
+    grid.innerHTML = "";
+    categories.forEach(function (c) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "cat" + (selectedCategory === c.id ? " active" : "");
+      btn.innerHTML = "<strong></strong><small></small><span class=\"badge\"></span>";
+      btn.querySelector("strong").textContent = catLabel(c.id, c.label);
+      btn.querySelector("small").textContent =
+        grpLabel(c.group, c.group) +
+        " · " +
+        (c.regulated ? ht("health.regulated") : ht("health.not_clinician"));
+      var badge = btn.querySelector(".badge");
+      if (c.subscription_required === false) {
+        badge.className = "badge free";
+        badge.textContent = ht("health.badge_free");
+      } else if (c.regulated) {
+        badge.className = "badge reg";
+        badge.textContent = ht("health.badge_license");
+      } else {
+        badge.className = "badge warn";
+        badge.textContent = ht("health.badge_unlabeled");
+      }
+      btn.addEventListener("click", function () {
+        if (c.id === "medicine_info") {
+          location.href = "health-medicine.html";
+          return;
+        }
+        location.href = "health-category.html?id=" + encodeURIComponent(c.id);
+      });
+      grid.appendChild(btn);
+    });
+  }
+
+  function renderProviders(rows) {
+    resultsEl.innerHTML = "";
+    if (!rows || !rows.length) {
+      emptyEl.hidden = false;
+      return;
+    }
+    emptyEl.hidden = true;
+    rows.forEach(function (row) {
+      var card = document.createElement("article");
+      card.className = "card";
+      var verified = row.license_status === "verified";
+      card.innerHTML =
+        "<h2></h2><p></p><p class=\"notice\" style=\"margin:0\"></p>" +
+        "<span class=\"badge\"></span> " +
+        "<div class=\"toolbar\" style=\"margin-top:8px\"></div>";
+      card.querySelector("h2").textContent = row.display_name || ht("health.provider");
+      card.querySelector("p").textContent =
+        [catLabel(row.category_id, row.category_id), row.city, row.country_code].filter(Boolean).join(" · ");
+      card.querySelector(".notice").textContent =
+        verified ? ht("health.license_verified") : ht("health.license_unverified");
+      var b = card.querySelector(".badge");
+      b.className = "badge " + (verified ? "reg" : "warn");
+      b.textContent = verified ? ht("health.verified_license") : ht("health.unverified");
+      var actions = card.querySelector(".toolbar");
+      var profile = document.createElement("a");
+      profile.className = "secondary";
+      profile.style.cssText = "display:inline-flex;align-items:center;text-decoration:none;padding:8px 12px";
+      profile.href = "health-provider.html?id=" + encodeURIComponent(row.id || "");
+      profile.textContent = ht("health.open_profile");
+      actions.appendChild(profile);
+      if (row.latitude != null && row.longitude != null) {
+        var dir = document.createElement("a");
+        dir.className = "secondary";
+        dir.style.cssText = "display:inline-flex;align-items:center;text-decoration:none;padding:8px 12px";
+        dir.href = "https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=;" +
+          encodeURIComponent(row.latitude + "," + row.longitude);
+        dir.textContent = ht("health.directions");
+        dir.target = "_blank";
+        dir.rel = "noopener";
+        actions.appendChild(dir);
+      }
+      resultsEl.appendChild(card);
+    });
+  }
+
+  async function loadCatalog() {
+    var res = await fetch("/api/health", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "health_catalog" })
+    });
+    var body = await res.json();
+    if (!body || body.ok !== true) {
+      setStatus((body && body.error) || ht("health.catalog_unavailable"));
+      return;
+    }
+    categories = body.categories || [];
+    var code = I18N && I18N.lang ? I18N.lang() : "en";
+    var notice =
+      (body.platform_role && (body.platform_role[code] || body.platform_role.en)) ||
+      ht("health.platform_notice");
+    document.getElementById("platformNotice").innerHTML =
+      "<strong>" + ht("health.platform_role_label") + "</strong> " + notice;
+    renderCategories();
+    var flagOn = !!(
+      (body.subscriptions && body.subscriptions.live_billing_enabled) ||
+      body.live_billing_enabled
+    );
+    var chargeAllowed = !!(
+      body.subscriptions && body.subscriptions.charge_allowed_now
+    );
+    var billingLabel = !flagOn
+      ? ht("health.billing_off")
+      : chargeAllowed
+        ? ht("health.billing_on")
+        : "flag ON · charge still OFF";
+    setStatus(
+      ht("health.billing_status", {
+        status: billingLabel
+      })
+    );
+  }
+
+  async function runSearch() {
+    setStatus(ht("health.searching"));
+    try {
+      var res = await fetch("/api/health", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "health_search",
+          q: document.getElementById("qInput").value,
+          city: document.getElementById("cityInput").value,
+          region: document.getElementById("regionInput").value,
+          country_code: document.getElementById("countryInput").value,
+          language: document.getElementById("langFilter").value,
+          category_id: selectedCategory,
+          category_group: document.getElementById("groupFilter").value,
+          verified_only: verifiedOnly,
+          accepts_insurance: insuranceOnly,
+          accessibility_required: accessOnly,
+          has_open_slots: openSlotsOnly,
+          distance_km: document.getElementById("distanceInput").value,
+          latitude: userLat,
+          longitude: userLng
+        })
+      });
+      var body = await res.json();
+      if (!body || body.ok !== true) {
+        setStatus((body && body.error) || ht("health.search_failed"));
+        renderProviders([]);
+        return;
+      }
+      var rows = body.results || [];
+      setStatus(ht("health.matches", { n: rows.length }));
+      renderProviders(rows);
+    } catch (e) {
+      setStatus(ht("health.search_request_failed"));
+      renderProviders([]);
+    }
+  }
+
+  document.getElementById("searchBtn").addEventListener("click", runSearch);
+  document.getElementById("clearCatBtn").addEventListener("click", function () {
+    selectedCategory = "";
+    renderCategories();
+    runSearch();
+  });
+  document.getElementById("verifiedOnlyBtn").addEventListener("click", function () {
+    verifiedOnly = !verifiedOnly;
+    this.setAttribute("aria-pressed", verifiedOnly ? "true" : "false");
+    this.classList.toggle("active", verifiedOnly);
+    runSearch();
+  });
+  document.getElementById("insuranceBtn").addEventListener("click", function () {
+    insuranceOnly = !insuranceOnly;
+    this.setAttribute("aria-pressed", insuranceOnly ? "true" : "false");
+    runSearch();
+  });
+  document.getElementById("accessBtn").addEventListener("click", function () {
+    accessOnly = !accessOnly;
+    this.setAttribute("aria-pressed", accessOnly ? "true" : "false");
+    runSearch();
+  });
+  document.getElementById("slotsBtn").addEventListener("click", function () {
+    openSlotsOnly = !openSlotsOnly;
+    this.setAttribute("aria-pressed", openSlotsOnly ? "true" : "false");
+    runSearch();
+  });
+  document.getElementById("groupFilter").addEventListener("change", runSearch);
+  document.getElementById("backButton").addEventListener("click", function () {
+    if (window.havkarNavigateBack) window.havkarNavigateBack();
+    else location.href = "index.html";
+  });
+
+  document.getElementById("placeBtn").addEventListener("click", function () {
+    var q = String(document.getElementById("placeInput").value || "").trim();
+    if (q.length < 2) return;
+    fetch("/api/hotels", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "hotels_geocode", query: q })
+    }).then(function (res) { return res.json(); }).then(function (geo) {
+      if (!geo || geo.ok !== true || !geo.primary) {
+        document.getElementById("geoLabel").textContent = ht("health.gps_denied");
+        return;
+      }
+      userLat = Number(geo.primary.latitude);
+      userLng = Number(geo.primary.longitude);
+      document.getElementById("geoLabel").textContent = geo.primary.label || ht("health.gps_ok");
+      if (geo.primary.address && geo.primary.address.city) {
+        document.getElementById("cityInput").value = geo.primary.address.city;
+      }
+      runSearch();
+    }).catch(function () {
+      document.getElementById("geoLabel").textContent = ht("health.gps_denied");
+    });
+  });
+
+  document.getElementById("gpsBtn").addEventListener("click", function () {
+    if (!navigator.geolocation) {
+      document.getElementById("geoLabel").textContent = ht("health.gps_denied");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      userLat = pos.coords.latitude;
+      userLng = pos.coords.longitude;
+      document.getElementById("geoLabel").textContent = ht("health.gps_ok");
+      runSearch();
+    }, function () {
+      document.getElementById("geoLabel").textContent = ht("health.gps_denied");
+    }, { enableHighAccuracy: true, timeout: 12000 });
+  });
+
+  function renderNearPois(body) {
+    var box = document.getElementById("healthNearResults");
+    var st = document.getElementById("healthNearStatus");
+    box.innerHTML = "";
+    if (!body || body.ok !== true) {
+      st.textContent = (body && (body.message || body.error)) || "Nearby POI lookup failed.";
+      return;
+    }
+    var groups = (body.groups || []).filter(function (g) {
+      return g.id === "hospital" || g.id === "pharmacy";
+    });
+    var count = 0;
+    groups.forEach(function (g) {
+      count += (g.places || []).length;
+      (g.places || []).slice(0, 5).forEach(function (p) {
+        var card = document.createElement("article");
+        card.className = "card";
+        card.innerHTML = "<h2></h2><p></p><p class=\"notice\" style=\"margin:0\"></p>";
+        card.querySelector("h2").textContent = p.name || g.label;
+        card.querySelector("p").textContent =
+          (g.label || "") +
+          (p.distance_m != null ? " · " + p.distance_m + " m" : "") +
+          (p.address ? " · " + p.address : "");
+        card.querySelector(".notice").textContent =
+          "Source: TomTom POI · " +
+          (p.fetched_at || body.last_updated || "") +
+          " · not a HAVKAR license verification";
+        var a = document.createElement("a");
+        a.className = "secondary";
+        a.style.cssText = "display:inline-flex;margin-top:8px;text-decoration:none;padding:8px 12px";
+        a.href =
+          "tickets.html#travelMapPanel";
+        a.textContent = "Open shared travel map";
+        card.appendChild(a);
+        box.appendChild(card);
+      });
+    });
+    st.textContent =
+      count > 0
+        ? count + " TomTom health POIs near coordinates (radius " + (body.radius_m || "") + " m)."
+        : (body.message ||
+            "No TomTom hospital/pharmacy POIs in radius. Empty coverage is reported honestly.");
+  }
+
+  document.getElementById("healthNearBtn").addEventListener("click", function () {
+    var st = document.getElementById("healthNearStatus");
+    if (userLat == null || userLng == null) {
+      st.textContent = "Set a place or allow GPS first — HAVKAR will not invent a location.";
+      return;
+    }
+    st.textContent = "Loading TomTom hospital/pharmacy POIs…";
+    var radiusKm = Number(document.getElementById("distanceInput").value) || 5;
+    var radiusM = Math.min(Math.max(Math.round(radiusKm * 1000), 500), 20000);
+    fetch(
+      "/api/map-nearby-pois?lat=" +
+        encodeURIComponent(userLat) +
+        "&lng=" +
+        encodeURIComponent(userLng) +
+        "&radius_m=" +
+        encodeURIComponent(radiusM) +
+        "&limit=5&category=all",
+      { headers: { Accept: "application/json" }, cache: "no-store" }
+    )
+      .then(function (r) {
+        return r.json();
+      })
+      .then(renderNearPois)
+      .catch(function () {
+        st.textContent = "Nearby POI network error.";
+      });
+  });
+
+  if (I18N) {
+    I18N.apply(document.body);
+    localizeStaticGroups();
+  }
+  if (window.HAVKAR_PREMIUM_I18N) window.HAVKAR_PREMIUM_I18N.apply(document.body);
+  loadCatalog().then(runSearch);
+})();
+</script>
+
+<!-- HAVKAR contextual help -->
+<p class="havkar-contextual-help" style="margin:10px 0;font-size:.85rem">
+  <a href="support.html?tile=health#tile-health">Help for this section</a>
+</p>
+</body>
+</html>

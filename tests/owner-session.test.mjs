@@ -17,8 +17,10 @@ assert.doesNotMatch(sql, /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-
 assert.doesNotMatch(sql, /UPDATE auth\.users/);
 
 assert.match(profile, /havkar_session_is_owner/);
+assert.match(profile, /havkar_session_role/);
 assert.match(profile, /Staff permissions do not reveal this button/);
-assert.match(admin, /havkar_session_is_owner/);
-assert.match(admin, /admin\.data !== true/);
+assert.match(admin, /havkar_owner_dashboard_overview/);
+assert.match(admin, /Authorized as/);
+assert.match(admin, /Profile entry only/);
 
 console.log("OWNER_SESSION_TEST_OK");

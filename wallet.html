@@ -1220,7 +1220,10 @@ select:focus{
 
     </button>  
 
-    <h1>Wallet</h1>  
+    <h1>Wallet</h1>
+    <p id="currencyRailsNotice" style="margin:8px 0 0;font-size:.9rem;line-height:1.4;color:#456">
+      Display currency · Charge currency · Settlement currency are separate. XLM rail separate. Live payments paused until Owner enables collection.
+    </p>  
 
 </div>  
 
@@ -1354,7 +1357,18 @@ select:focus{
         <button id="stellarSendButton" class="stellar-send-button" type="button" onclick="sendHAVKARStellarPayment()">  
             Sign and send on Testnet  
         </button>  
-    </div>  
+    </div>
+    <div id="stellarReceiveRegister" class="stellar-send" style="margin-top:14px">
+        <label class="stellar-label" for="stellarReceivePublicKey">Marketplace / services receive public key</label>
+        <p class="stellar-note">Register the G… account that should receive buyer XLM under direct-split settlement. HAVKAR never asks for a secret key.</p>
+        <input id="stellarReceivePublicKey" class="stellar-input" type="text" autocomplete="off" spellcheck="false" placeholder="G...">
+        <button id="stellarReceiveSaveButton" class="stellar-send-button" type="button" onclick="saveHAVKARStellarReceiveKey()">
+            Save receive key
+        </button>
+        <button id="stellarReceiveUseConnectedButton" class="stellar-disconnect-button" type="button" onclick="useConnectedAsStellarReceiveKey()">
+            Use connected wallet
+        </button>
+    </div>
     <div id="stellarStatus" class="stellar-status"></div>  
     <div class="stellar-note">  
         Pi Network payment is disconnected on this screen. No Mainnet Pi payment is started from Wallet.  
@@ -1447,19 +1461,15 @@ select:focus{
     class="currency-select"  
     onchange="changeDisplayCurrency()"  
     translate="no"  
-    data-i18n-ignore>  
-
-    <option value="EUR">EUR — Euro — €</option>  
-    <option value="USD">USD — US Dollar — $</option>  
-    <option value="GBP">GBP — British Pound — £</option>  
-    <option value="CHF">CHF — Swiss Franc — CHF</option>  
-    <option value="SEK">SEK — Swedish Krona — kr</option>  
-    <option value="CNY">CNY — Chinese Yuan — ¥</option>  
-    <option value="JPY">JPY — Japanese Yen — ¥</option>  
-    <option value="AED">AED — UAE Dirham — AED</option>  
-    <option value="RUB">RUB — Russian Ruble — ₽</option>  
-
+    data-i18n-ignore
+    hidden
+    aria-hidden="true">  
+    <option value="EUR">EUR</option>
 </select>
+<div id="walletDisplayCurrencyMount" data-havkar-currency-mount="1"></div>
+<p class="portfolio-label" style="margin-top:8px;font-size:.82rem;line-height:1.35;color:#456">
+  Display currency only (133 fiat presentment codes). Withdrawal / settlement rails below stay EUR or USD until Owner-approved payment rails expand. XLM is a separate crypto rail.
+</p>
 
 </div>  <!-- =========================================================  
      WALLETS  
@@ -1696,11 +1706,12 @@ select:focus{
     <label>Amount</label>  
     <input id="withdrawAmount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00">  
 
-    <label>Currency</label>  
-    <select id="withdrawCurrency">  
-        <option value="EUR">EUR</option>  
-        <option value="USD">USD</option>  
-    </select>  
+    <label>Settlement currency (supported payout rails)</label>  
+    <select id="withdrawCurrency" aria-label="Supported settlement currency">  
+        <option value="EUR">EUR — Euro settlement</option>  
+        <option value="USD">USD — US Dollar settlement</option>  
+    </select>
+    <p style="margin:6px 0 0;font-size:.82rem;color:#567">Not all display currencies can be withdrawn. Only EUR/USD settlement is enabled here.</p>  
 
     <label>IBAN</label>  
     <input id="withdrawIban" type="text" autocomplete="off" spellcheck="false" placeholder="IBAN">  
@@ -1782,17 +1793,7 @@ select:focus{
     <i class="fas fa-history"></i>  
     History  
 
-</div>  
-
-<div  
-    class="nav-item"  
-    onclick="goPage('profile.html')">  
-
-    <i class="fas fa-user"></i>  
-    Profile  
-
 </div>
-
 </div>  <!-- =========================================================  
      STELLAR WALLET BUNDLE  
      ========================================================= -->  <script src="./stellar-wallet-bundle.js"></script>  <!-- =========================================================  
@@ -5582,16 +5583,43 @@ document.addEventListener(
    ========================================================= */  
   
 supabaseClient.auth.onAuthStateChange(  
-    function(  
+    async function(  
         event,  
         session  
     ){  
   
         currentUser =  
-            session?.user || null;  
+            session?.user || null;
+
+        if(currentUser?.id){
+            await loadHAVKARStellarReceiveKey();
+        }
   
     }  
-);  
+);
+
+async function loadHAVKARStellarReceiveKey(){
+    const input=document.getElementById("stellarReceivePublicKey");
+    if(!input || !supabaseClient || !currentUser?.id){
+        return;
+    }
+    try{
+        const loaded=await supabaseClient
+            .from("stellar_receive_accounts")
+            .select("public_key")
+            .eq("user_id", currentUser.id)
+            .maybeSingle();
+        if(loaded.error){
+            return;
+        }
+        const key=String(loaded.data?.public_key||"").trim();
+        if(/^G[A-Z2-7]{55}$/.test(key)){
+            input.value=key;
+        }
+    }catch(_error){
+        // Migration may not be applied yet.
+    }
+}  
   
   
 /* =========================================================  
@@ -5789,6 +5817,68 @@ async function disconnectHAVKARStellar(){
     }  
 }  
   
+function useConnectedAsStellarReceiveKey(){
+    const address=String(window.HAVKAR_STELLAR?.address||"").trim();
+    const input=document.getElementById("stellarReceivePublicKey");
+    if(!input){
+        return;
+    }
+    if(!/^G[A-Z2-7]{55}$/.test(address)){
+        setStellarStatus("Connect a Stellar wallet first, or paste a G… public key.","error");
+        return;
+    }
+    input.value=address;
+    setStellarStatus("Connected public key copied into the receive field. Save to register it.","info");
+}
+
+async function saveHAVKARStellarReceiveKey(){
+    const input=document.getElementById("stellarReceivePublicKey");
+    const button=document.getElementById("stellarReceiveSaveButton");
+    const key=String(input?.value||"").trim();
+    if(!/^G[A-Z2-7]{55}$/.test(key)){
+        setStellarStatus("Enter a valid Stellar public key (G…). Never paste a secret key.","error");
+        return;
+    }
+    if(!supabaseClient){
+        setStellarStatus("Sign in is required to register a receive key.","error");
+        return;
+    }
+    button.disabled=true;
+    try{
+        const session=await supabaseClient.auth.getSession();
+        const user=session?.data?.session?.user;
+        if(!user?.id){
+            setStellarStatus("Sign in before saving a marketplace receive key.","error");
+            return;
+        }
+        const saved=await supabaseClient
+            .from("stellar_receive_accounts")
+            .upsert(
+                {
+                    user_id:user.id,
+                    public_key:key,
+                    updated_at:new Date().toISOString()
+                },
+                { onConflict:"user_id" }
+            )
+            .select("public_key")
+            .single();
+        if(saved.error){
+            setStellarStatus(
+                saved.error.message||
+                "Could not save receive key. Owner may still need to apply the stellar_receive_accounts migration.",
+                "error"
+            );
+            return;
+        }
+        setStellarStatus("Receive public key saved for direct-split XLM settlement.","success");
+    }catch(error){
+        setStellarStatus(error?.message||"Could not save receive key.","error");
+    }finally{
+        button.disabled=false;
+    }
+}
+
 async function sendHAVKARStellarPayment(){  
     const button=document.getElementById("stellarSendButton");  
     const destination=document.getElementById("stellarDestination")?.value||"";  
@@ -5846,11 +5936,42 @@ window.addEventListener("havkar-stellar-error",function(event){
    START  
    ========================================================= */  
   
+async function refreshCurrencyRailsHonesty(){
+    try{
+        const res=await fetch("/api/payment-status",{cache:"no-store"});
+        const body=await res.json().catch(function(){return null;});
+        const xlmLive=body&&body.stellar_mainnet_customer_live==="armed";
+        const cardLive=body&&body.customer_facing_collection==="armed";
+        window.HAVKAR_XLM_MAINNET_LIVE_COLLECTION=xlmLive===true;
+        const notice=document.getElementById("currencyRailsNotice");
+        if(notice){
+            notice.textContent=xlmLive||cardLive
+                ?"Display · Charge · Settlement are separate. Owner-armed collection rails are active for verified flows only. Peer wallet Mainnet sends still require your wallet approval; HAVKAR never invents balances."
+                :"Display · Charge · Settlement are separate. XLM rail separate. Live customer collection is paused until Owner arms it.";
+        }
+        const orig=window.havkarGetStellarNetwork;
+        if(typeof orig==="function"&&!window.__havkarStellarNetworkPatched){
+            window.__havkarStellarNetworkPatched=true;
+            window.havkarGetStellarNetwork=function(){
+                const n=orig();
+                if(n&&n.id==="PUBLIC"&&window.HAVKAR_XLM_MAINNET_LIVE_COLLECTION!==true){
+                    return Object.assign({},n,{paymentsEnabled:false});
+                }
+                return n;
+            };
+        }
+    }catch(_e){
+        window.HAVKAR_XLM_MAINNET_LIVE_COLLECTION=false;
+    }
+}
+
 async function startWallet(){  
   
     clearError();  
   
     applySavedDisplayCurrency();  
+
+    await refreshCurrencyRailsHonesty();
   
     renderStellarNetwork();  
   
@@ -5881,8 +6002,65 @@ startWallet();
   
 </script>
 
+<script src="/havkar-currency-select.js"></script>
+<script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
+<script>
+(function(){
+  var mount = document.getElementById("walletDisplayCurrencyMount");
+  var hidden = document.getElementById("displayCurrency");
+  if(!mount || !hidden || !window.HAVKAR_CURRENCY_SELECT) return;
+  window.HAVKAR_CURRENCY_SELECT.mount(mount, {
+    initialCurrency: hidden.value || "EUR",
+    includeXlm: true,
+    onChange: function(sel){
+      if(!sel) return;
+      if(sel.method === "xlm_mainnet"){
+        // Display helper only — wallet settlement remains fiat-gated.
+        if(typeof showStatus === "function"){
+          try{ showStatus("walletStatus", "XLM selected as crypto rail preference. Fiat wallet display unchanged until Owner-authorized XLM settlement.", "info"); }catch(_e){}
+        }
+        return;
+      }
+      if(sel.currency){
+        hidden.value = String(sel.currency).toUpperCase();
+        if(typeof changeDisplayCurrency === "function") changeDisplayCurrency();
+      }
+    }
+  });
+})();
+</script>
 
 <script src="/havkar-page-back.js"></script>
+
+<script>
+(function(){
+  async function loadRails(){
+    var el=document.getElementById('currencyRailsNotice');
+    if(!el) return;
+    try{
+      var res=await fetch('/api/currency-matrix',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'currency_rails_status'})});
+      var body=await res.json();
+      if(!body||body.ok!==true) return;
+      var pack=(window.HAVKAR_UI_I18N21&&window.HAVKAR_UI_I18N21.pack)?window.HAVKAR_UI_I18N21.pack((localStorage.getItem('havkar_language')||'en')):{};
+      var display=pack['Display currency']||'Display currency';
+      var charge=pack['Charge currency']||'Charge currency';
+      var settle=pack['Settlement currency']||'Settlement currency';
+      var paused=pack['Live payments paused']||'Live payments paused';
+      var present=body.presentment&&body.presentment.count?body.presentment.count:'133';
+      var healthOff=(body.module_scopes&&body.module_scopes.health_subscription_billing&&body.module_scopes.health_subscription_billing.effective==='OFF');
+      var means=(body.honesty&&body.honesty.live_payments_paused_means)||'';
+      el.textContent=display+' ('+present+') · '+charge+' · '+settle+' · XLM separate. '+(body.honesty&&body.honesty.live_payments_paused?paused:('Global collection armed'+(healthOff?'; Health billing OFF':'')))+(means?' · '+means:'');
+    }catch(_e){}
+  }
+  loadRails();
+})();
+</script>
+
+
+<!-- HAVKAR contextual help -->
+<p class="havkar-contextual-help" style="margin:10px 0;font-size:.85rem">
+  <a href="support.html?tile=wallet#tile-wallet">Help for this section</a>
+</p>
 </body>  
       </html>  

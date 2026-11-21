@@ -1,3 +1,5 @@
+import { piPaymentsAllowed } from "../lib/real-payments.cjs";
+
 function piAction(req) {
     const queryAction = req.query?.piAction;
     const action = Array.isArray(queryAction) ? queryAction[0] : queryAction;
@@ -27,13 +29,7 @@ function readPiResponse(text) {
 }
 
 export default async function handler(req, res) {
-    if (process.env.HAVKAR_REAL_PAYMENTS_ENABLED !== "true") {
-        return res.status(404).json({
-            error: "Not found"
-        });
-    }
-
-    if (process.env.HAVKAR_PI_PAYMENTS_ENABLED !== "true") {
+    if (!piPaymentsAllowed()) {
         return res.status(404).json({
             error: "Not found"
         });

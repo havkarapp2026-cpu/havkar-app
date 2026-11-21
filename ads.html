@@ -546,6 +546,21 @@
             gap: 9px;
         }
 
+        .ad-actions.has-owner-delete {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .ad-actions .action-btn.danger {
+            grid-column: 1 / -1;
+            border-color: #c62828;
+            color: #b71c1c;
+            background: #fff5f5;
+        }
+
+        .ad-actions .action-btn.danger:hover {
+            background: #ffebee;
+        }
+
         .action-btn {
             min-height: 43px;
             border-radius: 11px;
@@ -629,10 +644,10 @@
             right: 20px;
             bottom:
                 calc(
-                    78px +
+                    88px +
                     env(safe-area-inset-bottom)
                 );
-            z-index: 900;
+            z-index: 4100;
             width: 62px;
             height: 62px;
             border: none;
@@ -1083,6 +1098,16 @@
             <button
                 class="header-icon-btn"
                 type="button"
+                onclick="showMyCampaigns()"
+                aria-label="My Campaigns"
+                title="My Campaigns"
+            >
+                <i class="fas fa-chart-line"></i>
+            </button>
+
+            <button
+                class="header-icon-btn"
+                type="button"
                 onclick="focusSearch()"
                 aria-label="Search"
             >
@@ -1209,7 +1234,7 @@
         <i class="fas fa-plus"></i>
     </button>
 
-    <nav class="bottom-nav">
+    <nav class="bottom-nav" aria-label="Ads navigation">
 
         <button
             class="nav-item"
@@ -1240,11 +1265,13 @@
 
         <button
             class="nav-item"
+            id="myCampaignsNavButton"
             type="button"
-            onclick="goProfile()"
+            onclick="showMyCampaigns()"
+            aria-label="My Campaigns"
         >
-            <i class="fas fa-user"></i>
-            <span>Profile</span>
+            <i class="fas fa-chart-line"></i>
+            <span>Campaigns</span>
         </button>
 
     </nav>
@@ -1369,6 +1396,31 @@
 
                         </div>
 
+                        <details class="form-group" style="grid-column:1 / -1;border:1px solid #d7e3d8;border-radius:12px;padding:10px 12px;background:#f7faf7">
+                            <summary class="form-label" style="cursor:pointer;list-style:none;margin:0">
+                                Currency (133 fiat + XLM) — tap to expand
+                            </summary>
+                            <label class="form-label" for="adCurrency" style="margin-top:10px">
+                                Offer display currency
+                            </label>
+                            <input
+                                type="hidden"
+                                id="adCurrency"
+                                name="currency"
+                                value="EUR"
+                            >
+                            <div
+                                id="adCurrencyMount"
+                                data-havkar-currency-mount="1"
+                            ></div>
+                            <p
+                                class="form-hint"
+                                style="font-size:.85rem;color:#567;margin:6px 0 0"
+                            >
+                                Display/quotation currency for this offer. Live Stripe charging still follows real Stripe capability — not all 133 can be charged.
+                            </p>
+                        </details>
+
                         <div class="form-group">
 
                             <label
@@ -1390,7 +1442,128 @@
 
                         </div>
 
+                        <div class="form-group">
+
+                            <label class="form-label" for="adCountry">
+                                Country code
+                            </label>
+
+                            <input
+                                class="form-control"
+                                id="adCountry"
+                                type="text"
+                                maxlength="2"
+                                placeholder="IT"
+                                autocomplete="country"
+                            >
+
+                        </div>
+
+                        <div class="form-group">
+
+                            <label class="form-label" for="adCity">
+                                City
+                            </label>
+
+                            <input
+                                class="form-control"
+                                id="adCity"
+                                type="text"
+                                maxlength="120"
+                                placeholder="Milan"
+                            >
+
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="adTargetRadiusKm">
+                                Targeting radius (km)
+                            </label>
+                            <input
+                                class="form-control"
+                                id="adTargetRadiusKm"
+                                type="number"
+                                min="1"
+                                max="500"
+                                step="1"
+                                value="25"
+                                placeholder="25"
+                            >
+                            <p style="margin:6px 0 0;font-size:.82rem;color:#567">
+                                Coordinates are geocoded from City / Location when you save — never invented. No interactive map on this page.
+                            </p>
+                            <input type="hidden" id="adLatitude" value="">
+                            <input type="hidden" id="adLongitude" value="">
+                        </div>
+
+                        <div class="form-group">
+
+                            <label class="form-label" for="adStarts">
+                                Starts at
+                            </label>
+
+                            <input
+                                class="form-control"
+                                id="adStarts"
+                                type="datetime-local"
+                            >
+
+                        </div>
+
+                        <div class="form-group">
+
+                            <label class="form-label" for="adExpires">
+                                Expires at
+                            </label>
+
+                            <input
+                                class="form-control"
+                                id="adExpires"
+                                type="datetime-local"
+                            >
+
+                        </div>
+
                     </div>
+
+                    <div class="form-group">
+
+                        <label class="form-label" for="adAudience">
+                            Target audience
+                        </label>
+
+                        <input
+                            class="form-control"
+                            id="adAudience"
+                            type="text"
+                            maxlength="500"
+                            placeholder="e.g. nearby lunch customers"
+                        >
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label class="form-label" for="adCampaignName">
+                            Campaign name (optional)
+                        </label>
+
+                        <input
+                            class="form-control"
+                            id="adCampaignName"
+                            type="text"
+                            maxlength="120"
+                            placeholder="Spring lunch campaign"
+                        >
+
+                    </div>
+
+                    <div
+                        id="adPreviewBox"
+                        class="pending-note"
+                        hidden
+                        aria-live="polite"
+                    ></div>
 
                     <div class="form-group">
 
@@ -1503,7 +1676,10 @@
     ></div>
 
     <script src="/havkar-supabase-config.js"></script>
+    <script src="/havkar-presentment-currencies.js"></script>
+    <script src="/havkar-currency-select.js"></script>
     <script src="/havkar-ad-images.js"></script>
+    <script src="/havkar-ads.js"></script>
     <script src="/havkar-ad-publish.js"></script>
     <script src="/havkar-marketplace.js"></script>
 <script>
@@ -1530,6 +1706,9 @@
             "all";
 
         let showingSavedOnly =
+            false;
+
+        let showingMineOnly =
             false;
 
         let selectedImageData =
@@ -1763,7 +1942,7 @@
                 await supabaseClient
                     .from(ADS_TABLE)
                     .select(
-                        "id,created_at,title,category,price,location,description,user_id,photos,status,listing_surface"
+                        "id,created_at,title,category,price,currency,location,description,user_id,photos,status,listing_surface,latitude,longitude"
                     )
                     .eq(
                         "listing_surface",
@@ -1788,7 +1967,7 @@
                     await supabaseClient
                         .from(ADS_TABLE)
                         .select(
-                            "id,created_at,title,category,price,location,description,user_id,photos,status"
+                            "id,created_at,title,category,price,currency,location,description,user_id,photos,status,latitude,longitude"
                         )
                         .order(
                             "created_at",
@@ -2104,6 +2283,9 @@
             showingSavedOnly =
                 false;
 
+            showingMineOnly =
+                false;
+
             document
                 .querySelectorAll(".tab")
                 .forEach(
@@ -2148,6 +2330,20 @@
                 ad => {
 
                     if (
+                        showingMineOnly
+                    ) {
+
+                        if (
+                            !currentUserId ||
+                            String(ad.user_id || "") !==
+                                String(currentUserId)
+                        ) {
+
+                            return false;
+
+                        }
+
+                    } else if (
                         !isPublicListingStatus(
                             ad.status
                         )
@@ -2275,7 +2471,9 @@
 
                         <h3>
                             ${
-                                showingSavedOnly
+                                showingMineOnly
+                                    ? "No campaigns yet"
+                                    : showingSavedOnly
                                     ? "No saved advertisements"
                                     : "No advertisements found"
                             }
@@ -2283,7 +2481,9 @@
 
                         <p>
                             ${
-                                showingSavedOnly
+                                showingMineOnly
+                                    ? "Create an advertisement with the + button. Pending, active and expired campaigns you own appear here."
+                                    : showingSavedOnly
                                     ? "Advertisements you save will appear here."
                                     : "Try another search or category, or create a new advertisement."
                             }
@@ -2527,7 +2727,8 @@
 
                             ${escapeHTML(
                                 formatPrice(
-                                    ad.price
+                                    ad.price,
+                                    ad.currency
                                 )
                             )}
 
@@ -2570,6 +2771,12 @@
 
                     `;
 
+            const locLabel = String(ad.location || "").trim();
+            const latNum = Number(ad.latitude);
+            const lngNum = Number(ad.longitude);
+            const latAttr = Number.isFinite(latNum) ? ` data-lat="${latNum}" data-latitude="${latNum}"` : "";
+            const lngAttr = Number.isFinite(lngNum) ? ` data-lng="${lngNum}" data-longitude="${lngNum}"` : "";
+
             return `
 
                 <article
@@ -2577,6 +2784,10 @@
                     data-ad-id="${escapeAttribute(
                         adId
                     )}"
+                    data-id="${escapeAttribute(adId)}"
+                    data-location="${escapeAttribute(locLabel)}"
+                    data-label="${escapeAttribute(locLabel.slice(0, 80))}"
+                    ${latAttr}${lngAttr}
                 >
 
                     <div class="ad-banner">
@@ -2743,7 +2954,13 @@
 
                         </div>
 
-                        <div class="ad-actions">
+                        <div class="ad-actions${
+                            currentUserId &&
+                            ad.user_id &&
+                            String(ad.user_id) === String(currentUserId)
+                                ? " has-owner-delete"
+                                : ""
+                        }">
 
                             <button
                                 class="action-btn primary"
@@ -2793,6 +3010,30 @@
 
                             </button>
 
+                            ${
+                                currentUserId &&
+                                ad.user_id &&
+                                String(ad.user_id) === String(currentUserId)
+                                    ? `
+                            <button
+                                class="action-btn danger"
+                                type="button"
+                                aria-label="Delete your advertisement"
+                                onclick="
+                                    confirmAndDeleteOwnAdvertisement(
+                                        '${escapeJS(
+                                            adId
+                                        )}'
+                                    )
+                                "
+                            >
+                                <i class="fas fa-trash"></i>
+                                Delete
+                            </button>
+                                    `
+                                    : ""
+                            }
+
                         </div>
 
                     </div>
@@ -2812,6 +3053,80 @@
             );
 
         }
+
+        async function confirmAndDeleteOwnAdvertisement(adId) {
+            const id = Number(adId);
+            if (!Number.isSafeInteger(id) || id <= 0) {
+                return;
+            }
+            if (!currentUserId) {
+                showToast(
+                    "Sign in to delete your advertisement."
+                );
+                return;
+            }
+            const ad = adsData.find(function (row) {
+                return Number(row.id) === id;
+            });
+            if (
+                !ad ||
+                String(ad.user_id || "") !== String(currentUserId)
+            ) {
+                showToast(
+                    "You can delete only your own advertisements."
+                );
+                return;
+            }
+            const ok = window.confirm(
+                "Delete this advertisement permanently? This cannot be undone."
+            );
+            if (!ok) {
+                return;
+            }
+            try {
+                const result = await supabaseClient.rpc(
+                    "delete_own_marketplace_listing",
+                    { p_ad_id: id }
+                );
+                if (result.error) {
+                    throw new Error(
+                        result.error.message || "Delete failed."
+                    );
+                }
+                const payload = result.data;
+                if (!payload || payload.ok !== true) {
+                    throw new Error("Delete failed.");
+                }
+                if (
+                    window.HAVKAR_AD_IMAGES &&
+                    typeof window.HAVKAR_AD_IMAGES
+                        .deleteOwnAdvertisementImages === "function"
+                ) {
+                    await window.HAVKAR_AD_IMAGES.deleteOwnAdvertisementImages(
+                        supabaseClient,
+                        currentUserId,
+                        Array.isArray(payload.photos)
+                            ? payload.photos
+                            : ad.photos || []
+                    );
+                }
+                adsData = adsData.filter(function (row) {
+                    return Number(row.id) !== id;
+                });
+                savedAdIds.delete(String(id));
+                renderAds();
+                showToast("Advertisement deleted.");
+            } catch (err) {
+                console.error("[HAVKAR] delete advertisement", err);
+                showToast(
+                    (err && err.message) ||
+                        "Could not delete advertisement."
+                );
+            }
+        }
+
+        window.confirmAndDeleteOwnAdvertisement =
+            confirmAndDeleteOwnAdvertisement;
 
         function openAdInfo(
             id
@@ -2838,6 +3153,30 @@
 
             }
 
+            if (
+                window.HAVKAR_ADS &&
+                typeof window.HAVKAR_ADS.detailUrl === "function"
+            ) {
+
+                window.location.href =
+                    window.HAVKAR_ADS.detailUrl(
+                        id
+                    );
+
+                return;
+
+            }
+
+            window.location.href =
+                "ad-view.html?id=" +
+                encodeURIComponent(
+                    String(id)
+                );
+
+            return;
+
+            /* legacy toast preview kept unreachable below for reference */
+
             const textParts = [
 
                 ad.title
@@ -2861,7 +3200,7 @@
                 String(
                     ad.price
                 ).trim() !== ""
-                    ? `Price / Offer: ${formatPrice(ad.price)}`
+                    ? `Price / Offer: ${formatPrice(ad.price, ad.currency)}`
                     : ""
 
             ]
@@ -2927,13 +3266,25 @@
         }
 
         function formatPrice(
-            value
+            value,
+            currencyCode
         ) {
 
             const number =
                 Number(
                     value
                 );
+            const currency =
+                String(
+                    currencyCode || "EUR"
+                )
+                    .trim()
+                    .toUpperCase();
+            const code =
+                /^[A-Z]{3}$/.test(currency) &&
+                currency !== "XLM"
+                    ? currency
+                    : "EUR";
 
             if (
                 Number.isFinite(
@@ -2941,17 +3292,33 @@
                 )
             ) {
 
-                return new Intl.NumberFormat(
-                    "en-IE",
-                    {
-                        minimumFractionDigits:
-                            0,
-                        maximumFractionDigits:
-                            2
-                    }
-                ).format(
-                    number
-                ) + " €";
+                try {
+
+                    return new Intl.NumberFormat(
+                        "en-IE",
+                        {
+                            style: "currency",
+                            currency: code,
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 2
+                        }
+                    ).format(
+                        number
+                    );
+
+                } catch (_formatError) {
+
+                    return new Intl.NumberFormat(
+                        "en-IE",
+                        {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 2
+                        }
+                    ).format(
+                        number
+                    ) + " " + code;
+
+                }
 
             }
 
@@ -3111,6 +3478,9 @@
             showingSavedOnly =
                 true;
 
+            showingMineOnly =
+                false;
+
             activeCategory =
                 "all";
 
@@ -3170,6 +3540,60 @@
 
         }
 
+        async function showMyCampaigns() {
+
+            if (!currentUserId) {
+
+                showToast(
+                    "Please log in to view your campaigns."
+                );
+
+                setTimeout(
+                    function () {
+                        window.location.href = "login.html";
+                    },
+                    700
+                );
+
+                return;
+
+            }
+
+            showingSavedOnly = false;
+            showingMineOnly = true;
+            activeCategory = "all";
+
+            document
+                .querySelectorAll(".tab")
+                .forEach(function (tab) {
+                    tab.classList.remove("active");
+                });
+
+            const allTab = document.querySelector(
+                '.tab[data-category="all"]'
+            );
+
+            if (allTab) {
+                allTab.classList.add("active");
+            }
+
+            const search = document.getElementById(
+                "searchInput"
+            );
+
+            if (search) {
+                search.value = "";
+            }
+
+            updateResultsTitle();
+            renderAds();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            showToast(
+                "Showing your advertisement campaigns (pending, active, expired)."
+            );
+
+        }
+
         function updateResultsTitle() {
 
             const title =
@@ -3179,6 +3603,17 @@
 
             if (!title) {
                 return;
+            }
+
+            if (
+                showingMineOnly
+            ) {
+
+                title.textContent =
+                    "My Campaigns";
+
+                return;
+
             }
 
             if (
@@ -3296,6 +3731,21 @@
                     .value
                     .trim();
 
+            const currencyInput =
+                document.getElementById(
+                    "adCurrency"
+                );
+            const currency =
+                String(
+                    (
+                        currencyInput &&
+                        currencyInput.value
+                    ) ||
+                    "EUR"
+                )
+                    .trim()
+                    .toUpperCase();
+
             const location =
                 document
                     .getElementById(
@@ -3312,50 +3762,148 @@
                     .value
                     .trim();
 
-            if (
-                !title ||
-                !category ||
-                !location ||
-                !description
-            ) {
+            const countryCode =
+                document
+                    .getElementById(
+                        "adCountry"
+                    )
+                    .value
+                    .trim()
+                    .toUpperCase();
+
+            const city =
+                document
+                    .getElementById(
+                        "adCity"
+                    )
+                    .value
+                    .trim();
+
+            const audience =
+                document
+                    .getElementById(
+                        "adAudience"
+                    )
+                    .value
+                    .trim();
+
+            const campaignName =
+                document
+                    .getElementById(
+                        "adCampaignName"
+                    )
+                    .value
+                    .trim();
+
+            const startsRaw =
+                document
+                    .getElementById(
+                        "adStarts"
+                    )
+                    .value;
+
+            const expiresRaw =
+                document
+                    .getElementById(
+                        "adExpires"
+                    )
+                    .value;
+
+            const startsAt =
+                startsRaw
+                    ? new Date(
+                        startsRaw
+                    ).toISOString()
+                    : null;
+
+            const expiresAt =
+                expiresRaw
+                    ? new Date(
+                        expiresRaw
+                    ).toISOString()
+                    : null;
+
+            const validated =
+                window.HAVKAR_ADS
+                    ? window.HAVKAR_ADS.validateCreatePayload({
+                        title: title,
+                        category: category,
+                        price: priceInput,
+                        currency: currency,
+                        location: location,
+                        description: description,
+                        country_code: countryCode,
+                        city: city,
+                        target_audience: audience,
+                        starts_at: startsAt,
+                        expires_at: expiresAt
+                    })
+                    : {
+                        ok: Boolean(
+                            title &&
+                            category &&
+                            location &&
+                            description
+                        ),
+                        errors: [],
+                        payload: null
+                    };
+
+            if (!validated.ok) {
 
                 showToast(
-                    "Please complete all required fields."
+                    "Please complete all required fields" +
+                    (
+                        validated.errors &&
+                        validated.errors.length
+                            ? (": " + validated.errors.join(", "))
+                            : "."
+                    )
                 );
 
                 return;
 
             }
 
-            let price =
-                null;
+            const price =
+                validated.payload
+                    ? validated.payload.price
+                    : null;
 
-            if (
-                priceInput !== ""
-            ) {
-
-                const parsedPrice =
-                    Number(
-                        priceInput
+            const listingCurrency =
+                validated.payload &&
+                validated.payload.currency
+                    ? validated.payload.currency
+                    : (
+                        /^[A-Z]{3}$/.test(currency) &&
+                        currency !== "XLM"
+                            ? currency
+                            : "EUR"
                     );
 
-                if (
-                    !Number.isFinite(
-                        parsedPrice
-                    ) ||
-                    parsedPrice < 0
-                ) {
+            const preview =
+                document.getElementById(
+                    "adPreviewBox"
+                );
 
-                    showToast(
-                        "Please enter a valid price."
-                    );
+            if (preview) {
 
-                    return;
+                preview.hidden =
+                    false;
 
-                }
-
-                price =
-                    parsedPrice;
+                preview.textContent =
+                    "Preview: " +
+                    title +
+                    " · " +
+                    category +
+                    " · " +
+                    location +
+                    (
+                        audience
+                            ? (" · audience " + audience)
+                            : ""
+                    ) +
+                    ". New ads enter pending review after publish.";
 
             }
 
@@ -3501,47 +4049,189 @@
                         )
                         : "[]";
 
-                const newAd = {
+                let campaignId =
+                    null;
 
-                    title:
-                        title,
+                if (campaignName) {
 
-                    category:
-                        category,
+                    const campaignInsert =
+                        await supabaseClient
+                            .from(
+                                "ad_campaigns"
+                            )
+                            .insert({
+                                user_id: currentUserId,
+                                name: campaignName,
+                                status: "active",
+                                starts_at: startsAt,
+                                ends_at: expiresAt
+                            })
+                            .select(
+                                "id"
+                            )
+                            .maybeSingle();
 
-                    price:
-                        price,
+                    if (
+                        !campaignInsert.error &&
+                        campaignInsert.data &&
+                        campaignInsert.data.id
+                    ) {
 
-                    location:
-                        location,
+                        campaignId =
+                            campaignInsert.data.id;
 
-                    description:
-                        description,
+                    }
 
-                    user_id:
-                        currentUserId,
+                }
 
-                    photos:
-                        photos,
+                let geoLat = Number((document.getElementById("adLatitude") || {}).value);
+                let geoLng = Number((document.getElementById("adLongitude") || {}).value);
+                if ((!Number.isFinite(geoLat) || !Number.isFinite(geoLng)) && location) {
+                    try {
+                        if (window.__havkarRefreshAdTargetCoords) await window.__havkarRefreshAdTargetCoords();
+                        geoLat = Number((document.getElementById("adLatitude") || {}).value);
+                        geoLng = Number((document.getElementById("adLongitude") || {}).value);
+                        if ((!Number.isFinite(geoLat) || !Number.isFinite(geoLng))) {
+                            const q = [location, city, countryCode].filter(Boolean).join(", ");
+                            const res = await fetch("/api/hotels", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ action: "hotels_geocode", query: q })
+                            });
+                            const body = await res.json().catch(function () { return null; });
+                            if (body && body.ok && body.primary) {
+                                geoLat = Number(body.primary.latitude);
+                                geoLng = Number(body.primary.longitude);
+                                const latEl = document.getElementById("adLatitude");
+                                const lngEl = document.getElementById("adLongitude");
+                                if (latEl) latEl.value = String(geoLat);
+                                if (lngEl) lngEl.value = String(geoLng);
+                            }
+                        }
+                    } catch (_geoErr) {}
+                }
 
-                    status:
-                        "active",
+                const newAd = Object.assign(
+                    {},
+                    validated.payload || {
+                        title: title,
+                        category: category,
+                        price: price,
+                        currency: listingCurrency,
+                        location: location,
+                        description: description,
+                        listing_surface: "advertising",
+                        status: "pending_review"
+                    },
+                    {
+                        user_id: currentUserId,
+                        photos: photos,
+                        campaign_id: campaignId,
+                        currency: listingCurrency
+                    }
+                );
+                if (Number.isFinite(geoLat) && Number.isFinite(geoLng)) {
+                    newAd.latitude = geoLat;
+                    newAd.longitude = geoLng;
+                }
 
-                    listing_surface:
-                        "advertising"
-
-                };
-
-                const insertPromise =
+                let insertPromise =
                     supabaseClient
                         .from(ADS_TABLE)
                         .insert(
                             newAd
                         )
                         .select(
-                            "id,created_at,title,category,price,location,description,user_id,photos,status"
+                            "id,created_at,title,category,price,currency,location,description,user_id,photos,status,listing_surface,latitude,longitude"
                         )
                         .single();
+
+                let insertedProbe =
+                    await insertPromise;
+
+                if (
+                    insertedProbe.error &&
+                    window.HAVKAR_MARKETPLACE &&
+                    typeof window.HAVKAR_MARKETPLACE.omitMissingColumn === "function"
+                ) {
+                    let payload =
+                        newAd;
+                    for (
+                        let attempt = 0;
+                        attempt < 6 &&
+                        insertedProbe.error;
+                        attempt += 1
+                    ) {
+                        const next =
+                            window.HAVKAR_MARKETPLACE.omitMissingColumn(
+                                payload,
+                                insertedProbe.error
+                            );
+                        if (!next) {
+                            break;
+                        }
+                        payload =
+                            next;
+                        insertedProbe =
+                            await supabaseClient
+                                .from(ADS_TABLE)
+                                .insert(
+                                    payload
+                                )
+                                .select(
+                                    "id,created_at,title,category,price,currency,location,description,user_id,photos,status,listing_surface,latitude,longitude"
+                                )
+                                .single();
+                    }
+                }
+
+                /*
+                 * Compatibility fallback for older schemas that lack
+                 * schedule/campaign columns. Never downgrade moderation:
+                 * advertising inserts stay pending_review (not active).
+                 */
+                if (
+                    insertedProbe.error &&
+                    /campaign_id|target_audience|starts_at|country_code|city/i.test(
+                        String(
+                            insertedProbe.error.message ||
+                            ""
+                        )
+                    )
+                ) {
+
+                    const compatAd = {
+                        title: title,
+                        category: category,
+                        price: price,
+                        currency: listingCurrency,
+                        location: location,
+                        description: description,
+                        user_id: currentUserId,
+                        photos: photos,
+                        status: "pending_review",
+                        listing_surface: "advertising"
+                    };
+
+                    insertPromise =
+                        supabaseClient
+                            .from(ADS_TABLE)
+                            .insert(
+                                compatAd
+                            )
+                            .select(
+                                "id,created_at,title,category,price,currency,location,description,user_id,photos,status,listing_surface,latitude,longitude"
+                            )
+                            .single();
+
+                } else {
+
+                    insertPromise =
+                        Promise.resolve(
+                            insertedProbe
+                        );
+
+                }
 
                 /*
                  * A slow response stays in progress.
@@ -3668,6 +4358,9 @@
                     "all";
 
                 showingSavedOnly =
+                    false;
+
+                showingMineOnly =
                     false;
 
                 document
@@ -4228,7 +4921,7 @@
 
         }
 
-        function openCreateAd() {
+        async function openCreateAd() {
 
             const modal =
                 document.getElementById(
@@ -4253,6 +4946,60 @@
 
                     },
                     700
+                );
+
+                return;
+
+            }
+
+            try {
+
+                const application =
+                    await supabaseClient
+                        .from(
+                            "business_applications"
+                        )
+                        .select(
+                            "id,status"
+                        )
+                        .eq(
+                            "user_id",
+                            currentUserId
+                        )
+                        .order(
+                            "created_at",
+                            {
+                                ascending: false
+                            }
+                        )
+                        .limit(
+                            1
+                        )
+                        .maybeSingle();
+
+                const status =
+                    application &&
+                    application.data
+                        ? String(
+                            application.data.status ||
+                            ""
+                        ).toLowerCase()
+                        : "";
+
+                if (status !== "approved") {
+
+                    showToast(
+                        "Approved business advertiser account required. Apply from Profile before publishing Ads."
+                    );
+
+                    return;
+
+                }
+
+            } catch (error) {
+
+                showToast(
+                    "Could not verify advertiser account. Try again."
                 );
 
                 return;
@@ -4351,13 +5098,7 @@
 
         }
 
-        function goProfile() {
-
-            window.location.href =
-                "profile.html";
-
-        }
-
+        
         function showAdPublishMessage(
             message
         ) {
@@ -4602,6 +5343,26 @@
 
                 updateResultsTitle();
 
+                try {
+                    const params =
+                        new URLSearchParams(
+                            window.location.search
+                        );
+                    const query =
+                        String(
+                            params.get("q") ||
+                            ""
+                        ).trim();
+                    const search =
+                        document.getElementById(
+                            "searchInput"
+                        );
+                    if (query && search) {
+                        search.value =
+                            query;
+                    }
+                } catch (queryError) {}
+
                 renderAds();
 
             } catch (error) {
@@ -4650,8 +5411,66 @@
 
     </script>
 
-    <script src="/havkar-i18n.js"></script>
+    <script src="/havkar-countries.js"></script>
+    <script src="/havkar-ui-i18n21.js"></script>
+<script src="/havkar-i18n.js"></script>
+<script>
+(function(){
+  var mount = document.getElementById("adCurrencyMount");
+  var hidden = document.getElementById("adCurrency");
+  if(!mount || !hidden || !window.HAVKAR_CURRENCY_SELECT) return;
+  window.HAVKAR_CURRENCY_SELECT.mount(mount, {
+    idPrefix: "adCur",
+    initialCurrency: String(hidden.value || "eur").toLowerCase(),
+    onChange: function(sel){
+      if(!sel) return;
+      if(sel.method === "xlm_mainnet"){
+        hidden.value = "XLM";
+      } else {
+        hidden.value = String(sel.currency || "eur").toUpperCase();
+      }
+    }
+  });
+})();
+</script>
 
 <script src="/havkar-page-back.js"></script>
+
+<script>
+(function(){
+  async function refreshTargetCoords(){
+    var loc = (document.getElementById('adLocation')||{}).value || '';
+    var city = (document.getElementById('adCity')||{}).value || '';
+    var country = (document.getElementById('adCountry')||{}).value || '';
+    var q = [loc, city, country].filter(Boolean).join(', ');
+    if(!q || q.trim().length < 3) return;
+    try{
+      var res = await fetch('/api/hotels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'hotels_geocode', query: q })
+      });
+      var body = await res.json().catch(function(){ return null; });
+      if(!body || !body.ok || !body.primary) return;
+      var latEl = document.getElementById('adLatitude');
+      var lngEl = document.getElementById('adLongitude');
+      if(latEl) latEl.value = String(body.primary.latitude);
+      if(lngEl) lngEl.value = String(body.primary.longitude);
+    }catch(_e){}
+  }
+  ['adLocation','adCity','adCountry'].forEach(function(id){
+    var node = document.getElementById(id);
+    if(!node) return;
+    node.addEventListener('change', refreshTargetCoords);
+    node.addEventListener('blur', refreshTargetCoords);
+  });
+  window.__havkarRefreshAdTargetCoords = refreshTargetCoords;
+})();
+</script>
+
+<!-- HAVKAR contextual help -->
+<p class="havkar-contextual-help" style="margin:10px 0;font-size:.85rem">
+  <a href="support.html?tile=ads#tile-ads">Help for this section</a>
+</p>
 </body>
     </html>

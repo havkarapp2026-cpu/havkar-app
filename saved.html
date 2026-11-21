@@ -580,26 +580,7 @@ main{max-width:980px;margin:auto;padding:16px}
 
 <nav class="bottom-nav">
     <div class="nav-inner">
-        <a class="nav-item" href="index.html">
-            <i class="fa-solid fa-house"></i>
-            <span data-i18n>Home</span>
-        </a>
-
-        <a class="nav-item" href="chat.html">
-            <i class="fa-solid fa-comments"></i>
-            <span data-i18n>Messages</span>
-        </a>
-
-        <a class="nav-item active" href="saved.html">
-            <i class="fa-solid fa-bookmark"></i>
-            <span data-i18n>Saved</span>
-        </a>
-
-        <a class="nav-item" href="profile.html">
-            <i class="fa-solid fa-user"></i>
-            <span data-i18n>Profile</span>
-        </a>
-    </div>
+</div>
 </nav>
 
 <div class="modal-backdrop hidden" id="collectionsModal">
@@ -2991,7 +2972,7 @@ async function removeSaved(savedId){
     }
 }
 
-function openSavedItem(savedId){
+async function openSavedItem(savedId){
 
     const item =
         state.items
@@ -3018,11 +2999,63 @@ function openSavedItem(savedId){
         );
 
     /*
-     * Verified from the current HAVKAR project:
-     * Buy & Sell opens an ad with:
-     * ad-details.html?id=AD_ID
+     * Buy & Sell opens marketplace rows in ad-details.html.
+     * Advertising rows open ad-view.html (never Buy & Sell detail).
      */
     if(type === "ad"){
+
+        let surface =
+            String(
+                item.listing_surface ||
+                item.surface ||
+                ""
+            ).toLowerCase();
+
+        if(
+            !surface &&
+            db
+        ){
+
+            try{
+
+                const probe =
+                    await db
+                        .from("ads")
+                        .select(
+                            "listing_surface"
+                        )
+                        .eq(
+                            "id",
+                            item.item_id
+                        )
+                        .maybeSingle();
+
+                surface =
+                    String(
+                        probe &&
+                        probe.data &&
+                        probe.data.listing_surface ||
+                        ""
+                    ).toLowerCase();
+
+            }catch(_error){
+
+                surface =
+                    "";
+
+            }
+
+        }
+
+        if(surface === "advertising"){
+
+            window.location.href =
+                "ad-view.html?id=" +
+                id;
+
+            return;
+
+        }
 
         window.location.href =
             "ad-details.html?id=" +
@@ -3039,7 +3072,9 @@ function openSavedItem(savedId){
     if(type === "job"){
 
         window.location.href =
-            "jobs.html";
+            id
+              ? ("jobs.html?id=" + encodeURIComponent(id))
+              : "jobs.html";
 
         return;
     }
@@ -3381,6 +3416,7 @@ refreshAll();
 
 </script>
 
+<script src="havkar-ui-i18n21.js"></script>
 <script src="havkar-i18n.js"></script>
 
 <script src="/havkar-page-back.js"></script>

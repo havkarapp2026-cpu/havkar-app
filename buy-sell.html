@@ -9,7 +9,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b5e20">
 <meta name="description" content="HAVKAR Buy & Sell marketplace">
+<meta name="havkar-buysell-ui" content="20261120-unify-v1">
 <title>HAVKAR — Buy & Sell</title>
+<script>
+window.HAVKAR_BUYSELL_UI = "20261121-owner-connect-v7";
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -328,28 +332,29 @@ input:focus-visible{
 .ads-grid,
 .skeleton-grid{
     display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:13px;
+    /* Unified public grid: every visitor gets the same 3-column marketplace. */
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:8px;
+}
+
+.ads-grid .ad-card,
+.skeleton-grid .skeleton-card{
+    border-radius:10px;
+}
+
+.ads-grid .ad-meta,
+.ads-grid .ad-actions{
+    display:none;
+}
+
+.ads-grid .ad-image{
+    aspect-ratio:1 / 1;
 }
 
 .ads-grid.is-explore,
 .skeleton-grid.is-explore{
     grid-template-columns:repeat(3,minmax(0,1fr));
     gap:8px;
-}
-
-.ads-grid.is-explore .ad-card,
-.skeleton-grid.is-explore .skeleton-card{
-    border-radius:10px;
-}
-
-.ads-grid.is-explore .ad-meta,
-.ads-grid.is-explore .ad-actions{
-    display:none;
-}
-
-.ads-grid.is-explore .ad-image{
-    aspect-ratio:1 / 1;
 }
 
 /* CARD */
@@ -388,8 +393,60 @@ input:focus-visible{
     height:100%;
     display:block;
     object-fit:cover;
+    image-orientation:from-image;
     opacity:0;
     transition:opacity .25s,transform .35s;
+}
+
+.ad-seller-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-top:8px;
+    min-width:0;
+}
+
+.ad-seller-avatar,
+.ad-seller-avatar-fallback{
+    width:24px;
+    height:24px;
+    border-radius:50%;
+    flex:0 0 auto;
+    overflow:hidden;
+    background:#dfe7e1;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    color:#6b776f;
+    font-size:.7rem;
+}
+
+.ad-seller-avatar{
+    object-fit:cover;
+    image-orientation:from-image;
+}
+
+.ad-seller-name{
+    font-size:.82rem;
+    font-weight:600;
+    color:#243028;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.paused-badge{
+    position:absolute;
+    left:12px;
+    bottom:12px;
+    z-index:2;
+    background:rgba(60, 48, 12, .88);
+    color:#fff8e8;
+    font-size:.68rem;
+    font-weight:700;
+    letter-spacing:.02em;
+    padding:.28rem .55rem;
+    border-radius:999px;
 }
 
 .ad-image img.loaded{
@@ -666,6 +723,26 @@ input:focus-visible{
     color:#d32f2f;
     background:#fff;
 }
+.own-delete-button{
+    position:absolute;
+    top:12px;
+    left:12px;
+    z-index:3;
+    width:38px;
+    height:38px;
+    border:0;
+    border-radius:50%;
+    background:rgba(140,30,30,.92);
+    color:#fff;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+}
+.own-delete-button:hover{
+    background:#a31f1f;
+}
+
 
 .save-button i{
     font-size:1.1rem;
@@ -847,6 +924,98 @@ input:focus-visible{
     }
 
 }
+
+.explore-video-overlay{
+  position:fixed; inset:0; z-index:1200; background:rgba(0,0,0,.92);
+  display:flex; align-items:center; justify-content:center; padding:12px;
+}
+.explore-video-overlay[hidden]{ display:none !important; }
+
+/* Seller Connect: outside sticky search so it stays findable */
+.seller-payout-card{
+    margin:0;
+    border:0;
+    border-bottom:2px solid #1b5e20;
+    border-radius:0;
+    padding:14px 16px 12px;
+    background:linear-gradient(180deg,#eef8ef 0%,#ffffff 78%);
+    box-shadow:none;
+}
+.seller-payout-card[hidden]{ display:none !important; }
+.seller-payout-card h2{
+    margin:0 0 6px;
+    font-size:1.05rem;
+    color:#1b5e20;
+}
+.seller-payout-card .seller-payout-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:10px;
+}
+.seller-payout-card .seller-payout-actions button{
+    border:0;
+    border-radius:999px;
+    padding:10px 14px;
+    font-weight:700;
+    cursor:pointer;
+    background:#1b5e20;
+    color:#fff;
+}
+.seller-payout-card .seller-payout-actions button.secondary{
+    background:#fff;
+    color:#1b5e20;
+    border:1px solid #1b5e20;
+}
+.seller-payout-card .seller-payout-alert{
+    margin:8px 0 0;
+    padding:10px 12px;
+    border-radius:12px;
+    border:1px solid #c62828;
+    background:#ffebee;
+    color:#7f1d1d;
+    font-size:.88rem;
+    line-height:1.45;
+    font-weight:600;
+}
+.seller-payout-card .seller-payout-alert[hidden]{ display:none !important; }
+.seller-payout-card .seller-payout-alert a{
+    color:#1b5e20;
+    font-weight:800;
+    text-decoration:underline;
+}
+.seller-payout-card .seller-payout-actions button:disabled{
+    opacity:.65;
+    cursor:wait;
+}
+.header-connect-btn{
+    display:none;
+    align-items:center;
+    justify-content:center;
+    min-width:41px;
+    height:41px;
+    padding:0 10px;
+    border-radius:999px;
+    border:0;
+    background:rgba(255,255,255,.22);
+    color:#fff;
+    font-size:.72rem;
+    font-weight:800;
+    cursor:pointer;
+}
+.header-connect-btn.visible{ display:inline-flex; }
+.explore-video-shell{ width:min(100%,720px); display:flex; flex-direction:column; gap:10px; }
+.explore-video-shell video{ width:100%; max-height:70vh; background:#000; border-radius:12px; }
+.explore-video-bar{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+.explore-video-bar button{
+  border:0; border-radius:999px; padding:10px 14px; font-weight:700;
+  background:#1f8f4e; color:#fff;
+}
+.ad-card .video-badge{
+  position:absolute; left:10px; bottom:10px; z-index:2;
+  background:rgba(0,0,0,.65); color:#fff; border-radius:999px;
+  padding:4px 8px; font-size:11px; font-weight:700;
+}
 </style>
 
 </head>
@@ -875,6 +1044,16 @@ input:focus-visible{
 <div class="header-right">
 
     <button
+        id="headerConnectButton"
+        class="header-connect-btn"
+        type="button"
+        aria-label="Open Stripe Connect seller payouts"
+        title="Stripe Connect"
+    >
+        Connect
+    </button>
+
+    <button
         id="notificationButton"
         class="circle-button"
         type="button"
@@ -882,19 +1061,42 @@ input:focus-visible{
     >
         <i class="fas fa-bell"></i>
     </button>
-
-    <button
-        id="profileButton"
-        class="circle-button"
-        type="button"
-        aria-label="Profile"
-    >
-        <i class="fas fa-user"></i>
-    </button>
-
 </div>
 
 </header>
+
+<section
+    id="sellerPayoutPanel"
+    class="seller-payout-card"
+    aria-label="Seller payout setup Stripe Connect"
+>
+    <h2>Seller payout setup (Stripe Connect + XLM)</h2>
+    <p id="sellerPayoutStatus" style="margin:0;font-size:.88rem;color:#355;line-height:1.45">
+        Sign in to see your Stripe Connect and Stellar receive status. No bank details are invented by HAVKAR.
+    </p>
+    <div
+        id="sellerPayoutAlert"
+        class="seller-payout-alert"
+        role="alert"
+        hidden
+    ></div>
+    <ol style="margin:8px 0 0 18px;font-size:.88rem;color:#355;line-height:1.45">
+        <li>Sign in with your HAVKAR seller account (Owner: havkarapp2026@gmail.com).</li>
+        <li>Tap <strong>Start / continue Stripe Connect</strong> — KYC and bank details stay on Stripe-hosted pages.</li>
+        <li>Return here until status shows <strong>charges_enabled=true</strong>.</li>
+        <li>Optional XLM: register a Stellar receive public key in Wallet (never a seed).</li>
+    </ol>
+    <div class="seller-payout-actions">
+        <button id="sellerConnectHomeButton" type="button">Start / continue Stripe Connect</button>
+        <button id="sellerConnectRefreshButton" type="button" class="secondary">Refresh Connect status</button>
+        <button id="sellerConnectLoginButton" type="button" class="secondary" hidden>Sign in again</button>
+    </div>
+    <p style="margin:10px 0 0;font-size:.78rem;color:#567">
+        Location: Buy &amp; Sell → directly under the green header (above Search).
+        When signed in, header chip <strong>Connect</strong> (left of the bell) scrolls here.
+        No live charge from this panel.
+    </p>
+</section>
 
 <section class="search-panel">
 
@@ -927,7 +1129,20 @@ input:focus-visible{
 
 </div>
 
-<div class="country-filter">
+<details class="buysell-tools" style="margin:8px 12px 0;border:1px solid #d7e6db;border-radius:12px;padding:8px 10px;background:#f7fbf7">
+<summary style="cursor:pointer;font-weight:700;color:#1b5e20">▸ Fees &amp; marketplace rules</summary>
+<p style="margin:8px 0 0;font-size:.88rem;color:#355;line-height:1.45">
+Publishing a listing is free. At checkout the buyer fee is <strong>2%</strong> and the seller fee is <strong>3%</strong>
+(server-enforced). Example: list €100 → buyer pays €102, seller receives €97, HAVKAR commission €5.
+Taxes, shipping and card-processor fees are separate when applicable.
+Refunds and disputes for card payments are recorded by Stripe webhooks; XLM direct-split refunds require the seller (merchant) to send funds back.
+See <a href="terms.html#marketplace-fees">Terms draft — marketplace fees</a>.
+Buy &amp; Sell stays distinct from paid Ads. Public live charges stay Owner-gated.
+</p>
+</details>
+<details class="buysell-tools" style="margin:8px 12px 0;border:1px solid #d7e6db;border-radius:12px;padding:8px 10px;background:#f7fbf7">
+<summary style="cursor:pointer;font-weight:700;color:#1b5e20">▸ Filters &amp; categories</summary>
+<div class="country-filter" style="margin-top:8px">
 
     <label class="visually-hidden" for="countryFilter">
         Country
@@ -987,6 +1202,24 @@ input:focus-visible{
         aria-label="Maximum price"
     >
 
+    <label class="visually-hidden" for="currencyFilter">
+        Listing currency
+    </label>
+    <select id="currencyFilter" aria-label="Filter by listing currency">
+        <option value="">All currencies</option>
+    </select>
+
+    <label class="visually-hidden" for="priceCurrency">
+        Price filter currency
+    </label>
+    <select id="priceCurrency" aria-label="Currency for min/max price">
+        <option value="EUR">Price unit: EUR</option>
+    </select>
+    <p id="currencyRailNote" class="photo-info" style="margin:6px 0 0;font-size:12px;color:#1b5e20;font-weight:700">
+        133 Stripe presentment currencies active · XLM (Stellar) is a separate checkout rail on listing details
+    </p>
+    <p id="fxStatus" class="photo-info" style="margin:6px 0 0;font-size:12px;color:#456"></p>
+
 </div>
 
 <div class="filters-wrapper">
@@ -998,6 +1231,7 @@ input:focus-visible{
     ></nav>
 
 </div>
+</details>
 
 </section>
 
@@ -1019,6 +1253,19 @@ input:focus-visible{
         Loading...
     </div>
 
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 10px">
+    <button
+        id="clearListingFilters"
+        type="button"
+        style="border:1px solid #c5d6c8;border-radius:999px;padding:6px 12px;background:#fff;color:#1b5e20;font-weight:700;font-size:.8rem;cursor:pointer"
+    >
+        Clear filters
+    </button>
+    <span
+        id="buysellUiVersion"
+        style="font-size:.72rem;color:#6a7a6e"
+    ></span>
 </div>
 
 <div
@@ -1099,7 +1346,7 @@ aria-label="Post a new ad"
 
 </button>
 
-<nav class="bottom-nav">
+<nav class="bottom-nav" aria-label="Buy and Sell navigation">
 
 <div
     class="nav-item active"
@@ -1141,18 +1388,22 @@ aria-label="Post a new ad"
     <span>Messages</span>
 </div>
 
-<div
-    class="nav-item"
-    id="navProfile"
-    role="button"
-    tabindex="0"
->
-    <i class="fas fa-user"></i>
-    <span>Profile</span>
-</div>
-
 </nav>
 
+
+<div id="exploreVideoOverlay" class="explore-video-overlay" hidden>
+  <div class="explore-video-shell">
+    <video id="exploreVideoEl" playsinline controls></video>
+    <div class="explore-video-bar">
+      <button type="button" id="exploreVideoMute" aria-label="Mute">Mute</button>
+      <button type="button" id="exploreVideoPause" aria-label="Pause">Pause</button>
+      <button type="button" id="exploreVideoSave" aria-label="Save">Save</button>
+      <button type="button" id="exploreVideoShare" aria-label="Share">Share</button>
+      <button type="button" id="exploreVideoOpen" aria-label="Open listing">Open</button>
+      <button type="button" id="exploreVideoClose" aria-label="Close">Close</button>
+    </div>
+  </div>
+</div>
 <div
     id="toast"
     class="toast"
@@ -1160,9 +1411,12 @@ aria-label="Post a new ad"
     aria-live="polite"
 ></div>
 
+<script src="/havkar-canonical-origin.js"></script>
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-ad-publish.js"></script>
+<script src="/havkar-presentment-currencies.js"></script>
+<script src="/havkar-ad-images.js"></script>
 <script src="/havkar-marketplace.js"></script>
 <script>
 "use strict";
@@ -1215,6 +1469,8 @@ const state = {
 
     currentUserId: null,
 
+    sellersByAdId: {},
+
     authReady: false,
 
     savedLoading: false,
@@ -1228,6 +1484,10 @@ const state = {
     minPrice: "",
 
     maxPrice: "",
+    currencyFilter: "",
+    priceCurrency: "EUR",
+    fxRates: null,
+    fxMeta: null,
 
     listingPage: 0,
 
@@ -1695,18 +1955,27 @@ function formatPrice(value, currencyCode){
         )
     ){
 
+        const rawCurrency =
+            String(currencyCode || "EUR").trim().toUpperCase();
         const currency =
-            arguments[1] === "USD"
-                ? "USD"
+            /^[A-Z]{3}$/.test(rawCurrency) && rawCurrency !== "XLM"
+                ? rawCurrency
                 : "EUR";
+        let decimals = 2;
+        if(
+            window.HAVKAR_MARKETPLACE &&
+            typeof window.HAVKAR_MARKETPLACE.currencyMeta === "function"
+        ){
+            decimals = window.HAVKAR_MARKETPLACE.currencyMeta(currency).decimals;
+        }
 
         return new Intl.NumberFormat(
             "en-US",
             {
                 style: "currency",
                 currency: currency,
-                minimumFractionDigits:0,
-                maximumFractionDigits:2
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
             }
         ).format(
             numeric
@@ -2209,14 +2478,13 @@ async function showSavedListings(){
     state.search =
         "";
 
-    $("searchInput")
-        .value =
-        "";
+    if($("searchInput")){
+        $("searchInput").value = "";
+    }
 
-    $("clearSearch")
-        .classList.remove(
-            "visible"
-        );
+    if($("clearSearch")){
+        $("clearSearch").classList.remove("visible");
+    }
 
     setActiveNav(
         "navSaved"
@@ -2320,6 +2588,13 @@ function setupAuthListener(){
 
                     }
 
+                    if(typeof syncHeaderConnectButton === "function"){
+                        syncHeaderConnectButton();
+                    }
+                    if(typeof refreshSellerPayoutPanel === "function"){
+                        refreshSellerPayoutPanel();
+                    }
+
                     return;
 
                 }
@@ -2372,6 +2647,13 @@ function setupAuthListener(){
                                 }
                             );
 
+                    }
+
+                    if(typeof syncHeaderConnectButton === "function"){
+                        syncHeaderConnectButton();
+                    }
+                    if(typeof refreshSellerPayoutPanel === "function"){
+                        refreshSellerPayoutPanel();
                     }
 
                 }
@@ -2767,7 +3049,10 @@ async function fetchListings(
         "created_at",
         "status",
         "listing_surface",
-        "expires_at"
+        "expires_at",
+        "latitude",
+        "longitude",
+        "video_path"
     ];
 
     let surfaceFilter =
@@ -2977,10 +3262,20 @@ function getErrorMessage(
 
     }
 
+    if(
+        /addEventListener|Cannot read properties of null/i.test(
+            message
+        )
+    ){
+
+        return "Buy & Sell page controls failed to start. Listings were not requested. Please reload the page.";
+
+    }
+
     if(message){
 
         return (
-            "Supabase error: " +
+            "Listings error: " +
             message
         );
 
@@ -3085,6 +3380,16 @@ function cardHtml(
             )
             : "";
 
+    const locationRaw =
+        legacyLocation &&
+        legacyLocation !== place
+            ? legacyLocation
+            : (
+                place
+                    ? place
+                    : "Location not specified"
+            );
+
     const location =
         escapeHtml(
             legacyLocation &&
@@ -3096,6 +3401,15 @@ function cardHtml(
                         : "Location not specified"
                 )
         );
+
+    const latAttr =
+        Number.isFinite(Number(ad.latitude))
+            ? ` data-lat="${Number(ad.latitude)}" data-latitude="${Number(ad.latitude)}"`
+            : "";
+    const lngAttr =
+        Number.isFinite(Number(ad.longitude))
+            ? ` data-lng="${Number(ad.longitude)}" data-longitude="${Number(ad.longitude)}"`
+            : "";
 
     const placeHtml =
         place
@@ -3133,14 +3447,73 @@ function cardHtml(
             ad.id
         );
 
+    const ownsListing =
+        state.currentUserId &&
+        String(ad.user_id || "") ===
+        String(state.currentUserId);
+
+    const sellerBag =
+        (state.sellersByAdId &&
+            state.sellersByAdId[String(ad.id)]) ||
+        null;
+    const seller =
+        sellerBag && sellerBag.seller
+            ? sellerBag.seller
+            : null;
+    const sellerLabel =
+        escapeHtml(
+            (seller && seller.display_name) ||
+            (
+                sellerBag && sellerBag.missing_reason
+                    ? "Public name not set"
+                    : "Seller profile…"
+            )
+        );
+    const sellerAvatar =
+        seller &&
+        typeof seller.avatar_url === "string" &&
+        /^https:\/\//i.test(seller.avatar_url)
+            ? escapeHtml(seller.avatar_url.trim())
+            : "";
+    const sellerHtml = `
+        <div class="ad-seller-row notranslate" translate="no" data-i18n-ignore="true" aria-label="Seller" data-seller-name="${sellerLabel}">
+            ${
+                sellerAvatar
+                    ? `<img class="ad-seller-avatar notranslate" src="${sellerAvatar}" alt="" width="24" height="24" loading="lazy" referrerpolicy="no-referrer" decoding="async">`
+                    : `<span class="ad-seller-avatar-fallback" aria-hidden="true"><i class="fas fa-user"></i></span>`
+            }
+            <span class="ad-seller-name notranslate" translate="no" data-i18n-ignore="true">${sellerLabel}</span>
+        </div>
+    `;
+
     return `
         <article
             class="ad-card"
             data-ad-id="${escapeHtml(ad.id)}"
+            data-id="${escapeHtml(ad.id)}"
+            data-video-path="${escapeHtml(ad.video_path || "")}"
+            data-location="${escapeHtml(locationRaw)}"
+            data-label="${escapeHtml(String(locationRaw).slice(0, 80))}"
+            ${latAttr}${lngAttr}
             tabindex="0"
             role="button"
             aria-label="${title}"
         >
+
+            ${
+                ownsListing
+                    ? `
+                        <button
+                            class="own-delete-button"
+                            type="button"
+                            aria-label="Delete your listing"
+                            data-delete-id="${escapeHtml(ad.id)}"
+                        >
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    `
+                    : ""
+            }
 
             <button
                 class="share-button"
@@ -3186,6 +3559,19 @@ function cardHtml(
                     ${category}
                 </span>
 
+                ${
+                    ad.video_path
+                        ? `<span class="video-badge"><i class="fas fa-play"></i> Video</span>`
+                        : ""
+                }
+
+                ${
+                    ownsListing &&
+                    !isPublicListingStatus(ad.status)
+                        ? `<span class="paused-badge">Paused · not public</span>`
+                        : ""
+                }
+
                 <img
                     alt="${title}"
                     loading="lazy"
@@ -3202,6 +3588,8 @@ function cardHtml(
                 <div class="ad-price">
                     ${formatPrice(ad.price, ad.currency)}
                 </div>
+
+                ${sellerHtml}
 
                 ${placeHtml}
 
@@ -3453,6 +3841,100 @@ async function loadCardImage(
    RENDER ADS
    ========================================================= */
 
+
+async function confirmAndDeleteOwnListing(adId){
+    const id = Number(adId);
+    if(!Number.isSafeInteger(id) || id <= 0){
+        return;
+    }
+    if(!state.currentUserId){
+        showToast("Sign in to delete your listing.");
+        return;
+    }
+    const ad = (state.ads || []).find(function(row){
+        return Number(row.id) === id;
+    });
+    if(!ad || String(ad.user_id || "") !== String(state.currentUserId)){
+        showToast("You can delete only your own listings.");
+        return;
+    }
+    const ok = window.confirm(
+        "Delete this listing permanently? Related saves/comments on it are cleared. This cannot be undone."
+    );
+    if(!ok){
+        return;
+    }
+    try{
+        initializeSupabase();
+        const result = await supabaseClient.rpc(
+            "delete_own_marketplace_listing",
+            { p_ad_id: id }
+        );
+        if(result.error){
+            throw new Error(result.error.message || "Delete failed.");
+        }
+        const payload = result.data;
+        if(!payload || payload.ok !== true){
+            throw new Error("Delete failed.");
+        }
+        if(
+            window.HAVKAR_AD_IMAGES &&
+            typeof window.HAVKAR_AD_IMAGES.deleteOwnAdvertisementImages === "function"
+        ){
+            const cleaned = await window.HAVKAR_AD_IMAGES.deleteOwnAdvertisementImages(
+                supabaseClient,
+                state.currentUserId,
+                Array.isArray(payload.photos) ? payload.photos : (ad.photos || [])
+            );
+            if(!cleaned.ok){
+                showToast("Listing deleted. Some images could not be removed from storage.");
+            }
+        }
+        if(
+            payload.video_path &&
+            window.HAVKAR_MARKETPLACE &&
+            typeof window.HAVKAR_MARKETPLACE.deleteListingVideo === "function"
+        ){
+            await window.HAVKAR_MARKETPLACE.deleteListingVideo(
+                supabaseClient,
+                payload.video_path
+            );
+        }
+        state.ads = (state.ads || []).filter(function(row){
+            return Number(row.id) !== id;
+        });
+        if(state.sellersByAdId){
+            delete state.sellersByAdId[String(id)];
+        }
+        state.imageCache.delete(String(id));
+        applyFilters();
+        showToast("Listing deleted.");
+        /* Re-fetch from server so a failed/partial delete cannot leave a stale card. */
+        try{
+            const fresh = await fetchListings(0);
+            state.ads = Array.isArray(fresh) ? fresh : state.ads;
+            state.hasMoreListings =
+                Array.isArray(fresh) &&
+                fresh.length >= 24;
+            syncLoadMore();
+            await loadSellerPublicProfilesForAds(state.ads || []);
+            applyFilters();
+            const stillThere = (state.ads || []).some(function(row){
+                return Number(row.id) === id;
+            });
+            if(stillThere){
+                showToast(
+                    "Server still returns this listing. Delete did not complete."
+                );
+            }
+        }catch(_reloadErr){
+            /* local removal already applied */
+        }
+    }catch(error){
+        showToast((error && error.message) || "This listing was not deleted.");
+    }
+}
+
 function renderAds(
     list
 ){
@@ -3500,10 +3982,15 @@ function renderAds(
         card => {
 
             const open =
-                () =>
-                    openAd(
-                        card.dataset.adId
-                    );
+                () => {
+                    const id = card.dataset.adId;
+                    const videoPath = String(card.dataset.videoPath || "").trim();
+                    if(state.exploreMode && videoPath){
+                        openExploreVideo(id, videoPath);
+                        return;
+                    }
+                    openAd(id);
+                };
 
             const shareButton =
                 card.querySelector(
@@ -3547,6 +4034,28 @@ function renderAds(
 
             }
 
+            const deleteButton =
+                card.querySelector(
+                    ".own-delete-button"
+                );
+
+            if(deleteButton){
+
+                deleteButton.addEventListener(
+                    "click",
+                    event => {
+
+                        event.preventDefault();
+                        event.stopPropagation();
+                        confirmAndDeleteOwnListing(
+                            deleteButton.dataset.deleteId
+                        );
+
+                    }
+                );
+
+            }
+
             card.addEventListener(
                 "click",
                 open
@@ -3581,6 +4090,99 @@ function renderAds(
 /* =========================================================
    FILTERS
    ========================================================= */
+
+
+async function ensureFxRates(){
+    if(state.fxRates){
+        return state.fxRates;
+    }
+    try{
+        const res = await fetch("/api/currency-matrix");
+        const body = await res.json();
+        if(!res.ok){
+            throw new Error((body && body.error) || "currency_matrix_failed");
+        }
+        const rates = (body.fx && body.fx.rates) || body.rates || null;
+        state.fxRates = rates;
+        state.fxMeta = {
+            date: body.fx_date || (body.fx && body.fx.date) || null,
+            source: body.fx_source || (body.fx && body.fx.source) || null,
+            fetched_at: body.fx_fetched_at || (body.fx && body.fx.fetched_at) || null,
+            live_collection: body.live_collection || "paused",
+            count: (body.matrix && body.matrix.currencies && body.matrix.currencies.length) || 0
+        };
+        const note = $("fxStatus");
+        if(note){
+            note.textContent =
+                "FX: " +
+                (state.fxMeta.source || "provider") +
+                (state.fxMeta.date ? (" · " + state.fxMeta.date) : "") +
+                " · live card collection " +
+                state.fxMeta.live_collection +
+                " · " +
+                (state.fxMeta.count || 133) +
+                " presentment currencies";
+        }
+        return state.fxRates;
+    }catch(err){
+        const note = $("fxStatus");
+        if(note){
+            note.textContent = "FX rates unavailable; price filter uses listing currency only.";
+        }
+        return null;
+    }
+}
+
+function populateCurrencyFilters(){
+    const listingSel = $("currencyFilter");
+    const priceSel = $("priceCurrency");
+    const bag = window.HAVKAR_PRESENTMENT_CURRENCIES;
+    const list = bag && Array.isArray(bag.list) ? bag.list.slice() : [];
+    const count = list.length || (bag && bag.count) || 0;
+    const note = $("currencyRailNote");
+    if(note){
+        note.textContent =
+            (count || 133) +
+            " Stripe presentment currencies active · XLM (Stellar) is a separate checkout rail on listing details";
+    }
+    if(listingSel && listingSel.options.length <= 1){
+        list.forEach(function(c){
+            const opt = document.createElement("option");
+            opt.value = String(c.code || "").toUpperCase();
+            opt.textContent = String(c.code || "").toUpperCase() + " — " + (c.name || "");
+            listingSel.appendChild(opt);
+        });
+        if(listingSel.options.length > 1){
+            listingSel.setAttribute(
+                "data-presentment-count",
+                String(listingSel.options.length - 1)
+            );
+        }
+    }
+    if(priceSel && priceSel.options.length <= 1){
+        /* Keep EUR as first seeded option; rebuild full 133 list. */
+        while(priceSel.options.length > 0){
+            priceSel.remove(0);
+        }
+        list.forEach(function(c){
+            const opt = document.createElement("option");
+            opt.value = String(c.code || "").toUpperCase();
+            opt.textContent = "Price unit: " + String(c.code || "").toUpperCase();
+            priceSel.appendChild(opt);
+        });
+        if(!list.length){
+            const fallback = document.createElement("option");
+            fallback.value = "EUR";
+            fallback.textContent = "Price unit: EUR";
+            priceSel.appendChild(fallback);
+        }
+        priceSel.value = state.priceCurrency || "EUR";
+        priceSel.setAttribute(
+            "data-presentment-count",
+            String(priceSel.options.length)
+        );
+    }
+}
 
 function applyFilters(){
 
@@ -3654,7 +4256,10 @@ function applyFilters(){
                         {
                             city: state.city,
                             minPrice: state.minPrice,
-                            maxPrice: state.maxPrice
+                            maxPrice: state.maxPrice,
+                            currency: state.currencyFilter || "",
+                            priceCurrency: state.priceCurrency || "EUR",
+                            rates: state.fxRates || null
                         }
                     )
                 ){
@@ -3749,6 +4354,51 @@ function applyFilters(){
 
 
 /* =========================================================
+   PUBLIC SELLER PROFILES (no private PII)
+   ========================================================= */
+
+async function loadSellerPublicProfilesForAds(ads){
+    const rows = Array.isArray(ads) ? ads : [];
+    const ids = [];
+    const seen = new Set();
+    rows.forEach(function(ad){
+        const id = Number(ad && ad.id);
+        if(!Number.isSafeInteger(id) || id <= 0){
+            return;
+        }
+        const key = String(id);
+        if(seen.has(key)){
+            return;
+        }
+        if(state.sellersByAdId && state.sellersByAdId[key]){
+            return;
+        }
+        seen.add(key);
+        ids.push(id);
+    });
+    if(!ids.length){
+        return;
+    }
+    try{
+        initializeSupabase();
+        const result = await supabaseClient.rpc(
+            "get_marketplace_sellers_public",
+            { p_ad_ids: ids }
+        );
+        if(result.error || !result.data || typeof result.data !== "object"){
+            return;
+        }
+        state.sellersByAdId = Object.assign(
+            {},
+            state.sellersByAdId || {},
+            result.data
+        );
+    }catch(_err){
+        /* keep cards usable without seller chips */
+    }
+}
+
+/* =========================================================
    LOAD LISTINGS
    ========================================================= */
 
@@ -3824,6 +4474,8 @@ async function loadListings(){
                 new Set();
 
         }
+
+        await loadSellerPublicProfilesForAds(state.ads);
 
         applyFilters();
 
@@ -3901,6 +4553,99 @@ async function loadListings(){
    NAVIGATION
    ========================================================= */
 
+
+const exploreVideoState = { adId: null, muted: false };
+
+function closeExploreVideo(){
+    const overlay = $("exploreVideoOverlay");
+    const video = $("exploreVideoEl");
+    if(video){
+        try{ video.pause(); video.removeAttribute("src"); video.load(); }catch(_e){}
+    }
+    if(overlay){ overlay.hidden = true; }
+    exploreVideoState.adId = null;
+}
+
+async function openExploreVideo(adId, videoPath){
+    if(!adId){ return; }
+    if(!videoPath || !window.HAVKAR_MARKETPLACE || typeof window.HAVKAR_MARKETPLACE.signedListingVideoUrl !== "function"){
+        openAd(adId);
+        return;
+    }
+    const overlay = $("exploreVideoOverlay");
+    const video = $("exploreVideoEl");
+    if(!overlay || !video){
+        openAd(adId);
+        return;
+    }
+    exploreVideoState.adId = String(adId);
+    overlay.hidden = false;
+    try{
+        const signed = await window.HAVKAR_MARKETPLACE.signedListingVideoUrl(
+            initializeSupabase(),
+            videoPath
+        );
+        if(!signed || !signed.ok || !signed.url){
+            showToast("This video is not available.");
+            closeExploreVideo();
+            openAd(adId);
+            return;
+        }
+        video.src = signed.url;
+        video.muted = exploreVideoState.muted;
+        await video.play().catch(function(){});
+    }catch(err){
+        showToast((err && err.message) || "Video could not be played.");
+        closeExploreVideo();
+        openAd(adId);
+    }
+}
+
+function setupExploreVideoControls(){
+    onClick("exploreVideoClose", closeExploreVideo);
+    onClick("exploreVideoOpen", function(){
+        const id = exploreVideoState.adId;
+        closeExploreVideo();
+        if(id){ openAd(id); }
+    });
+    onClick("exploreVideoMute", function(){
+        const video = $("exploreVideoEl");
+        const btn = $("exploreVideoMute");
+        if(!video){ return; }
+        video.muted = !video.muted;
+        exploreVideoState.muted = video.muted;
+        if(btn){ btn.textContent = video.muted ? "Unmute" : "Mute"; }
+    });
+    onClick("exploreVideoPause", function(){
+        const video = $("exploreVideoEl");
+        const btn = $("exploreVideoPause");
+        if(!video){ return; }
+        if(video.paused){
+            video.play().catch(function(){});
+            if(btn){ btn.textContent = "Pause"; }
+        }else{
+            video.pause();
+            if(btn){ btn.textContent = "Play"; }
+        }
+    });
+    onClick("exploreVideoSave", function(event){
+        if(exploreVideoState.adId){
+            toggleSaved(exploreVideoState.adId, event);
+        }
+    });
+    onClick("exploreVideoShare", function(event){
+        if(exploreVideoState.adId){
+            shareCard(exploreVideoState.adId, event);
+        }
+    });
+    const overlay = $("exploreVideoOverlay");
+    if(overlay){
+        overlay.addEventListener("click", function(e){
+            if(e.target === overlay){ closeExploreVideo(); }
+        });
+    }
+}
+
 function openAd(
     id
 ){
@@ -3912,7 +4657,7 @@ function openAd(
     }
 
     window.location.href =
-        "ad-details.html?id=" +
+        "ad-details.html?v=buynow4&id=" +
         encodeURIComponent(
             id
         );
@@ -3921,10 +4666,42 @@ function openAd(
 
 
 function goAppHome(){
-
-    window.location.href =
-        "index.html";
-
+    /* Seed language so Home does not bounce to language.html. */
+    try{
+        const keys = [
+            "havkar_language",
+            "selectedLanguage",
+            "language"
+        ];
+        const supported = {
+            en:1,it:1,de:1,fr:1,es:1,pt:1,nl:1,sv:1,pl:1,id:1,
+            zh:1,ja:1,ko:1,hi:1,tr:1,ru:1,uk:1,fa:1,ar:1,ur:1,
+            ckb:1,kmr:1
+        };
+        let have = "";
+        for(let i=0;i<keys.length;i++){
+            const v = String(localStorage.getItem(keys[i]) || "").trim().toLowerCase();
+            if(v && supported[v]){
+                have = v;
+                break;
+            }
+        }
+        if(!have){
+            have = "en";
+        }
+        localStorage.setItem("havkar_language", have);
+        localStorage.setItem("selectedLanguage", have);
+        localStorage.setItem("language", have);
+        try{
+            localStorage.setItem(
+                "havkar_language_dir",
+                (have === "fa" || have === "ar" || have === "ur" || have === "ckb")
+                    ? "rtl"
+                    : "ltr"
+            );
+        }catch(_d){}
+    }catch(_e){}
+    window.location.href = "index.html";
 }
 
 
@@ -4106,12 +4883,6 @@ function goHome(){
 }
 
 
-function goProfile(){
-
-    window.location.href =
-        "profile.html";
-
-}
 
 
 function goMessages(){
@@ -4150,146 +4921,130 @@ function applyShotModeFromQuery(){
 
     }
 
+    const query =
+        String(
+            params.get("q") ||
+            ""
+        ).trim();
+
+    if(
+        query &&
+        $("searchInput")
+    ){
+
+        $("searchInput").value =
+            query;
+
+        state.search =
+            query;
+
+        if(
+            typeof applyFilters === "function"
+        ){
+
+            applyFilters();
+
+        }
+
+    }
+
 }
 
 
+function onClick(id, handler){
+    const node = $(id);
+    if(!node || typeof handler !== "function"){
+        return;
+    }
+    node.addEventListener("click", handler);
+}
+
+function clearListingFilters(){
+    state.savedOnly = false;
+    state.exploreMode = false;
+    state.search = "";
+    state.country = "";
+    state.city = "";
+    state.minPrice = "";
+    state.maxPrice = "";
+    state.category = "All";
+    state.currencyFilter = "";
+    if($("searchInput")){
+        $("searchInput").value = "";
+    }
+    if($("clearSearch")){
+        $("clearSearch").classList.remove("visible");
+    }
+    if($("countryFilter")){
+        $("countryFilter").value = "";
+    }
+    if($("cityFilter")){
+        $("cityFilter").value = "";
+    }
+    if($("minPrice")){
+        $("minPrice").value = "";
+    }
+    if($("maxPrice")){
+        $("maxPrice").value = "";
+    }
+    if($("currencyFilter")){
+        $("currencyFilter").value = "";
+    }
+    document.querySelectorAll(".filter-button").forEach(function(btn){
+        btn.classList.toggle("active", btn.dataset.category === "All" || btn.textContent.trim() === "All");
+    });
+    setActiveNav("navHome");
+    updateListingLayout();
+    applyFilters();
+}
+
 function setupNavigation(){
 
-    $("backButton")
-        .addEventListener(
-            "click",
-            () => {
+    /* Defensive binds: missing chrome must not abort listing boot. */
+    onClick("backButton", () => {
+        if(window.havkarNavigateBack){
+            window.havkarNavigateBack();
+            return;
+        }
+        goAppHome();
+    });
 
-                if(
-                    window.havkarNavigateBack
-                ){
+    onClick("addButton", () => {
+        window.location.href = "post-ad.html";
+    });
 
-                    window.havkarNavigateBack();
+    onClick("notificationButton", () => {
+        window.location.href = "notifications.html";
+    });
 
-                    return;
+    /* Home returns to the real HAVKAR home (index), not a Profile shortcut. */
+    onClick("navHome", goAppHome);
 
-                }
+    onClick("navSearch", () => {
+        /* Open the shared Search hub — never leave users on an alternate old search UI. */
+        const q = String(($("searchInput") && $("searchInput").value) || state.search || "").trim();
+        const target =
+            "search.html?scope=buy-sell" +
+            (q ? ("&q=" + encodeURIComponent(q)) : "");
+        window.location.href = target;
+    });
 
-                goAppHome();
+    onClick("clearListingFilters", clearListingFilters);
 
-            }
-        );
+    onClick("navSaved", showSavedListings);
 
-    $("addButton")
-        .addEventListener(
-            "click",
-            () => {
-
-                window.location.href =
-                    "post-ad.html";
-
-            }
-        );
-
-    $("profileButton")
-        .addEventListener(
-            "click",
-            goProfile
-        );
-
-                $("notificationButton")
-        .addEventListener(
-            "click",
-            () => {
-
-                window.location.href =
-                    "notifications.html";
-
-            }
-        );
-
-    $("navHome")
-        .addEventListener(
-            "click",
-            () => {
-
-                goMarketplaceHome();
-
-            }
-        );
-
-    $("navSearch")
-        .addEventListener(
-            "click",
-            () => {
-
-                state.savedOnly =
-                    false;
-
-                state.exploreMode =
-                    true;
-
-                setActiveNav(
-                    "navSearch"
-                );
-
-                updateListingLayout();
-
-                applyFilters();
-
-                $("searchInput")
-                    .focus();
-
-                window.scrollTo(
-                    {
-                        top:0,
-                        behavior:"smooth"
-                    }
-                );
-
-            }
-        );
-
-    $("navSaved")
-        .addEventListener(
-            "click",
-            showSavedListings
-        );
-
-    $("navMessages")
-        .addEventListener(
-            "click",
-            goMessages
-        );
-
-    $("navProfile")
-        .addEventListener(
-            "click",
-            goProfile
-        );
+    onClick("navMessages", goMessages);
 
     document
-        .querySelectorAll(
-            ".nav-item"
-        )
-        .forEach(
-            item => {
-
-                item.addEventListener(
-                    "keydown",
-                    event => {
-
-                        if(
-                            event.key === "Enter" ||
-                            event.key === " "
-                        ){
-
-                            event.preventDefault();
-
-                            item.click();
-
-                        }
-
-                    }
-                );
-
-            }
-        );
+        .querySelectorAll(".nav-item")
+        .forEach(item => {
+            item.addEventListener("keydown", event => {
+                if(event.key === "Enter" || event.key === " "){
+                    event.preventDefault();
+                    item.click();
+                }
+            });
+        });
 
 }
 
@@ -4410,6 +5165,54 @@ function setupSearch(){
 
     }
 
+    const currencyFilter =
+        $("currencyFilter");
+
+    if(currencyFilter){
+
+        currencyFilter.addEventListener(
+            "change",
+            () => {
+
+                state.currencyFilter =
+                    currencyFilter.value ||
+                    "";
+
+                state.savedOnly =
+                    false;
+
+                applyFilters();
+
+            }
+        );
+
+    }
+
+    const priceCurrency =
+        $("priceCurrency");
+
+    if(priceCurrency){
+
+        priceCurrency.addEventListener(
+            "change",
+            async () => {
+
+                state.priceCurrency =
+                    priceCurrency.value ||
+                    "EUR";
+
+                state.savedOnly =
+                    false;
+
+                await ensureFxRates();
+
+                applyFilters();
+
+            }
+        );
+
+    }
+
 }
 
 
@@ -4499,6 +5302,8 @@ async function loadMoreListings(){
                     : 24
             );
 
+        await loadSellerPublicProfilesForAds(ads);
+
         applyFilters();
 
         syncLoadMore();
@@ -4537,17 +5342,8 @@ async function loadMoreListings(){
 
 function setupRetry(){
 
-    $("retryButton")
-        .addEventListener(
-            "click",
-            loadListings
-        );
-
-    $("loadMoreListings")
-        .addEventListener(
-            "click",
-            loadMoreListings
-        );
+    onClick("retryButton", loadListings);
+    onClick("loadMoreListings", loadMoreListings);
 
 }
 
@@ -4602,9 +5398,421 @@ async function handleInitialHash(){
    BOOT
    ========================================================= */
 
+function applyConnectReturnFromQuery(){
+    try{
+        const params = new URLSearchParams(window.location.search || "");
+        const connect = String(params.get("connect") || "").trim().toLowerCase();
+        const payment = String(params.get("payment") || "").trim().toLowerCase();
+        let message = "";
+        if(connect === "return"){
+            message = "Stripe Connect return received. Syncing seller payout status from Stripe now…";
+            window.setTimeout(function(){
+                if(typeof refreshSellerPayoutPanel === "function"){
+                    refreshSellerPayoutPanel();
+                }
+            }, 400);
+        }else if(connect === "refresh"){
+            message = "Stripe Connect onboarding needs to be continued. Open Connect again when ready.";
+        }else if(payment === "success"){
+            message = "Payment return received. Checking settlement status…";
+        }else if(payment === "cancelled"){
+            message = "Payment was cancelled. No charge was completed.";
+        }
+        if(!message) return;
+        const host = document.getElementById("sellerPayoutStatus")
+            || document.getElementById("statusMessage")
+            || document.getElementById("message")
+            || document.querySelector("[data-status], .status, .banner");
+        if(host){
+            host.hidden = false;
+            host.textContent = message;
+            host.setAttribute("role", "status");
+        }else if(typeof window.alert === "function"){
+            window.alert(message);
+        }
+        params.delete("connect");
+        params.delete("payment");
+        const next = params.toString();
+        const clean = window.location.pathname + (next ? ("?" + next) : "") + (window.location.hash || "");
+        window.history.replaceState({}, "", clean);
+    }catch(_e){}
+}
+
+function buysellLoginUrl(){
+    const next = "/buy-sell.html";
+    /*
+     * Stay on the current Preview/production host.
+     * Never bounce Preview → havkar.online (that dropped Owner out of Preview).
+     * Absolute same-origin URL only — no cross-domain token handoff.
+     */
+    try{
+        if(
+            window.HAVKAR_CANONICAL &&
+            typeof window.HAVKAR_CANONICAL.sameOriginPathUrl === "function"
+        ){
+            return window.HAVKAR_CANONICAL.sameOriginPathUrl(
+                "/login.html?next=" + encodeURIComponent(next)
+            );
+        }
+        const u = new URL("/login.html", window.location.origin);
+        u.searchParams.set("next", next);
+        return u.href;
+    }catch(_e){
+        return "login.html?next=" + encodeURIComponent(next);
+    }
+}
+
+function clearSellerPayoutAlert(){
+    const alertBox = document.getElementById("sellerPayoutAlert");
+    const loginBtn = document.getElementById("sellerConnectLoginButton");
+    if(alertBox){
+        alertBox.hidden = true;
+        alertBox.innerHTML = "";
+    }
+    if(loginBtn){
+        loginBtn.hidden = true;
+    }
+}
+
+function showSellerPayoutAlert(message, options){
+    const opts = options || {};
+    const note = document.getElementById("sellerPayoutStatus");
+    const alertBox = document.getElementById("sellerPayoutAlert");
+    const loginBtn = document.getElementById("sellerConnectLoginButton");
+    const panel = document.getElementById("sellerPayoutPanel");
+    const text = String(message || "Stripe Connect could not continue.");
+    if(note){
+        note.textContent = text;
+    }
+    if(alertBox){
+        alertBox.hidden = false;
+        if(opts.needLogin){
+            alertBox.innerHTML =
+                text +
+                " <a id=\"sellerPayoutLoginLink\" href=\"" +
+                buysellLoginUrl() +
+                "\">Open Preview login → return to this Buy &amp; Sell</a>";
+        }else{
+            alertBox.textContent = text;
+        }
+    }
+    if(loginBtn){
+        loginBtn.hidden = !opts.needLogin;
+    }
+    if(typeof showToast === "function"){
+        showToast(text);
+    }
+    if(panel && typeof panel.scrollIntoView === "function"){
+        panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    try{
+        console.error("[HAVKAR Buy&Sell Connect]", text, opts.detail || null);
+    }catch(_e){}
+}
+
+async function getBuysellAccessToken(){
+    try{
+        initializeSupabase();
+        if(!supabaseClient || !supabaseClient.auth){
+            return null;
+        }
+        let sessionResult = await supabaseClient.auth.getSession();
+        let session =
+            sessionResult &&
+            sessionResult.data &&
+            sessionResult.data.session;
+        if(session && session.expires_at){
+            const expiresAtMs = Number(session.expires_at) * 1000;
+            if(Number.isFinite(expiresAtMs) && expiresAtMs < Date.now() + 30000){
+                const refreshed = await supabaseClient.auth.refreshSession();
+                session =
+                    refreshed &&
+                    refreshed.data &&
+                    refreshed.data.session;
+            }
+        }
+        if(!session || !session.access_token){
+            const refreshed = await supabaseClient.auth.refreshSession();
+            session =
+                refreshed &&
+                refreshed.data &&
+                refreshed.data.session;
+        }
+        return (session && session.access_token) || null;
+    }catch(_e){
+        return null;
+    }
+}
+
+function openStripeConnectUrl(url){
+    const target = String(url || "").trim();
+    if(!target){
+        return false;
+    }
+    try{
+        if(
+            window.Capacitor &&
+            window.Capacitor.Plugins &&
+            window.Capacitor.Plugins.Browser &&
+            typeof window.Capacitor.Plugins.Browser.open === "function"
+        ){
+            window.Capacitor.Plugins.Browser.open({ url: target });
+            return true;
+        }
+    }catch(_e){}
+    try{
+        window.location.assign(target);
+        return true;
+    }catch(_e2){
+        try{
+            window.location.href = target;
+            return true;
+        }catch(_e3){
+            return false;
+        }
+    }
+}
+
+async function refreshSellerPayoutPanel(){
+    const note = document.getElementById("sellerPayoutStatus");
+    if(!note){
+        return;
+    }
+    clearSellerPayoutAlert();
+    const token = await getBuysellAccessToken();
+    if(!token){
+        note.textContent =
+            "Session required. Sign in again to load Stripe Connect status.";
+        showSellerPayoutAlert(
+            "Your HAVKAR session is missing or expired on this Preview. Sign in again, then tap Start / continue Stripe Connect.",
+            { needLogin: true }
+        );
+        syncHeaderConnectButton();
+        return;
+    }
+    try{
+        const res = await fetch("/api/create-event-checkout", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + token,
+                Accept: "application/json"
+            },
+            body: JSON.stringify({
+                action: "marketplace_connect_status",
+                sync: true
+            })
+        });
+        const body = await res.json().catch(function(){ return null; });
+        if(res.status === 401 || res.status === 403){
+            showSellerPayoutAlert(
+                "Session expired or invalid (" +
+                    res.status +
+                    "). Sign in again, then retry Connect.",
+                {
+                    needLogin: true,
+                    detail: body
+                }
+            );
+            return;
+        }
+        if(!res.ok || !body || body.ok !== true){
+            showSellerPayoutAlert(
+                (body && (body.customer_message || body.error || body.message)) ||
+                    ("Connect status unavailable (HTTP " + res.status + ")."),
+                { detail: body }
+            );
+            return;
+        }
+        clearSellerPayoutAlert();
+        const account = body.account;
+        const live = body.live_collection === "armed" ? "armed" : "paused";
+        const publicLive =
+            body.public_live_payments === true ? "ON" : "OFF";
+        let connectLine = "Stripe Connect: not started.";
+        if(account){
+            if(account.charges_enabled === true){
+                connectLine =
+                    "Stripe Connect: charges_enabled=true" +
+                    (account.payouts_enabled === true ? ", payouts_enabled=true" : ", payouts_enabled=false") +
+                    " · account " + String(account.stripe_account_id || "").slice(0, 14) + "…";
+            }else{
+                connectLine =
+                    "Stripe Connect: " +
+                    (account.onboarding_status || "pending") +
+                    " · charges_enabled=false · finish Stripe KYC/KYB.";
+            }
+        }
+        let ownerLine = "";
+        if(body.is_primary_owner === true){
+            ownerLine =
+                " Signed in as Primary Owner. Use Start / continue Stripe Connect — KYC/bank only on Stripe-hosted pages.";
+            if(body.stripe_secret_configured === false){
+                ownerLine +=
+                    " Blocker: Stripe secret is not configured on this environment (Owner must bind it in Vercel).";
+            }
+        }
+        if(body.next_action){
+            ownerLine += " Next: " + String(body.next_action);
+        }
+        note.textContent =
+            connectLine +
+            " Public live collection: " +
+            live +
+            " · marketplace public live: " +
+            publicLive +
+            ". Register XLM receive key in Wallet if you accept Stellar. Seller fees remain 3% of list price." +
+            ownerLine;
+        syncHeaderConnectButton();
+    }catch(_err){
+        showSellerPayoutAlert("Connect status check failed. Check network and retry.");
+    }
+}
+
+async function startSellerConnectFromHome(){
+    const note = document.getElementById("sellerPayoutStatus");
+    const btn = document.getElementById("sellerConnectHomeButton");
+    if(btn){
+        btn.disabled = true;
+        btn.textContent = "Starting Stripe…";
+    }
+    clearSellerPayoutAlert();
+    try{
+        const token = await getBuysellAccessToken();
+        if(!token){
+            showSellerPayoutAlert(
+                "No active Owner session on this Preview. Sign in again, then tap Start / continue Stripe Connect.",
+                { needLogin: true }
+            );
+            return;
+        }
+        if(note){
+            note.textContent = "Contacting HAVKAR Connect API…";
+        }
+        const res = await fetch("/api/create-event-checkout", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + token,
+                Accept: "application/json"
+            },
+            body: JSON.stringify({ action: "marketplace_connect_onboard" })
+        });
+        const body = await res.json().catch(function(){ return null; });
+        if(res.status === 401 || res.status === 403){
+            showSellerPayoutAlert(
+                "Session expired while starting Connect (HTTP " +
+                    res.status +
+                    "). Sign in again, then retry.",
+                { needLogin: true, detail: body }
+            );
+            return;
+        }
+        if(!res.ok || !body || !body.onboarding_url){
+            showSellerPayoutAlert(
+                (body && (body.error || body.message || body.customer_message)) ||
+                    ("Connect onboarding failed (HTTP " + res.status + ")."),
+                { detail: body }
+            );
+            return;
+        }
+        if(note){
+            note.textContent =
+                "Opening official Stripe Connect page (no charge). If nothing opens, allow redirects/popups for this site.";
+        }
+        showToast("Opening Stripe Connect…");
+        const opened = openStripeConnectUrl(body.onboarding_url);
+        if(!opened){
+            const alertBox = document.getElementById("sellerPayoutAlert");
+            if(alertBox){
+                alertBox.hidden = false;
+                alertBox.innerHTML =
+                    "Stripe URL received but navigation was blocked. " +
+                    "<a href=\"" +
+                    String(body.onboarding_url).replace(/"/g, "&quot;") +
+                    "\" rel=\"noopener noreferrer\">Open official Stripe Connect page</a>";
+            }
+            showToast("Open the Stripe link shown in the red alert.");
+        }
+    }catch(err){
+        showSellerPayoutAlert(
+            (err && err.message) || "Connect onboarding failed."
+        );
+    }finally{
+        if(btn){
+            btn.disabled = false;
+            btn.textContent = "Start / continue Stripe Connect";
+        }
+    }
+}
+
+function syncHeaderConnectButton(){
+    const headerBtn = document.getElementById("headerConnectButton");
+    const panel = document.getElementById("sellerPayoutPanel");
+    if(!headerBtn){
+        return;
+    }
+    const signedIn = !!(state && state.currentUserId);
+    headerBtn.classList.toggle("visible", signedIn);
+    if(!headerBtn.dataset.wired){
+        headerBtn.dataset.wired = "1";
+        headerBtn.addEventListener("click", function(){
+            if(panel){
+                panel.hidden = false;
+                panel.scrollIntoView({ behavior: "smooth", block: "start" });
+                panel.style.outline = "3px solid #f9a825";
+                window.setTimeout(function(){
+                    panel.style.outline = "";
+                }, 2200);
+            }
+        });
+    }
+}
+
+function setupSellerPayoutPanel(){
+    const panel = document.getElementById("sellerPayoutPanel");
+    const startBtn = document.getElementById("sellerConnectHomeButton");
+    const refreshBtn = document.getElementById("sellerConnectRefreshButton");
+    const loginBtn = document.getElementById("sellerConnectLoginButton");
+    if(panel){
+        panel.hidden = false;
+    }
+    if(startBtn && !startBtn.dataset.wired){
+        startBtn.dataset.wired = "1";
+        startBtn.addEventListener("click", function(ev){
+            if(ev && typeof ev.preventDefault === "function"){
+                ev.preventDefault();
+            }
+            startSellerConnectFromHome();
+        });
+    }
+    if(refreshBtn && !refreshBtn.dataset.wired){
+        refreshBtn.dataset.wired = "1";
+        refreshBtn.addEventListener("click", function(ev){
+            if(ev && typeof ev.preventDefault === "function"){
+                ev.preventDefault();
+            }
+            refreshSellerPayoutPanel();
+        });
+    }
+    if(loginBtn && !loginBtn.dataset.wired){
+        loginBtn.dataset.wired = "1";
+        loginBtn.addEventListener("click", function(ev){
+            if(ev && typeof ev.preventDefault === "function"){
+                ev.preventDefault();
+            }
+            window.location.assign(buysellLoginUrl());
+        });
+    }
+    syncHeaderConnectButton();
+    refreshSellerPayoutPanel();
+}
+
 async function boot(){
 
     try{
+
+        applyConnectReturnFromQuery();
 
         initializeSupabase();
 
@@ -4614,19 +5822,33 @@ async function boot(){
 
         await resolveCurrentUser();
 
+        setupSellerPayoutPanel();
+
+        const versionNode = $("buysellUiVersion");
+        if(versionNode){
+            versionNode.textContent =
+                "UI " + (window.HAVKAR_BUYSELL_UI || "unknown");
+        }
+
         renderCategories();
 
         renderCountryFilter();
 
-        setupNavigation();
+                setupNavigation();
 
-applyShotModeFromQuery();
+        populateCurrencyFilters();
+        ensureFxRates().then(function () {
+            applyFilters();
+        }).catch(function () {});
+
+        applyShotModeFromQuery();
 
         setupSearch();
 
         setupRetry();
 
         renderSkeletons();
+        updateListingLayout();
 
         /*
          * Listen for future login/logout/session changes.
@@ -4649,6 +5871,10 @@ applyShotModeFromQuery();
          */
 
         await handleInitialHash();
+
+        try{
+            refreshTranslatedLabels();
+        }catch(_i18n){}
 
     }catch(error){
 
@@ -4688,8 +5914,17 @@ document.addEventListener(
 
 </script>
 
+<script src="/havkar-countries.js"></script>
+<script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
 
 <script src="/havkar-page-back.js"></script>
+<script src="/havkar-sw-register.js"></script>
+
+
+<!-- HAVKAR contextual help -->
+<p class="havkar-contextual-help" style="margin:10px 0;font-size:.85rem">
+  <a href="support.html?tile=buy-sell#tile-buy-sell">Help for this section</a>
+</p>
 </body>
     </html>

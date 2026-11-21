@@ -52,18 +52,24 @@ assert.equal(cardPaymentsAllowed({
 }), true);
 
 const checkout = read("api/create-event-checkout.js");
-const pauseAt = checkout.indexOf("if (!cardPaymentsAllowed())");
+const pauseAt = checkout.indexOf("eventCardCheckoutAllowed");
 const stripeInsertAt = checkout.indexOf('payment_provider: "stripe"');
 const sessionAt = checkout.indexOf("checkout.sessions.create");
 assert.ok(pauseAt > 0);
 assert.ok(pauseAt < stripeInsertAt);
 assert.ok(pauseAt < sessionAt);
+assert.match(checkout, /REAL_PAYMENTS_PAUSED/);
+assert.match(checkout, /stripeTestCheckoutAllowed/);
 assert.match(checkout, /new Stripe\(process\.env\.STRIPE_SECRET_KEY\)/);
 assert.match(checkout, /allowedCheckoutOrigin/);
 assert.doesNotMatch(checkout, /sk_live_/);
 
 const webhookSource = read("api/stripe-webhook.js");
-assert.match(webhookSource, /const stripe = new Stripe\(process\.env\.STRIPE_SECRET_KEY\);/);
+assert.match(webhookSource, /createStripeClient/);
+assert.doesNotMatch(
+  webhookSource,
+  /const stripe = new Stripe\(process\.env\.STRIPE_SECRET_KEY\);/
+);
 assert.ok(webhookSource.indexOf("cardPaymentsAllowed()") < webhookSource.indexOf("checkout.session.completed"));
 
 const wallet = read("wallet.html");
