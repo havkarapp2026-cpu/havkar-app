@@ -293,7 +293,7 @@ nav.bottom a i{font-size:1.05rem}
     var client = initDb();
     var res = await client
       .from("ads")
-      .select("id,title,category,location,city,country,description,price,status,listing_surface,created_at")
+      .select("id,title,category,location,city,country_code,description,price,status,listing_surface,created_at")
       .order("created_at", { ascending: false })
       .limit(80);
     if (res.error) throw res.error;
@@ -304,7 +304,7 @@ nav.bottom a i{font-size:1.05rem}
       if (window.HAVKAR_MARKETPLACE && !window.HAVKAR_MARKETPLACE.isMarketplaceRow(row)) continue;
       var st = String(row.status || "").toLowerCase();
       if (["sold", "deleted", "archived", "draft", "inactive"].indexOf(st) !== -1) continue;
-      var pack = haystack([row.title, row.category, row.location, row.city, row.country, row.description, row.price]);
+      var pack = haystack([row.title, row.category, row.location, row.city, row.country_code, row.description, row.price]);
       if (!matchNeedle(pack, needle)) continue;
       out.push({
         surface: "buy-sell",
@@ -409,7 +409,7 @@ nav.bottom a i{font-size:1.05rem}
     var client = initDb();
     var res = await client
       .from("events")
-      .select("id,title,location,organizer,description,category,status,visibility,created_at")
+      .select("id,title,location,organizer,description,category,status,created_at")
       .order("created_at", { ascending: false })
       .limit(80);
     if (res.error) throw res.error;
@@ -418,9 +418,7 @@ nav.bottom a i{font-size:1.05rem}
     for (var i = 0; i < rows.length; i++) {
       var row = rows[i];
       var status = String(row.status || "").toLowerCase();
-      if (status && status !== "active" && status !== "published" && status !== "public") {
-        if (["cancelled", "deleted", "draft"].indexOf(status) !== -1) continue;
-      }
+      if (["cancelled", "deleted", "draft"].indexOf(status) !== -1) continue;
       var pack = haystack([row.title, row.location, row.organizer, row.description, row.category]);
       if (!matchNeedle(pack, needle)) continue;
       out.push({
