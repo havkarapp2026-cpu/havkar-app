@@ -234,6 +234,13 @@ assert.match(buysell, /sellerPayoutPanel/);
 assert.match(buysell, /marketplace_connect_onboard/);
 assert.match(buysell, /marketplace_connect_status/);
 
+const api = fs.readFileSync("api/create-event-checkout.js", "utf8");
+assert.match(api, /marketplace_owner_seller_prep/);
+assert.match(api, /PRIMARY_OWNER_USER_ID/);
+assert.match(api, /idempotencyKey/);
+assert.match(api, /kyc_note/);
+assert.match(terms, /marketplace-tax/);
+
 const outPath = "store/MARKETPLACE_SETTLEMENT_EVIDENCE_20261121.json";
 fs.mkdirSync("store", { recursive: true });
 fs.writeFileSync(outPath, JSON.stringify(evidence, null, 2) + "\n");

@@ -48,5 +48,8 @@ assert.match(terms, /Seller fee: <strong>3%<\/strong>/);
 assert.match(terms, /Still blank for counsel/);
 assert.match(terms, /direct_split/);
 assert.match(terms, /MiCA/);
+assert.match(terms, /id="marketplace-tax"/);
+assert.match(terms, /Directive 2011\/83\/EU|Consumer Code/);
+assert.match(terms, /IVA/);
 
 console.log("LEGAL_DRAFTS_TEST_OK");

@@ -12,7 +12,7 @@
 <meta name="havkar-buysell-ui" content="20261120-unify-v1">
 <title>HAVKAR — Buy & Sell</title>
 <script>
-window.HAVKAR_BUYSELL_UI = "20261121-connect-payout-v1";
+window.HAVKAR_BUYSELL_UI = "20261121-owner-connect-v2";
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -5352,11 +5352,21 @@ async function refreshSellerPayoutPanel(){
                     " · charges_enabled=false · finish Stripe KYC/KYB.";
             }
         }
+        let ownerLine = "";
+        if(body.is_primary_owner === true){
+            ownerLine =
+                " Primary Owner seller prep: use Start / continue Stripe Connect — KYC/bank only on Stripe-hosted pages.";
+            if(body.stripe_secret_configured === false){
+                ownerLine +=
+                    " Blocker: Stripe secret is not configured on this environment (Owner must bind it in Vercel).";
+            }
+        }
         note.textContent =
             connectLine +
             " Public live collection: " +
             live +
-            ". Register XLM receive key in Wallet if you accept Stellar. Seller fees remain 3% of list price.";
+            ". Register XLM receive key in Wallet if you accept Stellar. Seller fees remain 3% of list price." +
+            ownerLine;
     }catch(_err){
         note.textContent = "Connect status check failed.";
     }

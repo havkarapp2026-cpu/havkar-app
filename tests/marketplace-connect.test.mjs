@@ -35,6 +35,15 @@ test("Accounts v2 recipient body requests express + application responsibilities
     true
   );
   assert.ok(body.include.includes("configuration.recipient"));
+  assert.equal(body.metadata.havkar_flow, "marketplace_connect");
+  assert.equal(body.metadata.havkar_business_url, "https://havkar.online");
+  const ownerBody = buildRecipientAccountV2CreateBody({
+    email: "havkarapp2026@gmail.com",
+    displayName: "HAVKAR Owner seller",
+    extraMetadata: { havkar_primary_owner: "true" }
+  });
+  assert.equal(ownerBody.metadata.havkar_primary_owner, "true");
+  assert.equal(ownerBody.display_name, "HAVKAR Owner seller");
 });
 
 test("connectAccountFlagsFromV2 reads transfer capability status", () => {

@@ -179,11 +179,88 @@ function isMarketplaceConnectRequest(req) {
       url.indexOf("marketplace-connect") !== -1 ||
       action === "marketplace_connect_onboard" ||
       action === "marketplace_connect_status" ||
+      action === "marketplace_owner_seller_prep" ||
       action === "marketplace_connect_quote" ||
       action === "marketplace_buy_checkout" ||
       action === "marketplace_seller_public" ||
       action === "marketplace_public_readiness"
   );
+}
+
+const PRIMARY_OWNER_USER_ID = "9b34b0bb-271a-49ee-aeb7-a9d28be06a06";
+
+async function isPrimaryHavkarOwner(userId) {
+  const id = String(userId || "").trim();
+  if (!id) return false;
+  if (id === PRIMARY_OWNER_USER_ID) return true;
+  try {
+    const { data, error } = await getSupabaseAdmin()
+      .from("owner_identity")
+      .select("user_id")
+      .eq("user_id", id)
+      .maybeSingle();
+    // Table may live in havkar_private; REST may not expose it. Fall back to constant.
+    if (!error && data && data.user_id) return true;
+  } catch (_err) {
+    /* ignore */
+  }
+  return false;
+}
+
+function ownerSellerPrepSteps(origin) {
+  const base = String(origin || "https://havkar.online").replace(/\/$/, "");
+  return {
+    note:
+      "KYC and bank details are entered only on Stripe-hosted pages. HAVKAR never asks for IBAN, card numbers, or Stripe secret keys in chat.",
+    steps: [
+      {
+        id: 1,
+        title: "Sign in as the primary Owner account",
+        detail: "Use havkarapp2026@gmail.com (HAVKAR Owner identity)."
+      },
+      {
+        id: 2,
+        title: "Confirm Stripe secrets on the target Vercel environment",
+        detail:
+          "Preview currently reports STRIPE_SECRET_KEY absent. Bind the live or test key in Vercel Project Settings → Environment Variables before Connect onboard can start."
+      },
+      {
+        id: 3,
+        title: "Open Buy & Sell Seller payout setup",
+        url: base + "/buy-sell.html",
+        detail: "Expand Seller payout setup → Start / continue Stripe Connect."
+      },
+      {
+        id: 4,
+        title: "Complete Stripe-hosted onboarding",
+        detail:
+          "Enter legal identity and bank account only on the Stripe secure page. Return URL: buy-sell.html?connect=return"
+      },
+      {
+        id: 5,
+        title: "Refresh until charges_enabled=true",
+        detail:
+          "Webhook account.updated updates marketplace_seller_connect_accounts. Confirm in Stripe Dashboard → Connect → Accounts."
+      },
+      {
+        id: 6,
+        title: "Optional XLM receive key",
+        url: base + "/wallet.html",
+        detail:
+          "Register a Stellar receive public key only (never a seed). Fund the Mainnet account before live XLM."
+      },
+      {
+        id: 7,
+        title: "Owner-only live activation (separate approval)",
+        detail:
+          "Do not set HAVKAR_MARKETPLACE_PUBLIC_LIVE_PAYMENTS=true or charge real cards until Owner explicitly approves."
+      }
+    ],
+    stripe_dashboard_connect:
+      "https://dashboard.stripe.com/connect/accounts",
+    stripe_dashboard_webhooks: "https://dashboard.stripe.com/webhooks",
+    required_webhook_events: REQUIRED_WEBHOOK_EVENTS.slice()
+  };
 }
 
 /** Customer-facing marketplace live checkout stays OFF until Owner sets this exact flag. */
@@ -3538,10 +3615,55 @@ export default async function handler(req, res) {
       if (error) {
         return sendError(res, 500, "Could not load Connect status");
       }
+      const primaryOwner = await isPrimaryHavkarOwner(auth.user.id);
+      const origin = allowedCheckoutOrigin(req);
       return res.status(200).json({
         ok: true,
         live_collection: cardPaymentsAllowed() ? "armed" : "paused",
-        account: data || null
+        stripe_secret_mode: stripeSecretMode(),
+        stripe_secret_configured: Boolean(
+          String(process.env.STRIPE_SECRET_KEY || "").trim()
+        ),
+        is_primary_owner: primaryOwner,
+        account: data || null,
+        owner_prep: primaryOwner ? ownerSellerPrepSteps(origin) : null
+      });
+    }
+
+    if (action === "marketplace_owner_seller_prep") {
+      const primaryOwner = await isPrimaryHavkarOwner(auth.user.id);
+      if (!primaryOwner) {
+        return res.status(403).json({
+          ok: false,
+          error: "Only the primary HAVKAR Owner can load Owner seller prep.",
+          code: "OWNER_ONLY"
+        });
+      }
+      const origin = allowedCheckoutOrigin(req);
+      const { data: account } = await getSupabaseAdmin()
+        .from("marketplace_seller_connect_accounts")
+        .select(
+          "stripe_account_id,charges_enabled,payouts_enabled,details_submitted,onboarding_status,updated_at"
+        )
+        .eq("user_id", auth.user.id)
+        .maybeSingle();
+      return res.status(200).json({
+        ok: true,
+        charged: false,
+        real_money_moved: false,
+        owner_user_id: auth.user.id,
+        owner_email: auth.user.email || null,
+        stripe_secret_mode: stripeSecretMode(),
+        stripe_secret_configured: Boolean(
+          String(process.env.STRIPE_SECRET_KEY || "").trim()
+        ),
+        live_collection: cardPaymentsAllowed() ? "armed" : "paused",
+        public_live_payments: marketplacePublicLivePaymentsAllowed(),
+        connect_account: account || null,
+        prep: ownerSellerPrepSteps(origin),
+        next_action: account && account.charges_enabled
+          ? "Owner Connect is charges_enabled. Live marketplace charges still need explicit Owner approval of HAVKAR_MARKETPLACE_PUBLIC_LIVE_PAYMENTS."
+          : "Sign in on Buy & Sell and start Stripe Connect. Complete KYC/bank only on the Stripe-hosted page."
       });
     }
 
@@ -3558,6 +3680,7 @@ export default async function handler(req, res) {
 
     try {
       const stripe = getStripe();
+      const primaryOwner = await isPrimaryHavkarOwner(auth.user.id);
       const existing = await getSupabaseAdmin()
         .from("marketplace_seller_connect_accounts")
         .select("stripe_account_id")
@@ -3567,11 +3690,17 @@ export default async function handler(req, res) {
       let accountId = existing.data && existing.data.stripe_account_id;
       if (!accountId) {
         // Accounts v2 only — Accounts v1 create is blocked on this platform.
+        // Prefill only email/display name. Bank + government ID stay on Stripe-hosted KYC.
         const created = await createRecipientAccountV2(stripe, {
           email: auth.user.email,
-          displayName:
-            (auth.user.user_metadata && auth.user.user_metadata.full_name) ||
-            "HAVKAR seller"
+          displayName: primaryOwner
+            ? "HAVKAR Owner seller"
+            : (auth.user.user_metadata && auth.user.user_metadata.full_name) ||
+              "HAVKAR seller",
+          extraMetadata: {
+            havkar_user_id: String(auth.user.id),
+            havkar_primary_owner: primaryOwner ? "true" : "false"
+          }
         });
         accountId = created.id;
         await getSupabaseAdmin()
@@ -3605,9 +3734,13 @@ export default async function handler(req, res) {
 
       return res.status(200).json({
         ok: true,
+        charged: false,
         live_collection: cardPaymentsAllowed() ? "armed" : "paused",
+        is_primary_owner: primaryOwner,
         stripe_account_id: accountId,
         onboarding_url: accountLink.url || accountLink.link || null,
+        kyc_note:
+          "Complete identity and bank details only on the Stripe-hosted page. HAVKAR does not collect IBAN or documents in this API.",
         fee_example_eur_100: demoSplit,
         destination_checkout_example: exampleCheckout
       });
