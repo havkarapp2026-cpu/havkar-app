@@ -63,6 +63,63 @@ test("connectAccountFlagsFromV2 reads transfer capability status", () => {
   assert.equal(flags.transfer_capability_status, "pending");
 });
 
+test("v1 Express fallback body requests card_payments + transfers", () => {
+  const {
+    buildExpressAccountV1CreateBody,
+    isAccountsV2PermissionError,
+    createMarketplaceConnectAccount
+  } = require("../lib/marketplace-connect.cjs");
+  const body = buildExpressAccountV1CreateBody({
+    email: "seller@example.com",
+    country: "IT",
+    displayName: "Seller",
+    extraMetadata: { havkar_primary_owner: "true" }
+  });
+  assert.equal(body.type, "express");
+  assert.equal(body.country, "IT");
+  assert.equal(body.capabilities.card_payments.requested, true);
+  assert.equal(body.capabilities.transfers.requested, true);
+  assert.equal(body.metadata.havkar_account_api, "v1_express");
+  assert.equal(body.metadata.havkar_primary_owner, "true");
+  assert.equal(
+    isAccountsV2PermissionError({
+      message:
+        "Permission denied. This key lacks access to Accounts v2. You can edit permissions at https://dashboard.stripe.com/"
+    }),
+    true
+  );
+});
+
+test("createMarketplaceConnectAccount falls back to v1 when v2 permission denied", async () => {
+  const { createMarketplaceConnectAccount } = require("../lib/marketplace-connect.cjs");
+  const stripe = {
+    v2: {
+      core: {
+        accounts: {
+          create: async () => {
+            const err = new Error(
+              "Permission denied. This key lacks access to Accounts v2."
+            );
+            throw err;
+          }
+        }
+      }
+    },
+    accounts: {
+      create: async (body) => {
+        assert.equal(body.type, "express");
+        return { id: "acct_v1_express_test", type: "express" };
+      }
+    }
+  };
+  const result = await createMarketplaceConnectAccount(stripe, {
+    email: "owner@example.com",
+    displayName: "HAVKAR Owner seller"
+  });
+  assert.equal(result.api, "v1_express");
+  assert.equal(result.id, "acct_v1_express_test");
+});
+
 test("destination Checkout params keep fee routing server-side", () => {
   const split = marketplaceCardSplit(40);
   const params = buildMarketplaceDestinationCheckoutParams({

@@ -13,6 +13,7 @@ import {
   marketplaceCardSplit,
   buildMarketplaceDestinationCheckoutParams,
   createRecipientAccountV2,
+  createMarketplaceConnectAccount,
   createRecipientAccountOnboardingLink,
   connectAccountFlagsFromV2
 } from "../lib/marketplace-connect.cjs";
@@ -3768,10 +3769,14 @@ export default async function handler(req, res) {
         .maybeSingle();
 
       let accountId = existing.data && existing.data.stripe_account_id;
+      let accountApi = existing.data && existing.data.stripe_account_id
+        ? "existing"
+        : null;
       if (!accountId) {
-        // Accounts v2 only — Accounts v1 create is blocked on this platform.
+        // Prefer Accounts v2 recipient; fall back to v1 Express when the
+        // Production secret lacks Accounts v2 permission (observed live error).
         // Prefill only email/display name. Bank + government ID stay on Stripe-hosted KYC.
-        const created = await createRecipientAccountV2(stripe, {
+        const created = await createMarketplaceConnectAccount(stripe, {
           email: auth.user.email,
           displayName: primaryOwner
             ? "HAVKAR Owner seller"
@@ -3783,6 +3788,7 @@ export default async function handler(req, res) {
           }
         });
         accountId = created.id;
+        accountApi = created.api || null;
         await getSupabaseAdmin()
           .from("marketplace_seller_connect_accounts")
           .upsert({
@@ -3794,10 +3800,12 @@ export default async function handler(req, res) {
       }
 
       const origin = allowedCheckoutOrigin(req);
+      const preferV1Links = accountApi === "v1_express";
       const accountLink = await createRecipientAccountOnboardingLink(stripe, {
         accountId,
         refreshUrl: `${origin}/buy-sell.html?connect=refresh`,
-        returnUrl: `${origin}/buy-sell.html?connect=return`
+        returnUrl: `${origin}/buy-sell.html?connect=return`,
+        preferV1: preferV1Links
       });
 
       // Example destination Checkout params (not charged unless Owner arms collection).
@@ -3812,13 +3820,26 @@ export default async function handler(req, res) {
         customerEmail: auth.user.email
       });
 
+      const onboardingUrl = accountLink.url || accountLink.link || null;
+      if (!onboardingUrl) {
+        return res.status(500).json({
+          ok: false,
+          charged: false,
+          code: "CONNECT_LINK_MISSING",
+          error:
+            "Stripe returned no onboarding URL. Retry Connect or check Stripe Dashboard Connect settings."
+        });
+      }
+
       return res.status(200).json({
         ok: true,
         charged: false,
         live_collection: cardPaymentsAllowed() ? "armed" : "paused",
+        public_live_payments: marketplacePublicLivePaymentsAllowed(),
         is_primary_owner: primaryOwner,
         stripe_account_id: accountId,
-        onboarding_url: accountLink.url || accountLink.link || null,
+        account_api: accountApi,
+        onboarding_url: onboardingUrl,
         kyc_note:
           "Complete identity and bank details only on the Stripe-hosted page. HAVKAR does not collect IBAN or documents in this API.",
         fee_example_eur_100: demoSplit,
@@ -3826,7 +3847,16 @@ export default async function handler(req, res) {
       });
     } catch (error) {
       console.error("marketplace connect onboard failed", error && error.message);
-      return sendError(res, 500, "Connect onboarding could not be started");
+      const stripeMessage = String((error && error.message) || "").slice(0, 300);
+      return res.status(500).json({
+        ok: false,
+        charged: false,
+        code: "CONNECT_ONBOARD_FAILED",
+        error: "Connect onboarding could not be started",
+        stripe_message: stripeMessage || null,
+        customer_message:
+          "Seller Connect could not start. HAVKAR did not charge anything. Retry in a moment; if it continues, the platform Stripe key may need Connect account permissions in Stripe Dashboard."
+      });
     }
   }
 
