@@ -529,8 +529,8 @@ body{
 
 .fab{
   position:fixed;
-  right:20px;
-  bottom:91px;
+  right:max(16px, env(safe-area-inset-right, 0px));
+  bottom:calc(91px + env(safe-area-inset-bottom, 0px));
   width:60px;
   height:60px;
   border:0;
@@ -547,8 +547,16 @@ body{
     0 7px 25px
     rgba(46,125,50,.35);
   cursor:pointer;
-  z-index:80;
+  /* Must sit above .bottom-nav (z-index:100); lower z-index blocked mobile taps. */
+  z-index:220;
+  pointer-events:auto;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
   transition:.2s;
+}
+
+.fab i{
+  pointer-events:none;
 }
 
 .fab:hover{
@@ -560,6 +568,19 @@ body{
 
 .fab:active{
   transform:scale(.93);
+}
+
+.jobs-publish-tip{
+  margin:0 0 14px;
+  max-width:720px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(46,125,50,.22);
+  background:linear-gradient(180deg, #f3faf4 0%, #eaf6ec 100%);
+  color:#1b5e20;
+  font-size:12.5px;
+  line-height:1.45;
+  font-weight:600;
 }
 
 /* =========================================================
@@ -1148,7 +1169,8 @@ a.primary{
   }
 
   .fab{
-    bottom:98px;
+    bottom:calc(98px + env(safe-area-inset-bottom, 0px));
+    z-index:220;
   }
 }
 
@@ -1370,6 +1392,14 @@ a.primary{
 
   </div>
 
+  <p
+    class="jobs-publish-tip"
+    id="jobsPublishTip"
+    data-i18n="jobs.publishTip"
+    role="note">
+    Job listings go live after the publishing fee is paid and the transaction is confirmed. HAVKAR connects employers with job seekers.
+  </p>
+
 <div id="jobsList"></div>
 
 </main>
@@ -1378,20 +1408,13 @@ a.primary{
      POST JOB FAB
      ======================================================= -->
 
-
-<div class="notice" id="jobsPayoutHonesty" style="margin:12px 16px;max-width:720px">
-  <strong>Honest payment status:</strong>
-  Jobs fees are <em>listing publication fees paid to HAVKAR</em> (Stripe card or XLM).
-  This is <strong>not</strong> a salary payout rail and does <strong>not</strong> transfer wages to a worker bank account.
-  Seller Connect bank payout limitations on the marketplace are separate; if Connect payouts are pending Stripe review, that status is shown in Buy &amp; Sell seller setup — not hidden here.
-</div>
 <button
   class="fab"
+  id="jobsPostFab"
   type="button"
-  onclick="openPostJob()"
   aria-label="Post a job">
 
-  <i class="fas fa-plus"></i>
+  <i class="fas fa-plus" aria-hidden="true"></i>
 
 </button>
 
@@ -2962,7 +2985,14 @@ function renderApplicationAction(job){
    OPEN POST JOB
    ========================================================= */
 
-async function openPostJob(){
+async function openPostJob(event){
+  /* exposed for FAB / legacy handlers */
+  if(event){
+    try{
+      event.preventDefault();
+      event.stopPropagation();
+    }catch(_e){}
+  }
 
   await refreshCurrentUser();
 
@@ -2977,6 +3007,67 @@ async function openPostJob(){
   if(typeof refreshCompanyStatusPanel === "function"){
     refreshCompanyStatusPanel();
   }
+}
+
+function bindJobsPostFab(){
+  const fab = document.getElementById("jobsPostFab");
+  if(!fab || fab.dataset.bound === "1") return;
+  fab.dataset.bound = "1";
+  let lastOpenMs = 0;
+  const open = function(ev){
+    const now = Date.now();
+    if(now - lastOpenMs < 450) return;
+    lastOpenMs = now;
+    openPostJob(ev);
+  };
+  /*
+    Mobile/tablet: bottom-nav had higher z-index and swallowed taps.
+    Bind click + touchend (touchend preventDefault avoids a second synthetic click).
+  */
+  fab.addEventListener("click", open, { passive: false });
+  fab.addEventListener(
+    "touchend",
+    function(ev){
+      if(ev){
+        try{ ev.preventDefault(); }catch(_e){}
+      }
+      open(ev);
+    },
+    { passive: false }
+  );
+}
+
+function applyJobsPublishTipLanguage(){
+  const tip = document.getElementById("jobsPublishTip");
+  if(!tip) return;
+  const messages = {
+    en: "Job listings go live after the publishing fee is paid and the transaction is confirmed. HAVKAR connects employers with job seekers.",
+    it: "Le offerte di lavoro vengono pubblicate dopo il pagamento della tariffa e la conferma della transazione. HAVKAR collega datori di lavoro e candidati.",
+    fa: "انتشار آگهی استخدام پس از پرداخت هزینه و تأیید تراکنش انجام می‌شود. هاوکار بستری برای ارتباط کارفرمایان و کارجویان است.",
+    ar: "يُنشر إعلان التوظيف بعد دفع الرسوم وتأكيد المعاملة. هافكار منصة للتواصل بين أصحاب العمل والباحثين عن عمل.",
+    sv: "Jobbannonser publiceras efter att publiceringsavgiften betalats och transaktionen bekräftats. HAVKAR kopplar arbetsgivare till arbetssökande.",
+    ckb: "بڵاوکردنەوەی ئاگاداری کار دوای پارەدان و پشتڕاستکردنەوەی مامەڵەکە دەبێت. HAVKAR بنکەیەکە بۆ پەیوەندی خاوەنکار و داواکاری کار.",
+    ku: "Belavkirina agahiya kar piştî dayîna xercê û pejirandina danûstandinê pêk tê. HAVKAR ji bo girêdana xwediyên kar û lêgerên kar e."
+  };
+  let lang = "en";
+  try{
+    lang = String(
+      (window.HAVKAR_I18N && window.HAVKAR_I18N.getLanguage && window.HAVKAR_I18N.getLanguage()) ||
+      localStorage.getItem("havkar_lang") ||
+      localStorage.getItem("havkar-language") ||
+      document.documentElement.lang ||
+      "en"
+    ).toLowerCase();
+  }catch(_e){}
+  if(lang.indexOf("fa") === 0 || lang === "per" || lang === "persian") lang = "fa";
+  if(lang.indexOf("it") === 0) lang = "it";
+  if(lang.indexOf("ar") === 0) lang = "ar";
+  if(lang.indexOf("sv") === 0) lang = "sv";
+  if(lang === "ckb" || lang === "ku-iq" || lang.indexOf("sorani") !== -1) lang = "ckb";
+  if(lang === "ku" || lang.indexOf("kurd") === 0) lang = "ku";
+  tip.textContent = messages[lang] || messages.en;
+  tip.setAttribute("lang", lang === "fa" || lang === "ar" || lang === "ckb" || lang === "ku" ? lang : "en");
+  tip.dir = (lang === "fa" || lang === "ar" || lang === "ckb" || lang === "ku") ? "rtl" : "ltr";
 }
 
 /* =========================================================
@@ -4872,8 +4963,22 @@ async function viewJobApplications(jobId){
   alert("Applications (" + rows.length + "):\n" + summary);
 }
 
+window.openPostJob = openPostJob;
+window.bindJobsPostFab = bindJobsPostFab;
+if(document.readyState === "loading"){
+  document.addEventListener("DOMContentLoaded", function(){
+    bindJobsPostFab();
+    applyJobsPublishTipLanguage();
+  });
+}else{
+  bindJobsPostFab();
+  applyJobsPublishTipLanguage();
+}
+
 (async function bootJobsPage(){
   try{
+    bindJobsPostFab();
+    applyJobsPublishTipLanguage();
     const params = new URLSearchParams(window.location.search);
     const mine = String(params.get("mine") || "") === "1";
     const openId = String(params.get("id") || params.get("job") || "").trim();
