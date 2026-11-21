@@ -89,5 +89,15 @@ const jobsI18n = fs.readFileSync("havkar-jobs-i18n.js", "utf8");
 assert.match(jobsI18n, /برای ثبت آگهی ابتدا وارد حساب هاوکار شوید/);
 assert.match(jobsI18n, /payReceiptPending/);
 assert.match(jobsI18n, /signInPay/);
+assert.match(jobsI18n, /planDiffNote/);
+assert.match(jobsI18n, /تفاوت واقعی فعلاً مبلغ و ترتیب نمایش/);
+assert.match(jobsI18n, /planFeatBasic/);
+assert.match(jobsI18n, /lblImage/);
+assert.match(page, /data-jobs-plan-feat/);
+assert.match(page, /monthly_fee/);
+assert.match(page, /jobsPlanDisplayName/);
+assert.ok(!String(billing.ORDINARY_PLANS.Professional.benefit || "").includes("More visibility"));
+assert.equal(billing.ORDINARY_PLANS.Basic.placementRank, 1);
+assert.equal(billing.ORDINARY_PLANS.Business.placementRank, 3);
 
 console.log("JOBS_EMPLOYMENT_COMPLETE_TEST_OK");

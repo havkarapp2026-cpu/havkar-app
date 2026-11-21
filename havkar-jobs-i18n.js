@@ -111,6 +111,77 @@
       signInCorpPay: "Please sign in before starting a corporate subscription.",
       companyStatusGuest: "Sign in to load your company verification status.",
       step3Notice: "Your job stays Pending payment until Stripe or XLM confirms the prepaid fee on the server. Duplicate charges are blocked.",
+      navHome: "Home",
+      navSearch: "Search",
+      navSaved: "Saved",
+      navMessages: "Messages",
+      addImage: "Add an image",
+      addImageHint: "Upload a professional image for your advertisement",
+      addImageNote: "Recommended: company logo, workplace photo or professional advertisement image.",
+      selectCountry: "Select country",
+      planTitle: "Choose a 30-day prepaid listing plan",
+      openCompanies: "Open Companies panel (verified monthly plans)",
+      planNameLabel: "Plan",
+      amountLabel: "Amount",
+      statusLabel: "Status",
+      statusPending: "Pending payment",
+      continuePayment: "Continue payment",
+      editListing: "Edit listing",
+      deleteListing: "Delete listing",
+      prepaid30: "prepaid / 30 days",
+      statusActive: "Active",
+      statusExpired: "Expired",
+      statusInactive: "Inactive",
+      planFeatBasic: "30-day prepaid public listing after confirmed payment. Standard placement in the Jobs list. No auto-renew.",
+      planFeatPro: "30-day prepaid public listing after confirmed payment. Higher placement than Basic (sorted by prepaid fee). No auto-renew.",
+      planFeatBiz: "30-day prepaid public listing after confirmed payment. Highest placement among ordinary prepaid plans. No auto-renew.",
+      planDiffNote: "All ordinary plans share the same 30-day prepaid activation. The real difference today is the fee tier and list placement order.",
+      corpBiz: "Business — €49.99 / month",
+      corpPlus: "Business Plus — €99.99 / month",
+      corpEnt: "Enterprise — €199.99 / month",
+      corpBizFeat: "Verified company. Auto-renew monthly. Up to 10 active job ads.",
+      corpPlusFeat: "Verified company. Auto-renew monthly. Up to 30 active job ads.",
+      corpEntFeat: "Verified company. Auto-renew monthly. Up to 100 active job ads.",
+      corpRegLabel: "Register company legal name",
+      corpSubmit: "Submit company for verification",
+      corpQuote: "Quote corporate subscription",
+      corpStart: "Start corporate Stripe subscription",
+      corpVerifyNote: "Corporate plans require a verified company. Self-registration stays unverified until HAVKAR Owner/staff confirms it. Auto-renew is Stripe Subscription only (XLM cannot renew monthly).",
+      corpMonthlyTitle: "Verified company — monthly subscription",
+      savedJobs: "Saved Jobs",
+      resumePay: "Continue payment",
+      editJob: "Edit",
+      deleteJob: "Delete",
+      viewApps: "Applications",
+      noJobsFound: "No jobs found",
+      noJobsHint: "Try another keyword or change the job filter.",
+      jobsCount: "jobs",
+      planBasicShort: "Basic",
+      planProShort: "Professional",
+      planBizShort: "Business",
+      noOwnJobs: "You have not posted any jobs yet.",
+      noOwnJobsHint: "Create your first advertisement and publish your job opportunity.",
+      lblImage: "Advertisement image / Company logo",
+      lblSalaryCurrency: "Salary currency (display only)",
+      locationNote: "Enter Country, City, and workplace address.",
+      phTitle: "Example: Pizza Chef",
+      phCompany: "Company name",
+      phCity: "City",
+      phLocation: "Address or workplace (optional detail)",
+      phSalary: "Example: €1,800/month",
+      phSkills: "Pizza, Cooking, Italian",
+      phDesc: "Describe the job, requirements and conditions...",
+      phReq: "Experience, language, or schedule",
+      phApplyUrl: "https://example.com/apply",
+      phContact: "name@company.com or phone number",
+      editJobTitle: "Edit job",
+      changeImage: "Change image",
+      editNotice: "Editing does not activate an unpaid listing. Payment status, plan, and fee stay unchanged.",
+      saveChanges: "Save changes",
+      applyOnHavkar: "Apply on HAVKAR",
+      fabPost: "Post a job",
+      fabCompanies: "Companies",
+      fabMyJobs: "My Jobs",
 
     },
     fa: {
@@ -214,10 +285,81 @@
       signInCompany: "برای ثبت شرکت ابتدا وارد شوید.",
       companySubmitted: "شرکت به‌صورت تأییدنشده ثبت شد. اشتراک شرکتی تا تأیید مدیریت هاوکار مسدود است. پرداختی ایجاد نشد.",
       signInCorpQuote: "برای استعلام تعرفه شرکتی وارد شوید.",
-      selectCorpPlan: "ابتدا Business، Business Plus یا Enterprise را انتخاب کنید.",
+      selectCorpPlan: "ابتدا یکی از طرح‌های شرکتی را انتخاب کنید.",
       signInCorpPay: "برای شروع اشتراک شرکتی وارد شوید.",
       companyStatusGuest: "برای مشاهده وضعیت تأیید شرکت وارد شوید.",
       step3Notice: "آگهی تا تأیید قطعی پرداخت Stripe یا XLM در سرور، در وضعیت انتظار می‌ماند. پرداخت تکراری مسدود است.",
+      navHome: "خانه",
+      navSearch: "جستجو",
+      navSaved: "ذخیره‌ها",
+      navMessages: "پیام‌ها",
+      addImage: "افزودن تصویر",
+      addImageHint: "یک تصویر حرفه‌ای برای آگهی بارگذاری کنید",
+      addImageNote: "پیشنهاد: لوگوی شرکت، عکس محیط کار یا تصویر حرفه‌ای آگهی.",
+      selectCountry: "انتخاب کشور",
+      planTitle: "انتخاب تعرفه آگهی ۳۰روزه پیش‌پرداخت",
+      openCompanies: "باز کردن پنل شرکت‌ها (اشتراک ماهانه تأییدشده)",
+      planNameLabel: "تعرفه",
+      amountLabel: "مبلغ",
+      statusLabel: "وضعیت",
+      statusPending: "در انتظار پرداخت",
+      continuePayment: "ادامه پرداخت",
+      editListing: "ویرایش آگهی",
+      deleteListing: "حذف آگهی",
+      prepaid30: "پیش‌پرداخت / ۳۰ روز",
+      statusActive: "فعال",
+      statusExpired: "منقضی",
+      statusInactive: "غیرفعال",
+      planFeatBasic: "آگهی عمومی ۳۰روزه پس از تأیید پرداخت. جایگاه استاندارد در فهرست. بدون تمدید خودکار.",
+      planFeatPro: "آگهی عمومی ۳۰روزه پس از تأیید پرداخت. جایگاه بالاتر از پایه (مرتب‌سازی بر اساس مبلغ پیش‌پرداخت). بدون تمدید خودکار.",
+      planFeatBiz: "آگهی عمومی ۳۰روزه پس از تأیید پرداخت. بالاترین جایگاه بین تعرفه‌های عادی پیش‌پرداخت. بدون تمدید خودکار.",
+      planDiffNote: "هر سه تعرفه عادی همان فعال‌سازی ۳۰روزه را دارند. تفاوت واقعی فعلاً مبلغ و ترتیب نمایش در فهرست است.",
+      corpBiz: "Business — ۴۹٫۹۹ یورو / ماه",
+      corpPlus: "Business Plus — ۹۹٫۹۹ یورو / ماه",
+      corpEnt: "Enterprise — ۱۹۹٫۹۹ یورو / ماه",
+      corpBizFeat: "شرکت تأییدشده. تمدید ماهانه خودکار. حداکثر ۱۰ آگهی فعال.",
+      corpPlusFeat: "شرکت تأییدشده. تمدید ماهانه خودکار. حداکثر ۳۰ آگهی فعال.",
+      corpEntFeat: "شرکت تأییدشده. تمدید ماهانه خودکار. حداکثر ۱۰۰ آگهی فعال.",
+      corpRegLabel: "نام قانونی شرکت",
+      corpSubmit: "ارسال شرکت برای تأیید",
+      corpQuote: "استعلام اشتراک شرکتی",
+      corpStart: "شروع اشتراک Stripe شرکتی",
+      corpVerifyNote: "اشتراک شرکتی فقط برای شرکت تأییدشده مجاز است. ثبت اولیه تا تأیید مدیریت هاوکار تأییدنشده می‌ماند. تمدید خودکار فقط با Stripe است (XLM تمدید ماهانه ندارد).",
+      corpMonthlyTitle: "شرکت تأییدشده — اشتراک ماهانه",
+      savedJobs: "آگهی‌های ذخیره‌شده",
+      resumePay: "ادامه پرداخت",
+      editJob: "ویرایش",
+      deleteJob: "حذف",
+      viewApps: "درخواست‌ها",
+      noJobsFound: "آگهی‌ای یافت نشد",
+      noJobsHint: "کلیدواژه دیگری امتحان کنید یا فیلتر را تغییر دهید.",
+      jobsCount: "آگهی",
+      planBasicShort: "پایه",
+      planProShort: "حرفه‌ای",
+      planBizShort: "تجاری",
+      noOwnJobs: "هنوز آگهی ثبت نکرده‌اید.",
+      noOwnJobsHint: "اولین آگهی استخدام را بسازید و پس از پرداخت منتشر کنید.",
+      lblImage: "تصویر آگهی / لوگوی شرکت",
+      lblSalaryCurrency: "ارز حقوق (فقط نمایش)",
+      locationNote: "کشور، شهر و آدرس محل کار را وارد کنید.",
+      phTitle: "مثال: آشپز پیتزا",
+      phCompany: "نام شرکت",
+      phCity: "شهر",
+      phLocation: "آدرس یا محل کار (جزئیات اختیاری)",
+      phSalary: "مثال: ۱۸۰۰ یورو در ماه",
+      phSkills: "پیتزا، آشپزی، ایتالیایی",
+      phDesc: "شرح شغل، شرایط و الزامات را بنویسید...",
+      phReq: "سابقه، زبان یا برنامه کاری",
+      phApplyUrl: "https://example.com/apply",
+      phContact: "ایمیل یا شماره تماس",
+      editJobTitle: "ویرایش آگهی",
+      changeImage: "تغییر تصویر",
+      editNotice: "ویرایش آگهی پرداخت‌نشده را فعال نمی‌کند. وضعیت پرداخت، تعرفه و مبلغ بدون تغییر می‌ماند.",
+      saveChanges: "ذخیره تغییرات",
+      applyOnHavkar: "درخواست استخدام در هاوکار",
+      fabPost: "ثبت آگهی",
+      fabCompanies: "شرکت‌ها",
+      fabMyJobs: "آگهی‌های من",
 
     },
     it: {
@@ -426,7 +568,19 @@
       ["#jobsFeeLabel", "feeLabel"],
       ["#companiesModalTitle", "companiesTitle"],
       ["#paymentModalTitle", "payTitle"],
-      ["#jobsStep3Notice", "step3Notice"]
+      ["#jobsStep3Notice", "step3Notice"],
+      ["#jobsPlanTitle", "planTitle"],
+      ["#jobsPlanDiffNote", "planDiffNote"],
+      ["#jobsOpenCompaniesBtn", "openCompanies"],
+      ["#jobsPlanNameLabel", "planNameLabel"],
+      ["#jobsAmountLabel", "amountLabel"],
+      ["#companyVerificationNote", "corpVerifyNote"],
+      ["#jobsCorpMonthlyTitle", "corpMonthlyTitle"],
+      ["#jobsCorpSubmitBtn", "corpSubmit"],
+      ["#jobsCorpQuoteBtn", "corpQuote"],
+      ["#jobsCorpStartBtn", "corpStart"],
+      ["#jobsCorpRegLabel", "corpRegLabel"],
+      ["#savedJobsTitle", "savedJobs"]
     ];
     map.forEach(function (row) {
       var el = document.querySelector(row[0]);
@@ -452,12 +606,53 @@
       if (!el) return;
       el.textContent = t(i === 0 ? "planBasic" : i === 1 ? "planPro" : "planBiz");
     });
-    document.querySelectorAll("[data-jobs-plan-feat]").forEach(function (el) {
-      el.textContent = t("planFeat");
-    });
     document.querySelectorAll("[data-jobs-i18n]").forEach(function (el) {
       var key = el.getAttribute("data-jobs-i18n");
       if (key) el.textContent = t(key);
+    });
+    document.querySelectorAll("[data-jobs-ph]").forEach(function (el) {
+      var key = el.getAttribute("data-jobs-ph");
+      if (key) el.setAttribute("placeholder", t(key));
+    });
+    var fabPost = document.querySelector('.fab-main, #jobsFabPost, button.fab');
+    var fabC = document.getElementById("fabCompaniesBtn");
+    var fabM = document.getElementById("fabMyJobsBtn");
+    if (fabC) { fabC.setAttribute("aria-label", t("fabCompanies")); fabC.setAttribute("title", t("fabCompanies")); }
+    if (fabM) { fabM.setAttribute("aria-label", t("fabMyJobs")); fabM.setAttribute("title", t("fabMyJobs")); }
+
+    var featMap = { basic: "planFeatBasic", pro: "planFeatPro", biz: "planFeatBiz" };
+    document.querySelectorAll("[data-jobs-plan-feat]").forEach(function (el) {
+      var k = featMap[el.getAttribute("data-jobs-plan-feat")] || "planFeat";
+      el.textContent = t(k);
+    });
+    var typeLabels = {
+      "Full-time": "fullTime",
+      "Part-time": "partTime",
+      Remote: "remote",
+      Freelance: "freelance",
+      Contract: "contract"
+    };
+    ["jobType", "editJobType"].forEach(function (id) {
+      var sel = document.getElementById(id);
+      if (!sel) return;
+      Array.prototype.forEach.call(sel.options || [], function (opt) {
+        var key = typeLabels[opt.value];
+        if (key) opt.textContent = t(key);
+      });
+    });
+    var countrySel = document.getElementById("jobCountry");
+    if (countrySel && countrySel.options && countrySel.options[0] && !countrySel.options[0].value) {
+      countrySel.options[0].textContent = t("selectCountry");
+    }
+    var navMap = [
+      ["#navHome span", "navHome"],
+      ["#navSearch span", "navSearch"],
+      ["#navSaved span", "navSaved"],
+      ["#navMessages span", "navMessages"]
+    ];
+    navMap.forEach(function (row) {
+      var el = document.querySelector(row[0]);
+      if (el) el.textContent = t(row[1]);
     });
     var box = document.getElementById("postModal");
     if (box) {
@@ -468,6 +663,14 @@
     if (tip) {
       tip.dir = rtl ? "rtl" : "ltr";
       tip.setAttribute("lang", lang);
+    }
+    var selPlan = document.getElementById("selectedPlanName");
+    if (selPlan) {
+      var cur = String(selPlan.textContent || "").trim();
+      var mapShort = { Basic: "planBasicShort", Professional: "planProShort", Business: "planBizShort",
+        "پایه": "planBasicShort", "حرفه‌ای": "planProShort", "تجاری": "planBizShort" };
+      var k = mapShort[cur];
+      if (k) selPlan.textContent = t(k);
     }
     document.body.classList.toggle("jobs-rtl", rtl);
   }

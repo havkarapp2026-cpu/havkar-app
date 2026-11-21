@@ -25,24 +25,28 @@
   const ADVERTISEMENT_DAYS = 30;
   const RENEWAL_CAP_DAYS = 62;
 
+  /* Ordinary prepaid plans: same 30-day activation. Real differences are fee + list placement. */
   const ORDINARY_PLANS = {
     Basic: {
       cents: 999,
       eur: 9.99,
       durationDays: ADVERTISEMENT_DAYS,
-      benefit: "For small businesses and one active job."
+      placementRank: 1,
+      benefit: "30-day prepaid listing. Standard list placement. No auto-renew."
     },
     Professional: {
       cents: 1999,
       eur: 19.99,
       durationDays: ADVERTISEMENT_DAYS,
-      benefit: "More visibility and multiple active jobs."
+      placementRank: 2,
+      benefit: "30-day prepaid listing. Higher list placement than Basic. No auto-renew."
     },
     Business: {
       cents: 3999,
       eur: 39.99,
       durationDays: ADVERTISEMENT_DAYS,
-      benefit: "For businesses with regular recruitment."
+      placementRank: 3,
+      benefit: "30-day prepaid listing. Highest ordinary prepaid list placement. No auto-renew."
     }
   };
 
