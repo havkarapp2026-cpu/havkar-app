@@ -147,6 +147,16 @@ function isPaymentStatusRequest(req) {
   );
 }
 
+function isJobsXlmAutoSettleRequest(req) {
+  const action = String((req && req.body && req.body.action) || "");
+  const url = String((req && req.url) || "");
+  return Boolean(
+    (req && req.query && req.query.havkarAction === "jobsXlmAutoSettle") ||
+      url.indexOf("jobs-xlm-auto-settle") !== -1 ||
+      action === "jobs_xlm_auto_settle"
+  );
+}
+
 function isStripeSandboxPayoutE2eRequest(req) {
   const action = String((req && req.body && req.body.action) || "");
   const url = String((req && req.url) || "");
@@ -2053,6 +2063,68 @@ export default async function handler(req, res) {
     }
 
     return res.status(200).json(await buildPaymentActivationStatus());
+  }
+
+  if (isJobsXlmAutoSettleRequest(req)) {
+    if (req.method !== "GET" && req.method !== "POST") {
+      res.setHeader("Allow", "GET, POST");
+      return sendError(res, 405, "Method not allowed");
+    }
+    try {
+      const {
+        autoSettleJobsXlmIntents,
+        authorizeAutoSettleRequest
+      } = require("../lib/jobs-xlm-auto-settle.cjs");
+      const cronAuth = authorizeAutoSettleRequest(req, process.env);
+      const intentId = String(
+        (req.body && req.body.intent_id) ||
+          (req.query && req.query.intent_id) ||
+          ""
+      ).trim();
+      let userId = null;
+      let mode = cronAuth.mode;
+      if (!cronAuth.ok) {
+        const {
+          user,
+          error: authError
+        } = await authenticateUser(req);
+        if (authError || !user) {
+          return res.status(401).json({
+            ok: false,
+            code: "AUTH_REQUIRED",
+            error:
+              "Cron secret or signed-in user is required for Jobs XLM auto-settle."
+          });
+        }
+        userId = user.id;
+        mode = "user";
+      }
+      const sweep = await autoSettleJobsXlmIntents(getSupabaseAdmin(), {
+        userId: userId,
+        intentId: intentId || null,
+        fetchImpl: fetch,
+        env: process.env
+      });
+      return res.status(200).json({
+        ok: sweep.ok === true,
+        mode: mode,
+        scanned: sweep.scanned,
+        settled: sweep.settled,
+        activated: sweep.activated,
+        results: sweep.results,
+        error: sweep.error || null
+      });
+    } catch (autoSettleErr) {
+      console.error(
+        "jobs xlm auto-settle failed",
+        autoSettleErr && autoSettleErr.message
+      );
+      return res.status(500).json({
+        ok: false,
+        code: "AUTO_SETTLE_ERROR",
+        error: "Jobs XLM auto-settle could not complete."
+      });
+    }
   }
 
   // Global catalog covers marketplace, jobs, services, AI, ads, events, etc.
