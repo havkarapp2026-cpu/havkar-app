@@ -3413,15 +3413,8 @@ export default async function handler(req, res) {
                   Date.now()
               }
             );
-            try {
-              await getSupabaseAdmin()
-                .from("jobs")
-                .update({ last_stripe_session_id: session.id })
-                .eq("id", microJob.id)
-                .eq("status", "pending_payment");
-            } catch (_saveErr) {
-              /* non-fatal */
-            }
+            // Do not set last_stripe_session_id before payment — webhook uses
+            // that field for fulfillment idempotency after status=active.
             return res.status(200).json({
               ok: true,
               charged: false,
@@ -3631,16 +3624,8 @@ export default async function handler(req, res) {
                 ).slice(0, 255)
               }
             );
-            try {
-              await getSupabaseAdmin()
-                .from("jobs")
-                .update({ last_stripe_session_id: session.id })
-                .eq("id", jobRow.id)
-                .eq("user_id", authJobs.user.id)
-                .eq("status", "pending_payment");
-            } catch (_sessionSaveErr) {
-              // Non-fatal: Checkout URL is still returned to the client.
-            }
+            // Do not set last_stripe_session_id before payment — webhook uses
+            // that field for fulfillment idempotency after status=active.
             return res.status(200).json({
               ok: true,
               charged: false,

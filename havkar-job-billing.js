@@ -464,7 +464,14 @@
         return { ok: false, retry: false, reason: "invalid_session", activate: false };
       }
 
-      if (job && job.last_stripe_session_id === sessionId) {
+      // Only treat as already-fulfilled when the listing is already active for
+      // this session. Storing last_stripe_session_id at Checkout *create* time
+      // must not skip activation after a real paid webhook.
+      if (
+        job &&
+        job.last_stripe_session_id === sessionId &&
+        String(job.status) === "active"
+      ) {
         await supabase.from("job_payment_events").update({
           outcome: "activated",
           job_id: job.id,
@@ -492,7 +499,9 @@
         return { ok: false, retry: false, reason: expiry.reason, activate: false };
       }
 
-      const updated = await supabase
+      // Allow activating when pending_payment even if last_stripe_session_id was
+      // already set at Checkout create time to this same session id.
+      let updated = await supabase
         .from("jobs")
         .update({
           status: "active",
@@ -501,9 +510,27 @@
         })
         .eq("id", job.id)
         .eq("user_id", job.user_id)
-        .in("status", ["pending_payment", "active"])
-        .or("last_stripe_session_id.is.null,last_stripe_session_id.neq." + sessionId)
+        .eq("status", "pending_payment")
         .select("id,status,expires_at");
+
+      if (
+        (!updated.data || !updated.data.length) &&
+        !updated.error &&
+        job.status === "active"
+      ) {
+        updated = await supabase
+          .from("jobs")
+          .update({
+            status: "active",
+            expires_at: expiry.expiresAt,
+            last_stripe_session_id: sessionId
+          })
+          .eq("id", job.id)
+          .eq("user_id", job.user_id)
+          .eq("status", "active")
+          .or("last_stripe_session_id.is.null,last_stripe_session_id.neq." + sessionId)
+          .select("id,status,expires_at");
+      }
 
       if (updated.error) {
         return { ok: false, retry: true, reason: "activation_failed" };
@@ -511,10 +538,14 @@
       if (!updated.data || !updated.data.length) {
         const again = await supabase
           .from("jobs")
-          .select("id,last_stripe_session_id")
+          .select("id,status,last_stripe_session_id")
           .eq("id", job.id)
           .maybeSingle();
-        if (again.data && again.data.last_stripe_session_id === sessionId) {
+        if (
+          again.data &&
+          again.data.last_stripe_session_id === sessionId &&
+          String(again.data.status) === "active"
+        ) {
           await supabase.from("job_payment_events").update({
             outcome: "activated",
             job_id: job.id,
@@ -674,6 +705,98 @@
     return { ok: false, retry: false, reason: "ignored" };
   }
 
+  /**
+   * Repair path: activate a pending_payment ordinary job after Stripe has
+   * already confirmed payment_status=paid. Does not create a new charge.
+   */
+  async function activateOrdinaryJobFromPaidSession(input) {
+    const supabase = input && input.supabase;
+    const session = input && input.session;
+    if (!supabase || !session) {
+      return { ok: false, reason: "invalid_session" };
+    }
+    const decision = decideCheckoutSession(session);
+    if (!decision.ok || decision.action !== "activate_ordinary_job") {
+      return {
+        ok: false,
+        reason: (decision && decision.reason) || "not_activatable",
+        decision: decision
+      };
+    }
+    const sessionId = safeStripeId(session.id);
+    if (!sessionId) {
+      return { ok: false, reason: "invalid_session" };
+    }
+    const existing = await supabase
+      .from("jobs")
+      .select("id,user_id,status,plan,expires_at,employer_kind,last_stripe_session_id")
+      .eq("id", decision.jobId)
+      .eq("user_id", decision.userId)
+      .maybeSingle();
+    if (existing.error || !existing.data) {
+      return { ok: false, reason: "job_not_found" };
+    }
+    const job = existing.data;
+    if (String(job.status) === "active") {
+      return {
+        ok: true,
+        already_active: true,
+        job_id: job.id,
+        expires_at: job.expires_at
+      };
+    }
+    if (String(job.status) !== "pending_payment") {
+      return { ok: false, reason: "job_not_pending", status: job.status };
+    }
+    if (job.employer_kind === "company" || job.plan !== decision.plan) {
+      return { ok: false, reason: "job_not_eligible" };
+    }
+    const expiry = nextOrdinaryExpiry(Date.now(), null);
+    if (!expiry.ok) {
+      return { ok: false, reason: expiry.reason };
+    }
+    const updated = await supabase
+      .from("jobs")
+      .update({
+        status: "active",
+        expires_at: expiry.expiresAt,
+        last_stripe_session_id: sessionId
+      })
+      .eq("id", job.id)
+      .eq("user_id", job.user_id)
+      .eq("status", "pending_payment")
+      .select("id,status,expires_at")
+      .maybeSingle();
+    if (updated.error || !updated.data || String(updated.data.status) !== "active") {
+      return { ok: false, reason: "activation_failed" };
+    }
+    if (input.eventId) {
+      await supabase
+        .from("job_payment_events")
+        .update({
+          outcome: "activated",
+          job_id: job.id,
+          stripe_session_id: sessionId,
+          stripe_payment_intent:
+            typeof session.payment_intent === "string"
+              ? session.payment_intent
+              : session.payment_intent && session.payment_intent.id
+                ? session.payment_intent.id
+                : null
+        })
+        .eq("stripe_event_id", input.eventId);
+    }
+    return {
+      ok: true,
+      repaired: true,
+      job_id: updated.data.id,
+      status: updated.data.status,
+      expires_at: updated.data.expires_at,
+      session_id: sessionId,
+      amount_cents: decision.amountCents
+    };
+  }
+
   return {
     ADVERTISEMENT_DAYS: ADVERTISEMENT_DAYS,
     ORDINARY_PLANS: ORDINARY_PLANS,
@@ -693,7 +816,8 @@
     eventClaimDecision: eventClaimDecision,
     planCodeFromCents: planCodeFromCents,
     applyVerifiedCheckoutSession: applyVerifiedCheckoutSession,
-    applyVerifiedBillingEvent: applyVerifiedBillingEvent
+    applyVerifiedBillingEvent: applyVerifiedBillingEvent,
+    activateOrdinaryJobFromPaidSession: activateOrdinaryJobFromPaidSession
   };
 
 });
