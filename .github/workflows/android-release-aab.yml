@@ -15,6 +15,11 @@ on:
           - signed
           - unsigned_smoke
         default: signed
+  # Agent tokens cannot always workflow_dispatch (HTTP 403). Pushing this tag
+  # on the default branch triggers a signed Play AAB using repository secrets.
+  push:
+    tags:
+      - "havkar-android-signed-*"
   pull_request:
     paths:
       - "android/**"
@@ -23,6 +28,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
 
 concurrency:
   group: android-release-aab-${{ github.ref }}
@@ -30,11 +36,11 @@ concurrency:
 
 jobs:
   aab:
-    name: Build AAB (${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'unsigned_smoke' }})
+    name: Build AAB (${{ github.event_name == 'push' && 'signed' || (github.event_name == 'workflow_dispatch' && inputs.mode || 'unsigned_smoke') }})
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      BUILD_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'unsigned_smoke' }}
+      BUILD_MODE: ${{ github.event_name == 'push' && 'signed' || (github.event_name == 'workflow_dispatch' && inputs.mode || 'unsigned_smoke') }}
       HAVKAR_UPLOAD_STORE_PASSWORD: ${{ secrets.HAVKAR_UPLOAD_STORE_PASSWORD }}
       HAVKAR_UPLOAD_KEY_ALIAS: ${{ secrets.HAVKAR_UPLOAD_KEY_ALIAS }}
       HAVKAR_UPLOAD_KEY_PASSWORD: ${{ secrets.HAVKAR_UPLOAD_KEY_PASSWORD }}
@@ -90,7 +96,7 @@ jobs:
 
       - name: Install Android platform and build-tools
         run: |
-          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0" "platform-tools"
 
       - name: Require upload-key secrets for signed builds
         if: env.BUILD_MODE == 'signed'

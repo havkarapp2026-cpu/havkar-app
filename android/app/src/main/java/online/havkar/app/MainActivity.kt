@@ -1,10 +1,14 @@
 package online.havkar.app
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.webkit.CookieManager
+import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -14,10 +18,12 @@ import android.webkit.WebViewClient
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private var fileCallback: ValueCallback<Array<Uri>>? = null
+    private var pendingWebPermissionRequest: PermissionRequest? = null
 
     private val fileChooser = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -28,12 +34,30 @@ class MainActivity : AppCompatActivity() {
         callback?.onReceiveValue(uris)
     }
 
+    private val notificationPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* Web/chat push still depends on browser Notification permission + VAPID/FCM config. */ }
+
+    private val microphonePermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        val request = pendingWebPermissionRequest
+        pendingWebPermissionRequest = null
+        if (request == null) return@registerForActivityResult
+        if (granted) {
+            request.grant(arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE))
+        } else {
+            request.deny()
+        }
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         webView = WebView(this)
         setContentView(webView)
         configureWebView()
+        maybeRequestNotifications()
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (webView.canGoBack()) webView.goBack() else finish()
@@ -45,7 +69,19 @@ class MainActivity : AppCompatActivity() {
         } else {
             HavkarLinks.START_URL
         }
+        // Deep link support for chat notification taps.
         webView.loadUrl(initial)
+    }
+
+    private fun maybeRequestNotifications() {
+        if (Build.VERSION.SDK_INT < 33) return
+        val granted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!granted) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     private fun isAppUrl(url: String?): Boolean {
@@ -63,14 +99,19 @@ class MainActivity : AppCompatActivity() {
         webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
+            // Production Buy & Sell / chat HTML must not reuse stale WebView disk cache.
+            cacheMode = WebSettings.LOAD_NO_CACHE
             mediaPlaybackRequiresUserGesture = true
             allowFileAccess = false
             allowContentAccess = false
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             javaScriptCanOpenWindowsAutomatically = false
             setSupportMultipleWindows(false)
-            userAgentString = userAgentString + " HAVKAR-Android/1.0.0"
+            userAgentString = userAgentString + " HAVKAR-Android/1.0.3"
         }
+        // Drop old WebView HTTP cache entries that can keep broken checkout HTML after deploys.
+        webView.clearCache(true)
+        webView.clearHistory()
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val url = request.url?.toString()
@@ -78,8 +119,40 @@ class MainActivity : AppCompatActivity() {
                 openOutside(url)
                 return true
             }
+
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                // After each navigation, drop HTTP cache so the next listing/chat open is fresh.
+                view?.clearCache(false)
+            }
         }
         webView.webChromeClient = object : WebChromeClient() {
+            override fun onPermissionRequest(request: PermissionRequest?) {
+                if (request == null) return
+                val originHost = request.origin?.host?.lowercase()?.trim('.') ?: ""
+                val allowedOrigin =
+                    originHost == "havkar.online" ||
+                        originHost == "www.havkar.online" ||
+                        originHost == "havkar-app.vercel.app" ||
+                        originHost.endsWith(".havkar.online") ||
+                        originHost.endsWith(".vercel.app")
+                val wantsAudio = request.resources.contains(PermissionRequest.RESOURCE_AUDIO_CAPTURE)
+                if (!allowedOrigin || !wantsAudio) {
+                    request.deny()
+                    return
+                }
+                val granted = ContextCompat.checkSelfPermission(
+                    this@MainActivity,
+                    Manifest.permission.RECORD_AUDIO
+                ) == PackageManager.PERMISSION_GRANTED
+                if (granted) {
+                    request.grant(arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE))
+                    return
+                }
+                pendingWebPermissionRequest = request
+                microphonePermission.launch(Manifest.permission.RECORD_AUDIO)
+            }
+
             override fun onShowFileChooser(
                 view: WebView?,
                 filePathCallback: ValueCallback<Array<Uri>>?,

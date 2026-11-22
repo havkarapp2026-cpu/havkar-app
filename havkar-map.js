@@ -1,0 +1,887 @@
+/**
+ * Shared HAVKAR map helper (Leaflet + OSM street tiles).
+ * Optional satellite/hybrid uses Esri World Imagery with required attribution
+ * (commercial ToS still apply to the host).
+ * Independent "live" mode uses RainViewer public precipitation radar tiles
+ * (real time-stamped frames). Traffic cameras stay disabled until a
+ * redistributable licensed camera feed is configured — never simulated.
+ * Never fabricates coordinates, routes, distances or availability.
+ */
+(function (root) {
+  "use strict";
+
+  /* Public OSM raster — no API key. Do not default to Carto basemaps that
+     watermark "API KEY REQUIRED" without a licensed key. */
+  var STREET_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+  var STREET_ATTR = "&copy; OpenStreetMap";
+  var STREET_CARTO_URL =
+    "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+  var STREET_CARTO_ATTR = "&copy; OpenStreetMap, &copy; CARTO";
+  var SAT_URL =
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+  var SAT_ATTR =
+    "Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community";
+  /* Esri reference labels for hybrid — avoid Carto key-gated label tiles. */
+  var LABELS_URL =
+    "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
+  var LABELS_ATTR =
+    "Labels &copy; Esri — Source: Esri, HERE, Garmin, FAO, NOAA, USGS";
+  var RAINVIEWER_API = "https://api.rainviewer.com/public/weather-maps.json";
+  var LIVE_ATTR =
+    'Live precipitation radar by <a href="https://www.rainviewer.com/" target="_blank" rel="noopener noreferrer">RainViewer</a> (public Weather Maps API)';
+
+  function safeAttributionPrefix(map) {
+    try {
+      if (map && map.attributionControl && map.attributionControl.setPrefix) {
+        /* Keep Leaflet credit as plain text — avoid a homepage hyperlink in the map chrome. */
+        map.attributionControl.setPrefix("Leaflet");
+      }
+    } catch (_e) {}
+  }
+
+  function formatUtc(ts) {
+    var n = Number(ts);
+    if (!Number.isFinite(n) || n <= 0) return "";
+    try {
+      return new Date(n * 1000).toISOString().replace("T", " ").replace(/\.\d+Z$/, " UTC");
+    } catch (_e) {
+      return String(n);
+    }
+  }
+
+  function fetchLiveRadarFrame() {
+    return fetch(RAINVIEWER_API, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      cache: "no-store"
+    })
+      .then(function (res) {
+        if (!res.ok) {
+          throw new Error("live_radar_http_" + res.status);
+        }
+        return res.json();
+      })
+      .then(function (body) {
+        var past =
+          body && body.radar && Array.isArray(body.radar.past) ? body.radar.past : [];
+        var frame = past.length ? past[past.length - 1] : null;
+        if (!frame || !frame.path || !body.host) {
+          return {
+            ok: false,
+            available: false,
+            reason: "no_live_radar_frames",
+            message:
+              "Live broadcast is not available in this region / no radar frames returned.",
+            source: "RainViewer",
+            source_url: "https://www.rainviewer.com/",
+            coverage:
+              "Precipitation radar where meteorological agencies publish feeds (150+ countries). Empty map areas mean no live radar for that place.",
+            terms:
+              "RainViewer public Weather Maps API — personal, educational, and small-scale community use; attribution required."
+          };
+        }
+        var host = String(body.host).replace(/\/$/, "");
+        var path = String(frame.path);
+        /* Free tier: 256px, Universal Blue (2), smooth on, snow on — max zoom 7. */
+        var tileUrl = host + path + "/256/{z}/{x}/{y}/2/1_1.png";
+        var coverageUrl = host + "/v2/coverage/0/256/{z}/{x}/{y}/0/0_0.png";
+        return {
+          ok: true,
+          available: true,
+          host: host,
+          path: path,
+          tileUrl: tileUrl,
+          coverageUrl: coverageUrl,
+          frame_time: frame.time,
+          frame_time_utc: formatUtc(frame.time),
+          generated: body.generated,
+          generated_utc: formatUtc(body.generated),
+          source: "RainViewer",
+          source_url: "https://www.rainviewer.com/",
+          product: "Live precipitation radar (composite reflectivity)",
+          coverage:
+            "Worldwide where radar agencies publish data via RainViewer (not traffic cameras; not private CCTV).",
+          terms:
+            "Public Weather Maps API — personal/educational/small-scale community use; mandatory attribution to RainViewer.",
+          max_zoom: 7,
+          message: ""
+        };
+      })
+      .catch(function (err) {
+        return {
+          ok: false,
+          available: false,
+          reason: "live_radar_network_error",
+          error: String((err && err.message) || err || "network"),
+          message:
+            "Live broadcast is not available right now (network or source error). No simulated live feed is shown.",
+          source: "RainViewer",
+          source_url: "https://www.rainviewer.com/"
+        };
+      });
+  }
+
+  function ensurePlatformCss() {
+    if (document.getElementById("havkar-map-platform-css")) return;
+    var link = document.createElement("link");
+    link.id = "havkar-map-platform-css";
+    link.rel = "stylesheet";
+    link.href = "/havkar-map-platform.css";
+    document.head.appendChild(link);
+  }
+
+  function ensureLeaflet(cb) {
+    if (root.L) {
+      cb(null, root.L);
+      return;
+    }
+    var existing = document.querySelector('script[data-havkar-leaflet="1"]');
+    if (existing) {
+      existing.addEventListener("load", function () {
+        cb(root.L ? null : new Error("leaflet_load_failed"), root.L);
+      });
+      return;
+    }
+    if (!document.querySelector('link[data-havkar-leaflet-css="1"]')) {
+      var link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      link.setAttribute("data-havkar-leaflet-css", "1");
+      document.head.appendChild(link);
+    }
+    var script = document.createElement("script");
+    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+    script.setAttribute("data-havkar-leaflet", "1");
+    script.onload = function () {
+      cb(root.L ? null : new Error("leaflet_load_failed"), root.L);
+    };
+    script.onerror = function () {
+      cb(new Error("leaflet_script_failed"));
+    };
+    document.head.appendChild(script);
+  }
+
+  function ensureMarkerCluster(L, cb) {
+    if (L.markerClusterGroup) {
+      cb(null);
+      return;
+    }
+    if (!document.querySelector('link[data-havkar-cluster-css="1"]')) {
+      var link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href =
+        "https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css";
+      link.setAttribute("data-havkar-cluster-css", "1");
+      document.head.appendChild(link);
+      var link2 = document.createElement("link");
+      link2.rel = "stylesheet";
+      link2.href =
+        "https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css";
+      link2.setAttribute("data-havkar-cluster-default-css", "1");
+      document.head.appendChild(link2);
+    }
+    var existing = document.querySelector('script[data-havkar-cluster="1"]');
+    if (existing) {
+      existing.addEventListener("load", function () {
+        cb(L.markerClusterGroup ? null : new Error("cluster_load_failed"));
+      });
+      return;
+    }
+    var script = document.createElement("script");
+    script.src =
+      "https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js";
+    script.setAttribute("data-havkar-cluster", "1");
+    script.onload = function () {
+      cb(L.markerClusterGroup ? null : new Error("cluster_load_failed"));
+    };
+    script.onerror = function () {
+      cb(new Error("cluster_script_failed"));
+    };
+    document.head.appendChild(script);
+  }
+
+  function haversineKm(lat1, lon1, lat2, lon2) {
+    var toRad = function (d) {
+      return (Number(d) * Math.PI) / 180;
+    };
+    var R = 6371;
+    var dLat = toRad(lat2 - lat1);
+    var dLon = toRad(lon2 - lon1);
+    var a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) *
+        Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function osmDirectionsUrl(lat, lng) {
+    return (
+      "https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=;" +
+      encodeURIComponent(Number(lat) + "," + Number(lng))
+    );
+  }
+
+  function osrmRouteUrl(fromLat, fromLng, toLat, toLng, profile) {
+    var mode = String(profile || "driving").toLowerCase();
+    if (mode !== "walking" && mode !== "cycling" && mode !== "driving") {
+      mode = "driving";
+    }
+    return (
+      "https://router.project-osrm.org/route/v1/" +
+      mode +
+      "/" +
+      Number(fromLng) +
+      "," +
+      Number(fromLat) +
+      ";" +
+      Number(toLng) +
+      "," +
+      Number(toLat) +
+      "?overview=full&geometries=geojson"
+    );
+  }
+
+  function mapsSharePayload(lat, lng, label) {
+    var la = Number(lat);
+    var ln = Number(lng);
+    if (!Number.isFinite(la) || !Number.isFinite(ln)) {
+      return { ok: false, error: "invalid_coordinates" };
+    }
+    var title = String(label || "HAVKAR location").trim() || "HAVKAR location";
+    var geo = "geo:" + la + "," + ln;
+    var osm =
+      "https://www.openstreetmap.org/?mlat=" +
+      encodeURIComponent(la) +
+      "&mlon=" +
+      encodeURIComponent(ln) +
+      "#map=16/" +
+      encodeURIComponent(la) +
+      "/" +
+      encodeURIComponent(ln);
+    var apple =
+      "https://maps.apple.com/?ll=" +
+      encodeURIComponent(la) +
+      "," +
+      encodeURIComponent(ln) +
+      "&q=" +
+      encodeURIComponent(title);
+    var google =
+      "https://www.google.com/maps/search/?api=1&query=" +
+      encodeURIComponent(la + "," + ln);
+    var text = title + "\n" + la.toFixed(6) + ", " + ln.toFixed(6) + "\n" + osm;
+    return {
+      ok: true,
+      latitude: la,
+      longitude: ln,
+      title: title,
+      text: text,
+      url: osm,
+      geo: geo,
+      external: { osm: osm, apple: apple, google: google },
+      note:
+        "Native share sheet when supported. Instagram location sharing is not claimed."
+    };
+  }
+
+  async function nativeShareLocation(lat, lng, label) {
+    var payload = mapsSharePayload(lat, lng, label);
+    if (!payload.ok) return payload;
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: payload.title,
+          text: payload.text,
+          url: payload.url
+        });
+        return Object.assign({ shared: true, method: "navigator.share" }, payload);
+      } catch (err) {
+        if (err && err.name === "AbortError") {
+          return Object.assign({ shared: false, method: "cancelled" }, payload);
+        }
+      }
+    }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(payload.text);
+        return Object.assign({ shared: true, method: "clipboard" }, payload);
+      }
+    } catch (_e) {}
+    return Object.assign({ shared: false, method: "manual_copy" }, payload);
+  }
+
+  async function geocodeQuery(query) {
+    var q = String(query || "").trim();
+    if (q.length < 2) {
+      return { ok: false, error: "query_too_short" };
+    }
+    /* Prefer server-side TomTom search when Owner key is configured. */
+    try {
+      var ttRes = await fetch(
+        "/api/map-tomtom-search?q=" + encodeURIComponent(q) + "&limit=6",
+        { headers: { Accept: "application/json" }, cache: "no-store" }
+      );
+      var ttBody = await ttRes.json().catch(function () {
+        return null;
+      });
+      if (ttBody && ttBody.ok === true && ttBody.primary) {
+        return ttBody;
+      }
+    } catch (_tt) {}
+    var res = await fetch("/api/hotels", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "hotels_geocode", query: q })
+    });
+    var body = await res.json().catch(function () {
+      return null;
+    });
+    if (!body || body.ok !== true) {
+      return {
+        ok: false,
+        error: (body && body.error) || "geocode_failed",
+        results: (body && body.results) || []
+      };
+    }
+    return body;
+  }
+
+  function createMap(container, options) {
+    var opts = options || {};
+    var lat = Number(opts.latitude);
+    var lng = Number(opts.longitude);
+    if (!Number.isFinite(lat)) lat = 41.8933203;
+    if (!Number.isFinite(lng)) lng = 12.4829321;
+    var zoom = Number(opts.zoom);
+    if (!Number.isFinite(zoom)) zoom = 11;
+    var useCluster = opts.cluster !== false;
+
+    return new Promise(function (resolve, reject) {
+      ensureLeaflet(function (err, L) {
+        if (err || !L) {
+          reject(err || new Error("leaflet_unavailable"));
+          return;
+        }
+        var el =
+          typeof container === "string"
+            ? document.getElementById(container)
+            : container;
+        if (!el) {
+          reject(new Error("map_container_missing"));
+          return;
+        }
+
+        function finish(clusterReady) {
+          ensurePlatformCss();
+          if (el && el.classList) {
+            el.classList.add("havkar-map-host");
+            el.setAttribute("data-havkar-map", "1");
+          }
+          var map = L.map(el, {
+            scrollWheelZoom: true,
+            tap: true
+          }).setView([lat, lng], zoom);
+          safeAttributionPrefix(map);
+          var useCarto =
+            String(opts.streetProvider || "").toLowerCase() === "carto";
+          var streetLayer = L.tileLayer(
+            useCarto ? STREET_CARTO_URL : STREET_URL,
+            {
+              maxZoom: 19,
+              attribution: useCarto ? STREET_CARTO_ATTR : STREET_ATTR
+            }
+          );
+          var satLayer = L.tileLayer(SAT_URL, {
+            maxZoom: 19,
+            attribution: SAT_ATTR
+          });
+          var labelsLayer = L.tileLayer(LABELS_URL, {
+            maxZoom: 19,
+            attribution: LABELS_ATTR,
+            opacity: 0.9
+          });
+          var liveRadarLayer = null;
+          var liveCoverageLayer = null;
+          var liveMeta = null;
+          var activeBase = "street";
+          streetLayer.addTo(map);
+          var centerMarker = L.marker([lat, lng]).addTo(map);
+          var pinLayer = null;
+          var routeLayer = L.layerGroup().addTo(map);
+          var trafficLayer = L.layerGroup();
+          var pinIndex = Object.create(null);
+          var selectedId = null;
+          var onBoundsSearch = typeof opts.onBoundsSearch === "function"
+            ? opts.onBoundsSearch
+            : null;
+          var onSelect = typeof opts.onSelect === "function" ? opts.onSelect : null;
+
+          function clearLiveLayers() {
+            if (liveRadarLayer && map.hasLayer(liveRadarLayer)) {
+              map.removeLayer(liveRadarLayer);
+            }
+            if (liveCoverageLayer && map.hasLayer(liveCoverageLayer)) {
+              map.removeLayer(liveCoverageLayer);
+            }
+            liveRadarLayer = null;
+            liveCoverageLayer = null;
+          }
+
+          if (clusterReady && L.markerClusterGroup) {
+            pinLayer = L.markerClusterGroup({
+              showCoverageOnHover: false,
+              maxClusterRadius: 48,
+              spiderfyOnMaxZoom: true
+            });
+          } else {
+            pinLayer = L.layerGroup();
+          }
+          pinLayer.addTo(map);
+
+          var api = {
+            map: map,
+            marker: centerMarker,
+            L: L,
+            layer: pinLayer,
+            haversineKm: haversineKm,
+            geocode: geocodeQuery,
+            osmDirectionsUrl: osmDirectionsUrl,
+            mapsSharePayload: mapsSharePayload,
+            nativeShareLocation: nativeShareLocation,
+            setBaseLayer: function (mode) {
+              var next = String(mode || "street").toLowerCase();
+              if (next === "live") {
+                /* Async live activation — caller should prefer setLiveLayer(). */
+                return api.setLiveLayer(true);
+              }
+              clearLiveLayers();
+              liveMeta = null;
+              map.removeLayer(streetLayer);
+              map.removeLayer(satLayer);
+              map.removeLayer(labelsLayer);
+              if (next === "satellite") {
+                satLayer.addTo(map);
+                activeBase = "satellite";
+              } else if (next === "hybrid") {
+                satLayer.addTo(map);
+                labelsLayer.addTo(map);
+                activeBase = "hybrid";
+              } else {
+                streetLayer.addTo(map);
+                activeBase = "street";
+              }
+              return Promise.resolve({
+                mode: activeBase,
+                live: null
+              });
+            },
+            setLiveLayer: function () {
+              return fetchLiveRadarFrame().then(function (meta) {
+                liveMeta = meta;
+                map.removeLayer(satLayer);
+                map.removeLayer(labelsLayer);
+                if (!map.hasLayer(streetLayer)) {
+                  streetLayer.addTo(map);
+                }
+                clearLiveLayers();
+                if (!meta || !meta.ok || !meta.available || !meta.tileUrl) {
+                  activeBase = "street";
+                  return {
+                    mode: "street",
+                    live: meta,
+                    available: false,
+                    message:
+                      (meta && meta.message) ||
+                      "Live broadcast is not available in this region."
+                  };
+                }
+                liveRadarLayer = L.tileLayer(meta.tileUrl, {
+                  maxZoom: Number(meta.max_zoom) || 7,
+                  opacity: 0.72,
+                  attribution: LIVE_ATTR
+                });
+                liveRadarLayer.addTo(map);
+                if (meta.coverageUrl) {
+                  liveCoverageLayer = L.tileLayer(meta.coverageUrl, {
+                    maxZoom: Number(meta.max_zoom) || 7,
+                    opacity: 0.35,
+                    attribution: LIVE_ATTR
+                  });
+                  /* Coverage mask is informational; keep subtle. */
+                  liveCoverageLayer.addTo(map);
+                }
+                activeBase = "live";
+                return {
+                  mode: "live",
+                  live: meta,
+                  available: true,
+                  message:
+                    meta.product +
+                    " · source " +
+                    meta.source +
+                    " · last frame " +
+                    (meta.frame_time_utc || "unknown") +
+                    ". Empty areas: live radar not available there. Not a traffic camera."
+                };
+              });
+            },
+            getLiveLayerStatus: function () {
+              return liveMeta
+                ? Object.assign({}, liveMeta, { mode: activeBase })
+                : {
+                    available: false,
+                    mode: activeBase,
+                    message: "Live layer not loaded yet."
+                  };
+            },
+            getBaseLayer: function () {
+              return activeBase;
+            },
+            trafficCamerasStatus: function () {
+              return {
+                enabled: false,
+                reason:
+                  "No authorized redistributable public traffic-camera feed is configured. Feature stays disabled.",
+                layer_available: false
+              };
+            },
+            setTrafficCamerasEnabled: function () {
+              return api.trafficCamerasStatus();
+            },
+            setCenter: function (nextLat, nextLng, nextZoom) {
+              var ll = [Number(nextLat), Number(nextLng)];
+              centerMarker.setLatLng(ll);
+              map.setView(ll, Number.isFinite(nextZoom) ? nextZoom : map.getZoom());
+            },
+            clearPins: function () {
+              pinLayer.clearLayers();
+              pinIndex = Object.create(null);
+              selectedId = null;
+            },
+            addPricePin: function (pinLat, pinLng, label, meta) {
+              var info = meta || {};
+              var m = L.circleMarker([pinLat, pinLng], {
+                radius: info.selected ? 10 : 8,
+                color: info.selected ? "#0d47a1" : "#1b5e20",
+                fillColor: info.selected ? "#42a5f5" : "#66bb6a",
+                fillOpacity: 0.9,
+                weight: 2
+              }).bindPopup(String(label || "Location"));
+              if (info.id != null) {
+                pinIndex[String(info.id)] = m;
+                m.on("click", function () {
+                  selectedId = String(info.id);
+                  if (onSelect) onSelect(info);
+                });
+              }
+              pinLayer.addLayer(m);
+              return m;
+            },
+            setMarkers: function (items, options2) {
+              var o = options2 || {};
+              api.clearPins();
+              var list = Array.isArray(items) ? items : [];
+              var bounds = [];
+              list.forEach(function (item) {
+                var plat = Number(item.latitude != null ? item.latitude : item.lat);
+                var plng = Number(item.longitude != null ? item.longitude : item.lng);
+                if (!Number.isFinite(plat) || !Number.isFinite(plng)) return;
+                bounds.push([plat, plng]);
+                api.addPricePin(
+                  plat,
+                  plng,
+                  item.label || item.title || item.display_name || "Location",
+                  {
+                    id: item.id,
+                    selected: selectedId && String(item.id) === selectedId,
+                    raw: item
+                  }
+                );
+              });
+              if (o.fit !== false && bounds.length) {
+                try {
+                  map.fitBounds(bounds, { padding: [28, 28], maxZoom: 14 });
+                } catch (_e) {}
+              }
+              return bounds.length;
+            },
+            getBoundsFilter: function () {
+              var b = map.getBounds();
+              if (!b) return null;
+              return {
+                north: b.getNorth(),
+                south: b.getSouth(),
+                east: b.getEast(),
+                west: b.getWest()
+              };
+            },
+            filterItemsInBounds: function (items) {
+              var b = api.getBoundsFilter();
+              if (!b) return Array.isArray(items) ? items.slice() : [];
+              return (items || []).filter(function (item) {
+                var plat = Number(item.latitude != null ? item.latitude : item.lat);
+                var plng = Number(item.longitude != null ? item.longitude : item.lng);
+                if (!Number.isFinite(plat) || !Number.isFinite(plng)) return false;
+                return (
+                  plat <= b.north &&
+                  plat >= b.south &&
+                  plng <= b.east &&
+                  plng >= b.west
+                );
+              });
+            },
+            filterByDistanceKm: function (items, centerLat, centerLng, maxKm) {
+              var max = Number(maxKm);
+              if (!Number.isFinite(max) || max <= 0) {
+                return Array.isArray(items) ? items.slice() : [];
+              }
+              return (items || []).filter(function (item) {
+                var plat = Number(item.latitude != null ? item.latitude : item.lat);
+                var plng = Number(item.longitude != null ? item.longitude : item.lng);
+                if (!Number.isFinite(plat) || !Number.isFinite(plng)) return false;
+                return (
+                  haversineKm(centerLat, centerLng, plat, plng) <= max
+                );
+              });
+            },
+            highlight: function (id) {
+              selectedId = id == null ? null : String(id);
+              Object.keys(pinIndex).forEach(function (key) {
+                var m = pinIndex[key];
+                if (!m || !m.setStyle) return;
+                var on = selectedId && key === selectedId;
+                m.setStyle({
+                  radius: on ? 10 : 8,
+                  color: on ? "#0d47a1" : "#1b5e20",
+                  fillColor: on ? "#42a5f5" : "#66bb6a"
+                });
+                if (on && m.openPopup) m.openPopup();
+              });
+            },
+            searchPlace: function (query) {
+              return geocodeQuery(query).then(function (geo) {
+                if (!geo.ok || !geo.primary) return geo;
+                api.setCenter(geo.primary.latitude, geo.primary.longitude, 12);
+                return geo;
+              });
+            },
+            searchThisArea: function () {
+              var bounds = api.getBoundsFilter();
+              if (onBoundsSearch) onBoundsSearch(bounds);
+              return bounds;
+            },
+            requestRoute: async function (toLat, toLng, profile) {
+              var from = centerMarker.getLatLng();
+              var mode = String(profile || "driving").toLowerCase();
+              function drawCoords(coordinates) {
+                routeLayer.clearLayers();
+                if (!coordinates || !coordinates.length) return null;
+                var latlngs = coordinates.map(function (c) {
+                  return [c[1], c[0]];
+                });
+                var line = L.polyline(latlngs, {
+                  color: "#1b5e20",
+                  weight: 5,
+                  opacity: 0.85
+                });
+                routeLayer.addLayer(line);
+                try {
+                  map.fitBounds(line.getBounds(), { padding: [28, 28] });
+                } catch (_fit) {}
+                return line;
+              }
+              /* Prefer TomTom traffic-aware routing when Owner key is configured. */
+              try {
+                var ttUrl =
+                  "/api/map-tomtom-routing?fromLat=" +
+                  encodeURIComponent(from.lat) +
+                  "&fromLng=" +
+                  encodeURIComponent(from.lng) +
+                  "&toLat=" +
+                  encodeURIComponent(toLat) +
+                  "&toLng=" +
+                  encodeURIComponent(toLng) +
+                  "&profile=" +
+                  encodeURIComponent(mode);
+                var ttRes = await fetch(ttUrl, {
+                  headers: { Accept: "application/json" },
+                  cache: "no-store"
+                });
+                var ttBody = await ttRes.json().catch(function () {
+                  return null;
+                });
+                if (
+                  ttBody &&
+                  ttBody.ok === true &&
+                  ttBody.geometry &&
+                  ttBody.geometry.coordinates
+                ) {
+                  drawCoords(ttBody.geometry.coordinates);
+                  return {
+                    ok: true,
+                    provider: "tomtom_routing",
+                    profile: ttBody.profile || mode,
+                    distance_m: ttBody.distance_m,
+                    duration_s: ttBody.duration_s,
+                    traffic_delay_s: ttBody.traffic_delay_s,
+                    last_updated: ttBody.last_updated || ttBody.fetched_at,
+                    directions_url: osmDirectionsUrl(toLat, toLng)
+                  };
+                }
+              } catch (_tt) {}
+              var url = osrmRouteUrl(from.lat, from.lng, toLat, toLng, mode);
+              try {
+                var res = await fetch(url, {
+                  headers: { Accept: "application/json" }
+                });
+                var body = await res.json();
+                var route = body && body.routes && body.routes[0];
+                if (!route) {
+                  return {
+                    ok: false,
+                    error: "route_unavailable",
+                    profile: mode,
+                    directions_url: osmDirectionsUrl(toLat, toLng)
+                  };
+                }
+                if (route.geometry && route.geometry.coordinates) {
+                  drawCoords(route.geometry.coordinates);
+                }
+                return {
+                  ok: true,
+                  provider: "osrm",
+                  profile: mode,
+                  distance_m: route.distance,
+                  duration_s: route.duration,
+                  directions_url: osmDirectionsUrl(toLat, toLng)
+                };
+              } catch (_e) {
+                return {
+                  ok: false,
+                  error: "route_network_error",
+                  profile: mode,
+                  directions_url: osmDirectionsUrl(toLat, toLng)
+                };
+              }
+            },
+            clearRoute: function () {
+              routeLayer.clearLayers();
+            },
+            requestGps: function () {
+              return new Promise(function (res, rej) {
+                if (!navigator.geolocation) {
+                  rej(Object.assign(new Error("geolocation_unavailable"), { code: 0 }));
+                  return;
+                }
+                /* Device GPS only — coordinates stay in-browser; never posted to HAVKAR. */
+                navigator.geolocation.getCurrentPosition(
+                  function (pos) {
+                    var plat = pos.coords.latitude;
+                    var plng = pos.coords.longitude;
+                    var accuracy = pos.coords.accuracy;
+                    try {
+                      if (!api._userGpsLayer) {
+                        api._userGpsLayer = L.layerGroup().addTo(map);
+                      } else {
+                        api._userGpsLayer.clearLayers();
+                      }
+                      var gpsIcon = L.divIcon({
+                        className: "havkar-gps-marker",
+                        html: '<span class="havkar-gps-dot" title="Your GPS location"></span>',
+                        iconSize: [22, 22],
+                        iconAnchor: [11, 11]
+                      });
+                      api._userGpsLayer.addLayer(
+                        L.marker([plat, plng], { icon: gpsIcon, zIndexOffset: 1200 }).bindPopup(
+                          "Your location" +
+                            (Number.isFinite(accuracy)
+                              ? "<br>Accuracy ≈ " + Math.round(accuracy) + " m"
+                              : "") +
+                            "<br><small>Not uploaded to HAVKAR servers.</small>"
+                        )
+                      );
+                      if (Number.isFinite(accuracy) && accuracy > 0) {
+                        api._userGpsLayer.addLayer(
+                          L.circle([plat, plng], {
+                            radius: Math.min(Math.max(accuracy, 10), 2500),
+                            color: "#1b5e20",
+                            weight: 2,
+                            fillColor: "#66bb6a",
+                            fillOpacity: 0.18,
+                            interactive: false
+                          })
+                        );
+                      }
+                    } catch (_markerErr) {}
+                    map.setView([plat, plng], Math.max(map.getZoom() || 14, 15));
+                    res({
+                      latitude: plat,
+                      longitude: plng,
+                      accuracy: accuracy,
+                      shared_with_server: false
+                    });
+                  },
+                  function (geoErr) {
+                    rej(geoErr || Object.assign(new Error("geolocation_denied"), { code: 1 }));
+                  },
+                  { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                );
+              });
+            },
+            googleMapsStatus: function () {
+              var key = String(opts.googleMapsApiKey || "").trim();
+              return {
+                configured: Boolean(key),
+                provider: key ? "google_maps" : "openstreetmap",
+                note: key
+                  ? "Host supplied a Google Maps key; page must load Maps JS separately."
+                  : "No Google Maps key configured. Using OpenStreetMap tiles."
+              };
+            },
+            invalidate: function () {
+              setTimeout(function () {
+                map.invalidateSize();
+              }, 50);
+            }
+          };
+
+          if (opts.bindSearchAreaButton) {
+            var btn =
+              typeof opts.bindSearchAreaButton === "string"
+                ? document.getElementById(opts.bindSearchAreaButton)
+                : opts.bindSearchAreaButton;
+            if (btn) {
+              btn.addEventListener("click", function () {
+                api.searchThisArea();
+              });
+            }
+          }
+
+          resolve(api);
+        }
+
+        if (useCluster) {
+          ensureMarkerCluster(L, function (clusterErr) {
+            finish(!clusterErr);
+          });
+        } else {
+          finish(false);
+        }
+      });
+    });
+  }
+
+  root.HAVKAR_MAP = {
+    create: createMap,
+    ensureLeaflet: ensureLeaflet,
+    geocode: geocodeQuery,
+    haversineKm: haversineKm,
+    osmDirectionsUrl: osmDirectionsUrl,
+    mapsSharePayload: mapsSharePayload,
+    nativeShareLocation: nativeShareLocation,
+    ensurePlatformCss: ensurePlatformCss,
+    fetchLiveRadarFrame: fetchLiveRadarFrame,
+    safeAttributionPrefix: safeAttributionPrefix
+  };
+})(typeof globalThis !== "undefined" ? globalThis : this);

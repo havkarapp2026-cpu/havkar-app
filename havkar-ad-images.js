@@ -3,7 +3,8 @@
  *
  * New images go to the existing public ad-images bucket.
  * The browser uses the signed-in user's Supabase client only.
- * There is no delete call: Storage DELETE is intentionally disabled.
+ * Deletes are allowed only for objects under the signed-in owner's folder
+ * and only after a server-verified owner listing delete.
  */
 (function (root, factory) {
 
@@ -441,6 +442,220 @@
     return typeof value === "string"
       ? value
       : "";
+
+  }
+
+
+  function objectPathFromPublicUrl(
+    value,
+    ownerId
+  ) {
+
+    const owner =
+      normalizeUserId(ownerId);
+
+    if (
+      !owner ||
+      typeof value !== "string" ||
+      !value.startsWith("https://")
+    ) {
+
+      return "";
+
+    }
+
+    let parsed;
+
+    try {
+
+      parsed =
+        new URL(value);
+
+    } catch (error) {
+
+      return "";
+
+    }
+
+    const marker =
+      "/storage/v1/object/public/" +
+      BUCKET +
+      "/";
+
+    const index =
+      parsed.pathname.indexOf(marker);
+
+    if (index === -1) {
+
+      return "";
+
+    }
+
+    let objectPath =
+      decodeURIComponent(
+        parsed.pathname.slice(
+          index + marker.length
+        )
+      );
+
+    objectPath =
+      String(objectPath || "")
+        .replace(/^\/+/, "")
+        .trim()
+        .toLowerCase();
+
+    if (!OBJECT_PATTERN.test(objectPath)) {
+
+      return "";
+
+    }
+
+    if (
+      objectPath.indexOf(owner + "/") !== 0
+    ) {
+
+      return "";
+
+    }
+
+    return objectPath;
+
+  }
+
+
+  async function deleteOwnAdvertisementImages(
+    client,
+    userId,
+    photoUrls
+  ) {
+
+    const ownerId =
+      normalizeUserId(userId);
+
+    if (!ownerId) {
+
+      return {
+        ok: false,
+        deleted: [],
+        failed: [],
+        error: "Sign in before deleting listing images."
+      };
+
+    }
+
+    const urls =
+      Array.isArray(photoUrls)
+        ? photoUrls
+        : [];
+
+    const paths =
+      [];
+
+    urls.forEach(function (url) {
+
+      const path =
+        objectPathFromPublicUrl(
+          url,
+          ownerId
+        );
+
+      if (
+        path &&
+        paths.indexOf(path) === -1
+      ) {
+
+        paths.push(path);
+
+      }
+
+    });
+
+    if (!paths.length) {
+
+      return {
+        ok: true,
+        deleted: [],
+        failed: [],
+        error: ""
+      };
+
+    }
+
+    let bucket;
+
+    try {
+
+      bucket =
+        storageBucket(client);
+
+    } catch (error) {
+
+      return {
+        ok: false,
+        deleted: [],
+        failed: paths.slice(),
+        error:
+          (error && error.message) ||
+          "Image storage is unavailable."
+      };
+
+    }
+
+    if (
+      !bucket ||
+      typeof bucket.remove !== "function"
+    ) {
+
+      return {
+        ok: false,
+        deleted: [],
+        failed: paths.slice(),
+        error: "Image deletion is unavailable."
+      };
+
+    }
+
+    let result;
+
+    try {
+
+      result =
+        await bucket.remove(paths);
+
+    } catch (networkError) {
+
+      return {
+        ok: false,
+        deleted: [],
+        failed: paths.slice(),
+        error:
+          "Listing images could not be removed from storage."
+      };
+
+    }
+
+    if (
+      result &&
+      result.error
+    ) {
+
+      return {
+        ok: false,
+        deleted: [],
+        failed: paths.slice(),
+        error:
+          result.error.message ||
+          "Listing images could not be removed from storage."
+      };
+
+    }
+
+    return {
+      ok: true,
+      deleted: paths.slice(),
+      failed: [],
+      error: ""
+    };
 
   }
 
@@ -1217,6 +1432,8 @@
     MAX_BYTES: MAX_BYTES,
     validateAdImage: validateAdImage,
     uploadAdvertisementImages: uploadAdvertisementImages,
+    objectPathFromPublicUrl: objectPathFromPublicUrl,
+    deleteOwnAdvertisementImages: deleteOwnAdvertisementImages,
     incompleteSaveError: incompleteSaveError,
     classifyInsertResult: classifyInsertResult,
     createPostingGuard: createPostingGuard,

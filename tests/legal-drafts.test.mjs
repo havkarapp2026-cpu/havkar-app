@@ -29,9 +29,27 @@ assert.match(read("privacy-request.html"), /does not delete the account/);
 assert.match(read("privacy.html"), /Processors observed in the current system/);
 assert.match(read("privacy.html"), /eu-west-1/);
 assert.match(read("privacy.html"), /generativelanguage\.googleapis\.com/);
-assert.match(read("privacy.html"), /Items still blank for the owner and counsel/);
+assert.match(read("privacy.html"), /Items still blank for counsel/);
 assert.match(read("privacy.html"), /persistSession/);
-assert.doesNotMatch(read("privacy.html"), /Partita|sk_live_|service_role|standard contractual clauses are in place|adequacy decision is confirmed/);
-assert.doesNotMatch(read("terms.html"), /Partita|sk_live_|service_role/);
+assert.match(read("privacy.html"), /Stripe/);
+assert.match(read("privacy.html"), /marketplace-fees/);
+// Operator Partita/REA may appear once Owner-provided; never invent secrets or claim SCCs/adequacy.
+assert.doesNotMatch(
+  read("privacy.html"),
+  /sk_live_|service_role|standard contractual clauses are in place|adequacy decision is confirmed/
+);
+assert.doesNotMatch(read("terms.html"), /sk_live_|service_role/);
+
+const terms = read("terms.html");
+assert.match(terms, /id="marketplace-fees"/);
+assert.match(terms, /id="marketplace-refunds"/);
+assert.match(terms, /Buyer fee: <strong>2%<\/strong>/);
+assert.match(terms, /Seller fee: <strong>3%<\/strong>/);
+assert.match(terms, /Still blank for counsel/);
+assert.match(terms, /direct_split/);
+assert.match(terms, /MiCA/);
+assert.match(terms, /id="marketplace-tax"/);
+assert.match(terms, /Directive 2011\/83\/EU|Consumer Code/);
+assert.match(terms, /IVA/);
 
 console.log("LEGAL_DRAFTS_TEST_OK");

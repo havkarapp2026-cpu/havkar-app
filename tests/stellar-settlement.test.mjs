@@ -76,8 +76,12 @@ assert.equal(missing.code, "DESTINATION_NOT_CONFIGURED");
 assert.equal(missing.paid, false);
 assert.equal(missing.destination, undefined);
 
+const collectEnv = {
+  ...env,
+  HAVKAR_XLM_ALLOW_PLATFORM_COLLECT: "true"
+};
 const quoted = await buildXlmQuote(decision, {
-  env: env,
+  env: collectEnv,
   fetchImpl: rateFetch,
   nowMs: Date.now(),
   memoBytes: Buffer.from("1234567890")
@@ -86,6 +90,7 @@ assert.equal(quoted.payable, true);
 assert.equal(quoted.paid, false);
 assert.equal(quoted.order_paid, false);
 assert.equal(quoted.destination, destination);
+assert.equal(quoted.settlement_model, "platform_collect");
 assert.equal(quoted.amount_xlm, xlmFromEur(51, 0.1));
 assert.equal(quoted.amount_xlm, "510.0000000");
 assert.notEqual(quoted.amount_xlm, xlmFromEur(51 + 0.00001, 0.1));
@@ -99,6 +104,7 @@ const intent = {
   destination: destination,
   memo: quoted.memo,
   amount_xlm: quoted.amount_xlm,
+  settlement_model: "platform_collect",
   tx_hash: null,
   payer_account: null
 };
@@ -133,7 +139,7 @@ const mismatch = await verifyStellarSettlement(admin, "user-1", {
   intent_id: "intent-1",
   tx_hash: hash
 }, {
-  env: env,
+  env: collectEnv,
   fetchImpl: horizon(true, [{ ...payment, amount: "1.0000000" }], quoted.memo)
 });
 assert.equal(mismatch.code, "PAYMENT_MISMATCH");
@@ -143,7 +149,7 @@ const settled = await verifyStellarSettlement(admin, "user-1", {
   intent_id: "intent-1",
   tx_hash: hash
 }, {
-  env: env,
+  env: collectEnv,
   fetchImpl: horizon(true, [payment], quoted.memo)
 });
 assert.equal(settled.order_paid, true);
@@ -153,7 +159,7 @@ const replay = await verifyStellarSettlement(admin, "user-1", {
   intent_id: "intent-1",
   tx_hash: "b".repeat(64)
 }, {
-  env: env,
+  env: collectEnv,
   fetchImpl: horizon(true, [payment], quoted.memo)
 });
 assert.equal(replay.code, "TX_REPLAY");
@@ -204,10 +210,17 @@ const liveIntent = {
   amount_xlm: "1.2500000",
   tx_hash: null
 };
-const live = await verifyStellarSettlement(fakeAdmin(liveIntent), "user-1", {
+const liveEnv = {
+  HAVKAR_STELLAR_TESTNET_DESTINATION: receiver.publicKey(),
+  HAVKAR_XLM_ALLOW_PLATFORM_COLLECT: "true"
+};
+const live = await verifyStellarSettlement(fakeAdmin({
+  ...liveIntent,
+  settlement_model: "platform_collect"
+}), "user-1", {
   intent_id: "intent-live",
   tx_hash: submittedBody.hash
-}, { env: { HAVKAR_STELLAR_TESTNET_DESTINATION: receiver.publicKey() } });
+}, { env: liveEnv });
 assert.equal(live.order_paid, true);
 assert.equal(live.settlement, "settled");
 
@@ -216,11 +229,12 @@ const wrong = await verifyStellarSettlement(fakeAdmin({
   id: "intent-wrong",
   amount_xlm: "9.0000000",
   status: "unpaid",
-  tx_hash: null
+  tx_hash: null,
+  settlement_model: "platform_collect"
 }), "user-1", {
   intent_id: "intent-wrong",
   tx_hash: submittedBody.hash
-}, { env: { HAVKAR_STELLAR_TESTNET_DESTINATION: receiver.publicKey() } });
+}, { env: liveEnv });
 assert.equal(wrong.order_paid, false);
 assert.equal(wrong.code, "PAYMENT_MISMATCH");
 

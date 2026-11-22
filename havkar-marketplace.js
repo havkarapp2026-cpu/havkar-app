@@ -34,29 +34,110 @@
     city: true
   };
 
-  function money(value) {
-    return Math.round(value * 100) / 100;
+  function money(value, decimals) {
+    const places = Number.isFinite(Number(decimals)) ? Number(decimals) : 2;
+    const factor = Math.pow(10, Math.max(0, Math.min(6, places)));
+    return Math.round(Number(value) * factor) / factor;
   }
 
-  function quoteListingFees(price) {
+  function currencyMeta(code) {
+    const want = String(code || "EUR").trim().toUpperCase();
+    const bag =
+      (typeof globalThis !== "undefined" &&
+        globalThis.HAVKAR_PRESENTMENT_CURRENCIES) ||
+      null;
+    const list = bag && Array.isArray(bag.list) ? bag.list : [];
+    for (let i = 0; i < list.length; i += 1) {
+      if (String(list[i].code || "").toUpperCase() === want) {
+        return {
+          code: want,
+          decimals: list[i].zero_decimal ? 0 : Number(list[i].decimals || 2),
+          zero_decimal: !!list[i].zero_decimal,
+          symbol: list[i].symbol || want,
+          name: list[i].name || want
+        };
+      }
+    }
+    return {
+      code: /^[A-Z]{3}$/.test(want) && want !== "XLM" ? want : "EUR",
+      decimals: 2,
+      zero_decimal: false,
+      symbol: want,
+      name: want
+    };
+  }
+
+  function quoteListingFees(price, currency) {
     const amount = Number(price);
+    const rawCode = String(currency || "").trim().toUpperCase();
 
     if (!Number.isFinite(amount) || amount < 0) {
       return { ok: false, error: "Price must be a non-negative number." };
     }
+    if (rawCode === "XLM") {
+      return {
+        ok: false,
+        error: "XLM is a payment rail, not a listing quotation currency."
+      };
+    }
 
+    const meta = currencyMeta(currency);
+    const bag =
+      (typeof globalThis !== "undefined" &&
+        globalThis.HAVKAR_PRESENTMENT_CURRENCIES) ||
+      null;
+    if (
+      bag &&
+      Array.isArray(bag.codes) &&
+      bag.codes.length &&
+      !bag.codes.includes(String(meta.code || "").toLowerCase())
+    ) {
+      return {
+        ok: false,
+        error: "Unsupported listing currency."
+      };
+    }
+
+    const rounded = money(amount, meta.decimals);
     return {
       ok: true,
-      currency: "EUR",
-      price: money(amount),
+      currency: meta.code,
+      decimals: meta.decimals,
+      zero_decimal: meta.zero_decimal,
+      price: rounded,
       listingPublicationFee: LISTING_PUBLICATION_FEE,
-      buyerFee: money(amount * BUYER_FEE_RATE),
-      sellerFee: money(amount * SELLER_FEE_RATE),
-      buyerPays: money(amount * (1 + BUYER_FEE_RATE)),
-      sellerReceives: money(amount * (1 - SELLER_FEE_RATE)),
+      buyerFee: money(rounded * BUYER_FEE_RATE, meta.decimals),
+      sellerFee: money(rounded * SELLER_FEE_RATE, meta.decimals),
+      buyerPays: money(rounded * (1 + BUYER_FEE_RATE), meta.decimals),
+      sellerReceives: money(rounded * (1 - SELLER_FEE_RATE), meta.decimals),
       tax: null,
       shipping: null,
-      paymentProcessing: null
+      paymentProcessing: null,
+      networkFee: null,
+      note:
+        "Publication is free. Buyer 2% and seller 3% are marketplace fees. Tax, shipping, processor, and Stellar network fees are separate."
+    };
+  }
+
+  /* Convert listing major units to EUR using frankfurter-style rates (EUR base: 1 EUR = rate units). */
+  function listingPriceToEur(row, rates) {
+    const price = Number(row && row.price);
+    if (!Number.isFinite(price)) {
+      return { ok: false, error: "price_missing" };
+    }
+    const code = String((row && row.currency) || "EUR").trim().toUpperCase();
+    if (code === "EUR" || code === "") {
+      return { ok: true, eur: price, currency: "EUR", rate: 1 };
+    }
+    const rate = rates && rates[code];
+    if (!rate || !Number.isFinite(Number(rate)) || Number(rate) <= 0) {
+      return { ok: false, error: "fx_rate_missing", currency: code };
+    }
+    return {
+      ok: true,
+      eur: price / Number(rate),
+      currency: code,
+      rate: Number(rate)
     };
   }
 
@@ -382,6 +463,15 @@
       return false;
     }
 
+    const currencyFilter = String(input.currency || "").trim().toUpperCase();
+    if (
+      currencyFilter &&
+      currencyFilter !== "ALL" &&
+      String(row && row.currency || "EUR").trim().toUpperCase() !== currencyFilter
+    ) {
+      return false;
+    }
+
     const min = priceBound(input.minPrice);
     const max = priceBound(input.maxPrice);
 
@@ -395,12 +485,31 @@
 
     const price = Number(row && row.price);
     const hasPrice = Number.isFinite(price);
+    const priceCurrency = String(input.priceCurrency || "").trim().toUpperCase();
+    const rates = input.rates || null;
 
-    if (min && min.ok && (!hasPrice || price < min.value)) {
+    let comparePrice = price;
+    if (hasPrice && rates && priceCurrency) {
+      const asEur = listingPriceToEur(row, rates);
+      if (!asEur.ok) {
+        return false;
+      }
+      if (priceCurrency === "EUR") {
+        comparePrice = asEur.eur;
+      } else {
+        const outRate = rates[priceCurrency];
+        if (!outRate || !Number.isFinite(Number(outRate)) || Number(outRate) <= 0) {
+          return false;
+        }
+        comparePrice = asEur.eur * Number(outRate);
+      }
+    }
+
+    if (min && min.ok && (!hasPrice || comparePrice < min.value)) {
       return false;
     }
 
-    if (max && max.ok && (!hasPrice || price > max.value)) {
+    if (max && max.ok && (!hasPrice || comparePrice > max.value)) {
       return false;
     }
 
@@ -410,7 +519,13 @@
   function listingShareUrl(origin, id) {
     const listingId = String(id || "").trim();
 
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(listingId)) {
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        listingId
+      );
+    const isNumericId = /^\d{1,18}$/.test(listingId);
+
+    if (!isUuid && !isNumericId) {
       return "";
     }
 
@@ -474,6 +589,8 @@
     listingShareUrl,
     shareListing,
     quoteListingFees,
+    currencyMeta,
+    listingPriceToEur,
     isMarketplaceRow,
     isAdvertisingRow,
     validateListingVideo,

@@ -1,10 +1,79 @@
 (function () {
+    function language() {
+        try {
+            return (
+                (window.HAVKAR_I18N &&
+                    window.HAVKAR_I18N.getLanguage &&
+                    window.HAVKAR_I18N.getLanguage()) ||
+                localStorage.getItem("havkar_language") ||
+                "en"
+            );
+        } catch (_e) {
+            return "en";
+        }
+    }
+
+    function packFor(lang) {
+        try {
+            if (window.HAVKAR_UI_I18N21 && typeof window.HAVKAR_UI_I18N21.pack === "function") {
+                return window.HAVKAR_UI_I18N21.pack(lang) || {};
+            }
+        } catch (_e) {}
+        return {};
+    }
+
     var PHRASES = {
         "Accommodation": "Alloggi",
         "Published Italian listings only. No sample stays and no prices.": "Solo annunci italiani pubblicati. Nessun soggiorno di esempio e nessun prezzo.",
+        "Search published HAVKAR stays + eligible suppliers. Live booking stays Owner-gated.": "Cerca soggiorni HAVKAR pubblicati e fornitori idonei. La prenotazione live resta bloccata dal Proprietario.",
         "No verified accommodation is published.": "Nessun alloggio verificato è pubblicato.",
+        "No verified accommodation is published yet": "Nessun alloggio verificato è ancora pubblicato",
+        "The interactive map above still works for destination search and GPS. HAVKAR never invents hotel inventory, prices, or availability. Property owners can apply via “List a property”.": "La mappa interattiva sopra funziona comunque per destinazione e GPS. HAVKAR non inventa inventario, prezzi o disponibilità. I proprietari possono candidarsi da “Registra un immobile”.",
+        "City / destination": "Città / destinazione",
+        "City / destination / address": "Città / destinazione / indirizzo",
+        "Category": "Categoria",
+        "All types": "Tutti i tipi",
+        "Hotel": "Hotel",
+        "Apartment": "Appartamento",
+        "Guesthouse": "Affittacamere",
+        "Other": "Altro",
+        "Use my location": "Usa la mia posizione",
+        "Map": "Mappa",
+        "List": "Elenco",
+        "Map + list": "Mappa + elenco",
+        "Destination map": "Mappa della destinazione",
+        "Choose a destination to place the map marker.": "Scegli una destinazione per posizionare il marker sulla mappa.",
+        "Map stays available even when no verified stay is published. Choose a destination or use GPS.": "La mappa resta disponibile anche senza soggiorni verificati. Scegli una destinazione o usa il GPS.",
+        "Check-in": "Check-in",
+        "Check-out": "Check-out",
+        "Adults": "Adulti",
+        "Children": "Bambini",
+        "Rooms": "Camere",
+        "Display / charge currency": "Valuta di visualizzazione / addebito",
+        "Currency": "Valuta",
+        "Search stays": "Cerca soggiorni",
+        "Fee quote (no charge)": "Preventivo commissioni (senza addebito)",
+        "Payment probe (no charge)": "Prova pagamento (senza addebito)",
+        "Payment methods": "Metodi di pagamento",
+        "Two separate rails. XLM is not a Stripe currency. Live hotel charges stay OFF.": "Due canali separati. XLM non è una valuta Stripe. Gli addebiti hotel live restano OFF.",
+        "Pay by card / supported currencies": "Paga con carta / valute supportate",
+        "Pay with XLM wallet": "Paga con wallet XLM",
+        "Sample list price (EUR)": "Prezzo elenco di esempio (EUR)",
+        "Stripe fee quote (no charge)": "Preventivo commissioni Stripe (senza addebito)",
+        "XLM quote (no charge)": "Preventivo XLM (senza addebito)",
+        "Not yet available": "Non ancora disponibile",
+        "My booking history": "Le mie prenotazioni",
+        "Owner tools": "Strumenti proprietario",
+        "Currency matrix": "Matrice valute",
         "List a property": "Registra un immobile",
         "Case status": "Stato della pratica",
+        "Hotel search": "Ricerca hotel",
+        "Private owner tools. Listings stay unpublished until verified. Payouts require KYB + Connect eligibility.": "Strumenti privati del proprietario. Gli annunci restano non pubblicati fino alla verifica. I pagamenti richiedono KYB e idoneità Connect.",
+        "Room name": "Nome camera",
+        "Room category": "Categoria camera",
+        "Save room": "Salva camera",
+        "Checking owner payout eligibility…": "Verifica idoneità ai pagamenti del proprietario…",
+        "Sign in to view payout eligibility.": "Accedi per vedere l'idoneità ai pagamenti.",
         "The operator record does not verify identity or the property.": "La scheda del titolare non verifica l'identità né l'immobile.",
         "A confirmed email is required. Identity Verified stays off until a contracted identity service is connected. Monthly plans are not priced and are not charged.": "È richiesta un'email confermata. L'identità verificata resta disattivata finché non è collegato un servizio di identità con contratto. I piani mensili non hanno un prezzo e non vengono addebitati.",
         "Legal name": "Nome legale",
@@ -121,29 +190,93 @@
         "Back": "Indietro"
     };
 
+
+    var FA_PHRASES = {
+        "Accommodation": "اقامت",
+        "Search published HAVKAR stays + eligible suppliers. Live booking stays Owner-gated.": "جستجوی اقامتگاه‌های منتشرشده هاوکار و تأمین‌کنندگان واجد شرایط. رزرو زنده همچنان تحت کنترل مالک است.",
+        "No verified accommodation is published yet": "هنوز اقامتگاه تأییدشده‌ای منتشر نشده است",
+        "The interactive map above still works for destination search and GPS. HAVKAR never invents hotel inventory, prices, or availability. Property owners can apply via “List a property”.": "نقشه تعاملی بالا همچنان برای جستجوی مقصد و GPS کار می‌کند. هاوکار اقامتگاه، قیمت یا موجودی ساختگی نمی‌سازد. مالکان می‌توانند از «ثبت ملک» اقدام کنند.",
+        "City / destination": "شهر / مقصد",
+        "City / destination / address": "شهر / مقصد / آدرس",
+        "Category": "دسته",
+        "All types": "همه انواع",
+        "Hotel": "هتل",
+        "Apartment": "آپارتمان",
+        "Guesthouse": "مهمان‌خانه",
+        "Other": "سایر",
+        "Use my location": "از موقعیت من استفاده کن",
+        "Search this area": "جستجو در این محدوده",
+        "Map": "نقشه",
+        "List": "فهرست",
+        "Map + list": "نقشه + فهرست",
+        "Destination map": "نقشه مقصد",
+        "Favorites": "علاقه‌مندی‌ها",
+        "Compare": "مقایسه",
+        "Share location": "اشتراک‌گذاری موقعیت",
+        "Copy location link": "کپی لینک موقعیت",
+        "Check-in": "ورود",
+        "Check-out": "خروج",
+        "Adults": "بزرگسال",
+        "Children": "کودک",
+        "Rooms": "اتاق",
+        "Display / charge currency": "ارز نمایش / پرداخت",
+        "Currency": "ارز",
+        "Search stays": "جستجوی اقامت",
+        "Payment methods": "روش‌های پرداخت",
+        "Two separate rails. XLM is not a Stripe currency. Live hotel charges stay OFF.": "دو مسیر جدا. XLM ارز Stripe نیست. شارژ زنده هتل خاموش است.",
+        "Pay by card / supported currencies": "پرداخت با کارت / ارزهای پشتیبانی‌شده",
+        "Pay with XLM wallet": "پرداخت با کیف‌پول XLM",
+        "Sample list price (EUR)": "قیمت نمونه فهرست (یورو)",
+        "Stripe fee quote (no charge)": "پیش‌فاکتور کارمزد Stripe (بدون شارژ)",
+        "XLM quote (no charge)": "پیش‌فاکتور XLM (بدون شارژ)",
+        "My booking history": "تاریخچه رزروهای من",
+        "Owner tools": "ابزارهای مالک",
+        "Currency matrix": "ماتریس ارز",
+        "List a property": "ثبت ملک",
+        "Case status": "وضعیت پرونده",
+        "Hotel search": "جستجوی هتل",
+        "Calls": "تماس‌ها",
+        "Log In": "ورود",
+        "Create New Account": "ایجاد حساب جدید",
+        "Home": "خانه",
+        "Listings": "آگهی‌ها",
+        "Back": "بازگشت",
+        "Help for this section": "راهنمای این بخش",
+        "Professional HAVKAR map for Accommodation: street / satellite / hybrid, live traffic, place search, GPS, routing. Satellite is static imagery, not a live camera. Cameras/rain only from licensed public sources. All active map tools are free.": "نقشه حرفه‌ای هاوکار برای اقامت: خیابان / ماهواره / ترکیبی، ترافیک زنده، جستجوی مکان، GPS و مسیریابی. ماهواره تصویر ثابت است نه دوربین زنده. دوربین/باران فقط از منابع عمومی مجاز. همه ابزارهای فعال نقشه رایگان‌اند."
+    };
+
     var applying = false;
 
-    function language() {
-        try {
-            return localStorage.getItem("havkar_language") || "en";
-        } catch (error) {
-            return "en";
-        }
+    function phraseMap() {
+        var lang = language();
+        if (lang === "it") return PHRASES;
+        if (lang === "fa") return Object.assign({}, packFor(lang), FA_PHRASES);
+        if (lang === "ar" || lang === "ckb") return Object.assign({}, packFor(lang), FA_PHRASES);
+        return Object.assign({}, packFor(lang));
     }
 
     function apply(root) {
-        if (applying || language() !== "it") {
-            if (language() !== "it") {
-                document.documentElement.lang = "en";
-            }
+        if (applying) {
+            return;
+        }
 
+        var lang = language();
+        if (lang === "en") {
+            document.documentElement.lang = "en";
             return;
         }
 
         applying = true;
 
         try {
-            document.documentElement.lang = "it";
+            document.documentElement.lang = lang;
+            try {
+                document.documentElement.dir =
+                    (lang === "fa" || lang === "ar" || lang === "ur" || lang === "ckb")
+                        ? "rtl"
+                        : "ltr";
+            } catch (_d) {}
+            var phrases = phraseMap();
             var scope = root && root.nodeType === 1 ? root : document.body;
             var walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
             var node;
@@ -155,7 +288,7 @@
                     continue;
                 }
 
-                var translated = PHRASES[node.nodeValue.trim()];
+                var translated = phrases[node.nodeValue.trim()];
 
                 if (translated) {
                     node.nodeValue = translated;
@@ -163,12 +296,16 @@
             }
 
             scope.querySelectorAll("[aria-label]").forEach(function (element) {
-                var label = PHRASES[element.getAttribute("aria-label")];
+                var label = phrases[element.getAttribute("aria-label")];
 
                 if (label) {
                     element.setAttribute("aria-label", label);
                 }
             });
+
+            if (window.HAVKAR_PREMIUM_I18N && typeof window.HAVKAR_PREMIUM_I18N.apply === "function") {
+                window.HAVKAR_PREMIUM_I18N.apply(scope);
+            }
         } finally {
             applying = false;
         }
@@ -177,11 +314,8 @@
     window.HAVKAR_ACCOMMODATION_I18N = {
         apply: apply,
         phrase: function (text) {
-            if (language() !== "it") {
-                return text;
-            }
-
-            return PHRASES[text] || text;
+            var phrases = phraseMap();
+            return phrases[text] || text;
         }
     };
 

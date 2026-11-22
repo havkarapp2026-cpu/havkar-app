@@ -445,13 +445,14 @@ textarea {
       >
 
       <label for="currency">
-        Currency
+        Currency (133 fiat presentation + separate XLM rail)
       </label>
-
-      <select id="currency" required>
-        <option value="EUR">EUR</option>
-        <option value="USD">USD</option>
-      </select>
+      <input type="hidden" id="currency" name="currency" value="EUR" required>
+      <div id="currencySelectMount" data-havkar-currency-mount="1"></div>
+      <p id="currencyPaymentNote" class="photo-info" style="margin-top:6px">Quotation currency for this listing (133 presentment codes). XLM is a separate crypto rail.</p>
+      <p class="hint" style="font-size:.85rem;color:#567;margin:6px 0 0">
+        Display/quotation currency. Live Stripe charging still follows real Stripe capability — not all 133 can be charged.
+      </p>
 
       <label for="expiresAt">
         Listing end (optional)
@@ -602,9 +603,46 @@ textarea {
 
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-countries.js"></script>
+<script src="/havkar-presentment-currencies.js"></script>
+<script src="/havkar-currency-select.js"></script>
 <script src="/havkar-ad-images.js"></script>
 <script src="/havkar-ad-publish.js"></script>
 <script src="/havkar-marketplace.js"></script>
+<script>
+(function(){
+  var mount = document.getElementById('currencySelectMount');
+  var hidden = document.getElementById('currency');
+  if(!mount || !window.HAVKAR_CURRENCY_SELECT || !hidden) return;
+  window.HAVKAR_CURRENCY_SELECT.mount(mount, {
+    initialCurrency: 'eur',
+    onChange: function(sel){
+      if(!sel) return;
+      // Listing quotation currency is fiat-only (DB forbids XLM on ads.currency).
+      // XLM is a separate payment rail preference, not a listing price currency.
+      if(sel.method === 'xlm_mainnet'){
+        if(!hidden.value || String(hidden.value).toUpperCase() === 'XLM'){
+          hidden.value = 'EUR';
+        }
+        mount.setAttribute('data-preferred-payment', 'xlm');
+        var note = document.getElementById('currencyPaymentNote');
+        if(note){
+          note.textContent = 'Listing price stays in ' + String(hidden.value).toUpperCase() + '. Preferred checkout rail: XLM (Stellar). Live XLM collection stays Owner-gated.';
+        }
+      } else {
+        hidden.value = String(sel.code || sel.currency || 'EUR').toUpperCase();
+        mount.setAttribute('data-preferred-payment', 'stripe');
+        var note2 = document.getElementById('currencyPaymentNote');
+        if(note2){
+          var meta = sel.meta || {};
+          note2.textContent = 'Quotation currency: ' + hidden.value +
+            (meta.zero_decimal ? ' (zero-decimal)' : '') +
+            '. Live card chargeability is provider-gated and may differ from display.';
+        }
+      }
+    }
+  });
+})();
+</script>
 <script>
 
 /* =========================================================
@@ -1107,180 +1145,102 @@ function readFile(file) {
    The advertisement stores the public image address, not a data URL.
    ========================================================= */
 
-function compressImage(
+async function compressImage(
   file,
   maxSize = 1600,
   quality = 0.82
 ) {
 
-  return new Promise(
-    function (
-      resolve,
-      reject
-    ) {
+  /* Bake EXIF orientation into pixels so vertical/horizontal phone photos stay correct after re-encode. */
+  let source = null;
+  let width = 0;
+  let height = 0;
 
-      const reader =
-        new FileReader();
-
-
-      reader.onload =
-        function () {
-
-          const img =
-            new Image();
-
-
-          img.onload =
-            function () {
-
-              let width =
-                img.naturalWidth;
-
-              let height =
-                img.naturalHeight;
-
-
-              if (
-                !width ||
-                !height
-              ) {
-
-                reject(
-                  new Error(
-                    "Invalid image dimensions."
-                  )
-                );
-
-                return;
-
-              }
-
-
-              const scale =
-                Math.min(
-                  1,
-                  maxSize /
-                  Math.max(
-                    width,
-                    height
-                  )
-                );
-
-
-              width =
-                Math.round(
-                  width * scale
-                );
-
-
-              height =
-                Math.round(
-                  height * scale
-                );
-
-
-              const canvas =
-                document.createElement(
-                  "canvas"
-                );
-
-
-              canvas.width =
-                width;
-
-              canvas.height =
-                height;
-
-
-              const ctx =
-                canvas.getContext(
-                  "2d"
-                );
-
-
-              if (!ctx) {
-
-                reject(
-                  new Error(
-                    "Could not prepare image."
-                  )
-                );
-
-                return;
-
-              }
-
-
-              ctx.drawImage(
-                img,
-                0,
-                0,
-                width,
-                height
-              );
-
-
-              canvas.toBlob(
-                function (blob) {
-
-                  if (!blob) {
-
-                    reject(
-                      new Error(
-                        "Could not prepare image."
-                      )
-                    );
-
-                    return;
-
-                  }
-
-                  resolve(blob);
-
-                },
-                "image/jpeg",
-                quality
-              );
-
-            };
-
-
-          img.onerror =
-            function () {
-
-              reject(
-                new Error(
-                  "Could not decode image."
-                )
-              );
-
-            };
-
-
-          img.src =
-            reader.result;
-
-        };
-
-
-      reader.onerror =
-        function () {
-
-          reject(
-            new Error(
-              "Could not read image."
-            )
-          );
-
-        };
-
-
-      reader.readAsDataURL(
-        file
-      );
-
+  if (typeof createImageBitmap === "function") {
+    try {
+      source = await createImageBitmap(file, {
+        imageOrientation: "from-image"
+      });
+    } catch (_orientErr) {
+      try {
+        source = await createImageBitmap(file);
+      } catch (_bitmapErr) {
+        source = null;
+      }
     }
-  );
+  }
+
+  if (source) {
+    width = source.width;
+    height = source.height;
+  } else {
+    const dataUrl = await new Promise(function (resolve, reject) {
+      const reader = new FileReader();
+      reader.onload = function () {
+        resolve(reader.result);
+      };
+      reader.onerror = function () {
+        reject(new Error("Could not read image."));
+      };
+      reader.readAsDataURL(file);
+    });
+    const img = await new Promise(function (resolve, reject) {
+      const image = new Image();
+      image.onload = function () {
+        resolve(image);
+      };
+      image.onerror = function () {
+        reject(new Error("Could not decode image."));
+      };
+      image.src = dataUrl;
+    });
+    source = img;
+    width = img.naturalWidth;
+    height = img.naturalHeight;
+  }
+
+  if (!width || !height) {
+    if (source && typeof source.close === "function") {
+      source.close();
+    }
+    throw new Error("Invalid image dimensions.");
+  }
+
+  const scale = Math.min(1, maxSize / Math.max(width, height));
+  width = Math.round(width * scale);
+  height = Math.round(height * scale);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    if (source && typeof source.close === "function") {
+      source.close();
+    }
+    throw new Error("Could not prepare image.");
+  }
+
+  ctx.drawImage(source, 0, 0, width, height);
+  if (source && typeof source.close === "function") {
+    source.close();
+  }
+
+  const blob = await new Promise(function (resolve, reject) {
+    canvas.toBlob(
+      function (out) {
+        if (!out) {
+          reject(new Error("Could not prepare image."));
+          return;
+        }
+        resolve(out);
+      },
+      "image/jpeg",
+      quality
+    );
+  });
+
+  return blob;
 
 }
 
@@ -1763,9 +1723,15 @@ adForm.addEventListener(
 
       const currencyInput =
         document.getElementById("currency");
+      const rawCurrency =
+        String(
+          (currencyInput && currencyInput.value) || "EUR"
+        )
+          .trim()
+          .toUpperCase();
       const currency =
-        currencyInput && currencyInput.value === "USD"
-          ? "USD"
+        /^[A-Z]{3}$/.test(rawCurrency) && rawCurrency !== "XLM"
+          ? rawCurrency
           : "EUR";
       const expiresInput =
         document.getElementById("expiresAt");
@@ -2319,6 +2285,7 @@ if (listingVideoInput) {
 }
 
 </script>
+<script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
 
 </body>

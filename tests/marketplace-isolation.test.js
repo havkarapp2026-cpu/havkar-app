@@ -172,7 +172,7 @@ assert.ok(buySell.includes('id="minPrice"'));
 assert.ok(buySell.includes('id="maxPrice"'));
 assert.ok(buySell.includes("listingMatchesPriceAndCity"));
 assert.ok(buySell.includes('data-share-id='));
-assert.ok(buySell.includes('window.location.href =\n                    "notifications.html"'));
+assert.ok(/window\.location\.href\s*=\s*"notifications\.html"/.test(buySell));
 assert.ok(buySell.includes('id="loadMoreListings"'));
 assert.ok(buySell.includes("nextListingQuery"));
 assert.ok(buySell.includes("updateListingLayout"));

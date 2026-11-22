@@ -10,6 +10,7 @@
 <style>
 *{box-sizing:border-box}body{margin:0;min-height:100vh;padding:20px;display:grid;place-items:center;font:16px Arial,Helvetica,sans-serif;color:#263529;background:linear-gradient(135deg,#b8e6bd,#37b85d)}main{width:100%;max-width:590px;background:#fff;border-radius:26px;padding:32px;box-shadow:0 15px 45px #0002}header{text-align:center}header img{width:88px;height:88px;object-fit:contain}h1{font-size:36px;color:#187a35;margin:8px 0}p.sub{color:#667;margin:0 0 25px}.field{margin:15px 0}label{display:block;font-weight:700;font-size:14px;margin-bottom:7px}input,select{width:100%;padding:14px;border:1.5px solid #cdd8ce;border-radius:12px;background:#fff;color:#263529;font:inherit}input:focus,select:focus{outline:2px solid #83d49a;border-color:#238943}.types{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.types label{margin:0;padding:12px 7px;text-align:center;border:1.5px solid #d1dfd4;border-radius:12px;cursor:pointer;font-size:13px}.types input{width:auto;accent-color:#248e46;margin:0 0 7px}.types label:has(input:checked){background:#e9f7ed;border-color:#238943}.hidden{display:none!important}button,.back{display:block;width:100%;border-radius:12px;padding:15px;font:700 16px Arial;cursor:pointer;text-align:center;text-decoration:none}button.primary{background:#218c45;color:white;border:0;margin-top:18px}button.google{display:flex;width:100%;min-height:56px;align-items:center;justify-content:center;gap:10px;background:#fff;border:2px solid #1b5e20;color:#1b5e20;margin-top:12px;border-radius:13px;font-size:18px;font-weight:800;cursor:pointer}button:disabled{opacity:.55;cursor:wait}.back{color:#237e3d;margin-top:8px}.hint{font-size:12px;color:#63766a;line-height:1.5;margin:9px 0}.message{min-height:24px;margin-top:15px;line-height:1.5;overflow-wrap:anywhere}.error{color:#ba2828}.success{color:#237e3d}.password-line{display:flex;gap:8px}.password-line input{min-width:0}.password-line button{width:auto;padding:0 14px;background:#eaf5ed;border:1px solid #cdd8ce;color:#246d39}footer{text-align:center;font-size:12px;color:#778;margin-top:20px}footer a{color:#187a35;margin:0 4px}@media(max-width:480px){body{padding:10px}main{padding:23px 17px}.types{gap:5px}.types label{font-size:12px;padding:10px 3px}}
 </style>
+<script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
 </head><body><main>
 <header><img src="/assets/icons/havkar-icon-1024-20261022-v3.png" alt="HAVKAR"><h1 translate="no" data-i18n-ignore>HAVKAR</h1><p class="sub">Create your account</p></header>
@@ -26,10 +27,12 @@
 <div id="message" class="message" role="status" aria-live="polite"></div>
 </form><footer>HAVKAR • Safe • Secure 🔒<br><a href="privacy.html">Privacy draft</a><a href="terms.html">Terms draft</a><a href="privacy-request.html">Privacy request</a></footer></main>
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-canonical-origin.js"></script>
 <script src="/havkar-auth-ui.js"></script>
 <script type="module">
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2';
 const supabase=createClient(window.HAVKAR_SUPABASE_CONFIG.url,window.HAVKAR_SUPABASE_CONFIG.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+const authRedirect=(path)=>window.HAVKAR_CANONICAL?window.HAVKAR_CANONICAL.authRedirectUrl(path):('https://havkar.online/'+String(path||'login.html').replace(/^\//,''));
 const $=id=>document.getElementById(id), form=$('signupForm'),message=$('message'),createBtn=$('createBtn'),googleBtn=$('googleBtn');
 const language=$('language');
 const i18n=window.HAVKAR_I18N;
@@ -91,7 +94,7 @@ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){show('Enter a valid email address.
 if(pass.length<8){show('Password must be at least 8 characters.','error');await paint();return;}
 if(pass!==confirm){show('Passwords do not match.','error');await paint();return;}
 saveLanguage();setBusy(true);
-try{const {data,error}=await supabase.auth.signUp({email,password:pass,options:{emailRedirectTo:new URL('login.html',location.href).href,data:{first_name:first,last_name:last,full_name:first+' '+last,account_type:type,organization_name:type==='personal'?null:org,preferred_language:language.value,verification_status:'unverified'}}});if(error)throw error;
+try{const {data,error}=await supabase.auth.signUp({email,password:pass,options:{emailRedirectTo:authRedirect('login.html'),data:{first_name:first,last_name:last,full_name:first+' '+last,account_type:type,organization_name:type==='personal'?null:org,preferred_language:language.value,verification_status:'unverified'}}});if(error)throw error;
 if(!data?.user){show('Account creation could not be confirmed. Please try again.','error');await paint();return;}
 const signupOutcome=window.HAVKAR_AUTH_UI?window.HAVKAR_AUTH_UI.signupResult(data):{code:data.session?'signed_in':'confirmation_required',text:''};
 if(signupOutcome.code==='existing_account'){show(signupOutcome.text,'error');await paint();return;}
@@ -102,5 +105,5 @@ else{show(window.HAVKAR_AUTH_UI?window.HAVKAR_AUTH_UI.signupResult(data).text:'A
 }catch(err){console.error('HAVKAR Signup Error:',err);show('Account creation could not be completed. Please try again.','error');}finally{googleBtn.disabled=false;if(!createBtn.disabled&&createBtn.textContent!=='Go to HAVKAR')setBusy(false);}
 await paint();
 });
-googleBtn.addEventListener('click',async()=>{saveLanguage();googleBtn.disabled=true;show('');try{const {error}=await supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:new URL('login.html',location.href).href}});if(error)throw error;}catch(err){console.error('HAVKAR Google OAuth Error:',err);show('Google sign-in could not be started. Please try again.','error');googleBtn.disabled=false;await paint();}});
+googleBtn.addEventListener('click',async()=>{saveLanguage();googleBtn.disabled=true;show('');try{const {error}=await supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:authRedirect('login.html'),queryParams:{prompt:'select_account'}}});if(error)throw error;}catch(err){console.error('HAVKAR Google OAuth Error:',err);show('Google sign-in could not be started. Please try again.','error');googleBtn.disabled=false;await paint();}});
 </script></body></html>
