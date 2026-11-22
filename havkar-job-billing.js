@@ -230,11 +230,23 @@
     }
 
     if (purpose === "job_advertisement") {
-      const expected = ordinaryAmountCents(metadata.plan);
+      const ownerMicro =
+        String(metadata.havkar_owner_jobs_micro_test || "") === "true";
+      const catalogExpected = ordinaryAmountCents(metadata.plan);
+      // Owner-only €1.00 micro-test: public catalog prices stay unchanged.
+      const expected = ownerMicro ? 100 : catalogExpected;
       if (session.mode !== "payment" || session.payment_status !== "paid") {
         return { ok: false, reason: "not_paid", retry: false };
       }
-      if (!amountsMatch(expected, session.amount_total, session.currency)) {
+      if (ownerMicro) {
+        // Reject forged micro flags that are not paired with the €1 amount.
+        if (!amountsMatch(100, session.amount_total, session.currency)) {
+          return { ok: false, reason: "amount_mismatch", retry: false, activate: false };
+        }
+        if (!metadata.paid_by_owner_user_id) {
+          return { ok: false, reason: "owner_micro_payer_required", retry: false, activate: false };
+        }
+      } else if (!amountsMatch(expected, session.amount_total, session.currency)) {
         return { ok: false, reason: "amount_mismatch", retry: false, activate: false };
       }
       if (!metadata.job_id || !metadata.user_id) {
@@ -247,7 +259,8 @@
         jobId: metadata.job_id,
         userId: metadata.user_id,
         plan: metadata.plan,
-        amountCents: expected
+        amountCents: expected,
+        ownerMicro: ownerMicro
       };
     }
 

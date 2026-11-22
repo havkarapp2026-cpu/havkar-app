@@ -1169,9 +1169,13 @@ async function loadMerchantStellarReceive(admin, ownerUserId) {
   return null;
 }
 
-async function validateXlmQuoteSubject(admin, userId, decision) {
+async function validateXlmQuoteSubject(admin, userId, decision, options) {
   const flow = String(decision.flow || "");
   const subjectId = String(decision.subject_id || "").trim();
+  const ownerMicro = Boolean(options && options.ownerMicro);
+  const ownerMicroAmountEur = Number(
+    (options && options.ownerMicroAmountEur) || 1
+  );
 
   if (!subjectId) {
     return {
@@ -1634,7 +1638,22 @@ async function validateXlmQuoteSubject(admin, userId, decision) {
         payable: false
       };
     }
-    if (Number(decision.fees.price) !== listed) {
+    if (ownerMicro) {
+      // Catalog monthly_fee stays at the public plan price; only the Owner
+      // micro quote may use the €1.00 test amount.
+      if (Number(decision.fees.price) !== ownerMicroAmountEur) {
+        return {
+          ok: false,
+          status: 409,
+          code: "OWNER_MICRO_PRICE_MISMATCH",
+          error:
+            "Owner Jobs micro XLM quote must use the approved €1.00 test amount.",
+          paid: false,
+          order_paid: false,
+          payable: false
+        };
+      }
+    } else if (Number(decision.fees.price) !== listed) {
       return {
         ok: false,
         status: 409,
@@ -1657,7 +1676,7 @@ async function validateXlmQuoteSubject(admin, userId, decision) {
         payable: false
       };
     }
-    return { ok: true, job: job };
+    return { ok: true, job: job, owner_micro: ownerMicro };
   }
 
   return {
@@ -2045,6 +2064,7 @@ export default async function handler(req, res) {
       globalBodyAction === "services_payment_methods" ||
       globalBodyAction === "jobs_quote" ||
       globalBodyAction === "jobs_checkout" ||
+      globalBodyAction === "jobs_owner_micro_checkout" ||
       globalBodyAction === "jobs_subscription_checkout" ||
       globalBodyAction === "jobs_company_verify" ||
       globalBodyAction === "services_quote");
@@ -3104,6 +3124,7 @@ export default async function handler(req, res) {
         bodyActionEarly === "services_payment_methods" ||
         bodyActionEarly === "jobs_quote" ||
         bodyActionEarly === "jobs_checkout" ||
+        bodyActionEarly === "jobs_owner_micro_checkout" ||
         bodyActionEarly === "jobs_subscription_checkout" ||
         bodyActionEarly === "jobs_company_verify" ||
         bodyActionEarly === "services_quote")
@@ -3255,6 +3276,181 @@ export default async function handler(req, res) {
               (catalog.gate && catalog.gate.message),
             error: corporateGate && corporateGate.error ? corporateGate.error : undefined
           });
+        }
+
+        if (bodyActionEarly === "jobs_owner_micro_checkout") {
+          const {
+            CONFIRM_PHRASE: JOBS_MICRO_CONFIRM,
+            AMOUNT_CENTS: JOBS_MICRO_CENTS,
+            AMOUNT_EUR: JOBS_MICRO_EUR,
+            isOwnerIdentity: isJobsMicroOwner,
+            createOwnerJobsMicroCheckoutSession
+          } = require("../lib/owner-jobs-micro-checkout.cjs");
+
+          const authMicro = await authenticateUser(req);
+          if (!authMicro.user) {
+            return sendError(
+              res,
+              401,
+              authMicro.error || "Authentication required"
+            );
+          }
+          if (!isJobsMicroOwner(authMicro.user)) {
+            return res.status(403).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              code: "OWNER_REQUIRED",
+              error:
+                "Only the primary HAVKAR Owner may prepare the €1.00 Jobs micro Checkout."
+            });
+          }
+          if (
+            String((req.body && req.body.confirm) || "") !== JOBS_MICRO_CONFIRM
+          ) {
+            return res.status(400).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              code: "CONFIRM_REQUIRED",
+              error: "Exact Owner confirm phrase required.",
+              required_confirm: JOBS_MICRO_CONFIRM
+            });
+          }
+          if (!String(process.env.STRIPE_SECRET_KEY || "").trim()) {
+            return res.status(503).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              code: "STRIPE_NOT_CONFIGURED",
+              error: "Stripe is not configured."
+            });
+          }
+          if (String(process.env.HAVKAR_JOB_PAYMENTS_ENABLED || "") !== "true") {
+            return res.status(403).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              code: "JOBS_PAYMENTS_OFF",
+              error: "Jobs live payments are not armed."
+            });
+          }
+
+          const microJobId = String((req.body && req.body.job_id) || "").trim();
+          if (!microJobId) {
+            return res.status(400).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              error: "job_id is required."
+            });
+          }
+
+          const loadedMicroJob = await getSupabaseAdmin()
+            .from("jobs")
+            .select(
+              "id,user_id,title,status,plan,monthly_fee,employer_kind,last_stripe_session_id"
+            )
+            .eq("id", microJobId)
+            .maybeSingle();
+          const microJob = loadedMicroJob && loadedMicroJob.data;
+          if (loadedMicroJob.error || !microJob) {
+            return res.status(404).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              error: "Job listing was not found."
+            });
+          }
+          if (String(microJob.status) !== "pending_payment") {
+            return res.status(409).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              code: "JOB_NOT_PENDING_PAYMENT",
+              error: "Only pending_payment listings can use Owner micro Checkout."
+            });
+          }
+          if (String(microJob.employer_kind || "ordinary") === "company") {
+            return res.status(400).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              error: "Owner micro Checkout is for ordinary prepaid listings only."
+            });
+          }
+
+          const billingModMicro = await loadJobBilling();
+          const jobBillingMicro = billingModMicro.default || billingModMicro;
+          const ordinaryMicro =
+            jobBillingMicro.ORDINARY_PLANS &&
+            jobBillingMicro.ORDINARY_PLANS[String(microJob.plan || "")];
+          if (
+            !ordinaryMicro ||
+            Math.round(Number(microJob.monthly_fee) * 100) !==
+              Number(ordinaryMicro.cents)
+          ) {
+            return res.status(409).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              code: "CATALOG_PRICE_INVALID",
+              error:
+                "Listing catalog fee must still match the public plan (€9.99/€19.99/€39.99). Micro Checkout does not change public tariffs."
+            });
+          }
+
+          try {
+            const session = await createOwnerJobsMicroCheckoutSession(
+              getStripe(),
+              {
+                origin: allowedCheckoutOrigin(req),
+                job: microJob,
+                ownerUser: authMicro.user,
+                refreshToken:
+                  (req.body &&
+                    (req.body.checkout_refresh || req.body.refresh_token)) ||
+                  Date.now()
+              }
+            );
+            try {
+              await getSupabaseAdmin()
+                .from("jobs")
+                .update({ last_stripe_session_id: session.id })
+                .eq("id", microJob.id)
+                .eq("status", "pending_payment");
+            } catch (_saveErr) {
+              /* non-fatal */
+            }
+            return res.status(200).json({
+              ok: true,
+              charged: false,
+              activated: false,
+              owner_micro: true,
+              public_list_price_eur: ordinaryMicro.eur,
+              micro_charge_eur: JOBS_MICRO_EUR,
+              micro_charge_cents: JOBS_MICRO_CENTS,
+              checkout_url: session.url,
+              session_id: session.id,
+              job_id: String(microJob.id),
+              plan: String(microJob.plan || ""),
+              billing: "owner_micro_test",
+              payout_model: "platform_listing_fee_only",
+              note:
+                "Owner-only €1.00 live micro charge. Public Jobs tariffs stay unchanged. Completing Checkout activates the listing via webhook."
+            });
+          } catch (microErr) {
+            console.error(
+              "jobs_owner_micro_checkout failed",
+              microErr && microErr.message
+            );
+            return res.status(500).json({
+              ok: false,
+              charged: false,
+              activated: false,
+              error: "Owner Jobs micro Checkout could not be started."
+            });
+          }
         }
 
         if (bodyActionEarly === "jobs_checkout") {
@@ -4831,8 +5027,50 @@ export default async function handler(req, res) {
         });
       }
 
+      let ownerMicroJobs = false;
+      const ownerMicroRequested =
+        String((req.body && req.body.owner_micro_test) || "") === "true" ||
+        String((req.body && req.body.action) || "") ===
+          "jobs_owner_micro_xlm_quote";
+      if (
+        ownerMicroRequested &&
+        String((req.body && req.body.flow) || "") === "jobs_listing"
+      ) {
+        const {
+          CONFIRM_PHRASE: JOBS_MICRO_XLM_CONFIRM,
+          AMOUNT_EUR: JOBS_MICRO_XLM_EUR,
+          isOwnerIdentity: isJobsMicroXlmOwner
+        } = require("../lib/owner-jobs-micro-checkout.cjs");
+        if (!isJobsMicroXlmOwner(user)) {
+          return res.status(403).json({
+            ok: false,
+            payable: false,
+            paid: false,
+            code: "OWNER_REQUIRED",
+            error:
+              "Only the primary HAVKAR Owner may prepare the €1.00 Jobs XLM micro quote."
+          });
+        }
+        if (
+          String((req.body && req.body.confirm) || "") !==
+          JOBS_MICRO_XLM_CONFIRM
+        ) {
+          return res.status(400).json({
+            ok: false,
+            payable: false,
+            paid: false,
+            code: "CONFIRM_REQUIRED",
+            error: "Exact Owner confirm phrase required.",
+            required_confirm: JOBS_MICRO_XLM_CONFIRM
+          });
+        }
+        ownerMicroJobs = true;
+        req.body.price = JOBS_MICRO_XLM_EUR;
+      }
+
       const decision = evaluateStellarCheckout({
         ...req.body,
+        price: ownerMicroJobs ? 1 : req.body && req.body.price,
         _geo: requestGeo
       });
 
@@ -4843,7 +5081,10 @@ export default async function handler(req, res) {
       const subjectCheck = await validateXlmQuoteSubject(
         getSupabaseAdmin(),
         user.id,
-        decision
+        decision,
+        ownerMicroJobs
+          ? { ownerMicro: true, ownerMicroAmountEur: 1 }
+          : null
       );
 
       if (!subjectCheck.ok) {
