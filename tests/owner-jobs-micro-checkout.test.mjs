@@ -7,6 +7,7 @@ import {
   CONFIRM_PHRASE,
   AMOUNT_CENTS,
   AMOUNT_EUR,
+  QUOTE_TTL_MS,
   isOwnerIdentity,
   isOwnerJobsMicroMetadata,
   ownerJobsMicroAmountOk
@@ -16,6 +17,7 @@ import billing from "../havkar-job-billing.js";
 assert.equal(AMOUNT_CENTS, 100);
 assert.equal(AMOUNT_EUR, 1);
 assert.equal(CONFIRM_PHRASE, "PREPARE_JOBS_EUR_1_00_LIVE_CHECKOUT");
+assert.ok(QUOTE_TTL_MS >= 30 * 60 * 1000);
 assert.equal(billing.ORDINARY_PLANS.Basic.cents, 999);
 assert.equal(billing.ORDINARY_PLANS.Basic.eur, 9.99);
 

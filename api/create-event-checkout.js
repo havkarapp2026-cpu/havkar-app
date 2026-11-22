@@ -5024,6 +5024,7 @@ export default async function handler(req, res) {
         const {
           CONFIRM_PHRASE: JOBS_MICRO_XLM_CONFIRM,
           AMOUNT_EUR: JOBS_MICRO_XLM_EUR,
+          QUOTE_TTL_MS: JOBS_MICRO_XLM_QUOTE_TTL_MS,
           isOwnerIdentity: isJobsMicroXlmOwner
         } = require("../lib/owner-jobs-micro-checkout.cjs");
         if (!isJobsMicroXlmOwner(user)) {
@@ -5051,6 +5052,7 @@ export default async function handler(req, res) {
         }
         ownerMicroJobs = true;
         req.body.price = JOBS_MICRO_XLM_EUR;
+        req._jobsOwnerMicroQuoteTtlMs = JOBS_MICRO_XLM_QUOTE_TTL_MS;
       }
 
       const decision = evaluateStellarCheckout({
@@ -5061,6 +5063,15 @@ export default async function handler(req, res) {
 
       if (!decision.ok) {
         return res.status(decision.status).json(decision);
+      }
+
+      if (
+        ownerMicroJobs &&
+        Number(req._jobsOwnerMicroQuoteTtlMs) >= 30 * 60 * 1000
+      ) {
+        decision.expires_at = new Date(
+          Date.now() + Number(req._jobsOwnerMicroQuoteTtlMs)
+        ).toISOString();
       }
 
       const subjectCheck = await validateXlmQuoteSubject(
