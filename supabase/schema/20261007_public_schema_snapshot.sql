@@ -1797,12 +1797,26 @@ CREATE POLICY "Users can create listings" ON public.marketplace_listings AS perm
 CREATE POLICY "Users can update own listings" ON public.marketplace_listings AS permissive FOR UPDATE TO authenticated USING ((seller_id = auth.uid())) WITH CHECK ((seller_id = auth.uid()));
 CREATE POLICY "Buyers can create orders" ON public.marketplace_orders AS permissive FOR INSERT TO authenticated WITH CHECK ((buyer_id = auth.uid()));
 CREATE POLICY "Users can view their orders" ON public.marketplace_orders AS permissive FOR SELECT TO authenticated USING (((buyer_id = auth.uid()) OR (seller_id = auth.uid())));
-CREATE POLICY "Users can add reactions in their conversations" ON public.message_reactions AS permissive FOR INSERT TO authenticated WITH CHECK (((auth.uid() = user_id) AND (emoji = ANY (ARRAY['❤️'::text, '😂'::text, '😍'::text, '👍'::text, '😢'::text, '😡'::text])) AND (EXISTS ( SELECT 1
+CREATE OR REPLACE FUNCTION public.havkar_is_reaction_emoji(p_emoji text)
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT
+    p_emoji IS NOT NULL
+    AND btrim(p_emoji) <> ''
+    AND char_length(p_emoji) BETWEEN 1 AND 32
+    AND octet_length(p_emoji) <= 64
+    AND p_emoji !~ '[[:cntrl:]]'
+    AND p_emoji !~ '[[:space:]]'
+    AND p_emoji !~ '[<>&"''`\\]';
+$$;
+CREATE POLICY "Users can add reactions in their conversations" ON public.message_reactions AS permissive FOR INSERT TO authenticated WITH CHECK (((auth.uid() = user_id) AND public.havkar_is_reaction_emoji(emoji) AND (EXISTS ( SELECT 1
    FROM (messages m
      JOIN conversations c ON ((c.id = m.conversation_id)))
   WHERE ((m.id = message_reactions.message_id) AND ((auth.uid() = c.buyer_id) OR (auth.uid() = c.seller_id)))))));
 CREATE POLICY "Users can delete their own reactions" ON public.message_reactions AS permissive FOR DELETE TO authenticated USING ((auth.uid() = user_id));
-CREATE POLICY "Users can update their own reactions" ON public.message_reactions AS permissive FOR UPDATE TO authenticated USING ((auth.uid() = user_id)) WITH CHECK (((auth.uid() = user_id) AND (emoji = ANY (ARRAY['❤️'::text, '😂'::text, '😍'::text, '👍'::text, '😢'::text, '😡'::text]))));
+CREATE POLICY "Users can update their own reactions" ON public.message_reactions AS permissive FOR UPDATE TO authenticated USING ((auth.uid() = user_id)) WITH CHECK (((auth.uid() = user_id) AND public.havkar_is_reaction_emoji(emoji)));
 CREATE POLICY "Users can view reactions in their conversations" ON public.message_reactions AS permissive FOR SELECT TO authenticated USING ((EXISTS ( SELECT 1
    FROM (messages m
      JOIN conversations c ON ((c.id = m.conversation_id)))

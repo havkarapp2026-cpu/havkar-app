@@ -1124,6 +1124,7 @@
             "Chat": "Chat",
             "Languages": "Lingue",
             "Reviews": "Recensioni",
+            "Doctors & Pharmacies": "Medici e farmacie",
             "Support": "Supporto",
             "HAVKAR AI": "HAVKAR AI",
             "About HAVKAR": "Informazioni su HAVKAR",
@@ -1146,6 +1147,7 @@
             "Chat": "Chat",
             "Languages": "Sprachen",
             "Reviews": "Bewertungen",
+            "Doctors & Pharmacies": "Ärzte & Apotheken",
             "Support": "Support",
             "HAVKAR AI": "HAVKAR AI",
             "About HAVKAR": "Über HAVKAR",
@@ -1153,6 +1155,122 @@
             "Already have an account?": "Schon ein Konto?",
             "Log In": "Anmelden",
             "Safe • Secure • Trusted": "Sicher • Geschützt • Vertrauenswürdig"
+        }),
+        fa: Object.freeze({
+            "Signed in": "وارد شده‌اید",
+            "Connect • Trade • Work • Help": "ارتباط • تجارت • کار • کمک",
+            "Buy & Sell": "خرید و فروش",
+            "Jobs": "مشاغل",
+            "Services": "خدمات",
+            "Wallet": "کیف پول",
+            "Tickets": "بلیط",
+            "Accommodation": "اقامت",
+            "Ads": "آگهی‌ها",
+            "Delivery": "ارسال",
+            "Events": "رویدادها",
+            "Chat": "گفتگو",
+            "Languages": "زبان‌ها",
+            "Reviews": "نظرات",
+            "Doctors & Pharmacies": "پزشکان و داروخانه‌ها",
+            "Support": "پشتیبانی",
+            "HAVKAR AI": "HAVKAR AI",
+            "About HAVKAR": "درباره HAVKAR",
+            "Create New Account": "ایجاد حساب جدید",
+            "Already have an account?": "حساب دارید؟",
+            "Log In": "ورود",
+            "Safe • Secure • Trusted": "ایمن • مطمئن • قابل اعتماد"
+        }),
+        ar: Object.freeze({
+            "Connect • Trade • Work • Help": "تواصل • تجارة • عمل • مساعدة",
+            "Buy & Sell": "بيع وشراء",
+            "Jobs": "وظائف",
+            "Services": "خدمات",
+            "Wallet": "المحفظة",
+            "Tickets": "التذاكر",
+            "Accommodation": "الإقامة",
+            "Ads": "الإعلانات",
+            "Delivery": "التوصيل",
+            "Events": "الفعاليات",
+            "Chat": "الدردشة",
+            "Languages": "اللغات",
+            "Reviews": "المراجعات",
+            "Doctors & Pharmacies": "الأطباء والصيدليات",
+            "Support": "الدعم",
+            "HAVKAR AI": "HAVKAR AI",
+            "About HAVKAR": "حول HAVKAR",
+            "Create New Account": "إنشاء حساب جديد",
+            "Already have an account?": "هل لديك حساب؟",
+            "Log In": "تسجيل الدخول",
+            "Safe • Secure • Trusted": "آمن • محمي • موثوق"
+        }),
+        ckb: Object.freeze({
+            "Connect • Trade • Work • Help": "پەیوەندی • بازرگانی • کار • یارمەتی",
+            "Buy & Sell": "کڕین و فرۆشتن",
+            "Jobs": "کارەکان",
+            "Services": "خزمەتگوزارییەکان",
+            "Wallet": "جزدان",
+            "Tickets": "بلیت",
+            "Accommodation": "نیشتەجێبوون",
+            "Ads": "ڕیکلامەکان",
+            "Delivery": "گەیاندن",
+            "Events": "بۆنەکان",
+            "Chat": "گفتوگۆ",
+            "Languages": "زمانەکان",
+            "Reviews": "پێداچوونەوەکان",
+            "Doctors & Pharmacies": "پزیشکان و دەرمانخانەکان",
+            "Support": "پشتگیری",
+            "HAVKAR AI": "HAVKAR AI",
+            "About HAVKAR": "دەربارەی HAVKAR",
+            "Create New Account": "دروستکردنی هەژماری نوێ",
+            "Already have an account?": "هەژمارت هەیە؟",
+            "Log In": "چوونەژوورەوە",
+            "Safe • Secure • Trusted": "پارێزراو • دڵنیا • متمانەپێکراو"
+        }),
+        kmr: Object.freeze({
+            "Connect • Trade • Work • Help": "Girêdan • Bazirganî • Kar • Alîkarî",
+            "Buy & Sell": "Kirîn û Firotin",
+            "Jobs": "Kar",
+            "Services": "Xizmet",
+            "Wallet": "Cûzdan",
+            "Tickets": "Bilêt",
+            "Accommodation": "Cîwar",
+            "Ads": "Reklam",
+            "Delivery": "Radestkirin",
+            "Events": "Bûyer",
+            "Chat": "Chat",
+            "Languages": "Ziman",
+            "Reviews": "Nirxandin",
+            "Doctors & Pharmacies": "Bijîşk û dermanxane",
+            "Support": "Piştgirî",
+            "HAVKAR AI": "HAVKAR AI",
+            "About HAVKAR": "Der barê HAVKAR",
+            "Create New Account": "Hesabekî nû çêke",
+            "Already have an account?": "Hesabê te heye?",
+            "Log In": "Têkeve",
+            "Safe • Secure • Trusted": "Ewle • Parastî • Pêbawer"
+        }),
+        sv: Object.freeze({
+            "Connect • Trade • Work • Help": "Anslut • Handla • Arbeta • Hjälp",
+            "Buy & Sell": "Köp & sälj",
+            "Jobs": "Jobb",
+            "Services": "Tjänster",
+            "Wallet": "Plånbok",
+            "Tickets": "Biljetter",
+            "Accommodation": "Boende",
+            "Ads": "Annonser",
+            "Delivery": "Leverans",
+            "Events": "Evenemang",
+            "Chat": "Chatt",
+            "Languages": "Språk",
+            "Reviews": "Recensioner",
+            "Doctors & Pharmacies": "Läkare & apotek",
+            "Support": "Support",
+            "HAVKAR AI": "HAVKAR AI",
+            "About HAVKAR": "Om HAVKAR",
+            "Create New Account": "Skapa nytt konto",
+            "Already have an account?": "Har du redan ett konto?",
+            "Log In": "Logga in",
+            "Safe • Secure • Trusted": "Säker • Trygg • Pålitlig"
         })
     });
 
@@ -1181,7 +1299,72 @@
             "Computers": "رایانه",
             "Furniture": "مبلمان",
             "Clothing": "پوشاک",
-            "Beauty & Personal Care": "زیبایی و مراقبت شخصی"
+            "Beauty & Personal Care": "زیبایی و مراقبت شخصی",
+            "Fees & marketplace rules": "کارمزد و قوانین بازار",
+            "Filters & categories": "فیلترها و دسته‌بندی‌ها",
+            "Could not load listings": "بارگذاری آگهی‌ها ممکن نشد",
+            "HAVKAR could not load the listings.": "هاوکار نتوانست آگهی‌ها را بارگذاری کند.",
+            "Try again": "تلاش دوباره",
+            "No listings found": "آگهی‌ای پیدا نشد",
+            "There are no listings matching your search or category.": "آگهی‌ای مطابق جستجو یا دسته شما نیست.",
+            "Load more listings": "آگهی‌های بیشتر",
+            "Post a new ad": "ثبت آگهی جدید",
+            "Go back": "بازگشت",
+            "Notifications": "اعلان‌ها",
+            "Clear search": "پاک کردن جستجو",
+            "Find listings across Buy & Sell, Services, Jobs, Business Ads, and Events. Results come from live HAVKAR data only.": "جستجو در خریدوفروش، خدمات، کار، تبلیغات و رویدادها. نتایج فقط از داده زنده هاوکار هستند.",
+            "Open full module": "باز کردن بخش کامل",
+            "Business Ads": "تبلیغات کسب‌وکار",
+            "Services": "خدمات",
+            "Jobs": "کار",
+            "Events": "رویدادها",
+            "Enter a search query.": "یک عبارت جستجو وارد کنید.",
+            "This page never invents results. Empty means nothing matched in the loaded live data.": "این صفحه نتیجه ساختگی نشان نمی‌دهد. خالی بودن یعنی در داده زنده موردی پیدا نشد.",
+            "Filter by country": "فیلتر بر اساس کشور",
+            "Filter by city": "فیلتر بر اساس شهر",
+            "Minimum price": "حداقل قیمت",
+            "Maximum price": "حداکثر قیمت",
+            "Listing categories": "دسته‌بندی آگهی‌ها",
+            "Buy and Sell navigation": "ناوبری خرید و فروش",
+            "Signed in": "وارد شده‌اید",
+            "Country": "کشور",
+            "City": "شهر",
+            "Publishing a listing is free. At checkout the buyer fee is 2% and the seller fee is 3%": "ثبت آگهی رایگان است. هنگام پرداخت، کارمزد خریدار ۲٪ و کارمزد فروشنده ۳٪ است",
+            "(verified by havkar-marketplace.js / listing checkout). Taxes, shipping and processor fees are separate when applicable.": "(تأییدشده در havkar-marketplace.js / تسویه آگهی). مالیات، ارسال و کارمزد پردازشگر جداگانه است.",
+            "Buy & Sell stays distinct from paid Ads.": "خرید و فروش از تبلیغات پولی جداست.",
+            "Help for this section": "راهنمای این بخش",
+            "Listing": "آگهی",
+            "Listing unavailable": "آگهی در دسترس نیست",
+            "This listing could not be loaded.": "بارگذاری این آگهی ممکن نشد.",
+            "Try again": "تلاش دوباره",
+            "Back to Buy & Sell": "بازگشت به خرید و فروش",
+            "Message Seller": "پیام به فروشنده",
+            "Save": "ذخیره",
+            "Share": "اشتراک‌گذاری",
+            "Report": "گزارش",
+            "Settings": "تنظیمات",
+            "Loading listing...": "در حال بارگذاری آگهی...",
+            "Description": "توضیحات",
+            "Your listing": "آگهی شما",
+            "Edit": "ویرایش",
+            "Delete": "حذف",
+            "BUY NOW": "خرید الآن",
+            "Mute": "بی‌صدا",
+            "Unmute": "با صدا",
+            "Pause": "توقف",
+            "Pause listing": "توقف آگهی",
+            "Publish again": "انتشار مجدد",
+            "Listing paused. It is hidden from public Buy & Sell.": "آگهی متوقف شد و از خریدوفروش عمومی مخفی است.",
+            "Listing published again.": "آگهی دوباره منتشر شد.",
+            "This listing is paused (draft). It is not shown publicly until you publish again.": "این آگهی متوقف است (پیش‌نویس) و تا انتشار مجدد عمومی نیست.",
+            "This listing is live. Pause hides it from Buy & Sell without deleting it.": "این آگهی فعال است. توقف آن را بدون حذف از خریدوفروش مخفی می‌کند.",
+            "Play": "پخش",
+            "Open": "باز کردن",
+            "Close": "بستن",
+            "Video": "ویدئو",
+            "Report this listing?": "گزارش این آگهی؟",
+            "Submit report": "ارسال گزارش",
+            "Cancel": "لغو",
         }),
         ar: Object.freeze({
             "Buy & Sell": "بيع وشراء",
@@ -1253,7 +1436,44 @@
             "Messages": "Messaggi",
             "Profile": "Profilo",
             "Loading...": "Caricamento...",
-            "All": "Tutti"
+            "All": "Tutti",
+            "Services": "Servizi",
+            "Jobs": "Lavori",
+            "Events": "Eventi",
+            "Business Ads": "Annunci aziendali",
+            "Ads": "Annunci",
+            "Open full module": "Apri il modulo completo",
+            "Find listings across Buy & Sell, Services, Jobs, Business Ads, and Events. Results come from live HAVKAR data only.":
+                "Cerca annunci in Compra e vendi, Servizi, Lavori, Annunci aziendali ed Eventi. I risultati arrivano solo da dati live HAVKAR.",
+            "Enter a search query.": "Inserisci una ricerca.",
+            "This page never invents results. Empty means nothing matched in the loaded live data.":
+                "Questa pagina non inventa risultati. Vuoto significa che nei dati live caricati non c’è corrispondenza.",
+            "No listings found": "Nessun annuncio trovato",
+            "There are no listings matching your search or category.":
+                "Non ci sono annunci corrispondenti alla ricerca o alla categoria.",
+            "Could not load listings": "Impossibile caricare gli annunci",
+            "Search in": "Cerca in",
+            "Delivery": "Consegne",
+            "Clear search": "Cancella ricerca",
+            "Try again": "Riprova",
+            "Delete": "Elimina",
+            "Edit": "Modifica",
+            "Save": "Salva",
+            "Share": "Condividi",
+            "Your listing": "Il tuo annuncio",
+            "Your Advertisement": "Il tuo annuncio",
+            "Delete your listing": "Elimina il tuo annuncio",
+            "Delete this advertisement?": "Eliminare questo annuncio?",
+            "All currencies": "Tutte le valute",
+            "Filter by listing currency": "Filtra per valuta dell’annuncio",
+            "Currency for min/max price": "Valuta per prezzo min/max",
+            "XLM payment rail": "Binario di pagamento XLM",
+            "133 presentment currencies": "133 valute di presentment",
+            "Change photo": "Cambia foto",
+            "My listings": "I miei annunci",
+            "My advertisements": "I miei annunci pubblicitari",
+            "View": "Vedi",
+            "Post a new ad": "Pubblica un annuncio"
         }),
         sv: Object.freeze({
             "Buy & Sell": "Köp & sälj",
@@ -1276,23 +1496,101 @@
     });
 
 
+    const MESSAGING_GLOSSARY = Object.freeze({
+        it: Object.freeze({
+            "Auto Translate": "Traduzione automatica",
+            "Auto Translate: Off": "Traduzione automatica: Off",
+            "Auto Translate: On": "Traduzione automatica: On",
+            "Block user": "Blocca utente",
+            "No notifications": "Nessuna notifica"
+        }),
+        de: Object.freeze({
+            "Auto Translate": "Automatische Übersetzung",
+            "Auto Translate: Off": "Automatische Übersetzung: Aus",
+            "Auto Translate: On": "Automatische Übersetzung: An",
+            "Block user": "Benutzer blockieren",
+            "No notifications": "Keine Benachrichtigungen"
+        }),
+        fa: Object.freeze({
+            "Auto Translate": "ترجمه خودکار",
+            "Auto Translate: Off": "ترجمه خودکار: خاموش",
+            "Auto Translate: On": "ترجمه خودکار: روشن",
+            "Block user": "مسدود کردن کاربر",
+            "No notifications": "اعلانی نیست"
+        }),
+        ar: Object.freeze({
+            "Auto Translate": "ترجمة تلقائية",
+            "Auto Translate: Off": "ترجمة تلقائية: إيقاف",
+            "Auto Translate: On": "ترجمة تلقائية: تشغيل",
+            "Block user": "حظر المستخدم",
+            "No notifications": "لا إشعارات"
+        }),
+        ckb: Object.freeze({
+            "Auto Translate": "وەرگێڕانی خۆکار",
+            "Auto Translate: Off": "وەرگێڕانی خۆکار: ناکارا",
+            "Auto Translate: On": "وەرگێڕانی خۆکار: کارا",
+            "Block user": "بلۆککردنی بەکارهێنەر",
+            "No notifications": "ئاگادارکردنەوە نییە"
+        }),
+        kmr: Object.freeze({
+            "Auto Translate": "Wergera otomatîk",
+            "Auto Translate: Off": "Wergera otomatîk: Girtî",
+            "Auto Translate: On": "Wergera otomatîk: Vekirî",
+            "Block user": "Bikarhênerê asteng bike",
+            "No notifications": "Agahdarî tune"
+        }),
+        sv: Object.freeze({
+            "Auto Translate": "Automatisk översättning",
+            "Auto Translate: Off": "Automatisk översättning: Av",
+            "Auto Translate: On": "Automatisk översättning: På",
+            "Block user": "Blockera användare",
+            "No notifications": "Inga aviseringar"
+        })
+    });
+
+
+    function ui21Pack(language) {
+        try {
+            if (
+                typeof globalThis !== "undefined" &&
+                globalThis.HAVKAR_UI_I18N21 &&
+                typeof globalThis.HAVKAR_UI_I18N21.pack === "function"
+            ) {
+                return globalThis.HAVKAR_UI_I18N21.pack(language) || {};
+            }
+        } catch (_error) {
+            /* ignore */
+        }
+        return {};
+    }
+
     function homepageGlossary(
         language
     ) {
-
-        return HOMEPAGE_GLOSSARY[
-            language
-        ] || null;
+        const base = HOMEPAGE_GLOSSARY[language] || {};
+        const pack21 = ui21Pack(language);
+        const merged = Object.assign({}, pack21, base);
+        return Object.keys(merged).length ? merged : null;
     }
 
 
     function marketplaceGlossary(
         language
     ) {
+        const base = MARKETPLACE_GLOSSARY[language] || {};
+        const pack21 = ui21Pack(language);
+        const merged = Object.assign({}, pack21, base);
+        return Object.keys(merged).length ? merged : null;
+    }
 
-        return MARKETPLACE_GLOSSARY[
-            language
-        ] || null;
+
+    function messagingGlossary(
+        language
+    ) {
+        const base = MESSAGING_GLOSSARY[language] || {};
+        const pack21 = ui21Pack(language);
+        const merged = Object.assign({}, pack21, base);
+        return Object.keys(merged).length ? merged : null;
     }
 
 
@@ -1310,6 +1608,9 @@
                     language
                 ) || {},
                 marketplaceGlossary(
+                    language
+                ) || {},
+                messagingGlossary(
                     language
                 ) || {}
             );
@@ -1591,13 +1892,20 @@
         uniqueTexts.forEach(
             text => {
 
-                const glossary =
-                    homepageGlossary(
-                        targetLanguage
-                    );
+                const glossary = Object.assign(
+                    {},
+                    homepageGlossary(targetLanguage) || {},
+                    marketplaceGlossary(targetLanguage) || {},
+                    messagingGlossary(targetLanguage) || {}
+                );
+                const uiDictionary =
+                    typeof window !== "undefined" &&
+                    window.HAVKAR_UI_DICTIONARY &&
+                    window.HAVKAR_UI_DICTIONARY[targetLanguage]
+                        ? window.HAVKAR_UI_DICTIONARY[targetLanguage]
+                        : null;
 
                 if (
-                    glossary &&
                     Object.prototype.hasOwnProperty.call(
                         glossary,
                         text
@@ -1618,6 +1926,21 @@
                         translation
                     );
 
+                    return;
+                }
+
+                if (
+                    uiDictionary &&
+                    Object.prototype.hasOwnProperty.call(
+                        uiDictionary,
+                        text
+                    ) &&
+                    typeof uiDictionary[text] === "string" &&
+                    uiDictionary[text].trim()
+                ) {
+                    const translation = uiDictionary[text];
+                    resultMap.set(text, translation);
+                    setCached(text, targetLanguage, translation);
                     return;
                 }
 
@@ -2235,6 +2558,24 @@
             safeLanguage
         );
 
+
+        /*
+         * Notify map / module i18n listeners before reload
+         * so same-document UIs can refresh immediately.
+         */
+        try {
+            document.dispatchEvent(
+                new CustomEvent(
+                    "havkar:language-changed",
+                    {
+                        detail: {
+                            language: safeLanguage,
+                            direction: safeDirection
+                        }
+                    }
+                )
+            );
+        } catch (_e) {}
 
         /*
          * Reload is intentional.

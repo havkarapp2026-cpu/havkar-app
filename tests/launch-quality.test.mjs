@@ -19,6 +19,7 @@ assert.match(vercel, /\/api\/pi-complete/);
 assert.match(vercel, /X-Frame-Options/);
 assert.match(vercel, /SAMEORIGIN/);
 assert.match(vercel, /camera=\(\), microphone=\(\)/);
+assert.match(vercel, /havkar-ai\.html[\s\S]*microphone=\(self\)/);
 assert.doesNotMatch(vercel, /geolocation=\(\)/);
 assert.doesNotMatch(vercel, /wallet\.html/);
 const profile = fs.readFileSync("profile.html", "utf8");

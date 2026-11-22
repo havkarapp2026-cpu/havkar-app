@@ -405,6 +405,7 @@ button:disabled {
 }
 
 </style>
+<script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
 </head>
 
@@ -646,6 +647,7 @@ button:disabled {
 
 
 <script src="/havkar-supabase-config.js"></script>
+<script src="/havkar-canonical-origin.js"></script>
 <script src="/havkar-auth-ui.js"></script>
 <script type="module">
 
@@ -978,7 +980,20 @@ googleBtn.addEventListener("click", async () => {
     if (label) label.textContent = "Connecting to Google...";
     showMessage("");
     try {
-        const redirectTo = new URL("login.html", window.location.href).href;
+        const nextPath = window.HAVKAR_CANONICAL
+            ? window.HAVKAR_CANONICAL.safeNextPath(
+                new URLSearchParams(window.location.search).get("next")
+              )
+            : "";
+        const redirectUrl = new URL(
+            window.HAVKAR_CANONICAL
+                ? window.HAVKAR_CANONICAL.authRedirectUrl("login.html")
+                : "https://havkar.online/login.html"
+        );
+        if (nextPath) {
+            redirectUrl.searchParams.set("next", nextPath);
+        }
+        const redirectTo = redirectUrl.href;
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: "google",
             options: {
@@ -1007,7 +1022,9 @@ resendConfirmBtn.addEventListener("click", async () => {
     resendConfirmBtn.disabled = true;
     resendConfirmBtn.textContent = "Sending confirmation...";
     try {
-        const redirectTo = new URL("login.html", window.location.href).href;
+        const redirectTo = window.HAVKAR_CANONICAL
+            ? window.HAVKAR_CANONICAL.authRedirectUrl("login.html")
+            : "https://havkar.online/login.html";
         const { error } = await supabase.auth.resend({
             type: "signup",
             email: email,
@@ -1166,14 +1183,30 @@ async function login() {
          * login button press.
          *
          * It does NOT affect Forgot Password.
+         * Honor ?next=/buy-sell.html (and other safe paths) so Connect
+         * can return the Owner to Buy & Sell after re-login.
          */
 
         window.setTimeout(
             function(){
 
-                window.location.replace(
-                    "index.html"
-                );
+                const nextPath = window.HAVKAR_CANONICAL
+                    ? window.HAVKAR_CANONICAL.safeNextPath(
+                        new URLSearchParams(window.location.search).get("next")
+                      )
+                    : "";
+
+                // Same-origin only (Preview stays on Preview; no cross-host token move).
+                const target =
+                    nextPath &&
+                    window.HAVKAR_CANONICAL &&
+                    typeof window.HAVKAR_CANONICAL.sameOriginPathUrl === "function"
+                        ? window.HAVKAR_CANONICAL.sameOriginPathUrl(nextPath)
+                        : (nextPath
+                            ? new URL(nextPath, window.location.origin).href
+                            : new URL("index.html", window.location.origin).href);
+
+                window.location.replace(target);
 
             },
             700
@@ -1267,9 +1300,9 @@ async function sendPasswordReset() {
          * session from the email link.
          */
 
-        const redirectTo =
-            window.location.origin +
-            window.location.pathname;
+        const redirectTo = window.HAVKAR_CANONICAL
+            ? window.HAVKAR_CANONICAL.authRedirectUrl("login.html")
+            : "https://havkar.online/login.html";
 
 
         const {
@@ -1897,6 +1930,22 @@ function authCallbackMessage(){
             data.session &&
             data.session.user
         ){
+
+            const nextPath = window.HAVKAR_CANONICAL
+                ? window.HAVKAR_CANONICAL.safeNextPath(
+                    new URLSearchParams(window.location.search).get("next")
+                  )
+                : "";
+
+            if (nextPath) {
+                const target =
+                    window.HAVKAR_CANONICAL &&
+                    typeof window.HAVKAR_CANONICAL.sameOriginPathUrl === "function"
+                        ? window.HAVKAR_CANONICAL.sameOriginPathUrl(nextPath)
+                        : new URL(nextPath, window.location.origin).href;
+                window.location.replace(target);
+                return;
+            }
 
             showAccountMode(data.session.user);
 

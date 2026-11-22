@@ -25,7 +25,40 @@ export function assistantBlocks(text) {
   return blocks;
 }
 
+/** Split inline text into plain and **bold** parts without HTML injection. */
+export function markdownInlineParts(text) {
+  const source = String(text || "");
+  const parts = [];
+  const pattern = /\*\*([^*]+)\*\*/g;
+  let lastIndex = 0;
+  let match;
+  while ((match = pattern.exec(source)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ type: "text", text: source.slice(lastIndex, match.index) });
+    }
+    parts.push({ type: "strong", text: match[1] });
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < source.length) {
+    parts.push({ type: "text", text: source.slice(lastIndex) });
+  }
+  return parts;
+}
+
+function appendMarkdownText(parent, text) {
+  markdownInlineParts(text).forEach((part) => {
+    if (part.type === "strong") {
+      const strong = document.createElement("strong");
+      strong.textContent = part.text;
+      parent.appendChild(strong);
+      return;
+    }
+    parent.appendChild(document.createTextNode(part.text));
+  });
+}
+
 export function renderAssistant(container, text) {
+  const actions = container.querySelector(".bubble-actions");
   container.replaceChildren();
   assistantBlocks(text).forEach((block) => {
     if (block.type === "code") {
@@ -36,8 +69,9 @@ export function renderAssistant(container, text) {
       container.appendChild(pre);
     } else {
       const span = document.createElement("span");
-      span.textContent = block.text;
+      appendMarkdownText(span, block.text);
       container.appendChild(span);
     }
   });
+  if (actions) container.appendChild(actions);
 }

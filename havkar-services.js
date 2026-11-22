@@ -19,7 +19,12 @@
 
   const COMMISSION_BPS = 1000;
   const PRICE_TYPES = ["fixed", "hourly", "daily", "negotiable"];
-  const CURRENCIES = ["EUR", "USD", "GBP", "SEK"];
+  /* Listing/display currencies: any ISO 4217 code. XLM is crypto-only and not a service listing fiat. */
+  const CURRENCIES = null;
+  function isAllowedServiceCurrency(code) {
+    const c = String(code || "").trim().toUpperCase();
+    return /^[A-Z]{3}$/.test(c) && c !== "XLM";
+  }
   const SERVICE_STATUSES = ["active", "paused", "closed"];
   const SERVICE_COLUMNS = "id,created_at,updated_at,provider_id,title,category,description,price,currency,price_type,location,image_url,status";
   const BOOKING_COLUMNS = "id,created_at,updated_at,service_id,customer_id,provider_id,booking_date,booking_time,message,status";
@@ -203,7 +208,7 @@
       return { ok: false, reason: "invalid_location" };
     }
 
-    if (CURRENCIES.indexOf(currency) === -1) {
+    if (!isAllowedServiceCurrency(currency)) {
       return { ok: false, reason: "invalid_currency" };
     }
 
@@ -359,7 +364,9 @@
 
   return {
     PRICE_TYPES: PRICE_TYPES,
-    CURRENCIES: CURRENCIES,
+    /* Legacy export kept for callers; validation uses isAllowedServiceCurrency (ISO, not XLM). */
+    CURRENCIES: ["EUR", "USD", "GBP", "SEK"],
+    isAllowedServiceCurrency: isAllowedServiceCurrency,
     SERVICE_STATUSES: SERVICE_STATUSES,
     SERVICE_COLUMNS: SERVICE_COLUMNS,
     BOOKING_COLUMNS: BOOKING_COLUMNS,

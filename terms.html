@@ -49,6 +49,37 @@ h2{font-size:1.15rem;margin:0 0 8px}
 <h2>Acceptable use</h2>
 <p>Do not break the law, probe or disrupt the service, attempt to take another person’s account, or upload content you have no right to share. HAVKAR may limit requests that overload the service.</p>
 </section>
+<section class="card" id="marketplace-fees">
+<h2>Buy &amp; Sell marketplace — fees (draft)</h2>
+<p>Publishing a listing is free. When card or XLM checkout is actually enabled by the owner, the platform fee model encoded in HAVKAR software is:</p>
+<ul>
+<li>Buyer fee: <strong>2%</strong> of the listed price (added to what the buyer pays).</li>
+<li>Seller fee: <strong>3%</strong> of the listed price (deducted from what the seller receives).</li>
+<li>Example: listed price €100 → buyer pays €102; seller receives €97; HAVKAR commission €5.</li>
+</ul>
+<p>Taxes, shipping, currency conversion, and payment-processor fees (Stripe / network fees) are separate and are not invented on this page. Exact live fee figures must match the server calculator in <code>lib/havkar-marketplace.js</code> at the time of charge.</p>
+<p class="fa" lang="fa" dir="rtl">انتشار آگهی رایگان است. وقتی مالک پرداخت واقعی را روشن کند، کارمزد نرم‌افزاری خریدار ۲٪ و فروشنده ۳٪ است. مثال: قیمت فهرست ۱۰۰ یورو → خریدار ۱۰۲، فروشنده ۹۷، کمیسیون HAVKAR ۵ یورو. مالیات، ارسال و کارمزد پردازشگر جداست.</p>
+</section>
+<section class="card" id="marketplace-tax">
+<h2>Buy &amp; Sell — tax and Italy / EU notes (draft)</h2>
+<p>Operator identity stated elsewhere in HAVKAR drafts: HAVKAR DI JALILNIA AMIR, Italy (Crotone). This draft does <strong>not</strong> invent a VAT ruling, OSS election, or invoice template.</p>
+<ul>
+<li>Marketplace commission (2% buyer + 3% seller) may create taxable supply by the platform — counsel must confirm Italian IVA treatment and invoice obligations.</li>
+<li>Sellers may be consumers or businesses; B2C vs B2B rules and Partita IVA requirements for sellers remain for counsel.</li>
+<li>Stripe Tax is not asserted as enabled for marketplace Checkout in current code.</li>
+<li>Cross-border EU sales of goods may trigger OSS/IOSS or destination VAT rules — not configured here.</li>
+<li>Stellar XLM fees may raise MiCA / CASP questions (see Direct_split legal package) separate from IVA.</li>
+</ul>
+<p><strong>Still blank for counsel:</strong> whether HAVKAR is commissionaire or disclosed agent; who issues the commercial invoice to the buyer; VAT on platform fees; e-commerce OSS registration; consumer cooling-off for distance contracts under Italian Consumer Code / Directive 2011/83/EU.</p>
+<p class="fa" lang="fa" dir="rtl">مالیات ایتالیا/اتحادیه اروپا و وضعیت IVA کمیسیون بازار عمداً اینجا حکم‌سازی نشده و نیازمند تأیید وکیل است.</p>
+</section>
+<section class="card" id="marketplace-refunds">
+<h2>Buy &amp; Sell — refunds and disputes (draft)</h2>
+<p><strong>Card (Stripe Connect destination charges):</strong> Successful payments, refunds, and chargebacks/disputes are recorded through Stripe webhooks into HAVKAR order/audit tables. A refund does not automatically republish a sold listing. Dispute outcomes follow Stripe’s process; HAVKAR may mark the order disputed/lost/won based on webhook events. Seller Connect payouts depend on Stripe account status (<code>charges_enabled</code> / <code>payouts_enabled</code>) and Owner enabling public live marketplace collection.</p>
+<p><strong>Stellar XLM (direct_split):</strong> The purchase amount is paid to the seller’s registered Stellar receive public key and the platform fee to HAVKAR’s fee destination in one user-signed transaction. HAVKAR does not hold the customer’s private key. Automated dual-leg refund verification for direct_split is <strong>not</strong> enabled in the current software; a refund requires the merchant (and separately the platform fee recipient, if applicable) to send XLM back. Platform-collect XLM for customer marketplace checkout is disabled.</p>
+<p><strong>Still blank for counsel:</strong> cooling-off / consumer withdrawal windows; which party is the merchant of record for physical goods; chargeback liability allocation between HAVKAR and sellers; MiCA / CASP questions for receiving XLM platform fees; governing law and venue; VAT/invoicing for marketplace commissions.</p>
+<p class="fa" lang="fa" dir="rtl">بازپرداخت کارت از مسیر وب‌هوک Stripe ثبت می‌شود و آگهی فروخته‌شده خودکار دوباره منتشر نمی‌شود. در XLM با مدل direct_split، بازپرداخت خودکار دوطرفه هنوز در نرم‌افزار فعال نیست و فروشنده باید وجوه را برگرداند. موارد حقوقی باز (دوره انصراف، مسئولیت اختلاف، MiCA، قانون حاکم) عمداً اینجا ساخته نشده‌اند.</p>
+</section>
 <section class="card">
 <h2>Availability and liability</h2>
 <p>The beta can change, pause, or fail. Counsel must write the final limitation of liability and the governing law. Until that review, this draft does not set damages, venue, or a court.</p>
@@ -59,5 +90,8 @@ h2{font-size:1.15rem;margin:0 0 8px}
 <p><a href="privacy.html">Privacy draft</a> · <a href="privacy-request.html">Export or deletion request</a></p>
 </section>
 </main>
+<div data-havkar-legal-footer></div>
+<script src="/havkar-operator-config.js"></script>
+<script src="/havkar-legal-footer.js"></script>
 </body>
 </html>

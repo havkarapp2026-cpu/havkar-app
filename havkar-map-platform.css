@@ -1,0 +1,115 @@
+/* Shared map stacking isolation — keep Leaflet panes below modals/FABs/nav. */
+.havkar-module-map,
+.havkar-map-host,
+[data-havkar-map="1"] {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 12px;
+  max-width: 100%;
+}
+
+.havkar-module-map .leaflet-container,
+.havkar-map-host .leaflet-container,
+[data-havkar-map="1"] .leaflet-container {
+  z-index: 1;
+  background: #dfece3;
+  font: inherit;
+}
+
+.havkar-module-map .leaflet-pane,
+.havkar-module-map .leaflet-top,
+.havkar-module-map .leaflet-bottom,
+.havkar-map-host .leaflet-pane,
+.havkar-map-host .leaflet-top,
+.havkar-map-host .leaflet-bottom {
+  z-index: auto;
+}
+
+/* Leaflet default panes climb past 400; pin them inside the isolated host. */
+.havkar-module-map .leaflet-map-pane { z-index: 2 !important; }
+.havkar-module-map .leaflet-tile-pane { z-index: 2 !important; }
+.havkar-module-map .leaflet-overlay-pane { z-index: 3 !important; }
+.havkar-module-map .leaflet-shadow-pane { z-index: 4 !important; }
+.havkar-module-map .leaflet-marker-pane { z-index: 5 !important; }
+.havkar-module-map .leaflet-tooltip-pane { z-index: 6 !important; }
+.havkar-module-map .leaflet-popup-pane { z-index: 7 !important; }
+.havkar-module-map .leaflet-control { z-index: 8 !important; }
+
+.havkar-map-host .leaflet-map-pane { z-index: 2 !important; }
+.havkar-map-host .leaflet-tile-pane { z-index: 2 !important; }
+.havkar-map-host .leaflet-overlay-pane { z-index: 3 !important; }
+.havkar-map-host .leaflet-shadow-pane { z-index: 4 !important; }
+.havkar-map-host .leaflet-marker-pane { z-index: 5 !important; }
+.havkar-map-host .leaflet-tooltip-pane { z-index: 6 !important; }
+.havkar-map-host .leaflet-popup-pane { z-index: 7 !important; }
+.havkar-map-host .leaflet-control { z-index: 8 !important; }
+
+/* Module modals / sheets must sit above map panes. */
+.modal,
+.havkar-modal,
+[data-havkar-modal="1"],
+.sheet-modal,
+.publish-modal {
+  z-index: 5000 !important;
+}
+
+.bottom-nav {
+  z-index: 4000 !important;
+}
+
+.fab,
+.fab-button,
+[data-havkar-fab="1"] {
+  z-index: 4100 !important;
+}
+
+.havkar-module-map.is-suppressed {
+  visibility: hidden;
+  pointer-events: none;
+  max-height: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+
+.havkar-map-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.havkar-map-toolbar input,
+.havkar-map-toolbar select,
+.havkar-map-toolbar button {
+  min-height: 42px;
+  border-radius: 10px;
+  border: 1px solid #cfd;
+  padding: 0 10px;
+  background: #fff;
+  color: #1b5e20;
+  font: inherit;
+}
+
+.havkar-map-toolbar button {
+  border-color: #1b5e20;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.havkar-map-toolbar button.is-active {
+  background: #e8f5e9;
+}
+
+.havkar-map-status {
+  margin: 0;
+  color: #567;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+[dir="rtl"] .havkar-map-toolbar {
+  direction: rtl;
+}
