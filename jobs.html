@@ -5229,14 +5229,17 @@ if(document.readyState === "loading"){
     renderJobs();
     await refreshCompanyStatusPanel();
     // Auto-settle unpaid Jobs XLM quotes via Horizon (no manual verify click).
-    try{
-      const session = await supabaseClient.auth.getSession();
-      const accessToken =
-        session &&
-        session.data &&
-        session.data.session &&
-        session.data.session.access_token;
-      if(accessToken){
+    async function runJobsXlmAutoSettle(){
+      try{
+        const session = await supabaseClient.auth.getSession();
+        const accessToken =
+          session &&
+          session.data &&
+          session.data.session &&
+          session.data.session.access_token;
+        if(!accessToken){
+          return false;
+        }
         const settleRes = await fetch("/api/jobs-xlm-auto-settle", {
           method: "POST",
           headers: {
@@ -5245,17 +5248,37 @@ if(document.readyState === "loading"){
           },
           body: "{}"
         });
-        if(settleRes && settleRes.ok){
-          const settleBody = await settleRes.json().catch(function(){ return null; });
-          if(settleBody && Number(settleBody.activated || 0) > 0){
-            await loadSupabaseJobs();
-            renderJobs();
-          }
+        if(!settleRes || !settleRes.ok){
+          return false;
         }
+        const settleBody = await settleRes.json().catch(function(){ return null; });
+        if(settleBody && Number(settleBody.activated || 0) > 0){
+          await loadSupabaseJobs();
+          renderJobs();
+          return true;
+        }
+        return false;
+      }catch(_autoSettleErr){
+        return false;
       }
-    }catch(_autoSettleErr){
-      /* non-fatal: cron / later refresh still settles */
     }
+    await runJobsXlmAutoSettle();
+    // Keep polling briefly while pending_payment jobs exist so external
+    // Mainnet transfers activate without a verify button (Hobby cron is daily).
+    (function pollJobsXlmAutoSettle(){
+      let ticks = 0;
+      const timer = setInterval(async function(){
+        ticks += 1;
+        const pending = (typeof jobs !== "undefined" && Array.isArray(jobs))
+          ? jobs.some(function(j){ return String(j.status) === "pending_payment"; })
+          : false;
+        if(!pending || ticks > 60){
+          clearInterval(timer);
+          return;
+        }
+        await runJobsXlmAutoSettle();
+      }, 15000);
+    })();
     if(jobPaid === "1"){
       jobsAlert(
         "stripeReturnOk",
