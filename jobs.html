@@ -5228,6 +5228,34 @@ if(document.readyState === "loading"){
     await loadSupabaseJobs();
     renderJobs();
     await refreshCompanyStatusPanel();
+    // Auto-settle unpaid Jobs XLM quotes via Horizon (no manual verify click).
+    try{
+      const session = await supabaseClient.auth.getSession();
+      const accessToken =
+        session &&
+        session.data &&
+        session.data.session &&
+        session.data.session.access_token;
+      if(accessToken){
+        const settleRes = await fetch("/api/jobs-xlm-auto-settle", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + accessToken
+          },
+          body: "{}"
+        });
+        if(settleRes && settleRes.ok){
+          const settleBody = await settleRes.json().catch(function(){ return null; });
+          if(settleBody && Number(settleBody.activated || 0) > 0){
+            await loadSupabaseJobs();
+            renderJobs();
+          }
+        }
+      }
+    }catch(_autoSettleErr){
+      /* non-fatal: cron / later refresh still settles */
+    }
     if(jobPaid === "1"){
       jobsAlert(
         "stripeReturnOk",
