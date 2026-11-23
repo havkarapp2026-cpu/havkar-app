@@ -1,5 +1,6 @@
 package online.havkar.app
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -36,5 +37,42 @@ class HavkarLinksTest {
         assertFalse(HavkarLinks.isAllowedNavigation("https://havkar.online@evil.com/"))
         assertFalse(HavkarLinks.isAllowedNavigation(null))
         assertFalse(HavkarLinks.isAllowedNavigation("   "))
+    }
+
+    @Test
+    fun launcherAlwaysOpensHomeNotOwnerEur1() {
+        assertTrue(HavkarLinks.isOwnerMicroTestPath("https://havkar.online/owner-eur1-checkout.html"))
+        assertTrue(
+            HavkarLinks.isOwnerMicroTestPath(
+                "https://havkar.online/owner-eur1-checkout.html?mode=services&service_id=12"
+            )
+        )
+        assertFalse(HavkarLinks.isOwnerMicroTestPath("https://havkar.online/services.html"))
+        assertFalse(HavkarLinks.isOwnerMicroTestPath("https://havkar.online/buy-sell.html"))
+        assertEquals(
+            HavkarLinks.START_URL,
+            HavkarLinks.resolveLaunchUrl(
+                "https://havkar.online/owner-eur1-checkout.html?mode=services",
+                launcherIntent = true
+            )
+        )
+        assertEquals(
+            HavkarLinks.START_URL,
+            HavkarLinks.resolveLaunchUrl(
+                "https://havkar.online/owner-eur1-checkout.html",
+                launcherIntent = false
+            )
+        )
+        assertEquals(
+            "https://havkar.online/chat.html?conversation_id=1",
+            HavkarLinks.resolveLaunchUrl(
+                "https://havkar.online/chat.html?conversation_id=1",
+                launcherIntent = false
+            )
+        )
+        assertEquals(
+            HavkarLinks.START_URL,
+            HavkarLinks.resolveLaunchUrl(null, launcherIntent = true)
+        )
     }
 }
