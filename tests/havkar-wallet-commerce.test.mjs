@@ -73,7 +73,7 @@ assert.match(financeApi, /buildWalletActivity/);
 const walletPage = fs.readFileSync("wallet.html", "utf8");
 assert.match(walletPage, /commerce-panel/);
 assert.match(walletPage, /loadCommerceActivity/);
-assert.match(walletPage, /Internal ledger record/);
+assert.match(walletPage, /Internal accounting ledger/);
 assert.match(walletPage, /action=wallet_activity/);
 assert.doesNotMatch(walletPage, /Live payments paused until Owner enables collection/);
 

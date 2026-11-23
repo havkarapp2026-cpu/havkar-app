@@ -68,59 +68,142 @@ button:disabled{
 }  
   
   
-/* =========================================================  
-   HEADER  
-   ========================================================= */  
+/* =========================================================
+   HEADER (compact + collapses on scroll)
+   ========================================================= */
+:root{
+  --hk-green:#2e7d32;
+  --hk-green-dark:#1b5e20;
+  --hk-green-mid:#689f38;
+  --hk-green-soft:#e8f5e9;
+  --hk-ink:#1a2e1c;
+  --hk-muted:#5a6b5c;
+  --hk-card:#ffffff;
+  --hk-bg:#f3f7f3;
+  --hk-radius:16px;
+  --hk-shadow:0 6px 18px rgba(27,94,32,.08);
+  --hk-header-h:56px;
+}
+body{
+  font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  background:
+    radial-gradient(1200px 500px at 10% -10%, rgba(104,159,56,.18), transparent 55%),
+    linear-gradient(180deg,#f7fbf7 0%, var(--hk-bg) 40%, #eef5ee 100%);
+  color:var(--hk-ink);
+  padding-bottom:calc(88px + env(safe-area-inset-bottom,0px));
+}
+.header{
+  background:linear-gradient(135deg,var(--hk-green-dark),var(--hk-green-mid));
+  color:#fff;
+  padding:10px 14px;
+  min-height:var(--hk-header-h);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  box-shadow:0 2px 10px rgba(0,0,0,.12);
+  position:sticky;
+  top:0;
+  z-index:40;
+  transition:padding .2s ease, box-shadow .2s ease, min-height .2s ease;
+}
+.header.is-compact{
+  padding:6px 12px;
+  min-height:48px;
+  box-shadow:0 1px 6px rgba(0,0,0,.14);
+}
+.header-left{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+.header-brand{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+}
+.header-logo{
+  width:32px;height:32px;border-radius:50%;
+  background:#fff;object-fit:cover;flex:0 0 auto;
+  box-shadow:0 2px 6px rgba(0,0,0,.15);
+}
+.header.is-compact .header-logo{width:28px;height:28px}
+.back-btn{
+  border:0;background:none;color:#fff;font-size:20px;
+  width:40px;height:40px;min-width:40px;border-radius:12px;
+}
+.back-btn:focus-visible,.icon-btn:focus-visible,.commerce-chip:focus-visible,
+.stellar-connect-button:focus-visible,.stellar-send-button:focus-visible{
+  outline:2px solid #fff;outline-offset:2px;
+}
+.header h1{
+  font-size:1.05rem;font-weight:800;letter-spacing:.01em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0;
+}
+.header.is-compact h1{font-size:.98rem}
+.header-sub{
+  display:none; /* long legal text removed from sticky header */
+}
+.icon-btn{
+  width:40px;height:40px;min-width:40px;border:0;border-radius:12px;
+  color:#fff;background:rgba(255,255,255,.18);
+}
+.wallet-status-strip{
+  margin:10px 14px 0;
+  padding:8px 12px;
+  border-radius:12px;
+  background:rgba(255,255,255,.92);
+  border:1px solid rgba(46,125,50,.18);
+  color:var(--hk-muted);
+  font-size:.78rem;line-height:1.35;
+  box-shadow:var(--hk-shadow);
+}
+.wallet-page{
+  max-width:920px;margin:0 auto;padding:0 0 8px;
+}
+.wallet-section{
+  margin:14px 14px 0;
+}
+.wallet-section > summary,
+.wallet-fold > summary{
+  cursor:pointer;list-style:none;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  font-weight:800;color:var(--hk-green-dark);font-size:1rem;
+  padding:4px 2px;
+}
+.wallet-fold > summary::-webkit-details-marker{display:none}
+.wallet-fold > summary::after{content:"▾";color:var(--hk-green-mid);font-size:.9rem}
+.wallet-fold:not([open]) > summary::after{content:"▸"}
+.ops-grid{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 14px 0;
+}
+@media(min-width:720px){.ops-grid{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.ops-chip{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  min-height:72px;padding:10px 6px;border-radius:14px;text-align:center;text-decoration:none;
+  background:var(--hk-card);border:1px solid rgba(46,125,50,.16);color:var(--hk-green-dark);
+  font-size:.72rem;font-weight:800;box-shadow:var(--hk-shadow);
+}
+.ops-chip i{font-size:1.15rem}
+.ops-chip[aria-disabled="true"],.ops-chip.is-unavailable{opacity:.55;pointer-events:none}
+.ledger-secondary{
+  margin:14px 14px 0;padding:14px;border-radius:var(--hk-radius);
+  background:#fff;border:1px dashed rgba(46,125,50,.28);color:var(--hk-muted);
+}
+.ledger-secondary .balance-amount{font-size:1.35rem;color:var(--hk-green-dark);font-weight:800}
+.network-badge{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+  font-size:.72rem;font-weight:800;
+}
+.network-badge.mainnet{background:#e8f5e9;color:#1b5e20}
+.network-badge.testnet{background:#fff8e1;color:#f57f17}
+.approx-value{
+  margin-top:8px;font-size:.8rem;color:var(--hk-muted);line-height:1.4;
+}
+.havkar-contextual-help{margin:12px 14px 20px!important;padding-bottom:8px}
   
-.header{  
-    background:  
-        linear-gradient(  
-            135deg,  
-            #689f38,  
-            #7cb342  
-        );  
-  
-    color:#fff;  
-    padding:15px 20px;  
-  
-    display:flex;  
-    align-items:center;  
-    justify-content:space-between;  
-  
-    box-shadow:0 2px 10px rgba(0,0,0,.12);  
-  
-    position:sticky;  
-    top:0;  
-    z-index:40;  
-}  
-  
-.header-left{  
-    display:flex;  
-    align-items:center;  
-    gap:15px;  
-}  
-  
-.back-btn{  
-    border:0;  
-    background:none;  
-    color:#fff;  
-    font-size:24px;  
-}  
-  
-.header h1{  
-    font-size:21px;  
-}  
-  
-.icon-btn{  
-    width:40px;  
-    height:40px;  
-  
-    border:0;  
-    border-radius:50%;  
-  
-    color:#fff;  
-    background:rgba(255,255,255,.2);  
-}  
   
   
 /* =========================================================  
@@ -782,24 +865,16 @@ button:disabled{
    BOTTOM NAV  
    ========================================================= */  
   
-.bottom-nav{  
-    position:fixed;  
-  
-    left:0;  
-    right:0;  
-    bottom:0;  
-  
-    height:75px;  
-  
-    background:#fff;  
-  
-    display:flex;  
-    justify-content:space-around;  
-    align-items:center;  
-  
-    box-shadow:0 -2px 10px rgba(0,0,0,.1);  
-  
-    z-index:50;  
+.bottom-nav{
+    position:fixed;
+    left:0;right:0;bottom:0;
+    height:calc(72px + env(safe-area-inset-bottom,0px));
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    background:rgba(255,255,255,.96);
+    backdrop-filter:blur(8px);
+    display:flex;justify-content:space-around;align-items:center;
+    box-shadow:0 -2px 12px rgba(27,94,32,.10);
+    z-index:50;
 }  
   
 .nav-item{  
@@ -1328,168 +1403,68 @@ select:focus{
   
 }  
   
-</style>  </head>  <body>  <!-- =========================================================  
-     HEADER  
-     ========================================================= -->  <div class="header">  <div class="header-left">  
-
-    <button  
-        class="back-btn"  
-        type="button"  
-        onclick="window.havkarNavigateBack ? window.havkarNavigateBack() : goHome()"  
-        aria-label="Back">  
-
-        <i class="fas fa-arrow-left"></i>  
-
-    </button>  
-
-    <div>
-    <h1>HAVKAR Wallet</h1>
-    <p id="currencyRailsNotice" style="margin:6px 0 0;font-size:.78rem;line-height:1.35;color:rgba(255,255,255,.92);max-width:42ch">
-      Display · charge · settlement are separate. XLM is a separate rail. Loading live payment status…
-    </p>
-    </div>  
-
-</div>  
-
-<button  
-    class="icon-btn"  
-    id="walletRefreshButton"  
-    type="button"  
-    onclick="refreshWallet()"  
-    aria-label="Refresh">  
-
-    <i class="fas fa-rotate"></i>  
-
-</button>
-
-</div>  <div id="errorContainer"></div>  <!-- =========================================================  
-     HAVKAR INTERNAL BALANCE  
-     ========================================================= -->  <div class="balance-card">  <div class="balance-label">  
-    Internal ledger record  
-</div>  
-
-<div  
-    class="balance-amount"  
-    id="totalBalance">  
-
-    €0.00  
-
-</div>  
-
-<div class="balance-subtitle" id="portfolioLabel">  
-    Not Stripe Connect · not bank custody · not Stellar balance  
-</div>  
-
-<div class="balance-subtitle" id="availableBalanceLine">  
-    Available EUR: sign in to see your recorded balance  
-</div>  
-
-<div class="balance-subtitle" id="pendingBalanceLine">  
-    Pending: nothing is reserved  
-</div>
-<span class="ledger-source-tag" id="ledgerSourceTag">Source: wallets table · fiat rails OFF</span>
-
-<div class="card-actions">  
-
-    <button  
-        class="action-btn is-unavailable"  
-        type="button"  
-        onclick="openSend()"
-        aria-disabled="true">  
-
-        <i class="fas fa-paper-plane"></i>  
-        Send  
-
-    </button>  
-
-    <button  
-        class="action-btn"  
-        type="button"  
-        onclick="openReceive()">  
-
-        <i class="fas fa-download"></i>  
-        Receive ID  
-
-    </button>  
-
-    <button  
-        class="action-btn is-unavailable"  
-        type="button"  
-        onclick="openExchange()"
-        aria-disabled="true">  
-
-        <i class="fas fa-exchange-alt"></i>  
-        Exchange  
-
-    </button>  
-
-    <button  
-        class="action-btn is-unavailable"  
-        type="button"  
-        onclick="openAddMoney()"
-        aria-disabled="true">  
-
-        <i class="fas fa-plus"></i>  
-        Add money  
-
-    </button>  
-
-    <button  
-        class="action-btn is-unavailable"  
-        type="button"  
-        onclick="openWithdraw()"
-        aria-disabled="true">  
-
-        <i class="fas fa-building-columns"></i>  
-        Withdraw  
-
-    </button>  
-
-</div>
-
-</div>
-
-<section class="commerce-panel" id="commercePanel" aria-label="Commerce settlements">
-  <h2>Commerce settlements</h2>
-  <p class="commerce-note" id="commerceArchitectureNote">
-    Stripe Connect destination charges and Services commissions are shown from your own records only.
-    These amounts are not the internal ledger balance above.
-  </p>
-  <div class="commerce-meta" id="commerceMeta"></div>
-  <div id="commerceList" class="commerce-list">
-    <div class="commerce-empty">Sign in to load your marketplace and services settlements.</div>
-  </div>
-</section>
-
-<nav class="wallet-hub-nav" aria-label="Wallet sections">
-  <a class="commerce-chip" href="#commercePanel">HAVKAR finance hub</a>
-  <a class="commerce-chip" href="#stellarNoncustodial">Stellar non-custodial</a>
-  <a class="commerce-chip" href="#havkarPaymentCenter">Payment center</a>
-  <a class="commerce-chip off" href="#walletLegalPanel">Security &amp; legal</a>
-</nav>
-
-  <!-- =========================================================  
-     STELLAR / XLM NON-CUSTODIAL WALLET  
-     ========================================================= -->  <div class="stellar-card" id="stellarNoncustodial">  
-    <div class="stellar-header">  
-        <div class="stellar-logo" aria-hidden="true"><img src="/assets/icons/havkar-icon-180-20261022-v3.png" alt="" width="50" height="50"></div>  
-        <div>  
-            <div class="stellar-title">Stellar · non-custodial</div>  
-            <div class="stellar-subtitle" id="stellarNetworkLabel">XLM Wallet • Testnet</div>  
-        </div>  
-    </div>  
-    <div class="stellar-description">  
-        Connect your own Stellar wallet. HAVKAR prepares a reviewable payment; <strong>only your wallet</strong> holds the secret and must approve every signature. HAVKAR never asks for a recovery phrase and cannot move your XLM alone.
+</style>  </head>  <body>  <!-- =========================================================
+     HEADER (compact)
+     ========================================================= -->
+<div class="header" id="walletHeader">
+  <div class="header-left">
+    <button class="back-btn" type="button" onclick="window.havkarNavigateBack ? window.havkarNavigateBack() : goHome()" aria-label="Back">
+      <i class="fas fa-arrow-left" aria-hidden="true"></i>
+    </button>
+    <div class="header-brand">
+      <img class="header-logo" src="/assets/icons/havkar-icon-180-20261022-v3.png" width="32" height="32" alt="HAVKAR">
+      <h1>HAVKAR Wallet</h1>
     </div>
+  </div>
+  <button class="icon-btn" id="walletRefreshButton" type="button" onclick="refreshWallet()" aria-label="Refresh">
+    <i class="fas fa-rotate" aria-hidden="true"></i>
+  </button>
+</div>
+
+<div id="errorContainer"></div>
+
+<div class="wallet-page">
+  <div class="wallet-status-strip" id="currencyRailsNotice">
+    Display · charge · settlement are separate. XLM is a separate rail. Loading live payment status…
+  </div>
+
+  <nav class="wallet-hub-nav" aria-label="Wallet sections">
+    <a class="commerce-chip" href="#stellarNoncustodial">Overview</a>
+    <a class="commerce-chip" href="#walletOps">Actions</a>
+    <a class="commerce-chip" href="#commercePanel">Finance hub</a>
+    <a class="commerce-chip" href="#walletMarkets">Markets</a>
+    <a class="commerce-chip off" href="#walletLegalPanel">Security</a>
+  </nav>
+
+  <!-- A) OVERVIEW: Stellar non-custodial first -->
+  <div class="stellar-card" id="stellarNoncustodial">
+    <div class="stellar-header">
+      <div class="stellar-logo" aria-hidden="true"><img src="/assets/icons/havkar-icon-180-20261022-v3.png" alt="" width="50" height="50"></div>
+      <div>
+        <div class="stellar-title">Stellar · non-custodial</div>
+        <div class="stellar-subtitle" id="stellarNetworkLabel">XLM Wallet</div>
+      </div>
+    </div>
+    <p class="stellar-description">
+      Connect your own Stellar wallet. HAVKAR prepares a reviewable payment; <strong>only your wallet</strong> holds the secret and must approve every signature. HAVKAR never asks for a recovery phrase and cannot move your XLM alone.
+    </p>
     <div id="stellarNetworkStatus" class="commerce-meta" style="margin-top:10px"></div>
-    <label class="stellar-label" for="stellarNetwork">Network</label>  
-    <select id="stellarNetwork" class="stellar-input" onchange="changeHAVKARStellarNetwork()">  
-        <option value="TESTNET" selected>Testnet</option>  
-        <option value="PUBLIC">Mainnet</option>  
-    </select>  
-    <div id="stellarNetworkNote" class="stellar-note">  
-        Testnet uses test XLM. Nothing on this network is Mainnet money.  
-    </div>  
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0">
+      <span class="network-badge mainnet" id="stellarNetworkBadge">Network</span>
+      <span class="stellar-note" id="stellarConnectState" style="margin:0">Not connected</span>
+    </div>
+    <label class="stellar-label" for="stellarNetwork">Active network</label>
+    <select id="stellarNetwork" class="stellar-input" onchange="changeHAVKARStellarNetwork()">
+      <option value="PUBLIC" selected>Mainnet (real XLM)</option>
+      <option value="TESTNET">Testnet (test XLM only)</option>
+    </select>
+    <div id="stellarNetworkNote" class="stellar-note">
+      Mainnet uses real XLM. Testnet is for development only and is never real money.
+    </div>
+    <details class="wallet-fold" style="margin-top:8px">
+      <summary class="stellar-note" style="font-weight:700">Developer / Testnet notes</summary>
+      <p class="stellar-note">Switch to Testnet only for experiments. Test balances must never be reported as Mainnet growth or production volume.</p>
+    </details>
     <div id="stellarAddress" class="stellar-address"></div>
     <div id="stellarReceiveBox" class="stellar-send" style="display:none;margin-top:10px">
       <label class="stellar-label">Receive XLM (public address)</label>
@@ -1505,222 +1480,160 @@ select:focus{
     </div>
     <div id="stellarBalance" class="stellar-balance"></div>
     <div id="stellarLimits" class="stellar-note" style="display:none"></div>
-    <button id="stellarConnectButton" class="stellar-connect-button" type="button" onclick="connectHAVKARStellar()">  
-        <i class="fas fa-wallet"></i> Connect Stellar Wallet  
-    </button>  
-    <button id="stellarDisconnectButton" class="stellar-disconnect-button" type="button" onclick="disconnectHAVKARStellar()">  
-        <i class="fas fa-link-slash"></i> Disconnect Wallet  
-    </button>  
-    <div id="stellarSend" class="stellar-send">  
-        <label class="stellar-label" for="stellarDestination">Destination public key</label>  
-        <input id="stellarDestination" class="stellar-input" type="text" autocomplete="off" spellcheck="false" placeholder="G...">  
-        <label class="stellar-label" for="stellarAmount">Amount in XLM</label>  
-        <input id="stellarAmount" class="stellar-input" type="text" inputmode="decimal" autocomplete="off" placeholder="0.0000000">  
-        <label class="stellar-label" for="stellarMemo">Memo, optional</label>  
-        <input id="stellarMemo" class="stellar-input" type="text" maxlength="28" autocomplete="off">  
-        <button id="stellarReviewButton" class="stellar-send-button" type="button" onclick="reviewHAVKARStellarPayment()">  
-            Review payment (no send yet)  
-        </button>
-        <div id="stellarReviewPanel" class="commerce-item" style="display:none;margin-top:12px"></div>
-        <button id="stellarSendButton" class="stellar-send-button" type="button" onclick="confirmHAVKARStellarPayment()" disabled>  
-            Confirm · sign in your wallet  
-        </button>  
+    <div class="approx-value" id="stellarApproxValue" hidden></div>
+    <button id="stellarConnectButton" class="stellar-connect-button" type="button" onclick="connectHAVKARStellar()">
+      <i class="fas fa-wallet" aria-hidden="true"></i> Connect Stellar Wallet
+    </button>
+    <button id="stellarDisconnectButton" class="stellar-disconnect-button" type="button" onclick="disconnectHAVKARStellar()">
+      <i class="fas fa-link-slash" aria-hidden="true"></i> Disconnect Wallet
+    </button>
+    <div id="stellarSend" class="stellar-send">
+      <label class="stellar-label" for="stellarDestination">Destination public key</label>
+      <input id="stellarDestination" class="stellar-input" type="text" autocomplete="off" spellcheck="false" placeholder="G...">
+      <label class="stellar-label" for="stellarAmount">Amount in XLM</label>
+      <input id="stellarAmount" class="stellar-input" type="text" inputmode="decimal" autocomplete="off" placeholder="0.0000000">
+      <label class="stellar-label" for="stellarMemo">Memo, optional</label>
+      <input id="stellarMemo" class="stellar-input" type="text" maxlength="28" autocomplete="off">
+      <button id="stellarReviewButton" class="stellar-send-button" type="button" onclick="reviewHAVKARStellarPayment()">
+        Review payment (no send yet)
+      </button>
+      <div id="stellarReviewPanel" class="commerce-item" style="display:none;margin-top:12px"></div>
+      <button id="stellarSendButton" class="stellar-send-button" type="button" onclick="confirmHAVKARStellarPayment()" disabled>
+        Confirm · sign in your wallet
+      </button>
     </div>
     <div id="stellarHistory" class="commerce-list" style="margin-top:14px">
       <div class="commerce-empty">Connect a wallet to load confirmed Horizon payments (read-only).</div>
     </div>
     <div id="stellarReceiveRegister" class="stellar-send" style="margin-top:14px">
-        <label class="stellar-label" for="stellarReceivePublicKey">Marketplace / services receive public key</label>
-        <p class="stellar-note">Register the G… account that should receive buyer XLM under direct-split settlement. HAVKAR never asks for a secret key.</p>
-        <input id="stellarReceivePublicKey" class="stellar-input" type="text" autocomplete="off" spellcheck="false" placeholder="G...">
-        <button id="stellarReceiveSaveButton" class="stellar-send-button" type="button" onclick="saveHAVKARStellarReceiveKey()">
-            Save receive key
-        </button>
-        <button id="stellarReceiveUseConnectedButton" class="stellar-disconnect-button" type="button" onclick="useConnectedAsStellarReceiveKey()">
-            Use connected wallet
-        </button>
+      <label class="stellar-label" for="stellarReceivePublicKey">Marketplace / services receive public key</label>
+      <p class="stellar-note">Register the G… account that should receive buyer XLM under direct-split settlement. HAVKAR never asks for a secret key.</p>
+      <input id="stellarReceivePublicKey" class="stellar-input" type="text" autocomplete="off" spellcheck="false" placeholder="G...">
+      <button id="stellarReceiveSaveButton" class="stellar-send-button" type="button" onclick="saveHAVKARStellarReceiveKey()">Save receive key</button>
+      <button id="stellarReceiveUseConnectedButton" class="stellar-disconnect-button" type="button" onclick="useConnectedAsStellarReceiveKey()">Use connected wallet</button>
     </div>
-    <div id="stellarStatus" class="stellar-status"></div>  
-    <div class="stellar-note">  
-        Pi Network payment is disconnected on this screen. No Mainnet Pi payment is started from Wallet.  
-    </div>  
-</div>
-
-<section class="commerce-panel" id="havkarPaymentCenter" aria-label="HAVKAR payment center">
-  <h2>HAVKAR payment center</h2>
-  <p class="commerce-note">
-    Pay for Buy &amp; Sell, Services, Jobs, and Tickets through the real module checkouts.
-    Card money settles via Stripe/Connect; XLM settles on-chain to registered public keys.
-    This hub does not create a withdrawable internal euro balance.
-  </p>
-  <div class="commerce-meta">
-    <a class="commerce-chip" href="buy-sell.html">Buy &amp; Sell</a>
-    <a class="commerce-chip" href="services.html">Services</a>
-    <a class="commerce-chip" href="jobs.html">Jobs</a>
-    <a class="commerce-chip" href="tickets.html">Tickets</a>
-    <a class="commerce-chip" href="history.html">Ledger history</a>
-    <a class="commerce-chip" href="my-receipts.html">Receipts</a>
+    <div id="stellarStatus" class="stellar-status"></div>
+    <p class="stellar-note">Pi Network payment is disconnected on this screen. No Mainnet Pi payment is started from Wallet.</p>
   </div>
-</section>
 
-<section class="commerce-panel" id="walletLegalPanel" aria-label="Security and legal">
-  <h2>Security &amp; legal boundaries</h2>
-  <p class="commerce-note" id="walletArchitectureNote">
-    Loading architecture statement…
-  </p>
-  <ul class="commerce-note" style="padding-left:1.1rem;margin:0">
-    <li>HAVKAR does not hold your Stellar secret key and cannot restore a lost non-custodial wallet.</li>
-    <li>Stellar payments are generally irreversible after network confirmation.</li>
-    <li>Non-custodial labeling is not a guarantee of exemption under PSD2, MiCA, or Italian/EU rules.</li>
-    <li>Internal fiat deposit, withdrawal, and P2P euro transfer stay OFF without a licensed partner.</li>
-  </ul>
-</section>
+  <!-- B) OPERATIONS -->
+  <div class="ops-grid" id="walletOps" aria-label="Main actions">
+    <a class="ops-chip" href="#stellarNoncustodial" onclick="document.getElementById('stellarConnectButton')?.focus()"><i class="fas fa-link" aria-hidden="true"></i>Connect</a>
+    <a class="ops-chip" href="#stellarReceiveBox" onclick="setTimeout(function(){document.getElementById('stellarReceiveBox')?.scrollIntoView({behavior:'smooth',block:'center'})},50)"><i class="fas fa-qrcode" aria-hidden="true"></i>Receive XLM</a>
+    <a class="ops-chip" href="#stellarSend"><i class="fas fa-paper-plane" aria-hidden="true"></i>Prepare send</a>
+    <a class="ops-chip" href="#stellarHistory"><i class="fas fa-clock-rotate-left" aria-hidden="true"></i>XLM history</a>
+    <a class="ops-chip" href="my-receipts.html"><i class="fas fa-receipt" aria-hidden="true"></i>Receipts</a>
+    <a class="ops-chip" href="#havkarPaymentCenter"><i class="fas fa-store" aria-hidden="true"></i>Payments</a>
+  </div>
 
-  <!-- =========================================================  
-     PI NETWORK MAINNET PAYMENT  
-     Hidden from normal wallet use. The handlers below stay
-     in this file for a later controlled Pi test.
-     ========================================================= -->  <div class="pi-card" hidden>  <div class="pi-header">  
+  <!-- C) FINANCE HUB -->
+  <section class="commerce-panel" id="commercePanel" aria-label="Commerce settlements">
+    <h2>HAVKAR finance hub</h2>
+    <p class="commerce-note" id="commerceArchitectureNote">
+      Real Stripe Connect destination charges and Services commissions from your own records only.
+      These amounts are not an internal withdrawable balance and are not Stellar XLM.
+    </p>
+    <div class="commerce-meta" id="commerceMeta"></div>
+    <div id="commerceList" class="commerce-list">
+      <div class="commerce-empty">Sign in to load your marketplace and services settlements.</div>
+    </div>
+  </section>
 
-    <div class="pi-logo">  
-        π  
-    </div>  
+  <section class="commerce-panel" id="havkarPaymentCenter" aria-label="HAVKAR payment center">
+    <h2>Payment center</h2>
+    <p class="commerce-note">
+      Pay for Buy &amp; Sell, Services, Jobs, and Tickets through real module checkouts.
+      Card money settles via Stripe/Connect; XLM settles on-chain to registered public keys.
+    </p>
+    <div class="commerce-meta">
+      <a class="commerce-chip" href="buy-sell.html">Buy &amp; Sell</a>
+      <a class="commerce-chip" href="services.html">Services</a>
+      <a class="commerce-chip" href="jobs.html">Jobs</a>
+      <a class="commerce-chip" href="tickets.html">Tickets</a>
+      <a class="commerce-chip" href="history.html">Ledger history</a>
+      <a class="commerce-chip" href="my-receipts.html">Receipts</a>
+    </div>
+  </section>
 
-    <div>  
+  <details class="wallet-fold ledger-secondary" id="internalLedgerPanel">
+    <summary>Internal accounting ledger (not spendable cash)</summary>
+    <p class="commerce-note" style="margin-top:10px">
+      This is a bookkeeping record from the wallets table. It is not Stripe Connect, not bank custody, and not your Stellar balance.
+    </p>
+    <div class="balance-label">Recorded EUR total</div>
+    <div class="balance-amount" id="totalBalance">—</div>
+    <div class="balance-subtitle" id="portfolioLabel">Not Stripe Connect · not bank custody · not Stellar balance</div>
+    <div class="balance-subtitle" id="availableBalanceLine">Available EUR: sign in to see your recorded balance</div>
+    <div class="balance-subtitle" id="pendingBalanceLine">Pending: nothing is reserved</div>
+    <span class="ledger-source-tag" id="ledgerSourceTag" style="background:rgba(46,125,50,.12);color:#1b5e20">Source: wallets table · fiat rails OFF</span>
+    <div class="card-actions" style="margin-top:12px">
+      <button class="action-btn is-unavailable" type="button" onclick="openSend()" aria-disabled="true" title="Internal P2P fiat transfer is OFF"><i class="fas fa-paper-plane" aria-hidden="true"></i> Send</button>
+      <button class="action-btn" type="button" onclick="openReceive()"><i class="fas fa-download" aria-hidden="true"></i> Receive ID</button>
+      <button class="action-btn is-unavailable" type="button" onclick="openExchange()" aria-disabled="true" title="Internal exchange is OFF"><i class="fas fa-exchange-alt" aria-hidden="true"></i> Exchange</button>
+      <button class="action-btn is-unavailable" type="button" onclick="openAddMoney()" aria-disabled="true" title="Fiat deposit is OFF"><i class="fas fa-plus" aria-hidden="true"></i> Add money</button>
+      <button class="action-btn is-unavailable" type="button" onclick="openWithdraw()" aria-disabled="true" title="Fiat withdrawal is OFF"><i class="fas fa-building-columns" aria-hidden="true"></i> Withdraw</button>
+    </div>
+    <div class="section-title" style="padding:12px 0 0;margin:0">Ledger rows</div>
+    <div class="list" id="walletList" style="padding:0"><div class="loading">Loading wallet...</div></div>
+    <div class="section-title" style="padding:12px 0 0;margin:0">Recent ledger movements</div>
+    <div class="list" id="transactionList" style="padding:0"><div class="loading">Loading transactions...</div></div>
+  </details>
 
-        <div class="pi-title">  
-            Pi Network  
-        </div>  
+  <!-- D) MARKETS (collapsed) -->
+  <details class="wallet-fold commerce-panel" id="walletMarkets">
+    <summary>Display currency &amp; market prices</summary>
+    <p class="commerce-note" style="margin-top:10px">
+      Display currency only (133 approved presentment codes when a valid rate exists). Choosing a display currency is not conversion, not settlement, and not a crypto exchange.
+    </p>
+    <div class="portfolio-bar" style="margin:0;padding:0;background:transparent;box-shadow:none">
+      <div class="portfolio-label">Market prices in</div>
+      <select id="displayCurrency" class="currency-select" onchange="changeDisplayCurrency()" translate="no" data-i18n-ignore hidden aria-hidden="true">
+        <option value="EUR">EUR</option>
+      </select>
+      <div id="walletDisplayCurrencyMount" data-havkar-currency-mount="1"></div>
+    </div>
+    <div class="market-header" style="padding:12px 0 0;margin:0">
+      <div class="section-title" style="padding:0;margin:0">Cryptocurrency prices</div>
+      <button class="market-refresh" id="cryptoRefreshButton" type="button" onclick="loadCryptoPrices()" aria-label="Refresh prices"><i class="fas fa-rotate" aria-hidden="true"></i></button>
+    </div>
+    <div class="price-time" id="priceUpdated">Loading prices...</div>
+    <div class="list" id="cryptoList" style="padding:0"><div class="loading">Loading cryptocurrency prices...</div></div>
+  </details>
 
-        <div class="pi-subtitle">  
-            Mainnet Payment  
-        </div>  
-
-    </div>  
-
-</div>  
-
-
-<div  
-    class="pi-user"  
-    id="piUser">  
-
-    Pi user: <span id="piUsername"></span>  
-
-</div>  
-
-
-<div class="pi-description">  
-
-    Pay HAVKAR directly with Pi.  
-    This payment uses the Pi Mainnet and is separate  
-    from the internal HAVKAR Supabase wallet.  
-
-</div>  
-
-
-<label  
-    class="pi-input-label"  
-    for="piAmount">  
-
-    Amount in Pi  
-
-</label>  
-
-<input  
-    id="piAmount"  
-    class="pi-input"  
-    type="number"  
-    min="0.01"  
-    step="0.0001"  
-    inputmode="decimal"  
-    placeholder="0.10">  
-
-
-<button  
-    id="piPayButton"  
-    class="pi-pay-button"  
-    type="button">  
-
-    <i class="fas fa-coins"></i>  
-    Pay with Pi  
-
-</button>  
-
-
-<div  
-    id="piStatus"  
-    class="pi-status">  
+  <!-- E) LEGAL (collapsed) -->
+  <details class="wallet-fold commerce-panel" id="walletLegalPanel">
+    <summary>Security &amp; legal boundaries</summary>
+    <p class="commerce-note" id="walletArchitectureNote" style="margin-top:10px">Loading architecture statement…</p>
+    <ul class="commerce-note" style="padding-left:1.1rem;margin:0">
+      <li>HAVKAR does not hold your Stellar secret key and cannot restore a lost non-custodial wallet.</li>
+      <li>Stellar payments are generally irreversible after network confirmation.</li>
+      <li>Non-custodial labeling is not a guarantee of exemption under PSD2, MiCA, or Italian/EU rules.</li>
+      <li>Internal fiat deposit, withdrawal, and P2P euro transfer stay OFF without a licensed partner.</li>
+    </ul>
+    <p class="commerce-note"><a href="support.html?tile=wallet#tile-wallet">Full help for this section</a></p>
+  </details>
 </div>
 
-</div>  <!-- =========================================================  
-     CURRENCY  
-     ========================================================= -->  <div class="portfolio-bar">  <div class="portfolio-label">  
-    Market prices in  
-</div>  
+  <!-- =========================================================
+     PI NETWORK MAINNET PAYMENT (hidden)
+     ========================================================= -->
+  <div class="pi-card" hidden>
+    <div class="pi-header">
+      <div class="pi-logo">π</div>
+      <div>
+        <div class="pi-title">Pi Network</div>
+        <div class="pi-subtitle">Mainnet Payment</div>
+      </div>
+    </div>
+    <div class="pi-user" id="piUser">Pi user: <span id="piUsername"></span></div>
+    <div class="pi-description">Pay HAVKAR directly with Pi. This payment uses the Pi Mainnet and is separate from the internal HAVKAR Supabase wallet.</div>
+    <label class="pi-input-label" for="piAmount">Amount in Pi</label>
+    <input id="piAmount" class="pi-input" type="number" min="0.01" step="0.0001" inputmode="decimal" placeholder="0.10">
+    <button id="piPayButton" class="pi-pay-button" type="button"><i class="fas fa-coins" aria-hidden="true"></i> Pay with Pi</button>
+    <div id="piStatus" class="pi-status"></div>
+  </div>
 
-<select  
-    id="displayCurrency"  
-    class="currency-select"  
-    onchange="changeDisplayCurrency()"  
-    translate="no"  
-    data-i18n-ignore
-    hidden
-    aria-hidden="true">  
-    <option value="EUR">EUR</option>
-</select>
-<div id="walletDisplayCurrencyMount" data-havkar-currency-mount="1"></div>
-<p class="portfolio-label" style="margin-top:8px;font-size:.82rem;line-height:1.35;color:#456">
-  Display currency only (133 fiat presentment codes). Withdrawal / settlement rails below stay EUR or USD until Owner-approved payment rails expand. XLM is a separate crypto rail.
-</p>
-
-</div>  <!-- =========================================================  
-     WALLETS  
-     ========================================================= -->  <div class="section-title">  
-    My Wallets  
-</div>  <div  
-    class="list"  
-    id="walletList">  <div class="loading">  
-    Loading wallet...  
-</div>
-
-</div>  <!-- =========================================================  
-     CRYPTO MARKET  
-     ========================================================= -->  <div class="market-header">  <div class="section-title">  
-    Cryptocurrency Prices  
-</div>  
-
-<button  
-    class="market-refresh"  
-    id="cryptoRefreshButton"  
-    type="button"  
-    onclick="loadCryptoPrices()">  
-
-    <i class="fas fa-rotate"></i>  
-
-</button>
-
-</div>  <div  
-    class="price-time"  
-    id="priceUpdated">  Loading prices...
-
-</div>  <div  
-    class="list"  
-    id="cryptoList">  <div class="loading">  
-    Loading cryptocurrency prices...  
-</div>
-
-</div>  <!-- =========================================================  
-     TRANSACTIONS  
-     ========================================================= -->  <div class="section-title">  
-    Recent Transactions  
-</div>  <div  
-    class="list"  
-    id="transactionList">  <div class="loading">  
-    Loading transactions...  
-</div>
-
-</div>  <!-- =========================================================  
+<!-- =========================================================  
      SEND MODAL  
      ========================================================= -->  <div  
     class="modal"  
@@ -5994,15 +5907,20 @@ let stellarAccountOnNetwork=null;
 let pendingStellarReview=null;
 
 function renderStellarNetwork(){  
-    const network=window.havkarGetStellarNetwork?.()||{id:"TESTNET",label:"Testnet",horizon:"",passphrase:""};  
+    const network=window.havkarGetStellarNetwork?.()||{id:"PUBLIC",label:"Mainnet",horizon:"",passphrase:""};  
     const select=document.getElementById("stellarNetwork");  
     const subtitle=document.getElementById("stellarNetworkLabel");  
     const note=document.getElementById("stellarNetworkNote");  
     const statusMeta=document.getElementById("stellarNetworkStatus");
+    const badge=document.getElementById("stellarNetworkBadge");
     const reviewButton=document.getElementById("stellarReviewButton");
     const sendButton=document.getElementById("stellarSendButton");  
     if(select && document.activeElement!==select)select.value=network.id;  
     if(subtitle)subtitle.textContent="XLM Wallet • "+network.label+" · non-custodial";  
+    if(badge){
+        badge.textContent=network.id==="PUBLIC"?"Mainnet · real XLM":"Testnet · test XLM only";
+        badge.className="network-badge "+(network.id==="PUBLIC"?"mainnet":"testnet");
+    }
     const mainnetBlocked=network.id==="PUBLIC" && network.paymentsEnabled!==true;  
     if(statusMeta){
         statusMeta.innerHTML=
@@ -6062,12 +5980,14 @@ function renderStellarConnection(address,options){
     const balance=document.getElementById("stellarBalance");
     const history=document.getElementById("stellarHistory");
     if(!addressElement||!connectButton||!disconnectButton)return;  
+    const connectState=document.getElementById("stellarConnectState");
     if(address){  
         addressElement.textContent=address;  
         addressElement.style.display="block";  
         connectButton.style.display="none";  
         disconnectButton.style.display="block";  
         if(send)send.style.display="block";
+        if(connectState)connectState.textContent="Connected · public key only";
         updateStellarReceiveQr(address);
         stellarAccountOnNetwork=null;  
         pendingStellarReview=null;
@@ -6083,6 +6003,7 @@ function renderStellarConnection(address,options){
         addressElement.style.display="none";  
         connectButton.style.display="block";  
         disconnectButton.style.display="none";  
+        if(connectState)connectState.textContent="Not connected";
         if(send)send.style.display="none";  
         if(balance){balance.textContent="";balance.style.display="none";}
         updateStellarReceiveQr("");
@@ -6095,6 +6016,24 @@ function renderStellarConnection(address,options){
     }  
 }  
   
+function updateStellarApproxValue(xlmAmount){
+    const el=document.getElementById("stellarApproxValue");
+    if(!el)return;
+    const xlm=Number(xlmAmount);
+    if(!Number.isFinite(xlm)){el.hidden=true;el.textContent="";return;}
+    const px=cryptoPrices&&cryptoPrices.XLM;
+    const eur=px&&Number(px.eur);
+    if(!Number.isFinite(eur)||eur<=0){
+        el.hidden=false;
+        el.textContent="Approximate fiat value unavailable until a valid XLM market rate is loaded. Amount shown above is on-chain XLM only.";
+        return;
+    }
+    const value=xlm*eur;
+    const when=document.getElementById("priceUpdated")?.textContent||"";
+    el.hidden=false;
+    el.textContent="Approximate display value ≈ €"+formatMoney(value)+" (XLM market rate; not a settlement quote). "+(when?("Rate source: "+when):"");
+}
+
 function updateStellarReceiveQr(address){
     const box=document.getElementById("stellarReceiveBox");
     const qr=document.getElementById("stellarReceiveQr");
@@ -6173,6 +6112,7 @@ async function refreshHAVKARStellarBalance(){
         if(!result.exists){  
             balance.textContent="No "+result.label+" account for this public key yet.";  
             if(limits){limits.style.display="none";limits.textContent="";}
+            updateStellarApproxValue(NaN);
             if(!/Confirmed on/.test(currentStatus)){  
                 setStellarStatus("This public key has no account on "+result.label+". HAVKAR will not ask the wallet to sign.","error");  
             }  
@@ -6183,6 +6123,7 @@ async function refreshHAVKARStellarBalance(){
             limits.style.display="block";
             limits.textContent="Minimum reserve "+(result.minimumBalance||"—")+" XLM · Spendable "+(result.spendable||"—")+" XLM · Source "+(result.horizon||"Horizon");
         }
+        updateStellarApproxValue(result.balance);
         loadStellarHorizonHistory();
         if(/no account on|will not ask the wallet to sign|did not ask the wallet to sign|Mainnet is protected/.test(currentStatus)){  
             const selected=window.havkarGetStellarNetwork?.()||{};  
@@ -6467,11 +6408,37 @@ async function loadWalletArchitectureNotice(){
     }
 }
 
+function initWalletChrome(){
+    const header=document.getElementById("walletHeader");
+    if(header){
+        let ticking=false;
+        const onScroll=function(){
+            if(ticking)return;
+            ticking=true;
+            requestAnimationFrame(function(){
+                header.classList.toggle("is-compact", window.scrollY>24);
+                ticking=false;
+            });
+        };
+        window.addEventListener("scroll", onScroll, {passive:true});
+        onScroll();
+    }
+    try{
+        if(!localStorage.getItem("havkar_stellar_network_v2")){
+            if(typeof window.havkarSetStellarNetwork==="function"){
+                window.havkarSetStellarNetwork("PUBLIC");
+            }
+            localStorage.setItem("havkar_stellar_network_v2","1");
+        }
+    }catch(_e){}
+}
+
 async function startWallet(){  
   
     clearError();  
   
     applySavedDisplayCurrency();  
+    initWalletChrome();
 
     await refreshCurrencyRailsHonesty();
     await loadWalletArchitectureNotice();
@@ -6562,9 +6529,5 @@ startWallet();
 </script>
 
 
-<!-- HAVKAR contextual help -->
-<p class="havkar-contextual-help" style="margin:10px 0;font-size:.85rem">
-  <a href="support.html?tile=wallet#tile-wallet">Help for this section</a>
-</p>
-</body>  
-      </html>  
+</body>
+</html>  

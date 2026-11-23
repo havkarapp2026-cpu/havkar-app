@@ -386,4 +386,47 @@
     } catch(_e){}
   })();
 
+  /* Wallet page strings (English source → approved HAVKAR languages) */
+  (function(){
+    try{
+      var walletExtra = {
+        "HAVKAR Wallet":{it:"Portafoglio HAVKAR",fa:"کیف پول هاوکار",sv:"HAVKAR-plånbok",ckb:"جزدانی HAVKAR",kmr:"Cûzdana HAVKAR",ar:"محفظة HAVKAR",de:"HAVKAR-Geldbörse",fr:"Portefeuille HAVKAR",es:"Cartera HAVKAR"},
+        "Overview":{it:"Panoramica",fa:"نمای کلی",sv:"Översikt",ckb:"تێڕوانین",kmr:"Giştî",ar:"نظرة عامة",de:"Übersicht",fr:"Aperçu",es:"Resumen"},
+        "Actions":{it:"Azioni",fa:"عملیات",sv:"Åtgärder",ckb:"کردارەکان",kmr:"Çalakî",ar:"إجراءات",de:"Aktionen",fr:"Actions",es:"Acciones"},
+        "Finance hub":{it:"Centro finanziario",fa:"مرکز مالی",sv:"Finanshub",ckb:"ناوەندی دارایی",kmr:"Navenda darayî",ar:"مركز مالي",de:"Finanzzentrum",fr:"Centre financier",es:"Centro financiero"},
+        "Markets":{it:"Mercati",fa:"بازارها",sv:"Marknader",ckb:"بازاڕەکان",kmr:"Bazar",ar:"الأسواق",de:"Märkte",fr:"Marchés",es:"Mercados"},
+        "Security":{it:"Sicurezza",fa:"امنیت",sv:"Säkerhet",ckb:"ئاسایش",kmr:"Ewlehî",ar:"الأمان",de:"Sicherheit",fr:"Sécurité",es:"Seguridad"},
+        "Stellar · non-custodial":{it:"Stellar · non custodiale",fa:"استلار · غیرامانی",sv:"Stellar · icke-förvaring",ckb:"ستێلار · غەیرەئەمانی",kmr:"Stellar · ne-emanetî",ar:"Stellar · غير وصائي",de:"Stellar · nicht verwahrend",fr:"Stellar · non-custodial",es:"Stellar · no custodial"},
+        "Connect Stellar Wallet":{it:"Collega wallet Stellar",fa:"اتصال کیف پول Stellar",sv:"Anslut Stellar-plånbok",ckb:"پەیوەندیکردنی جزدانی Stellar",kmr:"Cûzdana Stellar girêde",ar:"ربط محفظة Stellar",de:"Stellar-Wallet verbinden",fr:"Connecter le portefeuille Stellar",es:"Conectar billetera Stellar"},
+        "Disconnect Wallet":{it:"Disconnetti wallet",fa:"قطع اتصال کیف پول",sv:"Koppla från plånbok",ckb:"جیابوونەوەی جزدان",kmr:"Cûzdanê qut bike",ar:"قطع اتصال المحفظة",de:"Wallet trennen",fr:"Déconnecter le portefeuille",es:"Desconectar billetera"},
+        "Review payment (no send yet)":{it:"Rivedi pagamento (nessun invio)",fa:"بررسی پرداخت (هنوز ارسال نشود)",sv:"Granska betalning (skickas inte ännu)",ckb:"پێداچوونەوەی پارەدان (هێشتا مەنێرە)",kmr:"Dravdanê binirxîne (hîn nêşîne)",ar:"مراجعة الدفع (بدون إرسال بعد)",de:"Zahlung prüfen (noch kein Senden)",fr:"Vérifier le paiement (pas d’envoi)",es:"Revisar pago (sin enviar aún)"},
+        "Confirm · sign in your wallet":{it:"Conferma · firma nel tuo wallet",fa:"تأیید · امضا در کیف پول شما",sv:"Bekräfta · signera i din plånbok",ckb:"دڵنیابوونەوە · واژۆ لە جزدانەکەت",kmr:"Pesend bike · di cûzdana xwe de îmze bike",ar:"تأكيد · التوقيع في محفظتك",de:"Bestätigen · in Ihrer Wallet signieren",fr:"Confirmer · signer dans votre portefeuille",es:"Confirmar · firmar en tu billetera"},
+        "HAVKAR finance hub":{it:"Centro finanziario HAVKAR",fa:"مرکز مالی هاوکار",sv:"HAVKAR finanshub",ckb:"ناوەندی دارایی HAVKAR",kmr:"Navenda darayî ya HAVKAR",ar:"المركز المالي لـ HAVKAR",de:"HAVKAR-Finanzzentrum",fr:"Centre financier HAVKAR",es:"Centro financiero HAVKAR"},
+        "Payment center":{it:"Centro pagamenti",fa:"مرکز پرداخت",sv:"Betalningscenter",ckb:"ناوەندی پارەدان",kmr:"Navenda dayînê",ar:"مركز الدفع",de:"Zahlungszentrum",fr:"Centre de paiement",es:"Centro de pagos"},
+        "Internal accounting ledger (not spendable cash)":{it:"Registro contabile interno (non spendibile)",fa:"دفتر حسابداری داخلی (وجه قابل‌برداشت نیست)",sv:"Intern redovisningsbok (ej spenderbar)",ckb:"تۆماری ژمێریاری ناوخۆیی (پارەی خەرجکراو نییە)",kmr:"Deftera hesabê ya navxweyî (nayê xerckirin)",ar:"دفتر محاسبة داخلي (غير قابل للإنفاق)",de:"Internes Buchhaltungsbuch (nicht ausgebbar)",fr:"Grand livre interne (non dépensable)",es:"Libro contable interno (no gastable)"},
+        "Display currency & market prices":{it:"Valuta di visualizzazione e prezzi di mercato",fa:"ارز نمایشی و قیمت بازار",sv:"Visningsvaluta och marknadspriser",ckb:"دراوی پیشاندان و نرخی بازاڕ",kmr:"Diravê nîşandanê û bihayên bazarê",ar:"عملة العرض وأسعار السوق",de:"Anzeigewährung und Marktpreise",fr:"Devise d’affichage et prix du marché",es:"Moneda de visualización y precios"},
+        "Security & legal boundaries":{it:"Sicurezza e limiti legali",fa:"مرزهای امنیتی و حقوقی",sv:"Säkerhet och rättsliga gränser",ckb:"سنوورەکانی ئاسایش و یاسایی",kmr:"Sînorên ewlehiyê û qanûnî",ar:"حدود الأمان والقانون",de:"Sicherheit und rechtliche Grenzen",fr:"Sécurité et limites juridiques",es:"Límites de seguridad y legales"},
+        "Mainnet (real XLM)":{it:"Mainnet (XLM reale)",fa:"مین‌نت (XLM واقعی)",sv:"Mainnet (riktig XLM)",ckb:"Mainnet (XLMی ڕاستەقینە)",kmr:"Mainnet (XLM a rastîn)",ar:"Mainnet (XLM حقيقي)",de:"Mainnet (echtes XLM)",fr:"Mainnet (XLM réel)",es:"Mainnet (XLM real)"},
+        "Testnet (test XLM only)":{it:"Testnet (solo XLM di test)",fa:"تست‌نت (فقط XLM آزمایشی)",sv:"Testnet (endast test-XLM)",ckb:"Testnet (تەنها XLMی تاقیکردنەوە)",kmr:"Testnet (tenê XLM a ceribandinê)",ar:"Testnet (XLM تجريبي فقط)",de:"Testnet (nur Test-XLM)",fr:"Testnet (XLM de test uniquement)",es:"Testnet (solo XLM de prueba)"},
+        "Connect":{it:"Collega",fa:"اتصال",sv:"Anslut",ckb:"پەیوەندی",kmr:"Girêdan",ar:"اتصال",de:"Verbinden",fr:"Connecter",es:"Conectar"},
+        "Receive XLM":{it:"Ricevi XLM",fa:"دریافت XLM",sv:"Ta emot XLM",ckb:"وەرگرتنی XLM",kmr:"XLM bistîne",ar:"استلام XLM",de:"XLM empfangen",fr:"Recevoir XLM",es:"Recibir XLM"},
+        "Prepare send":{it:"Prepara invio",fa:"آماده‌سازی ارسال",sv:"Förbered sändning",ckb:"ئامادەکردنی ناردن",kmr:"Şandinê amade bike",ar:"تجهيز الإرسال",de:"Senden vorbereiten",fr:"Préparer l’envoi",es:"Preparar envío"},
+        "XLM history":{it:"Cronologia XLM",fa:"تاریخچه XLM",sv:"XLM-historik",ckb:"مێژووی XLM",kmr:"Dîroka XLM",ar:"سجل XLM",de:"XLM-Verlauf",fr:"Historique XLM",es:"Historial XLM"},
+        "Receipts":{it:"Ricevute",fa:"رسیدها",sv:"Kvitton",ckb:"پسوولەکان",kmr:"Wergirtî",ar:"الإيصالات",de:"Belege",fr:"Reçus",es:"Recibos"},
+        "Payments":{it:"Pagamenti",fa:"پرداخت‌ها",sv:"Betalningar",ckb:"پارەدانەکان",kmr:"Dayîn",ar:"المدفوعات",de:"Zahlungen",fr:"Paiements",es:"Pagos"}
+      };
+      var api2 = root.HAVKAR_UI_I18N21;
+      if(!api2 || !api2.pack) return;
+      var orig2 = api2.pack.bind(api2);
+      api2.pack = function(lang){
+        var base = orig2(lang) || {};
+        var code = String(lang||'en');
+        Object.keys(walletExtra).forEach(function(en){
+          if(walletExtra[en][code]) base[en] = walletExtra[en][code];
+        });
+        return base;
+      };
+    } catch(_e){}
+  })();
+
 })(typeof globalThis !== "undefined" ? globalThis : this);
