@@ -708,7 +708,8 @@
     if (!client || !source.userId) {
       return { ok: false, reason: "missing", message: MESSAGES.missing };
     }
-    if (legalName.length < 2 || legalName.length > 200) {
+    // Matches public.job_companies CHECK: btrim length 2..160
+    if (legalName.length < 2 || legalName.length > 160) {
       return { ok: false, reason: "company_short", message: MESSAGES.company_short };
     }
     const result = await client

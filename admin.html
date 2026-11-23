@@ -114,6 +114,14 @@ nav.bottom a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px
     </div>
   </section>
 
+  <section class="panel hidden" id="jobsCompanyReviewPanel">
+    <h2>Jobs company verification</h2>
+    <p class="note">Owner-only. Review legal names submitted from Jobs. No finance, bank, or Owner mailbox data is shown here. Companies are never auto-verified.</p>
+    <button id="jobsCompanyRefresh" type="button">Refresh queue</button>
+    <p id="jobsCompanyReviewNote" class="note"></p>
+    <div id="jobsCompanyReviewList"></div>
+  </section>
+
   <section class="panel" id="supportPanel">
     <h2>Support requests</h2>
     <p class="note">Stored support tickets. Public mailbox remains support@havkar.online · notifications to info@havkar.online.</p>
@@ -303,9 +311,13 @@ nav.bottom a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px
 
     setHidden("financePanel", role !== "owner");
     setHidden("securityPanel", role !== "owner");
+    setHidden("jobsCompanyReviewPanel", role !== "owner");
     setHidden("staffPanel", !(role === "owner" || role === "admin"));
     setHidden("staffForm", role !== "owner");
     setHidden("reauthBanner", role !== "owner");
+    if (role === "owner") {
+      loadJobsCompanyReview();
+    }
 
     if (role === "owner" && data.finance) {
       var f = data.finance;
@@ -435,6 +447,86 @@ nav.bottom a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px
       message.className = "status err";
       message.textContent = (error && error.message) || "Not authorized for the dashboard.";
     }
+  }
+
+  async function jobsCompanyApi(action, body) {
+    var session = await db.auth.getSession();
+    var token = session.data.session && session.data.session.access_token;
+    if (!token) throw new Error("Sign in again as Owner.");
+    var res = await fetch("/api/create-event-checkout", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + token
+      },
+      body: JSON.stringify(Object.assign({ action: action }, body || {}))
+    });
+    var data = await res.json().catch(function () { return null; });
+    if (!data || data.ok !== true) {
+      throw new Error((data && data.error) || ("Request failed (" + res.status + ")"));
+    }
+    return data;
+  }
+
+  async function loadJobsCompanyReview() {
+    var note = document.getElementById("jobsCompanyReviewNote");
+    var list = document.getElementById("jobsCompanyReviewList");
+    if (!note || !list) return;
+    note.textContent = "Loading…";
+    list.innerHTML = "";
+    try {
+      var data = await jobsCompanyApi("jobs_company_list_review", {});
+      var rows = data.companies || [];
+      note.textContent = rows.length + " compan" + (rows.length === 1 ? "y" : "ies") + " loaded.";
+      if (!rows.length) {
+        list.appendChild(el("p", "note", "No job companies registered yet."));
+        return;
+      }
+      var table = el("table");
+      table.innerHTML = "<thead><tr><th>Legal name</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>";
+      var body = el("tbody");
+      rows.forEach(function (row) {
+        var tr = el("tr");
+        tr.appendChild(el("td", null, row.legal_name || ""));
+        tr.appendChild(el("td", "mono", row.verification_status || ""));
+        tr.appendChild(el("td", null, row.created_at || ""));
+        var actions = el("td");
+        ["verified", "rejected", "pending", "unverified"].forEach(function (status) {
+          var btn = el("button");
+          btn.type = "button";
+          btn.textContent = status;
+          btn.style.marginRight = "4px";
+          btn.addEventListener("click", async function () {
+            note.textContent = "Updating " + (row.legal_name || row.id) + " → " + status + "…";
+            try {
+              await jobsCompanyApi("jobs_company_verify", {
+                company_id: row.id,
+                verification_status: status
+              });
+              await loadJobsCompanyReview();
+            } catch (error) {
+              note.className = "err";
+              note.textContent = (error && error.message) || "Update failed.";
+            }
+          });
+          actions.appendChild(btn);
+        });
+        tr.appendChild(actions);
+        body.appendChild(tr);
+      });
+      table.appendChild(body);
+      list.appendChild(table);
+    } catch (error) {
+      note.className = "err";
+      note.textContent = (error && error.message) || "Could not load Jobs companies.";
+    }
+  }
+
+  var jobsRefresh = document.getElementById("jobsCompanyRefresh");
+  if (jobsRefresh) {
+    jobsRefresh.addEventListener("click", function () {
+      loadJobsCompanyReview();
+    });
   }
 
   document.getElementById("assignRole").addEventListener("click", async function () {

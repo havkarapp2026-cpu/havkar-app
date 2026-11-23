@@ -2139,6 +2139,8 @@ export default async function handler(req, res) {
       globalBodyAction === "jobs_owner_micro_checkout" ||
       globalBodyAction === "jobs_subscription_checkout" ||
       globalBodyAction === "jobs_company_verify" ||
+      globalBodyAction === "jobs_company_list_review" ||
+      globalBodyAction === "jobs_company_submit_review" ||
       globalBodyAction === "services_quote");
   if (isGlobalPaymentsRequest(req) && !isJobsServicesPaymentAction) {
     if (req.method !== "GET" && req.method !== "POST") {
@@ -3199,6 +3201,8 @@ export default async function handler(req, res) {
         bodyActionEarly === "jobs_owner_micro_checkout" ||
         bodyActionEarly === "jobs_subscription_checkout" ||
         bodyActionEarly === "jobs_company_verify" ||
+        bodyActionEarly === "jobs_company_list_review" ||
+        bodyActionEarly === "jobs_company_submit_review" ||
         bodyActionEarly === "services_quote")
     ) {
       try {
@@ -3728,6 +3732,108 @@ export default async function handler(req, res) {
           }
         }
 
+        if (bodyActionEarly === "jobs_company_list_review") {
+          const authList = await authenticateUser(req);
+          if (!authList.user) {
+            return sendError(
+              res,
+              401,
+              authList.error || "Authentication required"
+            );
+          }
+          const primaryList = await isPrimaryHavkarOwner(authList.user.id);
+          if (!primaryList) {
+            return res.status(403).json({
+              ok: false,
+              code: "OWNER_ONLY",
+              error: "Only the primary HAVKAR Owner can review job companies."
+            });
+          }
+          const listed = await getSupabaseAdmin()
+            .from("job_companies")
+            .select("id,legal_name,verification_status,owner_user_id,created_at")
+            .in("verification_status", ["unverified", "pending", "rejected", "verified"])
+            .order("created_at", { ascending: false })
+            .limit(100);
+          if (listed.error) {
+            return res.status(500).json({
+              ok: false,
+              error: "Could not load job companies for review."
+            });
+          }
+          return res.status(200).json({
+            ok: true,
+            charged: false,
+            companies: listed.data || []
+          });
+        }
+
+        if (bodyActionEarly === "jobs_company_submit_review") {
+          const authSubmit = await authenticateUser(req);
+          if (!authSubmit.user) {
+            return sendError(
+              res,
+              401,
+              authSubmit.error || "Authentication required"
+            );
+          }
+          const companyIdSubmit = String(
+            (req.body && req.body.company_id) || ""
+          ).trim();
+          if (!companyIdSubmit) {
+            return res.status(400).json({
+              ok: false,
+              error: "company_id is required."
+            });
+          }
+          const owned = await getSupabaseAdmin()
+            .from("job_companies")
+            .select("id,legal_name,verification_status,owner_user_id")
+            .eq("id", companyIdSubmit)
+            .eq("owner_user_id", authSubmit.user.id)
+            .maybeSingle();
+          if (owned.error || !owned.data) {
+            return res.status(404).json({
+              ok: false,
+              error: "Company was not found for this account."
+            });
+          }
+          if (owned.data.verification_status === "verified") {
+            return res.status(200).json({
+              ok: true,
+              charged: false,
+              company: owned.data,
+              message: "Company is already verified."
+            });
+          }
+          // Clients never set verified. Only queue for Owner review.
+          const queued = await getSupabaseAdmin()
+            .from("job_companies")
+            .update({ verification_status: "pending" })
+            .eq("id", companyIdSubmit)
+            .eq("owner_user_id", authSubmit.user.id)
+            .select("id,legal_name,verification_status,owner_user_id")
+            .maybeSingle();
+          if (queued.error || !queued.data) {
+            return res.status(500).json({
+              ok: false,
+              error: "Could not submit company for Owner review."
+            });
+          }
+          if (queued.data.verification_status === "verified") {
+            return res.status(500).json({
+              ok: false,
+              code: "SELF_VERIFY_BLOCKED",
+              error: "Server refused unexpected verified status after submit."
+            });
+          }
+          return res.status(200).json({
+            ok: true,
+            charged: false,
+            company: queued.data
+          });
+        }
+
         if (bodyActionEarly === "jobs_company_verify") {
           const authOwner = await authenticateUser(req);
           if (!authOwner.user) {
@@ -3749,25 +3855,32 @@ export default async function handler(req, res) {
             (req.body && req.body.company_id) || ""
           ).trim();
           const nextStatus = String(
-            (req.body && req.body.verification_status) || "verified"
-          );
+            (req.body && req.body.verification_status) || ""
+          ).trim();
           if (!companyId) {
             return res.status(400).json({
               ok: false,
               error: "company_id is required."
             });
           }
-          if (nextStatus !== "verified" && nextStatus !== "unverified") {
+          // Align with DB CHECK: unverified|pending|verified|rejected.
+          // Never invent columns (job_companies has no updated_at).
+          if (
+            nextStatus !== "verified" &&
+            nextStatus !== "unverified" &&
+            nextStatus !== "rejected" &&
+            nextStatus !== "pending"
+          ) {
             return res.status(400).json({
               ok: false,
-              error: "verification_status must be verified or unverified."
+              error:
+                "verification_status must be verified, rejected, pending, or unverified."
             });
           }
           const updated = await getSupabaseAdmin()
             .from("job_companies")
             .update({
-              verification_status: nextStatus,
-              updated_at: new Date().toISOString()
+              verification_status: nextStatus
             })
             .eq("id", companyId)
             .select("id,legal_name,verification_status,owner_user_id")
