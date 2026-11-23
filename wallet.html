@@ -1424,8 +1424,8 @@ select:focus{
 <div id="errorContainer"></div>
 
 <div class="wallet-page">
-  <div class="wallet-status-strip" id="currencyRailsNotice">
-    Display · charge · settlement are separate. XLM is a separate rail. Loading live payment status…
+  <div class="wallet-status-strip" id="currencyRailsNotice" data-i18n-ignore>
+    Loading payment rails…
   </div>
 
   <nav class="wallet-hub-nav" aria-label="Wallet sections">
@@ -1441,8 +1441,8 @@ select:focus{
     <div class="stellar-header">
       <div class="stellar-logo" aria-hidden="true"><img src="/assets/icons/havkar-icon-180-20261022-v3.png" alt="" width="50" height="50"></div>
       <div>
-        <div class="stellar-title">Stellar · non-custodial</div>
-        <div class="stellar-subtitle" id="stellarNetworkLabel">XLM Wallet</div>
+        <div class="stellar-title" data-i18n-ignore>Stellar · non-custodial</div>
+        <div class="stellar-subtitle" id="stellarNetworkLabel" data-i18n-ignore>XLM Wallet</div>
       </div>
     </div>
     <p class="stellar-description">
@@ -6369,8 +6369,8 @@ async function refreshCurrencyRailsHonesty(){
         const notice=document.getElementById("currencyRailsNotice");
         if(notice){
             notice.textContent=xlmLive||cardLive
-                ?"Display · Charge · Settlement are separate. Owner-armed collection rails are active for verified flows only. Peer wallet Mainnet sends still require your wallet approval; HAVKAR never invents balances."
-                :"Display · Charge · Settlement are separate. XLM rail separate. Live customer collection is paused until Owner arms it.";
+                ?"Rails live · Display ≠ charge ≠ settlement · XLM separate"
+                :"Collection paused · Display ≠ charge ≠ settlement · XLM separate";
         }
         const orig=window.havkarGetStellarNetwork;
         if(typeof orig==="function"&&!window.__havkarStellarNetworkPatched){
@@ -6521,7 +6521,8 @@ startWallet();
       var present=body.presentment&&body.presentment.count?body.presentment.count:'133';
       var healthOff=(body.module_scopes&&body.module_scopes.health_subscription_billing&&body.module_scopes.health_subscription_billing.effective==='OFF');
       var means=(body.honesty&&body.honesty.live_payments_paused_means)||'';
-      el.textContent=display+' ('+present+') · '+charge+' · '+settle+' · XLM separate. '+(body.honesty&&body.honesty.live_payments_paused?paused:('Global collection armed'+(healthOff?'; Health billing OFF':'')))+(means?' · '+means:'');
+      var live=!(body.honesty&&body.honesty.live_payments_paused);
+      el.textContent=(live?'Rails live':'Collection paused')+' · '+present+' display currencies · XLM separate'+(healthOff?' · Health billing OFF':'');
     }catch(_e){}
   }
   loadRails();
