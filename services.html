@@ -1504,6 +1504,9 @@ textarea.form-control {
                 0 services
             </div>
         </div>
+        <p id="servicesConnectHonesty" style="margin:8px 0 0;font-size:.8rem;color:#5f6f66;max-width:52rem">
+            Card checkout requires Stripe Connect (Express). New provider onboarding currently defaults to Italy (IT) / EUR capability. Providers outside supported Connect countries cannot receive destination payouts until Stripe country support and KYC are complete. Cash bookings stay closed until a real payment proof exists. Platform commission is 10% paid by the provider on successful online charges — not a bank payout by itself.
+        </p>
 
     </div>
 
@@ -2396,6 +2399,7 @@ document.addEventListener(
         bindCategoryButtons();
         bindSearch();
         bindForms();
+        loadServiceCategoriesFromApi();
 
         const connectBtn = document.getElementById("servicesConnectBtn");
         if (connectBtn) {
@@ -2569,6 +2573,69 @@ function bindCategoryButtons() {
 
 }
 
+async function loadServiceCategoriesFromApi() {
+    try {
+        const res = await fetch("/api/create-event-checkout", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json"
+            },
+            body: JSON.stringify({ action: "services_categories" })
+        });
+        const payload = await res.json().catch(function () {
+            return null;
+        });
+        const rows =
+            payload && Array.isArray(payload.categories)
+                ? payload.categories
+                : payload && Array.isArray(payload.data)
+                  ? payload.data
+                  : [];
+        if (!rows.length) {
+            return;
+        }
+        const wrap = document.getElementById("categories");
+        if (!wrap) {
+            return;
+        }
+        const labels = ["All"].concat(
+            rows
+                .map(function (row) {
+                    return (
+                        (row && (row.name || row.label || row.slug)) ||
+                        ""
+                    );
+                })
+                .filter(Boolean)
+        );
+        const unique = [];
+        labels.forEach(function (label) {
+            if (unique.indexOf(label) === -1) {
+                unique.push(label);
+            }
+        });
+        wrap.innerHTML = unique
+            .map(function (label, index) {
+                const active = index === 0 ? " active" : "";
+                return (
+                    '<button class="category-btn' +
+                    active +
+                    '" type="button" data-category="' +
+                    String(label).replace(/"/g, "&quot;") +
+                    '">' +
+                    String(label) +
+                    "</button>"
+                );
+            })
+            .join("");
+        selectedCategory = "All";
+        bindCategoryButtons();
+    } catch (_err) {
+        /* keep hardcoded fallback buttons */
+    }
+}
+
 
 /* =========================================================
    AUTH
@@ -2712,11 +2779,21 @@ function renderServices() {
                 (currentUser &&
                     String(service.provider_id) === String(currentUser.id));
 
+            const title = String(service.title || "");
+            const isProbeOrE2E =
+                /^E2E\b/i.test(title) ||
+                /\blive probe\b/i.test(title) ||
+                /\btest\b/i.test(title);
+            /* Keep owner/provider able to see own paused/closed; public browse hides probes. */
+            const probeMatch =
+                showingMineOnly || !isProbeOrE2E;
+
             return (
                 categoryMatch &&
                 searchMatch &&
                 savedMatch &&
-                mineMatch
+                mineMatch &&
+                probeMatch
             );
 
         });
@@ -3342,12 +3419,32 @@ async function submitBooking(event) {
                 + (payload.message ? "\n" : "")
                 + "XLM " + settledNetwork + " settled tx " + settledTx;
             payload.agreed_price = servicePrice;
-            if (settled.result.fulfillment === "services_intent") {
-                payload.commission_bps = 1000;
-                payload.commission_amount =
-                    Math.round(servicePrice * 0.1 * 100) / 100;
-            }
+            /* Do not set commission_* here — DB trigger owns ledger rows. */
         }
+    }
+
+    /* Prevent double-booking the same provider slot before insert. */
+    const { data: existingSlot } = await db
+        .from("service_bookings")
+        .select("id")
+        .eq("provider_id", selectedBookingService.provider_id)
+        .eq("booking_date", date)
+        .eq("booking_time", time)
+        .in("status", [
+            "pending",
+            "price_proposed",
+            "accepted",
+            "completion_requested",
+            "completed",
+            "in_review",
+            "disputed"
+        ])
+        .limit(1)
+        .maybeSingle();
+    if (existingSlot && existingSlot.id) {
+        setButtonBusy(submitButton, false, "Confirm Booking");
+        showToast("This time slot is already booked. Choose another time.");
+        return;
     }
 
     const inserted = await db
@@ -3366,6 +3463,13 @@ async function submitBooking(event) {
 
     if (error) {
         console.error("Booking error:", error);
+        if (
+            error.code === "23505" ||
+            /duplicate|unique|already booked/i.test(String(error.message || ""))
+        ) {
+            showToast("This time slot is already booked. Choose another time.");
+            return;
+        }
         showToast(
             payment === "cash"
                 ? "The cash request was not recorded. Nothing was collected."
@@ -3701,7 +3805,7 @@ async function deleteOwnService(serviceId, button) {
     }
 
     const confirmed = window.confirm(
-        "Delete this service permanently?"
+        "Close this service? Existing bookings stay intact. Permanent delete is blocked to protect booking history."
     );
 
     if (!confirmed) {
@@ -3710,17 +3814,18 @@ async function deleteOwnService(serviceId, button) {
 
     button.disabled = true;
 
+    /* Soft-close only: hard delete would cascade bookings and erase history. */
     const { error } = await db
         .from("services")
-        .delete()
+        .update({ status: "closed" })
         .eq("id", serviceId)
         .eq("provider_id", user.id);
 
     button.disabled = false;
 
     if (error) {
-        console.error("Delete service error:", error);
-        showToast("Could not delete service.");
+        console.error("Close service error:", error);
+        showToast("Could not close service.");
         return;
     }
 

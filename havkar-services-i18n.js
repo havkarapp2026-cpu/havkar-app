@@ -159,6 +159,28 @@
       Saved: "المحفوظات",
       Home: "الرئيسية",
       Messages: "الرسائل"
+    },
+    ur: {
+      "Available Services": "دستیاب خدمات",
+      Bookings: "بکنگز",
+      "Offer a Service": "خدمت پیش کریں",
+      "No services found": "کوئی خدمت نہیں ملی",
+      "Near me": "میرے قریب",
+      Distance: "فاصلہ",
+      "All distances": "تمام فاصلے",
+      "Within 5 km": "۵ کلومیٹر کے اندر",
+      "Within 25 km": "۲۵ کلومیٹر کے اندر",
+      "Within 100 km": "۱۰۰ کلومیٹر کے اندر",
+      Map: "نقشہ",
+      "Use my location": "میرا مقام استعمال کریں",
+      "Stripe Connect": "Stripe Connect",
+      "Start Connect": "Stripe Connect شروع / جاری رکھیں",
+      "Pay by card": "کارڈ سے ادائیگی (۱۰٪ فراہم‌کنندہ کمیشن)",
+      "Confirm Booking": "بکنگ کی تصدیق",
+      Search: "تلاش",
+      Saved: "محفوظ",
+      Home: "ہوم",
+      Messages: "پیغامات"
     }
   };
 
