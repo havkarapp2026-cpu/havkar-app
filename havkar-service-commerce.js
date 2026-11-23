@@ -561,10 +561,26 @@
       return { ok: false, retry: false, activated: false, reason: "missing_booking" };
     }
 
+    const paymentIntentId =
+      typeof session.payment_intent === "string"
+        ? session.payment_intent
+        : session.payment_intent && session.payment_intent.id
+          ? String(session.payment_intent.id)
+          : null;
+    const chargeId = input.verifiedChargeId
+      ? String(input.verifiedChargeId)
+      : session.payment_intent &&
+          typeof session.payment_intent === "object" &&
+          session.payment_intent.latest_charge
+        ? typeof session.payment_intent.latest_charge === "string"
+          ? session.payment_intent.latest_charge
+          : session.payment_intent.latest_charge.id || null
+        : null;
+
     const bookingResult = await supabase
       .from("service_bookings")
       .select(
-        "id,customer_id,provider_id,agreed_price,currency,payment_method,status"
+        "id,customer_id,provider_id,agreed_price,currency,payment_method,status,stripe_checkout_session_id,stripe_payment_intent,stripe_charge_id"
       )
       .eq("id", bookingId)
       .eq("customer_id", customerId)
@@ -614,53 +630,123 @@
 
     const existing = await supabase
       .from("service_commission_entries")
-      .select("booking_id,agreed_amount_cents,customer_charge_cents,commission_bps,commission_cents,provider_settlement_cents")
+      .select(
+        "booking_id,agreed_amount_cents,customer_charge_cents,commission_bps,commission_cents,provider_settlement_cents,stripe_event_id,collection_state,liability_state"
+      )
       .eq("booking_id", bookingResult.data.id)
       .maybeSingle();
 
     if (existing.error && !isMissingRelation(existing.error)) {
       return { ok: false, retry: true, activated: false, reason: "ledger_lookup_failed" };
     }
+
     const ledger = commissionLedgerDecision(existing.data, settled);
-    if (ledger.duplicate) {
-      return {
-        ok: true,
-        duplicate: true,
-        activated: false,
-        additionalCommissionCents: 0,
-        settlement: ledger.settlement
-      };
-    }
+    let ledgerMode = "inserted";
+    let additionalCommissionCents = settled.settlement.commissionCents;
 
-    const inserted = await supabase
-      .from("service_commission_entries")
-      .insert({
-        booking_id: bookingResult.data.id,
-        agreed_amount_cents: settled.settlement.agreedCents,
-        currency: bookingResult.data.currency,
-        customer_charge_cents: settled.settlement.customerChargeCents,
-        commission_bps: settled.settlement.commissionBps,
-        commission_cents: settled.settlement.commissionCents,
-        provider_settlement_cents: settled.settlement.providerSettlementCents,
-        payer: "provider",
+    if (ledger.duplicate && existing.data) {
+      /*
+       * Booking-create trigger pre-inserts a liability row. That MUST NOT
+       * block Stripe fulfillment: update the same row and complete booking.
+       */
+      const alreadySameEvent =
+        existing.data.stripe_event_id &&
+        String(existing.data.stripe_event_id) === String(event.id);
+      const amountsMatch =
+        Number(existing.data.commission_cents) ===
+          settled.settlement.commissionCents &&
+        Number(existing.data.provider_settlement_cents) ===
+          settled.settlement.providerSettlementCents &&
+        Number(existing.data.customer_charge_cents) ===
+          settled.settlement.customerChargeCents;
+      const ledgerPatch = {
         stripe_event_id: event.id,
-        settlement_channel: "online",
         liability_state: "owed",
-        /* collection_state stays uncollected by schema design; Stripe application fee is the live collection rail. */
-        collection_state: "uncollected"
-      })
-      .select("booking_id");
-
-    if (inserted.error && isUniqueViolation(inserted.error)) {
-      return { ok: true, duplicate: true, activated: false, additionalCommissionCents: 0 };
-    }
-    if (inserted.error) {
-      return {
-        ok: false,
-        retry: isMissingRelation(inserted.error),
-        activated: false,
-        reason: "ledger_insert_failed"
+        collection_state: "collected_stripe",
+        settlement_channel: "online"
       };
+      if (!amountsMatch || Number(existing.data.commission_cents) === 0) {
+        ledgerPatch.agreed_amount_cents = settled.settlement.agreedCents;
+        ledgerPatch.customer_charge_cents = settled.settlement.customerChargeCents;
+        ledgerPatch.commission_bps = settled.settlement.commissionBps;
+        ledgerPatch.commission_cents = settled.settlement.commissionCents;
+        ledgerPatch.provider_settlement_cents =
+          settled.settlement.providerSettlementCents;
+        ledgerPatch.payer = "provider";
+      }
+      const updatedLedger = await supabase
+        .from("service_commission_entries")
+        .update(ledgerPatch)
+        .eq("booking_id", bookingResult.data.id)
+        .select("booking_id,stripe_event_id,collection_state")
+        .maybeSingle();
+      if (updatedLedger.error) {
+        return {
+          ok: false,
+          retry: isMissingRelation(updatedLedger.error),
+          activated: false,
+          reason: "ledger_update_failed",
+          error: updatedLedger.error.message || null
+        };
+      }
+      ledgerMode = alreadySameEvent ? "replay" : "updated_existing";
+      additionalCommissionCents = 0;
+    } else {
+      const inserted = await supabase
+        .from("service_commission_entries")
+        .insert({
+          booking_id: bookingResult.data.id,
+          agreed_amount_cents: settled.settlement.agreedCents,
+          currency: bookingResult.data.currency,
+          customer_charge_cents: settled.settlement.customerChargeCents,
+          commission_bps: settled.settlement.commissionBps,
+          commission_cents: settled.settlement.commissionCents,
+          provider_settlement_cents: settled.settlement.providerSettlementCents,
+          payer: "provider",
+          stripe_event_id: event.id,
+          settlement_channel: "online",
+          liability_state: "owed",
+          collection_state: "collected_stripe"
+        })
+        .select("booking_id");
+
+      if (inserted.error && isUniqueViolation(inserted.error)) {
+        /* Concurrent insert: update the existing liability row instead. */
+        const raced = await supabase
+          .from("service_commission_entries")
+          .update({
+            stripe_event_id: event.id,
+            liability_state: "owed",
+            collection_state: "collected_stripe",
+            settlement_channel: "online",
+            agreed_amount_cents: settled.settlement.agreedCents,
+            customer_charge_cents: settled.settlement.customerChargeCents,
+            commission_bps: settled.settlement.commissionBps,
+            commission_cents: settled.settlement.commissionCents,
+            provider_settlement_cents: settled.settlement.providerSettlementCents,
+            payer: "provider"
+          })
+          .eq("booking_id", bookingResult.data.id)
+          .select("booking_id")
+          .maybeSingle();
+        if (raced.error) {
+          return {
+            ok: false,
+            retry: true,
+            activated: false,
+            reason: "ledger_race_update_failed"
+          };
+        }
+        ledgerMode = "updated_race";
+        additionalCommissionCents = 0;
+      } else if (inserted.error) {
+        return {
+          ok: false,
+          retry: isMissingRelation(inserted.error),
+          activated: false,
+          reason: "ledger_insert_failed"
+        };
+      }
     }
 
     const bookingPatch = {
@@ -671,14 +757,11 @@
     if (session && session.id) {
       bookingPatch.stripe_checkout_session_id = session.id;
     }
-    if (session && session.payment_intent) {
-      bookingPatch.stripe_payment_intent =
-        typeof session.payment_intent === "string"
-          ? session.payment_intent
-          : session.payment_intent.id || null;
+    if (paymentIntentId) {
+      bookingPatch.stripe_payment_intent = paymentIntentId;
     }
-    if (input.verifiedChargeId) {
-      bookingPatch.stripe_charge_id = String(input.verifiedChargeId);
+    if (chargeId) {
+      bookingPatch.stripe_charge_id = String(chargeId);
     }
     /* Service role webhook may advance pending → accepted after verified Stripe payment. */
     const statusNow = String(bookingResult.data.status || "");
@@ -686,24 +769,45 @@
       bookingPatch.status = "accepted";
     }
 
-    const activated = await supabase
-      .from("service_bookings")
-      .update(bookingPatch)
-      .eq("id", bookingResult.data.id)
-      .select("id,status")
-      .maybeSingle();
+    const alreadyComplete =
+      String(bookingResult.data.stripe_payment_intent || "") ===
+        String(paymentIntentId || "") &&
+      String(bookingResult.data.stripe_charge_id || "") ===
+        String(chargeId || "") &&
+      String(bookingResult.data.status || "") === "accepted";
+
+    let activatedRow = {
+      id: bookingResult.data.id,
+      status: bookingResult.data.status
+    };
+    if (!alreadyComplete) {
+      const activated = await supabase
+        .from("service_bookings")
+        .update(bookingPatch)
+        .eq("id", bookingResult.data.id)
+        .select("id,status,stripe_payment_intent,stripe_charge_id")
+        .maybeSingle();
+      if (activated.error) {
+        return {
+          ok: false,
+          retry: isMissingRelation(activated.error),
+          activated: false,
+          reason: "booking_update_failed",
+          error: activated.error.message || null
+        };
+      }
+      activatedRow = activated.data || activatedRow;
+    }
 
     return {
       ok: true,
-      duplicate: false,
-      activated: Boolean(
-        activated &&
-          activated.data &&
-          String(activated.data.status) === "accepted"
-      ),
-      booking_status:
-        activated && activated.data ? activated.data.status : null,
-      additionalCommissionCents: settled.settlement.commissionCents,
+      duplicate: ledgerMode === "replay" && alreadyComplete,
+      ledger_mode: ledgerMode,
+      activated: String(activatedRow.status || "") === "accepted",
+      booking_status: activatedRow.status || null,
+      stripe_payment_intent: paymentIntentId,
+      stripe_charge_id: chargeId,
+      additionalCommissionCents: additionalCommissionCents,
       settlement: settled.settlement
     };
   }

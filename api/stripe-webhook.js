@@ -472,6 +472,7 @@ function createWebhookStore(supabase, stripe) {
       let verifiedApplicationFeeCents = null;
       let verifiedTransferDestination =
         meta.connected_account_id || null;
+      let verifiedChargeId = null;
       let paymentIntent = session && session.payment_intent;
       try {
         if (
@@ -479,7 +480,9 @@ function createWebhookStore(supabase, stripe) {
           typeof paymentIntent === "string" &&
           paymentIntent.startsWith("pi_")
         ) {
-          paymentIntent = await stripe.paymentIntents.retrieve(paymentIntent);
+          paymentIntent = await stripe.paymentIntents.retrieve(paymentIntent, {
+            expand: ["latest_charge"]
+          });
         }
         if (paymentIntent && typeof paymentIntent === "object") {
           if (paymentIntent.application_fee_amount != null) {
@@ -493,6 +496,12 @@ function createWebhookStore(supabase, stripe) {
           ) {
             verifiedTransferDestination =
               paymentIntent.transfer_data.destination;
+          }
+          if (paymentIntent.latest_charge) {
+            verifiedChargeId =
+              typeof paymentIntent.latest_charge === "string"
+                ? paymentIntent.latest_charge
+                : paymentIntent.latest_charge.id || null;
           }
         }
       } catch (_err) {
@@ -512,7 +521,8 @@ function createWebhookStore(supabase, stripe) {
         event,
         session: sessionForSettle,
         verifiedApplicationFeeCents,
-        verifiedTransferDestination
+        verifiedTransferDestination,
+        verifiedChargeId
       });
       return Object.assign(
         {
