@@ -1325,6 +1325,11 @@ body.jobs-rtl .section-header{direction:rtl;text-align:right}
 
   <div class="header-right">
 
+    <div class="jobs-role-switch" role="group" aria-label="Jobs role">
+      <button type="button" class="filter" id="jobsRoleEmployerBtn" data-jobs-role="employer" onclick="setJobsRoleMode('employer')">Employer</button>
+      <button type="button" class="filter" id="jobsRoleSeekerBtn" data-jobs-role="seeker" onclick="setJobsRoleMode('seeker')">Job seeker</button>
+    </div>
+
     <button
       class="icon-btn"
       type="button"
@@ -1762,18 +1767,27 @@ body.jobs-rtl .section-header{direction:rtl;text-align:right}
     </div>
 
     <p class="upload-note" id="companyVerificationNote">
-      Corporate plans require a verified company. Self-registration stays unverified until HAVKAR Owner/staff confirms it.
-      Auto-renew is Stripe Subscription only (XLM cannot renew monthly).
+      Corporate plans require a verified company. Registration starts as unverified; then use Submit for Owner review.
+      Only the HAVKAR Owner can approve or reject. Companies are never auto-verified. Auto-renew is Stripe only (not XLM).
     </p>
     <div id="companyStatusPanel" class="notice" style="margin-bottom:12px">
       Sign in to load your company verification status.
     </div>
     <div class="field">
       <label for="companyLegalName" id="jobsCorpRegLabel">Register company legal name</label>
-      <input id="companyLegalName" type="text" maxlength="200" autocomplete="organization" placeholder="Legal company name">
+      <input id="companyLegalName" type="text" maxlength="160" autocomplete="organization" placeholder="Legal company name">
       <button class="secondary" type="button" id="jobsCorpSubmitBtn" onclick="registerJobCompany()" style="margin-top:8px;min-height:44px">
-        Submit company for verification
+        Register company
       </button>
+      <button class="primary" type="button" id="jobsCorpRequestReviewBtn" onclick="submitCompanyForOwnerReview()" style="margin-top:8px;min-height:44px">
+        Submit for Owner review
+      </button>
+    </div>
+    <div class="field" id="jobsVerifiedCompanyPostField" style="margin-top:12px">
+      <label for="jobsPostAsCompany">Post this ordinary prepaid ad under a verified company (optional)</label>
+      <select id="jobsPostAsCompany" aria-label="Verified company for listing">
+        <option value="">Ordinary employer (prepaid plans)</option>
+      </select>
     </div>
 
     <div class="plan-title" id="jobsCorpMonthlyTitle" style="margin-top:18px">Verified company — monthly subscription</div>
@@ -3928,6 +3942,22 @@ async function submitJob(){
     ? String(currencyEl.value).trim().toUpperCase()
     : "EUR";
 
+  const companySelect = document.getElementById("jobsPostAsCompany");
+  const selectedCompanyId = companySelect ? String(companySelect.value || "").trim() : "";
+  const verifiedCompany = selectedCompanyId
+    ? (cachedOwnCompanies || []).find(function(row){
+        return String(row.id) === selectedCompanyId && window.HAVKAR_JOBS.companyIsVerified(row);
+      })
+    : null;
+  if(selectedCompanyId && !verifiedCompany){
+    alert("Only a verified company can be attached to a listing. Corporate benefits stay blocked until Owner verification.");
+    if(submitButton){
+      submitButton.disabled = false;
+      submitButton.innerHTML = originalButtonHTML;
+    }
+    return;
+  }
+
   const result = await window.HAVKAR_JOBS.createOwnJob(
     supabaseClient,
     {
@@ -3945,7 +3975,9 @@ async function submitJob(){
         application_url:applicationUrl,
         contact,
         currency: currency,
-        image:selectedJobImage || null
+        image:selectedJobImage || null,
+        employer_kind: verifiedCompany ? "company" : "ordinary",
+        company_id: verifiedCompany ? verifiedCompany.id : null
       }
     }
   );
@@ -5095,14 +5127,30 @@ async function refreshCompanyStatusPanel(){
     return;
   }
   cachedOwnCompanies = result.rows || [];
+  const postSelect = document.getElementById("jobsPostAsCompany");
+  if(postSelect){
+    const previous = postSelect.value;
+    postSelect.innerHTML = '<option value=\"\">Ordinary employer (prepaid plans)</option>';
+    cachedOwnCompanies.filter(function(row){
+      return window.HAVKAR_JOBS.companyIsVerified(row);
+    }).forEach(function(row){
+      const opt = document.createElement("option");
+      opt.value = row.id;
+      opt.textContent = row.legal_name + " (verified)";
+      postSelect.appendChild(opt);
+    });
+    if(previous) postSelect.value = previous;
+  }
   if(!cachedOwnCompanies.length){
-    panel.innerHTML = "No company registered yet. Submit a legal name below. Status stays <strong>unverified</strong> until HAVKAR Owner/staff verifies it.";
+    panel.innerHTML = "No company registered yet. Register a legal name, then submit for Owner review. Status stays unverified until the Owner verifies it.";
     return;
   }
   panel.innerHTML = cachedOwnCompanies.map(function(row){
+    const status = String(row.verification_status || "unverified");
     const verified = window.HAVKAR_JOBS.companyIsVerified(row);
     return "<div><strong>" + escapeHTML(row.legal_name) + "</strong> — " +
-      (verified ? "verified ✅" : "unverified (corporate checkout blocked)") +
+      escapeHTML(status) +
+      (verified ? " (corporate checkout allowed)" : " (corporate checkout blocked)") +
       "</div>";
   }).join("");
 }
@@ -5124,8 +5172,86 @@ async function registerJobCompany(){
     return;
   }
   if(input) input.value = "";
-  jobsAlert("companySubmitted", "Company submitted as unverified. Corporate subscriptions stay blocked until HAVKAR verifies the company. No payment was created.");
+  jobsAlert("companySubmitted", "Company registered as unverified. Use Submit for Owner review next. No payment was created.");
   await refreshCompanyStatusPanel();
+}
+
+async function submitCompanyForOwnerReview(){
+  await refreshCurrentUser();
+  if(!currentUser){
+    jobsAlert("signInCompany", "Please sign in before submitting a company for review.");
+    return;
+  }
+  const company = (cachedOwnCompanies || []).find(function(row){
+    return String(row.verification_status) !== "verified";
+  }) || (cachedOwnCompanies || [])[0] || null;
+  if(!company || !company.id){
+    alert("Register a company first.");
+    return;
+  }
+  const session = await supabaseClient.auth.getSession();
+  const token = session && session.data && session.data.session && session.data.session.access_token;
+  if(!token){
+    alert("Please sign in again.");
+    return;
+  }
+  try{
+    const res = await fetch("/api/create-event-checkout", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + token
+      },
+      body: JSON.stringify({
+        action: "jobs_company_submit_review",
+        company_id: company.id
+      })
+    });
+    const body = await res.json().catch(function(){ return null; });
+    if(!body || body.ok !== true){
+      alert((body && body.error) || "Could not submit company for review.");
+      return;
+    }
+    if(body.company && body.company.verification_status === "verified"){
+      alert("Unexpected verified status after submit. Refusing to trust self-verification.");
+      return;
+    }
+    alert("Company queued for Owner review (" + String(body.company && body.company.verification_status) + "). No payment was created.");
+    await refreshCompanyStatusPanel();
+  }catch(_err){
+    alert("Could not reach company review API.");
+  }
+}
+
+const JOBS_ROLE_KEY = "havkar_jobs_role_mode";
+function getJobsRoleMode(){
+  try{
+    const mode = String(localStorage.getItem(JOBS_ROLE_KEY) || "employer");
+    return mode === "seeker" ? "seeker" : "employer";
+  }catch(_err){
+    return "employer";
+  }
+}
+function setJobsRoleMode(mode){
+  const next = mode === "seeker" ? "seeker" : "employer";
+  try{ localStorage.setItem(JOBS_ROLE_KEY, next); }catch(_err){}
+  applyJobsRoleMode();
+}
+function applyJobsRoleMode(){
+  const mode = getJobsRoleMode();
+  const employer = mode === "employer";
+  const empBtn = document.getElementById("jobsRoleEmployerBtn");
+  const seekBtn = document.getElementById("jobsRoleSeekerBtn");
+  if(empBtn) empBtn.classList.toggle("active", employer);
+  if(seekBtn) seekBtn.classList.toggle("active", !employer);
+  const postFab = document.getElementById("jobsPostFab");
+  const companies = document.getElementById("fabCompaniesBtn");
+  const myJobs = document.getElementById("fabMyJobsBtn");
+  const myApps = document.getElementById("fabMyApplicationsBtn");
+  if(postFab) postFab.style.display = employer ? "" : "none";
+  if(companies) companies.style.display = employer ? "" : "none";
+  if(myJobs) myJobs.style.display = employer ? "" : "none";
+  if(myApps) myApps.style.display = employer ? "none" : "";
 }
 
 function selectCorporatePlan(element){
@@ -5319,9 +5445,11 @@ if(document.readyState === "loading"){
   document.addEventListener("DOMContentLoaded", function(){
     bindJobsPostFab();
     applyJobsPublishTipLanguage();
+    applyJobsRoleMode();
   });
 }else{
   bindJobsPostFab();
+  applyJobsRoleMode();
   applyJobsPublishTipLanguage();
 }
 
