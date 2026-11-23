@@ -64,6 +64,11 @@ nav.bottom a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px
     <p class="note">Badge cases and business applications. Self-review is blocked.</p>
     <p><a href="verification-review.html">Open verification + business application review</a></p>
   </section>
+  <section class="panel" id="servicesOpsPanel">
+    <h2>Services operations (limited)</h2>
+    <p class="note">Complaints, credential reviews, and booking status only. Commission ledgers, Stripe balances, Owner vault, and payout secrets stay hidden.</p>
+    <div id="servicesOpsBody"><p class="note">Loading Services ops…</p></div>
+  </section>
   <section class="panel hidden" id="ownerLinkPanel">
     <h2>Owner Control</h2>
     <p class="note">Full financial and role management remains in Administration.</p>
@@ -181,6 +186,87 @@ nav.bottom a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px
     }
 
     document.getElementById("ownerLinkPanel").classList.toggle("hidden", !(role === "owner" || role === "admin"));
+
+    try {
+      var token = session.data.session.access_token;
+      var svcRes = await fetch("/api/create-event-checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + token,
+          Accept: "application/json"
+        },
+        body: JSON.stringify({ action: "services_staff_panel" })
+      });
+      var svc = await svcRes.json().catch(function () { return null; });
+      var svcBody = document.getElementById("servicesOpsBody");
+      if (!svc || svc.ok !== true) {
+        svcBody.innerHTML = "<p class='note err'>" + ((svc && svc.error) || "Services staff panel unavailable") + "</p>";
+      } else {
+        var html = "<p class='ok'>Role: " + String(svc.role || role).toUpperCase() + " · finance hidden</p>";
+        html += "<h3>Pending credentials</h3>";
+        var creds = svc.credential_reviews || [];
+        if (!creds.length) html += "<p class='note'>No pending credential reviews.</p>";
+        else {
+          html += "<table><thead><tr><th>ID</th><th>Provider</th><th>Category</th><th>Action</th></tr></thead><tbody>";
+          creds.forEach(function (c) {
+            html += "<tr><td>" + c.id + "</td><td>" + String(c.provider_id || "").slice(0, 8) + "</td><td>" + (c.category || "") + "</td><td>" +
+              "<button type='button' data-approve='" + c.id + "'>Approve</button> " +
+              "<button type='button' data-reject='" + c.id + "'>Reject</button></td></tr>";
+          });
+          html += "</tbody></table>";
+        }
+        html += "<h3>Recent complaints</h3>";
+        var comps = svc.complaints || [];
+        if (!comps.length) html += "<p class='note'>No complaints.</p>";
+        else {
+          html += "<table><thead><tr><th>ID</th><th>Booking</th><th>Category</th><th>Status</th></tr></thead><tbody>";
+          comps.forEach(function (c) {
+            html += "<tr><td>" + c.id + "</td><td>" + (c.booking_id || "") + "</td><td>" + (c.category || "") + "</td><td>" + (c.status || "") + "</td></tr>";
+          });
+          html += "</tbody></table>";
+        }
+        svcBody.innerHTML = html;
+        svcBody.querySelectorAll("[data-approve]").forEach(function (btn) {
+          btn.addEventListener("click", async function () {
+            var out = await fetch("/api/create-event-checkout", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + token,
+                Accept: "application/json"
+              },
+              body: JSON.stringify({
+                action: "services_credential_review",
+                review_id: Number(btn.getAttribute("data-approve")),
+                status: "approved"
+              })
+            }).then(function (r) { return r.json(); });
+            message.textContent = out && out.ok ? "Credential approved." : ((out && out.error) || "Approve failed");
+          });
+        });
+        svcBody.querySelectorAll("[data-reject]").forEach(function (btn) {
+          btn.addEventListener("click", async function () {
+            var out = await fetch("/api/create-event-checkout", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + token,
+                Accept: "application/json"
+              },
+              body: JSON.stringify({
+                action: "services_credential_review",
+                review_id: Number(btn.getAttribute("data-reject")),
+                status: "rejected"
+              })
+            }).then(function (r) { return r.json(); });
+            message.textContent = out && out.ok ? "Credential rejected." : ((out && out.error) || "Reject failed");
+          });
+        });
+      }
+    } catch (svcErr) {
+      document.getElementById("servicesOpsBody").textContent = "Services ops load failed.";
+    }
   }
 
   start();
