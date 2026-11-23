@@ -48,7 +48,15 @@ assert.match(signup, /authRedirect\('login\.html'\)/);
 const owner = fs.readFileSync("owner-eur1-checkout.html", "utf8");
 assert.match(owner, /login\.html\?next=/);
 assert.match(owner, /havkar-canonical-origin\.js/);
+assert.match(owner, /href="\/index\.html"/);
+assert.match(owner, /not<\/strong> the HAVKAR app home/i);
 assert.doesNotMatch(owner, /localStorage\.setItem\(["']sb-/);
+
+const home = fs.readFileSync("index.html", "utf8");
+assert.match(home, /data-havkar-entry="home"/);
+assert.equal((home.match(/class="menu-item"/g) || []).length, 15);
+assert.doesNotMatch(home, /owner-eur1-checkout/);
+assert.doesNotMatch(home, /Owner EUR 1\.00 live card test/);
 
 const vercel = fs.readFileSync("vercel.json", "utf8");
 assert.match(vercel, /havkar-app\.vercel\.app/);

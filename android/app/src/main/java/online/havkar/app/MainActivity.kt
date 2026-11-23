@@ -63,14 +63,24 @@ class MainActivity : AppCompatActivity() {
                 if (webView.canGoBack()) webView.goBack() else finish()
             }
         })
-        val incoming = intent?.dataString
-        val initial = if (HavkarLinks.isAllowedNavigation(incoming) && isAppUrl(incoming)) {
-            incoming!!
-        } else {
-            HavkarLinks.START_URL
-        }
-        // Deep link support for chat notification taps.
-        webView.loadUrl(initial)
+        // Launcher / MAIN always opens the 15-tile Home. Owner EUR micro-test is never start.
+        webView.loadUrl(resolveInitialUrl(intent))
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        // singleTask: returning via app icon must reset to Home, not the last WebView page
+        // (e.g. owner-eur1-checkout.html left open from a prior Owner smoke test).
+        webView.loadUrl(resolveInitialUrl(intent))
+    }
+
+    private fun resolveInitialUrl(intent: Intent?): String {
+        val action = intent?.action
+        val launcherIntent =
+            action == Intent.ACTION_MAIN ||
+                intent?.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
+        return HavkarLinks.resolveLaunchUrl(intent?.dataString, launcherIntent)
     }
 
     private fun maybeRequestNotifications() {
@@ -82,15 +92,6 @@ class MainActivity : AppCompatActivity() {
         if (!granted) {
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
-    }
-
-    private fun isAppUrl(url: String?): Boolean {
-        if (!HavkarLinks.isAllowedNavigation(url)) return false
-        val host = Uri.parse(url).host?.lowercase()?.trim('.') ?: return false
-        return host == "havkar-app.vercel.app" ||
-            host == "havkar.online" ||
-            host == "www.havkar.online" ||
-            host.endsWith(".havkar.online")
     }
 
     private fun configureWebView() {
@@ -107,7 +108,7 @@ class MainActivity : AppCompatActivity() {
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             javaScriptCanOpenWindowsAutomatically = false
             setSupportMultipleWindows(false)
-            userAgentString = userAgentString + " HAVKAR-Android/1.0.3"
+            userAgentString = userAgentString + " HAVKAR-Android/1.0.5"
         }
         // Drop old WebView HTTP cache entries that can keep broken checkout HTML after deploys.
         webView.clearCache(true)
