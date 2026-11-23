@@ -279,15 +279,223 @@ function havkarSetStellarNetwork(
 
 /* =========================================================
    AMOUNT AND ADDRESS
+   Classic peer payments use G… account keys only.
+   Protocol 30 CAP-84 W… muxed-contract addresses are recognized
+   and rejected here with a clear message (not used as Payment destinations).
    ========================================================= */
+
+function classifyStellarAddress(
+    value
+){
+
+    const text =
+        String(value || "").trim();
+
+    if(
+        !text
+    ){
+
+        return {
+            kind:"empty",
+            value:text
+        };
+
+    }
+
+    if(
+        StrKey.isValidEd25519PublicKey(
+            text
+        )
+    ){
+
+        return {
+            kind:"account",
+            value:text
+        };
+
+    }
+
+    if(
+        typeof StrKey.isValidMed25519PublicKey === "function" &&
+        StrKey.isValidMed25519PublicKey(
+            text
+        )
+    ){
+
+        return {
+            kind:"muxed_account",
+            value:text
+        };
+
+    }
+
+    if(
+        typeof StrKey.isValidMuxedContract === "function" &&
+        StrKey.isValidMuxedContract(
+            text
+        )
+    ){
+
+        return {
+            kind:"muxed_contract",
+            value:text
+        };
+
+    }
+
+    if(
+        typeof StrKey.isValidContract === "function" &&
+        StrKey.isValidContract(
+            text
+        )
+    ){
+
+        return {
+            kind:"contract",
+            value:text
+        };
+
+    }
+
+    return {
+        kind:"invalid",
+        value:text
+    };
+
+}
+
 
 function isPublicKey(
     value
 ){
 
-    return StrKey.isValidEd25519PublicKey(
-        String(value || "").trim()
+    return classifyStellarAddress(
+        value
+    ).kind === "account";
+
+}
+
+
+function requireClassicPaymentDestination(
+    value
+){
+
+    const classified =
+        classifyStellarAddress(
+            value
+        );
+
+    if(
+        classified.kind === "account"
+    ){
+
+        return classified.value;
+
+    }
+
+    if(
+        classified.kind === "muxed_contract"
+    ){
+
+        throw new Error(
+            "W… muxed contract addresses (Protocol 30 / CAP-84) are not valid destinations for HAVKAR classic XLM Payment. Use a G… account public key."
+        );
+
+    }
+
+    if(
+        classified.kind === "muxed_account"
+    ){
+
+        throw new Error(
+            "M… muxed account addresses are not used for HAVKAR classic peer Payment. Use a G… account public key."
+        );
+
+    }
+
+    if(
+        classified.kind === "contract"
+    ){
+
+        throw new Error(
+            "C… contract addresses are not valid destinations for HAVKAR classic XLM Payment. Use a G… account public key."
+        );
+
+    }
+
+    throw new Error(
+        "Enter a valid Stellar destination public key (G…)."
     );
+
+}
+
+
+async function havkarFetchStellarProtocolInfo(
+    networkId
+){
+
+    const network =
+        STELLAR_NETWORKS[
+            String(
+                networkId || HAVKAR_STELLAR.network || "PUBLIC"
+            ).toUpperCase()
+        ] || currentNetwork();
+
+    const server =
+        horizonServer(
+            network
+        );
+
+    const page =
+        await server
+            .ledgers()
+            .order(
+                "desc"
+            )
+            .limit(
+                1
+            )
+            .call();
+
+    const ledger =
+        page.records &&
+        page.records[0]
+        ? page.records[0]
+        : null;
+
+    return {
+
+        network:network.id,
+
+        label:network.label,
+
+        horizon:network.horizon,
+
+        protocol_version:ledger
+            ? Number(
+                ledger.protocol_version
+            )
+            : null,
+
+        ledger_sequence:ledger
+            ? Number(
+                ledger.sequence
+            )
+            : null,
+
+        closed_at:ledger
+            ? ledger.closed_at
+            : null,
+
+        protocol30:ledger
+            ? Number(
+                ledger.protocol_version
+            ) >= 30
+            : false,
+
+        money_moved_by_this_helper:false
+
+    };
 
 }
 
@@ -1288,18 +1496,9 @@ function readUnsignedPaymentRequest(
                 function(entry){
 
                     const destination =
-                        String(
-                            entry?.destination ||
-                            ""
-                        ).trim();
-
-                    if(!isPublicKey(destination)){
-
-                        throw new Error(
-                            "Enter a valid Stellar destination public key."
+                        requireClassicPaymentDestination(
+                            entry?.destination
                         );
-
-                    }
 
                     if(destination === source){
 
@@ -1360,18 +1559,9 @@ function readUnsignedPaymentRequest(
 
 
     const destination =
-        String(
-            options?.destination || ""
-        ).trim();
-
-
-    if(!isPublicKey(destination)){
-
-        throw new Error(
-            "Enter a valid Stellar destination public key."
+        requireClassicPaymentDestination(
+            options?.destination
         );
-
-    }
 
 
     if(destination === source){
@@ -3617,6 +3807,12 @@ window.havkarFetchStellarBalance =
 
 window.havkarFetchStellarRecentPayments =
     havkarFetchStellarRecentPayments;
+
+window.havkarFetchStellarProtocolInfo =
+    havkarFetchStellarProtocolInfo;
+
+window.havkarClassifyStellarAddress =
+    classifyStellarAddress;
 
 window.havkarPrepareStellarPayment =
     havkarPrepareStellarPayment;
