@@ -52,6 +52,7 @@
       text-decoration: none;
       display: inline-block;
     }
+    button.secondary { background: #2a5f78; color: #e8f2ec; }
     button:disabled { opacity: 0.55; cursor: not-allowed; }
     a.link {
       display: inline-block;
@@ -62,6 +63,7 @@
     .status { margin-top: 0.85rem; white-space: pre-wrap; color: var(--warn); }
     .ok { color: #8fdbb0; }
     .actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.35rem; }
+    code { color: #cdebd9; }
   </style>
   <script src="/havkar-supabase-config.js"></script>
   <script src="/havkar-canonical-origin.js"></script>
@@ -70,15 +72,20 @@
   <main>
     <h1>Owner EUR 1.00 live card test</h1>
     <p>
-      Owner-only controlled live smoke: exactly €1.00 EUR, one Checkout Session.
-      Sign in on havkar.online first (same domain). Card details are entered only on
-      official Stripe Checkout — never paste card numbers into HAVKAR. No automatic
-      refund or transfer after this charge.
+      Owner-only controlled live smoke. Sign in on <code>havkar.online</code> first.
+      Card details are entered only on official Stripe Checkout — never paste card
+      numbers into HAVKAR. No automatic refund or transfer after this charge.
     </p>
     <div class="panel">
+      <p>
+        <strong>Marketplace Connect probe</strong> (listing
+        <code id="listingLabel">95</code>): list €1.00 → buyer pays €1.02 /
+        seller €0.97 / HAVKAR fee €0.05 via destination charge to Connect.
+      </p>
       <div class="actions">
-        <a id="loginLink" class="btn" href="/login.html?next=%2Fowner-eur1-checkout.html">Sign in on havkar.online</a>
-        <button id="prepare" type="button">Prepare EUR 1.00 Checkout</button>
+        <a id="loginLink" class="btn" href="/login.html?next=%2Fowner-eur1-checkout.html%3Fmode%3Dmarketplace%26listing_id%3D95">Sign in on havkar.online</a>
+        <button id="prepareMarketplace" class="secondary" type="button">Prepare marketplace €1.02 Checkout</button>
+        <button id="prepare" type="button">Prepare platform €1.00 Checkout</button>
       </div>
       <div id="out" class="status" aria-live="polite"></div>
       <a id="pay" class="link" href="#" hidden target="_blank" rel="noopener">Open payment link</a>
@@ -90,13 +97,19 @@
     const out = document.getElementById("out");
     const pay = document.getElementById("pay");
     const btn = document.getElementById("prepare");
+    const btnMkt = document.getElementById("prepareMarketplace");
     const loginLink = document.getElementById("loginLink");
     const params = new URLSearchParams(location.search);
     const returnStatus = params.get("status");
     const sessionId = params.get("session_id");
+    const listingId = String(params.get("listing_id") || "95").trim() || "95";
+    document.getElementById("listingLabel").textContent = listingId;
 
-    const loginHref = "/login.html?next=" + encodeURIComponent("/owner-eur1-checkout.html");
-    loginLink.href = loginHref;
+    const nextPath =
+      "/owner-eur1-checkout.html?mode=marketplace&listing_id=" +
+      encodeURIComponent(listingId);
+    loginLink.href =
+      "/login.html?next=" + encodeURIComponent(nextPath);
 
     function message(text, ok) {
       out.textContent = text;
@@ -123,7 +136,7 @@
       const { data } = await client.auth.getSession();
       if (data && data.session && data.session.access_token) return data.session;
       message(
-        "No session on havkar.online. Use Sign in on havkar.online (Google or password), then return here. Do not stay on havkar-app.vercel.app."
+        "No session on havkar.online. Use Sign in on havkar.online (Google or password), then return here."
       );
       return null;
     }
@@ -157,60 +170,94 @@
           "Verified session " + body.session_id,
           "payment_status=" + body.payment_status,
           "status=" + body.status,
+          "amount_total=" + body.amount_total,
+          "currency=" + body.currency,
+          "listing_id=" + (body.listing_id || "-"),
           "livemode=" + body.livemode
         ].join("\n"),
         body.payment_status === "paid"
       );
     }
 
-    btn.addEventListener("click", async () => {
+    async function prepare(kind) {
+      const activeBtn = kind === "marketplace" ? btnMkt : btn;
+      activeBtn.disabled = true;
       btn.disabled = true;
+      btnMkt.disabled = true;
       pay.hidden = true;
       try {
         const client = supabaseClient();
         const session = await ensureSession(client);
         if (!session) {
-          btn.disabled = false;
           return;
         }
+        const payload =
+          kind === "marketplace"
+            ? {
+                action: "owner_marketplace_eur1_prepare",
+                confirm: "PREPARE_EUR_1_00_LIVE_CHECKOUT",
+                listing_id: listingId
+              }
+            : {
+                action: "owner_eur1_prepare",
+                confirm: "PREPARE_EUR_1_00_LIVE_CHECKOUT"
+              };
         const res = await fetch("/api/owner-eur1-checkout", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: "Bearer " + session.access_token
           },
-          body: JSON.stringify({
-            action: "owner_eur1_prepare",
-            confirm: "PREPARE_EUR_1_00_LIVE_CHECKOUT"
-          })
+          body: JSON.stringify(payload)
         });
         const body = await res.json();
         if (!res.ok || !body.ok || !body.url) {
           message((body && body.error) || ("HTTP " + res.status));
-          btn.disabled = false;
           return;
         }
         pay.href = body.url;
         pay.hidden = false;
-        message(
-          "Checkout prepared (session " +
-            body.session_id +
-            "). Public collection remains paused. Open the link to pay €1.00.",
-          true
-        );
+        if (kind === "marketplace") {
+          message(
+            [
+              "Marketplace Connect Checkout prepared.",
+              "session=" + body.session_id,
+              "list=" + body.list_price_eur + " EUR",
+              "buyer_pays=" + body.buyer_pays_eur + " EUR",
+              "seller_receives=" + body.seller_receives_eur + " EUR",
+              "havkar_fee=" + body.platform_commission_eur + " EUR",
+              "est_stripe_fee≈" + body.estimated_stripe_eu_card_fee_eur + " EUR (platform pays)",
+              "Open the payment link and pay manually. Agent will not charge."
+            ].join("\n"),
+            true
+          );
+        } else {
+          message(
+            "Platform Checkout prepared (session " +
+              body.session_id +
+              "). Open the link to pay €1.00.",
+            true
+          );
+        }
       } catch (err) {
         message(err && err.message ? err.message : String(err));
       } finally {
         btn.disabled = false;
+        btnMkt.disabled = false;
       }
-    });
+    }
+
+    btn.addEventListener("click", () => prepare("platform"));
+    btnMkt.addEventListener("click", () => prepare("marketplace"));
 
     try {
       const client = supabaseClient();
       const session = await ensureSession(client);
       if (session) {
         message(
-          "Owner session detected on havkar.online. You can prepare the EUR 1.00 Checkout.",
+          "Owner session detected. Prepare marketplace €1.02 Connect Checkout for listing " +
+            listingId +
+            ".",
           true
         );
       }

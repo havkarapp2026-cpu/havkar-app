@@ -5038,7 +5038,11 @@ export default async function handler(req, res) {
         CONFIRM_PHRASE,
         isOwnerIdentity,
         createOwnerEur1CheckoutSession,
-        retrieveOwnerEur1Session
+        createOwnerMarketplaceEur1CheckoutSession,
+        retrieveOwnerEur1Session,
+        MARKETPLACE_BUYER_USER_ID,
+        MARKETPLACE_BUYER_EMAIL,
+        MARKETPLACE_LIST_EUR
       } = require("../lib/owner-eur1-checkout.cjs");
 
       const auth = await authenticateUser(req);
@@ -5068,6 +5072,146 @@ export default async function handler(req, res) {
           ok: false,
           error: "Exact confirm phrase required.",
           required_confirm: CONFIRM_PHRASE
+        });
+      }
+
+      if (action === "owner_marketplace_eur1_prepare") {
+        const listingId = String(
+          (req.body && req.body.listing_id) || ""
+        ).trim();
+        if (!listingId) {
+          return sendError(res, 400, "listing_id is required");
+        }
+        const { data: ad, error: adError } = await getSupabaseAdmin()
+          .from("ads")
+          .select(
+            "id,title,price,currency,status,listing_surface,user_id"
+          )
+          .eq("id", listingId)
+          .maybeSingle();
+        if (adError || !ad) {
+          return sendError(res, 404, "Listing not found");
+        }
+        if (String(ad.listing_surface || "") !== "marketplace") {
+          return sendError(res, 400, "Listing is not a marketplace row");
+        }
+        if (String(ad.status || "") !== "active" && String(ad.status || "") !== "reserved") {
+          return sendError(res, 409, "Listing must be active for EUR1 probe");
+        }
+        const listPrice = Number(ad.price);
+        const currency = String(ad.currency || "EUR").toUpperCase();
+        if (currency !== "EUR" || !Number.isFinite(listPrice) || listPrice !== MARKETPLACE_LIST_EUR) {
+          return sendError(
+            res,
+            400,
+            "Marketplace EUR1 probe requires list price exactly 1.00 EUR"
+          );
+        }
+        if (String(ad.user_id) === String(MARKETPLACE_BUYER_USER_ID)) {
+          return sendError(
+            res,
+            400,
+            "Seller and designated buyer must be independent"
+          );
+        }
+        const sellerConnect = await getSupabaseAdmin()
+          .from("marketplace_seller_connect_accounts")
+          .select(
+            "stripe_account_id,charges_enabled,payouts_enabled,onboarding_status"
+          )
+          .eq("user_id", ad.user_id)
+          .maybeSingle();
+        if (
+          !sellerConnect.data ||
+          sellerConnect.data.charges_enabled !== true ||
+          !sellerConnect.data.stripe_account_id
+        ) {
+          return res.status(409).json({
+            ok: false,
+            code: "SELLER_CONNECT_REQUIRED",
+            error:
+              "Seller Connect must be charges_enabled before marketplace EUR1 checkout."
+          });
+        }
+
+        if (String(ad.status) === "active") {
+          const { data: reservedRow, error: reserveError } =
+            await getSupabaseAdmin()
+              .from("ads")
+              .update({ status: "reserved" })
+              .eq("id", ad.id)
+              .eq("status", "active")
+              .eq("listing_surface", "marketplace")
+              .select("id,status")
+              .maybeSingle();
+          if (reserveError || !reservedRow) {
+            return sendError(res, 409, "Could not reserve listing for checkout");
+          }
+        }
+
+        let prepared;
+        try {
+          prepared = await createOwnerMarketplaceEur1CheckoutSession(
+            getStripe(),
+            allowedCheckoutOrigin(req),
+            {
+              listingId: ad.id,
+              listingTitle: ad.title,
+              sellerUserId: ad.user_id,
+              connectedAccountId: sellerConnect.data.stripe_account_id,
+              buyerUserId: MARKETPLACE_BUYER_USER_ID,
+              buyerEmail: MARKETPLACE_BUYER_EMAIL
+            }
+          );
+        } catch (createErr) {
+          try {
+            await getSupabaseAdmin()
+              .from("ads")
+              .update({ status: "active" })
+              .eq("id", ad.id)
+              .eq("status", "reserved")
+              .eq("listing_surface", "marketplace");
+          } catch (_releaseErr) {
+            /* best-effort */
+          }
+          throw createErr;
+        }
+
+        const session = prepared.session;
+        const split = prepared.split;
+        const estimatedStripeFeeEur =
+          Math.round((split.buyer_pays_eur * 0.015 + 0.25) * 100) / 100;
+        return res.status(200).json({
+          ok: true,
+          mode: "marketplace_destination",
+          public_collection: marketplacePublicLivePaymentsAllowed()
+            ? "armed"
+            : "paused",
+          listing_id: String(ad.id),
+          list_price_eur: split.list_price_eur,
+          buyer_pays_eur: split.buyer_pays_eur,
+          seller_receives_eur: split.seller_receives_eur,
+          platform_commission_eur: split.platform_commission_eur,
+          buyer_fee_pct: 0.02,
+          seller_fee_pct: 0.03,
+          connected_account_id: sellerConnect.data.stripe_account_id,
+          buyer_email: MARKETPLACE_BUYER_EMAIL,
+          seller_user_id: String(ad.user_id),
+          estimated_stripe_eu_card_fee_eur: estimatedStripeFeeEur,
+          estimated_platform_net_after_stripe_eur:
+            Math.round(
+              (split.platform_commission_eur - estimatedStripeFeeEur) * 100
+            ) / 100,
+          fee_payer: "application",
+          payout_note:
+            "Connect payout to seller bank follows Stripe Express schedule (typically daily after available). No manual transfer by this prepare.",
+          session_id: session.id,
+          url: session.url,
+          expires_at: session.expires_at,
+          livemode: session.livemode === true,
+          listing_status: "reserved",
+          note:
+            "Owner-approved marketplace EUR1 Connect probe. Complete payment only on Stripe Checkout. Agent will not charge the card."
         });
       }
 
