@@ -54,12 +54,13 @@ test("tickets exposes a visible travel map host", () => {
   assert.match(tickets, /havkar-map\.js/);
 });
 
-test("jobs workplace map uses a separate picker modal", () => {
+test("jobs publish flow uses country/city + prepaid checkout", () => {
   const jobs = read("jobs.html");
-  assert.match(jobs, /id="jobLocationModal"/);
-  assert.match(jobs, /openJobLocationPicker/);
-  assert.match(jobs, /display = "none"/);
-  assert.match(jobs, /z-index:5000/);
+  assert.match(jobs, /id="jobCountry"/);
+  assert.match(jobs, /id="jobCurrencyMount"/);
+  assert.match(jobs, /action:\s*"jobs_checkout"/);
+  assert.match(jobs, /params\.get\("mine"\)/);
+  assert.match(jobs, /Remote jobs may omit a pin/);
 });
 
 test("map defaults avoid blue-ocean low zoom and support hybrid layers", () => {

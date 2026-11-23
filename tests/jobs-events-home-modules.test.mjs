@@ -8,10 +8,9 @@ assert.doesNotMatch(
   jobs,
   /function startRealPayment\([\s\S]*?await fetch\("\/api\/global-payments/
 );
-assert.match(
-  jobs,
-  /The payment gateway is not connected yet\./
-);
+assert.match(jobs, /action:\s*"jobs_checkout"/);
+assert.match(jobs, /has NOT been activated/);
+assert.match(jobs, /resumeJobPayment/);
 
 const events = fs.readFileSync("events.html", "utf8");
 assert.match(events, /supabase\.rpc\("event_interest_counts"\)/);

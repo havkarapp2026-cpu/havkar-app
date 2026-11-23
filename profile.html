@@ -349,12 +349,12 @@ button{
     left:auto;
     top:auto;
 
-    width:36px;
-    height:36px;
-    min-width:36px;
-    max-width:36px;
-    min-height:36px;
-    max-height:36px;
+    width:40px;
+    height:40px;
+    min-width:40px;
+    max-width:40px;
+    min-height:40px;
+    max-height:40px;
 
     border:3px solid white;
 
@@ -369,13 +369,15 @@ button{
     justify-content:center;
 
     cursor:pointer;
-    z-index:2;
+    z-index:20;
     padding:0;
     margin:0;
     overflow:hidden;
     font-size:0; /* icon-only; never float a text label over Settings */
     line-height:0;
     transform:none;
+    pointer-events:auto;
+    -webkit-tap-highlight-color:transparent;
 
     box-shadow:
         0 3px 9px rgba(0,0,0,.2);
@@ -5059,26 +5061,60 @@ async function syncPublicMarketplaceProfile(fields){
         avatar_url: nextAvatar
     };
 
-    const result =
+    /* Prefer update-then-insert so missing Owner profiles are created reliably. */
+    const updated =
         await supabase
             .from("profiles")
-            .upsert(
-                payload,
-                { onConflict: "id" }
-            )
+            .update({
+                full_name: payload.full_name,
+                avatar_url: payload.avatar_url
+            })
+            .eq("id", currentUser.id)
             .select("id,full_name,avatar_url")
             .maybeSingle();
 
-    if(result.error){
+    if(!updated.error && updated.data){
         return {
-            ok:false,
-            error: result.error.message || "Could not sync public profile."
+            ok:true,
+            profile: updated.data
+        };
+    }
+
+    const inserted =
+        await supabase
+            .from("profiles")
+            .insert(payload)
+            .select("id,full_name,avatar_url")
+            .maybeSingle();
+
+    if(inserted.error){
+        const upserted =
+            await supabase
+                .from("profiles")
+                .upsert(
+                    payload,
+                    { onConflict: "id" }
+                )
+                .select("id,full_name,avatar_url")
+                .maybeSingle();
+        if(upserted.error){
+            return {
+                ok:false,
+                error:
+                    upserted.error.message ||
+                    inserted.error.message ||
+                    "Could not sync public profile."
+            };
+        }
+        return {
+            ok:true,
+            profile: upserted.data || payload
         };
     }
 
     return {
         ok:true,
-        profile: result.data || payload
+        profile: inserted.data || payload
     };
 }
 
@@ -7567,11 +7603,19 @@ function(){
         );
 
 
-    if(input){
-
-        input.click();
-
+    if(!input){
+        showMessage(
+            "Photo picker is not available on this screen. Refresh Profile and try again.",
+            "error"
+        );
+        return;
     }
+
+    try{
+        input.value = "";
+    }catch(_e){}
+
+    input.click();
 
 };
 

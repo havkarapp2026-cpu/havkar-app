@@ -35,6 +35,15 @@ test("Accounts v2 recipient body requests express + application responsibilities
     true
   );
   assert.ok(body.include.includes("configuration.recipient"));
+  assert.equal(body.metadata.havkar_flow, "marketplace_connect");
+  assert.equal(body.metadata.havkar_business_url, "https://havkar.online");
+  const ownerBody = buildRecipientAccountV2CreateBody({
+    email: "havkarapp2026@gmail.com",
+    displayName: "HAVKAR Owner seller",
+    extraMetadata: { havkar_primary_owner: "true" }
+  });
+  assert.equal(ownerBody.metadata.havkar_primary_owner, "true");
+  assert.equal(ownerBody.display_name, "HAVKAR Owner seller");
 });
 
 test("connectAccountFlagsFromV2 reads transfer capability status", () => {
@@ -52,6 +61,125 @@ test("connectAccountFlagsFromV2 reads transfer capability status", () => {
   });
   assert.equal(flags.charges_enabled, false);
   assert.equal(flags.transfer_capability_status, "pending");
+});
+
+test("v1 Express fallback body requests card_payments + transfers", () => {
+  const {
+    buildExpressAccountV1CreateBody,
+    isAccountsV2PermissionError,
+    createMarketplaceConnectAccount
+  } = require("../lib/marketplace-connect.cjs");
+  const body = buildExpressAccountV1CreateBody({
+    email: "seller@example.com",
+    country: "IT",
+    displayName: "Seller",
+    extraMetadata: { havkar_primary_owner: "true" }
+  });
+  assert.equal(body.type, undefined);
+  assert.equal(body.controller.stripe_dashboard.type, "express");
+  assert.equal(body.controller.fees.payer, "application");
+  assert.equal(body.controller.losses.payments, "stripe");
+  assert.equal(body.controller.requirement_collection, "stripe");
+  assert.equal(body.country, "IT");
+  assert.equal(body.capabilities.card_payments.requested, true);
+  assert.equal(body.capabilities.transfers.requested, true);
+  assert.equal(body.metadata.havkar_account_api, "v1_express");
+  assert.equal(body.metadata.havkar_primary_owner, "true");
+  assert.equal(
+    isAccountsV2PermissionError({
+      message:
+        "Permission denied. This key lacks access to Accounts v2. You can edit permissions at https://dashboard.stripe.com/"
+    }),
+    true
+  );
+});
+
+test("retrieveMarketplaceConnectAccount falls back to v1 when v2 permission denied", async () => {
+  const { retrieveMarketplaceConnectAccount, connectOnboardingStatusFromAccount, sanitizeConnectRequirements } =
+    require("../lib/marketplace-connect.cjs");
+  const stripe = {
+    v2: {
+      core: {
+        accounts: {
+          retrieve: async () => {
+            throw new Error(
+              "Permission denied. This key lacks access to Accounts v2."
+            );
+          }
+        }
+      }
+    },
+    accounts: {
+      retrieve: async (id) => {
+        assert.equal(id, "acct_owner_live");
+        return {
+          id,
+          charges_enabled: true,
+          payouts_enabled: false,
+          details_submitted: true,
+          capabilities: { card_payments: "active", transfers: "active" },
+          requirements: {
+            currently_due: [],
+            pending_verification: ["interv_x.sanctions_review.support"],
+            disabled_reason: "other"
+          },
+          future_requirements: { currently_due: [] }
+        };
+      }
+    }
+  };
+  const retrieved = await retrieveMarketplaceConnectAccount(
+    stripe,
+    "acct_owner_live"
+  );
+  assert.equal(retrieved.api, "v1");
+  assert.equal(retrieved.account.charges_enabled, true);
+  const flags = {
+    charges_enabled: true,
+    payouts_enabled: false,
+    details_submitted: true
+  };
+  assert.equal(
+    connectOnboardingStatusFromAccount(retrieved.account, flags),
+    "pending_verification"
+  );
+  const safe = sanitizeConnectRequirements(retrieved.account);
+  assert.deepEqual(safe.pending_verification, ["sanctions_review.support"]);
+  assert.equal(safe.disabled_reason, "other");
+  assert.equal(safe.charges_enabled, true);
+  assert.equal(safe.payouts_enabled, false);
+});
+
+test("createMarketplaceConnectAccount falls back to v1 when v2 permission denied", async () => {
+  const { createMarketplaceConnectAccount } = require("../lib/marketplace-connect.cjs");
+  const stripe = {
+    v2: {
+      core: {
+        accounts: {
+          create: async () => {
+            const err = new Error(
+              "Permission denied. This key lacks access to Accounts v2."
+            );
+            throw err;
+          }
+        }
+      }
+    },
+    accounts: {
+      create: async (body) => {
+        assert.equal(body.type, undefined);
+        assert.equal(body.controller.stripe_dashboard.type, "express");
+        assert.equal(body.controller.losses.payments, "stripe");
+        return { id: "acct_v1_express_test", controller: body.controller };
+      }
+    }
+  };
+  const result = await createMarketplaceConnectAccount(stripe, {
+    email: "owner@example.com",
+    displayName: "HAVKAR Owner seller"
+  });
+  assert.equal(result.api, "v1_express");
+  assert.equal(result.id, "acct_v1_express_test");
 });
 
 test("destination Checkout params keep fee routing server-side", () => {

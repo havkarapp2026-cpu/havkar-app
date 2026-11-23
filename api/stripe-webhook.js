@@ -17,6 +17,7 @@ import {
   configErrorResponse,
   stagingIsolationFailure
 } from "../lib/stripe-runtime.cjs";
+import jobBilling from "../havkar-job-billing.js";
 
 export const config = {
   api: {
@@ -218,6 +219,74 @@ function createWebhookStore(supabase) {
         session_id: sessionId
       };
     },
+    async settleMarketplaceCharge({
+      listingId,
+      eventType,
+      outcome,
+      nextStatus,
+      chargeId,
+      paymentIntentId,
+      amount,
+      currency,
+      at
+    }) {
+      const { data: existing, error: loadError } = await supabase
+        .from("ads")
+        .select("id,status,listing_surface")
+        .eq("id", listingId)
+        .maybeSingle();
+      if (loadError) throw loadError;
+      if (!existing) {
+        return { applied: false, reason: "listing_not_found" };
+      }
+      let statusChanged = false;
+      if (
+        nextStatus &&
+        String(existing.status || "") !== String(nextStatus) &&
+        (String(existing.status) === "ended" ||
+          String(existing.status) === "disputed" ||
+          String(existing.status) === "refunded" ||
+          String(existing.status) === "active")
+      ) {
+        const { data: updated, error: updateError } = await supabase
+          .from("ads")
+          .update({ status: nextStatus })
+          .eq("id", listingId)
+          .select("id,status")
+          .maybeSingle();
+        if (updateError) throw updateError;
+        statusChanged = Boolean(
+          updated && String(updated.status) === String(nextStatus)
+        );
+      }
+      try {
+        await supabase.from("ad_audit_events").insert({
+          ad_id: listingId,
+          actor_id: null,
+          action: outcome || "marketplace_charge_event",
+          meta: {
+            stripe_event_type: eventType || null,
+            stripe_charge_id: chargeId || null,
+            stripe_payment_intent: paymentIntentId || null,
+            amount: amount == null ? null : Number(amount),
+            currency: currency || null,
+            next_status: nextStatus || null,
+            previous_status: existing.status || null,
+            status_changed: statusChanged,
+            at: at || null,
+            source: "stripe_webhook"
+          }
+        });
+      } catch (_auditErr) {
+        // Audit is best-effort after Stripe already settled the charge event.
+      }
+      return {
+        applied: true,
+        status_changed: statusChanged,
+        listing_id: listingId,
+        outcome: outcome || null
+      };
+    },
     async postFinanceJournal(built) {
       const {
         postJournalEntry
@@ -397,6 +466,52 @@ export default async function handler(req, res) {
     ) {
       const result = await processAdsBoostEvent(event, process.env);
       return res.status(200).json(result);
+    }
+
+    /* Ordinary Jobs prepaid Checkout + subscription billing events. */
+    if (jobBilling.isJobBillingEvent(event)) {
+      if (
+        !cardPaymentsAllowed() &&
+        event.livemode === true &&
+        event.type === "checkout.session.completed"
+      ) {
+        return res.status(403).json({
+          ok: false,
+          error: REAL_PAYMENTS_PAUSED_MESSAGE,
+          code: REAL_PAYMENTS_PAUSED_CODE,
+          received_event: event.type
+        });
+      }
+      if (
+        String(process.env.HAVKAR_JOB_PAYMENTS_ENABLED || "") !== "true" &&
+        event.type === "checkout.session.completed" &&
+        event.livemode === true
+      ) {
+        return res.status(403).json({
+          ok: false,
+          code: "JOBS_PAYMENTS_OFF",
+          error: "Jobs live payments are not armed.",
+          received_event: event.type
+        });
+      }
+      let jobOutcome = null;
+      if (event.type === "checkout.session.completed") {
+        jobOutcome = await jobBilling.applyVerifiedCheckoutSession({
+          supabase: supabaseRuntime.client,
+          event: event,
+          session: event.data.object
+        });
+      } else {
+        jobOutcome = await jobBilling.applyVerifiedBillingEvent({
+          supabase: supabaseRuntime.client,
+          event: event
+        });
+      }
+      return res.status(200).json({
+        received: true,
+        jobs_billing: true,
+        ...jobOutcome
+      });
     }
 
     let financeGates = null;

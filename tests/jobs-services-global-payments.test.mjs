@@ -102,4 +102,10 @@ assert.match(api, /refuseLiveCheckout/);
 const vercel = fs.readFileSync("vercel.json", "utf8");
 assert.match(vercel, /\/api\/global-payments/);
 
+assert.equal(jobBilling.ORDINARY_PLANS.Basic.placementRank, 1);
+assert.equal(jobBilling.ORDINARY_PLANS.Professional.placementRank, 2);
+assert.equal(jobBilling.ORDINARY_PLANS.Business.placementRank, 3);
+assert.ok(!String(jobBilling.ORDINARY_PLANS.Professional.benefit).includes("More visibility"));
+assert.ok(String(jobBilling.ORDINARY_PLANS.Business.benefit).toLowerCase().includes("highest"));
+
 console.log("JOBS_SERVICES_GLOBAL_PAYMENTS_TEST_OK");

@@ -529,8 +529,8 @@ body{
 
 .fab{
   position:fixed;
-  right:20px;
-  bottom:91px;
+  right:max(16px, env(safe-area-inset-right, 0px));
+  bottom:calc(91px + env(safe-area-inset-bottom, 0px));
   width:60px;
   height:60px;
   border:0;
@@ -547,8 +547,16 @@ body{
     0 7px 25px
     rgba(46,125,50,.35);
   cursor:pointer;
-  z-index:80;
+  /* Must sit above .bottom-nav (z-index:100); lower z-index blocked mobile taps. */
+  z-index:220;
+  pointer-events:auto;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
   transition:.2s;
+}
+
+.fab i{
+  pointer-events:none;
 }
 
 .fab:hover{
@@ -560,6 +568,19 @@ body{
 
 .fab:active{
   transform:scale(.93);
+}
+
+.jobs-publish-tip{
+  margin:0 0 14px;
+  max-width:720px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(46,125,50,.22);
+  background:linear-gradient(180deg, #f3faf4 0%, #eaf6ec 100%);
+  color:#1b5e20;
+  font-size:12.5px;
+  line-height:1.45;
+  font-weight:600;
 }
 
 /* =========================================================
@@ -1148,7 +1169,8 @@ a.primary{
   }
 
   .fab{
-    bottom:98px;
+    bottom:calc(98px + env(safe-area-inset-bottom, 0px));
+    z-index:220;
   }
 }
 
@@ -1195,6 +1217,85 @@ a.primary{
   }
 }
 
+
+/* ===== Jobs professional wizard ===== */
+.jobs-wizard-steps{
+  display:flex;
+  gap:8px;
+  margin:0 0 16px;
+  padding:0;
+  list-style:none;
+}
+.jobs-wizard-steps li{
+  flex:1;
+  text-align:center;
+  font-size:12px;
+  font-weight:700;
+  color:#6a7a6e;
+  padding:10px 6px;
+  border-radius:12px;
+  background:#f3f6f4;
+  border:1px solid #e0ebe2;
+}
+.jobs-wizard-steps li.active{
+  color:#1b5e20;
+  background:linear-gradient(180deg,#f3faf4,#e8f5e9);
+  border-color:rgba(46,125,50,.35);
+}
+.jobs-wizard-steps li.done{
+  color:#2e7d32;
+  border-color:#a5d6a7;
+}
+.jobs-wizard-pane{display:none}
+.jobs-wizard-pane.active{display:block}
+.jobs-wizard-nav{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:16px;
+}
+.jobs-wizard-nav .primary,
+.jobs-wizard-nav .secondary{
+  flex:1 1 140px;
+  min-height:48px;
+  font-size:16px;
+}
+.jobs-filter-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin:10px 0 0;
+}
+.jobs-filter-row input,
+.jobs-filter-row select{
+  width:100%;
+  min-height:44px;
+  border:1px solid #cfd8d1;
+  border-radius:12px;
+  padding:0 12px;
+  box-sizing:border-box;
+  font:inherit;
+}
+.jobs-review-card{
+  border:1px solid #d7e6db;
+  border-radius:14px;
+  background:#f8fbf8;
+  padding:12px 14px;
+  margin:10px 0;
+  font-size:14px;
+  line-height:1.45;
+}
+.jobs-review-card dt{color:#567;font-size:12px;margin-top:8px}
+.jobs-review-card dd{margin:2px 0 0;font-weight:600;color:#123}
+body.jobs-rtl .modal-box,
+body.jobs-rtl .hero-inner,
+body.jobs-rtl .section-header{direction:rtl;text-align:right}
+@media (max-width:768px){
+  .jobs-filter-row{grid-template-columns:1fr}
+  .plans{grid-template-columns:1fr !important}
+  .modal-box{max-width:100%;width:100%;margin:0;border-radius:16px 16px 0 0}
+}
+
 </style>
 </head>
 
@@ -1218,7 +1319,7 @@ a.primary{
 
     </button>
 
-    <h1>Jobs</h1>
+    <h1 id="jobsPageTitle">Jobs</h1>
 
   </div>
 
@@ -1237,8 +1338,29 @@ a.primary{
     <button
       class="icon-btn"
       type="button"
+      onclick="openCompaniesPanel()"
+      aria-label="Companies" id="fabCompaniesBtn"
+      title="Companies">
+      <i class="fas fa-building"></i>
+    </button>
+
+    <button
+      class="icon-btn"
+      type="button"
+      onclick="openMyApplications()"
+      aria-label="My Applications"
+      id="fabMyApplicationsBtn"
+      title="My Applications">
+      <i class="fas fa-file-alt"></i>
+    </button>
+
+    <button
+      class="icon-btn"
+      type="button"
       onclick="openMyJobs()"
-      aria-label="My Jobs">
+      aria-label="My Jobs"
+      id="fabMyJobsBtn"
+      title="My Jobs">
 
       <i class="fas fa-briefcase"></i>
 
@@ -1314,6 +1436,12 @@ a.primary{
 
     </div>
 
+    <div class="jobs-filter-row">
+      <input id="filterCountry" type="search" autocomplete="country-name" placeholder="Country" aria-label="Filter by country">
+      <input id="filterCity" type="search" autocomplete="address-level2" placeholder="City" aria-label="Filter by city">
+      <input id="filterCategory" type="search" autocomplete="off" placeholder="Category" aria-label="Filter by category">
+    </div>
+
   </div>
 
 </section>
@@ -1370,6 +1498,14 @@ a.primary{
 
   </div>
 
+  <p
+    class="jobs-publish-tip"
+    id="jobsPublishTip"
+    data-i18n="jobs.publishTip"
+    role="note">
+    Job listings go live after the publishing fee is paid and the transaction is confirmed. HAVKAR connects employers with job seekers.
+  </p>
+
 <div id="jobsList"></div>
 
 </main>
@@ -1380,11 +1516,12 @@ a.primary{
 
 <button
   class="fab"
+  id="jobsPostFab"
   type="button"
-  onclick="openPostJob()"
-  aria-label="Post a job">
+  aria-label="Post a job"
+  onclick="openPostJob(event)">
 
-  <i class="fas fa-plus"></i>
+  <i class="fas fa-plus" aria-hidden="true"></i>
 
 </button>
 
@@ -1446,7 +1583,7 @@ a.primary{
 </div>
 
 <!-- =======================================================
-     POST JOB MODAL
+     POST JOB MODAL — 3-step wizard
      ======================================================= -->
 
 <div class="modal" id="postModal">
@@ -1454,282 +1591,213 @@ a.primary{
   <div class="modal-box">
 
     <div class="modal-head">
-
-      <h2>
-        Post a Job
-      </h2>
-
-      <button
-        class="close"
-        type="button"
-        onclick="closeModal('postModal')">
-        ×
-      </button>
-
+      <h2 id="postModalTitle">Post a job</h2>
+      <button class="close" type="button" onclick="closeModal('postModal')">×</button>
     </div>
 
+    <ol class="jobs-wizard-steps" aria-label="Posting steps">
+      <li id="jobsStepLabel1" class="active" data-step="1">Listing details</li>
+      <li id="jobsStepLabel2" data-step="2">Choose plan</li>
+      <li id="jobsStepLabel3" data-step="3">Review &amp; pay</li>
+    </ol>
+
+    <!-- STEP 1 -->
+    <div class="jobs-wizard-pane active" id="jobsWizardStep1" data-step="1">
+
     <div class="form-group">
-
-      <label>
-        Advertisement image / Company logo
-      </label>
-
-      <div
-        class="image-upload"
-        onclick="document.getElementById('jobImage').click()">
-
+      <label data-jobs-i18n="lblImage">Advertisement image / Company logo</label>
+      <div class="image-upload" onclick="document.getElementById('jobImage').click()">
         <i class="fas fa-cloud-arrow-up"></i>
-
-        <strong>
-          Add an image
-        </strong>
-
-        <span>
-          Upload a professional image for your advertisement
-        </span>
-
+        <strong data-jobs-i18n="addImage">Add an image</strong>
+        <span data-jobs-i18n="addImageHint">Upload a professional image for your advertisement</span>
       </div>
-
       <input id="jobImage" type="file" accept="image/*">
-
       <div id="imagePreview" class="image-preview">
-
-        <img
-          id="imagePreviewImg"
-          src=""
-          alt="Advertisement preview"
-        >
-
-        <button
-          type="button"
-          class="remove-image"
-          onclick="removeJobImage(event)">
-          ×
-        </button>
-
+        <img id="imagePreviewImg" src="" alt="Advertisement preview">
+        <button type="button" class="remove-image" onclick="removeJobImage(event)">×</button>
       </div>
-
-      <div class="upload-note">
-        Recommended: company logo, workplace photo
-        or professional advertisement image.
-      </div>
-
+      <div class="upload-note" data-jobs-i18n="addImageNote">Recommended: company logo, workplace photo or professional advertisement image.</div>
     </div>
 
     <div class="form-group">
-      <label>Job title *</label>
-      <input
-        id="jobTitle"
-        type="text"
-        maxlength="120"
-        placeholder="Example: Pizza Chef"
-      >
+      <label for="jobTitle" data-jobs-i18n="lblTitle">Job title *</label>
+      <input id="jobTitle" type="text" maxlength="120" data-jobs-ph="phTitle" placeholder="Example: Pizza Chef">
     </div>
 
     <div class="form-group">
-      <label>Company / Business *</label>
-      <input
-        id="jobCompany"
-        type="text"
-        maxlength="120"
-        placeholder="Company name"
-      >
+      <label for="jobCompany" data-jobs-i18n="lblCompany">Employer / Company *</label>
+      <input id="jobCompany" type="text" maxlength="120" data-jobs-ph="phCompany" placeholder="Company name">
     </div>
 
     <div class="form-group">
-      <label>Country</label>
+      <label for="jobCountry" data-jobs-i18n="lblCountry">Country</label>
       <select id="jobCountry" aria-label="Country">
         <option value="">Select country</option>
       </select>
     </div>
 
     <div class="form-group">
-      <label>City</label>
-      <input
-        id="jobCity"
-        type="text"
-        maxlength="120"
-        placeholder="City"
-      >
+      <label for="jobCity" data-jobs-i18n="lblCity">City</label>
+      <input id="jobCity" type="text" maxlength="120" data-jobs-ph="phCity" placeholder="City">
     </div>
 
     <div class="form-group">
-      <label>Workplace location *</label>
-      <input
-        id="jobLocation"
-        type="text"
-        maxlength="160"
-        placeholder="Address or workplace (optional detail)"
-      >
-      <div class="upload-note">
-        Enter Country, City, and workplace address. Map picker is not used on this page.
-      </div>
+      <label for="jobLocation" data-jobs-i18n="lblLocation">Workplace location *</label>
+      <input id="jobLocation" type="text" maxlength="160" data-jobs-ph="phLocation" placeholder="Address or workplace (optional detail)">
+      <div class="upload-note" data-jobs-i18n="locationNote">Enter Country, City, and workplace address.</div>
     </div>
 
     <div class="form-group">
-
-      <label>Job type</label>
-
+      <label for="jobType" data-jobs-i18n="lblType">Employment type</label>
       <select id="jobType">
         <option value="Full-time">Full-time</option>
         <option value="Part-time">Part-time</option>
         <option value="Remote">Remote</option>
-        <option value="Freelance">Freelance</option>
         <option value="Contract">Contract</option>
+        <option value="Freelance">Freelance</option>
       </select>
-
     </div>
 
     <div class="form-group">
-      <label>Salary / Payment</label>
-      <input
-        id="jobSalary"
-        type="text"
-        maxlength="100"
-        placeholder="Example: €1,800/month"
-      >
-      <label for="jobCurrency" style="margin-top:10px;display:block">Display currency</label>
+      <label for="jobSalary" data-jobs-i18n="lblSalary">Salary / Payment</label>
+      <input id="jobSalary" type="text" maxlength="100" data-jobs-ph="phSalary" placeholder="Example: €1,800/month">
+      <label for="jobCurrency" style="margin-top:10px;display:block" data-jobs-i18n="lblSalaryCurrency">Salary currency (display only)</label>
       <input type="hidden" id="jobCurrency" value="EUR">
-      <div id="jobCurrencyMount" data-havkar-currency-mount="1"></div>
-      <p style="margin:6px 0 0;font-size:.82rem;color:#567">133 fiat display codes + separate XLM. Display currency is not a payment guarantee.</p>
+      <div id="jobCurrencyMount" class="notranslate" translate="no" data-havkar-currency-mount="1" data-i18n-ignore="1"></div>
+      <p id="salaryCurrencyNote" class="upload-note">Salary currency is for display only. The publishing fee is paid in EUR (Stripe) or XLM.</p>
     </div>
 
     <div class="form-group">
-      <label>Skills</label>
-      <input
-        id="jobSkills"
-        type="text"
-        maxlength="250"
-        placeholder="Pizza, Cooking, Italian"
-      >
+      <label for="jobSkills" data-jobs-i18n="lblSkills">Skills</label>
+      <input id="jobSkills" type="text" maxlength="250" data-jobs-ph="phSkills" placeholder="Pizza, Cooking, Italian">
     </div>
 
     <div class="form-group">
-      <label>Job description *</label>
-      <textarea
-        id="jobDescription"
-        maxlength="3000"
-        placeholder="Describe the job, requirements and conditions..."
-      ></textarea>
+      <label for="jobDescription" data-jobs-i18n="lblDesc">Job description *</label>
+      <textarea id="jobDescription" maxlength="3000" data-jobs-ph="phDesc" placeholder="Describe the job, requirements and conditions..."></textarea>
     </div>
 
     <div class="form-group">
-      <label>Requirements</label>
-      <textarea
-        id="jobRequirements"
-        maxlength="3000"
-        placeholder="Experience, language, or schedule"
-      ></textarea>
+      <label for="jobRequirements" data-jobs-i18n="lblReq">Hiring requirements</label>
+      <textarea id="jobRequirements" maxlength="3000" data-jobs-ph="phReq" placeholder="Experience, language, or schedule"></textarea>
     </div>
 
     <div class="form-group">
-      <label>Application link</label>
-      <input
-        id="jobApplicationUrl"
-        type="url"
-        maxlength="500"
-        placeholder="https://example.com/apply"
-        autocomplete="off"
-      >
+      <label for="jobApplicationUrl" data-jobs-i18n="lblApplyUrl">Application link</label>
+      <input id="jobApplicationUrl" type="url" maxlength="500" data-jobs-ph="phApplyUrl" placeholder="https://example.com/apply" autocomplete="off">
     </div>
 
     <div class="form-group">
-      <label>Contact email or phone</label>
-      <input
-        id="jobContact"
-        type="text"
-        maxlength="200"
-        placeholder="name@company.com or phone number"
-        autocomplete="off"
-      >
+      <label for="jobContact" data-jobs-i18n="lblContact">Contact email or phone</label>
+      <input id="jobContact" type="text" maxlength="200" data-jobs-ph="phContact" placeholder="name@company.com or phone number" autocomplete="off">
     </div>
 
-    <div class="plan-title">
-      Choose a 30-day prepaid listing plan
     </div>
+
+    <!-- STEP 2 -->
+    <div class="jobs-wizard-pane" id="jobsWizardStep2" data-step="2">
+
+    <div class="plan-title" id="jobsPlanTitle">Choose a 30-day prepaid listing plan</div>
+    <p class="upload-note" id="jobsCorpNote">Corporate monthly plans are managed in the Companies panel. Ordinary listings use the prepaid plans below.</p>
+    <p class="upload-note" id="jobsPlanDiffNote">All ordinary plans share the same 30-day prepaid activation. The real difference today is the fee tier and list placement order.</p>
 
     <div class="plans">
-
-      <div
-        class="plan selected"
-        data-price="9.99"
-        data-plan="Basic"
-        onclick="selectPlan(this)">
-
-        <strong>Basic — €9.99 / 30 days</strong>
-
-        <span>
-          For small businesses and one active job. One-time prepaid listing window.
-        </span>
-
+      <div class="plan selected" data-price="9.99" data-plan="Basic" data-billing="one_time_prepaid" onclick="selectPlan(this)">
+        <strong id="planBasicTitle">Basic — €9.99 / 30 days</strong>
+        <span data-jobs-plan-feat="basic">30-day prepaid public listing after confirmed payment. Standard placement in the Jobs list. No auto-renew.</span>
       </div>
-
-      <div
-        class="plan"
-        data-price="19.99"
-        data-plan="Professional"
-        onclick="selectPlan(this)">
-
-        <strong>Professional — €19.99 / 30 days</strong>
-
-        <span>
-          More visibility and multiple active jobs. One-time prepaid listing window.
-        </span>
-
+      <div class="plan" data-price="19.99" data-plan="Professional" data-billing="one_time_prepaid" onclick="selectPlan(this)">
+        <strong id="planProTitle">Professional — €19.99 / 30 days</strong>
+        <span data-jobs-plan-feat="pro">30-day prepaid public listing after confirmed payment. Higher placement than Basic (sorted by prepaid fee). No auto-renew.</span>
       </div>
-
-      <div
-        class="plan"
-        data-price="39.99"
-        data-plan="Business"
-        onclick="selectPlan(this)">
-
-        <strong>Business — €39.99 / 30 days</strong>
-
-        <span>
-          For businesses with regular recruitment. One-time prepaid listing window.
-        </span>
-
+      <div class="plan" data-price="39.99" data-plan="Business" data-billing="one_time_prepaid" onclick="selectPlan(this)">
+        <strong id="planBizTitle">Business (ordinary) — €39.99 / 30 days</strong>
+        <span data-jobs-plan-feat="biz">30-day prepaid public listing after confirmed payment. Highest placement among ordinary prepaid plans. No auto-renew.</span>
       </div>
-
     </div>
 
     <div class="summary">
+      <strong id="jobsFeeLabel">Publishing fee (EUR)</strong><br>
+      <span id="jobsPlanNameLabel">Plan</span>: <span id="selectedPlanName">Basic</span><br>
+      <span id="jobsAmountLabel">Amount</span>: €<span id="selectedPlanPrice">9.99</span>
+    </div>
 
-      <strong>
-        30-day prepaid listing fee
-      </strong>
-
-      <br>
-
-      Plan:
-      <span id="selectedPlanName">Basic</span>
-
-      <br>
-
-      Amount:
-      €<span id="selectedPlanPrice">9.99</span>
+    <p class="upload-note">
+      <button type="button" class="secondary" id="jobsOpenCompaniesBtn" onclick="openCompaniesPanel()" style="min-height:44px">
+        <i class="fas fa-building"></i> Open Companies panel (verified monthly plans)
+      </button>
+    </p>
 
     </div>
 
-    <div class="notice">
-      Your job will remain
-      <strong>Pending payment</strong>
-      until a real payment provider confirms the prepaid listing fee. This is not an automatic monthly subscription.
+    <!-- STEP 3 -->
+    <div class="jobs-wizard-pane" id="jobsWizardStep3" data-step="3">
+      <h3 id="jobsReviewTitle" style="margin:0 0 8px;font-size:16px">Review your listing</h3>
+      <div id="jobsReviewCard" class="jobs-review-card"></div>
+      <div class="notice" id="jobsStep3Notice">
+        Your job stays <strong>Pending payment</strong> until Stripe or XLM confirms the prepaid fee on the server. Duplicate charges are blocked.
+      </div>
     </div>
 
-    <button
-      class="primary"
-      type="button"
-      onclick="submitJob()">
-
-      <i class="fas fa-arrow-right"></i>
-      Continue to payment
-
-    </button>
+    <div class="jobs-wizard-nav">
+      <button id="jobsWizardBack" class="secondary" type="button" onclick="jobsWizardBack()" hidden>Back</button>
+      <button id="jobsSaveDraftBtn" class="secondary" type="button" onclick="saveJobsLocalDraft()">Save draft</button>
+      <button id="jobsWizardNext" class="primary" type="button" onclick="jobsWizardNext()">
+        <i class="fas fa-arrow-right"></i> Continue
+      </button>
+    </div>
 
   </div>
+</div>
 
+<!-- =======================================================
+     COMPANIES PANEL (separate from ordinary posting)
+     ======================================================= -->
+
+<div class="modal" id="companiesModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2 id="companiesModalTitle">Companies</h2>
+      <button class="close" type="button" onclick="closeModal('companiesModal')">×</button>
+    </div>
+
+    <p class="upload-note" id="companyVerificationNote">
+      Corporate plans require a verified company. Self-registration stays unverified until HAVKAR Owner/staff confirms it.
+      Auto-renew is Stripe Subscription only (XLM cannot renew monthly).
+    </p>
+    <div id="companyStatusPanel" class="notice" style="margin-bottom:12px">
+      Sign in to load your company verification status.
+    </div>
+    <div class="field">
+      <label for="companyLegalName" id="jobsCorpRegLabel">Register company legal name</label>
+      <input id="companyLegalName" type="text" maxlength="200" autocomplete="organization" placeholder="Legal company name">
+      <button class="secondary" type="button" id="jobsCorpSubmitBtn" onclick="registerJobCompany()" style="margin-top:8px;min-height:44px">
+        Submit company for verification
+      </button>
+    </div>
+
+    <div class="plan-title" id="jobsCorpMonthlyTitle" style="margin-top:18px">Verified company — monthly subscription</div>
+    <div class="plans" id="corporatePlans">
+      <div class="plan" data-corporate="business" data-price="49.99" onclick="selectCorporatePlan(this)">
+        <strong data-jobs-i18n="corpBiz">Business — €49.99 / month</strong>
+        <span data-jobs-i18n="corpBizFeat">Verified company. Auto-renew monthly. Up to 10 active job ads.</span>
+      </div>
+      <div class="plan" data-corporate="business_plus" data-price="99.99" onclick="selectCorporatePlan(this)">
+        <strong data-jobs-i18n="corpPlus">Business Plus — €99.99 / month</strong>
+        <span data-jobs-i18n="corpPlusFeat">Verified company. Auto-renew monthly. Up to 30 active job ads.</span>
+      </div>
+      <div class="plan" data-corporate="enterprise" data-price="199.99" onclick="selectCorporatePlan(this)">
+        <strong data-jobs-i18n="corpEnt">Enterprise — €199.99 / month</strong>
+        <span data-jobs-i18n="corpEntFeat">Verified company. Auto-renew monthly. Up to 100 active job ads.</span>
+      </div>
+    </div>
+    <button class="secondary" type="button" id="jobsCorpQuoteBtn" onclick="quoteCorporateSubscription()" style="margin-top:10px;min-height:44px;width:100%">
+      Quote corporate subscription
+    </button>
+    <button class="primary" type="button" id="jobsCorpStartBtn" onclick="startCorporateSubscriptionCheckout()" style="margin-top:8px;min-height:48px;width:100%">
+      Start corporate Stripe subscription
+    </button>
+  </div>
 </div>
 
 <!-- =======================================================
@@ -1742,8 +1810,8 @@ a.primary{
 
     <div class="modal-head">
 
-      <h2>
-        Monthly subscription
+      <h2 id="paymentModalTitle">
+        Prepaid listing (30 days)
       </h2>
 
       <button
@@ -1771,9 +1839,7 @@ a.primary{
 
     <div class="modal-head">
 
-      <h2>
-        Saved Jobs
-      </h2>
+      <h2 id="savedJobsTitle">Saved Jobs</h2>
 
       <button
         class="close"
@@ -1800,9 +1866,7 @@ a.primary{
 
     <div class="modal-head">
 
-      <h2>
-        My Jobs
-      </h2>
+      <h2 id="myJobsTitle">My Jobs</h2>
 
       <button
         class="close"
@@ -1829,9 +1893,7 @@ a.primary{
 
     <div class="modal-head">
 
-      <h2>
-        Edit job
-      </h2>
+      <h2 id="editJobModalTitle" data-jobs-i18n="editJobTitle">Edit job</h2>
 
       <button
         class="close"
@@ -1844,7 +1906,7 @@ a.primary{
 
     <div class="form-group">
 
-      <label>
+      <label data-jobs-i18n="lblImage">
         Advertisement image / Company logo
       </label>
 
@@ -1854,7 +1916,7 @@ a.primary{
 
         <i class="fas fa-cloud-arrow-up"></i>
 
-        <strong>
+        <strong data-jobs-i18n="changeImage">
           Change image
         </strong>
 
@@ -1882,22 +1944,22 @@ a.primary{
     </div>
 
     <div class="form-group">
-      <label>Job title *</label>
+      <label data-jobs-i18n="lblTitle">Job title *</label>
       <input id="editJobTitle" type="text" maxlength="120">
     </div>
 
     <div class="form-group">
-      <label>Company / Business *</label>
+      <label data-jobs-i18n="lblCompany">Company / Business *</label>
       <input id="editJobCompany" type="text" maxlength="120">
     </div>
 
     <div class="form-group">
-      <label>Location *</label>
+      <label data-jobs-i18n="lblLocation">Location *</label>
       <input id="editJobLocation" type="text" maxlength="120">
     </div>
 
     <div class="form-group">
-      <label>Job type</label>
+      <label data-jobs-i18n="lblType">Job type</label>
       <select id="editJobType">
         <option value="Full-time">Full-time</option>
         <option value="Part-time">Part-time</option>
@@ -1908,36 +1970,36 @@ a.primary{
     </div>
 
     <div class="form-group">
-      <label>Salary / Payment</label>
+      <label data-jobs-i18n="lblSalary">Salary / Payment</label>
       <input id="editJobSalary" type="text" maxlength="100">
     </div>
 
     <div class="form-group">
-      <label>Skills</label>
+      <label data-jobs-i18n="lblSkills">Skills</label>
       <input id="editJobSkills" type="text" maxlength="250">
     </div>
 
     <div class="form-group">
-      <label>Job description *</label>
+      <label data-jobs-i18n="lblDesc">Job description *</label>
       <textarea id="editJobDescription" maxlength="3000"></textarea>
     </div>
 
     <div class="form-group">
-      <label>Requirements</label>
+      <label data-jobs-i18n="lblReq">Requirements</label>
       <textarea id="editJobRequirements" maxlength="3000"></textarea>
     </div>
 
     <div class="form-group">
-      <label>Application link</label>
+      <label data-jobs-i18n="lblApplyUrl">Application link</label>
       <input id="editJobApplicationUrl" type="url" maxlength="500" autocomplete="off">
     </div>
 
     <div class="form-group">
-      <label>Contact email or phone</label>
+      <label data-jobs-i18n="lblContact">Contact email or phone</label>
       <input id="editJobContact" type="text" maxlength="200" autocomplete="off">
     </div>
 
-    <div class="notice">
+    <div class="notice" data-jobs-i18n="editNotice">
       Editing does not activate an unpaid listing.
       Payment status, plan, and fee stay unchanged.
     </div>
@@ -1948,7 +2010,7 @@ a.primary{
       type="button"
       onclick="saveJobEdit()">
 
-      Save changes
+      <span data-jobs-i18n="saveChanges">Save changes</span>
 
     </button>
 
@@ -1960,6 +2022,7 @@ a.primary{
 
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-jobs.js"></script>
+<script src="/havkar-job-applications.js"></script>
 <script src="/havkar-xlm-checkout.js"></script>
 <script>
 
@@ -2264,17 +2327,37 @@ function renderJobs(){
       ? locationInput.value.trim()
       : "";
 
-  const filtered =
+  const countryFilter =
+    ((document.getElementById("filterCountry") || {}).value || "").trim();
+  const cityFilter =
+    ((document.getElementById("filterCity") || {}).value || "").trim();
+  const categoryFilter =
+    ((document.getElementById("filterCategory") || {}).value || "").trim();
+
+  let filtered =
     window.HAVKAR_JOBS
       ? window.HAVKAR_JOBS.filterJobs(jobs, {
           filter: selectedFilter,
           query: search,
-          location: location
+          location: location,
+          country: countryFilter,
+          city: cityFilter,
+          category: categoryFilter
         })
       : jobs.filter(job =>
           selectedFilter === "All" ||
           job.type === selectedFilter
         );
+
+  /* Ordinary prepaid differentiation: higher confirmed fee → higher list placement. */
+  filtered = filtered.slice().sort(function(a, b){
+    const feeA = Number(a && a.monthly_fee) || 0;
+    const feeB = Number(b && b.monthly_fee) || 0;
+    if(feeB !== feeA) return feeB - feeA;
+    const ta = Date.parse(a && a.created_at) || 0;
+    const tb = Date.parse(b && b.created_at) || 0;
+    return tb - ta;
+  });
 
   const resultCount =
     document.getElementById(
@@ -2282,13 +2365,8 @@ function renderJobs(){
     );
 
   if(resultCount){
-
     resultCount.textContent =
-      `${filtered.length} ${
-        filtered.length === 1
-          ? "job"
-          : "jobs"
-      }`;
+      filtered.length + " " + jobsT("jobsCount", "jobs");
   }
 
   if(!filtered.length){
@@ -2304,11 +2382,11 @@ function renderJobs(){
         </div>
 
         <strong>
-          No jobs found
+          ${escapeHTML(jobsT("noJobsFound", "No jobs found"))}
         </strong>
 
         <p>
-          Try another keyword or change the job filter.
+          ${escapeHTML(jobsT("noJobsHint", "Try another keyword or change the job filter."))}
         </p>
 
       </div>
@@ -2802,7 +2880,7 @@ function jobStatusHTML(job){
     return `
       <span class="status-badge status-active">
         <i class="fas fa-check-circle"></i>
-        Active
+        ${escapeHTML(jobsT("statusActive", "Active"))}
       </span>
     `;
   }
@@ -2811,7 +2889,7 @@ function jobStatusHTML(job){
     return `
       <span class="status-badge status-pending">
         <i class="fas fa-clock"></i>
-        Expired
+        ${escapeHTML(jobsT("statusExpired", "Expired"))}
       </span>
     `;
   }
@@ -2820,7 +2898,7 @@ function jobStatusHTML(job){
     return `
       <span class="status-badge status-pending">
         <i class="fas fa-clock"></i>
-        Pending payment
+        ${escapeHTML(jobsT("statusPending", "Pending payment"))}
       </span>
     `;
   }
@@ -2828,7 +2906,7 @@ function jobStatusHTML(job){
   return `
     <span class="status-badge status-pending">
       <i class="fas fa-clock"></i>
-      Not active
+      ${escapeHTML(jobsT("statusInactive", "Not active"))}
     </span>
   `;
 }
@@ -2870,7 +2948,7 @@ function renderApplicationAction(job){
       `
       : "";
 
-  return `
+  const external = `
     <a
       class="primary"
       href="${escapeHTML(action.href)}"
@@ -2880,24 +2958,368 @@ function renderApplicationAction(job){
     </a>
     ${detail}
   `;
+
+  const inAppApply = `
+    <div class="field" style="margin-top:14px">
+      <label for="inAppCoverLetter" data-jobs-i18n="applyOnHavkar">Apply on HAVKAR</label>
+      <textarea id="inAppCoverLetter" rows="4" maxlength="4000" placeholder="Short cover note (required)"></textarea>
+      <button
+        class="secondary"
+        type="button"
+        style="margin-top:8px"
+        onclick="submitInAppApplication('${escapeJS(job.id)}')">
+        Submit application
+      </button>
+    </div>
+  `;
+
+  const ownerApps =
+    job.owner === true
+      ? `
+    <button
+      class="secondary"
+      type="button"
+      style="margin-top:8px"
+      onclick="viewJobApplications('${escapeJS(job.id)}')">
+      View applications
+    </button>
+  `
+      : "";
+
+  return external + inAppApply + ownerApps;
 }
 
 /* =========================================================
    OPEN POST JOB
    ========================================================= */
 
-async function openPostJob(){
+
+/* =========================================================
+   3-STEP POST WIZARD + LOCAL DRAFT
+   ========================================================= */
+
+function jobsT(key, fallback){
+  try{
+    if(window.HAVKAR_JOBS_I18N && typeof window.HAVKAR_JOBS_I18N.t === "function"){
+      var v = window.HAVKAR_JOBS_I18N.t(key);
+      if(v && v !== key) return v;
+    }
+  }catch(_e){}
+  return fallback != null ? fallback : key;
+}
+function jobsAlert(key, fallback){
+  alert(jobsT(key, fallback));
+}
+function jobsPlanDisplayName(planName){
+  var n = String(planName || "");
+  if(n === "Basic") return jobsT("planBasicShort", "Basic");
+  if(n === "Professional") return jobsT("planProShort", "Professional");
+  if(n === "Business") return jobsT("planBizShort", "Business");
+  return n;
+}
+
+
+var jobsWizardStep = 1;
+var JOBS_DRAFT_KEY = "havkar_jobs_post_draft_v1";
+
+function jobsWizardSetStep(step){
+  jobsWizardStep = Math.max(1, Math.min(3, Number(step) || 1));
+  document.querySelectorAll(".jobs-wizard-pane").forEach(function(pane){
+    pane.classList.toggle("active", Number(pane.getAttribute("data-step")) === jobsWizardStep);
+  });
+  document.querySelectorAll(".jobs-wizard-steps li").forEach(function(li){
+    var n = Number(li.getAttribute("data-step"));
+    li.classList.toggle("active", n === jobsWizardStep);
+    li.classList.toggle("done", n < jobsWizardStep);
+  });
+  var back = document.getElementById("jobsWizardBack");
+  var next = document.getElementById("jobsWizardNext");
+  if(back) back.hidden = jobsWizardStep <= 1;
+  if(next){
+    var t = (window.HAVKAR_JOBS_I18N && window.HAVKAR_JOBS_I18N.t) ? window.HAVKAR_JOBS_I18N.t.bind(window.HAVKAR_JOBS_I18N) : function(k){return k;};
+    if(jobsWizardStep >= 3){
+      next.innerHTML = '<i class="fas fa-lock"></i> ' + jobsT("continuePay", "Continue to payment");
+      next.setAttribute("data-mode", "submit");
+    }else{
+      next.innerHTML = '<i class="fas fa-arrow-right"></i> ' + (t("next") || "Continue");
+      next.setAttribute("data-mode", "next");
+    }
+  }
+  if(jobsWizardStep === 3){
+    renderJobsReviewCard();
+  }
+  try{
+    if(window.HAVKAR_JOBS_I18N) window.HAVKAR_JOBS_I18N.applyJobsChrome();
+  }catch(_e){}
+}
+
+function collectJobsWizardDraft(){
+  var countryEl = document.getElementById("jobCountry");
+  return {
+    title: (document.getElementById("jobTitle") || {}).value || "",
+    company: (document.getElementById("jobCompany") || {}).value || "",
+    country: countryEl ? countryEl.value : "",
+    city: (document.getElementById("jobCity") || {}).value || "",
+    location: (document.getElementById("jobLocation") || {}).value || "",
+    type: (document.getElementById("jobType") || {}).value || "Full-time",
+    salary: (document.getElementById("jobSalary") || {}).value || "",
+    currency: (document.getElementById("jobCurrency") || {}).value || "EUR",
+    skills: (document.getElementById("jobSkills") || {}).value || "",
+    description: (document.getElementById("jobDescription") || {}).value || "",
+    requirements: (document.getElementById("jobRequirements") || {}).value || "",
+    application_url: (document.getElementById("jobApplicationUrl") || {}).value || "",
+    contact: (document.getElementById("jobContact") || {}).value || "",
+    plan: (selectedPlan && selectedPlan.name) || "Basic",
+    price: (selectedPlan && selectedPlan.price) || 9.99,
+    image: selectedJobImage || "",
+    savedAt: Date.now()
+  };
+}
+
+function applyJobsWizardDraft(draft){
+  if(!draft || typeof draft !== "object") return;
+  var set = function(id, val){
+    var el = document.getElementById(id);
+    if(el && val != null) el.value = val;
+  };
+  set("jobTitle", draft.title);
+  set("jobCompany", draft.company);
+  set("jobCountry", draft.country);
+  set("jobCity", draft.city);
+  set("jobLocation", draft.location);
+  set("jobType", draft.type);
+  set("jobSalary", draft.salary);
+  set("jobCurrency", draft.currency || "EUR");
+  set("jobSkills", draft.skills);
+  set("jobDescription", draft.description);
+  set("jobRequirements", draft.requirements);
+  set("jobApplicationUrl", draft.application_url);
+  set("jobContact", draft.contact);
+  if(draft.plan){
+    selectedPlan = { name: draft.plan, price: Number(draft.price) || 9.99 };
+    var planEl = document.querySelector('.plan[data-plan="' + draft.plan + '"]');
+    if(planEl) selectPlan(planEl);
+    else {
+      var nameEl = document.getElementById("selectedPlanName");
+      var priceEl = document.getElementById("selectedPlanPrice");
+      if(nameEl) nameEl.textContent = selectedPlan.name;
+      if(priceEl) priceEl.textContent = String(selectedPlan.price);
+    }
+  }
+  if(draft.image){
+    selectedJobImage = draft.image;
+    var prev = document.getElementById("imagePreview");
+    var img = document.getElementById("imagePreviewImg");
+    if(prev && img){
+      img.src = draft.image;
+      prev.classList.add("show");
+    }
+  }
+  if(draft.currency && window.__jobsSalaryCurrencySelect && window.__jobsSalaryCurrencySelect.setCurrency){
+    window.__jobsSalaryCurrencySelect.setCurrency(draft.currency);
+  }
+}
+
+function saveJobsLocalDraft(){
+  try{
+    localStorage.setItem(JOBS_DRAFT_KEY, JSON.stringify(collectJobsWizardDraft()));
+    var msg = (window.HAVKAR_JOBS_I18N && window.HAVKAR_JOBS_I18N.t("draftSaved")) || "Draft saved on this device.";
+    alert(msg);
+  }catch(e){
+    jobsAlert("draftFail", "Could not save draft on this device.");
+  }
+}
+
+function loadJobsLocalDraft(){
+  try{
+    var raw = localStorage.getItem(JOBS_DRAFT_KEY);
+    if(!raw) return null;
+    return JSON.parse(raw);
+  }catch(_e){
+    return null;
+  }
+}
+
+function clearJobsLocalDraft(){
+  try{ localStorage.removeItem(JOBS_DRAFT_KEY); }catch(_e){}
+}
+
+function validateJobsWizardStep1(){
+  var title = (document.getElementById("jobTitle") || {}).value.trim();
+  var company = (document.getElementById("jobCompany") || {}).value.trim();
+  var type = (document.getElementById("jobType") || {}).value;
+  var countryEl = document.getElementById("jobCountry");
+  var city = ((document.getElementById("jobCity") || {}).value || "").trim();
+  var workplace = ((document.getElementById("jobLocation") || {}).value || "").trim();
+  var countryName = countryEl && countryEl.value
+    ? ((countryEl.selectedOptions[0] && countryEl.selectedOptions[0].textContent) || countryEl.value)
+    : "";
+  var location = [workplace, city, countryName].filter(Boolean).join(", ");
+  var description = ((document.getElementById("jobDescription") || {}).value || "").trim();
+  var t = (window.HAVKAR_JOBS_I18N && window.HAVKAR_JOBS_I18N.t) ? window.HAVKAR_JOBS_I18N.t.bind(window.HAVKAR_JOBS_I18N) : function(k){return k;};
+  if(!title || !company){
+    alert(t("required"));
+    return false;
+  }
+  if(!location && type !== "Remote"){
+    alert(t("required"));
+    return false;
+  }
+  if(!description || description.length < 10){
+    alert(t("required"));
+    return false;
+  }
+  return true;
+}
+
+function renderJobsReviewCard(){
+  var d = collectJobsWizardDraft();
+  var card = document.getElementById("jobsReviewCard");
+  if(!card) return;
+  var rows = [
+    [jobsT("lblTitle","Job title"), d.title],
+    [jobsT("lblCompany","Employer / Company"), d.company],
+    [jobsT("lblLocation","Workplace location"), [d.location, d.city, d.country].filter(Boolean).join(", ") || "—"],
+    [jobsT("lblType","Employment type"), (function(){
+      var typeMap = { "Full-time":"fullTime", "Part-time":"partTime", Remote:"remote", Freelance:"freelance", Contract:"contract" };
+      var tk = typeMap[d.type];
+      return tk ? jobsT(tk, d.type) : d.type;
+    })()],
+    [jobsT("lblSalary","Salary / Payment"), (d.salary || "—") + (d.currency ? " (" + d.currency + ")" : "")],
+    [jobsT("lblSkills","Skills"), d.skills || "—"],
+    [jobsT("lblContact","Contact email or phone"), d.contact || d.application_url || "—"],
+    [jobsT("planNameLabel","Plan"), jobsPlanDisplayName(d.plan) + " — €" + d.price]
+  ];
+  card.innerHTML = rows.map(function(r){
+    return "<dt>" + escapeHTML(r[0]) + "</dt><dd>" + escapeHTML(String(r[1] || "—")) + "</dd>";
+  }).join("");
+}
+
+function jobsWizardNext(){
+  if(jobsWizardStep === 1){
+    if(!validateJobsWizardStep1()) return;
+    saveJobsLocalDraft();
+    jobsWizardSetStep(2);
+    return;
+  }
+  if(jobsWizardStep === 2){
+    if(!selectedPlan || !selectedPlan.name){
+      jobsAlert("choosePlan", "Please choose a publishing plan.");
+      return;
+    }
+    saveJobsLocalDraft();
+    jobsWizardSetStep(3);
+    return;
+  }
+  submitJob();
+}
+
+function jobsWizardBack(){
+  if(jobsWizardStep <= 1) return;
+  jobsWizardSetStep(jobsWizardStep - 1);
+}
+
+async function openCompaniesPanel(){
+  await refreshCurrentUser();
+  if(!currentUser){
+    alert((window.HAVKAR_JOBS_I18N && window.HAVKAR_JOBS_I18N.t("signInPost")) || "Please sign in first.");
+    window.location.href = "profile.html";
+    return;
+  }
+  openModal("companiesModal");
+  if(typeof refreshCompanyStatusPanel === "function"){
+    refreshCompanyStatusPanel();
+  }
+}
+
+async function openPostJob(event){
+  /* exposed for FAB / legacy handlers */
+  if(event){
+    try{
+      event.preventDefault();
+      event.stopPropagation();
+    }catch(_e){}
+  }
 
   await refreshCurrentUser();
 
   if(!currentUser){
-    alert("Please sign in to your HAVKAR account before posting a job.");
+    jobsAlert("signInPost", "Please sign in to your HAVKAR account before posting a job.");
     window.location.href = "profile.html";
     return;
   }
 
   resetPostForm();
+  jobsWizardSetStep(1);
+  var draft = loadJobsLocalDraft();
+  if(draft){
+    applyJobsWizardDraft(draft);
+  }
   openModal("postModal");
+  try{
+    if(window.HAVKAR_JOBS_I18N) window.HAVKAR_JOBS_I18N.applyJobsChrome();
+  }catch(_e){}
+}
+
+function bindJobsPostFab(){
+  const fab = document.getElementById("jobsPostFab");
+  if(!fab || fab.dataset.bound === "1") return;
+  fab.dataset.bound = "1";
+  let lastOpenMs = 0;
+  const open = function(ev){
+    const now = Date.now();
+    if(now - lastOpenMs < 450) return;
+    lastOpenMs = now;
+    openPostJob(ev);
+  };
+  /*
+    Mobile/tablet: bottom-nav had higher z-index and swallowed taps.
+    Bind click + touchend (touchend preventDefault avoids a second synthetic click).
+  */
+  fab.addEventListener("click", open, { passive: false });
+  fab.addEventListener(
+    "touchend",
+    function(ev){
+      if(ev){
+        try{ ev.preventDefault(); }catch(_e){}
+      }
+      open(ev);
+    },
+    { passive: false }
+  );
+}
+
+function applyJobsPublishTipLanguage(){
+  const tip = document.getElementById("jobsPublishTip");
+  if(!tip) return;
+  const messages = {
+    en: "Job listings go live after the publishing fee is paid and the transaction is confirmed. HAVKAR connects employers with job seekers.",
+    it: "Le offerte di lavoro vengono pubblicate dopo il pagamento della tariffa e la conferma della transazione. HAVKAR collega datori di lavoro e candidati.",
+    fa: "انتشار آگهی استخدام پس از پرداخت هزینه و تأیید تراکنش انجام می‌شود. هاوکار بستری برای ارتباط کارفرمایان و کارجویان است.",
+    ar: "يُنشر إعلان التوظيف بعد دفع الرسوم وتأكيد المعاملة. هافكار منصة للتواصل بين أصحاب العمل والباحثين عن عمل.",
+    sv: "Jobbannonser publiceras efter att publiceringsavgiften betalats och transaktionen bekräftats. HAVKAR kopplar arbetsgivare till arbetssökande.",
+    ckb: "بڵاوکردنەوەی ئاگاداری کار دوای پارەدان و پشتڕاستکردنەوەی مامەڵەکە دەبێت. HAVKAR بنکەیەکە بۆ پەیوەندی خاوەنکار و داواکاری کار.",
+    ku: "Belavkirina agahiya kar piştî dayîna xercê û pejirandina danûstandinê pêk tê. HAVKAR ji bo girêdana xwediyên kar û lêgerên kar e."
+  };
+  let lang = "en";
+  try{
+    lang = String(
+      (window.HAVKAR_I18N && window.HAVKAR_I18N.getLanguage && window.HAVKAR_I18N.getLanguage()) ||
+      localStorage.getItem("havkar_lang") ||
+      localStorage.getItem("havkar-language") ||
+      document.documentElement.lang ||
+      "en"
+    ).toLowerCase();
+  }catch(_e){}
+  if(lang.indexOf("fa") === 0 || lang === "per" || lang === "persian") lang = "fa";
+  if(lang.indexOf("it") === 0) lang = "it";
+  if(lang.indexOf("ar") === 0) lang = "ar";
+  if(lang.indexOf("sv") === 0) lang = "sv";
+  if(lang === "ckb" || lang === "ku-iq" || lang.indexOf("sorani") !== -1) lang = "ckb";
+  if(lang === "ku" || lang.indexOf("kurd") === 0) lang = "ku";
+  tip.textContent = messages[lang] || messages.en;
+  tip.setAttribute("lang", lang === "fa" || lang === "ar" || lang === "ckb" || lang === "ku" ? lang : "en");
+  tip.dir = (lang === "fa" || lang === "ar" || lang === "ckb" || lang === "ku") ? "rtl" : "ltr";
 }
 
 /* =========================================================
@@ -2954,7 +3376,7 @@ function resetPostForm(){
 
   const basic =
     document.querySelector(
-      '.plan[data-plan="Basic"]'
+      '.plan[data-plan="Basic"][data-billing="one_time_prepaid"]'
     );
 
   if(basic){
@@ -3010,7 +3432,7 @@ function selectPlan(element){
   document.getElementById(
     "selectedPlanName"
   ).textContent =
-    selectedPlan.name;
+    jobsPlanDisplayName(selectedPlan.name);
 
   document.getElementById(
     "selectedPlanPrice"
@@ -3288,7 +3710,7 @@ async function openEditJob(id){
   const job = ownJob(id);
 
   if(!currentUser || !job || job.owner !== true){
-    alert("You can only edit your own job listings.");
+    jobsAlert("ownOnlyEdit", "You can only edit your own job listings.");
     return;
   }
 
@@ -3336,7 +3758,7 @@ async function saveJobEdit(){
   const job = ownJob(editingJobId);
 
   if(!currentUser || !job || job.owner !== true || !window.HAVKAR_JOBS){
-    alert("You can only edit your own job listings.");
+    jobsAlert("ownOnlyEdit", "You can only edit your own job listings.");
     return;
   }
 
@@ -3402,11 +3824,11 @@ async function deleteJobListing(id){
   const job = ownJob(id);
 
   if(!currentUser || !job || job.owner !== true || !window.HAVKAR_JOBS){
-    alert("You can only delete your own job listings.");
+    jobsAlert("ownOnlyDelete", "You can only delete your own job listings.");
     return;
   }
 
-  if(!confirm("Delete this job listing? This cannot be undone.")){
+  if(!confirm(jobsT("deleteConfirm", "Delete this job listing? This cannot be undone."))){
     return;
   }
 
@@ -3448,7 +3870,7 @@ async function submitJob(){
   await refreshCurrentUser();
 
   if(!currentUser){
-    alert("Please sign in before posting a job.");
+    jobsAlert("signInPost", "Please sign in before posting a job.");
     window.location.href = "profile.html";
     return;
   }
@@ -3476,26 +3898,35 @@ async function submitJob(){
   const contact = document.getElementById("jobContact").value.trim();
 
   if(!title || !company){
-    alert("Job title and company are required.");
+    jobsAlert("titleCompanyRequired", "Job title and company are required.");
     return;
   }
   if(!location && type !== "Remote"){
-    alert("Select Country and City, or enter a workplace location. Remote jobs may omit a pin.");
+    jobsAlert("locationRequired", "Select Country and City, or enter a workplace location. Remote jobs may omit a pin.");
+    return;
+  }
+  if(!description || description.length < 10){
+    jobsAlert("descRequired", "Please provide a more detailed job description (at least 10 characters).");
     return;
   }
 
   if(!window.HAVKAR_JOBS){
-    alert("Jobs tools could not be loaded.");
+    jobsAlert("toolsMissing", "Jobs tools could not be loaded.");
     return;
   }
 
-  const submitButton = document.querySelector('#postModal button.primary');
+  const submitButton = document.getElementById('jobsWizardNext') || document.querySelector('#postModal button.primary');
   const originalButtonHTML = submitButton ? submitButton.innerHTML : "";
 
   if(submitButton){
     submitButton.disabled = true;
-    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + jobsT("saving", "Saving...");
   }
+
+  const currencyEl = document.getElementById("jobCurrency");
+  const currency = currencyEl && currencyEl.value
+    ? String(currencyEl.value).trim().toUpperCase()
+    : "EUR";
 
   const result = await window.HAVKAR_JOBS.createOwnJob(
     supabaseClient,
@@ -3505,7 +3936,7 @@ async function submitJob(){
       draft:{
         title,
         company,
-        location,
+        location: location || (type === "Remote" ? "Remote" : location),
         type,
         salary,
         skills,
@@ -3513,6 +3944,7 @@ async function submitJob(){
         requirements,
         application_url:applicationUrl,
         contact,
+        currency: currency,
         image:selectedJobImage || null
       }
     }
@@ -3525,19 +3957,20 @@ async function submitJob(){
 
   if(!result.ok){
     console.error("HAVKAR: Job insert failed.", result);
-    alert(result.message || "The job could not be saved.");
+    alert(result.message || jobsT("saveFail", "The job could not be saved."));
     return;
   }
 
   if(result.row.status !== "pending_payment"){
     if(submitButton) submitButton.disabled = true;
-    alert("The server has not confirmed that this job stayed unpaid. Do not submit it again. Check My Jobs before posting again.");
+    jobsAlert("unpaidGate", "The server has not confirmed that this job stayed unpaid. Do not submit it again. Check My Jobs before posting again.");
     return;
   }
 
   const newJob = normalizeJob(result.row);
   jobs = [newJob, ...jobs.filter(job => String(job.id) !== String(newJob.id))];
 
+  clearJobsLocalDraft();
   closeModal("postModal");
   renderJobs();
   showPaymentScreen(newJob);
@@ -3562,125 +3995,95 @@ function showPaymentScreen(job){
       `
       : "";
 
+  const fee = Number(job.monthly_fee).toFixed(2);
+  const statusKind = (window.HAVKAR_JOBS && window.HAVKAR_JOBS.jobStatusKind)
+    ? window.HAVKAR_JOBS.jobStatusKind(job)
+    : String(job.status || "pending_payment");
+  const receiptLabel = statusKind === "active"
+    ? jobsT("payReceiptActive", "Payment confirmed — listing active")
+    : jobsT("payReceiptPending", "Awaiting confirmed payment");
+  const receiptClass = statusKind === "active" ? "notice" : "notice";
+
   document.getElementById(
     "paymentContent"
   ).innerHTML = `
 
     ${imageHTML}
 
+    <div class="jobs-review-card ${receiptClass}" id="jobsPaymentReceipt">
+      <dt>${escapeHTML(jobsT("payReceiptTitle", "Payment status"))}</dt>
+      <dd><strong>${escapeHTML(receiptLabel)}</strong></dd>
+      <dt>${escapeHTML(jobsT("payReceiptId", "Reference"))}</dt>
+      <dd>${escapeHTML(String(job.id || "—"))}</dd>
+      <dt>${escapeHTML(jobsT("statusLabel", "Status"))}</dt>
+      <dd>${escapeHTML(
+        statusKind === "active"
+          ? jobsT("statusActive", "Active")
+          : statusKind === "pending_payment"
+            ? jobsT("statusPending", "Pending payment")
+            : jobsT("statusInactive", String(job.status || "pending_payment"))
+      )}</dd>
+    </div>
+
     <div class="summary">
 
       <div class="detail-row">
-
-        <span class="detail-label">
-          Job
-        </span>
-
-        <span class="detail-value">
-          ${escapeHTML(job.title)}
-        </span>
-
+        <span class="detail-label">${escapeHTML(jobsT("payJob", "Job"))}</span>
+        <span class="detail-value">${escapeHTML(job.title)}</span>
       </div>
 
       <div class="detail-row">
-
-        <span class="detail-label">
-          Company
-        </span>
-
-        <span class="detail-value">
-          ${escapeHTML(job.company)}
-        </span>
-
+        <span class="detail-label">${escapeHTML(jobsT("payCompany", "Company"))}</span>
+        <span class="detail-value">${escapeHTML(job.company)}</span>
       </div>
 
       <div class="detail-row">
-
-        <span class="detail-label">
-          Prepaid plan
-        </span>
-
-        <span class="detail-value">
-          ${escapeHTML(job.plan)}
-        </span>
-
+        <span class="detail-label">${escapeHTML(jobsT("payPlan", "Prepaid plan"))}</span>
+        <span class="detail-value">${escapeHTML(jobsPlanDisplayName(job.plan))}</span>
       </div>
 
       <div class="detail-row">
-
-        <span class="detail-label">
-          30-day listing fee
-        </span>
-
-        <span class="detail-value">
-
-          €${Number(
-            job.monthly_fee
-          ).toFixed(2)}
-
-        </span>
-
+        <span class="detail-label">${escapeHTML(jobsT("payFee", "30-day listing fee"))}</span>
+        <span class="detail-value">€${fee}</span>
       </div>
 
     </div>
 
     <div class="notice">
-
-      Your advertisement is currently
-      <strong>pending payment</strong>.
-
-      It will not be treated as an active paid advertisement
-      until the real payment provider confirms the prepaid 30-day fee.
-
+      ${escapeHTML(jobsT("payPendingNotice", "Your advertisement is pending payment. It activates only after Stripe or XLM confirms the fee on the server."))}
     </div>
 
     <button
       class="primary"
       type="button"
-      onclick="
-        startRealPayment(
-          '${escapeJS(job.id)}'
-        )
-      ">
-
+      style="min-height:48px"
+      onclick="startRealPayment('${escapeJS(job.id)}')">
       <i class="fas fa-credit-card"></i>
-
-      Pay €${Number(
-        job.monthly_fee
-      ).toFixed(2)} (30 days)
-
+      ${escapeHTML(jobsT("payPrepaid", "Pay €{amount} prepaid (30 days)").replace("{amount}", fee))}
     </button>
 
     <button
       class="secondary"
       type="button"
-      onclick="
-        quoteJobXlm(
-          '${escapeJS(job.id)}',
-          '${escapeJS(String(job.monthly_fee))}'
-        )
-      ">
-
-      Quote XLM for prepaid listing
-
+      style="min-height:48px;margin-top:8px;width:100%"
+      onclick="payJobWithXlm('${escapeJS(job.id)}', '${escapeJS(String(job.monthly_fee))}')">
+      ${escapeHTML(jobsT("payXlmBtn", "Pay with XLM (prepaid listing)"))}
     </button>
 
     <button
       class="secondary"
       type="button"
-      onclick="
-        closeModal('paymentModal')
-      ">
-
-      Pay later
-
+      style="min-height:48px;margin-top:8px;width:100%"
+      onclick="closeModal('paymentModal')">
+      ${escapeHTML(jobsT("payLater", "Pay later"))}
     </button>
 
   `;
 
-  openModal(
-    "paymentModal"
-  );
+  const payTitle = document.getElementById("paymentModalTitle");
+  if(payTitle) payTitle.textContent = jobsT("payTitle", "Prepaid listing (30 days)");
+
+  openModal("paymentModal");
 }
 
 /* =========================================================
@@ -3692,7 +4095,8 @@ async function startRealPayment(jobId){
   /*
     IMPORTANT:
     No fake payment confirmation.
-    Ask the server for jobs_quote honesty before any charge attempt.
+    Creates a real Stripe Checkout Session only when Jobs live payments are armed.
+    Activation happens only after Stripe webhook confirms payment.
   */
 
   const job =
@@ -3705,44 +4109,51 @@ async function startRealPayment(jobId){
   if(!job) return;
 
   try{
-    /* jobs_quote is handled on create-event-checkout; /api/global-payments catalog would swallow it. */
+    const session =
+      await supabaseClient.auth.getSession();
+    const accessToken =
+      session &&
+      session.data &&
+      session.data.session &&
+      session.data.session.access_token;
+    if(!accessToken){
+      jobsAlert("signInPay", "Please sign in before payment. Your advertisement has NOT been activated.");
+      window.location.href = "profile.html";
+      return;
+    }
+
     const res = await fetch("/api/create-event-checkout", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + accessToken,
+        Accept: "application/json"
+      },
       body: JSON.stringify({
-        action: "jobs_quote",
+        action: "jobs_checkout",
+        job_id: String(job.id),
         plan: job.plan || "Basic",
         method: "stripe"
       })
     });
     const body = await res.json().catch(function(){ return null; });
-    if(
-      body &&
-      body.ok === true &&
-      body.charge_allowed_now === true
-    ){
-      alert(
-        "Card collection is Owner-armed for Jobs quotes, but checkout session creation is not started from this button yet. " +
-        "Your advertisement has NOT been activated. No charge was created."
-      );
+    if(body && body.ok === true && body.checkout_url){
+      window.location.href = body.checkout_url;
       return;
     }
     const reason =
-      (body && (body.availability_reason || body.error || body.availability_label)) ||
-      "Jobs live payments are not armed (HAVKAR_JOB_PAYMENTS_ENABLED).";
+      (body && (body.error || body.code || body.availability_reason)) ||
+      "Jobs Checkout could not be started.";
     alert(
-      "Jobs card payment is not available now: " +
       reason +
       " Your advertisement has NOT been activated. No charge was created."
     );
   }catch(_err){
-    alert(
-      "Could not verify Jobs payment readiness. Your advertisement has NOT been activated. No charge was created."
-    );
+    jobsAlert("checkoutStartFail", "Could not start Jobs Checkout. Your advertisement has NOT been activated. No charge was created.");
   }
 }
 
-async function quoteJobXlm(jobId, fee){
+async function payJobWithXlm(jobId, fee){
 
   const session =
     await supabaseClient.auth.getSession();
@@ -3753,11 +4164,39 @@ async function quoteJobXlm(jobId, fee){
     session.data.session.access_token;
 
   if(!accessToken || !window.HAVKAR_XLM){
-    alert("Sign in before checking XLM. The job was not activated.");
+    jobsAlert("signInXlm", "Sign in before paying with XLM. The job was not activated.");
     return;
   }
 
   // Prepaid one-time jobs_listing only — XLM cannot start automatic renewals.
+  if(
+    typeof window.HAVKAR_XLM.payAndVerify === "function"
+  ){
+    const paid = await window.HAVKAR_XLM.payAndVerify({
+      flow: "jobs_listing",
+      price: fee,
+      subjectId: String(jobId),
+      accessToken: accessToken
+    });
+    if(paid && paid.ok){
+      alert(
+        (window.HAVKAR_XLM.describe && window.HAVKAR_XLM.describe(paid.result)) ||
+        jobsT("xlmSubmitted", "XLM settlement submitted. Refresh My Jobs after confirmation.")
+      );
+      await loadSupabaseJobs();
+      renderJobs();
+      await openMyJobs();
+      return;
+    }
+    alert(
+      ((paid && window.HAVKAR_XLM.describe && window.HAVKAR_XLM.describe(paid.result)) ||
+        (paid && paid.error) ||
+        "XLM payment could not complete.") +
+      " The job was not activated."
+    );
+    return;
+  }
+
   const quoted =
     await window.HAVKAR_XLM.quote({
       flow: "jobs_listing",
@@ -3766,19 +4205,113 @@ async function quoteJobXlm(jobId, fee){
       accessToken: accessToken
     });
 
-  alert(window.HAVKAR_XLM.describe(quoted.result) + " The job was not activated.");
+  alert(
+    window.HAVKAR_XLM.describe(quoted.result) +
+    " Complete wallet settlement when prompted. The job stays inactive until settlement is verified."
+  );
+}
+
+/* Keep older onclick name working if cached markup remains. */
+async function quoteJobXlm(jobId, fee){
+  return payJobWithXlm(jobId, fee);
 }
 
 /* =========================================================
    MY JOBS
    ========================================================= */
 
+function resumeJobPayment(jobId){
+  const job = jobs.find(function(item){
+    return String(item.id) === String(jobId);
+  });
+  if(!job){
+    alert("Job listing was not found.");
+    return;
+  }
+  closeModal("myJobsModal");
+  showPaymentScreen(job);
+}
+
+function renewJobListing(jobId){
+  const job = jobs.find(function(item){
+    return String(item.id) === String(jobId);
+  });
+  if(!job){
+    alert("Job listing was not found.");
+    return;
+  }
+  if(
+    String(job.status) !== "expired" &&
+    !(
+      String(job.status) === "active" &&
+      window.HAVKAR_JOBS &&
+      window.HAVKAR_JOBS.isExpired(job)
+    )
+  ){
+    jobsAlert("renewNotDue", "This listing is still within its paid window.");
+    return;
+  }
+  closeModal("myJobsModal");
+  // Ordinary renew = new prepaid Checkout; activation extends expires_at server-side.
+  showPaymentScreen(job);
+}
+
+async function openMyApplications(){
+  await refreshCurrentUser();
+  if(!currentUser){
+    jobsAlert("signInMyApps", "Please sign in to view your applications.");
+    window.location.href = "profile.html";
+    return;
+  }
+  if(!supabaseClient || !window.HAVKAR_JOBS || typeof window.HAVKAR_JOBS.listMyApplications !== "function"){
+    jobsAlert("appsUnavailable", "Applications are temporarily unavailable.");
+    return;
+  }
+  const result = await window.HAVKAR_JOBS.listMyApplications(supabaseClient, currentUser.id);
+  if(!result || !result.ok){
+    alert((result && result.message) || "Could not load applications.");
+    return;
+  }
+  let panel = document.getElementById("myApplicationsModal");
+  if(!panel){
+    panel = document.createElement("div");
+    panel.id = "myApplicationsModal";
+    panel.className = "modal";
+    panel.innerHTML =
+      '<div class="modal-card">' +
+      '<div class="modal-head"><h2>' + jobsT("myApplications", "My Applications") + '</h2>' +
+      '<button class="close" type="button" onclick="closeModal(\'myApplicationsModal\')">×</button></div>' +
+      '<div id="myApplicationsContent"></div></div>';
+    document.body.appendChild(panel);
+  }
+  const content = document.getElementById("myApplicationsContent");
+  const rows = result.rows || [];
+  if(!rows.length){
+    content.innerHTML =
+      '<div class="empty"><strong>' + jobsT("noMyApplications", "No applications yet") + '</strong>' +
+      '<p>' + jobsT("noMyApplicationsHint", "Applications you submit on HAVKAR appear here.") + '</p></div>';
+  } else {
+    content.innerHTML = rows.map(function(row){
+      const job = jobs.find(function(item){ return String(item.id) === String(row.job_id); });
+      const title = job ? job.title : ("Job #" + String(row.job_id));
+      return (
+        '<div class="saved-job-card">' +
+        '<div class="job-title">' + escapeHTML(title) + '</div>' +
+        '<div class="job-status-line"><span>' + escapeHTML(String(row.status || "")) + '</span></div>' +
+        '<p>' + escapeHTML(String(row.cover_letter || "").slice(0, 240) || "—") + '</p>' +
+        '</div>'
+      );
+    }).join("");
+  }
+  openModal("myApplicationsModal");
+}
+
 async function openMyJobs(){
 
   await refreshCurrentUser();
 
   if(!currentUser){
-    alert("Please sign in to view your jobs.");
+    jobsAlert("signInMyJobs", "Please sign in to view your jobs.");
     window.location.href = "profile.html";
     return;
   }
@@ -3807,11 +4340,11 @@ async function openMyJobs(){
 
         </div>
 
-        <strong>
+        <strong data-jobs-i18n="noOwnJobs">
           You have not posted any jobs yet.
         </strong>
 
-        <p>
+        <p data-jobs-i18n="noOwnJobsHint">
           Create your first advertisement and publish your job opportunity.
         </p>
 
@@ -3894,18 +4427,53 @@ async function openMyJobs(){
 
                 <span>
                   ${escapeHTML(
-                    job.plan ||
-                    "Basic"
+                    jobsPlanDisplayName(job.plan || "Basic")
                   )}
                 </span>
 
                 <span>
                   €${Number(
                     job.monthly_fee || 0
-                  ).toFixed(2)}/month
+                  ).toFixed(2)} ${escapeHTML(jobsT("prepaid30", "prepaid / 30 days"))}
                 </span>
 
               </div>
+
+              ${
+                String(job.status) === "pending_payment"
+                  ? `
+              <button
+                class="primary"
+                type="button"
+                onclick="
+                  event.stopPropagation();
+                  resumeJobPayment('${escapeJS(job.id)}')
+                ">
+                ${escapeHTML(jobsT("continuePayment", "Continue payment"))}
+              </button>
+              `
+                  : ""
+              }
+
+              ${
+                (
+                  String(job.status) === "active" &&
+                  window.HAVKAR_JOBS &&
+                  window.HAVKAR_JOBS.isExpired(job)
+                ) || String(job.status) === "expired"
+                  ? `
+              <button
+                class="primary"
+                type="button"
+                onclick="
+                  event.stopPropagation();
+                  renewJobListing('${escapeJS(job.id)}')
+                ">
+                ${escapeHTML(jobsT("renewListing", "Renew listing (30 days)"))}
+              </button>
+              `
+                  : ""
+              }
 
               <button
                 class="secondary"
@@ -3914,7 +4482,7 @@ async function openMyJobs(){
                   event.stopPropagation();
                   openEditJob('${escapeJS(job.id)}')
                 ">
-                Edit listing
+                ${escapeHTML(jobsT("editListing", "Edit listing"))}
               </button>
 
               <button
@@ -3924,7 +4492,7 @@ async function openMyJobs(){
                   event.stopPropagation();
                   deleteJobListing('${escapeJS(job.id)}')
                 ">
-                Delete listing
+                ${escapeHTML(jobsT("deleteListing", "Delete listing"))}
               </button>
 
             </div>
@@ -4288,6 +4856,13 @@ if(locationInput){
   );
 }
 
+
+["filterCountry","filterCity","filterCategory"].forEach(function(id){
+  var el = document.getElementById(id);
+  if(!el) return;
+  el.addEventListener("input", function(){ renderJobs(); });
+});
+
 function clearLocationFilter(){
 
   const input =
@@ -4492,15 +5067,357 @@ function escapeJS(value){
 supabaseClient.auth.onAuthStateChange(
   async (_event, session) => {
     currentUser = session?.user || null;
+    /* Reload after auth settles so owner pending_payment listings appear. */
+    await loadSupabaseJobs();
+    renderJobs();
+    if(typeof refreshCompanyStatusPanel === "function"){
+      refreshCompanyStatusPanel();
+    }
   }
 );
 
-loadSupabaseJobs();
+let selectedCorporatePlanCode = null;
+let cachedOwnCompanies = [];
+
+async function refreshCompanyStatusPanel(){
+  const panel = document.getElementById("companyStatusPanel");
+  if(!panel || !window.HAVKAR_JOBS) return;
+  await refreshCurrentUser();
+  if(!currentUser){
+    panel.textContent = jobsT("companyStatusGuest", "Sign in to load your company verification status.");
+    cachedOwnCompanies = [];
+    return;
+  }
+  const result = await window.HAVKAR_JOBS.loadOwnCompanies(supabaseClient, currentUser.id);
+  if(!result.ok){
+    panel.textContent = result.message || "Could not load company status.";
+    cachedOwnCompanies = [];
+    return;
+  }
+  cachedOwnCompanies = result.rows || [];
+  if(!cachedOwnCompanies.length){
+    panel.innerHTML = "No company registered yet. Submit a legal name below. Status stays <strong>unverified</strong> until HAVKAR Owner/staff verifies it.";
+    return;
+  }
+  panel.innerHTML = cachedOwnCompanies.map(function(row){
+    const verified = window.HAVKAR_JOBS.companyIsVerified(row);
+    return "<div><strong>" + escapeHTML(row.legal_name) + "</strong> — " +
+      (verified ? "verified ✅" : "unverified (corporate checkout blocked)") +
+      "</div>";
+  }).join("");
+}
+
+async function registerJobCompany(){
+  await refreshCurrentUser();
+  if(!currentUser){
+    jobsAlert("signInCompany", "Please sign in before registering a company.");
+    return;
+  }
+  const input = document.getElementById("companyLegalName");
+  const legalName = input ? input.value.trim() : "";
+  const result = await window.HAVKAR_JOBS.registerCompany(supabaseClient, {
+    userId: currentUser.id,
+    legal_name: legalName
+  });
+  if(!result.ok){
+    alert(result.message || "Company could not be registered.");
+    return;
+  }
+  if(input) input.value = "";
+  jobsAlert("companySubmitted", "Company submitted as unverified. Corporate subscriptions stay blocked until HAVKAR verifies the company. No payment was created.");
+  await refreshCompanyStatusPanel();
+}
+
+function selectCorporatePlan(element){
+  selectedCorporatePlanCode = element && element.dataset
+    ? element.dataset.corporate
+    : null;
+  document.querySelectorAll("#corporatePlans .plan").forEach(function(plan){
+    plan.classList.remove("selected");
+  });
+  if(element) element.classList.add("selected");
+}
+
+async function quoteCorporateSubscription(){
+  await refreshCurrentUser();
+  if(!currentUser){
+    jobsAlert("signInCorpQuote", "Please sign in before quoting a corporate plan.");
+    return;
+  }
+  if(!selectedCorporatePlanCode){
+    jobsAlert("selectCorpPlan", "Select Business, Business Plus, or Enterprise first.");
+    return;
+  }
+  const company = (cachedOwnCompanies || []).find(function(row){
+    return window.HAVKAR_JOBS.companyIsVerified(row);
+  }) || (cachedOwnCompanies || [])[0] || null;
+  try{
+    const res = await fetch("/api/create-event-checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "jobs_quote",
+        plan: selectedCorporatePlanCode,
+        method: "stripe",
+        company_id: company && company.id,
+        verification_status: company && company.verification_status
+      })
+    });
+    const body = await res.json().catch(function(){ return null; });
+    if(!body || body.ok !== true){
+      alert((body && (body.error || body.availability_reason)) || "Corporate quote failed.");
+      return;
+    }
+    alert(
+      "Corporate " + selectedCorporatePlanCode +
+      ": €" + Number(body.list_price_eur || 0).toFixed(2) +
+      "/month, limit " + String(body.active_listing_limit || "—") +
+      " ads, auto-renew=" + String(body.auto_renew === true) +
+      ", charge_allowed_now=" + String(body.charge_allowed_now === true) +
+      ". " + (body.error || body.availability_reason || "")
+    );
+  }catch(_err){
+    alert("Could not quote corporate subscription.");
+  }
+}
+
+async function startCorporateSubscriptionCheckout(){
+  await refreshCurrentUser();
+  if(!currentUser){
+    jobsAlert("signInCorpPay", "Please sign in before starting a corporate subscription.");
+    window.location.href = "profile.html";
+    return;
+  }
+  if(!selectedCorporatePlanCode){
+    jobsAlert("selectCorpPlan", "Select Business, Business Plus, or Enterprise first.");
+    return;
+  }
+  const company = (cachedOwnCompanies || []).find(function(row){
+    return window.HAVKAR_JOBS.companyIsVerified(row);
+  });
+  if(!company){
+    alert("Corporate subscriptions require a verified company. Register and wait for HAVKAR verification. No charge was created.");
+    return;
+  }
+  const session = await supabaseClient.auth.getSession();
+  const accessToken =
+    session && session.data && session.data.session && session.data.session.access_token;
+  if(!accessToken){
+    alert("Session expired. Sign in again. No charge was created.");
+    return;
+  }
+  try{
+    const res = await fetch("/api/create-event-checkout", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + accessToken,
+        Accept: "application/json"
+      },
+      body: JSON.stringify({
+        action: "jobs_subscription_checkout",
+        plan_code: selectedCorporatePlanCode,
+        company_id: company.id
+      })
+    });
+    const body = await res.json().catch(function(){ return null; });
+    if(body && body.ok === true && body.checkout_url){
+      window.location.href = body.checkout_url;
+      return;
+    }
+    alert(
+      ((body && (body.error || body.code)) || "Corporate subscription Checkout could not start.") +
+      " No charge was created. No auto-renew was started."
+    );
+  }catch(_err){
+    alert("Corporate subscription Checkout failed. No charge was created.");
+  }
+}
+
+async function submitInAppApplication(jobId){
+  await refreshCurrentUser();
+  if(!currentUser){
+    alert("Please sign in before applying.");
+    window.location.href = "profile.html";
+    return;
+  }
+  const job = jobs.find(function(item){ return String(item.id) === String(jobId); });
+  const coverEl = document.getElementById("inAppCoverLetter");
+  const cover = coverEl ? coverEl.value : "";
+  const result = await window.HAVKAR_JOBS.submitJobApplication(supabaseClient, {
+    job: job,
+    applicantId: currentUser.id,
+    cover_letter: cover
+  });
+  if(!result.ok){
+    alert(result.message || "Application could not be saved.");
+    return;
+  }
+  alert("Application submitted. The employer can review it in View applications.");
+  if(coverEl) coverEl.value = "";
+}
+
+async function viewJobApplications(jobId){
+  await refreshCurrentUser();
+  if(!currentUser){
+    alert("Please sign in.");
+    return;
+  }
+  const result = await window.HAVKAR_JOBS.listApplicationsForJob(supabaseClient, {
+    jobId: jobId,
+    userId: currentUser.id
+  });
+  if(!result.ok){
+    alert(result.message || "Could not load applications.");
+    return;
+  }
+  const rows = result.rows || [];
+  let panel = document.getElementById("jobApplicationsModal");
+  if(!panel){
+    panel = document.createElement("div");
+    panel.className = "modal";
+    panel.id = "jobApplicationsModal";
+    panel.innerHTML =
+      '<div class="modal-box">' +
+      '<div class="modal-head"><h2>' + jobsT("applicationsTitle", "Applications") + '</h2>' +
+      '<button class="close" type="button" onclick="closeModal(\'jobApplicationsModal\')">×</button></div>' +
+      '<div id="jobApplicationsContent"></div></div>';
+    document.body.appendChild(panel);
+  }
+  const content = document.getElementById("jobApplicationsContent");
+  if(!rows.length){
+    content.innerHTML = '<div class="empty"><strong>' + jobsT("noApplications", "No applications yet") + '</strong><p>' + jobsT("noApplicationsHint", "Applicants will appear here after they apply.") + '</p></div>';
+  }else{
+    content.innerHTML = rows.map(function(row){
+      return '<div class="jobs-review-card">' +
+        '<dt>' + escapeHTML(jobsT("statusLabel", "Status")) + '</dt><dd>' + escapeHTML(String(row.status || "submitted")) + '</dd>' +
+        '<dt>' + escapeHTML(jobsT("coverNote", "Cover note")) + '</dt><dd>' + escapeHTML(String(row.cover_letter || "—")) + '</dd>' +
+        '<dt>' + escapeHTML(jobsT("submittedAt", "Submitted")) + '</dt><dd>' + escapeHTML(String(row.created_at || "—")) + '</dd>' +
+        '</div>';
+    }).join("");
+  }
+  openModal("jobApplicationsModal");
+}
+
+window.openPostJob = openPostJob;
+window.bindJobsPostFab = bindJobsPostFab;
+window.applyJobsPublishTipLanguage = applyJobsPublishTipLanguage;
+try{
+  if(window.HAVKAR_I18N && typeof window.HAVKAR_I18N.setLanguage === "function"){
+    var __setLang = window.HAVKAR_I18N.setLanguage.bind(window.HAVKAR_I18N);
+    window.HAVKAR_I18N.setLanguage = function(){
+      var out = __setLang.apply(null, arguments);
+      try{ applyJobsPublishTipLanguage(); }catch(_e){}
+      return out;
+    };
+  }
+}catch(_e){}
+setTimeout(function(){ try{ applyJobsPublishTipLanguage(); }catch(_e){} }, 800);
+setTimeout(function(){ try{ applyJobsPublishTipLanguage(); }catch(_e){} }, 2000);
+
+if(document.readyState === "loading"){
+  document.addEventListener("DOMContentLoaded", function(){
+    bindJobsPostFab();
+    applyJobsPublishTipLanguage();
+  });
+}else{
+  bindJobsPostFab();
+  applyJobsPublishTipLanguage();
+}
+
+(async function bootJobsPage(){
+  try{
+    bindJobsPostFab();
+    applyJobsPublishTipLanguage();
+    const params = new URLSearchParams(window.location.search);
+    const mine = String(params.get("mine") || "") === "1";
+    const openId = String(params.get("id") || params.get("job") || "").trim();
+    const jobPaid = String(params.get("job_paid") || "");
+    const jobSub = String(params.get("job_sub") || "");
+    await loadSupabaseJobs();
+    renderJobs();
+    await refreshCompanyStatusPanel();
+    // Auto-settle unpaid Jobs XLM quotes via Horizon (no manual verify click).
+    async function runJobsXlmAutoSettle(){
+      try{
+        const session = await supabaseClient.auth.getSession();
+        const accessToken =
+          session &&
+          session.data &&
+          session.data.session &&
+          session.data.session.access_token;
+        if(!accessToken){
+          return false;
+        }
+        const settleRes = await fetch("/api/jobs-xlm-auto-settle", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + accessToken
+          },
+          body: "{}"
+        });
+        if(!settleRes || !settleRes.ok){
+          return false;
+        }
+        const settleBody = await settleRes.json().catch(function(){ return null; });
+        if(settleBody && Number(settleBody.activated || 0) > 0){
+          await loadSupabaseJobs();
+          renderJobs();
+          return true;
+        }
+        return false;
+      }catch(_autoSettleErr){
+        return false;
+      }
+    }
+    await runJobsXlmAutoSettle();
+    // Keep polling briefly while pending_payment jobs exist so external
+    // Mainnet transfers activate without a verify button (Hobby cron is daily).
+    (function pollJobsXlmAutoSettle(){
+      let ticks = 0;
+      const timer = setInterval(async function(){
+        ticks += 1;
+        const pending = (typeof jobs !== "undefined" && Array.isArray(jobs))
+          ? jobs.some(function(j){ return String(j.status) === "pending_payment"; })
+          : false;
+        if(!pending || ticks > 60){
+          clearInterval(timer);
+          return;
+        }
+        await runJobsXlmAutoSettle();
+      }, 15000);
+    })();
+    if(jobPaid === "1"){
+      jobsAlert(
+        "stripeReturnOk",
+        "Stripe Checkout returned successfully. Your listing activates after Stripe confirms payment. Open My Jobs to refresh status."
+      );
+      await openMyJobs();
+    }else if(jobPaid === "0"){
+      jobsAlert("stripeReturnCancel", "Checkout was cancelled. Your listing stays pending payment and was NOT activated.");
+      await openMyJobs();
+    }else if(jobSub === "1"){
+      jobsAlert("corpSubOk", "Corporate subscription Checkout returned. Renewals appear after Stripe confirms invoice.paid.");
+      await refreshCompanyStatusPanel();
+    }else if(jobSub === "0"){
+      jobsAlert("corpSubCancel", "Corporate subscription Checkout was cancelled. No auto-renew started.");
+    }else if(mine){
+      await openMyJobs();
+    }else if(openId){
+      openJob(openId);
+    }
+  }catch(_bootErr){
+    loadSupabaseJobs();
+  }
+})();
 
 </script>
 
 <script src="/havkar-countries.js"></script>
+<script src="/havkar-presentment-currencies.js"></script>
 <script src="/havkar-currency-select.js"></script>
+<script src="/havkar-jobs-i18n.js"></script>
 <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
 <script>
@@ -4508,13 +5425,31 @@ loadSupabaseJobs();
   var mount = document.getElementById('jobCurrencyMount');
   var hidden = document.getElementById('jobCurrency');
   if(!mount || !hidden || !window.HAVKAR_CURRENCY_SELECT) return;
-  window.HAVKAR_CURRENCY_SELECT.mount(mount, {
+  /* Salary display currency only — publishing fee stays EUR Stripe / XLM separate. */
+  window.__jobsSalaryCurrencySelect = window.HAVKAR_CURRENCY_SELECT.mount(mount, {
     initialCurrency: hidden.value || 'EUR',
-    includeXlm: true,
+    includeXlm: false,
+    compact: true,
+    idPrefix: 'jobsSalaryCur',
     onChange: function(sel){
       if(sel && sel.currency) hidden.value = String(sel.currency).toUpperCase();
     }
   });
+  function applyChrome(){
+    try{
+      if(window.HAVKAR_JOBS_I18N) window.HAVKAR_JOBS_I18N.applyJobsChrome();
+      if(typeof applyJobsPublishTipLanguage === 'function') applyJobsPublishTipLanguage();
+    }catch(_e){}
+  }
+  applyChrome();
+  if(window.HAVKAR_I18N && typeof window.HAVKAR_I18N.setLanguage === 'function'){
+    var __set = window.HAVKAR_I18N.setLanguage.bind(window.HAVKAR_I18N);
+    window.HAVKAR_I18N.setLanguage = function(){
+      var out = __set.apply(null, arguments);
+      applyChrome();
+      return out;
+    };
+  }
 })();
 </script>
 
