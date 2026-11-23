@@ -29,6 +29,8 @@ assert.equal(plan.executes_stripe_refund, false);
 
 assert.equal(handlers.isServicesOpsAction("services_staff_panel"), true);
 assert.equal(handlers.isServicesOpsAction("services_buy_checkout"), false);
+assert.equal(handlers.isServicesOpsAction("services_credential_review"), true);
+assert.equal(handlers.isServicesOpsAction("services_availability_list"), true);
 
 const safe = ops.staffServicesPanelSafe([
   {
