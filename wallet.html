@@ -5906,6 +5906,21 @@ let stellarAccountOnNetwork=null;
   
 let pendingStellarReview=null;
 
+let stellarProtocolChip="";
+
+async function refreshStellarProtocolChip(){
+    if(typeof window.havkarFetchStellarProtocolInfo!=="function")return;
+    try{
+        const info=await window.havkarFetchStellarProtocolInfo();
+        if(info&&info.protocol_version!=null){
+            stellarProtocolChip="Protocol "+info.protocol_version+(info.protocol30?" (Bell)":"");
+        }
+    }catch(_e){
+        stellarProtocolChip="";
+    }
+    renderStellarNetwork();
+}
+
 function renderStellarNetwork(){  
     const network=window.havkarGetStellarNetwork?.()||{id:"PUBLIC",label:"Mainnet",horizon:"",passphrase:""};  
     const select=document.getElementById("stellarNetwork");  
@@ -5925,6 +5940,7 @@ function renderStellarNetwork(){
     if(statusMeta){
         statusMeta.innerHTML=
             '<span class="commerce-chip">'+(network.label||"Network")+'</span>'+
+            (stellarProtocolChip?'<span class="commerce-chip">'+(stellarProtocolChip)+'</span>':'')+
             '<span class="commerce-chip'+(mainnetBlocked?" warn":"")+'">Peer send: '+(mainnetBlocked?"blocked":"user-signed only")+'</span>'+
             '<span class="commerce-chip off">HAVKAR holds no secret key</span>';
     }
@@ -5969,6 +5985,7 @@ function changeHAVKARStellarNetwork(){
     if(selected?.id==="PUBLIC" && selected.paymentsEnabled!==true){  
         setStellarStatus("Mainnet is protected. HAVKAR will not create or send a Mainnet payment.","error");  
     }  
+    refreshStellarProtocolChip();
     if(window.havkarIsStellarConnected?.())refreshHAVKARStellarBalance();  
 }  
   
@@ -6443,7 +6460,8 @@ async function startWallet(){
     await refreshCurrencyRailsHonesty();
     await loadWalletArchitectureNotice();
   
-    renderStellarNetwork();  
+    renderStellarNetwork();
+    refreshStellarProtocolChip();  
   
     if(typeof window.havkarRestoreStellarAddress==="function"){  
         const restored=await window.havkarRestoreStellarAddress();  

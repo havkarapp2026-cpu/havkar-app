@@ -89057,6 +89057,12 @@ ${params.statement}
       HEX = "0123456789abcdef";
       XdrString = class _XdrString {
         bytes;
+        /**
+         * A string input is UTF-8 encoded. A lone surrogate (for example from
+         * a `slice()` that cuts a surrogate pair) encodes as U+FFFD with no
+         * error. Check `String.prototype.isWellFormed()` (ES2024) first when the
+         * input can be cut text.
+         */
         constructor(input) {
           if (input instanceof _XdrString) {
             this.bytes = input.bytes.slice();
@@ -89743,6 +89749,7 @@ ${params.statement}
       case "claimableBalance":
         return [58, 58];
       case "med25519PublicKey":
+      case "muxedContract":
         return [69, 69];
       case "signedPayload":
         return [56, 165];
@@ -89829,6 +89836,7 @@ ${params.statement}
         return decoded.length === 32 + 1;
       // +1 byte for discriminant
       case "med25519PublicKey":
+      case "muxedContract":
         return decoded.length === 40;
       // +8 bytes for the ID
       case "signedPayload":
@@ -90158,12 +90166,28 @@ ${params.statement}
     checksum7[1] = crc16 >> 8 & 255;
     return checksum7;
   }
+  function packMuxedContract(contractId, id) {
+    assertBigIntFits(id, false, 64, "MuxedContract.id");
+    const raw = new Uint8Array(40);
+    raw.set(contractId, 0);
+    new DataView(raw.buffer).setBigUint64(32, id);
+    return raw;
+  }
+  function unpackMuxedContract(raw) {
+    return {
+      contractId: raw.subarray(0, 32),
+      id: new DataView(raw.buffer, raw.byteOffset, raw.byteLength).getBigUint64(
+        32
+      )
+    };
+  }
   var versionBytes, strkeyTypes, StrKey;
   var init_strkey = __esm({
     "node_modules/@stellar/stellar-sdk/lib/esm/base/strkey.js"() {
       init_uint8array_extras();
       init_base323();
       init_checksum();
+      init_bigint_parts();
       versionBytes = {
         ed25519PublicKey: 6 << 3,
         // G (when encoded in base32)
@@ -90181,8 +90205,10 @@ ${params.statement}
         // C
         liquidityPool: 11 << 3,
         // L
-        claimableBalance: 1 << 3
+        claimableBalance: 1 << 3,
         // B
+        muxedContract: 22 << 3
+        // W
       };
       strkeyTypes = {
         G: "ed25519PublicKey",
@@ -90193,7 +90219,8 @@ ${params.statement}
         P: "signedPayload",
         C: "contract",
         L: "liquidityPool",
-        B: "claimableBalance"
+        B: "claimableBalance",
+        W: "muxedContract"
       };
       StrKey = class {
         static types = strkeyTypes;
@@ -90375,6 +90402,31 @@ ${params.statement}
          */
         static isValidClaimableBalance(address) {
           return isValid("claimableBalance", address);
+        }
+        /**
+         * Encodes raw data to strkey muxed contract (W...): the 32-byte contract ID
+         * followed by the 8-byte big-endian mux ID.
+         *
+         * @param data - data to encode
+         */
+        static encodeMuxedContract(data) {
+          return encodeCheck("muxedContract", data);
+        }
+        /**
+         * Decodes strkey muxed contract (W...) to raw data.
+         *
+         * @param address - address to decode
+         */
+        static decodeMuxedContract(address) {
+          return decodeCheck("muxedContract", address);
+        }
+        /**
+         * Checks validity of alleged muxed contract (W...) strkey address.
+         *
+         * @param address - address to check
+         */
+        static isValidMuxedContract(address) {
+          return isValid("muxedContract", address);
         }
         /**
          * Encodes raw data to strkey liquidity pool (L...).
@@ -90731,6 +90783,7 @@ ${params.statement}
     return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   }
   function med25519ToStrkey(w25) {
+    assertBigIntFits(w25.id, false, 64, "MuxedEd25519Account.id");
     const payload = new Uint8Array(40);
     payload.set(w25.ed25519, 0);
     asDataView(payload).setBigUint64(32, w25.id);
@@ -90742,6 +90795,12 @@ ${params.statement}
       id: asDataView(raw).getBigUint64(32),
       ed25519: raw.subarray(0, 32)
     };
+  }
+  function muxedContractToStrkey(w25) {
+    return StrKey.encodeMuxedContract(packMuxedContract(w25.contractId, w25.id));
+  }
+  function muxedContractFromStrkey(json) {
+    return unpackMuxedContract(StrKey.decodeMuxedContract(json));
   }
   function signedPayloadToStrkey(w25) {
     const buf = new Uint8Array(32 + 4 + roundUp4(w25.payload.length));
@@ -90838,6 +90897,17 @@ ${params.statement}
       };
       OVERRIDES.set("MuxedEd25519Account", MED25519_OVERRIDE);
       OVERRIDES.set("MuxedAccountMed25519", MED25519_OVERRIDE);
+      OVERRIDES.set("MuxedContract", {
+        toJson(wire) {
+          return muxedContractToStrkey(wire);
+        },
+        fromJson(json) {
+          if (typeof json !== "string") {
+            throw new XdrError("MuxedContract: expected W-strkey string");
+          }
+          return muxedContractFromStrkey(json);
+        }
+      });
       OVERRIDES.set("SignerKey", {
         toJson(wire) {
           const w25 = wire;
@@ -90908,6 +90978,14 @@ ${params.statement}
             }
             case 4:
               return StrKey.encodeLiquidityPool(w25.liquidityPoolId);
+            case 5:
+              return muxedContractToStrkey(w25.muxedContract);
+            default: {
+              const unknown = w25;
+              throw new XdrError(
+                `ScAddress: unsupported type ${unknown.type}`
+              );
+            }
           }
         },
         fromJson(json) {
@@ -90944,6 +91022,9 @@ ${params.statement}
               type: 4,
               liquidityPoolId: StrKey.decodeLiquidityPool(json)
             };
+          }
+          if (json.startsWith("W")) {
+            return { type: 5, muxedContract: muxedContractFromStrkey(json) };
           }
           throw new XdrError(`ScAddress: unsupported strkey prefix in ${json}`);
         }
@@ -92877,6 +92958,11 @@ ${params.statement}
           super();
           this.text = text instanceof XdrString ? text : new XdrString(text);
         }
+        /**
+         * Decodes `text` leniently: invalid bytes become U+FFFD, so a
+         * value rebuilt from this string can differ on the wire. Use
+         * `text` to keep the bytes.
+         */
         get value() {
           return this.text.toString();
         }
@@ -95179,13 +95265,18 @@ ${params.statement}
           "scAddressTypeLiquidityPool",
           4
         );
+        static scAddressTypeMuxedContract = new _ScAddressType(
+          "scAddressTypeMuxedContract",
+          5
+        );
         static schema = withMemberPrefix(
           enumType("ScAddressType", {
             scAddressTypeAccount: 0,
             scAddressTypeContract: 1,
             scAddressTypeMuxedAccount: 2,
             scAddressTypeClaimableBalance: 3,
-            scAddressTypeLiquidityPool: 4
+            scAddressTypeLiquidityPool: 4,
+            scAddressTypeMuxedContract: 5
           }),
           "scAddressType"
         );
@@ -95262,8 +95353,43 @@ ${params.statement}
     }
   });
 
+  // node_modules/@stellar/stellar-sdk/lib/esm/xdr/generated/muxed-contract.js
+  var MuxedContract;
+  var init_muxed_contract = __esm({
+    "node_modules/@stellar/stellar-sdk/lib/esm/xdr/generated/muxed-contract.js"() {
+      init_js_xdr();
+      init_xdr_value();
+      init_contract_id();
+      MuxedContract = class _MuxedContract extends XdrValue {
+        id;
+        contractId;
+        static schema = struct("MuxedContract", {
+          id: uint64(),
+          contractId: ContractId.schema
+        });
+        constructor(input) {
+          super();
+          this.id = input.id;
+          this.contractId = input.contractId;
+        }
+        toXdrObject() {
+          return {
+            id: this.id,
+            contractId: this.contractId.toXdrObject()
+          };
+        }
+        static fromXdrObject(wire) {
+          return new _MuxedContract({
+            id: wire.id,
+            contractId: ContractId.fromXdrObject(wire.contractId)
+          });
+        }
+      };
+    }
+  });
+
   // node_modules/@stellar/stellar-sdk/lib/esm/xdr/generated/sc-address.js
-  var ScAddressBase, ScAddressAccount, ScAddressContract, ScAddressMuxedAccount, ScAddressClaimableBalance, ScAddressLiquidityPool, ScAddress;
+  var ScAddressBase, ScAddressAccount, ScAddressContract, ScAddressMuxedAccount, ScAddressClaimableBalance, ScAddressLiquidityPool, ScAddressMuxedContract, ScAddress;
   var init_sc_address = __esm({
     "node_modules/@stellar/stellar-sdk/lib/esm/xdr/generated/sc-address.js"() {
       init_js_xdr();
@@ -95274,6 +95400,7 @@ ${params.statement}
       init_muxed_ed25519_account();
       init_claimable_balance_id();
       init_pool_id();
+      init_muxed_contract();
       ScAddressBase = class _ScAddressBase extends XdrValue {
         constructor() {
           super();
@@ -95302,6 +95429,11 @@ ${params.statement}
               "scAddressTypeLiquidityPool",
               4,
               field("liquidityPoolId", PoolId.schema)
+            ),
+            case_(
+              "scAddressTypeMuxedContract",
+              5,
+              field("muxedContract", MuxedContract.schema)
             )
           ]
         });
@@ -95320,6 +95452,9 @@ ${params.statement}
         static scAddressTypeLiquidityPool(liquidityPoolId) {
           return new ScAddressLiquidityPool(liquidityPoolId);
         }
+        static scAddressTypeMuxedContract(muxedContract) {
+          return new ScAddressMuxedContract(muxedContract);
+        }
         static fromXdrObject(wire) {
           switch (wire.type) {
             case 0:
@@ -95337,6 +95472,10 @@ ${params.statement}
             case 4:
               return new ScAddressLiquidityPool(
                 PoolId.fromXdrObject(wire.liquidityPoolId)
+              );
+            case 5:
+              return new ScAddressMuxedContract(
+                MuxedContract.fromXdrObject(wire.muxedContract)
               );
           }
           throw new XdrError(
@@ -95424,6 +95563,20 @@ ${params.statement}
         }
         toXdrObject() {
           return { type: 4, liquidityPoolId: this.liquidityPoolId.toXdrObject() };
+        }
+      };
+      ScAddressMuxedContract = class extends ScAddressBase {
+        type = "scAddressTypeMuxedContract";
+        muxedContract;
+        constructor(muxedContract) {
+          super();
+          this.muxedContract = muxedContract;
+        }
+        get value() {
+          return this.muxedContract;
+        }
+        toXdrObject() {
+          return { type: 5, muxedContract: this.muxedContract.toXdrObject() };
         }
       };
       ScAddress = ScAddressBase;
@@ -96716,6 +96869,11 @@ ${params.statement}
           super();
           this.str = str instanceof XdrString ? str : new XdrString(str);
         }
+        /**
+         * Decodes `str` leniently: invalid bytes become U+FFFD, so a
+         * value rebuilt from this string can differ on the wire. Use
+         * `str` to keep the bytes.
+         */
         get value() {
           return this.str.toString();
         }
@@ -96730,6 +96888,11 @@ ${params.statement}
           super();
           this.sym = sym instanceof XdrString ? sym : new XdrString(sym);
         }
+        /**
+         * Decodes `sym` leniently: invalid bytes become U+FFFD, so a
+         * value rebuilt from this string can differ on the wire. Use
+         * `sym` to keep the bytes.
+         */
         get value() {
           return this.sym.toString();
         }
@@ -96829,6 +96992,11 @@ ${params.statement}
           super();
           this.executableTag = executableTag instanceof XdrString ? executableTag : new XdrString(executableTag);
         }
+        /**
+         * Decodes `executableTag` leniently: invalid bytes become U+FFFD, so a
+         * value rebuilt from this string can differ on the wire. Use
+         * `executableTag` to keep the bytes.
+         */
         get value() {
           return this.executableTag.toString();
         }
@@ -111124,6 +111292,104 @@ ${params.statement}
     }
   });
 
+  // node_modules/@stellar/stellar-sdk/lib/esm/base/util/decode_encode_muxed_account.js
+  function canonicalUint64Id(id) {
+    return parseUint64Id(id).toString();
+  }
+  function parseUint64Id(id) {
+    if (typeof id !== "string") {
+      throw new Error("id should be a string representing a number (uint64)");
+    }
+    if (id.length > 22) {
+      throw new Error("id must have at most 22 digits");
+    }
+    if (!/^\d+$/.test(id)) {
+      throw new Error(`id is not a valid uint64 string: ${id}`);
+    }
+    const value = BigInt(id);
+    if (value > MAX_UINT64) {
+      throw new Error(
+        `id value out of range for uint64 [0, ${MAX_UINT64}]: ${id}`
+      );
+    }
+    return value;
+  }
+  function decodeAddressToMuxedAccount(address) {
+    if (StrKey.isValidMed25519PublicKey(address)) {
+      return _decodeAddressFullyToMuxedAccount(address);
+    }
+    return MuxedAccount.keyTypeEd25519(StrKey.decodeEd25519PublicKey(address));
+  }
+  function encodeMuxedAccountToAddress(muxedAccount) {
+    if (muxedAccount.type === "keyTypeMuxedEd25519") {
+      return _encodeMuxedAccountFullyToAddress(muxedAccount);
+    }
+    return StrKey.encodeEd25519PublicKey(muxedAccount.value.toBytes());
+  }
+  function encodeMuxedAccount(address, id) {
+    if (!StrKey.isValidEd25519PublicKey(address)) {
+      throw new Error("address should be a Stellar account ID (G...)");
+    }
+    return MuxedAccount.keyTypeMuxedEd25519(
+      new MuxedAccountMed25519({
+        id: Uint64.fromString(canonicalUint64Id(id)),
+        ed25519: StrKey.decodeEd25519PublicKey(address)
+      })
+    );
+  }
+  function extractBaseAddress(address) {
+    if (StrKey.isValidEd25519PublicKey(address) || StrKey.isValidContract(address)) {
+      return address;
+    }
+    if (StrKey.isValidMuxedContract(address)) {
+      return StrKey.encodeContract(
+        StrKey.decodeMuxedContract(address).subarray(0, 32)
+      );
+    }
+    if (!StrKey.isValidMed25519PublicKey(address)) {
+      throw new TypeError(
+        `expected an account or contract address (G..., M..., C... or W...), got ${address}`
+      );
+    }
+    const muxedAccount = decodeAddressToMuxedAccount(address);
+    if (muxedAccount.type !== "keyTypeMuxedEd25519") {
+      throw new TypeError(`expected muxed account (M...), got ${address}`);
+    }
+    return StrKey.encodeEd25519PublicKey(muxedAccount.value.ed25519.toBytes());
+  }
+  function _decodeAddressFullyToMuxedAccount(address) {
+    const rawBytes = StrKey.decodeMed25519PublicKey(address);
+    return MuxedAccount.keyTypeMuxedEd25519(
+      new MuxedAccountMed25519({
+        id: Uint64.fromXdr(rawBytes.subarray(-8)),
+        ed25519: rawBytes.subarray(0, -8)
+      })
+    );
+  }
+  function _encodeMuxedAccountFullyToAddress(muxedAccount) {
+    if (muxedAccount.type === "keyTypeEd25519") {
+      return encodeMuxedAccountToAddress(muxedAccount);
+    }
+    const muxed = muxedAccount.value;
+    return StrKey.encodeMed25519PublicKey(
+      concatUint8Arrays([
+        muxed.ed25519.toBytes(),
+        MuxedAccountMed25519.schema.encode(muxed.toXdrObject()).subarray(0, 8)
+      ])
+    );
+  }
+  var MAX_UINT64;
+  var init_decode_encode_muxed_account = __esm({
+    "node_modules/@stellar/stellar-sdk/lib/esm/base/util/decode_encode_muxed_account.js"() {
+      init_uint8array_extras();
+      init_xdr();
+      init_strkey();
+      init_muxed_account();
+      init_muxed_account_med25519();
+      MAX_UINT64 = BigInt("18446744073709551615");
+    }
+  });
+
   // node_modules/@stellar/stellar-sdk/lib/esm/base/keypair.js
   function isSignature(value) {
     if (value instanceof Signature) return true;
@@ -111144,12 +111410,13 @@ ${params.statement}
       init_signing();
       init_strkey();
       init_hashing();
+      init_decode_encode_muxed_account();
       init_xdr();
       init_public_key();
-      init_muxed_account();
-      init_muxed_account_med25519();
       init_decorated_signature();
       init_signature2();
+      init_muxed_account();
+      init_muxed_account_med25519();
       hashes2.sha512 = sha5122;
       MESSAGE_PREFIX = stringToUint8Array("Stellar Signed Message:\n");
       Keypair = class {
@@ -111251,8 +111518,8 @@ ${params.statement}
          * You will get a different type of muxed account depending on whether or not
          * you pass an ID.
          *
-         * @param id - stringified integer indicating the underlying muxed
-         *     ID of the new account object
+         * @param id - the underlying muxed ID of the new account object, as a
+         *     uint64 in decimal digits. Leading zeros are removed. At most 22 digits.
          */
         xdrMuxedAccount(id) {
           if (typeof id !== "undefined") {
@@ -111261,7 +111528,7 @@ ${params.statement}
             }
             return MuxedAccount.keyTypeMuxedEd25519(
               new MuxedAccountMed25519({
-                id: Uint64.fromString(id),
+                id: Uint64.fromString(canonicalUint64Id(id)),
                 ed25519: this._publicKey
               })
             );
@@ -113018,271 +113285,6 @@ ${params.statement}
     }
   });
 
-  // node_modules/@stellar/stellar-sdk/lib/esm/base/account.js
-  var Account;
-  var init_account2 = __esm({
-    "node_modules/@stellar/stellar-sdk/lib/esm/base/account.js"() {
-      init_bignumber2();
-      init_strkey();
-      Account = class {
-        _accountId;
-        sequence;
-        /**
-         * @param accountId - ID of the account (ex.
-         *     `GB3KJPLFUYN5VL6R3GU3EGCGVCKFDSD7BEDX42HWG5BWFKB3KQGJJRMA`). If you
-         *     provide a muxed account address, this will throw; use {@link
-         *     MuxedAccount} instead.
-         * @param sequence - current sequence number of the account
-         */
-        constructor(accountId, sequence) {
-          if (StrKey.isValidMed25519PublicKey(accountId)) {
-            throw new Error("accountId is an M-address; use MuxedAccount instead");
-          }
-          if (!StrKey.isValidEd25519PublicKey(accountId)) {
-            throw new Error("accountId is invalid");
-          }
-          if (!(typeof sequence === "string")) {
-            throw new Error("sequence must be of type string");
-          }
-          let parsed;
-          try {
-            parsed = new BigNumber2(sequence);
-          } catch {
-            throw new Error("sequence is not a valid number");
-          }
-          if (parsed.isNaN()) {
-            throw new Error("sequence is not a valid number");
-          }
-          this._accountId = accountId;
-          this.sequence = parsed;
-        }
-        /**
-         * Returns Stellar account ID, ex.
-         * `GB3KJPLFUYN5VL6R3GU3EGCGVCKFDSD7BEDX42HWG5BWFKB3KQGJJRMA`.
-         */
-        accountId() {
-          return this._accountId;
-        }
-        /**
-         * Returns sequence number for the account as a string
-         */
-        sequenceNumber() {
-          return this.sequence.toString();
-        }
-        /**
-         * Increments sequence number in this object by one.
-         */
-        incrementSequenceNumber() {
-          this.sequence = this.sequence.plus(1);
-        }
-      };
-    }
-  });
-
-  // node_modules/@stellar/stellar-sdk/lib/esm/base/util/decode_encode_muxed_account.js
-  function decodeAddressToMuxedAccount(address) {
-    if (StrKey.isValidMed25519PublicKey(address)) {
-      return _decodeAddressFullyToMuxedAccount(address);
-    }
-    return MuxedAccount.keyTypeEd25519(StrKey.decodeEd25519PublicKey(address));
-  }
-  function encodeMuxedAccountToAddress(muxedAccount) {
-    if (muxedAccount.type === "keyTypeMuxedEd25519") {
-      return _encodeMuxedAccountFullyToAddress(muxedAccount);
-    }
-    return StrKey.encodeEd25519PublicKey(muxedAccount.value.toBytes());
-  }
-  function encodeMuxedAccount(address, id) {
-    if (!StrKey.isValidEd25519PublicKey(address)) {
-      throw new Error("address should be a Stellar account ID (G...)");
-    }
-    if (typeof id !== "string") {
-      throw new Error("id should be a string representing a number (uint64)");
-    }
-    return MuxedAccount.keyTypeMuxedEd25519(
-      new MuxedAccountMed25519({
-        id: Uint64.fromString(id),
-        ed25519: StrKey.decodeEd25519PublicKey(address)
-      })
-    );
-  }
-  function extractBaseAddress(address) {
-    if (StrKey.isValidEd25519PublicKey(address)) {
-      return address;
-    }
-    if (!StrKey.isValidMed25519PublicKey(address)) {
-      throw new TypeError(`expected muxed account (M...), got ${address}`);
-    }
-    const muxedAccount = decodeAddressToMuxedAccount(address);
-    if (muxedAccount.type !== "keyTypeMuxedEd25519") {
-      throw new TypeError(`expected muxed account (M...), got ${address}`);
-    }
-    return StrKey.encodeEd25519PublicKey(muxedAccount.value.ed25519.toBytes());
-  }
-  function _decodeAddressFullyToMuxedAccount(address) {
-    const rawBytes = StrKey.decodeMed25519PublicKey(address);
-    return MuxedAccount.keyTypeMuxedEd25519(
-      new MuxedAccountMed25519({
-        id: Uint64.fromXdr(rawBytes.subarray(-8)),
-        ed25519: rawBytes.subarray(0, -8)
-      })
-    );
-  }
-  function _encodeMuxedAccountFullyToAddress(muxedAccount) {
-    if (muxedAccount.type === "keyTypeEd25519") {
-      return encodeMuxedAccountToAddress(muxedAccount);
-    }
-    const muxed = muxedAccount.value;
-    return StrKey.encodeMed25519PublicKey(
-      concatUint8Arrays([
-        muxed.ed25519.toBytes(),
-        MuxedAccountMed25519.schema.encode(muxed.toXdrObject()).subarray(0, 8)
-      ])
-    );
-  }
-  var init_decode_encode_muxed_account = __esm({
-    "node_modules/@stellar/stellar-sdk/lib/esm/base/util/decode_encode_muxed_account.js"() {
-      init_uint8array_extras();
-      init_xdr();
-      init_strkey();
-      init_muxed_account();
-      init_muxed_account_med25519();
-    }
-  });
-
-  // node_modules/@stellar/stellar-sdk/lib/esm/base/muxed_account.js
-  function validateUint64Id(id) {
-    let value;
-    try {
-      value = BigInt(id);
-    } catch {
-      throw new Error(`id is not a valid uint64 string: ${id}`);
-    }
-    if (value < BigInt(0) || value > MAX_UINT64) {
-      throw new Error(
-        `id value out of range for uint64 [0, ${MAX_UINT64}]: ${id}`
-      );
-    }
-  }
-  var MAX_UINT64, MuxedAccount2;
-  var init_muxed_account2 = __esm({
-    "node_modules/@stellar/stellar-sdk/lib/esm/base/muxed_account.js"() {
-      init_account2();
-      init_strkey();
-      init_decode_encode_muxed_account();
-      MAX_UINT64 = BigInt("18446744073709551615");
-      MuxedAccount2 = class _MuxedAccount {
-        account;
-        _muxedXdr;
-        _mAddress;
-        _id;
-        /**
-         * @param baseAccount - the {@link Account} instance representing the
-         *     underlying G... address
-         * @param id - a stringified uint64 value that represents the ID of the
-         *     muxed account
-         */
-        constructor(baseAccount, id) {
-          const accountId = baseAccount.accountId();
-          if (!StrKey.isValidEd25519PublicKey(accountId)) {
-            throw new Error("accountId is invalid");
-          }
-          validateUint64Id(id);
-          this.account = baseAccount;
-          this._muxedXdr = encodeMuxedAccount(accountId, id);
-          this._mAddress = encodeMuxedAccountToAddress(this._muxedXdr);
-          this._id = id;
-        }
-        /**
-         * Parses an M-address into a MuxedAccount object.
-         *
-         * @param  mAddress    - an M-address to transform
-         * @param  sequenceNum - the sequence number of the underlying {@link
-         *     Account}, to use for the underlying base account {@link
-         *     MuxedAccount.baseAccount}. If you're using the SDK, you can use
-         *     `server.loadAccount` to fetch this if you don't know it.
-         */
-        static fromAddress(mAddress, sequenceNum) {
-          const muxedAccount = decodeAddressToMuxedAccount(mAddress);
-          const gAddress = extractBaseAddress(mAddress);
-          if (muxedAccount.type !== "keyTypeMuxedEd25519") {
-            throw new Error("accountId is invalid");
-          }
-          const id = muxedAccount.value.id.toString();
-          return new _MuxedAccount(new Account(gAddress, sequenceNum), id);
-        }
-        /**
-         * Returns the underlying account object shared among all muxed
-         * accounts with this Stellar address.
-         */
-        baseAccount() {
-          return this.account;
-        }
-        /**
-         * Returns the M-address representing this account's (G-address, ID).
-         */
-        accountId() {
-          return this._mAddress;
-        }
-        /**
-         * Returns the uint64 ID of this muxed account as a string.
-         */
-        id() {
-          return this._id;
-        }
-        /**
-         * Updates the muxed account's ID, regenerating the M-address accordingly.
-         *
-         * @param id - a stringified uint64 value to set as the new muxed account ID
-         */
-        setId(id) {
-          if (typeof id !== "string") {
-            throw new Error("id should be a string representing a number (uint64)");
-          }
-          validateUint64Id(id);
-          this._muxedXdr = encodeMuxedAccount(this.account.accountId(), id);
-          this._mAddress = encodeMuxedAccountToAddress(this._muxedXdr);
-          this._id = id;
-          return this;
-        }
-        /**
-         * Returns the stringified sequence number for the underlying account.
-         */
-        sequenceNumber() {
-          return this.account.sequenceNumber();
-        }
-        /**
-         * Increments the underlying account's sequence number by one.
-         */
-        incrementSequenceNumber() {
-          this.account.incrementSequenceNumber();
-        }
-        /**
-         * Returns the XDR object representing this muxed account's
-         * G-address and uint64 ID.
-         */
-        toXdrObject() {
-          return this._muxedXdr;
-        }
-        /**
-         * @deprecated Use {@link toXdrObject} instead.
-         * Deprecated in version v17.0.0
-         */
-        toXDRObject() {
-          return this.toXdrObject();
-        }
-        /**
-         * Checks whether two muxed accounts are equal by comparing their M-addresses.
-         *
-         * @param otherMuxedAccount - the MuxedAccount to compare against
-         */
-        equals(otherMuxedAccount) {
-          return this.accountId() === otherMuxedAccount.accountId();
-        }
-      };
-    }
-  });
-
   // node_modules/feaxios/dist/index.mjs
   async function prepareAxiosResponse(options, res) {
     const response = { config: options };
@@ -113658,9 +113660,14 @@ ${params.statement}
       const qs = new URLSearchParams(
         config4.params
       ).toString();
+      url = stripFragment(url);
       url += (url.includes("?") ? "&" : "?") + qs;
     }
     return url;
+  }
+  function stripFragment(url) {
+    const hashIndex = url.indexOf("#");
+    return hashIndex === -1 ? url : url.slice(0, hashIndex);
   }
   function encodeRequestBody(data, headers) {
     if (data === void 0 || data === null) return void 0;
@@ -113758,21 +113765,20 @@ ${params.statement}
     headers.delete("content-type");
     headers.delete("content-length");
     headers.delete("transfer-encoding");
+    headers.delete("content-encoding");
+    headers.delete("content-language");
+    headers.delete("content-location");
+    headers.delete("content-range");
     next.headers = headers;
     return next;
   }
-  function stripCrossOriginAuth(init, fromUrl, toUrl) {
-    let sameOrigin;
-    try {
-      sameOrigin = new URL(fromUrl).origin === new URL(toUrl).origin;
-    } catch {
-      sameOrigin = false;
-    }
-    if (sameOrigin) return init;
-    const headers = new Headers(init.headers || {});
-    headers.delete("authorization");
-    headers.delete("proxy-authorization");
-    headers.delete("cookie");
+  function stripCrossOriginHeaders(init, fromUrl, toUrl) {
+    if (fromUrl.origin === toUrl.origin) return init;
+    const source = init.headers instanceof Headers ? init.headers : new Headers(init.headers || {});
+    const headers = new Headers();
+    source.forEach((value, name2) => {
+      if (SAFE_CROSS_ORIGIN_HEADERS.has(name2)) headers.set(name2, value);
+    });
     return { ...init, headers };
   }
   function buildHttpError(response, config4, data) {
@@ -113817,12 +113823,13 @@ ${params.statement}
       redirect,
       ...signal ? { signal } : {}
     };
-    let currentUrl = buildBoundedUrl(config4);
+    const startUrl = buildBoundedUrl(config4);
+    let current;
     let redirectsRemaining = maxRedirects ?? 0;
     let response;
     while (true) {
       try {
-        response = await fetch(currentUrl, currentInit);
+        response = await fetch(current?.href ?? startUrl, currentInit);
       } catch (err) {
         if (err?.name === "TimeoutError") {
           throw new Error(`timeout of ${config4.timeout}ms exceeded`);
@@ -113837,10 +113844,17 @@ ${params.statement}
       }
       const location = response.headers.get("location");
       if (!location) break;
-      const nextUrl = new URL(location, currentUrl).toString();
+      const from29 = current ?? new URL(startUrl);
+      const target = new URL(location, from29);
+      if (target.protocol !== "http:" && target.protocol !== "https:") {
+        throw new Error(`Unsupported protocol ${target.protocol}`);
+      }
+      if (from29.protocol === "https:" && target.protocol === "http:") {
+        throw new Error("Redirect from https: to http: is not allowed");
+      }
       currentInit = applyRedirectSemantics(currentInit, response.status);
-      currentInit = stripCrossOriginAuth(currentInit, currentUrl, nextUrl);
-      currentUrl = nextUrl;
+      currentInit = stripCrossOriginHeaders(currentInit, from29, target);
+      current = target;
       redirectsRemaining -= 1;
     }
     if (!response.ok) {
@@ -113859,7 +113873,13 @@ ${params.statement}
       throw buildHttpError(response, config4, errBody);
     }
     const bytes = await readBodyBounded(response, maxContentLength);
-    const text = new TextDecoder().decode(bytes);
+    strictUtf8Decoder ??= new TextDecoder("utf-8", { fatal: true });
+    let text;
+    try {
+      text = strictUtf8Decoder.decode(bytes);
+    } catch (err) {
+      throw new Error("Response body is not valid UTF-8", { cause: err });
+    }
     let data = text;
     try {
       data = JSON.parse(text);
@@ -113892,6 +113912,12 @@ ${params.statement}
         adapter: (config4) => {
           if (config4.maxRedirects !== void 0 || config4.maxContentLength !== void 0) {
             return boundedFetchAdapter(config4);
+          }
+          if (config4.url?.includes("#") && config4.params && Object.keys(config4.params).length > 0) {
+            return instance.request({
+              ...config4,
+              url: stripFragment(config4.url)
+            });
           }
           return instance.request(config4);
         }
@@ -114060,7 +114086,7 @@ ${params.statement}
     };
     return httpClient;
   }
-  var CANCELED_MARKER, InterceptorManager, fetchClient;
+  var CANCELED_MARKER, InterceptorManager, SAFE_CROSS_ORIGIN_HEADERS, strictUtf8Decoder, fetchClient;
   var init_fetch_client = __esm({
     "node_modules/@stellar/stellar-sdk/lib/esm/http-client/fetch-client.js"() {
       init_dist12();
@@ -114088,6 +114114,30 @@ ${params.statement}
           });
         }
       };
+      SAFE_CROSS_ORIGIN_HEADERS = /* @__PURE__ */ new Set([
+        "accept",
+        "accept-encoding",
+        "accept-language",
+        "content-type",
+        "content-length",
+        "content-encoding",
+        "content-language",
+        "content-location",
+        "content-range",
+        "user-agent",
+        "range",
+        "if-range",
+        "if-match",
+        "if-none-match",
+        "if-modified-since",
+        "if-unmodified-since",
+        "cache-control",
+        "pragma",
+        "x-client-name",
+        "x-client-version",
+        "x-app-name",
+        "x-app-version"
+      ]);
       fetchClient = createFetchClient();
     }
   });
@@ -114160,7 +114210,7 @@ ${params.statement}
           if (issuer && !StrKey.isValidEd25519PublicKey(issuer)) {
             throw new Error("Issuer is invalid");
           }
-          if (String(code2).toLowerCase() === "xlm") {
+          if (!issuer && String(code2).toLowerCase() === "xlm") {
             this.code = "XLM";
           } else {
             this.code = code2;
@@ -114851,6 +114901,41 @@ ${params.statement}
     const amount = new BigNumber2(value).times(ONE);
     return Int64.fromString(amount.toString());
   }
+  function toXdrOfferId(offerId) {
+    if (offerId === void 0) {
+      return Int64.fromString("0");
+    }
+    let value;
+    if (typeof offerId === "number") {
+      if (!Number.isSafeInteger(offerId) || offerId < 0) {
+        throw new Error(
+          "offerId must be a non-negative safe integer; pass a larger ID as a bigint or a decimal string"
+        );
+      }
+      value = BigInt(offerId);
+    } else if (typeof offerId === "bigint") {
+      if (offerId < 0n) {
+        throw new Error("offerId must not be negative");
+      }
+      value = offerId;
+    } else if (typeof offerId === "string") {
+      if (offerId.length > 22) {
+        throw new Error("offerId must have at most 22 digits");
+      }
+      if (!/^\d+$/.test(offerId)) {
+        throw new Error("offerId must be a string of decimal digits");
+      }
+      value = BigInt(offerId);
+    } else {
+      throw new Error(
+        "offerId must be a number, a bigint, or a string of decimal digits"
+      );
+    }
+    if (value > Int64.MAX_VALUE) {
+      throw new Error(`offerId must not exceed ${Int64.MAX_VALUE}`);
+    }
+    return Int64.fromString(value.toString());
+  }
   function fromXdrAmount(value) {
     return new BigNumber2(value.toString()).div(ONE).toFixed(7);
   }
@@ -114873,7 +114958,7 @@ ${params.statement}
         d: parseInt(String(approx[1]), 10)
       });
     }
-    if (xdrObject.n < 0 || xdrObject.d <= 0) {
+    if (xdrObject.n <= 0 || xdrObject.d <= 0) {
       throw new Error("price must be positive");
     }
     return xdrObject;
@@ -114928,8 +115013,7 @@ ${params.statement}
       throw new TypeError("price argument is required");
     }
     const price = toXdrPrice(opts.price);
-    const offerIdStr = opts.offerId !== void 0 ? opts.offerId.toString() : "0";
-    const offerId = Int64.fromString(offerIdStr);
+    const offerId = toXdrOfferId(opts.offerId);
     const manageSellOfferOp = new ManageSellOfferOp({
       selling,
       buying,
@@ -114947,7 +115031,6 @@ ${params.statement}
   var init_manage_sell_offer = __esm({
     "node_modules/@stellar/stellar-sdk/lib/esm/base/operations/manage_sell_offer.js"() {
       init_operations();
-      init_xdr();
       init_manage_sell_offer_op();
       init_operation_body();
       init_operation();
@@ -115334,8 +115417,7 @@ ${params.statement}
       throw new TypeError("price argument is required");
     }
     const price = toXdrPrice(opts.price);
-    const offerIdStr = opts.offerId !== void 0 ? opts.offerId.toString() : "0";
-    const offerId = Int64.fromString(offerIdStr);
+    const offerId = toXdrOfferId(opts.offerId);
     const manageBuyOfferOp = new ManageBuyOfferOp({
       selling,
       buying,
@@ -115353,7 +115435,6 @@ ${params.statement}
   var init_manage_buy_offer = __esm({
     "node_modules/@stellar/stellar-sdk/lib/esm/base/operations/manage_buy_offer.js"() {
       init_operations();
-      init_xdr();
       init_manage_buy_offer_op();
       init_operation_body();
       init_operation();
@@ -115726,13 +115807,13 @@ ${params.statement}
     if (!StrKey.isValidEd25519PublicKey(opts.seller)) {
       throw new Error("seller is invalid");
     }
-    if (typeof opts.offerId !== "string") {
+    if (opts.offerId === void 0) {
       throw new Error("offerId is invalid");
     }
     const ledgerKey = LedgerKey.offer(
       new LedgerKeyOffer({
         sellerId: Keypair.fromPublicKey(opts.seller).xdrAccountId(),
-        offerId: Int64.fromString(opts.offerId)
+        offerId: toXdrOfferId(opts.offerId)
       })
     );
     const op = RevokeSponsorshipOp.revokeSponsorshipLedgerEntry(ledgerKey);
@@ -115857,7 +115938,6 @@ ${params.statement}
   }
   var init_revoke_sponsorship = __esm({
     "node_modules/@stellar/stellar-sdk/lib/esm/base/operations/revoke_sponsorship.js"() {
-      init_xdr();
       init_uint8array_extras();
       init_strkey();
       init_keypair();
@@ -116075,9 +116155,10 @@ ${params.statement}
       init_muxed_ed25519_account();
       init_sc_val();
       init_sc_address();
+      init_muxed_contract();
+      init_contract_id();
       init_claimable_balance_id();
       init_hash();
-      init_contract_id();
       init_pool_id();
       init_public_key();
       Address = class _Address {
@@ -116096,6 +116177,9 @@ ${params.statement}
           } else if (StrKey.isValidMed25519PublicKey(address)) {
             this._type = "muxedAccount";
             this._key = StrKey.decodeMed25519PublicKey(address);
+          } else if (StrKey.isValidMuxedContract(address)) {
+            this._type = "muxedContract";
+            this._key = StrKey.decodeMuxedContract(address);
           } else if (StrKey.isValidClaimableBalance(address)) {
             this._type = "claimableBalance";
             this._key = StrKey.decodeClaimableBalance(address);
@@ -116155,6 +116239,15 @@ ${params.statement}
           return new _Address(StrKey.encodeMed25519PublicKey(buffer2));
         }
         /**
+         * Creates a new muxed contract Address object from raw bytes: the 32-byte
+         * contract ID followed by the 8-byte big-endian mux ID.
+         *
+         * @param buffer - The bytes of an address to parse.
+         */
+        static muxedContract(buffer2) {
+          return new _Address(StrKey.encodeMuxedContract(buffer2));
+        }
+        /**
          * Convert this from an xdr.ScVal type.
          *
          * @param scVal - The xdr.ScVal type to parse
@@ -116197,6 +116290,12 @@ ${params.statement}
             }
             case "scAddressTypeLiquidityPool":
               return _Address.liquidityPool(scAddress.value.toBytes());
+            case "scAddressTypeMuxedContract": {
+              const muxed = scAddress.value;
+              return _Address.muxedContract(
+                packMuxedContract(muxed.contractId.value, muxed.id)
+              );
+            }
             default:
               throw new Error("Unsupported address type");
           }
@@ -116216,6 +116315,8 @@ ${params.statement}
               return StrKey.encodeLiquidityPool(this._key);
             case "muxedAccount":
               return StrKey.encodeMed25519PublicKey(this._key);
+            case "muxedContract":
+              return StrKey.encodeMuxedContract(this._key);
             default:
               throw new Error("Unsupported address type");
           }
@@ -116250,6 +116351,12 @@ ${params.statement}
                   id: Uint64.fromXdr(this._key.subarray(32, 40), "raw")
                 })
               );
+            case "muxedContract": {
+              const { contractId, id } = unpackMuxedContract(this._key);
+              return ScAddress.scAddressTypeMuxedContract(
+                new MuxedContract({ id, contractId: new ContractId(contractId) })
+              );
+            }
             default:
               throw new Error("Unsupported address type");
           }
@@ -117107,8 +117214,9 @@ ${params.statement}
         /**
          * Creates and returns a `MemoText` memo.
          *
-         * @param text - memo text. A JS string is UTF-8 encoded on the wire;
-         *   pass a `Uint8Array` for byte-exact content. A plain `number[]` is not
+         * @param text - memo text. A JS string is UTF-8 encoded on the wire, and
+         *   a lone surrogate becomes U+FFFD with no error; pass a `Uint8Array`
+         *   for byte-exact content. A plain `number[]` is not
          *   accepted (16.2.0 and earlier took one); wrap it: `new Uint8Array(arr)`.
          */
         static text(text) {
@@ -117196,7 +117304,37 @@ ${params.statement}
   });
 
   // node_modules/@stellar/stellar-sdk/lib/esm/base/transaction_base.js
-  var TransactionBase;
+  function markSdkOwned(envelope) {
+    sdkOwned.add(envelope);
+    return envelope;
+  }
+  function ownEnvelope(envelope, isExpected, expected) {
+    const isString = typeof envelope === "string";
+    const input = isString ? TransactionEnvelope.fromXdr(base64ToUint8Array(envelope)) : envelope;
+    if (!isExpected(input)) {
+      throw new Error(
+        `Invalid TransactionEnvelope: expected an ${expected} but received an ${input.type}.`
+      );
+    }
+    if (isString || sdkOwned.has(input)) {
+      return input;
+    }
+    let own;
+    try {
+      own = TransactionEnvelope.fromXdr(input.toXdr());
+    } catch (error) {
+      throw new Error(
+        `Invalid TransactionEnvelope: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+    if (!isExpected(own)) {
+      throw new Error(
+        `TransactionEnvelope changed type in the copy: ${input.type} became ${own.type}.`
+      );
+    }
+    return own;
+  }
+  var sdkOwned, TransactionBase;
   var init_transaction_base = __esm({
     "node_modules/@stellar/stellar-sdk/lib/esm/base/transaction_base.js"() {
       init_uint8array_extras();
@@ -117206,7 +117344,9 @@ ${params.statement}
       init_transaction3();
       init_transaction_v0();
       init_fee_bump_transaction();
+      init_transaction_envelope();
       init_decorated_signature();
+      sdkOwned = /* @__PURE__ */ new WeakSet();
       TransactionBase = class {
         _tx;
         _signatures;
@@ -117417,15 +117557,14 @@ ${params.statement}
   var init_transaction4 = __esm({
     "node_modules/@stellar/stellar-sdk/lib/esm/base/transaction.js"() {
       init_uint8array_extras();
-      init_base642();
       init_xdr();
       init_hashing();
       init_strkey();
       init_operation2();
       init_memo2();
       init_transaction_base();
+      init_util();
       init_decode_encode_muxed_account();
-      init_transaction_envelope();
       init_transaction_signature_payload_tagged_transaction();
       init_transaction_signature_payload();
       init_transaction_v1_envelope();
@@ -117433,6 +117572,7 @@ ${params.statement}
       init_hash_id_preimage_operation_id();
       init_transaction3();
       init_hash();
+      init_transaction_envelope();
       init_transaction_v0();
       init_hash_id_preimage();
       init_public_key();
@@ -117455,17 +117595,13 @@ ${params.statement}
          *     (e.g. "Public Global Stellar Network ; September 2015")
          */
         constructor(envelope, networkPassphrase) {
-          if (typeof envelope === "string") {
-            const bytes = base64ToUint8Array(envelope);
-            envelope = TransactionEnvelope.fromXdr(bytes);
-          }
-          const envelopeType = envelope.type;
-          if (envelopeType !== "envelopeTypeTxV0" && envelopeType !== "envelopeTypeTx") {
-            throw new Error(
-              `Invalid TransactionEnvelope: expected an envelopeTypeTxV0 or envelopeTypeTx but received an ${envelopeType}.`
-            );
-          }
-          const txEnvelope = envelope.value;
+          const own = ownEnvelope(
+            envelope,
+            (value) => isUnionVariant(value, "envelopeTypeTxV0") || isUnionVariant(value, "envelopeTypeTx"),
+            "envelopeTypeTxV0 or envelopeTypeTx"
+          );
+          const envelopeType = own.type;
+          const txEnvelope = own.value;
           const tx3 = txEnvelope.tx;
           const fee = tx3.fee.toString();
           const signatures = (txEnvelope.signatures || []).slice();
@@ -117727,10 +117863,10 @@ ${params.statement}
   var FeeBumpTransaction2;
   var init_fee_bump_transaction2 = __esm({
     "node_modules/@stellar/stellar-sdk/lib/esm/base/fee_bump_transaction.js"() {
-      init_base642();
       init_hashing();
       init_transaction4();
       init_transaction_base();
+      init_util();
       init_decode_encode_muxed_account();
       init_fee_bump_transaction_envelope();
       init_transaction_envelope();
@@ -117747,17 +117883,12 @@ ${params.statement}
          *     (e.g. "Public Global Stellar Network ; September 2015").
          */
         constructor(envelope, networkPassphrase) {
-          if (typeof envelope === "string") {
-            const bytes = base64ToUint8Array(envelope);
-            envelope = TransactionEnvelope.fromXdr(bytes);
-          }
-          const envelopeType = envelope.type;
-          if (envelopeType !== "envelopeTypeTxFeeBump") {
-            throw new Error(
-              `Invalid TransactionEnvelope: expected an envelopeTypeTxFeeBump but received an ${envelopeType}.`
-            );
-          }
-          const txEnvelope = envelope.value;
+          const own = ownEnvelope(
+            envelope,
+            (value) => isUnionVariant(value, "envelopeTypeTxFeeBump"),
+            "envelopeTypeTxFeeBump"
+          );
+          const txEnvelope = own.value;
           const tx3 = txEnvelope.tx;
           const fee = tx3.fee.toString();
           const signatures = (txEnvelope.signatures || []).slice();
@@ -117767,7 +117898,7 @@ ${params.statement}
           );
           this._feeSource = encodeMuxedAccountToAddress(this.tx.feeSource);
           this._innerTransaction = new Transaction2(
-            innerTxEnvelope,
+            markSdkOwned(innerTxEnvelope),
             networkPassphrase
           );
         }
@@ -117818,6 +117949,184 @@ ${params.statement}
             // make a copy of the signatures
           });
           return TransactionEnvelope.envelopeTypeTxFeeBump(envelope);
+        }
+      };
+    }
+  });
+
+  // node_modules/@stellar/stellar-sdk/lib/esm/base/account.js
+  var Account;
+  var init_account2 = __esm({
+    "node_modules/@stellar/stellar-sdk/lib/esm/base/account.js"() {
+      init_bignumber2();
+      init_strkey();
+      Account = class {
+        _accountId;
+        sequence;
+        /**
+         * @param accountId - ID of the account (ex.
+         *     `GB3KJPLFUYN5VL6R3GU3EGCGVCKFDSD7BEDX42HWG5BWFKB3KQGJJRMA`). If you
+         *     provide a muxed account address, this will throw; use {@link
+         *     MuxedAccount} instead.
+         * @param sequence - current sequence number of the account
+         */
+        constructor(accountId, sequence) {
+          if (StrKey.isValidMed25519PublicKey(accountId)) {
+            throw new Error("accountId is an M-address; use MuxedAccount instead");
+          }
+          if (!StrKey.isValidEd25519PublicKey(accountId)) {
+            throw new Error("accountId is invalid");
+          }
+          if (!(typeof sequence === "string")) {
+            throw new Error("sequence must be of type string");
+          }
+          let parsed;
+          try {
+            parsed = new BigNumber2(sequence);
+          } catch {
+            throw new Error("sequence is not a valid number");
+          }
+          if (parsed.isNaN()) {
+            throw new Error("sequence is not a valid number");
+          }
+          this._accountId = accountId;
+          this.sequence = parsed;
+        }
+        /**
+         * Returns Stellar account ID, ex.
+         * `GB3KJPLFUYN5VL6R3GU3EGCGVCKFDSD7BEDX42HWG5BWFKB3KQGJJRMA`.
+         */
+        accountId() {
+          return this._accountId;
+        }
+        /**
+         * Returns sequence number for the account as a string
+         */
+        sequenceNumber() {
+          return this.sequence.toString();
+        }
+        /**
+         * Increments sequence number in this object by one.
+         */
+        incrementSequenceNumber() {
+          this.sequence = this.sequence.plus(1);
+        }
+      };
+    }
+  });
+
+  // node_modules/@stellar/stellar-sdk/lib/esm/base/muxed_account.js
+  var MuxedAccount2;
+  var init_muxed_account2 = __esm({
+    "node_modules/@stellar/stellar-sdk/lib/esm/base/muxed_account.js"() {
+      init_account2();
+      init_strkey();
+      init_decode_encode_muxed_account();
+      MuxedAccount2 = class _MuxedAccount {
+        account;
+        _muxedXdr;
+        _mAddress;
+        _id;
+        /**
+         * @param baseAccount - the {@link Account} instance representing the
+         *     underlying G... address
+         * @param id - the ID of the muxed account, as a uint64 in decimal digits.
+         *     Leading zeros are removed. At most 22 digits.
+         */
+        constructor(baseAccount, id) {
+          const accountId = baseAccount.accountId();
+          if (!StrKey.isValidEd25519PublicKey(accountId)) {
+            throw new Error("accountId is invalid");
+          }
+          const canonicalId = canonicalUint64Id(id);
+          this.account = baseAccount;
+          this._muxedXdr = encodeMuxedAccount(accountId, canonicalId);
+          this._mAddress = encodeMuxedAccountToAddress(this._muxedXdr);
+          this._id = canonicalId;
+        }
+        /**
+         * Parses an M-address into a MuxedAccount object.
+         *
+         * @param  mAddress    - an M-address to transform
+         * @param  sequenceNum - the sequence number of the underlying {@link
+         *     Account}, to use for the underlying base account {@link
+         *     MuxedAccount.baseAccount}. If you're using the SDK, you can use
+         *     `server.loadAccount` to fetch this if you don't know it.
+         */
+        static fromAddress(mAddress, sequenceNum) {
+          const muxedAccount = decodeAddressToMuxedAccount(mAddress);
+          const gAddress = extractBaseAddress(mAddress);
+          if (muxedAccount.type !== "keyTypeMuxedEd25519") {
+            throw new Error("accountId is invalid");
+          }
+          const id = muxedAccount.value.id.toString();
+          return new _MuxedAccount(new Account(gAddress, sequenceNum), id);
+        }
+        /**
+         * Returns the underlying account object shared among all muxed
+         * accounts with this Stellar address.
+         */
+        baseAccount() {
+          return this.account;
+        }
+        /**
+         * Returns the M-address representing this account's (G-address, ID).
+         */
+        accountId() {
+          return this._mAddress;
+        }
+        /**
+         * Returns the uint64 ID of this muxed account as a string.
+         */
+        id() {
+          return this._id;
+        }
+        /**
+         * Updates the muxed account's ID, regenerating the M-address accordingly.
+         *
+         * @param id - the new muxed account ID, as a uint64 in decimal digits.
+         *     Leading zeros are removed. At most 22 digits.
+         */
+        setId(id) {
+          const canonicalId = canonicalUint64Id(id);
+          this._muxedXdr = encodeMuxedAccount(this.account.accountId(), canonicalId);
+          this._mAddress = encodeMuxedAccountToAddress(this._muxedXdr);
+          this._id = canonicalId;
+          return this;
+        }
+        /**
+         * Returns the stringified sequence number for the underlying account.
+         */
+        sequenceNumber() {
+          return this.account.sequenceNumber();
+        }
+        /**
+         * Increments the underlying account's sequence number by one.
+         */
+        incrementSequenceNumber() {
+          this.account.incrementSequenceNumber();
+        }
+        /**
+         * Returns the XDR object representing this muxed account's
+         * G-address and uint64 ID.
+         */
+        toXdrObject() {
+          return this._muxedXdr;
+        }
+        /**
+         * @deprecated Use {@link toXdrObject} instead.
+         * Deprecated in version v17.0.0
+         */
+        toXDRObject() {
+          return this.toXdrObject();
+        }
+        /**
+         * Checks whether two muxed accounts are equal by comparing their M-addresses.
+         *
+         * @param otherMuxedAccount - the MuxedAccount to compare against
+         */
+        equals(otherMuxedAccount) {
+          return this.accountId() === otherMuxedAccount.accountId();
         }
       };
     }
@@ -118121,6 +118430,11 @@ ${params.statement}
           try {
             this._id = StrKey.decodeContract(contractId);
           } catch {
+            if (StrKey.isValidMuxedContract(contractId)) {
+              throw new Error(
+                `Invalid contract ID: ${contractId} is a muxed contract address; use its base address (C...)`
+              );
+            }
             throw new Error(`Invalid contract ID: ${contractId}`);
           }
         }
@@ -118736,8 +119050,6 @@ ${params.statement}
         return ScVal.scvBool(val);
       case "undefined":
         return ScVal.scvVoid();
-      case "function":
-        return nativeToScVal(val());
       default:
         throw new TypeError(
           `failed to convert typeof ${typeof val} (${JSON.stringify(val)})`
@@ -118827,6 +119139,13 @@ ${params.statement}
   });
 
   // node_modules/@stellar/stellar-sdk/lib/esm/base/transaction_builder.js
+  function checkResourceFee(resourceFee) {
+    if (resourceFee < 0n || resourceFee > MAX_RESOURCE_FEE) {
+      throw new Error(
+        `Invalid resourceFee ${resourceFee}: must be between 0 and ${MAX_RESOURCE_FEE}`
+      );
+    }
+  }
   function isValidDate2(d21) {
     return d21 instanceof Date && !Number.isNaN(d21.getTime());
   }
@@ -118840,7 +119159,7 @@ ${params.statement}
     }
     return num2;
   }
-  var UINT32_MAX3, BASE_FEE, TransactionBuilder;
+  var UINT32_MAX3, MAX_RESOURCE_FEE, SOROBAN_OPERATION_TYPES, BASE_FEE, TransactionBuilder;
   var init_transaction_builder = __esm({
     "node_modules/@stellar/stellar-sdk/lib/esm/base/transaction_builder.js"() {
       init_bignumber2();
@@ -118850,6 +119169,7 @@ ${params.statement}
       init_decode_encode_muxed_account();
       init_transaction4();
       init_fee_bump_transaction2();
+      init_transaction_base();
       init_sorobandata_builder();
       init_strkey();
       init_signerkey();
@@ -118887,6 +119207,12 @@ ${params.statement}
       init_fee_bump_transaction();
       init_fee_bump_transaction_envelope();
       UINT32_MAX3 = 4294967295;
+      MAX_RESOURCE_FEE = 2n ** 50n;
+      SOROBAN_OPERATION_TYPES = /* @__PURE__ */ new Set([
+        "invokeHostFunction",
+        "extendFootprintTtl",
+        "restoreFootprint"
+      ]);
       BASE_FEE = "100";
       TransactionBuilder = class _TransactionBuilder {
         source;
@@ -118977,6 +119303,8 @@ ${params.statement}
          *    as needed, instead..
          *
          * **TODO:** This cannot clone {@link FeeBumpTransaction}s, yet.
+         *
+         * @throws If the transaction's `resourceFee` is below 0 or above 2^50.
          */
         static cloneFrom(tx3, opts = {}) {
           if (!(tx3 instanceof Transaction2)) {
@@ -119003,15 +119331,18 @@ ${params.statement}
             sorobanData = ext.type === "sorobanData" ? ext.value : void 0;
           }
           let totalFee = parseInt(tx3.fee, 10);
+          let zeroInclusionFee = false;
           if (sorobanData) {
-            const resourceFee = Number(sorobanData.resourceFee.toString());
+            checkResourceFee(sorobanData.resourceFee);
+            const resourceFee = Number(sorobanData.resourceFee);
+            zeroInclusionFee = totalFee === resourceFee;
             if (totalFee - resourceFee > 0) {
               totalFee -= resourceFee;
             }
           }
           const unscaledFee = Math.floor(totalFee / tx3.operations.length);
           const builderOpts = {
-            fee: (unscaledFee || BASE_FEE).toString(),
+            fee: (zeroInclusionFee ? 0 : unscaledFee || BASE_FEE).toString(),
             memo: tx3.memo,
             networkPassphrase: tx3.networkPassphrase
           };
@@ -119108,7 +119439,8 @@ ${params.statement}
          *
          * @param timeoutSeconds - Number of seconds the transaction is good.
          *     Can't be negative. If the value is {@link TimeoutInfinite}, the
-         *     transaction is good indefinitely.
+         *     transaction is good indefinitely. An existing `minTime` is kept in
+         *     both cases, and a timeout that ends before it throws.
          *
          * @see {@link TimeoutInfinite}
          * @see https://developers.stellar.org/docs/tutorials/handling-errors/
@@ -119122,21 +119454,18 @@ ${params.statement}
           if (timeoutSeconds < 0) {
             throw new Error("timeout cannot be negative");
           }
+          const minTime = this.timebounds?.minTime ?? 0;
           if (timeoutSeconds > 0) {
             const timeoutTimestamp = Math.floor(Date.now() / 1e3) + timeoutSeconds;
-            if (this.timebounds === null) {
-              this.timebounds = { minTime: 0, maxTime: timeoutTimestamp };
-            } else {
-              this.timebounds = {
-                minTime: this.timebounds.minTime ?? 0,
-                maxTime: timeoutTimestamp
-              };
+            const minSeconds = toEpochSeconds(minTime) ?? 0;
+            if (minSeconds > timeoutTimestamp) {
+              throw new Error(
+                `timeout ends before min_time (${timeoutTimestamp} < ${minSeconds})`
+              );
             }
+            this.timebounds = { minTime, maxTime: timeoutTimestamp };
           } else {
-            this.timebounds = {
-              minTime: 0,
-              maxTime: 0
-            };
+            this.timebounds = { minTime, maxTime: 0 };
           }
           return this;
         }
@@ -119344,12 +119673,15 @@ ${params.statement}
          * This method removes the need for simulation by handling the creation of the
          * appropriate authorization entries and ledger footprint for the transfer operation.
          *
-         * @param destination - the address of the recipient of the SAC transfer (should be a valid Stellar address or contract ID)
+         * @param destination - the address of the recipient of the SAC transfer (a G, M, C or W address)
          * @param asset - the SAC asset to be transferred
          * @param amount - the amount of tokens to be transferred in 7 decimals. IE 1 token with 7 decimals of precision would be represented as "1_0000000"
          * @param sorobanFees - optional Soroban fees for the transaction to override the default fees used
+         *
+         * @throws If the builder's source is a muxed (`M...`) account.
          */
         addSacTransferOperation(destination, asset, amount, sorobanFees) {
+          this.assertSorobanSourceNotMuxed();
           if (BigInt(amount) <= 0n) {
             throw new Error("Amount must be a positive integer");
           } else if (BigInt(amount) > Int64.MAX_VALUE) {
@@ -119379,7 +119711,7 @@ ${params.statement}
               );
             }
           }
-          const isDestinationContract = StrKey.isValidContract(destination);
+          const isDestinationContract = StrKey.isValidContract(destination) || StrKey.isValidMuxedContract(destination);
           if (!isDestinationContract) {
             if (!StrKey.isValidEd25519PublicKey(destination) && !StrKey.isValidMed25519PublicKey(destination)) {
               throw new Error(
@@ -119387,8 +119719,9 @@ ${params.statement}
               );
             }
           }
-          const destinationBaseAddress = isDestinationContract ? destination : extractBaseAddress(destination);
-          if (destinationBaseAddress === extractBaseAddress(this.source.accountId())) {
+          const destinationBaseAddress = extractBaseAddress(destination);
+          const source = this.source.accountId();
+          if (destinationBaseAddress === source) {
             throw new Error("Destination cannot be the same as the source account.");
           }
           if (this.networkPassphrase === null) {
@@ -119398,8 +119731,6 @@ ${params.statement}
           }
           const contractId = asset.contractId(this.networkPassphrase);
           const functionName = "transfer";
-          const source = this.source.accountId();
-          const sourceBaseAddress = extractBaseAddress(source);
           const args = [
             nativeToScVal(source, { type: "address" }),
             nativeToScVal(destination, { type: "address" }),
@@ -119438,7 +119769,7 @@ ${params.statement}
                   contract: Address.fromString(contractId).toScAddress(),
                   key: ScVal.scvVec([
                     nativeToScVal("Balance", { type: "symbol" }),
-                    nativeToScVal(destination, { type: "address" })
+                    nativeToScVal(destinationBaseAddress, { type: "address" })
                   ]),
                   durability: ContractDataDurability.persistent
                 })
@@ -119483,15 +119814,15 @@ ${params.statement}
             footprint.readWrite.push(
               LedgerKey.account(
                 new LedgerKeyAccount({
-                  accountId: Keypair.fromPublicKey(sourceBaseAddress).xdrPublicKey()
+                  accountId: Keypair.fromPublicKey(source).xdrPublicKey()
                 })
               )
             );
-          } else if (asset.getIssuer() !== sourceBaseAddress) {
+          } else if (asset.getIssuer() !== source) {
             footprint.readWrite.push(
               LedgerKey.trustline(
                 new LedgerKeyTrustLine({
-                  accountId: Keypair.fromPublicKey(sourceBaseAddress).xdrPublicKey(),
+                  accountId: Keypair.fromPublicKey(source).xdrPublicKey(),
                   asset: asset.toTrustLineXdrObject()
                 })
               )
@@ -119524,11 +119855,42 @@ ${params.statement}
           this.setSorobanData(sorobanData);
           return this.addOperation(operation);
         }
+        // Core rejects any Soroban transaction with a muxed source account.
+        assertSorobanSourceNotMuxed() {
+          if (StrKey.isValidMed25519PublicKey(this.source.accountId())) {
+            throw new Error(
+              "Soroban transactions cannot use a muxed source account; use the base account"
+            );
+          }
+        }
+        // Core also rejects a muxed operation source and a memo.
+        assertValidSoroban() {
+          this.assertSorobanSourceNotMuxed();
+          if (this.operations.some(
+            (op) => op.sourceAccount?.type === "keyTypeMuxedEd25519"
+          )) {
+            throw new Error(
+              "Soroban operations cannot use a muxed source account; use the base account"
+            );
+          }
+          if (this.memo.type !== "none") {
+            throw new Error("Soroban transactions cannot have a memo");
+          }
+        }
         /**
          * Builds the transaction and increments the source account's sequence
          * number by 1.
+         *
+         * @throws If a Soroban transaction has a muxed (`M...`) source account,
+         *    on the transaction or an operation, or has a memo. Also if the Soroban
+         *    data's `resourceFee` is below 0, or if the total fee is above the uint32
+         *    maximum.
          */
         build() {
+          const isSoroban = this.sorobanData !== null || this.operations.some((op) => SOROBAN_OPERATION_TYPES.has(op.body.type));
+          if (isSoroban) {
+            this.assertValidSoroban();
+          }
           const sequenceNumber = new BigNumber2(this.source.sequenceNumber()).plus(1);
           const fee = new BigNumber2(this.baseFee).times(this.operations.length).toNumber();
           if (fee > UINT32_MAX3) {
@@ -119595,6 +119957,7 @@ ${params.statement}
                 `Total fee (baseFee * operations + resourceFee) exceeds the maximum uint32 value (${UINT32_MAX3}). Got ${attrs.fee}.`
               );
             }
+            checkResourceFee(this.sorobanData.resourceFee);
           } else {
             attrs.ext = TransactionExt.v0();
           }
@@ -119640,6 +120003,8 @@ ${params.statement}
          *
          * Your fee-bump amount should be `>= 10x` the original fee.
          * @see  https://developers.stellar.org/docs/glossary/fee-bumps/#replace-by-fee
+         *
+         * @throws If the inner transaction's `resourceFee` is below 0 or above 2^50.
          */
         static buildFeeBumpTransaction(feeSource, baseFee, innerTx, networkPassphrase) {
           const innerOps = innerTx.operations.length;
@@ -119650,7 +120015,10 @@ ${params.statement}
             case "envelopeTypeTx": {
               const ext = env.value.tx.ext;
               const sorobanData = ext.type === "sorobanData" ? ext.value : void 0;
-              resourceFee = new BigNumber2(sorobanData?.resourceFee.toString() ?? 0);
+              if (sorobanData) {
+                checkResourceFee(sorobanData.resourceFee);
+                resourceFee = new BigNumber2(sorobanData.resourceFee.toString());
+              }
               break;
             }
           }
@@ -119727,7 +120095,7 @@ ${params.statement}
          */
         static fromXdr(envelope, networkPassphrase) {
           if (typeof envelope === "string") {
-            envelope = TransactionEnvelope.fromXdr(envelope, "base64");
+            envelope = markSdkOwned(TransactionEnvelope.fromXdr(envelope, "base64"));
           }
           if (envelope.type === "envelopeTypeTxFeeBump") {
             return new FeeBumpTransaction2(envelope, networkPassphrase);
@@ -145397,6 +145765,7 @@ ${t51.length}`, n29 = new TextEncoder().encode(e15 + t51);
   init_bignumber2();
   init_asset2();
   init_strkey();
+  init_util();
   init_fee_bump_transaction2();
 
   // node_modules/eventsource-parser/dist/index.js
@@ -145880,7 +146249,7 @@ ${value}`, dataLines++;
 
   // node_modules/@stellar/stellar-sdk/lib/esm/horizon/horizon_axios_client.js
   init_fetch_client();
-  var version7 = "17.2.1";
+  var version7 = "17.4.0";
   var SERVER_TIME_MAP = {};
   function toSeconds(ms3) {
     return Math.floor(ms3 / 1e3);
@@ -145996,6 +146365,13 @@ ${value}`, dataLines++;
 
   // node_modules/@stellar/stellar-sdk/lib/esm/horizon/call_builder.js
   var JOINABLE = ["transaction"];
+  var SKIPPED_LINK_KEYS = /* @__PURE__ */ new Set([
+    "then",
+    "toJSON",
+    "paging_token",
+    "_links",
+    ...Object.getOwnPropertyNames(Object.prototype)
+  ]);
   var CallBuilder = class {
     url;
     filter;
@@ -146048,7 +146424,7 @@ ${value}`, dataLines++;
      * @see [MDN EventSource](https://developer.mozilla.org/en-US/docs/Web/API/EventSource)
      * @param options - (optional) EventSource options.
      *   - `onmessage` (optional): Callback function to handle incoming messages.
-     *   - `onerror` (optional): Callback function to handle errors.
+     *   - `onerror` (optional): Callback function to handle errors. For an event that the SDK cannot parse, it gets a `MessageEvent` of type `"error"` whose `data` is the error. Without `onerror`, the SDK skips such an event silently.
      *   - `reconnectTimeout` (optional): Custom stream connection timeout in ms, default is 15 seconds.
      * @returns Close function. Run to close the connection and stop listening for new events.
      */
@@ -146113,12 +146489,21 @@ ${value}`, dataLines++;
             onClose();
             return;
           }
-          const result = message.data ? this._parseRecord(JSON.parse(message.data)) : message;
+          clearTimeout(timeout);
+          createTimeout();
+          let result;
+          try {
+            result = message.data ? this._parseRecord(JSON.parse(message.data)) : message;
+          } catch (err) {
+            if (message.lastEventId) {
+              streamUrl.searchParams.set("cursor", message.lastEventId);
+            }
+            onError(new MessageEvent("error", { data: err }));
+            return;
+          }
           if (result.paging_token) {
             streamUrl.searchParams.set("cursor", result.paging_token);
           }
-          clearTimeout(timeout);
-          createTimeout();
           if (typeof options.onmessage !== "undefined") {
             options.onmessage(result);
           }
@@ -146236,7 +146621,7 @@ ${value}`, dataLines++;
       return async (opts = {}) => {
         let uri;
         if (link.templated) {
-          uri = new URL(expandUriTemplate(link.href, opts), this.url);
+          uri = new URL(expandUriTemplate(link.href, opts, this.url));
         } else {
           uri = new URL(link.href, this.url);
         }
@@ -146255,8 +146640,12 @@ ${value}`, dataLines++;
       if (!json._links) {
         return json;
       }
-      Object.keys(json._links).forEach((key) => {
-        const n29 = json._links[key];
+      const links = json._links;
+      Object.keys(links).forEach((key) => {
+        if (SKIPPED_LINK_KEYS.has(key)) {
+          return;
+        }
+        const n29 = links[key];
         let included = false;
         if (typeof json[key] !== "undefined") {
           json[`${key}_attr`] = json[key];
@@ -147125,7 +147514,6 @@ ${value}`, dataLines++;
   };
 
   // node_modules/@stellar/stellar-sdk/lib/esm/horizon/server.js
-  init_util();
   init_transaction_result();
   var SUBMIT_TRANSACTION_TIMEOUT = 60 * 1e3;
   var STROOPS_IN_LUMEN = 1e7;
@@ -147939,10 +148327,111 @@ ${value}`, dataLines++;
     );
     return havkarGetStellarNetwork();
   }
+  function classifyStellarAddress(value) {
+    const text = String(value || "").trim();
+    if (!text) {
+      return {
+        kind: "empty",
+        value: text
+      };
+    }
+    if (StrKey.isValidEd25519PublicKey(
+      text
+    )) {
+      return {
+        kind: "account",
+        value: text
+      };
+    }
+    if (typeof StrKey.isValidMed25519PublicKey === "function" && StrKey.isValidMed25519PublicKey(
+      text
+    )) {
+      return {
+        kind: "muxed_account",
+        value: text
+      };
+    }
+    if (typeof StrKey.isValidMuxedContract === "function" && StrKey.isValidMuxedContract(
+      text
+    )) {
+      return {
+        kind: "muxed_contract",
+        value: text
+      };
+    }
+    if (typeof StrKey.isValidContract === "function" && StrKey.isValidContract(
+      text
+    )) {
+      return {
+        kind: "contract",
+        value: text
+      };
+    }
+    return {
+      kind: "invalid",
+      value: text
+    };
+  }
   function isPublicKey(value) {
-    return StrKey.isValidEd25519PublicKey(
-      String(value || "").trim()
+    return classifyStellarAddress(
+      value
+    ).kind === "account";
+  }
+  function requireClassicPaymentDestination(value) {
+    const classified = classifyStellarAddress(
+      value
     );
+    if (classified.kind === "account") {
+      return classified.value;
+    }
+    if (classified.kind === "muxed_contract") {
+      throw new Error(
+        "W\u2026 muxed contract addresses (Protocol 30 / CAP-84) are not valid destinations for HAVKAR classic XLM Payment. Use a G\u2026 account public key."
+      );
+    }
+    if (classified.kind === "muxed_account") {
+      throw new Error(
+        "M\u2026 muxed account addresses are not used for HAVKAR classic peer Payment. Use a G\u2026 account public key."
+      );
+    }
+    if (classified.kind === "contract") {
+      throw new Error(
+        "C\u2026 contract addresses are not valid destinations for HAVKAR classic XLM Payment. Use a G\u2026 account public key."
+      );
+    }
+    throw new Error(
+      "Enter a valid Stellar destination public key (G\u2026)."
+    );
+  }
+  async function havkarFetchStellarProtocolInfo(networkId) {
+    const network = STELLAR_NETWORKS[String(
+      networkId || HAVKAR_STELLAR.network || "PUBLIC"
+    ).toUpperCase()] || currentNetwork();
+    const server = horizonServer(
+      network
+    );
+    const page = await server.ledgers().order(
+      "desc"
+    ).limit(
+      1
+    ).call();
+    const ledger = page.records && page.records[0] ? page.records[0] : null;
+    return {
+      network: network.id,
+      label: network.label,
+      horizon: network.horizon,
+      protocol_version: ledger ? Number(
+        ledger.protocol_version
+      ) : null,
+      ledger_sequence: ledger ? Number(
+        ledger.sequence
+      ) : null,
+      closed_at: ledger ? ledger.closed_at : null,
+      protocol30: ledger ? Number(
+        ledger.protocol_version
+      ) >= 30 : false,
+      money_moved_by_this_helper: false
+    };
   }
   function parseXlmAmount(value, allowZero) {
     const text = String(value ?? "").trim();
@@ -148340,14 +148829,9 @@ ${value}`, dataLines++;
     if (rawPayments && rawPayments.length > 0) {
       payments = rawPayments.map(
         function(entry) {
-          const destination2 = String(
-            entry?.destination || ""
-          ).trim();
-          if (!isPublicKey(destination2)) {
-            throw new Error(
-              "Enter a valid Stellar destination public key."
-            );
-          }
+          const destination2 = requireClassicPaymentDestination(
+            entry?.destination
+          );
           if (destination2 === source) {
             throw new Error(
               "The destination must be a different Stellar account."
@@ -148379,14 +148863,9 @@ ${value}`, dataLines++;
         payments
       };
     }
-    const destination = String(
-      options?.destination || ""
-    ).trim();
-    if (!isPublicKey(destination)) {
-      throw new Error(
-        "Enter a valid Stellar destination public key."
-      );
-    }
+    const destination = requireClassicPaymentDestination(
+      options?.destination
+    );
     if (destination === source) {
       throw new Error(
         "The destination must be a different Stellar account."
@@ -149337,6 +149816,8 @@ ${value}`, dataLines++;
   window.havkarSetStellarNetwork = havkarSetStellarNetwork;
   window.havkarFetchStellarBalance = havkarFetchStellarBalance;
   window.havkarFetchStellarRecentPayments = havkarFetchStellarRecentPayments;
+  window.havkarFetchStellarProtocolInfo = havkarFetchStellarProtocolInfo;
+  window.havkarClassifyStellarAddress = classifyStellarAddress;
   window.havkarPrepareStellarPayment = havkarPrepareStellarPayment;
   window.havkarSignAndSubmitStellarPayment = havkarSignAndSubmitStellarPayment;
   window.havkarRestoreStellarAddress = havkarRestoreStellarAddress;
