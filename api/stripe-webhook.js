@@ -17,6 +17,9 @@ import {
   configErrorResponse,
   stagingIsolationFailure
 } from "../lib/stripe-runtime.cjs";
+import {
+  buildMarketplaceCardOrderFromSession
+} from "../lib/marketplace-card-orders.cjs";
 import jobBilling from "../havkar-job-billing.js";
 
 export const config = {
@@ -31,6 +34,95 @@ async function getRawBody(req) {
     chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
   }
   return Buffer.concat(chunks);
+}
+
+async function upsertMarketplaceCardOrderBestEffort({
+  supabase,
+  session,
+  sessionId,
+  listingId,
+  buyerUserId,
+  sellerUserId,
+  listingTitle,
+  paidAt
+}) {
+  try {
+    const built = buildMarketplaceCardOrderFromSession(
+      session || {
+        id: sessionId,
+        amount_total: null,
+        currency: "eur",
+        metadata: {
+          havkar_flow: "marketplace",
+          listing_id: String(listingId),
+          havkar_user_id: buyerUserId || "",
+          seller_id: sellerUserId || ""
+        }
+      },
+      {
+        listingId,
+        sessionId,
+        buyerUserId,
+        sellerUserId,
+        listingTitle,
+        paidAt
+      }
+    );
+    if (!built.ok || !built.row) {
+      return { ok: false, reason: built.reason || "build_failed" };
+    }
+    const row = built.row;
+    const matchKey = row.stripe_session_id
+      ? { stripe_session_id: row.stripe_session_id }
+      : row.stripe_payment_intent
+        ? { stripe_payment_intent: row.stripe_payment_intent }
+        : null;
+    if (matchKey) {
+      const { data: existing } = await supabase
+        .from("marketplace_card_orders")
+        .select("id")
+        .match(matchKey)
+        .maybeSingle();
+      if (existing && existing.id) {
+        const { data: updated, error: updateError } = await supabase
+          .from("marketplace_card_orders")
+          .update({
+            ...row,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", existing.id)
+          .select("id")
+          .maybeSingle();
+        if (updateError) throw updateError;
+        return { ok: true, id: updated && updated.id, updated: true };
+      }
+    }
+    const { data: inserted, error: insertError } = await supabase
+      .from("marketplace_card_orders")
+      .insert(row)
+      .select("id")
+      .maybeSingle();
+    if (insertError) {
+      if (
+        insertError.code === "23505" ||
+        /duplicate|unique/i.test(String(insertError.message || ""))
+      ) {
+        return { ok: true, duplicate: true };
+      }
+      throw insertError;
+    }
+    return { ok: true, id: inserted && inserted.id, inserted: true };
+  } catch (error) {
+    console.error(
+      "marketplace_card_orders upsert skipped:",
+      error && error.message
+    );
+    return {
+      ok: false,
+      skipped: true,
+      error: error && error.message ? error.message : "upsert_failed"
+    };
+  }
 }
 
 function createWebhookStore(supabase) {
@@ -151,12 +243,14 @@ function createWebhookStore(supabase) {
     async fulfillMarketplaceListing({
       listingId,
       sessionId,
+      session,
       buyerUserId,
+      sellerUserId,
       paidAt
     }) {
       const { data: existing, error: loadError } = await supabase
         .from("ads")
-        .select("id,status,user_id,listing_surface")
+        .select("id,status,user_id,listing_surface,title")
         .eq("id", listingId)
         .maybeSingle();
       if (loadError) throw loadError;
@@ -164,6 +258,17 @@ function createWebhookStore(supabase) {
         return { applied: false, reason: "listing_not_found" };
       }
       if (String(existing.status) === "ended") {
+        /* Still ensure order history row exists for already-ended paid listings. */
+        await upsertMarketplaceCardOrderBestEffort({
+          supabase,
+          session,
+          sessionId,
+          listingId,
+          buyerUserId,
+          sellerUserId: sellerUserId || existing.user_id,
+          listingTitle: existing.title,
+          paidAt
+        });
         return {
           applied: false,
           duplicate: true,
@@ -214,12 +319,24 @@ function createWebhookStore(supabase) {
       } catch (_auditErr) {
         // Audit insert is best-effort; Stripe payment already settled.
       }
+      const orderResult = await upsertMarketplaceCardOrderBestEffort({
+        supabase,
+        session,
+        sessionId,
+        listingId,
+        buyerUserId,
+        sellerUserId: sellerUserId || existing.user_id,
+        listingTitle: existing.title,
+        paidAt
+      });
       return {
         applied: true,
         fulfillment: "marketplace_listing_ended",
         listing_id: listingId,
         session_id: sessionId,
-        previous_status: prior
+        previous_status: prior,
+        order_registered: Boolean(orderResult && orderResult.ok),
+        order_id: orderResult && orderResult.id ? orderResult.id : null
       };
     },
     async releaseMarketplaceReservation({
@@ -346,6 +463,35 @@ function createWebhookStore(supabase) {
         });
       } catch (_auditErr) {
         // Audit is best-effort after Stripe already settled the charge event.
+      }
+      if (nextStatus === "refunded" || nextStatus === "disputed") {
+        try {
+          const patch = {
+            status: nextStatus,
+            updated_at: at || new Date().toISOString()
+          };
+          if (chargeId) patch.stripe_charge_id = chargeId;
+          if (paymentIntentId) patch.stripe_payment_intent = paymentIntentId;
+          let orderQuery = supabase
+            .from("marketplace_card_orders")
+            .update(patch)
+            .eq("ad_id", listingId)
+            .eq("status", "paid");
+          if (paymentIntentId) {
+            orderQuery = orderQuery.eq(
+              "stripe_payment_intent",
+              paymentIntentId
+            );
+          } else if (chargeId) {
+            orderQuery = orderQuery.eq("stripe_charge_id", chargeId);
+          }
+          await orderQuery;
+        } catch (orderErr) {
+          console.error(
+            "marketplace_card_orders settle update skipped:",
+            orderErr && orderErr.message
+          );
+        }
       }
       return {
         applied: true,

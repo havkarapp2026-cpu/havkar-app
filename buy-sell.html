@@ -1402,6 +1402,16 @@ aria-label="Post a new ad"
 
 <div
     class="nav-item"
+    id="navOrders"
+    role="button"
+    tabindex="0"
+>
+    <i class="fas fa-receipt"></i>
+    <span>Orders</span>
+</div>
+
+<div
+    class="nav-item"
     id="navMessages"
     role="button"
     tabindex="0"
@@ -2572,6 +2582,160 @@ function showAllListings(){
 
     applyFilters();
 
+}
+
+function escapeOrdersHtml(value){
+    return String(value == null ? "" : value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
+
+function formatOrdersMoney(amount, currency){
+    const n = Number(amount);
+    const cur = String(currency || "eur").toUpperCase();
+    if(!Number.isFinite(n)) return "—";
+    try{
+        return new Intl.NumberFormat(undefined, {
+            style: "currency",
+            currency: cur
+        }).format(n);
+    }catch(_err){
+        return n.toFixed(2) + " " + cur;
+    }
+}
+
+async function showOrdersHistory(){
+    if(!state.currentUserId){
+        showToast("Please sign in to view order history.");
+        window.setTimeout(() => {
+            window.location.href = "login.html";
+        }, 850);
+        return;
+    }
+
+    state.savedOnly = false;
+    state.exploreMode = false;
+    setActiveNav("navOrders");
+
+    if($("resultsTitle")){
+        $("resultsTitle").textContent = "Order history";
+    }
+    if($("resultsCount")){
+        $("resultsCount").textContent = "Loading…";
+    }
+    if($("adsGrid")){
+        $("adsGrid").innerHTML =
+            "<div class=\"empty-state\" style=\"padding:24px;text-align:center\">Loading orders…</div>";
+    }
+
+    const token = await getBuysellAccessToken();
+    if(!token){
+        if($("adsGrid")){
+            $("adsGrid").innerHTML =
+                "<div class=\"empty-state\" style=\"padding:24px;text-align:center\">Session required. Sign in again.</div>";
+        }
+        if($("resultsCount")){
+            $("resultsCount").textContent = "Unavailable";
+        }
+        return;
+    }
+
+    try{
+        const res = await fetch("/api/create-event-checkout", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + token,
+                Accept: "application/json"
+            },
+            body: JSON.stringify({
+                action: "list_marketplace_card_orders",
+                role: "auto",
+                limit: 50
+            })
+        });
+        const body = await res.json().catch(function(){ return null; });
+        if(!res.ok || !body || body.ok !== true){
+            throw new Error(
+                (body && (body.error || body.message)) ||
+                    ("HTTP " + res.status)
+            );
+        }
+        const orders = Array.isArray(body.orders) ? body.orders : [];
+        if($("resultsCount")){
+            $("resultsCount").textContent =
+                String(orders.length) +
+                (body.is_owner ? " (owner view)" : "");
+        }
+        if(!$("adsGrid")) return;
+        if(!orders.length){
+            $("adsGrid").innerHTML =
+                "<div class=\"empty-state\" style=\"padding:24px;text-align:center\">No card marketplace orders yet.</div>";
+            return;
+        }
+        $("adsGrid").innerHTML = orders.map(function(order){
+            const role = escapeOrdersHtml(order.viewer_role || "");
+            const title = escapeOrdersHtml(
+                order.listing_title || ("Listing #" + order.ad_id)
+            );
+            const status = escapeOrdersHtml(order.status || "");
+            const paid = formatOrdersMoney(order.buyer_pays, order.currency);
+            const sellerGets = formatOrdersMoney(
+                order.seller_receives,
+                order.currency
+            );
+            const fee = formatOrdersMoney(order.platform_fee, order.currency);
+            const when = escapeOrdersHtml(
+                order.paid_at || order.created_at || ""
+            );
+            const adHref = "ad-details.html?id=" + encodeURIComponent(String(order.ad_id));
+            return (
+                "<article class=\"ad-card\" style=\"padding:14px\">" +
+                "<div style=\"font-size:.75rem;color:#6b7a70;margin-bottom:4px\">" +
+                role.toUpperCase() +
+                " · #" +
+                escapeOrdersHtml(order.ad_id) +
+                " · " +
+                status +
+                "</div>" +
+                "<h3 style=\"margin:0 0 8px;font-size:1rem\">" +
+                "<a href=\"" +
+                adHref +
+                "\" style=\"color:inherit;text-decoration:none\">" +
+                title +
+                "</a></h3>" +
+                "<div style=\"font-size:.85rem;line-height:1.45\">" +
+                "Buyer paid: <strong>" +
+                escapeOrdersHtml(paid) +
+                "</strong><br>" +
+                "Seller receives: <strong>" +
+                escapeOrdersHtml(sellerGets) +
+                "</strong><br>" +
+                "Platform fee: " +
+                escapeOrdersHtml(fee) +
+                "<br>" +
+                "<span style=\"color:#6b7a70\">" +
+                when +
+                "</span>" +
+                "</div></article>"
+            );
+        }).join("");
+    }catch(error){
+        console.error("[HAVKAR] Order history load failed:", error);
+        if($("adsGrid")){
+            $("adsGrid").innerHTML =
+                "<div class=\"empty-state\" style=\"padding:24px;text-align:center\">Could not load order history.</div>";
+        }
+        if($("resultsCount")){
+            $("resultsCount").textContent = "Unavailable";
+        }
+        showStatus(
+            "error",
+            (error && error.message) || "Order history unavailable"
+        );
+    }
 }
 
 
@@ -5087,6 +5251,8 @@ function setupNavigation(){
     onClick("clearListingFilters", clearListingFilters);
 
     onClick("navSaved", showSavedListings);
+
+    onClick("navOrders", showOrdersHistory);
 
     onClick("navMessages", goMessages);
 
