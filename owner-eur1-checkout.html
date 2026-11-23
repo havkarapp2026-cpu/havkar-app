@@ -78,14 +78,20 @@
     </p>
     <div class="panel">
       <p>
+        <strong>Services Connect probe</strong> (service
+        <code id="serviceLabel">12</code>): list €1.00 → customer pays €1.00 /
+        provider €0.90 / HAVKAR fee €0.10 (10% provider-paid) via destination charge.
+      </p>
+      <p>
         <strong>Marketplace Connect probe</strong> (listing
         <code id="listingLabel">95</code>): list €1.00 → buyer pays €1.02 /
         seller €0.97 / HAVKAR fee €0.05 via destination charge to Connect.
       </p>
       <div class="actions">
-        <a id="loginLink" class="btn" href="/login.html?next=%2Fowner-eur1-checkout.html%3Fmode%3Dmarketplace%26listing_id%3D95">Sign in on havkar.online</a>
+        <a id="loginLink" class="btn" href="/login.html?next=%2Fowner-eur1-checkout.html%3Fmode%3Dservices%26service_id%3D12">Sign in on havkar.online</a>
+        <button id="prepareServices" type="button">Prepare Services €1.00 Checkout</button>
         <button id="prepareMarketplace" class="secondary" type="button">Prepare marketplace €1.02 Checkout</button>
-        <button id="prepare" type="button">Prepare platform €1.00 Checkout</button>
+        <button id="prepare" class="secondary" type="button">Prepare platform €1.00 Checkout</button>
       </div>
       <div id="out" class="status" aria-live="polite"></div>
       <a id="pay" class="link" href="#" hidden target="_blank" rel="noopener">Open payment link</a>
@@ -98,16 +104,23 @@
     const pay = document.getElementById("pay");
     const btn = document.getElementById("prepare");
     const btnMkt = document.getElementById("prepareMarketplace");
+    const btnSvc = document.getElementById("prepareServices");
     const loginLink = document.getElementById("loginLink");
     const params = new URLSearchParams(location.search);
     const returnStatus = params.get("status");
     const sessionId = params.get("session_id");
+    const mode = String(params.get("mode") || "services").trim() || "services";
     const listingId = String(params.get("listing_id") || "95").trim() || "95";
+    const serviceId = String(params.get("service_id") || "12").trim() || "12";
     document.getElementById("listingLabel").textContent = listingId;
+    document.getElementById("serviceLabel").textContent = serviceId;
 
     const nextPath =
-      "/owner-eur1-checkout.html?mode=marketplace&listing_id=" +
-      encodeURIComponent(listingId);
+      mode === "marketplace"
+        ? "/owner-eur1-checkout.html?mode=marketplace&listing_id=" +
+          encodeURIComponent(listingId)
+        : "/owner-eur1-checkout.html?mode=services&service_id=" +
+          encodeURIComponent(serviceId);
     loginLink.href =
       "/login.html?next=" + encodeURIComponent(nextPath);
 
@@ -180,10 +193,12 @@
     }
 
     async function prepare(kind) {
-      const activeBtn = kind === "marketplace" ? btnMkt : btn;
+      const activeBtn =
+        kind === "services" ? btnSvc : kind === "marketplace" ? btnMkt : btn;
       activeBtn.disabled = true;
       btn.disabled = true;
       btnMkt.disabled = true;
+      btnSvc.disabled = true;
       pay.hidden = true;
       try {
         const client = supabaseClient();
@@ -192,16 +207,22 @@
           return;
         }
         const payload =
-          kind === "marketplace"
+          kind === "services"
             ? {
-                action: "owner_marketplace_eur1_prepare",
+                action: "owner_services_eur1_prepare",
                 confirm: "PREPARE_EUR_1_00_LIVE_CHECKOUT",
-                listing_id: listingId
+                service_id: serviceId
               }
-            : {
-                action: "owner_eur1_prepare",
-                confirm: "PREPARE_EUR_1_00_LIVE_CHECKOUT"
-              };
+            : kind === "marketplace"
+              ? {
+                  action: "owner_marketplace_eur1_prepare",
+                  confirm: "PREPARE_EUR_1_00_LIVE_CHECKOUT",
+                  listing_id: listingId
+                }
+              : {
+                  action: "owner_eur1_prepare",
+                  confirm: "PREPARE_EUR_1_00_LIVE_CHECKOUT"
+                };
         const res = await fetch("/api/owner-eur1-checkout", {
           method: "POST",
           headers: {
@@ -217,7 +238,22 @@
         }
         pay.href = body.url;
         pay.hidden = false;
-        if (kind === "marketplace") {
+        if (kind === "services") {
+          message(
+            [
+              "Services Connect Checkout prepared (not charged).",
+              "session=" + body.session_id,
+              "service_id=" + body.service_id,
+              "booking_id=" + body.booking_id,
+              "list=" + body.list_price_eur + " EUR",
+              "customer_pays=" + body.customer_pays_eur + " EUR",
+              "provider_settlement=" + body.provider_settlement_eur + " EUR",
+              "havkar_fee=" + body.platform_commission_eur + " EUR",
+              "Open the payment link and pay manually. Agent will not charge."
+            ].join("\n"),
+            true
+          );
+        } else if (kind === "marketplace") {
           message(
             [
               "Marketplace Connect Checkout prepared.",
@@ -244,20 +280,26 @@
       } finally {
         btn.disabled = false;
         btnMkt.disabled = false;
+        btnSvc.disabled = false;
       }
     }
 
     btn.addEventListener("click", () => prepare("platform"));
     btnMkt.addEventListener("click", () => prepare("marketplace"));
+    btnSvc.addEventListener("click", () => prepare("services"));
 
     try {
       const client = supabaseClient();
       const session = await ensureSession(client);
       if (session) {
         message(
-          "Owner session detected. Prepare marketplace €1.02 Connect Checkout for listing " +
-            listingId +
-            ".",
+          mode === "services"
+            ? "Owner session detected. Prepare Services €1.00 Connect Checkout for service " +
+                serviceId +
+                "."
+            : "Owner session detected. Prepare marketplace €1.02 Connect Checkout for listing " +
+                listingId +
+                ".",
           true
         );
       }
