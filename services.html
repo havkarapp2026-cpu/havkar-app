@@ -1478,25 +1478,50 @@ textarea.form-control {
 
     <div class="content-header">
 
-        <div class="content-title">
+        <div class="content-title" data-i18n-services="Available Services">
             Available Services
         </div>
 
-        <div style="display:flex;align-items:center">
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px">
             <button
                 class="bookings-btn"
                 type="button"
-                onclick="openBookings()">
+                onclick="openBookings()"
+                data-i18n-services="Bookings">
                 Bookings
+            </button>
+            <button
+                class="bookings-btn"
+                type="button"
+                id="servicesConnectBtn"
+                data-i18n-services="Start Connect">
+                Start / continue Stripe Connect
             </button>
             <div
                 class="service-count"
                 id="serviceCount"
-                style="margin-left:10px">
+                style="margin-left:4px">
                 0 services
             </div>
         </div>
 
+    </div>
+
+    <div class="geo-filters" id="geoFilters" style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px;align-items:center">
+        <button class="bookings-btn" type="button" id="nearMeBtn" data-i18n-services="Use my location">Use my location</button>
+        <label for="distanceFilter" data-i18n-services="Distance" style="font-size:.85rem">Distance</label>
+        <select id="distanceFilter" class="form-control" style="width:auto;min-width:140px">
+            <option value="" data-i18n-services="All distances">All distances</option>
+            <option value="5" data-i18n-services="Within 5 km">Within 5 km</option>
+            <option value="25" selected data-i18n-services="Within 25 km">Within 25 km</option>
+            <option value="100" data-i18n-services="Within 100 km">Within 100 km</option>
+        </select>
+        <span id="geoStatus" style="font-size:.8rem;color:#5f6f66"></span>
+    </div>
+
+    <div id="servicesMapPanel" class="panel" hidden style="margin:0 0 14px;border:1px solid #d7e0da;border-radius:14px;overflow:hidden;background:#fff">
+        <div style="padding:8px 12px;font-weight:700" data-i18n-services="Map">Map</div>
+        <iframe id="servicesMapFrame" title="Service map" style="width:100%;height:220px;border:0" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
 
 
@@ -2372,6 +2397,23 @@ document.addEventListener(
         bindSearch();
         bindForms();
 
+        const connectBtn = document.getElementById("servicesConnectBtn");
+        if (connectBtn) {
+            connectBtn.addEventListener("click", async function() {
+                const result = await postServicesAction({
+                    action: "services_connect_onboard"
+                });
+                if (result && result.onboarding_url) {
+                    window.location.href = result.onboarding_url;
+                    return;
+                }
+                showToast(
+                    (result && (result.error || result.message)) ||
+                        "Connect could not start."
+                );
+            });
+        }
+
         const {
             data: { user },
             error: authError
@@ -2386,6 +2428,10 @@ document.addEventListener(
             loadSavedBookmarks(),
             updateNotificationBadge()
         ]);
+
+        if (window.HAVKAR_SERVICES_I18N && window.HAVKAR_SERVICES_I18N.apply) {
+            window.HAVKAR_SERVICES_I18N.apply();
+        }
 
     }
 );
@@ -2637,7 +2683,7 @@ function renderServices() {
             .toLowerCase()
             .trim();
 
-    const visibleServices =
+    let visibleServices =
         services.filter(function(service) {
 
             const categoryMatch =
@@ -2674,6 +2720,60 @@ function renderServices() {
             );
 
         });
+
+    const geo = window.HAVKAR_SERVICES_GEO;
+    const distEl = document.getElementById("distanceFilter");
+    const maxKm = distEl ? Number(distEl.value) : NaN;
+    if (
+        geo &&
+        geo.origin &&
+        Number.isFinite(maxKm) &&
+        maxKm > 0 &&
+        typeof geo.haversineKm === "function"
+    ) {
+        visibleServices = visibleServices
+            .map(function(service) {
+                const d = geo.haversineKm(
+                    geo.origin.latitude,
+                    geo.origin.longitude,
+                    service.latitude,
+                    service.longitude
+                );
+                return Object.assign({}, service, { distance_km: d });
+            })
+            .filter(function(service) {
+                return (
+                    service.distance_km != null &&
+                    service.distance_km <= maxKm
+                );
+            })
+            .sort(function(a, b) {
+                return (a.distance_km || 0) - (b.distance_km || 0);
+            });
+    }
+
+    const mapPanel = document.getElementById("servicesMapPanel");
+    const mapFrame = document.getElementById("servicesMapFrame");
+    if (mapPanel && mapFrame && geo && typeof geo.osmEmbed === "function") {
+        const firstMapped = visibleServices.find(function(s) {
+            return Number.isFinite(Number(s.latitude)) && Number.isFinite(Number(s.longitude));
+        });
+        if (firstMapped) {
+            const url = geo.osmEmbed(firstMapped.latitude, firstMapped.longitude);
+            if (url) {
+                mapFrame.src = url;
+                mapPanel.hidden = false;
+            }
+        } else if (geo.origin) {
+            const url = geo.osmEmbed(geo.origin.latitude, geo.origin.longitude);
+            if (url) {
+                mapFrame.src = url;
+                mapPanel.hidden = false;
+            }
+        } else {
+            mapPanel.hidden = true;
+        }
+    }
 
     servicesContainer.innerHTML = "";
 
@@ -2771,6 +2871,11 @@ function buildServiceCard(service) {
             <div class="detail-item">
                 <i class="fas fa-location-dot"></i>
                 ${escapeHtml(service.location || "Location not specified")}
+                ${
+                    Number.isFinite(Number(service.distance_km))
+                        ? ` · ${Number(service.distance_km).toFixed(1)} km`
+                        : ""
+                }
             </div>
 
             <div class="detail-item">
@@ -2850,6 +2955,25 @@ function buildServiceCard(service) {
             }
         );
     }
+
+    card.addEventListener("click", function(ev) {
+        if (ev.target.closest("button")) return;
+        const geo = window.HAVKAR_SERVICES_GEO;
+        const mapPanel = document.getElementById("servicesMapPanel");
+        const mapFrame = document.getElementById("servicesMapFrame");
+        if (
+            !geo ||
+            typeof geo.osmEmbed !== "function" ||
+            !mapPanel ||
+            !mapFrame
+        ) {
+            return;
+        }
+        const url = geo.osmEmbed(service.latitude, service.longitude);
+        if (!url) return;
+        mapFrame.src = url;
+        mapPanel.hidden = false;
+    });
 
     return card;
 
@@ -4610,6 +4734,62 @@ function escapeHtml(text) {
 <script src="/havkar-currency-select.js"></script>
 <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-i18n.js"></script>
+<script src="/havkar-services-i18n.js"></script>
+<script>
+(function(){
+  function haversineKm(lat1, lon1, lat2, lon2){
+    var toRad = function(d){ return d * Math.PI / 180; };
+    var aLat = Number(lat1), aLon = Number(lon1), bLat = Number(lat2), bLon = Number(lon2);
+    if(![aLat,aLon,bLat,bLon].every(Number.isFinite)) return null;
+    var R = 6371;
+    var dLat = toRad(bLat - aLat);
+    var dLon = toRad(bLon - aLon);
+    var h = Math.sin(dLat/2)*Math.sin(dLat/2) +
+      Math.cos(toRad(aLat))*Math.cos(toRad(bLat))*Math.sin(dLon/2)*Math.sin(dLon/2);
+    return Math.round(R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1-h)) * 100) / 100;
+  }
+  window.HAVKAR_SERVICES_GEO = {
+    origin: null,
+    haversineKm: haversineKm,
+    osmEmbed: function(lat, lon){
+      var a = Number(lat), b = Number(lon), d = 0.02;
+      if(!Number.isFinite(a) || !Number.isFinite(b)) return null;
+      return "https://www.openstreetmap.org/export/embed.html?bbox=" +
+        encodeURIComponent([b-d,a-d,b+d,a+d].join(",")) +
+        "&layer=mapnik&marker=" + encodeURIComponent(a + "," + b);
+    }
+  };
+  document.addEventListener("DOMContentLoaded", function(){
+    var nearBtn = document.getElementById("nearMeBtn");
+    var dist = document.getElementById("distanceFilter");
+    var status = document.getElementById("geoStatus");
+    var connectBtn = document.getElementById("servicesConnectBtn");
+    if(nearBtn){
+      nearBtn.addEventListener("click", function(){
+        if(!navigator.geolocation){
+          if(status) status.textContent = "Geolocation unavailable";
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(function(pos){
+          window.HAVKAR_SERVICES_GEO.origin = {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude
+          };
+          if(status) status.textContent = "Location on";
+          if(typeof renderServices === "function") renderServices();
+        }, function(){
+          if(status) status.textContent = "Location permission denied";
+        }, { enableHighAccuracy: false, timeout: 10000 });
+      });
+    }
+    if(dist){
+      dist.addEventListener("change", function(){
+        if(typeof renderServices === "function") renderServices();
+      });
+    }
+  });
+})();
+</script>
 <script>
 (function(){
   var mount = document.getElementById('editServiceCurrencyMount');

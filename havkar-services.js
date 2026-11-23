@@ -26,7 +26,7 @@
     return /^[A-Z]{3}$/.test(c) && c !== "XLM";
   }
   const SERVICE_STATUSES = ["active", "paused", "closed"];
-  const SERVICE_COLUMNS = "id,created_at,updated_at,provider_id,title,category,description,price,currency,price_type,location,image_url,status";
+  const SERVICE_COLUMNS = "id,created_at,updated_at,provider_id,title,category,description,price,currency,price_type,location,image_url,status,latitude,longitude";
   const BOOKING_COLUMNS = "id,created_at,updated_at,service_id,customer_id,provider_id,booking_date,booking_time,message,status,payment_method,agreed_price,currency,commission_bps,commission_amount,completion_confirmed_at";
 
   function commissionFromCents(agreedCents) {

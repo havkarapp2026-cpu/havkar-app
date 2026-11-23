@@ -76,6 +76,30 @@ nav.bottom a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px
     <div class="grid" id="moderationGrid"></div>
   </section>
 
+  <section class="panel hidden" id="servicesOpsPanel">
+    <h2>Services operations</h2>
+    <p class="note">Owner-only: categories, provider verification (requires Stripe charges_enabled), complaints. No fake badges.</p>
+    <div class="grid" id="servicesOpsGrid"></div>
+    <div class="form-row">
+      <label for="svcCatLabel">New / update category label</label>
+      <input id="svcCatLabel" placeholder="e.g. Home Repairs">
+      <button type="button" id="svcCatSave">Save category</button>
+    </div>
+    <div class="form-row">
+      <label for="svcProviderId">Provider user id</label>
+      <input id="svcProviderId" class="mono" placeholder="uuid">
+      <select id="svcProviderStatus">
+        <option value="verified">verified</option>
+        <option value="unverified">unverified</option>
+      </select>
+      <button type="button" id="svcProviderSave">Set verification</button>
+    </div>
+    <h3>Open complaints</h3>
+    <div id="svcComplaintsWrap"></div>
+    <h3>Recent bookings</h3>
+    <div id="svcBookingsWrap"></div>
+  </section>
+
   <section class="panel hidden" id="financePanel">
     <h2>Revenue & transactions</h2>
     <p class="note">Owner-only ledger. Stellar XLM is not a EUR bank deposit. Bank/IBAN details are never shown here — attach Revolut in Stripe Dashboard.</p>
@@ -265,6 +289,7 @@ nav.bottom a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px
       ["#emailPanel", "Emails"],
       role === "owner" || role === "admin" ? ["#staffPanel", "Staff"] : null,
       role === "owner" ? ["#financePanel", "Finance"] : null,
+      role === "owner" ? ["#servicesOpsPanel", "Services"] : null,
       role === "owner" ? ["#securityPanel", "Security"] : null
     ].filter(Boolean).forEach(function (item) {
       var a = el("a", null, item[1]);
@@ -311,12 +336,14 @@ nav.bottom a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px
 
     setHidden("financePanel", role !== "owner");
     setHidden("securityPanel", role !== "owner");
+    setHidden("servicesOpsPanel", role !== "owner");
     setHidden("jobsCompanyReviewPanel", role !== "owner");
     setHidden("staffPanel", !(role === "owner" || role === "admin"));
     setHidden("staffForm", role !== "owner");
     setHidden("reauthBanner", role !== "owner");
     if (role === "owner") {
       loadJobsCompanyReview();
+      loadServicesOpsPanel();
     }
 
     if (role === "owner" && data.finance) {
@@ -526,6 +553,189 @@ nav.bottom a{color:#607d8b;text-decoration:none;align-self:center;font-size:13px
   if (jobsRefresh) {
     jobsRefresh.addEventListener("click", function () {
       loadJobsCompanyReview();
+    });
+  }
+
+  async function loadServicesOpsPanel() {
+    var grid = document.getElementById("servicesOpsGrid");
+    var complaintsWrap = document.getElementById("svcComplaintsWrap");
+    var bookingsWrap = document.getElementById("svcBookingsWrap");
+    if (!grid || !complaintsWrap || !bookingsWrap) return;
+    grid.innerHTML = "";
+    complaintsWrap.innerHTML = "";
+    bookingsWrap.innerHTML = "";
+    try {
+      var data = await jobsCompanyApi("services_owner_panel", {});
+      grid.appendChild(
+        el(
+          "p",
+          "note",
+          "Payments armed: " +
+            String(!!data.payments_armed) +
+            " · Completion pepper configured: " +
+            String(!!data.completion_pepper_configured) +
+            " (value never shown)"
+        )
+      );
+      var cats = data.categories || [];
+      var catNote = el("p", "note", "Categories: " + cats.length);
+      grid.appendChild(catNote);
+      if (cats.length) {
+        var ct = el("table");
+        ct.innerHTML = "<thead><tr><th>Slug</th><th>Label</th><th>Active</th></tr></thead>";
+        var cb = el("tbody");
+        cats.forEach(function (c) {
+          var tr = el("tr");
+          tr.appendChild(el("td", "mono", c.slug || ""));
+          tr.appendChild(el("td", null, c.label || ""));
+          tr.appendChild(el("td", null, String(c.active !== false)));
+          cb.appendChild(tr);
+        });
+        ct.appendChild(cb);
+        grid.appendChild(ct);
+      }
+      var providers = data.providers || [];
+      grid.appendChild(el("p", "note", "Providers: " + providers.length));
+      if (providers.length) {
+        var pt = el("table");
+        pt.innerHTML =
+          "<thead><tr><th>User</th><th>Name</th><th>Status</th><th>Connect</th></tr></thead>";
+        var pb = el("tbody");
+        providers.forEach(function (p) {
+          var tr = el("tr");
+          tr.appendChild(el("td", "mono", p.user_id || ""));
+          tr.appendChild(el("td", null, p.display_name || ""));
+          tr.appendChild(el("td", "mono", p.verification_status || ""));
+          tr.appendChild(el("td", "mono", p.stripe_account_id || "—"));
+          pb.appendChild(tr);
+        });
+        pt.appendChild(pb);
+        grid.appendChild(pt);
+      }
+      var complaints = data.complaints || [];
+      if (!complaints.length) {
+        complaintsWrap.appendChild(el("p", "note", "No complaints."));
+      } else {
+        var cmt = el("table");
+        cmt.innerHTML =
+          "<thead><tr><th>ID</th><th>Booking</th><th>Category</th><th>Status</th><th></th></tr></thead>";
+        var cmb = el("tbody");
+        complaints.forEach(function (c) {
+          var tr = el("tr");
+          tr.appendChild(el("td", "mono", String(c.id)));
+          tr.appendChild(el("td", "mono", String(c.booking_id || "")));
+          tr.appendChild(el("td", null, c.category || ""));
+          tr.appendChild(el("td", "mono", c.status || ""));
+          var act = el("td");
+          var btn = el("button", "secondary", "Resolve");
+          btn.type = "button";
+          btn.addEventListener("click", async function () {
+            try {
+              await jobsCompanyApi("services_complaint_resolve", {
+                complaint_id: c.id,
+                status: "resolved"
+              });
+              await loadServicesOpsPanel();
+            } catch (err) {
+              alert((err && err.message) || "Resolve failed");
+            }
+          });
+          act.appendChild(btn);
+          tr.appendChild(act);
+          cmb.appendChild(tr);
+        });
+        cmt.appendChild(cmb);
+        complaintsWrap.appendChild(cmt);
+      }
+      var bookings = data.bookings || [];
+      if (!bookings.length) {
+        bookingsWrap.appendChild(el("p", "note", "No bookings."));
+      } else {
+        var bt = el("table");
+        bt.innerHTML =
+          "<thead><tr><th>ID</th><th>Status</th><th>Pay</th><th>Price</th><th>Refund prep</th></tr></thead>";
+        var bb = el("tbody");
+        bookings.forEach(function (b) {
+          var tr = el("tr");
+          tr.appendChild(el("td", "mono", String(b.id)));
+          tr.appendChild(el("td", "mono", b.status || ""));
+          tr.appendChild(el("td", null, b.payment_method || ""));
+          tr.appendChild(
+            el(
+              "td",
+              null,
+              String(b.agreed_price || "") + " " + String(b.currency || "")
+            )
+          );
+          var act = el("td");
+          var prep = el("button", "secondary", "Prepare refund");
+          prep.type = "button";
+          prep.addEventListener("click", async function () {
+            try {
+              var prepData = await jobsCompanyApi("services_refund_prepare", {
+                booking_id: b.id
+              });
+              alert(
+                "Refund prepared (not executed).\n" +
+                  "Customer: " +
+                  (prepData.customer_paid_cents / 100).toFixed(2) +
+                  " · Fee: " +
+                  (prepData.platform_fee_cents / 100).toFixed(2) +
+                  " · Provider: " +
+                  (prepData.provider_settlement_cents / 100).toFixed(2) +
+                  "\n" +
+                  (prepData.note || "")
+              );
+            } catch (err) {
+              alert((err && err.message) || "Prepare failed");
+            }
+          });
+          act.appendChild(prep);
+          tr.appendChild(act);
+          bb.appendChild(tr);
+        });
+        bt.appendChild(bb);
+        bookingsWrap.appendChild(bt);
+      }
+    } catch (error) {
+      grid.appendChild(
+        el("p", "err", (error && error.message) || "Services ops load failed")
+      );
+    }
+  }
+
+  var svcCatSave = document.getElementById("svcCatSave");
+  if (svcCatSave) {
+    svcCatSave.addEventListener("click", async function () {
+      var label = String(document.getElementById("svcCatLabel").value || "").trim();
+      if (!label) return;
+      try {
+        await jobsCompanyApi("services_category_upsert", { label: label });
+        document.getElementById("svcCatLabel").value = "";
+        await loadServicesOpsPanel();
+      } catch (error) {
+        alert((error && error.message) || "Category save failed");
+      }
+    });
+  }
+
+  var svcProviderSave = document.getElementById("svcProviderSave");
+  if (svcProviderSave) {
+    svcProviderSave.addEventListener("click", async function () {
+      var providerId = String(
+        document.getElementById("svcProviderId").value || ""
+      ).trim();
+      var status = document.getElementById("svcProviderStatus").value;
+      if (!providerId) return;
+      try {
+        await jobsCompanyApi("services_provider_set_verification", {
+          provider_user_id: providerId,
+          verification_status: status
+        });
+        await loadServicesOpsPanel();
+      } catch (error) {
+        alert((error && error.message) || "Verification update failed");
+      }
     });
   }
 

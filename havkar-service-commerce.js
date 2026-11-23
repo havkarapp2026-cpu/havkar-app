@@ -668,6 +668,18 @@
       commission_amount: settled.settlement.commissionCents / 100,
       updated_at: new Date().toISOString()
     };
+    if (session && session.id) {
+      bookingPatch.stripe_checkout_session_id = session.id;
+    }
+    if (session && session.payment_intent) {
+      bookingPatch.stripe_payment_intent =
+        typeof session.payment_intent === "string"
+          ? session.payment_intent
+          : session.payment_intent.id || null;
+    }
+    if (input.verifiedChargeId) {
+      bookingPatch.stripe_charge_id = String(input.verifiedChargeId);
+    }
     /* Service role webhook may advance pending → accepted after verified Stripe payment. */
     const statusNow = String(bookingResult.data.status || "");
     if (statusNow === "pending" || statusNow === "price_proposed") {
@@ -696,6 +708,87 @@
     };
   }
 
+  async function applyServiceChargeSettlement(input) {
+    const supabase = input && input.supabase;
+    const event = input && input.event;
+    const chargeOrObject = input && input.chargeOrObject;
+    if (!supabase || !event || !chargeOrObject) {
+      return { ok: false, applied: false, reason: "invalid_event" };
+    }
+    const meta = chargeOrObject.metadata || {};
+    let bookingId = Number(meta.booking_id);
+    if ((!Number.isSafeInteger(bookingId) || bookingId <= 0) && meta.havkar_flow === "services") {
+      bookingId = Number(meta.booking_id);
+    }
+    if ((!Number.isSafeInteger(bookingId) || bookingId <= 0) && chargeOrObject.payment_intent) {
+      /* Caller may resolve booking via payment_intent lookup. */
+      bookingId = Number(input.bookingId || 0);
+    }
+    if (!Number.isSafeInteger(bookingId) || bookingId <= 0) {
+      return { ok: true, applied: false, reason: "not_services_charge" };
+    }
+
+    let outcome = "services_charge_event";
+    let nextStatus = null;
+    const nowIso = input.nowIso || new Date().toISOString();
+    if (event.type === "charge.refunded") {
+      outcome = "services_card_refunded";
+      nextStatus = "refunded";
+    } else if (event.type === "charge.dispute.created") {
+      outcome = "services_card_dispute_opened";
+      nextStatus = "disputed";
+    } else if (event.type === "charge.dispute.closed") {
+      const status = String(chargeOrObject.status || "");
+      outcome =
+        status === "lost"
+          ? "services_card_dispute_lost"
+          : "services_card_dispute_closed";
+      nextStatus = status === "lost" ? "refunded" : "accepted";
+    } else if (event.type === "charge.dispute.updated") {
+      outcome = "services_card_dispute_updated";
+    }
+
+    const patch = {
+      updated_at: nowIso,
+      stripe_charge_id: chargeOrObject.id || null
+    };
+    if (nextStatus === "refunded") patch.refunded_at = nowIso;
+    if (nextStatus === "disputed") patch.disputed_at = nowIso;
+    if (nextStatus) patch.status = nextStatus;
+
+    if (nextStatus) {
+      await supabase
+        .from("service_bookings")
+        .update(patch)
+        .eq("id", bookingId);
+    }
+
+    try {
+      await supabase.from("service_settlement_events").insert({
+        booking_id: bookingId,
+        stripe_event_id: event.id,
+        event_type: event.type,
+        outcome: outcome,
+        amount: chargeOrObject.amount == null ? null : Number(chargeOrObject.amount),
+        currency: chargeOrObject.currency || null,
+        meta: {
+          payment_intent: chargeOrObject.payment_intent || null,
+          source: "stripe_webhook"
+        }
+      });
+    } catch (_err) {
+      /* best-effort audit */
+    }
+
+    return {
+      ok: true,
+      applied: Boolean(nextStatus),
+      booking_id: bookingId,
+      outcome: outcome,
+      next_status: nextStatus
+    };
+  }
+
   function safeServiceImage(value) {
     if (!value) return "";
     try {
@@ -721,6 +814,7 @@
     settleProviderCommission: settleProviderCommission,
     commissionLedgerDecision: commissionLedgerDecision,
     applyVerifiedServicePayment: applyVerifiedServicePayment,
+    applyServiceChargeSettlement: applyServiceChargeSettlement,
     servicePaymentsEnabled: servicePaymentsEnabled,
     onlineCheckoutDecision: onlineCheckoutDecision,
     cashBookingDecision: cashBookingDecision,

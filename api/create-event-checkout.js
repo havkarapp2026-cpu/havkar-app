@@ -2149,7 +2149,15 @@ export default async function handler(req, res) {
       globalBodyAction === "services_confirm_completion" ||
       globalBodyAction === "services_review_create" ||
       globalBodyAction === "services_complaint_create" ||
-      globalBodyAction === "services_categories");
+      globalBodyAction === "services_categories" ||
+      globalBodyAction === "services_connect_onboard" ||
+      globalBodyAction === "services_owner_panel" ||
+      globalBodyAction === "services_category_upsert" ||
+      globalBodyAction === "services_provider_set_verification" ||
+      globalBodyAction === "services_complaint_resolve" ||
+      globalBodyAction === "services_refund_prepare" ||
+      globalBodyAction === "owner_services_eur1_prepare" ||
+      globalBodyAction === "services_geo_search");
   if (isGlobalPaymentsRequest(req) && !isJobsServicesPaymentAction) {
     if (req.method !== "GET" && req.method !== "POST") {
       res.setHeader("Allow", "GET, POST");
@@ -3218,7 +3226,15 @@ export default async function handler(req, res) {
         bodyActionEarly === "services_confirm_completion" ||
         bodyActionEarly === "services_review_create" ||
         bodyActionEarly === "services_complaint_create" ||
-        bodyActionEarly === "services_categories")
+        bodyActionEarly === "services_categories" ||
+        bodyActionEarly === "services_connect_onboard" ||
+        bodyActionEarly === "services_owner_panel" ||
+        bodyActionEarly === "services_category_upsert" ||
+        bodyActionEarly === "services_provider_set_verification" ||
+        bodyActionEarly === "services_complaint_resolve" ||
+        bodyActionEarly === "services_refund_prepare" ||
+        bodyActionEarly === "owner_services_eur1_prepare" ||
+        bodyActionEarly === "services_geo_search")
     ) {
       try {
         const paymentsApi = await loadJobsServicesPayments();
@@ -3237,6 +3253,11 @@ export default async function handler(req, res) {
           decideServicesCheckout,
           servicesPaymentsArmed
         } = require("../lib/services-checkout.cjs");
+        const {
+          filterServicesByDistance,
+          osmEmbedUrl,
+          haversineKm
+        } = require("../lib/services-geo.cjs");
 
         if (bodyActionEarly === "jobs_payment_methods") {
           return res.status(200).json(jobsPaymentMethods(process.env));
@@ -4638,6 +4659,455 @@ export default async function handler(req, res) {
             return sendError(res, 500, error.message || "Could not save complaint");
           }
           return res.status(200).json({ ok: true, complaint: inserted });
+        }
+
+        if (bodyActionEarly === "services_geo_search") {
+          const lat = Number((req.body && req.body.latitude) || "");
+          const lon = Number((req.body && req.body.longitude) || "");
+          const maxKm = Number((req.body && req.body.max_km) || 25);
+          const q = String((req.body && req.body.q) || "").trim().toLowerCase();
+          const category = String((req.body && req.body.category) || "All").trim();
+          const { data, error } = await getSupabaseAdmin()
+            .from("services")
+            .select(
+              "id,provider_id,title,category,description,price,currency,price_type,location,image_url,status,latitude,longitude"
+            )
+            .eq("status", "active")
+            .limit(200);
+          if (error) {
+            return sendError(res, 500, "Could not search services");
+          }
+          let rows = Array.isArray(data) ? data : [];
+          if (category && category !== "All") {
+            rows = rows.filter((r) => String(r.category) === category);
+          }
+          if (q) {
+            rows = rows.filter((r) =>
+              [r.title, r.description, r.location, r.category]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase()
+                .includes(q)
+            );
+          }
+          if (Number.isFinite(lat) && Number.isFinite(lon)) {
+            rows = filterServicesByDistance(
+              rows,
+              { latitude: lat, longitude: lon },
+              maxKm
+            );
+          }
+          return res.status(200).json({
+            ok: true,
+            count: rows.length,
+            origin:
+              Number.isFinite(lat) && Number.isFinite(lon)
+                ? { latitude: lat, longitude: lon, max_km: maxKm }
+                : null,
+            services: rows.slice(0, 100),
+            map_embed_example:
+              rows[0] && rows[0].latitude != null
+                ? osmEmbedUrl(rows[0].latitude, rows[0].longitude, 13)
+                : null
+          });
+        }
+
+        if (bodyActionEarly === "services_connect_onboard") {
+          const auth = await authenticateUser(req);
+          if (!auth || !auth.user) {
+            return sendError(res, 401, (auth && auth.error) || "Authentication required");
+          }
+          if (!String(process.env.STRIPE_SECRET_KEY || "").trim()) {
+            return res.status(503).json({
+              ok: false,
+              code: "STRIPE_NOT_CONFIGURED",
+              error: "Stripe is not configured."
+            });
+          }
+          const stripe = getStripe();
+          const primaryOwner = await isPrimaryHavkarOwner(auth.user.id);
+          const existing = await getSupabaseAdmin()
+            .from("marketplace_seller_connect_accounts")
+            .select("stripe_account_id,charges_enabled,payouts_enabled,onboarding_status")
+            .eq("user_id", auth.user.id)
+            .maybeSingle();
+          const origin = allowedCheckoutOrigin(req);
+          let accountId = existing.data && existing.data.stripe_account_id;
+          if (!accountId) {
+            const created = await createMarketplaceConnectAccount(stripe, {
+              email: auth.user.email,
+              displayName: primaryOwner
+                ? "HAVKAR Owner provider"
+                : (auth.user.user_metadata && auth.user.user_metadata.full_name) ||
+                  "HAVKAR service provider",
+              extraMetadata: {
+                havkar_user_id: String(auth.user.id),
+                havkar_product: "services",
+                havkar_primary_owner: primaryOwner ? "true" : "false"
+              }
+            });
+            accountId = created.id;
+            await getSupabaseAdmin()
+              .from("marketplace_seller_connect_accounts")
+              .upsert({
+                user_id: auth.user.id,
+                stripe_account_id: accountId,
+                onboarding_status: "pending",
+                charges_enabled: false,
+                payouts_enabled: false,
+                details_submitted: false,
+                updated_at: new Date().toISOString()
+              });
+          }
+          const accountLink = await createRecipientAccountOnboardingLink(stripe, {
+            accountId,
+            refreshUrl: `${origin}/services.html?connect=refresh`,
+            returnUrl: `${origin}/services.html?connect=return`
+          });
+          await getSupabaseAdmin().from("service_provider_profiles").upsert(
+            {
+              user_id: auth.user.id,
+              stripe_account_id: accountId,
+              verification_status: "unverified",
+              display_name:
+                (auth.user.user_metadata && auth.user.user_metadata.full_name) ||
+                "HAVKAR provider",
+              updated_at: new Date().toISOString()
+            },
+            { onConflict: "user_id" }
+          );
+          return res.status(200).json({
+            ok: true,
+            charged: false,
+            onboarding_url: accountLink.url || accountLink.link || null,
+            stripe_account_id: accountId,
+            note:
+              "KYC stays on Stripe-hosted pages. Providers are not marked verified until Owner confirmation or Stripe charges_enabled sync."
+          });
+        }
+
+        if (bodyActionEarly === "services_owner_panel") {
+          const auth = await authenticateUser(req);
+          if (!auth || !auth.user) {
+            return sendError(res, 401, (auth && auth.error) || "Authentication required");
+          }
+          if (!(await isPrimaryHavkarOwner(auth.user.id))) {
+            return sendError(res, 403, "Owner role required");
+          }
+          const admin = getSupabaseAdmin();
+          const [categories, providers, complaints, bookings, commissions] =
+            await Promise.all([
+              admin
+                .from("service_categories")
+                .select("id,slug,label,parent_slug,sort_order,active")
+                .order("sort_order"),
+              admin
+                .from("service_provider_profiles")
+                .select(
+                  "user_id,display_name,verification_status,stripe_account_id,service_area,updated_at"
+                )
+                .order("updated_at", { ascending: false })
+                .limit(100),
+              admin
+                .from("service_complaints")
+                .select("id,booking_id,author_id,category,explanation,status,created_at")
+                .order("created_at", { ascending: false })
+                .limit(50),
+              admin
+                .from("service_bookings")
+                .select(
+                  "id,service_id,customer_id,provider_id,status,payment_method,agreed_price,currency,commission_amount,created_at"
+                )
+                .order("created_at", { ascending: false })
+                .limit(50),
+              admin
+                .from("service_commission_entries")
+                .select(
+                  "booking_id,commission_cents,provider_settlement_cents,settlement_channel,liability_state,collection_state,created_at"
+                )
+                .order("created_at", { ascending: false })
+                .limit(50)
+            ]);
+          return res.status(200).json({
+            ok: true,
+            completion_pepper_configured: Boolean(
+              process.env.HAVKAR_COMPLETION_CODE_PEPPER
+            ),
+            payments_armed: servicesPaymentsArmed(process.env),
+            categories: categories.data || [],
+            providers: providers.data || [],
+            complaints: complaints.data || [],
+            bookings: bookings.data || [],
+            commissions: commissions.data || []
+          });
+        }
+
+        if (bodyActionEarly === "services_category_upsert") {
+          const auth = await authenticateUser(req);
+          if (!auth || !auth.user) {
+            return sendError(res, 401, (auth && auth.error) || "Authentication required");
+          }
+          if (!(await isPrimaryHavkarOwner(auth.user.id))) {
+            return sendError(res, 403, "Owner role required");
+          }
+          const label = String((req.body && req.body.label) || "").trim();
+          const slug = String((req.body && req.body.slug) || label)
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, "");
+          if (!label || !slug) {
+            return sendError(res, 400, "label/slug required");
+          }
+          const row = {
+            slug,
+            label,
+            parent_slug: (req.body && req.body.parent_slug) || null,
+            sort_order: Number((req.body && req.body.sort_order) || 500),
+            active: (req.body && req.body.active) !== false
+          };
+          const { data, error } = await getSupabaseAdmin()
+            .from("service_categories")
+            .upsert(row, { onConflict: "slug" })
+            .select("id,slug,label,active,sort_order")
+            .maybeSingle();
+          if (error) return sendError(res, 500, error.message || "category upsert failed");
+          return res.status(200).json({ ok: true, category: data });
+        }
+
+        if (bodyActionEarly === "services_provider_set_verification") {
+          const auth = await authenticateUser(req);
+          if (!auth || !auth.user) {
+            return sendError(res, 401, (auth && auth.error) || "Authentication required");
+          }
+          if (!(await isPrimaryHavkarOwner(auth.user.id))) {
+            return sendError(res, 403, "Owner role required");
+          }
+          const providerId = String((req.body && req.body.provider_user_id) || "").trim();
+          const next = String((req.body && req.body.verification_status) || "")
+            .trim()
+            .toLowerCase();
+          if (!providerId || !["verified", "unverified"].includes(next)) {
+            return sendError(res, 400, "provider_user_id and verification_status required");
+          }
+          if (next === "verified") {
+            const connect = await resolveServiceProviderConnectAccount(
+              getSupabaseAdmin(),
+              providerId
+            );
+            if (!connect.ok || connect.charges_enabled !== true) {
+              return res.status(409).json({
+                ok: false,
+                code: "CONNECT_NOT_READY",
+                error:
+                  "Cannot mark verified: Stripe Connect charges_enabled is not true for this provider."
+              });
+            }
+          }
+          const { data, error } = await getSupabaseAdmin()
+            .from("service_provider_profiles")
+            .upsert(
+              {
+                user_id: providerId,
+                verification_status: next,
+                updated_at: new Date().toISOString()
+              },
+              { onConflict: "user_id" }
+            )
+            .select("user_id,verification_status,stripe_account_id")
+            .maybeSingle();
+          if (error) return sendError(res, 500, error.message || "verification update failed");
+          return res.status(200).json({ ok: true, provider: data });
+        }
+
+        if (bodyActionEarly === "services_complaint_resolve") {
+          const auth = await authenticateUser(req);
+          if (!auth || !auth.user) {
+            return sendError(res, 401, (auth && auth.error) || "Authentication required");
+          }
+          if (!(await isPrimaryHavkarOwner(auth.user.id))) {
+            return sendError(res, 403, "Owner role required");
+          }
+          const complaintId = Number((req.body && req.body.complaint_id) || 0);
+          const status = String((req.body && req.body.status) || "resolved")
+            .trim()
+            .toLowerCase();
+          if (!complaintId || !["resolved", "closed", "awaiting_review"].includes(status)) {
+            return sendError(res, 400, "complaint_id and valid status required");
+          }
+          const { data, error } = await getSupabaseAdmin()
+            .from("service_complaints")
+            .update({ status })
+            .eq("id", complaintId)
+            .select("id,booking_id,status")
+            .maybeSingle();
+          if (error || !data) {
+            return sendError(res, 500, (error && error.message) || "resolve failed");
+          }
+          return res.status(200).json({ ok: true, complaint: data });
+        }
+
+        if (bodyActionEarly === "services_refund_prepare") {
+          const auth = await authenticateUser(req);
+          if (!auth || !auth.user) {
+            return sendError(res, 401, (auth && auth.error) || "Authentication required");
+          }
+          const bookingId = Number((req.body && req.body.booking_id) || 0);
+          const { data: booking } = await getSupabaseAdmin()
+            .from("service_bookings")
+            .select(
+              "id,customer_id,provider_id,status,payment_method,agreed_price,currency,stripe_payment_intent,stripe_charge_id,commission_amount"
+            )
+            .eq("id", bookingId)
+            .maybeSingle();
+          if (!booking) return sendError(res, 404, "Booking not found");
+          const uid = String(auth.user.id);
+          const isOwner = await isPrimaryHavkarOwner(uid);
+          if (
+            !isOwner &&
+            uid !== String(booking.customer_id) &&
+            uid !== String(booking.provider_id)
+          ) {
+            return sendError(res, 403, "Not authorized for this booking");
+          }
+          const agreedCents = serviceCommerce.priceToCents(booking.agreed_price);
+          const split = serviceCommerce.settleProviderCommission(agreedCents);
+          return res.status(200).json({
+            ok: true,
+            charged: false,
+            refund_executed: false,
+            booking_id: booking.id,
+            status: booking.status,
+            payment_method: booking.payment_method,
+            stripe_payment_intent: booking.stripe_payment_intent || null,
+            stripe_charge_id: booking.stripe_charge_id || null,
+            customer_paid_cents: split.ok ? split.settlement.customerChargeCents : null,
+            platform_fee_cents: split.ok ? split.settlement.commissionCents : null,
+            provider_settlement_cents: split.ok
+              ? split.settlement.providerSettlementCents
+              : null,
+            note:
+              "Refund is prepared only. Execute via Stripe Dashboard/API after Owner approval. This endpoint does not move money.",
+            requires_owner_approval_to_execute: true
+          });
+        }
+
+        if (bodyActionEarly === "owner_services_eur1_prepare") {
+          const auth = await authenticateUser(req);
+          if (!auth || !auth.user) {
+            return sendError(res, 401, (auth && auth.error) || "Authentication required");
+          }
+          if (!(await isPrimaryHavkarOwner(auth.user.id))) {
+            return sendError(res, 403, "Owner role required");
+          }
+          const serviceId = Number((req.body && req.body.service_id) || 0);
+          let service = null;
+          if (serviceId > 0) {
+            const loaded = await getSupabaseAdmin()
+              .from("services")
+              .select(
+                "id,provider_id,title,price,currency,status,price_type"
+              )
+              .eq("id", serviceId)
+              .maybeSingle();
+            service = loaded.data;
+          }
+          if (!service) {
+            /* Prefer an Owner-owned active fixed EUR service if present. */
+            const owned = await getSupabaseAdmin()
+              .from("services")
+              .select(
+                "id,provider_id,title,price,currency,status,price_type"
+              )
+              .eq("provider_id", auth.user.id)
+              .eq("status", "active")
+              .order("id", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            service = owned.data;
+          }
+          const listEur = 1;
+          const agreedCents = 100;
+          const feeCents = 10;
+          const providerConnect = service
+            ? await resolveServiceProviderConnectAccount(
+                getSupabaseAdmin(),
+                service.provider_id
+              )
+            : { ok: false, reason: "no_service" };
+          const decision = decideServicesCheckout(process.env, {
+            agreedCents,
+            clientCustomerChargeCents: agreedCents,
+            clientCommissionCents: feeCents,
+            clientCommissionBps: 1000,
+            connectedAccountId: providerConnect.stripe_account_id,
+            providerVerified: providerConnect.provider_verified === true
+          });
+          const createNow = (req.body && req.body.create_checkout) === true;
+          if (!createNow) {
+            return res.status(200).json({
+              ok: true,
+              prepared: true,
+              charged: false,
+              checkout_created: false,
+              list_price_eur: listEur,
+              customer_pays_eur: listEur,
+              platform_commission_eur: 0.1,
+              provider_settlement_eur: 0.9,
+              commission_bps: 1000,
+              commission_payer: "provider",
+              service: service
+                ? { id: service.id, title: service.title, provider_id: service.provider_id }
+                : null,
+              provider_connect: providerConnect,
+              stripe_ready: decision.callStripe === true,
+              decision_code: decision.code || null,
+              decision_error: decision.callStripe ? null : decision.error,
+              next_step:
+                "Owner must send create_checkout:true after reviewing amounts. No charge is created until then.",
+              requires_owner_confirmation: true
+            });
+          }
+          if (!decision.callStripe) {
+            return res.status(decision.status || 503).json({
+              ok: false,
+              charged: false,
+              code: decision.code,
+              error: decision.error,
+              provider_connect: providerConnect
+            });
+          }
+          if (!service) {
+            return sendError(
+              res,
+              409,
+              "No Owner active service listing found for €1 probe. Create one first."
+            );
+          }
+          if (String(service.provider_id) === String(auth.user.id)) {
+            return res.status(409).json({
+              ok: false,
+              charged: false,
+              code: "SELF_BUY_BLOCKED",
+              error:
+                "Owner cannot be both customer and provider on the same €1 probe. Use a second buyer account after prepare."
+            });
+          }
+          /* create_checkout true path still blocked for Owner self-buy; for third-party buyer, use services_buy_checkout. */
+          return res.status(200).json({
+            ok: true,
+            prepared: true,
+            charged: false,
+            checkout_created: false,
+            list_price_eur: listEur,
+            customer_pays_eur: listEur,
+            platform_commission_eur: 0.1,
+            provider_settlement_eur: 0.9,
+            service_id: service.id,
+            checkout_action: "services_buy_checkout",
+            note:
+              "Amounts confirmed. Buyer (non-provider) calls services_buy_checkout with this service_id. No money moved in this prepare call."
+          });
         }
       } catch (error) {
         console.error("HAVKAR jobs/services payments error:", error && error.message);
