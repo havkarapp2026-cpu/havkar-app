@@ -881,6 +881,221 @@ function minimumBalance(
 }
 
 
+async function havkarFetchStellarRecentPayments(
+    address,
+    limit
+){
+
+    const network =
+        currentNetwork();
+
+    const publicKey =
+        String(
+            address ||
+            HAVKAR_STELLAR.address ||
+            ""
+        ).trim();
+
+    const max =
+        Math.max(
+            1,
+            Math.min(
+                Number(limit) || 12,
+                40
+            )
+        );
+
+    if(!isPublicKey(publicKey)){
+
+        throw new Error(
+            "A valid Stellar public key is required."
+        );
+
+    }
+
+    const server =
+        horizonServer(network);
+
+    try{
+
+        const page =
+            await server
+                .payments()
+                .forAccount(publicKey)
+                .order("desc")
+                .limit(max)
+                .call();
+
+        const records =
+            Array.isArray(page && page.records)
+            ? page.records
+            : [];
+
+        const rows = [];
+
+        for(
+            let index = 0;
+            index < records.length;
+            index += 1
+        ){
+
+            const row =
+                records[index] || {};
+
+            const type =
+                String(row.type || "");
+
+            if(
+                type !== "payment" &&
+                type !== "create_account"
+            ){
+
+                continue;
+
+            }
+
+            const assetType =
+                String(
+                    row.asset_type ||
+                    ""
+                );
+
+            if(
+                type === "payment" &&
+                assetType !== "native"
+            ){
+
+                continue;
+
+            }
+
+            const amountText =
+                type === "create_account"
+                ? String(
+                    row.starting_balance ||
+                    "0"
+                )
+                : String(
+                    row.amount ||
+                    "0"
+                );
+
+            const from =
+                String(
+                    row.from ||
+                    row.funder ||
+                    ""
+                );
+
+            const to =
+                String(
+                    row.to ||
+                    row.account ||
+                    ""
+                );
+
+            const inbound =
+                to === publicKey;
+
+            rows.push({
+
+                id:String(
+                    row.id ||
+                    row.paging_token ||
+                    ""
+                ),
+
+                type:type,
+
+                direction:
+                    inbound
+                    ? "in"
+                    : "out",
+
+                amount:amountText,
+
+                asset:"XLM",
+
+                counterparty:
+                    inbound
+                    ? from
+                    : to,
+
+                transaction_hash:String(
+                    row.transaction_hash ||
+                    ""
+                ),
+
+                created_at:String(
+                    row.created_at ||
+                    ""
+                ),
+
+                successful:
+                    row.transaction_successful !== false,
+
+                network:network.id,
+
+                label:network.label,
+
+                horizon:network.horizon
+
+            });
+
+        }
+
+        return {
+
+            ok:true,
+
+            network:network.id,
+
+            label:network.label,
+
+            horizon:network.horizon,
+
+            address:publicKey,
+
+            payments:rows
+
+        };
+
+    }
+    catch(error){
+
+        if(
+            error instanceof NotFoundError
+        ){
+
+            return {
+
+                ok:true,
+
+                network:network.id,
+
+                label:network.label,
+
+                horizon:network.horizon,
+
+                address:publicKey,
+
+                payments:[],
+
+                exists:false
+
+            };
+
+        }
+
+        throw new Error(
+            safeErrorMessage(error)
+        );
+
+    }
+
+}
+
+
 async function havkarFetchStellarBalance(
     address
 ){
@@ -3398,6 +3613,9 @@ window.havkarSetStellarNetwork =
 
 window.havkarFetchStellarBalance =
     havkarFetchStellarBalance;
+
+window.havkarFetchStellarRecentPayments =
+    havkarFetchStellarRecentPayments;
 
 window.havkarPrepareStellarPayment =
     havkarPrepareStellarPayment;
