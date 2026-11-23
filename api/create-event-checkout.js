@@ -198,7 +198,8 @@ function isMarketplaceConnectRequest(req) {
       action === "marketplace_connect_quote" ||
       action === "marketplace_buy_checkout" ||
       action === "marketplace_seller_public" ||
-      action === "marketplace_public_readiness"
+      action === "marketplace_public_readiness" ||
+      action === "list_marketplace_card_orders"
   );
 }
 
@@ -4146,6 +4147,95 @@ export default async function handler(req, res) {
     }
 
     const action = marketplaceConnectAction(req);
+
+    if (action === "list_marketplace_card_orders") {
+      try {
+        const auth = await authenticateUser(req);
+        if (!auth || !auth.user || !auth.user.id) {
+          return sendError(res, 401, auth && auth.error
+            ? auth.error
+            : "Authentication required");
+        }
+        const roleRaw = String(
+          (req.body && req.body.role) ||
+            (req.query && req.query.role) ||
+            "auto"
+        )
+          .trim()
+          .toLowerCase();
+        const role = ["buyer", "seller", "owner", "auto"].includes(roleRaw)
+          ? roleRaw
+          : "auto";
+        const limit = Math.max(
+          1,
+          Math.min(
+            Number(
+              (req.body && req.body.limit) ||
+                (req.query && req.query.limit) ||
+                50
+            ) || 50,
+            200
+          )
+        );
+        const uid = String(auth.user.id);
+        const isOwner = await isPrimaryHavkarOwner(uid);
+        if (role === "owner" && !isOwner) {
+          return sendError(res, 403, "Owner role required");
+        }
+
+        let query = getSupabaseAdmin()
+          .from("marketplace_card_orders")
+          .select(
+            "id,ad_id,buyer_id,seller_id,listing_title,list_price_eur,buyer_pays,seller_receives,platform_fee,currency,status,stripe_session_id,stripe_payment_intent,stripe_charge_id,stripe_transfer_id,stripe_connected_account_id,paid_at,created_at,updated_at"
+          )
+          .order("created_at", { ascending: false })
+          .limit(limit);
+
+        if (role === "owner" || (role === "auto" && isOwner)) {
+          /* Owner sees full marketplace card order registry. */
+        } else if (role === "buyer") {
+          query = query.eq("buyer_id", uid);
+        } else if (role === "seller") {
+          query = query.eq("seller_id", uid);
+        } else {
+          query = query.or(`buyer_id.eq.${uid},seller_id.eq.${uid}`);
+        }
+
+        const { data, error } = await query;
+        if (error) {
+          console.error(
+            "list_marketplace_card_orders failed",
+            error.message
+          );
+          return sendError(res, 500, "Could not load marketplace orders");
+        }
+        const orders = Array.isArray(data) ? data : [];
+        return res.status(200).json({
+          ok: true,
+          role: role === "auto" && isOwner ? "owner" : role,
+          viewer_id: uid,
+          is_owner: isOwner,
+          count: orders.length,
+          orders: orders.map((row) => {
+            const viewerRole =
+              String(row.buyer_id) === uid
+                ? "buyer"
+                : String(row.seller_id) === uid
+                  ? "seller"
+                  : isOwner
+                    ? "owner"
+                    : "viewer";
+            return Object.assign({}, row, { viewer_role: viewerRole });
+          })
+        });
+      } catch (error) {
+        console.error(
+          "list_marketplace_card_orders error",
+          error && error.message
+        );
+        return sendError(res, 500, "Marketplace order history failed");
+      }
+    }
 
     if (action === "marketplace_public_readiness") {
       try {
