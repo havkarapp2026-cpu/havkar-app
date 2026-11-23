@@ -148164,6 +148164,98 @@ ${value}`, dataLines++;
     }
     return entries2 * baseReserve;
   }
+  async function havkarFetchStellarRecentPayments(address, limit) {
+    const network = currentNetwork();
+    const publicKey = String(
+      address || HAVKAR_STELLAR.address || ""
+    ).trim();
+    const max = Math.max(
+      1,
+      Math.min(
+        Number(limit) || 12,
+        40
+      )
+    );
+    if (!isPublicKey(publicKey)) {
+      throw new Error(
+        "A valid Stellar public key is required."
+      );
+    }
+    const server = horizonServer(network);
+    try {
+      const page = await server.payments().forAccount(publicKey).order("desc").limit(max).call();
+      const records = Array.isArray(page && page.records) ? page.records : [];
+      const rows = [];
+      for (let index2 = 0; index2 < records.length; index2 += 1) {
+        const row = records[index2] || {};
+        const type = String(row.type || "");
+        if (type !== "payment" && type !== "create_account") {
+          continue;
+        }
+        const assetType = String(
+          row.asset_type || ""
+        );
+        if (type === "payment" && assetType !== "native") {
+          continue;
+        }
+        const amountText = type === "create_account" ? String(
+          row.starting_balance || "0"
+        ) : String(
+          row.amount || "0"
+        );
+        const from29 = String(
+          row.from || row.funder || ""
+        );
+        const to6 = String(
+          row.to || row.account || ""
+        );
+        const inbound = to6 === publicKey;
+        rows.push({
+          id: String(
+            row.id || row.paging_token || ""
+          ),
+          type,
+          direction: inbound ? "in" : "out",
+          amount: amountText,
+          asset: "XLM",
+          counterparty: inbound ? from29 : to6,
+          transaction_hash: String(
+            row.transaction_hash || ""
+          ),
+          created_at: String(
+            row.created_at || ""
+          ),
+          successful: row.transaction_successful !== false,
+          network: network.id,
+          label: network.label,
+          horizon: network.horizon
+        });
+      }
+      return {
+        ok: true,
+        network: network.id,
+        label: network.label,
+        horizon: network.horizon,
+        address: publicKey,
+        payments: rows
+      };
+    } catch (error) {
+      if (error instanceof NotFoundError2) {
+        return {
+          ok: true,
+          network: network.id,
+          label: network.label,
+          horizon: network.horizon,
+          address: publicKey,
+          payments: [],
+          exists: false
+        };
+      }
+      throw new Error(
+        safeErrorMessage(error)
+      );
+    }
+  }
   async function havkarFetchStellarBalance(address) {
     const network = currentNetwork();
     const publicKey = String(
@@ -149244,6 +149336,7 @@ ${value}`, dataLines++;
   window.havkarGetStellarNetwork = havkarGetStellarNetwork;
   window.havkarSetStellarNetwork = havkarSetStellarNetwork;
   window.havkarFetchStellarBalance = havkarFetchStellarBalance;
+  window.havkarFetchStellarRecentPayments = havkarFetchStellarRecentPayments;
   window.havkarPrepareStellarPayment = havkarPrepareStellarPayment;
   window.havkarSignAndSubmitStellarPayment = havkarSignAndSubmitStellarPayment;
   window.havkarRestoreStellarAddress = havkarRestoreStellarAddress;
