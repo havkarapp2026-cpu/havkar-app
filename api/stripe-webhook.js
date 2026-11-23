@@ -403,6 +403,67 @@ function createWebhookStore(supabase, stripe) {
         session_id: sessionId || null
       };
     },
+    async settleServiceCharge({ event, chargeOrObject, stripeClient, nowIso }) {
+      const meta = (chargeOrObject && chargeOrObject.metadata) || {};
+      let bookingId = Number(meta.booking_id);
+      if (
+        (!Number.isSafeInteger(bookingId) || bookingId <= 0) &&
+        chargeOrObject &&
+        typeof chargeOrObject.payment_intent === "string" &&
+        stripeClient
+      ) {
+        try {
+          const intent = await stripeClient.paymentIntents.retrieve(
+            chargeOrObject.payment_intent
+          );
+          bookingId = Number(
+            (intent && intent.metadata && intent.metadata.booking_id) || 0
+          );
+          if (String((intent && intent.metadata && intent.metadata.havkar_flow) || "") !== "services") {
+            return { ok: true, applied: false, reason: "not_services_pi" };
+          }
+        } catch (_err) {
+          bookingId = 0;
+        }
+      } else if (String(meta.havkar_flow || "") !== "services") {
+        /* Also accept lookup by stored charge/payment intent on bookings. */
+        if (chargeOrObject && chargeOrObject.id) {
+          const { data: byCharge } = await supabase
+            .from("service_bookings")
+            .select("id")
+            .eq("stripe_charge_id", chargeOrObject.id)
+            .maybeSingle();
+          if (byCharge && byCharge.id) bookingId = Number(byCharge.id);
+        }
+        if (
+          (!Number.isSafeInteger(bookingId) || bookingId <= 0) &&
+          chargeOrObject &&
+          chargeOrObject.payment_intent
+        ) {
+          const { data: byPi } = await supabase
+            .from("service_bookings")
+            .select("id")
+            .eq(
+              "stripe_payment_intent",
+              typeof chargeOrObject.payment_intent === "string"
+                ? chargeOrObject.payment_intent
+                : chargeOrObject.payment_intent.id
+            )
+            .maybeSingle();
+          if (byPi && byPi.id) bookingId = Number(byPi.id);
+        }
+      }
+      if (!Number.isSafeInteger(bookingId) || bookingId <= 0) {
+        return { ok: true, applied: false, reason: "not_services_charge" };
+      }
+      return serviceCommerce.applyServiceChargeSettlement({
+        supabase,
+        event,
+        chargeOrObject,
+        bookingId,
+        nowIso
+      });
+    },
     async fulfillServiceBookingPayment({ event, session }) {
       const meta = (session && session.metadata) || {};
       if (String(meta.havkar_flow || "") !== "services") {
