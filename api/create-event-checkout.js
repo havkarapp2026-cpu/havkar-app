@@ -2156,7 +2156,6 @@ export default async function handler(req, res) {
       globalBodyAction === "services_provider_set_verification" ||
       globalBodyAction === "services_complaint_resolve" ||
       globalBodyAction === "services_refund_prepare" ||
-      globalBodyAction === "owner_services_eur1_prepare" ||
       globalBodyAction === "services_geo_search");
   if (isGlobalPaymentsRequest(req) && !isJobsServicesPaymentAction) {
     if (req.method !== "GET" && req.method !== "POST") {
@@ -3233,7 +3232,6 @@ export default async function handler(req, res) {
         bodyActionEarly === "services_provider_set_verification" ||
         bodyActionEarly === "services_complaint_resolve" ||
         bodyActionEarly === "services_refund_prepare" ||
-        bodyActionEarly === "owner_services_eur1_prepare" ||
         bodyActionEarly === "services_geo_search")
     ) {
       try {
@@ -4992,123 +4990,6 @@ export default async function handler(req, res) {
           });
         }
 
-        if (bodyActionEarly === "owner_services_eur1_prepare") {
-          const auth = await authenticateUser(req);
-          if (!auth || !auth.user) {
-            return sendError(res, 401, (auth && auth.error) || "Authentication required");
-          }
-          if (!(await isPrimaryHavkarOwner(auth.user.id))) {
-            return sendError(res, 403, "Owner role required");
-          }
-          const serviceId = Number((req.body && req.body.service_id) || 0);
-          let service = null;
-          if (serviceId > 0) {
-            const loaded = await getSupabaseAdmin()
-              .from("services")
-              .select(
-                "id,provider_id,title,price,currency,status,price_type"
-              )
-              .eq("id", serviceId)
-              .maybeSingle();
-            service = loaded.data;
-          }
-          if (!service) {
-            /* Prefer an Owner-owned active fixed EUR service if present. */
-            const owned = await getSupabaseAdmin()
-              .from("services")
-              .select(
-                "id,provider_id,title,price,currency,status,price_type"
-              )
-              .eq("provider_id", auth.user.id)
-              .eq("status", "active")
-              .order("id", { ascending: false })
-              .limit(1)
-              .maybeSingle();
-            service = owned.data;
-          }
-          const listEur = 1;
-          const agreedCents = 100;
-          const feeCents = 10;
-          const providerConnect = service
-            ? await resolveServiceProviderConnectAccount(
-                getSupabaseAdmin(),
-                service.provider_id
-              )
-            : { ok: false, reason: "no_service" };
-          const decision = decideServicesCheckout(process.env, {
-            agreedCents,
-            clientCustomerChargeCents: agreedCents,
-            clientCommissionCents: feeCents,
-            clientCommissionBps: 1000,
-            connectedAccountId: providerConnect.stripe_account_id,
-            providerVerified: providerConnect.provider_verified === true
-          });
-          const createNow = (req.body && req.body.create_checkout) === true;
-          if (!createNow) {
-            return res.status(200).json({
-              ok: true,
-              prepared: true,
-              charged: false,
-              checkout_created: false,
-              list_price_eur: listEur,
-              customer_pays_eur: listEur,
-              platform_commission_eur: 0.1,
-              provider_settlement_eur: 0.9,
-              commission_bps: 1000,
-              commission_payer: "provider",
-              service: service
-                ? { id: service.id, title: service.title, provider_id: service.provider_id }
-                : null,
-              provider_connect: providerConnect,
-              stripe_ready: decision.callStripe === true,
-              decision_code: decision.code || null,
-              decision_error: decision.callStripe ? null : decision.error,
-              next_step:
-                "Owner must send create_checkout:true after reviewing amounts. No charge is created until then.",
-              requires_owner_confirmation: true
-            });
-          }
-          if (!decision.callStripe) {
-            return res.status(decision.status || 503).json({
-              ok: false,
-              charged: false,
-              code: decision.code,
-              error: decision.error,
-              provider_connect: providerConnect
-            });
-          }
-          if (!service) {
-            return sendError(
-              res,
-              409,
-              "No Owner active service listing found for €1 probe. Create one first."
-            );
-          }
-          if (String(service.provider_id) === String(auth.user.id)) {
-            return res.status(409).json({
-              ok: false,
-              charged: false,
-              code: "SELF_BUY_BLOCKED",
-              error:
-                "Owner cannot be both customer and provider on the same €1 probe. Use a second buyer account after prepare."
-            });
-          }
-          /* create_checkout true path still blocked for Owner self-buy; for third-party buyer, use services_buy_checkout. */
-          return res.status(200).json({
-            ok: true,
-            prepared: true,
-            charged: false,
-            checkout_created: false,
-            list_price_eur: listEur,
-            customer_pays_eur: listEur,
-            platform_commission_eur: 0.1,
-            provider_settlement_eur: 0.9,
-            service_id: service.id,
-            checkout_action: "services_buy_checkout",
-            note:
-              "Amounts confirmed. Buyer (non-provider) calls services_buy_checkout with this service_id. No money moved in this prepare call."
-          });
-        }
       } catch (error) {
         console.error("HAVKAR jobs/services payments error:", error && error.message);
         return sendError(res, 500, "Jobs/services payment catalog failed");
@@ -6138,6 +6019,177 @@ export default async function handler(req, res) {
           ok: false,
           error: "Exact confirm phrase required.",
           required_confirm: CONFIRM_PHRASE
+        });
+      }
+
+      if (action === "owner_services_eur1_prepare") {
+        const {
+          createOwnerServicesEur1CheckoutSession,
+          SERVICES_LIST_EUR,
+          SERVICES_PROBE_SERVICE_ID
+        } = require("../lib/owner-eur1-checkout.cjs");
+        const serviceIdRaw = String(
+          (req.body && (req.body.service_id || req.body.listing_id)) ||
+            SERVICES_PROBE_SERVICE_ID
+        ).trim();
+        const serviceId = Number(serviceIdRaw);
+        if (!Number.isSafeInteger(serviceId) || serviceId <= 0) {
+          return sendError(res, 400, "service_id is required");
+        }
+        const { data: service, error: serviceError } = await getSupabaseAdmin()
+          .from("services")
+          .select(
+            "id,provider_id,title,price,currency,price_type,status"
+          )
+          .eq("id", serviceId)
+          .maybeSingle();
+        if (serviceError || !service) {
+          return sendError(res, 404, "Service not found");
+        }
+        if (String(service.status) !== "active") {
+          return sendError(res, 409, "Service must be active for EUR1 probe");
+        }
+        const listPrice = Number(service.price);
+        const currency = String(service.currency || "EUR").toUpperCase();
+        if (
+          currency !== "EUR" ||
+          !Number.isFinite(listPrice) ||
+          listPrice !== SERVICES_LIST_EUR
+        ) {
+          return sendError(
+            res,
+            400,
+            "Services EUR1 probe requires list price exactly 1.00 EUR"
+          );
+        }
+        const priceType = String(service.price_type || "").toLowerCase();
+        if (priceType !== "fixed") {
+          return sendError(res, 400, "Services EUR1 probe requires fixed price_type");
+        }
+        if (String(service.provider_id) === String(MARKETPLACE_BUYER_USER_ID)) {
+          return sendError(
+            res,
+            400,
+            "Provider and designated buyer must be independent"
+          );
+        }
+        const providerConnect = await getSupabaseAdmin()
+          .from("marketplace_seller_connect_accounts")
+          .select(
+            "stripe_account_id,charges_enabled,payouts_enabled,onboarding_status"
+          )
+          .eq("user_id", service.provider_id)
+          .maybeSingle();
+        if (
+          !providerConnect.data ||
+          providerConnect.data.charges_enabled !== true ||
+          !providerConnect.data.stripe_account_id
+        ) {
+          return res.status(409).json({
+            ok: false,
+            code: "PROVIDER_CONNECT_REQUIRED",
+            error:
+              "Provider Connect must be charges_enabled before Services EUR1 checkout."
+          });
+        }
+
+        const tomorrow = new Date();
+        tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+        const bookingDate = tomorrow.toISOString().slice(0, 10);
+        const { data: createdBooking, error: bookingError } =
+          await getSupabaseAdmin()
+            .from("service_bookings")
+            .insert({
+              service_id: service.id,
+              customer_id: MARKETPLACE_BUYER_USER_ID,
+              provider_id: service.provider_id,
+              booking_date: bookingDate,
+              booking_time: "12:00",
+              message: "Owner-approved Services EUR1 Connect probe",
+              status: "pending",
+              payment_method: "online",
+              agreed_price: service.price,
+              currency: service.currency,
+              commission_amount: 0.1
+            })
+            .select("id")
+            .maybeSingle();
+        if (bookingError || !createdBooking) {
+          console.error("owner_services_eur1 booking", bookingError);
+          return sendError(res, 500, "Could not create probe booking");
+        }
+
+        let prepared;
+        try {
+          prepared = await createOwnerServicesEur1CheckoutSession(
+            getStripe(),
+            allowedCheckoutOrigin(req),
+            {
+              serviceId: service.id,
+              serviceTitle: service.title,
+              providerUserId: service.provider_id,
+              connectedAccountId: providerConnect.data.stripe_account_id,
+              bookingId: createdBooking.id,
+              buyerUserId: MARKETPLACE_BUYER_USER_ID,
+              buyerEmail: MARKETPLACE_BUYER_EMAIL
+            }
+          );
+        } catch (createErr) {
+          try {
+            await getSupabaseAdmin()
+              .from("service_bookings")
+              .update({ status: "cancelled" })
+              .eq("id", createdBooking.id)
+              .eq("status", "pending");
+          } catch (_cancelErr) {
+            /* best-effort */
+          }
+          throw createErr;
+        }
+
+        const session = prepared.session;
+        const settlement = prepared.settlement;
+        try {
+          await getSupabaseAdmin()
+            .from("service_bookings")
+            .update({
+              stripe_checkout_session_id: session.id,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", createdBooking.id);
+        } catch (_sessionSaveErr) {
+          /* best-effort */
+        }
+
+        const customerPaysEur = settlement.customerChargeCents / 100;
+        const feeEur = settlement.commissionCents / 100;
+        const providerEur = settlement.providerSettlementCents / 100;
+        const estimatedStripeFeeEur =
+          Math.round((customerPaysEur * 0.015 + 0.25) * 100) / 100;
+        return res.status(200).json({
+          ok: true,
+          mode: "services_destination",
+          charged: false,
+          public_collection: "owner_micro_probe",
+          service_id: String(service.id),
+          booking_id: String(createdBooking.id),
+          list_price_eur: SERVICES_LIST_EUR,
+          customer_pays_eur: customerPaysEur,
+          platform_commission_eur: feeEur,
+          provider_settlement_eur: providerEur,
+          commission_bps: 1000,
+          commission_payer: "provider",
+          connected_account_id: providerConnect.data.stripe_account_id,
+          buyer_email: MARKETPLACE_BUYER_EMAIL,
+          provider_user_id: String(service.provider_id),
+          estimated_stripe_eu_card_fee_eur: estimatedStripeFeeEur,
+          fee_payer: "application",
+          session_id: session.id,
+          url: session.url,
+          expires_at: session.expires_at,
+          livemode: session.livemode === true,
+          note:
+            "Owner-approved Services EUR1 Connect probe. Complete payment only on Stripe Checkout. Agent will not charge the card."
         });
       }
 

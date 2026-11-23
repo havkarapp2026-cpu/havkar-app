@@ -58,10 +58,19 @@ for (const action of [
 
 assert.match(apiSrc, /CONNECT_NOT_READY/);
 assert.match(apiSrc, /charges_enabled !== true/);
-assert.match(apiSrc, /requires_owner_confirmation:\s*true/);
-assert.match(apiSrc, /create_checkout:\s*true/);
+assert.match(apiSrc, /owner_services_eur1_prepare/);
+assert.match(apiSrc, /CONFIRM_PHRASE/);
+assert.match(apiSrc, /services_destination/);
 assert.match(apiSrc, /refund_executed:\s*false/);
 assert.match(apiSrc, /completion_pepper_configured/);
+assert.match(
+  fs.readFileSync(new URL("../lib/owner-eur1-checkout.cjs", import.meta.url), "utf8"),
+  /PREPARE_EUR_1_00_LIVE_CHECKOUT/
+);
+assert.match(
+  fs.readFileSync(new URL("../owner-eur1-checkout.html", import.meta.url), "utf8"),
+  /owner_services_eur1_prepare/
+);
 
 assert.match(webhookSrc, /settleServiceCharge|applyServiceChargeSettlement|havkar_flow.*services/);
 assert.match(processorSrc, /services/);
