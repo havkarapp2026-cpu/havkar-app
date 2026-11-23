@@ -147889,7 +147889,7 @@ ${value}`, dataLines++;
       }
     } catch (error) {
     }
-    return "TESTNET";
+    return "PUBLIC";
   }
   function currentNetwork() {
     return STELLAR_NETWORKS[HAVKAR_STELLAR.network] || STELLAR_NETWORKS.TESTNET;

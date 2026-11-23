@@ -160,7 +160,8 @@ function readStoredNetwork(){
     }
 
 
-    return "TESTNET";
+    // Public product default: Mainnet. Testnet remains selectable for development.
+    return "PUBLIC";
 
 }
 
