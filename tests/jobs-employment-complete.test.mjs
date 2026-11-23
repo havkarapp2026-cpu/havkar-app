@@ -61,8 +61,19 @@ assert.match(
 assert.doesNotMatch(page, /jobsPayoutHonesty/);
 assert.doesNotMatch(page, /Seller Connect bank payout/);
 assert.match(page, /submitInAppApplication/);
+assert.match(page, /openMyApplications/);
+assert.match(page, /filterCategory/);
+assert.match(page, /renewJobListing/);
 assert.match(page, /Business Plus — €99\.99/);
 assert.match(page, /havkar-job-applications\.js/);
+assert.equal(typeof jobs.listMyApplications, "function");
+assert.equal(
+  jobs.filterJobs(
+    [{ title: "A", type: "Full-time", category: "Hospitality", location: "Bari", country: "Italy", city: "Bari", status: "active" }],
+    { filter: "All", category: "hosp" }
+  ).length,
+  1
+);
 
 const api = fs.readFileSync("api/create-event-checkout.js", "utf8");
 assert.match(api, /jobs_subscription_checkout/);

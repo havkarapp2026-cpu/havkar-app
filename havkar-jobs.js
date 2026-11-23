@@ -168,6 +168,7 @@
     const location = clean(settings.location).toLowerCase();
     const country = clean(settings.country).toLowerCase();
     const city = clean(settings.city).toLowerCase();
+    const category = clean(settings.category).toLowerCase();
     return (list || []).filter(function (job) {
       if (!jobMatchesType(job, settings.filter)) return false;
       const locBlob = String(job.location || "").toLowerCase();
@@ -178,6 +179,13 @@
         return false;
       }
       if (city && !locBlob.includes(city) && !String(job.city || "").toLowerCase().includes(city)) {
+        return false;
+      }
+      if (
+        category &&
+        !String(job.category || "").toLowerCase().includes(category) &&
+        !jobSearchHaystack(job).includes(category)
+      ) {
         return false;
       }
       if (query && !jobSearchHaystack(job).includes(query)) return false;
@@ -658,6 +666,27 @@
     return { ok: true, rows: result.data || [] };
   }
 
+  async function listMyApplications(client, applicantId) {
+    if (!client || !applicantId) {
+      return { ok: false, reason: "missing", message: MESSAGES.missing };
+    }
+    const appsApi =
+      (typeof globalThis !== "undefined" && globalThis.HAVKAR_JOB_APPLICATIONS) ||
+      null;
+    if (appsApi && typeof appsApi.listMine === "function") {
+      return appsApi.listMine(client, applicantId);
+    }
+    const result = await client
+      .from("job_applications")
+      .select(APPLICATION_COLUMNS)
+      .eq("applicant_id", applicantId)
+      .order("created_at", { ascending: false });
+    if (result.error) {
+      return { ok: false, reason: "rejected", message: result.error.message || MESSAGES.rejected };
+    }
+    return { ok: true, rows: result.data || [] };
+  }
+
   async function loadOwnCompanies(client, userId) {
     if (!client || !userId) {
       return { ok: false, reason: "missing", message: MESSAGES.missing };
@@ -735,6 +764,7 @@
     deleteOwnJob: deleteOwnJob,
     submitJobApplication: submitJobApplication,
     listApplicationsForJob: listApplicationsForJob,
+    listMyApplications: listMyApplications,
     loadOwnCompanies: loadOwnCompanies,
     registerCompany: registerCompany
   };

@@ -14,6 +14,11 @@
       locationPh: "Filter by country or city",
       countryPh: "Country",
       cityPh: "City",
+      categoryPh: "Category",
+      myApplications: "My Applications",
+      noMyApplications: "No applications yet",
+      noMyApplicationsHint: "Applications you submit on HAVKAR appear here.",
+      renewListing: "Renew listing (30 days)",
       available: "Available jobs",
       publishTip:
         "Job listings go live after the publishing fee is paid and the transaction is confirmed. HAVKAR connects employers with job seekers.",
@@ -194,6 +199,11 @@
       locationPh: "فیلتر کشور یا شهر",
       countryPh: "کشور",
       cityPh: "شهر",
+      categoryPh: "دسته",
+      myApplications: "درخواست‌های من",
+      noMyApplications: "هنوز درخواستی ثبت نشده",
+      noMyApplicationsHint: "درخواست‌هایی که در هاوکار می‌فرستید اینجا دیده می‌شوند.",
+      renewListing: "تمدید آگهی (۳۰ روز)",
       available: "آگهی‌های موجود",
       publishTip:
         "انتشار آگهی استخدام پس از پرداخت هزینه و تأیید تراکنش انجام می‌شود. هاوکار بستری برای ارتباط کارفرمایان و کارجویان است.",
@@ -374,6 +384,11 @@
       locationPh: "Filtra per paese o città",
       countryPh: "Paese",
       cityPh: "Città",
+      categoryPh: "Categoria",
+      myApplications: "Le mie candidature",
+      noMyApplications: "Nessuna candidatura ancora",
+      noMyApplicationsHint: "Le candidature inviate su HAVKAR compaiono qui.",
+      renewListing: "Rinnova annuncio (30 giorni)",
       available: "Offerte disponibili",
       publishTip:
         "Le offerte di lavoro vengono pubblicate dopo il pagamento della tariffa e la conferma della transazione. HAVKAR collega datori di lavoro e candidati.",
@@ -419,6 +434,11 @@
       locationPh: "تصفية حسب الدولة أو المدينة",
       countryPh: "الدولة",
       cityPh: "المدينة",
+      categoryPh: "الفئة",
+      myApplications: "طلباتي",
+      noMyApplications: "لا توجد طلبات بعد",
+      noMyApplicationsHint: "الطلبات التي ترسلها عبر هافكار تظهر هنا.",
+      renewListing: "تجديد الإعلان (٣٠ يوماً)",
       available: "الوظائف المتاحة",
       publishTip:
         "يُنشر إعلان التوظيف بعد دفع الرسوم وتأكيد المعاملة. هافكار منصة للتواصل بين أصحاب العمل والباحثين عن عمل.",
@@ -464,6 +484,11 @@
       locationPh: "Filtrera efter land eller stad",
       countryPh: "Land",
       cityPh: "Stad",
+      categoryPh: "Kategori",
+      myApplications: "Mina ansökningar",
+      noMyApplications: "Inga ansökningar ännu",
+      noMyApplicationsHint: "Ansökningar du skickar via HAVKAR visas här.",
+      renewListing: "Förnya annons (30 dagar)",
       available: "Tillgängliga jobb",
       publishTip:
         "Jobbannonser publiceras efter att publiceringsavgiften betalats och transaktionen bekräftats. HAVKAR kopplar arbetsgivare till arbetssökande.",
@@ -555,6 +580,9 @@
       ["#locationInput", "locationPh", "placeholder"],
       ["#filterCountry", "countryPh", "placeholder"],
       ["#filterCity", "cityPh", "placeholder"],
+      ["#filterCategory", "categoryPh", "placeholder"],
+      ["#fabMyApplicationsBtn", "myApplications", "aria-label"],
+      ["#fabMyApplicationsBtn", "myApplications", "title"],
       [".section-title", "available"],
       ["#jobsPublishTip", "publishTip"],
       ["#postModalTitle", "postTitle"],
@@ -591,6 +619,8 @@
       if (!el) return;
       var val = t(row[1]);
       if (row[2] === "placeholder") el.setAttribute("placeholder", val);
+      else if (row[2] === "aria-label") el.setAttribute("aria-label", val);
+      else if (row[2] === "title") el.setAttribute("title", val);
       else el.textContent = val;
     });
     var filters = {

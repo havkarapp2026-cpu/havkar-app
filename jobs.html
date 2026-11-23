@@ -1347,9 +1347,20 @@ body.jobs-rtl .section-header{direction:rtl;text-align:right}
     <button
       class="icon-btn"
       type="button"
+      onclick="openMyApplications()"
+      aria-label="My Applications"
+      id="fabMyApplicationsBtn"
+      title="My Applications">
+      <i class="fas fa-file-alt"></i>
+    </button>
+
+    <button
+      class="icon-btn"
+      type="button"
       onclick="openMyJobs()"
-      aria-label="My Jobs" id="fabMyJobsBtn"
-      id="myJobsHeaderBtn">
+      aria-label="My Jobs"
+      id="fabMyJobsBtn"
+      title="My Jobs">
 
       <i class="fas fa-briefcase"></i>
 
@@ -1428,6 +1439,7 @@ body.jobs-rtl .section-header{direction:rtl;text-align:right}
     <div class="jobs-filter-row">
       <input id="filterCountry" type="search" autocomplete="country-name" placeholder="Country" aria-label="Filter by country">
       <input id="filterCity" type="search" autocomplete="address-level2" placeholder="City" aria-label="Filter by city">
+      <input id="filterCategory" type="search" autocomplete="off" placeholder="Category" aria-label="Filter by category">
     </div>
 
   </div>
@@ -2319,6 +2331,8 @@ function renderJobs(){
     ((document.getElementById("filterCountry") || {}).value || "").trim();
   const cityFilter =
     ((document.getElementById("filterCity") || {}).value || "").trim();
+  const categoryFilter =
+    ((document.getElementById("filterCategory") || {}).value || "").trim();
 
   let filtered =
     window.HAVKAR_JOBS
@@ -2327,7 +2341,8 @@ function renderJobs(){
           query: search,
           location: location,
           country: countryFilter,
-          city: cityFilter
+          city: cityFilter,
+          category: categoryFilter
         })
       : jobs.filter(job =>
           selectedFilter === "All" ||
@@ -4217,6 +4232,80 @@ function resumeJobPayment(jobId){
   showPaymentScreen(job);
 }
 
+function renewJobListing(jobId){
+  const job = jobs.find(function(item){
+    return String(item.id) === String(jobId);
+  });
+  if(!job){
+    alert("Job listing was not found.");
+    return;
+  }
+  if(
+    String(job.status) !== "expired" &&
+    !(
+      String(job.status) === "active" &&
+      window.HAVKAR_JOBS &&
+      window.HAVKAR_JOBS.isExpired(job)
+    )
+  ){
+    jobsAlert("renewNotDue", "This listing is still within its paid window.");
+    return;
+  }
+  closeModal("myJobsModal");
+  // Ordinary renew = new prepaid Checkout; activation extends expires_at server-side.
+  showPaymentScreen(job);
+}
+
+async function openMyApplications(){
+  await refreshCurrentUser();
+  if(!currentUser){
+    jobsAlert("signInMyApps", "Please sign in to view your applications.");
+    window.location.href = "profile.html";
+    return;
+  }
+  if(!supabaseClient || !window.HAVKAR_JOBS || typeof window.HAVKAR_JOBS.listMyApplications !== "function"){
+    jobsAlert("appsUnavailable", "Applications are temporarily unavailable.");
+    return;
+  }
+  const result = await window.HAVKAR_JOBS.listMyApplications(supabaseClient, currentUser.id);
+  if(!result || !result.ok){
+    alert((result && result.message) || "Could not load applications.");
+    return;
+  }
+  let panel = document.getElementById("myApplicationsModal");
+  if(!panel){
+    panel = document.createElement("div");
+    panel.id = "myApplicationsModal";
+    panel.className = "modal";
+    panel.innerHTML =
+      '<div class="modal-card">' +
+      '<div class="modal-head"><h2>' + jobsT("myApplications", "My Applications") + '</h2>' +
+      '<button class="close" type="button" onclick="closeModal(\'myApplicationsModal\')">×</button></div>' +
+      '<div id="myApplicationsContent"></div></div>';
+    document.body.appendChild(panel);
+  }
+  const content = document.getElementById("myApplicationsContent");
+  const rows = result.rows || [];
+  if(!rows.length){
+    content.innerHTML =
+      '<div class="empty"><strong>' + jobsT("noMyApplications", "No applications yet") + '</strong>' +
+      '<p>' + jobsT("noMyApplicationsHint", "Applications you submit on HAVKAR appear here.") + '</p></div>';
+  } else {
+    content.innerHTML = rows.map(function(row){
+      const job = jobs.find(function(item){ return String(item.id) === String(row.job_id); });
+      const title = job ? job.title : ("Job #" + String(row.job_id));
+      return (
+        '<div class="saved-job-card">' +
+        '<div class="job-title">' + escapeHTML(title) + '</div>' +
+        '<div class="job-status-line"><span>' + escapeHTML(String(row.status || "")) + '</span></div>' +
+        '<p>' + escapeHTML(String(row.cover_letter || "").slice(0, 240) || "—") + '</p>' +
+        '</div>'
+      );
+    }).join("");
+  }
+  openModal("myApplicationsModal");
+}
+
 async function openMyJobs(){
 
   await refreshCurrentUser();
@@ -4361,6 +4450,26 @@ async function openMyJobs(){
                   resumeJobPayment('${escapeJS(job.id)}')
                 ">
                 ${escapeHTML(jobsT("continuePayment", "Continue payment"))}
+              </button>
+              `
+                  : ""
+              }
+
+              ${
+                (
+                  String(job.status) === "active" &&
+                  window.HAVKAR_JOBS &&
+                  window.HAVKAR_JOBS.isExpired(job)
+                ) || String(job.status) === "expired"
+                  ? `
+              <button
+                class="primary"
+                type="button"
+                onclick="
+                  event.stopPropagation();
+                  renewJobListing('${escapeJS(job.id)}')
+                ">
+                ${escapeHTML(jobsT("renewListing", "Renew listing (30 days)"))}
               </button>
               `
                   : ""
@@ -4748,7 +4857,7 @@ if(locationInput){
 }
 
 
-["filterCountry","filterCity"].forEach(function(id){
+["filterCountry","filterCity","filterCategory"].forEach(function(id){
   var el = document.getElementById(id);
   if(!el) return;
   el.addEventListener("input", function(){ renderJobs(); });
