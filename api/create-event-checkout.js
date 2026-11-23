@@ -4337,6 +4337,30 @@ export default async function handler(req, res) {
             if (!bookingDate || !bookingTime) {
               return sendError(res, 400, "booking_date and booking_time are required");
             }
+            const { data: slotConflict } = await getSupabaseAdmin()
+              .from("service_bookings")
+              .select("id,status")
+              .eq("provider_id", service.provider_id)
+              .eq("booking_date", bookingDate)
+              .eq("booking_time", bookingTime)
+              .in("status", [
+                "pending",
+                "price_proposed",
+                "accepted",
+                "completion_requested",
+                "completed",
+                "in_review",
+                "disputed"
+              ])
+              .limit(1)
+              .maybeSingle();
+            if (slotConflict && slotConflict.id) {
+              return sendError(
+                res,
+                409,
+                "This time slot is already booked for the provider"
+              );
+            }
             const { data: createdBooking, error: createError } =
               await getSupabaseAdmin()
                 .from("service_bookings")
@@ -4356,6 +4380,17 @@ export default async function handler(req, res) {
                 .maybeSingle();
             if (createError || !createdBooking) {
               console.error("services_buy_checkout booking insert", createError);
+              if (
+                createError &&
+                (createError.code === "23505" ||
+                  /duplicate|unique/i.test(String(createError.message || "")))
+              ) {
+                return sendError(
+                  res,
+                  409,
+                  "This time slot is already booked for the provider"
+                );
+              }
               return sendError(res, 500, "Could not create booking");
             }
             bookingId = createdBooking.id;
@@ -4469,6 +4504,7 @@ export default async function handler(req, res) {
             return sendError(res, 500, "Could not request completion");
           }
           let completionCode = null;
+          let deliveredToCustomer = false;
           const decision = serviceCommerce.completionRequestDecision(process.env, {
             role: "provider",
             userId: auth.user.id,
@@ -4489,17 +4525,48 @@ export default async function handler(req, res) {
               },
               { onConflict: "booking_id" }
             );
-            /* Code is for the customer only; never return plaintext to provider. */
-            completionCode = "sent_to_customer_channel";
+            /* Deliver plaintext only to the customer notification inbox. */
+            try {
+              const { error: notifyError } = await getSupabaseAdmin()
+                .from("notifications")
+                .insert({
+                  user_id: booking.customer_id,
+                  type: "services_completion_code",
+                  title: "Service completion code",
+                  message:
+                    "Your provider requested completion for booking #" +
+                    bookingId +
+                    ". Enter this code to confirm: " +
+                    decision.delivery.code,
+                  is_read: false,
+                  action_url: "/services.html#bookings",
+                  reference_id: String(bookingId),
+                  metadata: {
+                    booking_id: bookingId,
+                    expires_at: decision.delivery.expiresAt,
+                    havkar_flow: "services"
+                  }
+                });
+              deliveredToCustomer = !notifyError;
+            } catch (_notifyErr) {
+              deliveredToCustomer = false;
+            }
+            completionCode = deliveredToCustomer
+              ? "notified_customer_inbox"
+              : "stored_awaiting_customer";
           }
+          const providerView = serviceCommerce.providerCompletionResponse(
+            Object.assign({}, decision, { deliveredToCustomer: deliveredToCustomer })
+          );
           return res.status(200).json({
             ok: true,
             booking_id: bookingId,
             status: updated.status,
             completion_code_delivery: completionCode,
+            delivered_to_customer: deliveredToCustomer,
             note:
               decision.ok
-                ? "Completion requested. Customer must confirm."
+                ? providerView.error
                 : "Completion requested. Completion-code pepper is not configured; customer mutual confirm still works."
           });
         }

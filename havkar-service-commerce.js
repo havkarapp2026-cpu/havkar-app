@@ -521,14 +521,20 @@
 
   function providerCompletionResponse(decision) {
     const source = decision || {};
+    const delivered = source.deliveredToCustomer === true;
     return {
       ok: source.ok === true,
-      code: source.ok === true ? "completion_code_sent" : (source.code || "completion_unavailable"),
+      code: source.ok === true
+        ? (delivered ? "completion_code_notified" : "completion_code_stored")
+        : (source.code || "completion_unavailable"),
       revealCodeToProvider: false,
       completed: false,
       cashPaid: false,
+      deliveredToCustomer: delivered,
       error: source.ok === true
-        ? "A completion code was sent only to the customer. The booking was not marked completed."
+        ? (delivered
+          ? "A completion code was delivered to the customer notification inbox. The booking was not marked completed."
+          : "A completion code was stored for customer confirmation. Delivery channel was unavailable; the booking was not marked completed.")
         : (source.error || "Completion confirmation is not available. The booking was not marked completed.")
     };
   }
@@ -797,6 +803,33 @@
         };
       }
       activatedRow = activated.data || activatedRow;
+    }
+
+    /* Audit trail: one row per Stripe event id (unique). Never creates money. */
+    try {
+      await supabase.from("service_settlement_events").upsert(
+        {
+          booking_id: bookingResult.data.id,
+          stripe_event_id: event.id,
+          event_type: event.type || "checkout.session.completed",
+          outcome: "services_booking_payment_collected",
+          amount: settled.settlement.customerChargeCents,
+          currency: String(session.currency || bookingResult.data.currency || "")
+            .toLowerCase(),
+          meta: {
+            payment_intent: paymentIntentId,
+            charge_id: chargeId,
+            application_fee_cents: settled.settlement.commissionCents,
+            provider_settlement_cents: settled.settlement.providerSettlementCents,
+            ledger_mode: ledgerMode,
+            source: "applyVerifiedServicePayment",
+            havkar_flow: "services"
+          }
+        },
+        { onConflict: "stripe_event_id" }
+      );
+    } catch (_auditErr) {
+      /* best-effort; payment/ledger already applied */
     }
 
     return {
