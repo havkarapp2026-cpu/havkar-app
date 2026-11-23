@@ -832,6 +832,27 @@
       /* best-effort; payment/ledger already applied */
     }
 
+    /* Ensure commercial invoice row exists for paid bookings (idempotent). */
+    try {
+      const opsHandlers = require("./lib/services-ops-handlers.cjs");
+      await opsHandlers.ensureInvoiceForBooking(
+        supabase,
+        {
+          id: bookingResult.data.id,
+          customer_id: bookingResult.data.customer_id,
+          provider_id: bookingResult.data.provider_id,
+          agreed_price: bookingResult.data.agreed_price,
+          currency: bookingResult.data.currency,
+          payment_method: bookingResult.data.payment_method || "online",
+          stripe_payment_intent: paymentIntentId,
+          status: activatedRow.status || bookingResult.data.status
+        },
+        "payment_collected"
+      );
+    } catch (_invoiceErr) {
+      /* best-effort; payment already applied */
+    }
+
     return {
       ok: true,
       duplicate: ledgerMode === "replay" && alreadyComplete,

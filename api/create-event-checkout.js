@@ -2156,7 +2156,8 @@ export default async function handler(req, res) {
       globalBodyAction === "services_provider_set_verification" ||
       globalBodyAction === "services_complaint_resolve" ||
       globalBodyAction === "services_refund_prepare" ||
-      globalBodyAction === "services_geo_search");
+      globalBodyAction === "services_geo_search" ||
+      String(globalBodyAction || "").indexOf("services_") === 0);
   if (isGlobalPaymentsRequest(req) && !isJobsServicesPaymentAction) {
     if (req.method !== "GET" && req.method !== "POST") {
       res.setHeader("Allow", "GET, POST");
@@ -3232,7 +3233,8 @@ export default async function handler(req, res) {
         bodyActionEarly === "services_provider_set_verification" ||
         bodyActionEarly === "services_complaint_resolve" ||
         bodyActionEarly === "services_refund_prepare" ||
-        bodyActionEarly === "services_geo_search")
+        bodyActionEarly === "services_geo_search" ||
+        String(bodyActionEarly || "").indexOf("services_") === 0)
     ) {
       try {
         const paymentsApi = await loadJobsServicesPayments();
@@ -3256,12 +3258,45 @@ export default async function handler(req, res) {
           osmEmbedUrl,
           haversineKm
         } = require("../lib/services-geo.cjs");
+        const servicesOps = require("../lib/services-ops-handlers.cjs");
+        const servicesGlobalOps = require("../lib/services-global-ops.cjs");
 
         if (bodyActionEarly === "jobs_payment_methods") {
           return res.status(200).json(jobsPaymentMethods(process.env));
         }
         if (bodyActionEarly === "services_payment_methods") {
           return res.status(200).json(servicesPaymentMethods(process.env));
+        }
+
+        if (servicesOps.isServicesOpsAction(bodyActionEarly)) {
+          const authOps =
+            bodyActionEarly === "services_connect_countries"
+              ? { user: null }
+              : await authenticateUser(req);
+          if (
+            bodyActionEarly !== "services_connect_countries" &&
+            (!authOps || !authOps.user)
+          ) {
+            return sendError(
+              res,
+              401,
+              (authOps && authOps.error) || "Authentication required"
+            );
+          }
+          return await servicesOps.handleServicesOpsAction({
+            action: bodyActionEarly,
+            req,
+            res,
+            auth: authOps,
+            supabase: getSupabaseAdmin(),
+            sendError,
+            isPrimaryHavkarOwner,
+            serviceCommerce,
+            createMarketplaceConnectAccount,
+            createRecipientAccountOnboardingLink,
+            allowedCheckoutOrigin,
+            getStripe
+          });
         }
 
         const method = String(
@@ -4337,6 +4372,33 @@ export default async function handler(req, res) {
             if (!bookingDate || !bookingTime) {
               return sendError(res, 400, "booking_date and booking_time are required");
             }
+            const { data: holidayHit } = await getSupabaseAdmin()
+              .from("service_provider_holidays")
+              .select("id")
+              .eq("provider_id", service.provider_id)
+              .eq("holiday_date", bookingDate)
+              .maybeSingle();
+            if (holidayHit && holidayHit.id) {
+              return sendError(res, 409, "Provider is unavailable on this holiday");
+            }
+            const { data: openSlots } = await getSupabaseAdmin()
+              .from("service_availability")
+              .select("start_time,end_time,is_available")
+              .eq("provider_id", service.provider_id)
+              .eq("slot_date", bookingDate)
+              .eq("is_available", true);
+            if (Array.isArray(openSlots) && openSlots.length > 0) {
+              const inWindow = openSlots.some(function (slot) {
+                return servicesGlobalOps.slotOverlaps(
+                  slot.start_time,
+                  slot.end_time,
+                  bookingTime
+                );
+              });
+              if (!inWindow) {
+                return sendError(res, 409, "Outside provider availability window");
+              }
+            }
             const { data: slotConflict } = await getSupabaseAdmin()
               .from("service_bookings")
               .select("id,status")
@@ -4798,9 +4860,26 @@ export default async function handler(req, res) {
             .maybeSingle();
           const origin = allowedCheckoutOrigin(req);
           let accountId = existing.data && existing.data.stripe_account_id;
+          const countryDecision = servicesGlobalOps.assertConnectCountryAllowed(
+            (req.body && req.body.country) ||
+              (req.body && req.body.connect_country) ||
+              null
+          );
+          if (!accountId && !countryDecision.ok) {
+            return res.status(400).json({
+              ok: false,
+              code: countryDecision.code,
+              error: countryDecision.error,
+              countries: servicesGlobalOps.STRIPE_CONNECT_EXPRESS_COUNTRIES
+            });
+          }
+          const connectCountry = countryDecision.ok
+            ? countryDecision.country.code
+            : null;
           if (!accountId) {
             const created = await createMarketplaceConnectAccount(stripe, {
               email: auth.user.email,
+              country: connectCountry,
               displayName: primaryOwner
                 ? "HAVKAR Owner provider"
                 : (auth.user.user_metadata && auth.user.user_metadata.full_name) ||
@@ -4808,7 +4887,8 @@ export default async function handler(req, res) {
               extraMetadata: {
                 havkar_user_id: String(auth.user.id),
                 havkar_product: "services",
-                havkar_primary_owner: primaryOwner ? "true" : "false"
+                havkar_primary_owner: primaryOwner ? "true" : "false",
+                havkar_connect_country: connectCountry
               }
             });
             accountId = created.id;
@@ -4834,6 +4914,7 @@ export default async function handler(req, res) {
               user_id: auth.user.id,
               stripe_account_id: accountId,
               verification_status: "unverified",
+              connect_country: connectCountry,
               display_name:
                 (auth.user.user_metadata && auth.user.user_metadata.full_name) ||
                 "HAVKAR provider",
@@ -4846,8 +4927,9 @@ export default async function handler(req, res) {
             charged: false,
             onboarding_url: accountLink.url || accountLink.link || null,
             stripe_account_id: accountId,
+            connect_country: connectCountry,
             note:
-              "KYC stays on Stripe-hosted pages. Providers are not marked verified until Owner confirmation or Stripe charges_enabled sync."
+              "KYC stays on Stripe-hosted pages. Providers are not marked verified until credential review approval and/or Stripe charges_enabled sync. Country is fixed at account creation."
           });
         }
 

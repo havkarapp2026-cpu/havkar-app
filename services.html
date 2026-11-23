@@ -1504,9 +1504,25 @@ textarea.form-control {
                 0 services
             </div>
         </div>
+        <div style="margin:8px 0 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+            <label for="servicesConnectCountry" style="font-size:.85rem">Connect country</label>
+            <select id="servicesConnectCountry" class="form-control" style="width:auto;min-width:180px">
+                <option value="">Select supported country</option>
+            </select>
+        </div>
         <p id="servicesConnectHonesty" style="margin:8px 0 0;font-size:.8rem;color:#5f6f66;max-width:52rem">
-            Card checkout requires Stripe Connect (Express). New provider onboarding currently defaults to Italy (IT) / EUR capability. Providers outside supported Connect countries cannot receive destination payouts until Stripe country support and KYC are complete. Cash bookings stay closed until a real payment proof exists. Platform commission is 10% paid by the provider on successful online charges — not a bank payout by itself.
+            Card checkout requires Stripe Connect (Express). Choose a Stripe-supported Connect country before starting onboarding — unsupported countries stay disabled. Cash bookings stay closed until a real payment proof exists. Platform commission is 10% paid by the provider on successful online charges — not a bank payout by itself.
         </p>
+        <div id="providerOpsPanel" class="panel" style="margin:12px 0 0;padding:12px;border:1px solid #d7e0da;border-radius:14px;background:#fff">
+            <strong data-i18n-services="Provider tools">Provider tools</strong>
+            <p style="font-size:.82rem;color:#5f6f66;margin:6px 0 10px">Availability calendar, holidays, booking messages, credentials, milestones.</p>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+                <button class="bookings-btn" type="button" id="openAvailabilityBtn" data-i18n-services="Availability">Availability</button>
+                <button class="bookings-btn" type="button" id="openCredentialsBtn" data-i18n-services="Credentials">Credentials</button>
+                <button class="bookings-btn" type="button" id="openBookingMsgsBtn" data-i18n-services="Messages">Messages</button>
+            </div>
+            <div id="providerOpsBody" style="margin-top:10px;font-size:.9rem"></div>
+        </div>
 
     </div>
 
@@ -2044,6 +2060,18 @@ textarea.form-control {
 
             </div>
 
+            <div class="form-group" style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">
+                <div style="flex:1;min-width:120px">
+                    <label class="form-label" for="newServiceLat">Latitude</label>
+                    <input id="newServiceLat" class="form-control" type="number" step="any" min="-90" max="90" required placeholder="e.g. 39.080">
+                </div>
+                <div style="flex:1;min-width:120px">
+                    <label class="form-label" for="newServiceLng">Longitude</label>
+                    <input id="newServiceLng" class="form-control" type="number" step="any" min="-180" max="180" required placeholder="e.g. 17.120">
+                </div>
+                <button class="bookings-btn" type="button" id="offerUseMyLocationBtn">Use my location</button>
+            </div>
+            <p class="note" style="font-size:.8rem;color:#5f6f66">Exact map coordinates are required for distance search. Do not invent coordinates. Only the public city/area text is shown in the card; coordinates power map/distance.</p>
 
             <div class="form-group">
 
@@ -2404,8 +2432,15 @@ document.addEventListener(
         const connectBtn = document.getElementById("servicesConnectBtn");
         if (connectBtn) {
             connectBtn.addEventListener("click", async function() {
+                const countryEl = document.getElementById("servicesConnectCountry");
+                const country = countryEl ? String(countryEl.value || "").trim() : "";
+                if (!country) {
+                    showToast("Select a supported Stripe Connect country first.");
+                    return;
+                }
                 const result = await postServicesAction({
-                    action: "services_connect_onboard"
+                    action: "services_connect_onboard",
+                    country: country
                 });
                 if (result && result.onboarding_url) {
                     window.location.href = result.onboarding_url;
@@ -2414,6 +2449,30 @@ document.addEventListener(
                 showToast(
                     (result && (result.error || result.message)) ||
                         "Connect could not start."
+                );
+            });
+        }
+        loadConnectCountries();
+        bindProviderOps();
+        const offerLocBtn = document.getElementById("offerUseMyLocationBtn");
+        if (offerLocBtn) {
+            offerLocBtn.addEventListener("click", function () {
+                if (!navigator.geolocation) {
+                    showToast("Geolocation is not available on this device.");
+                    return;
+                }
+                navigator.geolocation.getCurrentPosition(
+                    function (pos) {
+                        document.getElementById("newServiceLat").value =
+                            String(pos.coords.latitude);
+                        document.getElementById("newServiceLng").value =
+                            String(pos.coords.longitude);
+                        showToast("Coordinates filled from your device location.");
+                    },
+                    function () {
+                        showToast("Could not read location. Enter coordinates manually.");
+                    },
+                    { enableHighAccuracy: true, timeout: 15000 }
                 );
             });
         }
@@ -2571,6 +2630,127 @@ function bindCategoryButtons() {
 
         });
 
+}
+
+async function loadConnectCountries() {
+    try {
+        const res = await fetch("/api/create-event-checkout", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ action: "services_connect_countries" })
+        });
+        const payload = await res.json().catch(function () { return null; });
+        const rows = payload && Array.isArray(payload.countries) ? payload.countries : [];
+        const sel = document.getElementById("servicesConnectCountry");
+        if (!sel || !rows.length) return;
+        sel.innerHTML =
+            '<option value="">Select supported country</option>' +
+            rows
+                .map(function (row) {
+                    return (
+                        '<option value="' +
+                        row.code +
+                        '">' +
+                        row.code +
+                        " — " +
+                        row.name +
+                        " (" +
+                        row.currency +
+                        ")</option>"
+                    );
+                })
+                .join("");
+    } catch (_e) {
+        /* keep empty select */
+    }
+}
+
+function bindProviderOps() {
+    const body = document.getElementById("providerOpsBody");
+    async function renderAvailability() {
+        if (!body) return;
+        body.innerHTML = "Loading availability…";
+        const list = await postServicesAction({ action: "services_availability_list" });
+        if (!list || list.ok !== true) {
+            body.textContent = (list && list.error) || "Sign in as provider to manage availability.";
+            return;
+        }
+        const slots = list.availability || [];
+        const holidays = list.holidays || [];
+        body.innerHTML =
+            "<div style='margin-bottom:8px'><input id='avDate' type='date'> <input id='avStart' type='time' value='09:00'> <input id='avEnd' type='time' value='17:00'> <input id='avTz' type='text' value='Europe/Rome' style='width:120px'> <button type='button' class='bookings-btn' id='avSave'>Save slot</button></div>" +
+            "<div style='margin-bottom:8px'><input id='holDate' type='date'> <button type='button' class='bookings-btn' id='holSave'>Add holiday</button></div>" +
+            "<pre style='white-space:pre-wrap;font-size:.8rem'>" +
+            JSON.stringify({ slots: slots.slice(0, 20), holidays: holidays.slice(0, 20) }, null, 2) +
+            "</pre>";
+        document.getElementById("avSave").onclick = async function () {
+            const result = await postServicesAction({
+                action: "services_availability_upsert",
+                slot_date: document.getElementById("avDate").value,
+                start_time: document.getElementById("avStart").value,
+                end_time: document.getElementById("avEnd").value,
+                timezone: document.getElementById("avTz").value || "Europe/Rome"
+            });
+            showToast(result && result.ok ? "Availability saved." : (result && result.error) || "Save failed");
+            renderAvailability();
+        };
+        document.getElementById("holSave").onclick = async function () {
+            const result = await postServicesAction({
+                action: "services_holiday_upsert",
+                holiday_date: document.getElementById("holDate").value
+            });
+            showToast(result && result.ok ? "Holiday saved." : (result && result.error) || "Save failed");
+            renderAvailability();
+        };
+    }
+    async function renderCredentials() {
+        if (!body) return;
+        body.innerHTML =
+            "<div><input id='credCat' placeholder='Category e.g. Electrical'> <input id='credLic' placeholder='License #'> <input id='credUrl' placeholder='https evidence URL' style='min-width:220px'> <button type='button' class='bookings-btn' id='credSubmit'>Submit for review</button></div><p style='font-size:.8rem;color:#5f6f66'>Verified badge is never granted without Owner/staff review.</p>";
+        document.getElementById("credSubmit").onclick = async function () {
+            const result = await postServicesAction({
+                action: "services_credential_submit",
+                category: document.getElementById("credCat").value,
+                license_number: document.getElementById("credLic").value,
+                evidence_path: document.getElementById("credUrl").value,
+                force: true
+            });
+            showToast(
+                result && result.ok
+                    ? result.note || "Submitted."
+                    : (result && result.error) || "Submit failed"
+            );
+        };
+    }
+    async function renderMessages() {
+        if (!body) return;
+        const bookingId = window.prompt("Booking ID for messages?");
+        if (!bookingId) return;
+        const list = await postServicesAction({
+            action: "services_booking_messages_list",
+            booking_id: Number(bookingId)
+        });
+        body.innerHTML =
+            "<div><textarea id='msgBody' maxlength='2000' style='width:100%;min-height:70px'></textarea><button type='button' class='bookings-btn' id='msgSend'>Send</button></div>" +
+            "<pre style='white-space:pre-wrap;font-size:.8rem'>" +
+            JSON.stringify((list && list.messages) || list, null, 2) +
+            "</pre>";
+        document.getElementById("msgSend").onclick = async function () {
+            const result = await postServicesAction({
+                action: "services_booking_message_send",
+                booking_id: Number(bookingId),
+                body: document.getElementById("msgBody").value
+            });
+            showToast(result && result.ok ? "Message sent." : (result && result.error) || "Send failed");
+            renderMessages();
+        };
+    }
+    const av = document.getElementById("openAvailabilityBtn");
+    const cr = document.getElementById("openCredentialsBtn");
+    const ms = document.getElementById("openBookingMsgsBtn");
+    if (av) av.addEventListener("click", renderAvailability);
+    if (cr) cr.addEventListener("click", renderCredentials);
+    if (ms) ms.addEventListener("click", renderMessages);
 }
 
 async function loadServiceCategoriesFromApi() {
@@ -3306,6 +3486,24 @@ async function submitBooking(event) {
         "Booking..."
     );
 
+    const slotCheck = await postServicesAction({
+        action: "services_slot_check",
+        provider_id: selectedBookingService.provider_id,
+        booking_date: date,
+        booking_time: time
+    });
+    if (slotCheck && slotCheck.ok === true && slotCheck.bookable === false) {
+        setButtonBusy(submitButton, false, "Confirm Booking");
+        showToast(
+            slotCheck.reason === "provider_holiday"
+                ? "Provider is on holiday that day."
+                : slotCheck.reason === "outside_availability"
+                  ? "Outside provider availability window."
+                  : "This time slot is not bookable."
+        );
+        return;
+    }
+
     const payment =
         document.getElementById("bookingPayment").value;
 
@@ -3553,6 +3751,24 @@ async function submitService(event) {
         return;
     }
 
+    const latRaw = document.getElementById("newServiceLat");
+    const lngRaw = document.getElementById("newServiceLng");
+    const latitude = latRaw ? Number(latRaw.value) : NaN;
+    const longitude = lngRaw ? Number(lngRaw.value) : NaN;
+    if (
+        !Number.isFinite(latitude) ||
+        !Number.isFinite(longitude) ||
+        latitude < -90 ||
+        latitude > 90 ||
+        longitude < -180 ||
+        longitude > 180
+    ) {
+        showToast(
+            "Valid map coordinates are required. Use “Use my location” or enter real latitude/longitude. Fake coordinates are not accepted."
+        );
+        return;
+    }
+
     const parsedPrice =
         parsePriceInput(rawPrice);
 
@@ -3576,6 +3792,42 @@ async function submitService(event) {
     if (!draft.ok) {
         showToast(serviceDraftMessage(draft.reason));
         return;
+    }
+
+    const licensedCats = [
+        "Electrical",
+        "Plumbing",
+        "Auto Services",
+        "Health",
+        "Medical",
+        "Legal",
+        "Accounting"
+    ];
+    if (
+        licensedCats.some(function (c) {
+            return c.toLowerCase() === String(category).toLowerCase();
+        })
+    ) {
+        const creds = await postServicesAction({
+            action: "services_credentials_list",
+            status: "approved"
+        });
+        const approved =
+            creds &&
+            Array.isArray(creds.reviews) &&
+            creds.reviews.some(function (row) {
+                return (
+                    String(row.status) === "approved" &&
+                    String(row.category || "").toLowerCase() ===
+                        String(category).toLowerCase()
+                );
+            });
+        if (!approved) {
+            showToast(
+                "This category requires an approved professional credential. Submit evidence under Provider tools → Credentials and wait for Owner/staff review. No verified badge without review."
+            );
+            return;
+        }
     }
 
     const submitButton =
@@ -3608,6 +3860,8 @@ async function submitService(event) {
                 draft.payload.price_type,
             location:
                 draft.payload.location,
+            latitude: latitude,
+            longitude: longitude,
             status:
                 draft.payload.status
         })
@@ -4519,6 +4773,119 @@ function buildBookingCard(booking) {
         });
         actions.appendChild(complaintBtn);
     }
+
+    const msgBtn = document.createElement("button");
+    msgBtn.type = "button";
+    msgBtn.className = "bookings-btn";
+    msgBtn.textContent = "Messages";
+    msgBtn.setAttribute("data-i18n-services", "Messages");
+    msgBtn.addEventListener("click", async function () {
+        const list = await postServicesAction({
+            action: "services_booking_messages_list",
+            booking_id: booking.id
+        });
+        const history = ((list && list.messages) || [])
+            .map(function (m) {
+                return String(m.created_at || "").slice(0, 16) + " · " + (m.body || "");
+            })
+            .join("\n");
+        const text = window.prompt(
+            (history ? history + "\n\n" : "") + "New message to the other party:",
+            ""
+        );
+        if (!text) return;
+        const result = await postServicesAction({
+            action: "services_booking_message_send",
+            booking_id: booking.id,
+            body: text
+        });
+        showToast(
+            result && result.ok
+                ? "Message sent."
+                : (result && result.error) || "Message failed"
+        );
+    });
+    actions.appendChild(msgBtn);
+
+    if (
+        ["pending", "accepted", "price_proposed"].indexOf(String(booking.status)) !== -1
+    ) {
+        const reschedBtn = document.createElement("button");
+        reschedBtn.type = "button";
+        reschedBtn.className = "bookings-btn";
+        reschedBtn.textContent = "Reschedule";
+        reschedBtn.setAttribute("data-i18n-services", "Reschedule");
+        reschedBtn.addEventListener("click", async function () {
+            const date = window.prompt("New date (YYYY-MM-DD):", booking.booking_date || "");
+            const time = window.prompt("New time (HH:MM):", booking.booking_time || "");
+            if (!date || !time) return;
+            const result = await postServicesAction({
+                action: "services_reschedule_booking",
+                booking_id: booking.id,
+                booking_date: date,
+                booking_time: time
+            });
+            showToast(
+                result && result.ok
+                    ? "Booking rescheduled."
+                    : (result && result.error) || "Reschedule failed"
+            );
+            if (result && result.ok) await openBookings();
+        });
+        actions.appendChild(reschedBtn);
+    }
+
+    if (
+        booking.stripe_payment_intent &&
+        ["accepted", "completed", "in_review", "disputed"].indexOf(
+            String(booking.status)
+        ) !== -1
+    ) {
+        const refundBtn = document.createElement("button");
+        refundBtn.type = "button";
+        refundBtn.className = "bookings-btn";
+        refundBtn.textContent = "Request refund";
+        refundBtn.setAttribute("data-i18n-services", "Request refund");
+        refundBtn.addEventListener("click", async function () {
+            const reason = window.prompt(
+                "Refund reason (prepared only — Owner must approve before any money moves):",
+                ""
+            );
+            if (!reason) return;
+            const result = await postServicesAction({
+                action: "services_refund_request",
+                booking_id: booking.id,
+                reason: reason
+            });
+            showToast(
+                result && result.ok
+                    ? result.note || "Refund prepared. No money moved."
+                    : (result && result.error) || "Refund request failed"
+            );
+        });
+        actions.appendChild(refundBtn);
+    }
+
+    const invoiceBtn = document.createElement("button");
+    invoiceBtn.type = "button";
+    invoiceBtn.className = "bookings-btn";
+    invoiceBtn.textContent = "Invoice";
+    invoiceBtn.setAttribute("data-i18n-services", "Invoice");
+    invoiceBtn.addEventListener("click", async function () {
+        const result = await postServicesAction({
+            action: "services_invoice_ensure",
+            booking_id: booking.id
+        });
+        showToast(
+            result && result.ok
+                ? "Invoice #" +
+                      ((result.invoice && result.invoice.id) || "?") +
+                      " · " +
+                      ((result.invoice && result.invoice.status) || "")
+                : (result && result.error) || "Invoice failed"
+        );
+    });
+    actions.appendChild(invoiceBtn);
 
     if (actions.childNodes.length) {
         card.appendChild(actions);

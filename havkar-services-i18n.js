@@ -5,6 +5,39 @@
 (function (root) {
   "use strict";
   var RTL = { fa: true, ar: true, ckb: true, ur: true };
+  var KEYS = [
+    "Available Services",
+    "Bookings",
+    "Offer a Service",
+    "No services found",
+    "Near me",
+    "Distance",
+    "All distances",
+    "Within 5 km",
+    "Within 25 km",
+    "Within 100 km",
+    "Map",
+    "Use my location",
+    "Stripe Connect",
+    "Start Connect",
+    "Pay by card",
+    "Confirm Booking",
+    "Search",
+    "Saved",
+    "Home",
+    "Messages",
+    "Provider tools",
+    "Availability",
+    "Credentials",
+    "Reschedule",
+    "Request refund",
+    "Invoice",
+    "Select supported country",
+    "File complaint",
+    "Cancel request",
+    "Accept",
+    "Decline"
+  ];
   var PHRASES = {
     en: {
       "Available Services": "Available Services",
@@ -26,7 +59,18 @@
       Search: "Search",
       Saved: "Saved",
       Home: "Home",
-      Messages: "Messages"
+      Messages: "Messages",
+      "Provider tools": "Provider tools",
+      Availability: "Availability",
+      Credentials: "Credentials",
+      Reschedule: "Reschedule",
+      "Request refund": "Request refund",
+      Invoice: "Invoice",
+      "Select supported country": "Select supported country",
+      "File complaint": "File complaint",
+      "Cancel request": "Cancel request",
+      Accept: "Accept",
+      Decline: "Decline"
     },
     fa: {
       "Available Services": "خدمات موجود",
@@ -48,7 +92,18 @@
       Search: "جستجو",
       Saved: "ذخیره‌ها",
       Home: "خانه",
-      Messages: "پیام‌ها"
+      Messages: "پیام‌ها",
+      "Provider tools": "ابزار ارائه‌دهنده",
+      Availability: "زمان‌بندی",
+      Credentials: "مدارک حرفه‌ای",
+      Reschedule: "تغییر زمان",
+      "Request refund": "درخواست بازپرداخت",
+      Invoice: "صورتحساب",
+      "Select supported country": "کشور پشتیبانی‌شده را انتخاب کنید",
+      "File complaint": "ثبت شکایت",
+      "Cancel request": "لغو درخواست",
+      Accept: "پذیرش",
+      Decline: "رد"
     },
     ckb: {
       "Available Services": "خزمەتگوزارییە بەردەستەکان",
@@ -70,7 +125,18 @@
       Search: "گەڕان",
       Saved: "پاشەکەوتکراوەکان",
       Home: "سەرەتا",
-      Messages: "نامەکان"
+      Messages: "نامەکان",
+      "Provider tools": "ئامرازەکانی دابینکەر",
+      Availability: "کاتەکان",
+      Credentials: "بڕوانامە",
+      Reschedule: "گۆڕینی کات",
+      "Request refund": "داواکاری گەڕاندنەوە",
+      Invoice: "وەسڵ",
+      "Select supported country": "وڵاتی پشتگیریکراو هەڵبژێرە",
+      "File complaint": "سکاڵا تۆمار بکە",
+      "Cancel request": "هەڵوەشاندنەوەی داواکاری",
+      Accept: "قبوڵکردن",
+      Decline: "ڕەتکردنەوە"
     },
     kmr: {
       "Available Services": "Xizmetên berdest",
@@ -92,7 +158,18 @@
       Search: "Lêgerîn",
       Saved: "Tomarkirî",
       Home: "Mal",
-      Messages: "Peyam"
+      Messages: "Peyam",
+      "Provider tools": "Amûrên pêşkêşker",
+      Availability: "Demjimêr",
+      Credentials: "Belge",
+      Reschedule: "Demê biguherîne",
+      "Request refund": "Daxwaza vegerandinê",
+      Invoice: "Fatura",
+      "Select supported country": "Welatê piştgirîkirî hilbijêre",
+      "File complaint": "Gilî bike",
+      "Cancel request": "Daxwazê betal bike",
+      Accept: "Pejirandin",
+      Decline: "Redkirin"
     },
     it: {
       "Available Services": "Servizi disponibili",
@@ -114,7 +191,18 @@
       Search: "Cerca",
       Saved: "Salvati",
       Home: "Home",
-      Messages: "Messaggi"
+      Messages: "Messaggi",
+      "Provider tools": "Strumenti fornitore",
+      Availability: "Disponibilità",
+      Credentials: "Credenziali",
+      Reschedule: "Riprogramma",
+      "Request refund": "Richiedi rimborso",
+      Invoice: "Fattura",
+      "Select supported country": "Seleziona paese supportato",
+      "File complaint": "Invia reclamo",
+      "Cancel request": "Annulla richiesta",
+      Accept: "Accetta",
+      Decline: "Rifiuta"
     },
     sv: {
       "Available Services": "Tillgängliga tjänster",
@@ -136,7 +224,18 @@
       Search: "Sök",
       Saved: "Sparade",
       Home: "Hem",
-      Messages: "Meddelanden"
+      Messages: "Meddelanden",
+      "Provider tools": "Leverantörsverktyg",
+      Availability: "Tillgänglighet",
+      Credentials: "Behörigheter",
+      Reschedule: "Boka om",
+      "Request refund": "Begär återbetalning",
+      Invoice: "Faktura",
+      "Select supported country": "Välj stödd land",
+      "File complaint": "Lämna klagomål",
+      "Cancel request": "Avbryt begäran",
+      Accept: "Acceptera",
+      Decline: "Avvisa"
     },
     ar: {
       "Available Services": "الخدمات المتاحة",
@@ -158,7 +257,18 @@
       Search: "بحث",
       Saved: "المحفوظات",
       Home: "الرئيسية",
-      Messages: "الرسائل"
+      Messages: "الرسائل",
+      "Provider tools": "أدوات المزود",
+      Availability: "التوفر",
+      Credentials: "الاعتمادات",
+      Reschedule: "إعادة الجدولة",
+      "Request refund": "طلب استرداد",
+      Invoice: "فاتورة",
+      "Select supported country": "اختر دولة مدعومة",
+      "File complaint": "تقديم شكوى",
+      "Cancel request": "إلغاء الطلب",
+      Accept: "قبول",
+      Decline: "رفض"
     },
     ur: {
       "Available Services": "دستیاب خدمات",
@@ -180,7 +290,18 @@
       Search: "تلاش",
       Saved: "محفوظ",
       Home: "ہوم",
-      Messages: "پیغامات"
+      Messages: "پیغامات",
+      "Provider tools": "فراہم‌کنندہ ٹولز",
+      Availability: "دستیابی",
+      Credentials: "اسناد",
+      Reschedule: "وقت تبدیل کریں",
+      "Request refund": "رقم کی واپسی کی درخواست",
+      Invoice: "انوائس",
+      "Select supported country": "معاون ملک منتخب کریں",
+      "File complaint": "شکایت درج کریں",
+      "Cancel request": "درخواست منسوخ کریں",
+      Accept: "قبول",
+      Decline: "مسترد"
     }
   };
 
@@ -218,15 +339,16 @@
 
   root.HAVKAR_SERVICES_I18N = {
     RTL: RTL,
+    KEYS: KEYS,
     PHRASES: PHRASES,
     currentLang: currentLang,
     apply: applyServicesI18n
   };
 
-  document.addEventListener("DOMContentLoaded", function () {
+  if (typeof document !== "undefined") {
     applyServicesI18n(currentLang());
-    window.addEventListener("havkar:langchange", function (ev) {
+    document.addEventListener("havkar:langchange", function (ev) {
       applyServicesI18n((ev && ev.detail && ev.detail.lang) || currentLang());
     });
-  });
-})(typeof globalThis !== "undefined" ? globalThis : this);
+  }
+})(typeof window !== "undefined" ? window : globalThis);
