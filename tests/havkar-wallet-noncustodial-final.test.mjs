@@ -35,6 +35,12 @@ assert.match(wallet, /loadStellarHorizonHistory/);
 assert.match(wallet, /wallet_architecture/);
 assert.match(wallet, /HAVKAR finance hub/);
 assert.match(wallet, /non-custodial/);
+// renderWallets must stay sync (no top-level await inside it)
+const renderStart = wallet.indexOf("function renderWallets(");
+const renderEnd = wallet.indexOf("function escapeCommerceHtml", renderStart);
+assert.ok(renderStart > 0 && renderEnd > renderStart);
+assert.equal(/await\s+loadCommerceActivity/.test(wallet.slice(renderStart, renderEnd)), false);
+assert.match(wallet, /async function loadWallet[\s\S]*await loadCommerceActivity\(\);/);
 
 const finance = fs.readFileSync("lib/havkar-finance-api.cjs", "utf8");
 assert.match(finance, /stellar_metrics/);
