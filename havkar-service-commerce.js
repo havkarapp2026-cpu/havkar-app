@@ -563,7 +563,9 @@
 
     const bookingResult = await supabase
       .from("service_bookings")
-      .select("id,customer_id,provider_id,agreed_price,currency,payment_method")
+      .select(
+        "id,customer_id,provider_id,agreed_price,currency,payment_method,status"
+      )
       .eq("id", bookingId)
       .eq("customer_id", customerId)
       .maybeSingle();
@@ -641,7 +643,11 @@
         commission_cents: settled.settlement.commissionCents,
         provider_settlement_cents: settled.settlement.providerSettlementCents,
         payer: "provider",
-        stripe_event_id: event.id
+        stripe_event_id: event.id,
+        settlement_channel: "online",
+        liability_state: "owed",
+        /* collection_state stays uncollected by schema design; Stripe application fee is the live collection rail. */
+        collection_state: "uncollected"
       })
       .select("booking_id");
 
@@ -657,19 +663,34 @@
       };
     }
 
-    await supabase
+    const bookingPatch = {
+      commission_bps: settled.settlement.commissionBps,
+      commission_amount: settled.settlement.commissionCents / 100,
+      updated_at: new Date().toISOString()
+    };
+    /* Service role webhook may advance pending → accepted after verified Stripe payment. */
+    const statusNow = String(bookingResult.data.status || "");
+    if (statusNow === "pending" || statusNow === "price_proposed") {
+      bookingPatch.status = "accepted";
+    }
+
+    const activated = await supabase
       .from("service_bookings")
-      .update({
-        commission_bps: settled.settlement.commissionBps,
-        commission_amount: settled.settlement.commissionCents / 100
-      })
+      .update(bookingPatch)
       .eq("id", bookingResult.data.id)
-      .is("commission_bps", null);
+      .select("id,status")
+      .maybeSingle();
 
     return {
       ok: true,
       duplicate: false,
-      activated: false,
+      activated: Boolean(
+        activated &&
+          activated.data &&
+          String(activated.data.status) === "accepted"
+      ),
+      booking_status:
+        activated && activated.data ? activated.data.status : null,
       additionalCommissionCents: settled.settlement.commissionCents,
       settlement: settled.settlement
     };

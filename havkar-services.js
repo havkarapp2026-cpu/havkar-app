@@ -27,7 +27,7 @@
   }
   const SERVICE_STATUSES = ["active", "paused", "closed"];
   const SERVICE_COLUMNS = "id,created_at,updated_at,provider_id,title,category,description,price,currency,price_type,location,image_url,status";
-  const BOOKING_COLUMNS = "id,created_at,updated_at,service_id,customer_id,provider_id,booking_date,booking_time,message,status";
+  const BOOKING_COLUMNS = "id,created_at,updated_at,service_id,customer_id,provider_id,booking_date,booking_time,message,status,payment_method,agreed_price,currency,commission_bps,commission_amount,completion_confirmed_at";
 
   function commissionFromCents(agreedCents) {
     if (!Number.isInteger(agreedCents) || agreedCents < 0 || agreedCents > 100000000) {
@@ -110,11 +110,16 @@
 
   function providerBookingTransition(fromStatus, toStatus) {
 
-    if (fromStatus === "pending" && (toStatus === "accepted" || toStatus === "declined")) {
+    if (fromStatus === "pending" && (toStatus === "accepted" || toStatus === "declined" || toStatus === "price_proposed")) {
       return true;
     }
 
-    if (fromStatus === "accepted" && toStatus === "completed") {
+    if (fromStatus === "price_proposed" && (toStatus === "accepted" || toStatus === "declined")) {
+      return true;
+    }
+
+    /* Completion must go through server completion_requested → completed (not direct client jump). */
+    if (fromStatus === "accepted" && toStatus === "completion_requested") {
       return true;
     }
 

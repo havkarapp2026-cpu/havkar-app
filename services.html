@@ -1453,6 +1453,18 @@ textarea.form-control {
 
         </button>
 
+        <button class="category-btn" type="button" data-category="Home Repairs">Home Repairs</button>
+        <button class="category-btn" type="button" data-category="Auto Services">Auto</button>
+        <button class="category-btn" type="button" data-category="IT & Programming">IT</button>
+        <button class="category-btn" type="button" data-category="Translation">Translation</button>
+        <button class="category-btn" type="button" data-category="Education">Education</button>
+        <button class="category-btn" type="button" data-category="Photography">Photo</button>
+        <button class="category-btn" type="button" data-category="Beauty">Beauty</button>
+        <button class="category-btn" type="button" data-category="Gardening">Garden</button>
+        <button class="category-btn" type="button" data-category="Pet Care">Pets</button>
+        <button class="category-btn" type="button" data-category="Admin & Consulting">Admin</button>
+        <button class="category-btn" type="button" data-category="Online Freelance">Online</button>
+
     </div>
 
 </section>
@@ -1710,12 +1722,16 @@ textarea.form-control {
                         Request only
                     </option>
 
+                    <option value="stripe">
+                        Pay by card (Stripe Connect, 10% provider fee)
+                    </option>
+
                     <option value="cash">
-                        Cash / manual
+                        Cash / manual (commission debt only — not Stripe-paid)
                     </option>
 
                     <option value="xlm">
-                        XLM Testnet, one-time
+                        XLM Mainnet, one-time (when armed)
                     </option>
 
                 </select>
@@ -1933,29 +1949,26 @@ textarea.form-control {
                     class="form-control"
                     required>
 
-                    <option value="Plumbing">
-                        Plumbing
-                    </option>
-
-                    <option value="Electrical">
-                        Electrical
-                    </option>
-
-                    <option value="Cleaning">
-                        Cleaning
-                    </option>
-
-                    <option value="Carpentry">
-                        Carpentry
-                    </option>
-
-                    <option value="Painting">
-                        Painting
-                    </option>
-
-                    <option value="Moving">
-                        Moving
-                    </option>
+                    <option value="Plumbing">Plumbing</option>
+                    <option value="Electrical">Electrical</option>
+                    <option value="Cleaning">Cleaning</option>
+                    <option value="Carpentry">Carpentry</option>
+                    <option value="Painting">Painting</option>
+                    <option value="Moving">Moving</option>
+                    <option value="Home Repairs">Home Repairs</option>
+                    <option value="Auto Services">Auto Services</option>
+                    <option value="Mobile & Computer Repair">Mobile & Computer Repair</option>
+                    <option value="IT & Programming">IT & Programming</option>
+                    <option value="Translation">Translation</option>
+                    <option value="Education">Education</option>
+                    <option value="Photography">Photography</option>
+                    <option value="Videography">Videography</option>
+                    <option value="Beauty">Beauty</option>
+                    <option value="Tailoring">Tailoring</option>
+                    <option value="Gardening">Gardening</option>
+                    <option value="Pet Care">Pet Care</option>
+                    <option value="Admin & Consulting">Admin & Consulting</option>
+                    <option value="Online Freelance">Online Freelance</option>
 
                 </select>
 
@@ -2177,6 +2190,20 @@ textarea.form-control {
                     <option value="Carpentry">Carpentry</option>
                     <option value="Painting">Painting</option>
                     <option value="Moving">Moving</option>
+                    <option value="Home Repairs">Home Repairs</option>
+                    <option value="Auto Services">Auto Services</option>
+                    <option value="Mobile & Computer Repair">Mobile & Computer Repair</option>
+                    <option value="IT & Programming">IT & Programming</option>
+                    <option value="Translation">Translation</option>
+                    <option value="Education">Education</option>
+                    <option value="Photography">Photography</option>
+                    <option value="Videography">Videography</option>
+                    <option value="Beauty">Beauty</option>
+                    <option value="Tailoring">Tailoring</option>
+                    <option value="Gardening">Gardening</option>
+                    <option value="Pet Care">Pet Care</option>
+                    <option value="Admin & Consulting">Admin & Consulting</option>
+                    <option value="Online Freelance">Online Freelance</option>
 
                 </select>
 
@@ -2290,6 +2317,7 @@ textarea.form-control {
 
 <script src="/havkar-supabase-config.js"></script>
 <script src="/havkar-services.js"></script>
+<script src="/havkar-service-commerce.js"></script>
 <script src="/stellar-wallet-bundle.js"></script>
 <script src="/havkar-xlm-checkout.js"></script>
 <script>
@@ -2408,6 +2436,8 @@ function clearSearch() {
 
 }
 
+let showingMineOnly = false;
+
 (function applySearchQueryFromUrl() {
     try {
         const params = new URLSearchParams(window.location.search);
@@ -2417,10 +2447,45 @@ function clearSearch() {
             updateClearSearchButton();
             renderServices();
         }
+        if (params.get("mine") === "1") {
+            showingMineOnly = true;
+            showingSavedOnly = false;
+        }
+        if (params.get("paid") === "1") {
+            showToast("Card payment submitted. Booking updates after Stripe confirms on the server.");
+        }
     } catch (error) {
         // Ignore malformed query strings.
     }
 })();
+
+async function getServicesAccessToken() {
+    try {
+        const sessionResult = await db.auth.getSession();
+        const session = sessionResult && sessionResult.data && sessionResult.data.session;
+        return (session && session.access_token) || "";
+    } catch (_err) {
+        return "";
+    }
+}
+
+async function postServicesAction(body) {
+    const token = await getServicesAccessToken();
+    if (!token) {
+        return { ok: false, error: "Authentication required" };
+    }
+    const res = await fetch("/api/create-event-checkout", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token,
+            Accept: "application/json"
+        },
+        body: JSON.stringify(body || {})
+    });
+    const payload = await res.json().catch(function(){ return null; });
+    return Object.assign({ http_status: res.status }, payload || { ok: false });
+}
 
 
 /* =========================================================
@@ -2596,10 +2661,16 @@ function renderServices() {
                 !showingSavedOnly ||
                 savedServiceIds.has(String(service.id));
 
+            const mineMatch =
+                !showingMineOnly ||
+                (currentUser &&
+                    String(service.provider_id) === String(currentUser.id));
+
             return (
                 categoryMatch &&
                 searchMatch &&
-                savedMatch
+                savedMatch &&
+                mineMatch
             );
 
         });
@@ -2614,7 +2685,7 @@ function renderServices() {
 
     updateServiceCount(
         visibleServices.length,
-        showingSavedOnly
+        showingSavedOnly || showingMineOnly
     );
 
     const empty =
@@ -3055,7 +3126,37 @@ async function submitBooking(event) {
     };
 
     if (payment === "cash") {
+        const cashDecision =
+            window.HAVKAR_SERVICE_COMMERCE &&
+            window.HAVKAR_SERVICE_COMMERCE.cashBookingDecision
+                ? window.HAVKAR_SERVICE_COMMERCE.cashBookingDecision()
+                : null;
+        if (cashDecision && cashDecision.createBooking === false) {
+            setButtonBusy(submitButton, false, "Confirm Booking");
+            showToast(cashDecision.error || "Cash bookings stay closed. Nothing was collected.");
+            return;
+        }
         payload.payment_method = "cash";
+    }
+
+    if (payment === "stripe") {
+        const stripeResult = await postServicesAction({
+            action: "services_buy_checkout",
+            service_id: selectedBookingService.id,
+            booking_date: date,
+            booking_time: time,
+            message: message || ""
+        });
+        setButtonBusy(submitButton, false, "Confirm Booking");
+        if (!stripeResult || stripeResult.ok !== true || !stripeResult.checkout_url) {
+            showToast(
+                (stripeResult && (stripeResult.error || stripeResult.message)) ||
+                    "Card checkout could not start. No charge was created."
+            );
+            return;
+        }
+        window.location.href = stripeResult.checkout_url;
+        return;
     }
 
     if (payment === "xlm") {
@@ -4078,6 +4179,118 @@ function buildBookingCard(booking) {
 
     });
 
+    if (
+        bookingRole === "provider" &&
+        String(booking.status) === "accepted" &&
+        String(booking.payment_method || "") === "online"
+    ) {
+        const completeBtn = document.createElement("button");
+        completeBtn.type = "button";
+        completeBtn.className = "bookings-btn";
+        completeBtn.textContent = "Request completion";
+        completeBtn.addEventListener("click", async function() {
+            const result = await postServicesAction({
+                action: "services_request_completion",
+                booking_id: booking.id
+            });
+            showToast(
+                result && result.ok
+                    ? "Completion requested. Waiting for customer confirm."
+                    : ((result && result.error) || "Could not request completion.")
+            );
+            if (result && result.ok) {
+                await openBookings();
+            }
+        });
+        actions.appendChild(completeBtn);
+    }
+
+    if (
+        bookingRole === "customer" &&
+        String(booking.status) === "completion_requested"
+    ) {
+        const confirmBtn = document.createElement("button");
+        confirmBtn.type = "button";
+        confirmBtn.className = "bookings-btn";
+        confirmBtn.textContent = "Confirm completion";
+        confirmBtn.addEventListener("click", async function() {
+            const code = window.prompt(
+                "Optional completion code (leave blank for mutual confirm):",
+                ""
+            );
+            const result = await postServicesAction({
+                action: "services_confirm_completion",
+                booking_id: booking.id,
+                code: code || ""
+            });
+            showToast(
+                result && result.ok
+                    ? "Service marked completed."
+                    : ((result && result.error) || "Could not confirm completion.")
+            );
+            if (result && result.ok) {
+                await openBookings();
+            }
+        });
+        actions.appendChild(confirmBtn);
+    }
+
+    if (
+        bookingRole === "customer" &&
+        (String(booking.status) === "completed" ||
+            String(booking.status) === "in_review")
+    ) {
+        const reviewBtn = document.createElement("button");
+        reviewBtn.type = "button";
+        reviewBtn.className = "bookings-btn";
+        reviewBtn.textContent = "Leave review";
+        reviewBtn.addEventListener("click", async function() {
+            const rating = Number(window.prompt("Rating 1-5:", "5"));
+            const text = window.prompt("Review text:", "");
+            const result = await postServicesAction({
+                action: "services_review_create",
+                booking_id: booking.id,
+                rating: rating,
+                review_text: text
+            });
+            showToast(
+                result && result.ok
+                    ? "Review published."
+                    : ((result && (result.error || result.code)) || "Review not saved.")
+            );
+        });
+        actions.appendChild(reviewBtn);
+    }
+
+    if (
+        String(booking.status) !== "pending" &&
+        String(booking.status) !== "declined"
+    ) {
+        const complaintBtn = document.createElement("button");
+        complaintBtn.type = "button";
+        complaintBtn.className = "bookings-btn";
+        complaintBtn.textContent = "File complaint";
+        complaintBtn.addEventListener("click", async function() {
+            const category = window.prompt(
+                "Category (service_not_completed, poor_service_quality, incorrect_price, payment_disagreement, provider_did_not_arrive, customer_did_not_pay, other):",
+                "other"
+            );
+            const explanation = window.prompt("Explain the issue (min 10 chars):", "");
+            const result = await postServicesAction({
+                action: "services_complaint_create",
+                booking_id: booking.id,
+                category: category,
+                explanation: explanation
+            });
+            showToast(
+                result && result.ok
+                    ? "Complaint submitted."
+                    : ((result && (result.error || result.code)) || "Complaint not saved.")
+            );
+        });
+        actions.appendChild(complaintBtn);
+    }
+
     if (actions.childNodes.length) {
         card.appendChild(actions);
     }
@@ -4093,7 +4306,7 @@ function bookingActions(booking) {
 
     if (bookingRole === "provider") {
 
-        return ["accepted", "declined", "completed"]
+        return ["accepted", "declined"]
             .filter(function(status) {
                 return rules.providerBookingTransition(booking.status, status);
             })
@@ -4101,8 +4314,7 @@ function bookingActions(booking) {
 
                 const labels = {
                     accepted: "Accept",
-                    declined: "Decline",
-                    completed: "Mark completed"
+                    declined: "Decline"
                 };
 
                 return {
