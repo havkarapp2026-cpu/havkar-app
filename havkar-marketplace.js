@@ -31,8 +31,73 @@
     video_bytes: true,
     video_duration_seconds: true,
     country_code: true,
-    city: true
+    city: true,
+    condition: true,
+    shipping_option: true
   };
+
+  const CONDITION_VALUES = ["new", "used", "refurbished", "unspecified"];
+  const SHIPPING_OPTION_VALUES = ["pickup", "shipping", "both", "unspecified"];
+
+  function normalizeCondition(value) {
+    const raw = String(value || "")
+      .trim()
+      .toLowerCase();
+    if (!raw) {
+      return "unspecified";
+    }
+    if (CONDITION_VALUES.indexOf(raw) !== -1) {
+      return raw;
+    }
+    return "unspecified";
+  }
+
+  function normalizeShippingOption(value, fulfillmentMode) {
+    const raw = String(value || "")
+      .trim()
+      .toLowerCase();
+    if (SHIPPING_OPTION_VALUES.indexOf(raw) !== -1) {
+      return raw;
+    }
+    const legacy = String(fulfillmentMode || "")
+      .trim()
+      .toLowerCase();
+    if (legacy === "delivery") {
+      return "shipping";
+    }
+    if (legacy === "pickup" || legacy === "both") {
+      return legacy;
+    }
+    return "unspecified";
+  }
+
+  function conditionLabel(value) {
+    const key = normalizeCondition(value);
+    if (key === "new") {
+      return "New";
+    }
+    if (key === "used") {
+      return "Used";
+    }
+    if (key === "refurbished") {
+      return "Refurbished";
+    }
+    return "Condition unspecified";
+  }
+
+  function shippingOptionLabel(value) {
+    const key = normalizeShippingOption(value);
+    if (key === "pickup") {
+      return "Pickup only";
+    }
+    if (key === "shipping") {
+      return "Shipping available";
+    }
+    if (key === "both") {
+      return "Pickup or shipping";
+    }
+    return "Shipping unspecified";
+  }
 
   function money(value, decimals) {
     const places = Number.isFinite(Number(decimals)) ? Number(decimals) : 2;
@@ -463,6 +528,31 @@
       return false;
     }
 
+    const conditionFilter = String(input.condition || "")
+      .trim()
+      .toLowerCase();
+    if (
+      conditionFilter &&
+      conditionFilter !== "all" &&
+      normalizeCondition(row && row.condition) !== conditionFilter
+    ) {
+      return false;
+    }
+
+    const shippingFilter = String(input.shipping || input.shipping_option || "")
+      .trim()
+      .toLowerCase();
+    if (
+      shippingFilter &&
+      shippingFilter !== "all" &&
+      normalizeShippingOption(
+        row && row.shipping_option,
+        row && row.fulfillment_mode
+      ) !== shippingFilter
+    ) {
+      return false;
+    }
+
     const currencyFilter = String(input.currency || "").trim().toUpperCase();
     if (
       currencyFilter &&
@@ -579,6 +669,8 @@
     MAX_VIDEO_BYTES,
     MAX_VIDEO_SECONDS,
     LISTING_PAGE_SIZE,
+    CONDITION_VALUES,
+    SHIPPING_OPTION_VALUES,
     schemaColumnMissing,
     listingSurfaceMissing,
     omitMissingColumn,
@@ -586,6 +678,10 @@
     listingPageRange,
     listingCities,
     listingMatchesPriceAndCity,
+    normalizeCondition,
+    normalizeShippingOption,
+    conditionLabel,
+    shippingOptionLabel,
     listingShareUrl,
     shareListing,
     quoteListingFees,

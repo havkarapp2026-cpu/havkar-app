@@ -4369,6 +4369,28 @@ export default async function handler(req, res) {
             "This listing is not available for Buy Now checkout"
           );
         }
+        const listingStatus = String(ad.status || "")
+          .trim()
+          .toLowerCase();
+        if (listingStatus !== "active") {
+          return res.status(409).json({
+            ok: false,
+            charged: false,
+            code:
+              listingStatus === "reserved"
+                ? "LISTING_RESERVED"
+                : "LISTING_NOT_ACTIVE",
+            message:
+              listingStatus === "reserved"
+                ? "This listing is reserved by another checkout in progress. No charge was started."
+                : "Only active marketplace listings can start Buy Now checkout. No charge was started.",
+            customer_message:
+              listingStatus === "reserved"
+                ? "Someone else is finishing checkout for this item. Try again shortly."
+                : "This listing is not available for purchase right now.",
+            checkout_url: null
+          });
+        }
         const listPrice = Number(ad.price);
         if (!Number.isFinite(listPrice) || listPrice <= 0) {
           return sendError(res, 400, "Listing has no purchasable price");
@@ -4422,6 +4444,11 @@ export default async function handler(req, res) {
           buyer_pays: currencyQuote.buyer_pays,
           seller_receives: currencyQuote.seller_receives,
           platform_fee: currencyQuote.platform_fee,
+          buyer_fee_pct: 0.02,
+          seller_fee_pct: 0.03,
+          platform_fee_pct_total: 0.05,
+          fee_note:
+            "Buyer 2% + seller 3% = 5% marketplace platform fee. Tax, shipping, card processor, and Stellar network fees are separate.",
           fx_rate: currencyQuote.fx_rate,
           fx_date: fx.date,
           live_collection: liveArmed ? "armed" : "paused",
@@ -4626,16 +4653,62 @@ export default async function handler(req, res) {
               (testAllowed ? "_test" : "_live")
           ).slice(0, 255);
 
-        const session = await getStripe().checkout.sessions.create(
-          sessionParams,
-          { idempotencyKey }
-        );
+        /* Atomic anti double-sell: only one Checkout may reserve an active listing. */
+        const { data: reservedRow, error: reserveError } = await getSupabaseAdmin()
+          .from("ads")
+          .update({ status: "reserved" })
+          .eq("id", ad.id)
+          .eq("status", "active")
+          .eq("listing_surface", "marketplace")
+          .select("id,status")
+          .maybeSingle();
+        if (reserveError) {
+          console.error(
+            "marketplace_buy_checkout reserve failed",
+            reserveError.message
+          );
+          return sendError(res, 500, "Could not reserve listing for checkout");
+        }
+        if (!reservedRow || String(reservedRow.status) !== "reserved") {
+          return res.status(409).json({
+            ok: false,
+            charged: false,
+            code: "LISTING_RESERVED",
+            message:
+              "This listing was reserved by another checkout before yours started. No charge was started.",
+            customer_message:
+              "Someone else is finishing checkout for this item. Try again shortly.",
+            checkout_url: null
+          });
+        }
+
+        let session;
+        try {
+          session = await getStripe().checkout.sessions.create(
+            sessionParams,
+            { idempotencyKey }
+          );
+        } catch (stripeCreateError) {
+          /* Release reservation if Stripe session creation fails. */
+          try {
+            await getSupabaseAdmin()
+              .from("ads")
+              .update({ status: "active" })
+              .eq("id", ad.id)
+              .eq("status", "reserved")
+              .eq("listing_surface", "marketplace");
+          } catch (_releaseErr) {
+            /* best-effort release */
+          }
+          throw stripeCreateError;
+        }
         return res.status(200).json({
           ok: true,
           charged: false,
           checkout_url: session.url,
           session_id: session.id,
           idempotency_key: idempotencyKey,
+          listing_status: "reserved",
           receipt,
           split,
           currency_quote: currencyQuote,

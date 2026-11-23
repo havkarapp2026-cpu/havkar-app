@@ -172,10 +172,11 @@ function createWebhookStore(supabase) {
           session_id: sessionId
         };
       }
-      if (String(existing.status) !== "active") {
+      const prior = String(existing.status || "");
+      if (prior !== "active" && prior !== "reserved") {
         return {
           applied: false,
-          reason: "listing_not_active",
+          reason: "listing_not_purchasable",
           status: existing.status
         };
       }
@@ -183,7 +184,7 @@ function createWebhookStore(supabase) {
         .from("ads")
         .update({ status: "ended" })
         .eq("id", listingId)
-        .eq("status", "active");
+        .in("status", ["active", "reserved"]);
       if (existing.listing_surface) {
         query = query.eq("listing_surface", existing.listing_surface);
       }
@@ -206,6 +207,7 @@ function createWebhookStore(supabase) {
           meta: {
             stripe_session_id: sessionId,
             paid_at: paidAt || null,
+            previous_status: prior,
             source: "stripe_webhook"
           }
         });
@@ -216,7 +218,71 @@ function createWebhookStore(supabase) {
         applied: true,
         fulfillment: "marketplace_listing_ended",
         listing_id: listingId,
-        session_id: sessionId
+        session_id: sessionId,
+        previous_status: prior
+      };
+    },
+    async releaseMarketplaceReservation({
+      listingId,
+      sessionId,
+      reason
+    }) {
+      const { data: existing, error: loadError } = await supabase
+        .from("ads")
+        .select("id,status,listing_surface")
+        .eq("id", listingId)
+        .maybeSingle();
+      if (loadError) throw loadError;
+      if (!existing) {
+        return { applied: false, reason: "listing_not_found" };
+      }
+      if (String(existing.status) !== "reserved") {
+        return {
+          applied: false,
+          reason: "listing_not_reserved",
+          status: existing.status,
+          listing_id: listingId,
+          session_id: sessionId || null
+        };
+      }
+      let query = supabase
+        .from("ads")
+        .update({ status: "active" })
+        .eq("id", listingId)
+        .eq("status", "reserved");
+      if (existing.listing_surface) {
+        query = query.eq("listing_surface", existing.listing_surface);
+      }
+      const { data: updated, error: updateError } = await query
+        .select("id,status")
+        .maybeSingle();
+      if (updateError) throw updateError;
+      if (!updated || String(updated.status) !== "active") {
+        return {
+          applied: false,
+          reason: "listing_release_failed",
+          listing_id: listingId
+        };
+      }
+      try {
+        await supabase.from("ad_audit_events").insert({
+          ad_id: listingId,
+          actor_id: null,
+          action: "marketplace_checkout_released",
+          meta: {
+            stripe_session_id: sessionId || null,
+            release_reason: reason || "checkout_expired",
+            source: "stripe_webhook"
+          }
+        });
+      } catch (_auditErr) {
+        // Audit is best-effort.
+      }
+      return {
+        applied: true,
+        fulfillment: "marketplace_reservation_released",
+        listing_id: listingId,
+        session_id: sessionId || null
       };
     },
     async settleMarketplaceCharge({
@@ -246,6 +312,7 @@ function createWebhookStore(supabase) {
         (String(existing.status) === "ended" ||
           String(existing.status) === "disputed" ||
           String(existing.status) === "refunded" ||
+          String(existing.status) === "reserved" ||
           String(existing.status) === "active")
       ) {
         const { data: updated, error: updateError } = await supabase

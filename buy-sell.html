@@ -1209,6 +1209,28 @@ Buy &amp; Sell stays distinct from paid Ads. Public live charges stay Owner-gate
         <option value="">All currencies</option>
     </select>
 
+    <label class="visually-hidden" for="conditionFilter">
+        Condition
+    </label>
+    <select id="conditionFilter" aria-label="Filter by condition">
+        <option value="">All conditions</option>
+        <option value="new">New</option>
+        <option value="used">Used</option>
+        <option value="refurbished">Refurbished</option>
+        <option value="unspecified">Unspecified</option>
+    </select>
+
+    <label class="visually-hidden" for="shippingFilter">
+        Shipping
+    </label>
+    <select id="shippingFilter" aria-label="Filter by shipping option">
+        <option value="">All shipping options</option>
+        <option value="pickup">Pickup only</option>
+        <option value="shipping">Shipping available</option>
+        <option value="both">Pickup or shipping</option>
+        <option value="unspecified">Unspecified</option>
+    </select>
+
     <label class="visually-hidden" for="priceCurrency">
         Price filter currency
     </label>
@@ -1485,6 +1507,8 @@ const state = {
 
     maxPrice: "",
     currencyFilter: "",
+    conditionFilter: "",
+    shippingFilter: "",
     priceCurrency: "EUR",
     fxRates: null,
     fxMeta: null,
@@ -3052,7 +3076,10 @@ async function fetchListings(
         "expires_at",
         "latitude",
         "longitude",
-        "video_path"
+        "video_path",
+        "condition",
+        "shipping_option",
+        "fulfillment_mode"
     ];
 
     let surfaceFilter =
@@ -3367,6 +3394,19 @@ function cardHtml(
             "Other"
         );
 
+    const conditionText =
+        window.HAVKAR_MARKETPLACE &&
+        typeof window.HAVKAR_MARKETPLACE.conditionLabel === "function"
+            ? window.HAVKAR_MARKETPLACE.conditionLabel(ad.condition)
+            : String(ad.condition || "unspecified");
+    const shippingText =
+        window.HAVKAR_MARKETPLACE &&
+        typeof window.HAVKAR_MARKETPLACE.shippingOptionLabel === "function"
+            ? window.HAVKAR_MARKETPLACE.shippingOptionLabel(
+                ad.shipping_option || ad.fulfillment_mode
+            )
+            : String(ad.shipping_option || "unspecified");
+
     const legacyLocation =
         String(
             ad.location ||
@@ -3556,7 +3596,7 @@ function cardHtml(
                 </div>
 
                 <span class="condition-badge">
-                    ${category}
+                    ${escapeHtml(conditionText)}
                 </span>
 
                 ${
@@ -3587,6 +3627,10 @@ function cardHtml(
 
                 <div class="ad-price">
                     ${formatPrice(ad.price, ad.currency)}
+                </div>
+
+                <div class="ad-meta">
+                    ${category} · ${escapeHtml(shippingText)}
                 </div>
 
                 ${sellerHtml}
@@ -4259,7 +4303,9 @@ function applyFilters(){
                             maxPrice: state.maxPrice,
                             currency: state.currencyFilter || "",
                             priceCurrency: state.priceCurrency || "EUR",
-                            rates: state.fxRates || null
+                            rates: state.fxRates || null,
+                            condition: state.conditionFilter || "",
+                            shipping: state.shippingFilter || ""
                         }
                     )
                 ){
@@ -4306,6 +4352,7 @@ function applyFilters(){
 
                     ad.title,
                     ad.category,
+                    ad.condition,
                     ad.location,
                     ad.city,
                     window.HAVKAR_COUNTRIES
@@ -4969,6 +5016,8 @@ function clearListingFilters(){
     state.maxPrice = "";
     state.category = "All";
     state.currencyFilter = "";
+    state.conditionFilter = "";
+    state.shippingFilter = "";
     if($("searchInput")){
         $("searchInput").value = "";
     }
@@ -4989,6 +5038,12 @@ function clearListingFilters(){
     }
     if($("currencyFilter")){
         $("currencyFilter").value = "";
+    }
+    if($("conditionFilter")){
+        $("conditionFilter").value = "";
+    }
+    if($("shippingFilter")){
+        $("shippingFilter").value = "";
     }
     document.querySelectorAll(".filter-button").forEach(function(btn){
         btn.classList.toggle("active", btn.dataset.category === "All" || btn.textContent.trim() === "All");
@@ -5176,6 +5231,52 @@ function setupSearch(){
 
                 state.currencyFilter =
                     currencyFilter.value ||
+                    "";
+
+                state.savedOnly =
+                    false;
+
+                applyFilters();
+
+            }
+        );
+
+    }
+
+    const conditionFilter =
+        $("conditionFilter");
+
+    if(conditionFilter){
+
+        conditionFilter.addEventListener(
+            "change",
+            () => {
+
+                state.conditionFilter =
+                    conditionFilter.value ||
+                    "";
+
+                state.savedOnly =
+                    false;
+
+                applyFilters();
+
+            }
+        );
+
+    }
+
+    const shippingFilter =
+        $("shippingFilter");
+
+    if(shippingFilter){
+
+        shippingFilter.addEventListener(
+            "change",
+            () => {
+
+                state.shippingFilter =
+                    shippingFilter.value ||
                     "";
 
                 state.savedOnly =
