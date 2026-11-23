@@ -20,6 +20,7 @@ import {
 import {
   buildMarketplaceCardOrderFromSession
 } from "../lib/marketplace-card-orders.cjs";
+import serviceCommerce from "../havkar-service-commerce.js";
 import jobBilling from "../havkar-job-billing.js";
 
 export const config = {
@@ -125,7 +126,7 @@ async function upsertMarketplaceCardOrderBestEffort({
   }
 }
 
-function createWebhookStore(supabase) {
+function createWebhookStore(supabase, stripe) {
   return {
     async insertEvent(row) {
       const { error } = await supabase.from("stripe_webhook_events").insert({
@@ -401,6 +402,64 @@ function createWebhookStore(supabase) {
         listing_id: listingId,
         session_id: sessionId || null
       };
+    },
+    async fulfillServiceBookingPayment({ event, session }) {
+      const meta = (session && session.metadata) || {};
+      if (String(meta.havkar_flow || "") !== "services") {
+        return { applied: false, reason: "not_services_flow" };
+      }
+      let verifiedApplicationFeeCents = null;
+      let verifiedTransferDestination =
+        meta.connected_account_id || null;
+      let paymentIntent = session && session.payment_intent;
+      try {
+        if (
+          stripe &&
+          typeof paymentIntent === "string" &&
+          paymentIntent.startsWith("pi_")
+        ) {
+          paymentIntent = await stripe.paymentIntents.retrieve(paymentIntent);
+        }
+        if (paymentIntent && typeof paymentIntent === "object") {
+          if (paymentIntent.application_fee_amount != null) {
+            verifiedApplicationFeeCents = Number(
+              paymentIntent.application_fee_amount
+            );
+          }
+          if (
+            paymentIntent.transfer_data &&
+            paymentIntent.transfer_data.destination
+          ) {
+            verifiedTransferDestination =
+              paymentIntent.transfer_data.destination;
+          }
+        }
+      } catch (_err) {
+        /* fall through to metadata fee */
+      }
+      if (
+        verifiedApplicationFeeCents == null &&
+        meta.application_fee_cents != null
+      ) {
+        verifiedApplicationFeeCents = Number(meta.application_fee_cents);
+      }
+      const sessionForSettle = Object.assign({}, session, {
+        payment_intent: paymentIntent || session.payment_intent
+      });
+      const result = await serviceCommerce.applyVerifiedServicePayment({
+        supabase,
+        event,
+        session: sessionForSettle,
+        verifiedApplicationFeeCents,
+        verifiedTransferDestination
+      });
+      return Object.assign(
+        {
+          applied: Boolean(result && result.ok),
+          fulfillment: "services_booking_payment"
+        },
+        result || {}
+      );
     },
     async settleMarketplaceCharge({
       listingId,
@@ -741,7 +800,10 @@ export default async function handler(req, res) {
 
     const result = await processStripeEvent(
       event,
-      createWebhookStore(supabaseRuntime.client),
+      createWebhookStore(
+        supabaseRuntime.client,
+        stripeRuntime && stripeRuntime.client ? stripeRuntime.client : null
+      ),
       {
         stripe,
         financeGates,

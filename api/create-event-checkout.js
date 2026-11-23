@@ -2142,7 +2142,14 @@ export default async function handler(req, res) {
       globalBodyAction === "jobs_company_verify" ||
       globalBodyAction === "jobs_company_list_review" ||
       globalBodyAction === "jobs_company_submit_review" ||
-      globalBodyAction === "services_quote");
+      globalBodyAction === "services_quote" ||
+      globalBodyAction === "services_buy_checkout" ||
+      globalBodyAction === "services_provider_status" ||
+      globalBodyAction === "services_request_completion" ||
+      globalBodyAction === "services_confirm_completion" ||
+      globalBodyAction === "services_review_create" ||
+      globalBodyAction === "services_complaint_create" ||
+      globalBodyAction === "services_categories");
   if (isGlobalPaymentsRequest(req) && !isJobsServicesPaymentAction) {
     if (req.method !== "GET" && req.method !== "POST") {
       res.setHeader("Allow", "GET, POST");
@@ -3204,7 +3211,14 @@ export default async function handler(req, res) {
         bodyActionEarly === "jobs_company_verify" ||
         bodyActionEarly === "jobs_company_list_review" ||
         bodyActionEarly === "jobs_company_submit_review" ||
-        bodyActionEarly === "services_quote")
+        bodyActionEarly === "services_quote" ||
+        bodyActionEarly === "services_buy_checkout" ||
+        bodyActionEarly === "services_provider_status" ||
+        bodyActionEarly === "services_request_completion" ||
+        bodyActionEarly === "services_confirm_completion" ||
+        bodyActionEarly === "services_review_create" ||
+        bodyActionEarly === "services_complaint_create" ||
+        bodyActionEarly === "services_categories")
     ) {
       try {
         const paymentsApi = await loadJobsServicesPayments();
@@ -3216,6 +3230,13 @@ export default async function handler(req, res) {
           paymentsApi.default?.servicesPaymentMethods;
         const billingMod = await loadJobBilling();
         const jobBilling = billingMod.default || billingMod;
+        const serviceCommerce = require("../havkar-service-commerce.js");
+        const {
+          buildServicesDestinationCheckoutParams,
+          resolveServiceProviderConnectAccount,
+          decideServicesCheckout,
+          servicesPaymentsArmed
+        } = require("../lib/services-checkout.cjs");
 
         if (bodyActionEarly === "jobs_payment_methods") {
           return res.status(200).json(jobsPaymentMethods(process.env));
@@ -4132,6 +4153,491 @@ export default async function handler(req, res) {
               ? "Available"
               : "Not yet available"
           });
+        }
+
+        if (bodyActionEarly === "services_categories") {
+          const { data, error } = await getSupabaseAdmin()
+            .from("service_categories")
+            .select("id,slug,label,parent_slug,sort_order,active")
+            .eq("active", true)
+            .order("sort_order", { ascending: true });
+          if (error && !/relation|does not exist|PGRST/i.test(String(error.message || ""))) {
+            return sendError(res, 500, "Could not load service categories");
+          }
+          const fallback = [
+            "Plumbing",
+            "Electrical",
+            "Cleaning",
+            "Carpentry",
+            "Painting",
+            "Moving",
+            "Home Repairs",
+            "Auto Services",
+            "IT & Programming",
+            "Translation",
+            "Education",
+            "Photography",
+            "Beauty",
+            "Gardening",
+            "Pet Care",
+            "Admin & Consulting",
+            "Online Freelance"
+          ].map((label, idx) => ({
+            id: idx + 1,
+            slug: label.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+            label,
+            parent_slug: null,
+            sort_order: idx + 1,
+            active: true
+          }));
+          return res.status(200).json({
+            ok: true,
+            categories: Array.isArray(data) && data.length ? data : fallback,
+            source:
+              Array.isArray(data) && data.length
+                ? "service_categories"
+                : "builtin_fallback"
+          });
+        }
+
+        if (bodyActionEarly === "services_provider_status") {
+          const auth = await authenticateUser(req);
+          if (!auth || !auth.user) {
+            return sendError(res, 401, (auth && auth.error) || "Authentication required");
+          }
+          const resolved = await resolveServiceProviderConnectAccount(
+            getSupabaseAdmin(),
+            auth.user.id
+          );
+          return res.status(200).json({
+            ok: true,
+            payments_armed: servicesPaymentsArmed(process.env),
+            provider: resolved,
+            connect_return_hint:
+              "Use marketplace_connect_onboard from Buy & Sell, then return here. The same Stripe Connect Express account is reused for Services destination charges."
+          });
+        }
+
+        if (bodyActionEarly === "services_buy_checkout") {
+          const auth = await authenticateUser(req);
+          if (!auth || !auth.user) {
+            return sendError(res, 401, (auth && auth.error) || "Authentication required");
+          }
+          const serviceId = Number(
+            (req.body && (req.body.service_id || req.body.listing_id)) || 0
+          );
+          const bookingIdInput = Number((req.body && req.body.booking_id) || 0);
+          if (!Number.isSafeInteger(serviceId) || serviceId <= 0) {
+            return sendError(res, 400, "service_id is required");
+          }
+          const { data: service, error: serviceError } = await getSupabaseAdmin()
+            .from("services")
+            .select(
+              "id,provider_id,title,price,currency,price_type,status,location"
+            )
+            .eq("id", serviceId)
+            .maybeSingle();
+          if (serviceError || !service) {
+            return sendError(res, 404, "Service not found");
+          }
+          if (String(service.status) !== "active") {
+            return sendError(res, 409, "Service is not available for booking");
+          }
+          if (String(service.provider_id) === String(auth.user.id)) {
+            return sendError(res, 403, "You cannot book your own service");
+          }
+          const priceType = String(service.price_type || "").toLowerCase();
+          if (["hour", "hourly", "day", "daily", "week", "month"].includes(priceType)) {
+            return res.status(409).json({
+              ok: false,
+              charged: false,
+              code: "RECURRING_NOT_SUPPORTED",
+              error:
+                "Recurring/hourly Stripe auto-billing for Services is not enabled. Create a fixed agreed booking first. No charge was created."
+            });
+          }
+          const agreedCents = serviceCommerce.priceToCents(service.price);
+          if (agreedCents == null || agreedCents <= 0) {
+            return sendError(res, 400, "Service price is invalid");
+          }
+          const providerConnect = await resolveServiceProviderConnectAccount(
+            getSupabaseAdmin(),
+            service.provider_id
+          );
+          const decision = decideServicesCheckout(process.env, {
+            agreedCents,
+            clientCustomerChargeCents: agreedCents,
+            clientCommissionCents: Math.round((agreedCents * 1000) / 10000),
+            clientCommissionBps: 1000,
+            connectedAccountId: providerConnect.stripe_account_id,
+            providerVerified: providerConnect.provider_verified === true
+          });
+          if (!decision.callStripe) {
+            return res.status(decision.status || 503).json({
+              ok: false,
+              charged: false,
+              code: decision.code,
+              error: decision.error,
+              provider: providerConnect,
+              checkout_url: null
+            });
+          }
+
+          let bookingId = bookingIdInput > 0 ? bookingIdInput : null;
+          if (bookingId) {
+            const { data: existingBooking, error: bookingLoadError } =
+              await getSupabaseAdmin()
+                .from("service_bookings")
+                .select(
+                  "id,customer_id,provider_id,service_id,status,payment_method,agreed_price,currency"
+                )
+                .eq("id", bookingId)
+                .maybeSingle();
+            if (bookingLoadError || !existingBooking) {
+              return sendError(res, 404, "Booking not found");
+            }
+            if (String(existingBooking.customer_id) !== String(auth.user.id)) {
+              return sendError(res, 403, "Not your booking");
+            }
+            if (Number(existingBooking.service_id) !== serviceId) {
+              return sendError(res, 409, "Booking does not match service");
+            }
+            if (String(existingBooking.payment_method) !== "online") {
+              return sendError(res, 409, "Booking is not online-payable");
+            }
+            if (
+              !["pending", "price_proposed", "accepted"].includes(
+                String(existingBooking.status)
+              )
+            ) {
+              return sendError(res, 409, "Booking is not payable in this status");
+            }
+          } else {
+            const bookingDate = String((req.body && req.body.booking_date) || "").trim();
+            const bookingTime = String((req.body && req.body.booking_time) || "").trim();
+            if (!bookingDate || !bookingTime) {
+              return sendError(res, 400, "booking_date and booking_time are required");
+            }
+            const { data: createdBooking, error: createError } =
+              await getSupabaseAdmin()
+                .from("service_bookings")
+                .insert({
+                  service_id: serviceId,
+                  customer_id: auth.user.id,
+                  provider_id: service.provider_id,
+                  booking_date: bookingDate,
+                  booking_time: bookingTime,
+                  message: String((req.body && req.body.message) || "").trim() || null,
+                  status: "pending",
+                  payment_method: "online",
+                  agreed_price: service.price,
+                  currency: service.currency
+                })
+                .select("id")
+                .maybeSingle();
+            if (createError || !createdBooking) {
+              console.error("services_buy_checkout booking insert", createError);
+              return sendError(res, 500, "Could not create booking");
+            }
+            bookingId = createdBooking.id;
+          }
+
+          const origin = allowedCheckoutOrigin(req);
+          const successUrl =
+            origin +
+            "/services.html?paid=1&booking_id=" +
+            encodeURIComponent(String(bookingId));
+          const cancelUrl =
+            origin +
+            "/services.html?paid=0&booking_id=" +
+            encodeURIComponent(String(bookingId));
+          if (!process.env.STRIPE_SECRET_KEY) {
+            return sendError(res, 503, "Stripe is not configured");
+          }
+          const sessionParams = buildServicesDestinationCheckoutParams({
+            amountCents: decision.customerChargeCents,
+            applicationFeeCents: decision.applicationFeeCents,
+            connectedAccountId: providerConnect.stripe_account_id,
+            currency: String(service.currency || "eur").toLowerCase(),
+            serviceTitle: service.title,
+            successUrl,
+            cancelUrl,
+            customerEmail: auth.user.email,
+            metadata: {
+              booking_id: String(bookingId),
+              service_id: String(serviceId),
+              customer_id: String(auth.user.id),
+              seller_id: String(service.provider_id),
+              havkar_user_id: String(auth.user.id),
+              application_fee_cents: String(decision.applicationFeeCents),
+              list_price_eur: String(service.price),
+              platform_commission_bps: "1000"
+            }
+          });
+          const session = await getStripe().checkout.sessions.create(
+            sessionParams,
+            {
+              idempotencyKey:
+                "svc_" +
+                String(bookingId) +
+                "_" +
+                String(decision.customerChargeCents)
+            }
+          );
+          try {
+            await getSupabaseAdmin()
+              .from("service_bookings")
+              .update({
+                stripe_checkout_session_id: session.id,
+                updated_at: new Date().toISOString()
+              })
+              .eq("id", bookingId);
+          } catch (_sessionSaveErr) {
+            /* Column may not exist until migration; Checkout still created. */
+          }
+          return res.status(200).json({
+            ok: true,
+            charged: false,
+            checkout_created: true,
+            checkout_url: session.url,
+            session_id: session.id,
+            booking_id: bookingId,
+            customer_pays_cents: decision.customerChargeCents,
+            application_fee_cents: decision.applicationFeeCents,
+            provider_settlement_cents: decision.providerSettlementCents,
+            commission_bps: 1000,
+            commission_payer: "provider"
+          });
+        }
+
+        if (bodyActionEarly === "services_request_completion") {
+          const auth = await authenticateUser(req);
+          if (!auth || !auth.user) {
+            return sendError(res, 401, (auth && auth.error) || "Authentication required");
+          }
+          const bookingId = Number((req.body && req.body.booking_id) || 0);
+          if (!Number.isSafeInteger(bookingId) || bookingId <= 0) {
+            return sendError(res, 400, "booking_id is required");
+          }
+          const { data: booking, error: bookingError } = await getSupabaseAdmin()
+            .from("service_bookings")
+            .select("id,provider_id,customer_id,status,payment_method")
+            .eq("id", bookingId)
+            .maybeSingle();
+          if (bookingError || !booking) {
+            return sendError(res, 404, "Booking not found");
+          }
+          if (String(booking.provider_id) !== String(auth.user.id)) {
+            return sendError(res, 403, "Only the provider can request completion");
+          }
+          if (String(booking.status) !== "accepted") {
+            return sendError(res, 409, "Booking must be accepted before completion");
+          }
+          if (String(booking.payment_method) !== "online") {
+            return sendError(res, 409, "Only online bookings can complete this way");
+          }
+          const { data: updated, error: updateError } = await getSupabaseAdmin()
+            .from("service_bookings")
+            .update({
+              status: "completion_requested",
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", bookingId)
+            .eq("status", "accepted")
+            .select("id,status")
+            .maybeSingle();
+          if (updateError || !updated) {
+            return sendError(res, 500, "Could not request completion");
+          }
+          let completionCode = null;
+          const decision = serviceCommerce.completionRequestDecision(process.env, {
+            role: "provider",
+            userId: auth.user.id,
+            bookingId,
+            bookingProviderId: booking.provider_id,
+            bookingCustomerId: booking.customer_id,
+            bookingStatus: "accepted"
+          });
+          if (decision.ok && decision.delivery) {
+            await getSupabaseAdmin().from("service_completion_codes").upsert(
+              {
+                booking_id: bookingId,
+                customer_id: booking.customer_id,
+                code_hash: decision.delivery.codeHash,
+                expires_at: decision.delivery.expiresAt,
+                attempts: 0,
+                used_at: null
+              },
+              { onConflict: "booking_id" }
+            );
+            /* Code is for the customer only; never return plaintext to provider. */
+            completionCode = "sent_to_customer_channel";
+          }
+          return res.status(200).json({
+            ok: true,
+            booking_id: bookingId,
+            status: updated.status,
+            completion_code_delivery: completionCode,
+            note:
+              decision.ok
+                ? "Completion requested. Customer must confirm."
+                : "Completion requested. Completion-code pepper is not configured; customer mutual confirm still works."
+          });
+        }
+
+        if (bodyActionEarly === "services_confirm_completion") {
+          const auth = await authenticateUser(req);
+          if (!auth || !auth.user) {
+            return sendError(res, 401, (auth && auth.error) || "Authentication required");
+          }
+          const bookingId = Number((req.body && req.body.booking_id) || 0);
+          const code = String((req.body && req.body.code) || "").trim();
+          if (!Number.isSafeInteger(bookingId) || bookingId <= 0) {
+            return sendError(res, 400, "booking_id is required");
+          }
+          const { data: booking, error: bookingError } = await getSupabaseAdmin()
+            .from("service_bookings")
+            .select("id,provider_id,customer_id,status")
+            .eq("id", bookingId)
+            .maybeSingle();
+          if (bookingError || !booking) {
+            return sendError(res, 404, "Booking not found");
+          }
+          if (String(booking.customer_id) !== String(auth.user.id)) {
+            return sendError(res, 403, "Only the customer can confirm completion");
+          }
+          if (String(booking.status) !== "completion_requested") {
+            return sendError(res, 409, "Provider has not requested completion yet");
+          }
+          if (code) {
+            const { data: row } = await getSupabaseAdmin()
+              .from("service_completion_codes")
+              .select("booking_id,code_hash,expires_at,used_at,attempts")
+              .eq("booking_id", bookingId)
+              .maybeSingle();
+            if (row && row.code_hash) {
+              const hashed = serviceCommerce.hashCompletionCode(
+                code,
+                bookingId,
+                process.env.HAVKAR_COMPLETION_CODE_PEPPER
+              );
+              const judged = serviceCommerce.judgeCompletionAttempt({
+                expectedHash: row.code_hash,
+                submittedHash: hashed.ok ? hashed.hash : "",
+                expiresAt: row.expires_at,
+                usedAt: row.used_at,
+                attempts: Number(row.attempts) || 0
+              });
+              if (!judged.ok) {
+                await getSupabaseAdmin()
+                  .from("service_completion_codes")
+                  .update({ attempts: (Number(row.attempts) || 0) + 1 })
+                  .eq("booking_id", bookingId);
+                return sendError(res, 403, "Invalid or expired completion code");
+              }
+              await getSupabaseAdmin()
+                .from("service_completion_codes")
+                .update({
+                  used_at: new Date().toISOString(),
+                  attempts: (Number(row.attempts) || 0) + 1
+                })
+                .eq("booking_id", bookingId);
+            }
+          }
+          const { data: updated, error: updateError } = await getSupabaseAdmin()
+            .from("service_bookings")
+            .update({
+              status: "completed",
+              completion_confirmed_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", bookingId)
+            .eq("status", "completion_requested")
+            .select("id,status,completion_confirmed_at")
+            .maybeSingle();
+          if (updateError || !updated) {
+            return sendError(res, 500, "Could not confirm completion");
+          }
+          return res.status(200).json({
+            ok: true,
+            booking_id: bookingId,
+            status: updated.status,
+            completion_confirmed_at: updated.completion_confirmed_at
+          });
+        }
+
+        if (bodyActionEarly === "services_review_create") {
+          const auth = await authenticateUser(req);
+          if (!auth || !auth.user) {
+            return sendError(res, 401, (auth && auth.error) || "Authentication required");
+          }
+          const bookingId = Number((req.body && req.body.booking_id) || 0);
+          const { data: booking } = await getSupabaseAdmin()
+            .from("service_bookings")
+            .select("id,customer_id,provider_id,status")
+            .eq("id", bookingId)
+            .maybeSingle();
+          if (!booking) return sendError(res, 404, "Booking not found");
+          const draft = serviceCommerce.reviewDraft({
+            bookingId,
+            customerId: auth.user.id,
+            providerId: booking.provider_id,
+            bookingCustomerId: booking.customer_id,
+            bookingStatus: booking.status,
+            rating: req.body && req.body.rating,
+            reviewText: req.body && (req.body.review_text || req.body.reviewText)
+          });
+          if (!draft.ok) {
+            return res.status(400).json({ ok: false, code: draft.reason });
+          }
+          const { data: inserted, error } = await getSupabaseAdmin()
+            .from("service_reviews")
+            .insert(draft.row)
+            .select("id,booking_id,rating,status")
+            .maybeSingle();
+          if (error) {
+            return sendError(res, 500, error.message || "Could not save review");
+          }
+          return res.status(200).json({ ok: true, review: inserted });
+        }
+
+        if (bodyActionEarly === "services_complaint_create") {
+          const auth = await authenticateUser(req);
+          if (!auth || !auth.user) {
+            return sendError(res, 401, (auth && auth.error) || "Authentication required");
+          }
+          const bookingId = Number((req.body && req.body.booking_id) || 0);
+          const { data: booking } = await getSupabaseAdmin()
+            .from("service_bookings")
+            .select("id,customer_id,provider_id,status")
+            .eq("id", bookingId)
+            .maybeSingle();
+          if (!booking) return sendError(res, 404, "Booking not found");
+          const uid = String(auth.user.id);
+          if (
+            uid !== String(booking.customer_id) &&
+            uid !== String(booking.provider_id)
+          ) {
+            return sendError(res, 403, "Not a party to this booking");
+          }
+          const draft = serviceCommerce.complaintDraft({
+            bookingId,
+            authorId: uid,
+            category: req.body && req.body.category,
+            explanation: req.body && req.body.explanation
+          });
+          if (!draft.ok) {
+            return res.status(400).json({ ok: false, code: draft.reason });
+          }
+          const { data: inserted, error } = await getSupabaseAdmin()
+            .from("service_complaints")
+            .insert(draft.row)
+            .select("id,booking_id,category,status")
+            .maybeSingle();
+          if (error) {
+            return sendError(res, 500, error.message || "Could not save complaint");
+          }
+          return res.status(200).json({ ok: true, complaint: inserted });
         }
       } catch (error) {
         console.error("HAVKAR jobs/services payments error:", error && error.message);
