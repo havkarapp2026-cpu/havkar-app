@@ -1272,6 +1272,26 @@ button:focus-visible{
 
                 </div>
 
+                <div class="meta-row" id="conditionRow">
+
+                    <i class="fas fa-tag"></i>
+
+                    <span id="conditionMeta">
+                        Condition unspecified
+                    </span>
+
+                </div>
+
+                <div class="meta-row" id="shippingRow">
+
+                    <i class="fas fa-truck"></i>
+
+                    <span id="shippingMeta">
+                        Shipping unspecified
+                    </span>
+
+                </div>
+
             </div>
 
             <div class="description-title">
@@ -2795,7 +2815,8 @@ async function fetchListing(id){
     initializeSupabase();
 
     const columns = [
-        "id,title,category,price,currency,location,country_code,city,description,user_id,created_at,photos,status,listing_surface,expires_at,video_path",
+        "id,title,category,price,currency,location,country_code,city,description,user_id,created_at,photos,status,listing_surface,expires_at,video_path,condition,shipping_option,fulfillment_mode",
+        "id,title,category,price,currency,location,country_code,city,description,user_id,created_at,photos,status,listing_surface,expires_at,video_path,condition,shipping_option",
         "id,title,category,price,location,country_code,city,description,user_id,created_at,photos,status",
         "id,title,category,price,location,description,user_id,created_at,photos,status"
     ];
@@ -3076,6 +3097,23 @@ function renderListing(){
             ad.price,
             ad.currency
         );
+
+    if($("conditionMeta")){
+        $("conditionMeta").textContent =
+            window.HAVKAR_MARKETPLACE &&
+            typeof window.HAVKAR_MARKETPLACE.conditionLabel === "function"
+                ? window.HAVKAR_MARKETPLACE.conditionLabel(ad.condition)
+                : String(ad.condition || "unspecified");
+    }
+    if($("shippingMeta")){
+        $("shippingMeta").textContent =
+            window.HAVKAR_MARKETPLACE &&
+            typeof window.HAVKAR_MARKETPLACE.shippingOptionLabel === "function"
+                ? window.HAVKAR_MARKETPLACE.shippingOptionLabel(
+                    ad.shipping_option || ad.fulfillment_mode
+                )
+                : String(ad.shipping_option || "unspecified");
+    }
 
     const isOwnerListing =
         Boolean(
@@ -5154,7 +5192,7 @@ async function setOwnListingStatus(nextStatus){
             .eq("id", state.ad.id)
             .eq("user_id", state.currentUserId)
             .eq("listing_surface", "marketplace")
-            .select("id,title,category,price,currency,location,country_code,city,description,user_id,created_at,photos,status,listing_surface,expires_at,video_path")
+            .select("id,title,category,price,currency,location,country_code,city,description,user_id,created_at,photos,status,listing_surface,expires_at,video_path,condition,shipping_option,fulfillment_mode")
             .maybeSingle();
         if(result.error){
             throw result.error;
