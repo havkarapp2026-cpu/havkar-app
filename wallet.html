@@ -144,6 +144,106 @@ button:disabled{
 }  
   
   
+/* =========================================================
+   COMMERCE SETTLEMENTS (Stripe Connect — not internal custody)
+   ========================================================= */
+.commerce-panel{
+    margin:0 16px 18px;
+    padding:16px 16px 14px;
+    border-radius:18px;
+    background:
+        linear-gradient(160deg, rgba(46,125,50,.12), rgba(255,255,255,.96) 42%),
+        #f4faf5;
+    border:1px solid rgba(46,125,50,.22);
+    box-shadow:0 10px 28px rgba(27,94,32,.08);
+}
+.commerce-panel h2{
+    margin:0 0 6px;
+    font-size:1.05rem;
+    color:#1b5e20;
+}
+.commerce-panel .commerce-note{
+    margin:0 0 12px;
+    font-size:.82rem;
+    line-height:1.45;
+    color:#456;
+}
+.commerce-meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-bottom:12px;
+}
+.commerce-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:6px 10px;
+    border-radius:999px;
+    background:#e8f5e9;
+    color:#1b5e20;
+    font-size:.75rem;
+    font-weight:700;
+}
+.commerce-chip.warn{background:#fff3e0;color:#e65100;}
+.commerce-chip.off{background:#eceff1;color:#546e7a;}
+.commerce-list{display:grid;gap:10px;}
+.commerce-item{
+    padding:12px;
+    border-radius:14px;
+    background:#fff;
+    border:1px solid rgba(46,125,50,.12);
+}
+.commerce-item strong{display:block;color:#1b5e20;font-size:.92rem;}
+.commerce-item .row{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:space-between;
+    gap:6px;
+    margin-top:6px;
+    font-size:.8rem;
+    color:#456;
+}
+.commerce-item .status{
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    font-size:.72rem;
+}
+.commerce-empty{
+    padding:14px;
+    border-radius:12px;
+    background:#fff;
+    color:#567;
+    font-size:.86rem;
+    border:1px dashed rgba(46,125,50,.25);
+}
+.action-btn.is-unavailable{
+    opacity:.55;
+    position:relative;
+}
+.action-btn.is-unavailable::after{
+    content:"Unavailable";
+    position:absolute;
+    left:50%;
+    bottom:4px;
+    transform:translateX(-50%);
+    font-size:.58rem;
+    font-weight:800;
+    color:#6d4c41;
+    letter-spacing:.02em;
+}
+.ledger-source-tag{
+    display:inline-block;
+    margin-top:8px;
+    padding:4px 8px;
+    border-radius:8px;
+    background:rgba(255,255,255,.18);
+    color:#fff;
+    font-size:.72rem;
+    font-weight:700;
+}
+
 /* =========================================================  
    BALANCE  
    ========================================================= */  
@@ -159,12 +259,12 @@ button:disabled{
     background:  
         linear-gradient(  
             135deg,  
-            #689f38,  
-            #7cb342  
+            #2e7d32,  
+            #689f38  
         );  
   
     box-shadow:  
-        0 5px 20px rgba(104,159,56,.3);  
+        0 5px 20px rgba(46,125,50,.28);  
 }  
   
 .balance-label{  
@@ -1222,7 +1322,7 @@ select:focus{
 
     <h1>Wallet</h1>
     <p id="currencyRailsNotice" style="margin:8px 0 0;font-size:.9rem;line-height:1.4;color:#456">
-      Display currency · Charge currency · Settlement currency are separate. XLM rail separate. Live payments paused until Owner enables collection.
+      Display · charge · settlement currencies are separate. XLM is a separate rail. Loading live payment status…
     </p>  
 
 </div>  
@@ -1241,7 +1341,7 @@ select:focus{
 </div>  <div id="errorContainer"></div>  <!-- =========================================================  
      HAVKAR INTERNAL BALANCE  
      ========================================================= -->  <div class="balance-card">  <div class="balance-label">  
-    Total Balance  
+    Internal ledger record  
 </div>  
 
 <div  
@@ -1253,7 +1353,7 @@ select:focus{
 </div>  
 
 <div class="balance-subtitle" id="portfolioLabel">  
-    Portfolio estimate  
+    Not Stripe Connect · not bank custody · not Stellar balance  
 </div>  
 
 <div class="balance-subtitle" id="availableBalanceLine">  
@@ -1262,14 +1362,16 @@ select:focus{
 
 <div class="balance-subtitle" id="pendingBalanceLine">  
     Pending: nothing is reserved  
-</div>  
+</div>
+<span class="ledger-source-tag" id="ledgerSourceTag">Source: wallets table · fiat rails OFF</span>
 
 <div class="card-actions">  
 
     <button  
-        class="action-btn"  
+        class="action-btn is-unavailable"  
         type="button"  
-        onclick="openSend()">  
+        onclick="openSend()"
+        aria-disabled="true">  
 
         <i class="fas fa-paper-plane"></i>  
         Send  
@@ -1282,14 +1384,15 @@ select:focus{
         onclick="openReceive()">  
 
         <i class="fas fa-download"></i>  
-        Receive  
+        Receive ID  
 
     </button>  
 
     <button  
-        class="action-btn"  
+        class="action-btn is-unavailable"  
         type="button"  
-        onclick="openExchange()">  
+        onclick="openExchange()"
+        aria-disabled="true">  
 
         <i class="fas fa-exchange-alt"></i>  
         Exchange  
@@ -1297,9 +1400,10 @@ select:focus{
     </button>  
 
     <button  
-        class="action-btn"  
+        class="action-btn is-unavailable"  
         type="button"  
-        onclick="openAddMoney()">  
+        onclick="openAddMoney()"
+        aria-disabled="true">  
 
         <i class="fas fa-plus"></i>  
         Add money  
@@ -1307,9 +1411,10 @@ select:focus{
     </button>  
 
     <button  
-        class="action-btn"  
+        class="action-btn is-unavailable"  
         type="button"  
-        onclick="openWithdraw()">  
+        onclick="openWithdraw()"
+        aria-disabled="true">  
 
         <i class="fas fa-building-columns"></i>  
         Withdraw  
@@ -1318,7 +1423,21 @@ select:focus{
 
 </div>
 
-</div>  <!-- =========================================================  
+</div>
+
+<section class="commerce-panel" id="commercePanel" aria-label="Commerce settlements">
+  <h2>Commerce settlements</h2>
+  <p class="commerce-note" id="commerceArchitectureNote">
+    Stripe Connect destination charges and Services commissions are shown from your own records only.
+    These amounts are not the internal ledger balance above.
+  </p>
+  <div class="commerce-meta" id="commerceMeta"></div>
+  <div id="commerceList" class="commerce-list">
+    <div class="commerce-empty">Sign in to load your marketplace and services settlements.</div>
+  </div>
+</section>
+
+  <!-- =========================================================  
      STELLAR / XLM WALLET  
      ========================================================= -->  <div class="stellar-card">  
     <div class="stellar-header">  
@@ -2874,6 +2993,8 @@ async function loadWallet(){
             "transactionList"  
         ).innerHTML =  
             '<div class="empty">Please log in first.</div>';  
+
+        await loadCommerceActivity();
   
         return;  
   
@@ -3147,8 +3268,126 @@ function renderWallets(
     ).textContent =  
         window.HAVKAR_WALLET.PENDING_BALANCE_TEXT;  
 
+    await loadCommerceActivity();
+
 }
   
+function escapeCommerceHtml(value){
+    return String(value == null ? "" : value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
+
+function formatCommerceMoney(amount, currency){
+    if(amount == null || !Number.isFinite(Number(amount))) return "—";
+    const code = String(currency || "EUR").toUpperCase();
+    try{
+        return new Intl.NumberFormat(undefined, {
+            style: "currency",
+            currency: code,
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(Number(amount));
+    }catch(_e){
+        return code + " " + Number(amount).toFixed(2);
+    }
+}
+
+function renderCommerceItem(item){
+    const title = item.title
+        || (item.kind === "service_booking"
+            ? ("Service booking #" + item.id)
+            : ("Marketplace order " + String(item.id || "").slice(0, 8)));
+    const amount = item.role === "seller" || item.role === "provider"
+        ? (item.seller_receives != null ? item.seller_receives : item.provider_settlement)
+        : (item.buyer_pays != null ? item.buyer_pays : item.agreed_price);
+    const fee = item.platform_fee != null ? item.platform_fee : item.commission_amount;
+    return (
+        '<article class="commerce-item">' +
+          '<strong>' + escapeCommerceHtml(title) + '</strong>' +
+          '<div class="row"><span class="status">' + escapeCommerceHtml(item.status || "unknown") +
+          '</span><span>' + escapeCommerceHtml(item.role || "") + '</span></div>' +
+          '<div class="row"><span>' + escapeCommerceHtml(formatCommerceMoney(amount, item.currency)) +
+          '</span><span>Fee ' + escapeCommerceHtml(formatCommerceMoney(fee, item.currency)) + '</span></div>' +
+          '<div class="row"><span>' + escapeCommerceHtml(item.fee_note || "") + '</span>' +
+          '<span>' + escapeCommerceHtml(item.paid_at || item.created_at || "") + '</span></div>' +
+          (item.stripe_payment_intent
+            ? '<div class="row"><span>PI ' + escapeCommerceHtml(String(item.stripe_payment_intent).slice(0, 18)) + '…</span>' +
+              (item.stripe_transfer_id
+                ? '<span>Transfer ' + escapeCommerceHtml(String(item.stripe_transfer_id).slice(0, 14)) + '…</span>'
+                : '<span></span>') +
+              '</div>'
+            : '') +
+        '</article>'
+    );
+}
+
+async function loadCommerceActivity(){
+    const list = document.getElementById("commerceList");
+    const meta = document.getElementById("commerceMeta");
+    const note = document.getElementById("commerceArchitectureNote");
+    if(!list || !meta) return;
+    if(!currentUser){
+        meta.innerHTML = "";
+        list.innerHTML = '<div class="commerce-empty">Sign in to load your marketplace and services settlements.</div>';
+        return;
+    }
+    list.innerHTML = '<div class="commerce-empty">Loading commerce settlements…</div>';
+    try{
+        const session = await supabaseClient.auth.getSession();
+        const token = session && session.data && session.data.session && session.data.session.access_token;
+        if(!token){
+            list.innerHTML = '<div class="commerce-empty">Sign in required for commerce settlements.</div>';
+            return;
+        }
+        const res = await fetch("/api/finance?action=wallet_activity", {
+            method: "GET",
+            headers: {
+                Accept: "application/json",
+                Authorization: "Bearer " + token
+            },
+            cache: "no-store"
+        });
+        const body = await res.json().catch(function(){ return null; });
+        if(!res.ok || !body || body.ok !== true){
+            list.innerHTML = '<div class="commerce-empty">Could not load commerce settlements' +
+                (body && body.error ? (": " + escapeCommerceHtml(body.error)) : ".") +
+                '</div>';
+            return;
+        }
+        if(note && body.architecture && body.architecture.custody){
+            note.textContent = body.architecture.custody;
+        }
+        const connect = body.stripe_connect && body.stripe_connect.account;
+        meta.innerHTML =
+            '<span class="commerce-chip' + (connect && connect.charges_enabled ? '' : ' warn') + '">Connect charges: ' +
+            (connect ? (connect.charges_enabled ? 'on' : 'off') : 'none') + '</span>' +
+            '<span class="commerce-chip' + (connect && connect.payouts_enabled ? '' : ' warn') + '">Connect payouts: ' +
+            (connect ? (connect.payouts_enabled ? 'on' : 'off') : 'none') + '</span>' +
+            '<span class="commerce-chip off">Fiat deposit/withdraw: OFF</span>' +
+            '<span class="commerce-chip">Buy&amp;Sell fees 2%+3%</span>' +
+            '<span class="commerce-chip">Services commission 10%</span>';
+
+        const items = []
+            .concat((body.marketplace && body.marketplace.as_seller) || [])
+            .concat((body.marketplace && body.marketplace.as_buyer) || [])
+            .concat((body.services && body.services.as_provider) || [])
+            .concat((body.services && body.services.as_customer) || []);
+        items.sort(function(a, b){
+            return String(b.paid_at || b.created_at || "").localeCompare(String(a.paid_at || a.created_at || ""));
+        });
+        if(!items.length){
+            list.innerHTML = '<div class="commerce-empty">No marketplace or services settlements for this account yet. This is not a fake zero balance — no matching paid records were found.</div>';
+            return;
+        }
+        list.innerHTML = items.slice(0, 30).map(renderCommerceItem).join("");
+    }catch(err){
+        list.innerHTML = '<div class="commerce-empty">Commerce settlements unavailable right now.</div>';
+    }
+}
+
   
 /* =========================================================  
    LOAD CRYPTO PRICES  
@@ -5993,6 +6232,7 @@ async function startWallet(){
     if(currentUser){  
   
         await loadTransactions();  
+        await loadCommerceActivity();
   
     }  
   
