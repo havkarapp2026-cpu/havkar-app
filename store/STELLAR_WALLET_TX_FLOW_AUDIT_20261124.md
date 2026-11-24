@@ -56,3 +56,14 @@ Horizon-confirmed public accounts (safe to record; not secrets):
 - Testnet automated peer-payment path: verified earlier (PR #275).
 - Mainnet interactive Owner sign + successful network settle: **verified** via the hash above.
 - Agent must not create or submit any further Mainnet/Testnet payments without new Owner authorization.
+
+### Follow-up Mainnet reverse path (LOBSTR WalletConnect → Albedo)
+Independently verified 2026-11-24 (no agent broadcast):
+
+| Field | Value |
+|-------|--------|
+| Hash | `a78337d9eefb5dc8c6ac7743efb9fd1a171b40338c14ea7473debc4c797acd4b` |
+| Direction | LOBSTR → Albedo |
+| Amount / fee | `0.01` XLM / `0.00001` XLM |
+| Full record | `store/STELLAR_MAINNET_LOBSTR_WC_E2E_20261124.md` |
+

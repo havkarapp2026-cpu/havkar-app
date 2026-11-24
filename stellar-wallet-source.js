@@ -56,6 +56,13 @@ const NETWORK_STORAGE_KEY =
 const PENDING_PAYMENT_KEY =
     "havkar_stellar_pending_payment";
 
+const LAST_SUCCESS_PAYMENT_KEY =
+    "havkar_stellar_last_success_payment";
+
+/* Block accidental identical peer re-sends shortly after a confirmed success. */
+const RECENT_SUCCESS_GUARD_MS =
+    15 * 60 * 1000;
+
 /* Owner-authorized Mainnet client capability.
    Server still requires HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED=true
    and HAVKAR_STELLAR_MAINNET_DESTINATION before any quote is payable.
@@ -1232,11 +1239,39 @@ function safeErrorMessage(
                 "The Stellar network rejected the transaction fee.";
 
         }
+        else if(
+            horizon.transaction ===
+            "tx_too_late"
+        ){
+
+            friendly =
+                "The payment timed out before Horizon accepted it. Review again to build a fresh transaction; nothing extra was charged if the previous hash never confirmed.";
+
+        }
+        else if(
+            horizon.transaction ===
+            "tx_too_early"
+        ){
+
+            friendly =
+                "The payment is not valid yet for the Stellar network. Wait a moment and try again.";
+
+        }
 
 
         return friendly +
             " " +
             horizon.text;
+
+    }
+
+
+    if(
+        /did not return a signature|signature timed out|wallet.?timeout|session.?expir/i
+            .test(message)
+    ){
+
+        return "The wallet did not return a signature in time. No transaction was submitted. Review the payment again if you still want to send.";
 
     }
 
@@ -1252,8 +1287,20 @@ function safeErrorMessage(
 
 
     if(
+        /identical payment already confirmed/i
+            .test(message)
+    ){
+
+        return message.length <= 220
+            ? message
+            : message.slice(0, 217) + "...";
+
+    }
+
+
+    if(
         message &&
-        message.length <= 180 &&
+        message.length <= 220 &&
         !/xdr|secret|seed|private|mnemonic/i
             .test(message)
     ){
@@ -3242,6 +3289,122 @@ function clearPendingPayment(){
 }
 
 
+function readLastSuccessfulPayment(){
+
+    try{
+
+        const raw =
+            localStorage.getItem(
+                LAST_SUCCESS_PAYMENT_KEY
+            );
+
+        if(!raw){
+
+            return null;
+
+        }
+
+        const parsed =
+            JSON.parse(raw);
+
+        if(
+            !parsed ||
+            typeof parsed.hash !== "string" ||
+            typeof parsed.at !== "number"
+        ){
+
+            return null;
+
+        }
+
+        return parsed;
+
+    }
+    catch(error){
+
+        return null;
+
+    }
+
+}
+
+
+function writeLastSuccessfulPayment(
+    confirmed,
+    prepared
+){
+
+    try{
+
+        localStorage.setItem(
+            LAST_SUCCESS_PAYMENT_KEY,
+            JSON.stringify({
+                at:Date.now(),
+                hash:confirmed.hash,
+                network:confirmed.network || prepared.network,
+                source:prepared.source,
+                destination:prepared.destination,
+                amount:prepared.amount,
+                memo:prepared.memo || "",
+                kind:prepared.kind || "payment"
+            })
+        );
+
+    }
+    catch(error){
+
+    }
+
+}
+
+
+function findRecentSuccessfulDuplicate(
+    request
+){
+
+    const last =
+        readLastSuccessfulPayment();
+
+    if(!last){
+
+        return null;
+
+    }
+
+    if(
+        Date.now() - Number(last.at || 0) >
+        RECENT_SUCCESS_GUARD_MS
+    ){
+
+        return null;
+
+    }
+
+    const networkId =
+        String(
+            request?.network?.id ||
+            request?.network ||
+            currentNetwork().id
+        );
+
+    if(
+        last.network !== networkId ||
+        last.source !== request.source ||
+        last.destination !== request.destination ||
+        last.amount !== request.amount.text ||
+        String(last.memo || "") !==
+            String(request.memo || "")
+    ){
+
+        return null;
+
+    }
+
+    return last;
+
+}
+
+
 function samePayment(
     pending,
     prepared
@@ -3531,7 +3694,18 @@ async function confirmedPayment(
 
         amount:prepared.amount,
 
-        successful:true
+        memo:prepared.memo || "",
+
+        fee:record.fee_charged != null
+            ? String(record.fee_charged)
+            : prepared.fee || null,
+
+        successful:true,
+
+        explorerUrl:havkarStellarExplorerTxUrl(
+            record.hash,
+            network.id
+        )
 
     };
 
@@ -3628,6 +3802,24 @@ async function havkarSignAndSubmitStellarPayment(
                 options
             );
 
+        const recentDuplicate =
+            findRecentSuccessfulDuplicate(
+                request
+            );
+
+        if(
+            recentDuplicate &&
+            options?.allowRecentDuplicate !== true
+        ){
+
+            throw new Error(
+                "Identical payment already confirmed recently (hash " +
+                recentDuplicate.hash +
+                "). Wait or open that receipt before sending the same amount again."
+            );
+
+        }
+
         const server =
             horizonServer(network);
 
@@ -3708,6 +3900,11 @@ async function havkarSignAndSubmitStellarPayment(
                 if(existing){
 
                     clearPendingPayment();
+
+                    writeLastSuccessfulPayment(
+                        existing,
+                        replay
+                    );
 
                     return existing;
 
@@ -3925,6 +4122,11 @@ async function havkarSignAndSubmitStellarPayment(
         if(confirmed){
 
             clearPendingPayment();
+
+            writeLastSuccessfulPayment(
+                confirmed,
+                prepared
+            );
 
             return confirmed;
 
@@ -5226,6 +5428,26 @@ window.havkarBuildStellarWalletChallengeTransaction =
 
 window.havkarPrepareStellarPayment =
     havkarPrepareStellarPayment;
+
+window.havkarFindRecentSuccessfulDuplicate =
+    function(options){
+
+        try{
+
+            return findRecentSuccessfulDuplicate(
+                readUnsignedPaymentRequest(
+                    options
+                )
+            );
+
+        }
+        catch(error){
+
+            return null;
+
+        }
+
+    };
 
 window.havkarSignAndSubmitStellarPayment =
     havkarSignAndSubmitStellarPayment;

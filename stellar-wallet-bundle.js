@@ -148239,6 +148239,8 @@ ${value}`, dataLines++;
   };
   var NETWORK_STORAGE_KEY = "havkar_stellar_network";
   var PENDING_PAYMENT_KEY = "havkar_stellar_pending_payment";
+  var LAST_SUCCESS_PAYMENT_KEY = "havkar_stellar_last_success_payment";
+  var RECENT_SUCCESS_GUARD_MS = 15 * 60 * 1e3;
   var STELLAR_MAINNET_PAYMENTS_ENABLED = true;
   var paymentInFlight = false;
   var HAVKAR_STELLAR = {
@@ -148773,13 +148775,23 @@ ${value}`, dataLines++;
         friendly = "The account sequence changed. Refresh the balance and try again.";
       } else if (horizon.transaction === "tx_insufficient_fee") {
         friendly = "The Stellar network rejected the transaction fee.";
+      } else if (horizon.transaction === "tx_too_late") {
+        friendly = "The payment timed out before Horizon accepted it. Review again to build a fresh transaction; nothing extra was charged if the previous hash never confirmed.";
+      } else if (horizon.transaction === "tx_too_early") {
+        friendly = "The payment is not valid yet for the Stellar network. Wait a moment and try again.";
       }
       return friendly + " " + horizon.text;
+    }
+    if (/did not return a signature|signature timed out|wallet.?timeout|session.?expir/i.test(message)) {
+      return "The wallet did not return a signature in time. No transaction was submitted. Review the payment again if you still want to send.";
     }
     if (/failed to fetch|networkerror|load failed|timeout/i.test(message)) {
       return "Could not reach the Stellar network.";
     }
-    if (message && message.length <= 180 && !/xdr|secret|seed|private|mnemonic/i.test(message)) {
+    if (/identical payment already confirmed/i.test(message)) {
+      return message.length <= 220 ? message : message.slice(0, 217) + "...";
+    }
+    if (message && message.length <= 220 && !/xdr|secret|seed|private|mnemonic/i.test(message)) {
       return message;
     }
     return "Stellar request failed.";
@@ -149642,6 +149654,57 @@ ${value}`, dataLines++;
     } catch (error) {
     }
   }
+  function readLastSuccessfulPayment() {
+    try {
+      const raw = localStorage.getItem(
+        LAST_SUCCESS_PAYMENT_KEY
+      );
+      if (!raw) {
+        return null;
+      }
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed.hash !== "string" || typeof parsed.at !== "number") {
+        return null;
+      }
+      return parsed;
+    } catch (error) {
+      return null;
+    }
+  }
+  function writeLastSuccessfulPayment(confirmed, prepared) {
+    try {
+      localStorage.setItem(
+        LAST_SUCCESS_PAYMENT_KEY,
+        JSON.stringify({
+          at: Date.now(),
+          hash: confirmed.hash,
+          network: confirmed.network || prepared.network,
+          source: prepared.source,
+          destination: prepared.destination,
+          amount: prepared.amount,
+          memo: prepared.memo || "",
+          kind: prepared.kind || "payment"
+        })
+      );
+    } catch (error) {
+    }
+  }
+  function findRecentSuccessfulDuplicate(request2) {
+    const last2 = readLastSuccessfulPayment();
+    if (!last2) {
+      return null;
+    }
+    if (Date.now() - Number(last2.at || 0) > RECENT_SUCCESS_GUARD_MS) {
+      return null;
+    }
+    const networkId = String(
+      request2?.network?.id || request2?.network || currentNetwork().id
+    );
+    if (last2.network !== networkId || last2.source !== request2.source || last2.destination !== request2.destination || last2.amount !== request2.amount.text || String(last2.memo || "") !== String(request2.memo || "")) {
+      return null;
+    }
+    return last2;
+  }
   function samePayment(pending, prepared) {
     if (!pending || pending.network !== prepared.network || pending.source !== prepared.source || pending.destination !== prepared.destination || pending.amount !== prepared.amount || pending.memo !== prepared.memo || pending.kind !== prepared.kind) {
       return false;
@@ -149740,7 +149803,13 @@ ${value}`, dataLines++;
       source: prepared.source,
       destination: prepared.destination,
       amount: prepared.amount,
-      successful: true
+      memo: prepared.memo || "",
+      fee: record.fee_charged != null ? String(record.fee_charged) : prepared.fee || null,
+      successful: true,
+      explorerUrl: havkarStellarExplorerTxUrl(
+        record.hash,
+        network.id
+      )
     };
   }
   function assertStellarSubmissionAllowed(network) {
@@ -149783,6 +149852,14 @@ ${value}`, dataLines++;
       const request2 = readUnsignedPaymentRequest(
         options
       );
+      const recentDuplicate = findRecentSuccessfulDuplicate(
+        request2
+      );
+      if (recentDuplicate && options?.allowRecentDuplicate !== true) {
+        throw new Error(
+          "Identical payment already confirmed recently (hash " + recentDuplicate.hash + "). Wait or open that receipt before sending the same amount again."
+        );
+      }
       const server = horizonServer(network);
       const pending = readPendingPayment();
       let prepared = null;
@@ -149822,6 +149899,10 @@ ${value}`, dataLines++;
           }
           if (existing) {
             clearPendingPayment();
+            writeLastSuccessfulPayment(
+              existing,
+              replay
+            );
             return existing;
           }
           if (!pending.fee || !pending.sequence || !pending.timeBounds) {
@@ -149924,6 +150005,10 @@ ${value}`, dataLines++;
       }
       if (confirmed) {
         clearPendingPayment();
+        writeLastSuccessfulPayment(
+          confirmed,
+          prepared
+        );
         return confirmed;
       }
       throw submitError || new Error(
@@ -150497,6 +150582,17 @@ ${value}`, dataLines++;
   window.havkarListWalletConnectMethods = havkarListWalletConnectMethods;
   window.havkarBuildStellarWalletChallengeTransaction = buildStellarWalletChallengeTransaction;
   window.havkarPrepareStellarPayment = havkarPrepareStellarPayment;
+  window.havkarFindRecentSuccessfulDuplicate = function(options) {
+    try {
+      return findRecentSuccessfulDuplicate(
+        readUnsignedPaymentRequest(
+          options
+        )
+      );
+    } catch (error) {
+      return null;
+    }
+  };
   window.havkarSignAndSubmitStellarPayment = havkarSignAndSubmitStellarPayment;
   window.havkarRestoreStellarAddress = havkarRestoreStellarAddress;
   window.dispatchEvent(

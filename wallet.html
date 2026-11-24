@@ -6519,6 +6519,25 @@ async function confirmHAVKARStellarPayment(){
         setStellarStatus("Network changed after review. Review the payment again. Nothing was signed.","error");
         return;
     }
+    if(typeof window.havkarFindRecentSuccessfulDuplicate==="function"){
+        const recent=window.havkarFindRecentSuccessfulDuplicate({
+            destination:pendingStellarReview.destination,
+            amount:pendingStellarReview.amount,
+            memo:pendingStellarReview.memo
+        });
+        if(recent&&recent.hash){
+            const again=window.confirm(
+                stellarT("An identical payment already confirmed recently.")+"\n"+
+                stellarT("Hash")+": "+recent.hash+"\n\n"+
+                stellarT("Continue only if you intentionally want to send the same amount again.")
+            );
+            if(!again){
+                setStellarStatus("Duplicate send cancelled. Previous hash "+recent.hash+" was kept.","info");
+                return;
+            }
+            pendingStellarReview.allowRecentDuplicate=true;
+        }
+    }
     if(network.id==="PUBLIC"){
         const confirmLines=[
             stellarT("MAINNET · real XLM"),
@@ -6553,7 +6572,8 @@ async function confirmHAVKARStellarPayment(){
         const result=await window.havkarSignAndSubmitStellarPayment({  
             destination:pendingStellarReview.destination,  
             amount:pendingStellarReview.amount,  
-            memo:pendingStellarReview.memo  
+            memo:pendingStellarReview.memo,
+            allowRecentDuplicate:pendingStellarReview.allowRecentDuplicate===true
         });
         result.fee=result.fee!=null?result.fee:pendingStellarReview.fee;
         renderStellarReceipt(result);
