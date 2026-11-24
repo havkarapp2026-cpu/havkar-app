@@ -1495,6 +1495,13 @@ select:focus{
     <button id="stellarDisconnectButton" class="stellar-disconnect-button" type="button" onclick="disconnectHAVKARStellar()">
       <i class="fas fa-link-slash" aria-hidden="true"></i> Disconnect Wallet
     </button>
+    <button id="stellarChallengeButton" class="stellar-disconnect-button" type="button" onclick="verifyHAVKARStellarChallenge()" style="display:none;margin-top:8px">
+      <i class="fas fa-shield-halved" aria-hidden="true"></i> Verify signature (no XLM)
+    </button>
+    <p class="stellar-note" id="stellarChallengeNote" style="display:none;margin-top:6px">
+      Asks LOBSTR or Freighter to sign a text challenge only. No payment is built and nothing is submitted to Horizon.
+    </p>
+    <div id="stellarChallengeResult" class="commerce-item" style="display:none;margin-top:10px" aria-live="polite"></div>
     <div id="stellarSend" class="stellar-send">
       <label class="stellar-label" for="stellarDestination">Destination public key</label>
       <input id="stellarDestination" class="stellar-input" type="text" autocomplete="off" spellcheck="false" placeholder="G...">
@@ -6038,7 +6045,7 @@ function renderStellarNetwork(){
         if(selected==="lobstr"){
             capNote.textContent=stellarT("LOBSTR ignores dApp network selection. Set Testnet or Mainnet inside LOBSTR before signing.");
         }else if(selected==="freighter"){
-            capNote.textContent=stellarT("Freighter must be installed and unlocked. HAVKAR passes the selected network passphrase into Freighter.");
+            capNote.textContent=stellarT("Freighter desktop needs the extension. On Android use WalletConnect with Freighter Mobile — then Verify signature (no XLM).");
         }else if(selected==="albedo"){
             capNote.textContent=stellarT("Albedo opens in a browser window. Allow popups if the signing window is blocked.");
         }
@@ -6063,7 +6070,9 @@ function changeHAVKARStellarNetwork(){
 function renderStellarConnection(address,options){  
     const addressElement=document.getElementById("stellarAddress");  
     const connectButton=document.getElementById("stellarConnectButton");  
-    const disconnectButton=document.getElementById("stellarDisconnectButton");  
+    const disconnectButton=document.getElementById("stellarDisconnectButton");
+    const challengeButton=document.getElementById("stellarChallengeButton");
+    const challengeNote=document.getElementById("stellarChallengeNote");
     const send=document.getElementById("stellarSend");  
     const balance=document.getElementById("stellarBalance");
     const history=document.getElementById("stellarHistory");
@@ -6073,7 +6082,9 @@ function renderStellarConnection(address,options){
         addressElement.textContent=address;  
         addressElement.style.display="block";  
         connectButton.style.display="none";  
-        disconnectButton.style.display="block";  
+        disconnectButton.style.display="block";
+        if(challengeButton)challengeButton.style.display="inline-flex";
+        if(challengeNote)challengeNote.style.display="block";
         if(send)send.style.display="block";
         if(connectState)connectState.textContent="Connected · public key only";
         updateStellarReceiveQr(address);
@@ -6090,7 +6101,11 @@ function renderStellarConnection(address,options){
         addressElement.textContent="";  
         addressElement.style.display="none";  
         connectButton.style.display="block";  
-        disconnectButton.style.display="none";  
+        disconnectButton.style.display="none";
+        if(challengeButton)challengeButton.style.display="none";
+        if(challengeNote)challengeNote.style.display="none";
+        const challengeResult=document.getElementById("stellarChallengeResult");
+        if(challengeResult){challengeResult.style.display="none";challengeResult.innerHTML="";}
         if(connectState)connectState.textContent="Not connected";
         if(send)send.style.display="none";  
         if(balance){balance.textContent="";balance.style.display="none";}
@@ -6102,6 +6117,37 @@ function renderStellarConnection(address,options){
         stellarAccountOnNetwork=null;
         renderStellarNetwork();
     }  
+}
+
+async function verifyHAVKARStellarChallenge(){
+    const button=document.getElementById("stellarChallengeButton");
+    const panel=document.getElementById("stellarChallengeResult");
+    if(typeof window.havkarVerifyStellarWalletChallenge!=="function"){
+        setStellarStatus("Signature challenge is not available.","error");
+        return;
+    }
+    if(button)button.disabled=true;
+    if(panel){panel.style.display="none";panel.innerHTML="";}
+    setStellarStatus("Waiting for a no-transfer challenge signature in your wallet...","info");
+    try{
+        const result=await window.havkarVerifyStellarWalletChallenge();
+        if(panel){
+            panel.style.display="block";
+            panel.innerHTML=
+                "<strong>"+escapeCommerceHtml(stellarT("Challenge signature verified"))+"</strong>"+
+                '<div class="row"><span>'+escapeCommerceHtml(stellarT("Transferred"))+'</span><span>'+escapeCommerceHtml(stellarT("No"))+"</span></div>"+
+                '<div class="row"><span>'+escapeCommerceHtml(stellarT("Submitted to Horizon"))+'</span><span>'+escapeCommerceHtml(stellarT("No"))+"</span></div>"+
+                '<div class="row"><span>'+escapeCommerceHtml(stellarT("Wallet module"))+'</span><span>'+escapeCommerceHtml(result.moduleId||"—")+"</span></div>"+
+                '<div class="row"><span>'+escapeCommerceHtml(stellarT("Network"))+'</span><span>'+escapeCommerceHtml(result.label||result.network||"")+"</span></div>"+
+                '<div class="row"><span>'+escapeCommerceHtml(stellarT("Signer"))+'</span><span style="word-break:break-all">'+escapeCommerceHtml(result.signerAddress||result.address||"")+"</span></div>"+
+                '<div class="row"><span>'+escapeCommerceHtml(stellarT("Signature"))+'</span><span style="word-break:break-all">'+escapeCommerceHtml(String(result.signature||"").slice(0,96))+(String(result.signature||"").length>96?"…":"")+"</span></div>";
+        }
+        setStellarStatus("Challenge signature received. No XLM was moved.","success");
+    }catch(error){
+        setStellarStatus(error?.message||"Challenge signature failed. Nothing was submitted.","error");
+    }finally{
+        if(button)button.disabled=false;
+    }
 }  
   
 function updateStellarApproxValue(xlmAmount){

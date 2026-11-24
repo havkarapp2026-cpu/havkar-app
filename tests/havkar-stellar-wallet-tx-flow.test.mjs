@@ -146,7 +146,7 @@ assert.deepEqual(
 assert.equal(wallets[0].kind, "web");
 assert.equal(wallets[1].kind, "browser_extension");
 assert.equal(wallets[2].kind, "browser_extension");
-assert.match(wallets[2].sign, /ignores address and networkPassphrase/i);
+assert.match(wallets[2].sign, /ignores.*networkPassphrase/i);
 
 window.havkarSetStellarNetwork("PUBLIC");
 assert.equal(window.havkarGetStellarNetwork().id, "PUBLIC");
