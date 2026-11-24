@@ -1505,7 +1505,7 @@ select:focus{
       <i class="fas fa-shield-halved" aria-hidden="true"></i> Verify signature (no XLM)
     </button>
     <p class="stellar-note" id="stellarChallengeNote" style="display:none;margin-top:6px">
-      Asks LOBSTR or Freighter to sign a text challenge only. No payment is built and nothing is submitted to Horizon.
+      Proves wallet control without moving XLM. LOBSTR Android WalletConnect uses stellar_signXDR with a no-payment manageData challenge (never submitted). Freighter Mobile / LOBSTR extension may use stellar_signMessage when negotiated. Nothing is broadcast to Horizon.
     </p>
     <div id="stellarChallengeResult" class="commerce-item" style="display:none;margin-top:10px" aria-live="polite"></div>
     <div id="stellarSend" class="stellar-send">
@@ -6146,11 +6146,13 @@ async function verifyHAVKARStellarChallenge(){
                 '<div class="row"><span>'+escapeCommerceHtml(stellarT("Transferred"))+'</span><span>'+escapeCommerceHtml(stellarT("No"))+"</span></div>"+
                 '<div class="row"><span>'+escapeCommerceHtml(stellarT("Submitted to Horizon"))+'</span><span>'+escapeCommerceHtml(stellarT("No"))+"</span></div>"+
                 '<div class="row"><span>'+escapeCommerceHtml(stellarT("Wallet module"))+'</span><span>'+escapeCommerceHtml(result.moduleId||"—")+"</span></div>"+
+                '<div class="row"><span>'+escapeCommerceHtml(stellarT("Method"))+'</span><span>'+escapeCommerceHtml(result.method||result.kind||"—")+"</span></div>"+
                 '<div class="row"><span>'+escapeCommerceHtml(stellarT("Network"))+'</span><span>'+escapeCommerceHtml(result.label||result.network||"")+"</span></div>"+
                 '<div class="row"><span>'+escapeCommerceHtml(stellarT("Signer"))+'</span><span style="word-break:break-all">'+escapeCommerceHtml(result.signerAddress||result.address||"")+"</span></div>"+
-                '<div class="row"><span>'+escapeCommerceHtml(stellarT("Signature"))+'</span><span style="word-break:break-all">'+escapeCommerceHtml(String(result.signature||"").slice(0,96))+(String(result.signature||"").length>96?"…":"")+"</span></div>";
+                '<div class="row"><span>'+escapeCommerceHtml(stellarT("Signature"))+'</span><span style="word-break:break-all">'+escapeCommerceHtml(String(result.signature||"").slice(0,96))+(String(result.signature||"").length>96?"…":"")+"</span></div>"+
+                (result.note?'<div class="row"><span>'+escapeCommerceHtml(stellarT("Note"))+'</span><span>'+escapeCommerceHtml(result.note)+"</span></div>":"");
         }
-        setStellarStatus("Challenge signature received. No XLM was moved.","success");
+        setStellarStatus("Challenge signature received ("+(result.method||result.kind||"ok")+"). No XLM was moved; nothing submitted.","success");
     }catch(error){
         setStellarStatus(error?.message||"Challenge signature failed. Nothing was submitted.","error");
     }finally{
