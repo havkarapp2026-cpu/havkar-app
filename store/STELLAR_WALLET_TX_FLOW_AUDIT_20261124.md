@@ -30,7 +30,29 @@ Covered by `tests/stellar-wallet.test.mjs` (real Horizon Testnet submit):
 - Mainnet confirm() before requesting a signature
 - `stellarT()` + expanded `havkar-ui-i18n21` wallet strings
 
-## Mainnet
-- Network default remains PUBLIC / Mainnet.
-- No real XLM was sent in this audit.
-- Interactive Mainnet sign+submit requires Owner wallet approval and Owner authorization.
+## Mainnet — Owner-signed live verification (2026-11-24)
+
+Recorded from Owner-reported successful send. Verified read-only against live Horizon Mainnet. **No private keys were requested, stored, or logged.** No additional Mainnet payment was created by the agent.
+
+| Field | Value |
+|-------|--------|
+| Date (UTC) | 2026-11-24 (`created_at` 2026-11-24T08:37:06Z) |
+| Network | Stellar Mainnet (`PUBLIC`) |
+| Protocol | Ledger `65644675` → `protocol_version: 30` |
+| Signer / source wallet | Albedo (Owner-signed) |
+| Destination wallet | LOBSTR |
+| Amount | `0.0100000` XLM (native) |
+| Fee charged | `100` stroops = `0.00001` XLM |
+| Horizon `successful` | `true` |
+| Operation | `payment` (1 op) |
+| Transaction hash | `f36e9d9e4184fa865b1eb3a3d1032564d5154c51459f6e949d85077c6c6ec66d` |
+| Explorer | https://stellar.expert/explorer/public/tx/f36e9d9e4184fa865b1eb3a3d1032564d5154c51459f6e949d85077c6c6ec66d |
+
+Horizon-confirmed public accounts (safe to record; not secrets):
+- Source `G…`: `GAPCPQKBQ2VKSSRXUFOCGNUYEJLT3FRPYBCJCN2SJZ2TPLGEMMCUJV4L`
+- Destination `G…`: `GBORWHZDJRQQQIWHS7YZ5GQDSGV6KKKTVCHNZGULACUK7SCAAHEAUTGM`
+
+### Status after this verification
+- Testnet automated peer-payment path: verified earlier (PR #275).
+- Mainnet interactive Owner sign + successful network settle: **verified** via the hash above.
+- Agent must not create or submit any further Mainnet/Testnet payments without new Owner authorization.
