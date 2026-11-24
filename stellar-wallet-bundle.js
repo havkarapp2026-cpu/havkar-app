@@ -148242,6 +148242,7 @@ ${value}`, dataLines++;
   var LAST_SUCCESS_PAYMENT_KEY = "havkar_stellar_last_success_payment";
   var PAYMENT_LOCK_KEY = "havkar_stellar_payment_lock";
   var RECENT_SUCCESS_GUARD_MS = 15 * 60 * 1e3;
+  var REVIEW_MATCH_LOOKBACK_MS = 24 * 60 * 60 * 1e3;
   var PAYMENT_LOCK_STALE_MS = 3 * 60 * 1e3;
   var HAVKAR_PAYMENT_TAB_ID = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "tab-" + Date.now().toString(36) + Math.random().toString(36).slice(2);
   var STELLAR_MAINNET_PAYMENTS_ENABLED = true;
@@ -149923,6 +149924,59 @@ ${value}`, dataLines++;
       options
     );
   }
+  function lastSuccessfulMatchesRequest(last2, request2) {
+    if (!last2 || !request2) {
+      return false;
+    }
+    const networkId = String(
+      request2?.network?.id || request2?.network || currentNetwork().id
+    );
+    const amountText = request2.amount?.text || request2.amount;
+    return last2.network === networkId && last2.source === request2.source && last2.destination === request2.destination && last2.amount === amountText && String(last2.memo || "") === String(request2.memo || "");
+  }
+  async function findPaymentDuplicateNotice(server, request2) {
+    const recent = await findAnyRecentDuplicate(
+      server,
+      request2
+    );
+    if (recent) {
+      return {
+        ...recent,
+        withinGuardWindow: true,
+        severity: "guard"
+      };
+    }
+    const last2 = readLastSuccessfulPayment();
+    if (lastSuccessfulMatchesRequest(
+      last2,
+      request2
+    )) {
+      return {
+        ...last2,
+        sourceGuard: "localStorage",
+        withinGuardWindow: false,
+        severity: "info"
+      };
+    }
+    if (!server) {
+      return null;
+    }
+    const older = await findRecentHorizonDuplicatePayment(
+      server,
+      request2,
+      {
+        windowMs: REVIEW_MATCH_LOOKBACK_MS
+      }
+    );
+    if (!older) {
+      return null;
+    }
+    return {
+      ...older,
+      withinGuardWindow: false,
+      severity: "info"
+    };
+  }
   function samePayment(pending, prepared) {
     if (!pending || pending.network !== prepared.network || pending.source !== prepared.source || pending.destination !== prepared.destination || pending.amount !== prepared.amount || pending.memo !== prepared.memo || pending.kind !== prepared.kind) {
       return false;
@@ -150864,6 +150918,22 @@ ${value}`, dataLines++;
       }
     }
   };
+  window.havkarFindPaymentDuplicateNotice = async function(options) {
+    try {
+      const request2 = readUnsignedPaymentRequest(
+        options
+      );
+      const network = currentNetwork();
+      return await findPaymentDuplicateNotice(
+        horizonServer(network),
+        request2
+      );
+    } catch (error) {
+      return null;
+    }
+  };
+  window.havkarRecentSuccessGuardMs = RECENT_SUCCESS_GUARD_MS;
+  window.havkarReviewMatchLookbackMs = REVIEW_MATCH_LOOKBACK_MS;
   window.havkarAcquirePaymentLock = acquirePaymentLock;
   window.havkarReleasePaymentLock = releasePaymentLock;
   window.havkarReadPendingPayment = readPendingPayment;

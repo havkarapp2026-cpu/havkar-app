@@ -68,6 +68,11 @@ const PAYMENT_LOCK_KEY =
 const RECENT_SUCCESS_GUARD_MS =
     15 * 60 * 1000;
 
+/* Review-panel informational lookback for an identical peer payment.
+   Outside RECENT_SUCCESS_GUARD_MS this never blocks signing; it only informs. */
+const REVIEW_MATCH_LOOKBACK_MS =
+    24 * 60 * 60 * 1000;
+
 const PAYMENT_LOCK_STALE_MS =
     3 * 60 * 1000;
 
@@ -3898,6 +3903,113 @@ async function findAnyRecentDuplicate(
 }
 
 
+function lastSuccessfulMatchesRequest(
+    last,
+    request
+){
+
+    if(!last || !request){
+
+        return false;
+
+    }
+
+    const networkId =
+        String(
+            request?.network?.id ||
+            request?.network ||
+            currentNetwork().id
+        );
+
+    const amountText =
+        request.amount?.text ||
+        request.amount;
+
+    return (
+        last.network === networkId &&
+        last.source === request.source &&
+        last.destination === request.destination &&
+        last.amount === amountText &&
+        String(last.memo || "") ===
+            String(request.memo || "")
+    );
+
+}
+
+
+/* Review UX: surface matching peer payments early.
+   - withinGuardWindow: still inside the 15-minute hard guard
+   - otherwise informational only (lookback up to 24h / local last success) */
+async function findPaymentDuplicateNotice(
+    server,
+    request
+){
+
+    const recent =
+        await findAnyRecentDuplicate(
+            server,
+            request
+        );
+
+    if(recent){
+
+        return {
+            ...recent,
+            withinGuardWindow:true,
+            severity:"guard"
+        };
+
+    }
+
+    const last =
+        readLastSuccessfulPayment();
+
+    if(
+        lastSuccessfulMatchesRequest(
+            last,
+            request
+        )
+    ){
+
+        return {
+            ...last,
+            sourceGuard:"localStorage",
+            withinGuardWindow:false,
+            severity:"info"
+        };
+
+    }
+
+    if(!server){
+
+        return null;
+
+    }
+
+    const older =
+        await findRecentHorizonDuplicatePayment(
+            server,
+            request,
+            {
+                windowMs:REVIEW_MATCH_LOOKBACK_MS
+            }
+        );
+
+    if(!older){
+
+        return null;
+
+    }
+
+    return {
+        ...older,
+        withinGuardWindow:false,
+        severity:"info"
+    };
+
+}
+
+
 function samePayment(
     pending,
     prepared
@@ -6039,6 +6151,39 @@ window.havkarFindRecentSuccessfulDuplicate =
         }
 
     };
+
+window.havkarFindPaymentDuplicateNotice =
+    async function(options){
+
+        try{
+
+            const request =
+                readUnsignedPaymentRequest(
+                    options
+                );
+
+            const network =
+                currentNetwork();
+
+            return await findPaymentDuplicateNotice(
+                horizonServer(network),
+                request
+            );
+
+        }
+        catch(error){
+
+            return null;
+
+        }
+
+    };
+
+window.havkarRecentSuccessGuardMs =
+    RECENT_SUCCESS_GUARD_MS;
+
+window.havkarReviewMatchLookbackMs =
+    REVIEW_MATCH_LOOKBACK_MS;
 
 window.havkarAcquirePaymentLock =
     acquirePaymentLock;
