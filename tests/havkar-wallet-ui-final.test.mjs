@@ -42,4 +42,11 @@ assert.match(i18n, /HAVKAR Wallet/);
 assert.match(i18n, /کیف پول هاوکار/);
 assert.match(i18n, /Connect Stellar Wallet/);
 
+assert.match(wallet, /An identical payment already confirmed recently/);
+assert.match(wallet, /Client-side checks cannot guarantee global exactly-once payments/);
+assert.match(wallet, /allowRecentDuplicate/);
+assert.match(i18n, /En identisk betalning har redan bekräftats nyligen/);
+assert.match(i18n, /Fortsätt bara om du medvetet vill skicka samma belopp igen/);
+assert.match(i18n, /Klientkontroller kan inte garantera globala exakt-en-gång-betalningar/);
+
 console.log("HAVKAR_WALLET_UI_FINAL_TEST_OK");

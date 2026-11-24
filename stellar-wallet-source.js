@@ -59,9 +59,29 @@ const PENDING_PAYMENT_KEY =
 const LAST_SUCCESS_PAYMENT_KEY =
     "havkar_stellar_last_success_payment";
 
-/* Block accidental identical peer re-sends shortly after a confirmed success. */
+const PAYMENT_LOCK_KEY =
+    "havkar_stellar_payment_lock";
+
+/* Block accidental identical peer re-sends shortly after a confirmed success.
+   localStorage is same-browser only; Horizon history is the cross-device check.
+   Neither is global exactly-once — Stellar has no payment idempotency key. */
 const RECENT_SUCCESS_GUARD_MS =
     15 * 60 * 1000;
+
+const PAYMENT_LOCK_STALE_MS =
+    3 * 60 * 1000;
+
+const HAVKAR_PAYMENT_TAB_ID =
+    (
+        typeof crypto !== "undefined" &&
+        crypto.randomUUID
+    )
+    ? crypto.randomUUID()
+    : (
+        "tab-" +
+        Date.now().toString(36) +
+        Math.random().toString(36).slice(2)
+    );
 
 /* Owner-authorized Mainnet client capability.
    Server still requires HAVKAR_STELLAR_MAINNET_PAYMENTS_ENABLED=true
@@ -3210,39 +3230,77 @@ function requestWalletSignature(
    It is never replaced with a second payment.
    ========================================================= */
 
+function parsePendingPaymentRaw(
+    raw
+){
+
+    if(!raw){
+
+        return null;
+
+    }
+
+    const parsed =
+        JSON.parse(raw);
+
+    if(
+        !parsed ||
+        typeof parsed.hash !== "string" ||
+        typeof parsed.signedXdr !== "string"
+    ){
+
+        return null;
+
+    }
+
+    return parsed;
+
+}
+
+
 function readPendingPayment(){
 
     try{
 
-        const raw =
-            sessionStorage.getItem(
-                PENDING_PAYMENT_KEY
+        const fromSession =
+            parsePendingPaymentRaw(
+                sessionStorage.getItem(
+                    PENDING_PAYMENT_KEY
+                )
             );
 
+        if(fromSession){
 
-        if(!raw){
-
-            return null;
-
-        }
-
-
-        const parsed =
-            JSON.parse(raw);
-
-
-        if(
-            !parsed ||
-            typeof parsed.hash !== "string" ||
-            typeof parsed.signedXdr !== "string"
-        ){
-
-            return null;
+            return fromSession;
 
         }
 
+        /* localStorage recovers the same signed XDR after refresh / WC reconnect
+           in this browser profile. It is not a secret key, but treat as sensitive. */
+        const fromLocal =
+            parsePendingPaymentRaw(
+                localStorage.getItem(
+                    PENDING_PAYMENT_KEY
+                )
+            );
 
-        return parsed;
+        if(fromLocal){
+
+            try{
+
+                sessionStorage.setItem(
+                    PENDING_PAYMENT_KEY,
+                    JSON.stringify(fromLocal)
+                );
+
+            }
+            catch(error){
+
+            }
+
+        }
+
+        return fromLocal;
 
     }
     catch(error){
@@ -3258,11 +3316,26 @@ function writePendingPayment(
     pending
 ){
 
+    const raw =
+        JSON.stringify(pending);
+
     try{
 
         sessionStorage.setItem(
             PENDING_PAYMENT_KEY,
-            JSON.stringify(pending)
+            raw
+        );
+
+    }
+    catch(error){
+
+    }
+
+    try{
+
+        localStorage.setItem(
+            PENDING_PAYMENT_KEY,
+            raw
         );
 
     }
@@ -3280,6 +3353,122 @@ function clearPendingPayment(){
         sessionStorage.removeItem(
             PENDING_PAYMENT_KEY
         );
+
+    }
+    catch(error){
+
+    }
+
+    try{
+
+        localStorage.removeItem(
+            PENDING_PAYMENT_KEY
+        );
+
+    }
+    catch(error){
+
+    }
+
+}
+
+
+function readPaymentLock(){
+
+    try{
+
+        const raw =
+            localStorage.getItem(
+                PAYMENT_LOCK_KEY
+            );
+
+        if(!raw){
+
+            return null;
+
+        }
+
+        const parsed =
+            JSON.parse(raw);
+
+        if(
+            !parsed ||
+            typeof parsed.tabId !== "string" ||
+            typeof parsed.at !== "number"
+        ){
+
+            return null;
+
+        }
+
+        return parsed;
+
+    }
+    catch(error){
+
+        return null;
+
+    }
+
+}
+
+
+function acquirePaymentLock(){
+
+    const existing =
+        readPaymentLock();
+
+    const now =
+        Date.now();
+
+    if(
+        existing &&
+        existing.tabId !== HAVKAR_PAYMENT_TAB_ID &&
+        now - Number(existing.at || 0) <
+            PAYMENT_LOCK_STALE_MS
+    ){
+
+        throw new Error(
+            "A Stellar payment is already in progress in another browser tab."
+        );
+
+    }
+
+    try{
+
+        localStorage.setItem(
+            PAYMENT_LOCK_KEY,
+            JSON.stringify({
+                tabId:HAVKAR_PAYMENT_TAB_ID,
+                at:now
+            })
+        );
+
+    }
+    catch(error){
+
+    }
+
+}
+
+
+function releasePaymentLock(){
+
+    try{
+
+        const existing =
+            readPaymentLock();
+
+        if(
+            !existing ||
+            existing.tabId === HAVKAR_PAYMENT_TAB_ID
+        ){
+
+            localStorage.removeItem(
+                PAYMENT_LOCK_KEY
+            );
+
+        }
 
     }
     catch(error){
@@ -3401,6 +3590,310 @@ function findRecentSuccessfulDuplicate(
     }
 
     return last;
+
+}
+
+
+function paymentRecordMatchesRequest(
+    record,
+    request
+){
+
+    if(!record || !request){
+
+        return false;
+
+    }
+
+    const amountText =
+        request.amount?.text ||
+        request.amount;
+
+    if(record.type === "payment"){
+
+        return (
+            record.asset_type === "native" &&
+            record.from === request.source &&
+            record.to === request.destination &&
+            parseXlmAmount(
+                record.amount,
+                true
+            ).text === amountText
+        );
+
+    }
+
+    if(
+        record.type === "create_account" &&
+        (
+            request.kind === "createAccount" ||
+            !request.kind
+        )
+    ){
+
+        return (
+            record.account === request.destination &&
+            parseXlmAmount(
+                record.starting_balance,
+                true
+            ).text === amountText
+        );
+
+    }
+
+    return false;
+
+}
+
+
+async function horizonTransactionMemoText(
+    server,
+    hash
+){
+
+    try{
+
+        const tx =
+            await readHorizonTransaction(
+                server,
+                hash
+            );
+
+        if(!tx){
+
+            return "";
+
+        }
+
+        const memoType =
+            String(
+                tx.memo_type ||
+                ""
+            ).toLowerCase();
+
+        if(
+            !memoType ||
+            memoType === "none"
+        ){
+
+            return "";
+
+        }
+
+        return String(
+            tx.memo ||
+            ""
+        );
+
+    }
+    catch(error){
+
+        return null;
+
+    }
+
+}
+
+
+async function findRecentHorizonDuplicatePayment(
+    server,
+    request,
+    options
+){
+
+    const opts =
+        options && typeof options === "object"
+        ? options
+        : {};
+
+    const windowMs =
+        Number(
+            opts.windowMs ||
+            RECENT_SUCCESS_GUARD_MS
+        );
+
+    const sinceMs =
+        Date.now() - windowMs;
+
+    const wantMemo =
+        String(
+            request.memo ||
+            ""
+        );
+
+    try{
+
+        const page =
+            await server
+                .payments()
+                .forAccount(
+                    request.source
+                )
+                .order(
+                    "desc"
+                )
+                .limit(
+                    25
+                )
+                .call();
+
+        const records =
+            page.records || [];
+
+        for(
+            let index = 0;
+            index < records.length;
+            index += 1
+        ){
+
+            const record =
+                records[index];
+
+            const createdMs =
+                Date.parse(
+                    String(
+                        record.created_at ||
+                        ""
+                    )
+                );
+
+            if(
+                !Number.isFinite(createdMs) ||
+                createdMs < sinceMs
+            ){
+
+                continue;
+
+            }
+
+            if(
+                !paymentRecordMatchesRequest(
+                    record,
+                    request
+                )
+            ){
+
+                continue;
+
+            }
+
+            const hash =
+                String(
+                    record.transaction_hash ||
+                    record.transactionHash ||
+                    ""
+                ).trim();
+
+            if(
+                !/^[a-fA-F0-9]{64}$/.test(hash)
+            ){
+
+                continue;
+
+            }
+
+            const memoText =
+                await horizonTransactionMemoText(
+                    server,
+                    hash
+                );
+
+            if(memoText === null){
+
+                continue;
+
+            }
+
+            if(memoText !== wantMemo){
+
+                continue;
+
+            }
+
+            return {
+
+                hash:hash,
+
+                at:createdMs,
+
+                network:String(
+                    request?.network?.id ||
+                    request?.network ||
+                    currentNetwork().id
+                ),
+
+                source:request.source,
+
+                destination:request.destination,
+
+                amount:request.amount?.text || request.amount,
+
+                memo:wantMemo,
+
+                kind:record.type === "create_account"
+                    ? "createAccount"
+                    : "payment",
+
+                sourceGuard:"horizon"
+
+            };
+
+        }
+
+    }
+    catch(error){
+
+        if(
+            error instanceof NotFoundError ||
+            error?.response?.status === 404
+        ){
+
+            return null;
+
+        }
+
+        /* Horizon read failures must not block a deliberate send after review;
+           local guards and hash-idempotent submit still apply. */
+        return null;
+
+    }
+
+    return null;
+
+}
+
+
+async function findAnyRecentDuplicate(
+    server,
+    request,
+    options
+){
+
+    const local =
+        findRecentSuccessfulDuplicate(
+            request
+        );
+
+    if(local){
+
+        return {
+            ...local,
+            sourceGuard:"localStorage"
+        };
+
+    }
+
+    if(!server){
+
+        return null;
+
+    }
+
+    return findRecentHorizonDuplicatePayment(
+        server,
+        request,
+        options
+    );
 
 }
 
@@ -3788,6 +4281,8 @@ async function havkarSignAndSubmitStellarPayment(
     }
 
 
+    acquirePaymentLock();
+
     paymentInFlight =
         true;
 
@@ -3802,8 +4297,12 @@ async function havkarSignAndSubmitStellarPayment(
                 options
             );
 
+        const server =
+            horizonServer(network);
+
         const recentDuplicate =
-            findRecentSuccessfulDuplicate(
+            await findAnyRecentDuplicate(
+                server,
                 request
             );
 
@@ -3819,9 +4318,6 @@ async function havkarSignAndSubmitStellarPayment(
             );
 
         }
-
-        const server =
-            horizonServer(network);
 
         const pending =
             readPendingPayment();
@@ -3987,6 +4483,8 @@ async function havkarSignAndSubmitStellarPayment(
 
         if(!prepared){
 
+            /* Never auto-build a new payment while a different signed pending
+               is still open — user must wait for expiry or finish that hash. */
             albedoPopup =
                 reserveAlbedoSigningWindow();
 
@@ -4058,6 +4556,44 @@ async function havkarSignAndSubmitStellarPayment(
         });
 
 
+        /* Hash-idempotent: if this exact tx already landed, never submit again. */
+        let alreadyConfirmed =
+            null;
+
+        try{
+
+            alreadyConfirmed =
+                await confirmedPayment(
+                    server,
+                    prepared.hash,
+                    prepared,
+                    network
+                );
+
+        }
+        catch(error){
+
+            clearPendingPayment();
+
+            throw error;
+
+        }
+
+
+        if(alreadyConfirmed){
+
+            clearPendingPayment();
+
+            writeLastSuccessfulPayment(
+                alreadyConfirmed,
+                prepared
+            );
+
+            return alreadyConfirmed;
+
+        }
+
+
         let submitError =
             null;
 
@@ -4091,6 +4627,39 @@ async function havkarSignAndSubmitStellarPayment(
 
             submitError =
                 error;
+
+            /* Delayed signature / double-tap: Horizon may already have the hash. */
+            try{
+
+                const raced =
+                    await confirmedPayment(
+                        server,
+                        prepared.hash,
+                        prepared,
+                        network
+                    );
+
+                if(raced){
+
+                    clearPendingPayment();
+
+                    writeLastSuccessfulPayment(
+                        raced,
+                        prepared
+                    );
+
+                    return raced;
+
+                }
+
+            }
+            catch(confirmError){
+
+                clearPendingPayment();
+
+                throw confirmError;
+
+            }
 
         }
 
@@ -4155,6 +4724,8 @@ async function havkarSignAndSubmitStellarPayment(
 
         paymentInFlight =
             false;
+
+        releasePaymentLock();
 
     }
 
@@ -5430,24 +6001,59 @@ window.havkarPrepareStellarPayment =
     havkarPrepareStellarPayment;
 
 window.havkarFindRecentSuccessfulDuplicate =
-    function(options){
+    async function(options){
 
         try{
 
-            return findRecentSuccessfulDuplicate(
+            const request =
                 readUnsignedPaymentRequest(
                     options
-                )
+                );
+
+            const network =
+                currentNetwork();
+
+            return await findAnyRecentDuplicate(
+                horizonServer(network),
+                request
             );
 
         }
         catch(error){
 
-            return null;
+            try{
+
+                return findRecentSuccessfulDuplicate(
+                    readUnsignedPaymentRequest(
+                        options
+                    )
+                );
+
+            }
+            catch(inner){
+
+                return null;
+
+            }
 
         }
 
     };
+
+window.havkarAcquirePaymentLock =
+    acquirePaymentLock;
+
+window.havkarReleasePaymentLock =
+    releasePaymentLock;
+
+window.havkarReadPendingPayment =
+    readPendingPayment;
+
+window.havkarWritePendingPayment =
+    writePendingPayment;
+
+window.havkarClearPendingPayment =
+    clearPendingPayment;
 
 window.havkarSignAndSubmitStellarPayment =
     havkarSignAndSubmitStellarPayment;
