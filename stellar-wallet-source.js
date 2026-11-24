@@ -88,7 +88,172 @@ window.HAVKAR_STELLAR =
 
 /* =========================================================
    STELLAR WALLET KIT
+   Prefer Albedo (web), Freighter (extension), LOBSTR (extension).
+   Other kit modules remain available after the preferred three.
    ========================================================= */
+
+const PREFERRED_STELLAR_WALLET_IDS = [
+    "albedo",
+    "freighter",
+    "lobstr"
+];
+
+function orderedStellarModules(){
+
+    const modules =
+        defaultModules();
+
+    const preferred =
+        [];
+
+    const rest =
+        [];
+
+    for(
+        let index = 0;
+        index < modules.length;
+        index += 1
+    ){
+
+        const module =
+            modules[index];
+
+        const id =
+            String(
+                module?.productId || ""
+            ).toLowerCase();
+
+        if(
+            PREFERRED_STELLAR_WALLET_IDS.includes(
+                id
+            )
+        ){
+
+            preferred.push(
+                module
+            );
+
+        }
+        else{
+
+            rest.push(
+                module
+            );
+
+        }
+
+    }
+
+
+    preferred.sort(
+        function(left, right){
+
+            return PREFERRED_STELLAR_WALLET_IDS.indexOf(
+                String(left.productId || "").toLowerCase()
+            ) - PREFERRED_STELLAR_WALLET_IDS.indexOf(
+                String(right.productId || "").toLowerCase()
+            );
+
+        }
+    );
+
+
+    return preferred.concat(
+        rest
+    );
+
+}
+
+
+function havkarListPreferredStellarWallets(){
+
+    return [
+
+        {
+            id:"albedo",
+            name:"Albedo",
+            kind:"web",
+            installUrl:"https://albedo.link/",
+            connect:"Opens albedo.link in a browser window; always available without an extension.",
+            sign:"Signs unsigned XDR after the user approves in Albedo; network can be Testnet or Mainnet.",
+            notes:"Best default for mobile and desktop browsers. Popup blockers can interrupt signing."
+        },
+
+        {
+            id:"freighter",
+            name:"Freighter",
+            kind:"browser_extension",
+            installUrl:"https://freighter.app",
+            connect:"Requires the Freighter extension (or Freighter mobile via WalletConnect).",
+            sign:"Signs with SEP-43 Freighter API and accepts HAVKAR networkPassphrase.",
+            notes:"Unavailable until the extension reports isConnected. Mobile Freighter uses WalletConnect, not the extension module."
+        },
+
+        {
+            id:"lobstr",
+            name:"LOBSTR",
+            kind:"browser_extension",
+            installUrl:"https://lobstr.co",
+            connect:"Requires the LOBSTR signer extension and an unlocked LOBSTR session.",
+            sign:"Signs XDR but ignores address and networkPassphrase options from the dApp.",
+            notes:"User must select Testnet or Mainnet inside LOBSTR itself. HAVKAR still verifies the signed XDR against the selected network before submit."
+        }
+
+    ];
+
+}
+
+
+function selectedStellarModuleId(){
+
+    try{
+
+        return String(
+            localStorage.getItem(
+                "@StellarWalletsKit/selectedModuleId"
+            ) || ""
+        ).toLowerCase();
+
+    }
+    catch(error){
+
+        return "";
+
+    }
+
+}
+
+
+function havkarStellarExplorerTxUrl(
+    hash,
+    networkId
+){
+
+    const clean =
+        String(hash || "").trim();
+
+    if(
+        !/^[a-fA-F0-9]{64}$/.test(clean)
+    ){
+
+        return "";
+
+    }
+
+    const pathNetwork =
+        String(
+            networkId || currentNetwork().id
+        ) === "PUBLIC"
+        ? "public"
+        : "testnet";
+
+    return "https://stellar.expert/explorer/" +
+        pathNetwork +
+        "/tx/" +
+        clean;
+
+}
+
 
 StellarWalletsKit.init({
 
@@ -96,7 +261,7 @@ StellarWalletsKit.init({
 
     modules:[
 
-        ...defaultModules(),
+        ...orderedStellarModules(),
 
         new WalletConnectModule({
 
@@ -112,10 +277,10 @@ StellarWalletsKit.init({
                     "HAVKAR multi-service platform",
 
                 url:
-                    "https://havkar-app.vercel.app",
+                    "https://havkar.online",
 
                 icons:[
-                    "https://havkar-app.vercel.app/icon.png"
+                    "https://havkar.online/icon.png"
                 ]
 
             },
@@ -804,11 +969,31 @@ function safeErrorMessage(
 
 
     if(
-        /reject|denied|cancel|closed|dismiss/i
+        /reject|denied|cancel|closed|dismiss|user declined|user refused/i
             .test(message)
     ){
 
-        return "The wallet did not approve this request.";
+        return "Signature declined or cancelled in the wallet. No transaction was submitted.";
+
+    }
+
+
+    if(
+        /not connected|not installed|is not connected|freighter is not|lobstr is not/i
+            .test(message)
+    ){
+
+        return "The selected wallet extension is not available. Install or unlock Albedo, Freighter, or LOBSTR, then reconnect.";
+
+    }
+
+
+    if(
+        /failed to fetch|networkerror|load failed|err_network|timeout|timed out|offline/i
+            .test(message)
+    ){
+
+        return "Network connection to Horizon or the wallet was interrupted. Check connectivity and try again.";
 
     }
 
@@ -3813,6 +3998,15 @@ window.havkarFetchStellarProtocolInfo =
 
 window.havkarClassifyStellarAddress =
     classifyStellarAddress;
+
+window.havkarListPreferredStellarWallets =
+    havkarListPreferredStellarWallets;
+
+window.havkarSelectedStellarModuleId =
+    selectedStellarModuleId;
+
+window.havkarStellarExplorerTxUrl =
+    havkarStellarExplorerTxUrl;
 
 window.havkarPrepareStellarPayment =
     havkarPrepareStellarPayment;
