@@ -22,7 +22,7 @@
     --green-dark:#558b2f;
     --green-deep:#3e6b22;
     --green-light:#eef7e8;
-    --bg:#f4f6f3;
+    --bg:radial-gradient(1200px 600px at 10% -10%,#e8f5e9 0%,transparent 55%),linear-gradient(180deg,#f7faf5 0%,#f4f6f3 40%,#eef2ea 100%);
     --white:#fff;
     --text:#243024;
     --muted:#5f6b60;
@@ -30,6 +30,129 @@
     --shadow:0 8px 28px rgba(36,48,36,.08);
     --nav-height:74px;
 }
+.journey-hud{
+    margin:12px 0 0;
+    padding:14px;
+    border-radius:18px;
+    border:1px solid #d7e6cb;
+    background:linear-gradient(145deg,#ffffff 0%,#f3f9ee 100%);
+    box-shadow:var(--shadow);
+}
+.journey-hud h3{
+    font-size:1rem;
+    color:var(--green-deep);
+    margin:0 0 10px;
+    display:flex;
+    gap:8px;
+    align-items:center;
+}
+.journey-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+    gap:10px;
+}
+.journey-metric{
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:10px 12px;
+}
+.journey-metric span{
+    display:block;
+    font-size:.72rem;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+}
+.journey-metric strong{
+    display:block;
+    margin-top:4px;
+    font-size:1.05rem;
+    color:var(--text);
+}
+.geo-consent{
+    margin:10px 0 12px;
+    padding:12px 14px;
+    border-radius:14px;
+    border:1px solid #c5dfb4;
+    background:#f3f9ee;
+    color:#2e4a28;
+    font-size:.92rem;
+    line-height:1.45;
+}
+.geo-consent-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:10px;
+}
+.geo-consent-actions button{
+    border:0;
+    border-radius:999px;
+    padding:9px 14px;
+    font-weight:650;
+    cursor:pointer;
+}
+.geo-consent-actions .accept{
+    background:var(--green);
+    color:#fff;
+}
+.geo-consent-actions .deny{
+    background:#fff;
+    color:var(--green-deep);
+    border:1px solid var(--border);
+}
+.travel-prefs{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+    gap:10px;
+    margin:10px 0 0;
+}
+.travel-prefs label{
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+    font-size:.82rem;
+    color:var(--muted);
+}
+.travel-prefs select{
+    min-height:40px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:8px 10px;
+    background:#fff;
+}
+.camera-honesty{
+    margin-top:12px;
+    padding:12px;
+    border-radius:14px;
+    border:1px dashed #b7d0a8;
+    background:#fbfff8;
+    font-size:.88rem;
+    color:var(--muted);
+    line-height:1.45;
+}
+.camera-honesty ul{margin:8px 0 0 18px}
+.events-split-note{
+    margin:0 0 14px;
+    padding:10px 12px;
+    border-radius:14px;
+    background:#fff8e7;
+    border:1px solid #f0d58a;
+    color:#7a5b12;
+    font-size:.9rem;
+}
+.ticket-type[data-ticket-type="events"]{
+    border:1px dashed #c9a227;
+    background:#fffdf5;
+}
+.revenue-about{
+    margin:12px 0 0;
+    font-size:.84rem;
+    color:var(--muted);
+    line-height:1.45;
+}
+.revenue-about a{color:var(--green-deep);font-weight:650}
 html{scroll-behavior:smooth}
 body{
     min-height:100vh;
@@ -464,6 +587,10 @@ html[dir="rtl"] .havkar-map-layers{
 </header>
 
 <main class="page">
+    <div class="events-split-note" role="note">
+        <strong>Travel Tickets</strong> cover flights, trains, buses, ferries, hotels, taxi/transfers and the live map.
+        <strong>Event tickets</strong> (QR / capacity / check-in) stay in the separate Events module — they are not mixed into travel checkout.
+    </div>
     <h2 class="kicker" style="margin:0 0 10px;font-size:0.95rem;letter-spacing:0.02em">
         <i class="fas fa-globe" aria-hidden="true"></i> Choose a travel category
     </h2>
@@ -476,7 +603,7 @@ html[dir="rtl"] .havkar-map-layers{
         <button class="ticket-type" type="button" data-ticket-type="transfer" aria-pressed="false"><i class="fas fa-right-left" aria-hidden="true"></i><span>Transfers</span></button>
         <button class="ticket-type" type="button" data-ticket-type="combined" aria-pressed="false"><i class="fas fa-route" aria-hidden="true"></i><span>Combined</span></button>
         <button class="ticket-type" type="button" data-ticket-type="hotel" aria-pressed="false"><i class="fas fa-hotel" aria-hidden="true"></i><span>Hotels</span></button>
-        <button class="ticket-type" type="button" data-ticket-type="events" aria-pressed="false"><i class="fas fa-ticket" aria-hidden="true"></i><span>Events</span></button>
+        <button class="ticket-type" type="button" data-ticket-type="events" aria-pressed="false"><i class="fas fa-ticket" aria-hidden="true"></i><span>Events (separate)</span></button>
     </div>
     <details class="panel" style="margin:0 0 14px" aria-label="About travel search">
         <summary class="kicker" style="cursor:pointer;list-style:none"><i class="fas fa-circle-info" aria-hidden="true"></i> About this search</summary>
@@ -495,18 +622,79 @@ html[dir="rtl"] .havkar-map-layers{
     </details>
 
     <details class="panel havkar-module-map" id="travelMapPanel" open aria-label="Travel route map" style="margin:0 0 16px;position:relative;z-index:1;isolation:isolate">
-        <summary class="kicker" style="cursor:pointer;list-style:none"><i class="fas fa-map-location-dot" aria-hidden="true"></i> Travel map &amp; tools</summary>
+        <summary class="kicker" style="cursor:pointer;list-style:none"><i class="fas fa-map-location-dot" aria-hidden="true"></i> Live HAVKAR travel map</summary>
         <link rel="stylesheet" href="/havkar-map-platform.css">
         <link rel="stylesheet" href="/havkar-map-pro.css">
-        <p class="lead" style="margin:10px 0 10px">Street / satellite / hybrid, live traffic, place search, GPS, routing. Schedules and fares are never invented. All active map tools are free.</p>
+        <p class="lead" style="margin:10px 0 10px">Green HAVKAR map: street / satellite / hybrid, traffic, place search, GPS (with consent), routing, trip stops, public cameras. Schedules and fares are never invented.</p>
+        <div id="ticketsGeoConsent" class="geo-consent" role="region" aria-label="Location permission">
+            <strong>Your location</strong>
+            <p style="margin:6px 0 0">HAVKAR can show your live position on this device only after you accept. Coordinates stay in the browser and are never uploaded to HAVKAR servers. Background tracking without consent is disabled.</p>
+            <div class="geo-consent-actions">
+                <button type="button" class="accept" id="ticketsGeoAccept">Allow GPS on this device</button>
+                <button type="button" class="deny" id="ticketsGeoDeny">Not now</button>
+                <button type="button" class="deny" id="ticketsGeoStop" hidden>Stop live follow</button>
+            </div>
+            <p id="ticketsGeoStatus" class="pending-note" style="margin:10px 0 0" role="status">GPS waiting for your choice.</p>
+        </div>
+        <div class="travel-prefs" aria-label="Travel search preferences">
+            <label>Sort preference
+                <select id="travelPrefSort">
+                    <option value="partner">Partner default</option>
+                    <option value="duration">Prefer shorter duration</option>
+                    <option value="price">Prefer lower price</option>
+                    <option value="direct">Prefer fewer stops</option>
+                </select>
+            </label>
+            <label>Max stops (hint)
+                <select id="travelPrefStops">
+                    <option value="any">Any</option>
+                    <option value="0">Direct only</option>
+                    <option value="1">Max 1 stop</option>
+                    <option value="2">Max 2 stops</option>
+                </select>
+            </label>
+            <label>Vehicle focus
+                <select id="travelPrefVehicle">
+                    <option value="auto">Match selected tab</option>
+                    <option value="train">Train</option>
+                    <option value="bus">Bus</option>
+                    <option value="ferry">Ferry</option>
+                    <option value="flight">Flight</option>
+                </select>
+            </label>
+        </div>
+        <p class="pending-note" style="margin:8px 0 0">Preferences are search hints for partner redirects. HAVKAR never invents inventory when a partner has no coverage.</p>
         <div id="ticketsProToolbarHost"></div>
         <div id="ticketsLayerMenuHost" style="margin:0 0 10px"></div>
         <div id="ticketsMapShell" class="havkar-map-shell">
-          <div id="ticketsMapHost" class="havkar-map-host" style="height:min(58vh,480px);min-height:320px;border-radius:14px;border:0"></div>
+          <div id="ticketsMapHost" class="havkar-map-host" style="height:min(62vh,520px);min-height:340px;border-radius:16px;border:0"></div>
+        </div>
+        <div id="ticketsJourneyHud" class="journey-hud" aria-live="polite">
+            <h3><i class="fas fa-route" aria-hidden="true"></i> Journey panel</h3>
+            <div class="journey-grid">
+                <div class="journey-metric"><span>Origin</span><strong id="jhOrigin">—</strong></div>
+                <div class="journey-metric"><span>Destination</span><strong id="jhDest">—</strong></div>
+                <div class="journey-metric"><span>Distance</span><strong id="jhDistance">—</strong></div>
+                <div class="journey-metric"><span>ETA</span><strong id="jhEta">—</strong></div>
+                <div class="journey-metric"><span>Remaining (GPS)</span><strong id="jhRemaining">Needs consent</strong></div>
+                <div class="journey-metric"><span>Provider</span><strong id="jhProvider">—</strong></div>
+                <div class="journey-metric"><span>Stops / change</span><strong id="jhStops">Use trip planner below</strong></div>
+                <div class="journey-metric"><span>Vehicle live status</span><strong id="jhVehicle">Not available without licensed feed</strong></div>
+            </div>
+            <p class="revenue-about">Partner checkout shows the final price charged by that partner. HAVKAR does not advertise platform commission inside travel purchase. Public revenue principles: <a href="about.html">About HAVKAR</a>. Marketplace 5% (Buy &amp; Sell) is never mixed into flight/train/bus/ferry/event ticket pricing here.</p>
         </div>
         <div id="havkarTripPlanner" class="havkar-trip-planner" aria-label="Trip planner"></div>
         <div id="havkarSurroundingsPanel" class="havkar-surroundings" hidden aria-live="polite"></div>
-        <p id="ticketsMapNote" class="pending-note" role="status">Search origin and destination to place markers. Illustrative flight connections are geographic lines, not verified airways. Satellite tiles are static imagery, not a live camera. Live video cams use curated YouTube Live embeds; intersection layer is licensed JPEG snapshots only. Rain/cameras only from licensed public sources.</p>
+        <div class="camera-honesty" id="ticketsCameraHonesty">
+            <strong><i class="fas fa-video" aria-hidden="true"></i> Public cameras (licensed only)</strong>
+            <p style="margin:6px 0 0">Open the <em>cameras</em> / <em>live</em> layers on the map toolbar. Sources currently wired: Singapore LTA JPEG, Finland Digitraffic, Calgary traffic, Datumfeed open registries (Austin / Ontario / TfL JamCams / Toronto), and curated YouTube Live embeds that pass a LIVE probe. Private or unauthorized CCTV is never shown. JPEG snapshots are never labeled LIVE. Satellite tiles are static imagery.</p>
+            <ul>
+                <li>Live video = probe-confirmed YouTube Live only</li>
+                <li>Intersection / road cams = periodic public JPEG + place name + source attribution</li>
+                <li>If a feed is down or not live, HAVKAR shows UNKNOWN / offline — never fake motion</li>
+            </ul>
+        </div>
+        <p id="ticketsMapNote" class="pending-note" role="status">Search origin and destination to place markers. Illustrative flight connections are geographic lines, not verified airways. Rain/cameras only from licensed public sources.</p>
         <button type="button" id="ticketsShareLocationBtn" hidden aria-hidden="true">Share location</button>
         <button type="button" id="ticketsCopyLocationBtn" hidden aria-hidden="true">Copy location link</button>
     </details>
@@ -679,6 +867,7 @@ html[dir="rtl"] .havkar-map-layers{
         </form>
         <div id="transfer-booking" class="pending-note">
             No HAVKAR fare is shown. Directions and partner estimates open on their official sites.
+            Marketplace Buy &amp; Sell 5% fees are not applied to taxi/transfer partner redirects.
         </div>
     </section>
 
@@ -1252,12 +1441,98 @@ html[dir="rtl"] .havkar-map-layers{
     }).catch(function(){ return null; });
   }
 
+  function setJourneyHud( partial ){
+    function setText(id, value){
+      var el = document.getElementById(id);
+      if(el) el.textContent = value == null || value === '' ? '—' : String(value);
+    }
+    if(!partial) return;
+    if('origin' in partial) setText('jhOrigin', partial.origin);
+    if('dest' in partial) setText('jhDest', partial.dest);
+    if('distance' in partial) setText('jhDistance', partial.distance);
+    if('eta' in partial) setText('jhEta', partial.eta);
+    if('remaining' in partial) setText('jhRemaining', partial.remaining);
+    if('provider' in partial) setText('jhProvider', partial.provider);
+    if('stops' in partial) setText('jhStops', partial.stops);
+    if('vehicle' in partial) setText('jhVehicle', partial.vehicle);
+  }
+
+  window.__havkarTicketsJourney = window.__havkarTicketsJourney || { dest:null, watchId:null };
+
+  function haversineKm(aLat, aLng, bLat, bLng){
+    var toRad = Math.PI / 180;
+    var dLat = (bLat - aLat) * toRad;
+    var dLng = (bLng - aLng) * toRad;
+    var s =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(aLat * toRad) * Math.cos(bLat * toRad) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    return 6371 * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
+  }
+
+  function stopLiveFollow(){
+    if(window.__havkarTicketsJourney.watchId != null && navigator.geolocation){
+      try{ navigator.geolocation.clearWatch(window.__havkarTicketsJourney.watchId); }catch(_e){}
+    }
+    window.__havkarTicketsJourney.watchId = null;
+    var stopBtn = document.getElementById('ticketsGeoStop');
+    if(stopBtn) stopBtn.hidden = true;
+  }
+
+  function startLiveFollow(){
+    if(window.HAVKAR_GEO_CONSENT !== true || !navigator.geolocation){
+      setJourneyHud({ remaining: 'Needs consent' });
+      return;
+    }
+    stopLiveFollow();
+    var stopBtn = document.getElementById('ticketsGeoStop');
+    if(stopBtn) stopBtn.hidden = false;
+    window.__havkarTicketsJourney.watchId = navigator.geolocation.watchPosition(
+      function(pos){
+        var dest = window.__havkarTicketsJourney.dest;
+        if(!dest){
+          setJourneyHud({ remaining: 'Waiting for destination' });
+          return;
+        }
+        var km = haversineKm(pos.coords.latitude, pos.coords.longitude, dest.latitude, dest.longitude);
+        var acc = Number(pos.coords.accuracy);
+        setJourneyHud({
+          remaining: '~' + km.toFixed(1) + ' km left' +
+            (Number.isFinite(acc) ? ' · ±' + Math.round(acc) + ' m' : '')
+        });
+        if(travelMapApi && travelMapApi.requestGps){
+          /* refresh marker via existing GPS helper without re-prompting */
+          try{
+            if(travelMapApi._userGpsLayer || true){
+              travelMapApi.requestGps().catch(function(){});
+            }
+          }catch(_g){}
+        }
+      },
+      function(){
+        setJourneyHud({ remaining: 'GPS follow paused' });
+      },
+      { enableHighAccuracy:true, maximumAge:5000, timeout:20000 }
+    );
+  }
+
   window.__havkarTicketsDrawRoute = function(fromQuery, toQuery, mode){
     if(!fromQuery || !toQuery){
       setMapNote('Enter origin and destination to show the travel map.');
       return;
     }
     setMapNote('Locating ' + fromQuery + ' → ' + toQuery + '…');
+    setJourneyHud({
+      origin: fromQuery,
+      dest: toQuery,
+      distance: '…',
+      eta: '…',
+      provider: '…',
+      vehicle: mode === 'flight'
+        ? 'Flight path not live-tracked without licensed ADS-B/airline feed'
+        : 'Live vehicle telemetry needs a licensed operator feed — not active here',
+      stops: 'Trip planner below for multi-stop changes'
+    });
     if (travelMapPanel && !travelMapPanel.open) travelMapPanel.open = true;
     var ready = ensureTravelMap ? ensureTravelMap() : (travelMapApi ? Promise.resolve(travelMapApi) : mountTravelMap());
     ready.then(function(api){
@@ -1266,8 +1541,10 @@ html[dir="rtl"] .havkar-map-layers{
         var a = pair[0], b = pair[1];
         if(!a || !b){
           setMapNote('Could not resolve one or both places on the map. No invented coordinates were used.');
+          setJourneyHud({ distance:'Unresolved', eta:'—', provider:'No invented pins' });
           return;
         }
+        window.__havkarTicketsJourney.dest = { latitude:b.latitude, longitude:b.longitude, label:b.label||toQuery };
         api.clearPins && api.clearPins();
         api.clearRoute && api.clearRoute();
         api.setMarkers([
@@ -1282,7 +1559,14 @@ html[dir="rtl"] .havkar-map-layers{
           }).bindPopup('Illustrative geographic connection — not a verified flight path');
           api.map.addLayer(line);
           try { api.map.fitBounds(line.getBounds(), { padding:[36,36] }); } catch(_e){}
+          var great = haversineKm(a.latitude,a.longitude,b.latitude,b.longitude).toFixed(0);
+          setJourneyHud({
+            distance: '~' + great + ' km (great-circle, illustrative)',
+            eta: 'Airline schedule required',
+            provider: 'Illustrative polyline (not ADS-B)'
+          });
           setMapNote('Airport markers placed. Blue dashed line is an illustrative geographic connection, not a verified airway.');
+          if(window.HAVKAR_GEO_CONSENT === true) startLiveFollow();
           return;
         }
         api.setCenter(a.latitude, a.longitude);
@@ -1294,13 +1578,79 @@ html[dir="rtl"] .havkar-map-layers{
             var delayTxt = Number.isFinite(delay) && delay > 0 ? (' · traffic delay ~'+Math.round(delay/60)+' min') : '';
             var updatedClock='';
             try{ if(route.last_updated){ var ud=new Date(route.last_updated); if(!isNaN(ud.getTime())) updatedClock=ud.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}); } }catch(_u){}
+            setJourneyHud({
+              distance: '~' + km + ' km',
+              eta: '~' + mins + ' min' + delayTxt,
+              provider: (route.provider || profile) + (updatedClock ? (' · ' + updatedClock) : '')
+            });
             setMapNote('Route preview ('+(route.provider||profile)+'): ~'+km+' km · ~'+mins+' min'+delayTxt+(updatedClock ? (' · '+updatedClock) : '')+'. Free map tool — not a ticket booking.');
           } else {
+            setJourneyHud({ distance:'Markers only', eta:'Route geometry unavailable', provider:'Fallback' });
             setMapNote('Markers placed. Live route geometry unavailable; open external directions if needed.');
           }
+          if(window.HAVKAR_GEO_CONSENT === true) startLiveFollow();
         });
       });
     });
+  };
+
+  (function wireGeoConsent(){
+    var accept = document.getElementById('ticketsGeoAccept');
+    var deny = document.getElementById('ticketsGeoDeny');
+    var stop = document.getElementById('ticketsGeoStop');
+    var status = document.getElementById('ticketsGeoStatus');
+    function setStatus(msg){ if(status) status.textContent = msg; }
+    try{
+      if(localStorage.getItem('havkar_geo_consent_tickets') === '1'){
+        window.HAVKAR_GEO_CONSENT = true;
+        setStatus('GPS allowed on this device. Coordinates stay in your browser.');
+      }
+    }catch(_e){}
+    if(accept){
+      accept.addEventListener('click', function(){
+        window.HAVKAR_GEO_CONSENT = true;
+        try{ localStorage.setItem('havkar_geo_consent_tickets','1'); }catch(_e){}
+        setStatus('GPS allowed. Use My location on the toolbar or search a route to follow remaining distance.');
+        if(window.__havkarTicketsJourney.dest) startLiveFollow();
+      });
+    }
+    if(deny){
+      deny.addEventListener('click', function(){
+        window.HAVKAR_GEO_CONSENT = false;
+        try{ localStorage.removeItem('havkar_geo_consent_tickets'); }catch(_e){}
+        stopLiveFollow();
+        setStatus('GPS not enabled. Map and partner search still work without sharing your location.');
+        setJourneyHud({ remaining: 'Needs consent' });
+      });
+    }
+    if(stop){
+      stop.addEventListener('click', function(){
+        stopLiveFollow();
+        setStatus('Live follow stopped. Consent remains until you tap Not now.');
+        setJourneyHud({ remaining: 'Follow stopped' });
+      });
+    }
+  })();
+
+  (function wireTravelPrefs(){
+    ['travelPrefSort','travelPrefStops','travelPrefVehicle'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(!el) return;
+      try{
+        var saved = localStorage.getItem('havkar_'+id);
+        if(saved) el.value = saved;
+      }catch(_e){}
+      el.addEventListener('change', function(){
+        try{ localStorage.setItem('havkar_'+id, el.value); }catch(_e2){}
+      });
+    });
+  })();
+
+  window.__havkarTravelPrefsQuery = function(){
+    var sort = (document.getElementById('travelPrefSort')||{}).value || 'partner';
+    var stops = (document.getElementById('travelPrefStops')||{}).value || 'any';
+    var vehicle = (document.getElementById('travelPrefVehicle')||{}).value || 'auto';
+    return { sort:sort, stops:stops, vehicle:vehicle };
   };
 
   var travelMapPanel = document.getElementById('travelMapPanel');
@@ -1384,6 +1734,13 @@ html[dir="rtl"] .havkar-map-layers{
     warn.style.marginTop='10px';
     warn.textContent='If a partner shows no trips for this corridor, that means no listed service — HAVKAR will not invent one.';
     out.appendChild(warn);
+    var prefs=typeof window.__havkarTravelPrefsQuery==='function' ? window.__havkarTravelPrefsQuery() : null;
+    if(prefs){
+      var prefNote=document.createElement('p');
+      prefNote.className='pending-note';
+      prefNote.textContent='Your search hints: sort='+prefs.sort+', stops='+prefs.stops+', vehicle='+prefs.vehicle+'. Partners may ignore hints; HAVKAR does not fabricate matching offers.';
+      out.appendChild(prefNote);
+    }
   }
 
   function openOmioPartnerSearch(mode, form, out){
@@ -1397,13 +1754,17 @@ html[dir="rtl"] .havkar-map-layers{
       return;
     }
     if(out) out.textContent='Building official worldwide partner links…';
+    var prefs=typeof window.__havkarTravelPrefsQuery==='function' ? window.__havkarTravelPrefsQuery() : {};
     var payload={
       action:'travel_partner_links',
       mode:mode,
       from:from,
       to:to,
       date:date,
-      adults:adults
+      adults:adults,
+      prefer_sort:prefs.sort||'partner',
+      prefer_stops:prefs.stops||'any',
+      prefer_vehicle:prefs.vehicle||'auto'
     };
     fetch('/api/currency-matrix',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
       .then(function(r){return r.json()})

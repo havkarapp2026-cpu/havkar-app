@@ -774,7 +774,17 @@
                   rej(Object.assign(new Error("geolocation_unavailable"), { code: 0 }));
                   return;
                 }
-                /* Device GPS only — coordinates stay in-browser; never posted to HAVKAR. */
+                /* Explicit in-app consent required (Travel Tickets / map toolbar).
+                   Coordinates stay in-browser; never posted to HAVKAR servers. */
+                if (window.HAVKAR_GEO_CONSENT !== true) {
+                  rej(
+                    Object.assign(new Error("geolocation_consent_required"), {
+                      code: 1,
+                      consent_required: true
+                    })
+                  );
+                  return;
+                }
                 navigator.geolocation.getCurrentPosition(
                   function (pos) {
                     var plat = pos.coords.latitude;
