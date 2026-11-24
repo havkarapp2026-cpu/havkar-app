@@ -148251,8 +148251,86 @@ ${value}`, dataLines++;
     "freighter",
     "lobstr"
   ];
+  var WC_STELLAR_LOBSTR_ID = "76a3d548a08cf402f5c7d021f24fd2881d767084b387a5325df88bc3d4b6f21b";
+  var WC_STELLAR_FREIGHTER_ID = "997a355c8f682468706a76cff1b004a7115f505fb962dac54b6e9b442dd1c380";
+  var WC_STELLAR_SCOPULY_ID = "9c78aee7d8a771255942334d06d2cbab89e2178ee49fee4ea3b6c78032fcac76";
+  var EXTENSION_ONLY_WALLET_IDS = [
+    "freighter",
+    "lobstr",
+    "rabet",
+    "xbull",
+    "hana",
+    "klever",
+    "onekey",
+    "bitget",
+    "fordefi",
+    "cactuslink",
+    "dcent",
+    "scopuly"
+  ];
+  var HAVKAR_STELLAR_APPKIT_NETWORKS = [
+    {
+      id: "pubnet",
+      name: "Stellar Public",
+      nativeCurrency: {
+        name: "Lumens",
+        symbol: "XLM",
+        decimals: 7
+      },
+      rpcUrls: {
+        default: {
+          http: [
+            "https://horizon.stellar.org"
+          ]
+        }
+      },
+      blockExplorers: {
+        default: {
+          name: "StellarExpert",
+          url: "https://stellar.expert/explorer/public"
+        }
+      },
+      chainNamespace: "stellar",
+      caipNetworkId: "stellar:pubnet"
+    },
+    {
+      id: "testnet",
+      name: "Stellar Testnet",
+      nativeCurrency: {
+        name: "Test Lumens",
+        symbol: "XLM",
+        decimals: 7
+      },
+      rpcUrls: {
+        default: {
+          http: [
+            "https://horizon-testnet.stellar.org"
+          ]
+        }
+      },
+      blockExplorers: {
+        default: {
+          name: "StellarExpert Testnet",
+          url: "https://stellar.expert/explorer/testnet"
+        }
+      },
+      chainNamespace: "stellar",
+      caipNetworkId: "stellar:testnet"
+    }
+  ];
+  function isLikelyMobileBrowser() {
+    try {
+      const ua3 = String(
+        navigator.userAgent || navigator.vendor || ""
+      );
+      return /Android|iPhone|iPad|iPod|Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua3);
+    } catch (error) {
+      return false;
+    }
+  }
   function orderedStellarModules() {
     const modules = defaultModules();
+    const mobile = isLikelyMobileBrowser();
     const preferred = [];
     const rest = [];
     for (let index2 = 0; index2 < modules.length; index2 += 1) {
@@ -148260,6 +148338,11 @@ ${value}`, dataLines++;
       const id = String(
         module?.productId || ""
       ).toLowerCase();
+      if (mobile && EXTENSION_ONLY_WALLET_IDS.includes(
+        id
+      )) {
+        continue;
+      }
       if (PREFERRED_STELLAR_WALLET_IDS.includes(
         id
       )) {
@@ -148286,6 +148369,7 @@ ${value}`, dataLines++;
     );
   }
   function havkarListPreferredStellarWallets() {
+    const mobile = isLikelyMobileBrowser();
     return [
       {
         id: "albedo",
@@ -148299,22 +148383,22 @@ ${value}`, dataLines++;
       {
         id: "freighter",
         name: "Freighter",
-        kind: "browser_extension",
+        kind: mobile ? "walletconnect_mobile" : "browser_extension",
         installUrl: "https://freighter.app",
-        connect: "Desktop/browser: Freighter extension. Android Freighter Mobile: WalletConnect (extension module returns unavailable on mobile).",
+        connect: mobile ? "Android/iOS: use WalletConnect \u2192 Freighter Mobile (not the browser-extension row)." : "Desktop: Freighter browser extension.",
         sign: "Payment XDR via signTransaction; challenge via signMessage / signAuthEntry (SEP-43/53). Honors networkPassphrase.",
         challengeSign: "supported",
-        notes: "On Android, open the kit modal and choose WalletConnect, then approve the Freighter Mobile session. No private key is shared with HAVKAR."
+        notes: "Extension module is hidden on mobile browsers. Connect through WalletConnect so Freighter Mobile can deep-link."
       },
       {
         id: "lobstr",
         name: "LOBSTR",
-        kind: "browser_extension",
+        kind: mobile ? "walletconnect_mobile" : "browser_extension",
         installUrl: "https://lobstr.co",
-        connect: "Requires the LOBSTR signer extension (or LOBSTR app bridge) and an unlocked session that grants the site public-key access.",
-        sign: "Payment XDR via signTransaction; challenge via signMessage. Ignores dApp address and networkPassphrase options.",
+        connect: mobile ? "Android/iOS: use WalletConnect \u2192 LOBSTR Wallet (or Connect LOBSTR via WalletConnect). Do not use the extension Install row." : "Desktop: LOBSTR browser signer extension.",
+        sign: "Payment XDR via signTransaction; challenge via signMessage. LOBSTR ignores dApp networkPassphrase options.",
         challengeSign: "supported",
-        notes: "Permissions: public key read + optional message/tx signature approval in LOBSTR UI. Network must be set inside LOBSTR. HAVKAR never receives the secret key."
+        notes: "The Android LOBSTR app is not a browser extension. HAVKAR hides the false Install badge on mobile and routes through WalletConnect (stellar:pubnet)."
       }
     ];
   }
@@ -148356,7 +148440,23 @@ ${value}`, dataLines++;
         allowedChains: [
           WalletConnectTargetChain.TESTNET,
           WalletConnectTargetChain.PUBLIC
-        ]
+        ],
+        /* Override kit default Ethereum `mainnet` AppKit network.
+           With eip155:1, AppKit search filters out stellar:pubnet
+           wallets → LOBSTR search returns "No Wallet found". */
+        appKitOptions: {
+          networks: HAVKAR_STELLAR_APPKIT_NETWORKS,
+          featuredWalletIds: [
+            WC_STELLAR_LOBSTR_ID,
+            WC_STELLAR_FREIGHTER_ID,
+            WC_STELLAR_SCOPULY_ID
+          ],
+          includeWalletIds: [
+            WC_STELLAR_LOBSTR_ID,
+            WC_STELLAR_FREIGHTER_ID,
+            WC_STELLAR_SCOPULY_ID
+          ]
+        }
       })
     ]
   });
@@ -149821,11 +149921,47 @@ ${value}`, dataLines++;
       paymentInFlight = false;
     }
   }
+  function rememberConnectedAddress(address) {
+    HAVKAR_STELLAR.connected = true;
+    HAVKAR_STELLAR.address = address;
+    window.dispatchEvent(
+      new CustomEvent(
+        "havkar-stellar-connected",
+        {
+          detail: {
+            address
+          }
+        }
+      )
+    );
+  }
+  function failConnect(error) {
+    HAVKAR_STELLAR.connected = false;
+    HAVKAR_STELLAR.address = null;
+    window.dispatchEvent(
+      new CustomEvent(
+        "havkar-stellar-error",
+        {
+          detail: {
+            message: safeErrorMessage(
+              error
+            )
+          }
+        }
+      )
+    );
+    throw new Error(
+      safeErrorMessage(error)
+    );
+  }
   async function havkarConnectStellarWallet() {
     try {
+      const mobile = isLikelyMobileBrowser();
       const result = await StellarWalletsKit.authModal({
-        showInstallLabel: true,
-        hideUnsupportedWallets: false
+        /* On phones, Install for LOBSTR/Freighter is misleading
+           (extension URL, not the installed Android app). */
+        showInstallLabel: !mobile,
+        hideUnsupportedWallets: mobile
       });
       const address = String(
         result?.address || ""
@@ -149835,36 +149971,42 @@ ${value}`, dataLines++;
           "The wallet did not return a valid Stellar public key."
         );
       }
-      HAVKAR_STELLAR.connected = true;
-      HAVKAR_STELLAR.address = address;
-      window.dispatchEvent(
-        new CustomEvent(
-          "havkar-stellar-connected",
-          {
-            detail: {
-              address
-            }
-          }
-        )
+      rememberConnectedAddress(
+        address
       );
       return address;
     } catch (error) {
-      HAVKAR_STELLAR.connected = false;
-      HAVKAR_STELLAR.address = null;
-      window.dispatchEvent(
-        new CustomEvent(
-          "havkar-stellar-error",
-          {
-            detail: {
-              message: safeErrorMessage(
-                error
-              )
-            }
-          }
-        )
+      failConnect(
+        error
       );
-      throw new Error(
-        safeErrorMessage(error)
+    }
+  }
+  async function havkarConnectStellarWalletConnect() {
+    try {
+      if (typeof StellarWalletsKit.setWallet !== "function") {
+        throw new Error(
+          "WalletConnect is not available in this wallet kit build."
+        );
+      }
+      StellarWalletsKit.setWallet(
+        "wallet_connect"
+      );
+      const result = typeof StellarWalletsKit.fetchAddress === "function" ? await StellarWalletsKit.fetchAddress() : await StellarWalletsKit.getAddress();
+      const address = String(
+        result?.address || ""
+      ).trim();
+      if (!isPublicKey(address)) {
+        throw new Error(
+          "WalletConnect did not return a valid Stellar public key. Open LOBSTR \u2192 WalletConnect and approve the session."
+        );
+      }
+      rememberConnectedAddress(
+        address
+      );
+      return address;
+    } catch (error) {
+      failConnect(
+        error
       );
     }
   }
@@ -149908,6 +150050,8 @@ ${value}`, dataLines++;
     }
   }
   window.havkarConnectStellarWallet = havkarConnectStellarWallet;
+  window.havkarConnectStellarWalletConnect = havkarConnectStellarWalletConnect;
+  window.havkarIsLikelyMobileBrowser = isLikelyMobileBrowser;
   window.havkarDisconnectStellarWallet = havkarDisconnectStellarWallet;
   window.havkarGetStellarAddress = havkarGetStellarAddress;
   window.havkarIsStellarConnected = havkarIsStellarConnected;
@@ -149945,8 +150089,10 @@ ${value}`, dataLines++;
     );
     if (moduleId === "albedo") {
       throw new Error(
-        "Albedo does not support HAVKAR\u2019s no-transfer message challenge. Use LOBSTR or Freighter (desktop extension or Freighter Mobile via WalletConnect)."
+        "Albedo does not support HAVKAR\u2019s no-transfer message challenge. Use LOBSTR or Freighter via WalletConnect on Android, then try again."
       );
+    }
+    if (moduleId === "wallet_connect" || moduleId === "lobstr" || moduleId === "freighter") {
     }
     const testHost = String(
       window.location?.hostname || ""

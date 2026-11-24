@@ -135,8 +135,9 @@ const freighter = wallets.find((item) => item.id === "freighter");
 const lobstr = wallets.find((item) => item.id === "lobstr");
 assert.equal(freighter.challengeSign, "supported");
 assert.equal(lobstr.challengeSign, "supported");
-assert.match(freighter.connect, /Android/i);
-assert.match(freighter.connect, /WalletConnect/i);
+assert.match(freighter.notes, /WalletConnect/i);
+assert.match(lobstr.notes, /WalletConnect|Android/i);
+assert.match(freighter.connect, /Freighter|WalletConnect|extension/i);
 
 await assert.rejects(
   () => window.havkarVerifyStellarWalletChallenge(),
