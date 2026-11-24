@@ -884,6 +884,14 @@
         return;
       }
 
+      if (root.HAVKAR_GEO_CONSENT !== true) {
+        note(
+          "Location needs your permission in Travel Tickets first. Accept GPS consent above the map — coordinates stay on your device and are never uploaded to HAVKAR."
+        );
+        finishGpsUi();
+        return;
+      }
+
       try {
         navigator.geolocation.getCurrentPosition(
           function (pos) {
