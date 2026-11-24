@@ -6520,19 +6520,25 @@ async function confirmHAVKARStellarPayment(){
         return;
     }
     if(typeof window.havkarFindRecentSuccessfulDuplicate==="function"){
-        const recent=window.havkarFindRecentSuccessfulDuplicate({
-            destination:pendingStellarReview.destination,
-            amount:pendingStellarReview.amount,
-            memo:pendingStellarReview.memo
-        });
+        let recent=null;
+        try{
+            recent=await window.havkarFindRecentSuccessfulDuplicate({
+                destination:pendingStellarReview.destination,
+                amount:pendingStellarReview.amount,
+                memo:pendingStellarReview.memo
+            });
+        }catch(_e){recent=null;}
         if(recent&&recent.hash){
             const again=window.confirm(
                 stellarT("An identical payment already confirmed recently.")+"\n"+
-                stellarT("Hash")+": "+recent.hash+"\n\n"+
-                stellarT("Continue only if you intentionally want to send the same amount again.")
+                stellarT("Hash")+": "+recent.hash+"\n"+
+                (recent.sourceGuard?stellarT("Detected by")+": "+recent.sourceGuard+"\n":"")+
+                "\n"+
+                stellarT("Continue only if you intentionally want to send the same amount again.")+"\n"+
+                stellarT("Client-side checks cannot guarantee global exactly-once payments.")
             );
             if(!again){
-                setStellarStatus("Duplicate send cancelled. Previous hash "+recent.hash+" was kept.","info");
+                setStellarStatus(stellarT("Duplicate send cancelled. Previous hash was kept.")+" "+recent.hash,"info");
                 return;
             }
             pendingStellarReview.allowRecentDuplicate=true;

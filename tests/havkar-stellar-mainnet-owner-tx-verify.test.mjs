@@ -192,13 +192,17 @@ localStorage.setItem(
     kind: "payment"
   })
 );
-const recent = window.havkarFindRecentSuccessfulDuplicate({
+const recent = await window.havkarFindRecentSuccessfulDuplicate({
   destination: DEST,
   amount: "0.01",
   memo: ""
 });
 assert.ok(recent);
 assert.equal(recent.hash, HASH);
+assert.ok(
+  recent.sourceGuard === "localStorage" ||
+    recent.sourceGuard === "horizon"
+);
 
 await assert.rejects(
   () =>
