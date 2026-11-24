@@ -182,6 +182,128 @@
 
         .clear-search.show { display: flex; }
 
+        .discovery-rail {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        .discovery-section {
+            background: linear-gradient(180deg, #ffffff 0%, #f7faf4 100%);
+            border: 1px solid #e3ecd8;
+            border-radius: var(--radius-lg);
+            padding: 14px 14px 10px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .discovery-section h2 {
+            font-size: 1.02rem;
+            font-weight: 750;
+            color: var(--primary-dark);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .discovery-section .section-empty {
+            color: var(--text-secondary);
+            font-size: .92rem;
+            padding: 8px 2px 12px;
+            line-height: 1.45;
+        }
+
+        .view-toggle {
+            display: inline-flex;
+            gap: 6px;
+            background: #eef5e8;
+            border-radius: 999px;
+            padding: 4px;
+        }
+
+        .view-toggle button {
+            border: 0;
+            background: transparent;
+            color: var(--primary-dark);
+            border-radius: 999px;
+            padding: 7px 12px;
+            font-weight: 650;
+            font-size: .85rem;
+        }
+
+        .view-toggle button.active {
+            background: white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .events-map-panel {
+            display: none;
+            min-height: 320px;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            border: 1px solid #e3ecd8;
+            background: #edf3e8;
+        }
+
+        .events-map-panel.show { display: block; }
+
+        .events-map-panel iframe {
+            width: 100%;
+            height: 360px;
+            border: 0;
+        }
+
+        .offline-banner {
+            display: none;
+            margin: 10px 16px 0;
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            background: #fff7ed;
+            color: #9a3412;
+            border: 1px solid #fdba74;
+            font-size: .9rem;
+        }
+
+        .offline-banner.show { display: block; }
+
+        .policy-note {
+            margin-top: 8px;
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            color: #0c4a6e;
+            font-size: .86rem;
+            line-height: 1.45;
+        }
+
+        .fee-honesty {
+            margin: 10px 0;
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            background: #fafafa;
+            border: 1px dashed #c5d6b8;
+            color: #456;
+            font-size: .84rem;
+            line-height: 1.45;
+        }
+
+        @media (min-width: 900px) {
+            .content { max-width: 980px; margin: 0 auto; }
+            #eventsContainer {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 14px;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            #eventsContainer {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
         .tabs {
             background: var(--surface);
             display: flex;
@@ -1751,18 +1873,39 @@
 
     </section>
 
-    <div class="tabs" id="categoryTabs">
-        <button class="tab active" data-category="all" type="button">All Events</button>
-        <button class="tab" data-category="music" type="button">Music</button>
-        <button class="tab" data-category="cultural" type="button">Cultural</button>
+    <div id="offlineBanner" class="offline-banner" role="status">
+        You appear to be offline. Showing the last loaded events. Purchases need a connection.
+    </div>
+
+    <div class="tabs" id="categoryTabs" role="tablist" aria-label="Event categories">
+        <button class="tab active" data-category="all" type="button">All</button>
+        <button class="tab" data-category="concert" type="button">Concert</button>
+        <button class="tab" data-category="festival" type="button">Festival</button>
+        <button class="tab" data-category="exhibition" type="button">Exhibition</button>
+        <button class="tab" data-category="conference" type="button">Conference</button>
+        <button class="tab" data-category="education" type="button">Education</button>
         <button class="tab" data-category="sports" type="button">Sports</button>
+        <button class="tab" data-category="theatre" type="button">Theatre</button>
+        <button class="tab" data-category="cinema" type="button">Cinema</button>
+        <button class="tab" data-category="tourism" type="button">Tourism</button>
+        <button class="tab" data-category="family" type="button">Family</button>
+        <button class="tab" data-category="cultural" type="button">Cultural</button>
+        <button class="tab" data-category="business" type="button">Business</button>
+        <button class="tab" data-category="charity" type="button">Charity</button>
+        <button class="tab" data-category="online" type="button">Online</button>
+        <button class="tab" data-category="music" type="button">Music</button>
         <button class="tab" data-category="food" type="button">Food</button>
         <button class="tab" data-category="community" type="button">Community</button>
+        <button class="tab" data-category="other" type="button">Other</button>
     </div>
 
 
     <div class="toolbar">
         <div class="result-count" id="resultCount">Loading events...</div>
+        <div class="view-toggle" role="group" aria-label="List or map view">
+            <button type="button" class="active" id="viewListBtn" onclick="setEventsViewMode('list')">List</button>
+            <button type="button" id="viewMapBtn" onclick="setEventsViewMode('map')">Map</button>
+        </div>
         <button class="sort-btn" type="button" onclick="toggleSort()">
             <i class="fas fa-arrow-down-wide-short"></i>
             <span id="sortLabel">Soonest</span>
@@ -1772,11 +1915,18 @@
 
 
     <main class="content">
-                <div id="eventsContainer"></div>
+        <div id="discoveryRail" class="discovery-rail" aria-live="polite"></div>
+        <div id="eventsMapPanel" class="events-map-panel" aria-label="Events map">
+            <div class="section-empty" style="padding:16px" id="eventsMapEmpty">
+                Map shows only events with real coordinates. No invented locations.
+            </div>
+            <div id="eventsMapFrameHost"></div>
+        </div>
+        <div id="eventsContainer"></div>
         <div id="emptyState" class="empty-state">
             <div class="empty-icon"><i class="fas fa-calendar-xmark"></i></div>
             <h3>No events found</h3>
-            <p>Try another search, category or date.</p>
+            <p>Try another search, category or date. HAVKAR never invents fake events to fill this space.</p>
         </div>
 
     </main>
@@ -1824,11 +1974,24 @@
                             <label class="form-label">Category <span class="required">*</span></label>
                             <select id="eventCategory" class="form-control" required>
                                 <option value="">Select</option>
-                                <option value="music">Music</option>
-                                <option value="cultural">Cultural</option>
+                                <option value="concert">Concert</option>
+                                <option value="festival">Festival</option>
+                                <option value="exhibition">Exhibition</option>
+                                <option value="conference">Conference</option>
+                                <option value="education">Education</option>
                                 <option value="sports">Sports</option>
+                                <option value="theatre">Theatre</option>
+                                <option value="cinema">Cinema</option>
+                                <option value="tourism">Tourism</option>
+                                <option value="family">Family</option>
+                                <option value="cultural">Cultural</option>
+                                <option value="business">Business</option>
+                                <option value="charity">Charity</option>
+                                <option value="online">Online</option>
+                                <option value="music">Music</option>
                                 <option value="food">Food</option>
                                 <option value="community">Community</option>
+                                <option value="other">Other</option>
                             </select>
                         </div>
 
@@ -1879,10 +2042,53 @@
 
 
                     <div class="form-group">
-                        <label class="form-label">Location <span class="required">*</span></label>
+                        <label class="form-label">Location / venue address <span class="required">*</span></label>
                         <input id="eventLocation" class="form-control" type="text" placeholder="City, venue or address" maxlength="150" required>
                     </div>
 
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Latitude (optional)</label>
+                            <input id="eventVenueLat" class="form-control" type="number" step="any" min="-90" max="90" placeholder="Only if real">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Longitude (optional)</label>
+                            <input id="eventVenueLng" class="form-control" type="number" step="any" min="-180" max="180" placeholder="Only if real">
+                        </div>
+                    </div>
+                    <p class="policy-note">Leave coordinates empty if unknown. HAVKAR will not invent map pins.</p>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Timezone</label>
+                            <input id="eventTimezone" class="form-control" type="text" maxlength="64" placeholder="e.g. Europe/Rome" value="">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Age restriction</label>
+                            <input id="eventAgeRestriction" class="form-control" type="text" maxlength="80" placeholder="e.g. 18+ / All ages">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Online event?</label>
+                        <select id="eventIsOnline" class="form-control">
+                            <option value="no">In-person</option>
+                            <option value="yes">Online</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Secure online access URL (online events)</label>
+                        <input id="eventOnlineUrl" class="form-control" type="url" maxlength="500" placeholder="https://… (shown after valid ticket)">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Cancellation / refund policy</label>
+                        <textarea id="eventCancelPolicy" class="form-control" maxlength="1000" placeholder="Explain cancellation and refund rules before buyers purchase."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Accessibility notes</label>
+                        <textarea id="eventAccessibility" class="form-control" maxlength="500" placeholder="Wheelchair access, captions, etc."></textarea>
+                    </div>
 
                     <div class="form-group">
                         <label class="form-label">Organizer</label>
@@ -1891,7 +2097,7 @@
 
 
                     <div class="form-group">
-                        <label class="form-label">Cover image URL</label>
+                        <label class="form-label">Cover image URL (https only)</label>
                         <input id="eventImageUrl" class="form-control" type="url" placeholder="https://..." maxlength="500">
                     </div>
 
@@ -1905,6 +2111,12 @@
                     <div class="form-group">
                         <label class="form-label">Capacity (max tickets) <span class="required">*</span></label>
                         <input id="eventAttendees" class="form-control" type="number" min="1" max="1000000" placeholder="e.g. 100" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Optional seat labels (one per line)</label>
+                        <textarea id="eventSeatLabels" class="form-control" maxlength="4000" placeholder="A1&#10;A2&#10;B1&#10;Leave empty for general admission capacity only."></textarea>
+                        <p class="policy-note">Labeled seats only — not a fake venue floor plan. Atomic holds use server RPC after migration is applied.</p>
                     </div>
 
 
@@ -2048,6 +2260,30 @@
             "Home":"Hem", "My Tickets":"Evenemangsbiljetter", "My Event Tickets":"Evenemangsbiljetter", "Profile":"Profil", "Loading events...":"Laddar evenemang...",
             "Soonest":"Snarast", "Popular":"Populärast", "Latest":"Senaste", "No events found":"Inga evenemang hittades",
             "Try another search, category or date.":"Prova en annan sökning, kategori eller ett annat datum.",
+            "Upcoming":"Kommande",
+            "Free events":"Gratis evenemang",
+            "Most interested":"Mest intresse",
+            "Online":"Online",
+            "No upcoming events yet. Create one or adjust filters.":"Inga kommande evenemang. Skapa ett eller ändra filter.",
+            "No free events match your filters.":"Inga gratis evenemang matchar filtren.",
+            "Interest counts appear only from real user actions — never invented.":"Intresseantal kommer bara från riktiga användaråtgärder — aldrig påhittade.",
+            "No online events match your filters.":"Inga onlineevenemang matchar filtren.",
+            "Concert":"Konsert","Festival":"Festival","Exhibition":"Utställning","Conference":"Konferens","Education":"Utbildning","Theatre":"Teater","Cinema":"Bio","Tourism":"Turism","Family":"Familj","Business":"Företag","Charity":"Välgörenhet","Other":"Övrigt",
+            "Timezone":"Tidszon","MAP":"KARTA","CANCELLATION / REFUND POLICY":"AVBOKNING / ÅTERBETALNING","AGE RESTRICTION":"ÅLDERSGRÄNS","ACCESSIBILITY":"TILLGÄNGLIGHET","ONLINE EVENT":"ONLINE-EVENEMANG",
+            "Coordinates are organizer-supplied. HAVKAR does not invent locations.":"Koordinater anges av arrangören. HAVKAR hittar inte på platser.",
+            "No verified coordinates for this venue — map hidden to avoid fake pins.":"Inga verifierade koordinater — kartan döljs för att undvika falska nålar.",
+            "Organizer has not published a cancellation policy yet. Ask before purchasing.":"Arrangören har inte publicerat avbokningspolicy ännu. Fråga före köp.",
+            "Access link is shown only after a valid ticket is issued.":"Åtkomstlänk visas först efter giltig biljett.",
+            "Paid tickets settle in EUR on HAVKAR Stripe when live payments are Owner-enabled. No new HAVKAR ticket commission % is invented here — Owner must confirm fee policy. Stripe processing fees apply to the platform.":"Betalda biljetter regleras i EUR via HAVKAR Stripe när livebetalningar är aktiverade av ägaren. Ingen ny biljettprovision hittas på här — ägaren måste bekräfta avgiftspolicyn.",
+            "Sales paused":"Försäljning pausad","Sales resumed":"Försäljning återupptagen","Pause sales":"Pausa försäljning","Resume sales":"Återuppta försäljning",
+            "Refund request recorded. No automatic payout was executed.":"Återbetalningsbegäran registrerad. Ingen automatisk utbetalning utfördes.",
+            "Describe why you request a refund (no money moves until Owner-approved payment ops).":"Beskriv varför du begär återbetalning (inga pengar flyttas förrän ägargodkänd betalningsdrift).",
+            "Please sign in.":"Logga in.",
+            "Request refund":"Begär återbetalning",
+            "Cancel ticket":"Avbryt biljett",
+            "Could not submit refund request. Migration may be pending.":"Kunde inte skicka återbetalningsbegäran. Migration kan saknas.",
+            "Could not update sales status.":"Kunde inte uppdatera försäljningsstatus.",
+
             "Create New Event":"Skapa nytt evenemang", "Event Title":"Evenemangets namn", "Category":"Kategori",
             "Select":"Välj", "Price":"Pris", "Date":"Datum", "Time":"Tid", "Location":"Plats",
             "Organizer":"Arrangör", "Description":"Beskrivning", "Expected Attendees":"Förväntat antal deltagare",
@@ -2141,11 +2377,24 @@
 
         function categoryName(category) {
             const names = {
-                music: et("Music"),
-                cultural: et("Cultural"),
+                concert: et("Concert"),
+                festival: et("Festival"),
+                exhibition: et("Exhibition"),
+                conference: et("Conference"),
+                education: et("Education"),
                 sports: et("Sports"),
+                theatre: et("Theatre"),
+                cinema: et("Cinema"),
+                tourism: et("Tourism"),
+                family: et("Family"),
+                cultural: et("Cultural"),
+                business: et("Business"),
+                charity: et("Charity"),
+                online: et("Online"),
+                music: et("Music"),
                 food: et("Food"),
-                community: et("Community")
+                community: et("Community"),
+                other: et("Other")
             };
 
 
@@ -2155,15 +2404,123 @@
 
         function categoryIcon(category) {
             const icons = {
-                music: "🎵",
-                cultural: "🎨",
+                concert: "🎤",
+                festival: "🎪",
+                exhibition: "🖼️",
+                conference: "💼",
+                education: "📚",
                 sports: "⚽",
+                theatre: "🎭",
+                cinema: "🎬",
+                tourism: "🗺️",
+                family: "👨‍👩‍👧",
+                cultural: "🎨",
+                business: "📈",
+                charity: "💗",
+                online: "💻",
+                music: "🎵",
                 food: "🍕",
-                community: "🎉"
+                community: "🎉",
+                other: "✨"
             };
 
 
             return icons[category] || "📅";
+        }
+
+        let eventsViewMode = "list";
+        let filteredEventsCache = [];
+
+        function setEventsViewMode(mode) {
+            eventsViewMode = mode === "map" ? "map" : "list";
+            const listBtn = document.getElementById("viewListBtn");
+            const mapBtn = document.getElementById("viewMapBtn");
+            const mapPanel = document.getElementById("eventsMapPanel");
+            const container = document.getElementById("eventsContainer");
+            if (listBtn) listBtn.classList.toggle("active", eventsViewMode === "list");
+            if (mapBtn) mapBtn.classList.toggle("active", eventsViewMode === "map");
+            if (mapPanel) mapPanel.classList.toggle("show", eventsViewMode === "map");
+            if (container) container.style.display = eventsViewMode === "map" ? "none" : "";
+            if (eventsViewMode === "map") renderEventsMap(filteredEventsCache || []);
+        }
+        window.setEventsViewMode = setEventsViewMode;
+
+        function hasValidCoords(event) {
+            const lat = Number(event.venue_lat);
+            const lng = Number(event.venue_lng);
+            return Number.isFinite(lat) && Number.isFinite(lng)
+                && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+        }
+
+        function renderEventsMap(events) {
+            const host = document.getElementById("eventsMapFrameHost");
+            const empty = document.getElementById("eventsMapEmpty");
+            if (!host) return;
+            const withCoords = (events || []).filter(hasValidCoords);
+            if (!withCoords.length) {
+                host.innerHTML = "";
+                if (empty) empty.style.display = "block";
+                return;
+            }
+            if (empty) empty.style.display = "none";
+            const first = withCoords[0];
+            const bboxPad = 0.08;
+            const lats = withCoords.map((e) => Number(e.venue_lat));
+            const lngs = withCoords.map((e) => Number(e.venue_lng));
+            const minLat = Math.min(...lats) - bboxPad;
+            const maxLat = Math.max(...lats) + bboxPad;
+            const minLng = Math.min(...lngs) - bboxPad;
+            const maxLng = Math.max(...lngs) + bboxPad;
+            const src =
+                "https://www.openstreetmap.org/export/embed.html?bbox=" +
+                encodeURIComponent(minLng + "," + minLat + "," + maxLng + "," + maxLat) +
+                "&layer=mapnik&marker=" +
+                encodeURIComponent(Number(first.venue_lat) + "," + first.venue_lng);
+            host.innerHTML =
+                '<iframe title="Events map" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="' +
+                src +
+                '"></iframe>' +
+                '<p class="policy-note" style="margin:8px">Showing ' +
+                withCoords.length +
+                " event(s) with real coordinates. OSM embed needs no map API key.</p>";
+        }
+
+        function renderDiscoveryRail(allFiltered) {
+            const rail = document.getElementById("discoveryRail");
+            if (!rail) return;
+            if (eventsViewMode === "map") {
+                rail.innerHTML = "";
+                return;
+            }
+            const now = Date.now();
+            const upcoming = allFiltered
+                .filter((e) => getTimestamp(e) >= now - 60 * 60 * 1000)
+                .slice(0, 4);
+            const free = allFiltered.filter((e) => isFreeEventPrice(e.price)).slice(0, 4);
+            const popular = [...allFiltered]
+                .sort((a, b) => Number(b.interested || 0) - Number(a.interested || 0))
+                .filter((e) => Number(e.interested || 0) > 0)
+                .slice(0, 4);
+            const online = allFiltered
+                .filter((e) => e.is_online || e.category === "online")
+                .slice(0, 4);
+
+            function section(title, items, emptyText) {
+                return (
+                    '<section class="discovery-section">' +
+                    "<h2>" + escapeHtml(title) + "</h2>" +
+                    (items.length
+                        ? '<div class="discovery-cards">' + items.map(renderEventCard).join("") + "</div>"
+                        : '<div class="section-empty">' + escapeHtml(emptyText) + "</div>") +
+                    "</section>"
+                );
+            }
+
+            rail.innerHTML =
+                section(et("Upcoming"), upcoming, et("No upcoming events yet. Create one or adjust filters.")) +
+                section(et("Free events"), free, et("No free events match your filters.")) +
+                section(et("Most interested"), popular, et("Interest counts appear only from real user actions — never invented.")) +
+                section(et("Online"), online, et("No online events match your filters."));
         }
 
 
@@ -2247,6 +2604,15 @@
                     : "",
                 location: row.location || "",
                 organizer: row.organizer || "HAVKAR Community",
+                venue_lat: row.venue_lat != null ? Number(row.venue_lat) : null,
+                venue_lng: row.venue_lng != null ? Number(row.venue_lng) : null,
+                timezone: row.timezone || "",
+                cancellation_policy: row.cancellation_policy || "",
+                age_restriction: row.age_restriction || "",
+                accessibility_notes: row.accessibility_notes || "",
+                is_online: row.is_online === true,
+                online_access_url: row.online_access_url || "",
+                sales_paused: row.sales_paused === true,
                 attendees: Number(row.max_attendees || 0),
                 interested: Number(
                     interestedCounts.get(String(row.id)) ?? row.interested ?? 0
@@ -2567,10 +2933,17 @@
             }
 
 
-            container.innerHTML =
-                events
-                    .map(renderEventCard)
-                    .join("");
+            filteredEventsCache = events;
+            renderDiscoveryRail(events);
+            if (eventsViewMode === "map") {
+                container.innerHTML = "";
+                renderEventsMap(events);
+            } else {
+                container.innerHTML =
+                    events
+                        .map(renderEventCard)
+                        .join("");
+            }
 
             document
                 .getElementById("resultCount")
@@ -2583,7 +2956,7 @@
 
             empty.classList.toggle(
                 "show",
-                events.length === 0
+                events.length === 0 && eventsViewMode === "list"
             );
         }
 
@@ -3029,10 +3402,60 @@
                         <div class="detail-row-content">
                             <strong>${et("LOCATION")}</strong>
                             <span>${escapeHtml(event.location)}</span>
+                            ${
+                                event.timezone
+                                    ? `<br><span>${et("Timezone")}: ${escapeHtml(event.timezone)}</span>`
+                                    : ""
+                            }
                         </div>
 
                     </div>
 
+                    ${
+                        hasValidCoords(event)
+                            ? `
+                    <div class="detail-row">
+                        <i class="fas fa-map"></i>
+                        <div class="detail-row-content">
+                            <strong>${et("MAP")}</strong>
+                            <iframe title="Venue map" loading="lazy" style="width:100%;height:220px;border:0;border-radius:12px;margin-top:8px"
+                                src="https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(
+                                    (Number(event.venue_lng)-0.02)+","+(Number(event.venue_lat)-0.02)+","+(Number(event.venue_lng)+0.02)+","+(Number(event.venue_lat)+0.02)
+                                )}&layer=mapnik&marker=${encodeURIComponent(Number(event.venue_lat)+","+Number(event.venue_lng))}"></iframe>
+                            <p class="policy-note">${et("Coordinates are organizer-supplied. HAVKAR does not invent locations.")}</p>
+                        </div>
+                    </div>`
+                            : `
+                    <div class="policy-note">${et("No verified coordinates for this venue — map hidden to avoid fake pins.")}</div>`
+                    }
+
+                    ${
+                        event.cancellation_policy
+                            ? `<div class="detail-row"><i class="fas fa-scale-balanced"></i><div class="detail-row-content"><strong>${et("CANCELLATION / REFUND POLICY")}</strong><span>${escapeHtml(event.cancellation_policy)}</span></div></div>`
+                            : `<div class="policy-note">${et("Organizer has not published a cancellation policy yet. Ask before purchasing.")}</div>`
+                    }
+
+                    ${
+                        event.age_restriction
+                            ? `<div class="detail-row"><i class="fas fa-user-shield"></i><div class="detail-row-content"><strong>${et("AGE RESTRICTION")}</strong><span>${escapeHtml(event.age_restriction)}</span></div></div>`
+                            : ""
+                    }
+
+                    ${
+                        event.accessibility_notes
+                            ? `<div class="detail-row"><i class="fas fa-wheelchair"></i><div class="detail-row-content"><strong>${et("ACCESSIBILITY")}</strong><span>${escapeHtml(event.accessibility_notes)}</span></div></div>`
+                            : ""
+                    }
+
+                    ${
+                        event.is_online
+                            ? `<div class="detail-row"><i class="fas fa-globe"></i><div class="detail-row-content"><strong>${et("ONLINE EVENT")}</strong><span>${et("Access link is shown only after a valid ticket is issued.")}</span></div></div>`
+                            : ""
+                    }
+
+                    <div class="fee-honesty">
+                        ${et("Paid tickets settle in EUR on HAVKAR Stripe when live payments are Owner-enabled. No new HAVKAR ticket commission % is invented here — Owner must confirm fee policy. Stripe processing fees apply to the platform.")}
+                    </div>
 
                     <div class="detail-row">
                         <i class="fas fa-users"></i>
@@ -3104,7 +3527,10 @@
                             XLM Testnet
                         </button>
 
-                        <button
+                        ${
+                            event.sales_paused
+                                ? `<button class="btn btn-secondary" type="button" disabled>${et("Sales paused")}</button>`
+                                : `<button
                             class="btn btn-primary"
                             type="button"
                             onclick="getTicket('${escapeHtml(String(event.id))}')"
@@ -3116,7 +3542,8 @@
                                     : et("Get Ticket")
                             }
 
-                        </button>
+                        </button>`
+                        }
 
                     </div>
 
@@ -3150,6 +3577,15 @@
                                     </button>
                                     <div id="organizerTicketPanel" style="margin-top:10px;"></div>
                                 </div>
+                                <button
+                                    class="btn btn-secondary"
+                                    style="width:100%;margin-top:10px;"
+                                    type="button"
+                                    onclick="toggleEventSalesPause('${escapeHtml(String(event.id))}', ${event.sales_paused ? "false" : "true"})"
+                                >
+                                    <i class="fas fa-pause"></i>
+                                    ${event.sales_paused ? et("Resume sales") : et("Pause sales")}
+                                </button>
                                 <button
                                     class="btn"
                                     style="
@@ -3325,32 +3761,109 @@
                     submitButton.disabled = true;
 
                     try {
-                        const {
-                            error
-                        } = await supabase
+                        const venueLatRaw = document.getElementById("eventVenueLat")?.value;
+                        const venueLngRaw = document.getElementById("eventVenueLng")?.value;
+                        let venue_lat = null;
+                        let venue_lng = null;
+                        if (String(venueLatRaw || "").trim() !== "" || String(venueLngRaw || "").trim() !== "") {
+                            venue_lat = Number(venueLatRaw);
+                            venue_lng = Number(venueLngRaw);
+                            if (
+                                !Number.isFinite(venue_lat) ||
+                                !Number.isFinite(venue_lng) ||
+                                venue_lat < -90 || venue_lat > 90 ||
+                                venue_lng < -180 || venue_lng > 180
+                            ) {
+                                showToast("Coordinates must be valid WGS84 values, or leave both empty.", "error");
+                                return;
+                            }
+                        }
+
+                        const isOnline = document.getElementById("eventIsOnline")?.value === "yes";
+                        let onlineUrl = String(document.getElementById("eventOnlineUrl")?.value || "").trim();
+                        if (onlineUrl) {
+                            try {
+                                const u = new URL(onlineUrl);
+                                if (u.protocol !== "https:") throw new Error("https only");
+                                onlineUrl = u.href;
+                            } catch {
+                                showToast("Online access URL must be https://", "error");
+                                return;
+                            }
+                        }
+
+                        const basePayload = {
+                            user_id: currentUser.id,
+                            title,
+                            category,
+                            event_date: date,
+                            event_time: time,
+                            location,
+                            description,
+                            image_url: imageUrl,
+                            max_attendees: attendees,
+                            is_public: true,
+                            status: "active",
+                            price,
+                            organizer,
+                            interested: 0,
+                            updated_at: new Date().toISOString()
+                        };
+
+                        const extendedPayload = {
+                            ...basePayload,
+                            venue_lat,
+                            venue_lng,
+                            timezone: String(document.getElementById("eventTimezone")?.value || "").trim() || null,
+                            cancellation_policy: String(document.getElementById("eventCancelPolicy")?.value || "").trim() || null,
+                            age_restriction: String(document.getElementById("eventAgeRestriction")?.value || "").trim() || null,
+                            accessibility_notes: String(document.getElementById("eventAccessibility")?.value || "").trim() || null,
+                            is_online: isOnline,
+                            online_access_url: onlineUrl || null,
+                            sales_paused: false
+                        };
+
+                        let inserted = null;
+                        let error = null;
+                        ({ data: inserted, error } = await supabase
                             .from("events")
-                            .insert({
-                                user_id: currentUser.id,
-                                title,
-                                category,
-                                event_date: date,
-                                event_time: time,
-                                location,
-                                description,
-                                image_url: imageUrl,
-                                max_attendees: attendees,
-                                is_public: true,
-                                status: "active",
-                                price,
-                                organizer,
-                                interested: 0,
-                                updated_at: new Date().toISOString()
-                            });
+                            .insert(extendedPayload)
+                            .select("id")
+                            .single());
+
+                        if (error && /column|schema cache|venue_lat|cancellation_policy|is_online/i.test(String(error.message || error))) {
+                            ({ data: inserted, error } = await supabase
+                                .from("events")
+                                .insert(basePayload)
+                                .select("id")
+                                .single());
+                            if (!error) {
+                                showToast("Event created. Extended venue fields need Owner-applied migration.", "info");
+                            }
+                        }
 
                         if (error) {
                             throw error;
                         }
 
+                        const seatText = String(document.getElementById("eventSeatLabels")?.value || "");
+                        const seatLabels = seatText
+                            .split(/\r?\n/)
+                            .map((s) => s.trim())
+                            .filter(Boolean)
+                            .slice(0, 500);
+                        if (inserted?.id && seatLabels.length) {
+                            const seatRows = seatLabels.map((label) => ({
+                                event_id: inserted.id,
+                                seat_label: label.slice(0, 40),
+                                status: "available"
+                            }));
+                            const seatRes = await supabase.from("event_seats").insert(seatRows);
+                            if (seatRes.error) {
+                                console.warn("HAVKAR event seats:", seatRes.error);
+                                showToast("Event created, but seat labels need the events_global_ops migration.", "info");
+                            }
+                        }
 
                         this.reset();
 
@@ -4053,6 +4566,21 @@
                                             ${et("Cancel ticket")}
                                         </button>
                                     ` : ""}
+                                    ${
+                                        ticket.payment_status === "paid" &&
+                                        ticket.ticket_status === "valid" &&
+                                        !isFreeEventPrice(ticket.unit_price || ticket.total_amount || "0")
+                                            ? `
+                                        <button
+                                            class="btn btn-secondary"
+                                            type="button"
+                                            style="margin-top:8px;width:100%"
+                                            onclick="requestEventRefund(${Number(ticket.id)}, ${Number(ticket.event_id)})"
+                                        >
+                                            ${et("Request refund")}
+                                        </button>`
+                                            : ""
+                                    }
                                 </div>
                             </article>
                         `;
@@ -4183,6 +4711,48 @@
         };
 
 
+        window.requestEventRefund = async function(ticketId, eventId) {
+            if (!currentUser) {
+                showToast(et("Please sign in."), "error");
+                return;
+            }
+            const reason = window.prompt(
+                et("Describe why you request a refund (no money moves until Owner-approved payment ops).")
+            );
+            if (reason == null) return;
+            const { error } = await supabase.from("event_refund_requests").insert({
+                ticket_id: Number(ticketId),
+                event_id: Number(eventId),
+                requester_id: currentUser.id,
+                reason: String(reason).slice(0, 1000),
+                status: "pending"
+            });
+            if (error) {
+                showToast(
+                    error.message || et("Could not submit refund request. Migration may be pending."),
+                    "error"
+                );
+                return;
+            }
+            showToast(et("Refund request recorded. No automatic payout was executed."), "success");
+        };
+
+        window.toggleEventSalesPause = async function(eventId, pause) {
+            if (!currentUser) return;
+            const { error } = await supabase
+                .from("events")
+                .update({ sales_paused: pause === true, updated_at: new Date().toISOString() })
+                .eq("id", Number(eventId))
+                .eq("user_id", currentUser.id);
+            if (error) {
+                showToast(error.message || et("Could not update sales status."), "error");
+                return;
+            }
+            await refreshEvents();
+            openEventDetails(String(eventId));
+            showToast(pause ? et("Sales paused") : et("Sales resumed"), "success");
+        };
+
         window.shareEvent = async function(id) {
             const event =
                 allEvents.find(
@@ -4194,6 +4764,8 @@
                 return;
             }
 
+            const shareUrl =
+                `${window.location.origin}${window.location.pathname}?event=${encodeURIComponent(String(event.id))}`;
 
             const text =
                 `${event.title} - ${
@@ -4201,14 +4773,14 @@
                         event.date,
                         event.time
                     )
-                } - ${event.location}`;
+                } - ${event.location} · ${shareUrl}`;
 
             if (navigator.share) {
                 try {
                     await navigator.share({
                         title: event.title,
                         text,
-                        url: window.location.href
+                        url: shareUrl
                     });
 
                     return;
@@ -4227,7 +4799,7 @@
             try {
                 await navigator
                     .clipboard
-                    .writeText(text);
+                    .writeText(shareUrl + "\n" + text);
 
                 showToast(
                     "Event information copied.",
@@ -4481,6 +5053,13 @@
 
         async function handleTicketsDeepLink() {
             const params = new URLSearchParams(window.location.search);
+            const eventId = String(params.get("event") || "").trim();
+            if (eventId) {
+                const match = allEvents.find((item) => String(item.id) === eventId);
+                if (match) {
+                    openEventDetails(eventId);
+                }
+            }
             const open = String(params.get("open") || "").trim().toLowerCase();
 
             if (!open) {
@@ -4548,6 +5127,16 @@
 
         async function initializeEventsPage() {
             localizeEventsStatic();
+            const offlineBanner = document.getElementById("offlineBanner");
+            function syncOfflineBanner() {
+                if (offlineBanner) {
+                    offlineBanner.classList.toggle("show", !navigator.onLine);
+                }
+            }
+            window.addEventListener("online", syncOfflineBanner);
+            window.addEventListener("offline", syncOfflineBanner);
+            syncOfflineBanner();
+
             await loadCurrentUser();
             await refreshEvents();
             await handleEventCheckoutReturn();
