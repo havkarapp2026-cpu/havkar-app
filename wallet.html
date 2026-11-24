@@ -1492,6 +1492,12 @@ select:focus{
     <button id="stellarConnectButton" class="stellar-connect-button" type="button" onclick="connectHAVKARStellar()">
       <i class="fas fa-wallet" aria-hidden="true"></i> Connect Stellar Wallet
     </button>
+    <button id="stellarLobstrWcButton" class="stellar-connect-button" type="button" onclick="connectHAVKARLobstrWalletConnect()" style="display:none;margin-top:8px;background:linear-gradient(135deg,#1b5e20,#2e7d32)">
+      <i class="fas fa-mobile-screen" aria-hidden="true"></i> Connect LOBSTR via WalletConnect
+    </button>
+    <p class="stellar-note" id="stellarMobileLobstrNote" style="display:none;margin-top:6px">
+      Android LOBSTR is the mobile app, not a browser extension. Use WalletConnect (not Install). After connecting, keep LOBSTR → WalletConnect / Explore Apps open, then tap Verify signature (no XLM).
+    </p>
     <button id="stellarDisconnectButton" class="stellar-disconnect-button" type="button" onclick="disconnectHAVKARStellar()">
       <i class="fas fa-link-slash" aria-hidden="true"></i> Disconnect Wallet
     </button>
@@ -6090,7 +6096,8 @@ function renderStellarConnection(address,options){
         updateStellarReceiveQr(address);
         stellarAccountOnNetwork=null;  
         pendingStellarReview=null;
-        renderStellarNetwork();  
+        renderStellarNetwork();
+        refreshMobileLobstrConnectUi();
         if(options?.restored){  
             setStellarStatus("Public address restored in this browser. A payment still needs your wallet to sign it.","info");  
         }else{  
@@ -6116,6 +6123,7 @@ function renderStellarConnection(address,options){
         if(history)history.innerHTML='<div class="commerce-empty">Connect a wallet to load confirmed Horizon payments (read-only).</div>';
         stellarAccountOnNetwork=null;
         renderStellarNetwork();
+        refreshMobileLobstrConnectUi();
     }  
 }
 
@@ -6272,6 +6280,17 @@ async function refreshHAVKARStellarBalance(){
     }  
 }  
   
+function refreshMobileLobstrConnectUi(){
+    const mobile=typeof window.havkarIsLikelyMobileBrowser==="function"
+        ? window.havkarIsLikelyMobileBrowser()
+        : /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||"");
+    const wcBtn=document.getElementById("stellarLobstrWcButton");
+    const note=document.getElementById("stellarMobileLobstrNote");
+    const connected=!!(window.HAVKAR_STELLAR&&window.HAVKAR_STELLAR.address);
+    if(wcBtn)wcBtn.style.display=(mobile && !connected)?"inline-flex":"none";
+    if(note)note.style.display=(mobile && !connected)?"block":"none";
+}
+
 async function connectHAVKARStellar(){  
     const button=document.getElementById("stellarConnectButton");  
     if(typeof window.havkarConnectStellarWallet!=="function"){  
@@ -6289,8 +6308,30 @@ async function connectHAVKARStellar(){
         setStellarStatus(error?.message||"Stellar wallet connection failed.","error");  
     }finally{  
         button.disabled=false;  
-        button.innerHTML='<i class="fas fa-wallet"></i> Connect Stellar Wallet';  
+        button.innerHTML='<i class="fas fa-wallet"></i> Connect Stellar Wallet';
+        refreshMobileLobstrConnectUi();
     }  
+}
+
+async function connectHAVKARLobstrWalletConnect(){
+    const button=document.getElementById("stellarLobstrWcButton");
+    if(typeof window.havkarConnectStellarWalletConnect!=="function"){
+        setStellarStatus("WalletConnect is not available.","error");
+        return;
+    }
+    if(button)button.disabled=true;
+    setStellarStatus("Opening WalletConnect for LOBSTR. Approve the session in the LOBSTR app…","info");
+    try{
+        const address=await window.havkarConnectStellarWalletConnect();
+        if(!address)throw new Error("WalletConnect did not return a Stellar public key.");
+        renderStellarConnection(address);
+        setStellarStatus("LOBSTR connected via WalletConnect. Use Verify signature (no XLM); keep LOBSTR WalletConnect screen open.","success");
+    }catch(error){
+        setStellarStatus(error?.message||"LOBSTR WalletConnect connection failed.","error");
+    }finally{
+        if(button)button.disabled=false;
+        refreshMobileLobstrConnectUi();
+    }
 }  
   
 async function disconnectHAVKARStellar(){  
@@ -6606,8 +6647,10 @@ async function startWallet(){
         if(restored)renderStellarConnection(restored,{restored:true});  
     }else if(window.HAVKAR_STELLAR?.connected && window.HAVKAR_STELLAR?.address){  
         renderStellarConnection(window.HAVKAR_STELLAR.address);  
-    }  
-  
+    }
+
+    refreshMobileLobstrConnectUi();
+
     await Promise.allSettled([  
   
         loadCryptoPrices(),  
