@@ -6465,15 +6465,60 @@ async function reviewHAVKARStellarPayment(){
             hash:prepared.hash||null,
             horizon:prepared.horizon||null,
             signed:false,
-            submitted:false
+            submitted:false,
+            duplicateNotice:null
         };
+        let duplicateNotice=null;
+        if(typeof window.havkarFindPaymentDuplicateNotice==="function"){
+            try{
+                duplicateNotice=await window.havkarFindPaymentDuplicateNotice({
+                    destination:pendingStellarReview.destination,
+                    amount:pendingStellarReview.amount,
+                    memo:pendingStellarReview.memo
+                });
+            }catch(_e){duplicateNotice=null;}
+        }
+        pendingStellarReview.duplicateNotice=duplicateNotice||null;
         const feeXlm=pendingStellarReview.feeXlm!=null
             ? pendingStellarReview.feeXlm
             : String(Number(pendingStellarReview.fee||0)/1e7);
+        let duplicateBanner="";
+        if(duplicateNotice&&duplicateNotice.hash){
+            const ageMin=Number.isFinite(Number(duplicateNotice.at))
+                ? Math.max(0, Math.round((Date.now()-Number(duplicateNotice.at))/60000))
+                : null;
+            const ageText=ageMin!=null
+                ? " · "+ageMin+" "+stellarT("min ago")
+                : "";
+            if(duplicateNotice.withinGuardWindow===true || duplicateNotice.severity==="guard"){
+                duplicateBanner=
+                    '<div class="row" style="display:block;margin:10px 0;padding:10px;border:1px solid #b45309;background:#fff7ed;color:#9a3412">'+
+                    "<strong>"+escapeCommerceHtml(stellarT("Duplicate payment warning"))+"</strong><br>"+
+                    escapeCommerceHtml(stellarT("An identical payment already confirmed recently."))+
+                    "<br>"+escapeCommerceHtml(stellarT("Hash"))+": "+escapeCommerceHtml(duplicateNotice.hash)+
+                    (duplicateNotice.sourceGuard?" · "+escapeCommerceHtml(stellarT("Detected by"))+": "+escapeCommerceHtml(String(duplicateNotice.sourceGuard)):"")+
+                    escapeCommerceHtml(ageText)+
+                    "<br>"+escapeCommerceHtml(stellarT("Confirm will ask again before opening your wallet."))+
+                    "<br>"+escapeCommerceHtml(stellarT("Client-side checks cannot guarantee global exactly-once payments."))+
+                    "</div>";
+            }else{
+                duplicateBanner=
+                    '<div class="row" style="display:block;margin:10px 0;padding:10px;border:1px solid #0369a1;background:#f0f9ff;color:#0c4a6e">'+
+                    "<strong>"+escapeCommerceHtml(stellarT("Matching payment found earlier"))+"</strong><br>"+
+                    escapeCommerceHtml(stellarT("An identical peer payment was found outside the 15-minute automatic guard."))+
+                    "<br>"+escapeCommerceHtml(stellarT("Hash"))+": "+escapeCommerceHtml(duplicateNotice.hash)+
+                    (duplicateNotice.sourceGuard?" · "+escapeCommerceHtml(stellarT("Detected by"))+": "+escapeCommerceHtml(String(duplicateNotice.sourceGuard)):"")+
+                    escapeCommerceHtml(ageText)+
+                    "<br>"+escapeCommerceHtml(stellarT("Continue only if you intentionally want to send the same amount again."))+
+                    "<br>"+escapeCommerceHtml(stellarT("Nothing is signed or submitted until you confirm in your wallet."))+
+                    "</div>";
+            }
+        }
         if(panel){
             panel.style.display="block";
             panel.innerHTML=
                 "<strong>"+escapeCommerceHtml(stellarT("Review before signing"))+"</strong>"+
+                duplicateBanner+
                 '<div class="row"><span>'+escapeCommerceHtml(stellarT("Network"))+'</span><span>'+escapeCommerceHtml(pendingStellarReview.label)+(pendingStellarReview.network==="PUBLIC"?" · real XLM":" · test XLM")+"</span></div>"+
                 (pendingStellarReview.source?'<div class="row"><span>'+escapeCommerceHtml(stellarT("From"))+'</span><span style="word-break:break-all">'+escapeCommerceHtml(pendingStellarReview.source)+"</span></div>":"")+
                 '<div class="row"><span>'+escapeCommerceHtml(stellarT("Destination"))+'</span><span style="word-break:break-all">'+escapeCommerceHtml(pendingStellarReview.destination)+"</span></div>"+
@@ -6491,7 +6536,21 @@ async function reviewHAVKARStellarPayment(){
                 '<div class="row"><span>'+escapeCommerceHtml(stellarT("Signing"))+'</span><span>'+escapeCommerceHtml(stellarT("Only in your wallet · HAVKAR never receives a secret key"))+"</span></div>"+
                 '<div class="row"><span>'+escapeCommerceHtml(stellarT("Next"))+'</span><span>'+escapeCommerceHtml(stellarT("Confirm to open your wallet for signature. Nothing is submitted until you approve."))+"</span></div>";
         }
-        setStellarStatus("Review ready. Confirm only if every detail is correct. HAVKAR still cannot sign for you.","success");
+        if(duplicateNotice&&duplicateNotice.hash&&(duplicateNotice.withinGuardWindow===true||duplicateNotice.severity==="guard")){
+            setStellarStatus(
+                stellarT("Duplicate payment warning")+": "+stellarT("Hash")+" "+duplicateNotice.hash+". "+
+                stellarT("Confirm will ask again before opening your wallet."),
+                "error"
+            );
+        }else if(duplicateNotice&&duplicateNotice.hash){
+            setStellarStatus(
+                stellarT("Matching payment found earlier")+": "+stellarT("Hash")+" "+duplicateNotice.hash+". "+
+                stellarT("Continue only if you intentionally want to send the same amount again."),
+                "info"
+            );
+        }else{
+            setStellarStatus("Review ready. Confirm only if every detail is correct. HAVKAR still cannot sign for you.","success");
+        }
         renderStellarNetwork();
     }catch(error){
         pendingStellarReview=null;
