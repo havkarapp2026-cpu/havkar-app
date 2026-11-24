@@ -1,7 +1,11 @@
 import { register } from "node:module";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { Keypair } from "@stellar/stellar-sdk";
+import {
+  Account,
+  Keypair,
+  TransactionBuilder
+} from "@stellar/stellar-sdk";
 
 register("./freighter-esm-hook.mjs", import.meta.url);
 
@@ -166,7 +170,7 @@ assert.equal(lobstr.kind, "walletconnect_mobile");
 assert.equal(freighter.kind, "walletconnect_mobile");
 assert.match(lobstr.connect, /WalletConnect/);
 assert.match(lobstr.connect, /Do not use the extension Install row/);
-assert.match(lobstr.notes, /stellar:pubnet/);
+assert.match(lobstr.notes, /stellar_signXDR|manageData|stellar_signMessage/i);
 
 const explorerEvm = await fetch(
   "https://explorer-api.walletconnect.com/v3/wallets?projectId=8c21324f756127dbb906a072cc18f7e6&entries=5&page=1&search=lobstr&chains=eip155%3A1"
@@ -201,22 +205,35 @@ localStorage.setItem(
 window.HAVKAR_STELLAR.connected = true;
 window.HAVKAR_STELLAR.address = kp.publicKey();
 
-let challengeCalls = 0;
-globalThis.HAVKAR_STELLAR_TEST_SIGN_MESSAGE = async (message) => {
-  challengeCalls += 1;
-  assert.match(message, /NOT a payment/);
-  return {
-    signedMessage: "dGVzdC1zaWduYXR1cmUtbm90LWEtdHg=",
-    signerAddress: kp.publicKey()
-  };
+let messageCalls = 0;
+globalThis.HAVKAR_STELLAR_TEST_SIGN_MESSAGE = async () => {
+  messageCalls += 1;
+  throw new Error("Saknad eller ogiltig request()-metod: stellar_signMessage");
 };
 
-const result = await window.havkarVerifyStellarWalletChallenge();
+let xdrCalls = 0;
+globalThis.HAVKAR_STELLAR_TEST_SIGN_TRANSACTION = async (unsignedXdr, prepared) => {
+  xdrCalls += 1;
+  const tx = TransactionBuilder.fromXDR(
+    unsignedXdr,
+    prepared.network.passphrase
+  );
+  assert.equal(tx.operations[0].type, "manageData");
+  tx.sign(kp);
+  return { signedTxXdr: tx.toXDR() };
+};
+
+const result = await window.havkarVerifyStellarWalletChallenge({
+  account: new Account(kp.publicKey(), "7"),
+  nonce: "android-wc"
+});
 assert.equal(result.ok, true);
 assert.equal(result.transferred, false);
 assert.equal(result.submitted, false);
 assert.equal(result.moduleId, "wallet_connect");
-assert.equal(challengeCalls, 1);
+assert.equal(result.method, "stellar_signXDR");
+assert.equal(xdrCalls, 1);
+assert.equal(messageCalls, 0);
 
 console.log("HAVKAR_STELLAR_LOBSTR_ANDROID_WC_TEST_OK");
 process.exit(0);

@@ -10,6 +10,7 @@ import {
 } from "@creit.tech/stellar-wallets-kit/modules/wallet-connect";
 
 import {
+    Account,
     Asset,
     Horizon,
     Keypair,
@@ -313,9 +314,11 @@ function havkarListPreferredStellarWallets(){
             connect:mobile
                 ? "Android/iOS: use WalletConnect → Freighter Mobile (not the browser-extension row)."
                 : "Desktop: Freighter browser extension.",
-            sign:"Payment XDR via signTransaction; challenge via signMessage / signAuthEntry (SEP-43/53). Honors networkPassphrase.",
-            challengeSign:"supported",
-            notes:"Extension module is hidden on mobile browsers. Connect through WalletConnect so Freighter Mobile can deep-link."
+            sign:"Payment XDR via signTransaction; challenge via signMessage / signAuthEntry when the WC session negotiated those methods (Freighter Mobile).",
+            challengeSign:mobile
+                ? "walletconnect_message_if_negotiated"
+                : "supported",
+            notes:"Extension module is hidden on mobile browsers. Connect through WalletConnect so Freighter Mobile can deep-link. Freighter Mobile can negotiate stellar_signMessage; LOBSTR mobile typically does not."
         },
 
         {
@@ -328,9 +331,13 @@ function havkarListPreferredStellarWallets(){
             connect:mobile
                 ? "Android/iOS: use WalletConnect → LOBSTR Wallet (or Connect LOBSTR via WalletConnect). Do not use the extension Install row."
                 : "Desktop: LOBSTR browser signer extension.",
-            sign:"Payment XDR via signTransaction; challenge via signMessage. LOBSTR ignores dApp networkPassphrase options.",
-            challengeSign:"supported",
-            notes:"The Android LOBSTR app is not a browser extension. HAVKAR hides the false Install badge on mobile and routes through WalletConnect (stellar:pubnet)."
+            sign:mobile
+                ? "WalletConnect supports stellar_signXDR (payments / no-submit challenge XDR). stellar_signMessage is not implemented by LOBSTR Android WC."
+                : "Extension: signTransaction + signMessage. LOBSTR ignores dApp networkPassphrase options.",
+            challengeSign:mobile
+                ? "walletconnect_sign_xdr_only"
+                : "supported",
+            notes:"Android LOBSTR rejects stellar_signMessage (missing request method). HAVKAR uses a no-payment manageData challenge XDR via stellar_signXDR and never submits it."
         }
 
     ];
@@ -389,6 +396,58 @@ function havkarStellarExplorerTxUrl(
 }
 
 
+const HAVKAR_WALLET_CONNECT_MODULE =
+    new WalletConnectModule({
+
+        projectId:
+            "8c21324f756127dbb906a072cc18f7e6",
+
+        metadata:{
+
+            name:
+                "HAVKAR",
+
+            description:
+                "HAVKAR multi-service platform",
+
+            url:
+                "https://havkar.online",
+
+            icons:[
+                "https://havkar.online/icon.png"
+            ]
+
+        },
+
+        allowedChains:[
+            WalletConnectTargetChain.TESTNET,
+            WalletConnectTargetChain.PUBLIC
+        ],
+
+        /* Override kit default Ethereum `mainnet` AppKit network.
+           With eip155:1, AppKit search filters out stellar:pubnet
+           wallets → LOBSTR search returns "No Wallet found". */
+        appKitOptions:{
+
+            networks:HAVKAR_STELLAR_APPKIT_NETWORKS,
+
+            featuredWalletIds:[
+                WC_STELLAR_LOBSTR_ID,
+                WC_STELLAR_FREIGHTER_ID,
+                WC_STELLAR_SCOPULY_ID
+            ],
+
+            includeWalletIds:[
+                WC_STELLAR_LOBSTR_ID,
+                WC_STELLAR_FREIGHTER_ID,
+                WC_STELLAR_SCOPULY_ID
+            ]
+
+        }
+
+    });
+
+
 StellarWalletsKit.init({
 
     network:currentNetwork().passphrase,
@@ -397,55 +456,7 @@ StellarWalletsKit.init({
 
         ...orderedStellarModules(),
 
-        new WalletConnectModule({
-
-            projectId:
-                "8c21324f756127dbb906a072cc18f7e6",
-
-            metadata:{
-
-                name:
-                    "HAVKAR",
-
-                description:
-                    "HAVKAR multi-service platform",
-
-                url:
-                    "https://havkar.online",
-
-                icons:[
-                    "https://havkar.online/icon.png"
-                ]
-
-            },
-
-            allowedChains:[
-                WalletConnectTargetChain.TESTNET,
-                WalletConnectTargetChain.PUBLIC
-            ],
-
-            /* Override kit default Ethereum `mainnet` AppKit network.
-               With eip155:1, AppKit search filters out stellar:pubnet
-               wallets → LOBSTR search returns "No Wallet found". */
-            appKitOptions:{
-
-                networks:HAVKAR_STELLAR_APPKIT_NETWORKS,
-
-                featuredWalletIds:[
-                    WC_STELLAR_LOBSTR_ID,
-                    WC_STELLAR_FREIGHTER_ID,
-                    WC_STELLAR_SCOPULY_ID
-                ],
-
-                includeWalletIds:[
-                    WC_STELLAR_LOBSTR_ID,
-                    WC_STELLAR_FREIGHTER_ID,
-                    WC_STELLAR_SCOPULY_ID
-                ]
-
-            }
-
-        })
+        HAVKAR_WALLET_CONNECT_MODULE
 
     ]
 
@@ -4247,9 +4258,45 @@ window.havkarFetchStellarProtocolInfo =
 
 /* =========================================================
    WALLET CHALLENGE (NO PAYMENT / NO SUBMIT)
-   Uses signMessage so LOBSTR / Freighter can prove control
-   without building or broadcasting any XLM transfer.
+
+   Protocol facts:
+   - WalletConnect required method in this kit: stellar_signXDR
+   - stellar_signMessage is OPTIONAL; Freighter Mobile may negotiate it
+   - LOBSTR Android WC rejects stellar_signMessage
+     ("Saknad eller ogiltig request()-metod: stellar_signMessage")
+   - Official kit docs: message signing is not generally available via WC
+   - LOBSTR browser extension supports SEP-43 signMessage
+
+   HAVKAR therefore:
+   - extension lobstr/freighter → signMessage
+   - wallet_connect with stellar_signMessage negotiated → signMessage
+   - wallet_connect otherwise → no-payment manageData challenge XDR
+     via stellar_signXDR, verified locally, NEVER submitted
    ========================================================= */
+
+const WC_METHOD_SIGN_XDR =
+    "stellar_signXDR";
+
+const WC_METHOD_SIGN_MESSAGE =
+    "stellar_signMessage";
+
+
+function challengeNonce(){
+
+    if(
+        typeof crypto !== "undefined" &&
+        crypto.randomUUID
+    ){
+
+        return crypto.randomUUID();
+
+    }
+
+    return Date.now().toString(36) +
+        Math.random().toString(36).slice(2);
+
+}
+
 
 function buildStellarWalletChallengeMessage(){
 
@@ -4261,25 +4308,658 @@ function buildStellarWalletChallengeMessage(){
             HAVKAR_STELLAR.address || ""
         ).trim();
 
-    const nonce =
-        (
-            typeof crypto !== "undefined" &&
-            crypto.randomUUID
-        )
-        ? crypto.randomUUID()
-        : (
-            Date.now().toString(36) +
-            Math.random().toString(36).slice(2)
-        );
-
     return [
         "HAVKAR Stellar wallet challenge",
         "This is NOT a payment and moves no XLM.",
         "Network: " + network.label + " (" + network.id + ")",
         "Address: " + (address || "(not connected)"),
-        "Nonce: " + nonce,
+        "Nonce: " + challengeNonce(),
         "IssuedAt: " + new Date().toISOString()
     ].join("\n");
+
+}
+
+
+async function havkarListWalletConnectMethods(){
+
+    try{
+
+        if(
+            typeof HAVKAR_WALLET_CONNECT_MODULE.getSessions !==
+            "function"
+        ){
+
+            return [];
+
+        }
+
+        const sessions =
+            await HAVKAR_WALLET_CONNECT_MODULE.getSessions();
+
+        const methods =
+            new Set();
+
+        const list =
+            Array.isArray(sessions)
+            ? sessions
+            : Object.values(
+                sessions || {}
+            );
+
+        for(
+            let index = 0;
+            index < list.length;
+            index += 1
+        ){
+
+            const session =
+                list[index];
+
+            const nsMethods =
+                session?.namespaces?.stellar?.methods ||
+                [];
+
+            for(
+                let m = 0;
+                m < nsMethods.length;
+                m += 1
+            ){
+
+                methods.add(
+                    String(
+                        nsMethods[m]
+                    )
+                );
+
+            }
+
+        }
+
+        return Array.from(
+            methods
+        );
+
+    }
+    catch(error){
+
+        return [];
+
+    }
+
+}
+
+
+function isLocalTestHost(){
+
+    const host =
+        String(
+            window.location?.hostname || ""
+        );
+
+    return host === "localhost" ||
+        host === "127.0.0.1";
+
+}
+
+
+function formatSignMessageUnsupportedError(
+    moduleId,
+    methods
+){
+
+    const methodList =
+        Array.isArray(methods) &&
+        methods.length
+        ? methods.join(", ")
+        : "(none read from session)";
+
+    return [
+        "LOBSTR via WalletConnect does not support stellar_signMessage.",
+        "The wallet returned: missing/invalid request method stellar_signMessage.",
+        "Negotiated WalletConnect methods: " + methodList + ".",
+        "HAVKAR will use stellar_signXDR with a no-payment challenge (manageData) and will not submit it.",
+        "Alternatives: Freighter Mobile via WalletConnect (if it negotiates stellar_signMessage), or LOBSTR browser extension on desktop for SEP-43 signMessage.",
+        "Connected address, balance, and history are unaffected. Module: " +
+            (moduleId || "wallet_connect") + "."
+    ].join(" ");
+
+}
+
+
+async function buildStellarWalletChallengeTransaction(
+    options
+){
+
+    const opts =
+        options && typeof options === "object"
+        ? options
+        : {};
+
+    const network =
+        currentNetwork();
+
+    const address =
+        String(
+            HAVKAR_STELLAR.address || ""
+        ).trim();
+
+    if(
+        !isPublicKey(address)
+    ){
+
+        throw new Error(
+            "Connect a valid Stellar public key before the challenge."
+        );
+
+    }
+
+    const nonce =
+        String(
+            opts.nonce ||
+            challengeNonce()
+        ).replace(
+            /[^a-zA-Z0-9_-]/g,
+            ""
+        ).slice(0, 28) || "havkar";
+
+    const valueBytes =
+        new TextEncoder().encode(
+            nonce
+        );
+
+    let sourceAccount;
+
+    if(
+        opts.account instanceof Account
+    ){
+
+        sourceAccount =
+            opts.account;
+
+    }
+    else if(
+        isLocalTestHost() &&
+        opts.sequence != null
+    ){
+
+        sourceAccount =
+            new Account(
+                address,
+                String(
+                    opts.sequence
+                )
+            );
+
+    }
+    else{
+
+        const server =
+            horizonServer(
+                network
+            );
+
+        sourceAccount =
+            await server.loadAccount(
+                address
+            );
+
+    }
+
+    const fee =
+        String(
+            opts.fee ||
+            "100"
+        );
+
+    const now =
+        Math.floor(
+            Date.now() / 1000
+        );
+
+    const built =
+        new TransactionBuilder(
+            sourceAccount,
+            {
+
+                fee:fee,
+
+                networkPassphrase:
+                    network.passphrase,
+
+                timebounds:{
+                    minTime:0,
+                    maxTime:now + 300
+                }
+
+            }
+        )
+        .addOperation(
+            Operation.manageData({
+                name:"havkar_chal",
+                value:valueBytes
+            })
+        )
+        .addMemo(
+            Memo.text(
+                "HAVKAR no-XLM challenge"
+            )
+        )
+        .build();
+
+
+    const operations =
+        built.operations || [];
+
+    for(
+        let index = 0;
+        index < operations.length;
+        index += 1
+    ){
+
+        const op =
+            operations[index];
+
+        if(
+            op.type === "payment" ||
+            op.type === "pathPaymentStrictReceive" ||
+            op.type === "pathPaymentStrictSend" ||
+            op.type === "createAccount" ||
+            op.type === "accountMerge"
+        ){
+
+            throw new Error(
+                "Refusing to build a challenge that contains a financial operation."
+            );
+
+        }
+
+    }
+
+
+    return {
+
+        unsignedXdr:built.toXDR(),
+
+        hash:bytesToHex(
+            built.hash()
+        ),
+
+        network:network,
+
+        address:address,
+
+        nonce:nonce,
+
+        memo:"HAVKAR no-XLM challenge",
+
+        operation:"manageData:havkar_chal",
+
+        fee:fee,
+
+        sequence:String(
+            built.sequence
+        )
+
+    };
+
+}
+
+
+function assertChallengeSignedXdr(
+    signedXdr,
+    prepared
+){
+
+    const signed =
+        TransactionBuilder.fromXDR(
+            signedXdr,
+            prepared.network.passphrase
+        );
+
+    if(
+        signed.source !== prepared.address
+    ){
+
+        throw new Error(
+            "Challenge signer source does not match the connected public key."
+        );
+
+    }
+
+    if(
+        bytesToHex(
+            signed.hash()
+        ) !== prepared.hash
+    ){
+
+        throw new Error(
+            "Signed challenge XDR hash does not match the unsigned challenge."
+        );
+
+    }
+
+    const operations =
+        signed.operations || [];
+
+    if(
+        operations.length !== 1 ||
+        operations[0].type !== "manageData" ||
+        operations[0].name !== "havkar_chal"
+    ){
+
+        throw new Error(
+            "Signed challenge must be exactly one manageData(havkar_chal) operation."
+        );
+
+    }
+
+    for(
+        let index = 0;
+        index < operations.length;
+        index += 1
+    ){
+
+        const op =
+            operations[index];
+
+        if(
+            op.type === "payment" ||
+            op.type === "pathPaymentStrictReceive" ||
+            op.type === "pathPaymentStrictSend" ||
+            op.type === "createAccount" ||
+            op.type === "accountMerge"
+        ){
+
+            throw new Error(
+                "Signed challenge contains a financial operation; refusing result."
+            );
+
+        }
+
+    }
+
+    if(
+        !signed.signatures ||
+        signed.signatures.length < 1
+    ){
+
+        throw new Error(
+            "The wallet did not attach a signature to the challenge XDR."
+        );
+
+    }
+
+    const keypair =
+        Keypair.fromPublicKey(
+            prepared.address
+        );
+
+    const hash =
+        signed.hash();
+
+    let verified =
+        false;
+
+    let signatureB64 =
+        "";
+
+    for(
+        let index = 0;
+        index < signed.signatures.length;
+        index += 1
+    ){
+
+        const decorated =
+            signed.signatures[index];
+
+        const rawSignature =
+            typeof decorated.signature ===
+            "function"
+            ? decorated.signature()
+            : decorated.signature;
+
+        const signatureBytes =
+            rawSignature?.value instanceof Uint8Array
+            ? rawSignature.value
+            : rawSignature instanceof Uint8Array
+            ? rawSignature
+            : null;
+
+        if(
+            !signatureBytes
+        ){
+
+            continue;
+
+        }
+
+        if(
+            keypair.verify(
+                hash,
+                signatureBytes
+            )
+        ){
+
+            verified =
+                true;
+
+            signatureB64 =
+                typeof btoa === "function"
+                ? btoa(
+                    String.fromCharCode.apply(
+                        null,
+                        Array.from(
+                            signatureBytes
+                        )
+                    )
+                )
+                : Buffer.from(
+                    signatureBytes
+                ).toString(
+                    "base64"
+                );
+
+            break;
+
+        }
+
+    }
+
+    if(
+        !verified
+    ){
+
+        throw new Error(
+            "Challenge XDR signature does not verify for the connected public key."
+        );
+
+    }
+
+    return {
+        signature:signatureB64,
+        signedTxXdr:signedXdr
+    };
+
+}
+
+
+async function verifyChallengeViaSignMessage(
+    message,
+    network
+){
+
+    const testSigner =
+        globalThis.HAVKAR_STELLAR_TEST_SIGN_MESSAGE;
+
+    let result;
+
+    if(
+        typeof testSigner === "function" &&
+        isLocalTestHost()
+    ){
+
+        result =
+            await testSigner(
+                message,
+                network
+            );
+
+    }
+    else{
+
+        result =
+            await StellarWalletsKit.signMessage(
+                message,
+                {
+
+                    networkPassphrase:
+                        network.passphrase,
+
+                    address:HAVKAR_STELLAR.address
+
+                }
+            );
+
+    }
+
+    const signature =
+        String(
+            result?.signedMessage ||
+            result?.signature ||
+            ""
+        ).trim();
+
+    if(
+        !signature
+    ){
+
+        throw new Error(
+            "The wallet did not return a challenge signature. Nothing was submitted to the network."
+        );
+
+    }
+
+    return {
+
+        kind:"challenge_message",
+
+        method:WC_METHOD_SIGN_MESSAGE,
+
+        message:message,
+
+        signature:signature,
+
+        signerAddress:String(
+            result?.signerAddress ||
+            HAVKAR_STELLAR.address ||
+            ""
+        ).trim() || null,
+
+        signedTxXdr:null,
+
+        note:"SEP-43/53 message signature only. No XLM moved and no Horizon submit."
+
+    };
+
+}
+
+
+async function verifyChallengeViaSignXdr(
+    options
+){
+
+    const prepared =
+        await buildStellarWalletChallengeTransaction(
+            options
+        );
+
+    const testSigner =
+        globalThis.HAVKAR_STELLAR_TEST_SIGN_TRANSACTION;
+
+    let signedXdr =
+        "";
+
+    if(
+        typeof testSigner === "function" &&
+        isLocalTestHost()
+    ){
+
+        const signed =
+            await testSigner(
+                prepared.unsignedXdr,
+                prepared
+            );
+
+        signedXdr =
+            String(
+                signed?.signedTxXdr ||
+                signed ||
+                ""
+            ).trim();
+
+    }
+    else{
+
+        const signed =
+            await StellarWalletsKit.signTransaction(
+                prepared.unsignedXdr,
+                {
+
+                    networkPassphrase:
+                        prepared.network.passphrase,
+
+                    address:prepared.address
+
+                }
+            );
+
+        signedXdr =
+            String(
+                signed?.signedTxXdr ||
+                ""
+            ).trim();
+
+    }
+
+    if(
+        !signedXdr
+    ){
+
+        throw new Error(
+            "The wallet did not return a signed challenge XDR. Nothing was submitted."
+        );
+
+    }
+
+    const verified =
+        assertChallengeSignedXdr(
+            signedXdr,
+            prepared
+        );
+
+    return {
+
+        kind:"challenge_xdr",
+
+        method:WC_METHOD_SIGN_XDR,
+
+        message:
+            "manageData havkar_chal nonce=" +
+            prepared.nonce +
+            " memo=" +
+            prepared.memo,
+
+        signature:verified.signature,
+
+        signerAddress:prepared.address,
+
+        signedTxXdr:verified.signedTxXdr,
+
+        hash:prepared.hash,
+
+        note:"WalletConnect stellar_signXDR challenge: one manageData op, verified locally, NEVER submitted to Horizon. No payment op. No XLM moved."
+
+    };
 
 }
 
@@ -4321,100 +5001,139 @@ async function havkarVerifyStellarWalletChallenge(
     ){
 
         throw new Error(
-            "Albedo does not support HAVKAR’s no-transfer message challenge. Use LOBSTR or Freighter via WalletConnect on Android, then try again."
+            "Albedo does not support HAVKAR’s no-transfer challenge. Use LOBSTR WalletConnect (stellar_signXDR challenge) or Freighter / LOBSTR extension signMessage."
         );
 
     }
 
 
-    if(
-        moduleId === "wallet_connect" ||
-        moduleId === "lobstr" ||
-        moduleId === "freighter"
-    ){
-
-        /* Supported challenge path. */
-
-    }
-
-
-    const testHost =
-        String(
-            window.location?.hostname || ""
-        );
-
-    const testSigner =
-        globalThis.HAVKAR_STELLAR_TEST_SIGN_MESSAGE;
-
-
-    let result;
-
-
-    if(
-        typeof testSigner === "function" &&
-        (
-            testHost === "localhost" ||
-            testHost === "127.0.0.1"
-        )
-    ){
-
-        result =
-            await testSigner(
-                message,
-                network
-            );
-
-    }
-    else if(
-        typeof StellarWalletsKit.signMessage ===
+    const listWcMethods =
+        typeof window.havkarListWalletConnectMethods ===
         "function"
-    ){
+        ? window.havkarListWalletConnectMethods
+        : havkarListWalletConnectMethods;
 
-        result =
-            await StellarWalletsKit.signMessage(
-                message,
-                {
+    const wcMethods =
+        moduleId === "wallet_connect"
+        ? await listWcMethods()
+        : [];
 
-                    networkPassphrase:
-                        network.passphrase,
+    const wcHasMessage =
+        wcMethods.includes(
+            WC_METHOD_SIGN_MESSAGE
+        );
 
-                    address:HAVKAR_STELLAR.address
+    let detail;
 
-                }
+
+    try{
+
+        if(
+            moduleId === "wallet_connect"
+        ){
+
+            if(
+                wcHasMessage &&
+                opts.forceXdr !== true
+            ){
+
+                detail =
+                    await verifyChallengeViaSignMessage(
+                        message,
+                        network
+                    );
+
+            }
+            else{
+
+                /* LOBSTR Android path: required WC method is stellar_signXDR only. */
+                detail =
+                    await verifyChallengeViaSignXdr(
+                        opts
+                    );
+
+            }
+
+        }
+        else if(
+            moduleId === "lobstr" ||
+            moduleId === "freighter"
+        ){
+
+            detail =
+                await verifyChallengeViaSignMessage(
+                    message,
+                    network
+                );
+
+        }
+        else if(
+            typeof StellarWalletsKit.signMessage ===
+            "function"
+        ){
+
+            detail =
+                await verifyChallengeViaSignMessage(
+                    message,
+                    network
+                );
+
+        }
+        else{
+
+            throw new Error(
+                "This wallet module cannot run HAVKAR’s no-transfer challenge."
             );
 
-    }
-    else{
-
-        throw new Error(
-            "This wallet kit build cannot request a message signature."
-        );
+        }
 
     }
+    catch(error){
 
+        const raw =
+            safeErrorMessage(
+                error
+            );
 
-    const signature =
-        String(
-            result?.signedMessage ||
-            result?.signature ||
-            ""
-        ).trim();
+        if(
+            /stellar_signMessage|signMessage|Saknad eller ogiltig|Missing or invalid request/i
+                .test(raw)
+        ){
 
-    const signerAddress =
-        String(
-            result?.signerAddress ||
-            HAVKAR_STELLAR.address ||
-            ""
-        ).trim();
+            if(
+                moduleId === "wallet_connect"
+            ){
 
+                /* Auto-fallback once to the real LOBSTR-supported method. */
+                detail =
+                    await verifyChallengeViaSignXdr(
+                        opts
+                    );
 
-    if(
-        !signature
-    ){
+            }
+            else{
 
-        throw new Error(
-            "The wallet did not return a challenge signature. Nothing was submitted to the network."
-        );
+                throw new Error(
+                    formatSignMessageUnsupportedError(
+                        moduleId,
+                        wcMethods
+                    ) +
+                    " Original wallet error: " +
+                    raw
+                );
+
+            }
+
+        }
+        else{
+
+            throw error instanceof Error
+                ? error
+                : new Error(
+                    raw
+                );
+
+        }
 
     }
 
@@ -4423,7 +5142,7 @@ async function havkarVerifyStellarWalletChallenge(
 
         ok:true,
 
-        kind:"challenge",
+        kind:detail.kind || "challenge",
 
         transferred:false,
 
@@ -4431,19 +5150,27 @@ async function havkarVerifyStellarWalletChallenge(
 
         moduleId:moduleId || null,
 
+        method:detail.method || null,
+
         network:network.id,
 
         label:network.label,
 
         address:HAVKAR_STELLAR.address,
 
-        signerAddress:signerAddress || null,
+        signerAddress:detail.signerAddress || null,
 
-        message:message,
+        message:detail.message || message,
 
-        signature:signature,
+        signature:detail.signature,
 
-        note:"Message signature only. No XLM moved and no Horizon submit."
+        signedTxXdr:detail.signedTxXdr || null,
+
+        hash:detail.hash || null,
+
+        walletConnectMethods:wcMethods,
+
+        note:detail.note
 
     };
 
@@ -4464,6 +5191,12 @@ window.havkarStellarExplorerTxUrl =
 
 window.havkarVerifyStellarWalletChallenge =
     havkarVerifyStellarWalletChallenge;
+
+window.havkarListWalletConnectMethods =
+    havkarListWalletConnectMethods;
+
+window.havkarBuildStellarWalletChallengeTransaction =
+    buildStellarWalletChallengeTransaction;
 
 window.havkarPrepareStellarPayment =
     havkarPrepareStellarPayment;
