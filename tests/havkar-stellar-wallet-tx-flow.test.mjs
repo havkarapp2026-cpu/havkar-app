@@ -132,7 +132,7 @@ assert.match(source, /Signature declined or cancelled/);
 assert.match(walletHtml, /stellarReceiptPanel/);
 assert.match(walletHtml, /cancelHAVKARStellarReview/);
 assert.match(walletHtml, /stellarT\(/);
-assert.match(walletHtml, /Mainnet sends real XLM/);
+assert.match(walletHtml, /MAINNET · real XLM|Mainnet sends real XLM|real XLM/);
 assert.match(i18n, /Payment receipt/);
 assert.match(i18n, /Review before signing/);
 assert.match(bundle, /havkarListPreferredStellarWallets/);

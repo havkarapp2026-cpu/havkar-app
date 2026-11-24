@@ -6048,10 +6048,12 @@ function renderStellarNetwork(){
     const capNote=document.getElementById("stellarWalletCapabilityNote");
     if(capNote && typeof window.havkarSelectedStellarModuleId==="function"){
         const selected=window.havkarSelectedStellarModuleId();
-        if(selected==="lobstr"){
+        if(selected==="wallet_connect"){
+            capNote.textContent=stellarT("WalletConnect (LOBSTR/Freighter mobile): set Mainnet or Testnet inside the wallet app before signing. HAVKAR never holds your secret key; stellar_signXDR only.");
+        }else if(selected==="lobstr"){
             capNote.textContent=stellarT("LOBSTR ignores dApp network selection. Set Testnet or Mainnet inside LOBSTR before signing.");
         }else if(selected==="freighter"){
-            capNote.textContent=stellarT("Freighter desktop needs the extension. On Android use WalletConnect with Freighter Mobile — then Verify signature (no XLM).");
+            capNote.textContent=stellarT("Freighter desktop needs the extension. On Android use WalletConnect with Freighter Mobile.");
         }else if(selected==="albedo"){
             capNote.textContent=stellarT("Albedo opens in a browser window. Allow popups if the signing window is blocked.");
         }
@@ -6451,25 +6453,43 @@ async function reviewHAVKARStellarPayment(){
             amount:prepared.amount||amount,
             memo:prepared.memo||memo||"",
             fee:prepared.fee||null,
+            feeXlm:prepared.feeXlm||null,
             kind:prepared.kind||"payment",
             label:prepared.label||network.label,
             network:prepared.network||network.id,
-            source:prepared.source||window.HAVKAR_STELLAR?.address||""
+            source:prepared.source||window.HAVKAR_STELLAR?.address||"",
+            spendable:prepared.spendable||null,
+            balance:prepared.balance||null,
+            minimumBalance:prepared.minimumBalance||null,
+            sequence:prepared.sequence||null,
+            hash:prepared.hash||null,
+            horizon:prepared.horizon||null,
+            signed:false,
+            submitted:false
         };
+        const feeXlm=pendingStellarReview.feeXlm!=null
+            ? pendingStellarReview.feeXlm
+            : String(Number(pendingStellarReview.fee||0)/1e7);
         if(panel){
             panel.style.display="block";
             panel.innerHTML=
                 "<strong>"+escapeCommerceHtml(stellarT("Review before signing"))+"</strong>"+
-                '<div class="row"><span>'+escapeCommerceHtml(stellarT("Network"))+'</span><span>'+escapeCommerceHtml(pendingStellarReview.label)+"</span></div>"+
+                '<div class="row"><span>'+escapeCommerceHtml(stellarT("Network"))+'</span><span>'+escapeCommerceHtml(pendingStellarReview.label)+(pendingStellarReview.network==="PUBLIC"?" · real XLM":" · test XLM")+"</span></div>"+
                 (pendingStellarReview.source?'<div class="row"><span>'+escapeCommerceHtml(stellarT("From"))+'</span><span style="word-break:break-all">'+escapeCommerceHtml(pendingStellarReview.source)+"</span></div>":"")+
                 '<div class="row"><span>'+escapeCommerceHtml(stellarT("Destination"))+'</span><span style="word-break:break-all">'+escapeCommerceHtml(pendingStellarReview.destination)+"</span></div>"+
                 '<div class="row"><span>'+escapeCommerceHtml(stellarT("Amount"))+'</span><span>'+escapeCommerceHtml(pendingStellarReview.amount)+" XLM</span></div>"+
-                '<div class="row"><span>'+escapeCommerceHtml(stellarT("Network fee"))+'</span><span>'+escapeCommerceHtml(String(Number(pendingStellarReview.fee||0)/1e7))+" XLM ("+escapeCommerceHtml(stellarT("not HAVKAR revenue"))+")</span></div>"+
+                '<div class="row"><span>'+escapeCommerceHtml(stellarT("Network fee"))+'</span><span>'+escapeCommerceHtml(feeXlm)+" XLM ("+escapeCommerceHtml(stellarT("not HAVKAR revenue"))+")</span></div>"+
+                (pendingStellarReview.spendable!=null?'<div class="row"><span>'+escapeCommerceHtml(stellarT("Spendable"))+'</span><span>'+escapeCommerceHtml(pendingStellarReview.spendable)+" XLM</span></div>":"")+
+                (pendingStellarReview.balance!=null?'<div class="row"><span>'+escapeCommerceHtml(stellarT("Balance"))+'</span><span>'+escapeCommerceHtml(pendingStellarReview.balance)+" XLM</span></div>":"")+
+                (pendingStellarReview.minimumBalance!=null?'<div class="row"><span>'+escapeCommerceHtml(stellarT("Reserve"))+'</span><span>'+escapeCommerceHtml(pendingStellarReview.minimumBalance)+" XLM</span></div>":"")+
                 '<div class="row"><span>'+escapeCommerceHtml(stellarT("Type"))+'</span><span>'+escapeCommerceHtml(pendingStellarReview.kind)+"</span></div>"+
                 (pendingStellarReview.memo
                     ? '<div class="row"><span>'+escapeCommerceHtml(stellarT("Memo"))+'</span><span>'+escapeCommerceHtml(pendingStellarReview.memo)+"</span></div>"
-                    : "")+
-                '<div class="row"><span>'+escapeCommerceHtml(stellarT("Next"))+'</span><span>'+escapeCommerceHtml(stellarT("Confirm to open your wallet for signature"))+"</span></div>";
+                    : '<div class="row"><span>'+escapeCommerceHtml(stellarT("Memo"))+'</span><span>'+escapeCommerceHtml(stellarT("(none)"))+"</span></div>")+
+                (pendingStellarReview.sequence?'<div class="row"><span>'+escapeCommerceHtml(stellarT("Sequence"))+'</span><span>'+escapeCommerceHtml(pendingStellarReview.sequence)+"</span></div>":"")+
+                (pendingStellarReview.hash?'<div class="row"><span>'+escapeCommerceHtml(stellarT("Unsigned hash"))+'</span><span style="word-break:break-all">'+escapeCommerceHtml(pendingStellarReview.hash)+"</span></div>":"")+
+                '<div class="row"><span>'+escapeCommerceHtml(stellarT("Signing"))+'</span><span>'+escapeCommerceHtml(stellarT("Only in your wallet · HAVKAR never receives a secret key"))+"</span></div>"+
+                '<div class="row"><span>'+escapeCommerceHtml(stellarT("Next"))+'</span><span>'+escapeCommerceHtml(stellarT("Confirm to open your wallet for signature. Nothing is submitted until you approve."))+"</span></div>";
         }
         setStellarStatus("Review ready. Confirm only if every detail is correct. HAVKAR still cannot sign for you.","success");
         renderStellarNetwork();
@@ -6495,8 +6515,23 @@ async function confirmHAVKARStellarPayment(){
         setStellarStatus("Mainnet is protected. Switch to Testnet before sending.","error");  
         return;  
     }
+    if(pendingStellarReview.network && network.id && pendingStellarReview.network!==network.id){
+        setStellarStatus("Network changed after review. Review the payment again. Nothing was signed.","error");
+        return;
+    }
     if(network.id==="PUBLIC"){
-        const ok=window.confirm(stellarT("Mainnet sends real XLM. Only continue if the Owner explicitly authorized this transfer. Your wallet must still approve the signature."));
+        const confirmLines=[
+            stellarT("MAINNET · real XLM"),
+            stellarT("From")+": "+(pendingStellarReview.source||"—"),
+            stellarT("Destination")+": "+(pendingStellarReview.destination||"—"),
+            stellarT("Amount")+": "+(pendingStellarReview.amount||"—")+" XLM",
+            stellarT("Memo")+": "+(pendingStellarReview.memo||stellarT("(none)")),
+            stellarT("Fee")+": "+(pendingStellarReview.feeXlm||String(Number(pendingStellarReview.fee||0)/1e7))+" XLM",
+            "",
+            stellarT("Only continue if the Owner explicitly authorized this transfer."),
+            stellarT("Your wallet must still approve the signature. HAVKAR never holds your secret key.")
+        ];
+        const ok=window.confirm(confirmLines.join("\n"));
         if(!ok){
             setStellarStatus("Mainnet send cancelled before signing. No transaction was submitted.","info");
             return;

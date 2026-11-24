@@ -149194,12 +149194,27 @@ ${value}`, dataLines++;
       network: network.id,
       label: network.label,
       passphrase: network.passphrase,
+      horizon: network.horizon,
       source,
       destination,
       amount: amount.text,
       kind,
       memo,
       fee: String(transaction.fee),
+      feeXlm: formatStroops(
+        BigInt(
+          String(
+            transaction.fee
+          )
+        )
+      ),
+      balance: available.text,
+      minimumBalance: formatStroops(
+        minimum
+      ),
+      spendable: formatStroops(
+        spendable > 0n ? spendable : 0n
+      ),
       sequence: String(transaction.sequence),
       timeBounds: {
         minTime: String(
@@ -149212,6 +149227,8 @@ ${value}`, dataLines++;
       hash: bytesToHex6(
         transaction.hash()
       ),
+      signed: false,
+      submitted: false,
       payments: splitPayments ? splitPayments.map(
         function(entry) {
           return {

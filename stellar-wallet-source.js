@@ -2212,6 +2212,8 @@ async function havkarPrepareStellarPayment(
 
         passphrase:network.passphrase,
 
+        horizon:network.horizon,
+
         source:source,
 
         destination:destination,
@@ -2223,6 +2225,26 @@ async function havkarPrepareStellarPayment(
         memo:memo,
 
         fee:String(transaction.fee),
+
+        feeXlm:formatStroops(
+            BigInt(
+                String(
+                    transaction.fee
+                )
+            )
+        ),
+
+        balance:available.text,
+
+        minimumBalance:formatStroops(
+            minimum
+        ),
+
+        spendable:formatStroops(
+            spendable > 0n
+            ? spendable
+            : 0n
+        ),
 
         sequence:String(transaction.sequence),
 
@@ -2241,6 +2263,10 @@ async function havkarPrepareStellarPayment(
         hash:bytesToHex(
             transaction.hash()
         ),
+
+        signed:false,
+
+        submitted:false,
 
         payments:splitPayments
             ? splitPayments.map(
