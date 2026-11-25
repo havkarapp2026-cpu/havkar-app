@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 import test from "node:test";
 
+const require = createRequire(import.meta.url);
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = (rel) => fs.readFileSync(path.join(root, rel), "utf8");
 
@@ -30,11 +32,15 @@ test("TomTom search supports lat/lon/radius bias", () => {
 });
 
 test("Travel Plus sales stay OFF and separate from health billing", () => {
-  const plus = read("lib/havkar-travel-plus.cjs");
-  assert.match(plus, /sales_enabled:\s*false/);
-  assert.match(plus, /price_monthly:\s*4\.99/);
-  assert.match(plus, /trial_days:\s*30/);
-  assert.match(plus, /havkar_travel_plus/);
+  const { travelPlusStatus, TRAVEL_PLUS } = require("../lib/havkar-travel-plus.cjs");
+  const status = travelPlusStatus({});
+  assert.equal(status.sales_enabled, false);
+  assert.equal(status.checkout_enabled, false);
+  assert.equal(status.armed, false);
+  assert.equal(status.free_features_preserved, true);
+  assert.equal(TRAVEL_PLUS.price_monthly, 4.99);
+  assert.equal(TRAVEL_PLUS.trial_days, 30);
+  assert.equal(TRAVEL_PLUS.product_id, "havkar_travel_plus");
   assert.match(read("lib/havkar-maps-plus.cjs"), /sales_enabled:\s*false/);
 });
 
@@ -50,7 +56,10 @@ test("trip planner UI wires Accommodation and Tickets; Health has no interactive
   assert.match(health, /healthNearBtn/);
   assert.doesNotMatch(health, /havkar-map-shell|leaflet\.js/i);
   assert.equal((read("index.html").match(/class="tile-label"/g) || []).length, 15);
-  assert.match(read("sw.js"), /map-final-dock-v1|live-cameras-restore-v1|map-search-destination-v1|map-i18n-complete-v1|map-surroundings-bari-v1|smart-travel-health-v1/);
+  assert.match(
+    read("sw.js"),
+    /map-final-dock-v1|live-cameras-restore-v1|map-search-destination-v1|map-i18n-complete-v1|map-surroundings-bari-v1|smart-travel-health-v1|havkar-sw-20261123-home-start-v1/
+  );
 });
 
 test("hotel surroundings consumes POIs + smart guide + trip add", () => {

@@ -360,6 +360,21 @@ function isTravelLifeRequest(req) {
   return viaRewrite || travelAction;
 }
 
+function isTravelPlusRequest(req) {
+  const action = String((req && req.body && req.body.action) || "");
+  const url = String((req && req.url) || "");
+  return Boolean(
+    (req && req.query && req.query.havkarAction === "travelPlus") ||
+      url.indexOf("havkarAction=travelPlus") !== -1 ||
+      action === "travel_plus_checkout" ||
+      action === "travel_plus_portal" ||
+      action === "travel_plus_entitlement" ||
+      action === "travel_plus_owner_prerequisites" ||
+      (action === "travel_plus_status" &&
+        url.indexOf("/api/map-travel-plus-status") === -1)
+  );
+}
+
 function isCurrencyMatrixRequest(req) {
   const action = String((req && req.body && req.body.action) || "");
   const url = String((req && req.url) || "");
@@ -2260,6 +2275,38 @@ export default async function handler(req, res) {
     } catch (error) {
       console.error("HAVKAR global payments error:", error && error.message);
       return sendError(res, 500, "Global payments catalog failed");
+    }
+  }
+
+  if (isTravelPlusRequest(req)) {
+    if (req.method !== "POST" && req.method !== "GET") {
+      res.setHeader("Allow", "GET, POST");
+      return sendError(res, 405, "Method not allowed");
+    }
+    try {
+      const { handleTravelPlusAction } = require("../lib/travel-plus-api.cjs");
+      const body = req.body && typeof req.body === "object" ? req.body : {};
+      const action = String(
+        body.action || (req.query && req.query.action) || "travel_plus_status"
+      );
+      const handled = await handleTravelPlusAction({
+        action,
+        req,
+        res,
+        body,
+        env: process.env,
+        authenticateUser,
+        getStripe,
+        getSupabaseAdmin,
+        publicOrigin: allowedCheckoutOrigin(req)
+      });
+      if (handled === null) {
+        return sendError(res, 400, "Unknown Travel Plus action");
+      }
+      return;
+    } catch (error) {
+      console.error("HAVKAR Travel Plus error:", error && error.message);
+      return sendError(res, 500, "Travel Plus request failed");
     }
   }
 

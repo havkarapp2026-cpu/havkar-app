@@ -1080,9 +1080,17 @@ html[dir="rtl"] .havkar-map-layers{
         </form>
         <div id="reminderPrefsStatus" class="pending-note" role="status"></div>
         <details class="panel" style="margin:12px 0 0;padding:10px 12px" open>
-            <summary class="kicker" style="cursor:pointer;list-style:none">Travel Plus (proposed)</summary>
+            <summary class="kicker" style="cursor:pointer;list-style:none">Travel Plus (€4.99 / 30-day trial)</summary>
             <p class="lead" id="travelPlusStatusText" style="margin:8px 0 0">Loading Travel Plus status…</p>
-            <p class="pending-note" style="margin:8px 0 0">Personal GPS, My trips, memories, and reminders stay free. €4.99/mo + 30-day trial are sales-OFF until Owner arms checkout. Cancel/renew terms appear only when billing is armed.</p>
+            <p class="pending-note" style="margin:8px 0 0">Personal GPS, My trips, memories, and reminders stay free. Paid extras unlock only with an active Travel Plus entitlement. Card data stays on Stripe Checkout (PCI).</p>
+            <ul id="travelPlusFreeList" class="pending-note" style="margin:8px 0 0;padding-inline-start:1.2rem"></ul>
+            <ul id="travelPlusPaidList" class="pending-note" style="margin:8px 0 0;padding-inline-start:1.2rem"></ul>
+            <p id="travelPlusPrereq" class="pending-note" style="margin:8px 0 0" hidden></p>
+            <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px">
+              <button type="button" id="travelPlusSubscribeBtn" class="partner-link" disabled>Start 30-day trial (€4.99/mo after)</button>
+              <button type="button" id="travelPlusManageBtn" class="partner-link" style="background:#fff;color:#1b5e20" disabled>Manage / cancel</button>
+            </div>
+            <p id="travelPlusActionStatus" class="pending-note" style="margin:8px 0 0" role="status"></p>
         </details>
         <details class="panel" style="margin:12px 0 0;padding:10px 12px">
             <summary class="kicker" style="cursor:pointer;list-style:none">Partners &amp; payment honesty</summary>
@@ -2681,9 +2689,53 @@ html[dir="rtl"] .havkar-map-layers{
     });
   }
 
+  function havkarAuthHeaders(){
+    var h={'Content-Type':'application/json','Accept':'application/json'};
+    try{
+      var sb=window.__havkarTravelLifeSb || (window.HAVKAR_SUPABASE_CONFIG && window.supabase && window.__havkarSb);
+      /* Prefer session from travel-life client when present */
+    }catch(_e){}
+    try{
+      if(window.HAVKAR_AUTH_ACCESS_TOKEN){
+        h.Authorization='Bearer '+window.HAVKAR_AUTH_ACCESS_TOKEN;
+      }
+    }catch(_e2){}
+    return h;
+  }
+  async function havkarBearerHeaders(){
+    var h=havkarAuthHeaders();
+    try{
+      if(window.supabase && window.HAVKAR_SUPABASE_CONFIG){
+        var client=window.__havkarTravelLifeSb || window.supabase.createClient(
+          window.HAVKAR_SUPABASE_CONFIG.url,
+          window.HAVKAR_SUPABASE_CONFIG.publishableKey
+        );
+        var sess=await client.auth.getSession();
+        var token=sess && sess.data && sess.data.session && sess.data.session.access_token;
+        if(token) h.Authorization='Bearer '+token;
+      }
+    }catch(_e){}
+    return h;
+  }
+  function fillList(el, title, items){
+    if(!el) return;
+    el.innerHTML='';
+    var strong=document.createElement('strong');
+    strong.textContent=title;
+    el.appendChild(strong);
+    (items||[]).forEach(function(t){
+      var li=document.createElement('li');
+      li.textContent=t;
+      el.appendChild(li);
+    });
+  }
   function loadTravelPlusAndPartners(){
     var plusEl=document.getElementById('travelPlusStatusText');
     var partEl=document.getElementById('travelPartnersStatus');
+    var subBtn=document.getElementById('travelPlusSubscribeBtn');
+    var manageBtn=document.getElementById('travelPlusManageBtn');
+    var actionSt=document.getElementById('travelPlusActionStatus');
+    var prereqEl=document.getElementById('travelPlusPrereq');
     fetch('/api/map-travel-plus-status')
       .then(function(r){ return r.json(); })
       .then(function(j){
@@ -2691,11 +2743,80 @@ html[dir="rtl"] .havkar-map-layers{
         if(!j || !j.ok){ plusEl.textContent='Travel Plus status unavailable.'; return; }
         var p=j.product||{};
         plusEl.textContent=(j.message||'')+
-          ' Free preserved='+(j.free_features_preserved?'yes':'n/a')+
-          '. Cancel/renew scaffold: trial '+((p.cancel_and_renew_terms&&p.cancel_and_renew_terms.trial)||'n/a');
+          ' · free preserved='+(j.free_features_preserved?'yes':'n/a')+
+          ' · armed='+(j.armed?'yes':'no')+
+          ' · tax='+(j.automatic_tax_enabled?'on':'off');
+        fillList(document.getElementById('travelPlusFreeList'), 'Always free:', p.free_tier||j.product&&j.product.free_tier);
+        fillList(document.getElementById('travelPlusPaidList'), 'Travel Plus exclusive:', j.paid_exclusive||p.paid_exclusive||[]);
+        var missing=(j.owner_prerequisites&&j.owner_prerequisites.missing)||[];
+        if(prereqEl){
+          if(!j.armed && missing.length){
+            prereqEl.hidden=false;
+            prereqEl.textContent='Owner prerequisites remaining: '+missing.slice(0,4).join(' · ')+(missing.length>4?' …':'');
+          } else {
+            prereqEl.hidden=true;
+          }
+        }
+        if(subBtn){
+          subBtn.disabled=!j.armed;
+          subBtn.title=j.armed
+            ? 'Opens Stripe Checkout (30-day trial, then €4.99/mo)'
+            : 'Checkout stays off until Owner arms Travel Plus';
+        }
+        if(manageBtn){
+          manageBtn.disabled=!j.sales_enabled;
+        }
       }).catch(function(){
         if(plusEl) plusEl.textContent='Travel Plus status fetch failed.';
       });
+    if(subBtn){
+      subBtn.onclick=function(){
+        if(actionSt) actionSt.textContent='Preparing Stripe Checkout…';
+        havkarBearerHeaders().then(function(headers){
+          return fetch('/api/create-event-checkout?havkarAction=travelPlus', {
+            method:'POST',
+            headers:headers,
+            body: JSON.stringify({ action:'travel_plus_checkout' })
+          });
+        }).then(function(r){ return r.json().then(function(j){ return { http:r.status, j:j }; }); })
+        .then(function(pack){
+          var j=pack.j||{};
+          if(j.ok && j.checkout_url){
+            if(actionSt) actionSt.textContent='Redirecting to Stripe Checkout…';
+            location.href=j.checkout_url;
+            return;
+          }
+          if(actionSt){
+            actionSt.textContent=(j.error||'Checkout unavailable')+
+              (j.charge_created===false?' · no charge created':'')+
+              (pack.http===401?' · sign in required':'');
+          }
+        }).catch(function(){
+          if(actionSt) actionSt.textContent='Checkout request failed.';
+        });
+      };
+    }
+    if(manageBtn){
+      manageBtn.onclick=function(){
+        if(actionSt) actionSt.textContent='Opening Stripe Customer Portal…';
+        havkarBearerHeaders().then(function(headers){
+          return fetch('/api/create-event-checkout?havkarAction=travelPlus', {
+            method:'POST',
+            headers:headers,
+            body: JSON.stringify({ action:'travel_plus_portal' })
+          });
+        }).then(function(r){ return r.json(); })
+        .then(function(j){
+          if(j && j.ok && j.portal_url){
+            location.href=j.portal_url;
+            return;
+          }
+          if(actionSt) actionSt.textContent=(j&&j.error)||'Portal unavailable (subscribe first; Owner must arm portal).';
+        }).catch(function(){
+          if(actionSt) actionSt.textContent='Portal request failed.';
+        });
+      };
+    }
     fetch('/api/create-event-checkout?havkarAction=currencyMatrix', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
