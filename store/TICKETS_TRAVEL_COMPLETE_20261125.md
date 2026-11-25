@@ -1,6 +1,7 @@
 # HAVKAR Tickets Travel Complete — Owner report (2026-11-25)
 
 Branch: `cursor/tickets-travel-complete-d4b2`  
+PR: [#289](https://github.com/havkarapp2026-cpu/havkar-app/pull/289) · commit `220ddbcc`  
 Prior merges verified: #284–#288 on `main` + production.
 
 ## Status by mandate section
