@@ -603,6 +603,11 @@ html[dir="rtl"] .havkar-map-layers{
         <button class="ticket-type" type="button" data-ticket-type="transfer" aria-pressed="false"><i class="fas fa-right-left" aria-hidden="true"></i><span>Transfers</span></button>
         <button class="ticket-type" type="button" data-ticket-type="combined" aria-pressed="false"><i class="fas fa-route" aria-hidden="true"></i><span>Combined</span></button>
         <button class="ticket-type" type="button" data-ticket-type="hotel" aria-pressed="false"><i class="fas fa-hotel" aria-hidden="true"></i><span>Hotels</span></button>
+        <button class="ticket-type" type="button" data-ticket-type="personal" aria-pressed="false"><i class="fas fa-car" aria-hidden="true"></i><span>Personal drive</span></button>
+        <button class="ticket-type" type="button" data-ticket-type="mytrips" aria-pressed="false"><i class="fas fa-book" aria-hidden="true"></i><span>My trips</span></button>
+        <button class="ticket-type" type="button" data-ticket-type="cameras" aria-pressed="false"><i class="fas fa-video" aria-hidden="true"></i><span>Public cameras</span></button>
+        <button class="ticket-type" type="button" data-ticket-type="memories" aria-pressed="false"><i class="fas fa-camera" aria-hidden="true"></i><span>Memories</span></button>
+        <button class="ticket-type" type="button" data-ticket-type="reminders" aria-pressed="false"><i class="fas fa-bell" aria-hidden="true"></i><span>Reminders</span></button>
         <button class="ticket-type" type="button" data-ticket-type="events" aria-pressed="false"><i class="fas fa-ticket" aria-hidden="true"></i><span>Events (separate)</span></button>
     </div>
     <details class="panel" style="margin:0 0 14px" aria-label="About travel search">
@@ -714,14 +719,18 @@ html[dir="rtl"] .havkar-map-layers{
         <div class="status-row">
             <span class="status-badge"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Awaiting partnership response</span>
         </div>
-        <p class="lead">Flights stay independent while partnership confirmation is pending. Existing Duffel search (sign-in) and Google Flights redirect remain available. Paid live booking inside HAVKAR stays off until the owner authorizes it. No sample fares are invented.</p>
+        <details class="panel" style="margin:0 0 12px;padding:10px 12px">
+            <summary class="kicker" style="cursor:pointer;list-style:none">Flight search notes</summary>
+            <p class="lead" style="margin:8px 0 0">Flights stay independent while partnership confirmation is pending. Duffel search (sign-in) and Google Flights redirect remain available. Paid live booking inside HAVKAR stays off until the owner authorizes it. No sample fares are invented. IATA codes are airport codes (e.g. MXP = Milan Malpensa), not translated city names.</p>
+        </details>
         <form id="flightSearchForm" class="flight-form" novalidate>
-            <label>Origin IATA
-                <input id="flightOrigin" name="origin" maxlength="3" placeholder="MXP" autocomplete="off" required>
+            <label>Origin airport code (IATA)
+                <input id="flightOrigin" name="origin" maxlength="3" placeholder="MXP" autocomplete="off" required aria-describedby="flightIataHint" translate="no" class="notranslate" spellcheck="false">
             </label>
-            <label>Destination IATA
-                <input id="flightDestination" name="destination" maxlength="3" placeholder="FCO" autocomplete="off" required>
+            <label>Destination airport code (IATA)
+                <input id="flightDestination" name="destination" maxlength="3" placeholder="FCO" autocomplete="off" required translate="no" class="notranslate" spellcheck="false">
             </label>
+            <p id="flightIataHint" class="pending-note" style="grid-column:1/-1;margin:0">Use 3-letter airport codes (MXP, FCO, JFK). City names are not IATA codes.</p>
             <label>Departure date
                 <input id="flightDepart" name="departure_date" type="date" required>
             </label>
@@ -792,11 +801,15 @@ html[dir="rtl"] .havkar-map-layers{
         <div class="status-row">
             <span class="status-badge"><i class="fas fa-globe" aria-hidden="true"></i> Global partner redirect</span>
         </div>
-        <p class="lead">Search any city or country worldwide. For intercontinental trips (for example Crotone → USA), HAVKAR opens official Omio and Rome2Rio pages so partners can show real train, bus, ferry, and combined options when they exist. HAVKAR never invents a multimodal itinerary or price.</p>
+        <details class="panel" style="margin:0 0 12px;padding:10px 12px">
+            <summary class="kicker" style="cursor:pointer;list-style:none">Combined search notes</summary>
+            <p class="lead" style="margin:8px 0 0">Search any city or country worldwide. For intercontinental trips, HAVKAR opens official Omio and Rome2Rio pages so partners can show real train, bus, ferry, and combined options when they exist. HAVKAR never invents a multimodal itinerary or price.</p>
+        </details>
         <form class="omio-search-form flight-form" data-omio-mode="all" onsubmit="return false;">
-            <label>From (city / country) <input name="from" autocomplete="off" placeholder="Tokyo, Japan" required></label>
-            <label>To (city / country) <input name="to" autocomplete="off" placeholder="New York, USA" required></label>
+            <label>From (city / station / country) <input name="from" autocomplete="off" placeholder="Tokyo, Japan" required></label>
+            <label>To (city / station / country) <input name="to" autocomplete="off" placeholder="New York, USA" required></label>
             <label>Departure date <input name="date" type="date"></label>
+            <label>Return date (optional) <input name="return_date" type="date"></label>
             <label>Passengers <input name="adults" type="number" min="1" max="9" value="1"></label>
             <button type="button" class="omio-search-btn partner-link" data-omio-mode="all">Search worldwide partners</button>
         </form>
@@ -811,11 +824,15 @@ html[dir="rtl"] .havkar-map-layers{
         <div class="status-row">
             <span class="status-badge"><i class="fas fa-globe" aria-hidden="true"></i> Global Omio redirect</span>
         </div>
-        <p class="lead">Enter any city or country worldwide. Official Omio train results open when Omio covers that corridor. In-app inventory needs an Omio API contract. No invented schedules or fares.</p>
+        <details class="panel" style="margin:0 0 12px;padding:10px 12px">
+            <summary class="kicker" style="cursor:pointer;list-style:none">Train search notes</summary>
+            <p class="lead" style="margin:8px 0 0">Enter any city, station, or country worldwide. Official Omio train results open when Omio covers that corridor. In-app inventory needs an Omio API contract. No invented schedules or fares.</p>
+        </details>
         <form class="omio-search-form flight-form" data-omio-mode="train" onsubmit="return false;">
-            <label>From (city / country) <input name="from" autocomplete="off" placeholder="Berlin, Germany" required></label>
-            <label>To (city / country) <input name="to" autocomplete="off" placeholder="Paris, France" required></label>
+            <label>From (city / station / country) <input name="from" autocomplete="off" placeholder="Berlin, Germany" required></label>
+            <label>To (city / station / country) <input name="to" autocomplete="off" placeholder="Paris, France" required></label>
             <label>Departure date <input name="date" type="date"></label>
+            <label>Return date (optional) <input name="return_date" type="date"></label>
             <label>Passengers <input name="adults" type="number" min="1" max="9" value="1"></label>
             <button type="button" class="omio-search-btn partner-link" data-omio-mode="train">Search trains worldwide</button>
         </form>
@@ -829,11 +846,15 @@ html[dir="rtl"] .havkar-map-layers{
         <div class="status-row">
             <span class="status-badge"><i class="fas fa-globe" aria-hidden="true"></i> Global Omio redirect</span>
         </div>
-        <p class="lead">Worldwide bus search via official Omio. Coverage follows Omio’s network — HAVKAR does not invent routes.</p>
+        <details class="panel" style="margin:0 0 12px;padding:10px 12px">
+            <summary class="kicker" style="cursor:pointer;list-style:none">Bus search notes</summary>
+            <p class="lead" style="margin:8px 0 0">Worldwide bus search via official Omio. Coverage follows Omio’s network — HAVKAR does not invent routes.</p>
+        </details>
         <form class="omio-search-form flight-form" data-omio-mode="bus" onsubmit="return false;">
-            <label>From (city / country) <input name="from" autocomplete="off" placeholder="Cairo, Egypt" required></label>
-            <label>To (city / country) <input name="to" autocomplete="off" placeholder="Alexandria, Egypt" required></label>
+            <label>From (city / station / country) <input name="from" autocomplete="off" placeholder="Cairo, Egypt" required></label>
+            <label>To (city / station / country) <input name="to" autocomplete="off" placeholder="Alexandria, Egypt" required></label>
             <label>Departure date <input name="date" type="date"></label>
+            <label>Return date (optional) <input name="return_date" type="date"></label>
             <label>Passengers <input name="adults" type="number" min="1" max="9" value="1"></label>
             <button type="button" class="omio-search-btn partner-link" data-omio-mode="bus">Search buses worldwide</button>
         </form>
@@ -847,11 +868,15 @@ html[dir="rtl"] .havkar-map-layers{
         <div class="status-row">
             <span class="status-badge"><i class="fas fa-globe" aria-hidden="true"></i> Global Omio redirect</span>
         </div>
-        <p class="lead">Ferry and passenger-ship search opens official Omio ferry results for ports Omio covers worldwide. No invented sailings.</p>
+        <details class="panel" style="margin:0 0 12px;padding:10px 12px">
+            <summary class="kicker" style="cursor:pointer;list-style:none">Ferry search notes</summary>
+            <p class="lead" style="margin:8px 0 0">Ferry and passenger-ship search opens official Omio ferry results for ports Omio covers worldwide. No invented sailings.</p>
+        </details>
         <form class="omio-search-form flight-form" data-omio-mode="ferry" onsubmit="return false;">
-            <label>From (port / city) <input name="from" autocomplete="off" placeholder="Helsinki, Finland" required></label>
-            <label>To (port / city) <input name="to" autocomplete="off" placeholder="Tallinn, Estonia" required></label>
+            <label>From (port / city / country) <input name="from" autocomplete="off" placeholder="Helsinki, Finland" required></label>
+            <label>To (port / city / country) <input name="to" autocomplete="off" placeholder="Tallinn, Estonia" required></label>
             <label>Departure date <input name="date" type="date"></label>
+            <label>Return date (optional) <input name="return_date" type="date"></label>
             <label>Passengers <input name="adults" type="number" min="1" max="9" value="1"></label>
             <button type="button" class="omio-search-btn partner-link" data-omio-mode="ferry">Search ferries worldwide</button>
         </form>
@@ -862,14 +887,13 @@ html[dir="rtl"] .havkar-map-layers{
     <section id="taxi-transfer" class="panel taxi-panel" data-ticket-panel="ride" hidden aria-labelledby="taxiTitle">
         <div class="kicker"><i class="fas fa-taxi" aria-hidden="true"></i> <span id="rideKicker">Taxi</span></div>
         <h2 id="taxiTitle">Taxi</h2>
-        <p class="lead">
-            Taxi and transfer booking is not available inside HAVKAR as a sold ride.
-            Worldwide taxi / transfer: HAVKAR does not sell rides or invent fares. Open official Google Maps directions
-            or an Uber estimate for any city. In-app taxi booking needs a partner contract.
-        </p>
+        <details class="panel" style="margin:0 0 12px;padding:10px 12px">
+            <summary class="kicker" style="cursor:pointer;list-style:none">Taxi / transfer notes</summary>
+            <p class="lead" style="margin:8px 0 0">Taxi and transfer booking is not available inside HAVKAR as a sold ride. Open official Google Maps directions or an Uber estimate for any city. In-app taxi booking needs a partner contract. No fares are invented.</p>
+        </details>
         <form id="taxiSearchForm" class="flight-form" onsubmit="return false;">
-            <label>From <input id="taxiFrom" name="from" autocomplete="off" placeholder="Tokyo Station, Japan" required></label>
-            <label>To <input id="taxiTo" name="to" autocomplete="off" placeholder="Narita Airport, Japan" required></label>
+            <label>From (address / city) <input id="taxiFrom" name="from" autocomplete="off" placeholder="Tokyo Station, Japan" required></label>
+            <label>To (address / city) <input id="taxiTo" name="to" autocomplete="off" placeholder="Narita Airport, Japan" required></label>
             <button type="button" id="taxiMapsBtn" class="partner-link">Open Google Maps directions</button>
             <button type="button" id="taxiUberBtn" class="partner-link" style="background:#fff;color:#1b5e20">Open Uber estimate (partner site)</button>
             <button type="button" id="taxiRome2RioBtn" class="partner-link" style="background:#fff;color:#1b5e20">Open Rome2Rio transfer options</button>
@@ -883,9 +907,12 @@ html[dir="rtl"] .havkar-map-layers{
     <section id="ticket-hotel" class="panel" data-ticket-panel="hotel" hidden aria-labelledby="hotelTitle">
         <div class="kicker"><i class="fas fa-hotel" aria-hidden="true"></i> Hotels</div>
         <h2 id="hotelTitle">Hotels</h2>
-        <p class="lead">Travel-linked stays: open HAVKAR Accommodation (map + live layers) or search the official Booking.com site. No sample hotel prices are invented here.</p>
+        <details class="panel" style="margin:0 0 12px;padding:10px 12px">
+            <summary class="kicker" style="cursor:pointer;list-style:none">Hotel search notes</summary>
+            <p class="lead" style="margin:8px 0 0">Travel-linked stays: open HAVKAR Accommodation (map + live layers) or search the official Booking.com site. No sample hotel prices are invented here.</p>
+        </details>
         <form id="hotelPartnerForm" class="flight-form" onsubmit="return false;">
-            <label>City / area <input id="hotelCity" name="city" autocomplete="off" placeholder="São Paulo, Brazil" required></label>
+            <label>City / area / country <input id="hotelCity" name="city" autocomplete="off" placeholder="São Paulo, Brazil" required></label>
             <label>Check-in <input id="hotelCheckin" name="checkin" type="date"></label>
             <label>Check-out <input id="hotelCheckout" name="checkout" type="date"></label>
             <button type="button" id="hotelAccBtn" class="partner-link">Open HAVKAR Accommodation</button>
@@ -929,6 +956,101 @@ html[dir="rtl"] .havkar-map-layers{
             </button>
         </div>
     </div>
+
+    <section id="ticket-personal" class="panel" data-ticket-panel="personal" hidden aria-labelledby="personalTitle">
+        <div class="kicker"><i class="fas fa-car" aria-hidden="true"></i> Personal drive</div>
+        <h2 id="personalTitle">Personal car trip</h2>
+        <details class="panel" style="margin:0 0 12px;padding:10px 12px" open>
+            <summary class="kicker" style="cursor:pointer;list-style:none">Consent &amp; honesty</summary>
+            <p class="lead" style="margin:8px 0 0">GPS recording starts only after you accept location consent on this page. Default private. Screen-off / background tracking is not guaranteed in mobile browsers — Android/iOS native builds need OS permissions. No silent tracking. Offline samples queue on-device and sync when online.</p>
+        </details>
+        <form id="personalTripForm" class="flight-form" onsubmit="return false;">
+            <label>Trip name <input id="personalTripTitle" maxlength="120" placeholder="Weekend drive" value="Personal drive"></label>
+            <label>Extra stop (optional) <input id="personalWaypoint" autocomplete="off" placeholder="City or place to add later"></label>
+            <button type="button" id="personalStartBtn" class="partner-link">Start trip</button>
+            <button type="button" id="personalPauseBtn" class="partner-link" style="background:#fff;color:#1b5e20" disabled>Pause</button>
+            <button type="button" id="personalResumeBtn" class="partner-link" style="background:#fff;color:#1b5e20" disabled>Resume</button>
+            <button type="button" id="personalStopBtn" class="partner-link" style="background:#fff;color:#b71c1c" disabled>End trip</button>
+        </form>
+        <div id="personalTripHud" class="pending-note" role="status" aria-live="polite">Idle — accept geo consent, then start.</div>
+        <p id="personalTripHonesty" class="pending-note" style="margin-top:8px"></p>
+    </section>
+
+    <section id="ticket-mytrips" class="panel" data-ticket-panel="mytrips" hidden aria-labelledby="mytripsTitle">
+        <div class="kicker"><i class="fas fa-book" aria-hidden="true"></i> My trips</div>
+        <h2 id="mytripsTitle">My trips</h2>
+        <p class="lead">Account-backed history (after Owner-approved migration). Search and filter stay private to your signed-in account.</p>
+        <form id="myTripsFilterForm" class="flight-form" onsubmit="return false;">
+            <label>Search <input id="myTripsQuery" autocomplete="off" placeholder="Title, city, country"></label>
+            <label>Type
+                <select id="myTripsType">
+                    <option value="">All types</option>
+                    <option value="personal_car">Personal car</option>
+                    <option value="flight">Flight</option>
+                    <option value="train">Train</option>
+                    <option value="bus">Bus</option>
+                    <option value="ferry">Ferry</option>
+                    <option value="hotel">Hotel</option>
+                    <option value="other">Other</option>
+                </select>
+            </label>
+            <button type="button" id="myTripsRefreshBtn" class="partner-link">Refresh</button>
+            <button type="button" id="myTripsExportBtn" class="partner-link" style="background:#fff;color:#1b5e20">Download JSON copy</button>
+        </form>
+        <div id="myTripsStats" class="pending-note" role="status">Sign in to load cloud trips.</div>
+        <div id="myTripsList" class="flight-results" style="margin-top:10px"></div>
+    </section>
+
+    <section id="ticket-cameras" class="panel" data-ticket-panel="cameras" hidden aria-labelledby="camerasTitle">
+        <div class="kicker"><i class="fas fa-video" aria-hidden="true"></i> Public cameras</div>
+        <h2 id="camerasTitle">Licensed public cameras</h2>
+        <details class="panel" style="margin:0 0 12px;padding:10px 12px" open>
+            <summary class="kicker" style="cursor:pointer;list-style:none">Source policy</summary>
+            <p class="lead" style="margin:8px 0 0">Only licensed public registries already wired in HAVKAR. Periodic JPEG ≠ LIVE video. Private, unauthorized, or fake cameras are refused. New sources need Owner review of license, ToS, and geo limits before addition.</p>
+        </details>
+        <form id="cameraCatalogForm" class="flight-form" onsubmit="return false;">
+            <label>Search <input id="cameraCatalogQuery" autocomplete="off" placeholder="Country, city, road, beach…"></label>
+            <button type="button" id="cameraCatalogSearchBtn" class="partner-link">Filter catalog</button>
+            <a class="partner-link" href="#ticketsMapShell" id="cameraOpenMapBtn" style="text-align:center;text-decoration:none">Open map camera layers</a>
+        </form>
+        <div id="cameraCatalogList" class="flight-results" style="margin-top:10px"></div>
+    </section>
+
+    <section id="ticket-memories" class="panel" data-ticket-panel="memories" hidden aria-labelledby="memoriesTitle">
+        <div class="kicker"><i class="fas fa-camera" aria-hidden="true"></i> Travel memories</div>
+        <h2 id="memoriesTitle">Photos &amp; videos</h2>
+        <details class="panel" style="margin:0 0 12px;padding:10px 12px" open>
+            <summary class="kicker" style="cursor:pointer;list-style:none">Privacy defaults</summary>
+            <p class="lead" style="margin:8px 0 0">Private by default. Exact GPS and EXIF are not published without separate share consent. While driving, capture stays one-tap and non-distracting — park before reviewing albums. Max 50&nbsp;MB per file after Owner migration enables cloud storage.</p>
+        </details>
+        <form id="memoriesForm" class="flight-form" onsubmit="return false;">
+            <label>Trip id (from My trips) <input id="memoriesTripId" autocomplete="off" placeholder="uuid from cloud trip" translate="no" class="notranslate"></label>
+            <label>Album title <input id="memoriesAlbumTitle" maxlength="120" value="Trip album"></label>
+            <label>Add photo/video
+                <input id="memoriesFile" type="file" accept="image/*,video/*" capture="environment">
+            </label>
+            <label><input type="checkbox" id="memoriesAttachGeo"> Attach current location (requires geo consent)</label>
+            <button type="button" id="memoriesUploadBtn" class="partner-link">Upload to album</button>
+        </form>
+        <div id="memoriesStatus" class="pending-note" role="status">Sign in + Owner migration required for cloud albums.</div>
+    </section>
+
+    <section id="ticket-reminders" class="panel" data-ticket-panel="reminders" hidden aria-labelledby="remindersTitle">
+        <div class="kicker"><i class="fas fa-bell" aria-hidden="true"></i> Smart reminders</div>
+        <h2 id="remindersTitle">Memory reminders</h2>
+        <p class="lead">Opt-in controls. Email off by default. No duplicate spam — prefs stored per account after migration.</p>
+        <form id="reminderPrefsForm" class="flight-form" onsubmit="return false;">
+            <label><input type="checkbox" id="remAnniversary" checked> Trip anniversaries</label>
+            <label><input type="checkbox" id="remYearly" checked> Yearly travel recap</label>
+            <label><input type="checkbox" id="remAlbum" checked> Old album memories</label>
+            <label><input type="checkbox" id="remBirthday"> Birthday memories (explicit opt-in)</label>
+            <label><input type="checkbox" id="remInApp" checked> In-app notices</label>
+            <label><input type="checkbox" id="remPush" checked> Device notifications</label>
+            <label><input type="checkbox" id="remEmail"> Email (optional)</label>
+            <button type="button" id="remSaveBtn" class="partner-link">Save reminder prefs</button>
+        </form>
+        <div id="reminderPrefsStatus" class="pending-note" role="status"></div>
+    </section>
 
     <section id="ticket-events" class="panel" data-ticket-panel="events" hidden aria-labelledby="eventsTitle">
         <div class="kicker"><i class="fas fa-ticket" aria-hidden="true"></i> Event Tickets</div>
@@ -1036,9 +1158,25 @@ html[dir="rtl"] .havkar-map-layers{
         if (panelName === "ride") {
             var booking = document.getElementById("transfer-booking");
             if (booking && type === "transfer") {
-                booking.scrollIntoView({ block: "start" });
+                booking.scrollIntoView({ block: "start", behavior: "smooth" });
+            } else {
+                var ridePanel = document.getElementById("taxi-transfer");
+                if (ridePanel) ridePanel.scrollIntoView({ block: "start", behavior: "smooth" });
+            }
+        } else {
+            var target = document.querySelector('[data-ticket-panel="' + panelName + '"]');
+            if (target && !target.hidden) {
+                target.scrollIntoView({ block: "start", behavior: "smooth" });
             }
         }
+        try {
+            if (history.replaceState) {
+                history.replaceState(null, "", "#mode-" + encodeURIComponent(type));
+            }
+        } catch (_eHash) {}
+        if (type === "mytrips" && window.__havkarRefreshMyTrips) window.__havkarRefreshMyTrips();
+        if (type === "cameras" && window.__havkarRefreshCameras) window.__havkarRefreshCameras();
+        if (type === "reminders" && window.__havkarLoadReminderPrefs) window.__havkarLoadReminderPrefs();
     }
 
     function setFlightStatus(message) {
@@ -1304,8 +1442,14 @@ html[dir="rtl"] .havkar-map-layers{
     }
 
     function applyHashRoute() {
-        if (String(location.hash || "") === "#transfer-booking") {
+        var hash = String(location.hash || "");
+        if (hash === "#transfer-booking") {
             show("transfer");
+            return;
+        }
+        var modeMatch = hash.match(/^#mode-([a-z0-9_-]+)/i);
+        if (modeMatch) {
+            show(modeMatch[1]);
         }
     }
     window.addEventListener("hashchange", applyHashRoute);
@@ -1318,13 +1462,14 @@ html[dir="rtl"] .havkar-map-layers{
         window.location.href = "index.html";
     });
 
-    if (String(location.hash || "") === "#transfer-booking") {
-        show("transfer");
-    } else {
+    applyHashRoute();
+    if (!String(location.hash || "").match(/^#(transfer-booking|mode-)/)) {
         show("flight");
     }
 })();
 </script>
+<script src="/havkar-travel-life.js"></script>
+<script src="/havkar-camera-catalog.js"></script>
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-presentment-currencies.js"></script>
 <script src="/havkar-currency-regions.js"></script>
@@ -1794,6 +1939,7 @@ html[dir="rtl"] .havkar-map-layers{
     var from=String((form.querySelector('[name="from"]')||{}).value||'').trim();
     var to=String((form.querySelector('[name="to"]')||{}).value||'').trim();
     var date=String((form.querySelector('[name="date"]')||{}).value||'').trim();
+    var returnDate=String((form.querySelector('[name="return_date"]')||{}).value||'').trim();
     var adults=String((form.querySelector('[name="adults"]')||{}).value||'1').trim();
     if(!from||!to){
       if(out) out.textContent='Enter any worldwide origin and destination first.';
@@ -1809,6 +1955,7 @@ html[dir="rtl"] .havkar-map-layers{
       from:from,
       to:to,
       date:date,
+      return_date:returnDate||null,
       adults:adults,
       currency: payMethod==='xlm_mainnet' ? 'XLM' : displayCur,
       prefer_currency: payMethod==='xlm_mainnet' ? 'XLM' : displayCur,
@@ -1883,6 +2030,7 @@ html[dir="rtl"] .havkar-map-layers{
         from:(form.querySelector('[name="from"]')||{}).value||'',
         to:(form.querySelector('[name="to"]')||{}).value||'',
         date:(form.querySelector('[name="date"]')||{}).value||'',
+        return_date:(form.querySelector('[name="return_date"]')||{}).value||'',
         adults:(form.querySelector('[name="adults"]')||{}).value||'1'
       };
       fetch('/api/currency-matrix',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
@@ -1999,6 +2147,274 @@ html[dir="rtl"] .havkar-map-layers{
 })();
 </script>
 
+
+<script>
+(function(){
+  var TL = window.HAVKAR_TRAVEL_LIFE;
+  var hud = document.getElementById('personalTripHud');
+  var honesty = document.getElementById('personalTripHonesty');
+  function setHud(t){ if(hud) hud.textContent = t; }
+  function setHonesty(t){ if(honesty) honesty.textContent = t || ''; }
+  function setBtns(state){
+    var start=document.getElementById('personalStartBtn');
+    var pause=document.getElementById('personalPauseBtn');
+    var resume=document.getElementById('personalResumeBtn');
+    var stop=document.getElementById('personalStopBtn');
+    if(start) start.disabled = state==='active' || state==='paused';
+    if(pause) pause.disabled = state!=='active';
+    if(resume) resume.disabled = state!=='paused';
+    if(stop) stop.disabled = state!=='active' && state!=='paused';
+  }
+  if(honesty && TL) setHonesty(TL.browserBackgroundHonesty || '');
+
+  window.addEventListener('havkar-travel-life', function(ev){
+    var d = (ev && ev.detail) || {};
+    if(d.type === 'sample'){
+      var km = ((d.distance_m||0)/1000).toFixed(2);
+      var spd = d.speed_mps != null && Number.isFinite(d.speed_mps) ? (d.speed_mps*3.6).toFixed(0)+' km/h' : '—';
+      setHud('Recording · '+km+' km · '+spd+(d.accuracy_m!=null?' · ±'+Math.round(d.accuracy_m)+' m':''));
+    } else if(d.type === 'started'){
+      setBtns('active');
+      setHud('Trip started'+(d.cloud?' (cloud)':' (on-device)')+' · id '+d.trip_id);
+      if(d.warn) setHonesty((TL&&TL.browserBackgroundHonesty?TL.browserBackgroundHonesty+' ':'')+'Cloud note: '+d.warn);
+    } else if(d.type === 'paused'){
+      setBtns('paused');
+      setHud('Paused · '+(((d.distance_m||0)/1000).toFixed(2))+' km');
+    } else if(d.type === 'resumed'){
+      setBtns('active');
+      setHud('Resumed');
+    } else if(d.type === 'stopped'){
+      setBtns('idle');
+      setHud('Ended · '+(((d.distance_m||0)/1000).toFixed(2))+' km · '+Math.round((d.duration_s||0)/60)+' min');
+    } else if(d.type === 'sync'){
+      var r = d.result || {};
+      if(r && r.synced) setHud((hud&&hud.textContent?hud.textContent+' · ':'')+'Synced '+r.synced+' offline points');
+    }
+  });
+
+  var startBtn=document.getElementById('personalStartBtn');
+  if(startBtn && TL){
+    startBtn.addEventListener('click', function(){
+      if(window.HAVKAR_GEO_CONSENT !== true){
+        setHud('Accept location consent on the travel map first.');
+        var mapPanel=document.getElementById('ticketsMapPanel');
+        if(mapPanel){ mapPanel.open=true; mapPanel.scrollIntoView({block:'start',behavior:'smooth'}); }
+        return;
+      }
+      var title=(document.getElementById('personalTripTitle')||{}).value||'Personal drive';
+      TL.startPersonalTrip({ title:title, trip_type:'personal_car' }).then(function(res){
+        if(!res || !res.ok){
+          setHud('Could not start: '+(res && res.error || 'unknown'));
+          return;
+        }
+        if(res.honesty) setHonesty(res.honesty);
+      });
+    });
+  }
+  var pauseBtn=document.getElementById('personalPauseBtn');
+  if(pauseBtn && TL) pauseBtn.addEventListener('click', function(){ TL.pauseTrip(); });
+  var resumeBtn=document.getElementById('personalResumeBtn');
+  if(resumeBtn && TL) resumeBtn.addEventListener('click', function(){ TL.resumeTrip(); });
+  var stopBtn=document.getElementById('personalStopBtn');
+  if(stopBtn && TL) stopBtn.addEventListener('click', function(){ TL.stopTrip(); });
+
+  function fmtKm(m){ return ((Number(m)||0)/1000).toFixed(1)+' km'; }
+  function renderTrips(trips){
+    var list=document.getElementById('myTripsList');
+    var stats=document.getElementById('myTripsStats');
+    if(!list) return;
+    list.innerHTML='';
+    var q=String((document.getElementById('myTripsQuery')||{}).value||'').toLowerCase();
+    var typ=String((document.getElementById('myTripsType')||{}).value||'');
+    var filtered=(trips||[]).filter(function(t){
+      if(typ && t.trip_type !== typ) return false;
+      if(!q) return true;
+      var hay=[t.title,t.origin_label,t.destination_label,(t.countries||[]).join(' '),(t.cities||[]).join(' ')].join(' ').toLowerCase();
+      return hay.indexOf(q)!==-1;
+    });
+    var ys = TL && TL.yearlyStats ? TL.yearlyStats(filtered) : { trip_count:filtered.length, total_distance_m:0 };
+    if(stats){
+      stats.textContent = filtered.length+' trip(s) shown · total '+fmtKm(ys.total_distance_m)+' · private account history';
+    }
+    filtered.forEach(function(t){
+      var card=document.createElement('article');
+      card.className='flight-card';
+      var when=(t.started_at||t.created_at||'').slice(0,16).replace('T',' ');
+      card.innerHTML='<strong></strong><p></p><p></p><div class="flight-card-actions"></div>';
+      card.querySelector('strong').textContent=(t.title||'Trip')+' · '+(t.trip_type||'');
+      card.querySelectorAll('p')[0].textContent=when+' · '+fmtKm(t.distance_m)+' · '+(t.status||'');
+      card.querySelectorAll('p')[1].textContent=((t.cities||[]).join(', ')||'—')+' / '+((t.countries||[]).join(', ')||'—');
+      var actions=card.querySelector('.flight-card-actions');
+      var ren=document.createElement('button');
+      ren.type='button'; ren.className='partner-link'; ren.textContent='Rename';
+      ren.style.cssText='background:#fff;color:#1b5e20;margin:4px 4px 0 0;padding:6px 10px;font-size:.85rem';
+      ren.addEventListener('click', function(){
+        var title=prompt('Trip name', t.title||'');
+        if(title==null || !TL) return;
+        TL.renameTrip(t.id, title).then(function(){ window.__havkarRefreshMyTrips(); });
+      });
+      var del=document.createElement('button');
+      del.type='button'; del.className='partner-link'; del.textContent='Delete';
+      del.style.cssText='background:#fff;color:#b71c1c;margin:4px 4px 0 0;padding:6px 10px;font-size:.85rem';
+      del.addEventListener('click', function(){
+        if(!confirm('Delete this private trip permanently?') || !TL) return;
+        TL.deleteTrip(t.id).then(function(){ window.__havkarRefreshMyTrips(); });
+      });
+      var useId=document.createElement('button');
+      useId.type='button'; useId.className='partner-link'; useId.textContent='Use for memories';
+      useId.style.cssText='background:#fff;color:#1b5e20;margin:4px 0 0;padding:6px 10px;font-size:.85rem';
+      useId.addEventListener('click', function(){
+        var inp=document.getElementById('memoriesTripId');
+        if(inp) inp.value=t.id;
+      });
+      actions.appendChild(ren); actions.appendChild(del); actions.appendChild(useId);
+      list.appendChild(card);
+    });
+  }
+
+  window.__havkarRefreshMyTrips = function(){
+    var stats=document.getElementById('myTripsStats');
+    if(!TL){ if(stats) stats.textContent='Travel life module unavailable.'; return; }
+    if(stats) stats.textContent='Loading…';
+    TL.listMyTrips(100).then(function(res){
+      if(!res.ok){
+        if(stats) stats.textContent=(res.migration_pending
+          ? 'Cloud tables pending Owner-approved migration. On-device local trips may still exist.'
+          : (res.error||'Could not load trips'));
+        renderTrips([]);
+        return;
+      }
+      renderTrips(res.trips||[]);
+    });
+  };
+  var refreshBtn=document.getElementById('myTripsRefreshBtn');
+  if(refreshBtn) refreshBtn.addEventListener('click', function(){ window.__havkarRefreshMyTrips(); });
+  var exportBtn=document.getElementById('myTripsExportBtn');
+  if(exportBtn && TL){
+    exportBtn.addEventListener('click', function(){
+      TL.exportMyTripsJson().then(function(res){
+        if(!res.ok){ alert(res.error||'Export failed'); return; }
+        var a=document.createElement('a');
+        a.href=URL.createObjectURL(new Blob([res.json],{type:'application/json'}));
+        a.download='havkar-my-trips.json';
+        a.click();
+        setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+      });
+    });
+  }
+  ['myTripsQuery','myTripsType'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.addEventListener('change', function(){ window.__havkarRefreshMyTrips(); });
+    if(el && id==='myTripsQuery') el.addEventListener('input', function(){ window.__havkarRefreshMyTrips(); });
+  });
+
+  window.__havkarRefreshCameras = function(){
+    var list=document.getElementById('cameraCatalogList');
+    if(!list) return;
+    var q=(document.getElementById('cameraCatalogQuery')||{}).value||'';
+    var cat=window.HAVKAR_CAMERA_CATALOG;
+    var rows=cat ? cat.search(q) : [];
+    list.innerHTML='';
+    if(!rows.length){
+      list.textContent='No licensed sources match. New cameras need Owner license review.';
+      return;
+    }
+    rows.forEach(function(s){
+      var card=document.createElement('article');
+      card.className='flight-card';
+      card.innerHTML='<strong></strong><p></p><p></p>';
+      card.querySelector('strong').textContent=s.label+' · '+s.kind;
+      card.querySelectorAll('p')[0].textContent=(s.countries||[]).join(', ')+' · '+(s.categories||[]).join(', ');
+      card.querySelectorAll('p')[1].textContent=s.live_policy+' · '+s.coverage;
+      list.appendChild(card);
+    });
+  };
+  var camBtn=document.getElementById('cameraCatalogSearchBtn');
+  if(camBtn) camBtn.addEventListener('click', function(){ window.__havkarRefreshCameras(); });
+  var camQ=document.getElementById('cameraCatalogQuery');
+  if(camQ) camQ.addEventListener('input', function(){ window.__havkarRefreshCameras(); });
+
+  var memBtn=document.getElementById('memoriesUploadBtn');
+  if(memBtn && TL){
+    memBtn.addEventListener('click', function(){
+      var status=document.getElementById('memoriesStatus');
+      var tripId=(document.getElementById('memoriesTripId')||{}).value||'';
+      var fileInput=document.getElementById('memoriesFile');
+      var file=fileInput && fileInput.files && fileInput.files[0];
+      var title=(document.getElementById('memoriesAlbumTitle')||{}).value||'Trip album';
+      var attach=!!(document.getElementById('memoriesAttachGeo')||{}).checked;
+      if(!tripId || !file){
+        if(status) status.textContent='Choose a cloud trip id and a photo/video first.';
+        return;
+      }
+      if(status) status.textContent='Uploading privately…';
+      TL.uploadTripMedia({
+        trip_id: tripId,
+        file: file,
+        album_title: title,
+        attach_geo: attach
+      }).then(function(res){
+        if(status){
+          status.textContent = res.ok
+            ? ('Saved privately · media '+res.media_id+' · album '+res.album_id)
+            : (res.migration_pending
+              ? 'Cloud storage pending Owner migration: '+(res.error||'')
+              : (res.error||'Upload failed'));
+        }
+      });
+    });
+  }
+
+  window.__havkarLoadReminderPrefs = function(){
+    if(!TL) return;
+    var st=document.getElementById('reminderPrefsStatus');
+    TL.loadReminderPrefs().then(function(res){
+      if(!res.ok){
+        if(st) st.textContent=res.migration_pending
+          ? 'Reminder prefs table pending Owner migration.'
+          : (res.error||'Could not load prefs');
+        return;
+      }
+      var p=res.prefs||{};
+      var map={
+        remAnniversary:p.trip_anniversary!==false,
+        remYearly:p.yearly_recap!==false,
+        remAlbum:p.album_memories!==false,
+        remBirthday:!!p.birthday_opt_in,
+        remInApp:p.in_app_enabled!==false,
+        remPush:p.push_enabled!==false,
+        remEmail:!!p.email_enabled
+      };
+      Object.keys(map).forEach(function(id){
+        var el=document.getElementById(id);
+        if(el) el.checked=!!map[id];
+      });
+      if(st) st.textContent='Prefs loaded'+(res.prefs?'':' (defaults)');
+    });
+  };
+  var remSave=document.getElementById('remSaveBtn');
+  if(remSave && TL){
+    remSave.addEventListener('click', function(){
+      var st=document.getElementById('reminderPrefsStatus');
+      TL.saveReminderPrefs({
+        trip_anniversary:!!(document.getElementById('remAnniversary')||{}).checked,
+        yearly_recap:!!(document.getElementById('remYearly')||{}).checked,
+        album_memories:!!(document.getElementById('remAlbum')||{}).checked,
+        birthday_opt_in:!!(document.getElementById('remBirthday')||{}).checked,
+        in_app_enabled:!!(document.getElementById('remInApp')||{}).checked,
+        push_enabled:!!(document.getElementById('remPush')||{}).checked,
+        email_enabled:!!(document.getElementById('remEmail')||{}).checked
+      }).then(function(res){
+        if(st) st.textContent=res.ok
+          ? 'Saved. Email stays off unless you enabled it. No duplicate senders are configured yet.'
+          : (res.migration_pending
+            ? 'Pending Owner migration: '+(res.error||'')
+            : (res.error||'Save failed'));
+      });
+    });
+  }
+})();
+</script>
 
 <!-- HAVKAR contextual help -->
 <p class="havkar-contextual-help" style="margin:10px 0;font-size:.85rem">
