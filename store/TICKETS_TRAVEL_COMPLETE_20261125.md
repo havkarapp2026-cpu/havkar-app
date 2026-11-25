@@ -1,8 +1,9 @@
 # HAVKAR Tickets Travel Complete — Owner report (2026-11-25)
 
 Branch: `cursor/tickets-travel-complete-d4b2`  
-PR: [#289](https://github.com/havkarapp2026-cpu/havkar-app/pull/289) · commit `220ddbcc`  
-Prior merges verified: #284–#288 on `main` + production.
+PR: [#289](https://github.com/havkarapp2026-cpu/havkar-app/pull/289) · HEAD `f1e86ece`  
+Prior merges verified: #284–#288 on `main` + production.  
+Vercel preview: **READY** (`dpl_7juoBukzuhuPB7wTjXoq5JYgEBwZ`) after Hobby ≤12 fix (travel-life routed via `create-event-checkout`).
 
 ## Status by mandate section
 
@@ -12,7 +13,7 @@ Prior merges verified: #284–#288 on `main` + production.
 | 2 | Personal GPS trip | ✅ Start/pause/resume/end + stops + origin/dest + speed/distance HUD |
 | 3 | Permanent history | ✅ Cloud account history, map replay, monthly+yearly stats, export/delete |
 | 4 | Memories / albums / share | ✅ Upload+compress; optional time-limited share (`travel-share.html`); geo/media flags |
-| 5 | Reminders | ✅ Prefs + in-app/email dispatch API with dedupe (`/api/travel-life`) |
+| 5 | Reminders | ✅ Prefs + in-app/email dispatch API with dedupe (`/api/travel-life` → checkout rewrite) |
 | 6 | Native background GPS | ✅ Android/iOS permission strings + modes declared; 🟡 needs native FGS plugin for true screen-off |
 | 7 | Public cameras | ✅ Kind/category filters; LIVE vs JPEG honesty; 🟡 no new unlicensed sources |
 | 8 | Map/routing/offline | ✅ Existing layers + track replay; 🟡 full offline tiles not bundled (cost) |
@@ -51,4 +52,11 @@ Prior merges verified: #284–#288 on `main` + production.
 - `node --test tests/tickets-travel-complete.test.mjs` ✅
 - Prior tickets travel-life platform suite ✅
 - Prod DB: `travel_life_complete` applied after backup snapshot
+- Preview smoke: `GET /api/travel-life?action=travel_life_status` → 200 JSON ✅
+- Vercel Hobby fix: removed 13th serverless file; 12 functions remain ✅
 - No real payments executed
+
+## Publication
+
+- PR #289 open on `main` — Owner merge approval pending
+- Cron/`RESEND_API_KEY` not configured on preview (`cron_secret_configured: false`)
