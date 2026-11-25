@@ -146,4 +146,6 @@ No new paid SaaS subscribed in this PR. Owner must approve any TomTom quota upli
 
 ---
 
-PR number / commit / production URL: filled after push in the agent final report.
+- PR: [#287](https://github.com/havkarapp2026-cpu/havkar-app/pull/287)
+- Commit: `75a6839c7b11202ab5bcb0c7e9a47c98a9b06b1f`
+- Production URL / migration: not updated in this mission (Owner gate)
