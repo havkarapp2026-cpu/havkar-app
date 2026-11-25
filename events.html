@@ -2289,7 +2289,54 @@
             }
 
             if (Number.isFinite(amount)) {
-                return "€" + amount.toFixed(2).replace(/\.00$/, "");
+                const eurLabel = "€" + amount.toFixed(2).replace(/\.00$/, "");
+                try {
+                    const sel = window.__havkarEventsCurrencySel;
+                    if (
+                        sel &&
+                        sel.method !== "xlm_mainnet" &&
+                        sel.currency &&
+                        String(sel.currency).toLowerCase() !== "eur" &&
+                        window.HAVKAR_CURRENCY_SELECT &&
+                        typeof window.HAVKAR_CURRENCY_SELECT.convertFromEur === "function"
+                    ) {
+                        const fx = (window.__havkarEventsCurrencyApi &&
+                            window.__havkarEventsCurrencyApi.getFx &&
+                            window.__havkarEventsCurrencyApi.getFx()) ||
+                            (sel.fx || null);
+                        const rates = fx && fx.rates ? fx.rates : null;
+                        const converted = window.HAVKAR_CURRENCY_SELECT.convertFromEur(
+                            amount,
+                            sel.currency,
+                            rates
+                        );
+                        if (converted && converted.ok) {
+                            const stamp = fx && (fx.date || fx.fetched_at)
+                                ? " · FX " + (fx.date || fx.fetched_at)
+                                : "";
+                            return (
+                                eurLabel +
+                                " ≈ " +
+                                converted.amount +
+                                " " +
+                                converted.currency +
+                                " (display only" +
+                                stamp +
+                                "; charge/settlement rules unchanged)"
+                            );
+                        }
+                        return (
+                            eurLabel +
+                            " · " +
+                            String(sel.currency).toUpperCase() +
+                            " display unavailable (no valid FX rate — not estimated)"
+                        );
+                    }
+                    if (sel && sel.method === "xlm_mainnet") {
+                        return eurLabel + " · XLM rail separate (not FX-converted fiat)";
+                    }
+                } catch (_fx) {}
+                return eurLabel;
             }
 
             return text;
@@ -3081,10 +3128,14 @@
 
 
                     <p style="margin:10px 0;font-size:.85rem;color:#567;line-height:1.4">
-                        Card tickets currently settle in EUR. HAVKAR supports 133 Stripe presentment currencies and a separate XLM crypto rail in the global matrix — without inventing live multi-currency event settlement here.
-                        <a href="checkout-currency.html">View 133 currencies + XLM</a>
+                        <strong>Display</strong> uses the verified 133 Stripe presentment currencies (+ separate XLM crypto rail).
+                        <strong>Card charge</strong> follows real Stripe capability when Owner arms live payments — showing 133 ≠ chargeable for all.
+                        <strong>Settlement</strong> for cards stays EUR on the HAVKAR Italian Stripe account. XLM settles on-ledger only.
+                        Converted display amounts appear only with a valid FX rate and timestamp — never estimated.
+                        <a href="checkout-currency.html">Currency matrix</a> · <a href="about.html">About HAVKAR</a>
                     </p>
                     <div id="eventCurrencyMount" style="margin:8px 0 12px"></div>
+                    <p id="eventCurrencyHonesty" class="pending-note" style="margin:0 0 10px;font-size:.85rem;color:#567" role="status"></p>
                     <div class="detail-buttons">
                         <button
                             class="btn btn-secondary"
@@ -4572,6 +4623,7 @@
 <script src="/havkar-legal-footer.js"></script>
 <script src="/havkar-premium-i18n.js"></script>
 <script src="/havkar-presentment-currencies.js"></script>
+<script src="/havkar-currency-regions.js"></script>
 <script src="/havkar-currency-select.js"></script>
 <script>
 (function(){
@@ -4594,21 +4646,44 @@
 (function(){
   function mountEventCurrencySelect(){
     var mount=document.getElementById("eventCurrencyMount");
+    var honesty=document.getElementById("eventCurrencyHonesty");
     if(!mount||!window.HAVKAR_CURRENCY_SELECT) return;
+    if(mount.getAttribute("data-mounted")==="1") return;
     mount.innerHTML="";
-    window.HAVKAR_CURRENCY_SELECT.mount(mount,{
+    mount.setAttribute("data-mounted","1");
+    window.__havkarEventsCurrencyApi = window.HAVKAR_CURRENCY_SELECT.mount(mount,{
       idPrefix:"eventCur",
+      module:"events",
       initialCurrency:"eur",
+      includeXlm:true,
+      persistKey:"havkar_events_currency_v2",
       onChange:function(sel){
-        if(sel.method==="xlm_mainnet"){
-          if(window.showToast) showToast("XLM is a separate crypto rail. Use XLM Testnet button when offered.", "info");
+        window.__havkarEventsCurrencySel = sel;
+        if(honesty){
+          if(sel.method==="xlm_mainnet"){
+            honesty.textContent="XLM selected: independent Stellar crypto rail (not banking fiat). Use the XLM button only on the gated path with explicit amount confirmation. Live Mainnet stays Owner-gated. No private keys stored.";
+          }else{
+            var code=String(sel.currency||"eur").toUpperCase();
+            var region=(sel.meta&&sel.meta.region)||"";
+            honesty.textContent=
+              "Display "+code+(region?" ("+region+")":"")+
+              ". Card settlement remains EUR. Live multi-currency Stripe charge requires Owner activation — display alone is not payment. Event fees stay independent of marketplace 5% / travel commissions.";
+          }
         }
+        if(sel.method==="xlm_mainnet" && window.showToast){
+          showToast("XLM is a separate crypto rail. Live Mainnet stays Owner-gated.", "info");
+        }
+        try{
+          if(typeof window.__havkarRefreshEventPriceDisplay==="function"){
+            window.__havkarRefreshEventPriceDisplay();
+          }
+        }catch(_e){}
       }
     });
   }
-  var root=document.getElementById("detailsModal")||document.body;
   var obs=new MutationObserver(function(){
-    if(document.getElementById("eventCurrencyMount")){
+    var mount=document.getElementById("eventCurrencyMount");
+    if(mount && mount.getAttribute("data-mounted")!=="1"){
       clearTimeout(window.__eventCurTimer);
       window.__eventCurTimer=setTimeout(mountEventCurrencySelect, 50);
     }

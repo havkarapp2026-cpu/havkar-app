@@ -614,11 +614,20 @@ html[dir="rtl"] .havkar-map-layers{
         </p>
     </details>
 
-    <details class="panel" aria-label="Travel display currency" style="margin:0 0 14px">
-        <summary class="kicker" style="cursor:pointer;list-style:none"><i class="fas fa-coins" aria-hidden="true"></i> Display currency</summary>
-        <p class="lead" style="margin:10px 0 8px">Choose how amounts are presented. Partner offers still quote in provider currencies. Live charging stays Owner-gated. XLM is a separate crypto option.</p>
+    <details class="panel" aria-label="Travel display currency" style="margin:0 0 14px" open>
+        <summary class="kicker" style="cursor:pointer;list-style:none"><i class="fas fa-coins" aria-hidden="true"></i> 133 currencies + XLM</summary>
+        <p class="lead" style="margin:10px 0 8px">
+            Choose a <strong>display</strong> currency from HAVKAR’s verified 133 Stripe presentment codes, or XLM as a separate crypto rail.
+            Display ≠ partner payment ≠ Stripe settlement (EUR). Converted amounts appear only with a valid FX rate and timestamp — never estimated.
+            Showing 133 currencies does <em>not</em> mean every currency can be charged live.
+        </p>
         <input type="hidden" id="ticketsDisplayCurrency" value="EUR">
+        <input type="hidden" id="ticketsPaymentMethod" value="stripe">
         <div id="ticketsCurrencyMount" data-havkar-currency-mount="1"></div>
+        <p id="ticketsCurrencyHonesty" class="pending-note" style="margin:10px 0 0" role="status">
+            Partner travel checkouts (Omio / Rome2Rio) use their own fiat. HAVKAR passes a currency hint only when that partner officially accepts it; otherwise EUR is used and you are told before redirect.
+            Public revenue principles: <a href="about.html">About HAVKAR</a>. Marketplace 5% is never mixed into travel ticket pricing.
+        </p>
     </details>
 
     <details class="panel havkar-module-map" id="travelMapPanel" open aria-label="Travel route map" style="margin:0 0 16px;position:relative;z-index:1;isolation:isolate">
@@ -1317,25 +1326,50 @@ html[dir="rtl"] .havkar-map-layers{
 })();
 </script>
 <script src="/havkar-countries.js"></script>
+<script src="/havkar-presentment-currencies.js"></script>
+<script src="/havkar-currency-regions.js"></script>
 <script src="/havkar-currency-select.js"></script>
 <script src="/havkar-map.js"></script>
 <script>
 (function(){
   var mount = document.getElementById('ticketsCurrencyMount');
   var hidden = document.getElementById('ticketsDisplayCurrency');
+  var methodEl = document.getElementById('ticketsPaymentMethod');
+  var honesty = document.getElementById('ticketsCurrencyHonesty');
   if(!mount || !hidden || !window.HAVKAR_CURRENCY_SELECT) return;
-  window.HAVKAR_CURRENCY_SELECT.mount(mount, {
-    initialCurrency: hidden.value || 'EUR',
-    includeXlm: true,
-    onChange: function(sel){
-      if(sel && sel.currency) hidden.value = String(sel.currency).toUpperCase();
-      try { localStorage.setItem('havkar_tickets_display_currency', hidden.value); } catch(_e){}
-    }
-  });
+  var initial = 'EUR';
   try {
     var saved = localStorage.getItem('havkar_tickets_display_currency');
-    if(saved && /^[A-Z]{3}$/i.test(saved)) hidden.value = saved.toUpperCase();
+    if(saved && /^[A-Z]{3}$/i.test(saved)) initial = saved.toUpperCase();
   } catch(_e){}
+  hidden.value = initial;
+  window.__havkarTicketsCurrencyApi = window.HAVKAR_CURRENCY_SELECT.mount(mount, {
+    idPrefix: 'ticketsCur',
+    module: 'tickets',
+    initialCurrency: initial,
+    includeXlm: true,
+    persistKey: 'havkar_tickets_currency_v2',
+    onChange: function(sel){
+      if(sel && sel.method === 'xlm_mainnet'){
+        if(methodEl) methodEl.value = 'xlm_mainnet';
+        hidden.value = 'XLM';
+        if(honesty){
+          honesty.textContent = 'XLM selected for display preference / crypto rail. Travel partners (Omio / Rome2Rio) do not accept XLM — redirects keep partner fiat (usually EUR). Live Stellar payments stay Owner-gated. No private keys are stored.';
+        }
+        return;
+      }
+      if(methodEl) methodEl.value = 'stripe';
+      if(sel && sel.currency) hidden.value = String(sel.currency).toUpperCase();
+      try { localStorage.setItem('havkar_tickets_display_currency', hidden.value); } catch(_e2){}
+      if(honesty){
+        var region = (sel.meta && sel.meta.region) || '';
+        honesty.textContent =
+          'Display ' + hidden.value +
+          (region ? ' (' + region + ')' : '') +
+          '. Partner payment currency is confirmed before redirect. Stripe settlement stays EUR when HAVKAR cards are used. Converted amounts appear only with a valid FX rate + timestamp — never estimated. Marketplace 5% is never mixed into travel pricing. About: about.html';
+      }
+    }
+  });
 })();
 </script>
 <script src="/havkar-module-map.js"></script>
@@ -1734,6 +1768,18 @@ html[dir="rtl"] .havkar-map-layers{
     warn.style.marginTop='10px';
     warn.textContent='If a partner shows no trips for this corridor, that means no listed service — HAVKAR will not invent one.';
     out.appendChild(warn);
+    var cur=body&&body.currency;
+    if(cur){
+      var curNote=document.createElement('p');
+      curNote.className='pending-note';
+      curNote.textContent=
+        'Payment currency before redirect: partner hint '+
+        (cur.partner||'EUR')+
+        (cur.requested && cur.requested!==cur.partner ? (' (you asked for '+cur.requested+')') : '')+
+        '. '+
+        (cur.honesty||'Partner may still quote a different currency on checkout.');
+      out.appendChild(curNote);
+    }
     var prefs=typeof window.__havkarTravelPrefsQuery==='function' ? window.__havkarTravelPrefsQuery() : null;
     if(prefs){
       var prefNote=document.createElement('p');
@@ -1755,6 +1801,8 @@ html[dir="rtl"] .havkar-map-layers{
     }
     if(out) out.textContent='Building official worldwide partner links…';
     var prefs=typeof window.__havkarTravelPrefsQuery==='function' ? window.__havkarTravelPrefsQuery() : {};
+    var displayCur=String((document.getElementById('ticketsDisplayCurrency')||{}).value||'EUR').toUpperCase();
+    var payMethod=String((document.getElementById('ticketsPaymentMethod')||{}).value||'stripe');
     var payload={
       action:'travel_partner_links',
       mode:mode,
@@ -1762,6 +1810,8 @@ html[dir="rtl"] .havkar-map-layers{
       to:to,
       date:date,
       adults:adults,
+      currency: payMethod==='xlm_mainnet' ? 'XLM' : displayCur,
+      prefer_currency: payMethod==='xlm_mainnet' ? 'XLM' : displayCur,
       prefer_sort:prefs.sort||'partner',
       prefer_stops:prefs.stops||'any',
       prefer_vehicle:prefs.vehicle||'auto'
