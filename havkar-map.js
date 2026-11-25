@@ -835,7 +835,8 @@
                   function (geoErr) {
                     rej(geoErr || Object.assign(new Error("geolocation_denied"), { code: 1 }));
                   },
-                  { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                  /* maximumAge > 0 avoids repeated OS prompts when permission already granted */
+                  { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
                 );
               });
             },

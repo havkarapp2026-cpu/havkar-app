@@ -1573,30 +1573,58 @@ html[dir="rtl"] .havkar-map-layers{
   function setMapNote(text){ if(mapNote) mapNote.textContent = text; }
   window.__havkarGetTravelMapApi = function(){ return travelMapApi; };
   window.__havkarTicketsDrawTrack = function(points, stops){
-    var panel = document.getElementById('ticketsMapPanel');
-    if(panel) panel.open = true;
+    var tt = function(key, fallback){
+      return (window.HAVKAR_TRAVEL_I18N && window.HAVKAR_TRAVEL_I18N.t)
+        ? window.HAVKAR_TRAVEL_I18N.t(key) : (fallback || key);
+    };
+    var panel = document.getElementById('travelMapPanel');
+    if(panel){
+      panel.open = true;
+      try{ panel.scrollIntoView({ block:'start', behavior:'smooth' }); }catch(_s){}
+    }
+    var valid = (window.HAVKAR_TRAVEL_LIFE && window.HAVKAR_TRAVEL_LIFE.validTrackPoints)
+      ? window.HAVKAR_TRAVEL_LIFE.validTrackPoints(points)
+      : (points||[]).filter(function(p){
+          var lat=Number(p&&p.lat), lng=Number(p&&p.lng);
+          return Number.isFinite(lat)&&Number.isFinite(lng);
+        });
+    if(!valid.length){
+      var emptyMsg = tt('noTrackPoints', 'No GPS coordinates for this trip. No invented route was drawn.');
+      setMapNote(emptyMsg);
+      var hudEl = document.getElementById('personalTripHud');
+      if(hudEl) hudEl.textContent = emptyMsg;
+      return Promise.resolve({ ok:false, empty:true, message: emptyMsg });
+    }
     var ready = travelMapApi ? Promise.resolve(travelMapApi) : mountTravelMap();
     return ready.then(function(api){
-      if(!api || !api.L || !api.map || !(points||[]).length){
-        setMapNote('Track available but map API not ready.');
+      if(!api || !api.L || !api.map){
+        setMapNote(tt('mapNotReady', 'Map is still loading. Try Show on map again in a moment.'));
         return;
       }
       travelMapApi = api;
+      if(api.invalidate) setTimeout(function(){ api.invalidate(); }, 180);
       if(tripTrackLayer){
         try { api.map.removeLayer(tripTrackLayer); } catch(_e){}
       }
       tripTrackLayer = api.L.layerGroup();
-      var latlngs = points.map(function(p){ return [p.lat, p.lng]; });
+      var latlngs = valid.map(function(p){ return [Number(p.lat), Number(p.lng)]; });
       api.L.polyline(latlngs, { color:'#2e7d32', weight:4, opacity:0.9 }).addTo(tripTrackLayer);
       (stops||[]).forEach(function(s){
-        if(s.lat == null || s.lng == null) return;
-        api.L.circleMarker([s.lat, s.lng], { radius:6, color:'#1565c0' })
+        var slat=Number(s&&s.lat), slng=Number(s&&s.lng);
+        if(!Number.isFinite(slat) || !Number.isFinite(slng)) return;
+        api.L.circleMarker([slat, slng], { radius:6, color:'#1565c0' })
           .bindPopup(String(s.label || s.kind || 'Stop'))
           .addTo(tripTrackLayer);
       });
       tripTrackLayer.addTo(api.map);
       try { api.map.fitBounds(api.L.latLngBounds(latlngs), { padding:[36,36] }); } catch(_e2){}
-      setMapNote('Past trip track · '+points.length+' GPS samples · stops '+(stops||[]).length);
+      var stopCount = (stops||[]).filter(function(s){
+        return Number.isFinite(Number(s&&s.lat)) && Number.isFinite(Number(s&&s.lng));
+      }).length;
+      setMapNote(
+        tt('trackDrawn', 'Past trip track') + ' · ' + valid.length + ' ' +
+        tt('samples', 'GPS samples') + ' · ' + tt('stops', 'Stops') + ' ' + stopCount
+      );
     });
   };
 
@@ -1747,14 +1775,7 @@ html[dir="rtl"] .havkar-map-layers{
           remaining: '~' + km.toFixed(1) + ' km left' +
             (Number.isFinite(acc) ? ' · ±' + Math.round(acc) + ' m' : '')
         });
-        if(travelMapApi && travelMapApi.requestGps){
-          /* refresh marker via existing GPS helper without re-prompting */
-          try{
-            if(travelMapApi._userGpsLayer || true){
-              travelMapApi.requestGps().catch(function(){});
-            }
-          }catch(_g){}
-        }
+        /* Do NOT call getCurrentPosition/requestGps on every tick — avoids repeated browser prompts. */
       },
       function(){
         setJourneyHud({ remaining: 'GPS follow paused' });
@@ -1846,34 +1867,75 @@ html[dir="rtl"] .havkar-map-layers{
     var deny = document.getElementById('ticketsGeoDeny');
     var stop = document.getElementById('ticketsGeoStop');
     var status = document.getElementById('ticketsGeoStatus');
+    var gpsMarkerArmed = false;
+    function tt(key, fallback){
+      return (window.HAVKAR_TRAVEL_I18N && window.HAVKAR_TRAVEL_I18N.t)
+        ? window.HAVKAR_TRAVEL_I18N.t(key) : (fallback || key);
+    }
     function setStatus(msg){ if(status) status.textContent = msg; }
+    function applyConsentUi(browserState){
+      var allowed = window.HAVKAR_GEO_CONSENT === true;
+      if(accept){
+        accept.hidden = !!allowed;
+        accept.disabled = !!allowed;
+      }
+      /* Keep Deny visible so the user can withdraw in-app consent without a new browser prompt. */
+      var parts = [];
+      if(allowed) parts.push(tt('gpsAllowed', 'GPS allowed on this device. Coordinates stay in your browser until you start a private trip.'));
+      else parts.push(tt('gpsWaiting', 'GPS waiting for your choice.'));
+      if(browserState === 'granted') parts.push(tt('gpsBrowserGranted', 'Browser location permission: granted (no repeated prompt).'));
+      else if(browserState === 'denied') parts.push(tt('gpsBrowserDenied', 'Browser location permission: denied. Enable it in browser settings if you want GPS.'));
+      else if(browserState === 'prompt') parts.push(tt('gpsBrowserPrompt', 'Browser location permission: will ask once when you use My location.'));
+      setStatus(parts.join(' '));
+    }
+    function refreshBrowserPermission(){
+      if(!navigator.permissions || !navigator.permissions.query){
+        applyConsentUi(null);
+        return;
+      }
+      navigator.permissions.query({ name: 'geolocation' }).then(function(p){
+        applyConsentUi(p.state);
+        p.onchange = function(){ applyConsentUi(p.state); };
+      }).catch(function(){ applyConsentUi(null); });
+    }
+    function armGpsMarkerOnce(){
+      if(gpsMarkerArmed) return;
+      if(window.HAVKAR_GEO_CONSENT !== true) return;
+      if(!(travelMapApi && travelMapApi.requestGps)) return;
+      gpsMarkerArmed = true;
+      travelMapApi.requestGps().catch(function(){ gpsMarkerArmed = false; });
+    }
     try{
       if(localStorage.getItem('havkar_geo_consent_tickets') === '1'){
         window.HAVKAR_GEO_CONSENT = true;
-        setStatus('GPS allowed on this device. Coordinates stay in your browser.');
       }
     }catch(_e){}
+    refreshBrowserPermission();
     if(accept){
       accept.addEventListener('click', function(){
         window.HAVKAR_GEO_CONSENT = true;
         try{ localStorage.setItem('havkar_geo_consent_tickets','1'); }catch(_e){}
-        setStatus('GPS allowed. Use My location on the toolbar or search a route to follow remaining distance.');
+        refreshBrowserPermission();
+        armGpsMarkerOnce();
         if(window.__havkarTicketsJourney.dest) startLiveFollow();
       });
     }
     if(deny){
       deny.addEventListener('click', function(){
         window.HAVKAR_GEO_CONSENT = false;
+        gpsMarkerArmed = false;
         try{ localStorage.removeItem('havkar_geo_consent_tickets'); }catch(_e){}
         stopLiveFollow();
-        setStatus('GPS not enabled. Map and partner search still work without sharing your location.');
+        setStatus(tt('gpsDenied', 'GPS not enabled. Map and partner search still work without sharing your location.'));
+        if(accept){ accept.hidden = false; accept.disabled = false; }
         setJourneyHud({ remaining: 'Needs consent' });
+        refreshBrowserPermission();
       });
     }
     if(stop){
       stop.addEventListener('click', function(){
         stopLiveFollow();
-        setStatus('Live follow stopped. Consent remains until you tap Not now.');
+        setStatus(tt('gpsAllowed', 'GPS allowed on this device. Coordinates stay in your browser until you start a private trip.') + ' · Follow stopped');
         setJourneyHud({ remaining: 'Follow stopped' });
       });
     }
@@ -2262,12 +2324,16 @@ html[dir="rtl"] .havkar-map-layers{
     }
   });
 
+  function travelT(key, fallback){
+    return (window.HAVKAR_TRAVEL_I18N && window.HAVKAR_TRAVEL_I18N.t)
+      ? window.HAVKAR_TRAVEL_I18N.t(key) : (fallback || key);
+  }
   var startBtn=document.getElementById('personalStartBtn');
   if(startBtn && TL){
     startBtn.addEventListener('click', function(){
       if(window.HAVKAR_GEO_CONSENT !== true){
-        setHud('Accept location consent on the travel map first.');
-        var mapPanel=document.getElementById('ticketsMapPanel');
+        setHud(travelT('gpsConsentRequired', 'Accept location consent on the travel map first.'));
+        var mapPanel=document.getElementById('travelMapPanel');
         if(mapPanel){ mapPanel.open=true; mapPanel.scrollIntoView({block:'start',behavior:'smooth'}); }
         return;
       }
@@ -2310,18 +2376,62 @@ html[dir="rtl"] .havkar-map-layers{
   }
 
   function fmtKm(m){ return ((Number(m)||0)/1000).toFixed(1)+' km'; }
+  function fmtDuration(s){
+    var n=Math.max(0, Number(s)||0);
+    if(n < 60) return n+' s';
+    if(n < 3600) return Math.round(n/60)+' min';
+    return (n/3600).toFixed(1)+' h';
+  }
+  function fmtSpeed(mps){
+    if(mps == null || !Number.isFinite(Number(mps))) return '—';
+    return ((Number(mps)*3.6).toFixed(1))+' km/h';
+  }
   function drawTripOnMap(tripId){
     if(!TL || !tripId) return;
     TL.loadTrackPoints(tripId, 2000).then(function(res){
-      if(!res.ok || !(res.points||[]).length){
-        setHud('No track points for this trip yet.');
+      var pts = (res && res.points) || [];
+      if(!res || !res.ok || !pts.length){
+        var msg = (res && res.honesty) || travelT('noTrackPoints', 'No GPS coordinates for this trip. No invented route was drawn.');
+        setHud(msg);
+        if(window.__havkarTicketsDrawTrack) window.__havkarTicketsDrawTrack([], []);
         return;
       }
       TL.listStops(tripId).then(function(stopsRes){
         if(window.__havkarTicketsDrawTrack){
-          window.__havkarTicketsDrawTrack(res.points, stopsRes.stops||[]);
+          window.__havkarTicketsDrawTrack(pts, (stopsRes && stopsRes.stops) || []);
         }
+      }).catch(function(){
+        if(window.__havkarTicketsDrawTrack) window.__havkarTicketsDrawTrack(pts, []);
       });
+    });
+  }
+  function showTripInfo(trip){
+    if(!TL || !trip) return;
+    Promise.all([
+      TL.loadTrackPoints(trip.id, 2000),
+      TL.listStops(trip.id).catch(function(){ return { ok:false, stops:[] }; })
+    ]).then(function(rows){
+      var trackRes = rows[0] || { points:[] };
+      var stopsRes = rows[1] || { stops:[] };
+      var summary = (trackRes.summary) || (TL.summarizeTrack ? TL.summarizeTrack(trackRes.points||[]) : null);
+      var stopCount = (stopsRes.stops||[]).length;
+      var distanceM = (summary && summary.distance_m) || trip.distance_m || 0;
+      var durationS = (summary && summary.duration_s) || trip.duration_s || 0;
+      var lines = [
+        travelT('tripInfoTitle', 'Private trip details'),
+        (trip.title || 'Trip') + ' · ' + (trip.trip_type || ''),
+        travelT('distance', 'Distance') + ': ' + fmtKm(distanceM),
+        travelT('duration', 'Duration') + ': ' + fmtDuration(durationS),
+        travelT('avgSpeed', 'Avg speed') + ': ' + fmtSpeed(summary && summary.avg_speed_mps),
+        travelT('maxSpeed', 'Max speed') + ': ' + fmtSpeed(summary && summary.max_speed_mps),
+        travelT('samples', 'GPS samples') + ': ' + ((summary && summary.point_count) || (trackRes.points||[]).length || 0),
+        travelT('stops', 'Stops') + ': ' + stopCount,
+        (summary && summary.has_coordinates)
+          ? ''
+          : travelT('noCoordsHonesty', 'This trip has no recorded coordinates. HAVKAR does not invent a path from place names.')
+      ].filter(Boolean);
+      alert(lines.join('\n'));
+      setHud(lines.slice(0, 4).join(' · '));
     });
   }
   function renderTrips(trips){
@@ -2340,7 +2450,7 @@ html[dir="rtl"] .havkar-map-layers{
     });
     var ys = TL && TL.yearlyStats ? TL.yearlyStats(filtered) : { trip_count:filtered.length, total_distance_m:0, by_month:{}, by_year:{} };
     if(stats){
-      stats.textContent = filtered.length+' trip(s) shown · total '+fmtKm(ys.total_distance_m)+' · private account history';
+      stats.textContent = filtered.length+' trip(s) shown · total '+fmtKm(ys.total_distance_m)+' · '+travelT('privacyOwnerOnly', 'private account history');
     }
     if(monthly){
       var months = Object.keys(ys.by_month||{}).sort().slice(-6);
@@ -2363,59 +2473,61 @@ html[dir="rtl"] .havkar-map-layers{
       card.querySelectorAll('p')[0].textContent=when+' · '+fmtKm(t.distance_m)+' · '+(t.status||'');
       card.querySelectorAll('p')[1].textContent=((t.cities||[]).join(', ')||'—')+' / '+((t.countries||[]).join(', ')||'—');
       var actions=card.querySelector('.flight-card-actions');
+      function styleBtn(btn, danger){
+        btn.type='button'; btn.className='partner-link';
+        btn.style.cssText='background:#fff;color:'+(danger?'#b71c1c':'#1b5e20')+';margin:4px 4px 0 0;padding:6px 10px;font-size:.85rem';
+      }
       var ren=document.createElement('button');
-      ren.type='button'; ren.className='partner-link'; ren.textContent='Rename';
-      ren.style.cssText='background:#fff;color:#1b5e20;margin:4px 4px 0 0;padding:6px 10px;font-size:.85rem';
+      styleBtn(ren); ren.textContent=travelT('rename', 'Rename');
       ren.addEventListener('click', function(){
-        var title=prompt('Trip name', t.title||'');
+        var title=prompt(travelT('renamePrompt', 'Trip name'), t.title||'');
         if(title==null || !TL) return;
         TL.renameTrip(t.id, title).then(function(){ window.__havkarRefreshMyTrips(); });
       });
       var del=document.createElement('button');
-      del.type='button'; del.className='partner-link'; del.textContent='Delete';
-      del.style.cssText='background:#fff;color:#b71c1c;margin:4px 4px 0 0;padding:6px 10px;font-size:.85rem';
+      styleBtn(del, true); del.textContent=travelT('delete', 'Delete');
       del.addEventListener('click', function(){
-        if(!confirm('Delete this private trip permanently?') || !TL) return;
+        if(!confirm(travelT('deleteConfirm', 'Delete this private trip permanently?')) || !TL) return;
         TL.deleteTrip(t.id).then(function(){ window.__havkarRefreshMyTrips(); });
       });
       var useId=document.createElement('button');
-      useId.type='button'; useId.className='partner-link'; useId.textContent='Use for memories';
-      useId.style.cssText='background:#fff;color:#1b5e20;margin:4px 4px 0 0;padding:6px 10px;font-size:.85rem';
+      styleBtn(useId); useId.textContent=travelT('useForMemories', 'Use for memories');
       useId.addEventListener('click', function(){
         var inp=document.getElementById('memoriesTripId');
         if(inp) inp.value=t.id;
+        setHud(travelT('useForMemories', 'Use for memories')+': '+t.id);
       });
+      var infoBtn=document.createElement('button');
+      styleBtn(infoBtn); infoBtn.textContent=travelT('tripInfo', 'Trip info');
+      infoBtn.addEventListener('click', function(){ showTripInfo(t); });
       var mapBtn=document.createElement('button');
-      mapBtn.type='button'; mapBtn.className='partner-link'; mapBtn.textContent='Show on map';
-      mapBtn.style.cssText='background:#fff;color:#1b5e20;margin:4px 4px 0 0;padding:6px 10px;font-size:.85rem';
+      styleBtn(mapBtn); mapBtn.textContent=travelT('showOnMap', 'Show on map');
       mapBtn.addEventListener('click', function(){ drawTripOnMap(t.id); });
       var shareBtn=document.createElement('button');
-      shareBtn.type='button'; shareBtn.className='partner-link'; shareBtn.textContent='Share (optional)';
-      shareBtn.style.cssText='background:#fff;color:#1b5e20;margin:4px 4px 0 0;padding:6px 10px;font-size:.85rem';
+      styleBtn(shareBtn); shareBtn.textContent=travelT('shareTrip', 'Share (optional)');
       shareBtn.addEventListener('click', function(){
-        if(!confirm('Create a time-limited share link? Exact GPS/media stay off unless you enable them next.')) return;
-        var includeMedia=confirm('Include media captions in the share? (files stay private; captions only)');
-        var includeGeo=confirm('Include exact media GPS coordinates in the share? Default Cancel = no.');
+        if(!confirm(travelT('shareConfirm', 'Create a time-limited share link? Exact GPS/media stay off unless you enable them next.'))) return;
+        var includeMedia=confirm(travelT('shareMediaConfirm', 'Include media captions in the share? (files stay private; captions only)'));
+        var includeGeo=confirm(travelT('shareGeoConfirm', 'Include exact media GPS coordinates in the share? Default Cancel = no.'));
         TL.createShareLink(t.id, {
           days:7,
           include_media: includeMedia,
           include_geo: includeGeo,
           include_track: true
         }).then(function(res){
-          if(!res.ok){ alert(res.error||'Share failed'); return; }
-          prompt('Copy share link (expires '+res.expires_at+'):', res.url);
+          if(!res.ok){ alert(res.error||travelT('shareFailed', 'Share failed')); return; }
+          prompt(travelT('shareCopy', 'Copy share link (expires')+' '+res.expires_at+'):', res.url);
         });
       });
       var revokeBtn=document.createElement('button');
-      revokeBtn.type='button'; revokeBtn.className='partner-link'; revokeBtn.textContent='Revoke share';
-      revokeBtn.style.cssText='background:#fff;color:#b71c1c;margin:4px 0 0;padding:6px 10px;font-size:.85rem';
+      styleBtn(revokeBtn, true); revokeBtn.textContent=travelT('revokeShare', 'Revoke share');
       revokeBtn.addEventListener('click', function(){
         TL.revokeShare(t.id).then(function(res){
-          alert(res.ok ? 'Share revoked. Trip is private again.' : (res.error||'Revoke failed'));
+          alert(res.ok ? travelT('shareRevoked', 'Share revoked. Trip is private again.') : (res.error||travelT('revokeFailed', 'Revoke failed')));
         });
       });
       actions.appendChild(ren); actions.appendChild(del); actions.appendChild(useId);
-      actions.appendChild(mapBtn); actions.appendChild(shareBtn); actions.appendChild(revokeBtn);
+      actions.appendChild(infoBtn); actions.appendChild(mapBtn); actions.appendChild(shareBtn); actions.appendChild(revokeBtn);
       list.appendChild(card);
     });
   }

@@ -136,6 +136,70 @@
     return 6371000 * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
   }
 
+  function validTrackPoints(points) {
+    return (points || []).filter(function (p) {
+      if (!p || p.lat == null || p.lng == null || p.lat === "" || p.lng === "") {
+        return false;
+      }
+      var lat = Number(p.lat);
+      var lng = Number(p.lng);
+      return (
+        Number.isFinite(lat) &&
+        Number.isFinite(lng) &&
+        lat >= -90 &&
+        lat <= 90 &&
+        lng >= -180 &&
+        lng <= 180
+      );
+    });
+  }
+
+  /** Distance / duration / speed from real GPS samples only — never from place-name labels. */
+  function summarizeTrack(points) {
+    var pts = validTrackPoints(points);
+    var distanceM = 0;
+    var maxSpeed = null;
+    var speedSum = 0;
+    var speedN = 0;
+    for (var i = 0; i < pts.length; i++) {
+      if (i > 0) {
+        distanceM += haversineM(
+          Number(pts[i - 1].lat),
+          Number(pts[i - 1].lng),
+          Number(pts[i].lat),
+          Number(pts[i].lng)
+        );
+      }
+      var sp = Number(pts[i].speed_mps);
+      if (Number.isFinite(sp) && sp >= 0) {
+        speedSum += sp;
+        speedN += 1;
+        if (maxSpeed == null || sp > maxSpeed) maxSpeed = sp;
+      }
+    }
+    var durationS = 0;
+    if (pts.length >= 2) {
+      var t0 = Date.parse(pts[0].recorded_at);
+      var t1 = Date.parse(pts[pts.length - 1].recorded_at);
+      if (Number.isFinite(t0) && Number.isFinite(t1) && t1 >= t0) {
+        durationS = Math.round((t1 - t0) / 1000);
+      }
+    }
+    var avgSpeed =
+      speedN > 0 ? speedSum / speedN : durationS > 0 ? distanceM / durationS : null;
+    return {
+      point_count: pts.length,
+      distance_m: Math.round(distanceM),
+      duration_s: durationS,
+      avg_speed_mps: avgSpeed == null ? null : Math.round(avgSpeed * 100) / 100,
+      max_speed_mps: maxSpeed == null ? null : Math.round(maxSpeed * 100) / 100,
+      has_coordinates: pts.length > 0,
+      honesty: pts.length
+        ? "Metrics from recorded GPS samples only."
+        : "No GPS coordinates recorded. HAVKAR does not invent a path from place names."
+    };
+  }
+
   function requireConsent() {
     return root.HAVKAR_GEO_CONSENT === true;
   }
@@ -906,19 +970,85 @@
   }
 
   async function loadTrackPoints(tripId, limit) {
+    var lim = Math.min(Number(limit) || 2000, 5000);
+    if (!tripId) {
+      return {
+        ok: true,
+        points: [],
+        source: "none",
+        honesty:
+          "No GPS coordinates recorded for this trip. No invented route."
+      };
+    }
+    /* In-memory samples for the active recording session */
+    if (active.tripId && String(active.tripId) === String(tripId) && active.localPoints.length) {
+      return {
+        ok: true,
+        points: validTrackPoints(active.localPoints).slice(-lim),
+        source: "active",
+        summary: summarizeTrack(active.localPoints)
+      };
+    }
+    /* Local-only completed trips (no cloud UUID) */
+    try {
+      if (root.localStorage) {
+        var raw = root.localStorage.getItem("havkar_local_trip_" + tripId);
+        if (raw) {
+          var parsed = JSON.parse(raw);
+          var localPts = validTrackPoints(parsed.points || []);
+          return {
+            ok: true,
+            points: localPts.slice(-lim),
+            source: "local_storage",
+            summary: summarizeTrack(localPts),
+            honesty: localPts.length
+              ? null
+              : "No GPS coordinates recorded for this trip. No invented route."
+          };
+        }
+      }
+    } catch (_e) {}
+
     var client = supabaseClient();
-    if (!client) return { ok: false, error: "supabase_unavailable", points: [] };
+    if (!client) {
+      return {
+        ok: true,
+        points: [],
+        source: "none",
+        honesty:
+          "No GPS coordinates available offline. HAVKAR does not invent a path from place names."
+      };
+    }
     var uid = await sessionUserId(client);
-    if (!uid) return { ok: false, error: "sign_in_required", points: [] };
+    if (!uid) {
+      return {
+        ok: true,
+        points: [],
+        source: "none",
+        honesty:
+          "Sign in required to load cloud GPS. No invented route was drawn."
+      };
+    }
     var res = await client
       .from("trip_track_points")
       .select("lat,lng,recorded_at,speed_mps,accuracy_m")
       .eq("trip_id", tripId)
       .eq("user_id", uid)
       .order("recorded_at", { ascending: true })
-      .limit(Math.min(Number(limit) || 2000, 5000));
-    if (res.error) return { ok: false, error: res.error.message, points: [] };
-    return { ok: true, points: res.data || [] };
+      .limit(lim);
+    if (res.error) {
+      return { ok: false, error: res.error.message, points: [], source: "cloud_error" };
+    }
+    var cloudPts = validTrackPoints(res.data || []);
+    return {
+      ok: true,
+      points: cloudPts,
+      source: cloudPts.length ? "cloud" : "none",
+      summary: summarizeTrack(cloudPts),
+      honesty: cloudPts.length
+        ? null
+        : "No GPS coordinates recorded for this trip. No invented route."
+    };
   }
 
   function randomToken() {
@@ -1023,6 +1153,8 @@
     addStop: addStop,
     listStops: listStops,
     loadTrackPoints: loadTrackPoints,
+    summarizeTrack: summarizeTrack,
+    validTrackPoints: validTrackPoints,
     createShareLink: createShareLink,
     revokeShare: revokeShare,
     syncPending: syncPending,
