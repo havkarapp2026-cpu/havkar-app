@@ -22,6 +22,11 @@ import {
 } from "../lib/marketplace-card-orders.cjs";
 import serviceCommerce from "../havkar-service-commerce.js";
 import jobBilling from "../havkar-job-billing.js";
+import {
+  isTravelPlusEvent,
+  applyVerifiedCheckoutSession as applyTravelPlusCheckout,
+  applyVerifiedBillingEvent as applyTravelPlusBilling
+} from "../lib/havkar-travel-plus.cjs";
 
 export const config = {
   api: {
@@ -809,6 +814,53 @@ export default async function handler(req, res) {
     ) {
       const result = await processAdsBoostEvent(event, process.env);
       return res.status(200).json(result);
+    }
+
+    /* Travel Plus subscription billing (Owner-armed Stripe Price + flags). */
+    if (isTravelPlusEvent(event)) {
+      if (
+        String(process.env.HAVKAR_TRAVEL_PLUS_BILLING_ENABLED || "") !== "true"
+      ) {
+        return res.status(403).json({
+          ok: false,
+          code: "TRAVEL_PLUS_BILLING_OFF",
+          error: "Travel Plus billing is not armed.",
+          received_event: event.type,
+          free_features_preserved: true
+        });
+      }
+      if (
+        !cardPaymentsAllowed() &&
+        event.livemode === true &&
+        event.type === "checkout.session.completed"
+      ) {
+        return res.status(403).json({
+          ok: false,
+          error: REAL_PAYMENTS_PAUSED_MESSAGE,
+          code: REAL_PAYMENTS_PAUSED_CODE,
+          received_event: event.type
+        });
+      }
+      let travelPlusOutcome = null;
+      if (event.type === "checkout.session.completed") {
+        travelPlusOutcome = await applyTravelPlusCheckout({
+          supabase: supabaseRuntime.client,
+          event,
+          session: event.data.object,
+          env: process.env
+        });
+      } else {
+        travelPlusOutcome = await applyTravelPlusBilling({
+          supabase: supabaseRuntime.client,
+          event,
+          env: process.env
+        });
+      }
+      return res.status(200).json({
+        received: true,
+        travel_plus: true,
+        ...travelPlusOutcome
+      });
     }
 
     /* Ordinary Jobs prepaid Checkout + subscription billing events. */
