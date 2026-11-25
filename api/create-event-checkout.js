@@ -340,6 +340,26 @@ function isHealthRequest(req) {
   );
 }
 
+function isTravelLifeRequest(req) {
+  const action = String((req && req.body && req.body.action) || "");
+  const qAction = String((req && req.query && req.query.action) || "");
+  const url = String((req && req.url) || "");
+  const viaRewrite = Boolean(
+    (req && req.query && req.query.havkarAction === "travelLife") ||
+      url.indexOf("/api/travel-life") !== -1 ||
+      url.indexOf("havkarAction=travelLife") !== -1
+  );
+  const travelAction = Boolean(
+    action === "resolve_share" ||
+      action === "dispatch_reminders" ||
+      action === "travel_life_status" ||
+      qAction === "resolve_share" ||
+      qAction === "dispatch_reminders" ||
+      qAction === "travel_life_status"
+  );
+  return viaRewrite || travelAction;
+}
+
 function isCurrencyMatrixRequest(req) {
   const action = String((req && req.body && req.body.action) || "");
   const url = String((req && req.url) || "");
@@ -2240,6 +2260,51 @@ export default async function handler(req, res) {
     } catch (error) {
       console.error("HAVKAR global payments error:", error && error.message);
       return sendError(res, 500, "Global payments catalog failed");
+    }
+  }
+
+  if (isTravelLifeRequest(req)) {
+    if (req.method !== "GET" && req.method !== "POST") {
+      res.setHeader("Allow", "GET, POST");
+      return sendError(res, 405, "Method not allowed");
+    }
+    try {
+      const {
+        resolveShare,
+        dispatchReminders,
+        cronAuthorized
+      } = require("../lib/travel-life-api.cjs");
+      const body = Object.assign({}, req.query || {}, req.body || {});
+      const action = String(body.action || "").trim();
+      if (action === "resolve_share" || action === "share") {
+        const out = await resolveShare(body.token || body.share_token, process.env);
+        return res.status(out.status || (out.ok ? 200 : 404)).json(out);
+      }
+      if (action === "dispatch_reminders") {
+        const auth = cronAuthorized(req, process.env);
+        if (!auth.ok) {
+          return res.status(401).json({ ok: false, error: auth.error });
+        }
+        const out = await dispatchReminders(
+          { dry_run: body.dry_run === true || body.dry_run === "true" },
+          process.env
+        );
+        return res.status(out.status || (out.ok ? 200 : 500)).json(out);
+      }
+      return res.status(200).json({
+        ok: true,
+        action: "travel_life_status",
+        actions: ["resolve_share", "dispatch_reminders", "status"],
+        cron_secret_configured: Boolean(
+          process.env.HAVKAR_TRAVEL_REMINDER_CRON_SECRET || process.env.CRON_SECRET
+        ),
+        resend_configured: Boolean(process.env.RESEND_API_KEY),
+        honesty:
+          "Share resolve is public only for opt-in unexpired tokens. Reminder email is opt-in and cron-gated. Routed via create-event-checkout (Hobby function limit)."
+      });
+    } catch (error) {
+      console.error("HAVKAR travel-life error:", error && error.message);
+      return sendError(res, 500, "Travel life request failed");
     }
   }
 

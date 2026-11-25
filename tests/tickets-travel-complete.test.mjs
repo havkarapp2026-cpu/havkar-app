@@ -7,8 +7,10 @@ const tickets = fs.readFileSync("tickets.html", "utf8");
 const life = fs.readFileSync("havkar-travel-life.js", "utf8");
 const i18n = fs.readFileSync("havkar-travel-life-i18n.js", "utf8");
 const share = fs.readFileSync("travel-share.html", "utf8");
-const api = fs.readFileSync("api/travel-life.js", "utf8");
+const checkout = fs.readFileSync("api/create-event-checkout.js", "utf8");
+const vercel = fs.readFileSync("vercel.json", "utf8");
 const lib = fs.readFileSync("lib/travel-life-api.cjs", "utf8");
+assert.equal(fs.existsSync("api/travel-life.js"), false);
 const migration = fs.readFileSync(
   "supabase/migrations/20261125200000_travel_life_complete.sql",
   "utf8"
@@ -47,7 +49,10 @@ const langs = [
 langs.forEach((l) => assert.match(i18n, new RegExp("\\b" + l + "\\s*:")));
 
 assert.match(share, /resolve_share/);
-assert.match(api, /dispatch_reminders/);
+assert.match(checkout, /isTravelLifeRequest/);
+assert.match(checkout, /dispatch_reminders/);
+assert.match(vercel, /api\/travel-life/);
+assert.match(vercel, /havkarAction=travelLife/);
 assert.match(lib, /RESEND_API_KEY/);
 assert.match(lib, /travel_reminder_dispatch/);
 
