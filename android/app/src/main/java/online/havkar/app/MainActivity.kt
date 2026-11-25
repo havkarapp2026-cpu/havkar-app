@@ -110,6 +110,8 @@ class MainActivity : AppCompatActivity() {
             setSupportMultipleWindows(false)
             userAgentString = userAgentString + " HAVKAR-Android/1.0.5"
         }
+        // Consented personal-trip GPS bridge (screen-off via Foreground Service).
+        webView.addJavascriptInterface(TravelGpsBridge(this), "HAVKAR_ANDROID_TRAVEL")
         // Drop old WebView HTTP cache entries that can keep broken checkout HTML after deploys.
         webView.clearCache(true)
         webView.clearHistory()
