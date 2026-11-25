@@ -307,7 +307,11 @@
     if (active.watchId != null) {
       return { ok: false, error: "trip_already_active", trip_id: active.tripId };
     }
-    var created = await createTrip(opts || {});
+    var tripOpts = Object.assign({}, opts || {});
+    if (tripOpts.origin_label == null && tripOpts.origin) {
+      tripOpts.origin_label = tripOpts.origin;
+    }
+    var created = await createTrip(tripOpts);
     if (!created.ok) {
       /* Local-only fallback when migration pending or offline */
       var localId = "local-" + Date.now();
@@ -338,7 +342,7 @@
         warn: created.error,
         migration_pending: created.migration_pending || false,
         honesty:
-          "Recording on-device. Cloud sync needs sign-in and Owner-approved travel_life migration."
+          "Recording on-device. Cloud sync needs sign-in and travel_life tables."
       };
     }
     active.tripId = created.trip_id;
@@ -354,6 +358,13 @@
       },
       { enableHighAccuracy: true, maximumAge: 3000, timeout: 20000 }
     );
+    addStop(created.trip_id, {
+      kind: "origin",
+      label: tripOpts.origin_label || "Start",
+      seq: 0
+    }).catch(function () {
+      return null;
+    });
     emit({ type: "started", trip_id: active.tripId, cloud: true });
     return {
       ok: true,
@@ -366,6 +377,19 @@
 
   function pauseTrip() {
     active.paused = true;
+    if (active.tripId && String(active.tripId).indexOf("local-") !== 0) {
+      addStop(active.tripId, {
+        kind: "pause",
+        label: "Pause",
+        lat: active.lastLat,
+        lng: active.lastLng
+      }).catch(function () {
+        return null;
+      });
+      updateTrip(active.tripId, { status: "paused" }).catch(function () {
+        return null;
+      });
+    }
     emit({ type: "paused", trip_id: active.tripId, distance_m: active.distanceM });
     return { ok: true };
   }
@@ -373,11 +397,17 @@
   function resumeTrip() {
     if (!requireConsent()) return { ok: false, error: "geolocation_consent_required" };
     active.paused = false;
+    if (active.tripId && String(active.tripId).indexOf("local-") !== 0) {
+      updateTrip(active.tripId, { status: "active" }).catch(function () {
+        return null;
+      });
+    }
     emit({ type: "resumed", trip_id: active.tripId });
     return { ok: true };
   }
 
-  async function stopTrip() {
+  async function stopTrip(opts) {
+    opts = opts || {};
     if (active.watchId != null && root.navigator && root.navigator.geolocation) {
       try {
         root.navigator.geolocation.clearWatch(active.watchId);
@@ -391,11 +421,22 @@
     var tripId = active.tripId;
     var distanceM = active.distanceM;
     if (tripId && String(tripId).indexOf("local-") !== 0) {
+      var destLabel = opts.destination_label || opts.destination || "End";
       await updateTrip(tripId, {
         status: "completed",
         ended_at: new Date().toISOString(),
         distance_m: distanceM,
-        duration_s: durationS
+        duration_s: durationS,
+        destination_label: destLabel
+      });
+      await addStop(tripId, {
+        kind: "destination",
+        label: destLabel,
+        lat: active.lastLat,
+        lng: active.lastLng,
+        seq: 9999
+      }).catch(function () {
+        return null;
       });
     } else if (tripId) {
       try {
@@ -647,15 +688,165 @@
 
   function yearlyStats(trips) {
     var byYear = {};
+    var byMonth = {};
     var totalM = 0;
     (trips || []).forEach(function (t) {
-      var y = String((t.started_at || t.created_at || "").slice(0, 4) || "unknown");
+      var stamp = t.started_at || t.created_at || "";
+      var y = String(stamp.slice(0, 4) || "unknown");
+      var ym = String(stamp.slice(0, 7) || "unknown");
       if (!byYear[y]) byYear[y] = { year: y, trips: 0, distance_m: 0 };
+      if (!byMonth[ym]) byMonth[ym] = { month: ym, trips: 0, distance_m: 0 };
       byYear[y].trips += 1;
       byYear[y].distance_m += Number(t.distance_m) || 0;
+      byMonth[ym].trips += 1;
+      byMonth[ym].distance_m += Number(t.distance_m) || 0;
       totalM += Number(t.distance_m) || 0;
     });
-    return { by_year: byYear, total_distance_m: totalM, trip_count: (trips || []).length };
+    return {
+      by_year: byYear,
+      by_month: byMonth,
+      total_distance_m: totalM,
+      trip_count: (trips || []).length
+    };
+  }
+
+  async function addStop(tripId, partial) {
+    var client = supabaseClient();
+    if (!client) return { ok: false, error: "supabase_unavailable" };
+    var uid = await sessionUserId(client);
+    if (!uid) return { ok: false, error: "sign_in_required" };
+    var row = Object.assign(
+      {
+        trip_id: tripId,
+        user_id: uid,
+        kind: "waypoint",
+        seq: 0,
+        lat: active.lastLat,
+        lng: active.lastLng,
+        arrived_at: new Date().toISOString()
+      },
+      partial || {}
+    );
+    var res = await client.from("trip_stops").insert(row).select("id").single();
+    if (res.error) {
+      return {
+        ok: false,
+        error: res.error.message || "stop_failed",
+        migration_pending: /relation|schema cache|trip_stops/i.test(
+          String(res.error.message || "")
+        )
+      };
+    }
+    emit({ type: "stop_added", trip_id: tripId, stop_id: res.data.id, label: row.label });
+    return { ok: true, stop_id: res.data.id };
+  }
+
+  async function listStops(tripId) {
+    var client = supabaseClient();
+    if (!client) return { ok: false, error: "supabase_unavailable", stops: [] };
+    var uid = await sessionUserId(client);
+    if (!uid) return { ok: false, error: "sign_in_required", stops: [] };
+    var res = await client
+      .from("trip_stops")
+      .select("id,seq,label,lat,lng,arrived_at,departed_at,kind")
+      .eq("trip_id", tripId)
+      .eq("user_id", uid)
+      .order("seq", { ascending: true });
+    if (res.error) return { ok: false, error: res.error.message, stops: [] };
+    return { ok: true, stops: res.data || [] };
+  }
+
+  async function loadTrackPoints(tripId, limit) {
+    var client = supabaseClient();
+    if (!client) return { ok: false, error: "supabase_unavailable", points: [] };
+    var uid = await sessionUserId(client);
+    if (!uid) return { ok: false, error: "sign_in_required", points: [] };
+    var res = await client
+      .from("trip_track_points")
+      .select("lat,lng,recorded_at,speed_mps,accuracy_m")
+      .eq("trip_id", tripId)
+      .eq("user_id", uid)
+      .order("recorded_at", { ascending: true })
+      .limit(Math.min(Number(limit) || 2000, 5000));
+    if (res.error) return { ok: false, error: res.error.message, points: [] };
+    return { ok: true, points: res.data || [] };
+  }
+
+  function randomToken() {
+    var bytes = new Uint8Array(24);
+    if (root.crypto && root.crypto.getRandomValues) root.crypto.getRandomValues(bytes);
+    else for (var i = 0; i < bytes.length; i++) bytes[i] = (Math.random() * 256) | 0;
+    var s = "";
+    for (var j = 0; j < bytes.length; j++) s += ("0" + bytes[j].toString(16)).slice(-2);
+    return s;
+  }
+
+  async function createShareLink(tripId, opts) {
+    opts = opts || {};
+    var days = Math.min(Math.max(Number(opts.days) || 7, 1), 30);
+    var expires = new Date(Date.now() + days * 86400000).toISOString();
+    var token = randomToken();
+    var patch = {
+      is_private: false,
+      share_token: token,
+      share_expires_at: expires,
+      share_include_media: !!opts.include_media,
+      share_include_geo: !!opts.include_geo,
+      share_include_track: opts.include_track !== false
+    };
+    var updated = await updateTrip(tripId, patch);
+    if (!updated.ok) return updated;
+    var origin = root.location && root.location.origin ? root.location.origin : "https://havkar.online";
+    return {
+      ok: true,
+      token: token,
+      expires_at: expires,
+      url: origin + "/travel-share.html?token=" + encodeURIComponent(token),
+      honesty:
+        "Share is opt-in and time-limited. Exact GPS/media only if you enabled those flags. Revoke anytime."
+    };
+  }
+
+  async function revokeShare(tripId) {
+    return updateTrip(tripId, {
+      is_private: true,
+      share_token: null,
+      share_expires_at: null,
+      share_include_media: false,
+      share_include_geo: false,
+      share_include_track: false
+    });
+  }
+
+  async function listAlbums(tripId) {
+    var client = supabaseClient();
+    if (!client) return { ok: false, error: "supabase_unavailable", albums: [] };
+    var uid = await sessionUserId(client);
+    if (!uid) return { ok: false, error: "sign_in_required", albums: [] };
+    var res = await client
+      .from("trip_albums")
+      .select("id,title,is_private,created_at")
+      .eq("trip_id", tripId)
+      .eq("user_id", uid)
+      .order("created_at", { ascending: false });
+    if (res.error) return { ok: false, error: res.error.message, albums: [] };
+    return { ok: true, albums: res.data || [] };
+  }
+
+  async function listMedia(tripId) {
+    var client = supabaseClient();
+    if (!client) return { ok: false, error: "supabase_unavailable", media: [] };
+    var uid = await sessionUserId(client);
+    if (!uid) return { ok: false, error: "sign_in_required", media: [] };
+    var res = await client
+      .from("trip_media")
+      .select("id,album_id,media_type,mime_type,byte_size,taken_at,lat,lng,caption,is_private,storage_path")
+      .eq("trip_id", tripId)
+      .eq("user_id", uid)
+      .order("taken_at", { ascending: false, nullsFirst: false })
+      .limit(200);
+    if (res.error) return { ok: false, error: res.error.message, media: [] };
+    return { ok: true, media: res.data || [] };
   }
 
   if (root.addEventListener) {
@@ -677,7 +868,14 @@
     exportMyTripsJson: exportMyTripsJson,
     createAlbum: createAlbum,
     uploadTripMedia: uploadTripMedia,
+    listAlbums: listAlbums,
+    listMedia: listMedia,
     yearlyStats: yearlyStats,
+    addStop: addStop,
+    listStops: listStops,
+    loadTrackPoints: loadTrackPoints,
+    createShareLink: createShareLink,
+    revokeShare: revokeShare,
     syncPending: syncPending,
     saveReminderPrefs: saveReminderPrefs,
     loadReminderPrefs: loadReminderPrefs,
@@ -686,10 +884,14 @@
         trip_id: active.tripId,
         paused: active.paused,
         distance_m: active.distanceM,
-        points: active.localPoints.length
+        points: active.localPoints.length,
+        last_lat: active.lastLat,
+        last_lng: active.lastLng
       };
     },
     browserBackgroundHonesty:
-      "Mobile browsers generally cannot guarantee continuous GPS with the screen off. Android/iOS native builds need OS location permissions (including background where legally allowed). HAVKAR never tracks without consent."
+      "Mobile browsers generally cannot guarantee continuous GPS with the screen off. Android/iOS native builds need OS location permissions (including background where legally allowed). HAVKAR never tracks without consent.",
+    nativeBackgroundReady:
+      "Android ACCESS_BACKGROUND_LOCATION + iOS Always permission strings are declared. Continuous screen-off tracking still requires a native location plugin / foreground service in store builds — WebView alone is not enough."
   };
 })(typeof globalThis !== "undefined" ? globalThis : this);
