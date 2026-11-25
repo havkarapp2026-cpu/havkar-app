@@ -962,7 +962,7 @@ html[dir="rtl"] .havkar-map-layers{
         <h2 id="personalTitle">Personal car trip</h2>
         <details class="panel" style="margin:0 0 12px;padding:10px 12px" open>
             <summary class="kicker" style="cursor:pointer;list-style:none">Consent &amp; honesty</summary>
-            <p class="lead" style="margin:8px 0 0">GPS recording starts only after you accept location consent on this page. Default private. Screen-off / background tracking is not guaranteed in mobile browsers — Android/iOS native builds need OS permissions. No silent tracking. Offline samples queue on-device and sync when online.</p>
+            <p class="lead" style="margin:8px 0 0">GPS recording starts only after you accept location consent on this page. Default private. In the HAVKAR Android/iOS apps, a native background GPS bridge (Android foreground service / iOS Always location) continues sampling when the screen is off after you start a cloud trip. Mobile browsers alone cannot guarantee screen-off GPS. No silent tracking. Offline samples + stops queue on-device and sync when online.</p>
         </details>
         <form id="personalTripForm" class="flight-form" onsubmit="return false;">
             <label data-travel-i18n="tripName">Trip name <input id="personalTripTitle" maxlength="120" placeholder="Weekend drive" value="Personal drive"></label>
@@ -978,6 +978,8 @@ html[dir="rtl"] .havkar-map-layers{
         <div id="personalTripHud" class="pending-note" role="status" aria-live="polite">Idle — accept geo consent, then start.</div>
         <p id="personalTripHonesty" class="pending-note" style="margin-top:8px"></p>
         <p class="pending-note" data-travel-i18n="offlineMapNote">Offline: recorded points stay in IndexedDB and sync when online. Full offline map tiles are not bundled (cost control).</p>
+        <button type="button" id="travelOfflineSyncBtn" class="partner-link" style="background:#fff;color:#1b5e20;margin-top:8px">Sync offline + native GPS queue</button>
+        <div id="travelOfflineSyncStatus" class="pending-note" role="status" style="margin-top:6px"></div>
     </section>
 
     <section id="ticket-mytrips" class="panel" data-ticket-panel="mytrips" hidden aria-labelledby="mytripsTitle">
@@ -1065,18 +1067,27 @@ html[dir="rtl"] .havkar-map-layers{
     <section id="ticket-reminders" class="panel" data-ticket-panel="reminders" hidden aria-labelledby="remindersTitle">
         <div class="kicker"><i class="fas fa-bell" aria-hidden="true"></i> Smart reminders</div>
         <h2 id="remindersTitle">Memory reminders</h2>
-        <p class="lead">Opt-in controls. Email off by default. No duplicate spam — prefs stored per account after migration.</p>
+        <p class="lead">Opt-in controls. Email off by default. Daily server cron + Resend deliver opted-in anniversary / album / yearly recap notices. No duplicate year/channel spam.</p>
         <form id="reminderPrefsForm" class="flight-form" onsubmit="return false;">
             <label><input type="checkbox" id="remAnniversary" checked> Trip anniversaries</label>
             <label><input type="checkbox" id="remYearly" checked> Yearly travel recap</label>
             <label><input type="checkbox" id="remAlbum" checked> Old album memories</label>
             <label><input type="checkbox" id="remBirthday"> Birthday memories (explicit opt-in)</label>
             <label><input type="checkbox" id="remInApp" checked> In-app notices</label>
-            <label><input type="checkbox" id="remPush" checked> Device notifications</label>
+            <label><input type="checkbox" id="remPush" checked> Device notifications (prefs only until FCM armed)</label>
             <label><input type="checkbox" id="remEmail"> Email (optional)</label>
             <button type="button" id="remSaveBtn" class="partner-link">Save reminder prefs</button>
         </form>
         <div id="reminderPrefsStatus" class="pending-note" role="status"></div>
+        <details class="panel" style="margin:12px 0 0;padding:10px 12px" open>
+            <summary class="kicker" style="cursor:pointer;list-style:none">Travel Plus (proposed)</summary>
+            <p class="lead" id="travelPlusStatusText" style="margin:8px 0 0">Loading Travel Plus status…</p>
+            <p class="pending-note" style="margin:8px 0 0">Personal GPS, My trips, memories, and reminders stay free. €4.99/mo + 30-day trial are sales-OFF until Owner arms checkout. Cancel/renew terms appear only when billing is armed.</p>
+        </details>
+        <details class="panel" style="margin:12px 0 0;padding:10px 12px">
+            <summary class="kicker" style="cursor:pointer;list-style:none">Partners &amp; payment honesty</summary>
+            <div id="travelPartnersStatus" class="pending-note" style="margin:8px 0 0">Loading Omio / Duffel / currency rails…</div>
+        </details>
     </section>
 
     <section id="ticket-events" class="panel" data-ticket-panel="events" hidden aria-labelledby="eventsTitle">
@@ -2550,10 +2561,72 @@ html[dir="rtl"] .havkar-map-layers{
         email_enabled:!!(document.getElementById('remEmail')||{}).checked
       }).then(function(res){
         if(st) st.textContent=res.ok
-          ? 'Saved. Email stays off unless you enabled it. No duplicate senders are configured yet.'
+          ? 'Saved. Email stays off unless you enabled it. Daily cron delivers opt-in in-app/email with year/channel dedupe.'
           : (res.migration_pending
             ? 'Pending Owner migration: '+(res.error||'')
             : (res.error||'Save failed'));
+      });
+    });
+  }
+
+  function loadTravelPlusAndPartners(){
+    var plusEl=document.getElementById('travelPlusStatusText');
+    var partEl=document.getElementById('travelPartnersStatus');
+    fetch('/api/map-travel-plus-status')
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if(!plusEl) return;
+        if(!j || !j.ok){ plusEl.textContent='Travel Plus status unavailable.'; return; }
+        var p=j.product||{};
+        plusEl.textContent=(j.message||'')+
+          ' Free preserved='+(j.free_features_preserved?'yes':'n/a')+
+          '. Cancel/renew scaffold: trial '+((p.cancel_and_renew_terms&&p.cancel_and_renew_terms.trial)||'n/a');
+      }).catch(function(){
+        if(plusEl) plusEl.textContent='Travel Plus status fetch failed.';
+      });
+    fetch('/api/create-event-checkout?havkarAction=currencyMatrix', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'external_integrations_status' })
+    }).then(function(r){ return r.json(); }).then(function(j){
+      if(!partEl) return;
+      var i=(j&&j.integrations)||{};
+      var omio=i.omio||{};
+      var duffel=i.duffel_flights||{};
+      partEl.innerHTML=
+        '<p><strong>Omio:</strong> affiliate='+(omio.affiliate_id_present?'yes':'no')+
+        ' · API key='+(omio.credential_present?'yes':'no')+
+        ' · live search/booking='+(omio.live_search?'on':'off')+'/'+(omio.live_booking?'on':'off')+
+        ' · '+(omio.reason||'redirect/affiliate only until OMIO_API_KEY')+'</p>'+
+        '<p><strong>Duffel:</strong> mode='+(duffel.token_mode||'n/a')+
+        ' · live orders='+(duffel.live_orders_possible?'possible':'off')+
+        ' · '+(duffel.blocker||'test token until Owner arms live')+'</p>'+
+        '<p><strong>Currencies:</strong> 133 presentment codes + XLM rail status. Real card/XLM charge only when that rail is technically and legally armed — display ≠ payment ≠ EUR settlement.</p>';
+    }).catch(function(){
+      if(partEl) partEl.textContent='Partner status fetch failed.';
+    });
+    fetch('/api/currency-matrix?action=currency_matrix').then(function(r){ return r.json(); }).then(function(j){
+      if(!partEl || !j || !j.ok) return;
+      var note=document.createElement('p');
+      note.innerHTML='<strong>Currency matrix:</strong> count='+((j.matrix&&j.matrix.count)||'?')+
+        ' · live_collection='+(j.live_collection||'n/a')+
+        ' · no unverified per-currency charge claims.';
+      partEl.appendChild(note);
+    }).catch(function(){});
+  }
+  if(document.getElementById('travelPlusStatusText')) loadTravelPlusAndPartners();
+
+  var syncBtn=document.getElementById('travelOfflineSyncBtn');
+  if(syncBtn && TL){
+    syncBtn.addEventListener('click', function(){
+      var st=document.getElementById('travelOfflineSyncStatus');
+      if(st) st.textContent='Syncing offline queue + native GPS drain…';
+      TL.syncPending().then(function(res){
+        if(st){
+          st.textContent=res.ok
+            ? ('Synced '+res.synced+' · native drained '+(res.native_drained||0)+' · remaining '+(res.remaining||0))
+            : (res.error||'Sync failed');
+        }
       });
     });
   }

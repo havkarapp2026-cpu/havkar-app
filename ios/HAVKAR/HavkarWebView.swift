@@ -23,6 +23,7 @@ final class HavkarWebController: UIViewController, WKNavigationDelegate {
             webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             webView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         ])
+        TravelLocationBridge.shared.attach(to: webView)
         if let startURL = HavkarLinks.startURL {
             webView.load(URLRequest(url: startURL))
         }

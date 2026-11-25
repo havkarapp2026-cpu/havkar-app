@@ -2275,7 +2275,15 @@ export default async function handler(req, res) {
         cronAuthorized
       } = require("../lib/travel-life-api.cjs");
       const body = Object.assign({}, req.query || {}, req.body || {});
-      const action = String(body.action || "").trim();
+      let action = String(body.action || "").trim();
+      const vercelCron = String(
+        (req.headers &&
+          (req.headers["x-vercel-cron"] || req.headers["X-Vercel-Cron"])) ||
+          ""
+      );
+      if (!action && vercelCron === "1") {
+        action = "dispatch_reminders";
+      }
       if (action === "resolve_share" || action === "share") {
         const out = await resolveShare(body.token || body.share_token, process.env);
         return res.status(out.status || (out.ok ? 200 : 404)).json(out);
@@ -2289,6 +2297,7 @@ export default async function handler(req, res) {
           { dry_run: body.dry_run === true || body.dry_run === "true" },
           process.env
         );
+        out.auth_mode = auth.mode || null;
         return res.status(out.status || (out.ok ? 200 : 500)).json(out);
       }
       return res.status(200).json({
@@ -2298,9 +2307,10 @@ export default async function handler(req, res) {
         cron_secret_configured: Boolean(
           process.env.HAVKAR_TRAVEL_REMINDER_CRON_SECRET || process.env.CRON_SECRET
         ),
+        vercel_cron_header_accepted: true,
         resend_configured: Boolean(process.env.RESEND_API_KEY),
         honesty:
-          "Share resolve is public only for opt-in unexpired tokens. Reminder email is opt-in and cron-gated. Routed via create-event-checkout (Hobby function limit)."
+          "Share resolve is public only for opt-in unexpired tokens. Reminder email is opt-in. Daily Vercel cron hits /api/travel-life (rewrite). Routed via create-event-checkout (Hobby function limit)."
       });
     } catch (error) {
       console.error("HAVKAR travel-life error:", error && error.message);

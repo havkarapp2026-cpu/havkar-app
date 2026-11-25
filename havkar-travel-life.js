@@ -8,9 +8,30 @@
 
   var IDB_NAME = "havkar_travel_life_v1";
   var IDB_STORE = "pending";
+  var IDB_VERSION = 2;
   var SAMPLE_MIN_MS = 8000;
   var SAMPLE_MIN_M = 35;
   var MAX_PENDING = 5000;
+
+  function nativeTravelBridge() {
+    if (root.HAVKAR_ANDROID_TRAVEL && typeof root.HAVKAR_ANDROID_TRAVEL.startBackground === "function") {
+      return { platform: "android", api: root.HAVKAR_ANDROID_TRAVEL };
+    }
+    if (root.HAVKAR_IOS_TRAVEL && typeof root.HAVKAR_IOS_TRAVEL.startBackground === "function") {
+      return { platform: "ios", api: root.HAVKAR_IOS_TRAVEL };
+    }
+    return null;
+  }
+
+  function parseNativeJson(raw) {
+    if (raw == null) return { ok: false, error: "empty" };
+    if (typeof raw === "object") return raw;
+    try {
+      return JSON.parse(String(raw));
+    } catch (_e) {
+      return { ok: false, error: "parse_failed" };
+    }
+  }
 
   function supabaseClient() {
     if (!root.supabase || !root.HAVKAR_SUPABASE_CONFIG) return null;
@@ -28,11 +49,14 @@
         reject(new Error("indexeddb_unavailable"));
         return;
       }
-      var req = root.indexedDB.open(IDB_NAME, 1);
+      var req = root.indexedDB.open(IDB_NAME, IDB_VERSION);
       req.onupgradeneeded = function () {
         var db = req.result;
         if (!db.objectStoreNames.contains(IDB_STORE)) {
           db.createObjectStore(IDB_STORE, { keyPath: "id", autoIncrement: true });
+        }
+        if (!db.objectStoreNames.contains("local_trips")) {
+          db.createObjectStore("local_trips", { keyPath: "id" });
         }
       };
       req.onsuccess = function () {
@@ -230,24 +254,108 @@
     return { ok: true, queued: false };
   }
 
+  async function saveLocalTripSnapshot(trip) {
+    return openIdb().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction("local_trips", "readwrite");
+        tx.objectStore("local_trips").put(trip);
+        tx.oncomplete = function () {
+          resolve(true);
+        };
+        tx.onerror = function () {
+          reject(tx.error || new Error("local_trip_write_failed"));
+        };
+      });
+    });
+  }
+
+  async function listLocalTripSnapshots() {
+    return openIdb().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        if (!db.objectStoreNames.contains("local_trips")) {
+          resolve([]);
+          return;
+        }
+        var req = db.transaction("local_trips", "readonly").objectStore("local_trips").getAll();
+        req.onsuccess = function () {
+          resolve(req.result || []);
+        };
+        req.onerror = function () {
+          reject(req.error || new Error("local_trip_read_failed"));
+        };
+      });
+    }).catch(function () {
+      return [];
+    });
+  }
+
+  async function drainNativePoints() {
+    var bridge = nativeTravelBridge();
+    if (!bridge) return { ok: true, points: [], platform: null };
+    var raw;
+    try {
+      raw = bridge.api.drainQueuedPoints();
+      if (raw && typeof raw.then === "function") raw = await raw;
+    } catch (_e) {
+      return { ok: false, points: [], error: "native_drain_failed", platform: bridge.platform };
+    }
+    var parsed = parseNativeJson(raw);
+    var points = (parsed && parsed.points) || [];
+    for (var i = 0; i < points.length; i++) {
+      await enqueueOrInsertPoint(points[i]).catch(function () {
+        return null;
+      });
+    }
+    return { ok: true, points: points, platform: bridge.platform, count: points.length };
+  }
+
   async function syncPending() {
     var client = supabaseClient();
     if (!client) return { ok: false, error: "supabase_unavailable" };
     var uid = await sessionUserId(client);
     if (!uid) return { ok: false, error: "sign_in_required" };
+    var nativeDrain = await drainNativePoints().catch(function () {
+      return { count: 0 };
+    });
     var rows = await idbAll().catch(function () {
       return [];
     });
     var done = [];
+    var syncedStops = 0;
     for (var i = 0; i < rows.length; i++) {
       var row = rows[i];
-      if (!row || row.kind !== "track_point" || !row.payload) continue;
-      var payload = Object.assign({}, row.payload, { user_id: uid });
-      var res = await client.from("trip_track_points").insert(payload);
-      if (!res.error) done.push(row.id);
+      if (!row || !row.payload) continue;
+      if (row.kind === "track_point") {
+        var payload = Object.assign({}, row.payload, { user_id: uid });
+        var res = await client.from("trip_track_points").insert(payload);
+        if (!res.error) done.push(row.id);
+      } else if (row.kind === "trip_stop") {
+        var stop = Object.assign({}, row.payload, { user_id: uid });
+        var stopRes = await client.from("trip_stops").insert(stop);
+        if (!stopRes.error) {
+          done.push(row.id);
+          syncedStops += 1;
+        }
+      } else if (row.kind === "trip_patch") {
+        var patch = row.payload || {};
+        if (patch.trip_id) {
+          var upd = await client
+            .from("user_trips")
+            .update(Object.assign({ updated_at: new Date().toISOString() }, patch.fields || {}))
+            .eq("id", patch.trip_id)
+            .eq("user_id", uid);
+          if (!upd.error) done.push(row.id);
+        }
+      }
     }
     await idbClearIds(done);
-    return { ok: true, synced: done.length, remaining: rows.length - done.length };
+    return {
+      ok: true,
+      synced: done.length,
+      synced_stops: syncedStops,
+      native_drained: nativeDrain.count || 0,
+      remaining: rows.length - done.length
+    };
   }
 
   function onPosition(pos) {
@@ -365,13 +473,39 @@
     }).catch(function () {
       return null;
     });
-    emit({ type: "started", trip_id: active.tripId, cloud: true });
+    var native = nativeTravelBridge();
+    var nativeStart = null;
+    if (native) {
+      try {
+        nativeStart = parseNativeJson(native.api.startBackground(String(created.trip_id)));
+      } catch (_e) {
+        nativeStart = { ok: false, error: "native_start_failed" };
+      }
+    }
+    saveLocalTripSnapshot({
+      id: created.trip_id,
+      status: "active",
+      started_at: new Date().toISOString(),
+      title: tripOpts.title || "Personal drive",
+      origin_label: tripOpts.origin_label || null,
+      offline: false
+    }).catch(function () {
+      return null;
+    });
+    emit({
+      type: "started",
+      trip_id: active.tripId,
+      cloud: true,
+      native_background: nativeStart
+    });
     return {
       ok: true,
       trip_id: active.tripId,
       cloud: true,
-      honesty:
-        "Foreground GPS with consent. Screen-off / background tracking needs native OS permission and is not guaranteed in mobile browsers."
+      native_background: nativeStart,
+      honesty: native
+        ? "Foreground watch + native background GPS bridge armed for this trip (Android FGS / iOS CLLocation). Consent required."
+        : "Foreground GPS with consent. Screen-off needs the HAVKAR Android/iOS app build with the travel GPS bridge."
     };
   }
 
@@ -414,6 +548,15 @@
       } catch (_e) {}
     }
     active.watchId = null;
+    var native = nativeTravelBridge();
+    if (native) {
+      try {
+        native.api.stopBackground();
+      } catch (_e) {}
+    }
+    await drainNativePoints().catch(function () {
+      return null;
+    });
     await releaseWakeLock();
     var durationS = active.startedAt
       ? Math.max(0, Math.round((Date.now() - active.startedAt) / 1000))
@@ -712,13 +855,11 @@
 
   async function addStop(tripId, partial) {
     var client = supabaseClient();
-    if (!client) return { ok: false, error: "supabase_unavailable" };
-    var uid = await sessionUserId(client);
-    if (!uid) return { ok: false, error: "sign_in_required" };
+    var uid = client ? await sessionUserId(client) : null;
     var row = Object.assign(
       {
         trip_id: tripId,
-        user_id: uid,
+        user_id: uid || null,
         kind: "waypoint",
         seq: 0,
         lat: active.lastLat,
@@ -727,11 +868,19 @@
       },
       partial || {}
     );
+    var online = root.navigator ? root.navigator.onLine !== false : true;
+    if (!client || !uid || !online) {
+      await idbAdd({ kind: "trip_stop", payload: row, queued_at: Date.now() });
+      emit({ type: "stop_added", trip_id: tripId, queued: true, label: row.label });
+      return { ok: true, queued: true };
+    }
     var res = await client.from("trip_stops").insert(row).select("id").single();
     if (res.error) {
+      await idbAdd({ kind: "trip_stop", payload: row, queued_at: Date.now() });
       return {
-        ok: false,
-        error: res.error.message || "stop_failed",
+        ok: true,
+        queued: true,
+        warn: res.error.message || "stop_failed",
         migration_pending: /relation|schema cache|trip_stops/i.test(
           String(res.error.message || "")
         )
@@ -877,6 +1026,8 @@
     createShareLink: createShareLink,
     revokeShare: revokeShare,
     syncPending: syncPending,
+    drainNativePoints: drainNativePoints,
+    listLocalTripSnapshots: listLocalTripSnapshots,
     saveReminderPrefs: saveReminderPrefs,
     loadReminderPrefs: loadReminderPrefs,
     getActive: function () {
@@ -886,12 +1037,16 @@
         distance_m: active.distanceM,
         points: active.localPoints.length,
         last_lat: active.lastLat,
-        last_lng: active.lastLng
+        last_lng: active.lastLng,
+        native: Boolean(nativeTravelBridge())
       };
     },
+    nativeBridgeAvailable: function () {
+      return Boolean(nativeTravelBridge());
+    },
     browserBackgroundHonesty:
-      "Mobile browsers generally cannot guarantee continuous GPS with the screen off. Android/iOS native builds need OS location permissions (including background where legally allowed). HAVKAR never tracks without consent.",
+      "Mobile browsers generally cannot guarantee continuous GPS with the screen off. Use the HAVKAR Android/iOS app for background recording after consent.",
     nativeBackgroundReady:
-      "Android ACCESS_BACKGROUND_LOCATION + iOS Always permission strings are declared. Continuous screen-off tracking still requires a native location plugin / foreground service in store builds — WebView alone is not enough."
+      "Android Foreground Service (location) + iOS CLLocation Always bridge are wired. WebView alone still cannot guarantee screen-off GPS."
   };
 })(typeof globalThis !== "undefined" ? globalThis : this);
