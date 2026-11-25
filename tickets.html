@@ -965,15 +965,19 @@ html[dir="rtl"] .havkar-map-layers{
             <p class="lead" style="margin:8px 0 0">GPS recording starts only after you accept location consent on this page. Default private. Screen-off / background tracking is not guaranteed in mobile browsers — Android/iOS native builds need OS permissions. No silent tracking. Offline samples queue on-device and sync when online.</p>
         </details>
         <form id="personalTripForm" class="flight-form" onsubmit="return false;">
-            <label>Trip name <input id="personalTripTitle" maxlength="120" placeholder="Weekend drive" value="Personal drive"></label>
-            <label>Extra stop (optional) <input id="personalWaypoint" autocomplete="off" placeholder="City or place to add later"></label>
-            <button type="button" id="personalStartBtn" class="partner-link">Start trip</button>
-            <button type="button" id="personalPauseBtn" class="partner-link" style="background:#fff;color:#1b5e20" disabled>Pause</button>
-            <button type="button" id="personalResumeBtn" class="partner-link" style="background:#fff;color:#1b5e20" disabled>Resume</button>
-            <button type="button" id="personalStopBtn" class="partner-link" style="background:#fff;color:#b71c1c" disabled>End trip</button>
+            <label data-travel-i18n="tripName">Trip name <input id="personalTripTitle" maxlength="120" placeholder="Weekend drive" value="Personal drive"></label>
+            <label data-travel-i18n="origin">Origin (optional) <input id="personalOrigin" autocomplete="off" placeholder="City / place"></label>
+            <label data-travel-i18n="destination">Destination (optional) <input id="personalDestination" autocomplete="off" placeholder="City / place"></label>
+            <label data-travel-i18n="extraStop">Extra stop <input id="personalWaypoint" autocomplete="off" placeholder="Add while driving (park first)"></label>
+            <button type="button" id="personalStartBtn" class="partner-link" data-travel-i18n="startTrip">Start trip</button>
+            <button type="button" id="personalPauseBtn" class="partner-link" style="background:#fff;color:#1b5e20" disabled data-travel-i18n="pause">Pause</button>
+            <button type="button" id="personalResumeBtn" class="partner-link" style="background:#fff;color:#1b5e20" disabled data-travel-i18n="resume">Resume</button>
+            <button type="button" id="personalAddStopBtn" class="partner-link" style="background:#fff;color:#1b5e20" disabled data-travel-i18n="addStop">Add stop</button>
+            <button type="button" id="personalStopBtn" class="partner-link" style="background:#fff;color:#b71c1c" disabled data-travel-i18n="endTrip">End trip</button>
         </form>
         <div id="personalTripHud" class="pending-note" role="status" aria-live="polite">Idle — accept geo consent, then start.</div>
         <p id="personalTripHonesty" class="pending-note" style="margin-top:8px"></p>
+        <p class="pending-note" data-travel-i18n="offlineMapNote">Offline: recorded points stay in IndexedDB and sync when online. Full offline map tiles are not bundled (cost control).</p>
     </section>
 
     <section id="ticket-mytrips" class="panel" data-ticket-panel="mytrips" hidden aria-labelledby="mytripsTitle">
@@ -998,6 +1002,7 @@ html[dir="rtl"] .havkar-map-layers{
             <button type="button" id="myTripsExportBtn" class="partner-link" style="background:#fff;color:#1b5e20">Download JSON copy</button>
         </form>
         <div id="myTripsStats" class="pending-note" role="status">Sign in to load cloud trips.</div>
+        <div id="myTripsMonthly" class="pending-note" style="margin-top:6px" hidden></div>
         <div id="myTripsList" class="flight-results" style="margin-top:10px"></div>
     </section>
 
@@ -1010,6 +1015,28 @@ html[dir="rtl"] .havkar-map-layers{
         </details>
         <form id="cameraCatalogForm" class="flight-form" onsubmit="return false;">
             <label>Search <input id="cameraCatalogQuery" autocomplete="off" placeholder="Country, city, road, beach…"></label>
+            <label>Kind
+                <select id="cameraCatalogKind">
+                    <option value="">All kinds</option>
+                    <option value="youtube_live">True LIVE video</option>
+                    <option value="jpeg_periodic">Periodic JPEG (not LIVE)</option>
+                    <option value="jpeg_poll">Polled JPEG (not LIVE)</option>
+                </select>
+            </label>
+            <label>Category
+                <select id="cameraCatalogCategory">
+                    <option value="">All categories</option>
+                    <option value="road">Road / highway</option>
+                    <option value="intersection">Intersection</option>
+                    <option value="city">City</option>
+                    <option value="tourism">Tourism</option>
+                    <option value="weather">Weather</option>
+                    <option value="port">Port</option>
+                    <option value="airport">Airport</option>
+                    <option value="beach">Beach</option>
+                    <option value="mountain">Mountain</option>
+                </select>
+            </label>
             <button type="button" id="cameraCatalogSearchBtn" class="partner-link">Filter catalog</button>
             <a class="partner-link" href="#ticketsMapShell" id="cameraOpenMapBtn" style="text-align:center;text-decoration:none">Open map camera layers</a>
         </form>
@@ -1032,7 +1059,7 @@ html[dir="rtl"] .havkar-map-layers{
             <label><input type="checkbox" id="memoriesAttachGeo"> Attach current location (requires geo consent)</label>
             <button type="button" id="memoriesUploadBtn" class="partner-link">Upload to album</button>
         </form>
-        <div id="memoriesStatus" class="pending-note" role="status">Sign in + Owner migration required for cloud albums.</div>
+        <div id="memoriesStatus" class="pending-note" role="status">Sign in to upload private albums (max 50&nbsp;MB / file).</div>
     </section>
 
     <section id="ticket-reminders" class="panel" data-ticket-panel="reminders" hidden aria-labelledby="remindersTitle">
@@ -1469,6 +1496,7 @@ html[dir="rtl"] .havkar-map-layers{
 })();
 </script>
 <script src="/havkar-travel-life.js"></script>
+<script src="/havkar-travel-life-i18n.js"></script>
 <script src="/havkar-camera-catalog.js"></script>
 <script src="/havkar-countries.js"></script>
 <script src="/havkar-presentment-currencies.js"></script>
@@ -1529,8 +1557,37 @@ html[dir="rtl"] .havkar-map-layers{
 <script>
 (function(){
   var travelMapApi = null;
+  var tripTrackLayer = null;
   var mapNote = document.getElementById('ticketsMapNote');
   function setMapNote(text){ if(mapNote) mapNote.textContent = text; }
+  window.__havkarGetTravelMapApi = function(){ return travelMapApi; };
+  window.__havkarTicketsDrawTrack = function(points, stops){
+    var panel = document.getElementById('ticketsMapPanel');
+    if(panel) panel.open = true;
+    var ready = travelMapApi ? Promise.resolve(travelMapApi) : mountTravelMap();
+    return ready.then(function(api){
+      if(!api || !api.L || !api.map || !(points||[]).length){
+        setMapNote('Track available but map API not ready.');
+        return;
+      }
+      travelMapApi = api;
+      if(tripTrackLayer){
+        try { api.map.removeLayer(tripTrackLayer); } catch(_e){}
+      }
+      tripTrackLayer = api.L.layerGroup();
+      var latlngs = points.map(function(p){ return [p.lat, p.lng]; });
+      api.L.polyline(latlngs, { color:'#2e7d32', weight:4, opacity:0.9 }).addTo(tripTrackLayer);
+      (stops||[]).forEach(function(s){
+        if(s.lat == null || s.lng == null) return;
+        api.L.circleMarker([s.lat, s.lng], { radius:6, color:'#1565c0' })
+          .bindPopup(String(s.label || s.kind || 'Stop'))
+          .addTo(tripTrackLayer);
+      });
+      tripTrackLayer.addTo(api.map);
+      try { api.map.fitBounds(api.L.latLngBounds(latlngs), { padding:[36,36] }); } catch(_e2){}
+      setMapNote('Past trip track · '+points.length+' GPS samples · stops '+(stops||[]).length);
+    });
+  };
 
   function mountTravelMap(){
     var host = document.getElementById('ticketsMapHost');
@@ -2160,10 +2217,12 @@ html[dir="rtl"] .havkar-map-layers{
     var pause=document.getElementById('personalPauseBtn');
     var resume=document.getElementById('personalResumeBtn');
     var stop=document.getElementById('personalStopBtn');
+    var addStop=document.getElementById('personalAddStopBtn');
     if(start) start.disabled = state==='active' || state==='paused';
     if(pause) pause.disabled = state!=='active';
     if(resume) resume.disabled = state!=='paused';
     if(stop) stop.disabled = state!=='active' && state!=='paused';
+    if(addStop) addStop.disabled = state!=='active' && state!=='paused';
   }
   if(honesty && TL) setHonesty(TL.browserBackgroundHonesty || '');
 
@@ -2202,7 +2261,14 @@ html[dir="rtl"] .havkar-map-layers{
         return;
       }
       var title=(document.getElementById('personalTripTitle')||{}).value||'Personal drive';
-      TL.startPersonalTrip({ title:title, trip_type:'personal_car' }).then(function(res){
+      var origin=(document.getElementById('personalOrigin')||{}).value||'';
+      var destination=(document.getElementById('personalDestination')||{}).value||'';
+      TL.startPersonalTrip({
+        title:title,
+        trip_type:'personal_car',
+        origin_label: origin || null,
+        destination_label: destination || null
+      }).then(function(res){
         if(!res || !res.ok){
           setHud('Could not start: '+(res && res.error || 'unknown'));
           return;
@@ -2216,12 +2282,41 @@ html[dir="rtl"] .havkar-map-layers{
   var resumeBtn=document.getElementById('personalResumeBtn');
   if(resumeBtn && TL) resumeBtn.addEventListener('click', function(){ TL.resumeTrip(); });
   var stopBtn=document.getElementById('personalStopBtn');
-  if(stopBtn && TL) stopBtn.addEventListener('click', function(){ TL.stopTrip(); });
+  if(stopBtn && TL) stopBtn.addEventListener('click', function(){
+    var destination=(document.getElementById('personalDestination')||{}).value||'';
+    TL.stopTrip({ destination_label: destination || 'End' });
+  });
+  var addStopBtn=document.getElementById('personalAddStopBtn');
+  if(addStopBtn && TL){
+    addStopBtn.addEventListener('click', function(){
+      var active=TL.getActive();
+      if(!active || !active.trip_id){ setHud('No active trip.'); return; }
+      var label=(document.getElementById('personalWaypoint')||{}).value||'Stop';
+      TL.addStop(active.trip_id, { kind:'waypoint', label:label }).then(function(res){
+        setHud(res.ok ? ('Stop added: '+label) : (res.error||'Stop failed'));
+      });
+    });
+  }
 
   function fmtKm(m){ return ((Number(m)||0)/1000).toFixed(1)+' km'; }
+  function drawTripOnMap(tripId){
+    if(!TL || !tripId) return;
+    TL.loadTrackPoints(tripId, 2000).then(function(res){
+      if(!res.ok || !(res.points||[]).length){
+        setHud('No track points for this trip yet.');
+        return;
+      }
+      TL.listStops(tripId).then(function(stopsRes){
+        if(window.__havkarTicketsDrawTrack){
+          window.__havkarTicketsDrawTrack(res.points, stopsRes.stops||[]);
+        }
+      });
+    });
+  }
   function renderTrips(trips){
     var list=document.getElementById('myTripsList');
     var stats=document.getElementById('myTripsStats');
+    var monthly=document.getElementById('myTripsMonthly');
     if(!list) return;
     list.innerHTML='';
     var q=String((document.getElementById('myTripsQuery')||{}).value||'').toLowerCase();
@@ -2232,9 +2327,21 @@ html[dir="rtl"] .havkar-map-layers{
       var hay=[t.title,t.origin_label,t.destination_label,(t.countries||[]).join(' '),(t.cities||[]).join(' ')].join(' ').toLowerCase();
       return hay.indexOf(q)!==-1;
     });
-    var ys = TL && TL.yearlyStats ? TL.yearlyStats(filtered) : { trip_count:filtered.length, total_distance_m:0 };
+    var ys = TL && TL.yearlyStats ? TL.yearlyStats(filtered) : { trip_count:filtered.length, total_distance_m:0, by_month:{}, by_year:{} };
     if(stats){
       stats.textContent = filtered.length+' trip(s) shown · total '+fmtKm(ys.total_distance_m)+' · private account history';
+    }
+    if(monthly){
+      var months = Object.keys(ys.by_month||{}).sort().slice(-6);
+      if(months.length){
+        monthly.hidden=false;
+        monthly.textContent = 'Monthly: ' + months.map(function(m){
+          var row = ys.by_month[m];
+          return m + ' ' + row.trips + ' trip(s)/' + fmtKm(row.distance_m);
+        }).join(' · ');
+      } else {
+        monthly.hidden=true;
+      }
     }
     filtered.forEach(function(t){
       var card=document.createElement('article');
@@ -2262,12 +2369,42 @@ html[dir="rtl"] .havkar-map-layers{
       });
       var useId=document.createElement('button');
       useId.type='button'; useId.className='partner-link'; useId.textContent='Use for memories';
-      useId.style.cssText='background:#fff;color:#1b5e20;margin:4px 0 0;padding:6px 10px;font-size:.85rem';
+      useId.style.cssText='background:#fff;color:#1b5e20;margin:4px 4px 0 0;padding:6px 10px;font-size:.85rem';
       useId.addEventListener('click', function(){
         var inp=document.getElementById('memoriesTripId');
         if(inp) inp.value=t.id;
       });
+      var mapBtn=document.createElement('button');
+      mapBtn.type='button'; mapBtn.className='partner-link'; mapBtn.textContent='Show on map';
+      mapBtn.style.cssText='background:#fff;color:#1b5e20;margin:4px 4px 0 0;padding:6px 10px;font-size:.85rem';
+      mapBtn.addEventListener('click', function(){ drawTripOnMap(t.id); });
+      var shareBtn=document.createElement('button');
+      shareBtn.type='button'; shareBtn.className='partner-link'; shareBtn.textContent='Share (optional)';
+      shareBtn.style.cssText='background:#fff;color:#1b5e20;margin:4px 4px 0 0;padding:6px 10px;font-size:.85rem';
+      shareBtn.addEventListener('click', function(){
+        if(!confirm('Create a time-limited share link? Exact GPS/media stay off unless you enable them next.')) return;
+        var includeMedia=confirm('Include media captions in the share? (files stay private; captions only)');
+        var includeGeo=confirm('Include exact media GPS coordinates in the share? Default Cancel = no.');
+        TL.createShareLink(t.id, {
+          days:7,
+          include_media: includeMedia,
+          include_geo: includeGeo,
+          include_track: true
+        }).then(function(res){
+          if(!res.ok){ alert(res.error||'Share failed'); return; }
+          prompt('Copy share link (expires '+res.expires_at+'):', res.url);
+        });
+      });
+      var revokeBtn=document.createElement('button');
+      revokeBtn.type='button'; revokeBtn.className='partner-link'; revokeBtn.textContent='Revoke share';
+      revokeBtn.style.cssText='background:#fff;color:#b71c1c;margin:4px 0 0;padding:6px 10px;font-size:.85rem';
+      revokeBtn.addEventListener('click', function(){
+        TL.revokeShare(t.id).then(function(res){
+          alert(res.ok ? 'Share revoked. Trip is private again.' : (res.error||'Revoke failed'));
+        });
+      });
       actions.appendChild(ren); actions.appendChild(del); actions.appendChild(useId);
+      actions.appendChild(mapBtn); actions.appendChild(shareBtn); actions.appendChild(revokeBtn);
       list.appendChild(card);
     });
   }
@@ -2312,8 +2449,10 @@ html[dir="rtl"] .havkar-map-layers{
     var list=document.getElementById('cameraCatalogList');
     if(!list) return;
     var q=(document.getElementById('cameraCatalogQuery')||{}).value||'';
+    var kind=(document.getElementById('cameraCatalogKind')||{}).value||'';
+    var category=(document.getElementById('cameraCatalogCategory')||{}).value||'';
     var cat=window.HAVKAR_CAMERA_CATALOG;
-    var rows=cat ? cat.search(q) : [];
+    var rows=cat ? cat.search(q, { kind:kind, category:category }) : [];
     list.innerHTML='';
     if(!rows.length){
       list.textContent='No licensed sources match. New cameras need Owner license review.';
@@ -2323,7 +2462,7 @@ html[dir="rtl"] .havkar-map-layers{
       var card=document.createElement('article');
       card.className='flight-card';
       card.innerHTML='<strong></strong><p></p><p></p>';
-      card.querySelector('strong').textContent=s.label+' · '+s.kind;
+      card.querySelector('strong').textContent=s.label+' · '+s.kind+' · '+(s.playback||'');
       card.querySelectorAll('p')[0].textContent=(s.countries||[]).join(', ')+' · '+(s.categories||[]).join(', ');
       card.querySelectorAll('p')[1].textContent=s.live_policy+' · '+s.coverage;
       list.appendChild(card);
@@ -2333,6 +2472,11 @@ html[dir="rtl"] .havkar-map-layers{
   if(camBtn) camBtn.addEventListener('click', function(){ window.__havkarRefreshCameras(); });
   var camQ=document.getElementById('cameraCatalogQuery');
   if(camQ) camQ.addEventListener('input', function(){ window.__havkarRefreshCameras(); });
+  ['cameraCatalogKind','cameraCatalogCategory'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.addEventListener('change', function(){ window.__havkarRefreshCameras(); });
+  });
+  if(window.HAVKAR_TRAVEL_I18N) window.HAVKAR_TRAVEL_I18N.apply();
 
   var memBtn=document.getElementById('memoriesUploadBtn');
   if(memBtn && TL){

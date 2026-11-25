@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HAVKAR shared trip</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    :root { --green:#2e7d32; --green-soft:#e8f5e9; --ink:#1b3a1f; }
+    body { margin:0; font-family: system-ui, sans-serif; background:linear-gradient(180deg,#f1f8e9,#fff); color:var(--ink); }
+    header { background:var(--green); color:#fff; padding:14px 16px; }
+    main { max-width:720px; margin:0 auto; padding:16px; }
+    .card { background:#fff; border:1px solid #c8e6c9; border-radius:12px; padding:14px; margin:12px 0; }
+    .muted { color:#4a674f; font-size:.9rem; }
+    #map { height:280px; border-radius:12px; border:1px solid #c8e6c9; }
+    a.btn { display:inline-block; margin-top:10px; background:var(--green); color:#fff; text-decoration:none; padding:10px 14px; border-radius:10px; }
+  </style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+  <header><strong>HAVKAR</strong> · Shared trip (time-limited)</header>
+  <main>
+    <p class="muted" id="status">Loading shared trip…</p>
+    <div class="card" id="tripCard" hidden>
+      <h1 id="title"></h1>
+      <p id="meta" class="muted"></p>
+      <p id="route" class="muted"></p>
+      <div id="map" hidden></div>
+      <div id="media"></div>
+    </div>
+    <a class="btn" href="tickets.html#mode-mytrips">Open HAVKAR Tickets</a>
+  </main>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+  (function(){
+    var params = new URLSearchParams(location.search);
+    var token = params.get('token') || '';
+    var status = document.getElementById('status');
+    if(!token){ status.textContent = 'Missing share token.'; return; }
+    fetch('/api/travel-life', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'resolve_share', token: token })
+    }).then(function(r){ return r.json(); }).then(function(body){
+      if(!body || !body.ok){
+        status.textContent = (body && body.error) || 'Share not found or expired.';
+        return;
+      }
+      status.textContent = 'Shared view · expires ' + (body.expires_at || '');
+      var trip = body.trip || {};
+      document.getElementById('tripCard').hidden = false;
+      document.getElementById('title').textContent = trip.title || 'Shared trip';
+      document.getElementById('meta').textContent =
+        (trip.trip_type||'') + ' · ' + ((trip.distance_m||0)/1000).toFixed(1) + ' km · ' +
+        Math.round((trip.duration_s||0)/60) + ' min · ' + (trip.started_at||'').slice(0,16);
+      document.getElementById('route').textContent =
+        (trip.origin_label||'—') + ' → ' + (trip.destination_label||'—') +
+        ' · ' + ((trip.cities||[]).join(', ')||'cities n/a');
+      var track = body.track || [];
+      if(track.length && window.L){
+        var mapEl = document.getElementById('map');
+        mapEl.hidden = false;
+        var map = L.map(mapEl).setView([track[0].lat, track[0].lng], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+        var latlngs = track.map(function(p){ return [p.lat, p.lng]; });
+        var line = L.polyline(latlngs, { color:'#2e7d32', weight:4 }).addTo(map);
+        map.fitBounds(line.getBounds(), { padding:[24,24] });
+      }
+      var mediaRoot = document.getElementById('media');
+      (body.media||[]).forEach(function(m){
+        var p = document.createElement('p');
+        p.className = 'muted';
+        p.textContent = (m.media_type||'media') + ' · ' + (m.taken_at||'') + (m.caption ? (' · '+m.caption) : '');
+        mediaRoot.appendChild(p);
+      });
+      if(!(body.media||[]).length){
+        var none = document.createElement('p');
+        none.className = 'muted';
+        none.textContent = 'No shared media (or media share disabled).';
+        mediaRoot.appendChild(none);
+      }
+    }).catch(function(err){
+      status.textContent = String(err && err.message || err);
+    });
+  })();
+  </script>
+</body>
+</html>
