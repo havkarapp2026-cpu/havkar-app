@@ -984,7 +984,7 @@ html[data-havkar-entry="home"] .havkar-legal-footer {
 
         <a class="menu-item" href="chat.html" data-havkar-tile="messenger">
             <img src="assets/home/chat.png?v=owner-approved-mint-20261119" alt="HAVKAR Messenger" width="252" height="236">
-            <span class="tile-label" data-i18n="chat">Messenger</span>
+            <span class="tile-label" data-i18n="Messenger">Messenger</span>
         </a>
 
         <!-- Owner mandate: HAVKAR AI occupies the former Languages tile slot (row 4, center).
@@ -1013,8 +1013,8 @@ html[data-havkar-entry="home"] .havkar-legal-footer {
             <i class="fas fa-sliders"></i>
         </span>
         <span class="home-settings-bar-copy">
-            <strong data-i18n="profileAndSettings">Profile &amp; Settings</strong>
-            <span data-i18n="profileAndSettingsHint">Language, support, about, account, and privacy</span>
+            <strong data-i18n="Profile &amp; Settings">Profile &amp; Settings</strong>
+            <span data-i18n="Language, support, about, account, and privacy">Language, support, about, account, and privacy</span>
         </span>
         <span class="home-settings-bar-arrow" aria-hidden="true">›</span>
     </a>
@@ -1049,7 +1049,7 @@ html[data-havkar-entry="home"] .havkar-legal-footer {
     <div class="account-panel" id="signedInPanel" hidden>
         <!-- Never display private account emails on the public Home surface.
              Settings CTA is the dedicated home-settings-bar above — do not duplicate. -->
-        <p id="signedInLabel" data-i18n="signedIn">Signed in</p>
+        <p id="signedInLabel" data-i18n="Signed in">Signed in</p>
     </div>
 
 
@@ -1086,11 +1086,11 @@ function updateAccount(user) {
   if (signedInPanel) signedInPanel.hidden = !user;
   // Public Home must never render personal emails (Gmail or otherwise).
   if (signedInLabel) {
-    // Prefer i18n catalog when loaded; fall back to English source string.
-    const i18nText =
-      (window.HAVKAR_I18N && typeof window.HAVKAR_I18N.t === "function" && window.HAVKAR_I18N.t("signedIn")) ||
-      signedInLabel.getAttribute("data-i18n-fallback") ||
-      "Signed in";
+    // Phrase-key catalog (English source). Fix Swedish/home showing raw English.
+    let i18nText = "Signed in";
+    if (window.HAVKAR_I18N && typeof window.HAVKAR_I18N.t === "function") {
+      i18nText = window.HAVKAR_I18N.t("Signed in") || i18nText;
+    }
     signedInLabel.textContent = user ? i18nText : "";
   }
 }

@@ -62,8 +62,8 @@ test("messenger logo asset is unchanged", () => {
 
 test("home has one full-width settings bar and no nested duplicate settings CTA", () => {
   assert.match(indexHtml, /class="home-settings-bar"/);
-  assert.match(indexHtml, /data-i18n="profileAndSettings"/);
+  assert.match(indexHtml, /data-i18n="Profile &amp; Settings"/);
   const signedIn = indexHtml.match(/id="signedInPanel"[\s\S]*?<\/div>/)[0];
   assert.equal(/href="profile\.html"/.test(signedIn), false);
-  assert.match(signedIn, /data-i18n="signedIn"/);
+  assert.match(signedIn, /data-i18n="Signed in"/);
 });

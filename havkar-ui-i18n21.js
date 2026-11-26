@@ -491,4 +491,98 @@
     } catch(_e){}
   })();
 
+
+  /* Home 12-tile + Settings hub phrases (Owner mandate 2026-11-26). Offline glossaries only. */
+  (function(){
+    try {
+      var homeSettingsExtra = {
+        "Signed in": {
+          en:"Signed in", it:"Accesso effettuato", de:"Angemeldet", fr:"Connecté", es:"Sesión iniciada",
+          pt:"Sessão iniciada", nl:"Ingelogd", sv:"Inloggad", pl:"Zalogowano", id:"Sudah masuk",
+          zh:"已登录", ja:"ログイン中", ko:"로그인됨", hi:"साइन इन है", ru:"Вы вошли",
+          ckb:"چوونەژوورەوە کراوە", kmr:"Hati têketin", tr:"Oturum açıldı", ar:"تم تسجيل الدخول",
+          fa:"وارد شده‌اید", ur:"سائن ان ہے"
+        },
+        "Profile & Settings": {
+          en:"Profile & Settings", it:"Profilo e impostazioni", de:"Profil & Einstellungen", fr:"Profil et paramètres",
+          es:"Perfil y ajustes", pt:"Perfil e definições", nl:"Profiel en instellingen", sv:"Profil och inställningar",
+          pl:"Profil i ustawienia", id:"Profil & Pengaturan", zh:"个人资料与设置", ja:"プロフィールと設定",
+          ko:"프로필 및 설정", hi:"प्रोफ़ाइल और सेटिंग्स", ru:"Профиль и настройки",
+          ckb:"پرۆفایل و ڕێکخستنەکان", kmr:"Profîl û mîheng", tr:"Profil ve ayarlar",
+          ar:"الملف والإعدادات", fa:"پروفایل و تنظیمات", ur:"پروفائل اور سیٹنگز"
+        },
+        "Language, support, about, account, and privacy": {
+          en:"Language, support, about, account, and privacy",
+          it:"Lingua, supporto, informazioni, account e privacy",
+          de:"Sprache, Support, Über uns, Konto und Datenschutz",
+          fr:"Langue, assistance, à propos, compte et confidentialité",
+          es:"Idioma, soporte, acerca de, cuenta y privacidad",
+          pt:"Idioma, suporte, sobre, conta e privacidade",
+          nl:"Taal, ondersteuning, over, account en privacy",
+          sv:"Språk, support, om, konto och integritet",
+          pl:"Język, wsparcie, o nas, konto i prywatność",
+          id:"Bahasa, dukungan, tentang, akun, dan privasi",
+          zh:"语言、支持、关于、账户与隐私",
+          ja:"言語・サポート・概要・アカウント・プライバシー",
+          ko:"언어, 지원, 소개, 계정 및 개인정보",
+          hi:"भाषा, सहायता, परिचय, खाता और गोपनीयता",
+          ru:"Язык, поддержка, о сервисе, аккаунт и конфиденциальность",
+          ckb:"زمان، پشتگیری، دەربارە، هەژمار و تایبەتمەندی",
+          kmr:"Ziman, piştgirî, der barê, hesab û nepenîtî",
+          tr:"Dil, destek, hakkında, hesap ve gizlilik",
+          ar:"اللغة والدعم وحول والحساب والخصوصية",
+          fa:"زبان، پشتیبانی، درباره، حساب و حریم خصوصی",
+          ur:"زبان، سپورٹ، تعارف، اکاؤنٹ اور رازداری"
+        },
+        "Messenger": {
+          en:"Messenger", it:"Messenger", de:"Messenger", fr:"Messenger", es:"Messenger",
+          pt:"Messenger", nl:"Messenger", sv:"Messenger", pl:"Messenger", id:"Messenger",
+          zh:"Messenger", ja:"Messenger", ko:"Messenger", hi:"Messenger", ru:"Messenger",
+          ckb:"مەسنجەر", kmr:"Messenger", tr:"Messenger", ar:"ماسینجر", fa:"پیام‌رسان", ur:"میسنجر"
+        },
+        "Language & smart translation": {
+          en:"Language & smart translation", it:"Lingua e traduzione smart", de:"Sprache & smarte Übersetzung",
+          fr:"Langue et traduction intelligente", es:"Idioma y traducción inteligente",
+          pt:"Idioma e tradução inteligente", nl:"Taal en slimme vertaling", sv:"Språk och smart översättning",
+          pl:"Język i inteligentne tłumaczenie", id:"Bahasa & terjemahan cerdas", zh:"语言与智能翻译",
+          ja:"言語とスマート翻訳", ko:"언어 및 스마트 번역", hi:"भाषा और स्मार्ट अनुवाद",
+          ru:"Язык и умный перевод", ckb:"زمان و وەرگێڕانی زیرک", kmr:"Ziman û wergera jîr",
+          tr:"Dil ve akıllı çeviri", ar:"اللغة والترجمة الذكية", fa:"زبان و ترجمه هوشمند", ur:"زبان اور اسمارٹ ترجمہ"
+        },
+        "Support center": {
+          en:"Support center", it:"Centro assistenza", de:"Support-Center", fr:"Centre d'assistance",
+          es:"Centro de soporte", pt:"Centro de suporte", nl:"Ondersteuningscentrum", sv:"Supportcenter",
+          pl:"Centrum pomocy", id:"Pusat dukungan", zh:"支持中心", ja:"サポートセンター",
+          ko:"지원 센터", hi:"सहायता केंद्र", ru:"Центр поддержки", ckb:"ناوەندی پشتگیری",
+          kmr:"Navenda piştgiriyê", tr:"Destek merkezi", ar:"مركز الدعم", fa:"مرکز پشتیبانی", ur:"سپورٹ سینٹر"
+        },
+        "About HAVKAR": {
+          en:"About HAVKAR", it:"Informazioni su HAVKAR", de:"Über HAVKAR", fr:"À propos de HAVKAR",
+          es:"Acerca de HAVKAR", pt:"Sobre a HAVKAR", nl:"Over HAVKAR", sv:"Om HAVKAR",
+          pl:"O HAVKAR", id:"Tentang HAVKAR", zh:"关于 HAVKAR", ja:"HAVKARについて",
+          ko:"HAVKAR 소개", hi:"HAVKAR के बारे में", ru:"О HAVKAR", ckb:"دەربارەی HAVKAR",
+          kmr:"Der barê HAVKAR", tr:"HAVKAR hakkında", ar:"حول HAVKAR", fa:"درباره هاوکار", ur:"HAVKAR کے بارے میں"
+        },
+        "Log Out": {
+          en:"Log Out", it:"Esci", de:"Abmelden", fr:"Déconnexion", es:"Cerrar sesión",
+          pt:"Terminar sessão", nl:"Uitloggen", sv:"Logga ut", pl:"Wyloguj", id:"Keluar",
+          zh:"退出登录", ja:"ログアウト", ko:"로그아웃", hi:"लॉग आउट", ru:"Выйти",
+          ckb:"دەرچوون", kmr:"Derkeve", tr:"Çıkış yap", ar:"تسجيل الخروج", fa:"خروج از حساب", ur:"لاگ آؤٹ"
+        }
+      };
+      var api = root.HAVKAR_UI_I18N21;
+      if(!api || !api.pack) return;
+      var orig = api.pack.bind(api);
+      api.pack = function(lang){
+        var base = orig(lang) || {};
+        var code = String(lang||'en');
+        Object.keys(homeSettingsExtra).forEach(function(en){
+          if(homeSettingsExtra[en][code]) base[en] = homeSettingsExtra[en][code];
+        });
+        return base;
+      };
+    } catch(_e){}
+  })();
+
+
 })(typeof globalThis !== "undefined" ? globalThis : this);
