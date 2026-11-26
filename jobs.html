@@ -5554,24 +5554,27 @@ if(document.readyState === "loading"){
 <script src="/havkar-i18n.js"></script>
 <script src="/havkar-smart-translate.js"></script>
 <script>
-document.addEventListener("havkar:i18n-ready", function () {
-  var smart = window.HAVKAR_SMART_TRANSLATE;
-  if (!smart) return;
-  var attach =
-    typeof smart.observeAndAttach === "function"
-      ? smart.observeAndAttach.bind(smart)
-      : smart.attachToSelectors.bind(smart);
-  attach(
-    [
-      ".job-description",
-      "[data-job-description]",
-      "#jobDescriptionPreview",
-      ".jobs-card-description",
-      ".listing-description"
-    ],
-    { kind: "listing", sourceLanguage: "auto" }
-  );
-});
+(function () {
+  function bootSmartTranslate() {
+    var smart = window.HAVKAR_SMART_TRANSLATE;
+    if (!smart) return;
+    var attach =
+      typeof smart.observeAndAttach === "function"
+        ? smart.observeAndAttach.bind(smart)
+        : typeof smart.attachToSelectors === "function"
+          ? smart.attachToSelectors.bind(smart)
+          : null;
+    if (!attach) return;
+    attach([".job-description","[data-job-description]","#jobDescriptionPreview",".jobs-card-description",".listing-description"], {"kind":"listing","sourceLanguage":"auto"});
+  }
+  if (window.HAVKAR_SMART_TRANSLATE && typeof window.HAVKAR_SMART_TRANSLATE.onI18nReady === "function") {
+    window.HAVKAR_SMART_TRANSLATE.onI18nReady(bootSmartTranslate);
+  } else {
+    document.addEventListener("havkar:i18n-ready", bootSmartTranslate);
+    setTimeout(bootSmartTranslate, 0);
+    setTimeout(bootSmartTranslate, 400);
+  }
+})();
 </script>
 <script>
 (function(){

@@ -201,14 +201,16 @@
     if (!contentEl || contentEl.getAttribute("data-hk-smart-translate") === "1") {
       return null;
     }
-    ensureStyles();
-    contentEl.setAttribute("data-hk-smart-translate", "1");
 
     var opts = options || {};
     var originalText = String(
       opts.originalText != null ? opts.originalText : contentEl.textContent || ""
     ).trim();
+    // Do not stamp the mount flag on empty nodes — listings often fill later.
     if (!originalText) return null;
+
+    ensureStyles();
+    contentEl.setAttribute("data-hk-smart-translate", "1");
 
     var wrap = document.createElement("div");
     wrap.className = "hk-smart-translate-wrap notranslate";
@@ -380,20 +382,70 @@
   function observeAndAttach(selectors, options) {
     var opts = options || { kind: "listing" };
     var mounted = attachToSelectors(selectors, opts);
-    if (typeof MutationObserver !== "function" || !document.body) {
+    if (typeof MutationObserver !== "function") {
       return mounted;
     }
     var timer = null;
-    var observer = new MutationObserver(function () {
+    function scan() {
+      attachToSelectors(selectors, opts);
+    }
+    function scheduleScan() {
       if (timer) clearTimeout(timer);
-      timer = setTimeout(function () {
-        attachToSelectors(selectors, opts);
-      }, 200);
-    });
-    try {
-      observer.observe(document.body, { childList: true, subtree: true });
-    } catch (_e) {}
+      timer = setTimeout(scan, 200);
+    }
+    function armObserver() {
+      if (!document.body) return;
+      var observer = new MutationObserver(scheduleScan);
+      try {
+        // childList + characterData: listing text often fills after first paint.
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true,
+          characterData: true
+        });
+      } catch (_e) {
+        try {
+          observer.observe(document.body, { childList: true, subtree: true });
+        } catch (_e2) {}
+      }
+      // Late-filled SPA content: a few deferred scans without API spend.
+      setTimeout(scan, 500);
+      setTimeout(scan, 1500);
+      setTimeout(scan, 3500);
+    }
+    if (document.body) armObserver();
+    else document.addEventListener("DOMContentLoaded", armObserver, { once: true });
     return mounted;
+  }
+
+  /**
+   * Run after i18n is ready even if havkar:i18n-ready already fired
+   * (race when Core initializes before page listeners register).
+   */
+  function onI18nReady(fn) {
+    var ran = false;
+    function run() {
+      if (ran) return;
+      ran = true;
+      try {
+        fn();
+      } catch (_e) {}
+    }
+    document.addEventListener("havkar:i18n-ready", run);
+    function maybe() {
+      try {
+        if (root.HAVKAR_I18N && typeof root.HAVKAR_I18N.getLanguage === "function") {
+          run();
+        }
+      } catch (_e) {}
+    }
+    setTimeout(maybe, 0);
+    setTimeout(maybe, 300);
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", function () {
+        setTimeout(maybe, 0);
+      });
+    }
   }
 
   root.HAVKAR_SMART_TRANSLATE = {
@@ -402,6 +454,7 @@
     mountOnChatMessage: mountOnChatMessage,
     attachToSelectors: attachToSelectors,
     observeAndAttach: observeAndAttach,
+    onI18nReady: onI18nReady,
     askBeforeListings: askBeforeListings,
     setAskBeforeListings: setAskBeforeListings,
     LISTINGS_ASK_KEY: LISTINGS_ASK_KEY,

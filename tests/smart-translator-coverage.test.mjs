@@ -47,6 +47,7 @@ test("smart translator exposes observeAndAttach and never auto-fetches on load",
   };
   const document = {
     body: {},
+    readyState: "complete",
     getElementById() {
       return null;
     },
@@ -64,12 +65,15 @@ test("smart translator exposes observeAndAttach and never auto-fetches on load",
     head: { appendChild() {} },
     querySelectorAll() {
       return [];
-    }
+    },
+    addEventListener() {}
   };
   const root = {
     localStorage,
     document,
     console,
+    setTimeout,
+    clearTimeout,
     fetch() {
       fetchCalls += 1;
       return Promise.resolve({

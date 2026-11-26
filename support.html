@@ -1868,20 +1868,27 @@ textarea:focus-visible{
 <script src="/havkar-i18n.js"></script>
 <script src="/havkar-smart-translate.js"></script>
 <script>
-document.addEventListener("havkar:i18n-ready", function () {
-  var smart = window.HAVKAR_SMART_TRANSLATE;
-  if (!smart || typeof smart.attachToSelectors !== "function") return;
-  smart.attachToSelectors(
-    [
-      ".support-message-body",
-      "[data-support-body]",
-      "#supportRequestBody",
-      ".faq-answer",
-      ".ticket-body"
-    ],
-    { kind: "support", sourceLanguage: "auto", confirmBefore: true }
-  );
-});
+(function () {
+  function bootSmartTranslate() {
+    var smart = window.HAVKAR_SMART_TRANSLATE;
+    if (!smart) return;
+    var attach =
+      typeof smart.observeAndAttach === "function"
+        ? smart.observeAndAttach.bind(smart)
+        : typeof smart.attachToSelectors === "function"
+          ? smart.attachToSelectors.bind(smart)
+          : null;
+    if (!attach) return;
+    attach([".support-message-body","[data-support-body]","#supportRequestBody",".faq-answer",".ticket-body"], {"kind":"support","sourceLanguage":"auto","confirmBefore":true});
+  }
+  if (window.HAVKAR_SMART_TRANSLATE && typeof window.HAVKAR_SMART_TRANSLATE.onI18nReady === "function") {
+    window.HAVKAR_SMART_TRANSLATE.onI18nReady(bootSmartTranslate);
+  } else {
+    document.addEventListener("havkar:i18n-ready", bootSmartTranslate);
+    setTimeout(bootSmartTranslate, 0);
+    setTimeout(bootSmartTranslate, 400);
+  }
+})();
 </script>
 
 <script>
