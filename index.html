@@ -353,6 +353,17 @@ h1 {
     line-height: 1.05;
     letter-spacing: -0.02em;
     text-align: center;
+    z-index: 2;
+    text-shadow:
+        0 0 6px rgba(255, 255, 255, 0.95),
+        0 1px 0 #fff,
+        0 -1px 0 rgba(255, 255, 255, 0.85);
+}
+
+/* Messenger title must stay readable like other tiles (no overlap wash-out). */
+.menu-item[data-havkar-tile="messenger"] .tile-label {
+    bottom: 5%;
+    font-size: 8.2cqw;
 }
 
 .icon-buy,
@@ -526,77 +537,7 @@ h1 {
     font-size: .8rem;
 }
 
-/* =========================
-   CREATE ACCOUNT
-   ========================= */
-
-.enter-button {
-    width: calc(100% - 32px);
-    margin: 8px 16px 0;
-
-    display: flex;
-
-    justify-content: center;
-    align-items: center;
-
-    gap: 12px;
-
-    border: none;
-
-    border-radius: 50px;
-
-    padding: 16px 20px;
-
-    background:
-        linear-gradient(
-            135deg,
-            #16833c 0%,
-            #35ad5a 100%
-        );
-
-    color: #ffffff;
-
-    font-size: 1.02rem;
-    font-weight: 800;
-
-    cursor: pointer;
-
-    box-shadow:
-        0 10px 24px
-        rgba(32,130,59,.25),
-
-        inset 0 1px 0
-        rgba(255,255,255,.25);
-
-    transition:
-        transform .2s ease,
-        box-shadow .2s ease;
-}
-
-.enter-button:hover {
-    transform: translateY(-2px);
-
-    box-shadow:
-        0 13px 30px
-        rgba(32,130,59,.32);
-}
-
-.enter-button:active {
-    transform: scale(.985);
-}
-
-.enter-icon {
-    font-size: 1.25rem;
-}
-
-.enter-arrow {
-    font-size: 1.35rem;
-    margin-left: auto;
-}
-
-/* =========================
-   LOGIN
-   ========================= */
+/* Guest Create Account / Log In chrome removed from Home (auth via Profile & Settings). */
 
 .account-panel { margin: 14px 0 10px; padding: 12px 14px; border: 1px solid #cbe4d0; background: #f4fbf5; border-radius: 18px; text-align: center; }
 .account-panel p { overflow-wrap: anywhere; font-size: .83rem; margin: 0; color: #315c3d; }
@@ -694,78 +635,6 @@ h1 {
     color: rgba(255, 255, 255, 0.85);
     line-height: 1;
 }
-.login {
-    margin-top: 13px;
-    margin-bottom: 17px;
-    margin-left: 16px;
-    margin-right: 16px;
-
-    text-align: center;
-
-    color: #54705b;
-
-    font-size: .84rem;
-    font-weight: 600;
-}
-
-.login a {
-    color: #21863f;
-
-    font-weight: 800;
-
-    text-decoration: none;
-}
-
-.login a:hover {
-    text-decoration: underline;
-}
-
-/* =========================
-   SECURITY
-   ========================= */
-
-.security-badge {
-    display: flex;
-
-    justify-content: center;
-    align-items: center;
-
-    gap: 8px;
-
-    color: #54705b;
-
-    font-size: .78rem;
-    font-weight: 600;
-
-    text-align: center;
-}
-
-.security-icon {
-    width: 26px;
-    height: 26px;
-
-    display: flex;
-
-    justify-content: center;
-    align-items: center;
-
-    border-radius: 50%;
-
-    background: #31a653;
-
-    color: white;
-
-    font-size: .82rem;
-
-    box-shadow:
-        0 5px 12px
-        rgba(46,125,50,.18);
-}
-
-.security-lock {
-    font-size: .8rem;
-}
-
 /* =========================
    SMALL PHONES
    ========================= */
@@ -882,11 +751,6 @@ html[data-havkar-entry="home"] .havkar-legal-footer {
     .about-description {
         font-size: .63rem;
     }
-
-    .enter-button {
-        font-size: .94rem;
-        padding: 14px;
-    }
 }
 
 /* =========================
@@ -985,7 +849,7 @@ html[data-havkar-entry="home"] .havkar-legal-footer {
         </a>
 
         <a class="menu-item" href="chat.html" data-havkar-tile="messenger">
-            <img src="assets/home/chat.png?v=owner-tile-triple-20261126" alt="HAVKAR Messenger" width="252" height="236">
+            <img src="assets/home/chat.png?v=owner-image3-exact-20261126" alt="HAVKAR Messenger" width="248" height="236">
             <span class="tile-label" data-i18n="Messenger">Messenger</span>
         </a>
 
@@ -1022,47 +886,14 @@ html[data-havkar-entry="home"] .havkar-legal-footer {
     </a>
 
 
-    <!-- =========================
-         CREATE NEW ACCOUNT
-         ========================= -->
-
-    <button
-        id="guestSignup"
-        class="enter-button"
-        type="button"
-        onclick="window.location.href='signup.html'"
-        aria-label="Create New Account"
-    >
-        <i class="fas fa-user-plus enter-icon" aria-hidden="true"></i>
-        <span data-i18n="createAccount">Create New Account</span>
-        <span class="enter-arrow" aria-hidden="true">›</span>
-    </button>
-
-
-    <!-- =========================
-         LOGIN
-         ========================= -->
-
-    <div class="login" id="guestLogin">
-        <span data-i18n="alreadyAccount">Already have an account?</span>
-        <a href="login.html" data-i18n="login">Log In</a>
-    </div>
+    <!-- Guest Create Account / Log In / security lock removed from Home.
+         Auth remains available via Profile & Settings (profile.html → login/signup).
+         Session check below is preserved (no auth deletion). -->
 
     <div class="account-panel" id="signedInPanel" hidden>
         <!-- Never display private account emails on the public Home surface.
              Settings CTA is the dedicated home-settings-bar above — do not duplicate. -->
         <p id="signedInLabel" data-i18n="Signed in">Signed in</p>
-    </div>
-
-
-    <!-- =========================
-         SECURITY
-         ========================= -->
-
-    <div class="security-badge" aria-label="Safe Secure Trusted">
-        <span class="security-icon">✓</span>
-        <span data-i18n="security">Safe • Secure • Trusted</span>
-        <span class="security-lock" aria-hidden="true">🔒</span>
     </div>
 
 </main>
@@ -1078,13 +909,10 @@ const supabase = createClient(
   window.HAVKAR_SUPABASE_CONFIG.publishableKey,
   { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }
 );
-const guestSignup = document.getElementById("guestSignup");
-const guestLogin = document.getElementById("guestLogin");
 const signedInPanel = document.getElementById("signedInPanel");
 const signedInLabel = document.getElementById("signedInLabel");
 function updateAccount(user) {
-  guestSignup.hidden = !!user;
-  guestLogin.hidden = !!user;
+  // Home no longer exposes guest signup/login chrome; Profile & Settings remains the entry.
   if (signedInPanel) signedInPanel.hidden = !user;
   // Public Home must never render personal emails (Gmail or otherwise).
   if (signedInLabel) {
@@ -1096,9 +924,6 @@ function updateAccount(user) {
     signedInLabel.textContent = user ? i18nText : "";
   }
 }
-// Avoid briefly displaying guest actions until the stored session is checked.
-guestSignup.hidden = true;
-guestLogin.hidden = true;
 if (signedInPanel) signedInPanel.hidden = true;
 try {
   const { data, error } = await supabase.auth.getSession();
@@ -1106,8 +931,6 @@ try {
   updateAccount(data.session?.user || null);
 } catch (error) {
   console.error("HAVKAR session check failed", error);
-  guestSignup.hidden = false;
-  guestLogin.hidden = false;
   if (signedInPanel) signedInPanel.hidden = true;
 }
 supabase.auth.onAuthStateChange((_event, session) => updateAccount(session?.user || null));
