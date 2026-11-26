@@ -5856,6 +5856,26 @@ function appendMessage(
 
     }
 
+    /*
+     * Smart translator: View original for stored translations,
+     * or on-demand Translate for incoming messages without translation.
+     * Never auto-calls /api/translate on render.
+     */
+    try {
+        if (
+            !sent &&
+            !shareRendered &&
+            window.HAVKAR_SMART_TRANSLATE &&
+            typeof window.HAVKAR_SMART_TRANSLATE.mountOnChatMessage ===
+                "function"
+        ) {
+            window.HAVKAR_SMART_TRANSLATE.mountOnChatMessage(
+                bubble,
+                message
+            );
+        }
+    } catch (_smartTranslateError) {}
+
     const meta =
         document.createElement(
             "div"
@@ -10560,7 +10580,9 @@ window.addEventListener(
 <script src="/havkar-messenger-share.js"></script>
 <script src="/havkar-messenger-rich.js"></script>
 <script src="/havkar-ui-i18n21.js"></script>
+<script src="/havkar-ui-i18n21-generated.js"></script>
 <script src="/havkar-i18n.js"></script>
+<script src="/havkar-smart-translate.js"></script>
 
 <script src="/havkar-page-back.js"></script>
 

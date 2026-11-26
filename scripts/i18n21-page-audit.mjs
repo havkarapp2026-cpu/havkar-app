@@ -20,35 +20,27 @@ const unique = [...new Set(codes)];
 const hasCkb = unique.includes("ckb");
 const hasKmr = unique.includes("kmr");
 
-const pages = [
-  "index.html",
-  "buy-sell.html",
-  "jobs.html",
-  "services.html",
-  "ads.html",
-  "tickets.html",
-  "accommodation.html",
-  "delivery.html",
-  "events.html",
-  "chat.html",
-  "wallet.html",
-  "language.html",
-  "health.html",
-  "havkar-ai.html",
-  "calls.html",
-  "profile.html",
-  "support.html",
-  "about.html"
-];
+const pages = fs
+  .readdirSync(root)
+  .filter((f) => f.endsWith(".html"))
+  .sort();
 
 const rows = pages.map((file) => {
   const html = fs.readFileSync(path.join(root, file), "utf8");
+  const hasBody = /<\/body>/i.test(html);
   return {
     file,
+    hasBody,
     hasI18n21: /havkar-ui-i18n21\.js/.test(html),
+    hasGenerated: /havkar-ui-i18n21-generated\.js/.test(html),
     hasI18nCore: /havkar-i18n\.js/.test(html)
   };
 });
+
+const bodyPages = rows.filter((r) => r.hasBody);
+const unwired = bodyPages.filter(
+  (r) => !r.hasI18n21 || !r.hasI18nCore || !r.hasGenerated
+);
 
 const report = {
   configuredLanguageCodes: unique.sort(),
@@ -56,9 +48,12 @@ const report = {
   soraniSeparate: hasCkb,
   kurmanjiSeparate: hasKmr,
   pages: rows,
-  fullCoverageClaim: false,
+  unwiredBodyPages: unwired.map((r) => r.file),
+  fullCoverageClaim: unwired.length === 0,
   note:
-    "Script verifies wiring and language separation only. Full page-by-page string coverage requires human/UI review per language."
+    unwired.length === 0
+      ? "All HTML body pages load UI21 + generated offline glossaries + Core. Runtime live UI translate remains opt-in."
+      : "Some body pages are still missing i18n script wiring."
 };
 
 const outPath = "/opt/cursor/artifacts/i18n21-audit.json";

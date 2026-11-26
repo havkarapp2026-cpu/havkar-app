@@ -603,7 +603,9 @@
 
     </style>
     <script src="/havkar-ui-i18n21.js"></script>
+<script src="/havkar-ui-i18n21-generated.js"></script>
 <script src="/havkar-i18n.js"></script>
+<script src="/havkar-smart-translate.js"></script>
 </head>
 
 <body data-havkar-parent="profile.html">
@@ -663,7 +665,7 @@
 
             <i class="fas fa-circle-info"></i>
 
-            <span id="infoTitle">
+            <span id="infoTitle" data-i18n="Language Settings">
                 Language Settings
             </span>
 
@@ -673,11 +675,71 @@
         <div
             class="info-text"
             id="infoText"
+            data-i18n="Choose your preferred HAVKAR language."
         >
             Choose your preferred HAVKAR language.
             Your preference is saved automatically
             on this device.
         </div>
+
+    </section>
+
+    <section class="info-card" id="smartTranslatePrefs" style="margin-top:14px">
+
+        <div class="info-title">
+
+            <i class="fas fa-language"></i>
+
+            <span data-i18n="Smart translation">
+                Smart translation
+            </span>
+
+        </div>
+
+        <div class="info-text" style="margin-bottom:12px">
+            <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer">
+                <input
+                    type="checkbox"
+                    id="prefOfflineUiOnly"
+                    checked
+                    style="margin-top:3px"
+                >
+                <span data-i18n="Offline UI only (no auto API spend)">
+                    Offline UI only (no auto API spend)
+                </span>
+            </label>
+        </div>
+
+        <div class="info-text" style="margin-bottom:12px">
+            <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer">
+                <input
+                    type="checkbox"
+                    id="prefLiveUiTranslate"
+                    style="margin-top:3px"
+                >
+                <span data-i18n="Live UI translation (uses Google Translation quota)">
+                    Live UI translation (uses Google Translation quota)
+                </span>
+            </label>
+        </div>
+
+        <div class="info-text">
+            <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer">
+                <input
+                    type="checkbox"
+                    id="prefAskBeforeListings"
+                    checked
+                    style="margin-top:3px"
+                >
+                <span data-i18n="Ask before translating listings">
+                    Ask before translating listings
+                </span>
+            </label>
+        </div>
+
+        <p class="info-text" style="margin-top:12px;opacity:.85">
+            <a href="translate.html" data-i18n="Translate with HAVKAR">Translate with HAVKAR</a>
+        </p>
 
     </section>
 
@@ -1507,6 +1569,140 @@
        INITIALIZE
     ===================================================== */
 
+    function syncSmartTranslatePrefs(){
+
+        const i18n =
+            getI18n();
+
+        const offlineOnly =
+            document.getElementById(
+                "prefOfflineUiOnly"
+            );
+
+        const liveUi =
+            document.getElementById(
+                "prefLiveUiTranslate"
+            );
+
+        const askListings =
+            document.getElementById(
+                "prefAskBeforeListings"
+            );
+
+        const liveEnabled =
+            i18n &&
+            typeof i18n.isUiLiveTranslateEnabled ===
+                "function"
+                ? i18n.isUiLiveTranslateEnabled()
+                : false;
+
+        if(liveUi){
+            liveUi.checked =
+                !!liveEnabled;
+        }
+
+        if(offlineOnly){
+            offlineOnly.checked =
+                !liveEnabled;
+        }
+
+        if(askListings){
+            const smart =
+                window.HAVKAR_SMART_TRANSLATE;
+
+            askListings.checked =
+                smart &&
+                typeof smart.askBeforeListings ===
+                    "function"
+                    ? smart.askBeforeListings()
+                    : true;
+        }
+
+        if(
+            offlineOnly &&
+            !offlineOnly._hkBound
+        ){
+            offlineOnly._hkBound = true;
+            offlineOnly.addEventListener(
+                "change",
+                function(){
+                    const on =
+                        offlineOnly.checked;
+
+                    if(liveUi){
+                        liveUi.checked =
+                            !on;
+                    }
+
+                    if(
+                        i18n &&
+                        typeof i18n.setUiLiveTranslateEnabled ===
+                            "function"
+                    ){
+                        i18n.setUiLiveTranslateEnabled(
+                            !on
+                        );
+                    }
+                }
+            );
+        }
+
+        if(
+            liveUi &&
+            !liveUi._hkBound
+        ){
+            liveUi._hkBound = true;
+            liveUi.addEventListener(
+                "change",
+                function(){
+                    const on =
+                        liveUi.checked;
+
+                    if(offlineOnly){
+                        offlineOnly.checked =
+                            !on;
+                    }
+
+                    if(
+                        i18n &&
+                        typeof i18n.setUiLiveTranslateEnabled ===
+                            "function"
+                    ){
+                        i18n.setUiLiveTranslateEnabled(
+                            on
+                        );
+                    }
+                }
+            );
+        }
+
+        if(
+            askListings &&
+            !askListings._hkBound
+        ){
+            askListings._hkBound = true;
+            askListings.addEventListener(
+                "change",
+                function(){
+                    const smart =
+                        window.HAVKAR_SMART_TRANSLATE;
+
+                    if(
+                        smart &&
+                        typeof smart.setAskBeforeListings ===
+                            "function"
+                    ){
+                        smart.setAskBeforeListings(
+                            askListings.checked
+                        );
+                    }
+                }
+            );
+        }
+
+    }
+
+
     function initialize(){
 
         const i18n =
@@ -1525,6 +1721,21 @@
 
         const built =
             buildLanguageList();
+
+
+        syncSmartTranslatePrefs();
+
+
+        try {
+            if (
+                i18n &&
+                typeof i18n.applyDataI18nAttributes === "function"
+            ) {
+                i18n.applyDataI18nAttributes(
+                    document.body
+                );
+            }
+        } catch (_applyErr) {}
 
 
         if(built){
