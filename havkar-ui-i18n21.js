@@ -568,6 +568,64 @@
           pt:"Terminar sessão", nl:"Uitloggen", sv:"Logga ut", pl:"Wyloguj", id:"Keluar",
           zh:"退出登录", ja:"ログアウト", ko:"로그아웃", hi:"लॉग आउट", ru:"Выйти",
           ckb:"دەرچوون", kmr:"Derkeve", tr:"Çıkış yap", ar:"تسجيل الخروج", fa:"خروج از حساب", ur:"لاگ آؤٹ"
+        },
+
+        "Personal information": {
+          en:"Personal information", it:"Informazioni personali", de:"Persönliche Daten", fr:"Informations personnelles",
+          es:"Información personal", pt:"Informações pessoais", nl:"Persoonlijke gegevens", sv:"Personuppgifter",
+          pl:"Dane osobowe", id:"Informasi pribadi", zh:"个人信息", ja:"個人情報", ko:"개인 정보",
+          hi:"व्यक्तिगत जानकारी", ru:"Личные данные", ckb:"زانیاری کەسی", kmr:"Agahiyên kesane",
+          tr:"Kişisel bilgiler", ar:"المعلومات الشخصية", fa:"اطلاعات شخصی", ur:"ذاتی معلومات"
+        },
+        "Preferences": {
+          en:"Preferences", it:"Preferenze", de:"Einstellungen", fr:"Préférences", es:"Preferencias",
+          pt:"Preferências", nl:"Voorkeuren", sv:"Inställningar", pl:"Preferencje", id:"Preferensi",
+          zh:"偏好设置", ja:"設定", ko:"환경설정", hi:"वरीयताएँ", ru:"Настройки",
+          ckb:"هەڵبژاردەکان", kmr:"Vebijêrk", tr:"Tercihler", ar:"التفضيلات", fa:"ترجیحات", ur:"ترجیحات"
+        },
+        "My wallet": {
+          en:"My wallet", it:"Il mio portafoglio", de:"Mein Wallet", fr:"Mon portefeuille", es:"Mi billetera",
+          pt:"A minha carteira", nl:"Mijn wallet", sv:"Min plånbok", pl:"Mój portfel", id:"Dompet saya",
+          zh:"我的钱包", ja:"マイウォレット", ko:"내 지갑", hi:"मेरा वॉलेट", ru:"Мой кошелёк",
+          ckb:"جزدانەکەم", kmr:"Cüzdanê min", tr:"Cüzdanım", ar:"محفظتي", fa:"کیف پول من", ur:"میرا والیٹ"
+        },
+        "Transaction history": {
+          en:"Transaction history", it:"Cronologia transazioni", de:"Transaktionsverlauf", fr:"Historique des transactions",
+          es:"Historial de transacciones", pt:"Histórico de transações", nl:"Transactiegeschiedenis", sv:"Transaktionshistorik",
+          pl:"Historia transakcji", id:"Riwayat transaksi", zh:"交易记录", ja:"取引履歴", ko:"거래 내역",
+          hi:"लेन-देन इतिहास", ru:"История операций", ckb:"مێژووی مامەڵەکان", kmr:"Dîroka danûstandinan",
+          tr:"İşlem geçmişi", ar:"سجل المعاملات", fa:"تاریخچه تراکنش‌ها", ur:"لین دین کی تاریخ"
+        },
+        "Security & privacy": {
+          en:"Security & privacy", it:"Sicurezza e privacy", de:"Sicherheit & Datenschutz", fr:"Sécurité et confidentialité",
+          es:"Seguridad y privacidad", pt:"Segurança e privacidade", nl:"Beveiliging en privacy", sv:"Säkerhet och integritet",
+          pl:"Bezpieczeństwo i prywatność", id:"Keamanan & privasi", zh:"安全与隐私", ja:"セキュリティとプライバシー",
+          ko:"보안 및 개인정보", hi:"सुरक्षा और गोपनीयता", ru:"Безопасность и конфиденциальность",
+          ckb:"ئاسایش و تایبەتمەندی", kmr:"Ewlehî û nepenîtî", tr:"Güvenlik ve gizlilik",
+          ar:"الأمان والخصوصية", fa:"امنیت و حریم خصوصی", ur:"سیکیورٹی اور رازداری"
+        },
+        "Choose a language before signing up": {
+          en:"Choose a language before signing up",
+          it:"Scegli una lingua prima di registrarti",
+          de:"Wählen Sie vor der Registrierung eine Sprache",
+          fr:"Choisissez une langue avant de vous inscrire",
+          es:"Elige un idioma antes de registrarte",
+          pt:"Escolha um idioma antes de se registar",
+          nl:"Kies een taal voordat u zich aanmeldt",
+          sv:"Välj ett språk innan du registrerar dig",
+          pl:"Wybierz język przed rejestracją",
+          id:"Pilih bahasa sebelum mendaftar",
+          zh:"注册前请先选择语言",
+          ja:"登録前に言語を選んでください",
+          ko:"가입 전에 언어를 선택하세요",
+          hi:"साइन अप से पहले भाषा चुनें",
+          ru:"Выберите язык перед регистрацией",
+          ckb:"پێش تۆمارکردن زمان هەڵبژێرە",
+          kmr:"Berî tomarkirinê zimanekî hilbijêre",
+          tr:"Kayıt olmadan önce bir dil seçin",
+          ar:"اختر لغة قبل التسجيل",
+          fa:"قبل از ثبت‌نام یک زبان انتخاب کنید",
+          ur:"سائن اپ سے پہلے زبان منتخب کریں"
         }
       };
       var api = root.HAVKAR_UI_I18N21;

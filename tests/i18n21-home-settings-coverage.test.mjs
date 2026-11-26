@@ -25,7 +25,17 @@ const REQUIRED_ALL = [
   "Signed in",
   "Profile & Settings",
   "Language, support, about, account, and privacy",
-  "Messenger"
+  "Messenger",
+  "Personal information",
+  "Preferences",
+  "My wallet",
+  "Transaction history",
+  "Security & privacy",
+  "Choose a language before signing up",
+  "Language & smart translation",
+  "Support center",
+  "About HAVKAR",
+  "Log Out"
 ];
 
 const REQUIRED_NON_EN = ["Buy & Sell", "HAVKAR AI"];
