@@ -64,6 +64,9 @@ test("user-content pages wire smart translator helper", () => {
   for (const file of [
     "buy-sell.html",
     "ad-details.html",
+    "ads.html",
+    "services.html",
+    "jobs.html",
     "support.html",
     "chat.html",
     "about.html",
@@ -80,6 +83,8 @@ test("user-content pages wire smart translator helper", () => {
   assert.match(chat, /mountOnChatMessage/);
   const about = fs.readFileSync("about.html", "utf8");
   assert.match(about, /havkar-i18n\.js/, "about.html must load Core i18n");
+  const services = fs.readFileSync("services.html", "utf8");
+  assert.match(services, /observeAndAttach|attachToSelectors/);
 });
 
 test("offline packs include Translate / View original / support chrome in all 21 langs", () => {
