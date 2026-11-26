@@ -28,16 +28,20 @@ test("chat.html inline script must parse (blocks Production Unexpected token ')'
   assert.doesNotThrow(() => new Function(script));
 });
 
-test("Messenger home tile uses approved logo asset on mint/white path with cache bust", async () => {
+test("Messenger home tile uses Owner triple-icon logo on white path with cache bust", async () => {
   const index = read("index.html");
   assert.match(
     index,
-    /data-havkar-tile="messenger"[\s\S]{0,220}?assets\/home\/chat\.png\?v=owner-approved-mint/
+    /data-havkar-tile="messenger"[\s\S]{0,220}?assets\/home\/chat\.png\?v=owner-tile-triple/
   );
   const tiles = [...index.matchAll(/class="menu-item"/g)];
-  assert.equal(tiles.length, 15, "home must keep exactly 15 tiles");
+  assert.equal(tiles.length, 12, "home must keep exactly 12 tiles");
   const pngPath = path.join(root, "assets/home/chat.png");
   assert.ok(fs.existsSync(pngPath), "chat.png missing");
+  // Old mint globe-only tile hash must not return.
+  const { createHash } = await import("node:crypto");
+  const hash = createHash("md5").update(fs.readFileSync(pngPath)).digest("hex");
+  assert.notEqual(hash, "7534c16b545d9439519f070e81fd662c", "old mint chat.png still present");
   const { spawnSync } = await import("node:child_process");
   const py = spawnSync(
     "python3",
