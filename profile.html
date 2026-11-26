@@ -750,17 +750,24 @@ button{
 .hub-search-wrap{
     display:flex;
     align-items:center;
-    gap:10px;
-    margin:0 0 14px;
-    padding:12px 14px;
-    border-radius:16px;
+    gap:12px;
+    margin:0 0 18px;
+    padding:14px 16px;
+    border-radius:18px;
     background:var(--havkar-card);
-    border:1px solid #d7eadc;
+    border:1.5px solid #c8e6c9;
     box-shadow:var(--havkar-shadow);
+    transition:border-color .18s ease, box-shadow .18s ease;
+}
+
+.hub-search-wrap:focus-within{
+    border-color:var(--havkar-green);
+    box-shadow:0 0 0 3px rgba(27,94,32,.14), var(--havkar-shadow);
 }
 
 .hub-search-wrap i{
     color:var(--havkar-green);
+    font-size:1rem;
 }
 
 .hub-search-wrap input{
@@ -768,65 +775,130 @@ button{
     border:0;
     outline:none;
     background:transparent;
-    font-size:.95rem;
+    font-size:.96rem;
     color:#1a2e22;
+    font-weight:500;
+}
+
+.hub-search-wrap input::placeholder{
+    color:#7a9a82;
+    font-weight:400;
 }
 
 .hub-featured{
     display:grid;
     grid-template-columns:1fr;
-    gap:10px;
-    margin:0 0 18px;
+    gap:12px;
+    margin:0 0 22px;
 }
 
 .hub-featured-card{
     display:flex;
     align-items:center;
-    gap:12px;
+    gap:14px;
     width:100%;
-    text-align:left;
+    text-align:inherit;
     border:0;
     cursor:pointer;
-    padding:14px 16px;
-    border-radius:18px;
+    padding:16px 18px;
+    border-radius:20px;
     color:#f4fff6;
     background:
         linear-gradient(135deg, #0f3d1c 0%, #1b5e20 48%, #2e7d32 100%);
-    box-shadow:0 12px 24px rgba(15,61,28,.22);
+    box-shadow:0 12px 28px rgba(15,61,28,.24);
+    transition:transform .15s ease, box-shadow .15s ease;
+}
+
+.hub-featured-card:active{
+    transform:scale(.985);
 }
 
 .hub-featured-icon{
-    width:42px;
-    height:42px;
-    border-radius:14px;
+    width:46px;
+    height:46px;
+    border-radius:15px;
     display:flex;
     align-items:center;
     justify-content:center;
-    background:rgba(255,255,255,.12);
+    background:rgba(255,255,255,.14);
     color:#e8f5e9;
     flex:0 0 auto;
+    font-size:1.15rem;
 }
 
 .hub-featured-copy{
     display:flex;
     flex-direction:column;
-    gap:2px;
+    gap:4px;
     min-width:0;
 }
 
 .hub-featured-copy strong{
-    font-size:.95rem;
+    font-size:1rem;
     font-weight:800;
+    letter-spacing:.01em;
 }
 
 .hub-featured-copy span{
-    font-size:.78rem;
-    color:rgba(232,245,233,.88);
-    line-height:1.3;
+    font-size:.8rem;
+    color:rgba(232,245,233,.9);
+    line-height:1.35;
 }
 
 .hub-category{
-    margin-bottom:14px;
+    margin-bottom:18px;
+}
+
+.hub-category > .section-title{
+    margin:0 4px 10px;
+    padding:0 2px 0 10px;
+    border-inline-start:3px solid var(--havkar-green);
+    color:var(--havkar-green-deep);
+    font-size:.78rem;
+    font-weight:800;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+}
+
+.hub-category .action-card{
+    border:1px solid #d7eadc;
+    border-radius:18px;
+    overflow:hidden;
+    background:#fff;
+    box-shadow:0 4px 14px rgba(27,94,32,.06);
+}
+
+.hub-category .action{
+    padding:14px 14px;
+    gap:12px;
+    border-bottom:1px solid #edf5ee;
+}
+
+.hub-category .action:last-child{
+    border-bottom:0;
+}
+
+.hub-category .action-subtitle{
+    color:#6b8573;
+    font-size:12px;
+    line-height:1.35;
+}
+
+.hub-empty{
+    display:none;
+    margin:8px 0 20px;
+    padding:22px 18px;
+    text-align:center;
+    border-radius:18px;
+    background:#f3faf4;
+    border:1px dashed #a5d6a7;
+    color:#2e5c36;
+    font-size:.92rem;
+    font-weight:600;
+}
+
+.hub-empty.show{
+    display:block;
 }
 
 .hub-category[hidden],
@@ -838,6 +910,7 @@ button{
 @media (min-width:720px){
     .hub-featured{
         grid-template-columns:repeat(3,minmax(0,1fr));
+        gap:14px;
     }
 }
 
@@ -2192,7 +2265,7 @@ input:focus-visible{
                 <div class="action-icon"><i class="fas fa-sliders"></i></div>
                 <div class="action-content">
                     <div class="action-title" data-i18n="Preferences">Preferences</div>
-                    <div class="action-subtitle" data-i18n="preferencesHint">Language picker, dark mode, location, privacy</div>
+                    <div class="action-subtitle" data-i18n="preferencesHint">Dark mode, location, notifications, and privacy</div>
                 </div>
                 <div class="action-arrow"><i class="fas fa-chevron-right"></i></div>
             </button>
@@ -2281,26 +2354,10 @@ input:focus-visible{
         </div>
     </div>
 
-    <div class="hub-category" data-hub-category="support-about">
-        <div class="section-title" data-i18n="hubSupportAbout">Support &amp; about</div>
-        <div class="action-card">
-            <button class="action" type="button" data-hub-search="support help faq" onclick="goTo('support.html')">
-                <div class="action-icon"><i class="fas fa-life-ring"></i></div>
-                <div class="action-content">
-                    <div class="action-title" data-i18n="support">Support</div>
-                    <div class="action-subtitle" data-i18n="supportHint">Help center and support requests</div>
-                </div>
-                <div class="action-arrow"><i class="fas fa-chevron-right"></i></div>
-            </button>
-            <button class="action" type="button" data-hub-search="about terms privacy legal" onclick="goTo('about.html')">
-                <div class="action-icon"><i class="fas fa-book-open"></i></div>
-                <div class="action-content">
-                    <div class="action-title" data-i18n="about">About</div>
-                    <div class="action-subtitle" data-i18n="aboutHint">About HAVKAR, terms, and privacy</div>
-                </div>
-                <div class="action-arrow"><i class="fas fa-chevron-right"></i></div>
-            </button>
-        </div>
+    <!-- Support & About: featured cards above are the single entry (no duplicate rows). -->
+
+    <div id="hubSearchEmpty" class="hub-empty" role="status" aria-live="polite" data-i18n="No settings match your search">
+        No settings match your search
     </div>
 
     <div class="hub-category" data-hub-category="admin">
@@ -3578,6 +3635,7 @@ input:focus-visible{
      HAVKAR GLOBAL LANGUAGE SYSTEM
 ========================================================= -->
 
+<script src="/havkar-i18n-key-map.js"></script>
 <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-ui-i18n21-generated.js"></script>
 <script src="/havkar-i18n.js"></script>
@@ -3950,6 +4008,38 @@ function(query){
             );
 
     });
+
+    const featuredVisible =
+        Array.prototype.some.call(
+            featured,
+            function(card){
+                return !card.hidden;
+            }
+        );
+
+    const categoryVisible =
+        Array.prototype.some.call(
+            categories,
+            function(cat){
+                return !cat.hidden;
+            }
+        );
+
+    const emptyEl =
+        document.getElementById(
+            "hubSearchEmpty"
+        );
+
+    if(emptyEl){
+        emptyEl.classList.toggle(
+            "show",
+            Boolean(
+                q &&
+                !featuredVisible &&
+                !categoryVisible
+            )
+        );
+    }
 
 };
 
