@@ -370,6 +370,127 @@
           ru:"Это сообщение удалено.", ckb:"ئەم پەیامە سڕایەوە.", kmr:"Ev peyam hate jêbirin.",
           tr:"Bu mesaj silindi.", ar:"تم حذف هذه الرسالة.", fa:"این پیام حذف شد.",
           ur:"یہ پیغام حذف کر دیا گیا۔"
+        },
+        "Sent": {
+          it:"Inviato", de:"Gesendet", fr:"Envoyé", es:"Enviado", pt:"Enviado", nl:"Verzonden",
+          sv:"Skickat", pl:"Wysłano", id:"Terkirim", zh:"已发送", ja:"送信済み", ko:"전송됨",
+          hi:"भेजा गया", ru:"Отправлено", ckb:"نێردرا", kmr:"Hate şandin", tr:"Gönderildi",
+          ar:"تم الإرسال", fa:"ارسال شد", ur:"بھیج دیا گیا"
+        },
+        "Delivered": {
+          it:"Consegnato", de:"Zugestellt", fr:"Distribué", es:"Entregado", pt:"Entregue", nl:"Afgeleverd",
+          sv:"Levererat", pl:"Dostarczono", id:"Tersampaikan", zh:"已送达", ja:"配信済み", ko:"전달됨",
+          hi:"डिलीवर हुआ", ru:"Доставлено", ckb:"گەیشت", kmr:"Hate gihandin", tr:"İletildi",
+          ar:"تم التسليم", fa:"تحویل داده شد", ur:"پہنچ گیا"
+        },
+        "Read": {
+          it:"Letto", de:"Gelesen", fr:"Lu", es:"Leído", pt:"Lido", nl:"Gelezen",
+          sv:"Läst", pl:"Przeczytano", id:"Dibaca", zh:"已读", ja:"既読", ko:"읽음",
+          hi:"पढ़ा गया", ru:"Прочитано", ckb:"خوێندرایەوە", kmr:"Hate xwendin", tr:"Okundu",
+          ar:"مقروء", fa:"خوانده شد", ur:"پڑھ لیا گیا"
+        },
+        "Sending": {
+          it:"Invio...", de:"Senden...", fr:"Envoi...", es:"Enviando...", pt:"A enviar...", nl:"Verzenden...",
+          sv:"Skickar...", pl:"Wysyłanie...", id:"Mengirim...", zh:"发送中...", ja:"送信中...", ko:"보내는 중...",
+          hi:"भेजा जा रहा है...", ru:"Отправка...", ckb:"ناردن...", kmr:"Tê şandin...", tr:"Gönderiliyor...",
+          ar:"جارٍ الإرسال...", fa:"در حال ارسال...", ur:"بھیجا جا رہا ہے..."
+        },
+        "Failed to send": {
+          it:"Invio non riuscito", de:"Senden fehlgeschlagen", fr:"Échec de l'envoi", es:"Error al enviar",
+          pt:"Falha ao enviar", nl:"Verzenden mislukt", sv:"Kunde inte skickas", pl:"Nie udało się wysłać",
+          id:"Gagal mengirim", zh:"发送失败", ja:"送信に失敗しました", ko:"전송 실패",
+          hi:"भेजने में विफल", ru:"Не удалось отправить", ckb:"ناردن سەرکەوتوو نەبوو", kmr:"Şandin têk çû",
+          tr:"Gönderilemedi", ar:"تعذّر الإرسال", fa:"ارسال ناموفق", ur:"بھیجنے میں ناکام"
+        },
+        "Verified Person": {
+          it:"Persona verificata", de:"Verifizierte Person", fr:"Personne vérifiée", es:"Persona verificada",
+          pt:"Pessoa verificada", nl:"Geverifieerde persoon", sv:"Verifierad person", pl:"Zweryfikowana osoba",
+          id:"Orang terverifikasi", zh:"已验证个人", ja:"認証済みの個人", ko:"인증된 개인",
+          hi:"सत्यापित व्यक्ति", ru:"Проверенное лицо", ckb:"کەسی پشتڕاستکراو", kmr:"Kesê pejirandî",
+          tr:"Doğrulanmış kişi", ar:"شخص موثّق", fa:"شخص تأییدشده", ur:"تصدیق شدہ شخص"
+        },
+        "Verified Business": {
+          it:"Attività verificata", de:"Verifiziertes Unternehmen", fr:"Entreprise vérifiée", es:"Negocio verificado",
+          pt:"Negócio verificado", nl:"Geverifieerd bedrijf", sv:"Verifierat företag", pl:"Zweryfikowana firma",
+          id:"Bisnis terverifikasi", zh:"已验证商家", ja:"認証済みビジネス", ko:"인증된 비즈니스",
+          hi:"सत्यापित व्यवसाय", ru:"Проверенный бизнес", ckb:"بزنسی پشتڕاستکراو", kmr:"Karsaziya pejirandî",
+          tr:"Doğrulanmış işletme", ar:"نشاط موثّق", fa:"کسب‌وکار تأییدشده", ur:"تصدیق شدہ کاروبار"
+        },
+        "Verified Company / Factory": {
+          it:"Azienda / fabbrica verificata", de:"Verifizierte Firma / Fabrik", fr:"Société / usine vérifiée",
+          es:"Empresa / fábrica verificada", pt:"Empresa / fábrica verificada", nl:"Geverifieerd bedrijf / fabriek",
+          sv:"Verifierat bolag / fabrik", pl:"Zweryfikowana spółka / fabryka",
+          id:"Perusahaan / pabrik terverifikasi", zh:"已验证公司 / 工厂", ja:"認証済みの会社 / 工場",
+          ko:"인증된 회사 / 공장", hi:"सत्यापित कंपनी / कारखाना", ru:"Проверенная компания / завод",
+          ckb:"کۆمپانیا / کارگەی پشتڕاستکراو", kmr:"Şirket / kargeha pejirandî",
+          tr:"Doğrulanmış şirket / fabrika", ar:"شركة / مصنع موثّق", fa:"شرکت یا کارخانه تأییدشده",
+          ur:"تصدیق شدہ کمپنی / فیکٹری"
+        },
+        "Verified individual identity. Not a rating or paid subscription.": {
+          it:"Identità individuale verificata. Non è una valutazione né un abbonamento a pagamento.",
+          de:"Verifizierte Einzelidentität. Keine Bewertung und kein kostenpflichtiges Abo.",
+          fr:"Identité individuelle vérifiée. Ce n'est ni une note ni un abonnement payant.",
+          es:"Identidad individual verificada. No es una valoración ni una suscripción de pago.",
+          pt:"Identidade individual verificada. Não é uma classificação nem uma assinatura paga.",
+          nl:"Geverifieerde individuele identiteit. Geen beoordeling of betaald abonnement.",
+          sv:"Verifierad individuell identitet. Inte ett betyg eller en betald prenumeration.",
+          pl:"Zweryfikowana tożsamość osoby. To nie ocena ani płatna subskrypcja.",
+          id:"Identitas individu terverifikasi. Bukan peringkat atau langganan berbayar.",
+          zh:"已验证的个人身份。不是评分，也不是付费订阅。",
+          ja:"個人の本人確認済み。評価や有料サブスクではありません。",
+          ko:"인증된 개인 신원입니다. 평점이나 유료 구독이 아닙니다.",
+          hi:"सत्यापित व्यक्तिगत पहचान। यह रेटिंग या सशुल्क सदस्यता नहीं है।",
+          ru:"Проверенная личность. Это не рейтинг и не платная подписка.",
+          ckb:"ناسنامەی تاکەکەسی پشتڕاستکراو. نە هەڵسەنگاندنە و نە بەشداری پارەدار.",
+          kmr:"Nasnameya kesane ya pejirandî. Ne nirxandin e û ne abonetiya bi pere ye.",
+          tr:"Doğrulanmış bireysel kimlik. Puan veya ücretli abonelik değildir.",
+          ar:"هوية فردية موثّقة. ليست تقييمًا ولا اشتراكًا مدفوعًا.",
+          fa:"هویت فردی تأییدشده. امتیاز کاربران یا اشتراک پولی نیست.",
+          ur:"تصدیق شدہ انفرادی شناخت۔ درجہ بندی یا ادا شدہ سبسکرپشن نہیں۔"
+        },
+        "Verified registered business. Not a rating or paid subscription.": {
+          it:"Attività registrata verificata. Non è una valutazione né un abbonamento a pagamento.",
+          de:"Verifiziertes registriertes Unternehmen. Keine Bewertung und kein kostenpflichtiges Abo.",
+          fr:"Entreprise enregistrée vérifiée. Ce n'est ni une note ni un abonnement payant.",
+          es:"Negocio registrado verificado. No es una valoración ni una suscripción de pago.",
+          pt:"Negócio registado verificado. Não é uma classificação nem uma assinatura paga.",
+          nl:"Geverifieerd geregistreerd bedrijf. Geen beoordeling of betaald abonnement.",
+          sv:"Verifierat registrerat företag. Inte ett betyg eller en betald prenumeration.",
+          pl:"Zweryfikowana zarejestrowana firma. To nie ocena ani płatna subskrypcja.",
+          id:"Bisnis terdaftar terverifikasi. Bukan peringkat atau langganan berbayar.",
+          zh:"已验证的注册商家。不是评分，也不是付费订阅。",
+          ja:"登録事業者の認証済み。評価や有料サブスクではありません。",
+          ko:"인증된 등록 비즈니스입니다. 평점이나 유료 구독이 아닙니다.",
+          hi:"सत्यापित पंजीकृत व्यवसाय। यह रेटिंग या सशुल्क सदस्यता नहीं है।",
+          ru:"Проверенный зарегистрированный бизнес. Это не рейтинг и не платная подписка.",
+          ckb:"بزنسی تۆمارکراوی پشتڕاستکراو. نە هەڵسەنگاندنە و نە بەشداری پارەدار.",
+          kmr:"Karsaziya qeydkirî ya pejirandî. Ne nirxandin e û ne abonetiya bi pere ye.",
+          tr:"Doğrulanmış kayıtlı işletme. Puan veya ücretli abonelik değildir.",
+          ar:"نشاط مسجّل موثّق. ليست تقييمًا ولا اشتراكًا مدفوعًا.",
+          fa:"کسب‌وکار ثبت‌شده تأییدشده. امتیاز کاربران یا اشتراک پولی نیست.",
+          ur:"تصدیق شدہ رجسٹرڈ کاروبار۔ درجہ بندی یا ادا شدہ سبسکرپشن نہیں۔"
+        },
+        "Verified company or factory. Not a rating or paid subscription.": {
+          it:"Azienda o fabbrica verificata. Non è una valutazione né un abbonamento a pagamento.",
+          de:"Verifizierte Firma oder Fabrik. Keine Bewertung und kein kostenpflichtiges Abo.",
+          fr:"Société ou usine vérifiée. Ce n'est ni une note ni un abonnement payant.",
+          es:"Empresa o fábrica verificada. No es una valoración ni una suscripción de pago.",
+          pt:"Empresa ou fábrica verificada. Não é uma classificação nem uma assinatura paga.",
+          nl:"Geverifieerd bedrijf of fabriek. Geen beoordeling of betaald abonnement.",
+          sv:"Verifierat bolag eller fabrik. Inte ett betyg eller en betald prenumeration.",
+          pl:"Zweryfikowana spółka lub fabryka. To nie ocena ani płatna subskrypcja.",
+          id:"Perusahaan atau pabrik terverifikasi. Bukan peringkat atau langganan berbayar.",
+          zh:"已验证的公司或工厂。不是评分，也不是付费订阅。",
+          ja:"会社または工場の認証済み。評価や有料サブスクではありません。",
+          ko:"인증된 회사 또는 공장입니다. 평점이나 유료 구독이 아닙니다.",
+          hi:"सत्यापित कंपनी या कारखाना। यह रेटिंग या सशुल्क सदस्यता नहीं है।",
+          ru:"Проверенная компания или завод. Это не рейтинг и не платная подписка.",
+          ckb:"کۆمپانیا یان کارگەی پشتڕاستکراو. نە هەڵسەنگاندنە و نە بەشداری پارەدار.",
+          kmr:"Şirket an kargeha pejirandî. Ne nirxandin e û ne abonetiya bi pere ye.",
+          tr:"Doğrulanmış şirket veya fabrika. Puan veya ücretli abonelik değildir.",
+          ar:"شركة أو مصنع موثّق. ليست تقييمًا ولا اشتراكًا مدفوعًا.",
+          fa:"شرکت یا کارخانه تأییدشده. امتیاز کاربران یا اشتراک پولی نیست.",
+          ur:"تصدیق شدہ کمپنی یا فیکٹری۔ درجہ بندی یا ادا شدہ سبسکرپشن نہیں۔"
         }
       };
       var api = root.HAVKAR_UI_I18N21;

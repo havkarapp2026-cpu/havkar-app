@@ -14,6 +14,7 @@
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link rel="stylesheet" href="/havkar-verification-badges.css">
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -1055,6 +1056,8 @@ select:focus-visible{
     opacity:.72;
 }
 
+/* Owner mandate: 1 tick = sent, 2 ticks = delivered, glowing green circle = read.
+   Read mark uses official asset when present; CSS shell is structure-only fallback. */
 .message-checks{
     display:inline-flex;
     align-items:center;
@@ -1062,9 +1065,10 @@ select:focus-visible{
     min-width:14px;
     min-height:14px;
     font-size:11px;
-    letter-spacing:-2px;
-    color:rgba(232,245,233,.88);
+    letter-spacing:-1px;
+    color:rgba(232,245,233,.92);
     line-height:1;
+    background:transparent;
 }
 
 .message-checks.sending{
@@ -1077,72 +1081,42 @@ select:focus-visible{
     color:#c62828;
     font-size:.78rem;
 }
-/* One check = server accepted (not device delivery). */
-.message-checks.delivered{
+.message-checks.sent{
     letter-spacing:0;
-    color:transparent;
-    width:14px;
-    height:14px;
-    border-radius:50%;
-    border:1.5px solid rgba(129, 199, 132, 0.95);
-    box-shadow:
-        0 0 4px rgba(76, 175, 80, 0.55),
-        inset 0 0 3px rgba(200, 230, 201, 0.45);
-    background:
-        radial-gradient(circle at 35% 30%, rgba(232,245,233,.35), transparent 55%);
+    color:rgba(200, 230, 201, 0.95);
+    font-weight:700;
+}
+.message-checks.delivered{
+    letter-spacing:-2px;
+    color:rgba(165, 214, 167, 0.98);
+    font-weight:700;
 }
 
-/*
- * Read receipt: Owner-approved small hollow glossy green ring,
- * golden-yellow dots on the circumference, empty center, no checkmark/photo.
- */
+/* Read: small luminous green circle — no extra background plate. */
 .message-checks.read{
     position:relative;
     letter-spacing:0;
     color:transparent;
-    width:15px;
-    height:15px;
+    width:12px;
+    height:12px;
+    min-width:12px;
+    min-height:12px;
     border-radius:50%;
-    border:1.7px solid rgba(102, 187, 106, 0.98);
+    border:0;
     background:
-        radial-gradient(circle at 32% 28%, rgba(232,245,233,.42), transparent 52%),
-        transparent;
+        radial-gradient(circle at 35% 30%, #e8f5e9 0%, #81c784 28%, #2e7d32 62%, #0b3d14 100%);
     box-shadow:
-        0 0 6px rgba(76, 175, 80, 0.65),
-        0 0 10px rgba(255, 213, 79, 0.28),
-        inset 0 0 4px rgba(200, 230, 201, 0.4);
-    font-weight:400;
-    text-shadow:none;
-    filter:none;
+        0 0 5px rgba(76, 175, 80, 0.85),
+        0 0 9px rgba(129, 199, 132, 0.45),
+        inset 0 1px 1px rgba(255,255,255,0.45);
 }
-.message-checks.read::before,
-.message-checks.read::after{
-    content:"";
-    position:absolute;
-    width:2.2px;
-    height:2.2px;
+.message-checks.read img.hk-read-mark{
+    display:block;
+    width:12px;
+    height:12px;
     border-radius:50%;
-    background:#ffd54f;
-    box-shadow:
-        0 0 3px rgba(255, 213, 79, 0.95),
-        5.2px 0 0 #ffd54f,
-        -5.2px 0 0 #ffd54f,
-        0 5.2px 0 #ffd54f,
-        0 -5.2px 0 #ffd54f,
-        3.7px 3.7px 0 #ffca28,
-        -3.7px 3.7px 0 #ffca28,
-        3.7px -3.7px 0 #ffca28,
-        -3.7px -3.7px 0 #ffca28;
-    top:50%;
-    left:50%;
-    transform:translate(-50%, -50%);
-    pointer-events:none;
-}
-.message-checks.read::after{
-    width:0;
-    height:0;
+    object-fit:contain;
     background:transparent;
-    box-shadow:none;
 }
 
 /* =========================================================
@@ -5030,6 +5004,50 @@ function getConversationRole(
 
 }
 
+function peerUserIdForConversation(conversation){
+    if(!conversation || !state.currentUser) return "";
+    const me = String(state.currentUser.id);
+    if(conversation.seller_id && String(conversation.seller_id) !== me){
+        return String(conversation.seller_id);
+    }
+    if(conversation.buyer_id && String(conversation.buyer_id) !== me){
+        return String(conversation.buyer_id);
+    }
+    return "";
+}
+
+async function setChatPersonHeader(conversation){
+    const el = $("chatPerson");
+    if(!el) return;
+    const label = getConversationRole(conversation);
+    el.textContent = label;
+    const peerId = peerUserIdForConversation(conversation);
+    if(
+        !peerId ||
+        !window.HAVKAR_VERIFICATION ||
+        typeof window.HAVKAR_VERIFICATION.loadApprovedBadgeTypes !== "function" ||
+        typeof window.HAVKAR_VERIFICATION.renderBadgesHtml !== "function"
+    ){
+        return;
+    }
+    try{
+        const types = await window.HAVKAR_VERIFICATION.loadApprovedBadgeTypes(
+            db,
+            peerId
+        );
+        if(!types || !types.length) return;
+        if($("chatPerson") !== el) return;
+        const badges = window.HAVKAR_VERIFICATION.renderBadgesHtml(types, {
+            compact: true
+        });
+        if(!badges) return;
+        el.innerHTML =
+            "<span class=\"chat-person-name\"></span> " + badges;
+        const nameEl = el.querySelector(".chat-person-name");
+        if(nameEl) nameEl.textContent = label;
+    }catch(_e){}
+}
+
 function conversationMatchesRoute(conversation, route){
     if(!conversation || !conversation.id){
         return false;
@@ -5119,11 +5137,7 @@ async function openConversation(
         .style.display =
         "flex";
 
-    $("chatPerson")
-        .textContent =
-        getConversationRole(
-            conversation
-        );
+    setChatPersonHeader(conversation);
 
     $("chatSubtitle")
         .textContent =
@@ -5335,9 +5349,7 @@ async function openConversationFromUrl(){
                         (row.ad && row.ad.title) ||
                         "HAVKAR Conversation";
 
-                    $("chatPerson")
-                        .textContent =
-                        getConversationRole(row);
+                    setChatPersonHeader(row);
 
                 }
 
@@ -7429,6 +7441,16 @@ function messageReceiptState(message){
     return "sent";
 }
 
+function receiptLabel(key, fallback){
+    try{
+        if(window.HAVKAR_I18N && typeof window.HAVKAR_I18N.phrase === "function"){
+            const t = window.HAVKAR_I18N.phrase(key);
+            if(t && t !== key) return t;
+        }
+    }catch(_e){}
+    return fallback || key;
+}
+
 function applyMessageChecks(element, message){
     if(!element){
         return;
@@ -7436,36 +7458,51 @@ function applyMessageChecks(element, message){
     const receipt =
         messageReceiptState(message);
     element.classList.remove(
+        "sent",
         "delivered",
         "read",
         "sending",
         "failed"
     );
-    /* Never claim delivered/read without server timestamps. */
+    element.innerHTML = "";
+    /* Never claim delivered/read without server timestamps (no fake status). */
     if(receipt === "read"){
         element.classList.add("read");
-        element.textContent = "";
-        element.setAttribute("aria-label", "Read");
-        element.title = "Read";
+        const mark = document.createElement("img");
+        mark.className = "hk-read-mark";
+        mark.alt = "";
+        mark.width = 12;
+        mark.height = 12;
+        mark.src = "assets/icons/messenger/message-read-mark.png";
+        mark.onerror = function(){
+            mark.remove();
+        };
+        element.appendChild(mark);
+        const readTxt = receiptLabel("Read", "Read");
+        element.setAttribute("aria-label", readTxt);
+        element.title = readTxt;
     }else if(receipt === "delivered"){
         element.classList.add("delivered");
-        element.textContent = "";
-        element.setAttribute("aria-label", "Delivered to recipient device");
-        element.title = "Delivered";
+        element.textContent = "✓✓";
+        const d = receiptLabel("Delivered", "Delivered");
+        element.setAttribute("aria-label", d);
+        element.title = d;
     }else if(receipt === "sending"){
         element.classList.add("sending");
         element.textContent = "…";
-        element.setAttribute("aria-label", "Sending");
-        element.title = "Sending";
+        element.setAttribute("aria-label", receiptLabel("Sending", "Sending"));
+        element.title = receiptLabel("Sending", "Sending");
     }else if(receipt === "failed"){
         element.classList.add("failed");
         element.textContent = "!";
-        element.setAttribute("aria-label", "Failed to send");
-        element.title = "Failed";
+        element.setAttribute("aria-label", receiptLabel("Failed to send", "Failed to send"));
+        element.title = receiptLabel("Failed", "Failed");
     }else{
+        element.classList.add("sent");
         element.textContent = "✓";
-        element.setAttribute("aria-label", "Sent — server accepted");
-        element.title = "Sent";
+        const s = receiptLabel("Sent", "Sent");
+        element.setAttribute("aria-label", s);
+        element.title = s;
     }
 }
 
@@ -10583,6 +10620,7 @@ window.addEventListener(
 <script src="/havkar-ui-i18n21.js"></script>
 <script src="/havkar-ui-i18n21-generated.js"></script>
 <script src="/havkar-i18n.js"></script>
+<script src="/havkar-verification.js"></script>
 <script src="/havkar-smart-translate.js"></script>
 
 <script src="/havkar-page-back.js"></script>

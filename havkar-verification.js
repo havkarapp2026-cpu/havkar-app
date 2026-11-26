@@ -67,31 +67,67 @@
     return out;
   }
 
-  function renderBadgeHtml(type) {
+  function phraseLabel(english) {
+    try {
+      if (
+        typeof globalThis !== "undefined" &&
+        globalThis.HAVKAR_I18N &&
+        typeof globalThis.HAVKAR_I18N.phrase === "function"
+      ) {
+        const t = globalThis.HAVKAR_I18N.phrase(english);
+        if (t && String(t).trim()) return String(t);
+      }
+    } catch (_e) {}
+    return english;
+  }
+
+  /**
+   * @param {string} type
+   * @param {{ compact?: boolean }} [options] compact = icon-only beside names
+   */
+  function renderBadgeHtml(type, options) {
     const normalized = normalizeType(type);
     if (!normalized) return "";
-    const label = BADGE_LABELS[normalized];
-    const help = BADGE_HELP[normalized];
-    return (
-      '<span class="havkar-badge ' +
+    const compact = !!(options && options.compact);
+    const label = phraseLabel(BADGE_LABELS[normalized]);
+    const help = phraseLabel(BADGE_HELP[normalized]);
+    const imgSrc =
+      normalized === "personal"
+        ? "assets/icons/verification/badge-person.png"
+        : normalized === "business"
+          ? "assets/icons/verification/badge-business.png"
+          : "assets/icons/verification/badge-company.png";
+    const classes =
+      "havkar-badge " +
       normalized +
+      (compact ? " compact" : "");
+    /* Prefer official extracted PNG when present; CSS icon is structural fallback. */
+    return (
+      '<span class="' +
+      classes +
       '" role="img" aria-label="' +
       label +
       ". " +
       help +
       '" title="' +
       help +
+      '" data-havkar-verification="' +
+      normalized +
       '">' +
+      '<img class="havkar-badge-img" src="' +
+      imgSrc +
+      '" alt="" width="18" height="18" loading="lazy" style="display:none" onload="this.style.display=\'inline-block\';var ic=this.nextElementSibling;if(ic)ic.hidden=true" onerror="this.remove()" />' +
       '<span class="icon" aria-hidden="true"></span>' +
-      "<span>" +
-      label +
-      "</span></span>"
+      (compact ? "" : "<span class=\"havkar-badge-label\">" + label + "</span>") +
+      "</span>"
     );
   }
 
-  function renderBadgesHtml(types) {
+  function renderBadgesHtml(types, options) {
     return (types || [])
-      .map(renderBadgeHtml)
+      .map(function (t) {
+        return renderBadgeHtml(t, options);
+      })
       .filter(Boolean)
       .join(" ");
   }
