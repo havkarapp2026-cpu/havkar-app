@@ -19,6 +19,7 @@
 
     const STORAGE_KEY = "havkar_language";
     const STORAGE_DIR_KEY = "havkar_language_dir";
+    const UI_LIVE_TRANSLATE_KEY = "havkar_ui_live_translate";
     const API_URL = "/api/translate";
 
     /*
@@ -1564,6 +1565,229 @@
         return {};
     }
 
+
+    /*
+     * Live UI translation via /api/translate is OPT-IN.
+     * Default OFF so page loads never auto-spend Google Translation quota.
+     * User content translation uses havkar-smart-translate.js (explicit tap).
+     */
+    function isUiLiveTranslateEnabled() {
+        try {
+            return (
+                String(
+                    localStorage.getItem(
+                        UI_LIVE_TRANSLATE_KEY
+                    ) || ""
+                ).trim() === "1"
+            );
+        } catch (_error) {
+            return false;
+        }
+    }
+
+
+    function setUiLiveTranslateEnabled(
+        enabled
+    ) {
+        try {
+            localStorage.setItem(
+                UI_LIVE_TRANSLATE_KEY,
+                enabled ? "1" : "0"
+            );
+        } catch (_error) {
+            /* ignore */
+        }
+    }
+
+
+    function phrase(
+        key,
+        language
+    ) {
+        const lang =
+            language ||
+            getLanguage();
+
+        if (
+            !key ||
+            lang === "en"
+        ) {
+            return String(
+                key || ""
+            );
+        }
+
+        const pack =
+            Object.assign(
+                {},
+                homepageGlossary(
+                    lang
+                ) || {},
+                marketplaceGlossary(
+                    lang
+                ) || {},
+                messagingGlossary(
+                    lang
+                ) || {}
+            );
+
+        if (
+            Object.prototype.hasOwnProperty.call(
+                pack,
+                key
+            ) &&
+            typeof pack[key] === "string" &&
+            pack[key].trim()
+        ) {
+            return pack[key];
+        }
+
+        return String(
+            key
+        );
+    }
+
+
+    function applyDataI18nAttributes(
+        root = document.body
+    ) {
+        if (
+            !root ||
+            typeof document === "undefined"
+        ) {
+            return;
+        }
+
+        const language =
+            getLanguage();
+
+        if (
+            language === "en"
+        ) {
+            return;
+        }
+
+        const nodes =
+            root.querySelectorAll(
+                "[data-i18n], [data-i18n-placeholder], [data-i18n-aria]"
+            );
+
+        nodes.forEach(
+            (el) => {
+                if (
+                    el.hasAttribute(
+                        "data-i18n-ignore"
+                    ) ||
+                    el.getAttribute(
+                        "translate"
+                    ) === "no" ||
+                    (
+                        el.classList &&
+                        el.classList.contains(
+                            "notranslate"
+                        )
+                    )
+                ) {
+                    return;
+                }
+
+                const textKey =
+                    el.getAttribute(
+                        "data-i18n"
+                    );
+
+                if (
+                    textKey
+                ) {
+                    const translated =
+                        phrase(
+                            textKey,
+                            language
+                        );
+
+                    if (
+                        translated &&
+                        translated !== textKey
+                    ) {
+                        /*
+                         * Only replace when the element is a simple
+                         * text carrier (no nested interactive markup).
+                         */
+                        if (
+                            el.children.length === 0
+                        ) {
+                            el.textContent =
+                                translated;
+                        } else if (
+                            el.children.length === 1 &&
+                            el.children[0].tagName === "I"
+                        ) {
+                            const icon =
+                                el.children[0];
+                            el.textContent = "";
+                            el.appendChild(
+                                icon
+                            );
+                            el.append(
+                                " " + translated
+                            );
+                        }
+                    }
+                }
+
+                const placeholderKey =
+                    el.getAttribute(
+                        "data-i18n-placeholder"
+                    );
+
+                if (
+                    placeholderKey
+                ) {
+                    const translated =
+                        phrase(
+                            placeholderKey,
+                            language
+                        );
+
+                    if (
+                        translated &&
+                        translated !== placeholderKey
+                    ) {
+                        el.setAttribute(
+                            "placeholder",
+                            translated
+                        );
+                    }
+                }
+
+                const ariaKey =
+                    el.getAttribute(
+                        "data-i18n-aria"
+                    );
+
+                if (
+                    ariaKey
+                ) {
+                    const translated =
+                        phrase(
+                            ariaKey,
+                            language
+                        );
+
+                    if (
+                        translated &&
+                        translated !== ariaKey
+                    ) {
+                        el.setAttribute(
+                            "aria-label",
+                            translated
+                        );
+                    }
+                }
+            }
+        );
+    }
+
     function homepageGlossary(
         language
     ) {
@@ -1973,6 +2197,19 @@
 
 
         /*
+         * Offline-only by default: leave missing
+         * strings in English. Live API batches run
+         * only when havkar_ui_live_translate=1.
+         */
+        if (
+            !missing.length ||
+            !isUiLiveTranslateEnabled()
+        ) {
+            return resultMap;
+        }
+
+
+        /*
          * Translation endpoint supports
          * batches. Keep them moderate.
          */
@@ -2140,6 +2377,11 @@
 
 
         applyHomepageGlossary(
+            root
+        );
+
+
+        applyDataI18nAttributes(
             root
         );
 
@@ -2608,6 +2850,11 @@
         );
 
 
+        applyDataI18nAttributes(
+            document.body
+        );
+
+
         await translatePage();
 
 
@@ -2667,6 +2914,18 @@
         translateRoot,
 
         setLanguage,
+
+        t: phrase,
+
+        phrase,
+
+        applyDataI18nAttributes,
+
+        isUiLiveTranslateEnabled,
+
+        setUiLiveTranslateEnabled,
+
+        UI_LIVE_TRANSLATE_KEY,
 
         refresh:
             translatePage
