@@ -4530,10 +4530,28 @@ function getAccountTypeLabel(
     };
 
 
-    return (
+    const english =
         labels[type] ||
-        "Personal Account"
-    );
+        "Personal Account";
+
+    try{
+
+        if(
+            window.HAVKAR_I18N &&
+            typeof window.HAVKAR_I18N.phrase === "function"
+        ){
+
+            return window.HAVKAR_I18N.phrase(
+                english
+            );
+
+        }
+
+    }catch(_error){
+        /* keep english fallback */
+    }
+
+    return english;
 
 }
 

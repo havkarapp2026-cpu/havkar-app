@@ -8,6 +8,28 @@
 
   var FEATURED = ["eur", "usd", "gbp", "sek", "cny", "jpy", "krw", "inr"];
 
+  function t(english) {
+    var en = String(english || "");
+    try {
+      if (root.HAVKAR_I18N && typeof root.HAVKAR_I18N.phrase === "function") {
+        var via = root.HAVKAR_I18N.phrase(en);
+        if (via && String(via).trim()) return String(via);
+      }
+      var lang = "en";
+      try {
+        lang =
+          (root.localStorage && root.localStorage.getItem("havkar_language")) ||
+          "en";
+      } catch (_ls) {}
+      var pack =
+        root.HAVKAR_UI_I18N21 && typeof root.HAVKAR_UI_I18N21.pack === "function"
+          ? root.HAVKAR_UI_I18N21.pack(lang)
+          : null;
+      if (pack && pack[en]) return String(pack[en]);
+    } catch (_e) {}
+    return en;
+  }
+
   function presentmentList() {
     var bag = root.HAVKAR_PRESENTMENT_CURRENCIES;
     if (bag && Array.isArray(bag.list) && bag.list.length) {
@@ -53,22 +75,22 @@
     if (compact) shell.classList.add("hcs-compact");
     shell.innerHTML =
       '<div class="hcs-rails" aria-label="Currency rails">' +
-      '<div class="hcs-rail"><span>Display</span><strong data-hcs="display">—</strong></div>' +
-      '<div class="hcs-rail"><span>Payment</span><strong data-hcs="payment">—</strong></div>' +
-      '<div class="hcs-rail"><span>Settlement</span><strong data-hcs="settlement">EUR (Stripe) / XLM on-ledger</strong></div>' +
+      '<div class="hcs-rail"><span data-hcs-i18n="Display">Display</span><strong data-hcs="display">—</strong></div>' +
+      '<div class="hcs-rail"><span data-hcs-i18n="Payment">Payment</span><strong data-hcs="payment">—</strong></div>' +
+      '<div class="hcs-rail"><span data-hcs-i18n="Settlement">Settlement</span><strong data-hcs="settlement">EUR (Stripe) / XLM on-ledger</strong></div>' +
       "</div>" +
       '<div class="hcs-featured" role="listbox" aria-label="Featured currencies"></div>' +
       (includeXlm
         ? '<button type="button" class="hcs-xlm" data-method="xlm_mainnet" aria-pressed="false">' +
-          '<span class="hcs-xlm-mark" aria-hidden="true">✦</span> XLM — Stellar Lumens' +
-          '<span class="hcs-xlm-note">Independent crypto rail · not a banking / Stripe fiat currency</span>' +
+          '<span class="hcs-xlm-mark" aria-hidden="true">✦</span> <span data-hcs-i18n="XLM — Stellar Lumens">XLM — Stellar Lumens</span>' +
+          '<span class="hcs-xlm-note" data-hcs-i18n="Independent crypto rail · not a banking / Stripe fiat currency">Independent crypto rail · not a banking / Stripe fiat currency</span>' +
           "</button>"
         : "") +
-      '<button type="button" class="hcs-toggle" aria-expanded="false">View all 133 currencies</button>' +
+      '<button type="button" class="hcs-toggle" aria-expanded="false" data-hcs-i18n="View all 133 currencies">View all 133 currencies</button>' +
       '<div class="hcs-all" hidden>' +
       '<label class="hcs-search-label" for="' +
       idPrefix +
-      'Search">Search by name, ISO code, symbol, or region</label>' +
+      'Search" data-hcs-i18n="Search by name, ISO code, symbol, or region">Search by name, ISO code, symbol, or region</label>' +
       '<input id="' +
       idPrefix +
       'Search" class="hcs-search" type="search" autocomplete="off" placeholder="EUR, Yen, Sweden…">' +
@@ -76,6 +98,13 @@
       "</div>" +
       '<p class="hcs-fx" data-hcs="fx" role="status">FX: waiting for a valid rate feed…</p>' +
       '<p class="hcs-status" role="status"></p>';
+    Array.prototype.forEach.call(
+      shell.querySelectorAll("[data-hcs-i18n]"),
+      function (el) {
+        var key = el.getAttribute("data-hcs-i18n");
+        if (key) el.textContent = t(key);
+      }
+    );
     mount.appendChild(shell);
     shell.__includeXlm = includeXlm;
     shell.__moduleName = moduleName;
