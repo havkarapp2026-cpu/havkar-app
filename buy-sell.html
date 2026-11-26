@@ -6191,7 +6191,11 @@ document.addEventListener(
 document.addEventListener("havkar:i18n-ready", function () {
   var smart = window.HAVKAR_SMART_TRANSLATE;
   if (!smart || typeof smart.attachToSelectors !== "function") return;
-  smart.attachToSelectors(
+  var attach =
+    typeof smart.observeAndAttach === "function"
+      ? smart.observeAndAttach.bind(smart)
+      : smart.attachToSelectors.bind(smart);
+  attach(
     [
       "[data-listing-description]",
       ".listing-description",

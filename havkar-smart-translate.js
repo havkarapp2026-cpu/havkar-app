@@ -373,11 +373,35 @@
     return mounted;
   }
 
+  /**
+   * Keep mounting Translate controls on dynamically added listing nodes.
+   * Never auto-translates — only attaches the user-initiated button.
+   */
+  function observeAndAttach(selectors, options) {
+    var opts = options || { kind: "listing" };
+    var mounted = attachToSelectors(selectors, opts);
+    if (typeof MutationObserver !== "function" || !document.body) {
+      return mounted;
+    }
+    var timer = null;
+    var observer = new MutationObserver(function () {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(function () {
+        attachToSelectors(selectors, opts);
+      }, 200);
+    });
+    try {
+      observer.observe(document.body, { childList: true, subtree: true });
+    } catch (_e) {}
+    return mounted;
+  }
+
   root.HAVKAR_SMART_TRANSLATE = {
     translateText: translateText,
     mountControls: mountControls,
     mountOnChatMessage: mountOnChatMessage,
     attachToSelectors: attachToSelectors,
+    observeAndAttach: observeAndAttach,
     askBeforeListings: askBeforeListings,
     setAskBeforeListings: setAskBeforeListings,
     LISTINGS_ASK_KEY: LISTINGS_ASK_KEY,
