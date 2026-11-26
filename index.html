@@ -1109,6 +1109,29 @@ try {
   if (signedInPanel) signedInPanel.hidden = true;
 }
 supabase.auth.onAuthStateChange((_event, session) => updateAccount(session?.user || null));
+
+document.addEventListener("havkar:i18n-ready", () => {
+  try {
+    if (!window.HAVKAR_I18N || typeof window.HAVKAR_I18N.t !== "function") return;
+    if (typeof window.HAVKAR_I18N.applyDataI18nAttributes === "function") {
+      window.HAVKAR_I18N.applyDataI18nAttributes(document.body);
+    }
+    const bar = document.querySelector(".home-settings-bar");
+    if (!bar) return;
+    const title = bar.querySelector("strong[data-i18n]");
+    const sub = bar.querySelector(".home-settings-bar-copy > span[data-i18n]");
+    if (title) title.textContent = window.HAVKAR_I18N.t("Profile & Settings") || title.textContent;
+    if (sub) {
+      sub.textContent =
+        window.HAVKAR_I18N.t("Language, support, about, account, and privacy") ||
+        sub.textContent;
+    }
+    bar.setAttribute(
+      "aria-label",
+      window.HAVKAR_I18N.t("Profile & Settings") || "Profile and Settings"
+    );
+  } catch (_e) {}
+});
 </script>
 </body>
 </html>

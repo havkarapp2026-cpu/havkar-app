@@ -1699,15 +1699,41 @@
                 if (
                     textKey
                 ) {
-                    const translated =
-                        phrase(
-                            textKey,
-                            language
-                        );
+                    const keyVariants = [
+                        textKey,
+                        textKey.replace(
+                            /&amp;/g,
+                            "&"
+                        ),
+                        textKey.replace(
+                            /&/g,
+                            "&amp;"
+                        )
+                    ];
+
+                    let translated = "";
+                    for (
+                        let i = 0;
+                        i < keyVariants.length;
+                        i += 1
+                    ) {
+                        const candidate =
+                            phrase(
+                                keyVariants[i],
+                                language
+                            );
+                        if (
+                            candidate &&
+                            candidate !== keyVariants[i]
+                        ) {
+                            translated =
+                                candidate;
+                            break;
+                        }
+                    }
 
                     if (
-                        translated &&
-                        translated !== textKey
+                        translated
                     ) {
                         /*
                          * Only replace when the element is a simple
