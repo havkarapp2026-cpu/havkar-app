@@ -28,11 +28,11 @@ test("chat.html inline script must parse (blocks Production Unexpected token ')'
   assert.doesNotThrow(() => new Function(script));
 });
 
-test("Messenger home tile uses exact Owner image3 mint logo without triple icons", async () => {
+test("Messenger home tile is transparent (no outer frame) with globe+three icons", async () => {
   const index = read("index.html");
   assert.match(
     index,
-    /data-havkar-tile="messenger"[\s\S]{0,220}?assets\/home\/chat\.png\?v=owner-image3-exact/
+    /data-havkar-tile="messenger"[\s\S]{0,220}?assets\/home\/chat\.png\?v=owner-transparent-noframe/
   );
   assert.doesNotMatch(index, /id="guestSignup"/);
   assert.doesNotMatch(index, /id="guestLogin"/);
@@ -45,22 +45,22 @@ test("Messenger home tile uses exact Owner image3 mint logo without triple icons
   assert.ok(fs.existsSync(pngPath), "chat.png missing");
   const { createHash } = await import("node:crypto");
   const hash = createHash("md5").update(fs.readFileSync(pngPath)).digest("hex");
-  // Reject both Production-old mint and the rejected triple-icon composite.
   assert.notEqual(hash, "7534c16b545d9439519f070e81fd662c", "production-old chat.png");
-  assert.notEqual(hash, "4a96c231b0adba9a0d2738960ced4d72", "rejected triple-icon chat.png");
-  assert.equal(hash, "e9c5b61ddfbf03494178e80112377033", "must be exact Owner mint image3");
+  assert.notEqual(hash, "4a96c231b0adba9a0d2738960ced4d72", "opaque white-frame chat.png");
+  assert.notEqual(hash, "e9c5b61ddfbf03494178e80112377033", "opaque mint chat.png");
   const { spawnSync } = await import("node:child_process");
   const py = spawnSync(
     "python3",
     [
       "-c",
-      "from PIL import Image; im=Image.open('assets/home/chat.png').convert('RGB'); print(','.join(map(str, im.getpixel((0,0)))))"
+      "from PIL import Image; im=Image.open('assets/home/chat.png').convert('RGBA'); print(im.getpixel((0,0))[3]); print(im.size[0], im.size[1])"
     ],
     { cwd: root, encoding: "utf8" }
   );
   assert.equal(py.status, 0, py.stderr);
-  const corner = py.stdout.trim().split(",").map(Number);
-  assert.ok(corner[0] > 200 && corner[1] > 200 && corner[2] > 200, `corner not mint/white: ${corner}`);
+  const lines = py.stdout.trim().split("\n");
+  assert.equal(Number(lines[0]), 0, "corner must be transparent");
+  assert.equal(lines[1].trim(), "248 236", "tile size must match other tiles");
 });
 
 test("goHome seeds language and assigns index.html (15-tile home)", () => {
