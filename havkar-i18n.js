@@ -1600,21 +1600,123 @@
     }
 
 
+    function getKeyMap() {
+        try {
+            if (
+                typeof globalThis !== "undefined" &&
+                globalThis.HAVKAR_I18N_KEY_MAP
+            ) {
+                return globalThis.HAVKAR_I18N_KEY_MAP;
+            }
+        } catch (_error) {
+            /* ignore */
+        }
+        return null;
+    }
+
+
+    function resolveEnglishPhrase(
+        key
+    ) {
+        const map = getKeyMap();
+        if (
+            map &&
+            typeof map.resolveEnglish === "function"
+        ) {
+            return map.resolveEnglish(key);
+        }
+        return String(key || "");
+    }
+
+
+    function isUnacceptableTranslation(
+        english,
+        translated
+    ) {
+        const map = getKeyMap();
+        const value = String(
+            translated || ""
+        ).trim();
+        if (!value) {
+            return true;
+        }
+        if (
+            map &&
+            typeof map.looksLikeRawKey === "function" &&
+            map.looksLikeRawKey(value)
+        ) {
+            return true;
+        }
+        if (
+            map &&
+            typeof map.looksStuck === "function" &&
+            map.looksStuck(english, value)
+        ) {
+            return true;
+        }
+        return false;
+    }
+
+
+    function lookupPackPhrase(
+        pack,
+        english
+    ) {
+        if (
+            !pack ||
+            !english
+        ) {
+            return "";
+        }
+        if (
+            Object.prototype.hasOwnProperty.call(
+                pack,
+                english
+            ) &&
+            typeof pack[english] === "string" &&
+            pack[english].trim() &&
+            !isUnacceptableTranslation(
+                english,
+                pack[english]
+            )
+        ) {
+            return pack[english].trim();
+        }
+        return "";
+    }
+
+
     function phrase(
         key,
         language
     ) {
+        const rawKey =
+            String(
+                key || ""
+            );
+
         const lang =
             language ||
             getLanguage();
 
+        const english =
+            resolveEnglishPhrase(
+                rawKey
+            );
+
         if (
-            !key ||
+            !rawKey
+        ) {
+            return "";
+        }
+
+        if (
             lang === "en"
         ) {
-            return String(
-                key || ""
-            );
+            /*
+             * Never show camelCase keys in English UI either.
+             */
+            return english || rawKey;
         }
 
         const pack =
@@ -1631,20 +1733,45 @@
                 ) || {}
             );
 
-        if (
-            Object.prototype.hasOwnProperty.call(
+        /*
+         * Prefer English-phrase pack entries over camelCase key
+         * entries (those were often machine-translated as opaque tokens).
+         */
+        const fromEnglish =
+            lookupPackPhrase(
                 pack,
-                key
-            ) &&
-            typeof pack[key] === "string" &&
-            pack[key].trim()
+                english
+            );
+        if (
+            fromEnglish
         ) {
-            return pack[key];
+            return fromEnglish;
         }
 
-        return String(
-            key
-        );
+        /*
+         * Only consult pack[rawKey] when it is already an English phrase
+         * key (no camelCase alias). Alias keys often held MT garbage.
+         */
+        if (
+            english === rawKey
+        ) {
+            const fromKey =
+                lookupPackPhrase(
+                    pack,
+                    rawKey
+                );
+            if (
+                fromKey &&
+                fromKey !== rawKey
+            ) {
+                return fromKey;
+            }
+        }
+
+        /*
+         * Fallback: English phrase, never a raw camelCase / opaque key.
+         */
+        return english || rawKey;
     }
 
 
