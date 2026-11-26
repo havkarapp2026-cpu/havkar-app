@@ -32,7 +32,7 @@ test("Messenger home tile is transparent (no outer frame) with globe+three icons
   const index = read("index.html");
   assert.match(
     index,
-    /data-havkar-tile="messenger"[\s\S]{0,220}?assets\/home\/chat\.png\?v=owner-transparent-noframe/
+    /data-havkar-tile="messenger"[\s\S]{0,220}?assets\/home\/chat\.png\?v=owner-transparent-noframe-v2/
   );
   assert.doesNotMatch(index, /id="guestSignup"/);
   assert.doesNotMatch(index, /id="guestLogin"/);
