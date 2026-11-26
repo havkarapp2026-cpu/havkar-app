@@ -28,11 +28,11 @@ test("chat.html inline script must parse (blocks Production Unexpected token ')'
   assert.doesNotThrow(() => new Function(script));
 });
 
-test("Messenger home tile is transparent (no outer frame) with globe+three icons", async () => {
+test("Messenger home tile uses restored Owner mint logo without three icons", async () => {
   const index = read("index.html");
   assert.match(
     index,
-    /data-havkar-tile="messenger"[\s\S]{0,220}?assets\/home\/chat\.png\?v=owner-transparent-noframe-v2/
+    /data-havkar-tile="messenger"[\s\S]{0,220}?assets\/home\/chat\.png\?v=owner-mint-restored/
   );
   assert.doesNotMatch(index, /id="guestSignup"/);
   assert.doesNotMatch(index, /id="guestLogin"/);
@@ -45,22 +45,23 @@ test("Messenger home tile is transparent (no outer frame) with globe+three icons
   assert.ok(fs.existsSync(pngPath), "chat.png missing");
   const { createHash } = await import("node:crypto");
   const hash = createHash("md5").update(fs.readFileSync(pngPath)).digest("hex");
-  assert.notEqual(hash, "7534c16b545d9439519f070e81fd662c", "production-old chat.png");
-  assert.notEqual(hash, "4a96c231b0adba9a0d2738960ced4d72", "opaque white-frame chat.png");
-  assert.notEqual(hash, "e9c5b61ddfbf03494178e80112377033", "opaque mint chat.png");
+  // Reject damaged transparency + triple-icon versions.
+  assert.notEqual(hash, "0408ec880fd67816e124e0311c37aee1", "damaged transparent chat.png");
+  assert.notEqual(hash, "0f1d3f262b1ac6e27734daadfd727a06", "damaged transparent v1 chat.png");
+  assert.notEqual(hash, "4a96c231b0adba9a0d2738960ced4d72", "triple-icon chat.png");
   const { spawnSync } = await import("node:child_process");
   const py = spawnSync(
     "python3",
     [
       "-c",
-      "from PIL import Image; im=Image.open('assets/home/chat.png').convert('RGBA'); print(im.getpixel((0,0))[3]); print(im.size[0], im.size[1])"
+      "from PIL import Image; im=Image.open('assets/home/chat.png').convert('RGBA'); print(im.size[0], im.size[1]); print(im.getpixel((0,0))[3])"
     ],
     { cwd: root, encoding: "utf8" }
   );
   assert.equal(py.status, 0, py.stderr);
   const lines = py.stdout.trim().split("\n");
-  assert.equal(Number(lines[0]), 0, "corner must be transparent");
-  assert.equal(lines[1].trim(), "248 236", "tile size must match other tiles");
+  assert.equal(lines[0].trim(), "248 236", "tile size must match other tiles");
+  assert.equal(Number(lines[1]), 255, "restored tile uses opaque plate like other tiles");
 });
 
 test("goHome seeds language and assigns index.html (15-tile home)", () => {
