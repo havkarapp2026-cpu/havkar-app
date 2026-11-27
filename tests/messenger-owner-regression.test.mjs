@@ -32,7 +32,7 @@ test("Messenger home tile uses Owner-approved attach fitted to other-tile canvas
   const index = read("index.html");
   assert.match(
     index,
-    /data-havkar-tile="messenger"[\s\S]{0,220}?assets\/home\/chat\.png\?v=owner-home-final-20261127c/
+    /data-havkar-tile="messenger"[\s\S]{0,220}?assets\/home\/chat\.png\?v=owner-home-clean-map-20261127/
   );
   assert.doesNotMatch(index, /id="guestSignup"/);
   assert.doesNotMatch(index, /id="guestLogin"/);
@@ -52,7 +52,7 @@ test("Messenger home tile uses Owner-approved attach fitted to other-tile canvas
   assert.notEqual(hash, "dfbda26de9f6b9696ab5a3ecd53dc73d", "damaged mint-restored chat.png");
   assert.notEqual(hash, "0408ec880fd67816e124e0311c37aee1", "damaged transparent chat.png");
   assert.notEqual(hash, "4a96c231b0adba9a0d2738960ced4d72", "old triple chat.png");
-  assert.equal(hash, "016715d72e90f3c8d3151b68028e2718", "owner final frameless messenger tile hash");
+  assert.equal(hash, "f629b755acd61f4c432936e7bde941bf", "owner final frameless messenger tile hash");
   const { spawnSync } = await import("node:child_process");
   const py = spawnSync(
     "python3",
@@ -64,7 +64,7 @@ test("Messenger home tile uses Owner-approved attach fitted to other-tile canvas
   );
   assert.equal(py.status, 0, py.stderr);
   const lines = py.stdout.trim().split("\n");
-  assert.equal(lines[0].trim(), "248 200", "frameless tile canvas");
+  assert.equal(lines[0].trim(), "248 190", "frameless tile canvas");
   assert.equal(Number(lines[1]), 0, "transparent corner on shared map");
 });
 
