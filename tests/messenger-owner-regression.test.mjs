@@ -32,7 +32,7 @@ test("Messenger home tile uses Owner-approved attach fitted to other-tile canvas
   const index = read("index.html");
   assert.match(
     index,
-    /data-havkar-tile="messenger"[\s\S]{0,220}?assets\/home\/chat\.png\?v=owner-approved-attach/
+    /data-havkar-tile="messenger"[\s\S]{0,220}?assets\/home\/chat\.png\?v=owner-approved-attach-v2/
   );
   assert.doesNotMatch(index, /id="guestSignup"/);
   assert.doesNotMatch(index, /id="guestLogin"/);
@@ -51,7 +51,7 @@ test("Messenger home tile uses Owner-approved attach fitted to other-tile canvas
   assert.notEqual(hash, "dfbda26de9f6b9696ab5a3ecd53dc73d", "damaged mint-restored chat.png");
   assert.notEqual(hash, "0408ec880fd67816e124e0311c37aee1", "damaged transparent chat.png");
   assert.notEqual(hash, "4a96c231b0adba9a0d2738960ced4d72", "old triple chat.png");
-  assert.equal(hash, "20d10faa664291fee484d2f534609ac5", "must be Owner-approved attach fitted tile");
+  assert.equal(hash, "afebd1ac7a5df7165fffd1fd4c156590", "must be Owner-approved attach fitted tile v2");
   const srcHash = createHash("md5").update(fs.readFileSync(srcPath)).digest("hex");
   assert.equal(srcHash, "ca7d36bde0f723f52776d27a35e88eb6", "owner source bytes must stay exact");
   const { spawnSync } = await import("node:child_process");
