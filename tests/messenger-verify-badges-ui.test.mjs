@@ -21,7 +21,7 @@ test("home keeps exactly 12 tiles and messenger tile points at chat.png", () => 
   assert.equal(tiles.length, 12);
   assert.ok(tiles.includes("chat.html"));
   assert.match(index, /data-havkar-tile="messenger"/);
-  assert.match(index, /assets\/home\/chat\.png\?v=owner-home-full-icons-20261127/);
+  assert.match(index, /assets\/home\/chat\.png\?v=owner-home-full-icons-20261127c/);
   assert.doesNotMatch(index, /id="guestSignup"|id="guestLogin"|security-lock/);
 });
 

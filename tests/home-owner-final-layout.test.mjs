@@ -29,7 +29,7 @@ const TILES = [
 test("home matches Owner final frameless layout invariants", async () => {
   const index = read("index.html");
   assert.match(index, /Frameless 3D icons on shared world-map background/);
-  assert.match(index, /home-mint-map-bg\.png\?v=owner-home-full-icons-20261127/);
+  assert.match(index, /home-mint-map-bg\.png\?v=owner-home-full-icons-20261127c/);
   assert.match(index, /\.menu-item[\s\S]{0,320}background:\s*transparent/);
   assert.match(index, /\.home-settings-bar[\s\S]{0,220}border-radius:\s*999px/);
   assert.match(index, /home-settings-bar[\s\S]{0,80}href="profile\.html"/);
