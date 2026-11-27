@@ -32,7 +32,7 @@ test("Messenger home tile uses Owner-approved attach fitted to other-tile canvas
   const index = read("index.html");
   assert.match(
     index,
-    /data-havkar-tile="messenger"[\s\S]{0,220}?assets\/home\/chat\.png\?v=tiles-unified/
+    /data-havkar-tile="messenger"[\s\S]{0,220}?assets\/home\/chat\.png\?v=owner-logo-20261127/
   );
   assert.doesNotMatch(index, /id="guestSignup"/);
   assert.doesNotMatch(index, /id="guestLogin"/);
@@ -42,16 +42,17 @@ test("Messenger home tile uses Owner-approved attach fitted to other-tile canvas
   const tiles = [...index.matchAll(/class="menu-item"/g)];
   assert.equal(tiles.length, 12, "home must keep exactly 12 tiles");
   const pngPath = path.join(root, "assets/home/chat.png");
-  const srcPath = path.join(root, "assets/icons/messenger/havkar-messenger-tile-owner-approved.webp");
+  const srcJpg = path.join(root, "assets/icons/messenger/havkar-messenger-tile-owner-approved.jpg");
+  const srcWebp = path.join(root, "assets/icons/messenger/havkar-messenger-tile-owner-approved.webp");
   assert.ok(fs.existsSync(pngPath), "chat.png missing");
-  assert.ok(fs.existsSync(srcPath), "owner-approved source missing");
+  assert.ok(fs.existsSync(srcJpg) || fs.existsSync(srcWebp), "owner-approved source missing");
   const { createHash } = await import("node:crypto");
   const hash = createHash("md5").update(fs.readFileSync(pngPath)).digest("hex");
   // Reject damaged / wrong lineages.
   assert.notEqual(hash, "dfbda26de9f6b9696ab5a3ecd53dc73d", "damaged mint-restored chat.png");
   assert.notEqual(hash, "0408ec880fd67816e124e0311c37aee1", "damaged transparent chat.png");
   assert.notEqual(hash, "4a96c231b0adba9a0d2738960ced4d72", "old triple chat.png");
-  assert.equal(hash, "12da4b2da32615e447c864778b583eb7", "unified messenger tile hash");
+  assert.equal(hash, "0a86af6523b95d1828be6870bc18736f", "owner logo messenger tile hash");
   const { spawnSync } = await import("node:child_process");
   const py = spawnSync(
     "python3",
