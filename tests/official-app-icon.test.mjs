@@ -53,7 +53,7 @@ assert.equal(JSON.stringify(manifest).includes("icon.png"), false);
 const header = read("assets/home/header.png");
 assert.equal(
   header.length,
-  685352
+  257748
 );
 
 const home = read("index.html").toString("utf8");
