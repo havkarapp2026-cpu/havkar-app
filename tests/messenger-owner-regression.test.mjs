@@ -32,27 +32,27 @@ test("Messenger home tile uses Owner-approved attach fitted to other-tile canvas
   const index = read("index.html");
   assert.match(
     index,
-    /data-havkar-tile="messenger"[\s\S]{0,220}?assets\/home\/chat\.png\?v=owner-logo-20261127/
+    /data-havkar-tile="messenger"[\s\S]{0,220}?assets\/home\/chat\.png\?v=owner-home-final-20261127/
   );
   assert.doesNotMatch(index, /id="guestSignup"/);
   assert.doesNotMatch(index, /id="guestLogin"/);
   assert.doesNotMatch(index, /security-badge|security-lock/);
   assert.match(index, /home-settings-bar/);
   assert.match(index, /supabase\.auth\.getSession/);
+  assert.match(index, /Frameless 3D icons on shared world-map background/);
   const tiles = [...index.matchAll(/class="menu-item"/g)];
   assert.equal(tiles.length, 12, "home must keep exactly 12 tiles");
   const pngPath = path.join(root, "assets/home/chat.png");
-  const srcJpg = path.join(root, "assets/icons/messenger/havkar-messenger-tile-owner-approved.jpg");
-  const srcWebp = path.join(root, "assets/icons/messenger/havkar-messenger-tile-owner-approved.webp");
+  const srcHome = path.join(root, "assets/icons/havkar-home-final-owner-approved.jpg");
   assert.ok(fs.existsSync(pngPath), "chat.png missing");
-  assert.ok(fs.existsSync(srcJpg) || fs.existsSync(srcWebp), "owner-approved source missing");
+  assert.ok(fs.existsSync(srcHome), "owner final home mockup missing");
   const { createHash } = await import("node:crypto");
   const hash = createHash("md5").update(fs.readFileSync(pngPath)).digest("hex");
   // Reject damaged / wrong lineages.
   assert.notEqual(hash, "dfbda26de9f6b9696ab5a3ecd53dc73d", "damaged mint-restored chat.png");
   assert.notEqual(hash, "0408ec880fd67816e124e0311c37aee1", "damaged transparent chat.png");
   assert.notEqual(hash, "4a96c231b0adba9a0d2738960ced4d72", "old triple chat.png");
-  assert.equal(hash, "0a86af6523b95d1828be6870bc18736f", "owner logo messenger tile hash");
+  assert.equal(hash, "9dcf494c239be16673bd6f6c2cbce0a6", "owner final frameless messenger tile hash");
   const { spawnSync } = await import("node:child_process");
   const py = spawnSync(
     "python3",
@@ -64,8 +64,8 @@ test("Messenger home tile uses Owner-approved attach fitted to other-tile canvas
   );
   assert.equal(py.status, 0, py.stderr);
   const lines = py.stdout.trim().split("\n");
-  assert.equal(lines[0].trim(), "248 236", "tile size must match other tiles");
-  assert.equal(Number(lines[1]), 255, "opaque shared plate");
+  assert.equal(lines[0].trim(), "248 200", "frameless tile canvas");
+  assert.equal(Number(lines[1]), 0, "transparent corner on shared map");
 });
 
 test("goHome seeds language and assigns index.html (15-tile home)", () => {
