@@ -28,11 +28,11 @@ test("chat.html inline script must parse (blocks Production Unexpected token ')'
   assert.doesNotThrow(() => new Function(script));
 });
 
-test("Messenger home tile uses restored Owner mint logo without three icons", async () => {
+test("Messenger home tile uses Owner-approved attach fitted to other-tile canvas", async () => {
   const index = read("index.html");
   assert.match(
     index,
-    /data-havkar-tile="messenger"[\s\S]{0,220}?assets\/home\/chat\.png\?v=owner-mint-restored/
+    /data-havkar-tile="messenger"[\s\S]{0,220}?assets\/home\/chat\.png\?v=owner-approved-attach/
   );
   assert.doesNotMatch(index, /id="guestSignup"/);
   assert.doesNotMatch(index, /id="guestLogin"/);
@@ -42,26 +42,32 @@ test("Messenger home tile uses restored Owner mint logo without three icons", as
   const tiles = [...index.matchAll(/class="menu-item"/g)];
   assert.equal(tiles.length, 12, "home must keep exactly 12 tiles");
   const pngPath = path.join(root, "assets/home/chat.png");
+  const srcPath = path.join(root, "assets/icons/messenger/havkar-messenger-tile-owner-approved.webp");
   assert.ok(fs.existsSync(pngPath), "chat.png missing");
+  assert.ok(fs.existsSync(srcPath), "owner-approved source missing");
   const { createHash } = await import("node:crypto");
   const hash = createHash("md5").update(fs.readFileSync(pngPath)).digest("hex");
-  // Reject damaged transparency + triple-icon versions.
+  // Reject damaged / wrong lineages.
+  assert.notEqual(hash, "dfbda26de9f6b9696ab5a3ecd53dc73d", "damaged mint-restored chat.png");
   assert.notEqual(hash, "0408ec880fd67816e124e0311c37aee1", "damaged transparent chat.png");
-  assert.notEqual(hash, "0f1d3f262b1ac6e27734daadfd727a06", "damaged transparent v1 chat.png");
-  assert.notEqual(hash, "4a96c231b0adba9a0d2738960ced4d72", "triple-icon chat.png");
+  assert.notEqual(hash, "4a96c231b0adba9a0d2738960ced4d72", "old triple chat.png");
+  assert.equal(hash, "20d10faa664291fee484d2f534609ac5", "must be Owner-approved attach fitted tile");
+  const srcHash = createHash("md5").update(fs.readFileSync(srcPath)).digest("hex");
+  assert.equal(srcHash, "ca7d36bde0f723f52776d27a35e88eb6", "owner source bytes must stay exact");
   const { spawnSync } = await import("node:child_process");
   const py = spawnSync(
     "python3",
     [
       "-c",
-      "from PIL import Image; im=Image.open('assets/home/chat.png').convert('RGBA'); print(im.size[0], im.size[1]); print(im.getpixel((0,0))[3])"
+      "from PIL import Image; im=Image.open('assets/home/chat.png').convert('RGBA'); print(im.size[0], im.size[1]); print(im.getpixel((0,0))[3]); print(sum(im.getpixel((124,220))[:3])/3)"
     ],
     { cwd: root, encoding: "utf8" }
   );
   assert.equal(py.status, 0, py.stderr);
   const lines = py.stdout.trim().split("\n");
   assert.equal(lines[0].trim(), "248 236", "tile size must match other tiles");
-  assert.equal(Number(lines[1]), 255, "restored tile uses opaque plate like other tiles");
+  assert.equal(Number(lines[1]), 255, "opaque plate like other tiles");
+  assert.ok(Number(lines[2]) > 240, "bottom label band must stay clear/light");
 });
 
 test("goHome seeds language and assigns index.html (15-tile home)", () => {
