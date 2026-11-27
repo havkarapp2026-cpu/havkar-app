@@ -29,7 +29,7 @@ const TILES = [
 test("home matches Owner final frameless layout invariants", async () => {
   const index = read("index.html");
   assert.match(index, /Frameless 3D icons on shared world-map background/);
-  assert.match(index, /home-mint-map-bg\.png\?v=owner-home-rembg-20261127b/);
+  assert.match(index, /home-mint-map-bg\.png\?v=owner-home-full-icons-20261127/);
   assert.match(index, /\.menu-item[\s\S]{0,320}background:\s*transparent/);
   assert.match(index, /\.home-settings-bar[\s\S]{0,220}border-radius:\s*999px/);
   assert.match(index, /home-settings-bar[\s\S]{0,80}href="profile\.html"/);
@@ -86,8 +86,8 @@ test("all twelve home icons exist as frameless 248x200 RGBA", async () => {
     );
     assert.equal(py.status, 0, py.stderr);
     const [w, h, a] = py.stdout.trim().split(/\s+/).map(Number);
-    assert.equal(w, 248, name);
-    assert.equal(h, 190, name);
+    assert.equal(w, 280, name);
+    assert.equal(h, 220, name);
     assert.equal(a, 0, `${name} corner must be transparent`);
   }
 });
