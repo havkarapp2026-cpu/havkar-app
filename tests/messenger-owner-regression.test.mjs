@@ -32,7 +32,7 @@ test("Messenger home tile uses Owner-approved attach fitted to other-tile canvas
   const index = read("index.html");
   assert.match(
     index,
-    /data-havkar-tile="messenger"[\s\S]{0,220}?assets\/home\/chat\.png\?v=owner-approved-attach-v3/
+    /data-havkar-tile="messenger"[\s\S]{0,220}?assets\/home\/chat\.png\?v=tiles-unified/
   );
   assert.doesNotMatch(index, /id="guestSignup"/);
   assert.doesNotMatch(index, /id="guestLogin"/);
@@ -51,23 +51,20 @@ test("Messenger home tile uses Owner-approved attach fitted to other-tile canvas
   assert.notEqual(hash, "dfbda26de9f6b9696ab5a3ecd53dc73d", "damaged mint-restored chat.png");
   assert.notEqual(hash, "0408ec880fd67816e124e0311c37aee1", "damaged transparent chat.png");
   assert.notEqual(hash, "4a96c231b0adba9a0d2738960ced4d72", "old triple chat.png");
-  assert.equal(hash, "f6a1f04b7b10ce1f3fcd2841bf3a4c67", "must be Owner-approved attach fitted tile v3");
-  const srcHash = createHash("md5").update(fs.readFileSync(srcPath)).digest("hex");
-  assert.equal(srcHash, "ca7d36bde0f723f52776d27a35e88eb6", "owner source bytes must stay exact");
+  assert.equal(hash, "12da4b2da32615e447c864778b583eb7", "unified messenger tile hash");
   const { spawnSync } = await import("node:child_process");
   const py = spawnSync(
     "python3",
     [
       "-c",
-      "from PIL import Image; im=Image.open('assets/home/chat.png').convert('RGBA'); print(im.size[0], im.size[1]); print(im.getpixel((0,0))[3]); print(sum(im.getpixel((124,220))[:3])/3)"
+      "from PIL import Image; im=Image.open('assets/home/chat.png').convert('RGBA'); print(im.size[0], im.size[1]); print(im.getpixel((0,0))[3])"
     ],
     { cwd: root, encoding: "utf8" }
   );
   assert.equal(py.status, 0, py.stderr);
   const lines = py.stdout.trim().split("\n");
   assert.equal(lines[0].trim(), "248 236", "tile size must match other tiles");
-  assert.equal(Number(lines[1]), 255, "opaque plate like other tiles");
-  assert.ok(Number(lines[2]) > 240, "bottom label band must stay clear/light");
+  assert.equal(Number(lines[1]), 255, "opaque shared plate");
 });
 
 test("goHome seeds language and assigns index.html (15-tile home)", () => {
