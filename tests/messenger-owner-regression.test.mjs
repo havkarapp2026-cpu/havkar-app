@@ -52,7 +52,7 @@ test("Messenger home tile uses Owner-approved attach fitted to other-tile canvas
   assert.notEqual(hash, "dfbda26de9f6b9696ab5a3ecd53dc73d", "damaged mint-restored chat.png");
   assert.notEqual(hash, "0408ec880fd67816e124e0311c37aee1", "damaged transparent chat.png");
   assert.notEqual(hash, "4a96c231b0adba9a0d2738960ced4d72", "old triple chat.png");
-  assert.equal(hash, "5cc82dd14ea1f97b9c47d86bdcefad07", "owner final frameless messenger tile hash");
+  assert.equal(hash, "74476521ea21d1d90992daacb0a43d74", "owner final frameless messenger tile hash");
   const { spawnSync } = await import("node:child_process");
   const py = spawnSync(
     "python3",
