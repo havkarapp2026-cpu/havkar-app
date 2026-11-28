@@ -29,20 +29,20 @@ const TILES = [
 test("home matches Owner final frameless layout invariants", async () => {
   const index = read("index.html");
   assert.match(index, /Frameless 3D icons on shared world-map background/);
-  assert.match(index, /home-mint-map-bg\.png\?v=owner-home-map-clean-20261128c/);
+  assert.match(index, /home-mint-map-bg\.png\?v=owner-home-map-scratch-20261128/);
   assert.match(index, /\.menu-item[\s\S]{0,320}background:\s*transparent/);
   assert.match(index, /\.home-settings-bar[\s\S]{0,220}border-radius:\s*999px/);
   assert.match(index, /home-globe-horizon/);
-  assert.match(index, /home-globe-horizon\.png/);
-  assert.ok(fs.existsSync(path.join(root, "assets/home/home-globe-horizon.png")));
   assert.match(index, /home-settings-bar[\s\S]{0,80}href="profile\.html"/);
+  // horizon-art plate intentionally removed (was a source of extra rectangle/line)
+  assert.doesNotMatch(index, /home-globe-horizon-art/);
   assert.ok(fs.existsSync(path.join(root, "assets/icons/havkar-home-final-owner-approved.jpg")));
   // Background must be the clean world map — never the full Owner mockup composite.
   const { createHash } = await import("node:crypto");
   const bgHash = createHash("md5")
     .update(fs.readFileSync(path.join(root, "assets/home/home-mint-map-bg.png")))
     .digest("hex");
-  assert.equal(bgHash, "1b17413fd27e22a26d4a861d1ddfeb36", "clean shared map only");
+  assert.equal(bgHash, "3435d056e923b690cd11e98fb335d8b0", "clean shared map only");
   assert.notEqual(bgHash, "bba9dc21137bcaad1af788b3e57edc93", "reject full-mockup background");
 
   const tiles = [...index.matchAll(/class="menu-item"[^>]*href="([^"]+)"/g)].map((m) => m[1]);
