@@ -29,7 +29,7 @@ const TILES = [
 test("home matches Owner final frameless layout invariants", async () => {
   const index = read("index.html");
   assert.match(index, /Frameless 3D icons on shared world-map background/);
-  assert.match(index, /home-mint-map-bg\.png\?v=owner-home-rootfix-20261127/);
+  assert.match(index, /home-mint-map-bg\.png\?v=owner-home-uncropped-20261127/);
   assert.match(index, /\.menu-item[\s\S]{0,320}background:\s*transparent/);
   assert.match(index, /\.home-settings-bar[\s\S]{0,220}border-radius:\s*999px/);
   assert.match(index, /home-globe-horizon/);
@@ -42,7 +42,7 @@ test("home matches Owner final frameless layout invariants", async () => {
   const bgHash = createHash("md5")
     .update(fs.readFileSync(path.join(root, "assets/home/home-mint-map-bg.png")))
     .digest("hex");
-  assert.equal(bgHash, "05e8401a7e462aae2b463d4cc815d87a", "clean shared map only");
+  assert.equal(bgHash, "2103388febc71d4b06e17a7dbcb0af2e", "clean shared map only");
   assert.notEqual(bgHash, "bba9dc21137bcaad1af788b3e57edc93", "reject full-mockup background");
 
   const tiles = [...index.matchAll(/class="menu-item"[^>]*href="([^"]+)"/g)].map((m) => m[1]);
@@ -89,8 +89,8 @@ test("all twelve home icons exist as frameless 248x200 RGBA", async () => {
     );
     assert.equal(py.status, 0, py.stderr);
     const [w, h, a] = py.stdout.trim().split(/\s+/).map(Number);
-    assert.equal(w, 280, name);
-    assert.equal(h, 220, name);
+    assert.equal(w, 380, name);
+    assert.equal(h, 320, name);
     assert.equal(a, 0, `${name} corner must be transparent`);
   }
 });
