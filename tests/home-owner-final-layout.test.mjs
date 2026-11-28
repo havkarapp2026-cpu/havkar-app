@@ -29,7 +29,7 @@ const TILES = [
 test("home matches Owner final frameless layout invariants", async () => {
   const index = read("index.html");
   assert.match(index, /Frameless 3D icons on shared world-map background/);
-  assert.match(index, /home-mint-map-bg\.png\?v=owner-home-photo-match-20261128/);
+  assert.match(index, /home-mint-map-bg\.png\?v=owner-home-layers-clean-20261128/);
   assert.match(index, /\.menu-item[\s\S]{0,320}background:\s*transparent/);
   assert.match(index, /\.home-settings-bar[\s\S]{0,220}border-radius:\s*999px/);
   assert.match(index, /home-globe-horizon/);
@@ -43,7 +43,7 @@ test("home matches Owner final frameless layout invariants", async () => {
   const bgHash = createHash("md5")
     .update(fs.readFileSync(path.join(root, "assets/home/home-mint-map-bg.png")))
     .digest("hex");
-  assert.equal(bgHash, "8caffe8459981c5cbf87b444a6c3c01e", "clean shared map only");
+  assert.equal(bgHash, "4dcfadee8445f036c2ec6e54773eca3b", "clean shared map only");
   assert.notEqual(bgHash, "bba9dc21137bcaad1af788b3e57edc93", "reject full-mockup background");
 
   const tiles = [...index.matchAll(/class="menu-item"[^>]*href="([^"]+)"/g)].map((m) => m[1]);
