@@ -28,28 +28,44 @@ test("chat.html inline script must parse (blocks Production Unexpected token ')'
   assert.doesNotThrow(() => new Function(script));
 });
 
-test("Messenger home tile uses approved logo asset on mint/white path with cache bust", async () => {
+test("Messenger home tile uses Owner-approved attach fitted to other-tile canvas", async () => {
   const index = read("index.html");
   assert.match(
     index,
-    /data-havkar-tile="messenger"[\s\S]{0,220}?assets\/home\/chat\.png\?v=owner-approved-mint/
+    /data-havkar-tile="messenger"[\s\S]{0,220}?assets\/home\/chat\.png\?v=owner-home-uncropped-b-20261127/
   );
+  assert.doesNotMatch(index, /id="guestSignup"/);
+  assert.doesNotMatch(index, /id="guestLogin"/);
+  assert.doesNotMatch(index, /security-badge|security-lock/);
+  assert.match(index, /home-settings-bar/);
+  assert.match(index, /supabase\.auth\.getSession/);
+  assert.match(index, /Frameless 3D icons on shared world-map background/);
   const tiles = [...index.matchAll(/class="menu-item"/g)];
-  assert.equal(tiles.length, 15, "home must keep exactly 15 tiles");
+  assert.equal(tiles.length, 12, "home must keep exactly 12 tiles");
   const pngPath = path.join(root, "assets/home/chat.png");
+  const srcHome = path.join(root, "assets/icons/havkar-home-final-owner-approved.jpg");
   assert.ok(fs.existsSync(pngPath), "chat.png missing");
+  assert.ok(fs.existsSync(srcHome), "owner final home mockup missing");
+  const { createHash } = await import("node:crypto");
+  const hash = createHash("md5").update(fs.readFileSync(pngPath)).digest("hex");
+  // Reject damaged / wrong lineages.
+  assert.notEqual(hash, "dfbda26de9f6b9696ab5a3ecd53dc73d", "damaged mint-restored chat.png");
+  assert.notEqual(hash, "0408ec880fd67816e124e0311c37aee1", "damaged transparent chat.png");
+  assert.notEqual(hash, "4a96c231b0adba9a0d2738960ced4d72", "old triple chat.png");
+  assert.equal(hash, "b9f21bad816757b77cd9c7dfec978538", "owner final frameless messenger tile hash");
   const { spawnSync } = await import("node:child_process");
   const py = spawnSync(
     "python3",
     [
       "-c",
-      "from PIL import Image; im=Image.open('assets/home/chat.png').convert('RGB'); print(','.join(map(str, im.getpixel((0,0)))))"
+      "from PIL import Image; im=Image.open('assets/home/chat.png').convert('RGBA'); print(im.size[0], im.size[1]); print(im.getpixel((0,0))[3])"
     ],
     { cwd: root, encoding: "utf8" }
   );
   assert.equal(py.status, 0, py.stderr);
-  const corner = py.stdout.trim().split(",").map(Number);
-  assert.ok(corner[0] > 200 && corner[1] > 200 && corner[2] > 200, `corner not mint/white: ${corner}`);
+  const lines = py.stdout.trim().split("\n");
+  assert.equal(lines[0].trim(), "380 320", "frameless tile canvas");
+  assert.equal(Number(lines[1]), 0, "transparent corner on shared map");
 });
 
 test("goHome seeds language and assigns index.html (15-tile home)", () => {

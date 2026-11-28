@@ -85,9 +85,11 @@ assert.doesNotMatch(home, /href="admin\.html"/);
 assert.match(home, /id="signedInPanel"/);
 assert.match(home, /id="signedInEmail"/);
 assert.doesNotMatch(home, /id="homeLogout"/);
-assert.match(home, /id="guestSignup"/);
-assert.match(home, /id="guestLogin"/);
+assert.doesNotMatch(home, /id="guestSignup"/);
+assert.doesNotMatch(home, /id="guestLogin"/);
+assert.doesNotMatch(home, /security-badge|security-lock/);
 assert.match(home, /href="profile\.html"/);
+assert.match(home, /home-settings-bar/);
 assert.match(home, /supabase\.auth\.getSession/);
 
 assert.match(profile, /id="profileAdministration"/);

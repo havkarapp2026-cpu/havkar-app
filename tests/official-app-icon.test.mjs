@@ -53,11 +53,11 @@ assert.equal(JSON.stringify(manifest).includes("icon.png"), false);
 const header = read("assets/home/header.png");
 assert.equal(
   header.length,
-  427865
+  406155
 );
 
 const home = read("index.html").toString("utf8");
-assert.match(home, /src="assets\/home\/header\.png"/);
+assert.match(home, /src="assets\/home\/header\.png(?:\?v=[^"]+)?"/);
 assert.match(home, /rel="manifest" href="\/manifest\.json"/);
 assert.match(home, /rel="apple-touch-icon" sizes="180x180"/);
 assert.doesNotMatch(home, /href="icon\.png"|src="icon\.png"/);

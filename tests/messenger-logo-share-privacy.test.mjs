@@ -15,14 +15,14 @@ test("approved messenger logo assets exist for tile and icons", () => {
   assert.ok(existsSync(new URL("../assets/icons/messenger/messenger-48.png", import.meta.url)));
 });
 
-test("home tile keeps 15 entries and opens chat.html with messenger branding", () => {
+test("home tile keeps 12 entries and opens chat.html with messenger branding", () => {
   const index = read("../index.html");
   const tiles = [...index.matchAll(/class="menu-item"[^>]*href="([^"]+)"/g)].map((m) => m[1]);
-  assert.equal(tiles.length, 15);
+  assert.equal(tiles.length, 12);
   assert.ok(tiles.includes("chat.html"));
   assert.ok(/data-havkar-tile="messenger"/.test(index));
   assert.ok(/assets\/home\/chat\.png/.test(index));
-  assert.ok(/data-i18n="chat">Messenger</.test(index));
+  assert.ok(/data-i18n="Messenger">Messenger</.test(index) || /data-i18n="chat">Messenger</.test(index));
   assert.ok(!tiles.includes("coming-soon.html"));
 });
 
